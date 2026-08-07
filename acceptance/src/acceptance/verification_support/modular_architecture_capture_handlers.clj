@@ -23,18 +23,43 @@
 (defn- handler-path [name]
   (str "acceptance/src/acceptance/steps/" name))
 
-(defn- history-key [change historical-registry]
-  (if (= "missing, unreadable, incompatible, or malformed" historical-registry)
-    :unreadable
-    (cond
-      (str/starts-with? change "delete ") :delete
-      (str/ends-with? change "data-layer-live-inspector-return-ui.ts") :renamePresentation
-      (str/ends-with? change "data-layer-live-observer-ui.ts") :renameSharedPresentation
-      (str/ends-with? change "data-layer-live-observer.ts") :renameSemantic
-      (str/ends-with? change "data-layer-saved-sessions.ts") :renamePersistence
-      (str/ends-with? change "data-layer-workflow-focus-ui.ts") :renameLibraryFocus)))
+(def ^:private historical-rename-keys
+  [["data-layer-live-inspector-return-ui.ts" :renamePresentation]
+   ["data-layer-live-observer-ui.ts" :renameSharedPresentation]
+   ["data-layer-live-observer.ts" :renameSemantic]
+   ["data-layer-saved-sessions.ts" :renamePersistence]
+   ["data-layer-workflow-focus-ui.ts" :renameLibraryFocus]])
 
-(defn handlers [{:keys [example-values] :as dependencies}]
+(defn- historical-rename-key [change]
+  (some (fn [[suffix history-key]]
+          (when (str/ends-with? change suffix) history-key))
+        historical-rename-keys))
+
+(defn- history-key [change historical-registry]
+  (cond
+    (= "missing, unreadable, incompatible, or malformed" historical-registry) :unreadable
+    (str/starts-with? change "delete ") :delete
+    :else (historical-rename-key change)))
+
+(defn- handler-evidence-world [world name consumer-evidence dependencies]
+  (let [prepared (capture-world world dependencies)
+        path (handler-path name)
+        evidence (first (filter #(= path (:path %))
+                                (get-in prepared [:vtd004/evidence :handlers])))
+        isolated? (some? evidence)]
+    (assoc prepared :vtd004/capture-handler path
+           :vtd004/consumer-evidence consumer-evidence
+           :vtd004/isolation-decision (if isolated? "isolated" "dependant propagation")
+           :vtd004/selected-scope (if isolated? "capture only" "ten-pack dependant closure"))))
+
+(defn- isolation-diagnostic-key [condition]
+  (cond
+    (str/starts-with? condition "a pattern") :captureLoadedStepDiagnostic
+    (str/starts-with? condition "a namespace") :captureNamespaceDiagnostic
+    (str/starts-with? condition "missing or foreign") :missingMetadataDiagnostic
+    :else :unreadableAuditDiagnostic))
+
+(defn- boundary-handlers [example-values dependencies]
   [{:pattern #"^the current Capture dependant closure is capture, event-library, project_event_transport, schemas, defects, replay, live_flow_testing, project_assurance_severity, guided_test_cases, shell$"
     :handler (fn [world _ _]
                (let [prepared (capture-world world dependencies)]
@@ -99,20 +124,14 @@
     :handler (fn [world _ _]
                (assert-capture! world (get-in world [:vtd004/evidence :presentationBoundary
                                                       :behaviorPreserved])
-                                "Capture presentation behavior was not conserved." {}))}
+                                "Capture presentation behavior was not conserved." {}))}])
+
+(defn- isolation-handlers [example-values dependencies]
+  [
    {:pattern #"^Capture handler (.+) has (.+)$"
     :handler (fn [world example captures]
-               (let [[name consumer-evidence] (example-values example captures)
-                     prepared (capture-world world dependencies)
-                     path (handler-path name)
-                     evidence (first (filter #(= path (:path %))
-                                             (get-in prepared [:vtd004/evidence :handlers])))
-                     isolated? (some? evidence)]
-                 (assoc prepared :vtd004/capture-handler path
-                        :vtd004/consumer-evidence consumer-evidence
-                        :vtd004/isolation-decision (if isolated? "isolated" "dependant propagation")
-                        :vtd004/selected-scope (if isolated? "capture only"
-                                                  "ten-pack dependant closure"))))}
+               (let [[name consumer-evidence] (example-values example captures)]
+                 (handler-evidence-world world name consumer-evidence dependencies)))}
    {:pattern #"^acceptance-handler isolation is audited from parsed APS steps and namespace consumers$"
     :handler (fn [world _ _]
                (assert-capture! world
@@ -144,11 +163,7 @@
     :handler (fn [world example captures]
                (let [expected (first (example-values example captures))
                      condition (:vtd004/isolation-condition world)
-                     key (cond
-                           (str/starts-with? condition "a pattern") :captureLoadedStepDiagnostic
-                           (str/starts-with? condition "a namespace") :captureNamespaceDiagnostic
-                           (str/starts-with? condition "missing or foreign") :missingMetadataDiagnostic
-                           :else :unreadableAuditDiagnostic)
+                     key (isolation-diagnostic-key condition)
                      diagnostic (get-in world [:vtd004/evidence :isolationAudit key])]
                  (assert-capture! world (and diagnostic (str/includes? diagnostic expected))
                                   "Capture isolation diagnostic is not exact."
@@ -165,7 +180,10 @@
     :handler (fn [world _ _]
                (assert-capture! world
                                 (get-in world [:vtd004/evidence :isolationAudit :metadataCannotConceal])
-                                "Capture feature metadata concealed a consumer." {}))}
+                                "Capture feature metadata concealed a consumer." {}))}])
+
+(defn- history-handlers [example-values dependencies]
+  [
    {:pattern #"^Capture change is (.+)$"
     :handler (fn [world example captures]
                (assoc (capture-world world dependencies)
@@ -188,7 +206,10 @@
                (let [expected (first (example-values example captures))]
                  (assert-capture! world (= expected (:vtd004/selected-scope world))
                                   "Capture selected scope is wrong."
-                                  {:expected expected :actual (:vtd004/selected-scope world)})))}
+                                  {:expected expected :actual (:vtd004/selected-scope world)})))}])
+
+(defn- conservation-handlers [dependencies]
+  [
    {:pattern #"^every Capture boundary maps to the complete owner evidence profile$"
     :handler (fn [world _ _]
                (let [prepared (capture-world world dependencies)
@@ -229,7 +250,10 @@
                (assert-capture! world
                                 (get-in world [:vtd004/evidence :conservation
                                                :terminalTaskIdentitiesConserved])
-                                "Capture topology or product behavior changed." {}))}
+                                "Capture topology or product behavior changed." {}))}])
+
+(defn- calibration-handlers [dependencies]
+  [
    {:pattern #"^src/data-layer-live-inspector-presentation-ui.ts currently selects ten packs with dependant fan-out 9, critical-path baseline 195.5 seconds, and limit 235 seconds$"
     :handler (fn [world _ _]
                (let [prepared (capture-world world dependencies)
@@ -273,3 +297,10 @@
                                        (= 19 (:otherPackCount evidence))
                                        (= 81 (:browserTargetCount evidence)))
                                   "Capture calibration changed conserved rows." {})))}])
+
+(defn handlers [{:keys [example-values] :as dependencies}]
+  (vec (concat (boundary-handlers example-values dependencies)
+               (isolation-handlers example-values dependencies)
+               (history-handlers example-values dependencies)
+               (conservation-handlers dependencies)
+               (calibration-handlers dependencies))))

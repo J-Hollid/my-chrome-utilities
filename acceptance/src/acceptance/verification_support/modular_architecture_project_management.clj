@@ -2,15 +2,19 @@
   (:require [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
+(def ^:private owner-evidence-keys
+  {"capture" :vtd004/capture-evidence
+   "durable_project_repository" :vtd004/durable-evidence
+   "event-library" :vtd004/event-evidence})
+
+(defn- owner-evidence [inspected owner]
+  (get inspected (get owner-evidence-keys owner :vtd004/project-evidence)))
+
 (defn vtd004-world [world {:keys [verify-throughput! performance-calibration]}]
   (let [inspected (verify-throughput! world)
         owner (or (:vtd004/owner world) "project_management")
         pack (first (filter #(= owner (:id %)) (:modular/registry inspected)))
-        evidence (case owner
-                   "capture" (:vtd004/capture-evidence inspected)
-                   "durable_project_repository" (:vtd004/durable-evidence inspected)
-                   "event-library" (:vtd004/event-evidence inspected)
-                   (:vtd004/project-evidence inspected))]
+        evidence (owner-evidence inspected owner)]
     (assoc inspected :vtd004/owner owner :vtd004/pack pack :vtd004/evidence evidence
            :vtd004/calibration (performance-calibration))))
 

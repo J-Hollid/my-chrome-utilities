@@ -113,36 +113,42 @@
 (deftest vtd004-capture-steps-use-dedicated-production-backed-semantics
   (assert-dedicated-scenario-handlers! #"Modular verification packs 06[1-7]" 7))
 
-(deftest event-library-isolation-audit-matches-effective-patterns-against-parsed-dependant-steps
-  (let [packs [{:id "event-library"
+(defn- assert-parsed-cross-pack-step-consumer!
+  [{:keys [owner owner-feature handler consumer consumer-feature pattern step message]}]
+  (let [packs [{:id owner
                 :dependencies []
-                :features ["features/data-layer-event-template-library.feature"]
-                :isolatedVerificationHandlers ["acceptance/src/acceptance/steps/event_template_library.clj"]}
-               {:id "project_event_transport"
-                :dependencies ["event-library"]
-                :features ["features/data-layer-project-event-transport-settings.feature"]}]]
+                :features [owner-feature]
+                :isolatedVerificationHandlers [handler]}
+               {:id consumer
+                :dependencies [owner]
+                :features [consumer-feature]}]]
     (with-redefs-fn {#'acceptance.verification-support.isolated-handler-audit/namespace-handlers
-                     (constantly [{:pattern #"<project> is active"}])}
-      #(is (= [{:handler "acceptance/src/acceptance/steps/event_template_library.clj"
-                :consumerPack "project_event_transport"
-                :feature "features/data-layer-project-event-transport-settings.feature"
-                :step "<project> is active"}]
+                     (constantly [{:pattern pattern}])}
+      #(is (= [{:handler handler
+                :consumerPack consumer
+                :feature consumer-feature
+                :step step}]
               (isolation-audit/loaded-cross-pack-step-consumers packs))
-           "handler feature metadata cannot conceal a pattern matching a parsed dependant step"))))
+           message))))
+
+(deftest event-library-isolation-audit-matches-effective-patterns-against-parsed-dependant-steps
+  (assert-parsed-cross-pack-step-consumer!
+   {:owner "event-library"
+    :owner-feature "features/data-layer-event-template-library.feature"
+    :handler "acceptance/src/acceptance/steps/event_template_library.clj"
+    :consumer "project_event_transport"
+    :consumer-feature "features/data-layer-project-event-transport-settings.feature"
+    :pattern #"<project> is active"
+    :step "<project> is active"
+    :message "handler feature metadata cannot conceal a pattern matching a parsed dependant step"}))
 
 (deftest capture-isolation-audit-matches-effective-patterns-against-parsed-dependant-steps
-  (let [packs [{:id "capture"
-                :dependencies []
-                :features ["features/data-layer-event-feed-query-builder.feature"]
-                :isolatedVerificationHandlers ["acceptance/src/acceptance/steps/event_feed_query.clj"]}
-               {:id "schemas"
-                :dependencies ["capture"]
-                :features ["features/data-layer-schema-validation-workflow.feature"]}]]
-    (with-redefs-fn {#'acceptance.verification-support.isolated-handler-audit/namespace-handlers
-                     (constantly [{:pattern #"captured event event-7 has no matching automatic assignment or manual attachment"}])}
-      #(is (= [{:handler "acceptance/src/acceptance/steps/event_feed_query.clj"
-                :consumerPack "schemas"
-                :feature "features/data-layer-schema-validation-workflow.feature"
-                :step "captured event event-7 has no matching automatic assignment or manual attachment"}]
-              (isolation-audit/loaded-cross-pack-step-consumers packs))
-           "Capture feature metadata cannot conceal a parsed cross-pack step"))))
+  (assert-parsed-cross-pack-step-consumer!
+   {:owner "capture"
+    :owner-feature "features/data-layer-event-feed-query-builder.feature"
+    :handler "acceptance/src/acceptance/steps/event_feed_query.clj"
+    :consumer "schemas"
+    :consumer-feature "features/data-layer-schema-validation-workflow.feature"
+    :pattern #"captured event event-7 has no matching automatic assignment or manual attachment"
+    :step "captured event event-7 has no matching automatic assignment or manual attachment"
+    :message "Capture feature metadata cannot conceal a parsed cross-pack step"}))
