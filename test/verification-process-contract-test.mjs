@@ -1535,18 +1535,22 @@ assert.deepEqual([exactCapturePlan.unitTasks.length,exactCapturePlan.propertyTas
 assert.deepEqual(terminalIdentities(planVerification(packs,{terminalFull:true})),
   terminalIdentities(planVerification(captureBasePacks,{terminalFull:true})),
   "terminal planning conserves every Capture task identity and ordering");
-const captureCalibration = vtd004CurrentCalibration.runnablePacks.find(({id}) => id === "capture");
+const captureCompletedCalibration = JSON.parse(await exec("git", [
+  "show", "14e4992a87:verification/performance-calibration.json",
+]));
+const captureCalibration = captureCompletedCalibration.runnablePacks.find(({id}) => id === "capture");
 const capturePreviousCalibration = captureBaseCalibration.runnablePacks.find(({id}) => id === "capture");
 assert.deepEqual({selectedPacks:captureCalibration.selectedPacks,
   fanOut:captureCalibration.changedPathFanOut.limit,
   duration:[captureCalibration.changedPathDuration.baseline,captureCalibration.changedPathDuration.tolerance,
     captureCalibration.changedPathDuration.limit]},
 {selectedPacks:["capture"],fanOut:0,duration:[51.9,1.2,63]});
-const captureOtherCurrent = vtd004CurrentCalibration.runnablePacks.filter(({id}) => id !== "capture");
+const captureOtherCurrent = captureCompletedCalibration.runnablePacks.filter(({id}) => id !== "capture");
 const captureOtherBase = captureBaseCalibration.runnablePacks.filter(({id}) => id !== "capture");
 assert.deepEqual(captureOtherCurrent,captureOtherBase);
-assert.deepEqual(vtd004CurrentCalibration.browserTargets,captureBaseCalibration.browserTargets);
-assert.deepEqual(calibrationProvenance(vtd004CurrentCalibration),calibrationProvenance(captureBaseCalibration));
+assert.deepEqual(captureCompletedCalibration.browserTargets,captureBaseCalibration.browserTargets);
+assert.deepEqual(calibrationProvenance(captureCompletedCalibration),calibrationProvenance(
+  captureBaseCalibration));
 const captureInstalledSource = await readFile(
   new URL("../test/side-panel-component-layout-runtime-test.mjs",import.meta.url),"utf8");
 assert.match(captureInstalledSource,/inspectorPresentation:\{captured,restored\}/u,
@@ -1567,6 +1571,197 @@ const vtd004CaptureAcceptance = {
       JSON.stringify(captureCalibration.exactPackDuration) === JSON.stringify(
         capturePreviousCalibration.exactPackDuration),provenanceConserved:true,
     otherPackCount:captureOtherCurrent.length,
+    browserTargetCount:Object.keys(captureCompletedCalibration.browserTargets).length},
+  presentationBoundary:{ownerOnly:true,suppliedValues:true,effectIsolated:true,
+    semanticIsolated:true,installedDirect:true,behaviorPreserved:true},
+};
+const schemasPack = packs.find(({id}) => id === "schemas");
+const schemasBasePacks = JSON.parse(await exec("git", ["show", "14e4992a87:verification/packs.json"]));
+const schemasBaseCalibration = JSON.parse(await exec("git", [
+  "show", "14e4992a87:verification/performance-calibration.json",
+]));
+const schemasClosure = ["schemas", "defects", "live_flow_testing", "project_assurance_severity",
+  "guided_test_cases", "shell"];
+const schemasPresentationPaths = [
+  "src/data-layer-allowed-value-expansion-ui.ts",
+  "src/data-layer-guided-schema-picker-ui.ts",
+  "src/data-layer-live-schema-property-declaration-ui.ts",
+  "src/data-layer-local-rule-promotion-ui.ts",
+  "src/data-layer-schema-assignment-data-conditions-ui.ts",
+  "src/data-layer-schema-property-copy-ui.ts",
+  "src/data-layer-schema-property-type-editing-ui.ts",
+  "src/data-layer-schema-specification-builder-ui.ts",
+];
+const expectedSchemasBoundaries = [
+  ["schemas_local_browser_presentation", "browser presentation", false],
+  ["schemas_shared_browser_workflows", "browser presentation", true],
+  ["schemas_application_controllers", "application controller", true],
+  ["schemas_persistence_and_migration", "persistence migration", true],
+  ["schemas_core_semantics", "core or semantic", true],
+  ["schemas_public_core_facades", "core or semantic", true],
+  ["schemas_public_application_facades", "application controller", true],
+  ["schemas_public_browser_facades", "browser presentation", true],
+];
+assert.deepEqual(schemasPack.impactBoundaries.map(({id,sourceClass,propagateDependants}) =>
+  [id,sourceClass,propagateDependants]), expectedSchemasBoundaries,
+"Schemas source classes and propagation are explicit registry data");
+for (const changedPath of schemasPresentationPaths) assert.deepEqual(
+  planVerification(packs,{changedPaths:[changedPath]}).packIds,["schemas"],
+  `${changedPath} selects only complete Schemas evidence`);
+const schemasBoundaryPaths = schemasPack.impactBoundaries.flatMap(({prefixes}) => prefixes);
+assert.equal(schemasBoundaryPaths.length,88,"every Schemas source path has one exact boundary");
+assert.equal(new Set(schemasBoundaryPaths).size,88,"Schemas impact boundaries cannot overlap");
+const schemasPropagatingPaths = schemasPack.impactBoundaries
+  .filter(({propagateDependants}) => propagateDependants)
+  .flatMap(({prefixes}) => prefixes);
+for (const changedPath of schemasPropagatingPaths) assert.deepEqual(
+  planVerification(packs,{changedPaths:[changedPath]}).packIds,schemasClosure,
+  `${changedPath} retains the six-pack dependant closure`);
+const schemasIsolatedHandlerNames = [
+  "allowed_value_expansion.clj", "allowed_values_rule_migration.clj",
+  "canonical_declared_property_validation.clj", "conditional_validation_rules.clj",
+  "guided_assignment_coverage.clj", "guided_nested_property_merge.clj",
+  "guided_rule_parameter_integrity.clj", "guided_validation.clj", "json_schema_export.clj",
+  "live_guided_conditional_rules.clj", "live_schema_property_declaration.clj",
+  "live_validation_visuals.clj", "local_rule_promotion.clj",
+  "local_rule_promotion_availability.clj", "non_applicable_property_visibility.clj",
+  "recursive_declared_property_validation.clj", "recursive_property_validation.clj",
+  "schema_assignment_data_conditions.clj", "schema_cardinality_comparison.clj",
+  "schema_container_child_authoring.clj", "schema_declared_property_exceptions.clj",
+  "schema_nested_path.clj", "schema_property_comments.clj", "schema_property_copy.clj",
+  "schema_property_example_values.clj", "schema_property_filter_sort.clj",
+  "schema_property_type_editing.clj", "schema_publication_refresh.clj", "schema_renaming.clj",
+  "schema_revision_lifecycle.clj", "schema_specification_builder_customization.clj",
+  "schema_specification_container_defaults.clj", "schema_specification_example_selection.clj",
+  "schema_specification_preview_layout.clj", "schema_workspace_runtime.clj",
+  "validation_presence_semantics.clj",
+];
+const schemasIsolatedHandlers = schemasIsolatedHandlerNames.map((name) =>
+  `acceptance/src/acceptance/steps/${name}`);
+assert.deepEqual(schemasPack.isolatedVerificationHandlers,schemasIsolatedHandlers);
+const schemasHandlerEvidence = [];
+for (const handlerPath of schemasIsolatedHandlers) {
+  const source = await readFile(new URL(`../${handlerPath}`, import.meta.url),"utf8");
+  const servedFeatures = [...source.matchAll(/"(features\/[A-Za-z0-9_./-]+\.feature)"/gu)]
+    .map((match) => match[1]);
+  assert.ok(servedFeatures.length > 0,`${handlerPath} names its owner-only served features`);
+  assert.deepEqual(planVerification(packs,{changedPaths:[handlerPath]}).packIds,["schemas"]);
+  schemasHandlerEvidence.push({path:handlerPath,servedFeatures,ownerPlan:["schemas"],consumers:[]});
+}
+const schemasLoadedStepDiagnostic = await captureRejection(() => validateIsolatedVerificationHandlers(packs,{
+  findLoadedStepConsumers:async() => [{handler:schemasIsolatedHandlers[0],consumerPack:"defects",
+    feature:"features/data-layer-defect-library.feature",step:"schema evidence is loaded"}],
+}));
+assert.match(schemasLoadedStepDiagnostic,/Loaded cross-pack step consumer blocks isolation.*defects/u);
+const shellHandler = packs.find(({id}) => id === "shell").handlers.find((handler) =>
+  handler !== "acceptance/src/acceptance/steps/all.clj");
+const schemasNamespaceDiagnostic = await captureRejection(() => validateIsolatedVerificationHandlers(packs,{
+  readSource:async(handlerPath) => {
+    const source = await readFile(new URL(`../${handlerPath}`,import.meta.url),"utf8");
+    return handlerPath === shellHandler
+      ? `${source}\n[acceptance.steps.allowed-value-expansion :refer [handlers]]\n` : source;
+  },
+}));
+assert.match(schemasNamespaceDiagnostic,
+  /Cross-pack handler consumer blocks isolation.*information_architecture/u);
+const schemasMissingMetadataDiagnostic = await captureRejection(() =>
+  validateIsolatedVerificationHandlers(packs,{
+    readSource:async(handlerPath) => handlerPath === schemasIsolatedHandlers[0]
+      ? "(def handlers [])" : readFile(new URL(`../${handlerPath}`,import.meta.url),"utf8"),
+  }));
+assert.match(schemasMissingMetadataDiagnostic,/Owner-only served features are required/u);
+const schemasUnreadableAuditDiagnostic = await captureRejection(() =>
+  validateIsolatedVerificationHandlers(packs,{
+    findLoadedStepConsumers:async() => { throw new Error("unreadable parsed consumer evidence"); },
+  }));
+assert.match(schemasUnreadableAuditDiagnostic,/Isolation audit fails closed/u);
+const nonIsolatedSchemasPacks = replacePack(packs,"schemas",() => ({isolatedVerificationHandlers:[]}));
+const rejectedSchemasHandlerPlan = planVerification(nonIsolatedSchemasPacks,{
+  changedPaths:[schemasIsolatedHandlers[0]],
+}).packIds;
+assert.deepEqual(rejectedSchemasHandlerPlan,schemasClosure);
+const schemasHistoryChange = (entry) => syntheticChangeSet([entry]);
+const deletedSchemasPresentation = schemasHistoryChange({status:"D",path:schemasPresentationPaths[1]});
+const renameSchemasPresentation = (newPath) => schemasHistoryChange({status:"R",score:100,
+  oldPath:schemasPresentationPaths[1],newPath});
+const schemasHistoryPlans = {
+  delete:planVerification(packs,{changedPaths:deletedSchemasPresentation.paths,
+    changeSet:deletedSchemasPresentation,basePacks:packs}).packIds,
+  renamePresentation:planVerification(packs,{changedPaths:renameSchemasPresentation(
+    schemasPresentationPaths[5]).paths,changeSet:renameSchemasPresentation(schemasPresentationPaths[5]),
+    basePacks:packs}).packIds,
+  renameSharedWorkflow:planVerification(packs,{changedPaths:renameSchemasPresentation(
+    "src/data-layer-guided-validation-ui.ts").paths,changeSet:renameSchemasPresentation(
+    "src/data-layer-guided-validation-ui.ts"),basePacks:packs}).packIds,
+  unreadable:planVerification(packs,{changedPaths:deletedSchemasPresentation.paths,
+    changeSet:deletedSchemasPresentation,basePacks:packs,historicalRegistryFallback:true}).packIds,
+};
+assert.deepEqual(schemasHistoryPlans.delete,["schemas"]);
+assert.deepEqual(schemasHistoryPlans.renamePresentation,["schemas"]);
+assert.deepEqual(schemasHistoryPlans.renameSharedWorkflow,schemasClosure);
+assert.deepEqual(schemasHistoryPlans.unreadable,planVerification(packs,{terminalFull:true}).packIds);
+const schemasEvidenceProfile = Object.fromEntries(exactEvidenceKeys.map((key) => [key,schemasPack[key]]));
+const schemasBasePack = schemasBasePacks.find(({id}) => id === "schemas");
+assert.deepEqual(schemasEvidenceProfile,
+  Object.fromEntries(exactEvidenceKeys.map((key) => [key,schemasBasePack[key]])),
+  "all Schemas owner evidence identities remain conserved");
+const exactSchemasPlan = planVerification(packs,{packIds:["schemas"],includeProperties:true});
+assert.equal(exactSchemasPlan.tasks.length,288);
+assert.deepEqual([exactSchemasPlan.unitTasks.length,exactSchemasPlan.propertyTasks.length,
+  exactSchemasPlan.parserTasks.length,schemasPack.handlers.length,schemasPack.browserAdapters.length,
+  exactSchemasPlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).length,
+  exactSchemasPlan.checkpointTasks.length],[49,29,103,60,1,46,0]);
+assert.deepEqual(terminalIdentities(planVerification(packs,{terminalFull:true})),
+  terminalIdentities(planVerification(schemasBasePacks,{terminalFull:true})),
+  "terminal planning conserves every Schemas task identity and ordering");
+const schemasCalibration = vtd004CurrentCalibration.runnablePacks.find(({id}) => id === "schemas");
+const schemasPreviousCalibration = schemasBaseCalibration.runnablePacks.find(({id}) => id === "schemas");
+assert.deepEqual({selectedPacks:schemasCalibration.selectedPacks,
+  fanOut:schemasCalibration.changedPathFanOut.limit,
+  duration:[schemasCalibration.changedPathDuration.baseline,
+    schemasCalibration.changedPathDuration.tolerance,schemasCalibration.changedPathDuration.limit]},
+{selectedPacks:["schemas"],fanOut:0,duration:[149.6,1.2,180]});
+const schemasOtherCurrent = vtd004CurrentCalibration.runnablePacks.filter(({id}) => id !== "schemas");
+const schemasOtherBase = schemasBaseCalibration.runnablePacks.filter(({id}) => id !== "schemas");
+assert.deepEqual(schemasOtherCurrent,schemasOtherBase);
+assert.deepEqual(vtd004CurrentCalibration.browserTargets,schemasBaseCalibration.browserTargets);
+assert.deepEqual(calibrationProvenance(vtd004CurrentCalibration),calibrationProvenance(
+  schemasBaseCalibration));
+const schemasInstalledSource = await readFile(
+  new URL("../test/side-panel-component-layout-runtime-test.mjs",import.meta.url),"utf8");
+const schemasPresentationTargets = [
+  ["ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER", "allowedValueExpansionObservation"],
+  ["GUIDED_VALIDATION_BROWSER_ADAPTER", "guidedSchemaPickerObservation"],
+  ["LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER", "liveSchemaPropertyDeclarationObservation"],
+  ["LOCAL_RULE_PROMOTION_BROWSER_ADAPTER", "localRulePromotionObservation"],
+  ["SCHEMA_ASSIGNMENT_DATA_CONDITIONS_BROWSER_ADAPTER", "schemaAssignmentDataConditionsObservation"],
+  ["SCHEMA_PROPERTY_COPY_BROWSER_ADAPTER", "schemaPropertyCopyObservation"],
+  ["SCHEMA_PROPERTY_TYPE_EDITING_BROWSER_ADAPTER", "schemaPropertyTypeEditingObservation"],
+  ["SCHEMA_SPECIFICATION_BUILDER_BROWSER_ADAPTER", "schemaSpecificationBuilderObservation"],
+];
+const schemasRegisteredTargets = new Set(schemasPack.browserObservations.map(({id}) => id));
+for (const [targetId,observation] of schemasPresentationTargets) {
+  assert.ok(schemasRegisteredTargets.has(targetId),`${targetId} remains in the Schemas browser batch`);
+  assert.match(schemasInstalledSource,new RegExp(observation,"u"),
+    `${targetId} retains direct installed-browser result evidence`);
+}
+const vtd004SchemasAcceptance = {
+  currentPlans:Object.fromEntries([...schemasPresentationPaths,...schemasPropagatingPaths]
+    .map((changedPath) => [changedPath,planVerification(packs,{changedPaths:[changedPath]}).packIds])),
+  historyPlans:schemasHistoryPlans,handlers:schemasHandlerEvidence,
+  isolationAudit:{schemasLoadedStepDiagnostic,schemasNamespaceDiagnostic,
+    missingMetadataDiagnostic:schemasMissingMetadataDiagnostic,
+    unreadableAuditDiagnostic:schemasUnreadableAuditDiagnostic,rejectedSchemasHandlerPlan,
+    metadataCannotConceal:true},
+  conservation:{evidenceProfile:schemasEvidenceProfile,exactTaskCount:exactSchemasPlan.tasks.length,
+    unitCount:49,propertyCount:29,featureCount:103,handlerCount:60,adapterCount:1,targetCount:46,
+    checkpointCount:0,terminalTaskIdentitiesConserved:true,packageCheckCount:1,
+    directPresentationPaths:schemasPresentationPaths},
+  calibration:{current:schemasCalibration,previous:schemasPreviousCalibration,
+    otherPackRowsConserved:true,browserTargetRowsConserved:true,exactPackCalibrationConserved:
+      JSON.stringify(schemasCalibration.exactPackDuration) === JSON.stringify(
+        schemasPreviousCalibration.exactPackDuration),provenanceConserved:true,
+    otherPackCount:schemasOtherCurrent.length,
     browserTargetCount:Object.keys(vtd004CurrentCalibration.browserTargets).length},
   presentationBoundary:{ownerOnly:true,suppliedValues:true,effectIsolated:true,
     semanticIsolated:true,installedDirect:true,behaviorPreserved:true},
@@ -4328,5 +4523,5 @@ for (const source of [handoffSource, handoffLibrarySource]) {
 }
 
 console.log(JSON.stringify({vtd004Acceptance,vtd004DurableAcceptance,vtd004EventAcceptance,
-  vtd004CaptureAcceptance}));
+  vtd004CaptureAcceptance,vtd004SchemasAcceptance}));
 console.log("verification process contract tests passed");
