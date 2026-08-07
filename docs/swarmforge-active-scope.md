@@ -2356,6 +2356,10 @@ handlers: `event-library` and its six dependants. In those sessions,
 `library_direct_template_push.clj` serves only its two Event Library-owned feature
 files. All three may therefore be declared isolated after the registry validator proves
 those actual loaded consumers and the absence of a cross-pack namespace require.
+The proof must match each handler's effective patterns against parsed APS steps for
+`event-library` and every dependant session that loads that handler. A handler's
+self-declared `feature-files` list is supporting metadata, not proof that no other
+loaded feature consumes a matching pattern.
 
 `event_library_editor.clj` composes Capture-owned event-property handlers and shared
 support, but that edge points from Event Library to Capture: Capture sessions do not

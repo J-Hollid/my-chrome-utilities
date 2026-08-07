@@ -734,3 +734,16 @@ Feature: Modular verification packs
     Then it selects only event-library with dependant fan-out 0
     And its critical-path baseline is 11.6 seconds with tolerance 1.2 and limit 14 seconds
     And the other 19 pack calibrations, the Event Library exact-pack calibration, and all 81 browser-target budgets are unchanged
+
+  # Modular verification packs 060
+  Scenario Outline: Modular verification packs 060
+    Given an isolated Event Library handler gains <cross_pack_consumer>
+    When isolation validation scans the parsed APS steps and namespaces of every session that loads the handler
+    Then isolation is rejected with <diagnostic>
+    And the handler-only change retains the seven-pack dependant closure
+    And a self-declared feature list cannot conceal the cross-pack consumer
+
+    Examples:
+      | cross_pack_consumer                                                     | diagnostic                                       |
+      | a pattern matching a project_event_transport feature step               | Loaded cross-pack step consumer blocks isolation |
+      | a namespace require from the project_event_transport acceptance handler | Cross-pack handler consumer blocks isolation     |
