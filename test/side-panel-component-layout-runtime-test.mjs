@@ -770,6 +770,7 @@ const payloadPathFilterPickerRuntime = `(async () => {
 
 const singleLiveEventFeedRuntime = `(async () => {
   const observerUi = await import("/data-layer-live-observer-ui.js");
+  const inspectorPresentationUi = await import("/data-layer-live-inspector-presentation-ui.js");
   const savedSessions = await import("/data-layer-saved-sessions.js");
   const defectReports = await import("/data-layer-defect-report-browser.js");
   const events = [
@@ -787,6 +788,24 @@ const singleLiveEventFeedRuntime = `(async () => {
   };
   const archive = savedSessions.saveCompletedSession(savedSessions.createSavedSessionLibrary(), completed, "Checkout journey").sessions[0];
   const defectContext = defectReports.defectReportContext(events, "purchase");
+  const inspector = document.createElement("section");
+  inspector.style.cssText = "height:40px;overflow:auto";
+  const properties = document.createElement("section"); properties.setAttribute("aria-label", "Properties");
+  properties.dataset.showNonApplicableProperties = "true";
+  const property = document.createElement("details"); property.dataset.propertyPath = "/checkout/id"; property.open = true;
+  const rule = document.createElement("div"); rule.className = "live-validation-property"; rule.dataset.propertyPath = "/checkout/id";
+  const disclosure = document.createElement("button"); disclosure.id = "capture-inspector-focus";
+  disclosure.className = "live-property-status"; disclosure.setAttribute("aria-expanded", "true");
+  disclosure.addEventListener("click", () => disclosure.setAttribute("aria-expanded", "true"));
+  rule.append(disclosure); property.append(rule, Object.assign(document.createElement("div"), { style:"height:1000px" }));
+  properties.append(property); inspector.append(properties); document.body.append(inspector);
+  inspector.scrollTop = 37; disclosure.focus({ preventScroll:true });
+  const captured = inspectorPresentationUi.captureLiveInspectorPresentation(inspector, disclosure);
+  property.open = false; disclosure.setAttribute("aria-expanded", "false"); inspector.scrollTop = 0; document.body.focus();
+  inspectorPresentationUi.restoreLiveInspectorPresentation(inspector, captured);
+  const restored = { propertyOpen:property.open, ruleExpanded:disclosure.getAttribute("aria-expanded"),
+    scrollTop:inspector.scrollTop, focusedId:document.activeElement?.id };
+  inspector.remove();
   return {
     liveFeedCount:document.querySelectorAll("#live-event-feed").length,
     liveFeedInsideLivePanel:Boolean(feed?.closest("#data-layer-panel-live")),
@@ -800,6 +819,7 @@ const singleLiveEventFeedRuntime = `(async () => {
     },
     archiveEventIds:archive.events.map(({ id }) => id),
     defectEventIds:defectContext.timeline.map(({ id }) => id),
+    inspectorPresentation:{captured,restored},
   };
 })()`;
 
@@ -6854,6 +6874,13 @@ try {
       journey:{ visits:["/checkout", "/products"], eventCount:3 },
       archiveEventIds:["pageview", "promotion", "purchase"],
       defectEventIds:["pageview", "promotion", "purchase"],
+      inspectorPresentation:{
+        captured:{showNonApplicableProperties:true,expandedPropertyPaths:["/checkout/id"],
+          expandedRulePaths:["/checkout/id"],focusedId:"capture-inspector-focus",
+          focusedPropertyPath:"/checkout/id",scrollTop:37},
+        restored:{propertyOpen:true,ruleExpanded:"true",scrollTop:37,
+          focusedId:"capture-inspector-focus"},
+      },
     }, `current-session journey was duplicated outside the Live feed at ${width}px`);
     const schemaRuleEditorVisibility = await evaluate(socket, schemaRuleEditorVisibilityRuntime);
     assert.deepEqual(schemaRuleEditorVisibility, {

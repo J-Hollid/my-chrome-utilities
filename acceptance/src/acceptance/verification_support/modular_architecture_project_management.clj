@@ -7,6 +7,7 @@
         owner (or (:vtd004/owner world) "project_management")
         pack (first (filter #(= owner (:id %)) (:modular/registry inspected)))
         evidence (case owner
+                   "capture" (:vtd004/capture-evidence inspected)
                    "durable_project_repository" (:vtd004/durable-evidence inspected)
                    "event-library" (:vtd004/event-evidence inspected)
                    (:vtd004/project-evidence inspected))]

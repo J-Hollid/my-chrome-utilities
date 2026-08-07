@@ -110,6 +110,9 @@
 (deftest vtd004-event-library-isolation-audit-uses-dedicated-semantics
   (assert-dedicated-scenario-handlers! #"Modular verification packs 060" 1))
 
+(deftest vtd004-capture-steps-use-dedicated-production-backed-semantics
+  (assert-dedicated-scenario-handlers! #"Modular verification packs 06[1-7]" 7))
+
 (deftest event-library-isolation-audit-matches-effective-patterns-against-parsed-dependant-steps
   (let [packs [{:id "event-library"
                 :dependencies []
@@ -126,3 +129,20 @@
                 :step "<project> is active"}]
               (isolation-audit/loaded-cross-pack-step-consumers packs))
            "handler feature metadata cannot conceal a pattern matching a parsed dependant step"))))
+
+(deftest capture-isolation-audit-matches-effective-patterns-against-parsed-dependant-steps
+  (let [packs [{:id "capture"
+                :dependencies []
+                :features ["features/data-layer-event-feed-query-builder.feature"]
+                :isolatedVerificationHandlers ["acceptance/src/acceptance/steps/event_feed_query.clj"]}
+               {:id "schemas"
+                :dependencies ["capture"]
+                :features ["features/data-layer-schema-validation-workflow.feature"]}]]
+    (with-redefs-fn {#'acceptance.verification-support.isolated-handler-audit/namespace-handlers
+                     (constantly [{:pattern #"captured event event-7 has no matching automatic assignment or manual attachment"}])}
+      #(is (= [{:handler "acceptance/src/acceptance/steps/event_feed_query.clj"
+                :consumerPack "schemas"
+                :feature "features/data-layer-schema-validation-workflow.feature"
+                :step "captured event event-7 has no matching automatic assignment or manual attachment"}]
+              (isolation-audit/loaded-cross-pack-step-consumers packs))
+           "Capture feature metadata cannot conceal a parsed cross-pack step"))))

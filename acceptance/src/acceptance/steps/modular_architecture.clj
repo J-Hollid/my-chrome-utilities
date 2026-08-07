@@ -1,5 +1,6 @@
 (ns acceptance.steps.modular-architecture
-  (:require [acceptance.verification-support.modular-architecture-durable-repository-handlers :as durable-repository]
+  (:require [acceptance.verification-support.modular-architecture-capture-handlers :as capture]
+            [acceptance.verification-support.modular-architecture-durable-repository-handlers :as durable-repository]
             [acceptance.verification-support.modular-architecture-event-library-handlers :as event-library]
             [acceptance.verification-support.modular-architecture-project-management-handlers :as project-management]
             [acceptance.steps.support :as support]
@@ -32,7 +33,8 @@
   (assoc (inspect! world)
          :vtd004/project-evidence (:vtd004Acceptance @throughput-evidence)
          :vtd004/durable-evidence (:vtd004DurableAcceptance @throughput-evidence)
-         :vtd004/event-evidence (:vtd004EventAcceptance @throughput-evidence)))
+         :vtd004/event-evidence (:vtd004EventAcceptance @throughput-evidence)
+         :vtd004/capture-evidence (:vtd004CaptureAcceptance @throughput-evidence)))
 
 (defn- parse-seconds [value]
   (when-let [[_ amount] (re-matches #"([0-9]+(?:\.[0-9]+)?) seconds" value)]
@@ -350,8 +352,11 @@
   (get (:browserTargets calibration) (keyword target-id)))
 
 (defn- calibration-pack-world [world pack-id representative-path]
-  (let [calibration (performance-calibration)
-        pack (calibration-pack calibration pack-id)
+  (let [inspected (verify-throughput! world)
+        calibration (performance-calibration)
+        pack (if (= "capture" pack-id)
+               (get-in inspected [:vtd004/capture-evidence :calibration :previous])
+               (calibration-pack calibration pack-id))
         registry (aps-json/read-json-file
                   (str (fs/path (support/repository-root) "verification/packs.json")))
         registry-pack (first (filter #(= pack-id (:id %)) registry))]
@@ -361,7 +366,7 @@
                           (fs/regular-file? (fs/path (support/repository-root) representative-path)))
                      "Representative verification file is not exact, owned, and committed."
                      {:pack pack-id :path representative-path})
-    (assoc (verify-throughput! world)
+    (assoc inspected
            :vtd003/calibration calibration
            :vtd003/pack pack
            :vtd003/selected-packs (:selectedPacks pack))))
@@ -1028,6 +1033,10 @@
 
 (def handlers
   (vec (concat core-handlers
+               (capture/handlers
+                {:example-values example-values
+                 :verify-throughput! verify-throughput!
+                 :performance-calibration performance-calibration})
                (event-library/handlers
                 {:example-values example-values
                  :verify-throughput! verify-throughput!

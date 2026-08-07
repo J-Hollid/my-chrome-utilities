@@ -232,6 +232,23 @@
       "src/data-layer-workflow-focus-ui.ts",
       "src/data-layer.ts"
     ],
+    "impactBoundaries": [
+      {"id":"capture_event_feed_semantic","prefixes":["src/data-layer-event-feed-query.ts","src/data-layer-event-feed-summaries.ts","src/data-layer-event-presentation.ts"],"propagateDependants":true,"sourceClass":"core or semantic"},
+      {"id":"capture_event_feed_presentation","prefixes":["src/data-layer-event-feed-query-ui.ts"],"propagateDependants":false,"sourceClass":"browser presentation"},
+      {"id":"capture_inspector_controller","prefixes":["src/data-layer-live-inspector-actions.ts"],"propagateDependants":true,"sourceClass":"application controller"},
+      {"id":"capture_inspector_return_semantic","prefixes":["src/data-layer-live-inspector-return.ts"],"propagateDependants":true,"sourceClass":"core or semantic"},
+      {"id":"capture_inspector_local_presentation","prefixes":["src/data-layer-live-inspector-presentation-ui.ts","src/data-layer-live-inspector-return-ui.ts"],"propagateDependants":false,"sourceClass":"browser presentation"},
+      {"id":"capture_live_observer_semantic","prefixes":["src/data-layer-live-observer.ts"],"propagateDependants":true,"sourceClass":"core or semantic"},
+      {"id":"capture_shared_live_presentation","prefixes":["src/data-layer-live-observer-ui.ts","src/data-layer-live-responsive-layout.ts"],"propagateDependants":true,"sourceClass":"browser presentation"},
+      {"id":"capture_runtime_controllers","prefixes":["src/data-layer-fresh-session.ts","src/data-layer-live-notifications.ts","src/data-layer-live-observation.ts","src/data-layer-live-session-end.ts","src/data-layer-live-session-summary-actions.ts","src/data-layer-observation-refresh.ts","src/data-layer-observer.ts","src/data-layer-recovery.ts","src/data-layer-session-start.ts","src/data-layer-target-path-status.ts","src/data-layer-target-recovery.ts"],"propagateDependants":true,"sourceClass":"application controller"},
+      {"id":"capture_live_session_semantic","prefixes":["src/data-layer-live-session-controls.ts","src/data-layer-live-session-summary.ts"],"propagateDependants":true,"sourceClass":"core or semantic"},
+      {"id":"capture_live_session_presentation","prefixes":["src/data-layer-live-session-controls-ui.ts","src/data-layer-live-session-summary-ui.ts"],"propagateDependants":false,"sourceClass":"browser presentation"},
+      {"id":"capture_observation_target_semantic","prefixes":["src/data-layer-observation-activation.ts","src/data-layer-observation-targets.ts"],"propagateDependants":true,"sourceClass":"core or semantic"},
+      {"id":"capture_observation_target_presentation","prefixes":["src/data-layer-observation-targets-ui.ts"],"propagateDependants":false,"sourceClass":"browser presentation"},
+      {"id":"capture_shared_semantic_models","prefixes":["src/data-layer-observability.ts","src/data-layer-recursive-property-tree.ts","src/data-layer-source.ts","src/data-layer-timeline.ts"],"propagateDependants":true,"sourceClass":"core or semantic"},
+      {"id":"capture_persistence","prefixes":["src/data-layer-saved-event-feed-filters.ts","src/data-layer-saved-session-live-feed.ts","src/data-layer-saved-sessions.ts","src/data-layer-session.ts","src/data-layer.ts"],"propagateDependants":true,"sourceClass":"persistence migration"},
+      {"id":"capture_event_library_focus_presentation","prefixes":["src/data-layer-workflow-focus-ui.ts"],"propagateDependants":true,"sourceClass":"browser presentation"}
+    ],
     "dependencies": [],
     "verificationInputs": [
       "src/commands.ts",
@@ -370,6 +387,12 @@
       "acceptance/src/acceptance/steps/saved_session_live_feed.clj",
       "acceptance/src/acceptance/steps/saved_sessions.clj",
       "acceptance/src/acceptance/steps/session_boundaries.clj"
+    ],
+    "isolatedVerificationHandlers": [
+      "acceptance/src/acceptance/steps/cross_tab_reattachment.clj",
+      "acceptance/src/acceptance/steps/event_feed_query.clj",
+      "acceptance/src/acceptance/steps/live_event_presentation.clj",
+      "acceptance/src/acceptance/steps/lossless_observation_activation.clj"
     ],
     "browserAdapters": [
       "test/browser-packs/capture.mjs"
