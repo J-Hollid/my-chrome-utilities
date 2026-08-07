@@ -11,5 +11,5 @@
   (some #(re-matches (:pattern %) text) handlers))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T15:11:46.178635962+02:00", :module-hash "1381316465", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "251843286"} {:id "def/event-library-editor-wired?", :kind "def", :line 6, :end-line nil, :hash "900186052"} {:id "def/handlers", :kind "def", :line 7, :end-line nil, :hash "1739808343"} {:id "defn/event-library-editor-step-covered?", :kind "defn", :line 9, :end-line nil, :hash "-22777240"}]}
+;; {:version 1, :tested-at "2026-08-07T09:44:39.301177706+02:00", :module-hash "137826328", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "251843286"} {:id "def/event-library-editor-wired?", :kind "def", :line 6, :end-line 6, :hash "900186052"} {:id "def/feature-files", :kind "def", :line 7, :end-line 7, :hash "-1650299248"} {:id "def/handlers", :kind "def", :line 8, :end-line 8, :hash "1739808343"} {:id "defn/event-library-editor-step-covered?", :kind "defn", :line 10, :end-line 11, :hash "-689583713"}]}
 ;; clj-mutate-manifest-end

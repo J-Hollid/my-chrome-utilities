@@ -235,5 +235,5 @@
         templates))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-11T03:59:23.080867176+02:00", :module-hash "848063953", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "509625456"} {:id "def/templates", :kind "def", :line 6, :end-line nil, :hash "2014803596"} {:id "defn-/canonical-name!", :kind "defn-", :line 40, :end-line nil, :hash "609916801"} {:id "defn-/transition", :kind "defn-", :line 45, :end-line nil, :hash "648915741"} {:id "def/handlers", :kind "def", :line 215, :end-line nil, :hash "1286011429"}]}
+;; {:version 1, :tested-at "2026-08-07T09:45:03.785367816+02:00", :module-hash "-407818751", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "509625456"} {:id "def/feature-files", :kind "def", :line 6, :end-line 6, :hash "-1650299248"} {:id "def/templates", :kind "def", :line 8, :end-line 40, :hash "-492384227"} {:id "defn-/canonical-name!", :kind "defn-", :line 42, :end-line 45, :hash "609916801"} {:id "defn-/transition", :kind "defn-", :line 47, :end-line 219, :hash "-1911705430"} {:id "def/handlers", :kind "def", :line 221, :end-line 235, :hash "1286011429"}]}
 ;; clj-mutate-manifest-end

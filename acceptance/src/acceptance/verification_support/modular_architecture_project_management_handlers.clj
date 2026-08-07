@@ -28,7 +28,11 @@
                world)}
    {:pattern #"^dependant propagation is (.+)$"
     :handler (fn [world example captures]
-               (let [expected (= "retained" (first (example-values example captures)))]
+               (let [declared (first (example-values example captures))
+                     expected (= "retained" declared)]
+                 (support/assert! (#{"retained" "excluded"} declared)
+                                  "Dependant propagation must use the declared retained/excluded vocabulary."
+                                  {:declared declared})
                  (support/assert! (= expected (get-in world [:vtd004/boundary :propagateDependants]))
                                   "Project dependant propagation differs from the registry." {}))
                world)}
@@ -148,5 +152,5 @@
                world)}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-07T02:58:57.641263034+02:00", :module-hash "1798812761", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-907446120"} {:id "def/human-pack-list", :kind "def", :line 5, :end-line 5, :hash "-401636353"} {:id "defn/handlers", :kind "defn", :line 7, :end-line 146, :hash "-2095114279"}]}
+;; {:version 1, :tested-at "2026-08-07T10:01:06.258126969+02:00", :module-hash "-1102289051", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-907446120"} {:id "def/human-pack-list", :kind "def", :line 5, :end-line 5, :hash "-401636353"} {:id "defn/handlers", :kind "defn", :line 7, :end-line 152, :hash "1943415375"}]}
 ;; clj-mutate-manifest-end

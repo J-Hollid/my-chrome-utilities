@@ -11,6 +11,24 @@
   ["event-library" "project_event_transport" "defects" "replay"
    "live_flow_testing" "guided_test_cases" "shell"])
 
+(def ^:private handler-consumer-conditions
+  {"event_template_library.clj"
+   "only Event Library-owned steps in sessions that load the handler"
+   "library_direct_template_push.clj"
+   "only its two Event Library-owned features in sessions that load the handler"
+   "event_library_editor.clj"
+   "only Event Library-owned steps despite composing Capture-owned input handlers"})
+
+(def ^:private historical-changes
+  #{"delete src/data-layer-push-draft-review-ui.ts"
+    "rename src/data-layer-push-draft-review-ui.ts to src/data-layer-template-change-review-ui.ts"
+    "rename src/data-layer-push-draft-review-ui.ts to src/data-layer-event-library-editor-ui.ts"
+    "rename src/data-layer-push-draft-review-ui.ts to src/data-layer-event-library-editor.ts"
+    "rename src/data-layer-push-draft-review-ui.ts to src/data-layer-push-draft-review.ts"})
+
+(def ^:private historical-registry-states
+  #{"readable and compatible" "missing, unreadable, incompatible, or malformed"})
+
 (defn- event-world [world dependencies]
   (project/vtd004-world (assoc world :vtd004/owner "event-library") dependencies))
 
@@ -145,8 +163,11 @@
                                 {:path path :expected expected-boundary})))}
    {:pattern #"^Event Library acceptance handler (.+) has (.+)$"
     :handler (fn [world example captures]
-               (let [[handler-name _condition] (example-values example captures)]
-                 (handler-world world handler-name dependencies)))}
+               (let [[handler-name condition] (example-values example captures)]
+                 (assert-event! (handler-world world handler-name dependencies)
+                                (= condition (handler-consumer-conditions handler-name))
+                                "Event Library handler consumer condition is not exact."
+                                {:handler handler-name :condition condition})))}
    {:pattern #"^the handler may be isolated$"
     :handler (fn [world _ _]
                (assert-event! world (get-in world [:vtd004/handler :negativeMutationRejected])
@@ -169,8 +190,21 @@
                               "Handler isolation changed Capture editor propagation." {}))}
    {:pattern #"^Event Library change is (.+)$"
     :handler (fn [world example captures]
-               (assoc world :vtd004/owner "event-library"
-                      :vtd004/change (first (example-values example captures))))}
+               (let [change (first (example-values example captures))]
+                 (assert-event! (assoc world :vtd004/owner "event-library"
+                                       :vtd004/change change)
+                                (historical-changes change)
+                                "Event Library historical change is not an exact declared case."
+                                {:change change})))}
+   {:pattern #"^historical registry state is (.+)$"
+    :applies? #(= "event-library" (:vtd004/owner %))
+    :handler (fn [world example captures]
+               (let [state (first (example-values example captures))]
+                 (assert-event! (project/history-world world (:vtd004/change world)
+                                                       state dependencies)
+                                (historical-registry-states state)
+                                "Event Library historical registry state is not exact."
+                                {:state state})))}
    {:pattern #"^every Event Library boundary maps to the complete owner evidence profile$"
     :handler (fn [world _ _] (conservation-world world dependencies))}
    {:pattern #"^exact event-library verification and terminal-full planning are compared before and after VTD-004$"
@@ -241,3 +275,7 @@
                                      (= 19 (:otherPackCount evidence))
                                      (= 81 (:browserTargetCount evidence)))
                                 "Conserved calibration rows changed." {})))}])
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-08-07T10:01:40.125989765+02:00", :module-hash "1344803156", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "-83228735"} {:id "def/eight-pack-capture-closure", :kind "def", :line 6, :end-line 8, :hash "406707630"} {:id "def/seven-pack-dependant-closure", :kind "def", :line 10, :end-line 12, :hash "-1317336705"} {:id "def/handler-consumer-conditions", :kind "def", :line 14, :end-line 20, :hash "1697516706"} {:id "def/historical-changes", :kind "def", :line 22, :end-line 27, :hash "639407252"} {:id "def/historical-registry-states", :kind "def", :line 29, :end-line 30, :hash "-965054600"} {:id "defn-/event-world", :kind "defn-", :line 32, :end-line 33, :hash "-242776053"} {:id "defn-/assert-event!", :kind "defn-", :line 35, :end-line 37, :hash "-1013980911"} {:id "defn-/presentation-world", :kind "defn-", :line 39, :end-line 51, :hash "373451540"} {:id "defn-/handler-world", :kind "defn-", :line 53, :end-line 65, :hash "527272816"} {:id "defn-/conservation-world", :kind "defn-", :line 67, :end-line 81, :hash "-2131605105"} {:id "defn-/calibration-world", :kind "defn-", :line 83, :end-line 102, :hash "-1460220513"} {:id "defn/handlers", :kind "defn", :line 104, :end-line 277, :hash "-1909331037"}]}
+;; clj-mutate-manifest-end
