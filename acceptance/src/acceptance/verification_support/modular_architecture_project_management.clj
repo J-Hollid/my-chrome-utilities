@@ -45,13 +45,24 @@
                      {:features (:features pack) :handler handler})
     (assoc prepared :vtd004/handler-isolated? true)))
 
-(defn- history-plan-key [owner change historical-registry]
+(defn- project-history-plan-key [change historical-registry]
   (cond
     (not= historical-registry "readable and compatible") :unreadable
-    (= owner "durable_project_repository") (if (str/includes? change " to ") :renameController :delete)
     (str/includes? change "to src/data-layer-project-library.ts") :renamePersistence
     (str/includes? change " to ") :renamePresentation
     :else :delete))
+
+(defn- durable-history-plan-key [change historical-registry]
+  (cond
+    (not= historical-registry "readable and compatible") :unreadable
+    (str/includes? change " to ") :renameController
+    :else :delete))
+
+(defn- history-plan-key [owner change historical-registry]
+  ((if (= owner "durable_project_repository")
+     durable-history-plan-key
+     project-history-plan-key)
+   change historical-registry))
 
 (defn- history-scope [owner selected]
   (cond

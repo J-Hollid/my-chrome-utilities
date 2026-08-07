@@ -1,6 +1,18 @@
 import assert from "node:assert/strict";
 import {createSpecificationProject,transactProject} from "../dist/data-layer-specification-project.js";
 import {createMemoryDurableProjectRepository,durableDraftCommand} from "../dist/data-layer-durable-project-repository.js";
+import {durableStorageDiagnosticsDisplay} from "../dist/data-layer-durable-project-repository-presentation-ui.js";
+
+for(let index=0;index<200;index+=1){
+  const bytes=(index*7919)%250000,input={lastSavedAt:`saved:${index}`,publishedRevision:index,
+    unsavedCommand:index%3?`command:${index}`:undefined,projectEntityBytes:bytes,releaseBytes:bytes+1,
+    fixtureBytes:bytes+2,migrationBackupBytes:bytes+3,explanation:`explanation:${index}`,
+    ...(index%2?{browserEstimate:{usage:bytes+4,quota:bytes+1004,label:`estimate:${index}`}}:{})},
+    first=durableStorageDiagnosticsDisplay(input),second=durableStorageDiagnosticsDisplay(structuredClone(input));
+  assert.deepEqual(second,first,"diagnostic formatting is deterministic for supplied values");
+  assert.equal(first.lastSavedAt,input.lastSavedAt);assert.equal(first.publishedRevision,String(index));
+  assert.equal(first.explanation,input.explanation);assert.match(first.projectSize,bytes<1024?/^[0-9]+ B$/u:/^[0-9]+\.[0-9] KiB$/u);
+}
 
 let sequence=0;const repository=createMemoryDurableProjectRepository({token:()=>`property-token:${++sequence}`,now:()=>"2026-07-21T12:00:00.000Z"}),projects=[];
 for(let index=0;index<24;index+=1){const state=createSpecificationProject({name:`Project ${index}`,site:`project-${index}.example`,id:(kind)=>kind==="project"?`project:${index}`:`${kind}:${index}`});state.project.collections.pages.push({id:`page:${index}`,name:`Page ${index}`,literal:`page:${(index+1)%24}`});state.project.collections.fixtures.push({id:`fixture:${index}`,name:`Fixture ${index}`,payload:{body:String(index).repeat(2048)}});const publishedRevision=index%4;if(publishedRevision){const release={id:`release:${index}:${publishedRevision}`,name:`Release ${publishedRevision}`,revision:publishedRevision,createdAt:"2026-07-21T00:00:00.000Z",snapshot:structuredClone(state.project.collections)};state.project.releases.push(release);state.project.currentRelease=release.id;}projects.push(state);await repository.putProject(state,{draftSequence:index,publishedRevision,active:index===0});}
