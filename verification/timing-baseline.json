@@ -345,22 +345,13 @@
         ]
       },
       "capture": {
-        "limit": 9,
-        "baseline": 9,
+        "limit": 0,
+        "baseline": 0,
         "percentile": "selected-dependant-count",
         "tolerance": 1,
         "provisional": false,
         "selectedPacks": [
-          "capture",
-          "event-library",
-          "project_event_transport",
-          "schemas",
-          "defects",
-          "replay",
-          "live_flow_testing",
-          "project_assurance_severity",
-          "guided_test_cases",
-          "shell"
+          "capture"
         ]
       },
       "event-library": {
@@ -593,14 +584,14 @@
         "path": "src/hotkey-keymap.ts"
       },
       "capture": {
-        "limit": 235,
-        "baseline": 195.5,
+        "limit": 63,
+        "baseline": 51.9,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
         "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 606
+          "exact task samples": 159
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-live-inspector-presentation-ui.ts"

@@ -28,10 +28,13 @@
           (when (some #(re-matches % text) patterns) text))
         (parsed-steps feature)))
 
+(def ^:private parsed-consumer-audit-owner-ids
+  #{"capture" "event-library"})
+
 (defn loaded-cross-pack-step-consumers [packs]
   (vec
    (for [owner packs
-         :when (= "event-library" (:id owner))
+         :when (contains? parsed-consumer-audit-owner-ids (:id owner))
          handler (:isolatedVerificationHandlers owner)
          :let [patterns (mapv :pattern (namespace-handlers handler))]
          consumer packs

@@ -1363,7 +1363,10 @@ assert.deepEqual(exactEventPlan.observationTasks.flatMap(({logicalTargetIds}) =>
 assert.deepEqual(terminalIdentities(planVerification(packs,{terminalFull:true})),
   terminalIdentities(planVerification(eventLibraryBasePacks,{terminalFull:true})),
   "terminal planning conserves every Event Library task identity and ordering");
-const eventCalibration = vtd004CurrentCalibration.runnablePacks.find(({id}) => id === "event-library");
+const eventCompletedCalibration = JSON.parse(await exec("git", [
+  "show", "be319ad555:verification/performance-calibration.json",
+]));
+const eventCalibration = eventCompletedCalibration.runnablePacks.find(({id}) => id === "event-library");
 const eventBaseCalibration = eventLibraryBaseCalibration.runnablePacks.find(({id}) => id === "event-library");
 assert.deepEqual({representative:eventCalibration.representativeChangedPath,
   selectedPacks:eventCalibration.selectedPacks,fanOut:eventCalibration.changedPathFanOut.limit,
@@ -1371,11 +1374,11 @@ assert.deepEqual({representative:eventCalibration.representativeChangedPath,
     eventCalibration.changedPathDuration.limit]},
 {representative:eventReviewPresentationPaths[0],selectedPacks:["event-library"],fanOut:0,
   duration:[11.6,1.2,14]});
-const eventOtherCurrent = vtd004CurrentCalibration.runnablePacks.filter(({id}) => id !== "event-library");
+const eventOtherCurrent = eventCompletedCalibration.runnablePacks.filter(({id}) => id !== "event-library");
 const eventOtherBase = eventLibraryBaseCalibration.runnablePacks.filter(({id}) => id !== "event-library");
 assert.deepEqual(eventOtherCurrent,eventOtherBase);
-assert.deepEqual(vtd004CurrentCalibration.browserTargets,eventLibraryBaseCalibration.browserTargets);
-assert.deepEqual(calibrationProvenance(vtd004CurrentCalibration),calibrationProvenance(eventLibraryBaseCalibration));
+assert.deepEqual(eventCompletedCalibration.browserTargets,eventLibraryBaseCalibration.browserTargets);
+assert.deepEqual(calibrationProvenance(eventCompletedCalibration),calibrationProvenance(eventLibraryBaseCalibration));
 const eventInstalledSource = await readFile(
   new URL("../test/side-panel-component-layout-runtime-test.mjs", import.meta.url), "utf8");
 assert.match(eventInstalledSource,/renderers:\{push:pushRendered,revision:revisionRendered,revisionEmpty\}/u,
@@ -1396,8 +1399,176 @@ const vtd004EventAcceptance = {
     previous:eventBaseCalibration,exactPackCalibrationConserved:
       JSON.stringify(eventCalibration.exactPackDuration) === JSON.stringify(eventBaseCalibration.exactPackDuration),
     provenanceConserved:true,otherPackCount:eventOtherCurrent.length,
-    browserTargetCount:Object.keys(vtd004CurrentCalibration.browserTargets).length},
+    browserTargetCount:Object.keys(eventCompletedCalibration.browserTargets).length},
   presentationBoundary:{ownerOnly:true,callerSuppliedRoots:true,effectIsolated:true,
+    semanticIsolated:true,installedDirect:true,behaviorPreserved:true},
+};
+const capturePack = packs.find(({id}) => id === "capture");
+const captureBasePacks = JSON.parse(await exec("git", ["show", "be319ad555:verification/packs.json"]));
+const captureBaseCalibration = JSON.parse(await exec("git", [
+  "show", "be319ad555:verification/performance-calibration.json",
+]));
+const captureClosure = ["capture", "event-library", "project_event_transport", "schemas", "defects",
+  "replay", "live_flow_testing", "project_assurance_severity", "guided_test_cases", "shell"];
+const capturePresentationPaths = [
+  "src/data-layer-event-feed-query-ui.ts",
+  "src/data-layer-live-inspector-presentation-ui.ts",
+  "src/data-layer-live-inspector-return-ui.ts",
+  "src/data-layer-live-session-controls-ui.ts",
+  "src/data-layer-live-session-summary-ui.ts",
+  "src/data-layer-observation-targets-ui.ts",
+];
+const expectedCaptureBoundaries = [
+  ["capture_event_feed_semantic", "core or semantic", true],
+  ["capture_event_feed_presentation", "browser presentation", false],
+  ["capture_inspector_controller", "application controller", true],
+  ["capture_inspector_return_semantic", "core or semantic", true],
+  ["capture_inspector_local_presentation", "browser presentation", false],
+  ["capture_live_observer_semantic", "core or semantic", true],
+  ["capture_shared_live_presentation", "browser presentation", true],
+  ["capture_runtime_controllers", "application controller", true],
+  ["capture_live_session_semantic", "core or semantic", true],
+  ["capture_live_session_presentation", "browser presentation", false],
+  ["capture_observation_target_semantic", "core or semantic", true],
+  ["capture_observation_target_presentation", "browser presentation", false],
+  ["capture_shared_semantic_models", "core or semantic", true],
+  ["capture_persistence", "persistence migration", true],
+  ["capture_event_library_focus_presentation", "browser presentation", true],
+];
+assert.deepEqual(capturePack.impactBoundaries.map(({id,sourceClass,propagateDependants}) =>
+  [id,sourceClass,propagateDependants]), expectedCaptureBoundaries,
+"Capture source classes and propagation are explicit registry data");
+for (const changedPath of capturePresentationPaths) assert.deepEqual(
+  planVerification(packs,{changedPaths:[changedPath]}).packIds,["capture"],
+  `${changedPath} selects only complete Capture evidence`);
+const capturePropagatingPaths = capturePack.impactBoundaries
+  .filter(({propagateDependants}) => propagateDependants)
+  .flatMap(({prefixes}) => prefixes);
+for (const changedPath of capturePropagatingPaths) assert.deepEqual(
+  planVerification(packs,{changedPaths:[changedPath]}).packIds,captureClosure,
+  `${changedPath} retains the ten-pack dependant closure`);
+const captureIsolatedHandlers = [
+  "acceptance/src/acceptance/steps/cross_tab_reattachment.clj",
+  "acceptance/src/acceptance/steps/event_feed_query.clj",
+  "acceptance/src/acceptance/steps/live_event_presentation.clj",
+  "acceptance/src/acceptance/steps/lossless_observation_activation.clj",
+];
+assert.deepEqual(capturePack.isolatedVerificationHandlers,captureIsolatedHandlers);
+const captureHandlerEvidence = [];
+for (const handlerPath of captureIsolatedHandlers) {
+  const source = await readFile(new URL(`../${handlerPath}`, import.meta.url),"utf8");
+  const servedFeatures = [...source.matchAll(/"(features\/[A-Za-z0-9_./-]+\.feature)"/gu)]
+    .map((match) => match[1]);
+  assert.ok(servedFeatures.length > 0,`${handlerPath} names its owner-only served features`);
+  assert.deepEqual(planVerification(packs,{changedPaths:[handlerPath]}).packIds,["capture"]);
+  captureHandlerEvidence.push({path:handlerPath,servedFeatures,ownerPlan:["capture"],consumers:[]});
+}
+const captureLoadedStepDiagnostic = await captureRejection(() => validateIsolatedVerificationHandlers(packs,{
+  findLoadedStepConsumers:async() => [{handler:captureIsolatedHandlers[1],consumerPack:"schemas",
+    feature:"features/data-layer-schema-validation-workflow.feature",step:"a captured event is selected"}],
+}));
+assert.match(captureLoadedStepDiagnostic,/Loaded cross-pack step consumer blocks isolation.*schemas/u);
+const replayHandler = packs.find(({id}) => id === "replay").handlers[0];
+const captureNamespaceDiagnostic = await captureRejection(() => validateIsolatedVerificationHandlers(packs,{
+  readSource:async(handlerPath) => {
+    const source = await readFile(new URL(`../${handlerPath}`,import.meta.url),"utf8");
+    return handlerPath === replayHandler
+      ? `${source}\n[acceptance.steps.event-feed-query :refer [handlers]]\n` : source;
+  },
+}));
+assert.match(captureNamespaceDiagnostic,/Cross-pack handler consumer blocks isolation.*replay/u);
+const missingMetadataDiagnostic = await captureRejection(() => validateIsolatedVerificationHandlers(packs,{
+  readSource:async(handlerPath) => handlerPath === captureIsolatedHandlers[0] ? "(def handlers [])"
+    : readFile(new URL(`../${handlerPath}`,import.meta.url),"utf8"),
+}));
+assert.match(missingMetadataDiagnostic,/Owner-only served features are required/u);
+const unreadableAuditDiagnostic = await captureRejection(() => validateIsolatedVerificationHandlers(packs,{
+  findLoadedStepConsumers:async() => { throw new Error("unreadable parsed consumer evidence"); },
+}));
+assert.match(unreadableAuditDiagnostic,/Isolation audit fails closed/u);
+const nonIsolatedCapturePacks = replacePack(packs,"capture",() => ({isolatedVerificationHandlers:[]}));
+const rejectedCaptureHandlerPlan = planVerification(nonIsolatedCapturePacks,{
+  changedPaths:[captureIsolatedHandlers[1]],
+}).packIds;
+assert.deepEqual(rejectedCaptureHandlerPlan,captureClosure);
+const captureHistoryChange = (entry) => syntheticChangeSet([entry]);
+const deletedCapturePresentation = captureHistoryChange({status:"D",path:capturePresentationPaths[1]});
+const renameCapturePresentation = (newPath) => captureHistoryChange({status:"R",score:100,
+  oldPath:capturePresentationPaths[1],newPath});
+const captureHistoryPlans = {
+  delete:planVerification(packs,{changedPaths:deletedCapturePresentation.paths,
+    changeSet:deletedCapturePresentation,basePacks:packs}).packIds,
+  renamePresentation:planVerification(packs,{changedPaths:renameCapturePresentation(
+    capturePresentationPaths[2]).paths,changeSet:renameCapturePresentation(capturePresentationPaths[2]),
+    basePacks:packs}).packIds,
+  renameSharedPresentation:planVerification(packs,{changedPaths:renameCapturePresentation(
+    "src/data-layer-live-observer-ui.ts").paths,changeSet:renameCapturePresentation(
+    "src/data-layer-live-observer-ui.ts"),basePacks:packs}).packIds,
+  renameSemantic:planVerification(packs,{changedPaths:renameCapturePresentation(
+    "src/data-layer-live-observer.ts").paths,changeSet:renameCapturePresentation(
+    "src/data-layer-live-observer.ts"),basePacks:packs}).packIds,
+  renamePersistence:planVerification(packs,{changedPaths:renameCapturePresentation(
+    "src/data-layer-saved-sessions.ts").paths,changeSet:renameCapturePresentation(
+    "src/data-layer-saved-sessions.ts"),basePacks:packs}).packIds,
+  renameLibraryFocus:planVerification(packs,{changedPaths:renameCapturePresentation(
+    "src/data-layer-workflow-focus-ui.ts").paths,changeSet:renameCapturePresentation(
+    "src/data-layer-workflow-focus-ui.ts"),basePacks:packs}).packIds,
+  unreadable:planVerification(packs,{changedPaths:deletedCapturePresentation.paths,
+    changeSet:deletedCapturePresentation,basePacks:packs,historicalRegistryFallback:true}).packIds,
+};
+assert.deepEqual(captureHistoryPlans.delete,["capture"]);
+assert.deepEqual(captureHistoryPlans.renamePresentation,["capture"]);
+for (const key of ["renameSharedPresentation","renameSemantic","renamePersistence","renameLibraryFocus"])
+  assert.deepEqual(captureHistoryPlans[key],captureClosure);
+assert.deepEqual(captureHistoryPlans.unreadable,planVerification(packs,{terminalFull:true}).packIds);
+const captureEvidenceProfile = Object.fromEntries(exactEvidenceKeys.map((key) => [key,capturePack[key]]));
+const captureBasePack = captureBasePacks.find(({id}) => id === "capture");
+assert.deepEqual(captureEvidenceProfile,
+  Object.fromEntries(exactEvidenceKeys.map((key) => [key,captureBasePack[key]])),
+  "all Capture owner evidence identities remain conserved");
+const exactCapturePlan = planVerification(packs,{packIds:["capture"],includeProperties:true});
+assert.equal(exactCapturePlan.tasks.length,171);
+assert.deepEqual([exactCapturePlan.unitTasks.length,exactCapturePlan.propertyTasks.length,
+  exactCapturePlan.parserTasks.length,capturePack.handlers.length,capturePack.browserAdapters.length,
+  exactCapturePlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).length,
+  exactCapturePlan.checkpointTasks.length],[21,12,66,25,1,5,2]);
+assert.deepEqual(terminalIdentities(planVerification(packs,{terminalFull:true})),
+  terminalIdentities(planVerification(captureBasePacks,{terminalFull:true})),
+  "terminal planning conserves every Capture task identity and ordering");
+const captureCalibration = vtd004CurrentCalibration.runnablePacks.find(({id}) => id === "capture");
+const capturePreviousCalibration = captureBaseCalibration.runnablePacks.find(({id}) => id === "capture");
+assert.deepEqual({selectedPacks:captureCalibration.selectedPacks,
+  fanOut:captureCalibration.changedPathFanOut.limit,
+  duration:[captureCalibration.changedPathDuration.baseline,captureCalibration.changedPathDuration.tolerance,
+    captureCalibration.changedPathDuration.limit]},
+{selectedPacks:["capture"],fanOut:0,duration:[51.9,1.2,63]});
+const captureOtherCurrent = vtd004CurrentCalibration.runnablePacks.filter(({id}) => id !== "capture");
+const captureOtherBase = captureBaseCalibration.runnablePacks.filter(({id}) => id !== "capture");
+assert.deepEqual(captureOtherCurrent,captureOtherBase);
+assert.deepEqual(vtd004CurrentCalibration.browserTargets,captureBaseCalibration.browserTargets);
+assert.deepEqual(calibrationProvenance(vtd004CurrentCalibration),calibrationProvenance(captureBaseCalibration));
+const captureInstalledSource = await readFile(
+  new URL("../test/side-panel-component-layout-runtime-test.mjs",import.meta.url),"utf8");
+assert.match(captureInstalledSource,/inspectorPresentation:\{captured,restored\}/u,
+  "the installed Capture observation directly captures and restores inspector presentation");
+const vtd004CaptureAcceptance = {
+  currentPlans:Object.fromEntries([...capturePresentationPaths,...capturePropagatingPaths]
+    .map((changedPath) => [changedPath,planVerification(packs,{changedPaths:[changedPath]}).packIds])),
+  historyPlans:captureHistoryPlans,
+  handlers:captureHandlerEvidence,
+  isolationAudit:{captureLoadedStepDiagnostic,captureNamespaceDiagnostic,missingMetadataDiagnostic,
+    unreadableAuditDiagnostic,rejectedCaptureHandlerPlan,metadataCannotConceal:true},
+  conservation:{evidenceProfile:captureEvidenceProfile,exactTaskCount:exactCapturePlan.tasks.length,
+    unitCount:21,propertyCount:12,featureCount:66,handlerCount:25,adapterCount:1,targetCount:5,
+    checkpointCount:2,terminalTaskIdentitiesConserved:true,packageCheckCount:1,
+    directInspectorPresentation:true},
+  calibration:{current:captureCalibration,previous:capturePreviousCalibration,
+    otherPackRowsConserved:true,browserTargetRowsConserved:true,exactPackCalibrationConserved:
+      JSON.stringify(captureCalibration.exactPackDuration) === JSON.stringify(
+        capturePreviousCalibration.exactPackDuration),provenanceConserved:true,
+    otherPackCount:captureOtherCurrent.length,
+    browserTargetCount:Object.keys(vtd004CurrentCalibration.browserTargets).length},
+  presentationBoundary:{ownerOnly:true,suppliedValues:true,effectIsolated:true,
     semanticIsolated:true,installedDirect:true,behaviorPreserved:true},
 };
 await assert.rejects(() => validateVerificationPacks(replacePack(packs, "shell", (pack) => ({
@@ -4156,5 +4327,6 @@ for (const source of [handoffSource, handoffLibrarySource]) {
     "handoff callers must not retain the legacy unbounded directory lock");
 }
 
-console.log(JSON.stringify({vtd004Acceptance,vtd004DurableAcceptance,vtd004EventAcceptance}));
+console.log(JSON.stringify({vtd004Acceptance,vtd004DurableAcceptance,vtd004EventAcceptance,
+  vtd004CaptureAcceptance}));
 console.log("verification process contract tests passed");

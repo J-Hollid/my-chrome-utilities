@@ -246,16 +246,7 @@
       "id": "capture",
       "representativeChangedPath": "src/data-layer-live-inspector-presentation-ui.ts",
       "selectedPacks": [
-        "capture",
-        "event-library",
-        "project_event_transport",
-        "schemas",
-        "defects",
-        "replay",
-        "live_flow_testing",
-        "project_assurance_severity",
-        "guided_test_cases",
-        "shell"
+        "capture"
       ],
       "exactPackDuration": {
         "limit": 63,
@@ -270,35 +261,26 @@
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 235,
-        "baseline": 195.5,
+        "limit": 63,
+        "baseline": 51.9,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
         "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 606
+          "exact task samples": 159
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-live-inspector-presentation-ui.ts"
       },
       "changedPathFanOut": {
-        "limit": 9,
-        "baseline": 9,
+        "limit": 0,
+        "baseline": 0,
         "percentile": "selected-dependant-count",
         "tolerance": 1,
         "provisional": false,
         "selectedPacks": [
-          "capture",
-          "event-library",
-          "project_event_transport",
-          "schemas",
-          "defects",
-          "replay",
-          "live_flow_testing",
-          "project_assurance_severity",
-          "guided_test_cases",
-          "shell"
+          "capture"
         ]
       }
     },
@@ -2104,7 +2086,7 @@
     }
   },
   "conservation": {
-    "verificationTopologyDigest": "7a60927e63fc77533b63d8912acc5211084663685dd484a39012710b23d0d092",
+    "verificationTopologyDigest": "0c9097ad3892df683ae1c6442404efe9e056a2ea700eae01735757143352ff08",
     "referenceTopologyDigest": "082c3858fd748766baaac36e408b27d66af9978ad9ab64039db6160f0a5530cc",
     "runnablePackCount": 20,
     "browserTargetCount": 81,

@@ -358,7 +358,15 @@ export async function validateIsolatedVerificationHandlers(
     findLoadedStepConsumers = loadedCrossPackStepConsumers,
   } = {},
 ) {
-  const loadedStepConsumers = await findLoadedStepConsumers(packs);
+  let loadedStepConsumers;
+  try {
+    loadedStepConsumers = await findLoadedStepConsumers(packs);
+  } catch (error) {
+    throw new Error(`Isolation audit fails closed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  if (!Array.isArray(loadedStepConsumers)) {
+    throw new Error("Isolation audit fails closed: parsed consumer evidence is invalid");
+  }
   for (const pack of packs) {
     const isolated = values(pack, "isolatedVerificationHandlers");
     if (new Set(isolated).size !== isolated.length ||
@@ -379,7 +387,9 @@ export async function validateIsolatedVerificationHandlers(
       const ownerFeatures = new Set(values(pack, "features"));
       if (servedFeatures.length === 0 || new Set(servedFeatures).size !== servedFeatures.length ||
           servedFeatures.some((feature) => !ownerFeatures.has(feature))) {
-        throw new Error(`Isolated handler ${handler} must serve only named features owned by ${pack.id}`);
+        throw new Error(
+          `Owner-only served features are required for isolated handler ${handler} in ${pack.id}`,
+        );
       }
       const namespace = handler.replace(/^acceptance\/src\//u, "").replace(/\.clj$/u, "")
         .replaceAll("/", ".").replaceAll("_", "-");
