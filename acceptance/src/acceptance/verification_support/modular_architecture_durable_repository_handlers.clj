@@ -108,3 +108,7 @@
                                        (= 81 (:browserTargetCount evidence)))
                                   "Durable calibration changed conserved rows." {}))
                world)}])
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-08-07T02:58:07.271009462+02:00", :module-hash "-1820642288", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1815584161"} {:id "defn-/durable-world", :kind "defn-", :line 5, :end-line 6, :hash "-1004597096"} {:id "defn-/assert-presentation!", :kind "defn-", :line 8, :end-line 10, :hash "1863728501"} {:id "defn/handlers", :kind "defn", :line 12, :end-line 110, :hash "-1684625995"}]}
+;; clj-mutate-manifest-end
