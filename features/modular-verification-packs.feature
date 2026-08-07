@@ -747,3 +747,147 @@ Feature: Modular verification packs
       | cross_pack_consumer                                                     | diagnostic                                       |
       | a pattern matching a project_event_transport feature step               | Loaded cross-pack step consumer blocks isolation |
       | a namespace require from the project_event_transport acceptance handler | Cross-pack handler consumer blocks isolation     |
+
+  # Modular verification packs 061
+  Scenario Outline: Modular verification packs 061
+    Given the current Capture dependant closure is capture, event-library, project_event_transport, schemas, defects, replay, live_flow_testing, project_assurance_severity, guided_test_cases, shell
+    When Capture changed path <changed_path> is classified
+    Then it belongs to exactly boundary <boundary>
+    And its source class is <source_class>
+    And selected scope is <selected_scope>
+
+    Examples:
+      | changed_path                                           | boundary                                         | source_class            | selected_scope            |
+      | src/data-layer-event-feed-query-ui.ts                  | capture_event_feed_presentation                  | browser presentation    | capture only              |
+      | src/data-layer-event-feed-query.ts                     | capture_event_feed_semantic                      | core or semantic        | ten-pack dependant closure |
+      | src/data-layer-event-feed-summaries.ts                 | capture_event_feed_semantic                      | core or semantic        | ten-pack dependant closure |
+      | src/data-layer-event-presentation.ts                   | capture_event_feed_semantic                      | core or semantic        | ten-pack dependant closure |
+      | src/data-layer-fresh-session.ts                        | capture_runtime_controllers                      | application controller  | ten-pack dependant closure |
+      | src/data-layer-live-inspector-actions.ts               | capture_inspector_controller                     | application controller  | ten-pack dependant closure |
+      | src/data-layer-live-inspector-presentation-ui.ts       | capture_inspector_local_presentation             | browser presentation    | capture only              |
+      | src/data-layer-live-inspector-return-ui.ts             | capture_inspector_local_presentation             | browser presentation    | capture only              |
+      | src/data-layer-live-inspector-return.ts                | capture_inspector_return_semantic                | core or semantic        | ten-pack dependant closure |
+      | src/data-layer-live-notifications.ts                   | capture_runtime_controllers                      | application controller  | ten-pack dependant closure |
+      | src/data-layer-live-observation.ts                     | capture_runtime_controllers                      | application controller  | ten-pack dependant closure |
+      | src/data-layer-live-observer-ui.ts                     | capture_shared_live_presentation                 | browser presentation    | ten-pack dependant closure |
+      | src/data-layer-live-observer.ts                        | capture_live_observer_semantic                   | core or semantic        | ten-pack dependant closure |
+      | src/data-layer-live-responsive-layout.ts               | capture_shared_live_presentation                 | browser presentation    | ten-pack dependant closure |
+      | src/data-layer-live-session-controls-ui.ts             | capture_live_session_presentation                | browser presentation    | capture only              |
+      | src/data-layer-live-session-controls.ts                | capture_live_session_semantic                    | core or semantic        | ten-pack dependant closure |
+      | src/data-layer-live-session-end.ts                     | capture_runtime_controllers                      | application controller  | ten-pack dependant closure |
+      | src/data-layer-live-session-summary-actions.ts         | capture_runtime_controllers                      | application controller  | ten-pack dependant closure |
+      | src/data-layer-live-session-summary-ui.ts              | capture_live_session_presentation                | browser presentation    | capture only              |
+      | src/data-layer-live-session-summary.ts                 | capture_live_session_semantic                    | core or semantic        | ten-pack dependant closure |
+      | src/data-layer-observability.ts                        | capture_shared_semantic_models                   | core or semantic        | ten-pack dependant closure |
+      | src/data-layer-observation-activation.ts               | capture_observation_target_semantic              | core or semantic        | ten-pack dependant closure |
+      | src/data-layer-observation-refresh.ts                  | capture_runtime_controllers                      | application controller  | ten-pack dependant closure |
+      | src/data-layer-observation-targets-ui.ts               | capture_observation_target_presentation          | browser presentation    | capture only              |
+      | src/data-layer-observation-targets.ts                  | capture_observation_target_semantic              | core or semantic        | ten-pack dependant closure |
+      | src/data-layer-observer.ts                             | capture_runtime_controllers                      | application controller  | ten-pack dependant closure |
+      | src/data-layer-recovery.ts                             | capture_runtime_controllers                      | application controller  | ten-pack dependant closure |
+      | src/data-layer-recursive-property-tree.ts              | capture_shared_semantic_models                   | core or semantic        | ten-pack dependant closure |
+      | src/data-layer-saved-event-feed-filters.ts             | capture_persistence                              | persistence migration   | ten-pack dependant closure |
+      | src/data-layer-saved-session-live-feed.ts              | capture_persistence                              | persistence migration   | ten-pack dependant closure |
+      | src/data-layer-saved-sessions.ts                       | capture_persistence                              | persistence migration   | ten-pack dependant closure |
+      | src/data-layer-session-start.ts                        | capture_runtime_controllers                      | application controller  | ten-pack dependant closure |
+      | src/data-layer-session.ts                              | capture_persistence                              | persistence migration   | ten-pack dependant closure |
+      | src/data-layer-source.ts                               | capture_shared_semantic_models                   | core or semantic        | ten-pack dependant closure |
+      | src/data-layer-target-path-status.ts                   | capture_runtime_controllers                      | application controller  | ten-pack dependant closure |
+      | src/data-layer-target-recovery.ts                      | capture_runtime_controllers                      | application controller  | ten-pack dependant closure |
+      | src/data-layer-timeline.ts                             | capture_shared_semantic_models                   | core or semantic        | ten-pack dependant closure |
+      | src/data-layer-workflow-focus-ui.ts                    | capture_event_library_focus_presentation         | browser presentation    | ten-pack dependant closure |
+      | src/data-layer.ts                                      | capture_persistence                              | persistence migration   | ten-pack dependant closure |
+
+  # Modular verification packs 062
+  Scenario: Modular verification packs 062
+    Given the six Capture local-presentation files receive already-computed values or snapshots
+    When their non-propagating boundaries are installed
+    Then they may render supplied values, inspect their own DOM hosts, restore supplied expansion, scroll, and focus state, manage target-picker focus, and call supplied callbacks
+    But they cannot observe a page, read or write storage, choose target access, derive query or session state, validate an event, perform a Capture or Library operation, or create a second live-state projection
+    And existing unit evidence directly asserts query, session-control, session-summary, and target-picker presentation
+    And an existing Capture browser observation directly asserts inspector return and newly asserts inspector presentation capture and restore without another browser process or plan task
+    And labels, counts, statuses, hidden and disabled states, query order, empty-state wording, target-dialog keyboard behavior, accessibility, responsive layout, stored state, and operator results are unchanged
+
+  # Modular verification packs 063
+  Scenario Outline: Modular verification packs 063
+    Given Capture handler <handler> has <consumer_evidence>
+    When acceptance-handler isolation is audited from parsed APS steps and namespace consumers
+    Then isolation decision is <expected_decision>
+    And a handler-only change selects <selected_scope>
+
+    Examples:
+      | handler                             | consumer_evidence                                            | expected_decision       | selected_scope            |
+      | cross_tab_reattachment.clj          | only named Capture-owned steps                               | isolated                | capture only              |
+      | event_feed_query.clj                | only named Capture-owned steps                               | isolated                | capture only              |
+      | live_event_presentation.clj         | only named Capture-owned steps                               | isolated                | capture only              |
+      | lossless_observation_activation.clj | only named Capture-owned steps                               | isolated                | capture only              |
+      | fresh_live_session.clj              | matching steps in defects and schemas                        | dependant propagation   | ten-pack dependant closure |
+      | live_observer.clj                   | matching steps in schemas and shell                          | dependant propagation   | ten-pack dependant closure |
+      | live_observer_workspace.clj         | matching steps in schemas and shell                          | dependant propagation   | ten-pack dependant closure |
+      | observation_targets.clj             | matching steps in replay and schemas                         | dependant propagation   | ten-pack dependant closure |
+      | saved_event_feed_filters.clj        | matching steps in schemas                                    | dependant propagation   | ten-pack dependant closure |
+      | saved_session_live_feed.clj         | matching steps in event-library, replay, schemas, and shell  | dependant propagation   | ten-pack dependant closure |
+      | saved_sessions.clj                  | matching steps in replay                                     | dependant propagation   | ten-pack dependant closure |
+      | data_layer.clj                      | shared support or incomplete owner-only feature declaration  | dependant propagation   | ten-pack dependant closure |
+      | data_layer_observer.clj             | shared support or incomplete owner-only feature declaration  | dependant propagation   | ten-pack dependant closure |
+      | data_layer_page_context.clj         | shared support or incomplete owner-only feature declaration  | dependant propagation   | ten-pack dependant closure |
+      | data_layer_recovery.clj             | shared support or incomplete owner-only feature declaration  | dependant propagation   | ten-pack dependant closure |
+      | data_layer_session.clj              | shared support or incomplete owner-only feature declaration  | dependant propagation   | ten-pack dependant closure |
+      | live_observer_timeline.clj          | shared support or incomplete owner-only feature declaration  | dependant propagation   | ten-pack dependant closure |
+      | data_layer_timeline.clj             | shared support or incomplete owner-only feature declaration  | dependant propagation   | ten-pack dependant closure |
+      | event_library_editor_support.clj    | shared support or incomplete owner-only feature declaration  | dependant propagation   | ten-pack dependant closure |
+      | event_property_editor.clj           | shared support or incomplete owner-only feature declaration  | dependant propagation   | ten-pack dependant closure |
+      | live_event_presentation_support.clj | shared support or incomplete owner-only feature declaration  | dependant propagation   | ten-pack dependant closure |
+      | live_observer_support.clj           | shared support or incomplete owner-only feature declaration  | dependant propagation   | ten-pack dependant closure |
+      | observability_library.clj           | shared support or incomplete owner-only feature declaration  | dependant propagation   | ten-pack dependant closure |
+      | observation_targets_support.clj     | shared support or incomplete owner-only feature declaration  | dependant propagation   | ten-pack dependant closure |
+      | session_boundaries.clj              | shared support or incomplete owner-only feature declaration  | dependant propagation   | ten-pack dependant closure |
+
+  # Modular verification packs 064
+  Scenario Outline: Modular verification packs 064
+    Given an isolated Capture handler gains <cross_pack_consumer>
+    When isolation validation scans every session that loads the handler
+    Then isolation is rejected with <diagnostic>
+    And the handler-only change retains the ten-pack dependant closure
+    And a self-declared feature list cannot conceal the cross-pack consumer
+
+    Examples:
+      | cross_pack_consumer                                        | diagnostic                                       |
+      | a pattern matching a schema feature step                   | Loaded cross-pack step consumer blocks isolation |
+      | a namespace require from a replay acceptance handler       | Cross-pack handler consumer blocks isolation     |
+      | missing or foreign named served-feature metadata           | Owner-only served features are required          |
+      | unreadable parsed consumer evidence                        | Isolation audit fails closed                     |
+
+  # Modular verification packs 065
+  Scenario Outline: Modular verification packs 065
+    Given Capture change is <change>
+    And historical registry state is <historical_registry>
+    When impacted verification packs are selected from current and historical ownership
+    Then selected scope is <selected_scope>
+
+    Examples:
+      | change                                                                                                        | historical_registry                             | selected_scope            |
+      | delete src/data-layer-live-inspector-presentation-ui.ts                                                       | readable and compatible                         | capture only              |
+      | rename src/data-layer-live-inspector-presentation-ui.ts to src/data-layer-live-inspector-return-ui.ts        | readable and compatible                         | capture only              |
+      | rename src/data-layer-live-inspector-presentation-ui.ts to src/data-layer-live-observer-ui.ts                | readable and compatible                         | ten-pack dependant closure |
+      | rename src/data-layer-live-inspector-presentation-ui.ts to src/data-layer-live-observer.ts                   | readable and compatible                         | ten-pack dependant closure |
+      | rename src/data-layer-live-inspector-presentation-ui.ts to src/data-layer-saved-sessions.ts                  | readable and compatible                         | ten-pack dependant closure |
+      | rename src/data-layer-live-inspector-presentation-ui.ts to src/data-layer-workflow-focus-ui.ts               | readable and compatible                         | ten-pack dependant closure |
+      | delete src/data-layer-live-inspector-presentation-ui.ts                                                       | missing, unreadable, incompatible, or malformed | every runnable pack       |
+
+  # Modular verification packs 066
+  Scenario: Modular verification packs 066
+    Given every Capture boundary maps to the complete owner evidence profile
+    When exact capture verification and terminal-full planning are compared before and after VTD-004
+    Then all 21 unit files, 12 property files, 66 feature files, 25 handlers, one shared browser adapter, five registered browser targets, and two runtime checkpoints execute once in the 171-task exact owner plan
+    And the existing Capture browser batch gains direct inspector-presentation capture-and-restore proof without another browser process or plan task
+    And terminal-full planning executes every conserved assertion leaf, checkpoint, and package check exactly once
+    And browser batching, task order, worker limits, terminal shards, capture behavior, stored bytes, visible output, accessibility, and operator results are unchanged
+
+  # Modular verification packs 067
+  Scenario: Modular verification packs 067
+    Given src/data-layer-live-inspector-presentation-ui.ts currently selects ten packs with dependant fan-out 9, critical-path baseline 195.5 seconds, and limit 235 seconds
+    When its proven local-presentation boundary becomes the Capture representative from the accepted VTD-003 receipt scope
+    Then it selects only capture with dependant fan-out 0
+    And its critical-path baseline is 51.9 seconds with tolerance 1.2 and limit 63 seconds
+    And the other 19 pack calibrations, the Capture exact-pack calibration, and all 81 browser-target budgets are unchanged

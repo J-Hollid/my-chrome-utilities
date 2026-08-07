@@ -2265,12 +2265,11 @@ outcome. After the boundary is installed, the exact presentation path selects on
 pack closure. The broad checkpoint is task-owned by the unavoidable global architecture-
 ledger change and does not make future recovery-screen changes global.
 
-## Verification throughput program — candidate slice VTD-004 Event Library review presentation (2026-08-07)
+## Verification throughput program — completed slice VTD-004 Event Library review presentation (2026-08-07)
 
-This is the only candidate specification slice. It covers the `event-library` pack
-only and grants no implementation authority until the user explicitly approves the
-bounded coder handoff. The remaining `capture` and `schemas` VTD-004 pack slices and
-VTD-005 through VTD-012 remain inactive.
+This completed slice covers the `event-library` pack only and merged at
+`b54e02866f9e0c76b6fa95873ea2b6f459da3aa5`. The remaining `capture` and `schemas`
+VTD-004 pack slices and VTD-005 through VTD-012 remain inactive.
 
 ### Plain-language outcome
 
@@ -2406,3 +2405,168 @@ all 20 runnable packs in canonical order, followed by `node scripts/package.mjs`
 This broad delivery checkpoint does not make future review-renderer changes global;
 after installation, either exact review-presentation path selects only
 `event-library`.
+
+## Verification throughput program — candidate slice VTD-004 Capture local presentation (2026-08-07)
+
+This is the only candidate specification slice. It covers the `capture` pack only
+and grants no implementation authority until the user explicitly approves the
+bounded coder handoff. The remaining `schemas` VTD-004 pack slice and VTD-005 through
+VTD-012 remain inactive.
+
+### Plain-language outcome
+
+Today a change to the representative Capture display helper pulls ten packs into the
+plan. The calibrated model is about 195.5 seconds, or three minutes and sixteen
+seconds. The complete `capture` pack itself models at about 51.9 seconds. This package
+makes changes confined to six small screen helpers run the Capture checks without the
+nine unrelated dependant packs. The representative guardrail becomes 63 seconds
+instead of 235 seconds, saving about two minutes and twenty-four seconds per focused
+change.
+
+The short route applies only to code that displays already-supplied values or restores
+already-recorded screen state: the event-feed query controls, inspector presentation
+and return state, live-session buttons and summary, and the observation-target picker.
+It does not apply to capturing events, choosing what events match, starting or ending a
+session, saving or restoring data, reconnecting to a page, validating a target,
+rendering the shared live inspector, or managing Event Library review focus. Those
+changes still run the current ten-pack safety net.
+
+Four acceptance handlers also qualify for the shorter owner check because their real
+loaded steps belong only to Capture. The other 21 do not qualify: seven are genuinely
+used by other packs, and 14 are shared support or lack a complete owner-only feature
+declaration. This avoids turning a faster feedback loop into a cross-package blind
+spot.
+
+### Capture impact boundaries
+
+Every one of the 39 source files currently owned by `capture` belongs to exactly one
+boundary below. A file cannot match two boundaries, and a newly owned path is a
+validation error until it is classified.
+
+| Boundary | Exact source paths | Class | Propagate dependants | Reason |
+|---|---|---|---|---|
+| `capture_event_feed_semantic` | `src/data-layer-event-feed-query.ts`, `src/data-layer-event-feed-summaries.ts`, `src/data-layer-event-presentation.ts` | core or semantic | yes | Chooses matches, summaries, normalized captured events, subscriptions, and public feed values. |
+| `capture_event_feed_presentation` | `src/data-layer-event-feed-query-ui.ts` | browser presentation | no | Renders supplied query state and returns an edited query through a callback. |
+| `capture_inspector_controller` | `src/data-layer-live-inspector-actions.ts` | application controller | yes | Chooses and invokes validation, schema, defect, continuation, Library, and replay actions. |
+| `capture_inspector_return_semantic` | `src/data-layer-live-inspector-return.ts` | core or semantic | yes | Defines the reusable event identity and scroll snapshot. |
+| `capture_inspector_local_presentation` | `src/data-layer-live-inspector-presentation-ui.ts`, `src/data-layer-live-inspector-return-ui.ts` | browser presentation | no | Captures or restores supplied DOM expansion, scroll, and focus state without changing the session. |
+| `capture_live_observer_semantic` | `src/data-layer-live-observer.ts` | core or semantic | yes | Defines live state, captured events, selection, filters, and public results used across the product. |
+| `capture_shared_live_presentation` | `src/data-layer-live-observer-ui.ts`, `src/data-layer-live-responsive-layout.ts` | browser presentation | yes | The shared live inspector and its layout are exercised by schema, defect, and shell workflows. |
+| `capture_runtime_controllers` | `src/data-layer-fresh-session.ts`, `src/data-layer-live-notifications.ts`, `src/data-layer-live-observation.ts`, `src/data-layer-live-session-end.ts`, `src/data-layer-live-session-summary-actions.ts`, `src/data-layer-observation-refresh.ts`, `src/data-layer-observer.ts`, `src/data-layer-recovery.ts`, `src/data-layer-session-start.ts`, `src/data-layer-target-path-status.ts`, `src/data-layer-target-recovery.ts` | application controller | yes | Starts, ends, reconnects, observes, retries, copies, announces, and coordinates page-facing effects. |
+| `capture_live_session_semantic` | `src/data-layer-live-session-controls.ts`, `src/data-layer-live-session-summary.ts` | core or semantic | yes | Chooses the session actions and status values shown to operators. |
+| `capture_live_session_presentation` | `src/data-layer-live-session-controls-ui.ts`, `src/data-layer-live-session-summary-ui.ts` | browser presentation | no | Displays supplied action availability and summary fields without starting, ending, or saving a session. |
+| `capture_observation_target_semantic` | `src/data-layer-observation-activation.ts`, `src/data-layer-observation-targets.ts` | core or semantic | yes | Defines target identity, access, selection, attachment, activation, and stale-request rules. |
+| `capture_observation_target_presentation` | `src/data-layer-observation-targets-ui.ts` | browser presentation | no | Displays supplied target rows and manages the picker DOM and focus while callbacks retain target effects. |
+| `capture_shared_semantic_models` | `src/data-layer-observability.ts`, `src/data-layer-recursive-property-tree.ts`, `src/data-layer-source.ts`, `src/data-layer-timeline.ts` | core or semantic | yes | Defines templates, sources, recursive property interpretation, and timeline values consumed beyond a single screen. |
+| `capture_persistence` | `src/data-layer-saved-event-feed-filters.ts`, `src/data-layer-saved-session-live-feed.ts`, `src/data-layer-saved-sessions.ts`, `src/data-layer-session.ts`, `src/data-layer.ts` | persistence migration | yes | Defines stored bytes, restoration, import/export, saved sessions and filters, and the configured history path. |
+| `capture_event_library_focus_presentation` | `src/data-layer-workflow-focus-ui.ts` | browser presentation | yes | Event Library push-review dialogs consume this exact focus behavior, so it is a deliberate UI exception. |
+
+The six non-propagating files are information-hiding boundaries, not new state
+models. They may inspect their supplied DOM hosts, render supplied values, restore a
+supplied snapshot, manage focus within their own dialog, and call supplied callbacks.
+They cannot observe a page, read or write storage, choose target access, derive session
+or query state, validate an event, create a second live-state projection, or perform a
+Capture or Library operation.
+
+The extraction preserves current labels, counts, status attributes, enabled/disabled
+and hidden states, query ordering, empty-state wording, inspector expansion, scroll and
+focus return, target-dialog keyboard behavior, accessibility, responsive layout, and
+installed browser results. Captured events, selected targets, session state, stored
+bytes, active filters, and validation results do not change.
+
+All eleven propagating boundaries retain this exact current selection in registry order:
+`capture,event-library,project_event_transport,schemas,defects,replay,live_flow_testing,project_assurance_severity,guided_test_cases,shell`.
+Any of the six exact local-presentation files selects only `capture`.
+
+### Exact evidence mapping
+
+Every boundary maps to the complete `capture` evidence profile; VTD-004 narrows
+dependant-pack selection, not evidence within its owner. The profile is:
+
+| Evidence class | Exact paths or count |
+|---|---|
+| Unit | All 21 registered Capture unit files |
+| Property | All 12 registered Capture property files |
+| Feature | All 66 registered Capture feature files |
+| Handler | All 25 registered Capture acceptance handlers |
+| Installed browser evidence | `test/browser-packs/capture.mjs`; all five registered targets in the existing `capture-side-panel` batch |
+| Checkpoint | `acceptance/runtime/cross-tab-reattachment.mjs`, `acceptance/runtime/lossless-observation-activation.mjs` |
+| Exact plan | 171 tasks: one build, 21 unit, 12 property, one shared browser adapter, one five-target browser batch, 66 parses, 66 generators, one Capture acceptance session, and two checkpoints |
+
+Existing unit evidence directly asserts the event-feed query, live-session control,
+live-session summary, and observation-target presentation helpers. The installed
+Capture browser batch directly asserts the event-feed query and inspector return UI.
+Before `src/data-layer-live-inspector-presentation-ui.ts` becomes non-propagating, an
+existing registered Capture observation must add a direct capture-and-restore assertion
+for its supplied expansion, scroll, and focus snapshot. That assertion stays inside the
+current batch and must not add a browser process or plan task.
+
+Handler isolation is decided per exact handler from real APS consumers. These four
+handlers serve named Capture-owned features, have no matching step in another loaded
+pack, and have no cross-pack namespace consumer, so they may be declared isolated:
+
+- `acceptance/src/acceptance/steps/cross_tab_reattachment.clj`
+- `acceptance/src/acceptance/steps/event_feed_query.clj`
+- `acceptance/src/acceptance/steps/live_event_presentation.clj`
+- `acceptance/src/acceptance/steps/lossless_observation_activation.clj`
+
+Seven handlers have actual loaded consumers outside Capture and remain propagating:
+`fresh_live_session.clj`, `live_observer.clj`, `live_observer_workspace.clj`,
+`observation_targets.clj`, `saved_event_feed_filters.clj`,
+`saved_session_live_feed.clj`, and `saved_sessions.clj`.
+
+The other 14 handlers also remain propagating in this slice because they are support
+composition or do not completely name owner-only served features: `data_layer.clj`,
+`data_layer_observer.clj`, `data_layer_page_context.clj`, `data_layer_recovery.clj`,
+`data_layer_session.clj`, `live_observer_timeline.clj`, `data_layer_timeline.clj`,
+`event_library_editor_support.clj`, `event_property_editor.clj`,
+`live_event_presentation_support.clj`, `live_observer_support.clj`,
+`observability_library.clj`, `observation_targets_support.clj`, and
+`session_boundaries.clj`.
+
+The existing generic isolation audit must validate all four Capture candidates against
+the parsed APS steps of every session that loads them. A matching cross-pack step, a
+cross-pack namespace require, missing or foreign served-feature metadata, or unreadable
+audit evidence rejects isolation and preserves dependant propagation. A handler's own
+feature list is never sufficient proof by itself.
+
+### Historical selection and calibrated guardrail
+
+Changed-path planning compares current ownership with the registry at the requested
+base. A deletion uses its historical boundary. A rename wholly inside the six local
+presentation files remains owner-only. A rename from one of them into any semantic,
+controller, persistence, shared-presentation, or Event Library focus path retains the
+ten-pack dependant set. Missing, unreadable, incompatible, or malformed historical
+ownership fails closed to every runnable pack. No deleted or renamed Capture file may
+disappear merely because its old path no longer exists.
+
+The committed receipt scope and environment class remain those accepted by VTD-003.
+Recalibration changes only the `capture` representative changed-path row:
+
+- the representative remains `src/data-layer-live-inspector-presentation-ui.ts`;
+- it selects only `capture` instead of the current ten-pack closure;
+- dependant fan-out changes from 9 to 0;
+- its critical-path baseline changes from 195.5 seconds to the accepted exact-owner
+  baseline of 51.9 seconds, with normal tolerance 1.2 and a 63-second limit instead of
+  235 seconds; and
+- the other 19 pack calibrations, the Capture exact-pack calibration, and all 81
+  browser-target budgets remain unchanged.
+
+### VTD-004 Capture evidence conservation
+
+| Evidence class | Conserved before/after mapping |
+|---|---|
+| Owner checkpoint | All 21 unit files, 12 property files, 66 features, 25 handlers, one shared browser adapter, five registered browser targets, and two runtime checkpoints remain in `capture` and execute once in its 171-task exact plan. |
+| Direct presentation proof | Existing direct assertions remain, and the inspector-presentation helper gains a direct assertion inside an existing Capture browser observation without another Chrome launch or plan task. |
+| Dependant safety | The 33 semantic, controller, persistence, shared-rendering, and Event Library focus files retain the ten-pack closure. Only the six exact supplied-value presentation files are owner-only. |
+| Handler safety | Only four individually proven handlers become owner-only. Seven real cross-pack consumers and 14 incomplete/shared handler compositions retain dependant propagation. |
+| Product behavior | Page observation, target access, session lifecycle, stored bytes, filters, captured events, validation, Library focus, visible wording, accessibility, scroll, focus, and operator results are unchanged. |
+| Historical safety | Modifications, additions, deletions, and renames use current and base registries; unavailable or malformed history selects every runnable pack. |
+| Terminal conservation | Terminal-full planning retains every registered unit, property, feature, handler, browser assertion leaf, checkpoint, shell check, and package check exactly once. Browser batching, task order, worker limits, and terminal shards are unchanged. |
+| Calibration | The same 24-receipt scope remains resolvable. Only the Capture representative selection, fan-out, changed-path duration, and limit change; every other calibrated row stays byte-equivalent. |
+
+The implementation changes the global verification registry and its process-contract
+coverage. Its one-time exact implementation checkpoint therefore contains all 20
+runnable packs in canonical order, followed by `node scripts/package.mjs`. This broad
+delivery checkpoint does not make future local Capture display changes global; after
+installation, any of the six exact local-presentation paths selects only `capture`.
