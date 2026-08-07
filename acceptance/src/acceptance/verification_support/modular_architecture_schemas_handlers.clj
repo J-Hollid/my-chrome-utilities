@@ -179,21 +179,26 @@
                                                   :rejectedSchemasHandlerPlan]))
                                 "Rejected Schemas isolation did not restore propagation." {}))}])
 
+(def ^:private historical-plan-routes
+  [[#(str/starts-with? % "delete src/data-layer-guided-schema-picker-ui.ts")
+    [:vtd004/evidence :historyPlans :delete]]
+   [#(str/includes? % "to src/data-layer-schema-property-copy-ui.ts")
+    [:vtd004/evidence :historyPlans :renamePresentation]]
+   [#(str/includes? % "to src/data-layer-guided-validation-ui.ts")
+    [:vtd004/evidence :historyPlans :renameSharedWorkflow]]
+   [#(str/starts-with? % "delete src/utilities/data-layer/schemas.ts")
+    [:vtd004/evidence :currentPlans (keyword "src/utilities/data-layer/schemas.ts")]]])
+
+(defn- historical-plan [prepared change]
+  (when-let [[_ path] (first (filter #((first %) change) historical-plan-routes))]
+    (get-in prepared path)))
+
 (defn- change-plan [prepared change]
-  (cond
-    (str/starts-with? change "modify ")
+  (if (str/starts-with? change "modify ")
     (get-in prepared [:vtd004/evidence :currentPlans
                       (keyword (subs change (count "modify ")))])
-    (str/starts-with? change "delete src/data-layer-guided-schema-picker-ui.ts")
-    (get-in prepared [:vtd004/evidence :historyPlans :delete])
-    (str/includes? change "to src/data-layer-schema-property-copy-ui.ts")
-    (get-in prepared [:vtd004/evidence :historyPlans :renamePresentation])
-    (str/includes? change "to src/data-layer-guided-validation-ui.ts")
-    (get-in prepared [:vtd004/evidence :historyPlans :renameSharedWorkflow])
-    (str/starts-with? change "delete src/utilities/data-layer/schemas.ts")
-    (get-in prepared [:vtd004/evidence :currentPlans
-                      (keyword "src/utilities/data-layer/schemas.ts")])
-    :else (get-in prepared [:vtd004/evidence :historyPlans :unreadable])))
+    (or (historical-plan prepared change)
+        (get-in prepared [:vtd004/evidence :historyPlans :unreadable]))))
 
 (defn- history-handlers [example-values dependencies]
   [{:pattern #"^Schemas change is (.+)$"
