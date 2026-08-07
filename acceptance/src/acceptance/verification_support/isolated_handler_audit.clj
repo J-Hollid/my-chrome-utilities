@@ -1,21 +1,16 @@
 (ns acceptance.verification-support.isolated-handler-audit
-  (:require [aps.gherkin :as gherkin]
-            [cheshire.core :as json]
-            [clojure.string :as str]))
+  (:require [acceptance.pack-runtime :as pack-runtime]
+            [aps.gherkin :as gherkin]
+            [cheshire.core :as json]))
 
-(defn- handler-namespace [handler]
-  (-> handler
-      (str/replace #"^acceptance/src/" "")
-      (str/replace #"\.clj$" "")
-      (str/replace "/" ".")
-      (str/replace "_" "-")
-      symbol))
+(defn- resolved-handlers [namespace handler-var]
+  (or (some-> (ns-resolve namespace handler-var) deref) []))
 
 (defn- namespace-handlers [handler]
-  (let [namespace (handler-namespace handler)]
+  (let [namespace (pack-runtime/handler-namespace handler)]
     (require namespace)
-    (concat (or (some-> (ns-resolve namespace 'priority-handlers) deref) [])
-            (or (some-> (ns-resolve namespace 'handlers) deref) []))))
+    (concat (resolved-handlers namespace 'priority-handlers)
+            (resolved-handlers namespace 'handlers))))
 
 (defn- dependency-closure [packs pack-id]
   (loop [selected #{pack-id}]

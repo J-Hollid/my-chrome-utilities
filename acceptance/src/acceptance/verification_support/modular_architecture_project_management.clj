@@ -59,29 +59,48 @@
     (str/includes? change " to ") :renameController
     :else :delete))
 
-(defn- history-plan-key [owner change historical-registry]
-  (if (= owner "event-library")
-    (cond
-      (not= historical-registry "readable and compatible") :unreadable
-      (str/includes? change "event-library-editor-ui.ts") :renameEditorUi
-      (str/includes? change "event-library-editor.ts") :renameEditorModel
-      (str/includes? change "push-draft-review.ts") :renameSemantic
-      (str/includes? change " to ") :renamePresentation
-      :else :delete)
-    ((if (= owner "durable_project_repository")
-       durable-history-plan-key
-       project-history-plan-key)
-     change historical-registry)))
+(def ^:private event-history-renames
+  [["event-library-editor-ui.ts" :renameEditorUi]
+   ["event-library-editor.ts" :renameEditorModel]
+   ["push-draft-review.ts" :renameSemantic]
+   [" to " :renamePresentation]])
 
-(defn- history-scope [owner selected]
+(defn- event-history-rename-key [change]
+  (some (fn [[fragment plan-key]]
+          (when (str/includes? change fragment) plan-key))
+        event-history-renames))
+
+(defn- event-history-plan-key [change historical-registry]
+  (if (= historical-registry "readable and compatible")
+    (or (event-history-rename-key change) :delete)
+    :unreadable))
+
+(defn- history-plan-key [owner change historical-registry]
+  ((case owner
+     "event-library" event-history-plan-key
+     "durable_project_repository" durable-history-plan-key
+     project-history-plan-key)
+   change historical-registry))
+
+(def ^:private event-history-scopes
+  {1 "event-library only"
+   7 "the seven-pack dependant closure"
+   8 "the eight-pack Capture closure"
+   20 "every runnable pack"})
+
+(defn- event-history-scope [_owner selected]
+  (get event-history-scopes (count selected) "the ten-pack dependant closure"))
+
+(defn- shared-history-scope [owner selected]
   (cond
-    (and (= owner "event-library") (= 1 (count selected))) "event-library only"
     (= 1 (count selected)) (first selected)
     (= 20 (count selected)) "every runnable pack"
-    (and (= owner "event-library") (= 8 (count selected))) "the eight-pack Capture closure"
-    (and (= owner "event-library") (= 7 (count selected))) "the seven-pack dependant closure"
-    :else (if (= owner "durable_project_repository")
-            "the six-pack dependant closure" "the ten-pack dependant closure")))
+    (= owner "durable_project_repository") "the six-pack dependant closure"
+    :else "the ten-pack dependant closure"))
+
+(defn- history-scope [owner selected]
+  ((if (= owner "event-library") event-history-scope shared-history-scope)
+   owner selected))
 
 (defn history-world [world change historical-registry dependencies]
   (let [prepared (vtd004-world world dependencies)

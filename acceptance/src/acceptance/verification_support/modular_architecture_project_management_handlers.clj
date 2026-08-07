@@ -4,7 +4,7 @@
 
 (def human-pack-list project/human-pack-list)
 
-(defn handlers [{:keys [example-values verify-throughput!] :as dependencies}]
+(defn- boundary-handlers [example-values verify-throughput! dependencies]
   [{:pattern #"^project_management owns source path (.+)$"
     :handler (fn [world example captures]
                (project/boundary-world (assoc world :vtd004/owner "project_management")
@@ -36,7 +36,10 @@
     :handler (fn [world example captures]
                (project/change-world world (first (example-values example captures)) dependencies))}
    {:pattern #"^impacted verification packs are selected$"
-    :handler (fn [world _ _] (verify-throughput! world))}
+    :handler (fn [world _ _] (verify-throughput! world))}])
+
+(defn- owner-evidence-handlers [example-values]
+  [
    {:pattern #"^its complete owner unit, property, feature, handler, and installed browser evidence is selected$"
     :handler (fn [world _ _]
                (let [pack (:vtd004/pack world)]
@@ -47,7 +50,10 @@
                                      (mapv #(count (% pack))
                                            [:unit :property :features :handlers :browserAdapters]))
                                   "Owner evidence profile is incomplete." {}))
-               world)}
+               world)}])
+
+(defn- isolation-handlers [dependencies]
+  [
    {:pattern #"^acceptance/src/acceptance/steps/project_management.clj owns six project-management feature files$"
     :handler (fn [world _ _] (project/handler-world world dependencies))}
    {:pattern #"^acceptance-handler isolation is audited from APS step consumers$"
@@ -76,7 +82,10 @@
     :handler (fn [world _ _]
                (support/assert! (get-in world [:vtd004/evidence :handler :negativeMutationRejected])
                                 "Cross-pack consumer mutation did not block isolation." {})
-               world)}
+               world)}])
+
+(defn- history-handlers [example-values verify-throughput! dependencies]
+  [
    {:pattern #"^project-management change is (.+)$"
     :handler (fn [world example captures]
                (assoc world :vtd004/change (first (example-values example captures))))}
@@ -91,7 +100,10 @@
                (support/assert! (= (first (example-values example captures))
                                    (:vtd004/historical-scope world))
                                 "Historical project boundary selected the wrong scope." {})
-               world)}
+               world)}])
+
+(defn- conservation-handlers [dependencies]
+  [
    {:pattern #"^every project-management boundary maps to the complete owner evidence profile$"
     :handler (fn [world _ _] (project/conservation-world world dependencies))}
    {:pattern #"^exact project_management verification and terminal-full planning are compared before and after VTD-004$"
@@ -116,7 +128,10 @@
                (support/assert! (:terminalTaskIdentitiesConserved
                                  (get-in world [:vtd004/evidence :conservation]))
                                 "Terminal product and verification identities changed." {})
-               world)}
+               world)}])
+
+(defn- calibration-handlers [dependencies]
+  [
    {:pattern #"^the calibrated representative path src/data-layer-assignment-routing-ui.ts previously selected ten packs with critical-path baseline 390 seconds and limit 468 seconds$"
     :handler (fn [world _ _] (project/calibration-world world dependencies))}
    {:pattern #"^its non-propagating boundary is calibrated from the accepted VTD-003 receipt scope$"
@@ -146,6 +161,14 @@
                                      (= 81 (get-in world [:vtd004/evidence :calibration :browserTargetCount])))
                                 "VTD-004 changed conserved calibration rows." {})
                world)}])
+
+(defn handlers [{:keys [example-values verify-throughput!] :as dependencies}]
+  (vec (concat (boundary-handlers example-values verify-throughput! dependencies)
+               (owner-evidence-handlers example-values)
+               (isolation-handlers dependencies)
+               (history-handlers example-values verify-throughput! dependencies)
+               (conservation-handlers dependencies)
+               (calibration-handlers dependencies))))
 
 ;; clj-mutate-manifest-begin
 ;; {:version 1, :tested-at "2026-08-07T02:58:57.641263034+02:00", :module-hash "1798812761", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-907446120"} {:id "def/human-pack-list", :kind "def", :line 5, :end-line 5, :hash "-401636353"} {:id "defn/handlers", :kind "defn", :line 7, :end-line 146, :hash "-2095114279"}]}

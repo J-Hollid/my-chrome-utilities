@@ -16,7 +16,7 @@
         (swap! *runtime-cache* assoc-in [:values key] value)
         value))))
 
-(defn- handler-namespace [path]
+(defn handler-namespace [path]
   (-> path
       (str/replace #"^acceptance/src/" "")
       (str/replace #"\.clj$" "")
