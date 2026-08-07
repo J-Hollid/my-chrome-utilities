@@ -2143,12 +2143,12 @@ coordination paths retain their ten-pack closure. The broad checkpoint is task-o
 the unavoidable global architecture-ledger change and does not authorize the specifier
 to run it or make future Project UI changes global.
 
-## Verification throughput program — candidate slice VTD-004 durable repository presentation (2026-08-07)
+## Verification throughput program — completed slice VTD-004 durable repository presentation (2026-08-07)
 
-This is the only candidate specification slice. It covers the
-`durable_project_repository` pack only and grants no implementation authority until
-the user explicitly approves the bounded coder handoff. The remaining VTD-004 pack
-slices and VTD-005 through VTD-012 remain inactive.
+This completed specification slice covers the `durable_project_repository` pack
+only. It completed the normal coder, refactorer, and architect chain and merged at
+`82e704bdc88eb7394624d907336ef0e6d08b828b`. It remains authoritative completed
+history; later VTD-004 packages do not reopen its delivered boundaries.
 
 ### Plain-language outcome
 
@@ -2264,3 +2264,141 @@ outcome. After the boundary is installed, the exact presentation path selects on
 `durable_project_repository`; all storage-changing and semantic paths retain their six-
 pack closure. The broad checkpoint is task-owned by the unavoidable global architecture-
 ledger change and does not make future recovery-screen changes global.
+
+## Verification throughput program — candidate slice VTD-004 Event Library review presentation (2026-08-07)
+
+This is the only candidate specification slice. It covers the `event-library` pack
+only and grants no implementation authority until the user explicitly approves the
+bounded coder handoff. The remaining `capture` and `schemas` VTD-004 pack slices and
+VTD-005 through VTD-012 remain inactive.
+
+### Plain-language outcome
+
+Today the representative Event Library file pulls seven packs into the plan, with a
+calibrated model of about 73.9 seconds. The complete `event-library` pack itself
+models at about 11.6 seconds. This package makes changes confined to the supplied
+push-review and revision-review display rows run the Event Library checks without the
+six unrelated dependant packs. The representative guardrail becomes 14 seconds
+instead of 89 seconds: about one minute and fourteen seconds of planned work becomes
+about twelve seconds, saving roughly one minute per review-screen change.
+
+This speedup does not apply to editing a template, validating or serializing its
+draft, saving or deleting revisions, importing or exporting the Library, renaming a
+template or Event, choosing a destination, pushing into the selected page, or
+reporting execution success and failure. Those semantic and controller paths keep the
+current seven-pack dependant set. The editor model and full editor UI keep an eight-pack
+set that additionally includes `capture`, because Capture's acceptance harness reads
+both exact files directly. The fast path cannot be used to hide a real cross-pack
+consumer merely because one of those files renders browser UI.
+
+The same owner-only result applies to changes confined to the three Event Library
+acceptance-handler files once their loaded step consumers are validated. That makes
+maintenance of Event Library acceptance wording and fixtures about as fast as the
+owner's 12-second plan instead of the current 74-second seven-pack plan, without
+narrowing any product source file.
+
+### Event Library impact boundaries
+
+Every current `event-library` source path belongs to exactly one boundary. An exact
+file cannot match two boundaries, and any newly owned path is a validation error until
+it is explicitly classified.
+
+| Boundary | Exact source paths | Class | Propagate dependants | Reason |
+|---|---|---|---|---|
+| `event_library_editor_model` | `src/data-layer-event-library-editor.ts` | core or semantic | yes | Defines template and draft state, validation, revision transitions, serialization, restoration, and the public editor model consumed by Capture evidence. |
+| `event_library_editor_shared_presentation` | `src/data-layer-event-library-editor-ui.ts` | browser presentation | yes | Renders the full editor, but Capture's registered acceptance support reads this exact file and therefore remains a real verification consumer. |
+| `event_library_deletion_persistence` | `src/data-layer-event-library-deletion.ts` | persistence migration | yes | Deletes saved Library records while preserving storage and revision rules. |
+| `event_library_transfer_persistence` | `src/data-layer-event-library-transfer.ts` | persistence migration | yes | Imports, exports, validates, and remaps saved Library records. |
+| `event_library_renaming_semantic` | `src/data-layer-event-template-renaming.ts` | core or semantic | yes | Defines template and Event rename and version transitions. |
+| `event_library_review_model` | `src/data-layer-push-draft-review.ts`, `src/data-layer-template-change-review.ts` | core or semantic | yes | Computes the decision rows, identity changes, execution changes, payload differences, and resulting version shown before a save or push. |
+| `event_library_review_presentation` | `src/data-layer-push-draft-review-ui.ts`, `src/data-layer-template-change-review-ui.ts` | browser presentation | no | Turns already-supplied review rows into DOM labels, values, change lists, and empty states without choosing or executing an operation. |
+| `event_library_target_push_controller` | `src/data-layer-selected-target-push.ts` | application controller | yes | Validates the selected target and destination, invokes the page push, and defines success or failure feedback. |
+| `event_library_page_push_semantic` | `src/data-layer-selected-target-push-page.ts` | core or semantic | yes | Resolves the destination on the active page and performs the actual payload append. |
+
+The two review renderers are information-hiding boundaries, not new decision models.
+They may query their supplied DOM root, display the supplied rows, and show or hide the
+supplied empty state. They cannot read or write Library storage; import the editor,
+transfer, rename, selected-target, page-push, or Capture runtime; derive payload
+differences; choose Save or Push; validate a destination; execute in a page; or invent
+a second review state. The review-model files remain the sole source of decision data.
+
+The boundary preserves the current detail labels, Previous/Revised/Pushed values,
+change order, empty-state wording and visibility, accessible structure, dialog
+integration, and installed browser results. No template, revision, payload, storage
+record, selected target, or page value changes.
+
+The deletion, transfer, rename, review-model, selected-target, and page-push boundaries
+retain this exact current selection in registry order:
+`event-library,project_event_transport,defects,replay,live_flow_testing,guided_test_cases,shell`.
+The editor model and shared editor presentation retain:
+`capture,event-library,project_event_transport,defects,replay,live_flow_testing,guided_test_cases,shell`.
+Either exact review-presentation path selects only `event-library`.
+
+### Exact evidence mapping
+
+Every boundary maps to the complete `event-library` evidence profile; VTD-004 narrows
+dependant-pack selection, not evidence within its owner. The profile is:
+
+| Evidence class | Exact paths or count |
+|---|---|
+| Unit | Nine registered unit files, including editor, deletion, transfer, direct-push, push-review, selected-target-push, rename, new-event, and template-change-review coverage |
+| Property | `test/data-layer-selected-target-push-property-test.mjs` |
+| Feature | Eight registered Event Library feature files |
+| Handler | `acceptance/src/acceptance/steps/event_library_editor.clj`, `acceptance/src/acceptance/steps/event_template_library.clj`, `acceptance/src/acceptance/steps/library_direct_template_push.clj` |
+| Installed browser evidence | `test/browser-packs/event-library.mjs` and `LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER` in `test/side-panel-component-layout-runtime-test.mjs`; the installed observation already exercises the push-review renderer and must add a direct revision-review renderer assertion before that second path becomes non-propagating |
+| Exact plan | 30 tasks: build, nine unit, one property, one shared browser adapter, one browser observation, eight parses, eight generators, and one Event Library acceptance session |
+
+Handler isolation is decided per exact handler rather than copied from another pack.
+The APS pattern audit is restricted to sessions that actually load Event Library
+handlers: `event-library` and its six dependants. In those sessions,
+`event_library_editor.clj` and `event_template_library.clj` serve only
+`features/data-layer-event-template-library.feature`, while
+`library_direct_template_push.clj` serves only its two Event Library-owned feature
+files. All three may therefore be declared isolated after the registry validator proves
+those actual loaded consumers and the absence of a cross-pack namespace require.
+
+`event_library_editor.clj` composes Capture-owned event-property handlers and shared
+support, but that edge points from Event Library to Capture: Capture sessions do not
+load the Event Library wrapper. Handler isolation does not narrow changes to the two
+Capture-consumed editor source files; those retain their eight-pack set. Any new loaded
+cross-pack step consumer or namespace require blocks or revokes handler isolation.
+
+### Historical selection and calibrated guardrail
+
+Changed-path planning compares the current registry with the registry at the requested
+base. A deletion uses the historical owner and boundary. A rename evaluates both old
+and new paths: a rename wholly inside the two narrow review-presentation files remains
+owner-only. A rename into the editor model or shared editor UI retains the eight-pack
+set including Capture; a rename into another semantic or controller path retains the
+seven-pack dependant set. Missing, unreadable, incompatible, or malformed historical
+ownership fails closed to every runnable pack.
+
+The committed receipt scope and environment class remain those accepted by VTD-003.
+Recalibration changes only the `event-library` representative changed-path row:
+
+- the representative changes from `src/data-layer-event-library-deletion.ts` to
+  `src/data-layer-push-draft-review-ui.ts`;
+- either review-presentation path selects `event-library` only;
+- dependant fan-out changes from 6 to 0;
+- its critical-path baseline is re-derived as 11.6 seconds from the accepted exact
+  owner evidence, with normal tolerance 1.2 and a 14-second limit; and
+- the other 19 pack calibrations, the Event Library exact-pack calibration, and all 81
+  browser-target budgets remain unchanged.
+
+### VTD-004 Event Library evidence conservation
+
+| Evidence class | Conserved before/after mapping |
+|---|---|
+| Owner checkpoint | All nine unit files, one property file, eight features, three handlers, one shared browser adapter, and one installed browser observation remain in `event-library` and execute once in its 30-task exact plan. The installed observation adds direct revision-review rendering coverage without adding another browser process or plan task. |
+| Dependant safety | The editor model and shared editor UI retain their current eight-pack set including Capture. Deletion, transfer, rename, review-model, selected-target, and page-push paths retain their current seven-pack set. Only the two exact supplied-value review renderers are owner-only. |
+| Product behavior | Template state, revision numbers, storage bytes, imports, exports, destination validation, selected-target behavior, page execution, decision data, visible review rows, empty states, accessibility, and operator results are unchanged. |
+| Historical safety | Modifications, additions, deletions, and renames use current and base registries; unavailable or malformed history selects every runnable pack. |
+| Terminal conservation | Terminal-full planning retains every registered unit, property, feature, handler, existing browser leaf, the new revision-review rendering assertion, shell check, and package check exactly once. Browser batching, task order, worker limits, and terminal shards are unchanged. |
+| Calibration | The same 24-receipt scope remains resolvable. Only the Event Library representative path, selected packs, fan-out, and changed-path duration change; every other calibrated row stays byte-equivalent. |
+
+The implementation changes the global verification registry and its architecture
+contract coverage. Its one-time exact implementation checkpoint therefore contains
+all 20 runnable packs in canonical order, followed by `node scripts/package.mjs`.
+This broad delivery checkpoint does not make future review-renderer changes global;
+after installation, either exact review-presentation path selects only
+`event-library`.

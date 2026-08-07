@@ -45,11 +45,14 @@ here.
 - The `project_management` VTD-004 slice completed the normal coder, refactorer,
   and architect chain and merged at
   `acfdf39d8d562c321ab8a168f276fb55ad024acf`.
-- The `durable_project_repository` presentation slice is the candidate next
-  VTD-004 package. Its implementation remains inactive until the user explicitly
-  approves the bounded coder handoff.
-- The remaining VTD-004 pack slices and VTD-005 through VTD-012 remain queued and
-  inactive.
+- The `durable_project_repository` presentation slice completed the normal coder,
+  refactorer, and architect chain and merged at
+  `82e704bdc88eb7394624d907336ef0e6d08b828b`.
+- The `event-library` review-presentation slice is the candidate next VTD-004
+  package. Its implementation remains inactive until the user explicitly approves
+  the bounded coder handoff.
+- The remaining `capture` and `schemas` VTD-004 pack slices and VTD-005 through
+  VTD-012 remain queued and inactive.
 
 ## Executive assessment
 

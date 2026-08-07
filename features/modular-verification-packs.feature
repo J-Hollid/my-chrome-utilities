@@ -399,7 +399,7 @@ Feature: Modular verification packs
       | command-palette              | src/command-palette-ui.ts                                 | command-palette, hotkeys, shell                                                                                                                                                                                     |
       | hotkeys                      | src/hotkey-keymap.ts                                      | hotkeys, shell                                                                                                                                                                                                      |
       | capture                      | src/data-layer-live-inspector-presentation-ui.ts          | capture, event-library, project_event_transport, schemas, defects, replay, live_flow_testing, project_assurance_severity, guided_test_cases, shell                                                                   |
-      | event-library                | src/data-layer-event-library-deletion.ts                  | event-library, project_event_transport, defects, replay, live_flow_testing, guided_test_cases, shell                                                                                                                 |
+      | event-library                | src/data-layer-push-draft-review-ui.ts                    | event-library                                                                                                                                                                                                       |
       | project_event_transport      | src/data-layer-project-event-transport.ts                 | project_event_transport                                                                                                                                                                                             |
       | schemas                      | src/data-layer-allowed-value-expansion-ui.ts              | schemas, defects, live_flow_testing, project_assurance_severity, guided_test_cases, shell                                                                                                                            |
       | defects                      | src/data-layer-defect-library-ui.ts                       | defects, live_flow_testing, shell                                                                                                                                                                                    |
@@ -632,3 +632,105 @@ Feature: Modular verification packs
     Then it selects only durable_project_repository with dependant fan-out 0
     And its critical-path baseline is 90.2 seconds with tolerance 1.2 and limit 109 seconds
     And the other 19 pack calibrations, the durable exact-pack calibration, and all 81 browser-target budgets are unchanged
+
+  # Modular verification packs 053
+  Scenario Outline: Modular verification packs 053
+    Given event-library owns source path <source_path>
+    When its impact boundary is inspected
+    Then its boundary is <boundary>
+    And its source class is <source_class>
+    And dependant propagation is <dependant_propagation>
+
+    Examples:
+      | source_path                                      | boundary                                   | source_class           | dependant_propagation |
+      | src/data-layer-event-library-editor.ts           | event_library_editor_model                 | core or semantic       | retained              |
+      | src/data-layer-event-library-editor-ui.ts        | event_library_editor_shared_presentation   | browser presentation   | retained              |
+      | src/data-layer-event-library-deletion.ts         | event_library_deletion_persistence         | persistence migration  | retained              |
+      | src/data-layer-event-library-transfer.ts         | event_library_transfer_persistence         | persistence migration  | retained              |
+      | src/data-layer-event-template-renaming.ts        | event_library_renaming_semantic            | core or semantic       | retained              |
+      | src/data-layer-push-draft-review.ts              | event_library_review_model                 | core or semantic       | retained              |
+      | src/data-layer-template-change-review.ts         | event_library_review_model                 | core or semantic       | retained              |
+      | src/data-layer-push-draft-review-ui.ts           | event_library_review_presentation          | browser presentation   | excluded              |
+      | src/data-layer-template-change-review-ui.ts      | event_library_review_presentation          | browser presentation   | excluded              |
+      | src/data-layer-selected-target-push.ts           | event_library_target_push_controller       | application controller | retained              |
+      | src/data-layer-selected-target-push-page.ts      | event_library_page_push_semantic           | core or semantic       | retained              |
+
+  # Modular verification packs 054
+  Scenario: Modular verification packs 054
+    Given Capture explicitly consumes src/data-layer-event-library-editor.ts and src/data-layer-event-library-editor-ui.ts
+    And the two Event Library review renderers receive review values and a DOM root from their caller
+    And installed Event Library browser evidence exercises both review renderers directly
+    When Event Library presentation boundaries are validated
+    Then the editor model and shared editor presentation retain dependant propagation
+    And their selected packs include Capture plus the seven ordinary Event Library packs
+    And the review renderers cannot access Library storage, semantic controllers, Capture runtime, or page-push execution
+    And they cannot derive differences, choose Save or Push, validate destinations, or create a second review state
+    And supplied rows, identity changes, execution changes, payload changes, labels, ordering, empty states, accessibility, dialog behavior, storage, payloads, and operator results are preserved
+
+  # Modular verification packs 055
+  Scenario Outline: Modular verification packs 055
+    Given changed Event Library path <changed_path> belongs to <boundary>
+    When impacted verification packs are selected
+    Then selected packs are <selected_packs>
+    And its complete owner unit, property, feature, handler, and installed browser evidence is selected
+
+    Examples:
+      | changed_path                                      | boundary                                   | selected_packs                                                                                      |
+      | src/data-layer-push-draft-review-ui.ts            | event_library_review_presentation          | event-library                                                                                       |
+      | src/data-layer-template-change-review-ui.ts       | event_library_review_presentation          | event-library                                                                                       |
+      | src/data-layer-event-library-editor.ts            | event_library_editor_model                 | capture, event-library, project_event_transport, defects, replay, live_flow_testing, guided_test_cases, shell |
+      | src/data-layer-event-library-editor-ui.ts         | event_library_editor_shared_presentation   | capture, event-library, project_event_transport, defects, replay, live_flow_testing, guided_test_cases, shell |
+      | src/data-layer-event-library-deletion.ts          | event_library_deletion_persistence         | event-library, project_event_transport, defects, replay, live_flow_testing, guided_test_cases, shell |
+      | src/data-layer-event-library-transfer.ts          | event_library_transfer_persistence         | event-library, project_event_transport, defects, replay, live_flow_testing, guided_test_cases, shell |
+      | src/data-layer-event-template-renaming.ts         | event_library_renaming_semantic            | event-library, project_event_transport, defects, replay, live_flow_testing, guided_test_cases, shell |
+      | src/data-layer-push-draft-review.ts               | event_library_review_model                 | event-library, project_event_transport, defects, replay, live_flow_testing, guided_test_cases, shell |
+      | src/data-layer-selected-target-push.ts            | event_library_target_push_controller       | event-library, project_event_transport, defects, replay, live_flow_testing, guided_test_cases, shell |
+      | src/data-layer-selected-target-push-page.ts       | event_library_page_push_semantic           | event-library, project_event_transport, defects, replay, live_flow_testing, guided_test_cases, shell |
+
+  # Modular verification packs 056
+  Scenario Outline: Modular verification packs 056
+    Given Event Library acceptance handler <handler> has <consumer_condition>
+    When acceptance-handler isolation is audited from APS step consumers
+    Then the handler may be isolated
+    And a handler-only change selects complete Event Library evidence
+    But a loaded cross-pack step consumer or namespace require blocks isolation and retains dependant propagation
+    And Capture-consumed editor source files retain their eight-pack selection independently of handler isolation
+
+    Examples:
+      | handler                           | consumer_condition                                                           |
+      | event_template_library.clj        | only Event Library-owned steps in sessions that load the handler             |
+      | library_direct_template_push.clj  | only its two Event Library-owned features in sessions that load the handler   |
+      | event_library_editor.clj          | only Event Library-owned steps despite composing Capture-owned input handlers |
+
+  # Modular verification packs 057
+  Scenario Outline: Modular verification packs 057
+    Given Event Library change is <change>
+    And historical registry state is <historical_registry>
+    When impacted verification packs are selected from current and historical ownership
+    Then selected scope is <selected_scope>
+
+    Examples:
+      | change                                                                                       | historical_registry                             | selected_scope                   |
+      | delete src/data-layer-push-draft-review-ui.ts                                                | readable and compatible                         | event-library only               |
+      | rename src/data-layer-push-draft-review-ui.ts to src/data-layer-template-change-review-ui.ts | readable and compatible                         | event-library only               |
+      | rename src/data-layer-push-draft-review-ui.ts to src/data-layer-event-library-editor-ui.ts   | readable and compatible                         | the eight-pack Capture closure   |
+      | rename src/data-layer-push-draft-review-ui.ts to src/data-layer-event-library-editor.ts      | readable and compatible                         | the eight-pack Capture closure   |
+      | rename src/data-layer-push-draft-review-ui.ts to src/data-layer-push-draft-review.ts         | readable and compatible                         | the seven-pack dependant closure |
+      | delete src/data-layer-push-draft-review-ui.ts                                                | missing, unreadable, incompatible, or malformed | every runnable pack              |
+
+  # Modular verification packs 058
+  Scenario: Modular verification packs 058
+    Given every Event Library boundary maps to the complete owner evidence profile
+    When exact event-library verification and terminal-full planning are compared before and after VTD-004
+    Then all nine unit files, one property file, eight feature files, three handlers, one shared browser adapter, and one installed browser observation execute once in the 30-task exact owner plan
+    And the installed observation directly renders both push-review and revision-review supplied values without adding another browser process or plan task
+    And terminal-full planning executes every conserved assertion leaf, the added revision-review renderer assertion, and every package check exactly once
+    And browser batching, task order, worker limits, terminal shards, template behavior, stored revisions, payloads, destinations, review rows, accessibility, and operator results are unchanged
+
+  # Modular verification packs 059
+  Scenario: Modular verification packs 059
+    Given the calibrated representative path src/data-layer-event-library-deletion.ts previously selected seven packs with critical-path baseline 73.9 seconds and limit 89 seconds
+    When src/data-layer-push-draft-review-ui.ts becomes the calibrated non-propagating representative from the accepted VTD-003 receipt scope
+    Then it selects only event-library with dependant fan-out 0
+    And its critical-path baseline is 11.6 seconds with tolerance 1.2 and limit 14 seconds
+    And the other 19 pack calibrations, the Event Library exact-pack calibration, and all 81 browser-target budgets are unchanged
