@@ -96,6 +96,7 @@ export async function runSidePanelBrowserSession({
   const frozenEnvironment = Object.freeze({ ...environment });
   const processContext = await resources.start();
   const failures = [];
+  const executions = [];
   try {
     for (const definition of definitions) {
       const timer = createBrowserPhaseTimer({ targetId:definition.id, phaseNames:phases, now });
@@ -209,6 +210,14 @@ export async function runSidePanelBrowserSession({
         }, 600),
         error:failure.message,
       } : { id:definition.id, status:"passed", durationMs:timing.durationMs } });
+      if (!failure) executions.push(Object.freeze({
+        id:definition.id,
+        viewport:structuredClone(definition.viewport),
+        observationKeys:[...definition.observationKeys],
+        observedKeys:Object.keys(observation),
+        assertionLeafCount:(definition.assertionLeaves ?? []).length,
+        deferredAssertionCount:context.preCleanupDiagnostics?.deferredAssertions ?? 0,
+      }));
     }
   } finally {
     await resources.stop(processContext);
@@ -219,6 +228,7 @@ export async function runSidePanelBrowserSession({
       failures.map(({ id, error }) => `${id}: ${error.message}`).join("; "),
     );
   }
+  return Object.freeze({ executions:Object.freeze(executions) });
 }
 
 export async function runInstalledSidePanelSession({
@@ -233,7 +243,10 @@ export async function runInstalledSidePanelSession({
   verifyTargetPersistence = verifyInstalledTargetPersistence,
   closeTarget = closeInstalledTarget,
 } = {}) {
-  await runSidePanelBrowserSession({
+  if (!Array.isArray(definitions) || definitions.length === 0) {
+    throw new Error("Installed side-panel session requires at least one executable definition");
+  }
+  return runSidePanelBrowserSession({
     definitions,
     environment,
     emit,

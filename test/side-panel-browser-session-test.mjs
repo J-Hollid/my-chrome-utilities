@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
+import { execFile as execFileCallback } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { promisify } from "node:util";
+
+import { planVerification } from "../scripts/verification-packs.mjs";
 
 import {
   createSidePanelTargetRegistry,
@@ -16,6 +20,8 @@ import {
 } from "./support/side-panel-browser-installed-order-regression.mjs";
 import { sidePanelTargetContract } from "./support/side-panel-browser-target-contract.mjs";
 
+const execFile = promisify(execFileCallback);
+
 const targetModulePaths = [
   "side-panel-capture-targets.mjs",
   "side-panel-event-library-targets.mjs",
@@ -25,6 +31,11 @@ const targetModulePaths = [
   "side-panel-schema-documentation-targets.mjs",
   "side-panel-defect-targets.mjs",
   "side-panel-shell-targets.mjs",
+];
+const directFixtureModulePaths = [
+  "side-panel-capture-fixtures.mjs",
+  "side-panel-event-library-fixtures.mjs",
+  "side-panel-defect-fixtures.mjs",
 ];
 
 assert.equal(sidePanelTargetContract.length, 63);
@@ -219,6 +230,13 @@ for (const { swarmforgeBrowserTargetTiming:timing } of emitted.filter(({ swarmfo
 const installedEvents = [];
 const installedRecords = [];
 let installedTime = 0;
+let rejectedSessionStarts = 0;
+await assert.rejects(runInstalledSidePanelSession({
+  definitions:[],
+  startProcess:async () => { rejectedSessionStarts += 1; return {}; },
+}), /requires at least one executable definition/iu);
+assert.equal(rejectedSessionStarts, 0,
+  "an empty installed definition set must fail before process resources start");
 await runInstalledSidePanelSession({
   definitions:[definition("ONE", {
     observe:async ({ context }) => context.executeFixture(),
@@ -260,18 +278,72 @@ const fixtureSource = await readFile(new URL("./support/side-panel-browser-fixtu
 const sessionSource = await readFile(new URL("./support/side-panel-browser-session.mjs", import.meta.url), "utf8");
 const entrySource = await readFile(new URL("./support/side-panel-browser-entry.mjs", import.meta.url), "utf8");
 const launcherSource = await readFile(new URL("./side-panel-component-layout-runtime-test.mjs", import.meta.url), "utf8");
+const directCompatibilitySource = await readFile(
+  new URL("./support/side-panel-browser-direct-compatibility.mjs", import.meta.url), "utf8");
 const targetModuleSources = await Promise.all(targetModulePaths.map(async (modulePath) => [
   modulePath,
   await readFile(new URL(`./support/${modulePath}`, import.meta.url), "utf8"),
 ]));
+const directFixtureModuleSources = await Promise.all(directFixtureModulePaths.map(async (modulePath) => [
+  modulePath,
+  await readFile(new URL(`./support/${modulePath}`, import.meta.url), "utf8"),
+]));
 for (const [modulePath, source] of targetModuleSources) {
-  assert.ok(source.trim().split(/\r?\n/u).length > 20,
-    `${modulePath} must own substantive executable fixture/check logic`);
+  const expectedSubstantive = modulePath.startsWith("side-panel-schema-") ||
+    modulePath === "side-panel-shell-targets.mjs";
+  assert.equal(source.trim().split(/\r?\n/u).length > 20, expectedSubstantive,
+    `${modulePath} must keep only its approved target-module scope`);
   assert.match(source, /executeFixture/u,
     `${modulePath} must execute its selected installed fixture through its target hook`);
 }
+for (const [modulePath, source] of directFixtureModuleSources) {
+  assert.ok(source.trim().split(/\r?\n/u).length > 20,
+    `${modulePath} must retain the extracted direct fixture corpus`);
+  assert.doesNotMatch(source, /createExecutableTargetDefinitions/u,
+    `${modulePath} must not own registered target definitions`);
+}
 assert.ok(fixtureSource.trim().split(/\r?\n/u).length < 4000,
   "cross-domain fixture primitives must not retain the copied 7,823-line program");
+assert.doesNotMatch(directCompatibilitySource,
+  /side-panel-(?:capture|event-library|defect)-targets\.mjs/u,
+  "direct compatibility must not broaden non-Schema target-module consumers to Shell");
+const directLauncherRun = await execFile(process.execPath,
+  [new URL("./side-panel-component-layout-runtime-test.mjs", import.meta.url).pathname], {
+    cwd:new URL("../", import.meta.url).pathname,
+    maxBuffer:16 * 1024 * 1024,
+  });
+const directLauncherLines = directLauncherRun.stdout.split(/\r?\n/u);
+const directContractLine = directLauncherLines
+  .findLast((line) => line.startsWith("{\"vtd006DirectCompatibility\""));
+assert.ok(directContractLine,
+  "the supported no-target launcher must emit evidence after its installed corpus completes");
+const directContract = JSON.parse(directContractLine).vtd006DirectCompatibility;
+assert.deepEqual(directContract, {
+  targetCount:63,
+  outputCount:67,
+  assertionLeafCount:6910,
+  deferredAssertionCount:1118,
+  targetIds:sidePanelTargetContract.map(({ id }) => id),
+  targetIdsExact:true,
+  expectedObservations:true,
+  viewportCounts:{ "320":20, "320,720":1, "360,520":1, "720":41 },
+}, "the no-target launcher must retain the complete assertion and viewport corpus");
+assert.equal(directLauncherLines.filter((line) => line.startsWith("{\"swarmforgeBrowserTargetResult\""))
+  .map((line) => JSON.parse(line).swarmforgeBrowserTargetResult)
+  .filter(({ status }) => status === "passed").length, 63,
+"the direct compatibility evidence must be derived from 63 executed definitions");
+const noOpLauncherSource = launcherSource
+  .replace("./support/side-panel-browser-direct-compatibility.mjs",
+    "./test/support/side-panel-browser-direct-compatibility.mjs")
+  .replace("await runDirectSidePanelCompatibility();", "void runDirectSidePanelCompatibility;");
+assert.match(noOpLauncherSource, /runDirectSidePanelCompatibility/u);
+const noOpLauncherRun = await execFile(process.execPath,
+  ["--input-type=module", "--eval", noOpLauncherSource], {
+    cwd:new URL("../", import.meta.url).pathname,
+  });
+const noOpLauncherRejected = !noOpLauncherRun.stdout.includes("vtd006DirectCompatibility");
+assert.equal(noOpLauncherRejected, true,
+  "a short launcher that only names the compatibility function must emit no scenario-103 evidence");
 
 const identityOrderRun = async (orderedTargets) => {
   const records = [];
@@ -333,6 +405,111 @@ const assertionLeafInventory = {
     JSON.stringify(normalizeInstalledObservation({ stable:"after", count:2 })),
 };
 const packs = JSON.parse(await readFile(new URL("../verification/packs.json", import.meta.url), "utf8"));
+const runnablePackIds = planVerification(packs, { terminalFull:true }).packIds;
+const helperPlanningRows = [
+  {
+    helperClass:"the side-panel session, registry, primitives, or target contract",
+    paths:[
+      "test/support/side-panel-browser-session.mjs",
+      "test/support/side-panel-browser-target-registry.mjs",
+      "test/support/side-panel-browser-fixture-primitives.mjs",
+      "test/support/side-panel-browser-target-contract.mjs",
+    ],
+    expected:["capture", "defects", "event-library", "schemas", "shell"],
+    renameDestination:"test/support/side-panel-capture-targets.mjs",
+  },
+  { helperClass:"the Capture target module", paths:["test/support/side-panel-capture-targets.mjs"],
+    expected:["capture"], renameDestination:"test/support/side-panel-schema-workspace-targets.mjs" },
+  { helperClass:"the Event Library target module",
+    paths:["test/support/side-panel-event-library-targets.mjs"], expected:["event-library"],
+    renameDestination:"test/support/side-panel-schema-workspace-targets.mjs" },
+  { helperClass:"any Schema-family target module", paths:[
+    "test/support/side-panel-schema-workspace-targets.mjs",
+    "test/support/side-panel-schema-guided-targets.mjs",
+    "test/support/side-panel-schema-validation-targets.mjs",
+    "test/support/side-panel-schema-documentation-targets.mjs",
+  ], expected:["schemas", "shell"],
+  renameDestination:"test/support/side-panel-capture-targets.mjs" },
+  { helperClass:"the Defects target module", paths:["test/support/side-panel-defect-targets.mjs"],
+    expected:["defects"], renameDestination:"test/support/side-panel-schema-workspace-targets.mjs" },
+  { helperClass:"the Shell target module", paths:["test/support/side-panel-shell-targets.mjs"],
+    expected:["shell"], renameDestination:"test/support/side-panel-capture-targets.mjs" },
+];
+const syntheticChangeSet = (entries) => ({
+  version:1,
+  baseCommit:"1".repeat(40),
+  commit:"2".repeat(40),
+  entries,
+  paths:[...new Set(entries.flatMap((entry) => entry.oldPath
+    ? [entry.oldPath, entry.newPath] : [entry.path]))].sort(),
+});
+const orderedUnion = (...groups) => runnablePackIds.filter((id) => groups.some((group) => group.includes(id)));
+const helperDeclarations = (registry, row) => row.paths.map((helperPath) => registry
+  .find(({ id }) => id === "shell").verificationHelpers
+  .find(({ path:declaredPath }) => declaredPath === helperPath));
+const assertExactHelperScope = (registry, row) => {
+  const declarations = helperDeclarations(registry, row);
+  assert.equal(declarations.every(Boolean), true, `${row.helperClass} must be declared exactly`);
+  for (const { path:helperPath, consumers } of declarations) {
+    assert.deepEqual(consumers, row.expected,
+      `${row.helperClass} declaration ${helperPath} must retain its approved scope`);
+  }
+  return declarations;
+};
+const mutateHelperConsumers = (helperPath, mutate) => packs.map((pack) => pack.id !== "shell" ? pack : ({
+  ...pack,
+  verificationHelpers:pack.verificationHelpers.map((helper) => helper.path !== helperPath ? helper : ({
+    ...helper, consumers:mutate(helper.consumers),
+  })),
+}));
+for (const row of helperPlanningRows) {
+  for (const helperPath of row.paths) {
+    for (const omitted of row.expected) {
+      assert.throws(() => assertExactHelperScope(
+        mutateHelperConsumers(helperPath, (consumers) => consumers.filter((id) => id !== omitted)), row),
+      /must retain its approved scope/iu,
+      `${row.helperClass} must reject omission of ${omitted}`);
+    }
+  }
+}
+for (const helperClass of ["the Capture target module", "the Event Library target module",
+  "the Defects target module"]) {
+  const row = helperPlanningRows.find((candidate) => candidate.helperClass === helperClass);
+  assert.throws(() => assertExactHelperScope(
+    mutateHelperConsumers(row.paths[0], (consumers) => [...consumers, "shell"]), row),
+  /must retain its approved scope/iu,
+  `${helperClass} must reject an extra Shell consumer`);
+}
+const helperPlanning = Object.fromEntries(helperPlanningRows.map((row) => {
+  const declarations = assertExactHelperScope(packs, row);
+  const current = planVerification(packs, { changedPaths:row.paths }).packIds;
+  assert.deepEqual(current, runnablePackIds.filter((id) => row.expected.includes(id)),
+    `${row.helperClass} current planning must select its exact consumers`);
+  const deletion = syntheticChangeSet(row.paths.map((helperPath) => ({ status:"D", path:helperPath })));
+  const deleted = planVerification(packs, { changedPaths:deletion.paths,
+    changeSet:deletion, basePacks:packs }).packIds;
+  assert.deepEqual(deleted, current, `${row.helperClass} deletion must retain historical consumers`);
+  const rename = syntheticChangeSet([{ status:"R", score:100, oldPath:row.paths[0],
+    newPath:row.renameDestination }]);
+  const renamed = planVerification(packs, { changedPaths:rename.paths,
+    changeSet:rename, basePacks:packs }).packIds;
+  const destination = planVerification(packs, { changedPaths:[row.renameDestination] }).packIds;
+  const renameUnion = orderedUnion(current, destination);
+  assert.deepEqual(renamed, renameUnion,
+    `${row.helperClass} rename must union current and historical consumers`);
+  const failClosedSelections = [
+    planVerification(packs, { changedPaths:deletion.paths, changeSet:deletion }).packIds,
+    planVerification(packs, { changedPaths:deletion.paths, changeSet:deletion,
+      basePacks:[{ ...packs[0], unit:"malformed" }] }).packIds,
+    planVerification(packs, { changedPaths:deletion.paths, changeSet:deletion,
+      basePacks:[], historicalRegistryFallback:true }).packIds,
+  ];
+  const failClosed = failClosedSelections
+    .every((selected) => JSON.stringify(selected) === JSON.stringify(runnablePackIds));
+  assert.equal(failClosed, true, `${row.helperClass} unavailable history must fail closed`);
+  return [row.helperClass, { declared:declarations.map(({ consumers }) => consumers),
+    current, deleted, renamed, renameUnion, runnablePackIds, failClosedSelections, failClosed }];
+}));
 const installedOrder = await runInstalledOrderRegression();
 const packInventory = Object.fromEntries(["capture", "event-library", "schemas", "defects", "shell"]
   .map((owningPack) => {
@@ -362,13 +539,12 @@ console.log(JSON.stringify({ vtd006Acceptance:{
       configuration:target.configuration, observationKeys:target.observationKeys,
     }])),
     registeredPrograms,
-    helperConsumers:Object.fromEntries(packs.find(({ id }) => id === "shell").verificationHelpers
-      .filter(({ path }) => path.includes("side-panel-"))
-      .map(({ path, consumers }) => [path, consumers])),
+    helperPlanning,
   },
   selectiveLoading:{ imported:[...imported] },
   registryValidation:{ duplicateId:true, unknownId:true, configurationDifference:true,
-    owningPack:true, duplicateOutput:true, hookShape:true, beforeResourcesStarted:true },
+    owningPack:true, duplicateOutput:true, hookShape:true, beforeResourcesStarted:true,
+    emptyDefinitionsBeforeResources:rejectedSessionStarts === 0 },
   isolation:{ resetCount:events.filter((event) => event.endsWith(":reset-origins")).length,
     cleanupBeforeContinuation:events.indexOf("one:cleanup") < events.indexOf("two:fresh:0:0:0"),
     freshSecondContext:events.includes("two:fresh:0:0:0"),
@@ -392,6 +568,8 @@ console.log(JSON.stringify({ vtd006Acceptance:{
       sessionSource.includes("this.context.timers.add(timer)"),
   },
   launcher:{ lineCount:launcherSource.trim().split(/\r?\n/u).length,
-    delegates:launcherSource.includes("runInstalledSidePanelSession") },
+    delegates:launcherSource.includes("runDirectSidePanelCompatibility"),
+    noOpRejected:noOpLauncherRejected,
+    directContract },
 } }));
 console.log("side-panel browser session contract passed");

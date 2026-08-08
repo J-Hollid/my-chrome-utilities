@@ -1416,7 +1416,7 @@ assert.deepEqual(eventOtherCurrent,eventOtherBase);
 assert.deepEqual(eventCompletedCalibration.browserTargets,eventLibraryBaseCalibration.browserTargets);
 assert.deepEqual(calibrationProvenance(eventCompletedCalibration),calibrationProvenance(eventLibraryBaseCalibration));
 const eventInstalledSource = await readFile(
-  new URL("../test/support/side-panel-event-library-targets.mjs", import.meta.url), "utf8");
+  new URL("../test/support/side-panel-event-library-fixtures.mjs", import.meta.url), "utf8");
 assert.match(eventInstalledSource,/renderers:\{push:pushRendered,revision:revisionRendered,revisionEmpty\}/u,
   "the installed observation directly renders push and revision supplied values");
 const vtd004EventAcceptance = {
@@ -1588,7 +1588,7 @@ assert.deepEqual(captureCompletedCalibration.browserTargets,captureBaseCalibrati
 assert.deepEqual(calibrationProvenance(captureCompletedCalibration),calibrationProvenance(
   captureBaseCalibration));
 const captureInstalledSource = await readFile(
-  new URL("../test/support/side-panel-capture-targets.mjs",import.meta.url),"utf8");
+  new URL("../test/support/side-panel-capture-fixtures.mjs",import.meta.url),"utf8");
 assert.match(captureInstalledSource,/inspectorPresentation:\{captured,restored\}/u,
   "the installed Capture observation directly captures and restores inspector presentation");
 const vtd004CaptureAcceptance = {

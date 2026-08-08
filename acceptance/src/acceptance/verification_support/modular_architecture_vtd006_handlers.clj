@@ -42,6 +42,15 @@
   (get-in world [:vtd006/evidence :contract :packInventory
                  (keyword (:vtd006/pack world))]))
 
+(defn- consumer-scope [scope]
+  (->> (str/split (str/replace scope #",? and " ", ") #",\s*")
+       (remove str/blank?)
+       set))
+
+(defn- helper-planning [world]
+  (get-in world [:vtd006/evidence :contract :helperPlanning
+                 (keyword (:vtd006/helper world))]))
+
 (defn handlers [_dependencies]
   [{:pattern #"^(.+) owns (.+) registered targets and (.+) top-level outputs in the shared side-panel browser program$"
     :handler (fn [world example captures]
@@ -243,22 +252,33 @@
                (assoc (prepared world) :vtd006/helper (first (values example captures))))}
    {:pattern #"^current and historical statically resolvable imports are planned$"
     :handler (fn [world _ _]
-               (assert! world (seq (get-in world [:vtd006/evidence :contract :helperConsumers]))
-                        "Side-panel helper ownership is absent."))}
+               (assert! world (some? (helper-planning world))
+                        "The requested side-panel helper class has no production planning evidence."))}
    {:pattern #"^current planning selects (.+) as the complete helper scope$"
-    :handler (fn [world _ _]
-               (assert! world (seq (get-in world [:vtd006/evidence :contract :helperConsumers]))
-                        "Current helper consumers are incomplete."))}
+    :handler (fn [world example captures]
+               (let [expected (consumer-scope (first (values example captures)))
+                     planning (helper-planning world)]
+                 (assert! world
+                          (and (= expected (set (:current planning)))
+                               (= expected (set (mapcat identity (:declared planning)))))
+                          "Current helper declaration or planner scope differs from the example row.")))}
    {:pattern #"^deleting or renaming it selects the union of old and new consumers$"
     :handler (fn [world _ _]
-               (assert! world (= 19 (count (get-in world [:vtd006/evidence :contract
-                                                          :helperConsumers])))
-                        "Migrated helper history is incomplete."))}
+               (let [planning (helper-planning world)]
+                 (assert! world
+                          (and (= (:current planning) (:deleted planning))
+                               (= (:renameUnion planning) (:renamed planning)))
+                          "Migrated helper history does not union exact old and new consumers.")))}
    {:pattern #"^unavailable, malformed, or incompatible history selects every runnable pack$"
     :handler (fn [world _ _]
-               (assert! world (= 5 (count (get-in world [:vtd006/evidence :contract
-                                                         :packInventory])))
-                        "Conservative helper fallback lost a migrated consumer."))}
+               (let [planning (helper-planning world)
+                     runnable (vec (:runnablePackIds planning))]
+                 (assert! world
+                          (and (= 20 (count runnable))
+                               (= 3 (count (:failClosedSelections planning)))
+                               (every? #(= runnable (vec %)) (:failClosedSelections planning))
+                               (true? (:failClosed planning)))
+                          "Conservative helper history fallback did not select every runnable pack.")))}
 
    {:pattern #"^test/side-panel-component-layout-runtime-test.mjs becomes a thin direct compatibility launcher$"
     :handler (fn [world _ _] (prepared world))}
@@ -269,8 +289,25 @@
                         "The direct component-layout command is not a thin launcher."))}
    {:pattern #"^npm run test:unit:component-layout retains its current no-target assertions and viewport behavior without copied fixture logic$"
     :handler (fn [world _ _]
-               (assert! world (< (get-in world [:vtd006/evidence :launcher :lineCount]) 20)
-                        "The direct launcher copied fixture logic."))}
+               (let [direct (get-in world [:vtd006/evidence :launcher :directContract])
+                     target-ids (vec (:targetIds direct))
+                     expected-target-ids (set (map name (keys (get-in world [:vtd006/evidence
+                                                                             :contract :targets]))))]
+                 (assert! world
+                          (and (= 63 (:targetCount direct))
+                               (= 67 (:outputCount direct))
+                               (= 6910 (:assertionLeafCount direct))
+                               (= 1118 (:deferredAssertionCount direct))
+                               (= 63 (count target-ids))
+                               (= 63 (count (set target-ids)))
+                               (= expected-target-ids (set target-ids))
+                               (true? (:targetIdsExact direct))
+                               (true? (:expectedObservations direct))
+                               (true? (get-in world [:vtd006/evidence :launcher :noOpRejected]))
+                               (= (zipmap (map keyword ["320" "320,720" "360,520" "720"])
+                                          [20 1 1 41])
+                                  (:viewportCounts direct)))
+                          "The direct no-target command did not execute the conserved assertion and viewport corpus.")))}
    {:pattern #"^the five registered entry programs use the VTD-007 readiness, protocol-deadline, syntax-check, lifecycle, and phase-timing controls$"
     :handler (fn [world _ _]
                (assert! world (every? true? (vals (get-in world [:vtd006/evidence :controls])))
@@ -288,7 +325,3 @@
     :handler (fn [world _ _]
                (assert! world (= 5 (count (get-in world [:vtd006/evidence :contract :packInventory])))
                         "VTD-006 checkpoint evidence is incomplete."))}])
-
-;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-08T22:11:47.302673276+02:00", :module-hash "-494118928", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "1339117946"} {:id "form/1/defonce", :kind "defonce", :line 6, :end-line 6, :hash "701185655"} {:id "def/module-paths", :kind "def", :line 8, :end-line 16, :hash "415945835"} {:id "defn-/production-evidence!", :kind "defn-", :line 18, :end-line 28, :hash "59277045"} {:id "defn-/prepared", :kind "defn-", :line 30, :end-line 31, :hash "-223598626"} {:id "defn-/values", :kind "defn-", :line 33, :end-line 35, :hash "-45555851"} {:id "defn-/assert!", :kind "defn-", :line 37, :end-line 39, :hash "-1884999679"} {:id "defn-/pack-facts", :kind "defn-", :line 41, :end-line 43, :hash "1935968671"} {:id "defn/handlers", :kind "defn", :line 45, :end-line 290, :hash "-187145871"}]}
-;; clj-mutate-manifest-end

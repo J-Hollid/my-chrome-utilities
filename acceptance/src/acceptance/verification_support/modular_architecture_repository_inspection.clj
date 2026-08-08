@@ -105,7 +105,7 @@
             ["removeChromeProfile" "EBUSY" "ENOTEMPTY" "targetId" "profile"]
             "Chrome profile cleanup lacks bounded contention diagnostics."]
            ["test/side-panel-component-layout-runtime-test.mjs"
-            ["runInstalledSidePanelSession"]
+            ["runDirectSidePanelCompatibility"]
             "The direct component-layout command is not a thin compatibility launcher."]
            ["test/support/side-panel-browser-session.mjs"
             ["withLogicalTargetLifecycle" "runSidePanelBrowserSession"

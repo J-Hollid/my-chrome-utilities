@@ -5323,6 +5323,12 @@
         ]
       },
       {
+        "path": "test/support/side-panel-browser-direct-compatibility.mjs",
+        "consumers": [
+          "shell"
+        ]
+      },
+      {
         "path": "test/support/side-panel-browser-session.mjs",
         "consumers": [
           "capture",
@@ -5414,12 +5420,24 @@
       {
         "path": "test/support/side-panel-capture-targets.mjs",
         "consumers": [
+          "capture"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-capture-fixtures.mjs",
+        "consumers": [
           "capture",
           "shell"
         ]
       },
       {
         "path": "test/support/side-panel-event-library-targets.mjs",
+        "consumers": [
+          "event-library"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-event-library-fixtures.mjs",
         "consumers": [
           "event-library",
           "shell"
@@ -5455,6 +5473,12 @@
       },
       {
         "path": "test/support/side-panel-defect-targets.mjs",
+        "consumers": [
+          "defects"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-defect-fixtures.mjs",
         "consumers": [
           "defects",
           "shell"
