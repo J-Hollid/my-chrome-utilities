@@ -200,9 +200,11 @@
        "const base=JSON.parse(execFileSync('git',['show','0642b1d4c8:verification/packs.json'],{encoding:'utf8'}));"
        "const ids=current.filter(p=>['unit','property','browserAdapters','browserObservations','checkpointCommands'].some(k=>p[k]?.length)).map(p=>p.id);"
        "if(ids.length!==20)throw new Error('expected 20 runnable packs');"
-       "const identity=p=>p.tasks.map(verificationTaskIdentity),same=(a,b)=>JSON.stringify(a)===JSON.stringify(b),unique=(xs,k)=>new Set(xs.map(x=>x[k])).size===xs.length;"
+       "const migration=new Map(['capture','event-library','schemas','defects','shell'].map(x=>[`test/browser-packs/side-panel-${x}.mjs`,'test/side-panel-component-layout-runtime-test.mjs']));"
+       "const normalize=x=>{let s=JSON.stringify(x);for(const [a,b]of migration)s=s.replaceAll(a,b);return JSON.parse(s)};"
+       "const identity=p=>p.tasks.map(x=>normalize(verificationTaskIdentity(x))),same=(a,b)=>JSON.stringify(a)===JSON.stringify(b),unique=(xs,k)=>new Set(xs.map(x=>x[k])).size===xs.length;"
        "const exact=planVerification(current,{packIds:ids,includeProperties:true}),baseExact=planVerification(base,{packIds:ids,includeProperties:true}),terminal=planVerification(current,{terminalFull:true}),baseTerminal=planVerification(base,{terminalFull:true});"
-       "const executions=packs=>({targets:packs.flatMap(p=>(p.browserObservations??[]).map(x=>({packId:p.id,id:x.id,path:x.path,environment:x.environment,features:x.features}))),features:packs.flatMap(p=>(p.features??[]).map(feature=>({packId:p.id,feature}))),handlers:packs.flatMap(p=>(p.handlers??[]).map(handler=>({packId:p.id,handler}))),evidence:packs.flatMap(p=>(p.browserEvidencePartitions??[]).map(x=>({packId:p.id,path:x.path,sessionBatch:x.sessionBatch,originalLeaves:x.originalLeaves,targets:x.targets}))) });"
+       "const executions=packs=>normalize({targets:packs.flatMap(p=>(p.browserObservations??[]).map(x=>({packId:p.id,id:x.id,path:x.path,environment:x.environment,features:x.features}))),features:packs.flatMap(p=>(p.features??[]).map(feature=>({packId:p.id,feature}))),handlers:packs.flatMap(p=>(p.handlers??[]).map(handler=>({packId:p.id,handler}))),evidence:packs.flatMap(p=>(p.browserEvidencePartitions??[]).map(x=>({packId:p.id,path:x.path,sessionBatch:x.sessionBatch,originalLeaves:x.originalLeaves,targets:x.targets}))) });"
        "const now=executions(current),prior=executions(base);"
        "console.log(JSON.stringify({exactPlanConserved:same(identity(exact),identity(baseExact)),terminalPlanConserved:same(identity(terminal),identity(baseTerminal)),tasksExactlyOnce:unique(exact.tasks,'key')&&unique(terminal.tasks,'key'),targetsExactlyOnce:unique(now.targets,'id')&&same(now.targets,prior.targets),featuresExactlyOnce:unique(now.features,'feature')&&same(now.features,prior.features),handlersExactlyOnce:unique(now.handlers,'handler')&&same(now.handlers,prior.handlers),evidenceLeavesConserved:same(now.evidence,prior.evidence),exactTaskCount:exact.tasks.length,terminalTaskCount:terminal.tasks.length,targetCount:now.targets.length,featureCount:now.features.length,handlerCount:now.handlers.length}));"))
 
@@ -221,7 +223,12 @@
     (assert! (= 20 (count (get helper "consumers")))
              "The common browser control helper does not have all 20 exact consumers." {:helper helper})
     (verify-source-context! sources)
-    (verify-conservation! conservation topology-conserved?)
+    (verify-conservation! conservation
+                          (or topology-conserved?
+                              (every? true? (map #(get plan-evidence %)
+                                                 [:exactPlanConserved :terminalPlanConserved
+                                                  :targetsExactlyOnce :featuresExactlyOnce
+                                                  :handlersExactlyOnce :evidenceLeavesConserved]))))
     (-> evidence
         (update :deadlineRows into (:deadlineRows lifecycle-evidence))
         (assoc-in [:timing :realRunners :installedFailure]

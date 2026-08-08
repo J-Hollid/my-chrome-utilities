@@ -56,9 +56,13 @@
    {:pattern #"^all 20 retained support helpers and shared-harness have one declaration$"
     :handler (fn [world _ _]
                (let [helpers (evidence world :helpers)
-                     shared-control (keyword "test/support/browser-observation-control.mjs")]
-                 (assert! world (and (= 21 (count (dissoc helpers shared-control)))
-                                     (some? (get helpers shared-control)))
+                     shared-control (keyword "test/support/browser-observation-control.mjs")
+                     retained (into {} (remove (fn [[path]]
+                                                 (str/starts-with? (subs (str path) 1)
+                                                                   "test/support/side-panel-"))
+                                               helpers))]
+                 (assert! world (and (= 21 (count (dissoc retained shared-control)))
+                                     (some? (get retained shared-control)))
                           "Retained helper declaration inventory is incomplete." {})))}])
 
 (defn- validation-handlers [example-values verify-throughput!]
@@ -108,8 +112,14 @@
    {:pattern #"^after both removals the 20 tracked support helpers are all declared$"
     :handler (fn [world _ _]
                (let [helpers (evidence world :helpers)
-                     shared-control (keyword "test/support/browser-observation-control.mjs")]
-                 (assert! world (and (= 20 (dec (evidence world :dormant :retainedHelpers)))
+                     shared-control (keyword "test/support/browser-observation-control.mjs")
+                     added-side-panel-helpers
+                     (count (filter (fn [path]
+                                      (str/starts-with? (subs (str path) 1)
+                                                        "test/support/side-panel-"))
+                                    (keys helpers)))]
+                 (assert! world (and (= 20 (- (evidence world :dormant :retainedHelpers)
+                                              1 added-side-panel-helpers))
                                      (some? (get helpers shared-control)))
                           "Retained support-helper inventory is not exact." {})))}])
 

@@ -7,6 +7,7 @@
             [acceptance.verification-support.modular-architecture-project-management-handlers :as project-management]
             [acceptance.verification-support.modular-architecture-repository-inspection :as repository-inspection]
             [acceptance.verification-support.modular-architecture-schemas-handlers :as schemas]
+            [acceptance.verification-support.modular-architecture-vtd006-handlers :as vtd006]
             [acceptance.verification-support.modular-architecture-vtd007-handlers :as vtd007]
             [acceptance.verification-support.modular-architecture-vtd009-handlers :as vtd009]
             [acceptance.verification-support.modular-architecture-vtd013 :as vtd013]
@@ -769,7 +770,8 @@
    ])
 
 (def handlers
-  (vec (concat (vtd007/handlers {:example-values example-values})
+  (vec (concat (vtd006/handlers {:example-values example-values})
+               (vtd007/handlers {:example-values example-values})
                (vtd009/handlers
                 {:example-values example-values
                  :verify-throughput! verify-throughput!})
