@@ -5,7 +5,7 @@
             [clojure.string :as str]))
 
 (def ^:private browser-adapter-modes
-  #{"shared" "shared-wrapper" "integration"})
+  #{"shared" "shared-wrapper" "integration" "compatibility"})
 
 (defn enough-verification-packs? [registry]
   (>= (count registry) 6))
@@ -27,7 +27,9 @@
                      "scripts/report-verification-throughput.mjs" "scripts/run-focused-acceptance.mjs"
                      "scripts/verification-timing-ledger.mjs" "verification/timing-receipt-index.json"
                      "scripts/run-browser-observation.mjs" "test/support/headless-chrome.mjs"
-                     "test/side-panel-component-layout-runtime-test.mjs"])}))
+                     "test/side-panel-component-layout-runtime-test.mjs"
+                     "test/support/side-panel-browser-session.mjs"
+                     "test/support/side-panel-browser-fixture-primitives.mjs"])}))
 
 (defn- assert-pack-fields! [registry]
   (doseq [pack registry
@@ -103,6 +105,13 @@
             ["removeChromeProfile" "EBUSY" "ENOTEMPTY" "targetId" "profile"]
             "Chrome profile cleanup lacks bounded contention diagnostics."]
            ["test/side-panel-component-layout-runtime-test.mjs"
+            ["runInstalledSidePanelSession"]
+            "The direct component-layout command is not a thin compatibility launcher."]
+           ["test/support/side-panel-browser-session.mjs"
+            ["withLogicalTargetLifecycle" "runSidePanelBrowserSession"
+             "runSidePanelBrowserFixture"]
+            "The shared side-panel session lacks target lifecycle ownership."]
+           ["test/support/side-panel-browser-fixture-primitives.mjs"
             ["SWARMFORGE_BROWSER_TARGET_IDS" "SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS"
              "Storage.clearDataForOrigin" "swarmforgeBrowserTargetResult"
              "swarmforgeBrowserTargetTiming"]
@@ -110,9 +119,11 @@
     (support/assert! (support/includes-all? (sources path) signals) message {})))
 
 (defn- assert-owning-pack-batches! [registry]
-  (doseq [[pack-id expected-count] {"capture" 5 "schemas" 46 "defects" 9}]
+  (doseq [[pack-id expected-count program]
+          [["capture" 5 "test/browser-packs/side-panel-capture.mjs"]
+           ["schemas" 46 "test/browser-packs/side-panel-schemas.mjs"]
+           ["defects" 9 "test/browser-packs/side-panel-defects.mjs"]]]
     (let [pack (first (filter #(= pack-id (:id %)) registry))
-          program "test/side-panel-component-layout-runtime-test.mjs"
           observations (filter #(= program (:path %)) (:browserObservations pack))
           batches (filter #(= program (:path %)) (:browserObservationBatches pack))]
       (support/assert! (and (= expected-count (count observations))
@@ -130,8 +141,10 @@
                      "No compatible browser observations share a declared session batch." {})
     (support/assert! (seq (mapcat :browserAdapterPerformance registry))
                      "No slow browser adapter declares independently selectable targets." {})
-    (support/assert! (= 3 (count (filter #(= "test/side-panel-component-layout-runtime-test.mjs"
-                                             (:path %)) observation-batches)))
+    (support/assert! (= #{"test/browser-packs/side-panel-capture.mjs"
+                          "test/browser-packs/side-panel-schemas.mjs"
+                          "test/browser-packs/side-panel-defects.mjs"}
+                        (set (map :path observation-batches)))
                      "Shared side-panel program batches are incomplete." {})
     (assert-owning-pack-batches! registry)))
 

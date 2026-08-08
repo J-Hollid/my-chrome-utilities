@@ -64,12 +64,24 @@
                    "Event Library APS handler isolation is incomplete."
                    {:handler handler-name :evidence handler})))
 
+(defn- conserved-evidence-profile [pack]
+  (let [observation-paths (set (keep :path (:browserObservations pack)))
+        registration-only-paths
+        (set (keep (fn [{:keys [path mode]}]
+                     (when (and (= "integration" mode)
+                                (observation-paths path))
+                       path))
+                   (:browserAdapterModes pack)))]
+    (update (select-keys pack [:unit :property :features :handlers :browserAdapters])
+            :browserAdapters
+            (fn [paths] (vec (remove registration-only-paths paths))))))
+
 (defn- conservation-world [world dependencies]
   (let [prepared (event-world world dependencies)
         pack (:vtd004/pack prepared)
         evidence (get-in prepared [:vtd004/evidence :conservation])]
     (assert-event! (assoc prepared :vtd004/conserved? true)
-                   (and (= (select-keys pack [:unit :property :features :handlers :browserAdapters])
+                   (and (= (conserved-evidence-profile pack)
                            (:evidenceProfile evidence))
                         (= [9 1 8 3 1 1 30]
                            ((juxt :unitCount :propertyCount :featureCount :handlerCount
