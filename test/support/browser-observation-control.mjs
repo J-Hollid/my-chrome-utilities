@@ -24,9 +24,17 @@ function diagnosticText(value) {
     const json = JSON.stringify(value);
     return json === undefined ? String(value) : json;
   } catch (error) {
-    try { return `${String(value)} (serialization failed: ${error.message})`; }
-    catch { return `unprintable diagnostic (serialization failed: ${error.message})`; }
+    const failure = errorText(error);
+    try { return `${String(value)} (serialization failed: ${failure})`; }
+    catch { return `unprintable diagnostic (serialization failed: ${failure})`; }
   }
+}
+
+function errorText(error) {
+  try {
+    if (error && typeof error.message === "string") return error.message;
+    return String(error);
+  } catch { return "unprintable error"; }
 }
 
 export function boundedDiagnostic(value, maximumCharacters) {
@@ -48,7 +56,7 @@ export function browserReadinessProgramSource({
   const configuration = JSON.stringify({
     targetId, phase, timeoutMs, pollIntervalMs, maximumSnapshotCharacters,
   });
-  return `const waitFor=async(read,predicate)=>{const configuration=${configuration},started=performance.now(),deadline=started+configuration.timeoutMs;let last;while(true){last=await read();if(last)return last;const observedAt=performance.now();if(observedAt>=deadline){let diagnostic;try{const encoded=JSON.stringify(last);diagnostic=encoded===undefined?String(last):encoded;}catch(error){diagnostic='snapshot failed: '+error.message;}if(diagnostic.length>configuration.maximumSnapshotCharacters)diagnostic=diagnostic.slice(0,configuration.maximumSnapshotCharacters-1)+'…';throw new Error(configuration.targetId+' '+configuration.phase+' timed out waiting for '+predicate+' after '+Math.max(0,observedAt-started)+'ms; last state '+diagnostic);}await new Promise(resolve=>setTimeout(resolve,Math.min(configuration.pollIntervalMs,deadline-observedAt)));}};`;
+  return `const waitFor=async(read,predicate)=>{const configuration=${configuration},started=performance.now(),deadline=started+configuration.timeoutMs;let last;while(true){last=await read();if(last)return last;const observedAt=performance.now();if(observedAt>=deadline){let diagnostic;try{const encoded=JSON.stringify(last);diagnostic=encoded===undefined?String(last):encoded;}catch(error){let failure;try{failure=error&&typeof error.message==='string'?error.message:String(error);}catch{failure='unprintable error';}diagnostic='snapshot failed: '+failure;}if(diagnostic.length>configuration.maximumSnapshotCharacters)diagnostic=diagnostic.slice(0,configuration.maximumSnapshotCharacters-1)+'…';throw new Error(configuration.targetId+' '+configuration.phase+' timed out waiting for '+predicate+' after '+Math.max(0,observedAt-started)+'ms; last state '+diagnostic);}await new Promise(resolve=>setTimeout(resolve,Math.min(configuration.pollIntervalMs,deadline-observedAt)));}};`;
 }
 
 export function observeBrowserReadiness(options) {
@@ -90,7 +98,7 @@ export function observeBrowserReadiness(options) {
         try { diagnostic = boundedDiagnostic(snapshot(lastObservation), maximumSnapshotCharacters); }
         catch (error) {
           diagnostic = boundedDiagnostic(
-            `snapshot failed: ${error.message}; observation ${diagnosticText(lastObservation)}`,
+            `snapshot failed: ${errorText(error)}; observation ${diagnosticText(lastObservation)}`,
             maximumSnapshotCharacters,
           );
         }

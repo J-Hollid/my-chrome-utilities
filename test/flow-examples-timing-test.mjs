@@ -125,6 +125,14 @@ await assert.rejects(() => observeBrowserReadiness({
   observe:async() => hostile, ready:({ ready }) => ready,
   snapshot:() => { throw new Error("snapshot exploded"); },
 }), (error) => error.snapshot.length <= 80 && /60ms.*snapshot exploded/su.test(error.message));
+readinessClock = 0;
+await assert.rejects(() => observeBrowserReadiness({
+  targetId:"TARGET-READY", phase:"navigation", predicateDescription:"workspace mounted",
+  timeoutMs:0, pollIntervalMs:25, maximumSnapshotCharacters:40,
+  now:() => readinessClock, sleep:async() => {}, observe:async() => false,
+  ready:() => false, snapshot:() => { throw undefined; },
+}), (error) => error.targetId === "TARGET-READY" && error.phase === "navigation" &&
+  error.snapshot.length <= 40 && /snapshot failed: undefined/u.test(error.message));
 
 let sharedTimestamp = 0;
 const sharedTimer = createBrowserPhaseTimer({
