@@ -33,6 +33,7 @@ import {
   flowGraphPageExampleStateEvidence,
 } from "./support/flow-graph-corrective-workflow.mjs";
 import {
+  flowSectionDrawActionabilityState,
   flowWorkspaceReadinessLimitMilliseconds,
   flowWorkspaceR02Runtime,
 } from "./support/flow-workspace-r02-runtime.mjs";
@@ -428,6 +429,53 @@ assert.match(flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"}),
 assert.match(flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"}),
   /addEventListener\('focusin',observeDeletionSourceFocus,true\)/u,
   "the authoring observation must latch the transient production focus event");
+const drawRuntimeProgram=flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"});
+assert.match(drawRuntimeProgram,/actionable Section draw mode/u,
+  "the authoring runtime must wait for the installed draw boundary");
+assert.ok(drawRuntimeProgram.indexOf("actionable Section draw mode")<
+  drawRuntimeProgram.indexOf("pointer(canvas,'pointerdown',{pointerId:51"),
+"the semantic draw gesture must follow the actionable boundary");
+assert.equal(drawRuntimeProgram.match(/pointer\(canvas,'pointerdown',\{pointerId:51/gu)?.length,1,
+  "the draw proof must retain one real semantic pointer gesture");
+assert.match(drawRuntimeProgram,/expectedSectionCount/u,
+  "draw persistence timeout diagnostics must retain section-count state");
+const actionableDrawFixture={drawingMode:true,canvasConnected:true,surfaceOpen:false,
+  canvasFocused:true,geometryStable:true,left:20,top:30,width:640,height:420};
+assert.equal(flowSectionDrawActionabilityState(actionableDrawFixture),true);
+for(const [field,value] of [["drawingMode",false],["canvasConnected",false],
+  ["surfaceOpen",true],["canvasFocused",false],["geometryStable",false],
+  ["width",0],["height",0]]){
+  assert.equal(flowSectionDrawActionabilityState({...actionableDrawFixture,[field]:value}),false,
+    `draw actionability requires ${field}`);
+}
+let drawClock=0,drawPointerDispatches=0,drawObservationCount=0;
+const delayedDrawStates=[
+  {drawingMode:false,canvasConnected:true,surfaceOpen:true,canvasFocused:false,
+    geometryStable:false,left:0,top:0,width:0,height:0},
+  {drawingMode:true,canvasConnected:true,surfaceOpen:false,canvasFocused:true,
+    geometryStable:false,left:20,top:30,width:640,height:420},
+  {drawingMode:true,canvasConnected:true,surfaceOpen:false,canvasFocused:true,
+    geometryStable:true,left:20,top:30,width:640,height:420},
+  {drawingMode:true,canvasConnected:true,surfaceOpen:false,canvasFocused:true,
+    geometryStable:true,left:20,top:30,width:640,height:420},
+];
+const actionableDrawState=await observeBrowserReadiness({
+  targetId:"FLOW_WORKSPACE_AUTHORING_TARGET",phase:"interaction",
+  predicateDescription:"actionable Section draw mode",timeoutMs:100,pollIntervalMs:25,
+  stabilityMs:25,maximumSnapshotCharacters:400,now:()=>drawClock,
+  sleep:async(milliseconds)=>{drawClock+=milliseconds;},
+  observe:async()=>{
+    assert.equal(drawPointerDispatches,0,
+      "pointer input must remain blocked while draw rendering is delayed");
+    return delayedDrawStates[Math.min(drawObservationCount++,delayedDrawStates.length-1)];
+  },
+  ready:flowSectionDrawActionabilityState,snapshot:(state)=>state,
+});
+drawPointerDispatches+=1;
+assert.equal(actionableDrawState.geometryStable,true);
+assert.equal(drawObservationCount,4);
+assert.equal(drawPointerDispatches,1,
+  "one semantic draw gesture is released only after actionable stable geometry");
 assert.equal(flowGraphRepeatedInstanceReadinessLimitMilliseconds,30000,
   "runtime024 needs a load-tolerant elapsed-time readiness boundary");
 const repeatedInstanceProgram=flowGraphRepeatedInstanceEvidence(
@@ -435,9 +483,24 @@ const repeatedInstanceProgram=flowGraphRepeatedInstanceEvidence(
 assert.match(repeatedInstanceProgram,/"timeoutMs":30000/u);
 assert.doesNotMatch(repeatedInstanceProgram,/attempt<300/u,
   "runtime024 readiness must not use a fixed retry count");
+assert.doesNotMatch(repeatedInstanceProgram,/attempt<40/u,
+  "runtime024 navigation must not accept a stale canvas through a fixed retry loop");
+assert.match(repeatedInstanceProgram,/actionable runtime024 Flow canvas/u,
+  "runtime024 must wait for visible Flow geometry before selecting an instance");
+assert.match(repeatedInstanceProgram,/actionable Definition section/u,
+  "runtime024 must stabilize the live Definition control before its one click");
+assert.match(repeatedInstanceProgram,/definitionConnected/u,
+  "runtime024 Definition failures must retain an actionable-state snapshot");
+assert.match(repeatedInstanceProgram,/workspaceOpen/u,
+  "runtime024 must observe the Flow return transition instead of a stale canvas node");
 assert.match(repeatedInstanceProgram,
-  /definition\.click\(\);const editor=await waitFor\(\(\)=>all\(':modal \[data-focused-property-editor="true"\]'\)\.at\(-1\),'Definition editor'\)/u,
+  /textContent\.trim\(\)==='Return to Flow'&&candidate\.isConnected&&candidate\.getBoundingClientRect\(\)\.width>0/u,
+  "runtime024 must activate the connected, painted Return to Flow control");
+assert.match(repeatedInstanceProgram,
+  /definitionBoundary\.definition\.click\(\);const editorBoundary=await waitFor/u,
   "runtime024 must activate Definition once and observe the resulting editor");
+assert.equal(repeatedInstanceProgram.match(/definitionBoundary\.definition\.click\(\)/gu)?.length,1,
+  "runtime024 must retain exactly one semantic Definition activation");
 assert.doesNotMatch(repeatedInstanceProgram,/liveDefinition\?\.click/u,
   "runtime024 readiness polling must not repeatedly disturb the Definition control");
 assert.match(inPageReadiness, /performance\.now\(\)/u);
