@@ -1447,3 +1447,123 @@ Feature: Modular verification packs
     And the migration neither adds nor removes a planned task or evidence leaf in exact-pack and terminal-full scope
     And product behavior, durable bytes, browser-target budgets, pack calibrations, and changed-path ownership are unchanged
     And the former Flow-only readiness behavior is conserved by the shared API without duplicate polling implementations
+
+  # Modular verification packs 095
+  Scenario Outline: Modular verification packs 095
+    Given <owning_pack> owns <target_count> registered targets and <output_count> top-level outputs in the shared side-panel browser program
+    When VTD-006 moves those targets to <new_program>
+    Then every logical target id and planner configuration is conserved exactly once
+    And exact and terminal planning use <process_group> without adding a Chrome launch
+
+    Examples:
+      | owning_pack  | target_count | output_count | new_program                                          | process_group                |
+      | capture      | 5            | 5            | test/browser-packs/side-panel-capture.mjs            | capture-side-panel           |
+      | event-library | 1           | 1            | test/browser-packs/side-panel-event-library.mjs      | the existing single target   |
+      | schemas      | 46           | 48           | test/browser-packs/side-panel-schemas.mjs            | schemas-side-panel           |
+      | defects      | 9            | 11           | test/browser-packs/side-panel-defects.mjs            | defects-side-panel           |
+      | shell        | 2            | 2            | test/browser-packs/side-panel-shell.mjs              | shell-containment            |
+
+  # Modular verification packs 096
+  Scenario Outline: Modular verification packs 096
+    Given focused side-panel target <target> is the only requested logical target
+    When its pack entry resolves the declarative target registry
+    Then it initializes <target_module> and the common kernel only
+    And no unselected domain or Schema-family module performs an import-time or runtime fixture side effect
+
+    Examples:
+      | target                                              | target_module                                               |
+      | FRESH_LIVE_SESSION_BROWSER_ADAPTER                  | test/support/side-panel-capture-targets.mjs                 |
+      | LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER        | test/support/side-panel-event-library-targets.mjs           |
+      | SCHEMA_WORKSPACE_BROWSER_ADAPTER:default            | test/support/side-panel-schema-workspace-targets.mjs        |
+      | GUIDED_VALIDATION_BROWSER_ADAPTER                   | test/support/side-panel-schema-guided-targets.mjs           |
+      | RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER       | test/support/side-panel-schema-validation-targets.mjs       |
+      | SCHEMA_SPECIFICATION_PREVIEW_LAYOUT_BROWSER_ADAPTER | test/support/side-panel-schema-documentation-targets.mjs    |
+      | DEFECT_LIBRARY_BROWSER_ADAPTER                      | test/support/side-panel-defect-targets.mjs                  |
+      | WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER         | test/support/side-panel-shell-targets.mjs                   |
+
+  # Modular verification packs 097
+  Scenario Outline: Modular verification packs 097
+    Given the side-panel target request contains <invalid_contract>
+    When the registry validates it before browser startup
+    Then execution is rejected with <diagnostic>
+    And no server, Chrome process, profile, fixture, or target module side effect has started
+
+    Examples:
+      | invalid_contract                                  | diagnostic                                      |
+      | a duplicate logical target id                    | the duplicate id                                |
+      | an unknown logical target id                     | the unknown id                                  |
+      | missing or extra planner configuration           | the exact configuration difference              |
+      | a target requested through another pack's entry  | the target id and expected owning pack           |
+      | duplicate observation-key ownership              | the target ids and duplicated output key         |
+      | an incompatible setup, observation, or cleanup hook | the target id and invalid hook                |
+
+  # Modular verification packs 098
+  Scenario: Modular verification packs 098
+    Given each logical side-panel target receives a new frozen target context inside a reusable process context
+    When targets pass, fail, or execute in another compatible order
+    Then both served and extension origins are cleared before every target
+    And device emulation, pages, sockets, listeners, timers, observations, and cleanup stacks cannot leak to the next target
+    And planner environment maps are never applied by mutating process.env between targets
+    And canonical and permuted fake-resource runs produce identical normalized results for every target identity
+    And representative Capture, Schemas, Defects, and Shell target pairs produce identical installed-browser results in both orders
+
+  # Modular verification packs 099
+  Scenario Outline: Modular verification packs 099
+    Given exact <owning_pack> verification selects <target_count> compatible side-panel targets
+    When its new entry program executes the selected registry definitions
+    Then one asset server, one Chrome process, and one temporary profile serve the complete process group
+    And every target receives fresh target state, its own result, timing, and declared outputs
+    And process shutdown occurs once after all target results
+
+    Examples:
+      | owning_pack   | target_count |
+      | capture       | 5            |
+      | event-library | 1            |
+      | schemas       | 46           |
+      | defects       | 9            |
+      | shell         | 2            |
+
+  # Modular verification packs 100
+  Scenario: Modular verification packs 100
+    Given an early side-panel target is forced to fail during an active browser phase
+    When later compatible targets remain in the same process group
+    Then its failure record has separate fields for target, phase, readiness-or-infrastructure cause, monotonic duration, and size-limited final state
+    And it emits completed and active phase timings without emitting a passed result
+    And its cleanup completes before every later target executes and reports independently
+    And one aggregate failure is thrown only after every requested target has emitted a result
+
+  # Modular verification packs 101
+  Scenario: Modular verification packs 101
+    Given the committed VTD-006 target contract maps the old shared browser program to the five new entry programs
+    When its current and migrated evidence inventories are compared
+    Then all 63 target ids and 67 top-level observation keys map exactly once
+    And all deep assertion leaves consumed by feature handlers remain reachable without constants, renames, duplicates, or relaxed branches
+    And the three Schema workspace configurations, two Guided Validation outputs, two Schema Manual Property outputs, and three combined missing-event Defects outputs remain distinct as before
+    And the two Shell containment targets retain their existing nine assertion leaves each
+
+  # Modular verification packs 102
+  Scenario Outline: Modular verification packs 102
+    Given changed verification helper <helper_class> is reached through registered browser-observation programs
+    When current and historical statically resolvable imports are planned
+    Then current planning selects <consumer_scope> as the complete helper scope
+    And deleting or renaming it selects the union of old and new consumers
+    And unavailable, malformed, or incompatible history selects every runnable pack
+
+    Examples:
+      | helper_class                                                   | consumer_scope                                         |
+      | the side-panel session, registry, primitives, or target contract | capture, event-library, schemas, defects, and shell |
+      | the Capture target module                                     | capture                                                |
+      | the Event Library target module                               | event-library                                          |
+      | any Schema-family target module                               | schemas and shell                                      |
+      | the Defects target module                                     | defects                                                |
+      | the Shell target module                                       | shell                                                  |
+
+  # Modular verification packs 103
+  Scenario: Modular verification packs 103
+    Given test/side-panel-component-layout-runtime-test.mjs becomes a thin direct compatibility launcher
+    When VTD-006 completes the target and session extraction
+    Then npm run test:unit:component-layout retains its current no-target assertions and viewport behavior without copied fixture logic
+    And the five registered entry programs use the VTD-007 readiness, protocol-deadline, syntax-check, lifecycle, and phase-timing controls
+    And no src product file, product behavior, saved value, accessibility result, feature owner, handler owner, pack dependency, target budget, calibration, worker limit, or shard changes
+    And exact-pack and terminal-full plans map every old program task to one new program task with every logical target and evidence leaf once
+    And the one-time delivery checkpoint runs all 20 runnable packs in canonical order followed by node scripts/package.mjs

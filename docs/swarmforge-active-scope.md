@@ -3044,11 +3044,11 @@ runnable packs in canonical order followed by `node scripts/package.mjs`. This
 broad delivery checkpoint does not make future focused helper or local Shell changes
 global.
 
-## Verification throughput program — candidate VTD-007 browser readiness and timing (2026-08-08)
+## Verification throughput program — completed VTD-007 browser readiness and timing (2026-08-08)
 
-This is the only candidate specification package. It covers VTD-007 only and grants
-no implementation authority until the user explicitly approves the bounded coder
-handoff. VTD-006, VTD-008, and VTD-010 through VTD-012 remain inactive.
+This package was approved, completed the coder, refactorer, and architect chain, and
+merged at `95c79a42d69078c3bca7018e528f3559a1a49668`. It covers VTD-007 only. Its
+delivered boundaries remain authoritative for later backlog packages.
 
 ### Plain-language outcome
 
@@ -3217,3 +3217,202 @@ process contract gains phase fields, the one-time implementation checkpoint runs
 20 packs in canonical order followed by `node scripts/package.mjs`. This broad
 delivery check verifies the shared migration; it does not make later domain-local
 fixture changes global.
+
+## Verification throughput program — candidate VTD-006 modular side-panel browser program (2026-08-08)
+
+This is the only candidate specification package. It completes VTD-006 as one
+test-infrastructure package and grants no implementation authority until the user
+explicitly approves the bounded coder handoff. VTD-008 and VTD-010 through VTD-012
+remain inactive.
+
+### Plain-language outcome
+
+The affected file is currently 7,823 lines and 1,036,942 bytes. It mixes 63 browser
+checks for five product areas into one program. Forty-six of those checks belong to
+the Specification Studio schema experience, so this friction is encountered often
+in the repository's present development focus. A developer changing one Studio
+check must presently navigate a file that also contains Capture feeds, defect
+reports, Event Library behavior, and Shell containment. Two otherwise unrelated
+changes can collide in that same file, and a leaked variable or unfinished cleanup
+can make a later check fail far away from the code that caused it.
+
+After this package, the large file is a small compatibility launcher. Browser
+startup and shutdown live in one reusable kernel, the list of checks lives in a
+validated registry, and the actual checks live in focused Capture, Event Library,
+Defects, Shell, and four Studio schema-family modules. Running one Studio check loads
+only its schema family, not the Capture or Defects fixtures. Running the complete
+Studio pack still executes all 46 compatible checks in one Chrome process, so the
+cleanup does not trade understandable code for 46 browser startups.
+
+Tangibly, this enables smaller reviews, fewer merge conflicts between unrelated
+work, less chance that one check contaminates the next, and a direct answer when a
+browser check fails: which check, which stage, what it was waiting for, and the last
+state it saw. Avoided fixture loading may make focused checks faster, but this package
+does not claim a new runtime budget. Its guaranteed benefit is safer, easier-to-find
+test code without removing coverage or browser-session reuse.
+
+### Program and module boundary
+
+`test/side-panel-component-layout-runtime-test.mjs` remains the supported direct
+component-layout command used by `npm run test:unit:component-layout` and the Shell
+integration declaration, but becomes a thin compatibility launcher. Its no-target
+mode retains the current direct component-layout assertions and viewport behavior;
+it does not keep a second copy of extracted fixture logic.
+
+Registered logical observations move from the shared path to one thin entry program
+per owning pack:
+
+| Owning pack | New entry program | Targets | Top-level observation keys | Compatible process group |
+|---|---|---:|---:|---|
+| `capture` | `test/browser-packs/side-panel-capture.mjs` | 5 | 5 | `capture-side-panel` |
+| `event-library` | `test/browser-packs/side-panel-event-library.mjs` | 1 | 1 | its existing single target |
+| `schemas` | `test/browser-packs/side-panel-schemas.mjs` | 46 | 48 | `schemas-side-panel` |
+| `defects` | `test/browser-packs/side-panel-defects.mjs` | 9 | 11 | `defects-side-panel` |
+| `shell` | `test/browser-packs/side-panel-shell.mjs` | 2 | 2 | `shell-containment` |
+
+The implementation adds these shared support boundaries:
+
+- `test/support/side-panel-browser-session.mjs` owns the asset server, Chrome
+  process, profile, DevTools connections, target lifecycle, and process cleanup;
+- `test/support/side-panel-browser-target-registry.mjs` validates target identity,
+  configuration, lazy module selection, hook shape, and output ownership;
+- `test/support/side-panel-browser-fixture-primitives.mjs` contains only genuinely
+  cross-domain browser-fixture primitives;
+- `test/support/side-panel-browser-target-contract.mjs` records the conserved target,
+  old/new program, batch, configuration, output-key, and assertion-leaf mapping;
+- `test/support/side-panel-capture-targets.mjs`,
+  `test/support/side-panel-event-library-targets.mjs`,
+  `test/support/side-panel-defect-targets.mjs`, and
+  `test/support/side-panel-shell-targets.mjs` own their named domain fixtures; and
+- Schemas is split into `side-panel-schema-workspace-targets.mjs` for the three
+  workspace configurations and seven lifecycle/editing targets,
+  `side-panel-schema-guided-targets.mjs` for 17 guided authoring and rule targets,
+  `side-panel-schema-validation-targets.mjs` for 10 validation targets, and
+  `side-panel-schema-documentation-targets.mjs` for nine documentation,
+  specification-builder, and preview targets.
+
+The four schema families contain all 46 Schemas target identities exactly once.
+Code shared by only two schema families remains schema-owned rather than being
+promoted to a five-pack primitive. Target modules have no import-time browser,
+storage, environment, or fixture side effects.
+
+### Declarative target contract and selective loading
+
+Every registered target definition supplies its stable logical id, owning pack,
+program and batch, immutable planner configuration, viewport requirements,
+observation keys, lazy module loader, and explicit setup, observation, and cleanup
+hooks. The registry rejects duplicate ids, unknown ids, missing or extra target
+configuration, a target requested through the wrong pack entry program, duplicate
+output ownership, and hooks with an incompatible shape before Chrome starts.
+
+The five entry programs use literal lazy imports so repository ownership remains
+statically checkable while runtime initialization remains selective. A focused
+target imports only the kernel, registry, shared primitives, contract, and its exact
+domain or schema-family module. Merely importing a target module cannot start a
+server, connect to Chrome, seed storage, register a listener, or mutate shared state.
+An exact batch may load several needed families, but never loads a domain that owns
+no selected target.
+
+Planner-supplied environment maps remain accepted input at the process boundary.
+They are parsed once into frozen target configurations and passed through target
+contexts. The runner and target modules do not activate a target by deleting or
+assigning `process.env`, and they do not derive target behavior from mutable global
+observation flags.
+
+### One process, isolated targets
+
+One program invocation owns one process context: asset server, Chrome process,
+temporary profile, extension id, process-scoped timings, and final shutdown. Each
+logical target receives a new target context containing only its frozen
+configuration, viewport, page and socket handles, cleanup stack, observations,
+phase timer, and diagnostic snapshot provider.
+
+Before every target, the runner preserves the current reset of both the served HTTP
+origin and installed-extension origin, restores the declared device emulation, and
+opens fresh target-scoped page and socket handles. Cleanup always removes that
+target's pages, sockets, listeners, timers, handles, and in-memory observations,
+whether setup, interaction, assertion, or output fails. Reload and persistence work
+inside one target may span pages as today; it cannot leave state for the next target.
+
+A failed target still emits its existing `swarmforgeBrowserTargetResult` identity,
+its compatible target timing with completed and active phase detail, and any valid
+bounded diagnostic, then runs cleanup and permits later targets in the same process
+to execute. The process throws one aggregate failure only after all requested
+targets have produced a result. Process shutdown is performed once and is not
+charged to every target.
+
+Deterministic kernel tests run every target identity against fake browser resources
+in canonical and permuted orders and prove fresh contexts and complete cleanup.
+Installed-browser regression coverage additionally runs a representative pair from
+Capture, Schemas, Defects, and Shell in both orders and compares normalized outputs;
+Event Library has only one target. Exact and terminal verification retain their
+canonical target order.
+
+### Batching, failures, and VTD-007 adoption
+
+The program-path migration changes no logical batching. Exact and terminal plans
+still schedule one compatible observation process for Capture's five targets,
+Schemas' 46 targets, Defects' nine targets, Shell's two containment targets, and the
+single Event Library target. No target is converted into a standalone Chrome launch,
+and the direct compatibility command does not become a new verification task.
+
+The new session kernel adopts the delivered
+`test/support/browser-observation-control.mjs` API for debug-port startup, DevTools
+protocol limits, product readiness, generated-program syntax checking, target
+lifecycle, and phase timing. A forced failure names the logical target, active setup,
+navigation, fixture, interaction, persistence, assertion, or cleanup phase, the
+unmet predicate or infrastructure operation, monotonic elapsed time, and a bounded
+last state. Infrastructure failures remain distinct from product-readiness failures.
+The failure of one target cannot prevent a later compatible target from reporting
+its own result.
+
+### Evidence and ownership conservation
+
+The committed target contract maps all 63 current target ids and all 67 top-level
+observation keys from the old shared program to the five new entry programs. For
+every target it also maps the complete deep assertion leaves consumed by its feature
+handlers. The three Schema workspace configurations still own separate logical ids
+while sharing the `schemaWorkspace` output key, Guided Validation still owns its two
+keys, Schema Manual Property still owns its two keys, and the combined missing-event
+Defects target still owns its three keys. Shell's existing 18 explicit containment
+leaves remain partitioned nine and nine. A missing, duplicated, constant,
+unreachable, renamed, or relaxed leaf blocks verification.
+
+`scripts/verification-packs.mjs` includes registered browser-observation program
+paths when validating the statically resolvable transitive verification-helper
+graph. The new kernel, registry, primitives, and contract are declared once with
+exact consumers `capture`, `event-library`, `schemas`, `defects`, and `shell`.
+Capture, Event Library, Defects, and Shell target modules name only their owning
+pack. The four Schema modules name `schemas` and `shell` because the existing direct
+Shell compatibility suite reuses the same Schema fixture logic rather than copying
+it. Literal lazy imports remain statically visible even though unselected modules do
+not initialize at runtime.
+
+Changing a domain target module selects its exact declared consumers; changing the
+kernel or registry selects the five affected packs. Deleting or renaming an old or
+new entry program or helper selects the union of current and historical consumers.
+Unavailable, malformed, or incompatible historical ownership fails closed to every
+runnable pack. Program-path migration cannot make a changed or deleted target
+disappear from planning.
+
+### Conservation and delivery checkpoint
+
+This package changes test and verification infrastructure only. It changes no
+`src/` product file, saved product value, visible control, accessibility behavior,
+logical target id, target configuration, observation key, assertion meaning,
+feature or handler owner, pack dependency, production impact boundary, worker
+limit, shard, calibration, or target budget. Performance declarations that include
+the old program path move to the corresponding new entry path while retaining their
+target ids and numbers. Existing exact and terminal task identities receive an
+explicit old-path/new-path mapping; every logical task and evidence leaf executes
+once.
+
+The package adds focused unit and process-contract tests for registry validation,
+lazy loading, frozen configuration, lifecycle cleanup, result continuation, order
+independence, helper ownership, current/history planning, and the 63-target evidence
+map. Browser checks exercise each of the five entry programs and the direct
+compatibility launcher. Because helper-graph validation is expanded to every
+browser-observation entry and the package migrates five packs at once, the one-time
+delivery checkpoint runs all 20 runnable packs in canonical order followed by
+`node scripts/package.mjs`. Future changes to a domain module use the narrower
+declared ownership above; the broad delivery checkpoint is not a permanent fan-out.
