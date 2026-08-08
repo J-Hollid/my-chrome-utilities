@@ -9,10 +9,13 @@ import { FLOW_RUNTIME_KEYS, flowInterruptionReport } from "../support/flow-evide
 import { wait } from "./shared-harness.mjs";
 import { flowGraphCorrectiveWorkflow, flowGraphEventExampleIncompleteEvidence, flowGraphEventExampleSeed, flowGraphEventExampleStateEvidence, flowGraphLegacyContextEvidence, flowGraphLegacyContextSeed, flowGraphPageExampleIncompleteEvidence, flowGraphPageExampleSeed, flowGraphPageExampleStateEvidence, flowGraphRelationshipKindEvidence, flowGraphRelationshipKindSeed, flowGraphReloadEvidence, flowGraphRepeatedInstanceEvidence, flowGraphRepeatedInstanceSeed } from "../support/flow-graph-corrective-workflow.mjs";
 import { flowR02GeometryEvidence, flowR02ItemActivationResult, flowR02PanProbe, flowR02PanResult, flowR02PreparePanGraph, flowR02RestorePanGraph, flowR02ViewStorageKey } from "../support/flow-r02-correction-evidence.mjs";
-import { boundedFlowExamplesReadiness, createFlowExamplesPhaseTimer } from "../support/flow-examples-timing.mjs";
-import { browserProgram, createBrowserPhaseTimer, observeBrowserReadiness } from "../support/browser-observation-control.mjs";
+import { boundedFlowExamplesReadiness, createFlowExamplesPhaseTimer,
+    flowExamplesTargetLimitMilliseconds } from "../support/flow-examples-timing.mjs";
+import { createBrowserPhaseTimer, observeBrowserReadiness, transmitDevtoolsProgram,
+    waitForChromeDebuggingPort, withDevtoolsProtocolDeadline,
+    withLogicalTargetLifecycle } from "../support/browser-observation-control.mjs";
 class DevtoolsSocket {
-    constructor(url) { this.url = new URL(url); this.nextId = 1; this.pending = new Map(); this.handlers = new Map(); this.buffer = Buffer.alloc(0); }
+    constructor(url, targetId, { callLimitMilliseconds, forcedHangMethod } = {}) { this.url = new URL(url); this.targetId = targetId; this.callLimitMilliseconds = callLimitMilliseconds ?? (() => 120000); this.forcedHangMethod = forcedHangMethod; this.nextId = 1; this.pending = new Map(); this.handlers = new Map(); this.buffer = Buffer.alloc(0); }
     async connect() { await new Promise((resolve, reject) => { this.socket = net.createConnection({ host: this.url.hostname, port: Number(this.url.port) }); this.socket.once("error", reject); this.socket.once("connect", () => { const key = Buffer.from(String(Math.random())).toString("base64"); this.socket.write([`GET ${this.url.pathname}${this.url.search} HTTP/1.1`, `Host: ${this.url.host}`, "Upgrade: websocket", "Connection: Upgrade", `Sec-WebSocket-Key: ${key}`, "Sec-WebSocket-Version: 13", "\r\n"].join("\r\n")); }); let handshake = ""; const receive = (chunk) => { handshake += chunk.toString("binary"); const end = handshake.indexOf("\r\n\r\n"); if (end < 0)
         return; this.socket.off("data", receive); if (!handshake.startsWith("HTTP/1.1 101"))
         return reject(new Error("DevTools WebSocket upgrade failed")); const remaining = Buffer.from(handshake.slice(end + 4), "binary"); this.socket.on("data", (data) => this.receive(data)); if (remaining.length)
@@ -43,6 +46,8 @@ class DevtoolsSocket {
             this.handlers.get(message.method)?.(message.params);
             continue;
         }
+        if (pending.method === this.forcedHangMethod)
+            continue;
         this.pending.delete(message.id);
         message.error ? pending.reject(new Error(message.error.message)) : pending.resolve(message.result);
     } }
@@ -58,19 +63,14 @@ class DevtoolsSocket {
     call(method, params = {}) {
         const id = this.nextId++;
         this.send({ id, method, params });
-        return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                this.pending.delete(id);
-                reject(new Error(`CDP ${method} timed out`));
-            }, 120000);
-            this.pending.set(id, {
-                resolve: (value) => { clearTimeout(timeout); resolve(value); },
-                reject: (error) => { clearTimeout(timeout); reject(error); },
-            });
+        return withDevtoolsProtocolDeadline({
+            targetId:this.targetId, method, limitMs:this.callLimitMilliseconds(),
+            work:() => new Promise((resolve, reject) => this.pending.set(id, { resolve, reject, method })),
+            onTimeout:() => this.pending.delete(id),
         });
     }
     on(method, handler) { this.handlers.set(method, handler); }
-    close() { this.socket?.destroy(); }
+    close() { for (const pending of this.pending.values()) pending.reject(new Error(`${this.targetId} DevTools socket closed`)); this.pending.clear(); this.socket?.destroy(); }
 }
 const targetShards = {
     FLOW_WORKSPACE_CONTROLS_TARGET: "core",
@@ -87,17 +87,20 @@ const selectedTargets = selectedTargetIds.length
 for (const { id, shard } of selectedTargets)
     assert.equal(typeof shard, "string", `Unknown Flow browser target ${id}`);
 const processStarted = performance.now();
+const configuredProtocolCallLimitMilliseconds = Number(
+    process.env.SWARMFORGE_VTD007_PROTOCOL_CALL_LIMIT_MS ?? 120000,
+);
+assert.ok(Number.isFinite(configuredProtocolCallLimitMilliseconds) &&
+    configuredProtocolCallLimitMilliseconds > 0,
+"SWARMFORGE_VTD007_PROTOCOL_CALL_LIMIT_MS must be finite and positive");
 const profile = await mkdtemp(path.join(os.tmpdir(), "flow-instance-runtime-")), extensionRoot = path.resolve("dist"), args = headlessChromeArguments(profile, extensionRoot);
 args.splice(-1, 0, `--load-extension=${extensionRoot}`);
 const chrome = spawn(resolveChromeExecutable(), args, { stdio: ["ignore", "ignore", "pipe"] });
-let socket, activePhase = "startup", activeTargetTimer, activeTargetId;
+let socket, activePhase = "startup", activeTargetTimer, activeTargetId, activeTargetPageId, port;
 try {
-    let port;
-    await new Promise((resolve, reject) => { let output = ""; const timeout = setTimeout(() => reject(new Error(`Chrome did not expose a debugging port: ${output}`)), 15000); chrome.stderr.on("data", (chunk) => { output += chunk; const match = output.match(/ws:\/\/127\.0\.0\.1:(\d+)\//); if (match) {
-        clearTimeout(timeout);
-        port = Number(match[1]);
-        resolve();
-    } }); chrome.once("error", reject); });
+    port = await waitForChromeDebuggingPort({
+        chrome, targetId:"flow-browser-process", limitMs:15000, maximumStderrCharacters:2000,
+    });
     const extensionState = await observeBrowserReadiness({
         targetId: "flow-browser-process", phase: "browser startup",
         predicateDescription: "installed extension service worker discovery",
@@ -113,35 +116,58 @@ try {
     const targetStarted = performance.now();
     const phaseTimer = browserShard === "examples"
         ? createFlowExamplesPhaseTimer({ browserStartupMs })
-        : createBrowserPhaseTimer({targetId,phaseNames:["target setup","fixture setup","readiness","interaction","persistence","assertion","cleanup"]});
+        : createBrowserPhaseTimer({targetId,phaseNames:["target setup","navigation","fixture","readiness","interaction","persistence","assertion","cleanup"]});
+    const transitionPhase=(phase)=>phaseTimer.transition(
+        browserShard === "examples" ? phase : phase === "fixture setup" ? "fixture" : phase,
+    );
     activeTargetTimer=phaseTimer;activeTargetId=targetId;
     activePhase = `${targetId}:startup`;
+    let flowGraph, phaseTiming, lifecycleFailedAtPhase;
+    const targetLimitMilliseconds=browserShard==="examples"?flowExamplesTargetLimitMilliseconds:120000;
+    await withLogicalTargetLifecycle({targetId,boundary:"Flow logical target",
+    limitMs:targetLimitMilliseconds,onTimeout:()=>socket?.close(),work:async({remainingMilliseconds})=>{
+    const protocolCallLimitMilliseconds=()=>Math.max(1,Math.min(
+        configuredProtocolCallLimitMilliseconds,
+        remainingMilliseconds()-50,
+    ));
     const target = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(pageUrl)}`, { method: "PUT" }).then((response) => response.json());
     if (!target)
         throw new Error("Installed Specification Builder target is unavailable.");
-    socket = new DevtoolsSocket(target.webSocketDebuggerUrl);
+    activeTargetPageId=target.id;
+    socket = new DevtoolsSocket(target.webSocketDebuggerUrl, targetId, {
+        callLimitMilliseconds:protocolCallLimitMilliseconds,
+        forcedHangMethod:process.env.SWARMFORGE_VTD007_FORCE_FLOW_PROTOCOL_HANG_METHOD,
+    });
     await socket.connect();
     await socket.call("Runtime.enable");
     await socket.call("Page.enable");
     await socket.call("Storage.clearDataForOrigin", { origin, storageTypes: "all" });
     await socket.call("Page.reload", { ignoreCache: true });
-    const targetDeadline = setTimeout(() => socket?.close(), 120000);
     for (const name of ["flowEvidencePhase", "flowNativeKey"])
         await socket.call("Runtime.addBinding", { name });
     socket.on("Runtime.bindingCalled", async ({ name, payload }) => { if (name === "flowEvidencePhase") {
         activePhase = `${targetId}:${payload}`;
         return;
     } const { key } = JSON.parse(payload), code = key === " " ? "Space" : key, virtualKeyCode = key === "Enter" ? 13 : key === "Escape" ? 27 : key.charCodeAt(0); await socket.call("Input.dispatchKeyEvent", { type: "keyDown", key, code, windowsVirtualKeyCode: virtualKeyCode, nativeVirtualKeyCode: virtualKeyCode }); await socket.call("Input.dispatchKeyEvent", { type: "keyUp", key, code, windowsVirtualKeyCode: virtualKeyCode, nativeVirtualKeyCode: virtualKeyCode }); });
-    const evaluate = async (expression, phase = activePhase) => { const result = await socket.call("Runtime.evaluate", { expression: browserProgram({ targetId, phase, source: expression, shape: "expression" }), returnByValue: true, awaitPromise: true, userGesture: true }); if (result.exceptionDetails)
+    const evaluate = async (expression, phase = activePhase) => { const result = await transmitDevtoolsProgram({ targetId, phase, source: expression, shape: "expression", call:socket.call.bind(socket), parameters:{ returnByValue: true, awaitPromise: true, userGesture: true } }); if (result.exceptionDetails)
         throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text); return result.result.value; };
-    const waitForBrowser = async (phase, predicate, selector, stabilityMs = 0) => boundedFlowExamplesReadiness({
+    const waitForBrowser = async (phase, predicate, selector, stabilityMs = 0) => {
+      const readiness=()=>boundedFlowExamplesReadiness({
         targetId, phase, predicate, timeoutMs: 5000,
         observe: async () => evaluate(`(()=>{const node=document.querySelector(${JSON.stringify(selector)});return{ready:document.readyState==='complete'&&Boolean(node),readyState:document.readyState,selector:${JSON.stringify(selector)},present:Boolean(node),text:String(node?.textContent??'').slice(0,120)}})()`),
         stabilityMs,
-    });
+      });
+      if(browserShard==="examples")return readiness();
+      const timedPhase=phase==="fixture setup"?"fixture":phase;
+      const result=await phaseTimer.scoped(timedPhase,readiness);
+      if(process.env.SWARMFORGE_VTD007_FORCE_FLOW_FAILURE_AFTER_READINESS==="1"&&
+          phaseTimer.activePhase==="interaction")
+        throw new Error("forced Flow failure after scoped readiness");
+      return result;
+    };
     await waitForBrowser("target setup", "create-project form mounted", "#create-project-form");
     activePhase = "seed";
-    phaseTimer.transition("fixture setup");
+    transitionPhase("fixture setup");
     const seeded = await evaluate(`(async()=>{const {createSpecificationProject,addProjectEntity}=await import('./data-layer-specification-project.js'),{createFlowSection,addFlowPageFrameToSection}=await import('./data-layer-property-set-flow-section.js'),{addGraphOccurrence,saveGraphRelationship}=await import('./data-layer-flow-graph.js'),{openIndexedDbProjectRepository}=await import('./data-layer-durable-project-repository.js');let n=0,id=(kind)=>kind+':runtime:'+ ++n,state=createSpecificationProject({name:'Flow runtime',site:'runtime.example',id});const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);},propertySet=add('propertySets',{name:'Checkout',schemaConstraints:[{path:'/currency',type:'string',examples:['EUR']}]}),application=(name)=>({id:id('application'),name:'Checkout',propertySetId:propertySet.id}),confirmation=add('pages',{name:'Confirmation',propertySetApplications:[application()]}),payment=add('pages',{name:'Payment',propertySetApplications:[application()]}),receipt=add('pages',{name:'Receipt',propertySetApplications:[application()]}),purchase=add('events',{name:'Purchase',eventName:'purchase',schemaConstraints:[{path:'/event',type:'string',examples:['purchase']}]}),review=add('events',{name:'Review',eventName:'review'}),flow=add('flows',{name:'Checkout journey',steps:[]}),otherFlow=add('flows',{name:'Returns journey',steps:[]});state=addFlowPageFrameToSection(state,otherFlow.id,receipt.id,undefined,id);state=createFlowSection(state,flow.id,{name:'Checkout',bounds:{x:20,y:20,width:760,height:300}},id);state=createFlowSection(state,flow.id,{name:'Completion',bounds:{x:20,y:360,width:760,height:260}},id);let graph=state.project.documentationFlowGraphs[flow.id],sections=graph.sections;for(const [page,sectionId]of[[confirmation,sections[0].id],[payment,sections[0].id],[receipt,sections[1].id],[confirmation,undefined]])state=addFlowPageFrameToSection(state,flow.id,page.id,sectionId,id);graph=state.project.documentationFlowGraphs[flow.id];const frames=graph.pageFrames;state=addGraphOccurrence(state,flow.id,{name:'Purchase',pageFrameId:frames[0].id,pageId:confirmation.id,eventId:purchase.id,obligation:'Required',minimum:1,maximum:1,x:24,y:70},id);state=addGraphOccurrence(state,flow.id,{name:'Review',pageFrameId:frames[1].id,pageId:payment.id,eventId:review.id,obligation:'Required',minimum:1,maximum:1,x:24,y:70},id);state=saveGraphRelationship(state,flow.id,frames[0].id,{toStepId:frames[1].id,sourcePort:'right',targetPort:'left',label:'Checkout route'},id);state=saveGraphRelationship(state,flow.id,frames[0].id,{toStepId:frames[2].id,sourcePort:'top',targetPort:'bottom'},id);graph=state.project.documentationFlowGraphs[flow.id];const repository=await openIndexedDbProjectRepository();await repository.putProject(state,{active:true,navigation:{kind:'flows',id:flow.id}});return{projectId:state.project.id,flowId:flow.id,otherFlowId:otherFlow.id,pageIds:[confirmation.id,payment.id,receipt.id],frameIds:graph.pageFrames.map(({id})=>id),occurrenceIds:graph.occurrences.map(({id})=>id),relationshipIds:graph.relationships.map(({id})=>id),sectionIds:graph.sections.map(({id})=>id)};})()`);
     const ensureFlowWorkspace = async (predicate) => {
         await waitForBrowser("navigation", `${predicate}: project tree mounted`, "#project-tree");
@@ -154,7 +180,7 @@ try {
         await waitForBrowser("readiness", predicate, "[aria-label=\"Flow toolbar\"]");
     };
     const runtime = {};
-    if (browserShard !== "examples") phaseTimer.transition("interaction");
+    if (browserShard !== "examples") transitionPhase("interaction");
     if (browserShard === "core") {
         const geometryRows = [[360, 800, false, false, "narrowHiddenClosed"], [360, 800, false, true, "narrowHiddenOpen"], [360, 800, true, false, "narrowVisibleClosed"], [360, 800, true, true, "narrowVisibleOpen"], [1440, 900, false, false, "wideHiddenClosed"], [1440, 900, false, true, "wideHiddenOpen"], [1440, 900, true, false, "wideVisibleClosed"], [1440, 900, true, true, "wideVisibleOpen"]], geometryEvidence = {};
         for (const [width, height, visible, inspectorOpen, label] of geometryRows) {
@@ -194,7 +220,7 @@ try {
             await waitForBrowser("navigation", `Flow canvas mounted for ${label}`, "[aria-label=\"Flow canvas viewport\"]");
             if (kind === "touch")
                 await socket.call("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 1 });
-            await evaluate(`(async()=>{const toolbar=document.querySelector('[aria-label="Flow toolbar"]'),button=(text)=>{const found=[...toolbar.querySelectorAll('button')].find(item=>item.textContent.trim()===text);if(!found)throw new Error('Missing pan setup control '+text+' from '+[...toolbar.querySelectorAll('button')].map(item=>item.textContent.trim()).join('|'));return found;},active=document.body.classList.contains('flow-focus-canvas');if(active!==${focused})button(active?'Exit Focus Canvas':'Focus Canvas').click();/* Observe focus-layout animation before measuring Fit Flow. */await new Promise(resolve=>setTimeout(resolve,10));button('Fit Flow').click();for(let count=0;count<20&&document.querySelector('[aria-label="Flow zoom percentage"]').textContent!=='200%';count+=1)button('Zoom in').click();document.querySelector('[aria-label="Flow canvas viewport"]').focus();})()`);
+            await evaluate(`(async()=>{const toolbar=document.querySelector('[aria-label="Flow toolbar"]'),button=(text)=>{const found=[...toolbar.querySelectorAll('button')].find(item=>item.textContent.trim()===text);if(!found)throw new Error('Missing pan setup control '+text+' from '+[...toolbar.querySelectorAll('button')].map(item=>item.textContent.trim()).join('|'));return found;},active=document.body.classList.contains('flow-focus-canvas');if(active!==${focused})button(active?'Exit Focus Canvas':'Focus Canvas').click();/* Observe focus-layout animation before measuring Fit Flow. */await new Promise(resolve=>setTimeout(resolve,10));button('Fit Flow').click();/* Repeat the Zoom in control to observe bounded key-repeat behavior. */for(let count=0;count<20&&document.querySelector('[aria-label="Flow zoom percentage"]').textContent!=='200%';count+=1)button('Zoom in').click();document.querySelector('[aria-label="Flow canvas viewport"]').focus();})()`);
             const before = await evaluate(flowR02PanProbe(seeded));
             if (kind === "keyboard")
                 await keyboardPan(dx, dy);
@@ -339,26 +365,31 @@ try {
         await waitForBrowser("navigation", "project tree mounted for repeated instances", "#project-tree");
         runtime.runtime024 = { ...runtime.runtime024, ...await evaluate(flowGraphRepeatedInstanceEvidence(seeded, repeatedInstances)) };
     }
-    phaseTimer.transition("assertion");
+    transitionPhase("assertion");
     const fallbackCore = browserShard === "core" && targetId === "FLOW_GRAPH_FALLBACK_TARGET", supplemental = new Set(["runtime017", "runtime021", "runtime022", "runtime025"]), missing = fallbackCore ? FLOW_RUNTIME_KEYS.filter(key => !supplemental.has(key) && !runtime[key]).map(path => ({ path, value: "unexecuted" })) : [], falseLeaves = Object.entries(runtime).flatMap(([runtimeKey, evidence]) => Object.entries(evidence).filter(([, value]) => value !== true).map(([key, value]) => ({ path: `${runtimeKey}.${key}`, value }))), shardFailures = [...missing, ...falseLeaves, ...(fallbackCore && runtime.installedBoundary !== true ? [{ path: "installedBoundary", value: runtime.installedBoundary }] : [])];
     assert.deepEqual(shardFailures, [], `Flow browser ${browserShard} evidence contains a false value`);
     const controlRuntimeKeys = new Set(["runtime001", "runtime016", "runtime018", "runtime020", "runtime027"]);
-    const flowGraph = targetId === "FLOW_WORKSPACE_CONTROLS_TARGET"
+    flowGraph = targetId === "FLOW_WORKSPACE_CONTROLS_TARGET"
         ? Object.fromEntries(Object.entries(runtime).filter(([key]) => controlRuntimeKeys.has(key)))
         : targetId === "FLOW_WORKSPACE_AUTHORING_TARGET"
             ? Object.fromEntries(Object.entries(runtime).filter(([key]) =>
                 key === "installedBoundary" || !controlRuntimeKeys.has(key)))
             : runtime;
-    phaseTimer.transition("cleanup");
-    clearTimeout(targetDeadline);
-    const completedTargetId = target.id;
-    socket.close();
-    socket = undefined;
-    await fetch(`http://127.0.0.1:${port}/json/close/${encodeURIComponent(completedTargetId)}`);
-    const phaseTiming = phaseTimer.finish();
-    activeTargetTimer=undefined;activeTargetId=undefined;
+    },cleanup:async({failure,signal})=>{
+    lifecycleFailedAtPhase=failure?phaseTimer.activePhase:undefined;
+    transitionPhase("cleanup");
+    const completedTargetId = activeTargetPageId;
+    socket?.close();socket=undefined;
+    if(completedTargetId)
+        await fetch(`http://127.0.0.1:${port}/json/close/${encodeURIComponent(completedTargetId)}`,{signal});
+    activeTargetPageId=undefined;
+    },finalize:({failure})=>{
+    phaseTiming = phaseTimer.finish({status:failure?"failed":"passed",failedAtPhase:lifecycleFailedAtPhase});
     const durationMs = phaseTiming.durationMs;
-    assert.ok(durationMs <= 120000, `${targetId} exceeded its 120000ms target limit`);
+    activeTargetTimer=undefined;activeTargetId=undefined;
+    if(failure){console.log(JSON.stringify({swarmforgeBrowserTargetResult:{id:targetId,status:"failed",error:failure.message}}));console.log(JSON.stringify({swarmforgeBrowserTargetTiming:{id:targetId,durationMs,phases:phaseTiming.phases,activePhase:phaseTiming.activePhase}}));}
+    }});
+    const durationMs = phaseTiming.durationMs;
     console.log(JSON.stringify({ flowGraph }));
     if (selectedTargetIds.length) {
         console.log(JSON.stringify({ swarmforgeBrowserTargetResult: { id: targetId, status: "passed" } }));
@@ -370,11 +401,10 @@ try {
         console.log(JSON.stringify({ swarmforgeBrowserLaunches: 1 }));
 }
 catch (error) {
-    if(activeTargetTimer&&activeTargetId){const failedAtPhase=activeTargetTimer.activePhase;const timing=activeTargetTimer.finish({status:"failed",failedAtPhase});console.log(JSON.stringify({swarmforgeBrowserTargetResult:{id:activeTargetId,status:"failed",error:error.message}}));console.log(JSON.stringify({swarmforgeBrowserTargetTiming:{id:activeTargetId,durationMs:timing.durationMs,phases:timing.phases,activePhase:timing.activePhase}}));}
     throw new Error(`Flow runtime interruption: ${JSON.stringify(flowInterruptionReport(activePhase, error))}`, { cause: error });
 }
 finally {
     socket?.close();
-    await stopHeadlessChrome(chrome);
+    await stopHeadlessChrome(chrome,3000,{targetId:"flow-browser-process"});
     await removeChromeProfile(profile, { targetId: "flow-graph" });
 }

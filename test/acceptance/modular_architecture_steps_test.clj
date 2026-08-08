@@ -2,6 +2,7 @@
   (:require [acceptance.runtime :as runtime]
             [acceptance.steps.modular-architecture :as modular]
             [acceptance.verification-support.isolated-handler-audit :as isolation-audit]
+            [acceptance.verification-support.modular-architecture-vtd007-handlers :as vtd007]
             [acceptance.verification-support.modular-architecture-vtd009-handlers :as vtd009]
             [aps.gherkin :as gherkin]
             [clojure.test :refer [deftest is]]))
@@ -125,6 +126,182 @@
 
 (deftest vtd007-browser-control-steps-use-dedicated-production-backed-semantics
   (assert-dedicated-scenario-handlers! #"Modular verification packs 0(?:8[8-9]|9[0-4])" 7))
+
+(deftest vtd007-handlers-reject-mutated-example-outcomes-and-deadline-owners
+  (let [handlers (vtd007/handlers {:example-values (fn [_ captures] captures)})
+        invoke (fn [world text captures]
+                 ((:handler (first (filter #(re-matches (:pattern %) text) handlers)))
+                  world nil captures))
+        readiness (-> {}
+                      (invoke "a shared browser readiness check for target TARGET-READY, phase navigation, and predicate \"the requested workspace is mounted\"" [])
+                      (invoke "its monotonic deadline is 100 milliseconds, poll interval is 25 milliseconds, maximum snapshot is 80 characters, and stability interval is 0 milliseconds" ["0 milliseconds"])
+                      (invoke "its observed ready states are true" ["true"]))
+        deadline (invoke {} "the browser boundary Chrome termination has its own bounded deadline"
+                         ["Chrome termination"])]
+    (is (thrown? Exception
+                 (invoke readiness "the readiness outcome is succeeds after 50 milliseconds"
+                         ["succeeds after 50 milliseconds"])))
+    (is (thrown? Exception
+                 (invoke deadline
+                         "the failure names DevTools protocol call rather than a product readiness predicate"
+                         ["DevTools protocol call"])))))
+
+(deftest vtd007-handlers-reject-permuted-forced-failure-descriptions
+  (let [handlers (vtd007/handlers {:example-values (fn [_ captures] captures)})
+        invoke (fn [world text captures]
+                 ((:handler (first (filter #(re-matches (:pattern %) text) handlers)))
+                  world nil captures))
+        rows [["Chrome debug-port startup" "Chrome never exposes a debugging port"]
+              ["DevTools protocol call" "a requested protocol response never arrives"]
+              ["logical target outer work" "target work never completes"]
+              ["Chrome termination" "the browser ignores graceful termination"]
+              ["profile cleanup" "the browser profile remains temporarily busy"]]]
+    (doseq [[[owner failure] [_ permuted]] (map vector rows (concat (rest rows) [(first rows)]))]
+      (let [world (invoke {} (str "the browser boundary " owner " has its own bounded deadline")
+                          [owner])]
+        (is (thrown? Exception
+                     (invoke world (str permuted " is forced independently") [permuted]))
+            (str failure " must not accept " permuted))))))
+
+(deftest vtd007-handlers-reject-disconnected-surface-phase-program-and-plan-evidence
+  (let [handlers (vtd007/handlers {:example-values (fn [_ captures] captures)})
+        invoke (fn [world text captures]
+                 ((:handler (first (filter #(re-matches (:pattern %) text) handlers)))
+                  world nil captures))
+        evidence {:surfaces [{:browserSurface "the shared side-panel harness"
+                              :readinessBoundary "initial navigation, post-fixture reload, and installed reload"
+                              :stabilityRequirement "no extra stability interval"
+                              :productionFacts {:entryPoint "test/browser-packs/shared-harness.mjs"
+                                                :predicateOwner
+                                                "test/browser-packs/shared-harness.mjs"
+                                                :phases ["navigation" "post-fixture reload"
+                                                         "installed reload"]
+                                                :sharedCalls 1
+                                                :compoundPredicateOutcomes
+                                                [true false false false]}}]
+                  :timing {:identity "swarmforgeBrowserTargetTiming"
+                           :passConserved true
+                           :failurePartialPhase "fixture"
+                           :realRunners
+                           {:flowFailure
+                            {:activePhase "interaction" :timingRecords 1
+                             :timing {:phaseNames ["target setup" "navigation" "fixture"
+                                                   "readiness" "interaction" "persistence"
+                                                   "assertion" "cleanup"]
+                                      :applicableNonZeroPhases
+                                      ["target setup" "navigation" "interaction" "cleanup"]
+                                      :phaseTotal 10 :durationMs 10}}
+                            :installedFailure
+                            {:activePhase "interaction" :timingRecords 1
+                             :timing {:phaseNames ["target setup" "navigation" "fixture"
+                                                   "interaction" "persistence" "assertion"
+                                                   "target cleanup"]
+                                      :applicableNonZeroPhases
+                                      ["target setup" "navigation" "interaction"
+                                       "target cleanup"]
+                                      :phaseTotal 10 :durationMs 10}}}}
+                  :programs {:invalidRejected true :targetAndPhase true
+                             :invalidTransmissionCount 0 :invalidCaseCount 5
+                             :validProgramCount 5
+                             :protocolAdapters
+                             [{:pathname "test/browser-packs/shared-harness.mjs"
+                               :transmissionCount 1 :allValidated true}
+                              {:pathname "test/support/browser-target-session.mjs"
+                               :transmissionCount 1 :allValidated true}
+                              {:pathname "test/browser-packs/flow-graph.mjs"
+                               :transmissionCount 1 :allValidated true}]
+                             :policyEntryPoints
+                             ["test/browser-packs/shared-harness.mjs"
+                              "test/support/browser-target-session.mjs"
+                              "test/support/layered-schema-targets.mjs"
+                              "test/browser-packs/flow-graph.mjs"
+                              "test/support/flow-examples-timing.mjs"]
+                             :fixedDelays [{:milliseconds 20 :reasonAdjacent true}]
+                             :fixedAttempts [{:condition "count<20"
+                                              :reasonAdjacent true}]
+                             :fixedWaitsBehaviorOnly true
+                             :validResults (mapv #(hash-map :phase %)
+                                                 ["setup" "workflow" "readiness"
+                                                  "persistence" "observation"])}
+                  :conservation {:targetsOnce true :tasksUnchanged true}}
+        with-evidence (fn [value work]
+                        (with-redefs-fn {#'vtd007/production-boundary (delay value)} work))]
+    (with-evidence
+      (assoc-in evidence [:surfaces 0 :productionFacts :phases]
+                ["navigation" "installed reload"])
+      #(is (thrown? Exception
+                    (invoke {} "the shared side-panel harness currently owns local fixed-attempt readiness loops"
+                            ["the shared side-panel harness"]))))
+    (with-evidence
+      (assoc-in evidence [:surfaces 0 :productionFacts :compoundPredicateOutcomes]
+                [true true false false])
+      #(is (thrown? Exception
+                    (invoke {} "the shared side-panel harness currently owns local fixed-attempt readiness loops"
+                            ["the shared side-panel harness"]))))
+    (with-evidence
+      (assoc-in evidence [:surfaces 0 :productionFacts :predicateOwner]
+                "test/support/browser-observation-control.mjs")
+      #(is (thrown? Exception
+                    (invoke {} "the shared side-panel harness currently owns local fixed-attempt readiness loops"
+                            ["the shared side-panel harness"]))))
+    (with-evidence
+      (assoc-in evidence [:timing :realRunners :flowFailure :activePhase] "readiness")
+      #(let [world (invoke {} "a browser target records target setup, navigation, fixture, interaction, persistence, assertion, and cleanup when those phases apply" [])]
+         (is (thrown? Exception
+                      (invoke world "a failure retains completed phase durations and identifies the active partial phase" [])))))
+    (doseq [mutated [(assoc-in evidence
+                               [:timing :realRunners :flowFailure :timing :phaseNames]
+                               ["navigation" "target setup"])
+                     (assoc-in evidence
+                               [:timing :realRunners :flowFailure :timing :durationMs] 11)
+                     (assoc-in evidence
+                               [:timing :realRunners :flowFailure :timing
+                                :applicableNonZeroPhases]
+                               ["target setup" "navigation" "interaction"])]]
+      (with-evidence
+        mutated
+        #(let [world (invoke {} "a browser target records target setup, navigation, fixture, interaction, persistence, assertion, and cleanup when those phases apply" [])]
+           (is (thrown? Exception
+                        (invoke world "its target-scoped phase durations are finite, non-negative, ordered, and cover the target duration exactly once within rounding tolerance" []))))))
+    (with-evidence
+      (assoc-in evidence [:programs :validResults 0 :phase] "observation")
+      #(let [world (invoke {} "shared side-panel, installed Layered Schema, and Flow fixture programs are generated before DevTools evaluation" [])]
+         (is (thrown? Exception
+                      (invoke world "valid setup, workflow, readiness, persistence, and observation programs retain their current results" [])))))
+    (with-evidence
+      (assoc-in evidence [:programs :invalidTransmissionCount] 1)
+      #(let [world (invoke {} "shared side-panel, installed Layered Schema, and Flow fixture programs are generated before DevTools evaluation" [])]
+         (is (thrown? Exception
+                      (invoke world "it is rejected before transmission with its logical target and phase" [])))))
+    (doseq [mutated [(assoc-in evidence [:programs :invalidCaseCount] 4)
+                     (assoc-in evidence [:programs :protocolAdapters 0 :allValidated] false)]]
+      (with-evidence
+        mutated
+        #(let [world (invoke {} "shared side-panel, installed Layered Schema, and Flow fixture programs are generated before DevTools evaluation" [])]
+           (is (thrown? Exception
+                        (invoke world "it is rejected before transmission with its logical target and phase" []))))))
+    (with-evidence
+      (assoc-in evidence [:programs :fixedDelays 0 :reasonAdjacent] false)
+      #(let [world (invoke {} "shared side-panel, installed Layered Schema, and Flow fixture programs are generated before DevTools evaluation" [])]
+         (is (thrown? Exception
+                      (invoke world "fixed waits in those shared entry points remain only where elapsed time or animation is the behavior under test and the reason is adjacent" [])))))
+    (doseq [mutated [(assoc-in evidence [:programs :fixedAttempts 0 :reasonAdjacent] false)
+                     (update-in evidence [:programs :policyEntryPoints] pop)]]
+      (with-evidence
+        mutated
+        #(let [world (invoke {} "shared side-panel, installed Layered Schema, and Flow fixture programs are generated before DevTools evaluation" [])]
+           (is (thrown? Exception
+                        (invoke world "fixed waits in those shared entry points remain only where elapsed time or animation is the behavior under test and the reason is adjacent" []))))))
+    (with-evidence
+      (assoc-in evidence [:conservation :targetsOnce] false)
+      #(let [world (invoke {} "VTD-007 adds one shared browser-observation control helper consumed transitively by all 20 runnable packs" [])]
+         (is (thrown? Exception
+                      (invoke world "every logical browser target, feature, and handler executes exactly once as before" [])))))
+    (with-evidence
+      (assoc-in evidence [:conservation :tasksUnchanged] false)
+      #(let [world (invoke {} "VTD-007 adds one shared browser-observation control helper consumed transitively by all 20 runnable packs" [])]
+         (is (thrown? Exception
+                      (invoke world "the migration neither adds nor removes a planned task or evidence leaf in exact-pack and terminal-full scope" [])))))))
 
 (deftest vtd009-scope-labels-and-history-changes-resolve-exactly
   (is (= 20 (#'vtd009/scope "every runnable pack")))

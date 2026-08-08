@@ -389,7 +389,13 @@ async function openSpecificationBuilder(port, width, height = 900, pageUrl = `ht
 async function reloadSpecificationBuilder(socket) { await socket.call("Page.enable");await socket.call("Page.reload",{ignoreCache:true});for(let attempt=0;attempt<panelReadyAttempts;attempt+=1){const ready=await socket.call("Runtime.evaluate",{expression:"document.readyState === 'complete' && document.querySelector('#create-project-form') !== null",returnByValue:true});if(ready.result.value===true)return;await wait(50);}throw new Error("Specification Builder did not reload."); }
 
 async function evaluate(socket, expression) {
-  const result = await socket.call("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true, userGesture:true });
+  const retainedExpression = `globalThis.__swarmforgeRetainedEvaluation = (${expression})`;
+  const result = await socket.call("Runtime.evaluate", {
+    expression:retainedExpression,
+    returnByValue:true,
+    awaitPromise:true,
+    userGesture:true,
+  });
   if (result.exceptionDetails) {
     throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text);
   }

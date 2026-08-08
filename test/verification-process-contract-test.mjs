@@ -2098,6 +2098,12 @@ const componentLayoutBrowserSource = await readFile(
   new URL("./side-panel-component-layout-runtime-test.mjs", import.meta.url),
   "utf8",
 );
+const installedTargetSessionSource = await readFile(
+  new URL("./support/browser-target-session.mjs", import.meta.url), "utf8",
+);
+assert.match(installedTargetSessionSource,
+  /withLogicalTargetLifecycle\(\{[\s\S]*?boundary:"installed-session logical target"[\s\S]*?work:async\(\{remainingMilliseconds\}\)[\s\S]*?cleanup:async[\s\S]*?finalize:/u,
+  "installed-target page cleanup remains inside its finite logical-target boundary");
 const shellBrowserBatch = packs.find(({ id }) => id === "shell");
 const shellContainmentTargets = shellBrowserBatch.browserObservations
   .filter(({ id }) => ["SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER",
@@ -2122,6 +2128,9 @@ assert.match(componentLayoutBrowserSource, /Storage\.clearDataForOrigin/u,
   "each batched logical target clears browser storage before executing");
 assert.match(componentLayoutBrowserSource, /swarmforgeBrowserTargetTiming/u,
   "the shared program emits timing evidence for each logical target");
+assert.match(componentLayoutBrowserSource,
+  /globalThis\.__swarmforgeRetainedEvaluation = \(\$\{expression\}\)/u,
+  "DevTools evaluations retain awaited promises until their results are collected");
 assert.match(componentLayoutBrowserSource,
   /process\.env\.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" \? \[720\]/u,
   "the focused Schema view containment observation owns one explicit viewport");

@@ -15,6 +15,7 @@ const targetPhaseNames = [
 ];
 
 export const flowExamplesPhaseNames = ["browser startup", ...targetPhaseNames];
+export const flowExamplesTargetLimitMilliseconds = 16_000;
 
 function finiteDuration(value, label) {
   if (!Number.isFinite(value) || value < 0) {

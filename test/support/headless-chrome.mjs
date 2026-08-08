@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import path from "node:path";
+import { browserDeadlineError, withBrowserDeadline } from "./browser-observation-control.mjs";
 
 export function chromeExecutableCandidates({
   env = process.env,
@@ -80,7 +81,7 @@ export function headlessChromeArguments(profile, extensionRoot) {
 }
 
 function exitWithin(chrome, milliseconds) {
-  if (chrome.exitCode !== null) return Promise.resolve(true);
+  if (chrome.exitCode !== null || chrome.signalCode != null) return Promise.resolve(true);
   return new Promise((resolve) => {
     const timeout = setTimeout(() => {
       chrome.removeListener("exit", exited);
@@ -94,12 +95,17 @@ function exitWithin(chrome, milliseconds) {
   });
 }
 
-export async function stopHeadlessChrome(chrome, timeoutMilliseconds = 1000) {
-  if (chrome.exitCode !== null) return;
+export async function stopHeadlessChrome(chrome, timeoutMilliseconds = 1000, {
+  targetId = "browser-process",
+  waitForExit = exitWithin,
+} = {}) {
+  if (chrome.exitCode !== null || chrome.signalCode != null) return;
   chrome.kill("SIGTERM");
-  if (await exitWithin(chrome, timeoutMilliseconds)) return;
+  if (await waitForExit(chrome, timeoutMilliseconds)) return;
   chrome.kill("SIGKILL");
-  await exitWithin(chrome, timeoutMilliseconds);
+  if (!await waitForExit(chrome, timeoutMilliseconds)) {
+    throw browserDeadlineError("Chrome termination", targetId, timeoutMilliseconds * 2);
+  }
 }
 
 export async function removeChromeProfile(profile, {
@@ -108,20 +114,29 @@ export async function removeChromeProfile(profile, {
   retryDelayMilliseconds = 100,
   remove = (target) => rm(target, { recursive:true, force:true }),
   wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
+  deadlineMilliseconds = Math.max(1_000,
+    retryDelayMilliseconds * attempts * (attempts + 1) / 2 + 5_000),
+  schedule,
+  cancel,
 } = {}) {
-  const transient = new Set(["EBUSY", "ENOTEMPTY", "EPERM"]);
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    try {
-      await remove(profile);
-      return;
-    } catch (error) {
-      if (!transient.has(error?.code) || attempt === attempts) {
-        throw new Error(
-          `Chrome profile cleanup failed for ${targetId} at ${profile} after ${attempt} attempt(s): ${error.message}`,
-          { cause:error },
-        );
+  return withBrowserDeadline({
+    owner:"profile cleanup", targetId, limitMs:deadlineMilliseconds, schedule, cancel,
+    work:async() => {
+      const transient = new Set(["EBUSY", "ENOTEMPTY", "EPERM"]);
+      for (let attempt = 1; attempt <= attempts; attempt += 1) {
+        try {
+          await remove(profile);
+          return;
+        } catch (error) {
+          if (!transient.has(error?.code) || attempt === attempts) {
+            const failure = browserDeadlineError("profile cleanup", targetId, deadlineMilliseconds,
+              `Chrome profile cleanup failed at ${profile} after ${attempt} attempt(s): ${error.message}`);
+            failure.cause = error;
+            throw failure;
+          }
+          await wait(retryDelayMilliseconds * attempt);
+        }
       }
-      await wait(retryDelayMilliseconds * attempt);
-    }
-  }
+    },
+  });
 }

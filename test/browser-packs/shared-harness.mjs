@@ -6,9 +6,22 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { removeChromeProfile, resolveChromeExecutable, stopHeadlessChrome } from "../support/headless-chrome.mjs";
-import { browserProgram, createBrowserPhaseTimer, observeBrowserReadiness, withBrowserDeadline } from "../support/browser-observation-control.mjs";
+import { createBrowserPhaseTimer, observeBrowserReadiness, transmitDevtoolsProgram,
+  waitForChromeDebuggingPort, withDevtoolsProtocolDeadline,
+  withLogicalTargetDeadline } from "../support/browser-observation-control.mjs";
 
 export const wait=(ms)=>new Promise((resolve)=>setTimeout(resolve,ms));
+
+export function sharedHarnessReadinessState({
+  documentReadyState, shellReady, isolation,
+}, expectedIsolation) {
+  return documentReadyState === "complete" && shellReady === "true" &&
+    isolation === expectedIsolation;
+}
+
+export function sharedHarnessReadinessExpression(expectedIsolation) {
+  return `(()=>{const root=document.querySelector('#side-panel-root'),state={documentReadyState:document.readyState,shellReady:root?.dataset.utilityShellReady??null,isolation:document.documentElement.dataset.utilityIsolation??''};return{...state,ready:(${sharedHarnessReadinessState.toString()})(state,${JSON.stringify(expectedIsolation)})};})()`;
+}
 const chromeAdapterSource=`(()=>{const calls=[];globalThis.__chromeAdapter={calls};const event=(name)=>({addListener(listener){calls.push('listen:'+name);globalThis.__chromeAdapter[name]=listener;}});globalThis.chrome={runtime:{onMessage:event('runtime.onMessage')},tabs:{async query(){calls.push('tabs.query');return [{id:7,windowId:1,active:true,title:'Fixture tab',url:'https://example.test/checkout'}];},async get(id){calls.push('tabs.get:'+id);return {id,windowId:1,title:'Fixture tab',url:'https://example.test/checkout'};},onUpdated:event('tabs.onUpdated'),onRemoved:event('tabs.onRemoved')},permissions:{async contains(){calls.push('permissions.contains');return true;},async request(){calls.push('permissions.request');return true;},onRemoved:event('permissions.onRemoved')},windows:{async getCurrent(){calls.push('windows.getCurrent');return {id:1};}},scripting:{async executeScript(){calls.push('scripting.executeScript');return [{result:{success:true,result:'pushed'}}];}}};})()`;
 const dataLayerPanelByPack={capture:"data-layer-panel-live","live-flow-testing":"data-layer-panel-live","event-library":"data-layer-panel-library",schemas:"data-layer-panel-schemas",defects:"data-layer-panel-defects",replay:"data-layer-panel-library"};
 function isolationScope(id){
@@ -36,12 +49,12 @@ function isolationAssertionExpression(id){
 }
 const accessibilityAssertionExpression=`(()=>{const visible=(element)=>element.getClientRects().length>0;const named=(element)=>{const ariaLabel=element.getAttribute('aria-label')?.trim();if(ariaLabel)return true;const labelledBy=element.getAttribute('aria-labelledby')?.trim().split(/\\s+/).filter(Boolean)??[];if(labelledBy.length&&labelledBy.every(id=>document.getElementById(id)?.textContent?.trim()))return true;if('labels' in element&&[...element.labels].some(label=>label.textContent?.trim()))return true;return Boolean(element.textContent?.trim()||element.getAttribute('title')?.trim());};const controls=[...document.querySelectorAll('button,input:not([type="hidden"]),select,textarea,[role="button"],[role="tab"],[role="combobox"],[role="textbox"]')].filter(visible);const unnamed=controls.filter(element=>!named(element));const references=[...document.querySelectorAll('[aria-controls],[aria-labelledby]')].flatMap(element=>['aria-controls','aria-labelledby'].flatMap(attribute=>(element.getAttribute(attribute)?.trim().split(/\\s+/).filter(Boolean)??[]).filter(id=>!document.getElementById(id)).map(id=>({attribute,id,element:element.id}))));return {passed:unnamed.length===0&&references.length===0,unnamed:unnamed.map(element=>element.id||element.outerHTML.slice(0,80)),references};})()`;
 class DevtoolsSocket{
-  constructor(url){this.url=new URL(url);this.nextId=1;this.pending=new Map();this.buffer=Buffer.alloc(0);}
+  constructor(url,targetId){this.url=new URL(url);this.targetId=targetId;this.nextId=1;this.pending=new Map();this.buffer=Buffer.alloc(0);}
   async connect(){await new Promise((resolve,reject)=>{this.socket=net.createConnection({host:this.url.hostname,port:Number(this.url.port)});this.socket.once("error",reject);this.socket.once("connect",()=>{const key=Buffer.from(String(Math.random())).toString("base64");this.socket.write([`GET ${this.url.pathname}${this.url.search} HTTP/1.1`,`Host: ${this.url.host}`,"Upgrade: websocket","Connection: Upgrade",`Sec-WebSocket-Key: ${key}`,"Sec-WebSocket-Version: 13","\r\n"].join("\r\n"));});let handshake="";const receive=(chunk)=>{handshake+=chunk.toString("binary");const end=handshake.indexOf("\r\n\r\n");if(end<0)return;this.socket.off("data",receive);if(!handshake.startsWith("HTTP/1.1 101")){reject(new Error("DevTools WebSocket upgrade failed"));return;}const remaining=Buffer.from(handshake.slice(end+4),"binary");this.socket.on("data",(data)=>this.receive(data));if(remaining.length)this.receive(remaining);resolve();};this.socket.on("data",receive);});}
   receive(chunk){this.buffer=Buffer.concat([this.buffer,chunk]);while(this.buffer.length>=2){const first=this.buffer[0];let length=this.buffer[1]&0x7f,offset=2;if(length===126){if(this.buffer.length<4)return;length=this.buffer.readUInt16BE(2);offset=4;}else if(length===127){if(this.buffer.length<10)return;length=Number(this.buffer.readBigUInt64BE(2));offset=10;}if(this.buffer.length<offset+length)return;const payload=this.buffer.subarray(offset,offset+length);this.buffer=this.buffer.subarray(offset+length);if((first&15)!==1)continue;const message=JSON.parse(payload.toString("utf8")),pending=this.pending.get(message.id);if(!pending)continue;this.pending.delete(message.id);clearTimeout(pending.timeout);message.error?pending.reject(new Error(message.error.message)):pending.resolve(message.result);}}
-  call(method,params={},limitMs=30000){const id=this.nextId++;this.send({id,method,params});return new Promise((resolve,reject)=>{const timeout=setTimeout(()=>{this.pending.delete(id);reject(new Error(`DevTools protocol call ${method} exceeded ${limitMs}ms`));},limitMs);this.pending.set(id,{resolve,reject,timeout});});}
+  call(method,params={},limitMs=30000){const id=this.nextId++;this.send({id,method,params});return withDevtoolsProtocolDeadline({targetId:this.targetId,method,limitMs,work:()=>new Promise((resolve,reject)=>{this.pending.set(id,{resolve,reject});}),onTimeout:()=>this.pending.delete(id)});}
   send(payload){const text=Buffer.from(JSON.stringify(payload)),mask=Buffer.from([1,2,3,4]);let header;if(text.length<126)header=Buffer.from([0x81,0x80|text.length]);else{header=Buffer.alloc(4);header[0]=0x81;header[1]=0x80|126;header.writeUInt16BE(text.length,2);}const body=Buffer.from(text);for(let i=0;i<body.length;i++)body[i]^=mask[i%4];this.socket.write(Buffer.concat([header,mask,body]));}
-  close(){this.socket?.destroy();}
+  close(){for(const pending of this.pending.values())pending.reject(new Error(`${this.targetId} DevTools socket closed`));this.pending.clear();this.socket?.destroy();}
 }
 
 async function executeRenderedWorkflow(id,workflow,options,deadlineControl){
@@ -52,40 +65,40 @@ async function executeRenderedWorkflow(id,workflow,options,deadlineControl){
   await new Promise((resolve)=>server.listen(0,"127.0.0.1",resolve));
   const chrome=spawn(resolveChromeExecutable(),["--headless=new","--disable-gpu","--no-first-run","--no-default-browser-check","--remote-debugging-port=0",`--user-data-dir=${profile}`,"about:blank"],{stdio:["ignore","ignore","pipe"]});
   const targetId=`${id}-shared-harness`;
-  const timer=createBrowserPhaseTimer({targetId,phaseNames:["target setup","navigation","fixture","interaction","persistence","assertion","target cleanup"]});
-  let socket,timingStatus="passed",failedAtPhase;
+  let socket,call,timer,timingStatus="passed",failedAtPhase;
   try{
-    const port=await new Promise((resolve,reject)=>{let output="";const timeout=setTimeout(()=>reject(new Error(`Chrome debug-port startup exceeded 10000ms; stderr ${output.slice(-2000)}`)),10000);chrome.stderr.on("data",(chunk)=>{output=(output+chunk).slice(-2000);const match=output.match(/ws:\/\/127\.0\.0\.1:(\d+)\//);if(match){clearTimeout(timeout);resolve(Number(match[1]));}});chrome.once("error",reject);});
+    const port=await waitForChromeDebuggingPort({chrome,targetId,limitMs:10000,maximumStderrCharacters:2000});
+    timer=createBrowserPhaseTimer({targetId,phaseNames:["target setup","navigation","fixture","interaction","persistence","assertion","target cleanup"]});
     const panelUrl=`http://127.0.0.1:${server.address().port}/side-panel.html${fullPanel?"":isolationQuery(id)}`;
     const page=await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent("about:blank")}`,{method:"PUT"}).then((response)=>response.json());
-    socket=new DevtoolsSocket(page.webSocketDebuggerUrl);deadlineControl.cancel=()=>socket?.close();await socket.connect();
+    socket=new DevtoolsSocket(page.webSocketDebuggerUrl,targetId);call=socket.call.bind(socket);deadlineControl.cancel=()=>socket?.close();await socket.connect();
     await socket.call("Browser.grantPermissions",{origin:new URL(panelUrl).origin,permissions:["clipboardReadWrite","clipboardSanitizedWrite"]});
     await socket.call("Emulation.setDeviceMetricsOverride",{width:viewportWidth,height:900,deviceScaleFactor:1,mobile:false});await socket.call("Runtime.enable");await socket.call("Page.enable");
-    if(id==="shell"||fullPanel)await socket.call("Page.addScriptToEvaluateOnNewDocument",{source:browserProgram({targetId,phase:"target setup",source:chromeAdapterSource,shape:"script"})});
-    if(options.preload)await socket.call("Page.addScriptToEvaluateOnNewDocument",{source:browserProgram({targetId,phase:"target setup",source:options.preload,shape:"script"})});
+    if(id==="shell"||fullPanel)await transmitDevtoolsProgram({targetId,phase:"target setup",source:chromeAdapterSource,shape:"script",call,method:"Page.addScriptToEvaluateOnNewDocument",programParameter:"source"});
+    if(options.preload)await transmitDevtoolsProgram({targetId,phase:"target setup",source:options.preload,shape:"script",call,method:"Page.addScriptToEvaluateOnNewDocument",programParameter:"source"});
     timer.transition("navigation");await socket.call("Page.navigate",{url:panelUrl});
     await socket.call("Page.bringToFront");
     const expectedIsolation=id==="shell"||fullPanel?"":isolationScope(id).utilityId;
-    const readinessExpression=browserProgram({targetId,phase:"navigation",shape:"expression",source:`(()=>{const root=document.querySelector('#side-panel-root'),isolation=document.documentElement.dataset.utilityIsolation??'';return{ready:document.readyState==='complete'&&root?.dataset.utilityShellReady==='true'&&isolation===${JSON.stringify(expectedIsolation)},documentReadyState:document.readyState,shellReady:root?.dataset.utilityShellReady??null,isolation};})()`});
-    const ready=async(phase)=>observeBrowserReadiness({targetId,phase,predicateDescription:"complete document, ready Shell root, and requested utility isolation",timeoutMs:15000,pollIntervalMs:50,maximumSnapshotCharacters:600,observe:async()=>{const response=await socket.call("Runtime.evaluate",{expression:readinessExpression,returnByValue:true});return response.result.value;},ready:(state)=>state?.ready===true,snapshot:(state)=>state});
+    const readinessExpression=sharedHarnessReadinessExpression(expectedIsolation);
+    const ready=async(phase)=>observeBrowserReadiness({targetId,phase,predicateDescription:"complete document, ready Shell root, and requested utility isolation",timeoutMs:15000,pollIntervalMs:50,maximumSnapshotCharacters:600,observe:async()=>{const response=await transmitDevtoolsProgram({targetId,phase,source:readinessExpression,shape:"expression",call,parameters:{returnByValue:true}});return response.result.value;},ready:(state)=>state?.ready===true,snapshot:(state)=>state});
     await ready("navigation");
     if(options.setup){
-      timer.transition("fixture");const setup=await socket.call("Runtime.evaluate",{expression:browserProgram({targetId,phase:"fixture",source:options.setup,shape:"statements"}),returnByValue:true,awaitPromise:true});if(setup.exceptionDetails)throw new Error(setup.exceptionDetails.exception?.description??setup.exceptionDetails.text);
+      timer.transition("fixture");const setup=await transmitDevtoolsProgram({targetId,phase:"fixture",source:options.setup,shape:"statements",call,parameters:{returnByValue:true,awaitPromise:true}});if(setup.exceptionDetails)throw new Error(setup.exceptionDetails.exception?.description??setup.exceptionDetails.text);
       timer.transition("navigation");await socket.call("Page.reload",{ignoreCache:true});await ready("post-fixture reload");
     }
-    if(!fullPanel){const isolated=await socket.call("Runtime.evaluate",{expression:browserProgram({targetId,phase:"assertion",source:isolationAssertionExpression(id),shape:"expression"}),returnByValue:true});assert.equal(isolated.result.value,true,`${id} browser fixture contains unrelated utility DOM`);}
-    timer.transition("interaction");const result=await socket.call("Runtime.evaluate",{expression:browserProgram({targetId,phase:"interaction",source:workflow,shape:"statements"}),returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description??result.exceptionDetails.text);assert.equal(result.result.value?.passed,true,JSON.stringify(result.result.value));assert.equal(result.result.value?.width,viewportWidth);assert.equal(result.result.value?.overflow,false,`workflow must fit the ${viewportWidth}px viewport`);
-    if(options.reloadWorkflow){timer.transition("persistence");await socket.call("Page.reload",{ignoreCache:true});await ready("installed reload");const reloadResult=await socket.call("Runtime.evaluate",{expression:browserProgram({targetId,phase:"persistence",source:options.reloadWorkflow,shape:"statements"}),returnByValue:true,awaitPromise:true});if(reloadResult.exceptionDetails)throw new Error(reloadResult.exceptionDetails.exception?.description??reloadResult.exceptionDetails.text);assert.equal(reloadResult.result.value?.passed,true,JSON.stringify(reloadResult.result.value));}
-    timer.transition("assertion");const accessibility=await socket.call("Runtime.evaluate",{expression:browserProgram({targetId,phase:"assertion",source:accessibilityAssertionExpression,shape:"expression"}),returnByValue:true});assert.equal(accessibility.result.value?.passed,true,`${id} accessibility outcomes failed: ${JSON.stringify(accessibility.result.value)}`);
+    if(!fullPanel){const isolated=await transmitDevtoolsProgram({targetId,phase:"assertion",source:isolationAssertionExpression(id),shape:"expression",call,parameters:{returnByValue:true}});assert.equal(isolated.result.value,true,`${id} browser fixture contains unrelated utility DOM`);}
+    timer.transition("interaction");const result=await transmitDevtoolsProgram({targetId,phase:"interaction",source:workflow,shape:"statements",call,parameters:{returnByValue:true,awaitPromise:true}});if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description??result.exceptionDetails.text);assert.equal(result.result.value?.passed,true,JSON.stringify(result.result.value));assert.equal(result.result.value?.width,viewportWidth);assert.equal(result.result.value?.overflow,false,`workflow must fit the ${viewportWidth}px viewport`);
+    if(options.reloadWorkflow){timer.transition("persistence");await socket.call("Page.reload",{ignoreCache:true});await ready("installed reload");const reloadResult=await transmitDevtoolsProgram({targetId,phase:"persistence",source:options.reloadWorkflow,shape:"statements",call,parameters:{returnByValue:true,awaitPromise:true}});if(reloadResult.exceptionDetails)throw new Error(reloadResult.exceptionDetails.exception?.description??reloadResult.exceptionDetails.text);assert.equal(reloadResult.result.value?.passed,true,JSON.stringify(reloadResult.result.value));}
+    timer.transition("assertion");const accessibility=await transmitDevtoolsProgram({targetId,phase:"assertion",source:accessibilityAssertionExpression,shape:"expression",call,parameters:{returnByValue:true}});assert.equal(accessibility.result.value?.passed,true,`${id} accessibility outcomes failed: ${JSON.stringify(accessibility.result.value)}`);
     console.log(`${id} rendered browser workflow passed`);
     return result.result.value;
-  }catch(error){timingStatus="failed";failedAtPhase=timer.activePhase;throw error;}finally{timer.transition("target cleanup");socket?.close();const timing=timer.finish({status:timingStatus,failedAtPhase});console.log(JSON.stringify({swarmforgeBrowserTargetTiming:{id:targetId,durationMs:timing.durationMs,phases:timing.phases,...(timing.activePhase?{activePhase:timing.activePhase}:{})}}));await stopHeadlessChrome(chrome,3000);await new Promise((resolve)=>server.close(resolve));await removeChromeProfile(profile,{targetId});}
+  }catch(error){timingStatus="failed";failedAtPhase=timer?.activePhase;throw error;}finally{if(timer){timer.transition("target cleanup");socket?.close();const timing=timer.finish({status:timingStatus,failedAtPhase});console.log(JSON.stringify({swarmforgeBrowserTargetTiming:{id:targetId,durationMs:timing.durationMs,phases:timing.phases,...(timing.activePhase?{activePhase:timing.activePhase}:{})}}));}else socket?.close();await stopHeadlessChrome(chrome,3000,{targetId});await new Promise((resolve)=>server.close(resolve));await removeChromeProfile(profile,{targetId});}
 }
 
 export function runRenderedWorkflow(id,workflow,options={}){
   const deadlineControl={cancel:()=>{}};
-  return withBrowserDeadline({
-    owner:"logical target outer work",targetId:`${id}-shared-harness`,
+  return withLogicalTargetDeadline({
+    targetId:`${id}-shared-harness`,
     limitMs:options.maximumElapsedMilliseconds??120000,
     work:()=>executeRenderedWorkflow(id,workflow,options,deadlineControl),
     onTimeout:()=>deadlineControl.cancel(),
