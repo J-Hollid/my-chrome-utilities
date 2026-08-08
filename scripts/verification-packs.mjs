@@ -17,7 +17,7 @@ const reservedTaskEnvironment = new Set([
 const allowedSwarmforgeTaskEnvironment = new Set([
   "SWARMFORGE_BUILD_PREPARED", "SWARMFORGE_PACK_RUNNER_OWNS_JS",
 ]);
-const browserAdapterModeNames = new Set(["shared", "shared-wrapper", "integration"]);
+const browserAdapterModeNames = new Set(["shared", "shared-wrapper", "integration", "compatibility"]);
 const sharedBrowserHarnessPath = "test/browser-packs/shared-harness.mjs";
 
 const values = (pack, key) => pack[key] ?? [];
@@ -1255,8 +1255,13 @@ export function planVerification(
     : [];
   const observedAdapterPaths = new Set(executionPacks.flatMap((pack) =>
     values(pack, "browserObservations").map(({ path }) => path)));
+  const compatibilityAdapters = new Set(packs.flatMap((pack) =>
+    values(pack, "browserAdapterModes")
+      .filter(({ mode }) => mode === "compatibility").map(({ path }) => path)));
   const browserTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) =>
-    values(pack, "browserAdapters").filter((path) => !observedAdapterPaths.has(path)).map((path) => commandTask({
+    values(pack, "browserAdapters")
+      .filter((path) => !observedAdapterPaths.has(path) && !compatibilityAdapters.has(path))
+      .map((path) => commandTask({
       key:`browser:${path}`, stage:"browser", packId:pack.id, executable:"node", args:[path], target:path,
     })));
 

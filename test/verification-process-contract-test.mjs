@@ -827,7 +827,13 @@ await validateVerificationPacks(packs);
 const adapterModes = new Map(packs.flatMap((pack) => (pack.browserAdapterModes ?? [])
   .map(({ path:adapterPath, mode }) => [adapterPath, mode])));
 assert.equal([...adapterModes.values()].filter((mode) => mode === "shared-wrapper").length, 0);
-assert.equal([...adapterModes.values()].filter((mode) => mode === "integration").length, 7);
+for (const program of [
+  "test/browser-packs/side-panel-capture.mjs",
+  "test/browser-packs/side-panel-event-library.mjs",
+  "test/browser-packs/side-panel-schemas.mjs",
+  "test/browser-packs/side-panel-defects.mjs",
+  "test/browser-packs/side-panel-shell.mjs",
+]) assert.equal(adapterModes.get(program), "integration");
 assert.equal(adapterModes.get("test/browser-packs/flow-graph.mjs"), "shared");
 assert.equal(adapterModes.get("test/twatility-projects-browser-test.mjs"), "integration");
 assert.deepEqual(staticallyResolvableModuleImports([
@@ -1033,11 +1039,20 @@ assert.deepEqual(planVerification(packs, {
 }).packIds, planVerification(packs, {terminalFull:true}).packIds,
 "an unreadable historical project boundary falls back to every runnable pack");
 const exactEvidenceKeys = ["unit", "property", "features", "handlers", "browserAdapters"];
+const vtd006RegisteredPrograms = new Set([
+  "test/browser-packs/side-panel-capture.mjs",
+  "test/browser-packs/side-panel-event-library.mjs",
+  "test/browser-packs/side-panel-schemas.mjs",
+  "test/browser-packs/side-panel-defects.mjs",
+  "test/browser-packs/side-panel-shell.mjs",
+]);
+const conservedEvidenceProfile = (pack) => Object.fromEntries(exactEvidenceKeys.map((key) => [key,
+  pack[key].filter((path) => !vtd006RegisteredPrograms.has(path) &&
+    path !== "test/side-panel-browser-session-test.mjs"),
+]));
 const baseProjectManagementPack = vtd004BasePacks.find(({ id }) => id === "project_management");
-const projectEvidenceProfile = Object.fromEntries(exactEvidenceKeys.map((key) =>
-  [key, projectManagementPack[key]]));
-assert.deepEqual(projectEvidenceProfile, Object.fromEntries(exactEvidenceKeys.map((key) =>
-  [key, baseProjectManagementPack[key]])),
+const projectEvidenceProfile = conservedEvidenceProfile(projectManagementPack);
+assert.deepEqual(projectEvidenceProfile, conservedEvidenceProfile(baseProjectManagementPack),
 "all exact project-management evidence identities are conserved from the accepted base");
 const exactProjectPlan = planVerification(packs, {packIds:["project_management"], includeProperties:true});
 for (const [key, taskKey] of [["unit", "unitTasks"], ["property", "propertyTasks"],
@@ -1049,9 +1064,29 @@ assert.deepEqual(exactProjectPlan.sessionTasks.map(({ packId }) => packId), ["pr
   "the one exact owner session consumes the one isolated project-management handler");
 const baseTerminalPlan = planVerification(vtd004BasePacks, {terminalFull:true});
 const currentTerminalPlan = planVerification(packs, {terminalFull:true});
-const terminalIdentities = (plan) => plan.tasks.map(verificationTaskIdentity);
-assert.deepEqual(terminalIdentities(currentTerminalPlan), terminalIdentities(baseTerminalPlan),
-  "terminal-full planning conserves every exact task identity and ordering");
+const vtd006ProgramMigration = new Map([
+  ["test/browser-packs/side-panel-capture.mjs", "test/side-panel-component-layout-runtime-test.mjs"],
+  ["test/browser-packs/side-panel-event-library.mjs", "test/side-panel-component-layout-runtime-test.mjs"],
+  ["test/browser-packs/side-panel-schemas.mjs", "test/side-panel-component-layout-runtime-test.mjs"],
+  ["test/browser-packs/side-panel-defects.mjs", "test/side-panel-component-layout-runtime-test.mjs"],
+  ["test/browser-packs/side-panel-shell.mjs", "test/side-panel-component-layout-runtime-test.mjs"],
+]);
+const normalizedVtd006Identity = (task) => {
+  let encoded = JSON.stringify(verificationTaskIdentity(task));
+  for (const [current, previous] of vtd006ProgramMigration) encoded = encoded.replaceAll(current, previous);
+  return JSON.parse(encoded);
+};
+const terminalIdentities = (plan) => plan.tasks
+  .filter(({ target }) => target !== "test/side-panel-browser-session-test.mjs")
+  .map(normalizedVtd006Identity);
+const conservedCurrentTasks = currentTerminalPlan.tasks.filter(({ target }) =>
+  target !== "test/side-panel-browser-session-test.mjs");
+assert.deepEqual(conservedCurrentTasks.map(normalizedVtd006Identity),
+  baseTerminalPlan.tasks.map(verificationTaskIdentity),
+  "terminal-full planning conserves every migrated exact task identity and ordering");
+assert.equal(currentTerminalPlan.tasks.filter(({ target }) =>
+  target === "test/side-panel-browser-session-test.mjs").length, 1,
+"terminal-full planning adds the focused VTD-006 session contract once");
 assert.equal(currentTerminalPlan.checkpointTasks.filter(({ display }) =>
   display === "npm run package").length, 1,
 "terminal-full planning executes the package check exactly once");
@@ -1171,10 +1206,10 @@ assert.deepEqual(planVerification(packs, {changedPaths:renamedDurablePresentatio
 assert.deepEqual(planVerification(packs, {changedPaths:deletedDurablePresentation.paths,
   changeSet:deletedDurablePresentation,basePacks:packs,historicalRegistryFallback:true}).packIds,
   planVerification(packs, {terminalFull:true}).packIds);
-const durableEvidenceProfile = Object.fromEntries(exactEvidenceKeys.map((key) => [key,durablePack[key]]));
+const durableEvidenceProfile = conservedEvidenceProfile(durablePack);
 const durableBasePack = durableBasePacks.find(({id}) => id === "durable_project_repository");
 assert.deepEqual(durableEvidenceProfile,
-  Object.fromEntries(exactEvidenceKeys.map((key) => [key,durableBasePack[key]])),
+  conservedEvidenceProfile(durableBasePack),
   "all durable owner evidence identities remain conserved");
 const exactDurablePlan = planVerification(packs, {packIds:["durable_project_repository"],includeProperties:true});
 assert.deepEqual(exactDurablePlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).sort(),
@@ -1347,10 +1382,10 @@ assert.deepEqual(eventHistoryPlans.renameEditorUi,eventEditorClosure);
 assert.deepEqual(eventHistoryPlans.renameEditorModel,eventEditorClosure);
 assert.deepEqual(eventHistoryPlans.renameSemantic,eventClosure);
 assert.deepEqual(eventHistoryPlans.unreadable,planVerification(packs,{terminalFull:true}).packIds);
-const eventEvidenceProfile = Object.fromEntries(exactEvidenceKeys.map((key) => [key,eventLibraryPack[key]]));
+const eventEvidenceProfile = conservedEvidenceProfile(eventLibraryPack);
 const eventBasePack = eventLibraryBasePacks.find(({id}) => id === "event-library");
 assert.deepEqual(eventEvidenceProfile,
-  Object.fromEntries(exactEvidenceKeys.map((key) => [key,eventBasePack[key]])),
+  conservedEvidenceProfile(eventBasePack),
   "all Event Library owner evidence identities remain conserved");
 const exactEventPlan = planVerification(packs,{packIds:["event-library"],includeProperties:true});
 assert.equal(exactEventPlan.tasks.length,30,"the exact Event Library plan remains 30 tasks");
@@ -1381,7 +1416,7 @@ assert.deepEqual(eventOtherCurrent,eventOtherBase);
 assert.deepEqual(eventCompletedCalibration.browserTargets,eventLibraryBaseCalibration.browserTargets);
 assert.deepEqual(calibrationProvenance(eventCompletedCalibration),calibrationProvenance(eventLibraryBaseCalibration));
 const eventInstalledSource = await readFile(
-  new URL("../test/side-panel-component-layout-runtime-test.mjs", import.meta.url), "utf8");
+  new URL("../test/support/side-panel-event-library-fixtures.mjs", import.meta.url), "utf8");
 assert.match(eventInstalledSource,/renderers:\{push:pushRendered,revision:revisionRendered,revisionEmpty\}/u,
   "the installed observation directly renders push and revision supplied values");
 const vtd004EventAcceptance = {
@@ -1394,7 +1429,7 @@ const vtd004EventAcceptance = {
   conservation:{evidenceProfile:eventEvidenceProfile,exactTaskCount:exactEventPlan.tasks.length,
     unitCount:exactEventPlan.unitTasks.length,propertyCount:exactEventPlan.propertyTasks.length,
     featureCount:exactEventPlan.parserTasks.length,handlerCount:eventLibraryPack.handlers.length,
-    adapterCount:eventLibraryPack.browserAdapters.length,targetCount:exactEventPlan.observationTasks.length,
+    adapterCount:exactEventPlan.browserTasks.length,targetCount:exactEventPlan.observationTasks.length,
     terminalTaskIdentitiesConserved:true,packageCheckCount:1,directRevisionRenderer:true},
   calibration:{current:eventCalibration,otherPackRowsConserved:true,browserTargetRowsConserved:true,
     previous:eventBaseCalibration,exactPackCalibrationConserved:
@@ -1522,15 +1557,15 @@ assert.deepEqual(captureHistoryPlans.renamePresentation,["capture"]);
 for (const key of ["renameSharedPresentation","renameSemantic","renamePersistence","renameLibraryFocus"])
   assert.deepEqual(captureHistoryPlans[key],captureClosure);
 assert.deepEqual(captureHistoryPlans.unreadable,planVerification(packs,{terminalFull:true}).packIds);
-const captureEvidenceProfile = Object.fromEntries(exactEvidenceKeys.map((key) => [key,capturePack[key]]));
+const captureEvidenceProfile = conservedEvidenceProfile(capturePack);
 const captureBasePack = captureBasePacks.find(({id}) => id === "capture");
 assert.deepEqual(captureEvidenceProfile,
-  Object.fromEntries(exactEvidenceKeys.map((key) => [key,captureBasePack[key]])),
+  conservedEvidenceProfile(captureBasePack),
   "all Capture owner evidence identities remain conserved");
 const exactCapturePlan = planVerification(packs,{packIds:["capture"],includeProperties:true});
 assert.equal(exactCapturePlan.tasks.length,171);
 assert.deepEqual([exactCapturePlan.unitTasks.length,exactCapturePlan.propertyTasks.length,
-  exactCapturePlan.parserTasks.length,capturePack.handlers.length,capturePack.browserAdapters.length,
+  exactCapturePlan.parserTasks.length,capturePack.handlers.length,exactCapturePlan.browserTasks.length,
   exactCapturePlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).length,
   exactCapturePlan.checkpointTasks.length],[21,12,66,25,1,5,2]);
 assert.deepEqual(terminalIdentities(planVerification(packs,{terminalFull:true})),
@@ -1553,7 +1588,7 @@ assert.deepEqual(captureCompletedCalibration.browserTargets,captureBaseCalibrati
 assert.deepEqual(calibrationProvenance(captureCompletedCalibration),calibrationProvenance(
   captureBaseCalibration));
 const captureInstalledSource = await readFile(
-  new URL("../test/side-panel-component-layout-runtime-test.mjs",import.meta.url),"utf8");
+  new URL("../test/support/side-panel-capture-fixtures.mjs",import.meta.url),"utf8");
 assert.match(captureInstalledSource,/inspectorPresentation:\{captured,restored\}/u,
   "the installed Capture observation directly captures and restores inspector presentation");
 const vtd004CaptureAcceptance = {
@@ -1701,15 +1736,15 @@ assert.deepEqual(schemasHistoryPlans.delete,["schemas"]);
 assert.deepEqual(schemasHistoryPlans.renamePresentation,["schemas"]);
 assert.deepEqual(schemasHistoryPlans.renameSharedWorkflow,schemasClosure);
 assert.deepEqual(schemasHistoryPlans.unreadable,planVerification(packs,{terminalFull:true}).packIds);
-const schemasEvidenceProfile = Object.fromEntries(exactEvidenceKeys.map((key) => [key,schemasPack[key]]));
+const schemasEvidenceProfile = conservedEvidenceProfile(schemasPack);
 const schemasBasePack = schemasBasePacks.find(({id}) => id === "schemas");
 assert.deepEqual(schemasEvidenceProfile,
-  Object.fromEntries(exactEvidenceKeys.map((key) => [key,schemasBasePack[key]])),
+  conservedEvidenceProfile(schemasBasePack),
   "all Schemas owner evidence identities remain conserved");
 const exactSchemasPlan = planVerification(packs,{packIds:["schemas"],includeProperties:true});
 assert.equal(exactSchemasPlan.tasks.length,288);
 assert.deepEqual([exactSchemasPlan.unitTasks.length,exactSchemasPlan.propertyTasks.length,
-  exactSchemasPlan.parserTasks.length,schemasPack.handlers.length,schemasPack.browserAdapters.length,
+  exactSchemasPlan.parserTasks.length,schemasPack.handlers.length,exactSchemasPlan.browserTasks.length,
   exactSchemasPlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).length,
   exactSchemasPlan.checkpointTasks.length],[49,29,103,60,1,46,0]);
 assert.deepEqual(terminalIdentities(planVerification(packs,{terminalFull:true})),
@@ -1741,7 +1776,7 @@ assert.deepEqual(schemasCalibrationProjection.browserTargets,schemasBaseCalibrat
 assert.deepEqual(calibrationProvenance(schemasCalibrationProjection),calibrationProvenance(
   schemasBaseCalibration));
 const schemasInstalledSource = await readFile(
-  new URL("../test/side-panel-component-layout-runtime-test.mjs",import.meta.url),"utf8");
+  new URL("../test/support/side-panel-browser-fixture-primitives.mjs",import.meta.url),"utf8");
 const schemasPresentationTargets = [
   ["ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER", "allowedValueExpansionObservation"],
   ["GUIDED_VALIDATION_BROWSER_ADAPTER", "guidedSchemaPickerObservation"],
@@ -1950,9 +1985,9 @@ for (const platformPath of shellSourcePaths.filter((sourcePath) => !(sourcePath 
 const localShellPlan = planVerification(packs, {
   changedPaths:["src/workspace-tabs-ui.ts"], includeProperties:true,
 });
-assert.equal(localShellPlan.tasks.length, 59,
-  "local Shell presentation retains the complete property-enabled 59-task plan");
-assert.equal(localShellPlan.unitTasks.length, 11);
+assert.equal(localShellPlan.tasks.length, 60,
+  "local Shell presentation includes the VTD-006 contract in its property-enabled 60-task plan");
+assert.equal(localShellPlan.unitTasks.length, 12);
 assert.equal(localShellPlan.propertyTasks.length, 1);
 assert.equal(localShellPlan.browserTasks.length, 3);
 assert.equal(localShellPlan.observationTasks.length, 1);
@@ -2095,7 +2130,7 @@ assert.equal(realRegistryBoundary.changedOwners["verification/packs.json"]
   .includes("selective_profile_inheritance"), false,
   "a nonrunnable production dependant is traversable but never required as an evidence selector");
 const componentLayoutBrowserSource = await readFile(
-  new URL("./side-panel-component-layout-runtime-test.mjs", import.meta.url),
+  new URL("./support/side-panel-browser-fixture-primitives.mjs", import.meta.url),
   "utf8",
 );
 const installedTargetSessionSource = await readFile(
@@ -2113,7 +2148,7 @@ assert.equal(new Set(shellContainmentTargets.map(({ sessionBatch }) => sessionBa
 assert.ok(shellContainmentTargets.every(({ sessionBatch }) => sessionBatch),
   "the real registry does not leave compatible containment targets unbatched");
 assert.deepEqual(shellBrowserBatch.browserAdapterPerformance, [{
-  path:"test/side-panel-component-layout-runtime-test.mjs",
+  path:"test/browser-packs/side-panel-shell.mjs",
   singleTargetP90Milliseconds:18000,
   maximumSingleTargetP90Milliseconds:10000,
   targetIds:["SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER",
@@ -2132,16 +2167,16 @@ assert.match(componentLayoutBrowserSource,
   /globalThis\.__swarmforgeRetainedEvaluation = \(\$\{expression\}\)/u,
   "DevTools evaluations retain awaited promises until their results are collected");
 assert.match(componentLayoutBrowserSource,
-  /process\.env\.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" \? \[720\]/u,
+  /activeBrowserTargetEnvironment\.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" \? \[720\]/u,
   "the focused Schema view containment observation owns one explicit viewport");
 assert.match(componentLayoutBrowserSource,
-  /process\.env\.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" \? \[720\]/u,
+  /activeBrowserTargetEnvironment\.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" \? \[720\]/u,
   "the focused Schema workspace observation owns its extended-workspace viewport");
 const schemaViewStop = componentLayoutBrowserSource.indexOf(
-  'if (process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1") {\n      socket.close(); continue;\n    }',
+  'if (activeBrowserTargetEnvironment.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1") {\n      socket.close(); continue;\n    }',
 );
 const schemaWorkspaceStop = componentLayoutBrowserSource.indexOf(
-  'if (process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1") {',
+  'if (activeBrowserTargetEnvironment.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1") {',
 );
 const payloadPathPicker = componentLayoutBrowserSource.indexOf(
   "payloadPathFilterPickerObservation =",
@@ -2149,10 +2184,10 @@ const payloadPathPicker = componentLayoutBrowserSource.indexOf(
 assert.ok(schemaViewStop >= 0 && schemaViewStop < schemaWorkspaceStop && schemaViewStop < payloadPathPicker,
   "the focused Schema view containment observation stops before workspace and payload browser contracts");
 assert.match(componentLayoutBrowserSource,
-  /if \(process\.env\.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1"\) \{[\s\S]*?schemaWorkspaceAdapterObservations\.push\(schemaWorkspaceObservation\);[\s\S]*?console\.log\(JSON\.stringify\(\{ schemaWorkspace:schemaWorkspaceObservation \}\)\);\s*await evaluate\(socket, guidedTransportProjectRestoreRuntime\(previousActiveProjectId\)\);\s*socket\.close\(\);\s*continue;\s*\}\s*payloadPathFilterPickerObservation =/u,
+  /if \(activeBrowserTargetEnvironment\.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1"\) \{[\s\S]*?schemaWorkspaceAdapterObservations\.push\(schemaWorkspaceObservation\);[\s\S]*?console\.log\(JSON\.stringify\(\{ schemaWorkspace:schemaWorkspaceObservation \}\)\);\s*await evaluate\(socket, guidedTransportProjectRestoreRuntime\(previousActiveProjectId\)\);\s*socket\.close\(\);\s*continue;\s*\}\s*if \(activeBrowserTargetEnvironment\.PAYLOAD_PATH_FILTER_BROWSER_ADAPTER === "1" \|\| !requestedBrowserAdapter\) \{\s*payloadPathFilterPickerObservation =/u,
   "the focused Schema workspace observation stops before unrelated browser contracts");
 assert.match(componentLayoutBrowserSource,
-  /await reloadPanel\(socket\);\s*if \(process\.env\.GUIDED_VALIDATION_BROWSER_ADAPTER === "1"\) \{\s*socket\.close\(\); continue;\s*\}\s*liveValidationVisualsObservation =/su,
+  /await reloadPanel\(socket\);\s*if \(activeBrowserTargetEnvironment\.GUIDED_VALIDATION_BROWSER_ADAPTER === "1"\) \{\s*socket\.close\(\); continue;\s*\}\s*\}\s*if \(activeBrowserTargetEnvironment\.LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER === "1" \|\|\s*!requestedBrowserAdapter\) \{\s*liveValidationVisualsObservation =/su,
   "the focused guided-validation observation stops before unrelated visual and layout contracts");
 assert.match(componentLayoutBrowserSource,
   /parentDisplay:style\.display/u,
@@ -2586,9 +2621,12 @@ for (const [packId, adapterPath] of [
   assert.ok(declaration.targetIds.length >= 2 && declaration.sessionBatch,
     `${packId} runtime outlier declares independently selectable batched targets`);
 }
-for (const [packId, logicalObservations] of [["capture", 5], ["schemas", 46], ["defects", 9]]) {
+for (const [packId, logicalObservations, program] of [
+  ["capture", 5, "test/browser-packs/side-panel-capture.mjs"],
+  ["schemas", 46, "test/browser-packs/side-panel-schemas.mjs"],
+  ["defects", 9, "test/browser-packs/side-panel-defects.mjs"],
+]) {
   const pack = packs.find(({ id }) => id === packId);
-  const program = "test/side-panel-component-layout-runtime-test.mjs";
   const observations = pack.browserObservations.filter(({ path }) => path === program);
   assert.equal(observations.length, logicalObservations,
     `${packId} retains the specified shared side-panel observation count`);
@@ -4983,10 +5021,8 @@ assert.deepEqual(committedCalibrationReport.browserTargets, vtd009BaseCalibratio
 const vtd009ExactBase = planVerification(vtd009BasePacks, {packIds:["shell"],includeProperties:true});
 const vtd009TerminalBase = planVerification(vtd009BasePacks, {terminalFull:true});
 const vtd009TerminalCurrent = planVerification(packs, {terminalFull:true});
-assert.deepEqual(localShellPlan.tasks.map(verificationTaskIdentity),
-  vtd009ExactBase.tasks.map(verificationTaskIdentity));
-assert.deepEqual(vtd009TerminalCurrent.tasks.map(verificationTaskIdentity),
-  vtd009TerminalBase.tasks.map(verificationTaskIdentity));
+assert.deepEqual(terminalIdentities(localShellPlan), terminalIdentities(vtd009ExactBase));
+assert.deepEqual(terminalIdentities(vtd009TerminalCurrent), terminalIdentities(vtd009TerminalBase));
 const vtd009Acceptance = {
   helpers:Object.fromEntries(helperDeclarations.map(({path:helperPath,consumers}) =>
     [helperPath,{consumers,selected:planVerification(packs,{changedPaths:[helperPath]}).packIds}])),

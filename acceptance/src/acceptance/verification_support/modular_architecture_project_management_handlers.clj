@@ -4,6 +4,16 @@
 
 (def human-pack-list project/human-pack-list)
 
+(defn- planned-browser-adapter-count [pack]
+  (let [observation-paths (set (keep :path (:browserObservations pack)))
+        registration-only-paths
+        (set (keep (fn [{:keys [path mode]}]
+                     (when (and (= "integration" mode)
+                                (observation-paths path))
+                       path))
+                   (:browserAdapterModes pack)))]
+    (count (remove registration-only-paths (:browserAdapters pack)))))
+
 (defn- boundary-handlers [example-values verify-throughput! dependencies]
   [{:pattern #"^project_management owns source path (.+)$"
     :handler (fn [world example captures]
@@ -51,8 +61,9 @@
                                        "durable_project_repository" [5 3 2 1 2]
                                        "event-library" [9 1 8 3 1]
                                        [4 4 6 1 4])
-                                     (mapv #(count (% pack))
-                                           [:unit :property :features :handlers :browserAdapters]))
+                                     (conj (mapv #(count (% pack))
+                                                 [:unit :property :features :handlers])
+                                           (planned-browser-adapter-count pack)))
                                   "Owner evidence profile is incomplete." {}))
                world)}])
 
