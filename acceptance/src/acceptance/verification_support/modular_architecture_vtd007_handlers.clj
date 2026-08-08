@@ -407,7 +407,7 @@
                                            (evidence world :timing :flowExamplesPhases)))
                              "Flow examples timing contract changed." {}))}])
 
-(defn- deadline-handlers [example-values]
+(defn- deadline-boundary-handlers [example-values]
   [
    {:pattern #"^the browser boundary (.+) has its own bounded deadline$"
     :handler (fn [world example captures]
@@ -431,7 +431,10 @@
                                "Forced failure does not exercise the specified production boundary."
                                {:failure (:vtd007/forced-failure prepared)
                                 :expected-owner (:vtd007/deadline-owner prepared)
-                                :row row})))}
+                                :row row})))}])
+
+(defn- deadline-diagnostic-handlers [example-values]
+  [
    {:pattern #"^the failure names (.+) rather than a product readiness predicate$"
     :handler (fn [world example captures]
                (let [expected (first (values example-values example captures))
@@ -508,6 +511,7 @@
   (vec (concat (readiness-handlers example-values)
                (surface-handlers example-values)
                (timing-handlers)
-               (deadline-handlers example-values)
+               (deadline-boundary-handlers example-values)
+               (deadline-diagnostic-handlers example-values)
                (program-handlers)
                (conservation-handlers))))
