@@ -33,6 +33,7 @@ import {
   flowGraphPageExampleStateEvidence,
 } from "./support/flow-graph-corrective-workflow.mjs";
 import {
+  flowSectionDrawBoundaryReady,
   flowWorkspaceReadinessLimitMilliseconds,
   flowWorkspaceR02Runtime,
 } from "./support/flow-workspace-r02-runtime.mjs";
@@ -428,6 +429,35 @@ assert.match(flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"}),
 assert.match(flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"}),
   /addEventListener\('focusin',observeDeletionSourceFocus,true\)/u,
   "the authoring observation must latch the transient production focus event");
+const flowWorkspaceProgram=flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"});
+const drawActivation=flowWorkspaceProgram.indexOf("click('Draw Section',surface())");
+const drawBoundaryWait=flowWorkspaceProgram.indexOf("'actionable Section draw boundary'");
+const drawPointerInput=flowWorkspaceProgram.indexOf("pointer(canvas,'pointerdown'",drawActivation);
+assert.ok(drawActivation>=0&&drawActivation<drawBoundaryWait&&drawBoundaryWait<drawPointerInput,
+  "the real Section gesture must wait for its actionable draw boundary");
+assert.match(flowWorkspaceProgram,/state=>\(\{sectionCount:state\.sectionCount,expectedSectionCount:/u,
+  "a failed Section draw must retain a useful final browser snapshot");
+const delayedDrawStates=[
+  {connected:false,currentCanvas:false,drawMode:true,surfaceClosed:true,geometryStable:true,width:640,height:480,pointerEvents:"auto"},
+  {connected:true,currentCanvas:true,drawMode:false,surfaceClosed:true,geometryStable:true,width:640,height:480,pointerEvents:"auto"},
+  {connected:true,currentCanvas:true,drawMode:true,surfaceClosed:true,geometryStable:false,width:640,height:480,pointerEvents:"auto"},
+  {connected:true,currentCanvas:true,drawMode:true,surfaceClosed:true,geometryStable:true,width:640,height:480,pointerEvents:"auto"},
+  {connected:true,currentCanvas:true,drawMode:true,surfaceClosed:true,geometryStable:true,width:640,height:480,pointerEvents:"auto"},
+  {connected:true,currentCanvas:true,drawMode:true,surfaceClosed:true,geometryStable:true,width:640,height:480,pointerEvents:"auto"},
+];
+let delayedDrawClock=0,delayedDrawIndex=0,pointerInputs=0;
+const actionableDrawState=await observeBrowserReadiness({
+  targetId:"FLOW_WORKSPACE_AUTHORING_TARGET",phase:"interaction",
+  predicateDescription:"actionable Section draw boundary",timeoutMs:200,pollIntervalMs:25,
+  maximumSnapshotCharacters:400,stabilityMs:50,now:()=>delayedDrawClock,
+  sleep:async(milliseconds)=>{delayedDrawClock+=milliseconds;},
+  observe:async()=>delayedDrawStates[Math.min(delayedDrawIndex++,delayedDrawStates.length-1)],
+  ready:flowSectionDrawBoundaryReady,snapshot:(state)=>state,
+});
+assert.equal(pointerInputs,0,"delayed rendering must not receive pointer input before draw readiness");
+assert.equal(actionableDrawState.geometryStable,true);
+pointerInputs+=1;
+assert.equal(pointerInputs,1,"the actionable draw boundary permits one semantic pointer gesture");
 assert.equal(flowGraphRepeatedInstanceReadinessLimitMilliseconds,30000,
   "runtime024 needs a load-tolerant elapsed-time readiness boundary");
 const repeatedInstanceProgram=flowGraphRepeatedInstanceEvidence(
