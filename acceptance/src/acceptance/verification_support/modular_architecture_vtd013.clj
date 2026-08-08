@@ -111,3 +111,7 @@
 (defn assert-vtd013! [world predicate message]
   (support/assert! predicate message {:report (:vtd013/report world)})
   world)
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-08-08T12:25:56.998581976+02:00", :module-hash "-1740773154", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "551388061"} {:id "def/flow-phase-names", :kind "def", :line 6, :end-line 8, :hash "-349843343"} {:id "defn/flow-characterization", :kind "defn", :line 10, :end-line 13, :hash "1595835236"} {:id "defn-/finite-non-negative?", :kind "defn-", :line 15, :end-line 16, :hash "-361320050"} {:id "defn/valid-flow-distributions?", :kind "defn", :line 18, :end-line 32, :hash "-1406208250"} {:id "defn/flow-sample-world", :kind "defn", :line 34, :end-line 55, :hash "-323368289"} {:id "defn-/maturity-status", :kind "defn-", :line 57, :end-line 58, :hash "-1566647915"} {:id "defn/flow-maturity-world", :kind "defn", :line 60, :end-line 72, :hash "-900377570"} {:id "defn/flow-budget-world", :kind "defn", :line 74, :end-line 84, :hash "-2034091371"} {:id "defn/flow-completion-world", :kind "defn", :line 86, :end-line 109, :hash "976164543"} {:id "defn/assert-vtd013!", :kind "defn", :line 111, :end-line 113, :hash "715497087"}]}
+;; clj-mutate-manifest-end

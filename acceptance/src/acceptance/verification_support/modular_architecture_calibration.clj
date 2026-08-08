@@ -68,3 +68,7 @@
 (defn assert-vtd003! [world predicate message]
   (support/assert! predicate message {:calibration (:vtd003/calibration world)})
   world)
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-08-08T12:16:41.561938793+02:00", :module-hash "-1531419588", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "702125126"} {:id "defn/performance-calibration", :kind "defn", :line 6, :end-line 8, :hash "-1292448049"} {:id "defn/calibration-pack", :kind "defn", :line 10, :end-line 11, :hash "-2084832475"} {:id "defn/calibration-target", :kind "defn", :line 13, :end-line 14, :hash "-464783358"} {:id "defn/calibration-pack-world", :kind "defn", :line 16, :end-line 35, :hash "873884160"} {:id "defn/calibration-target-world", :kind "defn", :line 37, :end-line 49, :hash "854402514"} {:id "defn/calibration-world", :kind "defn", :line 51, :end-line 52, :hash "349749996"} {:id "defn/regression-world", :kind "defn", :line 54, :end-line 66, :hash "1243936214"} {:id "defn/assert-vtd003!", :kind "defn", :line 68, :end-line 70, :hash "-1417059923"}]}
+;; clj-mutate-manifest-end
