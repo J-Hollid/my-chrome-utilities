@@ -1,3 +1,8 @@
+import {
+  createBrowserPhaseTimer,
+  observeBrowserReadiness,
+} from "./browser-observation-control.mjs";
+
 const targetPhaseNames = [
   "target setup",
   "fixture setup",
@@ -20,34 +25,16 @@ function finiteDuration(value, label) {
 
 export function createFlowExamplesPhaseTimer({ browserStartupMs, now = () => performance.now() } = {}) {
   finiteDuration(browserStartupMs, "browser startup");
-  const durations = new Map(targetPhaseNames.map((name) => [name, 0]));
-  const started = now();
-  let phaseStarted = started;
-  let activePhase = "target setup";
-  let finished = false;
-  const record = (ended) => {
-    durations.set(activePhase, durations.get(activePhase) + finiteDuration(ended - phaseStarted, activePhase));
-    phaseStarted = ended;
-  };
+  const timer = createBrowserPhaseTimer({
+    targetId:"FLOW_GRAPH_EXAMPLES_TARGET", phaseNames:targetPhaseNames, now,
+  });
   return {
-    transition(nextPhase) {
-      if (finished) throw new Error("Flow examples phase timing is already complete");
-      if (!targetPhaseNames.includes(nextPhase)) throw new Error(`Unknown Flow examples phase: ${nextPhase}`);
-      const timestamp = now();
-      record(timestamp);
-      activePhase = nextPhase;
-    },
-    finish() {
-      if (finished) throw new Error("Flow examples phase timing is already complete");
-      const ended = now();
-      record(ended);
-      finished = true;
-      const targetPhases = targetPhaseNames.map((name) => ({
-        name, scope:"target", durationMs:Number(durations.get(name).toFixed(3)),
-      }));
-      const durationMs = Number(targetPhases
-        .reduce((sum, phase) => sum + phase.durationMs, 0).toFixed(3));
+    transition(nextPhase) { timer.transition(nextPhase); },
+    finish(options) {
+      const completed = timer.finish(options);
+      const { durationMs, phases:targetPhases } = completed;
       return validateFlowExamplesPhaseTiming({
+        ...completed,
         durationMs,
         phases:[
           { name:"browser startup", scope:"process", durationMs:Number(browserStartupMs.toFixed(3)) },
@@ -55,6 +42,7 @@ export function createFlowExamplesPhaseTimer({ browserStartupMs, now = () => per
         ],
       });
     },
+    get activePhase() { return timer.activePhase; },
   };
 }
 
@@ -76,15 +64,6 @@ export function validateFlowExamplesPhaseTiming(timing) {
   return timing;
 }
 
-function boundedSnapshot(value, maximumCharacters) {
-  let serialized;
-  try { serialized = JSON.stringify(value); }
-  catch { serialized = String(value); }
-  if (serialized === undefined) serialized = String(value);
-  return serialized.length <= maximumCharacters
-    ? serialized : `${serialized.slice(0, maximumCharacters - 1)}…`;
-}
-
 export async function boundedFlowExamplesReadiness({
   targetId,
   phase,
@@ -93,22 +72,14 @@ export async function boundedFlowExamplesReadiness({
   timeoutMs,
   intervalMs = 25,
   maximumSnapshotCharacters = 400,
+  stabilityMs = 0,
   now = () => performance.now(),
   sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
 }) {
-  const started = now();
-  const deadline = started + timeoutMs;
-  let lastState;
-  while (true) {
-    lastState = await observe();
-    if (lastState?.ready) return lastState;
-    const current = now();
-    if (current >= deadline) {
-      throw new Error(
-        `${targetId} ${phase} timed out waiting for ${predicate} after ` +
-        `${Math.round(current - started)}ms; last state ${boundedSnapshot(lastState, maximumSnapshotCharacters)}`,
-      );
-    }
-    await sleep(Math.min(intervalMs, deadline - current));
-  }
+  return observeBrowserReadiness({
+    targetId, phase, predicateDescription:predicate, observe,
+    ready:(state) => Boolean(state?.ready), snapshot:(state) => state,
+    timeoutMs, pollIntervalMs:intervalMs, maximumSnapshotCharacters, stabilityMs,
+    now, sleep,
+  });
 }

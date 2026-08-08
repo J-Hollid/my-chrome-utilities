@@ -5,6 +5,7 @@
             [acceptance.verification-support.modular-architecture-layered-editor-handlers :as layered-editor]
             [acceptance.verification-support.modular-architecture-project-management-handlers :as project-management]
             [acceptance.verification-support.modular-architecture-schemas-handlers :as schemas]
+            [acceptance.verification-support.modular-architecture-vtd007-handlers :as vtd007]
             [acceptance.verification-support.modular-architecture-vtd009-handlers :as vtd009]
             [acceptance.steps.support :as support]
             [aps.json :as aps-json]
@@ -1045,7 +1046,8 @@
    ])
 
 (def handlers
-  (vec (concat (vtd009/handlers
+  (vec (concat (vtd007/handlers)
+               (vtd009/handlers
                 {:example-values example-values
                  :verify-throughput! verify-throughput!})
                core-handlers

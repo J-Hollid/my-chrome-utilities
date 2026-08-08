@@ -1,11 +1,17 @@
-export function flowWorkspaceR02Runtime(seeded, { stopAfterRuntime } = {}) {
+import {browserReadinessProgramSource} from "./browser-observation-control.mjs";
+
+export function flowWorkspaceR02Runtime(seeded, { stopAfterRuntime, targetId = "FLOW_WORKSPACE_AUTHORING_TARGET" } = {}) {
   const stopAfterRuntime020 = stopAfterRuntime === 20 ? "return evidence;" : "";
+  const readinessProgram = browserReadinessProgramSource({
+    targetId, phase:"interaction", timeoutMs:10000, pollIntervalMs:25,
+    maximumSnapshotCharacters:400,
+  });
   return `
 (async()=>{
   const q=(selector,root=document)=>root?.querySelector(selector);
   const all=(selector,root=document)=>root?[...root.querySelectorAll(selector)]:[];
   const pause=(milliseconds=60)=>new Promise(resolve=>setTimeout(resolve,milliseconds));
-  const waitFor=async(read,description,attempts=100)=>{for(let attempt=0;attempt<attempts;attempt+=1){const value=await read();if(value)return value;await pause(25);}throw new Error('Timed out waiting for '+description);};
+  ${readinessProgram}
   const button=(text,root=document)=>all('button',root).find(candidate=>candidate.textContent.trim()===text);
   const click=(text,root=document)=>{const found=button(text,root);if(!found)throw new Error('Missing Flow control '+text);found.click();return found;};
   const pointer=(target,type,values={})=>target.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:values.pointerId??41,pointerType:values.pointerType??'mouse',button:values.button??0,clientX:values.clientX??0,clientY:values.clientY??0}));

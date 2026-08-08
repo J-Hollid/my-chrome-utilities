@@ -6,6 +6,13 @@ import {
   validateFlowExamplesPhaseTiming,
 } from "./support/flow-examples-timing.mjs";
 import {
+  browserReadinessProgramSource,
+  browserProgram,
+  createBrowserPhaseTimer,
+  observeBrowserReadiness,
+  withBrowserDeadline,
+} from "./support/browser-observation-control.mjs";
+import {
   flowGraphEventExampleIncompleteEvidence,
   flowGraphEventExampleStateEvidence,
   flowGraphPageExampleIncompleteEvidence,
@@ -95,6 +102,62 @@ assert.throws(() => validateFlowExamplesPhaseTiming({
   phases:timing.phases.map((phase) => phase.name === "cleanup"
     ? { ...phase, durationMs:phase.durationMs + 2 } : phase),
 }), /cover target duration/u);
+
+readinessClock = 0;
+const stableStates = [true, false, true, true, true].map((ready, index) => ({ ready, index }));
+const stable = await observeBrowserReadiness({
+  targetId:"TARGET-READY", phase:"navigation", predicateDescription:"workspace mounted",
+  timeoutMs:100, pollIntervalMs:25, stabilityMs:50, maximumSnapshotCharacters:80,
+  now:() => readinessClock,
+  sleep:async(milliseconds) => { readinessClock += milliseconds; },
+  observe:async() => stableStates.shift(), ready:({ ready }) => ready,
+  snapshot:(observation) => observation,
+});
+assert.equal(stable.index, 4, "a false observation resets elapsed stability");
+
+readinessClock = 0;
+const hostile = { ready:false, text:"x".repeat(200) };hostile.self=hostile;
+await assert.rejects(() => observeBrowserReadiness({
+  targetId:"TARGET-READY", phase:"navigation", predicateDescription:"workspace mounted",
+  timeoutMs:60, pollIntervalMs:25, maximumSnapshotCharacters:80,
+  now:() => readinessClock,
+  sleep:async(milliseconds) => { readinessClock += milliseconds; },
+  observe:async() => hostile, ready:({ ready }) => ready,
+  snapshot:() => { throw new Error("snapshot exploded"); },
+}), (error) => error.snapshot.length <= 80 && /60ms.*snapshot exploded/su.test(error.message));
+
+let sharedTimestamp = 0;
+const sharedTimer = createBrowserPhaseTimer({
+  targetId:"TARGET", phaseNames:["navigation", "fixture", "assertion"],
+  now:() => sharedTimestamp,
+});
+sharedTimestamp=3;sharedTimer.transition("fixture");
+sharedTimestamp=5;sharedTimer.transition("navigation");
+sharedTimestamp=9;sharedTimer.transition("assertion");
+sharedTimestamp=12;
+const sharedTiming=sharedTimer.finish();
+assert.equal(sharedTiming.durationMs,12);
+assert.deepEqual(sharedTiming.phases.map(({durationMs})=>durationMs),[7,2,3]);
+assert.equal(browserProgram({targetId:"TARGET",phase:"fixture",source:"return true;",shape:"statements"}),
+  "(async()=>{return true;})()");
+assert.throws(() => browserProgram({targetId:"TARGET",phase:"fixture",source:"return (;",shape:"statements"}),
+  /TARGET.*fixture.*syntax/u);
+const inPageReadiness = browserReadinessProgramSource({
+  targetId:"FLOW_WORKSPACE_AUTHORING_TARGET", phase:"interaction", timeoutMs:10000,
+  pollIntervalMs:25, maximumSnapshotCharacters:400,
+});
+assert.match(inPageReadiness, /performance\.now\(\)/u);
+assert.match(inPageReadiness, /FLOW_WORKSPACE_AUTHORING_TARGET/u);
+assert.doesNotMatch(inPageReadiness, /attempt/u,
+  "generated in-page readiness must use elapsed time rather than a fixed sample count");
+for (const owner of ["Chrome debug-port startup", "DevTools protocol call",
+  "logical target outer work", "Chrome termination", "profile cleanup"]) {
+  await assert.rejects(() => withBrowserDeadline({
+    owner, targetId:"TARGET-DEADLINE", limitMs:10, work:() => new Promise(() => {}),
+    schedule:(callback) => { callback(); return 1; }, cancel:() => {},
+  }), (error) => error.deadlineOwner === owner && error.message.includes(owner) &&
+    !error.message.includes("readiness predicate"));
+}
 
 const exampleEvidenceSources = [
   flowGraphEventExampleIncompleteEvidence({ projectId:"project", flowId:"flow" },

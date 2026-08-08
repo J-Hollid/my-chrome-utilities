@@ -2138,6 +2138,10 @@
         "consumers": ["capture", "command-palette", "defects", "durable_project_repository", "event-library", "flow_export", "flow_graph", "guided_test_cases", "hotkeys", "layered_schema", "live_flow_testing", "project_assurance_severity", "project_event_transport", "project_management", "property_set_flow_sections", "replay", "schema_relationship_tree", "schemas", "shell"]
       },
       {
+        "path": "test/support/browser-observation-control.mjs",
+        "consumers": ["branding_polish", "capture", "command-palette", "defects", "durable_project_repository", "event-library", "flow_export", "flow_graph", "guided_test_cases", "hotkeys", "layered_schema", "live_flow_testing", "project_assurance_severity", "project_event_transport", "project_management", "property_set_flow_sections", "replay", "schema_relationship_tree", "schemas", "shell"]
+      },
+      {
         "path": "test/support/documentation-concept-runtime-probes.mjs",
         "consumers": ["flow_export"]
       },

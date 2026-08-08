@@ -123,6 +123,9 @@
 (deftest vtd009-helper-shell-steps-use-dedicated-production-backed-semantics
   (assert-dedicated-scenario-handlers! #"Modular verification packs 08[1-7]" 7))
 
+(deftest vtd007-browser-control-steps-use-dedicated-production-backed-semantics
+  (assert-dedicated-scenario-handlers! #"Modular verification packs 0(?:8[8-9]|9[0-4])" 7))
+
 (deftest vtd009-scope-labels-and-history-changes-resolve-exactly
   (is (= 20 (#'vtd009/scope "every runnable pack")))
   (is (= ["flow_graph" "layered_schema"]

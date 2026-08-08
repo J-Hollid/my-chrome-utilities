@@ -153,14 +153,18 @@ async function debuggingPort(chrome) {
 }
 
 async function installedExtensionOrigin(port) {
-  for (let attempt = 0; attempt < 240; attempt += 1) {
-    const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then((response) => response.json());
-    const worker = targets.find(({ type, url }) => type === "service_worker" &&
-      url.startsWith("chrome-extension://") && new URL(url).pathname === "/background.js");
-    if (worker) return `chrome-extension://${new URL(worker.url).hostname}`;
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
-  throw new Error("Unpacked extension did not start");
+  const observed = await observeBrowserReadiness({
+    targetId:"installed-extension", phase:"target setup",
+    predicateDescription:"installed extension service worker discovery",
+    timeoutMs:6000, pollIntervalMs:25, maximumSnapshotCharacters:500,
+    observe:async() => {
+      const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then((response) => response.json());
+      const worker = targets.find(({ type, url }) => type === "service_worker" &&
+        url.startsWith("chrome-extension://") && new URL(url).pathname === "/background.js");
+      return { ready:Boolean(worker), worker, targetCount:targets.length };
+    }, ready:({ ready }) => ready, snapshot:({ targetCount }) => ({ targetCount }),
+  });
+  return `chrome-extension://${new URL(observed.worker.url).hostname}`;
 }
 
 async function freshTargetSocket(port, origin, pagePath) {
@@ -178,31 +182,29 @@ async function freshTargetSocket(port, origin, pagePath) {
   return socket;
 }
 
-async function reconnectTargetSocket(port, origin, pagePath) {
-  for (let attempt = 0; attempt < 240; attempt += 1) {
-    const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then((response) => response.json());
-    const target = targets.find(({ type, url }) => type === "page" &&
-      url.startsWith(`${origin}/${pagePath}`));
-    if (target) {
+async function reconnectTargetSocket(port, origin, pagePath, targetId) {
+  const connected = await observeBrowserReadiness({
+    targetId, phase:"navigation", predicateDescription:`target reconnection for ${pagePath}`,
+    timeoutMs:6000, pollIntervalMs:25, maximumSnapshotCharacters:500,
+    observe:async() => {
+      const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then((response) => response.json());
+      const target = targets.find(({ type, url }) => type === "page" && url.startsWith(`${origin}/${pagePath}`));
+      if (!target) return { ready:false, pages:targets.filter(({ type }) => type === "page").map(({ url }) => url) };
       let socket;
       try {
-        socket = new DevtoolsSocket(target.webSocketDebuggerUrl);
-        socket.targetId = target.id;
-        await socket.connect();
-        await socket.call("Runtime.enable");
-        await socket.call("Page.enable");
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        return socket;
-      } catch { socket?.close(); }
-    }
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
-  throw new Error(`Installed browser target did not settle after navigation: ${pagePath}`);
+        socket = new DevtoolsSocket(target.webSocketDebuggerUrl);socket.targetId=target.id;
+        await socket.connect();await socket.call("Runtime.enable");await socket.call("Page.enable");
+        return { ready:true, socket };
+      } catch (error) { socket?.close();return { ready:false, connectionError:error.message }; }
+    }, ready:({ ready }) => ready, snapshot:({ pages, connectionError }) => ({ pages, connectionError }),
+  });
+  return connected.socket;
 }
 
-async function evaluate(socket, expression) {
+async function evaluate(socket, expression, targetId, phase) {
   const result = await socket.call("Runtime.evaluate", {
-    expression:`(async()=>{${expression}})()`, returnByValue:true, awaitPromise:true,
+    expression:browserProgram({ targetId, phase, source:expression, shape:"statements" }),
+    returnByValue:true, awaitPromise:true,
     userGesture:true,
   });
   if (result.exceptionDetails) {
@@ -227,30 +229,51 @@ export async function runBrowserTargetSession({
     const port = await debuggingPort(chrome);
     const origin = await installedExtensionOrigin(port);
     for (const target of selected) {
-      const started = performance.now();
-      let socket;
+      const definition = definitions[target.id];
+      const timer = createBrowserPhaseTimer({
+        targetId:target.id,
+        phaseNames:["target setup", "navigation", "fixture", "interaction", "persistence", "assertion", "target cleanup"],
+      });
+      let socket, observation, failure, failedAtPhase;
       try {
-        const definition = definitions[target.id];
         socket = await freshTargetSocket(port, origin, definition.pagePath);
+        const waitForDefinitionReadiness=async(phase)=>{
+          const readiness=definition.readiness??{};
+          const source=readiness.expression??"({ready:document.readyState==='complete',documentReadyState:document.readyState,href:location.href})";
+          return observeBrowserReadiness({
+            targetId:target.id,phase,predicateDescription:readiness.description??"definition-owned page readiness",
+            timeoutMs:readiness.timeoutMs??6000,pollIntervalMs:readiness.pollIntervalMs??25,
+            stabilityMs:readiness.stabilityMs??0,maximumSnapshotCharacters:readiness.maximumSnapshotCharacters??600,
+            observe:async()=>{const result=await socket.call("Runtime.evaluate",{expression:browserProgram({targetId:target.id,phase,source,shape:"expression"}),returnByValue:true});return result.result.value;},
+            ready:(state)=>state===true||state?.ready===true,snapshot:(state)=>state,
+          });
+        };
+        timer.transition("navigation");
+        await waitForDefinitionReadiness("initial navigation");
+        let activeProgramPhase="interaction";
         const evaluateWithNavigationRetries=async(expression)=>{
           for (let attempt = 0; attempt <= (definition.navigationRetries ?? 0); attempt += 1) {
-            try { return await evaluate(socket, expression); }
+            try { return await evaluate(socket, expression, target.id, activeProgramPhase); }
             catch (error) {
               if (!String(error).includes("Inspected target navigated or closed") ||
                   attempt === (definition.navigationRetries ?? 0)) throw error;
               socket.close();
-              socket = await reconnectTargetSocket(port, origin, definition.pagePath);
+              socket = await reconnectTargetSocket(port, origin, definition.pagePath, target.id);
+              await waitForDefinitionReadiness("reconnected navigation");
             }
           }
         };
         const targetWork=async()=>{
           if (definition.beforeExpression) {
+            timer.transition("fixture");activeProgramPhase="fixture";
             await evaluateWithNavigationRetries(definition.beforeExpression(target.environment));
-            await socket.call("Page.reload", { ignoreCache:true });
-            await new Promise((resolve) => setTimeout(resolve, 100));
+            timer.transition("navigation");await socket.call("Page.reload", { ignoreCache:true });
+            await waitForDefinitionReadiness("post-fixture navigation");
           }
+          timer.transition("interaction");activeProgramPhase="interaction";
           return definition.run
             ? definition.run({
+              targetId:target.id,
               environment:target.environment,
               evaluate:(unusedSocket, expression)=>evaluateWithNavigationRetries(expression),
               socket:()=>socket,
@@ -258,33 +281,34 @@ export async function runBrowserTargetSession({
             : evaluateWithNavigationRetries(definition.expression(target.environment));
         };
         const maximumElapsedMilliseconds=definition.maximumElapsedMilliseconds??120_000;
-        const remaining=Math.max(1,maximumElapsedMilliseconds-(performance.now()-started));
-        let deadline;
-        const observation=await Promise.race([targetWork(),new Promise((unusedResolve,reject)=>{
-          deadline=setTimeout(()=>{socket?.close();reject(new Error(`${target.id} exceeded outer ${maximumElapsedMilliseconds}ms target limit`));},remaining);
-        })]).finally(()=>clearTimeout(deadline));
+        observation=await withBrowserDeadline({
+          owner:"logical target outer work",targetId:target.id,limitMs:maximumElapsedMilliseconds,
+          work:targetWork,onTimeout:()=>socket?.close(),
+        });
         if (!observation || Array.isArray(observation) || typeof observation !== "object") {
           throw new Error(`${target.id} did not return an observation object`);
         }
-        const durationMs = Math.round(performance.now() - started);
-        results.push({ id:target.id, status:"passed", durationMs, observation });
-        console.log(JSON.stringify(observation));
-        console.log(JSON.stringify({ swarmforgeBrowserTargetResult:{ id:target.id, status:"passed" } }));
-        console.log(JSON.stringify({ swarmforgeBrowserTargetTiming:{ id:target.id, durationMs } }));
+        timer.transition("assertion");
       } catch (error) {
-        const durationMs = Math.round(performance.now() - started);
-        results.push({ id:target.id, status:"failed", durationMs, error:error.message });
-        console.log(JSON.stringify({
-          swarmforgeBrowserTargetResult:{ id:target.id, status:"failed", error:error.message },
-        }));
-        console.log(JSON.stringify({ swarmforgeBrowserTargetTiming:{ id:target.id, durationMs } }));
+        failure=error;failedAtPhase=timer.activePhase;
       } finally {
-        const targetId=socket?.targetId;
+        timer.transition("target cleanup");
+        const pageTargetId=socket?.targetId;
         socket?.close();
-        if (targetId) {
-          try { await fetch(`http://127.0.0.1:${port}/json/close/${encodeURIComponent(targetId)}`); }
+        if (pageTargetId) {
+          try { await fetch(`http://127.0.0.1:${port}/json/close/${encodeURIComponent(pageTargetId)}`); }
           catch { /* Chrome shutdown remains the final cleanup boundary. */ }
         }
+        const timing=timer.finish({status:failure?"failed":"passed",failedAtPhase});
+        if (failure) {
+          results.push({id:target.id,status:"failed",durationMs:timing.durationMs,error:failure.message});
+          console.log(JSON.stringify({swarmforgeBrowserTargetResult:{id:target.id,status:"failed",error:failure.message}}));
+        } else {
+          results.push({id:target.id,status:"passed",durationMs:timing.durationMs,observation});
+          console.log(JSON.stringify(observation));
+          console.log(JSON.stringify({swarmforgeBrowserTargetResult:{id:target.id,status:"passed"}}));
+        }
+        console.log(JSON.stringify({swarmforgeBrowserTargetTiming:{id:target.id,durationMs:timing.durationMs,phases:timing.phases,...(timing.activePhase?{activePhase:timing.activePhase}:{})}}));
       }
     }
   } finally {
@@ -317,3 +341,4 @@ import {
   resolveChromeExecutable,
   stopHeadlessChrome,
 } from "./headless-chrome.mjs";
+import { browserProgram, createBrowserPhaseTimer, observeBrowserReadiness, withBrowserDeadline } from "./browser-observation-control.mjs";

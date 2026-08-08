@@ -1,4 +1,5 @@
 import { runBrowserTargetSession } from "./browser-target-session.mjs";
+import { observeBrowserReadiness } from "./browser-observation-control.mjs";
 import assert from "node:assert/strict";
 import {
   flowCrossFacetExpression,
@@ -41,9 +42,9 @@ const editorCanonicalKeys=[...Array.from({length:11},(_,index)=>`authoring${Stri
 const editorPolicyKeys=[...Array.from({length:9},(_,index)=>`authoring${String(index+77).padStart(3,"0")}`),
   ...Array.from({length:7},(_,index)=>`layering${String(index+25).padStart(3,"0")}`)];
 const canonicalEditorKeys=["canonicalPresence","canonicalValues","canonicalConditions","canonicalRules","canonicalExample","canonicalPersisted"];
-const runEditorProducer=async(workflow,keys,{evaluate,socket},{canonical=false}={})=>{
-  const liveSocket={call:(...arguments_)=>socket().call(...arguments_)},originalEvaluate=(unused,expression)=>{let body;try{Function(`return (${expression})`);body=`return await (${expression});`;}catch{body=expression.replace(/;\s*true\s*$/u,";return true;");}return evaluate(unused,body);},ready=async(unused,selector)=>{for(let attempt=0;attempt<240;attempt+=1){if(await originalEvaluate(liveSocket,`Boolean(document.querySelector(${JSON.stringify(selector)}))`))return true;await new Promise((resolve)=>setTimeout(resolve,25));}throw new Error(`Installed editor did not settle: ${selector}`);};
-  await ready(liveSocket,"#create-project-form");let stableDocumentSamples=0;for(let attempt=0;attempt<240&&stableDocumentSamples<3;attempt+=1){const settled=await originalEvaluate(liveSocket,"document.readyState==='complete'&&Boolean(document.querySelector('#create-project-form')?.isConnected&&document.querySelector('#project-tree')?.isConnected)");stableDocumentSamples=settled?stableDocumentSamples+1:0;await new Promise((resolve)=>setTimeout(resolve,25));}if(stableDocumentSamples<3)throw new Error("Installed editor document did not hydrate stably");
+const runEditorProducer=async(workflow,keys,{targetId,evaluate,socket},{canonical=false}={})=>{
+  const liveSocket={call:(...arguments_)=>socket().call(...arguments_)},originalEvaluate=(unused,expression)=>{let body;try{Function(`return (${expression})`);body=`return await (${expression});`;}catch{body=expression.replace(/;\s*true\s*$/u,";return true;");}return evaluate(unused,body);},ready=async(unused,selector)=>observeBrowserReadiness({targetId,phase:"readiness",predicateDescription:`mounted selector ${selector}`,timeoutMs:6000,pollIntervalMs:25,maximumSnapshotCharacters:400,observe:async()=>({ready:await originalEvaluate(liveSocket,`Boolean(document.querySelector(${JSON.stringify(selector)}))`),selector}),ready:({ready})=>ready,snapshot:(state)=>state});
+  await ready(liveSocket,"#create-project-form");await observeBrowserReadiness({targetId,phase:"readiness",predicateDescription:"connected, completely loaded editor hydration",timeoutMs:6000,pollIntervalMs:25,stabilityMs:50,maximumSnapshotCharacters:500,observe:async()=>({ready:await originalEvaluate(liveSocket,"document.readyState==='complete'&&Boolean(document.querySelector('#create-project-form')?.isConnected&&document.querySelector('#project-tree')?.isConnected)",),documentReadyState:await originalEvaluate(liveSocket,"document.readyState")}),ready:({ready})=>ready,snapshot:(state)=>state});
   const evidence=await originalEvaluate(liveSocket,editorInitialLayeredInstalledExpression),result=await workflow({
     evidence,evaluate:originalEvaluate,socket:liveSocket,activeSocket:liveSocket,ready,
     wait:(milliseconds)=>new Promise((resolve)=>setTimeout(resolve,milliseconds)),assert,

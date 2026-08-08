@@ -55,8 +55,11 @@
                           "Changed-helper planning does not conserve exact consumers." {:helper helper}))) }
    {:pattern #"^all 20 retained support helpers and shared-harness have one declaration$"
     :handler (fn [world _ _]
-               (assert! world (= 21 (count (evidence world :helpers)))
-                        "Retained helper declaration inventory is incomplete." {}))}])
+               (let [helpers (evidence world :helpers)
+                     shared-control (keyword "test/support/browser-observation-control.mjs")]
+                 (assert! world (and (= 21 (count (dissoc helpers shared-control)))
+                                     (some? (get helpers shared-control)))
+                          "Retained helper declaration inventory is incomplete." {})))}])
 
 (defn- validation-handlers [example-values verify-throughput!]
   [{:pattern #"^verification helper registry defect is (.+)$"
@@ -104,8 +107,11 @@
                         "Dormant-file removal changed executable evidence." {}))}
    {:pattern #"^after both removals the 20 tracked support helpers are all declared$"
     :handler (fn [world _ _]
-               (assert! world (= 20 (evidence world :dormant :retainedHelpers))
-                        "Retained support-helper inventory is not exact." {}))}])
+               (let [helpers (evidence world :helpers)
+                     shared-control (keyword "test/support/browser-observation-control.mjs")]
+                 (assert! world (and (= 20 (dec (evidence world :dormant :retainedHelpers)))
+                                     (some? (get helpers shared-control)))
+                          "Retained support-helper inventory is not exact." {})))}])
 
 (defn- boundary-handlers [example-values verify-throughput!]
   [{:pattern #"^Shell source (.+) currently falls through the global Shell prefix$"
