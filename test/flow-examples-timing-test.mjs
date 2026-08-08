@@ -25,6 +25,10 @@ import {
 } from "./support/browser-observation-control.mjs";
 import { sharedHarnessReadinessState } from "./browser-packs/shared-harness.mjs";
 import {
+  flowGraphRuntimeCanvasReady,
+  flowGraphRuntimeDefinitionReady,
+  flowGraphRuntimeEditorReady,
+  flowGraphRuntimeReturnReady,
   flowGraphRepeatedInstanceEvidence,
   flowGraphRepeatedInstanceReadinessLimitMilliseconds,
   flowGraphEventExampleIncompleteEvidence,
@@ -33,7 +37,7 @@ import {
   flowGraphPageExampleStateEvidence,
 } from "./support/flow-graph-corrective-workflow.mjs";
 import {
-  flowSectionDrawBoundaryReady,
+  flowSectionDrawActionabilityState,
   flowWorkspaceReadinessLimitMilliseconds,
   flowWorkspaceR02Runtime,
 } from "./support/flow-workspace-r02-runtime.mjs";
@@ -429,59 +433,98 @@ assert.match(flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"}),
 assert.match(flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"}),
   /addEventListener\('focusin',observeDeletionSourceFocus,true\)/u,
   "the authoring observation must latch the transient production focus event");
-const flowWorkspaceProgram=flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"});
-const drawActivation=flowWorkspaceProgram.indexOf("click('Draw Section',surface())");
-const drawBoundaryWait=flowWorkspaceProgram.indexOf("'actionable Section draw boundary'");
-const drawPointerInput=flowWorkspaceProgram.indexOf("pointer(canvas,'pointerdown'",drawActivation);
+const drawRuntimeProgram=flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"});
+const drawActivation=drawRuntimeProgram.indexOf("click('Draw Section',surface())");
+const drawBoundaryWait=drawRuntimeProgram.indexOf("'actionable Section draw mode'");
+const drawPointerInput=drawRuntimeProgram.indexOf("pointer(canvas,'pointerdown'",drawActivation);
 assert.ok(drawActivation>=0&&drawActivation<drawBoundaryWait&&drawBoundaryWait<drawPointerInput,
   "the real Section gesture must wait for its actionable draw boundary");
-assert.match(flowWorkspaceProgram,
-  /const drawBoundary=await waitFor\([^]*'actionable Section draw boundary',flowSectionDrawBoundaryReady,state=>state,50\);const drawBox=/u,
+assert.match(drawRuntimeProgram,
+  /const drawBoundary=await waitFor\([^]*'actionable Section draw mode',drawActionable,state=>state,50\);const drawBox=/u,
   "the real Section gesture must await the conserved predicate and stability boundary");
-assert.match(flowWorkspaceProgram,/state=>\(\{sectionCount:state\.sectionCount,expectedSectionCount:/u,
-  "a failed Section draw must retain a useful final browser snapshot");
-const readyDrawState={connected:true,currentCanvas:true,drawMode:true,surfaceClosed:true,
-  geometryStable:true,width:640,height:480,pointerEvents:"auto"};
-assert.equal(flowSectionDrawBoundaryReady(readyDrawState),true);
-for(const [field,value] of [
-  ["connected",false],["currentCanvas",false],["drawMode",false],["surfaceClosed",false],
-  ["geometryStable",false],["width",0],["height",0],["pointerEvents","none"],
-]) {
-  assert.equal(flowSectionDrawBoundaryReady({...readyDrawState,[field]:value}),false,
-    `the actionable Section boundary must reject ${field}=${JSON.stringify(value)}`);
+assert.equal(drawRuntimeProgram.match(/pointer\(canvas,'pointerdown',\{pointerId:51/gu)?.length,1,
+  "the draw proof must retain one real semantic pointer gesture");
+assert.match(drawRuntimeProgram,/expectedSectionCount/u,
+  "draw persistence timeout diagnostics must retain section-count state");
+const actionableDrawFixture={drawingMode:true,canvasConnected:true,surfaceOpen:false,
+  currentCanvas:true,canvasFocused:true,geometryStable:true,left:20,top:30,width:640,
+  height:420,pointerEvents:"auto"};
+assert.equal(flowSectionDrawActionabilityState(actionableDrawFixture),true);
+for(const [field,value] of [["drawingMode",false],["canvasConnected",false],
+  ["currentCanvas",false],["surfaceOpen",true],["canvasFocused",false],
+  ["geometryStable",false],["width",0],["height",0],["pointerEvents","none"]]){
+  assert.equal(flowSectionDrawActionabilityState({...actionableDrawFixture,[field]:value}),false,
+    `draw actionability requires ${field}`);
 }
-assert.equal(flowSectionDrawBoundaryReady(undefined),false);
+assert.equal(flowSectionDrawActionabilityState(undefined),false);
 const delayedDrawStates=[
-  {connected:false,currentCanvas:false,drawMode:true,surfaceClosed:true,geometryStable:true,width:640,height:480,pointerEvents:"auto"},
-  {connected:true,currentCanvas:true,drawMode:false,surfaceClosed:true,geometryStable:true,width:640,height:480,pointerEvents:"auto"},
-  {connected:true,currentCanvas:true,drawMode:true,surfaceClosed:true,geometryStable:false,width:640,height:480,pointerEvents:"auto"},
-  {connected:true,currentCanvas:true,drawMode:true,surfaceClosed:true,geometryStable:true,width:640,height:480,pointerEvents:"auto"},
-  {connected:true,currentCanvas:true,drawMode:true,surfaceClosed:true,geometryStable:true,width:640,height:480,pointerEvents:"auto"},
-  {connected:true,currentCanvas:true,drawMode:true,surfaceClosed:true,geometryStable:true,width:640,height:480,pointerEvents:"auto"},
+  {...actionableDrawFixture,drawingMode:false},
+  {...actionableDrawFixture,canvasConnected:false,currentCanvas:false},
+  {...actionableDrawFixture,geometryStable:false},
+  actionableDrawFixture,actionableDrawFixture,actionableDrawFixture,
 ];
-let delayedDrawClock=0,delayedDrawIndex=0;
+let drawClock=0,drawObservationCount=0;
 const actionableDrawState=await observeBrowserReadiness({
   targetId:"FLOW_WORKSPACE_AUTHORING_TARGET",phase:"interaction",
-  predicateDescription:"actionable Section draw boundary",timeoutMs:200,pollIntervalMs:25,
-  maximumSnapshotCharacters:400,stabilityMs:50,now:()=>delayedDrawClock,
-  sleep:async(milliseconds)=>{delayedDrawClock+=milliseconds;},
-  observe:async()=>delayedDrawStates[Math.min(delayedDrawIndex++,delayedDrawStates.length-1)],
-  ready:flowSectionDrawBoundaryReady,snapshot:(state)=>state,
+  predicateDescription:"actionable Section draw mode",timeoutMs:200,pollIntervalMs:25,
+  stabilityMs:50,maximumSnapshotCharacters:400,now:()=>drawClock,
+  sleep:async(milliseconds)=>{drawClock+=milliseconds;},
+  observe:async()=>delayedDrawStates[Math.min(drawObservationCount++,delayedDrawStates.length-1)],
+  ready:flowSectionDrawActionabilityState,snapshot:(state)=>state,
 });
-assert.equal(delayedDrawIndex,delayedDrawStates.length,
+assert.equal(drawObservationCount,delayedDrawStates.length,
   "delayed rendering must remain under observation until every draw condition is stable");
-assert.deepEqual(actionableDrawState,readyDrawState,
+assert.deepEqual(actionableDrawState,actionableDrawFixture,
   "only the complete actionable draw state may release the semantic pointer gesture");
 assert.equal(flowGraphRepeatedInstanceReadinessLimitMilliseconds,30000,
   "runtime024 needs a load-tolerant elapsed-time readiness boundary");
 const repeatedInstanceProgram=flowGraphRepeatedInstanceEvidence(
   {projectId:"project",flowId:"flow"},{frameIds:[],values:[],relationshipIds:[]});
+const assertReadinessFactors=(predicate,readyState,falseStates,label)=>{
+  assert.equal(predicate(readyState),true,`${label} accepts its complete state`);
+  for(const [field,value] of falseStates){
+    assert.equal(predicate({...readyState,[field]:value}),false,
+      `${label} rejects ${field}=${JSON.stringify(value)}`);
+  }
+  assert.equal(predicate(undefined),false,`${label} rejects a missing observation`);
+};
+assertReadinessFactors(flowGraphRuntimeCanvasReady,
+  {canvasConnected:true,workspaceOpen:false,width:640,height:420},
+  [["canvasConnected",false],["workspaceOpen",true],["width",0],["height",0]],
+  "runtime024 canvas readiness");
+assertReadinessFactors(flowGraphRuntimeDefinitionReady,
+  {definitionConnected:true,definitionDisabled:false,menuConnected:true,workspaceConnected:true},
+  [["definitionConnected",false],["definitionDisabled",true],["menuConnected",false],
+    ["workspaceConnected",false]],"runtime024 Definition readiness");
+assertReadinessFactors(flowGraphRuntimeEditorReady,
+  {editorConnected:true,workspaceConnected:true},
+  [["editorConnected",false],["workspaceConnected",false]],"runtime024 editor readiness");
+assertReadinessFactors(flowGraphRuntimeReturnReady,
+  {returnConnected:true,returnDisabled:false,width:120,height:32},
+  [["returnConnected",false],["returnDisabled",true],["width",0],["height",0]],
+  "runtime024 Return-to-Flow readiness");
 assert.match(repeatedInstanceProgram,/"timeoutMs":30000/u);
 assert.doesNotMatch(repeatedInstanceProgram,/attempt<300/u,
   "runtime024 readiness must not use a fixed retry count");
+assert.doesNotMatch(repeatedInstanceProgram,/attempt<40/u,
+  "runtime024 navigation must not accept a stale canvas through a fixed retry loop");
+assert.match(repeatedInstanceProgram,/actionable runtime024 Flow canvas/u,
+  "runtime024 must wait for visible Flow geometry before selecting an instance");
+assert.match(repeatedInstanceProgram,/actionable Definition section/u,
+  "runtime024 must stabilize the live Definition control before its one click");
+assert.match(repeatedInstanceProgram,/actionable Definition editor/u,
+  "runtime024 must stabilize the live editor before editing its value");
+assert.match(repeatedInstanceProgram,/definitionConnected/u,
+  "runtime024 Definition failures must retain an actionable-state snapshot");
+assert.match(repeatedInstanceProgram,/workspaceOpen/u,
+  "runtime024 must observe the Flow return transition instead of a stale canvas node");
+assert.match(repeatedInstanceProgram,/actionable Return to Flow',returnReady/u,
+  "runtime024 must wait for the connected, enabled, painted Return to Flow control");
 assert.match(repeatedInstanceProgram,
-  /definition\.click\(\);const editor=await waitFor\(\(\)=>all\(':modal \[data-focused-property-editor="true"\]'\)\.at\(-1\),'Definition editor'\)/u,
+  /definitionBoundary\.definition\.click\(\);const editorBoundary=await waitFor/u,
   "runtime024 must activate Definition once and observe the resulting editor");
+assert.equal(repeatedInstanceProgram.match(/definitionBoundary\.definition\.click\(\)/gu)?.length,1,
+  "runtime024 must retain exactly one semantic Definition activation");
 assert.doesNotMatch(repeatedInstanceProgram,/liveDefinition\?\.click/u,
   "runtime024 readiness polling must not repeatedly disturb the Definition control");
 assert.match(inPageReadiness, /performance\.now\(\)/u);
