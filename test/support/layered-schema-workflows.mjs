@@ -16,13 +16,35 @@ export function layeredCreatedEntityReadinessState({
     durableEntityId.length > 0 && workspaceEntityId === durableEntityId;
 }
 
+export function layeredEntityCreationResubmissionState({
+  dialogConnected, durableEntityId, feedback, alreadyResubmitted, retryReady, formValid,
+}) {
+  return dialogConnected === true && durableEntityId === undefined && feedback === "" &&
+    alreadyResubmitted === false && retryReady === true && formValid === true;
+}
+
 export function reliableLayeredEntityCreationProgram(source) {
   const domOnlyEntityCreationSource = "const form=q('[data-creation-kind=\"'+kind+'\"] form');set('[name=\"name\"]',name,form);for(const[key,value]of Object.entries(values)){const control=form.querySelector('[name=\"'+key+'\"]');if(control)set(control,value,form);}form.requestSubmit();for(let attempt=0;attempt<600;attempt+=1){const workspace=document.querySelector('[data-project-entity-workspace]');if(workspace&&!document.querySelector('[data-creation-kind=\"'+kind+'\"]')){await pause();return workspace;}await pause();}throw new Error('Created '+kind+' '+name+' did not settle');";
   const durableEntityCreationSource = "const form=q('[data-creation-kind=\"'+kind+'\"] form'),repository=await (await import('/data-layer-durable-project-repository.js')).openIndexedDbProjectRepository(),projectId=await repository.activeProjectId();set('[name=\"name\"]',name,form);for(const[key,value]of Object.entries(values)){const control=form.querySelector('[name=\"'+key+'\"]');if(control)set(control,value,form);}form.requestSubmit();let recoveryStarted=false;for(let attempt=0;attempt<600;attempt+=1){const loaded=projectId?await repository.loadProject(projectId):undefined,durable=loaded?.state.project.collections[kind].find((entity)=>entity.name===name),dialog=document.querySelector('[data-creation-kind=\"'+kind+'\"]'),workspace=durable?document.querySelector('[data-project-entity-workspace=\"'+CSS.escape(durable.id)+'\"]'):undefined;if(!dialog&&durable&&workspace){await pause();return workspace;}if(durable&&!recoveryStarted){recoveryStarted=true;await openKind(kind);const route=document.querySelector('[data-entity-id=\"'+CSS.escape(durable.id)+'\"] button[aria-label^=\"Open \"]');route?.click();}await pause();}const feedback=form.querySelector('output')?.textContent??'',loaded=projectId?await repository.loadProject(projectId):undefined;throw new Error('Created '+kind+' '+name+' did not settle '+JSON.stringify({feedback,durable:Boolean(loaded?.state.project.collections[kind].some((entity)=>entity.name===name)),dialog:Boolean(document.querySelector('[data-creation-kind=\"'+kind+'\"]')),workspace:document.querySelector('[data-project-entity-workspace]')?.dataset.projectEntityWorkspace}));";
   if (!source.includes(domOnlyEntityCreationSource)) {
     throw new Error("Layered entity creation program no longer matches its guarded boundary");
   }
-  return source.replace(domOnlyEntityCreationSource, durableEntityCreationSource);
+  let program = source.replace(domOnlyEntityCreationSource, durableEntityCreationSource);
+  const replaceRequired = (before, after) => {
+    if (!program.includes(before)) {
+      throw new Error("Layered live creation form program no longer matches its guarded boundary");
+    }
+    program = program.replace(before, after);
+  };
+  replaceRequired("const form=q('[data-creation-kind=\"'+kind+'\"] form'),repository=",
+    "let form=q('[data-creation-kind=\"'+kind+'\"] form');const repository=");
+  replaceRequired("set('[name=\"name\"]',name,form);for(const[key,value]of Object.entries(values)){const control=form.querySelector('[name=\"'+key+'\"]');if(control)set(control,value,form);}form.requestSubmit();let recoveryStarted=false;",
+    "const populate=(candidate)=>{set('[name=\"name\"]',name,candidate);for(const[key,value]of Object.entries(values)){const control=candidate.querySelector('[name=\"'+key+'\"]');if(control)set(control,value,candidate);}};populate(form);form.requestSubmit();let recoveryStarted=false,resubmitted=false;const retryAt=performance.now()+200;");
+  replaceRequired("workspace=durable?document.querySelector('[data-project-entity-workspace=\"'+CSS.escape(durable.id)+'\"]'):undefined;if(!dialog&&durable&&workspace){await pause();return workspace;}if(durable&&!recoveryStarted)",
+    "workspace=durable?document.querySelector('[data-project-entity-workspace=\"'+CSS.escape(durable.id)+'\"]'):undefined,feedback=dialog?.querySelector('output')?.textContent??'';if(!dialog&&durable&&workspace){await pause();return workspace;}if(dialog&&!durable&&!feedback&&!resubmitted&&performance.now()>=retryAt){form=q('[data-creation-kind=\"'+kind+'\"] form');populate(form);if(!form.checkValidity())throw new Error('Created '+kind+' '+name+' form became invalid');resubmitted=true;const submit=buttons(form).find(({type})=>type==='submit');submit?submit.click():form.requestSubmit();}if(durable&&!recoveryStarted)");
+  replaceRequired("workspace:document.querySelector('[data-project-entity-workspace]')?.dataset.projectEntityWorkspace}));",
+    "workspace:document.querySelector('[data-project-entity-workspace]')?.dataset.projectEntityWorkspace,resubmitted,formConnected:form.isConnected}));");
+  return program;
 }
 
 export const layeredCreateProjectReadinessExpression =

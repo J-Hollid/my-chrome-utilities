@@ -43,6 +43,17 @@ export function timeoutRepairDiagnosedBoundary(incident) {
     executionArgs:["scripts/run-browser-observation.mjs", logicalTargetId] };
 }
 
+export function timeoutRepairCandidate(incident) {
+  if (!incident.repair?.candidate) return undefined;
+  let candidate = structuredClone(incident.repair.candidate);
+  for (const mapping of incident.lineageTransitions ?? []) {
+    if (mapping.kind === "rebase" && mapping.fromCommit === candidate.commit) {
+      candidate = { commit:mapping.toCommit, tree:mapping.toTree };
+    }
+  }
+  return candidate;
+}
+
 export function timeoutRepairFocusedTaskKeys(incident, changedPaths, regressionKey) {
   validateIncident(incident);
   const keys = new Set([incident.failure.task.key, regressionKey]);
@@ -215,12 +226,13 @@ export async function validateTimeoutRepairProposal(incident, proposal, { isAnce
 export function timeoutResolutionEvidence(incident) {
   validateIncident(incident);
   if (incident.state !== "resolved") throw new Error(`Timeout incident ${incident.id} is unresolved`);
+  const repairCandidate = timeoutRepairCandidate(incident);
   return {
     incidentId:incident.id,
     failureDigest:incident.failureDigest,
     diagnosticClassification:incident.retry?.classification,
-    repairCommit:incident.repair.candidate.commit,
-    repairTree:incident.repair.candidate.tree,
+    repairCommit:repairCandidate.commit,
+    repairTree:repairCandidate.tree,
     causalCategory:incident.repair.causalCategory,
     causalExplanation:incident.repair.causalExplanation,
     diagnosedBoundary:incident.repair.diagnosedBoundary,

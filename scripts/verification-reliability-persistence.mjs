@@ -46,7 +46,7 @@ function matchingTransitions(incident, type) {
 
 function validateTransitionHistory(incident) {
   const allowed = new Set(["diagnostic-retry-claimed", "diagnostic-retry-classified",
-    "repair-proposed", "repair-checkpoint-claimed", "resolved", "lineage-rebased",
+    "repair-proposed", "repair-checkpoint-claimed", "repair-checkpoint-reclaimed", "resolved", "lineage-rebased",
     "lineage-abandoned"]);
   let previousTime = Date.parse(incident.createdAt);
   let previousRank = 0;
@@ -108,6 +108,7 @@ function validateTransitionHistory(incident) {
   requireCount("diagnostic-retry-classified", retryStatus === "classified" ? 1 : 0);
   requireCount("repair-proposed", incident.repair ? 1 : 0);
   requireCount("repair-checkpoint-claimed", incident.repairCheckpoint ? 1 : 0);
+  requireCount("repair-checkpoint-reclaimed", Number(incident.repairCheckpoint?.reclaimCount ?? 0));
   requireCount("resolved", incident.state === "resolved" ? 1 : 0);
   const claimed = matchingTransitions(incident, "diagnostic-retry-claimed")[0];
   if (claimed && claimed.at !== incident.retry.claimedAt) {
@@ -122,7 +123,8 @@ function validateTransitionHistory(incident) {
   if (repair && repair.commit !== incident.repair.candidate?.commit) {
     transitionHistoryError(incident.id, "repair candidate disagrees");
   }
-  const checkpoint = matchingTransitions(incident, "repair-checkpoint-claimed")[0];
+  const checkpoint = [...matchingTransitions(incident, "repair-checkpoint-claimed"),
+    ...matchingTransitions(incident, "repair-checkpoint-reclaimed")].at(-1);
   if (checkpoint && (checkpoint.runId !== incident.repairCheckpoint.runId ||
       checkpoint.at !== incident.repairCheckpoint.claimedAt)) {
     transitionHistoryError(incident.id, "checkpoint claim disagrees");
@@ -134,7 +136,8 @@ function validateTransitionHistory(incident) {
   }
   const lineageTransitions = incident.lineageTransitions ?? [];
   if (!Array.isArray(lineageTransitions)) transitionHistoryError(incident.id, "lineage transitions are malformed");
-  const anchors = new Set([incident.failure?.lineage?.commit]);
+  const anchors = new Set([incident.failure?.lineage?.commit,
+    ...(incident.repair?.candidate?.commit ? [incident.repair.candidate.commit] : [])]);
   for (const mapping of lineageTransitions) {
     exactObject(mapping, "Timeout incident lineage transition");
     if (!anchors.has(mapping.fromCommit) || !["rebase", "abandon"].includes(mapping.kind) ||

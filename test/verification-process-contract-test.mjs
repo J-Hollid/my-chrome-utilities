@@ -477,6 +477,16 @@ assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-b",
   evidenceTask:"vtd014-timeout-repair-gate", requestedPackIds:timeoutRepairPackIds }),
 ["incident-a", "incident-b"],
 "one canonical checkpoint resolves every compatible eligible incident on the candidate lineage");
+const rebasedCompatible = { ...compatibleRepair("incident-rebased"),
+  repair:{ ...compatibleRepair("incident-rebased").repair,
+    candidate:{ commit:"failed-repair", tree:"failed-repair-tree" } },
+  lineageTransitions:[{ kind:"rebase", fromCommit:"failed-repair",
+    toCommit:"repair-commit", toTree:"repair-tree" }] };
+assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-rebased",
+  blocking:[rebasedCompatible], candidateCommit:"repair-commit", candidateTree:"repair-tree",
+  baseCommit:"approved-base", evidenceTask:"vtd014-timeout-repair-gate",
+  requestedPackIds:timeoutRepairPackIds }), ["incident-rebased"],
+"an explicitly rebased failed repair checkpoint can use its descendant repair candidate");
 await assert.rejects(async() => compatibleTimeoutRepairIncidentIds({ requestedId:"incident-a",
   blocking:[compatibleRepair("incident-a"), { ...compatibleRepair("incident-b"), repair:undefined }],
   candidateCommit:"repair-commit", candidateTree:"repair-tree", baseCommit:"approved-base",

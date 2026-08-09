@@ -14,6 +14,7 @@ import {
 } from "./verification-reliability-receipts.mjs";
 import {
   timeoutResolutionEvidence, validateRepairReceiptSemantics, validateTimeoutRepairProposal,
+  timeoutRepairCandidate,
 } from "./verification-reliability-repair.mjs";
 import {
   exactObject, git, normalized, repositoryRoot, retryClassifications, shaPattern,
@@ -143,8 +144,19 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
         if (incident.state !== "unresolved" || incident.repair?.status !== "eligible") {
           throw new Error(`Timeout incident ${id} has no eligible repair`);
         }
-        if (incident.repairCheckpoint) throw new Error(`Timeout incident ${id} repair checkpoint was already used`);
         const at = now();
+        if (incident.repairCheckpoint) {
+          const candidate = timeoutRepairCandidate(incident);
+          const reclaimCount = Number(incident.repairCheckpoint.reclaimCount ?? 0);
+          const repairRebases = (incident.lineageTransitions ?? []).filter(({kind, fromCommit}) =>
+            kind === "rebase" && (fromCommit === incident.repair.candidate.commit ||
+              (incident.lineageTransitions ?? []).some(({toCommit}) => toCommit === fromCommit))).length;
+          if (candidate.commit === incident.repair.candidate.commit || reclaimCount >= repairRebases) {
+            throw new Error(`Timeout incident ${id} repair checkpoint was already used`);
+          }
+          return transition({ ...incident, repairCheckpoint:{ status:"claimed", runId, claimedAt:at,
+            reclaimCount:reclaimCount + 1 } }, "repair-checkpoint-reclaimed", at, { runId });
+        }
         return transition({ ...incident, repairCheckpoint:{ status:"claimed", runId, claimedAt:at } },
           "repair-checkpoint-claimed", at, { runId });
       });
@@ -217,15 +229,28 @@ function activeLineageAnchors(incident) {
   return active;
 }
 
+function transitionLineageAnchors(incident) {
+  const active = activeLineageAnchors(incident);
+  if (incident.repair?.candidate?.commit) active.add(incident.repair.candidate.commit);
+  for (const mapping of incident.lineageTransitions ?? []) {
+    if (mapping.kind === "rebase" && active.has(mapping.fromCommit)) {
+      active.delete(mapping.fromCommit);
+      active.add(mapping.toCommit);
+    }
+  }
+  return active;
+}
+
 function recordedLineageTree(incident, commit) {
   if (incident.failure?.lineage?.commit === commit) return incident.failure.lineage.tree;
+  if (incident.repair?.candidate?.commit === commit) return incident.repair.candidate.tree;
   return (incident.lineageTransitions ?? []).find(
     ({ kind, toCommit }) => kind === "rebase" && toCommit === commit)?.toTree;
 }
 
 async function lineageApplies({ root, isAncestor, incident, commit, resolution = false }) {
   const anchors = resolution
-    ? [incident.repair?.candidate?.commit]
+    ? [timeoutRepairCandidate(incident)?.commit]
     : [...activeLineageAnchors(incident)];
   for (const ancestor of anchors) {
     if (await commitDescendsFrom({ root, isAncestor, ancestor, commit })) return true;
@@ -338,7 +363,7 @@ export function createTimeoutIncidentStore({
       return access.update(id, async(incident) => {
         if (incident.state !== "unresolved") throw new Error(`Timeout incident ${id} is resolved`);
         const transitions = incident.lineageTransitions ?? [];
-        const anchors = activeLineageAnchors(incident);
+        const anchors = transitionLineageAnchors(incident);
         if (typeof mapping.fromCommit !== "string" || !anchors.has(mapping.fromCommit)) {
           throw new Error(`Timeout incident ${id} lineage transition has an unknown source`);
         }

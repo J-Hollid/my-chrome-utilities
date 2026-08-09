@@ -32,6 +32,7 @@ import {
   reliabilityFailureFingerprint,
   resolvedVerificationDeadlines,
   timeoutRepairCausalCategory,
+  timeoutRepairCandidate,
   timeoutRepairDiagnosedBoundary,
   timeoutRepairFocusedTaskPlan,
   timeoutRepairPackageTaskIdentity,
@@ -292,11 +293,14 @@ export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, cand
   if (JSON.stringify([...requestedPackIds].sort()) !== JSON.stringify(timeoutRepairPackIds)) {
     throw new Error("Repair checkpoint requires the eligible repair candidate and exact all-20 plan");
   }
-  const incompatible = blocking.find((incident) => incident.repair?.status !== "eligible" ||
-    incident.repair.candidate.commit !== candidateCommit ||
-    incident.repair.candidate.tree !== candidateTree ||
+  const incompatible = blocking.find((incident) => {
+    const repairCandidate = timeoutRepairCandidate(incident);
+    return incident.repair?.status !== "eligible" ||
+    repairCandidate?.commit !== candidateCommit ||
+    repairCandidate?.tree !== candidateTree ||
     incident.repair.checkpoint.baseCommit !== baseCommit ||
-    incident.repair.checkpoint.evidenceTask !== evidenceTask);
+    incident.repair.checkpoint.evidenceTask !== evidenceTask;
+  });
   if (incompatible) {
     throw new Error(`Repair checkpoint is blocked by incompatible timeout incident ${incompatible.id}`);
   }

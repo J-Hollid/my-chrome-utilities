@@ -16,7 +16,7 @@ import {documentPageGroupStructure,evaluatePageGroupFixture,pageGroupStructuralS
 import {composedSchemaWorkspace} from "../dist/data-layer-composed-schema-workspace.js";
 import {flowDocumentationSnapshotFromState} from "../dist/data-layer-flow-table-documentation-export-ui.js";
 import {applySchemaTablePropertyEditorAllocation,schemaTablePropertyEditorAllocation} from "../dist/data-layer-schema-table.js";
-import {initialLayeredInstalledExpression,layeredCreatedEntityReadinessState,reliableLayeredEntityCreationProgram} from "./support/layered-schema-workflows.mjs";
+import {initialLayeredInstalledExpression,layeredCreatedEntityReadinessState,layeredEntityCreationResubmissionState,reliableLayeredEntityCreationProgram} from "./support/layered-schema-workflows.mjs";
 
 const createdEntityCases=[
   {dialogConnected:false,durableEntityId:"property-set:checkout",workspaceEntityId:"property-set:checkout"},
@@ -31,6 +31,23 @@ assert.match(reliableCreationProgram,/durable=loaded\?\.state\.project\.collecti
   "the installed Layered workflow observes the durable entity before accepting creation");
 assert.match(reliableCreationProgram,/data-project-entity-workspace=/u,
   "the installed Layered workflow recovers and observes the exact created workspace identity");
+const resubmissionCases=[
+  {dialogConnected:true,durableEntityId:undefined,feedback:"",alreadyResubmitted:false,
+    retryReady:true,formValid:true},
+  {dialogConnected:false,durableEntityId:undefined,feedback:"",alreadyResubmitted:false,
+    retryReady:true,formValid:true},
+  {dialogConnected:true,durableEntityId:"property-set:checkout",feedback:"",alreadyResubmitted:false,
+    retryReady:true,formValid:true},
+  {dialogConnected:true,durableEntityId:undefined,feedback:"Validation failed",alreadyResubmitted:false,
+    retryReady:true,formValid:true},
+  {dialogConnected:true,durableEntityId:undefined,feedback:"",alreadyResubmitted:true,
+    retryReady:true,formValid:true},
+];
+assert.deepEqual(resubmissionCases.map(layeredEntityCreationResubmissionState),
+  [true,false,false,false,false],
+  "Layered creation resubmits only one valid live form after an observed no-effect submission");
+assert.match(reliableCreationProgram,/resubmitted=true;const submit=/u,
+  "the installed Layered workflow reacquires and activates the live creation form once");
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
@@ -40,15 +57,19 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       :value,
     digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
     transient={dialogConnected:false,durableEntityId:undefined,workspaceEntityId:"stale-workspace"},
+    stalled={dialogConnected:true,durableEntityId:undefined,feedback:"",alreadyResubmitted:false,
+      retryReady:true,formValid:true},
     exact={dialogConnected:false,durableEntityId:"property-set:checkout",
       workspaceEntityId:"property-set:checkout"},
-    fixture={id:"layered-durable-entity-readiness-v1",causalCategory:"readiness or settling",
-      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:{transient,exact},
-      expectedPreRepairFailure:{transientSettled:true,exactSettled:true},
-      expectedRepairResult:{transientSettled:false,exactSettled:true}},
+    fixture={id:"layered-durable-entity-readiness-v2",causalCategory:"readiness or settling",
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:{transient,stalled,exact},
+      expectedPreRepairFailure:{transientSettled:true,stalledResubmitted:false,exactSettled:true},
+      expectedRepairResult:{transientSettled:false,stalledResubmitted:true,exactSettled:true}},
     preRepairResult={transientSettled:transient.dialogConnected===false&&Boolean(transient.workspaceEntityId),
+      stalledResubmitted:false,
       exactSettled:exact.dialogConnected===false&&Boolean(exact.workspaceEntityId)},
     repairResult={transientSettled:layeredCreatedEntityReadinessState(transient),
+      stalledResubmitted:layeredEntityCreationResubmissionState(stalled),
       exactSettled:layeredCreatedEntityReadinessState(exact)},fixtureDigest=digest(fixture);
   assert.deepEqual(preRepairResult,fixture.expectedPreRepairFailure);
   assert.deepEqual(repairResult,fixture.expectedRepairResult);

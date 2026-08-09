@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   normalized, timeoutIncidentDigest, timeoutRepairPackIds,
 } from "./verification-reliability-values.mjs";
+import { timeoutRepairCandidate } from "./verification-reliability-repair.mjs";
 
 export async function receiptDocument(root, receiptPath) {
   if (typeof receiptPath !== "string" || !receiptPath) throw new Error("Provide a runner receipt path");
@@ -42,10 +43,11 @@ export async function defaultCanonicalCheckpointValidator({
   document, incident, root, allowLegacySeparatePackage = false,
 }) {
   const { validateCanonicalVerificationCheckpoint } = await import("./verification-evidence.mjs");
+  const candidate = timeoutRepairCandidate(incident);
   return validateCanonicalVerificationCheckpoint({
     receiptPath:path.resolve(root, document.path),
-    commit:incident.repair.candidate.commit,
-    tree:incident.repair.candidate.tree,
+    commit:candidate.commit,
+    tree:candidate.tree,
     baseCommit:incident.repair.checkpoint.baseCommit,
     evidenceTask:incident.repair.checkpoint.evidenceTask,
     packIds:timeoutRepairPackIds,
@@ -76,8 +78,9 @@ export function validatePackageReceipt(
   const [key, result] = entries[0] ?? [];
   const packageStartedAt = Date.parse(receipt.startedAt);
   const checkpointCompletedAt = Date.parse(checkpointDocument.receipt.completedAt);
-  if (receipt.candidate.commit !== incident.repair.candidate.commit ||
-      receipt.candidate.tree !== incident.repair.candidate.tree ||
+  const candidate = timeoutRepairCandidate(incident);
+  if (receipt.candidate.commit !== candidate.commit ||
+      receipt.candidate.tree !== candidate.tree ||
       receipt.plan?.mode !== "package" ||
       receipt.plan?.checkpointRunId !== checkpointDocument.receipt.runId ||
       !Number.isFinite(packageStartedAt) || !Number.isFinite(checkpointCompletedAt) ||
