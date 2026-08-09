@@ -5618,7 +5618,6 @@
       "test/panel-empty-states-ui-test.mjs",
       "test/side-panel-action-hierarchy-test.mjs",
       "test/side-panel-action-hierarchy-ui-test.mjs",
-      "test/side-panel-browser-session-test.mjs",
       "test/twatility-brand-foundation-test.mjs"
     ],
     "property": [

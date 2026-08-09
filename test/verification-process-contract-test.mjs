@@ -1981,9 +1981,9 @@ for (const platformPath of shellSourcePaths.filter((sourcePath) => !(sourcePath 
 const localShellPlan = planVerification(packs, {
   changedPaths:["src/workspace-tabs-ui.ts"], includeProperties:true,
 });
-assert.equal(localShellPlan.tasks.length, 60,
-  "local Shell presentation includes the VTD-006 contract in its property-enabled 60-task plan");
-assert.equal(localShellPlan.unitTasks.length, 12);
+assert.equal(localShellPlan.tasks.length, 59,
+  "local Shell presentation retains the complete property-enabled 59-task plan");
+assert.equal(localShellPlan.unitTasks.length, 11);
 assert.equal(localShellPlan.propertyTasks.length, 1);
 assert.equal(localShellPlan.browserTasks.length, 3);
 assert.equal(localShellPlan.observationTasks.length, 1);

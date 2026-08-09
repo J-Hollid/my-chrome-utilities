@@ -318,3 +318,7 @@
     :handler (fn [world _ _]
                (assert! world (= 5 (count (get-in world [:vtd006/evidence :contract :packInventory])))
                         "VTD-006 checkpoint evidence is incomplete."))}])
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-08-09T02:37:48.266220499+02:00", :module-hash "1485002485", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "1339117946"} {:id "form/1/defonce", :kind "defonce", :line 6, :end-line 6, :hash "701185655"} {:id "def/module-paths", :kind "def", :line 8, :end-line 16, :hash "415945835"} {:id "defn-/production-evidence!", :kind "defn-", :line 18, :end-line 30, :hash "1881117448"} {:id "defn-/prepared", :kind "defn-", :line 32, :end-line 33, :hash "-223598626"} {:id "defn-/values", :kind "defn-", :line 35, :end-line 37, :hash "-45555851"} {:id "defn-/assert!", :kind "defn-", :line 39, :end-line 41, :hash "-1884999679"} {:id "defn-/pack-facts", :kind "defn-", :line 43, :end-line 45, :hash "1935968671"} {:id "defn-/consumer-scope", :kind "defn-", :line 47, :end-line 50, :hash "-640295098"} {:id "defn-/helper-planning", :kind "defn-", :line 52, :end-line 54, :hash "3897991"} {:id "defn/handlers", :kind "defn", :line 56, :end-line 320, :hash "2080827457"}]}
+;; clj-mutate-manifest-end
