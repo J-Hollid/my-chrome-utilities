@@ -146,7 +146,7 @@ function validateTransitionHistory(incident) {
     }
     if (mapping.kind === "rebase") {
       if (typeof mapping.toCommit !== "string" || !mapping.toCommit ||
-          typeof mapping.toTree !== "string" || !mapping.toTree || anchors.has(mapping.toCommit)) {
+          typeof mapping.toTree !== "string" || !mapping.toTree) {
         transitionHistoryError(incident.id, "rebase transition has an invalid replacement");
       }
       anchors.delete(mapping.fromCommit);
