@@ -225,7 +225,7 @@ Large items must be split into independently reviewable descendants.
 | VTD-011 | P2 | M | Measured terminal shard balance | VTD-001, VTD-002 |
 | VTD-012 | P2 | L, module slices | Modular registry and planner | VTD-004, VTD-005 |
 | VTD-013 | P1 | S–M | Stable Flow examples timing | VTD-002, VTD-007 |
-| VTD-014 | P1 | M | Timeout incidents must be repaired, not retried away | VTD-002, VTD-007 |
+| VTD-014 | P1 | M | Unreliable tests must be repaired, not retried away | VTD-002, VTD-007 |
 
 ## Backlog
 
@@ -771,40 +771,46 @@ Dependencies: VTD-002 and VTD-007.
 Expected effect: remove a current source of loaded-run flake without reopening the
 already improved Flow selection work.
 
-### VTD-014 — Repair timeout flakes instead of retrying them away
+### VTD-014 — Repair every manifested flaky test instead of retrying it away
 
 Priority: P1, bounded
 
 Problem:
 
-An exact checkpoint can currently time out, be resumed, and later produce passing
-evidence without retaining the fact that the same unchanged code failed first. A
-real receipt from 2026-08-07 shows the Capture batch waiting the complete 600-second
-outer limit on a dist-artifact lock before any logical target reported. The receipt
-correctly failed, but the current resume path had no durable incident, no setup-phase
-identity, and no rule requiring the lock/lifecycle cause to be repaired. Repeating
-that pattern wastes ten minutes at a time and lets flaky verification accumulate.
+Any exact-checkpoint failure can currently be retried and later produce passing
+evidence without retaining the fact that the same unchanged code failed first. This
+includes runner timeouts, offscreen-control hit-test failures, Property Set settling
+failures, readiness races, cleanup leaks, and any other assertion or infrastructure
+failure that disappears on an unchanged retry. A real receipt from 2026-08-07 shows
+one expensive form: the Capture batch waited the complete 600-second outer limit on
+a dist-artifact lock before any logical target reported. The same process weakness
+can hide a five-second assertion flake just as easily. Passing on retry must identify
+unreliable verification, not erase it.
 
 Required outcome:
 
-- Every runner-owned command timeout creates a repository-common, tamper-evident
-  incident that survives coder, refactorer, architect, and specifier worktrees.
-- The incident identifies the candidate lineage, task, owning pack, timeout owner,
-  last started logical target when one exists, active phase, last bounded progress
-  state, exact limit, termination result, receipt, and artifact/toolchain identity.
-- Browser batches emit process-start, setup, target-start, phase, and cleanup
-  progress before completion so an outer kill cannot erase the active boundary.
-- Exactly one unchanged diagnostic retry is permitted. It runs only the active
-  failed logical target; if no target started, it runs only the owning setup
-  boundary; for an indivisible non-browser leaf, it runs only that exact task.
-  Previously passing tasks and targets are never part of this retry.
+- Every failure manifested through the canonical verification runner creates a
+  repository-common, tamper-evident reliability incident before any unchanged retry.
+  It survives coder, refactorer, architect, and specifier worktrees.
+- The incident identifies the candidate lineage, task, owning pack, failure class
+  and fingerprint, last started logical target or smaller case when one exists,
+  active phase, bounded final state, receipt, and artifact/toolchain identity.
+- Browser and other multi-boundary programs emit enough process, target, case,
+  phase, assertion, cleanup, and completion progress to preserve the smallest failed
+  boundary. Timeouts additionally retain their exact limit and termination result.
+- At most one unchanged diagnostic retry is permitted. It runs only the smallest
+  failed target, scenario, generated case, setup boundary, or indivisible task.
+  Previously passing work is never part of this retry. An agent may instead repair
+  the failure immediately; ordinary resume cannot bypass incident classification.
 - The retry keeps the same candidate tree, artifact, toolchain, execution-load
-  class, task configuration, and timeout. A pass classifies a confirmed flake; a
-  repeated or different failure remains an unresolved incident. No outcome silently
-  becomes a pass, and a second unchanged retry is rejected.
+  class, task configuration, and applicable limits. A pass classifies a confirmed
+  flake regardless of whether the first symptom was a timeout, hit-test assertion,
+  settling assertion, or another failure. A repeated or different failure also
+  remains unresolved. No outcome silently becomes a pass, and a second unchanged
+  retry is rejected.
 - Evidence recording and Git handoff fail while the current candidate lineage owns
-  an unresolved timeout incident. Repair notes remain available so a role can route
-  the work to the appropriate owner.
+  any unresolved reliability incident. Repair notes remain available so a role can
+  route the work to the appropriate owner.
 - Resolution requires a changed candidate, a named causal repair, a deterministic
   regression that would have caught the original failure without waiting for the
   production timeout, focused fresh verification of the repaired boundary, and one
@@ -812,14 +818,19 @@ Required outcome:
 
 Acceptance criteria:
 
+- Forced offscreen-control hit-test and Property Set settling failures create the
+  same blocking incident contract as a forced timeout and isolate their exact target
+  or case rather than rerunning the all-20 checkpoint.
 - A forced batch timeout after target progress records the exact target and phase;
   a timeout before target progress records the setup boundary, not every target in
   the batch.
 - The historical 600-second Capture-lock receipt is represented by a bounded fixture
   and is classified as dist-artifact setup with all 274 passing tasks excluded from
   its isolated retry.
-- Pass-on-retry, same-failure, different-failure, missing-progress, and attempted
-  second-retry fixtures all remain blocking and have distinct diagnostics.
+- Pass-on-retry for timeout, hit-test, settling, and ordinary assertion fixtures is
+  always classified as confirmed flaky. Same-failure, different-failure,
+  missing-progress, and attempted second-retry fixtures remain blocking and have
+  distinct diagnostics.
 - Concurrent incident writers cannot overwrite one another; malformed, redirected,
   symlinked, truncated, or manually altered state fails closed.
 - A candidate with only a timeout-value increase, only a verbal explanation, reused
@@ -828,16 +839,17 @@ Acceptance criteria:
 - After a valid repair, its focused boundary and one fresh canonical all-pack run
   pass, the resolution is linked into durable Git-note evidence, and the handoff
   gate reports no unresolved incident for that lineage.
-- Runs without a timeout retain their exact task plans, batching, budgets,
-  calibrations, worker limits, package check, and ordinary non-timeout resume
-  behavior.
+- Runs without a failure retain their exact task plans, batching, budgets,
+  calibrations, worker limits, and package check. Previously passing work may be
+  reused for diagnosis, but no failed result bypasses incident classification.
 
 Dependencies: VTD-002 provides durable receipt identity and VTD-007 provides
 target/phase progress. VTD-006 makes the shared side-panel batches target-aware.
 
-Expected effect: developers stop paying repeated ten-minute retry penalties for the
-same hidden problem. A timeout becomes a small, named repair job with evidence, so a
-flaky check is fixed once instead of slowing every later Specification Studio change.
+Expected effect: developers stop paying repeated retry penalties for hidden test
+problems, whether they cost five seconds or ten minutes. Every manifested unreliable
+check becomes a small, named repair job with evidence, so it is fixed once instead of
+slowing later Specification Studio changes.
 
 ## Recommended sequence
 
@@ -870,11 +882,12 @@ while semantic changes retain downstream closure.
 
 1. VTD-007 — readiness and phase timing
 2. VTD-006 — modular side-panel browser program
-3. VTD-014 — timeout incident repair gate
+3. VTD-014 — unreliable-test repair gate
 4. VTD-010 — redundant smoke launch consolidation
 
 Exit condition: terminal batching is retained, focused targets initialize only
-their fixtures, and a timeout cannot be retried away without a causal repair.
+their fixtures, and no manifested flaky failure can be retried away without a causal
+repair.
 
 ### Phase D — Reduce product-code coupling
 
@@ -900,8 +913,9 @@ maintenance no longer requires editing several monolithic infrastructure files.
 4. Inspect `git status`; preserve unrelated user changes.
 5. Use the delivered canonical timing ledger and environment classes; never edit a
    raw receipt to make it eligible.
-6. For VTD-014, inspect repository-common unresolved timeout incidents and the
-   sanitized historical Capture-lock fixture before changing retry behavior.
+6. For VTD-014, inspect repository-common unresolved reliability incidents and the
+   sanitized timeout, hit-test, and Property Set settling fixtures before changing
+   retry behavior.
 7. Select exactly one backlog id. Do not hand the entire program to one coder as an
    unbounded task.
 8. Write its deterministic contract and evidence-conservation table.
@@ -926,9 +940,10 @@ The Flow editor is no longer the leading general bottleneck for a simple UI chan
 its representative path is about 27 seconds and remains under the 35-second
 guardrail, and its isolated examples regression was stabilized by VTD-013. The
 shared one-megabyte side-panel runtime was modularized by VTD-006. VTD-014 is next
-because current exact-checkpoint retry behavior can still hide a ten-minute timeout
-instead of forcing its cause to be repaired. The largest remaining product-code debt
-is the `src/side-panel.ts` composition root.
+because current exact-checkpoint retry behavior can still hide timeouts, hit-test
+races, settling failures, and other unreliable tests instead of forcing their causes
+to be repaired. The largest remaining product-code debt is the `src/side-panel.ts`
+composition root.
 
 The VTD-014 specification is not an implementation handoff. The specifier must
 obtain user approval before committing it and sending the normal SwarmForge coder
