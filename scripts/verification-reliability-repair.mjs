@@ -14,7 +14,7 @@ const causalCategories = new Set([
 export function timeoutRepairCausalCategory(value) {
   if (typeof value !== "string" ||
       (!causalCategories.has(value) && !/^other:[^\s].{0,119}$/u.test(value))) {
-    throw new Error("Timeout repair causal category must be a specified category or explicitly testable other:<cause>");
+    throw new Error("Reliability repair causal category must be a specified category or explicitly testable other:<cause>");
   }
   return value;
 }
@@ -22,7 +22,7 @@ export function timeoutRepairCausalCategory(value) {
 function validateCausalExplanation(value) {
   if (typeof value !== "string" || value !== value.trim() || value.length < 1 || value.length > 500 ||
       /[\u0000-\u001f\u007f]/u.test(value)) {
-    throw new Error("Timeout repair requires a bounded one-line causal explanation");
+    throw new Error("Reliability repair requires a bounded one-line causal explanation");
   }
   return value;
 }
@@ -37,7 +37,7 @@ export function timeoutRepairDiagnosedBoundary(incident) {
       failure.failedBoundary?.boundary !== undefined ||
       typeof logicalTargetId !== "string" || !logicalTargetId ||
       !failure.task.logicalTargetIds?.includes(logicalTargetId)) {
-    throw new Error(`Timeout incident ${incident.id} has no trusted repair boundary`);
+    throw new Error(`Reliability incident ${incident.id} has no trusted repair boundary`);
   }
   return { kind:"target", logicalTargetIds:[logicalTargetId],
     executionArgs:["scripts/run-browser-observation.mjs", logicalTargetId] };
@@ -93,7 +93,7 @@ export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionK
       ? normalized(incident.failure.task) : canonical.get(key);
     if (!identity || !canonical.has(key) || (key === incident.failure.task.key &&
         JSON.stringify(identity) !== JSON.stringify(canonical.get(key)))) {
-      throw new Error(`Timeout repair task ${key} is not a canonical current task identity`);
+      throw new Error(`Reliability repair task ${key} is not a canonical current task identity`);
     }
     const descriptor = { identity, roles:[...(roles.get(key) ?? new Set())].sort() };
     if (key === incident.failure.task.key) {
@@ -113,25 +113,25 @@ function regressionProtocol(document, regressionKey, incidentId) {
       return parsed?.incidentId === incidentId ? [parsed] : [];
     } catch { return []; }
   });
-  if (records.length !== 1) throw new Error("Timeout repair requires one causal regression protocol record");
+  if (records.length !== 1) throw new Error("Reliability repair requires one causal regression protocol record");
   return records[0];
 }
 
 function validateRegressionEvidence(incident, proposal, protocol) {
   const diagnosedBoundary = timeoutRepairDiagnosedBoundary(incident);
-  const invalidEvidence = () => new Error("Timeout repair causal regression must contain bounded cause-specific fixture evidence with an observed pre-repair failure and repaired result");
+  const invalidEvidence = () => new Error("Reliability repair causal regression must contain bounded cause-specific fixture evidence with an observed pre-repair failure and repaired result");
   if (!protocol?.fixture || typeof protocol.fixture !== "object" || Array.isArray(protocol.fixture) ||
       !protocol.preRepairResult || typeof protocol.preRepairResult !== "object" ||
       Array.isArray(protocol.preRepairResult) || !protocol.repairResult ||
       typeof protocol.repairResult !== "object" || Array.isArray(protocol.repairResult)) {
     throw invalidEvidence();
   }
-  const fixture = exactObject(protocol.fixture, "Timeout repair causal fixture");
-  const preRepairResult = exactObject(protocol.preRepairResult, "Timeout repair pre-repair result");
-  const repairResult = exactObject(protocol.repairResult, "Timeout repair result");
+  const fixture = exactObject(protocol.fixture, "Reliability repair causal fixture");
+  const preRepairResult = exactObject(protocol.preRepairResult, "Reliability repair pre-repair result");
+  const repairResult = exactObject(protocol.repairResult, "Reliability repair result");
   let encodedFixture;
   try { encodedFixture = JSON.stringify(fixture); }
-  catch { throw new Error("Timeout repair causal fixture must be serializable"); }
+  catch { throw new Error("Reliability repair causal fixture must be serializable"); }
   const fixtureDigest = timeoutIncidentDigest(fixture);
   if (protocol.version !== 2 || protocol.incidentId !== incident.id ||
       protocol.failureDigest !== incident.failureDigest ||
@@ -177,7 +177,7 @@ export async function validateRepairReceiptSemantics(incident, proposal, regress
         JSON.stringify(normalized(focusedDocument.receipt.tasks[identity.key]?.execution)) !==
           JSON.stringify(normalized({ args:executionArgs,
             logicalTargetIds:executionLogicalTargetIds ?? [] })))) {
-    throw new Error("Timeout repair focused repair plan contains unrelated or missing tasks");
+    throw new Error("Reliability repair focused repair plan contains unrelated or missing tasks");
   }
   return { ...proposal, diagnosedBoundary:timeoutRepairDiagnosedBoundary(incident),
     causalProtocol:protocol, focusedTaskPlan:expectedTaskPlan };
@@ -185,7 +185,7 @@ export async function validateRepairReceiptSemantics(incident, proposal, regress
 
 export async function validateTimeoutRepairProposal(incident, proposal, { isAncestor } = {}) {
   validateIncident(incident);
-  exactObject(proposal, "Timeout repair proposal");
+  exactObject(proposal, "Reliability repair proposal");
   const failed = incident.failure.lineage;
   if (!proposal.candidate?.commit || !proposal.candidate?.tree ||
       proposal.candidate.commit === failed.commit || proposal.candidate.tree === failed.tree ||
@@ -193,12 +193,12 @@ export async function validateTimeoutRepairProposal(incident, proposal, { isAnce
         try { await git(repositoryRoot, "merge-base", "--is-ancestor", ancestor, descendant); return true; }
         catch { return false; }
       }))(failed.commit, proposal.candidate.commit))) {
-    throw new Error("Timeout repair must use a descendant changed candidate and tree");
+    throw new Error("Reliability repair must use a descendant changed candidate and tree");
   }
   const changedPaths = proposal.changedPaths ?? [];
   const limitDeclaration = /(?:performance-calibration|timing-baseline|budget|timeout|worker)/iu;
   if (!changedPaths.length || changedPaths.every((changedPath) => limitDeclaration.test(changedPath))) {
-    throw new Error("Timeout repair is rejected as a limit-only or unrelated change");
+    throw new Error("Reliability repair is rejected as a limit-only or unrelated change");
   }
   timeoutRepairCausalCategory(proposal.causalCategory);
   const capabilityRoutingCategory = "sandbox capability declaration/first-run routing";
@@ -209,23 +209,23 @@ export async function validateTimeoutRepairProposal(incident, proposal, { isAnce
   validateCausalExplanation(proposal.causalExplanation);
   if (typeof proposal.checkpoint?.baseCommit !== "string" || !proposal.checkpoint.baseCommit ||
       typeof proposal.checkpoint?.evidenceTask !== "string" || !proposal.checkpoint.evidenceTask) {
-    throw new Error("Timeout repair requires the approved checkpoint base and evidence task");
+    throw new Error("Reliability repair requires the approved checkpoint base and evidence task");
   }
   if (proposal.regression?.status !== "passed" || proposal.regression?.commit !== proposal.candidate.commit ||
       typeof proposal.regression?.key !== "string") {
-    throw new Error("Timeout repair requires a deterministic regression on the repair commit");
+    throw new Error("Reliability repair requires a deterministic regression on the repair commit");
   }
   if (proposal.focusedReceipt?.status !== "passed" ||
       proposal.focusedReceipt?.commit !== proposal.candidate.commit ||
       proposal.focusedReceipt?.provenance !== "fresh") {
-    throw new Error("Timeout repair requires fresh focused verification from the repair tree");
+    throw new Error("Reliability repair requires fresh focused verification from the repair tree");
   }
   return { ...structuredClone(proposal), status:"eligible", validatedAt:new Date().toISOString() };
 }
 
 export function timeoutResolutionEvidence(incident) {
   validateIncident(incident);
-  if (incident.state !== "resolved") throw new Error(`Timeout incident ${incident.id} is unresolved`);
+  if (incident.state !== "resolved") throw new Error(`Reliability incident ${incident.id} is unresolved`);
   const repairCandidate = timeoutRepairCandidate(incident);
   return {
     incidentId:incident.id,

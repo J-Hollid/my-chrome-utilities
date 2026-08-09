@@ -1,33 +1,39 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   lstat, mkdir, open, readFile, realpath, rename, rm, writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import os from "node:os";
 import { setTimeout as pause } from "node:timers/promises";
 
 import {
   exactObject, git, normalized, shaPattern, stableIncidentId, timeoutIncidentDigest,
 } from "./verification-reliability-values.mjs";
 
-export async function defaultStoreDirectory(root) {
+export async function defaultRepositoryRuntimeDirectory(root) {
   const common = await git(root, "rev-parse", "--git-common-dir");
   const commonDirectory = path.isAbsolute(common) ? common : path.resolve(root, common);
-  return path.join(commonDirectory, "swarmforge-reliability-incidents");
+  const repositoryIdentity = createHash("sha256").update(path.resolve(commonDirectory)).digest("hex");
+  return path.join(os.tmpdir(), "swarmforge-repository-runtime", repositoryIdentity);
+}
+
+export async function defaultStoreDirectory(root) {
+  return path.join(await defaultRepositoryRuntimeDirectory(root), "reliability-incidents");
 }
 
 export async function ensureSafeDirectory(directory, { create = true } = {}) {
   const resolved = path.resolve(directory);
   try {
     const details = await lstat(resolved);
-    if (details.isSymbolicLink()) throw new Error(`Timeout incident store is redirected by a symlink: ${resolved}`);
-    if (!details.isDirectory()) throw new Error(`Timeout incident store is not a directory: ${resolved}`);
+    if (details.isSymbolicLink()) throw new Error(`Reliability incident store is redirected by a symlink: ${resolved}`);
+    if (!details.isDirectory()) throw new Error(`Reliability incident store is not a directory: ${resolved}`);
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
     if (!create) return undefined;
     await mkdir(resolved, { recursive:true });
   }
   if (await realpath(resolved) !== resolved) {
-    throw new Error(`Timeout incident store is redirected outside its canonical path: ${resolved}`);
+    throw new Error(`Reliability incident store is redirected outside its canonical path: ${resolved}`);
   }
   return resolved;
 }
@@ -37,7 +43,7 @@ export function incidentEnvelope(incident) {
 }
 
 function transitionHistoryError(id, message) {
-  throw new Error(`Timeout incident ${id} has invalid transition history: ${message}`);
+  throw new Error(`Reliability incident ${id} has invalid transition history: ${message}`);
 }
 
 function matchingTransitions(incident, type) {
@@ -56,7 +62,7 @@ function validateTransitionHistory(incident) {
   if (!Number.isFinite(previousTime)) transitionHistoryError(incident.id, "invalid created timestamp");
   for (const record of incident.transitions) {
     if (terminal) transitionHistoryError(incident.id, "an event follows the resolved transition");
-    exactObject(record, "Timeout incident transition");
+    exactObject(record, "Reliability incident transition");
     const time = Date.parse(record.at);
     if (!allowed.has(record.type) || !Number.isFinite(time)) {
       transitionHistoryError(incident.id, "unknown transition or timestamp");
@@ -139,7 +145,7 @@ function validateTransitionHistory(incident) {
   const anchors = new Set([incident.failure?.lineage?.commit,
     ...(incident.repair?.candidate?.commit ? [incident.repair.candidate.commit] : [])]);
   for (const mapping of lineageTransitions) {
-    exactObject(mapping, "Timeout incident lineage transition");
+    exactObject(mapping, "Reliability incident lineage transition");
     if (!anchors.has(mapping.fromCommit) || !["rebase", "abandon"].includes(mapping.kind) ||
         !Number.isFinite(Date.parse(mapping.at))) {
       transitionHistoryError(incident.id, "lineage transition has an invalid source, kind, or timestamp");
@@ -166,13 +172,13 @@ function validateTransitionHistory(incident) {
 }
 
 export function validateIncident(incident) {
-  exactObject(incident, "Timeout incident");
+  exactObject(incident, "Reliability incident");
   stableIncidentId(incident.id);
   if (!["unresolved", "resolved"].includes(incident.state) || !incident.failure ||
       !shaPattern.test(incident.failureDigest ?? "") ||
       incident.failureDigest !== timeoutIncidentDigest(incident.failure) ||
       !Array.isArray(incident.transitions)) {
-    throw new Error(`Malformed timeout incident ${incident.id}`);
+    throw new Error(`Malformed reliability incident ${incident.id}`);
   }
   validateTransitionHistory(incident);
   if (incident.state === "unresolved" && incident.resolution !== undefined) {
@@ -181,17 +187,17 @@ export function validateIncident(incident) {
   if (incident.state === "resolved" &&
       (!shaPattern.test(incident.resolution?.digest ?? "") ||
        incident.resolution.digest !== timeoutIncidentDigest({ ...incident.resolution, digest:undefined }))) {
-    throw new Error(`Timeout incident ${incident.id} has an invalid resolution digest`);
+    throw new Error(`Reliability incident ${incident.id} has an invalid resolution digest`);
   }
   if (incident.state === "resolved") validateArchiveNames(incident.id, incident.resolution.archive);
   return incident;
 }
 
 export function validateEnvelope(envelope, expectedId) {
-  exactObject(envelope, "Timeout incident document");
+  exactObject(envelope, "Reliability incident document");
   if (envelope.version !== 1 || envelope.incident?.id !== expectedId ||
       envelope.digest !== timeoutIncidentDigest(envelope.incident)) {
-    throw new Error(`Timeout incident ${expectedId} document digest does not match`);
+    throw new Error(`Reliability incident ${expectedId} document digest does not match`);
   }
   return validateIncident(envelope.incident);
 }
@@ -239,7 +245,7 @@ export function archiveNames(id) {
 
 export function validateArchiveNames(id, archive) {
   if (JSON.stringify(normalized(archive)) !== JSON.stringify(normalized(archiveNames(id)))) {
-    throw new Error(`Timeout incident ${id} has invalid archive filenames or traversal`);
+    throw new Error(`Reliability incident ${id} has invalid archive filenames or traversal`);
   }
   return archive;
 }
@@ -269,7 +275,7 @@ export async function withIncidentLock(directory, id, operation) {
       await pause(5);
     }
   }
-  if (!handle) throw new Error(`Timed out waiting for timeout incident lock ${id}`);
+  if (!handle) throw new Error(`Timed out waiting for reliability incident lock ${id}`);
   try { return await operation(); }
   finally { await handle.close(); await rm(lockPath, { force:true }); }
 }

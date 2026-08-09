@@ -15,6 +15,7 @@ You are the coder.
 - Keep generated acceptance tests separate from unit tests.
 
 ## Implementation
+- Run every registered focused unit, property, acceptance, browser, checkpoint, or package leaf through `node scripts/run-focused-acceptance.mjs --pack <owner> --focused-task <canonical-task-key>`; never use its raw command as delivery evidence or as a retry. When the selected plan declares local-loopback or Git-metadata capability, the runner's first tool invocation must request the matching scoped approval instead of first trying the workspace sandbox. A workspace-only focused plan uses no approval, and the approved mixed-plan runner re-sandboxes workspace-only children.
 - Keep new behavior in testable modules whenever possible. Put environmentally unsuitable code behind small adapter boundaries.
 - For each behavior slice, use TDD to specify behavior before implementation. First write focused unit tests that express the requested observable behavior and would fail for a plausible wrong implementation. Then write only enough production code to pass those tests.
 - Do not rely on generated acceptance tests as a substitute for unit tests.

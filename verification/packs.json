@@ -5632,6 +5632,14 @@
       "test/side-panel-action-hierarchy-ui-test.mjs",
       "test/twatility-brand-foundation-test.mjs"
     ],
+    "executionPrerequisites": [
+      {
+        "path": "test/verification-process-contract-test.mjs",
+        "requiredCapabilities": [
+          "local-loopback"
+        ]
+      }
+    ],
     "property": [
       "test/workspace-tabs-property-test.mjs"
     ],

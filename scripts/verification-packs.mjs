@@ -26,6 +26,15 @@ const sharedBrowserHarnessPath = "test/browser-packs/shared-harness.mjs";
 const values = (pack, key) => pack[key] ?? [];
 const canonicalPaths = (paths) => [...new Set(paths)].sort();
 
+function declaredTaskExecutionPrerequisites(pack, target, stage) {
+  const matches = values(pack, "executionPrerequisites")
+    .filter(({ path:declaredPath }) => declaredPath === target);
+  if (matches.length > 1) {
+    throw new Error(`Verification task has duplicate execution prerequisite declarations: ${target}`);
+  }
+  return matches[0]?.requiredCapabilities ?? defaultTaskExecutionPrerequisites(stage);
+}
+
 export function staticallyResolvableModuleImports(source, importerPath) {
   const sourceFile = ts.createSourceFile(
     importerPath,
@@ -735,6 +744,17 @@ function validateDeclaredTasks(packs) {
   const observationIds = new Set();
   const registeredTestPaths = new Set(packs.flatMap((pack) => testPathKeys.flatMap((key) => values(pack, key))));
   for (const pack of packs) {
+    for (const declaration of values(pack, "executionPrerequisites")) {
+      if (!declaration || Array.isArray(declaration) ||
+          Object.keys(declaration).sort().join(",") !== "path,requiredCapabilities" ||
+          typeof declaration.path !== "string" ||
+          !registeredTestPaths.has(declaration.path)) {
+        throw new Error(`Use an exact registered test execution prerequisite in pack ${pack.id}`);
+      }
+      validateTaskExecutionPrerequisites({ key:`declared:${declaration.path}`, stage:"unit",
+        executable:"node", args:[declaration.path],
+        requiredCapabilities:declaration.requiredCapabilities });
+    }
     for (const observation of values(pack, "browserObservations")) {
       if (!observation || !/^[A-Za-z0-9][A-Za-z0-9_:.-]*$/u.test(observation.id ?? "")) {
         throw new Error(`Use a stable browser observation id in pack ${pack.id}`);
@@ -1032,7 +1052,7 @@ function historicalRegistryHasPlanningShape(packs, known) {
     "browserObservations", "checkpointCommands", "dependencies", "sharedComponents",
     "verificationInputs", "runtimeInputs", "verificationHelpers", "isolatedVerificationHandlers", "browserAdapterModes",
     "browserAdapterPerformance", "browserObservationBatches", "browserEvidencePartitions",
-    "impactBoundaries",
+    "impactBoundaries", "executionPrerequisites",
   ];
   const boundaryIds = Array.isArray(packs)
     ? packs.flatMap((pack) => Array.isArray(pack?.impactBoundaries)
@@ -1257,10 +1277,12 @@ export function planVerification(
   })];
   const unitTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) => values(pack, "unit").map((path) => commandTask({
     key:`unit:${path}`, stage:"unit", packId:pack.id, executable:"node", args:[path], target:path,
+    requiredCapabilities:declaredTaskExecutionPrerequisites(pack, path, "unit"),
   })));
   const propertyTasks = !browserTargetIds.length && (terminalFull || includeProperties)
     ? executionPacks.flatMap((pack) => values(pack, "property").map((path) => commandTask({
       key:`property:${path}`, stage:"property", packId:pack.id, executable:"node", args:[path], target:path,
+      requiredCapabilities:declaredTaskExecutionPrerequisites(pack, path, "property"),
     })))
     : [];
   const observedAdapterPaths = new Set(executionPacks.flatMap((pack) =>
@@ -1273,6 +1295,7 @@ export function planVerification(
       .filter((path) => !observedAdapterPaths.has(path) && !compatibilityAdapters.has(path))
       .map((path) => commandTask({
       key:`browser:${path}`, stage:"browser", packId:pack.id, executable:"node", args:[path], target:path,
+      requiredCapabilities:declaredTaskExecutionPrerequisites(pack, path, "browser"),
     })));
 
   const executionIds = new Set(executionPacks.map(({ id }) => id));

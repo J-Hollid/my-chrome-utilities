@@ -28,10 +28,10 @@ function createStoreAccess({ root, storeDirectory }) {
   const read = async(id) => {
     stableIncidentId(id);
     const store = await directory({ create:false });
-    if (!store) throw new Error(`Unknown timeout incident ${id}`);
+    if (!store) throw new Error(`Unknown reliability incident ${id}`);
     let envelope;
     try { envelope = JSON.parse(await safeStoreFile(path.join(store, `${id}.json`))); }
-    catch (error) { throw new Error(`Cannot read timeout incident ${id}: ${error.message}`); }
+    catch (error) { throw new Error(`Cannot read reliability incident ${id}: ${error.message}`); }
     return validateEnvelope(envelope, id);
   };
   const update = async(id, operation) => {
@@ -40,7 +40,7 @@ function createStoreAccess({ root, storeDirectory }) {
       const current = await read(id);
       const next = validateIncident(await operation(structuredClone(current)));
       if (next.id !== id || next.failureDigest !== current.failureDigest) {
-        throw new Error(`Timeout incident ${id} immutable failure record changed`);
+        throw new Error(`Reliability incident ${id} immutable failure record changed`);
       }
       await atomicReplace(path.join(store, `${id}.json`), incidentEnvelope(next));
       return next;
@@ -53,10 +53,10 @@ function diagnosticOperations({ root, now, read, update }) {
   return {
     claimDiagnosticRetry(id, identity) {
       return update(id, (incident) => {
-        if (incident.state !== "unresolved") throw new Error(`Timeout incident ${id} is resolved`);
-        if (incident.retry) throw new Error(`Timeout incident ${id} diagnostic retry was already used`);
+        if (incident.state !== "unresolved") throw new Error(`Reliability incident ${id} is resolved`);
+        if (incident.retry) throw new Error(`Reliability incident ${id} diagnostic retry was already used`);
         if (!incident.failure.retryScope || identity !== incident.failure.retryIdentity) {
-          throw new Error(`Timeout incident ${id} diagnostic retry identity changed`);
+          throw new Error(`Reliability incident ${id} diagnostic retry identity changed`);
         }
         const at = now();
         return transition({ ...incident, retry:{ status:"claimed", identity, claimedAt:at } },
@@ -66,7 +66,7 @@ function diagnosticOperations({ root, now, read, update }) {
     async classifyDiagnosticRetry(id, receiptPath) {
       const document = await receiptDocument(root, receiptPath);
       return update(id, (incident) => {
-        if (incident.retry?.status !== "claimed") throw new Error(`Timeout incident ${id} retry is not claimable`);
+        if (incident.retry?.status !== "claimed") throw new Error(`Reliability incident ${id} retry is not claimable`);
         const task = Object.values(document.receipt.tasks)[0];
         const identityChanged = document.receipt.diagnostic?.incidentId !== id ||
           document.receipt.diagnostic?.retryIdentity !== incident.failure.retryIdentity ||
@@ -117,7 +117,7 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
         "Deterministic regression");
       freshPassingReceipt(focusedDocument, candidate, "Fresh focused verification");
       if (!regressionTasks.some(([key]) => key === regressionKey)) {
-        throw new Error("Timeout repair requires the named deterministic regression task");
+        throw new Error("Reliability repair requires the named deterministic regression task");
       }
       const proposal = {
         candidate, changedPaths:paths, causalCategory, causalExplanation,
@@ -142,7 +142,7 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
     claimRepairCheckpoint(id, runId) {
       return update(id, (incident) => {
         if (incident.state !== "unresolved" || incident.repair?.status !== "eligible") {
-          throw new Error(`Timeout incident ${id} has no eligible repair`);
+          throw new Error(`Reliability incident ${id} has no eligible repair`);
         }
         const at = now();
         if (incident.repairCheckpoint) {
@@ -152,7 +152,7 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
             kind === "rebase" && (fromCommit === incident.repair.candidate.commit ||
               (incident.lineageTransitions ?? []).some(({toCommit}) => toCommit === fromCommit))).length;
           if (candidate.commit === incident.repair.candidate.commit || reclaimCount >= repairRebases) {
-            throw new Error(`Timeout incident ${id} repair checkpoint was already used`);
+            throw new Error(`Reliability incident ${id} repair checkpoint was already used`);
           }
           return transition({ ...incident, repairCheckpoint:{ status:"claimed", runId, claimedAt:at,
             reclaimCount:reclaimCount + 1 } }, "repair-checkpoint-reclaimed", at, { runId });
@@ -186,13 +186,13 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
       ]);
       return update(id, (incident) => {
         if (incident.state !== "unresolved" || incident.repair?.status !== "eligible") {
-          throw new Error(`Timeout incident ${id} has no eligible repair`);
+          throw new Error(`Reliability incident ${id} has no eligible repair`);
         }
         const checkpoint = checkpointDocument.receipt;
         if (incident.repairCheckpoint?.status !== "claimed" ||
             incident.repairCheckpoint.runId !== checkpoint.runId ||
             canonicalCheckpoint.receipt.runId !== checkpoint.runId) {
-          throw new Error(`Timeout incident ${id} resolution requires one canonical all-20 checkpoint and package`);
+          throw new Error(`Reliability incident ${id} resolution requires one canonical all-20 checkpoint and package`);
         }
         const checkpointResult = { status:"passed", commit:checkpoint.candidate.commit,
           tree:checkpoint.candidate.tree, reusedTaskCount:0,
@@ -287,9 +287,9 @@ export function createTimeoutIncidentStore({
       const unexpected = names.filter((name) => !name.endsWith(".lock") &&
         !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}\.(?:checkpoint-receipt|package-receipt|package-zip)$/u.test(name) &&
         !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}\.json$/u.test(name));
-      if (unexpected.length) throw new Error(`Malformed timeout incident store entry: ${unexpected[0]}`);
+      if (unexpected.length) throw new Error(`Malformed reliability incident store entry: ${unexpected[0]}`);
       const ids = names.filter((name) => name.endsWith(".json")).map((name) => name.slice(0, -5));
-      if (new Set(ids).size !== ids.length) throw new Error("Duplicate timeout incident ids");
+      if (new Set(ids).size !== ids.length) throw new Error("Duplicate reliability incident ids");
       return Promise.all(ids.sort().map(access.read));
     },
     async create(failure) {
@@ -317,7 +317,7 @@ export function createTimeoutIncidentStore({
       const directory = await access.directory();
       try { await writeExclusive(path.join(directory, `${id}.json`), incidentEnvelope(incident)); }
       catch (error) {
-        if (error.code === "EEXIST") throw new Error(`Duplicate timeout incident id ${id}`);
+        if (error.code === "EEXIST") throw new Error(`Duplicate reliability incident id ${id}`);
         throw error;
       }
       return incident;
@@ -352,7 +352,7 @@ export function createTimeoutIncidentStore({
             checkpointDocument.sha256 !== incident.resolution.checkpoint.receiptSha256 ||
             packageDocument.sha256 !== incident.resolution.package.receiptSha256 ||
             timeoutIncidentDigest(packageBytes) !== incident.resolution.package.digest) {
-          throw new Error(`Timeout incident ${incident.id} archived resolution evidence does not match`);
+          throw new Error(`Reliability incident ${incident.id} archived resolution evidence does not match`);
         }
         records.push(timeoutResolutionEvidence(incident));
       }
@@ -361,11 +361,11 @@ export function createTimeoutIncidentStore({
     recordLineageTransition(id, mapping) {
       exactObject(mapping, "Reliability lineage transition");
       return access.update(id, async(incident) => {
-        if (incident.state !== "unresolved") throw new Error(`Timeout incident ${id} is resolved`);
+        if (incident.state !== "unresolved") throw new Error(`Reliability incident ${id} is resolved`);
         const transitions = incident.lineageTransitions ?? [];
         const anchors = transitionLineageAnchors(incident);
         if (typeof mapping.fromCommit !== "string" || !anchors.has(mapping.fromCommit)) {
-          throw new Error(`Timeout incident ${id} lineage transition has an unknown source`);
+          throw new Error(`Reliability incident ${id} lineage transition has an unknown source`);
         }
         const at = now();
         let durable;
@@ -373,7 +373,7 @@ export function createTimeoutIncidentStore({
           if (typeof mapping.toCommit !== "string" || !mapping.toCommit ||
               typeof mapping.toTree !== "string" || !mapping.toTree ||
               mapping.toCommit === mapping.fromCommit || anchors.has(mapping.toCommit)) {
-            throw new Error(`Timeout incident ${id} rebase transition requires a distinct candidate and tree`);
+            throw new Error(`Reliability incident ${id} rebase transition requires a distinct candidate and tree`);
           }
           let source;
           let replacement;
@@ -382,17 +382,17 @@ export function createTimeoutIncidentStore({
               resolveCandidate(mapping.fromCommit), resolveCandidate(mapping.toCommit),
             ]);
           } catch (error) {
-            throw new Error(`Timeout incident ${id} rebase identity cannot be resolved by Git: ${error.message}`);
+            throw new Error(`Reliability incident ${id} rebase identity cannot be resolved by Git: ${error.message}`);
           }
           const sourceTree = recordedLineageTree(incident, mapping.fromCommit);
           if (source?.commit !== mapping.fromCommit || source?.tree !== sourceTree ||
               replacement?.commit !== mapping.toCommit || replacement?.tree !== mapping.toTree) {
-            throw new Error(`Timeout incident ${id} rebase commit or tree disagrees with Git identity`);
+            throw new Error(`Reliability incident ${id} rebase commit or tree disagrees with Git identity`);
           }
           const preservesLineage = await commitDescendsFrom({ root, isAncestor,
             ancestor:mapping.fromCommit, commit:mapping.toCommit });
           if (!preservesLineage && source.tree !== replacement.tree) {
-            throw new Error(`Timeout incident ${id} rebase replacement is unrelated to the affected lineage or change set`);
+            throw new Error(`Reliability incident ${id} rebase replacement is unrelated to the affected lineage or change set`);
           }
           durable = { kind:"rebase", fromCommit:mapping.fromCommit,
             toCommit:mapping.toCommit, toTree:mapping.toTree, at };
@@ -400,12 +400,12 @@ export function createTimeoutIncidentStore({
           const decision = mapping.userDecision;
           if (decision?.approvedBy !== "specifier" || decision?.approved !== true ||
               typeof decision.reference !== "string" || !decision.reference.trim()) {
-            throw new Error(`Timeout incident ${id} abandonment requires a separate specifier-approved user decision`);
+            throw new Error(`Reliability incident ${id} abandonment requires a separate specifier-approved user decision`);
           }
           durable = { kind:"abandon", fromCommit:mapping.fromCommit,
             userDecision:structuredClone(decision), at };
         } else {
-          throw new Error(`Timeout incident ${id} has an unsupported lineage transition`);
+          throw new Error(`Reliability incident ${id} has an unsupported lineage transition`);
         }
         return transition({ ...incident, lineageTransitions:[...transitions, durable] },
           durable.kind === "rebase" ? "lineage-rebased" : "lineage-abandoned", at,

@@ -77,7 +77,7 @@ export function exactObject(value, name) {
 
 export function stableIncidentId(value) {
   if (!incidentIdPattern.test(value ?? "") || value === "." || value === "..") {
-    throw new Error(`Invalid timeout incident id: ${value}`);
+    throw new Error(`Invalid reliability incident id: ${value}`);
   }
   return value;
 }

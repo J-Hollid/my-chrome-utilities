@@ -115,7 +115,7 @@ export function focusedAcceptanceOptions(args) {
   const options = {
     packIds:[], changedPaths:[], terminalFull:false, includeProperties:false,
     withDependencies:false, skipBuild:false, changedSince:undefined, shard:undefined,
-    prepareEvidence:undefined, browserTargetIds:[],
+    prepareEvidence:undefined, browserTargetIds:[], focusedTaskKeys:[],
   };
   const reliabilityOptionAliases = new Map([
     ["--reliability-diagnostic-retry", "--timeout-diagnostic-retry"],
@@ -219,6 +219,18 @@ export function focusedAcceptanceOptions(args) {
       index += 1;
       continue;
     }
+    if (argument === "--focused-task") {
+      const value = valueArgument(args, index, argument);
+      if (!/^[A-Za-z0-9][A-Za-z0-9_:/+.-]{0,511}$/u.test(value)) {
+        throw new Error(`Use a canonical registered task key with ${argument}: ${value}`);
+      }
+      if (options.focusedTaskKeys.includes(value)) {
+        throw new Error(`Select every focused task once: ${value}`);
+      }
+      options.focusedTaskKeys.push(value);
+      index += 1;
+      continue;
+    }
     if (argument === "--changed") {
       const value = changedPath(valueArgument(args, index, argument));
       if (options.changedPaths.includes(value)) throw new Error(`Select every changed path once: ${value}`);
@@ -247,6 +259,13 @@ export function focusedAcceptanceOptions(args) {
       options.skipBuild || options.shard || options.prepareEvidence)) {
     throw new Error("Use --browser-target with one --pack and no other verification mode options");
   }
+  if (options.focusedTaskKeys.length && (options.packIds.length !== 1 || options.changedPaths.length ||
+      options.changedSince || options.terminalFull || options.includeProperties || options.withDependencies ||
+      options.skipBuild || options.shard || options.prepareEvidence || options.resumeReceipt ||
+      options.browserTargetIds.length || options.timeoutDiagnosticRetry || options.timeoutRepairIncident ||
+      options.timeoutRepairFocused)) {
+    throw new Error("Use --focused-task with one owning --pack and no broad or evidence selectors");
+  }
   if (options.prepareEvidence && !options.timeoutRepairFocused) {
     if (!options.packIds.length || !options.changedSince) {
       throw new Error("Evidence requires exact --pack selector(s) and --changed-since <commit>");
@@ -266,10 +285,10 @@ export function focusedAcceptanceOptions(args) {
       options.changedSince || options.terminalFull || options.includeProperties || options.withDependencies ||
       options.skipBuild || options.shard || options.prepareEvidence || options.resumeReceipt ||
       options.browserTargetIds.length || options.timeoutRepairIncident)) {
-    throw new Error("Use --timeout-diagnostic-retry as an isolated runner-owned mode");
+    throw new Error("Use --reliability-diagnostic-retry as an isolated runner-owned mode");
   }
   if (options.timeoutRepairIncident && (!options.prepareEvidence || options.resumeReceipt)) {
-    throw new Error("Use --timeout-repair-incident only with a fresh exact evidence checkpoint");
+    throw new Error("Use --reliability-repair-incident only with a fresh exact evidence checkpoint");
   }
   if (options.timeoutRepairFocused) {
     if (!options.timeoutRegression || !options.timeoutCausalCategory || !options.timeoutCausalExplanation ||
@@ -279,10 +298,10 @@ export function focusedAcceptanceOptions(args) {
     if (options.packIds.length || options.changedPaths.length || options.terminalFull || options.includeProperties ||
         options.withDependencies || options.skipBuild || options.shard || options.resumeReceipt ||
         options.browserTargetIds.length || options.timeoutDiagnosticRetry || options.timeoutRepairIncident) {
-      throw new Error("Use --timeout-repair-focused as an isolated runner-owned mode");
+      throw new Error("Use --reliability-repair-focused as an isolated runner-owned mode");
     }
   } else if (options.timeoutRegression || options.timeoutCausalCategory || options.timeoutCausalExplanation) {
-    throw new Error("Timeout regression and causal fields require --timeout-repair-focused");
+    throw new Error("Reliability regression and causal fields require --reliability-repair-focused");
   }
   return options;
 }
@@ -290,7 +309,7 @@ export function focusedAcceptanceOptions(args) {
 export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, candidateCommit,
   candidateTree, baseCommit, evidenceTask, requestedPackIds }) {
   if (!blocking.some(({ id }) => id === requestedId)) {
-    throw new Error("Repair checkpoint requires an applicable timeout incident");
+    throw new Error("Repair checkpoint requires an applicable reliability incident");
   }
   if (JSON.stringify([...requestedPackIds].sort()) !== JSON.stringify(timeoutRepairPackIds)) {
     throw new Error("Repair checkpoint requires the eligible repair candidate and exact all-20 plan");
@@ -304,7 +323,7 @@ export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, cand
     incident.repair.checkpoint.evidenceTask !== evidenceTask;
   });
   if (incompatible) {
-    throw new Error(`Repair checkpoint is blocked by incompatible timeout incident ${incompatible.id}`);
+    throw new Error(`Repair checkpoint is blocked by incompatible reliability incident ${incompatible.id}`);
   }
   return blocking.map(({ id }) => id).sort();
 }
@@ -418,6 +437,8 @@ export function createVerificationCommandRunner(context, options = {}) {
     "VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES", defaultOutputLimitBytes,
     { maximum:maximumOutputLimitBytes },
   );
+  const capabilityApprovedPlan = [...(options.launchRoutes?.values() ?? [])]
+    .some((route) => route !== "workspace-sandbox");
   return async function runCommand(display, task) {
     if (!task?.executable || !Array.isArray(task.args)) throw new Error(`Missing structured task identity: ${display}`);
     if (receivedParentSignal) {
@@ -454,12 +475,13 @@ export function createVerificationCommandRunner(context, options = {}) {
     const browserOutputDirectory = ["browser", "browser-observation"].includes(task.stage)
       ? path.join(context.runDirectory, task.key.replaceAll(/[^A-Za-z0-9._-]/gu, "_"))
       : undefined;
-    const isolateWorkspace = launchRoute !== "workspace-sandbox";
-    const launch = isolateWorkspace ? {
+    const isolateChild = capabilityApprovedPlan;
+    const shareLoopback = launchRoute === "scoped-command-approval";
+    const launch = isolateChild ? {
       executable:"bwrap",
       args:["--ro-bind", "/", "/", "--bind", repositoryRoot, repositoryRoot,
         "--bind", "/tmp", "/tmp", "--dev-bind", "/dev", "/dev", "--proc", "/proc",
-        "--unshare-net", executable, ...executionArgs],
+        ...(shareLoopback ? [] : ["--unshare-net"]), executable, ...executionArgs],
     } : { executable, args:executionArgs };
     const child = spawn(launch.executable, launch.args, {
       cwd:repositoryRoot,
@@ -476,8 +498,9 @@ export function createVerificationCommandRunner(context, options = {}) {
         SWARMFORGE_VERIFICATION_RECEIPT:context.receiptPath,
         SWARMFORGE_VERIFICATION_TASK_KEY:task.key,
         SWARMFORGE_EXECUTION_ROUTE:launchRoute,
-        SWARMFORGE_EXECUTION_BOUNDARY:isolateWorkspace ? "bwrap-unshared-network" :
-          "workspace-sandbox",
+        SWARMFORGE_EXECUTION_BOUNDARY:isolateChild
+          ? shareLoopback ? "bwrap-shared-loopback" : "bwrap-unshared-network"
+          : "workspace-sandbox",
         ...(browserOutputDirectory ? {
           SWARMFORGE_VERIFICATION_OUTPUT_DIRECTORY:browserOutputDirectory,
           ...(process.env.SWARMFORGE_UPDATE_FIXTURES === "1"
@@ -740,16 +763,16 @@ export async function runTimeoutDiagnosticRetry(id, {
   }),
 } = {}) {
   const incident = await store.read(id);
-  if (!incident.failure.retryScope) throw new Error(`Timeout incident ${id} has no trusted retry scope`);
+  if (!incident.failure.retryScope) throw new Error(`Reliability incident ${id} has no trusted retry scope`);
   const [candidate, artifact, deadlines] = await Promise.all([
     candidateIdentity(), artifactIdentity(), deadlineIdentity(incident),
   ]);
   if (candidate.commit !== incident.failure.lineage.commit || candidate.tree !== incident.failure.lineage.tree ||
       verificationDigest(artifact) !== verificationDigest(incident.failure.artifact)) {
-    throw new Error(`Timeout incident ${id} diagnostic candidate or artifact identity changed`);
+    throw new Error(`Reliability incident ${id} diagnostic candidate or artifact identity changed`);
   }
   if (verificationDigest(deadlines) !== verificationDigest(incident.failure.resolvedDeadlines)) {
-    throw new Error(`Timeout incident ${id} diagnostic deadline identity changed`);
+    throw new Error(`Reliability incident ${id} diagnostic deadline identity changed`);
   }
   const concurrency = incident.failure.environment.concurrency;
   const observationConcurrency = incident.failure.environment.observationConcurrency;
@@ -761,7 +784,7 @@ export async function runTimeoutDiagnosticRetry(id, {
   context.receipt.diagnostic = { incidentId:id, retryIdentity:incident.failure.retryIdentity,
     scope:structuredClone(incident.failure.retryScope), resolvedDeadlines:structuredClone(deadlines) };
   if (JSON.stringify(context.receipt.environment) !== JSON.stringify(incident.failure.environment)) {
-    throw new Error(`Timeout incident ${id} diagnostic environment identity changed`);
+    throw new Error(`Reliability incident ${id} diagnostic environment identity changed`);
   }
   await store.claimDiagnosticRetry(id, incident.failure.retryIdentity);
   await context.write();
@@ -775,7 +798,7 @@ export async function runTimeoutDiagnosticRetry(id, {
   context.receipt.completedAt = new Date().toISOString();
   await context.write();
   const classified = await store.classifyDiagnosticRetry(id, context.receiptPath);
-  console.error(`[verify:timeout-diagnostic] ${id} ${classified.retry.classification}`);
+  console.error(`[verify:reliability-diagnostic] ${id} ${classified.retry.classification}`);
   return { incident:classified, receiptPath:context.receiptPath };
 }
 
@@ -804,10 +827,10 @@ export async function runTimeoutRepairFocused(id, {
   if (typeof causalExplanation !== "string" || causalExplanation !== causalExplanation.trim() ||
       causalExplanation.length < 1 || causalExplanation.length > 500 ||
       /[\u0000-\u001f\u007f]/u.test(causalExplanation)) {
-    throw new Error("Timeout repair requires a bounded one-line causal explanation");
+    throw new Error("Reliability repair requires a bounded one-line causal explanation");
   }
   if (typeof regressionKey !== "string" || !regressionKey || !baseCommit || !evidenceTask) {
-    throw new Error("Timeout repair requires regression, approved base, and evidence task");
+    throw new Error("Reliability repair requires regression, approved base, and evidence task");
   }
   await strictToolchainValidator();
   await candidateCleanValidator();
@@ -845,13 +868,13 @@ export async function runTimeoutRepairFocused(id, {
         SWARMFORGE_TIMEOUT_REPAIR_REGRESSION:JSON.stringify(regressionContext),
       } } : {}),
     };
-    await runner(`timeout repair ${descriptor.roles.join("+")} ${task.key}`, task);
+    await runner(`reliability repair ${descriptor.roles.join("+")} ${task.key}`, task);
   }
   context.receipt.completedAt = new Date().toISOString();
   await context.write();
   const repaired = await store.proposeRepair(id, { causalCategory, causalExplanation, regressionKey,
     regressionReceiptPath:context.receiptPath, focusedReceiptPath:context.receiptPath });
-  console.error(`[verify:timeout-repair-focused] ${id} ${repaired.repair.status}`);
+  console.error(`[verify:reliability-repair-focused] ${id} ${repaired.repair.status}`);
   return { incident:repaired, receiptPath:context.receiptPath, taskPlan };
 }
 
@@ -986,6 +1009,60 @@ function planPackageTask(plan) {
     stages:{ ...plan.stages, package:[] } };
 }
 
+const focusedTaskGroups = [
+  "preparationTasks", "unitTasks", "propertyTasks", "browserTasks", "observationTasks",
+  "parserTasks", "generatorTasks", "checkpointTasks", "sessionTasks", "packageTasks",
+];
+
+export function selectFocusedVerificationTasks(plan, requestedKeys) {
+  if (!Array.isArray(requestedKeys) || !requestedKeys.length ||
+      new Set(requestedKeys).size !== requestedKeys.length) {
+    throw new Error("Focused verification requires unique canonical task keys");
+  }
+  const withPackage = requestedKeys.includes(timeoutRepairPackageTaskIdentity.key)
+    ? planPackageTask(plan) : plan;
+  const candidates = new Map(withPackage.tasks.map((task) => [task.key, task]));
+  for (const key of requestedKeys) {
+    if (!candidates.has(key)) throw new Error(`Focused verification task is not registered by the selected pack: ${key}`);
+  }
+  const selected = new Set(requestedKeys);
+  const artifactStages = new Set(["browser", "browser-observation", "checkpoint", "acceptance-session", "package"]);
+  if (requestedKeys.some((key) => artifactStages.has(candidates.get(key).stage))) {
+    selected.add("build:dist");
+  }
+  if (requestedKeys.some((key) => candidates.get(key).stage === "acceptance-session")) {
+    for (const task of [...withPackage.parserTasks, ...withPackage.generatorTasks]) selected.add(task.key);
+  }
+  const groups = Object.fromEntries(focusedTaskGroups.map((group) => [group,
+    (withPackage[group] ?? []).filter(({ key }) => selected.has(key))]));
+  const tasks = withPackage.tasks.filter(({ key }) => selected.has(key));
+  if (tasks.length !== selected.size) {
+    throw new Error("Focused verification dependencies are not registered by the selected pack");
+  }
+  const commandsFor = (group) => groups[group].map(({ display }) => display);
+  return {
+    ...withPackage,
+    ...groups,
+    mode:"focused-task",
+    tasks,
+    preparationCommands:commandsFor("preparationTasks"),
+    unitCommands:commandsFor("unitTasks"),
+    propertyCommands:commandsFor("propertyTasks"),
+    browserCommands:commandsFor("browserTasks"),
+    observationCommands:commandsFor("observationTasks"),
+    parserCommands:commandsFor("parserTasks"),
+    generatorCommands:commandsFor("generatorTasks"),
+    checkpointCommands:commandsFor("checkpointTasks"),
+    sessionCommands:commandsFor("sessionTasks"),
+    packageCommands:commandsFor("packageTasks"),
+    acceptanceCommands:[...commandsFor("parserTasks"), ...commandsFor("generatorTasks"),
+      ...commandsFor("sessionTasks")],
+    commands:tasks.map(({ display }) => display),
+    includeProperties:tasks.some(({ stage }) => stage === "property"),
+    focusedTaskKeys:[...requestedKeys],
+  };
+}
+
 export function createRepositoryCheckpointIdentityGuard({
   repositoryRoot:root = repositoryRoot, expected, context, attemptId, launchRoutes = new Map(),
   inputFingerprintOptions = {}, artifactValidator = ({ root:artifactRoot }) =>
@@ -1108,8 +1185,14 @@ export async function checkpointPreflight({
     },
     artifact:async() => {
       const buildTasks = plan.tasks.filter(({ stage }) => stage === "build");
-      if (!plan.skipBuild && buildTasks.length !== 1) {
+      const artifactRequired = plan.tasks.some(({ stage }) =>
+        ["build", "browser", "browser-observation", "checkpoint", "acceptance-session", "package"]
+          .includes(stage));
+      if (artifactRequired && !plan.skipBuild && buildTasks.length !== 1) {
         throw new Error("Checkpoint preflight requires exactly one artifact build task");
+      }
+      if (!artifactRequired && buildTasks.length) {
+        throw new Error("Workspace-only focused verification cannot include an unrelated artifact build");
       }
       if (plan.skipBuild && buildTasks.length) {
         throw new Error("Checkpoint preflight cannot build a prepared artifact");
@@ -1223,6 +1306,9 @@ export async function runFocusedAcceptance(
   delete options.timeoutRepairIncident;
   await validateVerificationPacks(packs);
   let plan = planVerification(packs, options);
+  if (options.focusedTaskKeys.length) {
+    plan = selectFocusedVerificationTasks(plan, options.focusedTaskKeys);
+  }
   if (evidenceTask) plan = planPackageTask(plan);
   const concurrency = environmentInteger("VERIFICATION_CONCURRENCY", 4, { maximum:64 });
   const observationConcurrency = environmentInteger("VERIFICATION_OBSERVATION_CONCURRENCY", 2, { maximum:4 });
@@ -1271,6 +1357,9 @@ export async function runFocusedAcceptance(
     }
   }
   let buildManifest;
+  const artifactRequired = plan.tasks.some(({ stage }) =>
+    ["build", "browser", "browser-observation", "checkpoint", "acceptance-session", "package"]
+      .includes(stage));
   if (options.skipBuild) buildManifest = await validateCurrentArtifactForConsumers({
     root:repositoryRoot, artifactValidator,
   });
@@ -1453,7 +1542,7 @@ export async function runFocusedAcceptance(
   try {
     await executeAcceptancePlan(executionPlan, {
       runCommand:runner, concurrency, observationConcurrency,
-      afterPreparation:async() => {
+      ...(artifactRequired ? { afterPreparation:async() => {
       buildManifest = await validateCurrentArtifactForConsumers({
         root:repositoryRoot, artifactValidator,
       });
@@ -1470,7 +1559,7 @@ export async function runFocusedAcceptance(
         context.receipt.resumeIdentity = verificationResumeIdentity(plan, context, buildManifest);
         await context.write();
       }
-      },
+      } } : {}),
     });
   } catch (error) {
     if (checkpointAttempt && receivedParentSignal && activeAttemptTask) {
@@ -1484,11 +1573,11 @@ export async function runFocusedAcceptance(
     await checkpointAttemptStore.markTasksComplete(checkpointAttempt.attempt.id, checkpointOwner);
   }
   if (!commandRunner) {
-    buildManifest = buildManifest ?? await validateCurrentArtifactForConsumers({
+    if (artifactRequired) buildManifest = buildManifest ?? await validateCurrentArtifactForConsumers({
       root:repositoryRoot, artifactValidator,
     });
     context.receipt.completedAt = new Date().toISOString();
-    context.receipt.artifact = {
+    if (buildManifest) context.receipt.artifact = {
       schemaVersion:buildManifest.schemaVersion,
       buildIdentity:buildManifest.buildIdentity,
       inputDigest:buildManifest.inputDigest,

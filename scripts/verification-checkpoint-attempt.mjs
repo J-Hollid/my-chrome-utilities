@@ -2,14 +2,13 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import {
-  atomicReplace, ensureSafeDirectory, safeStoreFile, withIncidentLock, writeExclusive,
+  atomicReplace, defaultRepositoryRuntimeDirectory, ensureSafeDirectory, safeStoreFile,
+  withIncidentLock, writeExclusive,
 } from "./verification-reliability-persistence.mjs";
 import { git, normalized, timeoutIncidentDigest } from "./verification-reliability-values.mjs";
 
 export async function defaultCheckpointAttemptDirectory(root) {
-  const common = await git(root, "rev-parse", "--git-common-dir");
-  return path.join(path.isAbsolute(common) ? common : path.resolve(root, common),
-    "swarmforge-checkpoint-attempts");
+  return path.join(await defaultRepositoryRuntimeDirectory(root), "checkpoint-attempts");
 }
 
 const identityFields = ["candidate", "baseCommit", "evidenceTask", "planDigest",

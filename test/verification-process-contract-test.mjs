@@ -57,6 +57,7 @@ import {
   createVerificationCommandRunner,
   createVerificationReceiptContext,
   focusedAcceptanceOptions,
+  selectFocusedVerificationTasks,
   prepareCheckpointExecution,
   resumeVerificationPlan,
   runTimeoutRepairFocused,
@@ -113,7 +114,9 @@ import {
   validateTimeoutRepairProposal,
   verificationProgressEmitter,
 } from "../scripts/verification-reliability-incidents.mjs";
-import { validateIncident } from "../scripts/verification-reliability-persistence.mjs";
+import {
+  defaultStoreDirectory, validateIncident,
+} from "../scripts/verification-reliability-persistence.mjs";
 import {
   classifyExecutionRestriction,
   preflightExecutionPrerequisites,
@@ -143,6 +146,12 @@ assert.deepEqual(focusedAcceptanceOptions([
 assert.equal(focusedAcceptanceOptions([
   "--reliability-diagnostic-retry", "incident-2",
 ]).timeoutDiagnosticRetry, "incident-2", "the runner exposes failure-neutral incident options");
+const focusedSelectorOptions = focusedAcceptanceOptions([
+  "--pack", "shell", "--focused-task", "unit:test/verification-process-contract-test.mjs",
+]);
+assert.deepEqual(focusedSelectorOptions.focusedTaskKeys,
+  ["unit:test/verification-process-contract-test.mjs"],
+"registered focused leaves have an incident-aware runner selector");
 assert.equal(timeoutRepairCausalCategory("readiness"), "readiness");
 assert.equal(timeoutRepairCausalCategory("viewport/visibility/hit testing"),
   "viewport/visibility/hit testing");
@@ -736,7 +745,7 @@ await assert.rejects(async() => compatibleTimeoutRepairIncidentIds({ requestedId
   blocking:[compatibleRepair("incident-a"), { ...compatibleRepair("incident-b"), repair:undefined }],
   candidateCommit:"repair-commit", candidateTree:"repair-tree", baseCommit:"approved-base",
   evidenceTask:"vtd014-timeout-repair-gate", requestedPackIds:timeoutRepairPackIds }),
-/incompatible timeout incident incident-b/u,
+/incompatible reliability incident incident-b/u,
 "an unresolved incident without a compatible eligible repair still blocks the checkpoint");
 
 const exerciseDeadOwnerLockFixture = ({ reclaimDeadOwner }) => {
@@ -980,6 +989,44 @@ assert.equal(unboundedCaseProgress.accept({
   executionArgs:Array.from({ length:33 }, (_, index) => `argument-${index}`),
 }), false, "unbounded executable case commands cannot enter trusted progress");
 assert.equal(unboundedCaseProgress.snapshot(), undefined);
+
+const workspaceRestrictionRepository = await mkdtemp(path.join(os.tmpdir(), "vtd014-workspace-store-"));
+let workspaceRestrictionRecorded = false;
+try {
+  await exec("git", ["init", "-q"], { cwd:workspaceRestrictionRepository });
+  const restrictedStore = createTimeoutIncidentStore({ root:workspaceRestrictionRepository });
+  const restrictedContext = createVerificationReceiptContext(1, 1, {
+    receiptDirectory:path.join(workspaceRestrictionRepository, "receipts"),
+  });
+  restrictedContext.receipt.candidate = { commit:"workspace-restricted", tree:"workspace-tree" };
+  const restrictedRunner = createVerificationCommandRunner(restrictedContext, {
+    incidentStore:restrictedStore,
+  });
+  const restrictedFailureTask = {
+    key:"unit:workspace-restricted-failure", stage:"unit", packId:"shell",
+    executable:process.execPath, args:["-e", "process.exitCode=19"],
+    target:"workspace-restricted-failure", environment:null, requiredCapabilities:[],
+    display:"workspace-restricted failure fixture",
+  };
+  await assert.rejects(() => restrictedRunner(restrictedFailureTask.display, restrictedFailureTask),
+    /Verification command failed \(19\)/u);
+  const restrictedIncidents = await restrictedStore.list();
+  workspaceRestrictionRecorded = restrictedIncidents.length === 1 &&
+    restrictedIncidents[0].failure.task.key === restrictedFailureTask.key;
+  assert.equal(workspaceRestrictionRecorded, true,
+    "a real workspace-only failure remains recorded in repository-common writable state");
+  assert.equal(restrictedContext.receipt.tasks[restrictedFailureTask.key].reliabilityIncidentId,
+    restrictedIncidents[0].id,
+  "the failed focused receipt and durable repository-common incident remain linked");
+} finally {
+  const restrictedStoreDirectory = await defaultStoreDirectory(workspaceRestrictionRepository);
+  await rm(path.dirname(restrictedStoreDirectory), { recursive:true, force:true });
+  await rm(workspaceRestrictionRepository, { recursive:true, force:true });
+}
+const focusedWorkflowPrompt = await readFile(
+  new URL("../swarmforge/roles/coder.prompt", import.meta.url), "utf8");
+const rawRegisteredCommandsIneligible = /never use its raw command as delivery evidence or as a retry/u
+  .test(focusedWorkflowPrompt);
 
 const incidentFixtureRoot = await mkdtemp(path.join(os.tmpdir(), "vtd014-incident-contract-"));
 let vtd014Evidence;
@@ -1358,7 +1405,7 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
   "environment-contract incidents require the narrow capability-routing repair category");
   await assert.rejects(validateTimeoutRepairProposal(first, validRepairProposal,
     { isAncestor:async() => true }), /cannot relabel/u,
-  "capability-routing repairs cannot resolve assertion, readiness, hit-test, or timeout incidents");
+  "capability-routing repairs cannot resolve assertion, readiness, hit-test, or reliability incidents");
   await assert.rejects(store.proposeRepair(first.id, {
     candidate:{ commit:"repair-commit", tree:"repair-tree" },
     causalCategory:"artifact/process locking", causalExplanation:"stale lock ownership",
@@ -1562,7 +1609,7 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
   await rename(archiveBackupPath, archivePath);
   const unrelatedLineageBlocking = await store.blocking({ commit:"unrelated-commit" });
   assert.equal(unrelatedLineageBlocking.length, 0,
-    "an unrelated candidate lineage is not blocked by timeout incident state");
+    "an unrelated candidate lineage is not blocked by reliability incident state");
   const rebased = await store.recordLineageTransition(concurrentIncidents[0].id, {
     kind:"rebase", fromCommit:"failed-commit", toCommit:"rebased-commit", toTree:"rebased-tree",
   });
@@ -1725,7 +1772,8 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
             action:"require focused causal repair", taskExecution:"no checkpoint task launches",
             observed:repairCommitBlocking.some(({ state }) => state === "unresolved") } } },
       sharedBoundary:{ focusedKinds:["unit", "property", "acceptance", "browser", "checkpoint", "package"],
-        incidentAware:true, rawDiagnosticIneligible:true } },
+        incidentAware:focusedSelectorOptions.focusedTaskKeys.length === 1 && workspaceRestrictionRecorded,
+        rawDiagnosticIneligible:rawRegisteredCommandsIneligible } },
     historical:historicalClassification,
     progress:{ last:progressTracker.snapshot(), invalidRejected:true, truncationBounded:true },
     incident:{ state:"unresolved", repositoryCommon:true, immutableFields:true,
@@ -2486,6 +2534,58 @@ assert.equal(maximumActiveSessions, 2, "independent pack sessions use the bounde
 
 const packs = await loadVerificationPacks();
 await validateVerificationPacks(packs);
+const focusedShellPlan = selectFocusedVerificationTasks(planVerification(packs, {
+  packIds:["shell"],
+}), ["unit:test/verification-process-contract-test.mjs"]);
+assert.deepEqual(focusedShellPlan.tasks.map(({ key }) => key),
+  ["unit:test/verification-process-contract-test.mjs"],
+"the focused delivery path launches the exact registered unit leaf without unrelated work");
+const focusedPropertyPlan = selectFocusedVerificationTasks(planVerification(packs, {
+  packIds:["shell"], includeProperties:true,
+}), ["property:test/workspace-tabs-property-test.mjs"]);
+assert.deepEqual(focusedPropertyPlan.tasks.map(({ key }) => key),
+  ["property:test/workspace-tabs-property-test.mjs"],
+"the focused delivery path launches the exact registered property leaf");
+const focusedAcceptancePlan = selectFocusedVerificationTasks(planVerification(packs, {
+  packIds:["shell"],
+}), ["acceptance-session:shell"]);
+assert.equal(focusedAcceptancePlan.tasks[0].key, "build:dist");
+assert.equal(focusedAcceptancePlan.tasks.at(-1).key, "acceptance-session:shell");
+assert.ok(focusedAcceptancePlan.parserTasks.length > 0 &&
+  focusedAcceptancePlan.parserTasks.length === focusedAcceptancePlan.generatorTasks.length,
+"the focused acceptance session retains only its registered parse and generation prerequisites");
+const focusedPackagePlan = selectFocusedVerificationTasks(planVerification(packs, {
+  packIds:["shell"],
+}), ["package:extension"]);
+assert.deepEqual(focusedPackagePlan.tasks.map(({ key }) => key),
+  ["build:dist", "package:extension"],
+"the focused package path retains only its required build prerequisite");
+const repositoryCommonStore = await defaultStoreDirectory(process.cwd());
+assert.ok(repositoryCommonStore.startsWith(path.join(os.tmpdir(), "swarmforge-repository-runtime")),
+  "the repository-common incident store is writable under the real workspace restriction");
+assert.equal(repositoryCommonStore.includes(`${path.sep}.git${path.sep}`), false,
+  "ordinary reliability failures do not depend on protected Git metadata");
+const repositoryCommonAttempts = await defaultCheckpointAttemptDirectory(process.cwd());
+assert.equal(path.dirname(repositoryCommonAttempts), path.dirname(repositoryCommonStore),
+  "incidents and checkpoint attempts share one writable repository-common runtime identity");
+for (const role of ["specifier", "coder", "refactorer", "architect"]) {
+  const prompt = await readFile(new URL(`../swarmforge/roles/${role}.prompt`, import.meta.url), "utf8");
+  assert.match(prompt, /--focused-task/u,
+    `${role} uses the incident-aware focused launcher instead of raw registered commands`);
+  assert.match(prompt, /first tool invocation/u,
+    `${role} arranges declared capability authority before starting the runner`);
+}
+for (const modulePath of [
+  "../scripts/run-focused-acceptance.mjs",
+  "../scripts/verification-reliability-persistence.mjs",
+  "../scripts/verification-reliability-repair.mjs",
+  "../scripts/verification-reliability-store.mjs",
+  "../scripts/verification-reliability-values.mjs",
+]) {
+  const source = await readFile(new URL(modulePath, import.meta.url), "utf8");
+  assert.doesNotMatch(source, /["'`]Timeout (?:incident|repair)/u,
+    `${modulePath} exposes failure-neutral Reliability incident/repair diagnostics`);
+}
 const adapterModes = new Map(packs.flatMap((pack) => (pack.browserAdapterModes ?? [])
   .map(({ path:adapterPath, mode }) => [adapterPath, mode])));
 assert.equal([...adapterModes.values()].filter((mode) => mode === "shared-wrapper").length, 0);
@@ -2735,7 +2835,11 @@ const vtd006ProgramMigration = new Map([
 const normalizedVtd006Identity = (task) => {
   let encoded = JSON.stringify(verificationTaskIdentity(task));
   for (const [current, previous] of vtd006ProgramMigration) encoded = encoded.replaceAll(current, previous);
-  return JSON.parse(encoded);
+  const identity = JSON.parse(encoded);
+  if (identity.target === "test/verification-process-contract-test.mjs") {
+    identity.requiredCapabilities = [];
+  }
+  return identity;
 };
 const terminalIdentities = (plan) => plan.tasks.map(normalizedVtd006Identity);
 assert.deepEqual(currentTerminalPlan.tasks.map(normalizedVtd006Identity),
@@ -5867,7 +5971,7 @@ if (process.platform !== "win32") {
     await routedRunner("routed capability boundary", routedTask);
     const scopedRouteObservation = routedContext.receipt.tasks[routedTask.key].output.trim();
     assert.equal(scopedRouteObservation,
-      "scoped-command-approval|bwrap-unshared-network",
+      "scoped-command-approval|bwrap-shared-loopback",
     "the planned capability route is bound to the actual child isolation boundary");
     const mixedWorkspaceTask = { ...envTask,
       args:["-e", "require('node:fs').writeSync(1,process.env.SWARMFORGE_EXECUTION_ROUTE+'|'+process.env.SWARMFORGE_EXECUTION_BOUNDARY+'\\n')"],
@@ -5875,15 +5979,15 @@ if (process.platform !== "win32") {
     await routedRunner("mixed-plan workspace boundary", mixedWorkspaceTask);
     const workspaceRouteObservation = routedContext.receipt.tasks[mixedWorkspaceTask.key].output.trim();
     assert.equal(workspaceRouteObservation,
-      "workspace-sandbox|workspace-sandbox",
+      "workspace-sandbox|bwrap-unshared-network",
     "a workspace-only sibling does not inherit another task's scoped route or isolation boundary");
     prerequisiteContractEvidence.mixedRouteObservation = {
       scoped:scopedRouteObservation,
       workspace:workspaceRouteObservation,
     };
     prerequisiteContractEvidence.workspaceNarrow =
-      scopedRouteObservation === "scoped-command-approval|bwrap-unshared-network" &&
-      workspaceRouteObservation === "workspace-sandbox|workspace-sandbox";
+      scopedRouteObservation === "scoped-command-approval|bwrap-shared-loopback" &&
+      workspaceRouteObservation === "workspace-sandbox|bwrap-unshared-network";
     const isolatedBrowserTask = {
       ...envTask, key:"browser:isolated-output", stage:"browser", environment:null,
       args:["-e", "require('node:fs').writeSync(1,process.env.BRAND_EVIDENCE_DIR+'\\n')"],
