@@ -12,10 +12,15 @@ import {
   verificationPacksAtCommit,
 } from "./verification-changes.mjs";
 import { planVerification, verificationTaskIdentity } from "./verification-packs.mjs";
+import {
+  assertNoBlockingTimeoutIncidents,
+  createTimeoutIncidentStore,
+} from "./verification-timeout-incidents.mjs";
 
 const repository = fileURLToPath(new URL("../", import.meta.url));
 const notesRef = "refs/notes/swarmforge-verification";
 const shaPattern = /^[a-f0-9]{64}$/u;
+const incidentIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
 const runtimeVersionPattern = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/u;
 
 function git(repositoryRoot, ...args) {
@@ -192,6 +197,29 @@ async function canonicalPlanDocument({ commit, baseCommit, changeSet, packIds, r
     basePacks,
     historicalRegistryFallback,
   }));
+}
+
+export async function validateCanonicalVerificationCheckpoint({
+  receiptPath, commit, tree, baseCommit, evidenceTask, packIds, repositoryRoot = repository,
+} = {}) {
+  const changeSet = await canonicalVerificationChangeSet({ base:baseCommit, commit, repositoryRoot });
+  const plan = await canonicalPlanDocument({
+    commit, baseCommit, changeSet, packIds:sortedUnique(packIds ?? []), repositoryRoot,
+  });
+  const receipt = JSON.parse(await readFile(receiptPath, "utf8"));
+  if (receipt.candidate?.commit !== commit || receipt.candidate?.tree !== tree ||
+      receipt.candidate?.baseCommit !== baseCommit ||
+      receipt.candidate?.evidenceTask !== evidenceTask ||
+      receipt.candidate?.changeSetDigest !== verificationDigest(changeSet)) {
+    throw new Error("Canonical checkpoint candidate, base, task, or change set is not bound to the repair");
+  }
+  const parsed = await parsedReceipt(receiptPath, plan);
+  const results = Object.values(receipt.tasks);
+  if (results.some((result) => result.provenance !== "fresh" || result.timeoutIncidentId ||
+      result.runnerOwnedTimeout)) {
+    throw new Error("Canonical checkpoint requires a complete fresh task set without reuse or timeout");
+  }
+  return { plan, changeSet, receipt, ...parsed };
 }
 
 async function assertCanonicalPlan(recordPlan, details) {
@@ -428,6 +456,9 @@ function evidenceId(record) {
     task:record.task, commit:record.commit, tree:record.tree, baseCommit:record.baseCommit,
     packIds:record.packIds, planDigest:record.planDigest, identities:record.identities,
     receiptSha256:record.receipt.sha256,
+    ...((record.timeoutResolutions ?? []).length
+      ? { timeoutResolutions:record.timeoutResolutions }
+      : {}),
   });
 }
 
@@ -481,6 +512,15 @@ function validateRecordDocument(record, { allowLegacyExecutionLoad = false } = {
       throw new Error(`Invalid verification receipt result: ${result.key}`);
     }
   }
+  const timeoutResolutions = record.timeoutResolutions ?? [];
+  if (!Array.isArray(timeoutResolutions) || timeoutResolutions.some((resolution) =>
+    !incidentIdPattern.test(resolution?.incidentId ?? "") ||
+    !shaPattern.test(resolution?.failureDigest ?? "") ||
+    !shaPattern.test(resolution?.resolutionDigest ?? "")) ||
+    !same(timeoutResolutions.map(({ incidentId }) => incidentId),
+      [...timeoutResolutions.map(({ incidentId }) => incidentId)].sort())) {
+    throw new Error("Verification evidence has invalid timeout resolution links");
+  }
   if (record.evidenceId && record.evidenceId !== evidenceId(record)) throw new Error("Verification evidence id does not match its content");
   return record;
 }
@@ -496,6 +536,7 @@ export async function createPendingVerificationEvidence({
   toolchainValidator = validateStrictVerificationToolchain,
 }) {
   await toolchainValidator({ repositoryRoot });
+  await assertNoBlockingTimeoutIncidents("HEAD", { root:repositoryRoot });
   const {
     commit, tree, baseCommit, sourceIdentity, planRecord, actualChangeSet,
     receiptSourcePath, bytes, results, environment, artifact,
@@ -503,6 +544,8 @@ export async function createPendingVerificationEvidence({
     task, plan, receiptPath, changedSince, buildManifest, repositoryRoot,
     requireCompletedReceipt:true,
   });
+  const timeoutResolutions = await createTimeoutIncidentStore({ root:repositoryRoot })
+    .resolutions({ commit });
   const record = {
     version:2,
     status:"pending",
@@ -517,6 +560,8 @@ export async function createPendingVerificationEvidence({
     planDigest:verificationDigest(planRecord),
     identities:{ ...sourceIdentity, artifact },
     receipt:{ sourcePath:receiptSourcePath, sha256:verificationDigest(bytes), environment, tasks:results },
+    timeoutResolutions:timeoutResolutions.sort((left, right) =>
+      left.incidentId.localeCompare(right.incidentId)),
     preparedAt:new Date().toISOString(),
   };
   record.evidenceId = evidenceId(record);
@@ -589,6 +634,13 @@ export async function recordPendingVerificationEvidence(
       ]);
       if (pending.commit !== commit || pending.tree !== tree) {
         throw new Error("Pending evidence does not match the current commit and tree");
+      }
+      await assertNoBlockingTimeoutIncidents(commit, { root:repositoryRoot });
+      const currentTimeoutResolutions = await createTimeoutIncidentStore({ root:repositoryRoot })
+        .resolutions({ commit });
+      if (!same(currentTimeoutResolutions.sort((left, right) => left.incidentId.localeCompare(right.incidentId)),
+        pending.timeoutResolutions ?? [])) {
+        throw new Error("Timeout incident resolutions changed after verification");
       }
       if (!same(sourceIdentity, {
         registrySha256:pending.identities.registrySha256,
@@ -697,6 +749,13 @@ async function validateRecordedEvidence(record, canonical, tree, repositoryRoot)
     packIds:record.packIds,
     repositoryRoot,
   });
+  if (record.timeoutResolutions) {
+    const current = await createTimeoutIncidentStore({ root:repositoryRoot }).resolutions({ commit:canonical });
+    if (!same(current.sort((left, right) => left.incidentId.localeCompare(right.incidentId)),
+      record.timeoutResolutions)) {
+      throw new Error("Verification evidence timeout resolution links do not match repository-common state");
+    }
+  }
   return record;
 }
 

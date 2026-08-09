@@ -8,6 +8,7 @@ import {
   browserObservationSessionBatch,
   loadVerificationPacks,
 } from "./verification-packs.mjs";
+import { verificationProgressEmitter } from "./verification-timeout-incidents.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 
@@ -69,7 +70,7 @@ export function validateBrowserObservationBatch(matches) {
   return observations;
 }
 
-function runObservationProcess(packs, observations) {
+function runObservationProcess(packs, observations, progressOffsetMs = 0) {
   const combined = {
     id:observations.map(({ id }) => id).join(","),
     path:observations[0].path,
@@ -87,6 +88,8 @@ function runObservationProcess(packs, observations) {
         SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS:JSON.stringify(
           browserTargetConfigurations(observations),
         ),
+        SWARMFORGE_PROGRESS_SEQUENCE_START:"1000000",
+        SWARMFORGE_PROGRESS_MONOTONIC_OFFSET:String(progressOffsetMs),
       },
     });
     const stdout = [];
@@ -237,7 +240,7 @@ export function parseBrowserObservationBatchOutput(stdout, observations) {
   return { document, results, failures };
 }
 
-export async function runBrowserObservation(...ids) {
+async function runBrowserObservationWithProgress(ids, progressOffsetMs) {
   if (!ids.length || ids.some((id) => !id)) {
     throw new Error("Use: run-browser-observation.mjs <observation-id> [<observation-id> ...]");
   }
@@ -245,7 +248,7 @@ export async function runBrowserObservation(...ids) {
   const matches = ids.map((id) => observationById(packs, id));
   const observations = validateBrowserObservationBatch(matches);
   await assertFreshDist({ root:repositoryRoot });
-  const processResult = await runObservationProcess(packs, observations);
+  const processResult = await runObservationProcess(packs, observations, progressOffsetMs);
   const parsed = parseBrowserObservationBatchOutput(processResult.stdout, observations);
   const failures = [...parsed.failures];
   if (processResult.code !== 0 && !failures.length) {
@@ -261,12 +264,35 @@ export async function runBrowserObservation(...ids) {
   return parsed.document;
 }
 
+export async function runBrowserObservation(...ids) {
+  return runBrowserObservationWithProgress(ids, 0);
+}
+
+export async function runBrowserObservationSetupOnly() {
+  await assertFreshDist({ root:repositoryRoot });
+  return { setupOnly:true };
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const progressStarted = performance.now();
+  const progress = verificationProgressEmitter();
+  progress({ boundary:"process", state:{ status:"started", program:"browser-observation" } });
   if (process.argv.length < 3) {
     console.error("Use: run-browser-observation.mjs <observation-id> [<observation-id> ...]");
     process.exitCode = 1;
   } else {
-    withDistArtifactLock(() => runBrowserObservation(...process.argv.slice(2)))
+    const setupOnly = process.argv[2] === "--setup-only";
+    progress({ boundary:"artifact/setup", phase:"dist-artifact-lock", state:{ status:"waiting" } });
+    withDistArtifactLock(async() => {
+      progress({ boundary:"artifact/setup", phase:"dist-artifact-lock", state:{ status:"acquired" } });
+      return setupOnly
+        ? runBrowserObservationSetupOnly()
+        : runBrowserObservationWithProgress(
+          process.argv.slice(2), Math.max(0, performance.now() - progressStarted),
+        );
+    }, { onWait:({ waitedMs, owner }) => progress({
+      boundary:"artifact/setup", phase:"dist-artifact-lock", state:{ status:"waiting", waitedMs, owner },
+    }) })
       .then((document) => console.log(JSON.stringify(document)))
       .catch((error) => {
       if (error.partialDocument && Object.keys(error.partialDocument).length) {

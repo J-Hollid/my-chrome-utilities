@@ -351,7 +351,7 @@ const identityOrderRun = async (orderedTargets) => {
     emit:(record) => records.push(record),
   });
   return records.filter((record) => !record.swarmforgeBrowserTargetResult &&
-      !record.swarmforgeBrowserTargetTiming)
+      !record.swarmforgeBrowserTargetTiming && !record.swarmforgeVerificationProgress)
     .flatMap((record) => Object.entries(record)).sort(([leftKey, leftValue], [rightKey, rightValue]) =>
       `${leftValue}:${leftKey}`.localeCompare(`${rightValue}:${rightKey}`));
 };

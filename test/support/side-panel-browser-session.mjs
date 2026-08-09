@@ -93,12 +93,23 @@ async function cleanTarget(definition, resources, context, failure) {
 export async function runSidePanelBrowserSession({
   definitions, resources, environment = process.env, emit = console.log, now = () => performance.now(),
 }) {
+  let progressSequence = Number(environment.SWARMFORGE_PROGRESS_SEQUENCE_START ?? 1000000);
+  const progressOffset = Number(environment.SWARMFORGE_PROGRESS_MONOTONIC_OFFSET ?? 0);
+  const progressStarted = now();
+  const emitProgress = (record) => emit({ swarmforgeVerificationProgress:{
+    version:1, sequence:++progressSequence,
+    monotonicMs:Math.max(0, progressOffset + now() - progressStarted), ...record,
+  } });
+  emitProgress({ boundary:"process", state:{ status:"shared-resources-starting" } });
   const frozenEnvironment = Object.freeze({ ...environment });
   const processContext = await resources.start();
+  emitProgress({ boundary:"process", state:{ status:"shared-resources-ready" } });
   const failures = [];
   const executions = [];
   try {
     for (const definition of definitions) {
+      emitProgress({ boundary:"target", logicalTargetId:definition.id, phase:"setup",
+        state:{ status:"started" } });
       const timer = createBrowserPhaseTimer({ targetId:definition.id, phaseNames:phases, now });
       const context = {
         id:definition.id,
@@ -120,6 +131,8 @@ export async function runSidePanelBrowserSession({
       let observation;
       const runPhase = async (phase, work) => {
         if (timer.activePhase !== phase) timer.transition(phase);
+        emitProgress({ boundary:"target", logicalTargetId:definition.id, phase,
+          state:{ status:"active" } });
         try { return await work(); }
         catch (error) {
           error.activeBrowserPhase ??= phase;
@@ -127,6 +140,8 @@ export async function runSidePanelBrowserSession({
         }
       };
       context.runPhaseScoped = async (phase, work) => {
+        emitProgress({ boundary:"target", logicalTargetId:definition.id, phase,
+          state:{ status:"active", scope:"nested" } });
         try { return await timer.scoped(phase, work); }
         catch (error) {
           error.activeBrowserPhase ??= phase;
@@ -184,6 +199,8 @@ export async function runSidePanelBrowserSession({
               deferredAssertions:context.deferredAssertions.length,
             });
             timer.transition("cleanup");
+            emitProgress({ boundary:"cleanup", logicalTargetId:definition.id, phase:"cleanup",
+              state:{ status:"active" } });
             await cleanTarget(definition, resources, context, targetFailure);
           },
         });
@@ -210,6 +227,9 @@ export async function runSidePanelBrowserSession({
         }, 600),
         error:failure.message,
       } : { id:definition.id, status:"passed", durationMs:timing.durationMs } });
+      emitProgress({ boundary:"target", logicalTargetId:definition.id,
+        phase:failedAtPhase ?? "assertion",
+        state:{ status:failure ? "failed" : "passed" } });
       if (!failure) executions.push(Object.freeze({
         id:definition.id,
         viewport:structuredClone(definition.viewport),
@@ -220,7 +240,10 @@ export async function runSidePanelBrowserSession({
       }));
     }
   } finally {
+    emitProgress({ boundary:"cleanup", phase:"process-shutdown", state:{ status:"active" } });
     await resources.stop(processContext);
+    emitProgress({ boundary:"cleanup", phase:"process-shutdown", completed:true,
+      state:{ status:"complete" } });
   }
   if (failures.length) {
     throw new AggregateError(

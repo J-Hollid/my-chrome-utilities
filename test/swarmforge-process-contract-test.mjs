@@ -80,6 +80,13 @@ assert.match(launcherSource, /\(def required-helpers[\s\S]*?"browser-test"/u,
   "the approval-friendly browser helper must be validated before launch mutation");
 assert.match(launcherSource, /\(def required-helpers[\s\S]*?"handoff_sequence\.bb"/u,
   "the shared crash-safe handoff sequence allocator must be validated before launch mutation");
+const handoffSource = await readFile(path.join(root, "swarmforge/scripts/swarm_handoff.bb"), "utf8");
+assert.match(handoffSource,
+  /\(= "git_handoff" \(get headers "type"\)\)[\s\S]*?verification-timeout-incidents\.mjs[\s\S]*?assert-handoff/u,
+  "Git handoff validates repository-common unresolved timeout incidents");
+assert.doesNotMatch(handoffSource,
+  /\(= "note" \(get headers "type"\)\)[\s\S]{0,200}?assert-handoff/u,
+  "repair note handoffs remain available while Git handoff is blocked");
 const babashkaTaskSource = await readFile(path.join(root, "bb.edn"), "utf8");
 const acceptanceTestDirectory = path.join(root, "test/acceptance");
 const acceptanceTestFiles = (await readdir(acceptanceTestDirectory))

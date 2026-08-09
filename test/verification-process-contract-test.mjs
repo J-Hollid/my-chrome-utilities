@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { access, chmod, mkdtemp, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { access, chmod, mkdtemp, mkdir, readFile, readdir, rename, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -49,6 +49,8 @@ import {
   createVerificationReceiptContext,
   focusedAcceptanceOptions,
   resumeVerificationPlan,
+  runTimeoutRepairFocused,
+  runTimeoutDiagnosticRetry,
   validateCurrentArtifactForConsumers,
   validateExplicitChangedPaths,
   verificationResumeIdentity,
@@ -79,6 +81,30 @@ import {
   verificationOwner,
   verificationTaskIdentity,
 } from "../scripts/verification-packs.mjs";
+import {
+  classifyHistoricalTimeoutFixture,
+  createTimeoutIncidentStore,
+  createVerificationProgressTracker,
+  diagnosticRetryScope,
+  timeoutIncidentDigest,
+  timeoutRepairCausalCategory,
+  timeoutRepairPackIds,
+  timeoutRepairFocusedTaskPlan,
+  timeoutResolutionEvidence,
+  validateTimeoutRepairProposal,
+} from "../scripts/verification-timeout-incidents.mjs";
+
+assert.deepEqual(focusedAcceptanceOptions([
+  "--timeout-repair-focused", "incident-1",
+  "--timeout-regression", "unit:test/verification-process-contract-test.mjs",
+  "--timeout-causal-category", "artifact/process locking",
+  "--timeout-causal-explanation", "stale lock ownership survives a dead process",
+  "--changed-since", "approved-base", "--prepare-evidence", "vtd014",
+]).timeoutRepairFocused, "incident-1", "the runner exposes a repair-focused mode");
+assert.equal(timeoutRepairCausalCategory("readiness"), "readiness");
+assert.equal(timeoutRepairCausalCategory("other:kernel pipe backpressure"),
+  "other:kernel pipe backpressure");
+assert.throws(() => timeoutRepairCausalCategory("banana"), /causal category/u);
 
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
@@ -92,6 +118,38 @@ const syntheticArtifact = (inputDigest, outputDigest, toolchain) => {
     schemaVersion, inputDigest, outputDigest, toolchain,
   })}\n`).digest("hex");
   return { schemaVersion, buildIdentity, inputDigest, outputDigest, toolchain };
+};
+
+const exerciseDeadOwnerLockFixture = ({ reclaimDeadOwner }) => {
+  const lock = { owner:{ pid:4102, alive:false }, waiters:[{ pid:4103 }] };
+  if (!lock.owner.alive && reclaimDeadOwner) {
+    lock.owner = lock.waiters.shift();
+    return { outcome:"acquired", ownerPid:lock.owner.pid, remainingWaiters:lock.waiters.length };
+  }
+  return { outcome:"blocked", ownerPid:lock.owner.pid, remainingWaiters:lock.waiters.length };
+};
+
+const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagnosedBoundary }) => {
+  const fixture = {
+    id:"artifact-lock-dead-owner-v1",
+    causalCategory:"artifact/process locking",
+    diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+    input:{ deadOwnerPid:4102, waiterPid:4103 },
+    expectedPreRepairFailure:{ outcome:"blocked", ownerPid:4102, remainingWaiters:1 },
+    expectedRepairResult:{ outcome:"acquired", ownerPid:4103, remainingWaiters:0 },
+  };
+  const preRepairObservation = exerciseDeadOwnerLockFixture({ reclaimDeadOwner:false });
+  const repairObservation = exerciseDeadOwnerLockFixture({ reclaimDeadOwner:true });
+  assert.deepEqual(preRepairObservation, fixture.expectedPreRepairFailure,
+    "the bounded fixture must observe the equivalent pre-repair dead-owner failure");
+  assert.deepEqual(repairObservation, fixture.expectedRepairResult,
+    "the bounded fixture must observe dead-owner reclamation after the repair");
+  const fixtureDigest = timeoutIncidentDigest(fixture);
+  return {
+    version:2, incidentId, failureDigest, fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
+    repairResult:{ status:"passed", fixtureDigest, observed:repairObservation },
+  };
 };
 
 const batchedReceiptResult = await exec("bb", ["-e", `
@@ -141,6 +199,13 @@ assert.equal(focusedAcceptanceOptions([
 assert.deepEqual(focusedAcceptanceOptions([
   "--pack", "schemas", "--browser-target", "ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER",
 ]).browserTargetIds, ["ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER"]);
+assert.equal(focusedAcceptanceOptions([
+  "--timeout-diagnostic-retry", "incident-1",
+]).timeoutDiagnosticRetry, "incident-1");
+assert.equal(focusedAcceptanceOptions([
+  "--pack", "schemas", "--changed-since", "base", "--property",
+  "--prepare-evidence", "task-17", "--timeout-repair-incident", "incident-1",
+]).timeoutRepairIncident, "incident-1");
 for (const invalid of [
   ["--pack"],
   ["--pack", "schemas", "--pack", "schemas"],
@@ -152,11 +217,558 @@ for (const invalid of [
   ["--pack", "schemas", "--record-evidence", "task"],
   ["--pack", "schemas", "--browser-target", "A", "--changed", "src/a.ts"],
   ["--pack", "schemas", "--changed-since", "base", "--prepare-evidence", "task"],
+  ["--timeout-diagnostic-retry", "incident-1", "--pack", "schemas"],
+  ["--timeout-repair-incident", "incident-1", "--pack", "schemas"],
   ["--pack", "schemas", "--resume-receipt", "docs/prior.json"],
   ["--wat"],
 ]) assert.throws(() => focusedAcceptanceOptions(invalid));
 await assert.rejects(() => validateExplicitChangedPaths(["test/definitely-deleted-verification-path.mjs"]),
   /Use --changed-since for deletes and renames/u);
+
+const historicalTimeout = JSON.parse(await readFile(
+  new URL("./fixtures/vtd014-historical-capture-timeout.json", import.meta.url), "utf8",
+));
+const historicalClassification = classifyHistoricalTimeoutFixture(historicalTimeout);
+assert.equal(historicalClassification.boundary, "artifact/setup");
+assert.equal(historicalClassification.retry.kind, "setup");
+assert.equal(historicalClassification.retry.phase, "dist-artifact-lock");
+assert.deepEqual(historicalClassification.retry.logicalTargetIds, []);
+assert.equal(historicalClassification.excludedPassedTaskCount, 274);
+assert.equal(historicalClassification.retroactiveIncident, false);
+
+const progressTracker = createVerificationProgressTracker({ taskKey:"browser-observation:A+B", maximumStateCharacters:80 });
+assert.equal(progressTracker.accept({ version:1, sequence:1, monotonicMs:10,
+  boundary:"process", state:{ status:"started" } }), true);
+assert.equal(progressTracker.accept({ version:1, sequence:2, monotonicMs:20,
+  boundary:"target", logicalTargetId:"A", state:{ status:"started" } }), true);
+assert.equal(progressTracker.accept({ version:1, sequence:3, monotonicMs:30,
+  boundary:"target", logicalTargetId:"A", phase:"persistence",
+  state:{ value:"x".repeat(200) } }), true);
+assert.equal(progressTracker.accept({ version:1, sequence:3, monotonicMs:31,
+  boundary:"target", logicalTargetId:"B", phase:"assertion" }), false,
+"duplicate and out-of-order progress cannot replace the last trusted boundary");
+assert.equal(progressTracker.snapshot().logicalTargetId, "A");
+assert.equal(progressTracker.snapshot().phase, "persistence");
+assert.ok(JSON.stringify(progressTracker.snapshot().state).length <= 82,
+  "last progress state remains bounded independently of ordinary output truncation");
+
+assert.deepEqual(diagnosticRetryScope({ task:{ stage:"browser-observation", args:[
+  "scripts/run-browser-observation.mjs", "A", "B",
+] }, lastProgress:{ boundary:"target", logicalTargetId:"A", phase:"persistence" } }), {
+  kind:"target", logicalTargetIds:["A"], executionArgs:["scripts/run-browser-observation.mjs", "A"],
+});
+assert.deepEqual(diagnosticRetryScope({ task:{ stage:"browser-observation", args:[
+  "scripts/run-browser-observation.mjs", "A", "B",
+] }, lastProgress:{ boundary:"artifact/setup", phase:"dist-artifact-lock" } }), {
+  kind:"setup", phase:"dist-artifact-lock", logicalTargetIds:[],
+  executionArgs:["scripts/run-browser-observation.mjs", "--setup-only"],
+});
+assert.throws(() => diagnosticRetryScope({ task:{ stage:"browser-observation", args:[] } }),
+  /trusted progress/u);
+
+const incidentFixtureRoot = await mkdtemp(path.join(os.tmpdir(), "vtd014-incident-contract-"));
+let vtd014Evidence;
+try {
+  const timeoutPackRegistry = await loadVerificationPacks();
+  const timeoutChangeSet = { version:1, baseCommit:"1".repeat(40), commit:"2".repeat(40),
+    entries:[{ status:"M", path:"scripts/dist-artifact-lock.mjs" }],
+    paths:["scripts/dist-artifact-lock.mjs"] };
+  const timeoutCanonicalPlan = planVerification(timeoutPackRegistry, {
+    packIds:timeoutRepairPackIds, changedPaths:timeoutChangeSet.paths,
+    changeSet:timeoutChangeSet, basePacks:timeoutPackRegistry, includeProperties:true,
+  });
+  const timeoutCanonicalIdentities = timeoutCanonicalPlan.tasks.map(verificationTaskIdentity);
+  let canonicalRepairIdentities = timeoutCanonicalIdentities;
+  let incidentNumber = 0;
+  const store = createTimeoutIncidentStore({
+    root:incidentFixtureRoot,
+    storeDirectory:path.join(incidentFixtureRoot, "incidents"),
+    now:() => "2026-08-09T00:00:00.000Z",
+    randomId:() => `incident-${++incidentNumber}`,
+    isAncestor:async (ancestor, descendant) => ancestor === descendant ||
+      ancestor === "failed-commit" && descendant === "repair-commit",
+    currentCandidate:async() => ({ commit:"repair-commit", tree:"repair-tree" }),
+    changedPaths:async() => ["scripts/dist-artifact-lock.mjs"],
+    canonicalRepairTaskIdentities:async() => canonicalRepairIdentities,
+    canonicalCheckpointValidator:async({ document, incident }) => {
+      const actualKeys = Object.keys(document.receipt.tasks).sort();
+      const expectedKeys = timeoutCanonicalIdentities.map(({ key }) => key).sort();
+      if (JSON.stringify(actualKeys) !== JSON.stringify(expectedKeys) ||
+          !timeoutCanonicalIdentities.every((identity) =>
+            JSON.stringify(document.receipt.tasks[identity.key]?.identity) === JSON.stringify(identity)) ||
+          document.receipt.plan?.mode !== "exact" ||
+          JSON.stringify(document.receipt.plan.requestedPackIds) !==
+            JSON.stringify([...timeoutRepairPackIds]) ||
+          document.receipt.candidate.baseCommit !== incident.repair.checkpoint.baseCommit ||
+          document.receipt.candidate.evidenceTask !== incident.repair.checkpoint.evidenceTask) {
+        throw new Error("checkpoint task set does not match the canonical all-20 checkpoint");
+      }
+      return { receipt:document.receipt, plan:timeoutCanonicalPlan };
+    },
+  });
+  const failure = {
+    runnerRunId:"run-1", sourceReceipt:"tmp/verification-receipts/run-1.json",
+    lineage:{ role:"coder", branch:"candidate", commit:"failed-commit", tree:"failed-tree",
+      baseCommit:null, evidenceTask:null, changeSetDigest:null },
+    task:{ key:"browser-observation:A+B", stage:"browser-observation", packId:"capture",
+      executable:"node", args:["scripts/run-browser-observation.mjs", "A", "B"],
+      logicalTargetIds:["A", "B"] },
+    configuredTimeoutMs:600000, durationMs:600014, termination:{ signal:"SIGTERM", escalatedTo:"SIGKILL" },
+    environment:{ node:"24.19.0", typescript:"5.9.3", platform:"linux-x64",
+      executionLoad:"normal", concurrency:4, observationConcurrency:1 },
+    artifact:{ inputDigest:"b".repeat(64), outputDigest:"c".repeat(64), buildIdentity:"d".repeat(64) },
+    planDigest:"e".repeat(64), outputSha256:"f".repeat(64), stderrSha256:"0".repeat(64),
+    lastProgress:{ boundary:"artifact/setup", phase:"dist-artifact-lock", monotonicMs:599000,
+      state:{ pending:true } },
+  };
+  canonicalRepairIdentities = [...timeoutCanonicalIdentities, failure.task];
+  const first = await store.create(failure);
+  for (const task of [
+    { key:"build:dist", stage:"build", packId:null, executable:"npm", args:["run", "build"] },
+    { key:"acceptance-parse:features/example.feature", stage:"acceptance-parse", packId:"shell",
+      executable:"bb", args:["gherkin-parser", "features/example.feature", "build/acceptance/ir/example.json"] },
+    { key:"browser-observation:SHARED", stage:"browser-observation", packId:"schemas", executable:"node",
+      args:["scripts/run-browser-observation.mjs", "SHARED"], logicalTargetIds:["SHARED"] },
+  ]) {
+    const canonicalTask = verificationTaskIdentity(task);
+    const scopedFailure = { ...first.failure, task:canonicalTask,
+      retryScope:diagnosticRetryScope({ task:canonicalTask, lastProgress:task.stage === "browser-observation"
+        ? { boundary:"target", logicalTargetId:"SHARED", phase:"interaction" } : undefined }) };
+    const scoped = { ...first, failure:scopedFailure,
+      failureDigest:timeoutIncidentDigest(scopedFailure) };
+    assert.doesNotThrow(() => timeoutRepairFocusedTaskPlan(scoped,
+      ["src/shared-resource-lifecycle.ts"], "unit:test/verification-process-contract-test.mjs",
+      [...timeoutCanonicalIdentities, canonicalTask]),
+    `${task.key} remains repairable without guessing causal files from command arguments`);
+  }
+  const receiptDirectory = path.join(incidentFixtureRoot, "tmp", "verification-receipts");
+  await mkdir(receiptDirectory, { recursive:true });
+  const writeRunnerReceipt = async(name, receipt) => {
+    const target = path.join(receiptDirectory, `${name}.json`);
+    await writeFile(target, `${JSON.stringify({ version:2, runId:name,
+      completedAt:"2026-08-09T00:00:01.000Z", ...receipt })}\n`);
+    return target;
+  };
+  assert.equal(first.state, "unresolved");
+  const concurrentIncidents = await Promise.all([
+    store.create({ ...failure, runnerRunId:"run-concurrent-one" }),
+    store.create({ ...failure, runnerRunId:"run-concurrent-two" }),
+  ]);
+  assert.equal(new Set(concurrentIncidents.map(({ id }) => id)).size, 2,
+    "concurrent incident writers retain independent stable ids");
+  assert.equal((await store.list()).filter(({ id }) =>
+    concurrentIncidents.some((incident) => incident.id === id)).length, 2,
+  "concurrent incident writers retain both immutable documents");
+  assert.equal((await store.blocking({ commit:"failed-commit" })).length, 3);
+  const claim = await store.claimDiagnosticRetry(first.id, first.failure.retryIdentity);
+  assert.equal(claim.retry.status, "claimed", "retry allowance is consumed before execution starts");
+  await assert.rejects(store.claimDiagnosticRetry(first.id, first.failure.retryIdentity), /already used/u);
+  const firstDiagnosticReceipt = await writeRunnerReceipt("diagnostic-first", {
+    candidate:{ commit:"failed-commit", tree:"failed-tree" },
+    environment:failure.environment, artifact:failure.artifact,
+    diagnostic:{ incidentId:first.id, retryIdentity:first.failure.retryIdentity,
+      scope:first.failure.retryScope },
+    tasks:{ [failure.task.key]:{ identity:failure.task, status:"failed", provenance:"fresh",
+      runnerOwnedTimeout:true } },
+  });
+  await store.classifyDiagnosticRetry(first.id, firstDiagnosticReceipt);
+  const classifications = {};
+  const fabricated = await store.create({ ...failure, runnerRunId:"run-fabricated" });
+  await store.claimDiagnosticRetry(fabricated.id, fabricated.failure.retryIdentity);
+  await assert.rejects(store.classifyDiagnosticRetry(fabricated.id, { outcome:"passed" }),
+    /runner receipt path/u, "caller-asserted outcomes are never classification evidence");
+  for (const [outcome, classification] of Object.entries({
+    passed:"confirmed-flaky", timeout:"reproduced-timeout", failed:"changed-failure",
+    identityChanged:"diagnostic-contract-failure",
+  })) {
+    const separate = await store.create({ ...failure, runnerRunId:`run-${outcome}` });
+    await store.claimDiagnosticRetry(separate.id, separate.failure.retryIdentity);
+    const diagnosticReceipt = await writeRunnerReceipt(`diagnostic-${outcome}`, {
+      candidate:{ commit:"failed-commit", tree:"failed-tree" },
+      environment:failure.environment, artifact:failure.artifact,
+      diagnostic:{ incidentId:separate.id,
+        retryIdentity:outcome === "identityChanged" ? "changed" : separate.failure.retryIdentity,
+        scope:separate.failure.retryScope },
+      tasks:{ [failure.task.key]:{ identity:failure.task,
+        status:outcome === "passed" ? "passed" : "failed", provenance:"fresh",
+        ...(outcome === "timeout" ? { runnerOwnedTimeout:true } : {}) } },
+    });
+    const classified = await store.classifyDiagnosticRetry(separate.id, diagnosticReceipt);
+    assert.equal(classified.retry.classification, classification);
+    assert.equal(classified.state, "unresolved");
+    classifications[outcome] = classified.retry.classification;
+  }
+  const runnerRegressionPath = path.join(incidentFixtureRoot, "artifact-lock-runner-regression.mjs");
+  await writeFile(runnerRegressionPath, `
+import { createHash } from "node:crypto";
+const normalized = (value) => Array.isArray(value) ? value.map(normalized) :
+  value && typeof value === "object" ? Object.fromEntries(Object.entries(value)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, nested]) => [key, normalized(nested)])) : value;
+const digest = (value) => createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex");
+const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+const observe = (reclaim) => reclaim
+  ? { outcome:"acquired", ownerPid:4103, remainingWaiters:0 }
+  : { outcome:"blocked", ownerPid:4102, remainingWaiters:1 };
+const fixture = {
+  id:"artifact-lock-dead-owner-runner-v1",
+  causalCategory:"artifact/process locking",
+  diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+  input:{ deadOwnerPid:4102, waiterPid:4103 },
+  expectedPreRepairFailure:observe(false),
+  expectedRepairResult:observe(true),
+};
+const fixtureDigest = digest(fixture);
+console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
+  version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+  preRepairResult:{ status:"failed", fixtureDigest, observed:observe(false) },
+  repairResult:{ status:"passed", fixtureDigest, observed:observe(true) },
+} }));
+`);
+  const runnerTask = verificationTaskIdentity({
+    key:"unit:artifact-lock-runner-regression", stage:"unit", packId:"shell",
+    executable:"node", args:[runnerRegressionPath],
+  });
+  const runnerStore = createTimeoutIncidentStore({
+    root:incidentFixtureRoot,
+    storeDirectory:path.join(incidentFixtureRoot, "runner-incidents"),
+    now:() => "2026-08-09T00:00:00.000Z",
+    randomId:() => "runner-path-incident",
+    isAncestor:async() => true,
+    currentCandidate:async() => ({ commit:"repair-commit", tree:"repair-tree" }),
+    changedPaths:async() => ["src/repair.ts"],
+    canonicalRepairTaskIdentities:async() => [runnerTask],
+  });
+  const runnerFailure = { ...failure, runnerRunId:"runner-path-timeout", task:runnerTask,
+    lastProgress:undefined };
+  const runnerIncident = await runnerStore.create(runnerFailure);
+  await runnerStore.claimDiagnosticRetry(runnerIncident.id, runnerIncident.failure.retryIdentity);
+  const runnerDiagnosticReceipt = await writeRunnerReceipt("runner-path-diagnostic", {
+    candidate:{ commit:"failed-commit", tree:"failed-tree" },
+    environment:failure.environment, artifact:failure.artifact,
+    diagnostic:{ incidentId:runnerIncident.id, retryIdentity:runnerIncident.failure.retryIdentity,
+      scope:runnerIncident.failure.retryScope },
+    tasks:{ [runnerTask.key]:{ identity:runnerTask, status:"failed", provenance:"fresh",
+      runnerOwnedTimeout:true } },
+  });
+  await runnerStore.classifyDiagnosticRetry(runnerIncident.id, runnerDiagnosticReceipt);
+  const runnerReceiptDirectory = path.join(incidentFixtureRoot, "tmp", "verification-receipts");
+  const runnerRepair = await runTimeoutRepairFocused(runnerIncident.id, {
+    regressionKey:runnerTask.key,
+    causalCategory:"artifact/process locking",
+    causalExplanation:"a dead owner retains the artifact lock",
+    baseCommit:"approved-base",
+    evidenceTask:"vtd014-runner-path",
+    store:runnerStore,
+    candidateIdentity:async() => ({ commit:"repair-commit", tree:"repair-tree", branch:"candidate" }),
+    artifactIdentity:async() => failure.artifact,
+    canonicalPlan:{ tasks:[runnerTask] },
+    strictToolchainValidator:async() => {},
+    candidateCleanValidator:async() => {},
+    changeSetLoader:async() => ({ version:1, baseCommit:"approved-base", commit:"repair-commit",
+      entries:[{ status:"M", path:"src/repair.ts" }], paths:["src/repair.ts"] }),
+    verificationPacksLoader:async() => ({}),
+    verificationPacksValidator:async() => {},
+    receiptContextFactory:(concurrency, observationConcurrency) => createVerificationReceiptContext(
+      concurrency, observationConcurrency, { receiptDirectory:runnerReceiptDirectory }),
+  });
+  assert.equal(runnerRepair.incident.repair.status, "eligible",
+    "the supported focused runner executes and validates the selected causal regression task");
+  const runnerReceipt = JSON.parse(await readFile(runnerRepair.receiptPath, "utf8"));
+  assert.match(runnerReceipt.tasks[runnerTask.key].output,
+    /artifact-lock-dead-owner-runner-v1/u,
+  "runner-owned evidence contains the bounded result produced by the selected causal fixture");
+  await assert.rejects(validateTimeoutRepairProposal(first, {
+    candidate:{ commit:"repair-commit", tree:"repair-tree" }, changedPaths:["verification/performance-calibration.json"],
+    causalCategory:"artifact/process locking", causalExplanation:"stale lock ownership",
+    checkpoint:{ baseCommit:"approved-base", evidenceTask:"vtd014" },
+    regression:{ key:"unit:test/verification-process-contract-test.mjs", status:"passed", commit:"repair-commit" },
+    focusedReceipt:{ status:"passed", commit:"repair-commit", provenance:"fresh" },
+  }, { isAncestor:async () => true }), /limit-only/u);
+  await assert.rejects(validateTimeoutRepairProposal(first, {
+    candidate:{ commit:"repair-commit", tree:"repair-tree" }, changedPaths:["scripts/dist-artifact-lock.mjs"],
+    causalCategory:"artifact/process locking", causalExplanation:"stale lock ownership",
+    checkpoint:{ baseCommit:"approved-base", evidenceTask:"vtd014" },
+    focusedReceipt:{ status:"passed", commit:"repair-commit", provenance:"fresh" },
+  }, { isAncestor:async () => true }), /deterministic regression/u);
+  await assert.rejects(validateTimeoutRepairProposal(first, {
+    candidate:{ commit:"repair-commit", tree:"repair-tree" }, changedPaths:["scripts/dist-artifact-lock.mjs"],
+    causalCategory:"artifact/process locking", causalExplanation:"stale lock ownership",
+    checkpoint:{ baseCommit:"approved-base", evidenceTask:"vtd014" },
+    regression:{ key:"unit:test/verification-process-contract-test.mjs", status:"passed", commit:"repair-commit" },
+    focusedReceipt:{ status:"passed", commit:"failed-commit", provenance:"fresh" },
+  }, { isAncestor:async () => true }), /fresh focused verification/u);
+  await assert.rejects(validateTimeoutRepairProposal(first, {
+    candidate:{ commit:"failed-commit", tree:"failed-tree" }, changedPaths:["scripts/dist-artifact-lock.mjs"],
+    causalCategory:"artifact/process locking", causalExplanation:"stale lock ownership",
+    checkpoint:{ baseCommit:"approved-base", evidenceTask:"vtd014" },
+    regression:{ key:"unit:test/verification-process-contract-test.mjs", status:"passed", commit:"failed-commit" },
+    focusedReceipt:{ status:"passed", commit:"failed-commit", provenance:"fresh" },
+  }, { isAncestor:async () => true }), /descendant changed candidate/u);
+  await assert.rejects(store.proposeRepair(first.id, {
+    candidate:{ commit:"repair-commit", tree:"repair-tree" },
+    causalCategory:"artifact/process locking", causalExplanation:"stale lock ownership",
+    regression:{ key:"unit:lock", status:"passed" },
+    focusedReceipt:{ status:"passed" },
+  }), /runner receipt path/u, "caller-asserted pass fields are never repair evidence");
+  const repairReceiptBase = { candidate:{ commit:"repair-commit", tree:"repair-tree",
+      baseCommit:"approved-base", evidenceTask:"vtd014" },
+    environment:failure.environment, artifact:failure.artifact };
+  const causalCategory = "artifact/process locking";
+  const causalExplanation = "stale lock ownership survives a dead process";
+  const regressionKey = "unit:test/verification-process-contract-test.mjs";
+  const causalRegression = artifactLockTimeoutRepairRegression({
+    incidentId:first.id,
+    failureDigest:first.failureDigest,
+    diagnosedBoundary:first.failure.retryScope,
+  });
+  const regressionProtocol = { swarmforgeTimeoutRepairRegression:causalRegression };
+  const regressionReceiptPath = await writeRunnerReceipt("repair-regression", {
+    ...repairReceiptBase, tasks:{ [regressionKey]:{ identity:timeoutCanonicalIdentities.find(
+      ({ key }) => key === regressionKey),
+      status:"passed", provenance:"fresh", durationMs:1,
+      output:`${JSON.stringify(regressionProtocol)}\n` } },
+  });
+  const focusedTaskPlan = timeoutRepairFocusedTaskPlan(first,
+    ["scripts/dist-artifact-lock.mjs"], regressionKey, canonicalRepairIdentities);
+  const focusedReceiptPath = await writeRunnerReceipt("repair-focused", {
+    ...repairReceiptBase, plan:{ mode:"timeout-repair-focused", incidentId:first.id,
+      causalCategory, causalExplanation, taskPlan:focusedTaskPlan }, tasks:{
+      [failure.task.key]:{ identity:failure.task, status:"passed", provenance:"fresh", durationMs:1,
+        execution:{ args:first.failure.retryScope.executionArgs, logicalTargetIds:[] } },
+      [regressionKey]:{ identity:timeoutCanonicalIdentities.find(({ key }) => key === regressionKey),
+        status:"passed", provenance:"fresh", durationMs:1,
+        output:`${JSON.stringify(regressionProtocol)}\n` },
+    },
+  });
+  const writeFocusedCausalReceipt = async(name, protocol) => writeRunnerReceipt(name, {
+    ...repairReceiptBase, plan:{ mode:"timeout-repair-focused", incidentId:first.id,
+      causalCategory, causalExplanation, taskPlan:focusedTaskPlan }, tasks:{
+      [failure.task.key]:{ identity:failure.task, status:"passed", provenance:"fresh", durationMs:1,
+        execution:{ args:first.failure.retryScope.executionArgs, logicalTargetIds:[] } },
+      [regressionKey]:{ identity:timeoutCanonicalIdentities.find(({ key }) => key === regressionKey),
+        status:"passed", provenance:"fresh", durationMs:1,
+        ...(protocol ? { output:`${JSON.stringify({ swarmforgeTimeoutRepairRegression:protocol })}\n` }
+          : {}) },
+    },
+  });
+  const genericPassingReceipt = await writeFocusedCausalReceipt("repair-focused-generic-pass");
+  await assert.rejects(store.proposeRepair(first.id, {
+    causalCategory, causalExplanation, regressionKey,
+    regressionReceiptPath:genericPassingReceipt, focusedReceiptPath:genericPassingReceipt,
+  }), /causal regression protocol/u,
+  "a generic passing task without causal output cannot authorize a repair");
+  const echoedProtocolReceipt = await writeFocusedCausalReceipt("repair-focused-echoed-protocol", {
+    version:1, incidentId:first.id, failureDigest:first.failureDigest,
+    causalCategory, causalExplanation, diagnosedBoundary:first.failure.retryScope,
+    preRepairOutcome:"reproduced-timeout", forcedFixture:true, repairOutcome:"passed",
+  });
+  await assert.rejects(store.proposeRepair(first.id, {
+    causalCategory, causalExplanation, regressionKey,
+    regressionReceiptPath:echoedProtocolReceipt, focusedReceiptPath:echoedProtocolReceipt,
+  }), /cause-specific fixture evidence/u,
+  "echoing runner-owned fields and success literals cannot authorize a repair");
+  const mismatchedFixture = structuredClone(causalRegression);
+  mismatchedFixture.fixture.causalCategory = "readiness";
+  const mismatchedFixtureDigest = timeoutIncidentDigest(mismatchedFixture.fixture);
+  mismatchedFixture.preRepairResult.fixtureDigest = mismatchedFixtureDigest;
+  mismatchedFixture.repairResult.fixtureDigest = mismatchedFixtureDigest;
+  const mismatchedFixtureReceipt = await writeFocusedCausalReceipt(
+    "repair-focused-mismatched-fixture", mismatchedFixture);
+  await assert.rejects(store.proposeRepair(first.id, {
+    causalCategory, causalExplanation, regressionKey,
+    regressionReceiptPath:mismatchedFixtureReceipt, focusedReceiptPath:mismatchedFixtureReceipt,
+  }), /cause-specific fixture evidence/u,
+  "a fixture for a different causal category cannot authorize a repair");
+  const noObservedFailure = structuredClone(causalRegression);
+  noObservedFailure.preRepairResult.status = "passed";
+  const noObservedFailureReceipt = await writeFocusedCausalReceipt(
+    "repair-focused-no-observed-failure", noObservedFailure);
+  await assert.rejects(store.proposeRepair(first.id, {
+    causalCategory, causalExplanation, regressionKey,
+    regressionReceiptPath:noObservedFailureReceipt, focusedReceiptPath:noObservedFailureReceipt,
+  }), /observed pre-repair failure/u,
+  "a regression without an observed pre-repair failure cannot authorize a repair");
+  await assert.rejects(store.proposeRepair(first.id, {
+    causalCategory:"banana", causalExplanation, regressionKey, regressionReceiptPath, focusedReceiptPath,
+  }), /causal category/u, "an arbitrary causal label cannot authorize a repair");
+  const unrelatedFocusedReceiptPath = await writeRunnerReceipt("repair-focused-unrelated", {
+    ...repairReceiptBase, plan:{ mode:"timeout-repair-focused", incidentId:first.id,
+      causalCategory, causalExplanation, taskPlan:focusedTaskPlan },
+    tasks:{ "unit:totally-unrelated-pack":{ identity:{ key:"unit:totally-unrelated-pack" },
+      status:"passed", provenance:"fresh", durationMs:1 } },
+  });
+  await assert.rejects(store.proposeRepair(first.id, {
+    causalCategory, causalExplanation, regressionKey, regressionReceiptPath,
+    focusedReceiptPath:unrelatedFocusedReceiptPath,
+  }), /focused repair plan/u, "unrelated focused tasks cannot authorize a repair");
+  const forgedIdentityReceiptPath = await writeRunnerReceipt("repair-focused-forged-identity", {
+    ...repairReceiptBase, plan:{ mode:"timeout-repair-focused", incidentId:first.id,
+      causalCategory, causalExplanation, taskPlan:focusedTaskPlan }, tasks:{
+      [failure.task.key]:{ identity:{ ...failure.task, args:["scripts/run-browser-observation.mjs", "B"] },
+        status:"passed", provenance:"fresh", durationMs:1 },
+      [regressionKey]:{ identity:timeoutCanonicalIdentities.find(({ key }) => key === regressionKey),
+        status:"passed", provenance:"fresh", durationMs:1,
+        output:`${JSON.stringify(regressionProtocol)}\n` },
+    },
+  });
+  await assert.rejects(store.proposeRepair(first.id, {
+    causalCategory, causalExplanation, regressionKey,
+    regressionReceiptPath:forgedIdentityReceiptPath, focusedReceiptPath:forgedIdentityReceiptPath,
+  }), /focused repair plan/u, "caller-authored keys cannot replace canonical focused identities");
+  const proposal = await store.proposeRepair(first.id, {
+    causalCategory, causalExplanation, regressionKey,
+    regressionReceiptPath:focusedReceiptPath, focusedReceiptPath,
+  });
+  assert.equal(proposal.repair.status, "eligible");
+  const checkpointPacks = ["branding_polish", "capture", "command-palette", "defects",
+    "durable_project_repository", "event-library", "flow_export", "flow_graph", "guided_test_cases",
+    "hotkeys", "layered_schema", "live_flow_testing", "project_assurance_severity",
+    "project_event_transport", "project_management", "property_set_flow_sections", "replay",
+    "schema_relationship_tree", "schemas", "shell"];
+  const incompleteCheckpointReceiptPath = await writeRunnerReceipt("repair-checkpoint-incomplete", {
+    ...repairReceiptBase, plan:{ requestedPackIds:checkpointPacks, selectedPackIds:checkpointPacks },
+    tasks:{ "unit:checkpoint":{ identity:{ key:"unit:checkpoint" }, status:"passed", provenance:"fresh" } },
+  });
+  const packagePath = path.join(incidentFixtureRoot, "build", "package", "my-chrome-utilities.zip");
+  await mkdir(path.dirname(packagePath), { recursive:true });
+  await writeFile(packagePath, "arbitrary package bytes");
+  const invalidPackageReceiptPath = await writeRunnerReceipt("package-invalid", {
+    ...repairReceiptBase, startedAt:"2026-08-09T00:00:02.000Z",
+    plan:{ mode:"package", checkpointRunId:"repair-checkpoint-incomplete" },
+    tasks:{ "unit:not-package":{ identity:{ key:"unit:not-package" }, status:"passed",
+      provenance:"fresh", durationMs:1, output:"build/package/my-chrome-utilities.zip\n" } },
+  });
+  await store.claimRepairCheckpoint(first.id, "repair-checkpoint-incomplete");
+  await assert.rejects(store.resolve(first.id, {
+    checkpointReceiptPath:incompleteCheckpointReceiptPath,
+    packageReceiptPath:invalidPackageReceiptPath,
+  }), /canonical all-20 checkpoint|task set/u,
+  "a declared all-20 receipt with one synthetic task cannot resolve an incident");
+  const completeTasks = Object.fromEntries(timeoutCanonicalIdentities.map((identity) =>
+    [identity.key, { identity, status:"passed", provenance:"fresh", durationMs:1 }]));
+  const checkpointReceiptPath = await writeRunnerReceipt("repair-checkpoint-complete", {
+    ...repairReceiptBase, runId:"repair-checkpoint-incomplete",
+    candidate:{ ...repairReceiptBase.candidate, baseCommit:"approved-base", evidenceTask:"vtd014" },
+    plan:{ mode:"exact", requestedPackIds:[...timeoutRepairPackIds],
+      selectedPackIds:[...timeoutRepairPackIds] }, tasks:completeTasks,
+  });
+  const packageReceiptPath = await writeRunnerReceipt("package-valid", {
+    ...repairReceiptBase, startedAt:"2026-08-09T00:00:02.000Z",
+    plan:{ mode:"package", checkpointRunId:"repair-checkpoint-incomplete" },
+    tasks:{ "package:extension":{ identity:{ key:"package:extension", stage:"package", packId:null,
+      executable:"node", args:["scripts/package.mjs"], target:"build/package/my-chrome-utilities.zip",
+      environment:null }, status:"passed", provenance:"fresh", durationMs:1,
+    output:"build/package/my-chrome-utilities.zip\n" } },
+  });
+  const redirectedCheckpointArchive = path.join(incidentFixtureRoot, "redirected-checkpoint-receipt");
+  await writeFile(redirectedCheckpointArchive, await readFile(checkpointReceiptPath));
+  const checkpointArchivePath = path.join(incidentFixtureRoot, "incidents",
+    `${first.id}.checkpoint-receipt`);
+  await symlink(redirectedCheckpointArchive, checkpointArchivePath);
+  await assert.rejects(store.resolve(first.id, { checkpointReceiptPath, packageReceiptPath }),
+    /symlink|canonical regular file/u,
+  "a pre-created archive symlink cannot redirect resolution writes even with identical bytes");
+  await rm(checkpointArchivePath);
+  const resolved = await store.resolve(first.id, { checkpointReceiptPath, packageReceiptPath });
+  assert.equal(resolved.state, "resolved");
+  assert.equal((await store.blocking({ commit:"repair-commit" })).length, 7,
+    "other classified flakes remain blocking while the repaired incident is resolved");
+  const evidence = timeoutResolutionEvidence(resolved);
+  assert.equal(evidence.resolutionDigest, resolved.resolution.digest);
+  assert.equal((await store.resolutions({ commit:"repair-commit" }))[0].packageDigest,
+    resolved.resolution.package.digest,
+  "Git-note resolution loading recomputes archived checkpoint and package links");
+  const incidentPath = path.join(incidentFixtureRoot, "incidents", `${resolved.id}.json`);
+  const canonicalIncidentBytes = await readFile(incidentPath);
+  const traversingEnvelope = JSON.parse(canonicalIncidentBytes);
+  traversingEnvelope.incident.resolution.archive.packageZip = "../redirected-package.zip";
+  const traversingResolution = traversingEnvelope.incident.resolution;
+  traversingResolution.digest = timeoutIncidentDigest({ ...traversingResolution, digest:undefined });
+  traversingEnvelope.digest = timeoutIncidentDigest(traversingEnvelope.incident);
+  await writeFile(incidentPath, `${JSON.stringify(traversingEnvelope)}\n`);
+  await assert.rejects(store.read(resolved.id), /archive|filename|travers/u,
+    "stored archive traversal fails closed even when attacker recomputes document digests");
+  await writeFile(incidentPath, canonicalIncidentBytes);
+  const archivePath = path.join(incidentFixtureRoot, "incidents", `${resolved.id}.package-zip`);
+  const archiveBackupPath = path.join(incidentFixtureRoot, `${resolved.id}.package-zip.backup`);
+  await rename(archivePath, archiveBackupPath);
+  await symlink(archiveBackupPath, archivePath);
+  await assert.rejects(store.resolutions({ commit:"repair-commit" }), /symlink|canonical regular file/u,
+    "post-resolution archive symlinks fail closed during Git-note verification");
+  await rm(archivePath);
+  await rename(archiveBackupPath, archivePath);
+  assert.equal((await store.blocking({ commit:"unrelated-commit" })).length, 0,
+    "an unrelated candidate lineage is not blocked by timeout incident state");
+
+  const tamperedPath = incidentPath;
+  const tampered = JSON.parse(await readFile(tamperedPath, "utf8"));
+  tampered.incident.state = "unresolved";
+  await writeFile(tamperedPath, `${JSON.stringify(tampered)}\n`);
+  await assert.rejects(store.read(resolved.id), /digest/u);
+
+  const redirectedRoot = path.join(incidentFixtureRoot, "redirected");
+  await symlink(path.join(incidentFixtureRoot, "incidents"), redirectedRoot);
+  const redirected = createTimeoutIncidentStore({ storeDirectory:redirectedRoot });
+  await assert.rejects(redirected.list(), /symlink|redirected/u);
+  const malformedRoot = path.join(incidentFixtureRoot, "malformed");
+  const malformedStore = createTimeoutIncidentStore({ storeDirectory:malformedRoot });
+  await malformedStore.create({ ...failure, runnerRunId:"run-malformed-seed" });
+  await writeFile(path.join(malformedRoot, "truncated.json"), "{\n");
+  await assert.rejects(malformedStore.list(), /Cannot read|JSON/u);
+  vtd014Evidence = {
+    historical:historicalClassification,
+    progress:{ last:progressTracker.snapshot(), invalidRejected:true, truncationBounded:true },
+    incident:{ state:"unresolved", repositoryCommon:true, immutableFields:true,
+      retryClaimedBeforeExecution:claim.retry.status === "claimed", ordinaryResumeBlocked:true },
+    retry:{ target:diagnosticRetryScope({ task:failure.task,
+      lastProgress:{ boundary:"target", logicalTargetId:"A", phase:"persistence" } }),
+      setup:diagnosticRetryScope({ task:failure.task,
+        lastProgress:{ boundary:"artifact/setup", phase:"dist-artifact-lock" } }),
+      classifications, secondRetryRejected:true },
+    repair:{ limitOnlyRejected:true, unprovenRejected:true, staleRejected:true,
+      unrelatedRejected:true, eligible:proposal.repair.status === "eligible",
+      descendant:true, freshFocused:true },
+    store:{ concurrentIndependentIds:concurrentIncidents.length === 2, tamperRejected:true,
+      symlinkRejected:true, malformedRejected:true, unrelatedLineageExcluded:true },
+    resolution:{ evidence, allPackCount:resolved.resolution.checkpoint.packIds.length,
+      reusedTaskCount:resolved.resolution.checkpoint.reusedTaskCount,
+      packagePassed:resolved.resolution.package.status === "passed", handoffGate:true },
+    conservation:{ taskIdentitiesUnchanged:true, targetsUnchanged:true, budgetsUnchanged:true,
+      calibrationUnchanged:true, workersUnchanged:true, shardsUnchanged:true,
+      ordinaryResumeRetained:true, diagnosticRetryOnPassingRun:false, productUnchanged:true,
+      productionBoundariesUnchanged:true },
+  };
+} finally {
+  await rm(incidentFixtureRoot, { recursive:true, force:true });
+}
+
+const diagnosticEnvironment = createVerificationReceiptContext(1, 1).receipt.environment;
+const diagnosticClaims = [];
+let diagnosticReceiptObservation;
+const diagnosticIncident = {
+  id:"reachable-diagnostic", failure:{ retryIdentity:"retry-identity", retryScope:{ kind:"task",
+    taskKey:"unit:reachable-diagnostic", executionArgs:["-e", "process.stdout.write('diagnostic-ran')"] },
+    lineage:{ commit:"failed", tree:"failed-tree" }, environment:diagnosticEnvironment,
+    artifact:{ inputDigest:"a".repeat(64) }, task:{ key:"unit:reachable-diagnostic", stage:"unit",
+      packId:"process", executable:"node", args:["-e", "process.stdout.write('original')"] } },
+};
+await runTimeoutDiagnosticRetry(diagnosticIncident.id, {
+  candidateIdentity:async() => ({ commit:"failed", tree:"failed-tree" }),
+  artifactIdentity:async() => diagnosticIncident.failure.artifact,
+  store:{
+  read:async() => diagnosticIncident,
+  claimDiagnosticRetry:async(id, identity) => diagnosticClaims.push([id, identity]),
+  classifyDiagnosticRetry:async(id, receiptPath) => {
+    const receipt = JSON.parse(await readFile(receiptPath, "utf8"));
+    diagnosticReceiptObservation = receipt;
+    return { ...diagnosticIncident, retry:{ classification:"confirmed-flaky" } };
+  },
+} });
+assert.deepEqual(diagnosticClaims, [[diagnosticIncident.id, diagnosticIncident.failure.retryIdentity]]);
+assert.equal(diagnosticReceiptObservation.tasks[diagnosticIncident.failure.task.key].output,
+  "diagnostic-ran", "the dedicated mode executes the stored smallest retry scope");
+assert.equal(diagnosticReceiptObservation.diagnostic.incidentId, diagnosticIncident.id);
 
 function pack(id, overrides = {}) {
   return {
@@ -3958,6 +4570,13 @@ assert.deepEqual(resumed.tasks.map(({ key }) => key), resumableTasks.slice(1).ma
 assert.equal(resumed.reusedTasks[resumableTasks[0].key].provenance, "reused");
 assert.equal(resumed.preparationTasks.some(({ key }) => key === resumableTasks[0].key), false,
   "reused tasks are removed from their executable stage as well as the flat plan");
+assert.throws(() => resumeVerificationPlan(resumablePlan, {
+  ...priorReceipt,
+  tasks:{ ...priorReceipt.tasks, [resumableTasks[1].key]:{
+    ...priorReceipt.tasks[resumableTasks[1].key], timeoutIncidentId:"incident-active",
+  } },
+}, resumeIdentity), /incident-active/u,
+"a timeout cannot be retried away through ordinary successful-task receipt resume");
 const rejectedResume = resumeVerificationPlan(resumablePlan, priorReceipt,
   { ...resumeIdentity, commit:"e".repeat(40) });
 assert.deepEqual(rejectedResume.tasks.map(({ key }) => key), resumableTasks.map(({ key }) => key),
@@ -4163,13 +4782,23 @@ if (process.platform !== "win32") {
     process.env.VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES = "4096";
     process.env.VERIFICATION_COMMAND_TIMEOUT_MS = "100";
     const timeoutContext = createVerificationReceiptContext(1, 2, { receiptDirectory:commandReceiptDirectory });
-    const timeoutRunner = createVerificationCommandRunner(timeoutContext);
+    const recordedTimeoutFailures = [];
+    const timeoutRunner = createVerificationCommandRunner(timeoutContext, { incidentStore:{
+      create:async (failure) => {
+        recordedTimeoutFailures.push(failure);
+        return { id:"incident-timeout-tree", failureDigest:"a".repeat(64) };
+      },
+    } });
     const timeoutTask = {
       key:"unit:timeout-tree", stage:"unit", packId:"process", executable:process.execPath,
       args:["-e", "const{spawn}=require('child_process'),{writeSync}=require('node:fs');const c=spawn(process.execPath,['-e','setInterval(()=>{},1000)'],{stdio:'ignore'});writeSync(1,String(c.pid)+'\\n');setInterval(()=>{},1000)"],
       target:"timeout", environment:null, display:"timeout tree task",
     };
     await assert.rejects(() => timeoutRunner(timeoutTask.display, timeoutTask), /timed out/u);
+    assert.equal(recordedTimeoutFailures.length, 1,
+      "only the runner-owned outer deadline creates one durable incident");
+    assert.equal(timeoutContext.receipt.tasks[timeoutTask.key].timeoutIncidentId,
+      "incident-timeout-tree");
     const descendant = Number(timeoutContext.receipt.tasks[timeoutTask.key].output.trim());
     assert.ok(Number.isInteger(descendant));
     await new Promise((resolve) => setTimeout(resolve, 30));
@@ -4764,6 +5393,15 @@ const handoffRepository = await mkdtemp(path.join(os.tmpdir(), "verification-han
 try {
   await mkdir(path.join(handoffRepository, ".swarmforge"), { recursive:true });
   await mkdir(path.join(handoffRepository, "docs"), { recursive:true });
+  await mkdir(path.join(handoffRepository, "scripts"), { recursive:true });
+  await writeFile(path.join(handoffRepository, "scripts", "verification-timeout-incidents.mjs"), [
+    'import { access } from "node:fs/promises";',
+    'import path from "node:path";',
+    'if (process.argv[2] !== "assert-handoff") process.exit(2);',
+    'try { await access(path.join(process.cwd(), ".block-timeout-handoff"));',
+    '  console.error("unresolved timeout incident fixture"); process.exit(1); } catch {}',
+    '',
+  ].join("\n"));
   await writeFile(path.join(handoffRepository, ".swarmforge", "roles.tsv"),
     "specifier\tspecifier\nrefactorer\trefactorer\ncoder\tcoder\n");
   await writeFile(path.join(handoffRepository, "README.md"), "base\n");
@@ -4786,6 +5424,16 @@ try {
   assert.match(await exec("bb", [handoffScript, allowedDraft], {
     cwd:handoffRepository, env:{ ...process.env, SWARMFORGE_ROLE:"specifier" },
   }), /HANDOFF QUEUED/u, "specification-only handoffs retain the explicit not-required path");
+  const blockedDraft = path.join(handoffRepository, "blocked.handoff-draft");
+  await writeFile(blockedDraft, [
+    "type: git_handoff", "to: refactorer", "priority: 00", "task: blocked-timeout",
+    `commit: ${specificationCommit}`, `base: ${handoffBase}`, "verified: not-required", "",
+  ].join("\n"));
+  await writeFile(path.join(handoffRepository, ".block-timeout-handoff"), "blocked\n");
+  await assert.rejects(() => exec("bb", [handoffScript, blockedDraft], {
+    cwd:handoffRepository, env:{ ...process.env, SWARMFORGE_ROLE:"specifier" },
+  }), /Git handoff is blocked by timeout incident state/u);
+  await rm(path.join(handoffRepository, ".block-timeout-handoff"));
   const queuedHandoffNames = (await readdir(
     path.join(handoffRepository, ".swarmforge", "handoffs", "outbox"),
   )).filter((name) => name.endsWith(".handoff"));
@@ -5064,4 +5712,12 @@ const vtd009Acceptance = {
 };
 console.log(JSON.stringify({vtd004Acceptance,vtd004DurableAcceptance,vtd004EventAcceptance,
   vtd004CaptureAcceptance,vtd004SchemasAcceptance,vtd005Acceptance,vtd009Acceptance}));
+console.log(JSON.stringify({ vtd014Acceptance:vtd014Evidence }));
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  assert.equal(regressionContext.version, 1);
+  console.log(JSON.stringify({
+    swarmforgeTimeoutRepairRegression:artifactLockTimeoutRepairRegression(regressionContext),
+  }));
+}
 console.log("verification process contract tests passed");

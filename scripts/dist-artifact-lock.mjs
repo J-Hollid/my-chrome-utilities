@@ -277,6 +277,7 @@ export async function acquireDistArtifactLock(
   {
     timeoutMs = environmentMilliseconds("DIST_ARTIFACT_LOCK_TIMEOUT_MS", 600000),
     reportAfterMs = environmentMilliseconds("DIST_ARTIFACT_LOCK_REPORT_MS", 5000),
+    onWait,
   } = {},
 ) {
   positiveMilliseconds("timeoutMs", timeoutMs);
@@ -296,6 +297,11 @@ export async function acquireDistArtifactLock(
       owner = await readFile(ownerFile, "utf8");
     } catch {}
     console.error(`[dist-lock:waiting ${Math.round(waited / 1000)}s] owner ${owner}`);
+    if (onWait) {
+      let parsedOwner;
+      try { parsedOwner = JSON.parse(owner); } catch { parsedOwner = owner; }
+      await onWait({ waitedMs:waited, owner:parsedOwner });
+    }
   };
 
   for (;;) {
@@ -342,10 +348,10 @@ export async function acquireDistArtifactLock(
   }
 }
 
-export async function withDistArtifactLock(operation) {
+export async function withDistArtifactLock(operation, options = {}) {
   if (localLockContext.getStore() === true) return operation();
   if (await inheritedDistArtifactLockIsHeld()) return operation();
-  const release = await acquireDistArtifactLock();
+  const release = await acquireDistArtifactLock(undefined, options);
   const previous = process.env[heldEnvironmentKey];
   process.env[heldEnvironmentKey] = release.token;
   try {

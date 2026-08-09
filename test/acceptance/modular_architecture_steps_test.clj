@@ -4,6 +4,7 @@
             [acceptance.verification-support.isolated-handler-audit :as isolation-audit]
             [acceptance.verification-support.modular-architecture-vtd007-handlers :as vtd007]
             [acceptance.verification-support.modular-architecture-vtd009-handlers :as vtd009]
+            [acceptance.verification-support.modular-architecture-vtd014-handlers :as vtd014]
             [aps.gherkin :as gherkin]
             [clojure.test :refer [deftest is]]))
 
@@ -71,6 +72,60 @@
       (let [handler (first (filter #(re-matches (:pattern %) step) modular/handlers))]
         (is (some? handler) step)
         (is (not= "^.*$" (str (:pattern handler))) step)))))
+
+(deftest vtd014-steps-use-dedicated-production-backed-semantics
+  (let [feature (gherkin/parse-file "features/modular-verification-packs.feature")
+        scenarios (filter #(re-matches #"Modular verification packs 1(?:0[4-9]|1[01])" (:name %))
+                          (:scenarios feature))
+        steps (mapcat :steps scenarios)]
+    (is (= 8 (count scenarios)))
+    (doseq [{:keys [text]} steps]
+      (let [handler (first (filter #(re-matches (:pattern %) text) modular/handlers))]
+        (is (some? handler) text)
+        (is (not= "^.*$" (str (:pattern handler))) text)))))
+
+(deftest vtd014-outline-captures-resolve-authoritative-example-values
+  (let [feature (gherkin/parse-file "features/modular-verification-packs.feature")
+        execution (first (filter #(= "Modular verification packs 105/example_1" (:name %))
+                                 (runtime/expand-executions feature)))
+        evidence {:incident {:retryClaimedBeforeExecution true}}]
+    (with-redefs-fn {#'vtd014/production-evidence! (constantly evidence)}
+      #(is (= "target TARGET-A in phase persistence"
+              (:vtd014/failure-boundary
+               (runtime/run-execution! execution modular/handlers)))))))
+
+(deftest vtd014-scenarios-execute-with-their-dedicated-production-evidence
+  (let [feature (gherkin/parse-file "features/modular-verification-packs.feature")
+        executions (filter #(re-matches #"Modular verification packs 1(?:0[4-9]|1[01])/example_\d+"
+                                        (:name %))
+                           (runtime/expand-executions feature))
+        digest (apply str (repeat 64 "a"))
+        evidence {:historical {:boundary "artifact/setup" :excludedPassedTaskCount 274
+                               :excludedLogicalTargetIds ["1" "2" "3" "4" "5"]
+                               :retroactiveIncident false}
+                  :progress {:truncationBounded true}
+                  :incident {:state "unresolved" :repositoryCommon true :immutableFields true
+                             :ordinaryResumeBlocked true :retryClaimedBeforeExecution true}
+                  :retry {:classifications {:passed "confirmed-flaky"
+                                            :timeout "reproduced-timeout"
+                                            :failed "changed-failure"
+                                            :identityChanged "diagnostic-contract-failure"}
+                          :secondRetryRejected true}
+                  :repair {:limitOnlyRejected true :unprovenRejected true :staleRejected true
+                           :unrelatedRejected true :eligible true :descendant true :freshFocused true}
+                  :store {:concurrentIndependentIds true :tamperRejected true :symlinkRejected true
+                          :malformedRejected true :unrelatedLineageExcluded true}
+                  :resolution {:allPackCount 20 :reusedTaskCount 0 :packagePassed true
+                               :evidence {:failureDigest digest :resolutionDigest digest}}
+                  :conservation {:taskIdentitiesUnchanged true :targetsUnchanged true
+                                 :budgetsUnchanged true :calibrationUnchanged true
+                                 :workersUnchanged true :shardsUnchanged true
+                                 :ordinaryResumeRetained true :diagnosticRetryOnPassingRun false
+                                 :productUnchanged true :productionBoundariesUnchanged true}}]
+    (is (= 18 (count executions)))
+    (with-redefs-fn {#'vtd014/production-evidence! (constantly evidence)}
+      #(doseq [execution executions]
+         (is (map? (runtime/run-execution! execution modular/handlers)) (:name execution))))))
 
 (deftest vtd003-steps-use-dedicated-production-backed-semantics
   (let [calibration (#'modular/performance-calibration)

@@ -1,6 +1,6 @@
 (ns acceptance.verification-support.modular-architecture-vtd006-handlers
   (:require [acceptance.steps.support :as support]
-            [cheshire.core :as json]
+            [acceptance.verification-support.modular-architecture-process-evidence :as process-evidence]
             [clojure.string :as str]))
 
 (defonce ^:private evidence (atom nil))
@@ -16,18 +16,13 @@
    "shell" "test/support/side-panel-shell-targets.mjs"})
 
 (defn- production-evidence! []
-  (or @evidence
-      (let [result (support/verified-command-or-prepared-task-result
-                    ["node" "test/acceptance/side-panel-browser-session-contract.mjs"]
-                    "unit:test/verification-process-contract-test.mjs"
-                    ["node" "test/verification-process-contract-test.mjs"])
-            line (first (filter #(str/starts-with? % "{\"vtd006Acceptance\"")
-                                (str/split-lines (:out result))))]
-        (support/assert! (zero? (:exit result))
-                         "VTD-006 production contract probes failed."
-                         {:out (:out result) :err (:err result)})
-        (support/assert! line "VTD-006 production evidence is missing." {:out (:out result)})
-        (reset! evidence (:vtd006Acceptance (json/parse-string line true))))))
+  (process-evidence/load! evidence
+    {:command ["node" "test/acceptance/side-panel-browser-session-contract.mjs"]
+     :prepared-task "unit:test/verification-process-contract-test.mjs"
+     :fallback ["node" "test/verification-process-contract-test.mjs"]
+     :prefix "{\"vtd006Acceptance\"" :key :vtd006Acceptance
+     :failure "VTD-006 production contract probes failed."
+     :missing "VTD-006 production evidence is missing."}))
 
 (defn- prepared [world]
   (assoc world :vtd006/evidence (production-evidence!)))
@@ -306,6 +301,7 @@
                (assert! world (every? true? (vals (get-in world [:vtd006/evidence :controls])))
                         "A VTD-007 browser control is missing."))}
    {:pattern #"^no src product file, product behavior, saved value, accessibility result, feature owner, handler owner, pack dependency, target budget, calibration, worker limit, or shard changes$"
+    :applies? (fn [world] (nil? (:vtd014/evidence world)))
     :handler (fn [world _ _]
                (assert! world (= 63 (get-in world [:vtd006/evidence :contract :targetCount]))
                         "The infrastructure-only contract changed product topology."))}
@@ -315,6 +311,7 @@
                                           (get-in world [:vtd006/evidence :contract :outputCount])])
                         "Old/new program task conservation failed."))}
    {:pattern #"^the one-time delivery checkpoint runs all 20 runnable packs in canonical order followed by node scripts/package.mjs$"
+    :applies? (fn [world] (nil? (:vtd014/evidence world)))
     :handler (fn [world _ _]
                (assert! world (= 5 (count (get-in world [:vtd006/evidence :contract :packInventory])))
                         "VTD-006 checkpoint evidence is incomplete."))}])

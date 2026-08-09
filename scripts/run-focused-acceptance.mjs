@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { access, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -25,6 +25,15 @@ import {
   canonicalVerificationChangeSet,
   verificationPacksAtCommit,
 } from "./verification-changes.mjs";
+import {
+  assertNoBlockingTimeoutIncidents,
+  createTimeoutIncidentStore,
+  createVerificationProgressTracker,
+  timeoutRepairCausalCategory,
+  timeoutRepairFocusedTaskPlan,
+  timeoutRepairPackageTaskIdentity,
+  timeoutRepairPackIds,
+} from "./verification-timeout-incidents.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const defaultTimeoutMs = 600_000;
@@ -119,6 +128,27 @@ export function focusedAcceptanceOptions(args) {
       index += 1;
       continue;
     }
+    if (["--timeout-diagnostic-retry", "--timeout-repair-incident", "--timeout-repair-focused"].includes(argument)) {
+      once(argument);
+      const value = valueArgument(args, index, argument);
+      if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(value)) {
+        throw new Error(`Use a stable timeout incident id with ${argument}`);
+      }
+      if (argument === "--timeout-diagnostic-retry") options.timeoutDiagnosticRetry = value;
+      else if (argument === "--timeout-repair-incident") options.timeoutRepairIncident = value;
+      else options.timeoutRepairFocused = value;
+      index += 1;
+      continue;
+    }
+    if (["--timeout-regression", "--timeout-causal-category", "--timeout-causal-explanation"].includes(argument)) {
+      once(argument);
+      const value = valueArgument(args, index, argument);
+      if (argument === "--timeout-regression") options.timeoutRegression = value;
+      else if (argument === "--timeout-causal-category") options.timeoutCausalCategory = value;
+      else options.timeoutCausalExplanation = value;
+      index += 1;
+      continue;
+    }
     if (argument === "--resume-receipt") {
       once(argument);
       const value = changedPath(valueArgument(args, index, argument));
@@ -173,7 +203,8 @@ export function focusedAcceptanceOptions(args) {
     throw new Error(`Unknown verification option: ${argument}`);
   }
 
-  if (!options.terminalFull && !options.packIds.length && !options.changedPaths.length && !options.changedSince) {
+  if (!options.terminalFull && !options.packIds.length && !options.changedPaths.length && !options.changedSince &&
+      !options.timeoutDiagnosticRetry && !options.timeoutRepairFocused) {
     throw new Error("Select --pack <id>, --changed <path>, --changed-since <ref>, or --full");
   }
   if (options.terminalFull && (options.packIds.length || options.changedPaths.length || options.changedSince ||
@@ -190,7 +221,7 @@ export function focusedAcceptanceOptions(args) {
       options.skipBuild || options.shard || options.prepareEvidence)) {
     throw new Error("Use --browser-target with one --pack and no other verification mode options");
   }
-  if (options.prepareEvidence) {
+  if (options.prepareEvidence && !options.timeoutRepairFocused) {
     if (!options.packIds.length || !options.changedSince) {
       throw new Error("Evidence requires exact --pack selector(s) and --changed-since <commit>");
     }
@@ -204,6 +235,28 @@ export function focusedAcceptanceOptions(args) {
   if (options.resumeReceipt && (!options.packIds.length || !options.changedSince ||
       !options.includeProperties || !options.prepareEvidence)) {
     throw new Error("Resume requires an exact evidence checkpoint with packs, property, and changed-since selectors");
+  }
+  if (options.timeoutDiagnosticRetry && (options.packIds.length || options.changedPaths.length ||
+      options.changedSince || options.terminalFull || options.includeProperties || options.withDependencies ||
+      options.skipBuild || options.shard || options.prepareEvidence || options.resumeReceipt ||
+      options.browserTargetIds.length || options.timeoutRepairIncident)) {
+    throw new Error("Use --timeout-diagnostic-retry as an isolated runner-owned mode");
+  }
+  if (options.timeoutRepairIncident && (!options.prepareEvidence || options.resumeReceipt)) {
+    throw new Error("Use --timeout-repair-incident only with a fresh exact evidence checkpoint");
+  }
+  if (options.timeoutRepairFocused) {
+    if (!options.timeoutRegression || !options.timeoutCausalCategory || !options.timeoutCausalExplanation ||
+        !options.changedSince || !options.prepareEvidence) {
+      throw new Error("Repair-focused mode requires regression, causal category/explanation, changed-since, and evidence task");
+    }
+    if (options.packIds.length || options.changedPaths.length || options.terminalFull || options.includeProperties ||
+        options.withDependencies || options.skipBuild || options.shard || options.resumeReceipt ||
+        options.browserTargetIds.length || options.timeoutDiagnosticRetry || options.timeoutRepairIncident) {
+      throw new Error("Use --timeout-repair-focused as an isolated runner-owned mode");
+    }
+  } else if (options.timeoutRegression || options.timeoutCausalCategory || options.timeoutCausalExplanation) {
+    throw new Error("Timeout regression and causal fields require --timeout-repair-focused");
   }
   return options;
 }
@@ -305,15 +358,15 @@ export function createVerificationReceiptContext(
   return { receiptPath, runDirectory, receipt, write };
 }
 
-export function createVerificationCommandRunner(context) {
+export function createVerificationCommandRunner(context, options = {}) {
   if (process.platform === "win32") {
     throw new Error("The verification runner requires POSIX process-group termination; Windows is not supported");
   }
-  const timeoutMs = environmentInteger("VERIFICATION_COMMAND_TIMEOUT_MS", defaultTimeoutMs);
-  const terminationGraceMs = environmentInteger(
+  const timeoutMs = options.timeoutMs ?? environmentInteger("VERIFICATION_COMMAND_TIMEOUT_MS", defaultTimeoutMs);
+  const terminationGraceMs = options.terminationGraceMs ?? environmentInteger(
     "VERIFICATION_TERMINATION_GRACE_MS", defaultTerminationGraceMs, { maximum:30_000 },
   );
-  const outputLimit = environmentInteger(
+  const outputLimit = options.outputLimit ?? environmentInteger(
     "VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES", defaultOutputLimitBytes,
     { maximum:maximumOutputLimitBytes },
   );
@@ -323,6 +376,12 @@ export function createVerificationCommandRunner(context) {
       throw new Error(`Verification runner received ${receivedParentSignal}; refusing to start: ${display}`);
     }
     const taskEnvironment = task.environment ?? {};
+    const executionEnvironment = task.executionEnvironment ?? {};
+    const invalidExecutionEnvironment = Object.keys(executionEnvironment).find((name) =>
+      name !== "SWARMFORGE_TIMEOUT_REPAIR_REGRESSION");
+    if (invalidExecutionEnvironment) {
+      throw new Error(`Verification task has an unsupported runner-owned environment: ${invalidExecutionEnvironment}`);
+    }
     const reservedEnvironment = Object.keys(taskEnvironment).find((name) =>
       ["PATH", "NODE_OPTIONS", "MY_CHROME_UTILITIES_DIST_LOCK_HELD",
         "SWARMFORGE_VERIFICATION_RECEIPT", "SWARMFORGE_STRICT_VERIFICATION_RECEIPT"].includes(name) ||
@@ -352,10 +411,12 @@ export function createVerificationCommandRunner(context) {
       env:{
         ...process.env,
         ...taskEnvironment,
+        ...executionEnvironment,
         ...(process.env.MY_CHROME_UTILITIES_DIST_LOCK_HELD === undefined
           ? {}
           : { MY_CHROME_UTILITIES_DIST_LOCK_HELD:process.env.MY_CHROME_UTILITIES_DIST_LOCK_HELD }),
         SWARMFORGE_VERIFICATION_RECEIPT:context.receiptPath,
+        SWARMFORGE_VERIFICATION_TASK_KEY:task.key,
         ...(browserOutputDirectory ? {
           SWARMFORGE_VERIFICATION_OUTPUT_DIRECTORY:browserOutputDirectory,
           ...(process.env.SWARMFORGE_UPDATE_FIXTURES === "1"
@@ -369,6 +430,7 @@ export function createVerificationCommandRunner(context) {
     const stderr = [];
     let outputBytes = 0;
     let termination;
+    let runnerTimedOut = false;
     let killTimer;
     const requestTermination = (reason, signal = "SIGTERM") => {
       if (termination) return;
@@ -383,8 +445,17 @@ export function createVerificationCommandRunner(context) {
         requestTermination(`Verification output exceeded ${outputLimit} bytes: ${display}`);
       }
     };
+    const progress = createVerificationProgressTracker({ taskKey:task.key });
+    let progressBuffer = "";
+    const captureProgress = (chunk) => {
+      progressBuffer += chunk.toString();
+      const lines = progressBuffer.split(/\r?\n/u);
+      progressBuffer = lines.pop() ?? "";
+      for (const line of lines) progress.acceptLine(line);
+    };
     child.stdout.on("data", (chunk) => {
       process.stdout.write(chunk);
+      captureProgress(chunk);
       countOutput(chunk);
       if (outputBytes <= outputLimit) output.push(chunk);
     });
@@ -394,7 +465,10 @@ export function createVerificationCommandRunner(context) {
       if (outputBytes <= outputLimit) stderr.push(chunk);
     });
     const timeout = setTimeout(
-      () => requestTermination(`Verification command timed out after ${timeoutMs}ms: ${display}`),
+      () => {
+        runnerTimedOut = true;
+        requestTermination(`Verification command timed out after ${timeoutMs}ms: ${display}`);
+      },
       timeoutMs,
     );
     const result = await new Promise((resolve) => {
@@ -406,6 +480,7 @@ export function createVerificationCommandRunner(context) {
     clearTimeout(timeout);
     clearTimeout(killTimer);
     const freshDurationMs = Date.now() - started;
+    if (progressBuffer) progress.acceptLine(progressBuffer);
     const freshOut = Buffer.concat(output).toString();
     const freshErr = Buffer.concat(stderr).toString();
     const priorTask = task.priorReceiptTask;
@@ -433,8 +508,9 @@ export function createVerificationCommandRunner(context) {
       }
       return values;
     };
-    const logicalResults = task.logicalTargetIds
-      ? parseLogicalResults(out, task.logicalTargetIds)
+    const executionLogicalTargetIds = task.executionLogicalTargetIds ?? task.logicalTargetIds;
+    const logicalResults = executionLogicalTargetIds?.length
+      ? parseLogicalResults(out, executionLogicalTargetIds)
       : undefined;
     const logicalPassed = !logicalResults || Object.values(logicalResults)
       .every(({ status, durationMs }) => status === "passed" && Number.isFinite(durationMs));
@@ -443,17 +519,48 @@ export function createVerificationCommandRunner(context) {
       (!logicalPassed ? `Browser target result incomplete or failed: ${display}`
         : `Verification command failed (${result.signal ?? result.code}): ${display}`);
     const taskProvenance = priorTask ? { provenance:"mixed" } : { provenance:"fresh" };
-    context.receipt.tasks[task.key] = {
+    const receiptTask = {
       identity,
       status:passed ? "passed" : "failed",
       ...taskProvenance,
       durationMs:(priorTask?.durationMs ?? 0) + freshDurationMs,
       output:out,
       stderr:err,
+      ...(task.executionArgs ? { execution:{ args:[...executionArgs],
+        logicalTargetIds:[...(task.executionLogicalTargetIds ?? [])] } } : {}),
       ...(logicalResults ? { logicalResults } : {}),
       ...(passed ? {} : { exitCode:result.code, signal:result.signal, error:failure }),
     };
+    context.receipt.tasks[task.key] = receiptTask;
     await context.write();
+    if (runnerTimedOut) {
+      if (options.diagnosticIncidentId) {
+        receiptTask.runnerOwnedTimeout = true;
+        receiptTask.timeoutIncidentId = options.diagnosticIncidentId;
+        await context.write();
+      } else {
+        const store = options.incidentStore ?? createTimeoutIncidentStore();
+        const incident = await store.create({
+        runnerRunId:context.receipt.runId,
+        sourceReceipt:path.relative(repositoryRoot, context.receiptPath),
+        lineage:context.receipt.candidate ?? {},
+        task:identity,
+        configuredTimeoutMs:timeoutMs,
+        durationMs:freshDurationMs,
+        termination:{ signal:result.signal, escalatedTo:result.signal === "SIGKILL" ? "SIGKILL" : null },
+        environment:context.receipt.environment,
+        artifact:context.receipt.artifact ?? context.receipt.artifactInput ?? null,
+        planDigest:verificationDigest(context.receipt.plan ?? {}),
+        outputSha256:verificationDigest(freshOut),
+        stderrSha256:verificationDigest(freshErr),
+        lastProgress:progress.snapshot(),
+        progressDiagnostics:progress.diagnostics(),
+        });
+        receiptTask.timeoutIncidentId = incident.id;
+        receiptTask.timeoutFailureDigest = incident.failureDigest;
+        await context.write();
+      }
+    }
     if (passed) {
       console.error(`[verify:pass ${(freshDurationMs / 1000).toFixed(1)}s] ${executionDisplay}`);
       return { out };
@@ -462,11 +569,139 @@ export function createVerificationCommandRunner(context) {
   };
 }
 
+export async function runTimeoutDiagnosticRetry(id, {
+  store = createTimeoutIncidentStore(),
+  candidateIdentity = async() => ({
+    commit:await new Promise((resolve, reject) => execFile("git", ["rev-parse", "HEAD^{commit}"],
+      { cwd:repositoryRoot }, (error, stdout, stderr) => error
+        ? reject(new Error(stderr.trim() || error.message)) : resolve(stdout.trim()))),
+    tree:await new Promise((resolve, reject) => execFile("git", ["rev-parse", "HEAD^{tree}"],
+      { cwd:repositoryRoot }, (error, stdout, stderr) => error
+        ? reject(new Error(stderr.trim() || error.message)) : resolve(stdout.trim()))),
+  }),
+  artifactIdentity = () => validateCurrentArtifactForConsumers({ root:repositoryRoot }),
+} = {}) {
+  const incident = await store.read(id);
+  if (!incident.failure.retryScope) throw new Error(`Timeout incident ${id} has no trusted retry scope`);
+  const [candidate, artifact] = await Promise.all([candidateIdentity(), artifactIdentity()]);
+  if (candidate.commit !== incident.failure.lineage.commit || candidate.tree !== incident.failure.lineage.tree ||
+      verificationDigest(artifact) !== verificationDigest(incident.failure.artifact)) {
+    throw new Error(`Timeout incident ${id} diagnostic candidate or artifact identity changed`);
+  }
+  const concurrency = incident.failure.environment.concurrency;
+  const observationConcurrency = incident.failure.environment.observationConcurrency;
+  const context = createVerificationReceiptContext(concurrency, observationConcurrency);
+  context.receipt.candidate = { ...structuredClone(incident.failure.lineage), ...candidate };
+  context.receipt.artifact = structuredClone(artifact);
+  context.receipt.plan = { mode:"timeout-diagnostic", requestedPackIds:[incident.failure.task.packId],
+    selectedPackIds:[incident.failure.task.packId] };
+  context.receipt.diagnostic = { incidentId:id, retryIdentity:incident.failure.retryIdentity,
+    scope:structuredClone(incident.failure.retryScope) };
+  if (JSON.stringify(context.receipt.environment) !== JSON.stringify(incident.failure.environment)) {
+    throw new Error(`Timeout incident ${id} diagnostic environment identity changed`);
+  }
+  await store.claimDiagnosticRetry(id, incident.failure.retryIdentity);
+  await context.write();
+  const task = { ...structuredClone(incident.failure.task),
+    executionArgs:[...incident.failure.retryScope.executionArgs],
+    executionLogicalTargetIds:incident.failure.retryScope.logicalTargetIds ?? [] };
+  const runner = createVerificationCommandRunner(context, { diagnosticIncidentId:id,
+    timeoutMs:incident.failure.configuredTimeoutMs });
+  try { await runner(`diagnostic retry ${id}`, task); }
+  catch { /* the persisted runner receipt is the classification authority */ }
+  context.receipt.completedAt = new Date().toISOString();
+  await context.write();
+  const classified = await store.classifyDiagnosticRetry(id, context.receiptPath);
+  console.error(`[verify:timeout-diagnostic] ${id} ${classified.retry.classification}`);
+  return { incident:classified, receiptPath:context.receiptPath };
+}
+
+export async function runTimeoutRepairFocused(id, {
+  regressionKey, causalCategory, causalExplanation, baseCommit, evidenceTask,
+  store = createTimeoutIncidentStore(),
+  candidateIdentity = async() => {
+    const value = (...arguments_) => new Promise((resolve, reject) => execFile("git", arguments_,
+      { cwd:repositoryRoot }, (error, stdout, stderr) => error
+        ? reject(new Error(stderr.trim() || error.message)) : resolve(stdout.trim())));
+    return { commit:await value("rev-parse", "HEAD^{commit}"),
+      tree:await value("rev-parse", "HEAD^{tree}"), branch:await value("rev-parse", "--abbrev-ref", "HEAD") };
+  },
+  artifactIdentity = () => validateCurrentArtifactForConsumers({ root:repositoryRoot }),
+  canonicalPlan,
+  strictToolchainValidator = () => validateStrictVerificationToolchain({ repositoryRoot }),
+  candidateCleanValidator = () => validateVerificationCandidateClean({ repositoryRoot }),
+  changeSetLoader = (base) => canonicalVerificationChangeSet({ base, repositoryRoot }),
+  verificationPacksLoader = loadVerificationPacks,
+  verificationPacksValidator = validateVerificationPacks,
+  receiptContextFactory = createVerificationReceiptContext,
+  commandRunnerFactory = createVerificationCommandRunner,
+} = {}) {
+  timeoutRepairCausalCategory(causalCategory);
+  if (typeof causalExplanation !== "string" || causalExplanation !== causalExplanation.trim() ||
+      causalExplanation.length < 1 || causalExplanation.length > 500 ||
+      /[\u0000-\u001f\u007f]/u.test(causalExplanation)) {
+    throw new Error("Timeout repair requires a bounded one-line causal explanation");
+  }
+  if (typeof regressionKey !== "string" || !regressionKey || !baseCommit || !evidenceTask) {
+    throw new Error("Timeout repair requires regression, approved base, and evidence task");
+  }
+  await strictToolchainValidator();
+  await candidateCleanValidator();
+  const incident = await store.read(id);
+  const [candidate, artifact, changeSet, packs] = await Promise.all([
+    candidateIdentity(), artifactIdentity(),
+    changeSetLoader(baseCommit), verificationPacksLoader(),
+  ]);
+  await verificationPacksValidator(packs);
+  const plan = canonicalPlan ?? planVerification(packs, {
+    packIds:timeoutRepairPackIds, includeProperties:true, changedPaths:changeSet.paths, changeSet,
+  });
+  const canonicalIdentities = plan.tasks.map(verificationTaskIdentity);
+  const taskPlan = timeoutRepairFocusedTaskPlan(incident, changeSet.paths, regressionKey,
+    canonicalIdentities);
+  const context = receiptContextFactory(incident.failure.environment.concurrency,
+    incident.failure.environment.observationConcurrency);
+  context.receipt.candidate = { role:process.env.SWARMFORGE_ROLE ?? null, branch:candidate.branch ?? null,
+    commit:candidate.commit, tree:candidate.tree, baseCommit:changeSet.baseCommit, evidenceTask,
+    changeSetDigest:verificationDigest(changeSet) };
+  context.receipt.artifact = structuredClone(artifact);
+  context.receipt.plan = { mode:"timeout-repair-focused", incidentId:id, causalCategory,
+    causalExplanation, taskPlan };
+  await context.write();
+  console.error(`[verify:receipt] ${path.relative(repositoryRoot, context.receiptPath)}`);
+  const regressionContext = { version:1, incidentId:id, failureDigest:incident.failureDigest,
+    diagnosedBoundary:incident.failure.retryScope };
+  const runner = commandRunnerFactory(context);
+  for (const descriptor of taskPlan) {
+    const task = { ...structuredClone(descriptor.identity),
+      ...(descriptor.executionArgs ? { executionArgs:[...descriptor.executionArgs] } : {}),
+      ...(descriptor.executionLogicalTargetIds
+        ? { executionLogicalTargetIds:[...descriptor.executionLogicalTargetIds] } : {}),
+      ...(descriptor.roles.includes("causal-regression") ? { executionEnvironment:{
+        SWARMFORGE_TIMEOUT_REPAIR_REGRESSION:JSON.stringify(regressionContext),
+      } } : {}),
+    };
+    await runner(`timeout repair ${descriptor.roles.join("+")} ${task.key}`, task);
+  }
+  context.receipt.completedAt = new Date().toISOString();
+  await context.write();
+  const repaired = await store.proposeRepair(id, { causalCategory, causalExplanation, regressionKey,
+    regressionReceiptPath:context.receiptPath, focusedReceiptPath:context.receiptPath });
+  console.error(`[verify:timeout-repair-focused] ${id} ${repaired.repair.status}`);
+  return { incident:repaired, receiptPath:context.receiptPath, taskPlan };
+}
+
 function sameIdentity(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
 export function resumeVerificationPlan(plan, priorReceipt, resumeIdentity) {
+  const timedOut = Object.entries(priorReceipt?.tasks ?? {})
+    .filter(([, result]) => result?.timeoutIncidentId || /command timed out after/iu.test(result?.error ?? ""));
+  if (timedOut.length) {
+    throw new Error(`Timeout incident retry cannot use ordinary receipt resume: ${
+      timedOut.map(([key, result]) => result.timeoutIncidentId ?? key).join(", ")}`);
+  }
   const reusable = priorReceipt?.version === 2 &&
     sameIdentity(priorReceipt.resumeIdentity, resumeIdentity);
   const reusedTasks = {};
@@ -611,9 +846,25 @@ export async function runFocusedAcceptance(
 ) {
   const packs = await loadVerificationPacks();
   const options = focusedAcceptanceOptions(args);
+  if (options.timeoutDiagnosticRetry) {
+    if (commandRunner) throw new Error("Diagnostic retry cannot use an injected command runner");
+    return runTimeoutDiagnosticRetry(options.timeoutDiagnosticRetry);
+  }
+  if (options.timeoutRepairFocused) {
+    if (commandRunner) throw new Error("Repair-focused mode cannot use an injected command runner");
+    return runTimeoutRepairFocused(options.timeoutRepairFocused, {
+      regressionKey:options.timeoutRegression,
+      causalCategory:options.timeoutCausalCategory,
+      causalExplanation:options.timeoutCausalExplanation,
+      baseCommit:options.changedSince,
+      evidenceTask:options.prepareEvidence,
+    });
+  }
   const evidenceTask = options.prepareEvidence;
   const resumeReceiptPath = options.resumeReceipt;
+  const timeoutRepairIncident = options.timeoutRepairIncident;
   if (evidenceTask) {
+    if (!timeoutRepairIncident) await assertNoBlockingTimeoutIncidents("HEAD");
     await validateStrictVerificationToolchain({ repositoryRoot });
     await validateVerificationCandidateClean({ repositoryRoot });
   }
@@ -638,12 +889,31 @@ export async function runFocusedAcceptance(
   delete options.changedSince;
   delete options.prepareEvidence;
   delete options.resumeReceipt;
+  delete options.timeoutDiagnosticRetry;
+  delete options.timeoutRepairIncident;
   await validateVerificationPacks(packs);
   const plan = planVerification(packs, options);
   const concurrency = environmentInteger("VERIFICATION_CONCURRENCY", 4, { maximum:64 });
   const observationConcurrency = environmentInteger("VERIFICATION_OBSERVATION_CONCURRENCY", 2, { maximum:4 });
   const context = createVerificationReceiptContext(concurrency, observationConcurrency);
   const inputFingerprint = await createDistInputFingerprint({ root:repositoryRoot });
+  const gitValue = (...arguments_) => new Promise((resolve, reject) => {
+    execFile("git", arguments_, { cwd:repositoryRoot }, (error, stdout, stderr) => error
+      ? reject(new Error(stderr.trim() || error.message))
+      : resolve(stdout.trim()));
+  });
+  const [candidateCommit, candidateTree, candidateBranch] = await Promise.all([
+    gitValue("rev-parse", "HEAD^{commit}"), gitValue("rev-parse", "HEAD^{tree}"),
+    gitValue("rev-parse", "--abbrev-ref", "HEAD"),
+  ]);
+  context.receipt.candidate = {
+    role:process.env.SWARMFORGE_ROLE ?? null, branch:candidateBranch, commit:candidateCommit,
+    tree:candidateTree, baseCommit:changedSince ?? null, evidenceTask:evidenceTask ?? null,
+    changeSetDigest:plan.changeSet ? verificationDigest(plan.changeSet) : null,
+  };
+  context.receipt.artifactInput = {
+    inputDigest:inputFingerprint.inputDigest ?? inputFingerprint.digest,
+  };
   context.receipt.plan = {
     mode:plan.mode,
     requestedPackIds:[...plan.requestedPackIds].sort(),
@@ -653,6 +923,27 @@ export async function runFocusedAcceptance(
     changeSetDigest:plan.changeSet ? verificationDigest(plan.changeSet) : null,
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };
+  let timeoutStore;
+  if (timeoutRepairIncident) {
+    timeoutStore = createTimeoutIncidentStore();
+    const [incident, blocking] = await Promise.all([
+      timeoutStore.read(timeoutRepairIncident), timeoutStore.blocking({ commit:candidateCommit }),
+    ]);
+    if (blocking.some(({ id }) => id !== timeoutRepairIncident) ||
+        !blocking.some(({ id }) => id === timeoutRepairIncident)) {
+      throw new Error("Repair checkpoint can bypass only its single applicable timeout incident");
+    }
+    if (incident.repair?.status !== "eligible" ||
+        incident.repair.candidate.commit !== candidateCommit ||
+        incident.repair.candidate.tree !== candidateTree ||
+        incident.repair.checkpoint.baseCommit !== changedSince ||
+        incident.repair.checkpoint.evidenceTask !== evidenceTask ||
+        JSON.stringify([...plan.requestedPackIds].sort()) !== JSON.stringify(timeoutRepairPackIds)) {
+      throw new Error("Repair checkpoint requires the eligible repair candidate and exact all-20 plan");
+    }
+    context.receipt.timeoutRepairCheckpoint = { incidentId:timeoutRepairIncident };
+    await timeoutStore.claimRepairCheckpoint(timeoutRepairIncident, context.receipt.runId);
+  }
   const runner = commandRunner ?? createVerificationCommandRunner(context);
   let buildManifest;
   if (options.skipBuild) buildManifest = await validateCurrentArtifactForConsumers({
@@ -701,6 +992,14 @@ export async function runFocusedAcceptance(
       buildManifest = await validateCurrentArtifactForConsumers({
         root:repositoryRoot, artifactValidator,
       });
+      context.receipt.artifact = {
+        schemaVersion:buildManifest.schemaVersion,
+        buildIdentity:buildManifest.buildIdentity,
+        inputDigest:buildManifest.inputDigest,
+        outputDigest:buildManifest.outputDigest,
+        toolchain:{ ...buildManifest.toolchain },
+      };
+      await context.write();
       if (evidenceTask) {
         context.receipt.resumeIdentity = verificationResumeIdentity(plan, context, buildManifest);
         await context.write();
@@ -724,6 +1023,22 @@ export async function runFocusedAcceptance(
   }
   if (evidenceTask) {
     if (commandRunner) throw new Error("Evidence cannot be prepared with an injected command runner");
+    if (timeoutRepairIncident) {
+      const packageContext = createVerificationReceiptContext(1, 1);
+      packageContext.receipt.candidate = structuredClone(context.receipt.candidate);
+      packageContext.receipt.artifact = structuredClone(context.receipt.artifact);
+      packageContext.receipt.plan = { mode:"package", checkpointRunId:context.receipt.runId };
+      await packageContext.write();
+      const packageRunner = createVerificationCommandRunner(packageContext);
+      await packageRunner("node scripts/package.mjs", timeoutRepairPackageTaskIdentity);
+      packageContext.receipt.completedAt = new Date().toISOString();
+      await packageContext.write();
+      await timeoutStore.resolve(timeoutRepairIncident, {
+        checkpointReceiptPath:context.receiptPath,
+        packageReceiptPath:packageContext.receiptPath,
+      });
+      await assertNoBlockingTimeoutIncidents("HEAD");
+    }
     const pending = await createPendingVerificationEvidence({
       task:evidenceTask,
       plan,

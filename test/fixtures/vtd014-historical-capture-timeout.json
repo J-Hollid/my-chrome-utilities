@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "runId": "1686032b-39aa-4140-a4db-f4f265e28eb5",
+  "sourceReceiptSha256": "3db06914559b048274e10725034474623736160a6eb7aa5a78ebd924e4211abb",
+  "task": {
+    "key": "browser-observation:FRESH_LIVE_SESSION_BROWSER_ADAPTER+PAYLOAD_PATH_FILTER_BROWSER_ADAPTER+SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER+SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER+SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER",
+    "stage": "browser-observation",
+    "packId": "capture",
+    "logicalTargetIds": [
+      "FRESH_LIVE_SESSION_BROWSER_ADAPTER",
+      "PAYLOAD_PATH_FILTER_BROWSER_ADAPTER",
+      "SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER",
+      "SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER",
+      "SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER"
+    ]
+  },
+  "timeoutMs": 600000,
+  "durationMs": 600014,
+  "passedTaskCount": 274,
+  "lastProgress": {
+    "boundary": "artifact/setup",
+    "phase": "dist-artifact-lock",
+    "monotonicMs": 596000,
+    "state": {
+      "status": "waiting",
+      "owner": {
+        "pid": 232587,
+        "identity": {
+          "kind": "linux-proc-start-time",
+          "value": "98946452"
+        }
+      }
+    }
+  },
+  "retroactiveIncident": false
+}
