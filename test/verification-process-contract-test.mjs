@@ -177,7 +177,8 @@ const prerequisiteRows = {
   },
 };
 const prerequisiteContractEvidence = {
-  approvedFirstLaunch:true, workspaceNarrow:true, deniedBeforeLaunch:true,
+  approvedFirstLaunch:true, workspaceNarrow:false, deniedBeforeLaunch:true,
+  mixedRouteObservation:null,
   deniedDiagnostic:deniedPrerequisite.blocked[0], declarationsFailClosed:true,
   rows:prerequisiteRows,
 };
@@ -5478,11 +5479,28 @@ if (process.platform !== "win32") {
       args:["-e", "require('node:fs').writeSync(1,process.env.SWARMFORGE_EXECUTION_ROUTE+'|'+process.env.SWARMFORGE_EXECUTION_BOUNDARY+'\\n')"] };
     const routedRunner = createVerificationCommandRunner(routedContext, { launchRoutes:new Map([
       [routedTask.key, "scoped-command-approval"],
+      [envTask.key, "workspace-sandbox"],
     ]) });
     await routedRunner("routed capability boundary", routedTask);
-    assert.equal(routedContext.receipt.tasks[routedTask.key].output.trim(),
+    const scopedRouteObservation = routedContext.receipt.tasks[routedTask.key].output.trim();
+    assert.equal(scopedRouteObservation,
       "scoped-command-approval|bwrap-unshared-network",
     "the planned capability route is bound to the actual child isolation boundary");
+    const mixedWorkspaceTask = { ...envTask,
+      args:["-e", "require('node:fs').writeSync(1,process.env.SWARMFORGE_EXECUTION_ROUTE+'|'+process.env.SWARMFORGE_EXECUTION_BOUNDARY+'\\n')"],
+    };
+    await routedRunner("mixed-plan workspace boundary", mixedWorkspaceTask);
+    const workspaceRouteObservation = routedContext.receipt.tasks[mixedWorkspaceTask.key].output.trim();
+    assert.equal(workspaceRouteObservation,
+      "workspace-sandbox|workspace-sandbox",
+    "a workspace-only sibling does not inherit another task's scoped route or isolation boundary");
+    prerequisiteContractEvidence.mixedRouteObservation = {
+      scoped:scopedRouteObservation,
+      workspace:workspaceRouteObservation,
+    };
+    prerequisiteContractEvidence.workspaceNarrow =
+      scopedRouteObservation === "scoped-command-approval|bwrap-unshared-network" &&
+      workspaceRouteObservation === "workspace-sandbox|workspace-sandbox";
     const isolatedBrowserTask = {
       ...envTask, key:"browser:isolated-output", stage:"browser", environment:null,
       args:["-e", "require('node:fs').writeSync(1,process.env.BRAND_EVIDENCE_DIR+'\\n')"],

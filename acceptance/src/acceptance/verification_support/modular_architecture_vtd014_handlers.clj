@@ -78,7 +78,34 @@
    "reused focused results, pre-repair results, no changed candidate, or an unrelated change"
    "rejected as stale or non-causal"})
 
-(defn- incident-handlers [example-values]
+(def ^:private incident-boundary-checks
+  {"the logical target and cleanup phase"
+   #(and (= "target" (get-in % [:retryScope :kind])) (= "cleanup" (:phase %)))
+   "the logical browser target and assertion site"
+   #(and (= "target" (get-in % [:retryScope :kind])) (:assertionSite %))
+   "the executable target or case and unsettled state"
+   #(and (= "case" (get-in % [:retryScope :kind]))
+         (false? (get-in % [:boundedState :settled])))
+   "the canonical task and diagnostic fingerprint"
+   #(and (= "task" (get-in % [:retryScope :kind])) (= 64 (count (:fingerprint %))))})
+
+(defn- incident-boundary-exact? [boundary observed]
+  (if-let [check (incident-boundary-checks boundary)] (boolean (check observed)) false))
+
+(def ^:private diagnostic-scope-checks
+  {"an assertion inside logical target TARGET-A"
+   #(= ["target" ["TARGET-A"]] [(:kind %) (:logicalTargetIds %)])
+   "an executable scenario or generated case" #(= "case" (:kind %))
+   "shared artifact setup before any target"
+   #(= ["setup" []] [(:kind %) (:logicalTargetIds %)])
+   "an indivisible non-browser task" #(= "task" (:kind %))
+   "absent, invalid, or ambiguous progress"
+   #(and (= "rejected" (:kind %)) (true? (:rejected %)))})
+
+(defn- diagnostic-scope-exact? [boundary scope]
+  (if-let [check (diagnostic-scope-checks boundary)] (boolean (check scope)) false))
+
+(defn- incident-recording-handlers [example-values]
   [{:pattern #"^the canonical verification runner manifests (.+)$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/first-failure
@@ -86,27 +113,17 @@
    {:pattern #"^it records the failure before any unchanged retry$"
     :handler (fn [world _ _]
                (assert! world (= "unresolved" (get-in world [:vtd014/evidence :incident :state]))
-                        "The manifested failure did not create an unresolved incident."))}
+                        "The manifested failure did not create an unresolved incident."))}])
+
+(defn- incident-identity-handlers [example-values]
+  [
    {:pattern #"^one repository-common reliability incident identifies (.+)$"
     :handler (fn [world example captures]
                (let [boundary (first (values example-values example captures))
                      record (first (filter #(= (:vtd014/first-failure world) (:failure %))
                                            (get-in world [:vtd014/evidence :failures :boundaries])))
                      observed (:observed record)
-                     exact? (case boundary
-                              "the logical target and cleanup phase"
-                              (and (= "target" (get-in observed [:retryScope :kind]))
-                                   (= "cleanup" (:phase observed)))
-                              "the logical browser target and assertion site"
-                              (and (= "target" (get-in observed [:retryScope :kind]))
-                                   (:assertionSite observed))
-                              "the executable target or case and unsettled state"
-                              (and (= "case" (get-in observed [:retryScope :kind]))
-                                   (false? (get-in observed [:boundedState :settled])))
-                              "the canonical task and diagnostic fingerprint"
-                              (and (= "task" (get-in observed [:retryScope :kind]))
-                                   (= 64 (count (:fingerprint observed))))
-                              false)]
+                     exact? (incident-boundary-exact? boundary observed)]
                  (assert! world (and (= boundary (:boundary record)) exact?)
                           "The reliability incident did not retain its smallest boundary.")))}
    {:pattern #"^(?:it retains the candidate lineage, canonical task, owning pack, failure class, normalized fingerprint, phase, bounded final state, receipt, artifact, and toolchain|the incident is visible from coder, refactorer, architect, and specifier worktrees|the failed result cannot later become passed merely by combining its output with a resumed receipt)$"
@@ -114,8 +131,10 @@
                (let [incident (get-in world [:vtd014/evidence :incident])]
                  (assert! world (and (:repositoryCommon incident) (:immutableFields incident)
                                      (:ordinaryResumeBlocked incident))
-                          "Reliability incident identity, visibility, or resume blocking failed.")))}
+                          "Reliability incident identity, visibility, or resume blocking failed.")))}])
 
+(defn- diagnostic-scope-handlers [example-values]
+  [
    {:pattern #"^a reliability incident's last trusted boundary is (.+)$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/failure-boundary
@@ -125,36 +144,35 @@
                (assert! world (some? (evidence-value
                                       (get-in world [:vtd014/evidence :retry :scopes])
                                       (:vtd014/failure-boundary world)))
-                        "The failure boundary has no deterministic diagnostic scope."))}
+                        "The failure boundary has no deterministic diagnostic scope."))}])
+
+(defn- diagnostic-execution-handlers [example-values]
+  [
    {:pattern #"^it executes (.+)$"
     :handler (fn [world example captures]
                (let [boundary (:vtd014/failure-boundary world)
                      expected (first (values example-values example captures))
                      scope (evidence-value (get-in world [:vtd014/evidence :retry :scopes]) boundary)
-                     exact? (case boundary
-                              "an assertion inside logical target TARGET-A"
-                              (= ["target" ["TARGET-A"]] [(:kind scope) (:logicalTargetIds scope)])
-                              "an executable scenario or generated case" (= "case" (:kind scope))
-                              "shared artifact setup before any target"
-                              (= ["setup" []] [(:kind scope) (:logicalTargetIds scope)])
-                              "an indivisible non-browser task" (= "task" (:kind scope))
-                              "absent, invalid, or ambiguous progress"
-                              (and (= "rejected" (:kind scope)) (true? (:rejected scope)))
-                              false)]
+                     exact? (diagnostic-scope-exact? boundary scope)]
                  (assert! world (and (= (retry-scopes boundary) expected) exact?)
                           "The diagnostic retry widened beyond the smallest failed boundary.")))}
    {:pattern #"^(?:no previously passing task or compatible sibling target executes|the candidate tree, artifact, toolchain, execution-load class, task configuration, environment, and applicable limits are unchanged)$"
     :handler (fn [world _ _]
                (assert! world (and (true? (get-in world [:vtd014/evidence :incident :retryClaimedBeforeExecution]))
                                    (true? (get-in world [:vtd014/evidence :retry :innerDeadlineIdentityConserved])))
-                        "Diagnostic identity was not conserved and claimed before execution."))}
+                        "Diagnostic identity was not conserved and claimed before execution."))}])
 
+(defn- diagnostic-classification-handlers [example-values]
+  [
    {:pattern #"^a reliability incident has not used its diagnostic retry$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^the unchanged isolated retry (.+)$"
     :handler (fn [world example captures]
                (assoc world :vtd014/retry-outcome
-                      (first (values example-values example captures))))}
+                      (first (values example-values example captures))))}])
+
+(defn- diagnostic-result-handlers [example-values]
+  [
    {:pattern #"^the incident classification is (.+)$"
     :handler (fn [world example captures]
                (let [outcome (:vtd014/retry-outcome world)
@@ -169,8 +187,10 @@
     :handler (fn [world _ _]
                (assert! world (and (true? (get-in world [:vtd014/evidence :retry :secondRetryRejected]))
                                    (true? (get-in world [:vtd014/evidence :incident :ordinaryResumeBlocked])))
-                        "A classified timeout was allowed to become green."))}
+                        "A classified timeout was allowed to become green."))}])
 
+(defn- historical-timeout-handlers [_example-values]
+  [
    {:pattern #"^the historical Capture receipt 1686032b-39aa-4140-a4db-f4f265e28eb5 passed 274 tasks before its five-target browser batch reached 600014 milliseconds$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^(?:its final output shows the dist-artifact lock owner but no logical target start|VTD-014 classifies the sanitized historical fixture|its active boundary is dist-artifact setup before any Capture target|its permitted diagnostic retry is the lock setup boundary only|the 274 passing tasks and all five Capture target workflows are excluded|the fixture does not create a retroactive live incident in repository-common state)$"
@@ -180,8 +200,10 @@
                                      (= 274 (:excludedPassedTaskCount historical))
                                      (= 5 (count (:excludedLogicalTargetIds historical)))
                                      (false? (:retroactiveIncident historical)))
-                          "Historical Capture timeout classification is not exact.")))}
+                          "Historical Capture timeout classification is not exact.")))}])
 
+(defn- non-timeout-boundary-handlers [_example-values]
+  [
    {:pattern #"^one fixture forces an offscreen control hit-test failure and another forces a Property Set settling failure$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^each exact failed boundary passes on its one unchanged isolated retry$"
@@ -189,7 +211,10 @@
                (let [fixtures (non-timeout-fixtures world)]
                  (assert! world (= #{"target" "case"}
                                     (set (map #(get-in % [:retryScope :kind]) fixtures)))
-                          "Non-timeout retries widened beyond their failed boundaries.")))}
+                          "Non-timeout retries widened beyond their failed boundaries.")))}])
+
+(defn- non-timeout-classification-handlers [_example-values]
+  [
    {:pattern #"^both incidents are classified confirmed-flaky without requiring a pre-registered failure message$"
     :handler (fn [world _ _]
                (assert! world (every? #(= "confirmed-flaky" (:classification %))
@@ -200,7 +225,10 @@
                (assert! world (every? #(and (:phase %) (:assertionSite %)
                                             (= 64 (count (:fingerprint %))) (map? (:boundedState %)))
                                       (non-timeout-fixtures world))
-                        "Non-timeout failure identity was not conserved."))}
+                        "Non-timeout failure identity was not conserved."))}])
+
+(defn- non-timeout-repair-handlers [_example-values]
+  [
    {:pattern #"^neither passing retry supplies handoff evidence$"
     :handler (fn [world _ _]
                (assert! world (every? #(= "unresolved" (:state %))
@@ -212,6 +240,32 @@
                                    (every? #(= "unresolved" (:state %))
                                            (non-timeout-fixtures world)))
                         "A non-timeout flake bypassed causal repair."))}])
+
+(defn- incident-handlers [example-values]
+  (vec (concat (incident-recording-handlers example-values)
+               (incident-identity-handlers example-values)
+               (diagnostic-scope-handlers example-values)
+               (diagnostic-execution-handlers example-values)
+               (diagnostic-classification-handlers example-values)
+               (diagnostic-result-handlers example-values)
+               (historical-timeout-handlers example-values)
+               (non-timeout-boundary-handlers example-values)
+               (non-timeout-classification-handlers example-values)
+               (non-timeout-repair-handlers example-values))))
+
+(def ^:private repair-proposal-requirements
+  {"descendant code, a causal regression, and fresh focused verification"
+   [:eligible :descendant :freshFocused]
+   "only a larger timeout, added sleep, repeated polling count, or weakened assertion"
+   [:symptomSuppressionRejected]
+   "only a budget, calibration, worker count, or environment label" [:limitOnlyRejected]
+   "a verbal explanation without a deterministic causal regression" [:unprovenRejected]
+   "reused focused results, pre-repair results, no changed candidate, or an unrelated change"
+   [:staleRejected :unrelatedRejected]})
+
+(defn- repair-proposal-observed? [repair-evidence repair]
+  (when-let [requirements (repair-proposal-requirements repair-evidence)]
+    (every? #(true? (get repair %)) requirements)))
 
 (defn- repair-handlers [example-values]
   [
@@ -228,18 +282,7 @@
                (let [repair-evidence (:vtd014/repair-evidence world)
                      outcome (first (values example-values example captures))
                      repair (get-in world [:vtd014/evidence :repair])
-                     observed? (case repair-evidence
-                                 "descendant code, a causal regression, and fresh focused verification"
-                                 (and (:eligible repair) (:descendant repair) (:freshFocused repair))
-                                 "only a larger timeout, added sleep, repeated polling count, or weakened assertion"
-                                 (:symptomSuppressionRejected repair)
-                                 "only a budget, calibration, worker count, or environment label"
-                                 (:limitOnlyRejected repair)
-                                 "a verbal explanation without a deterministic causal regression"
-                                 (:unprovenRejected repair)
-                                 "reused focused results, pre-repair results, no changed candidate, or an unrelated change"
-                                 (and (:staleRejected repair) (:unrelatedRejected repair))
-                                 false)]
+                     observed? (repair-proposal-observed? repair-evidence repair)]
                  (assert! world (and (= (repair-outcomes repair-evidence) outcome) observed?)
                           "Reliability causal repair gate accepted the wrong proposal class.")))}])
 
@@ -362,9 +405,13 @@
                         "A predictable sandbox trial run occurred.")))}
    {:pattern #"^no task inherits unrelated access from another task in its pack$"
     :handler (fn [world _ _]
-               (assert! world (true? (get-in world [:vtd014/evidence :execution
-                                                     :prerequisites :workspaceNarrow]))
-                        "A workspace task inherited unrelated access."))}
+               (let [prerequisites (get-in world [:vtd014/evidence :execution :prerequisites])]
+                 (assert! world
+                          (and (true? (:workspaceNarrow prerequisites))
+                               (= {:scoped "scoped-command-approval|bwrap-unshared-network"
+                                   :workspace "workspace-sandbox|workspace-sandbox"}
+                                  (:mixedRouteObservation prerequisites)))
+                        "A workspace task inherited unrelated access.")))}
 
    {:pattern #"^a canonical task is declared workspace-only but an injected loopback bind reports a sandbox permission denial after preflight$"
     :handler (fn [world _ _] (prepared world))}

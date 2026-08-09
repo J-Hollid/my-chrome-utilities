@@ -181,6 +181,9 @@
                                  :diagnosticRetryOnPassingRun false :allPackCount 20
                                  :packageTask "scripts/package.mjs"}
                   :execution {:prerequisites {:approvedFirstLaunch true :workspaceNarrow true
+                                              :mixedRouteObservation
+                                              {:scoped "scoped-command-approval|bwrap-unshared-network"
+                                               :workspace "workspace-sandbox|workspace-sandbox"}
                                               :deniedBeforeLaunch true :declarationsFailClosed true
                                               :rows {"the workspace sandbox cannot bind"
                                                      {:firstRunAction "use the existing scoped approval route immediately"

@@ -447,8 +447,7 @@ export function createVerificationCommandRunner(context, options = {}) {
     const browserOutputDirectory = ["browser", "browser-observation"].includes(task.stage)
       ? path.join(context.runDirectory, task.key.replaceAll(/[^A-Za-z0-9._-]/gu, "_"))
       : undefined;
-    const isolateWorkspace = [...(options.launchRoutes?.values() ?? [])]
-      .some((route) => route !== "workspace-sandbox");
+    const isolateWorkspace = launchRoute !== "workspace-sandbox";
     const launch = isolateWorkspace ? {
       executable:"bwrap",
       args:["--ro-bind", "/", "/", "--bind", repositoryRoot, repositoryRoot,
