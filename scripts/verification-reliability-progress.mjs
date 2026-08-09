@@ -126,9 +126,30 @@ export function classifyHistoricalTimeoutFixture(fixture) {
 export function retryIdentity(failure) {
   return timeoutIncidentDigest({
     lineage:failure.lineage, task:failure.task, configuredTimeoutMs:failure.configuredTimeoutMs,
-    applicableLimit:failure.applicableLimit, fingerprint:failure.fingerprint,
+    applicableLimit:failure.applicableLimit, resolvedDeadlines:failure.resolvedDeadlines,
+    fingerprint:failure.fingerprint,
     environment:failure.environment, artifact:failure.artifact, planDigest:failure.planDigest,
     scope:diagnosticRetryScope({ task:failure.task,
       lastProgress:failure.failedBoundary ?? failure.lastProgress }),
   });
+}
+
+export function resolvedVerificationDeadlines({
+  timeoutMs = 600000, terminationGraceMs = 5000, environment = process.env,
+} = {}) {
+  const resolved = {};
+  for (const [name, value] of Object.entries(environment)) {
+    if (name.endsWith("_TIMEOUT_MS")) resolved[name] = value;
+  }
+  resolved.DIST_ARTIFACT_LOCK_TIMEOUT_MS = environment.DIST_ARTIFACT_LOCK_TIMEOUT_MS ?? 600000;
+  resolved.VERIFICATION_COMMAND_TIMEOUT_MS = timeoutMs;
+  resolved.VERIFICATION_TERMINATION_GRACE_MS = terminationGraceMs;
+  const entries = Object.entries(resolved).map(([name, value]) => {
+    const milliseconds = Number(value);
+    if (!Number.isInteger(milliseconds) || milliseconds <= 0 || milliseconds > Number.MAX_SAFE_INTEGER) {
+      throw new Error(`${name} must resolve to a positive integer deadline`);
+    }
+    return [name, milliseconds];
+  }).sort(([left], [right]) => left.localeCompare(right));
+  return Object.fromEntries(entries);
 }

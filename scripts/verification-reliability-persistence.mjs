@@ -36,6 +36,131 @@ export function incidentEnvelope(incident) {
   return { version:1, incident, digest:timeoutIncidentDigest(incident) };
 }
 
+function transitionHistoryError(id, message) {
+  throw new Error(`Timeout incident ${id} has invalid transition history: ${message}`);
+}
+
+function matchingTransitions(incident, type) {
+  return incident.transitions.filter((record) => record?.type === type);
+}
+
+function validateTransitionHistory(incident) {
+  const allowed = new Set(["diagnostic-retry-claimed", "diagnostic-retry-classified",
+    "repair-proposed", "repair-checkpoint-claimed", "resolved", "lineage-rebased",
+    "lineage-abandoned"]);
+  let previousTime = Date.parse(incident.createdAt);
+  let previousRank = 0;
+  let terminal = false;
+  const rank = { "diagnostic-retry-claimed":10, "diagnostic-retry-classified":20,
+    "repair-proposed":30, "repair-checkpoint-claimed":40, resolved:50 };
+  if (!Number.isFinite(previousTime)) transitionHistoryError(incident.id, "invalid created timestamp");
+  for (const record of incident.transitions) {
+    if (terminal) transitionHistoryError(incident.id, "an event follows the resolved transition");
+    exactObject(record, "Timeout incident transition");
+    const time = Date.parse(record.at);
+    if (!allowed.has(record.type) || !Number.isFinite(time)) {
+      transitionHistoryError(incident.id, "unknown transition or timestamp");
+    }
+    if (time < previousTime) transitionHistoryError(incident.id, "timestamps are out of order");
+    previousTime = time;
+    if (rank[record.type]) {
+      if (rank[record.type] <= previousRank) transitionHistoryError(incident.id, "events are duplicated or reordered");
+      previousRank = rank[record.type];
+    }
+    if (record.type === "resolved") terminal = true;
+  }
+  const requireCount = (type, expected) => {
+    if (matchingTransitions(incident, type).length !== expected) {
+      transitionHistoryError(incident.id, `${type} event does not agree with incident state`);
+    }
+  };
+  const retryStatus = incident.retry?.status;
+  if (retryStatus !== undefined && !["claimed", "classified", "invalidated-by-repair"].includes(retryStatus)) {
+    transitionHistoryError(incident.id, "diagnostic status is unknown");
+  }
+  if (["claimed", "classified"].includes(retryStatus) &&
+      incident.retry.identity !== incident.failure.retryIdentity) {
+    transitionHistoryError(incident.id, "diagnostic identity disagrees with the failure");
+  }
+  const classifications = { passed:"confirmed-flaky", sameFailure:"reproduced-failure",
+    failed:"changed-failure", identityChanged:"diagnostic-contract-failure" };
+  if (retryStatus === "classified" &&
+      classifications[incident.retry.outcome] !== incident.retry.classification) {
+    transitionHistoryError(incident.id, "diagnostic outcome and classification disagree");
+  }
+  if (retryStatus === "invalidated-by-repair" &&
+      incident.retry.classification !== "not-retried-repaired") {
+    transitionHistoryError(incident.id, "repair invalidation classification disagrees");
+  }
+  if (incident.repair && incident.repair.status !== "eligible") {
+    transitionHistoryError(incident.id, "repair proposal is not eligible");
+  }
+  if (incident.repairCheckpoint && incident.repairCheckpoint.status !== "claimed") {
+    transitionHistoryError(incident.id, "repair checkpoint is not claimed");
+  }
+  if (incident.repairCheckpoint && !incident.repair) {
+    transitionHistoryError(incident.id, "checkpoint claim has no repair proposal");
+  }
+  if (incident.state === "resolved" && (!incident.repair || !incident.repairCheckpoint || !incident.retry)) {
+    transitionHistoryError(incident.id, "resolution is missing diagnostic, repair, or checkpoint state");
+  }
+  requireCount("diagnostic-retry-claimed", ["claimed", "classified"].includes(retryStatus) ? 1 : 0);
+  requireCount("diagnostic-retry-classified", retryStatus === "classified" ? 1 : 0);
+  requireCount("repair-proposed", incident.repair ? 1 : 0);
+  requireCount("repair-checkpoint-claimed", incident.repairCheckpoint ? 1 : 0);
+  requireCount("resolved", incident.state === "resolved" ? 1 : 0);
+  const claimed = matchingTransitions(incident, "diagnostic-retry-claimed")[0];
+  if (claimed && claimed.at !== incident.retry.claimedAt) {
+    transitionHistoryError(incident.id, "diagnostic claim timestamp disagrees");
+  }
+  const classified = matchingTransitions(incident, "diagnostic-retry-classified")[0];
+  if (classified && (classified.at !== incident.retry.classifiedAt ||
+      classified.classification !== incident.retry.classification)) {
+    transitionHistoryError(incident.id, "diagnostic classification disagrees");
+  }
+  const repair = matchingTransitions(incident, "repair-proposed")[0];
+  if (repair && repair.commit !== incident.repair.candidate?.commit) {
+    transitionHistoryError(incident.id, "repair candidate disagrees");
+  }
+  const checkpoint = matchingTransitions(incident, "repair-checkpoint-claimed")[0];
+  if (checkpoint && (checkpoint.runId !== incident.repairCheckpoint.runId ||
+      checkpoint.at !== incident.repairCheckpoint.claimedAt)) {
+    transitionHistoryError(incident.id, "checkpoint claim disagrees");
+  }
+  const resolved = matchingTransitions(incident, "resolved")[0];
+  if (resolved && (resolved.resolutionDigest !== incident.resolution?.digest ||
+      resolved.at !== incident.resolution?.resolvedAt)) {
+    transitionHistoryError(incident.id, "resolution disagrees");
+  }
+  const lineageTransitions = incident.lineageTransitions ?? [];
+  if (!Array.isArray(lineageTransitions)) transitionHistoryError(incident.id, "lineage transitions are malformed");
+  const anchors = new Set([incident.failure?.lineage?.commit]);
+  for (const mapping of lineageTransitions) {
+    exactObject(mapping, "Timeout incident lineage transition");
+    if (!anchors.has(mapping.fromCommit) || !["rebase", "abandon"].includes(mapping.kind) ||
+        !Number.isFinite(Date.parse(mapping.at))) {
+      transitionHistoryError(incident.id, "lineage transition has an invalid source, kind, or timestamp");
+    }
+    if (mapping.kind === "rebase") {
+      if (typeof mapping.toCommit !== "string" || !mapping.toCommit ||
+          typeof mapping.toTree !== "string" || !mapping.toTree || anchors.has(mapping.toCommit)) {
+        transitionHistoryError(incident.id, "rebase transition has an invalid replacement");
+      }
+      anchors.add(mapping.toCommit);
+    } else if (mapping.userDecision?.approvedBy !== "specifier" ||
+        mapping.userDecision?.approved !== true ||
+        typeof mapping.userDecision?.reference !== "string" || !mapping.userDecision.reference.trim()) {
+      transitionHistoryError(incident.id, "abandonment lacks a specifier-approved user decision");
+    }
+  }
+  const lineageEvents = incident.transitions.filter(({ type }) => type.startsWith("lineage-"));
+  if (JSON.stringify(normalized(lineageEvents.map(({ type, ...record }) => ({
+    kind:type === "lineage-rebased" ? "rebase" : "abandon", ...record,
+  })))) !== JSON.stringify(normalized(lineageTransitions))) {
+    transitionHistoryError(incident.id, "lineage events disagree with durable mappings");
+  }
+}
+
 export function validateIncident(incident) {
   exactObject(incident, "Timeout incident");
   stableIncidentId(incident.id);
@@ -44,6 +169,10 @@ export function validateIncident(incident) {
       incident.failureDigest !== timeoutIncidentDigest(incident.failure) ||
       !Array.isArray(incident.transitions)) {
     throw new Error(`Malformed timeout incident ${incident.id}`);
+  }
+  validateTransitionHistory(incident);
+  if (incident.state === "unresolved" && incident.resolution !== undefined) {
+    transitionHistoryError(incident.id, "an unresolved incident contains a resolution");
   }
   if (incident.state === "resolved" &&
       (!shaPattern.test(incident.resolution?.digest ?? "") ||

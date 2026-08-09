@@ -24,6 +24,13 @@
   (let [resolved (example-values example captures)]
     (if (seq resolved) resolved captures)))
 
+(defn- evidence-value [mapping key]
+  (or (get mapping key) (get mapping (keyword key))))
+
+(defn- non-timeout-fixtures [world]
+  (vals (or (get-in world [:vtd014/evidence :nonTimeoutFixtures])
+            (get-in world [:vtd014/evidence :non-timeout-fixtures]))))
+
 (def ^:private retry-scopes
   {"an assertion inside logical target TARGET-A" "TARGET-A only"
    "an executable scenario or generated case" "that case only"
@@ -36,6 +43,12 @@
    "repeats the same normalized failure" "reproduced-failure"
    "fails with another fingerprint" "changed-failure"
    "cannot conserve the isolated identity" "diagnostic-contract-failure"})
+
+(def ^:private retry-outcome-keys
+  {"passes" "passed"
+   "repeats the same normalized failure" "sameFailure"
+   "fails with another fingerprint" "failed"
+   "cannot conserve the isolated identity" "identityChanged"})
 
 (def ^:private repair-outcomes
   {"descendant code, a causal regression, and fresh focused verification"
@@ -60,9 +73,25 @@
                         "The manifested failure did not create an unresolved incident."))}
    {:pattern #"^one repository-common reliability incident identifies (.+)$"
     :handler (fn [world example captures]
-               (let [boundary (first (values example-values example captures))]
-                 (assert! world (some #{[(:vtd014/first-failure world) boundary]}
-                                      (get-in world [:vtd014/evidence :failures :boundaries]))
+               (let [boundary (first (values example-values example captures))
+                     record (first (filter #(= (:vtd014/first-failure world) (:failure %))
+                                           (get-in world [:vtd014/evidence :failures :boundaries])))
+                     observed (:observed record)
+                     exact? (case boundary
+                              "the logical target and cleanup phase"
+                              (and (= "target" (get-in observed [:retryScope :kind]))
+                                   (= "cleanup" (:phase observed)))
+                              "the logical browser target and assertion site"
+                              (and (= "target" (get-in observed [:retryScope :kind]))
+                                   (:assertionSite observed))
+                              "the executable target or case and unsettled state"
+                              (and (= "case" (get-in observed [:retryScope :kind]))
+                                   (false? (get-in observed [:boundedState :settled])))
+                              "the canonical task and diagnostic fingerprint"
+                              (and (= "task" (get-in observed [:retryScope :kind]))
+                                   (= 64 (count (:fingerprint observed))))
+                              false)]
+                 (assert! world (and (= boundary (:boundary record)) exact?)
                           "The reliability incident did not retain its smallest boundary.")))}
    {:pattern #"^(?:it retains the candidate lineage, canonical task, owning pack, failure class, normalized fingerprint, phase, bounded final state, receipt, artifact, and toolchain|the incident is visible from coder, refactorer, architect, and specifier worktrees|the failed result cannot later become passed merely by combining its output with a resumed receipt)$"
     :handler (fn [world _ _]
@@ -77,16 +106,31 @@
                       (first (values example-values example captures))))}
    {:pattern #"^the agent uses its one unchanged diagnostic retry$"
     :handler (fn [world _ _]
-               (assert! world (contains? retry-scopes (:vtd014/failure-boundary world))
+               (assert! world (some? (evidence-value
+                                      (get-in world [:vtd014/evidence :retry :scopes])
+                                      (:vtd014/failure-boundary world)))
                         "The failure boundary has no deterministic diagnostic scope."))}
    {:pattern #"^it executes (.+)$"
     :handler (fn [world example captures]
-               (assert! world (= (retry-scopes (:vtd014/failure-boundary world))
-                                 (first (values example-values example captures)))
-                        "The diagnostic retry widened beyond the smallest failed boundary."))}
+               (let [boundary (:vtd014/failure-boundary world)
+                     expected (first (values example-values example captures))
+                     scope (evidence-value (get-in world [:vtd014/evidence :retry :scopes]) boundary)
+                     exact? (case boundary
+                              "an assertion inside logical target TARGET-A"
+                              (= ["target" ["TARGET-A"]] [(:kind scope) (:logicalTargetIds scope)])
+                              "an executable scenario or generated case" (= "case" (:kind scope))
+                              "shared artifact setup before any target"
+                              (= ["setup" []] [(:kind scope) (:logicalTargetIds scope)])
+                              "an indivisible non-browser task" (= "task" (:kind scope))
+                              "absent, invalid, or ambiguous progress"
+                              (and (= "rejected" (:kind scope)) (true? (:rejected scope)))
+                              false)]
+                 (assert! world (and (= (retry-scopes boundary) expected) exact?)
+                          "The diagnostic retry widened beyond the smallest failed boundary.")))}
    {:pattern #"^(?:no previously passing task or compatible sibling target executes|the candidate tree, artifact, toolchain, execution-load class, task configuration, environment, and applicable limits are unchanged)$"
     :handler (fn [world _ _]
-               (assert! world (true? (get-in world [:vtd014/evidence :incident :retryClaimedBeforeExecution]))
+               (assert! world (and (true? (get-in world [:vtd014/evidence :incident :retryClaimedBeforeExecution]))
+                                   (true? (get-in world [:vtd014/evidence :retry :innerDeadlineIdentityConserved])))
                         "Diagnostic identity was not conserved and claimed before execution."))}
 
    {:pattern #"^a reliability incident has not used its diagnostic retry$"
@@ -97,9 +141,14 @@
                       (first (values example-values example captures))))}
    {:pattern #"^the incident classification is (.+)$"
     :handler (fn [world example captures]
-               (assert! world (= (retry-outcomes (:vtd014/retry-outcome world))
-                                 (first (values example-values example captures)))
-                        "Diagnostic retry classification changed."))}
+               (let [outcome (:vtd014/retry-outcome world)
+                     expected (first (values example-values example captures))
+                     observed (evidence-value
+                               (get-in world [:vtd014/evidence :retry :classifications])
+                               (retry-outcome-keys outcome))]
+                 (assert! world (and (= (retry-outcomes outcome) expected)
+                                     (= expected observed))
+                          "Diagnostic retry classification changed.")))}
    {:pattern #"^(?:it remains unresolved and blocks evidence and Git handoff|another unchanged retry or a normal resume containing the failed task is rejected)$"
     :handler (fn [world _ _]
                (assert! world (and (true? (get-in world [:vtd014/evidence :retry :secondRetryRejected]))
@@ -119,10 +168,34 @@
 
    {:pattern #"^one fixture forces an offscreen control hit-test failure and another forces a Property Set settling failure$"
     :handler (fn [world _ _] (prepared world))}
-   {:pattern #"^(?:each exact failed boundary passes on its one unchanged isolated retry|both incidents are classified confirmed-flaky without requiring a pre-registered failure message|each retains its target or case, phase, assertion site, normalized fingerprint, and bounded observed geometry or unsettled state|neither passing retry supplies handoff evidence|both require a causal repair and deterministic regression)$"
+   {:pattern #"^each exact failed boundary passes on its one unchanged isolated retry$"
     :handler (fn [world _ _]
-               (assert! world (every? true? (vals (get-in world [:vtd014/evidence :non-timeout-fixtures])))
-                        "Non-timeout reliability fixtures did not retain their blocking contract."))}
+               (let [fixtures (non-timeout-fixtures world)]
+                 (assert! world (= #{"target" "case"}
+                                    (set (map #(get-in % [:retryScope :kind]) fixtures)))
+                          "Non-timeout retries widened beyond their failed boundaries.")))}
+   {:pattern #"^both incidents are classified confirmed-flaky without requiring a pre-registered failure message$"
+    :handler (fn [world _ _]
+               (assert! world (every? #(= "confirmed-flaky" (:classification %))
+                                      (non-timeout-fixtures world))
+                        "Non-timeout passing retries were allowed to become green."))}
+   {:pattern #"^each retains its target or case, phase, assertion site, normalized fingerprint, and bounded observed geometry or unsettled state$"
+    :handler (fn [world _ _]
+               (assert! world (every? #(and (:phase %) (:assertionSite %)
+                                            (= 64 (count (:fingerprint %))) (map? (:boundedState %)))
+                                      (non-timeout-fixtures world))
+                        "Non-timeout failure identity was not conserved."))}
+   {:pattern #"^neither passing retry supplies handoff evidence$"
+    :handler (fn [world _ _]
+               (assert! world (every? #(= "unresolved" (:state %))
+                                      (non-timeout-fixtures world))
+                        "A passing diagnostic retry supplied handoff evidence."))}
+   {:pattern #"^both require a causal repair and deterministic regression$"
+    :handler (fn [world _ _]
+               (assert! world (and (true? (get-in world [:vtd014/evidence :repair :unprovenRejected]))
+                                   (every? #(= "unresolved" (:state %))
+                                           (non-timeout-fixtures world)))
+                        "A non-timeout flake bypassed causal repair."))}
 
    {:pattern #"^a reliability incident has a proposed repair with (.+)$"
     :handler (fn [world example captures]
@@ -154,10 +227,34 @@
 
    {:pattern #"^reliability incidents and their state transitions are written concurrently$"
     :handler (fn [world _ _] (prepared world))}
-   {:pattern #"^(?:repository-common incident state is loaded for evidence or handoff|every stable incident id and immutable failure digest is retained exactly once|atomic state transitions cannot overwrite another writer|a redirected, symlinked, traversing, malformed, truncated, duplicate, out-of-order, or digest-mismatched record fails closed|an unrelated candidate lineage is not blocked|abandoning or rebasing the affected lineage cannot discard its unresolved incident without a separate specifier-approved user decision)$"
+   {:pattern #"^repository-common incident state is loaded for evidence or handoff$"
     :handler (fn [world _ _]
-               (assert! world (every? true? (vals (get-in world [:vtd014/evidence :store])))
-                        "Repository-common reliability state did not fail closed."))}
+               (assert! world (true? (get-in world [:vtd014/evidence :store :concurrentIndependentIds]))
+                        "Repository-common reliability state was not loaded."))}
+   {:pattern #"^every stable incident id and immutable failure digest is retained exactly once$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :store :concurrentIndependentIds]))
+                        "Concurrent incidents lost a stable identity."))}
+   {:pattern #"^atomic state transitions cannot overwrite another writer$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :store :concurrentIndependentIds]))
+                        "Concurrent incident transitions overwrote another writer."))}
+   {:pattern #"^a redirected, symlinked, traversing, malformed, truncated, duplicate, out-of-order, or digest-mismatched record fails closed$"
+    :handler (fn [world _ _]
+               (let [store (get-in world [:vtd014/evidence :store])]
+                 (assert! world (and (:tamperRejected store) (:symlinkRejected store)
+                                     (:malformedRejected store)
+                                     (every? true? (vals (:transitionHistory store))))
+                          "Malformed reliability state did not fail closed.")))}
+   {:pattern #"^an unrelated candidate lineage is not blocked$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :store :lineage :unrelatedExcluded]))
+                        "An unrelated lineage was blocked."))}
+   {:pattern #"^abandoning or rebasing the affected lineage cannot discard its unresolved incident without a separate specifier-approved user decision$"
+    :handler (fn [world _ _]
+               (assert! world (and (true? (get-in world [:vtd014/evidence :store :lineage :rebasePreserved]))
+                                   (true? (get-in world [:vtd014/evidence :store :lineage :abandonmentDecisionRequired])))
+                        "An affected lineage discarded its unresolved incident."))}
 
    {:pattern #"^a causal reliability repair and its fresh focused regression have passed$"
     :handler (fn [world _ _] (prepared world))}
@@ -168,12 +265,31 @@
                                      (zero? (:reusedTaskCount resolution))
                                      (:packagePassed resolution))
                           "Reliability resolution did not use a fresh all-20 checkpoint and package.")))}
-   {:pattern #"^(?:the incident resolution binds .+|Git-note verification recomputes every resolution link|the current candidate lineage has no unresolved incident or retry result awaiting repair|git_handoff is permitted while repair note handoffs remained available throughout the blocked state|a later failure in a downstream role creates a new incident rather than reopening or hiding the resolved one)$"
+   {:pattern #"^the incident resolution binds .+$"
     :handler (fn [world _ _]
                (let [resolution (get-in world [:vtd014/evidence :resolution :evidence])]
                  (assert! world (and (= 64 (count (:failureDigest resolution)))
-                                     (= 64 (count (:resolutionDigest resolution))))
-                          "Reliability resolution evidence is not digest-bound.")))}
+                                     (= 64 (count (:resolutionDigest resolution)))
+                                     (:repairCommit resolution) (:repairTree resolution)
+                                     (:causalCategory resolution) (:regression resolution)
+                                     (:focusedReceipt resolution) (:checkpointReceiptSha256 resolution))
+                          "Reliability resolution evidence is not completely bound.")))}
+   {:pattern #"^Git-note verification recomputes every resolution link$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :resolution :archiveVerified]))
+                        "Resolution archive links were not recomputed."))}
+   {:pattern #"^the current candidate lineage has no unresolved incident or retry result awaiting repair$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :resolution :resolvedIncidentExcludedFromBlocking]))
+                        "The resolved incident still blocks its candidate lineage."))}
+   {:pattern #"^git_handoff is permitted while repair note handoffs remained available throughout the blocked state$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :resolution :handoffGate]))
+                        "The resolved incident did not release the handoff gate."))}
+   {:pattern #"^a later failure in a downstream role creates a new incident rather than reopening or hiding the resolved one$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :resolution :downstreamIncidentDistinct]))
+                        "A later failure reused the resolved incident identity."))}
 
    {:pattern #"^VTD-014 changes shared reliability, evidence, and handoff infrastructure for all 20 runnable packs$"
     :handler (fn [world _ _] (prepared world))}
@@ -183,8 +299,17 @@
                         "A passing run executed a reliability retry."))}
    {:pattern #"^(?:its exact task identities, logical targets, observations, assertion leaves, batching, budgets, calibrations, worker limits, shards, and package check are unchanged|no diagnostic retry executes|previously passing work may be reused for diagnosis but no failed result can bypass incident classification|no final post-repair checkpoint reuses a pre-repair result|no src product file, product behavior, saved value, accessibility result, feature owner, handler owner, pack dependency, target budget, calibration, worker limit, or shard changes|production impact boundaries are unchanged|the one-time delivery checkpoint runs all 20 runnable packs in canonical order followed by node scripts/package.mjs)$"
     :handler (fn [world _ _]
-               (let [conservation (get-in world [:vtd014/evidence :conservation])]
+               (let [conservation (get-in world [:vtd014/evidence :conservation])
+                     digests-match? (and (= (:currentTaskDigest conservation)
+                                            (:masterTaskDigest conservation))
+                                         (= (:currentPackContractDigest conservation)
+                                            (:masterPackContractDigest conservation))
+                                         (= (:currentCalibrationDigest conservation)
+                                            (:masterCalibrationDigest conservation)))]
                  (assert! world (and (false? (:diagnosticRetryOnPassingRun conservation))
-                                     (every? true? (vals (dissoc conservation
-                                                                 :diagnosticRetryOnPassingRun))))
+                                     (empty? (:productChangedFiles conservation))
+                                     (empty? (:featureChangedFiles conservation))
+                                     digests-match?
+                                     (= 20 (:allPackCount conservation))
+                                     (= "scripts/package.mjs" (:packageTask conservation)))
                         "VTD-014 conservation evidence is incomplete.")))}])

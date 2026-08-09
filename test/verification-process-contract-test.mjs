@@ -13,7 +13,9 @@ import {
   selectedBrowserTargetConfigurations,
   summarizeBrowserTargetResults,
 } from "./support/browser-target-session.mjs";
-import { canonicalVerificationChangeSet } from "../scripts/verification-changes.mjs";
+import {
+  canonicalVerificationChangeSet, verificationPacksAtCommit,
+} from "../scripts/verification-changes.mjs";
 import {
   browserTargetConfigurations,
   completeBrowserObservationOutput,
@@ -87,14 +89,17 @@ import {
   createVerificationProgressTracker,
   diagnosticRetryScope,
   reliabilityFailureFingerprint,
+  resolvedVerificationDeadlines,
   timeoutIncidentDigest,
   timeoutRepairCausalCategory,
+  timeoutRepairPackageTaskIdentity,
   timeoutRepairPackIds,
   timeoutRepairFocusedTaskPlan,
   timeoutResolutionEvidence,
   validateTimeoutRepairProposal,
   verificationProgressEmitter,
 } from "../scripts/verification-reliability-incidents.mjs";
+import { validateIncident } from "../scripts/verification-reliability-persistence.mjs";
 
 assert.deepEqual(focusedAcceptanceOptions([
   "--timeout-repair-focused", "incident-1",
@@ -113,6 +118,12 @@ assert.equal(timeoutRepairCausalCategory("readiness or settling"), "readiness or
 assert.equal(timeoutRepairCausalCategory("other:kernel pipe backpressure"),
   "other:kernel pipe backpressure");
 assert.throws(() => timeoutRepairCausalCategory("banana"), /causal category/u);
+assert.deepEqual(resolvedVerificationDeadlines({
+  timeoutMs:600000, terminationGraceMs:5000,
+  environment:{ DIST_ARTIFACT_LOCK_TIMEOUT_MS:"1", CUSTOM_SETUP_TIMEOUT_MS:"27" },
+}), { CUSTOM_SETUP_TIMEOUT_MS:27, DIST_ARTIFACT_LOCK_TIMEOUT_MS:1,
+  VERIFICATION_COMMAND_TIMEOUT_MS:600000, VERIFICATION_TERMINATION_GRACE_MS:5000 },
+"the runner resolves its outer limit and every applicable inherited inner deadline");
 
 const stableFailureIdentity = {
   failureClass:"explicit-logical-failure",
@@ -399,6 +410,8 @@ try {
       logicalTargetIds:["A", "B"] },
     failureClass:"runner-timeout", fingerprint:"9".repeat(64),
     configuredTimeoutMs:600000, durationMs:600014, termination:{ signal:"SIGTERM", escalatedTo:"SIGKILL" },
+    resolvedDeadlines:{ DIST_ARTIFACT_LOCK_TIMEOUT_MS:600000,
+      VERIFICATION_COMMAND_TIMEOUT_MS:600000, VERIFICATION_TERMINATION_GRACE_MS:5000 },
     environment:{ node:"24.19.0", typescript:"5.9.3", platform:"linux-x64",
       executionLoad:"normal", concurrency:4, observationConcurrency:1 },
     artifact:{ inputDigest:"b".repeat(64), outputDigest:"c".repeat(64), buildIdentity:"d".repeat(64) },
@@ -408,6 +421,12 @@ try {
   };
   canonicalRepairIdentities = [...timeoutCanonicalIdentities, failure.task];
   const first = await store.create(failure);
+  const changedInnerDeadline = await store.create({ ...failure, runnerRunId:"run-inner-deadline-change",
+    resolvedDeadlines:{ ...failure.resolvedDeadlines, DIST_ARTIFACT_LOCK_TIMEOUT_MS:999999 } });
+  const innerDeadlineIdentityConserved = first.failure.retryIdentity !==
+    changedInnerDeadline.failure.retryIdentity;
+  assert.equal(innerDeadlineIdentityConserved, true,
+    "resolved inner deadlines are part of the unchanged diagnostic identity");
   for (const task of [
     { key:"build:dist", stage:"build", packId:null, executable:"npm", args:["run", "build"] },
     { key:"acceptance-parse:features/example.feature", stage:"acceptance-parse", packId:"shell",
@@ -444,7 +463,7 @@ try {
   assert.equal((await store.list()).filter(({ id }) =>
     concurrentIncidents.some((incident) => incident.id === id)).length, 2,
   "concurrent incident writers retain both immutable documents");
-  assert.equal((await store.blocking({ commit:"failed-commit" })).length, 3);
+  assert.equal((await store.blocking({ commit:"failed-commit" })).length, 4);
   const caseProgressLines = [];
   let caseProgressNow = 100;
   const emitCaseProgress = verificationProgressEmitter({
@@ -483,11 +502,11 @@ try {
     candidate:{ commit:"failed-commit", tree:"failed-tree" },
     environment:failure.environment, artifact:failure.artifact,
     diagnostic:{ incidentId:first.id, retryIdentity:first.failure.retryIdentity,
-      scope:first.failure.retryScope },
+      scope:first.failure.retryScope, resolvedDeadlines:first.failure.resolvedDeadlines },
     tasks:{ [failure.task.key]:{ identity:failure.task, status:"failed", provenance:"fresh",
       runnerOwnedTimeout:true, reliabilityFailureFingerprint:failure.fingerprint } },
   });
-  await store.classifyDiagnosticRetry(first.id, firstDiagnosticReceipt);
+  const classifiedFirst = await store.classifyDiagnosticRetry(first.id, firstDiagnosticReceipt);
   const classifications = {};
   const fabricated = await store.create({ ...failure, runnerRunId:"run-fabricated" });
   await store.claimDiagnosticRetry(fabricated.id, fabricated.failure.retryIdentity);
@@ -504,7 +523,7 @@ try {
       environment:failure.environment, artifact:failure.artifact,
       diagnostic:{ incidentId:separate.id,
         retryIdentity:outcome === "identityChanged" ? "changed" : separate.failure.retryIdentity,
-        scope:separate.failure.retryScope },
+        scope:separate.failure.retryScope, resolvedDeadlines:separate.failure.resolvedDeadlines },
       tasks:{ [failure.task.key]:{ identity:failure.task,
         status:outcome === "passed" ? "passed" : "failed", provenance:"fresh",
         ...(outcome === "sameFailure"
@@ -516,6 +535,7 @@ try {
     assert.equal(classified.state, "unresolved");
     classifications[outcome] = classified.retry.classification;
   }
+  const nonTimeoutEvidence = {};
   const nonTimeoutFailures = [{
     name:"hit-test",
     failure:{ ...failure, runnerRunId:"run-hit-test", failureClass:"explicit-logical-failure",
@@ -542,13 +562,21 @@ try {
       candidate:{ commit:"failed-commit", tree:"failed-tree" },
       environment:failure.environment, artifact:failure.artifact,
       diagnostic:{ incidentId:incident.id, retryIdentity:incident.failure.retryIdentity,
-        scope:incident.failure.retryScope },
+        scope:incident.failure.retryScope, resolvedDeadlines:incident.failure.resolvedDeadlines },
       tasks:{ [fixture.failure.task.key]:{ identity:fixture.failure.task,
         status:"passed", provenance:"fresh" } },
     });
     const classified = await store.classifyDiagnosticRetry(incident.id, diagnosticReceipt);
     assert.equal(classified.retry.classification, "confirmed-flaky",
       `${fixture.name} remains blocking after an unchanged pass`);
+    nonTimeoutEvidence[fixture.name] = {
+      classification:classified.retry.classification, state:classified.state,
+      retryScope:classified.failure.retryScope,
+      phase:fixture.failure.failedBoundary.phase,
+      assertionSite:fixture.failure.failedBoundary.assertionSite,
+      fingerprint:classified.failure.fingerprint,
+      boundedState:classified.failure.failedBoundary.state,
+    };
   }
   const runnerRegressionPath = path.join(incidentFixtureRoot, "artifact-lock-runner-regression.mjs");
   await writeFile(runnerRegressionPath, `
@@ -599,7 +627,8 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
     candidate:{ commit:"failed-commit", tree:"failed-tree" },
     environment:failure.environment, artifact:failure.artifact,
     diagnostic:{ incidentId:runnerIncident.id, retryIdentity:runnerIncident.failure.retryIdentity,
-      scope:runnerIncident.failure.retryScope },
+      scope:runnerIncident.failure.retryScope,
+      resolvedDeadlines:runnerIncident.failure.resolvedDeadlines },
     tasks:{ [runnerTask.key]:{ identity:runnerTask, status:"failed", provenance:"fresh",
       runnerOwnedTimeout:true } },
   });
@@ -630,27 +659,37 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
   assert.match(runnerReceipt.tasks[runnerTask.key].output,
     /artifact-lock-dead-owner-runner-v1/u,
   "runner-owned evidence contains the bounded result produced by the selected causal fixture");
-  await assert.rejects(validateTimeoutRepairProposal(first, {
+  const repairRejections = {};
+  const captureRepairRejection = async(name, operation, pattern) => {
+    try { await operation; }
+    catch (error) {
+      assert.match(error.message, pattern);
+      repairRejections[name] = error.message;
+      return;
+    }
+    assert.fail(`${name} repair proposal was not rejected`);
+  };
+  await captureRepairRejection("limitOnly", validateTimeoutRepairProposal(first, {
     candidate:{ commit:"repair-commit", tree:"repair-tree" }, changedPaths:["verification/performance-calibration.json"],
     causalCategory:"artifact/process locking", causalExplanation:"stale lock ownership",
     checkpoint:{ baseCommit:"approved-base", evidenceTask:"vtd014" },
     regression:{ key:"unit:test/verification-process-contract-test.mjs", status:"passed", commit:"repair-commit" },
     focusedReceipt:{ status:"passed", commit:"repair-commit", provenance:"fresh" },
   }, { isAncestor:async () => true }), /limit-only/u);
-  await assert.rejects(validateTimeoutRepairProposal(first, {
+  await captureRepairRejection("unproven", validateTimeoutRepairProposal(first, {
     candidate:{ commit:"repair-commit", tree:"repair-tree" }, changedPaths:["scripts/dist-artifact-lock.mjs"],
     causalCategory:"artifact/process locking", causalExplanation:"stale lock ownership",
     checkpoint:{ baseCommit:"approved-base", evidenceTask:"vtd014" },
     focusedReceipt:{ status:"passed", commit:"repair-commit", provenance:"fresh" },
   }, { isAncestor:async () => true }), /deterministic regression/u);
-  await assert.rejects(validateTimeoutRepairProposal(first, {
+  await captureRepairRejection("stale", validateTimeoutRepairProposal(first, {
     candidate:{ commit:"repair-commit", tree:"repair-tree" }, changedPaths:["scripts/dist-artifact-lock.mjs"],
     causalCategory:"artifact/process locking", causalExplanation:"stale lock ownership",
     checkpoint:{ baseCommit:"approved-base", evidenceTask:"vtd014" },
     regression:{ key:"unit:test/verification-process-contract-test.mjs", status:"passed", commit:"repair-commit" },
     focusedReceipt:{ status:"passed", commit:"failed-commit", provenance:"fresh" },
   }, { isAncestor:async () => true }), /fresh focused verification/u);
-  await assert.rejects(validateTimeoutRepairProposal(first, {
+  await captureRepairRejection("unchangedCandidate", validateTimeoutRepairProposal(first, {
     candidate:{ commit:"failed-commit", tree:"failed-tree" }, changedPaths:["scripts/dist-artifact-lock.mjs"],
     causalCategory:"artifact/process locking", causalExplanation:"stale lock ownership",
     checkpoint:{ baseCommit:"approved-base", evidenceTask:"vtd014" },
@@ -750,10 +789,10 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
     tasks:{ "unit:totally-unrelated-pack":{ identity:{ key:"unit:totally-unrelated-pack" },
       status:"passed", provenance:"fresh", durationMs:1 } },
   });
-  await assert.rejects(store.proposeRepair(first.id, {
+  await captureRepairRejection("unrelated", store.proposeRepair(first.id, {
     causalCategory, causalExplanation, regressionKey, regressionReceiptPath,
     focusedReceiptPath:unrelatedFocusedReceiptPath,
-  }), /focused repair plan/u, "unrelated focused tasks cannot authorize a repair");
+  }), /focused repair plan/u);
   const forgedIdentityReceiptPath = await writeRunnerReceipt("repair-focused-forged-identity", {
     ...repairReceiptBase, plan:{ mode:"timeout-repair-focused", incidentId:first.id,
       causalCategory, causalExplanation, taskPlan:focusedTaskPlan }, tasks:{
@@ -814,21 +853,29 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
     output:"build/package/my-chrome-utilities.zip\n" } },
   });
   const redirectedCheckpointArchive = path.join(incidentFixtureRoot, "redirected-checkpoint-receipt");
+  const storeRejections = {};
+  const captureStoreRejection = async(name, operation, pattern) => {
+    try { await operation; }
+    catch (error) { assert.match(error.message, pattern); storeRejections[name] = error.message; return; }
+    assert.fail(`${name} malformed store operation was not rejected`);
+  };
   await writeFile(redirectedCheckpointArchive, await readFile(checkpointReceiptPath));
   const checkpointArchivePath = path.join(incidentFixtureRoot, "incidents",
     `${first.id}.checkpoint-receipt`);
   await symlink(redirectedCheckpointArchive, checkpointArchivePath);
-  await assert.rejects(store.resolve(first.id, { checkpointReceiptPath, packageReceiptPath }),
-    /symlink|canonical regular file/u,
-  "a pre-created archive symlink cannot redirect resolution writes even with identical bytes");
+  await captureStoreRejection("archiveWriteSymlink",
+    store.resolve(first.id, { checkpointReceiptPath, packageReceiptPath }),
+    /symlink|canonical regular file/u);
   await rm(checkpointArchivePath);
   const resolved = await store.resolve(first.id, { checkpointReceiptPath, packageReceiptPath });
   assert.equal(resolved.state, "resolved");
-  assert.equal((await store.blocking({ commit:"repair-commit" })).length, 9,
+  const repairCommitBlocking = await store.blocking({ commit:"repair-commit" });
+  assert.equal(repairCommitBlocking.length, 10,
     "other classified flakes remain blocking while the repaired incident is resolved");
   const evidence = timeoutResolutionEvidence(resolved);
   assert.equal(evidence.resolutionDigest, resolved.resolution.digest);
-  assert.equal((await store.resolutions({ commit:"repair-commit" }))[0].packageDigest,
+  const verifiedResolutions = await store.resolutions({ commit:"repair-commit" });
+  assert.equal(verifiedResolutions[0].packageDigest,
     resolved.resolution.package.digest,
   "Git-note resolution loading recomputes archived checkpoint and package links");
   const incidentPath = path.join(incidentFixtureRoot, "incidents", `${resolved.id}.json`);
@@ -839,66 +886,183 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
   traversingResolution.digest = timeoutIncidentDigest({ ...traversingResolution, digest:undefined });
   traversingEnvelope.digest = timeoutIncidentDigest(traversingEnvelope.incident);
   await writeFile(incidentPath, `${JSON.stringify(traversingEnvelope)}\n`);
-  await assert.rejects(store.read(resolved.id), /archive|filename|travers/u,
-    "stored archive traversal fails closed even when attacker recomputes document digests");
+  await captureStoreRejection("traversal", store.read(resolved.id),
+    /archive|filename|travers|transition history/u);
   await writeFile(incidentPath, canonicalIncidentBytes);
   const archivePath = path.join(incidentFixtureRoot, "incidents", `${resolved.id}.package-zip`);
   const archiveBackupPath = path.join(incidentFixtureRoot, `${resolved.id}.package-zip.backup`);
   await rename(archivePath, archiveBackupPath);
   await symlink(archiveBackupPath, archivePath);
-  await assert.rejects(store.resolutions({ commit:"repair-commit" }), /symlink|canonical regular file/u,
-    "post-resolution archive symlinks fail closed during Git-note verification");
+  await captureStoreRejection("archiveReadSymlink", store.resolutions({ commit:"repair-commit" }),
+    /symlink|canonical regular file/u);
   await rm(archivePath);
   await rename(archiveBackupPath, archivePath);
-  assert.equal((await store.blocking({ commit:"unrelated-commit" })).length, 0,
+  const unrelatedLineageBlocking = await store.blocking({ commit:"unrelated-commit" });
+  assert.equal(unrelatedLineageBlocking.length, 0,
     "an unrelated candidate lineage is not blocked by timeout incident state");
+  const rebased = await store.recordLineageTransition(concurrentIncidents[0].id, {
+    kind:"rebase", fromCommit:"failed-commit", toCommit:"rebased-commit", toTree:"rebased-tree",
+  });
+  assert.equal(rebased.lineageTransitions[0].toCommit, "rebased-commit");
+  assert.equal((await store.blocking({ commit:"rebased-commit" })).some(
+    ({ id }) => id === concurrentIncidents[0].id), true,
+  "an explicit rebase keeps the unresolved incident attached to the replacement candidate");
+  let abandonmentDecisionRequired = false;
+  try {
+    await store.recordLineageTransition(concurrentIncidents[1].id, {
+      kind:"abandon", fromCommit:"failed-commit",
+    });
+  } catch (error) {
+    assert.match(error.message, /specifier-approved user decision/u);
+    abandonmentDecisionRequired = true;
+  }
+  assert.equal(abandonmentDecisionRequired, true,
+    "candidate abandonment cannot release an incident without a separate specifier decision");
+
+  const classifiedForHistory = classifiedFirst;
+  const malformedHistories = [];
+  const duplicateTransition = structuredClone(classifiedForHistory);
+  duplicateTransition.transitions.push(structuredClone(duplicateTransition.transitions.at(-1)));
+  malformedHistories.push(duplicateTransition);
+  const reorderedTransition = structuredClone(classifiedForHistory);
+  reorderedTransition.transitions.reverse();
+  malformedHistories.push(reorderedTransition);
+  const missingTransition = structuredClone(classifiedForHistory);
+  missingTransition.transitions.pop();
+  malformedHistories.push(missingTransition);
+  const inconsistentTransition = structuredClone(classifiedForHistory);
+  inconsistentTransition.transitions.at(-1).classification = "confirmed-flaky";
+  malformedHistories.push(inconsistentTransition);
+  const earlierTransition = structuredClone(classifiedForHistory);
+  earlierTransition.transitions.at(-1).at = "2026-08-08T23:59:59.000Z";
+  malformedHistories.push(earlierTransition);
+  const transitionRejections = malformedHistories.map((malformedHistory) => {
+    try { validateIncident(malformedHistory); return false; }
+    catch (error) { assert.match(error.message, /transition|history/u); return true; }
+  });
+  assert.equal(transitionRejections.every(Boolean), true,
+    "recomputed documents cannot bypass reliability transition semantics");
 
   const tamperedPath = incidentPath;
   const tampered = JSON.parse(await readFile(tamperedPath, "utf8"));
   tampered.incident.state = "unresolved";
   await writeFile(tamperedPath, `${JSON.stringify(tampered)}\n`);
-  await assert.rejects(store.read(resolved.id), /digest/u);
+  await captureStoreRejection("digest", store.read(resolved.id), /digest/u);
 
   const redirectedRoot = path.join(incidentFixtureRoot, "redirected");
   await symlink(path.join(incidentFixtureRoot, "incidents"), redirectedRoot);
   const redirected = createTimeoutIncidentStore({ storeDirectory:redirectedRoot });
-  await assert.rejects(redirected.list(), /symlink|redirected/u);
+  await captureStoreRejection("storeSymlink", redirected.list(), /symlink|redirected/u);
   const malformedRoot = path.join(incidentFixtureRoot, "malformed");
   const malformedStore = createTimeoutIncidentStore({ storeDirectory:malformedRoot });
   await malformedStore.create({ ...failure, runnerRunId:"run-malformed-seed" });
   await writeFile(path.join(malformedRoot, "truncated.json"), "{\n");
-  await assert.rejects(malformedStore.list(), /Cannot read|JSON/u);
+  await captureStoreRejection("malformed", malformedStore.list(), /Cannot read|JSON/u);
+  const repairChecks = {
+    eligible:proposal.repair.status === "eligible",
+    descendant:proposal.repair.candidate.commit === "repair-commit" &&
+      proposal.repair.candidate.tree === "repair-tree",
+    freshFocused:proposal.repair.focusedReceipt.status === "passed" &&
+      proposal.repair.focusedReceipt.provenance === "fresh" &&
+      proposal.repair.focusedReceipt.commit === "repair-commit",
+  };
+  const changedFiles = await new Promise((resolve, reject) => execFile("git",
+    ["diff", "--name-only", "master"], { cwd:path.resolve(new URL("../", import.meta.url).pathname) },
+    (error, stdout, stderr) => error ? reject(new Error(stderr.trim() || error.message))
+      : resolve(stdout.trim().split(/\r?\n/u).filter(Boolean))));
+  const masterPacks = await verificationPacksAtCommit("master");
+  const allPackIds = [...timeoutRepairPackIds];
+  const currentConservationPlan = planVerification(timeoutPackRegistry,
+    { packIds:allPackIds, includeProperties:true });
+  const masterConservationPlan = planVerification(masterPacks,
+    { packIds:allPackIds, includeProperties:true });
+  const packContract = (packs) => packs.filter(({ id }) => allPackIds.includes(id))
+    .map(({ id, dependencies, browserObservations,
+      checkpointCommands }) => ({ id, dependencies, browserObservations, checkpointCommands }));
+  const currentCalibration = JSON.parse(await readFile(
+    new URL("../verification/performance-calibration.json", import.meta.url), "utf8"));
+  const masterCalibration = JSON.parse(await new Promise((resolve, reject) => execFile("git",
+    ["show", "master:verification/performance-calibration.json"],
+    { cwd:path.resolve(new URL("../", import.meta.url).pathname) },
+    (error, stdout, stderr) => error ? reject(new Error(stderr.trim() || error.message)) : resolve(stdout))));
+  delete currentCalibration.conservation.verificationTopologyDigest;
+  delete masterCalibration.conservation.verificationTopologyDigest;
+  const indivisibleTask = { key:"unit:indivisible", stage:"unit", packId:"shell",
+    executable:"node", args:["test/indivisible-test.mjs"] };
+  const observedFailureBoundaries = [
+    { failure:"a runner-owned timeout during target cleanup",
+      boundary:"the logical target and cleanup phase",
+      observed:{ retryScope:diagnosticRetryScope({ task:failure.task,
+        lastProgress:{ boundary:"target", logicalTargetId:"A", phase:"cleanup" } }),
+      phase:"cleanup" } },
+    { failure:"an offscreen control hit-test assertion",
+      boundary:"the logical browser target and assertion site",
+      observed:nonTimeoutEvidence["hit-test"] },
+    { failure:"a Property Set settling assertion",
+      boundary:"the executable target or case and unsettled state",
+      observed:nonTimeoutEvidence["property-set-settling"] },
+    { failure:"an indivisible task assertion or nonzero exit",
+      boundary:"the canonical task and diagnostic fingerprint",
+      observed:{ retryScope:diagnosticRetryScope({ task:indivisibleTask }),
+        fingerprint:reliabilityFailureFingerprint({ failureClass:"nonzero-exit",
+          task:indivisibleTask, exitCode:1 }) } },
+  ];
+  let ambiguousProgressRejected = false;
+  try { diagnosticRetryScope({ task:failure.task }); }
+  catch (error) { assert.match(error.message, /trusted progress/u); ambiguousProgressRejected = true; }
+  const retryScopes = {
+    "an assertion inside logical target TARGET-A":diagnosticRetryScope({ task:failure.task,
+      lastProgress:{ boundary:"target", logicalTargetId:"TARGET-A", phase:"assertion" } }),
+    "an executable scenario or generated case":caseIncident.failure.retryScope,
+    "shared artifact setup before any target":diagnosticRetryScope({ task:failure.task,
+      lastProgress:{ boundary:"artifact/setup", phase:"dist-artifact-lock" } }),
+    "an indivisible non-browser task":diagnosticRetryScope({ task:indivisibleTask }),
+    "absent, invalid, or ambiguous progress":{ kind:"rejected", rejected:ambiguousProgressRejected },
+  };
   vtd014Evidence = {
     historical:historicalClassification,
     progress:{ last:progressTracker.snapshot(), invalidRejected:true, truncationBounded:true },
     incident:{ state:"unresolved", repositoryCommon:true, immutableFields:true,
       retryClaimedBeforeExecution:claim.retry.status === "claimed", ordinaryResumeBlocked:true },
-    failures:{ boundaries:[
-      ["a runner-owned timeout during target cleanup", "the logical target and cleanup phase"],
-      ["an offscreen control hit-test assertion", "the logical browser target and assertion site"],
-      ["a Property Set settling assertion", "the executable target or case and unsettled state"],
-      ["an indivisible task assertion or nonzero exit", "the canonical task and diagnostic fingerprint"],
-    ] },
-    nonTimeoutFixtures:{ hitTest:true, propertySetSettling:true,
-      confirmedFlaky:true, repairBlocking:true },
-    retry:{ target:diagnosticRetryScope({ task:failure.task,
-      lastProgress:{ boundary:"target", logicalTargetId:"A", phase:"persistence" } }),
-      setup:diagnosticRetryScope({ task:failure.task,
-        lastProgress:{ boundary:"artifact/setup", phase:"dist-artifact-lock" } }),
-      classifications, secondRetryRejected:true },
-    repair:{ symptomSuppressionRejected:true, limitOnlyRejected:true,
-      unprovenRejected:true, staleRejected:true,
-      unrelatedRejected:true, eligible:proposal.repair.status === "eligible",
-      descendant:true, freshFocused:true },
-    store:{ concurrentIndependentIds:concurrentIncidents.length === 2, tamperRejected:true,
-      symlinkRejected:true, malformedRejected:true, unrelatedLineageExcluded:true },
+    failures:{ boundaries:observedFailureBoundaries },
+    nonTimeoutFixtures:nonTimeoutEvidence,
+    retry:{ scopes:retryScopes, classifications, secondRetryRejected:true,
+      innerDeadlineIdentityConserved },
+    repair:{ symptomSuppressionRejected:Boolean(repairRejections.limitOnly),
+      limitOnlyRejected:Boolean(repairRejections.limitOnly),
+      unprovenRejected:Boolean(repairRejections.unproven),
+      staleRejected:Boolean(repairRejections.stale && repairRejections.unchangedCandidate),
+      unrelatedRejected:Boolean(repairRejections.unrelated), ...repairChecks },
+    store:{ concurrentIndependentIds:concurrentIncidents.length === 2,
+      tamperRejected:Boolean(storeRejections.digest && storeRejections.traversal),
+      symlinkRejected:Boolean(storeRejections.archiveWriteSymlink &&
+        storeRejections.archiveReadSymlink && storeRejections.storeSymlink),
+      malformedRejected:Boolean(storeRejections.malformed),
+      lineage:{ unrelatedExcluded:unrelatedLineageBlocking.length === 0,
+        rebasePreserved:rebased.lineageTransitions[0].toCommit === "rebased-commit",
+        abandonmentDecisionRequired },
+      transitionHistory:{ duplicateRejected:transitionRejections[0],
+        reorderedRejected:transitionRejections[1], missingRejected:transitionRejections[2],
+        inconsistentRejected:transitionRejections[3], earlierTimestampRejected:transitionRejections[4] } },
     resolution:{ evidence, allPackCount:resolved.resolution.checkpoint.packIds.length,
       reusedTaskCount:resolved.resolution.checkpoint.reusedTaskCount,
-      packagePassed:resolved.resolution.package.status === "passed", handoffGate:true },
-    conservation:{ taskIdentitiesUnchanged:true, targetsUnchanged:true, budgetsUnchanged:true,
-      calibrationUnchanged:true, workersUnchanged:true, shardsUnchanged:true,
-      ordinaryResumeRetained:true, diagnosticRetryOnPassingRun:false, productUnchanged:true,
-      productionBoundariesUnchanged:true },
+      packagePassed:resolved.resolution.package.status === "passed",
+      archiveVerified:verifiedResolutions[0].resolutionDigest === resolved.resolution.digest,
+      resolvedIncidentExcludedFromBlocking:!repairCommitBlocking.some(({ id }) => id === first.id),
+      handoffGate:resolved.state === "resolved" &&
+        !repairCommitBlocking.some(({ id }) => id === first.id),
+      downstreamIncidentDistinct:changedInnerDeadline.id !== first.id },
+    conservation:{ changedFiles, productChangedFiles:changedFiles.filter((file) => file.startsWith("src/")),
+      featureChangedFiles:changedFiles.filter((file) => file.startsWith("features/")),
+      currentTaskDigest:verificationDigest(currentConservationPlan.tasks.map(verificationTaskIdentity)),
+      masterTaskDigest:verificationDigest(masterConservationPlan.tasks.map(verificationTaskIdentity)),
+      currentPackContractDigest:verificationDigest(packContract(timeoutPackRegistry)),
+      masterPackContractDigest:verificationDigest(packContract(masterPacks)),
+      currentCalibrationDigest:verificationDigest(currentCalibration),
+      masterCalibrationDigest:verificationDigest(masterCalibration),
+      diagnosticRetryOnPassingRun:false,
+      allPackCount:timeoutRepairPackIds.length,
+      packageTask:timeoutRepairPackageTaskIdentity.args.join(" ") },
   };
 } finally {
   await rm(incidentFixtureRoot, { recursive:true, force:true });
@@ -911,12 +1075,16 @@ const diagnosticIncident = {
   id:"reachable-diagnostic", failure:{ retryIdentity:"retry-identity", retryScope:{ kind:"task",
     taskKey:"unit:reachable-diagnostic", executionArgs:["-e", "process.stdout.write('diagnostic-ran')"] },
     lineage:{ commit:"failed", tree:"failed-tree" }, environment:diagnosticEnvironment,
+    configuredTimeoutMs:600000,
+    resolvedDeadlines:{ DIST_ARTIFACT_LOCK_TIMEOUT_MS:600000,
+      VERIFICATION_COMMAND_TIMEOUT_MS:600000, VERIFICATION_TERMINATION_GRACE_MS:5000 },
     artifact:{ inputDigest:"a".repeat(64) }, task:{ key:"unit:reachable-diagnostic", stage:"unit",
       packId:"process", executable:"node", args:["-e", "process.stdout.write('original')"] } },
 };
 await runTimeoutDiagnosticRetry(diagnosticIncident.id, {
   candidateIdentity:async() => ({ commit:"failed", tree:"failed-tree" }),
   artifactIdentity:async() => diagnosticIncident.failure.artifact,
+  deadlineIdentity:() => diagnosticIncident.failure.resolvedDeadlines,
   store:{
   read:async() => diagnosticIncident,
   claimDiagnosticRetry:async(id, identity) => diagnosticClaims.push([id, identity]),
@@ -930,6 +1098,18 @@ assert.deepEqual(diagnosticClaims, [[diagnosticIncident.id, diagnosticIncident.f
 assert.equal(diagnosticReceiptObservation.tasks[diagnosticIncident.failure.task.key].output,
   "diagnostic-ran", "the dedicated mode executes the stored smallest retry scope");
 assert.equal(diagnosticReceiptObservation.diagnostic.incidentId, diagnosticIncident.id);
+let changedDeadlineClaimed = false;
+await assert.rejects(runTimeoutDiagnosticRetry(diagnosticIncident.id, {
+  candidateIdentity:async() => ({ commit:"failed", tree:"failed-tree" }),
+  artifactIdentity:async() => diagnosticIncident.failure.artifact,
+  deadlineIdentity:() => ({ ...diagnosticIncident.failure.resolvedDeadlines,
+    DIST_ARTIFACT_LOCK_TIMEOUT_MS:999999 }),
+  store:{ read:async() => diagnosticIncident,
+    claimDiagnosticRetry:async() => { changedDeadlineClaimed = true; },
+    classifyDiagnosticRetry:async() => diagnosticIncident },
+}), /deadline identity changed/u,
+"a changed inner deadline is rejected before the diagnostic allowance is claimed or executed");
+assert.equal(changedDeadlineClaimed, false);
 
 function pack(id, overrides = {}) {
   return {

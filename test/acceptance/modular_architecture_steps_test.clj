@@ -88,7 +88,10 @@
   (let [feature (gherkin/parse-file "features/modular-verification-packs.feature")
         execution (first (filter #(= "Modular verification packs 105/example_1" (:name %))
                                  (runtime/expand-executions feature)))
-        evidence {:incident {:retryClaimedBeforeExecution true}}]
+        evidence {:incident {:retryClaimedBeforeExecution true}
+                  :retry {:scopes {"an assertion inside logical target TARGET-A"
+                                   {:kind "target" :logicalTargetIds ["TARGET-A"]}}
+                          :innerDeadlineIdentityConserved true}}]
     (with-redefs-fn {#'vtd014/production-evidence! (constantly evidence)}
       #(is (= "an assertion inside logical target TARGET-A"
               (:vtd014/failure-boundary
@@ -106,17 +109,39 @@
                   :progress {:truncationBounded true}
                   :incident {:state "unresolved" :repositoryCommon true :immutableFields true
                              :ordinaryResumeBlocked true :retryClaimedBeforeExecution true}
-                  :failures {:boundaries #{["a runner-owned timeout during target cleanup"
-                                            "the logical target and cleanup phase"]
-                                           ["an offscreen control hit-test assertion"
-                                            "the logical browser target and assertion site"]
-                                           ["a Property Set settling assertion"
-                                            "the executable target or case and unsettled state"]
-                                           ["an indivisible task assertion or nonzero exit"
-                                            "the canonical task and diagnostic fingerprint"]}}
-                  :non-timeout-fixtures {:hitTest true :propertySetSettling true
-                                         :confirmedFlaky true :repairBlocking true}
-                  :retry {:classifications {:passed "confirmed-flaky"
+                  :failures {:boundaries [{:failure "a runner-owned timeout during target cleanup"
+                                           :boundary "the logical target and cleanup phase"
+                                           :observed {:retryScope {:kind "target"} :phase "cleanup"}}
+                                          {:failure "an offscreen control hit-test assertion"
+                                           :boundary "the logical browser target and assertion site"
+                                           :observed {:retryScope {:kind "target"} :assertionSite "layout:1"}}
+                                          {:failure "a Property Set settling assertion"
+                                           :boundary "the executable target or case and unsettled state"
+                                           :observed {:retryScope {:kind "case"}
+                                                      :boundedState {:settled false}}}
+                                          {:failure "an indivisible task assertion or nonzero exit"
+                                           :boundary "the canonical task and diagnostic fingerprint"
+                                           :observed {:retryScope {:kind "task"} :fingerprint digest}}]}
+                  :non-timeout-fixtures {:hit-test {:classification "confirmed-flaky"
+                                                    :state "unresolved"
+                                                    :retryScope {:kind "target"}
+                                                    :phase "assertion" :assertionSite "layout:1"
+                                                    :fingerprint digest :boundedState {:x 1}}
+                                         :property-set-settling {:classification "confirmed-flaky"
+                                                                 :state "unresolved"
+                                                                 :retryScope {:kind "case"}
+                                                                 :phase "assertion" :assertionSite "settling:1"
+                                                                 :fingerprint digest :boundedState {:settled false}}}
+                  :retry {:scopes {"an assertion inside logical target TARGET-A"
+                                   {:kind "target" :logicalTargetIds ["TARGET-A"]}
+                                   "an executable scenario or generated case" {:kind "case"}
+                                   "shared artifact setup before any target"
+                                   {:kind "setup" :logicalTargetIds []}
+                                   "an indivisible non-browser task" {:kind "task"}
+                                   "absent, invalid, or ambiguous progress"
+                                   {:kind "rejected" :rejected true}}
+                          :innerDeadlineIdentityConserved true
+                          :classifications {:passed "confirmed-flaky"
                                             :sameFailure "reproduced-failure"
                                             :failed "changed-failure"
                                             :identityChanged "diagnostic-contract-failure"}
@@ -125,14 +150,26 @@
                            :unprovenRejected true :staleRejected true
                            :unrelatedRejected true :eligible true :descendant true :freshFocused true}
                   :store {:concurrentIndependentIds true :tamperRejected true :symlinkRejected true
-                          :malformedRejected true :unrelatedLineageExcluded true}
+                          :malformedRejected true
+                          :lineage {:unrelatedExcluded true :rebasePreserved true
+                                    :abandonmentDecisionRequired true}
+                          :transitionHistory {:duplicateRejected true :reorderedRejected true
+                                              :missingRejected true :inconsistentRejected true
+                                              :earlierTimestampRejected true}}
                   :resolution {:allPackCount 20 :reusedTaskCount 0 :packagePassed true
-                               :evidence {:failureDigest digest :resolutionDigest digest}}
-                  :conservation {:taskIdentitiesUnchanged true :targetsUnchanged true
-                                 :budgetsUnchanged true :calibrationUnchanged true
-                                 :workersUnchanged true :shardsUnchanged true
-                                 :ordinaryResumeRetained true :diagnosticRetryOnPassingRun false
-                                 :productUnchanged true :productionBoundariesUnchanged true}}]
+                               :archiveVerified true :resolvedIncidentExcludedFromBlocking true
+                               :handoffGate true :downstreamIncidentDistinct true
+                               :evidence {:failureDigest digest :resolutionDigest digest
+                                          :repairCommit "repair" :repairTree "tree"
+                                          :causalCategory "readiness" :regression {}
+                                          :focusedReceipt {} :checkpointReceiptSha256 digest}}
+                  :conservation {:changedFiles ["scripts/verification-reliability-store.mjs"]
+                                 :productChangedFiles [] :featureChangedFiles []
+                                 :currentTaskDigest digest :masterTaskDigest digest
+                                 :currentPackContractDigest digest :masterPackContractDigest digest
+                                 :currentCalibrationDigest digest :masterCalibrationDigest digest
+                                 :diagnosticRetryOnPassingRun false :allPackCount 20
+                                 :packageTask "scripts/package.mjs"}}]
     (is (= 23 (count executions)))
     (with-redefs-fn {#'vtd014/production-evidence! (constantly evidence)}
       #(doseq [execution executions]

@@ -30,6 +30,7 @@ import {
   createTimeoutIncidentStore,
   createVerificationProgressTracker,
   reliabilityFailureFingerprint,
+  resolvedVerificationDeadlines,
   timeoutRepairCausalCategory,
   timeoutRepairFocusedTaskPlan,
   timeoutRepairPackageTaskIdentity,
@@ -399,6 +400,8 @@ export function createVerificationCommandRunner(context, options = {}) {
       ].includes(name));
     if (reservedEnvironment) throw new Error(`Verification task cannot override reserved environment: ${reservedEnvironment}`);
     const identity = verificationTaskIdentity(task);
+    const resolvedDeadlines = resolvedVerificationDeadlines({ timeoutMs, terminationGraceMs,
+      environment:{ ...process.env, ...taskEnvironment } });
     const executionArgs = task.executionArgs ?? task.args;
     const executionDisplay = task.executionArgs
       ? [task.executable, ...executionArgs].join(" ")
@@ -581,6 +584,7 @@ export function createVerificationCommandRunner(context, options = {}) {
         failureClass,
         fingerprint,
         configuredTimeoutMs:timeoutMs,
+        resolvedDeadlines,
         applicableLimit:runnerTimedOut ? { kind:"runner-timeout", milliseconds:timeoutMs }
           : failureClass === "output-limit" ? { kind:"output-bytes", bytes:outputLimit } : null,
         durationMs:freshDurationMs,
@@ -624,13 +628,24 @@ export async function runTimeoutDiagnosticRetry(id, {
         ? reject(new Error(stderr.trim() || error.message)) : resolve(stdout.trim()))),
   }),
   artifactIdentity = () => validateCurrentArtifactForConsumers({ root:repositoryRoot }),
+  deadlineIdentity = (incident) => resolvedVerificationDeadlines({
+    timeoutMs:environmentInteger("VERIFICATION_COMMAND_TIMEOUT_MS", defaultTimeoutMs),
+    terminationGraceMs:environmentInteger("VERIFICATION_TERMINATION_GRACE_MS",
+      defaultTerminationGraceMs, { maximum:30000 }),
+    environment:{ ...process.env, ...(incident.failure.task.environment ?? {}) },
+  }),
 } = {}) {
   const incident = await store.read(id);
   if (!incident.failure.retryScope) throw new Error(`Timeout incident ${id} has no trusted retry scope`);
-  const [candidate, artifact] = await Promise.all([candidateIdentity(), artifactIdentity()]);
+  const [candidate, artifact, deadlines] = await Promise.all([
+    candidateIdentity(), artifactIdentity(), deadlineIdentity(incident),
+  ]);
   if (candidate.commit !== incident.failure.lineage.commit || candidate.tree !== incident.failure.lineage.tree ||
       verificationDigest(artifact) !== verificationDigest(incident.failure.artifact)) {
     throw new Error(`Timeout incident ${id} diagnostic candidate or artifact identity changed`);
+  }
+  if (verificationDigest(deadlines) !== verificationDigest(incident.failure.resolvedDeadlines)) {
+    throw new Error(`Timeout incident ${id} diagnostic deadline identity changed`);
   }
   const concurrency = incident.failure.environment.concurrency;
   const observationConcurrency = incident.failure.environment.observationConcurrency;
@@ -640,7 +655,7 @@ export async function runTimeoutDiagnosticRetry(id, {
   context.receipt.plan = { mode:"timeout-diagnostic", requestedPackIds:[incident.failure.task.packId],
     selectedPackIds:[incident.failure.task.packId] };
   context.receipt.diagnostic = { incidentId:id, retryIdentity:incident.failure.retryIdentity,
-    scope:structuredClone(incident.failure.retryScope) };
+    scope:structuredClone(incident.failure.retryScope), resolvedDeadlines:structuredClone(deadlines) };
   if (JSON.stringify(context.receipt.environment) !== JSON.stringify(incident.failure.environment)) {
     throw new Error(`Timeout incident ${id} diagnostic environment identity changed`);
   }

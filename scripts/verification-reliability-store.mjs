@@ -57,8 +57,9 @@ function diagnosticOperations({ root, now, read, update }) {
         if (!incident.failure.retryScope || identity !== incident.failure.retryIdentity) {
           throw new Error(`Timeout incident ${id} diagnostic retry identity changed`);
         }
-        return transition({ ...incident, retry:{ status:"claimed", identity, claimedAt:now() } },
-          "diagnostic-retry-claimed", now());
+        const at = now();
+        return transition({ ...incident, retry:{ status:"claimed", identity, claimedAt:at } },
+          "diagnostic-retry-claimed", at);
       });
     },
     async classifyDiagnosticRetry(id, receiptPath) {
@@ -68,6 +69,8 @@ function diagnosticOperations({ root, now, read, update }) {
         const task = Object.values(document.receipt.tasks)[0];
         const identityChanged = document.receipt.diagnostic?.incidentId !== id ||
           document.receipt.diagnostic?.retryIdentity !== incident.failure.retryIdentity ||
+          JSON.stringify(normalized(document.receipt.diagnostic?.resolvedDeadlines)) !==
+            JSON.stringify(normalized(incident.failure.resolvedDeadlines)) ||
           JSON.stringify(normalized(document.receipt.diagnostic?.scope)) !==
             JSON.stringify(normalized(incident.failure.retryScope)) ||
           document.receipt.candidate.commit !== incident.failure.lineage.commit ||
@@ -83,9 +86,10 @@ function diagnosticOperations({ root, now, read, update }) {
             : task.reliabilityFailureFingerprint === incident.failure.fingerprint
               ? "sameFailure" : "failed";
         const classification = retryClassifications[outcome];
+        const at = now();
         return transition({ ...incident, retry:{ ...incident.retry, status:"classified", outcome,
-          classification, receiptPath:document.path, receiptSha256:document.sha256, classifiedAt:now() } },
-        "diagnostic-retry-classified", now(), { classification });
+          classification, receiptPath:document.path, receiptSha256:document.sha256, classifiedAt:at } },
+        "diagnostic-retry-classified", at, { classification });
       });
     },
   };
@@ -126,10 +130,13 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
       const semanticProposal = await validateRepairReceiptSemantics(current, proposal,
         regressionDocument, focusedDocument, canonicalRepairTaskIdentities);
       const eligible = await validateTimeoutRepairProposal(current, semanticProposal, { isAncestor });
-      return update(id, (incident) => transition({ ...incident,
-        retry:incident.retry ?? { status:"invalidated-by-repair", classification:"not-retried-repaired",
-          invalidatedAt:now() }, repair:eligible },
-      "repair-proposed", now(), { commit:eligible.candidate.commit }));
+      return update(id, (incident) => {
+        const at = now();
+        return transition({ ...incident,
+          retry:incident.retry ?? { status:"invalidated-by-repair", classification:"not-retried-repaired",
+            invalidatedAt:at }, repair:eligible },
+        "repair-proposed", at, { commit:eligible.candidate.commit });
+      });
     },
     claimRepairCheckpoint(id, runId) {
       return update(id, (incident) => {
@@ -137,8 +144,9 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
           throw new Error(`Timeout incident ${id} has no eligible repair`);
         }
         if (incident.repairCheckpoint) throw new Error(`Timeout incident ${id} repair checkpoint was already used`);
-        return transition({ ...incident, repairCheckpoint:{ status:"claimed", runId, claimedAt:now() } },
-          "repair-checkpoint-claimed", now(), { runId });
+        const at = now();
+        return transition({ ...incident, repairCheckpoint:{ status:"claimed", runId, claimedAt:at } },
+          "repair-checkpoint-claimed", at, { runId });
       });
     },
     async resolve(id, { checkpointReceiptPath, packageReceiptPath } = {}) {
@@ -181,22 +189,34 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
         const packageResult = { status:"passed", path:path.relative(root, resolvedPackagePath),
           receiptPath:packageDocument.path, receiptSha256:packageDocument.sha256,
           digest:timeoutIncidentDigest(packageBytes) };
+        const at = now();
         const resolutionWithoutDigest = { checkpoint:checkpointResult,
-          package:packageResult, archive, resolvedAt:now() };
+          package:packageResult, archive, resolvedAt:at };
         const resolution = { ...resolutionWithoutDigest, digest:timeoutIncidentDigest(resolutionWithoutDigest) };
-        return transition({ ...incident, state:"resolved", resolution }, "resolved", now(),
+        return transition({ ...incident, state:"resolved", resolution }, "resolved", at,
           { resolutionDigest:resolution.digest });
       });
     },
   };
 }
 
-async function lineageApplies({ root, isAncestor, ancestor, commit }) {
+async function commitDescendsFrom({ root, isAncestor, ancestor, commit }) {
   if (ancestor === commit) return true;
   if (!ancestor || !commit) return false;
   if (isAncestor) return isAncestor(ancestor, commit);
   try { await git(root, "merge-base", "--is-ancestor", ancestor, commit); return true; }
   catch { return false; }
+}
+
+async function lineageApplies({ root, isAncestor, incident, commit, resolution = false }) {
+  const anchors = resolution
+    ? [incident.repair?.candidate?.commit]
+    : [incident.failure?.lineage?.commit, ...(incident.lineageTransitions ?? [])
+      .filter(({ kind }) => kind === "rebase").map(({ toCommit }) => toCommit)];
+  for (const ancestor of anchors) {
+    if (await commitDescendsFrom({ root, isAncestor, ancestor, commit })) return true;
+  }
+  return false;
 }
 
 export function createTimeoutIncidentStore({
@@ -245,6 +265,7 @@ export function createTimeoutIncidentStore({
       });
       const incident = validateIncident({
         version:1, id, createdAt:now(), state:"unresolved", failure:immutableFailure,
+        lineageTransitions:[],
         failureDigest:timeoutIncidentDigest(immutableFailure), transitions:[],
       });
       const directory = await access.directory();
@@ -258,7 +279,7 @@ export function createTimeoutIncidentStore({
     async blocking({ commit }) {
       const applicable = [];
       for (const incident of await this.list()) {
-        if (await lineageApplies({ root, isAncestor, ancestor:incident.failure?.lineage?.commit, commit }) &&
+        if (await lineageApplies({ root, isAncestor, incident, commit }) &&
             incident.state !== "resolved") applicable.push(incident);
       }
       return applicable;
@@ -267,7 +288,7 @@ export function createTimeoutIncidentStore({
       const records = [];
       for (const incident of await this.list()) {
         if (incident.state !== "resolved" || !await lineageApplies({ root, isAncestor,
-          ancestor:incident.repair?.candidate?.commit, commit })) continue;
+          incident, commit, resolution:true })) continue;
         const directory = await access.directory({ create:false });
         validateArchiveNames(incident.id, incident.resolution.archive);
         const checkpointDocument = await archivedReceiptDocument(
@@ -286,6 +307,42 @@ export function createTimeoutIncidentStore({
         records.push(timeoutResolutionEvidence(incident));
       }
       return records;
+    },
+    recordLineageTransition(id, mapping) {
+      exactObject(mapping, "Reliability lineage transition");
+      return access.update(id, (incident) => {
+        if (incident.state !== "unresolved") throw new Error(`Timeout incident ${id} is resolved`);
+        const transitions = incident.lineageTransitions ?? [];
+        const anchors = new Set([incident.failure.lineage?.commit,
+          ...transitions.filter(({ kind }) => kind === "rebase").map(({ toCommit }) => toCommit)]);
+        if (typeof mapping.fromCommit !== "string" || !anchors.has(mapping.fromCommit)) {
+          throw new Error(`Timeout incident ${id} lineage transition has an unknown source`);
+        }
+        const at = now();
+        let durable;
+        if (mapping.kind === "rebase") {
+          if (typeof mapping.toCommit !== "string" || !mapping.toCommit ||
+              typeof mapping.toTree !== "string" || !mapping.toTree ||
+              mapping.toCommit === mapping.fromCommit || anchors.has(mapping.toCommit)) {
+            throw new Error(`Timeout incident ${id} rebase transition requires a distinct candidate and tree`);
+          }
+          durable = { kind:"rebase", fromCommit:mapping.fromCommit,
+            toCommit:mapping.toCommit, toTree:mapping.toTree, at };
+        } else if (mapping.kind === "abandon") {
+          const decision = mapping.userDecision;
+          if (decision?.approvedBy !== "specifier" || decision?.approved !== true ||
+              typeof decision.reference !== "string" || !decision.reference.trim()) {
+            throw new Error(`Timeout incident ${id} abandonment requires a separate specifier-approved user decision`);
+          }
+          durable = { kind:"abandon", fromCommit:mapping.fromCommit,
+            userDecision:structuredClone(decision), at };
+        } else {
+          throw new Error(`Timeout incident ${id} has an unsupported lineage transition`);
+        }
+        return transition({ ...incident, lineageTransitions:[...transitions, durable] },
+          durable.kind === "rebase" ? "lineage-rebased" : "lineage-abandoned", at,
+          Object.fromEntries(Object.entries(durable).filter(([key]) => !["kind", "at"].includes(key))));
+      });
     },
   };
   return Object.assign(store,
