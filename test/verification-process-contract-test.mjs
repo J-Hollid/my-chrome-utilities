@@ -805,6 +805,21 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
       repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
   }
+  if (causalCategory === "other:workspace temporary repository detection") {
+    const fixture = {
+      id:"workspace-temporary-repository-detection-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ temporaryRootInsideRepository:true },
+      expectedPreRepairFailure:{ expectedStateRoot:"system", matchesWrapper:false },
+      expectedRepairResult:{ expectedStateRoot:"repository-local", matchesWrapper:true },
+    };
+    const preRepairObservation = { expectedStateRoot:"system", matchesWrapper:false };
+    const repairObservation = { expectedStateRoot:"repository-local", matchesWrapper:true };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
+  }
   if (causalCategory === "other:reliability outward diagnostic terminology") {
     const fixture = {
       id:"reliability-outward-diagnostic-terminology-v1", causalCategory,

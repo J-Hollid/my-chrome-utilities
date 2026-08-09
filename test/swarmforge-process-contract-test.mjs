@@ -303,7 +303,9 @@ printf 'CLJ_CACHE=%s\\n' "$CLJ_CACHE"
 printf 'GITLIBS=%s\\n' "$GITLIBS"
 for argument in "$@"; do printf 'ARG=%s\\n' "$argument"; done
 `, { mode: 0o755 });
-  const state = `/tmp/swarmforge-clojure-${process.getuid()}`;
+  const state = path.resolve(temporary).startsWith(`${path.resolve(root)}${path.sep}`)
+    ? path.join(root, ".swarmforge", "clojure")
+    : path.join(os.tmpdir(), `swarmforge-clojure-${process.getuid()}`);
   const wrapper = await run(path.join(root, "swarmforge/scripts/clj"), ["-Sdescribe"], {
     cwd: temporary,
     env: {
