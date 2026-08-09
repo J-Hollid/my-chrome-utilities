@@ -63,9 +63,10 @@ here.
   `60458b958ccfbb59238cc7a96c573ab207de5bcc`.
 - VTD-007 completed the normal coder, refactorer, and architect chain and merged at
   `95c79a42d69078c3bca7018e528f3559a1a49668`.
-- VTD-004, VTD-005, VTD-007, and VTD-009 are complete. VTD-006 has a bounded
-  candidate specification awaiting user approval; VTD-008 and VTD-010 through
-  VTD-012 remain queued and inactive.
+- VTD-006 completed the normal coder, refactorer, and architect chain and merged at
+  `51ef49a2f9e3b39fb564ddde1869c9b8b2c84a8d`.
+- VTD-014 has a bounded candidate specification awaiting user approval. VTD-008
+  and VTD-010 through VTD-012 remain queued and inactive.
 
 ## Executive assessment
 
@@ -224,6 +225,7 @@ Large items must be split into independently reviewable descendants.
 | VTD-011 | P2 | M | Measured terminal shard balance | VTD-001, VTD-002 |
 | VTD-012 | P2 | L, module slices | Modular registry and planner | VTD-004, VTD-005 |
 | VTD-013 | P1 | S–M | Stable Flow examples timing | VTD-002, VTD-007 |
+| VTD-014 | P1 | M | Timeout incidents must be repaired, not retried away | VTD-002, VTD-007 |
 
 ## Backlog
 
@@ -769,6 +771,74 @@ Dependencies: VTD-002 and VTD-007.
 Expected effect: remove a current source of loaded-run flake without reopening the
 already improved Flow selection work.
 
+### VTD-014 — Repair timeout flakes instead of retrying them away
+
+Priority: P1, bounded
+
+Problem:
+
+An exact checkpoint can currently time out, be resumed, and later produce passing
+evidence without retaining the fact that the same unchanged code failed first. A
+real receipt from 2026-08-07 shows the Capture batch waiting the complete 600-second
+outer limit on a dist-artifact lock before any logical target reported. The receipt
+correctly failed, but the current resume path had no durable incident, no setup-phase
+identity, and no rule requiring the lock/lifecycle cause to be repaired. Repeating
+that pattern wastes ten minutes at a time and lets flaky verification accumulate.
+
+Required outcome:
+
+- Every runner-owned command timeout creates a repository-common, tamper-evident
+  incident that survives coder, refactorer, architect, and specifier worktrees.
+- The incident identifies the candidate lineage, task, owning pack, timeout owner,
+  last started logical target when one exists, active phase, last bounded progress
+  state, exact limit, termination result, receipt, and artifact/toolchain identity.
+- Browser batches emit process-start, setup, target-start, phase, and cleanup
+  progress before completion so an outer kill cannot erase the active boundary.
+- Exactly one unchanged diagnostic retry is permitted. It runs only the active
+  failed logical target; if no target started, it runs only the owning setup
+  boundary; for an indivisible non-browser leaf, it runs only that exact task.
+  Previously passing tasks and targets are never part of this retry.
+- The retry keeps the same candidate tree, artifact, toolchain, execution-load
+  class, task configuration, and timeout. A pass classifies a confirmed flake; a
+  repeated or different failure remains an unresolved incident. No outcome silently
+  becomes a pass, and a second unchanged retry is rejected.
+- Evidence recording and Git handoff fail while the current candidate lineage owns
+  an unresolved timeout incident. Repair notes remain available so a role can route
+  the work to the appropriate owner.
+- Resolution requires a changed candidate, a named causal repair, a deterministic
+  regression that would have caught the original failure without waiting for the
+  production timeout, focused fresh verification of the repaired boundary, and one
+  fresh all-pack checkpoint. Raising a timeout alone cannot resolve an incident.
+
+Acceptance criteria:
+
+- A forced batch timeout after target progress records the exact target and phase;
+  a timeout before target progress records the setup boundary, not every target in
+  the batch.
+- The historical 600-second Capture-lock receipt is represented by a bounded fixture
+  and is classified as dist-artifact setup with all 274 passing tasks excluded from
+  its isolated retry.
+- Pass-on-retry, same-failure, different-failure, missing-progress, and attempted
+  second-retry fixtures all remain blocking and have distinct diagnostics.
+- Concurrent incident writers cannot overwrite one another; malformed, redirected,
+  symlinked, truncated, or manually altered state fails closed.
+- A candidate with only a timeout-value increase, only a verbal explanation, reused
+  focused results, or no causal regression cannot enter the fresh checkpoint or
+  create handoff evidence.
+- After a valid repair, its focused boundary and one fresh canonical all-pack run
+  pass, the resolution is linked into durable Git-note evidence, and the handoff
+  gate reports no unresolved incident for that lineage.
+- Runs without a timeout retain their exact task plans, batching, budgets,
+  calibrations, worker limits, package check, and ordinary non-timeout resume
+  behavior.
+
+Dependencies: VTD-002 provides durable receipt identity and VTD-007 provides
+target/phase progress. VTD-006 makes the shared side-panel batches target-aware.
+
+Expected effect: developers stop paying repeated ten-minute retry penalties for the
+same hidden problem. A timeout becomes a small, named repair job with evidence, so a
+flaky check is fixed once instead of slowing every later Specification Studio change.
+
 ## Recommended sequence
 
 ### Phase A — Establish measurement truth
@@ -800,10 +870,11 @@ while semantic changes retain downstream closure.
 
 1. VTD-007 — readiness and phase timing
 2. VTD-006 — modular side-panel browser program
-3. VTD-010 — redundant smoke launch consolidation
+3. VTD-014 — timeout incident repair gate
+4. VTD-010 — redundant smoke launch consolidation
 
 Exit condition: terminal batching is retained, focused targets initialize only
-their fixtures, and timeout diagnostics name the unmet state.
+their fixtures, and a timeout cannot be retried away without a causal repair.
 
 ### Phase D — Reduce product-code coupling
 
@@ -827,10 +898,10 @@ maintenance no longer requires editing several monolithic infrastructure files.
    Flow/schema authority.
 3. Run the locked toolchain checker once.
 4. Inspect `git status`; preserve unrelated user changes.
-5. Regenerate the throughput report from the currently authoritative receipt
-   sources without editing raw receipts.
-6. Recalculate at least the audit comparison table using indivisible bounded-task
-   scheduling until VTD-001 is complete.
+5. Use the delivered canonical timing ledger and environment classes; never edit a
+   raw receipt to make it eligible.
+6. For VTD-014, inspect repository-common unresolved timeout incidents and the
+   sanitized historical Capture-lock fixture before changing retry behavior.
 7. Select exactly one backlog id. Do not hand the entire program to one coder as an
    unbounded task.
 8. Write its deterministic contract and evidence-conservation table.
@@ -840,10 +911,10 @@ maintenance no longer requires editing several monolithic infrastructure files.
 
 ## Handover summary
 
-Start with VTD-001. The repository currently contains enough instrumentation to
-expose the principal costs, but its plan-duration arithmetic can understate them by
-roughly 40–90 seconds for the largest packs. Correct measurement is the dependency
-for credible budgets, shard weights, and benefit reports.
+Proceed with the bounded VTD-014 candidate after explicit user approval. VTD-001
+through VTD-007, VTD-009, and VTD-013 are delivered, including corrected scheduling,
+canonical timing evidence, representative budgets, narrower ownership, shared
+readiness, and the modular side-panel browser program.
 
 After measurement truth, the fastest direct development-time wins are precise
 impact boundaries and layered editor target partitioning. Preserve terminal
@@ -853,11 +924,12 @@ target-specific initialization, not 46 independent Chrome launches.
 
 The Flow editor is no longer the leading general bottleneck for a simple UI change:
 its representative path is about 27 seconds and remains under the 35-second
-guardrail. The isolated Flow examples p90 regression still needs VTD-013. The
-largest remaining product-code debt is the `src/side-panel.ts` composition root,
-and the largest browser-fixture debt is the shared one-megabyte side-panel runtime
-program.
+guardrail, and its isolated examples regression was stabilized by VTD-013. The
+shared one-megabyte side-panel runtime was modularized by VTD-006. VTD-014 is next
+because current exact-checkpoint retry behavior can still hide a ten-minute timeout
+instead of forcing its cause to be repaired. The largest remaining product-code debt
+is the `src/side-panel.ts` composition root.
 
-No implementation commit or verification evidence is attached to this backlog.
-The next specifier must create a bounded specification and obtain user approval
-before normal SwarmForge handoff.
+The VTD-014 specification is not an implementation handoff. The specifier must
+obtain user approval before committing it and sending the normal SwarmForge coder
+handoff.
