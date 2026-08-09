@@ -9,6 +9,22 @@ export function layeredEditorHydrationReadinessState({
     projectTreeConnected === true;
 }
 
+export function layeredCreatedEntityReadinessState({
+  dialogConnected, durableEntityId, workspaceEntityId,
+}) {
+  return dialogConnected === false && typeof durableEntityId === "string" &&
+    durableEntityId.length > 0 && workspaceEntityId === durableEntityId;
+}
+
+export function reliableLayeredEntityCreationProgram(source) {
+  const domOnlyEntityCreationSource = "const form=q('[data-creation-kind=\"'+kind+'\"] form');set('[name=\"name\"]',name,form);for(const[key,value]of Object.entries(values)){const control=form.querySelector('[name=\"'+key+'\"]');if(control)set(control,value,form);}form.requestSubmit();for(let attempt=0;attempt<600;attempt+=1){const workspace=document.querySelector('[data-project-entity-workspace]');if(workspace&&!document.querySelector('[data-creation-kind=\"'+kind+'\"]')){await pause();return workspace;}await pause();}throw new Error('Created '+kind+' '+name+' did not settle');";
+  const durableEntityCreationSource = "const form=q('[data-creation-kind=\"'+kind+'\"] form'),repository=await (await import('/data-layer-durable-project-repository.js')).openIndexedDbProjectRepository(),projectId=await repository.activeProjectId();set('[name=\"name\"]',name,form);for(const[key,value]of Object.entries(values)){const control=form.querySelector('[name=\"'+key+'\"]');if(control)set(control,value,form);}form.requestSubmit();let recoveryStarted=false;for(let attempt=0;attempt<600;attempt+=1){const loaded=projectId?await repository.loadProject(projectId):undefined,durable=loaded?.state.project.collections[kind].find((entity)=>entity.name===name),dialog=document.querySelector('[data-creation-kind=\"'+kind+'\"]'),workspace=durable?document.querySelector('[data-project-entity-workspace=\"'+CSS.escape(durable.id)+'\"]'):undefined;if(!dialog&&durable&&workspace){await pause();return workspace;}if(durable&&!recoveryStarted){recoveryStarted=true;await openKind(kind);const route=document.querySelector('[data-entity-id=\"'+CSS.escape(durable.id)+'\"] button[aria-label^=\"Open \"]');route?.click();}await pause();}const feedback=form.querySelector('output')?.textContent??'',loaded=projectId?await repository.loadProject(projectId):undefined;throw new Error('Created '+kind+' '+name+' did not settle '+JSON.stringify({feedback,durable:Boolean(loaded?.state.project.collections[kind].some((entity)=>entity.name===name)),dialog:Boolean(document.querySelector('[data-creation-kind=\"'+kind+'\"]')),workspace:document.querySelector('[data-project-entity-workspace]')?.dataset.projectEntityWorkspace}));";
+  if (!source.includes(domOnlyEntityCreationSource)) {
+    throw new Error("Layered entity creation program no longer matches its guarded boundary");
+  }
+  return source.replace(domOnlyEntityCreationSource, durableEntityCreationSource);
+}
+
 export const layeredCreateProjectReadinessExpression =
   `(()=>{const state={createProjectConnected:Boolean(document.querySelector('#create-project-form')?.isConnected)};return{...state,ready:(${layeredCreateProjectReadinessState.toString()})(state)};})()`;
 

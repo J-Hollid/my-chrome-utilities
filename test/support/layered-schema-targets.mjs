@@ -13,6 +13,7 @@ import {
   initialLayeredInstalledExpression,
   pageGroupRuntimeExpression,
   pageGroupSeedExpression,
+  reliableLayeredEntityCreationProgram,
   runLayeredEditorCanonicalWorkflow,
   runLayeredEditorPolicyWorkflow,
   runLayeredEditorRuleWorkflow,
@@ -27,7 +28,8 @@ import { typedLiteralFocusedEditorExpression } from "./typed-literal-focused-edi
 import { runProfileInheritanceControlsRuntimeProbe } from "./profile-inheritance-controls-runtime-probe.mjs";
 import { runJournalFreeInstalledRuntimeProbe } from "./journal-free-installed-runtime-probe.mjs";
 
-const editorInitialLayeredInstalledExpression=initialLayeredInstalledExpression;
+const editorInitialLayeredInstalledExpression=
+  reliableLayeredEntityCreationProgram(initialLayeredInstalledExpression);
 const initialCoreKeys=["installedBoundary","consequential","persistenceReload",
   ...Array.from({length:14},(_,index)=>`authoring${String(index+1).padStart(3,"0")}`),
   ...[17,18,19,21,22,23,24,25].map(index=>`authoring${String(index).padStart(3,"0")}`),
@@ -63,7 +65,7 @@ const runEditorProducer=async(workflow,keys,{targetId,evaluate,socket},{canonica
 
 const definitions = {
   LAYERED_SCHEMA_CORE_TARGET:{pagePath:"specification-builder.html",navigationRetries:4,expression:()=>`
-    const complete=await (${initialLayeredInstalledExpression}),owned={};
+    const complete=await (${editorInitialLayeredInstalledExpression}),owned={};
     for(const key of ${JSON.stringify(initialCoreKeys)})owned[key]=complete[key];
     return{layeredSchema:owned};`},
   LAYERED_SCHEMA_EDITOR_TARGET:{pagePath:"specification-builder.html",navigationRetries:4,run:(context)=>runEditorProducer(runLayeredEditorSurfaceWorkflow,editorKeys,context)},
@@ -73,7 +75,7 @@ const definitions = {
   LAYERED_SCHEMA_COMPOSITION_TARGET:{
     pagePath:"specification-builder.html",navigationRetries:4,
     expression:()=>`
-      await (${initialLayeredInstalledExpression});
+      await (${editorInitialLayeredInstalledExpression});
       const flowFacetEvidence=await (${flowFacetExpression});
       if(!flowFacetEvidence.reset)Object.assign(flowFacetEvidence,await (${flowFacet003Expression}));
       const
@@ -96,7 +98,7 @@ const definitions = {
   LAYERED_SCHEMA_PAGE_GROUP_TARGET:{
     pagePath:"specification-builder.html",navigationRetries:4,
     beforeExpression:()=>`
-      await (${initialLayeredInstalledExpression});
+      await (${editorInitialLayeredInstalledExpression});
       const pageGroupStructuralSeed=await (${pageGroupSeedExpression});
       return pageGroupStructuralSeed;`,
     expression:()=>`

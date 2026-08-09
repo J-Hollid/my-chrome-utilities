@@ -14,7 +14,7 @@ import {flatRuleMainProjectionLifecycleExpression,flatRulePanelProjectionDiagnos
 import {typedLiteralFocusedEditorExpression} from "../support/typed-literal-focused-editor-probes.mjs";
 import {runProfileInheritanceControlsRuntimeProbe} from "../support/profile-inheritance-controls-runtime-probe.mjs";
 import {runJournalFreeInstalledRuntimeProbe} from "../support/journal-free-installed-runtime-probe.mjs";
-import {flowCrossFacetExpression,flowFacetExpression,flowMoveOwnershipExpression,flowOwnershipSetupExpression,flowStructureExpression,flowStructureOwnershipSetupExpression,initialLayeredInstalledExpression,pageGroupSeedExpression,pageGroupWorkflowExpression,runLayeredEditorCompleteWorkflow} from "../support/layered-schema-workflows.mjs";
+import {flowCrossFacetExpression,flowFacetExpression,flowMoveOwnershipExpression,flowOwnershipSetupExpression,flowStructureExpression,flowStructureOwnershipSetupExpression,initialLayeredInstalledExpression,pageGroupSeedExpression,pageGroupWorkflowExpression,reliableLayeredEntityCreationProgram,runLayeredEditorCompleteWorkflow} from "../support/layered-schema-workflows.mjs";
 
 if (process.env.SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS) {
   await import("../support/layered-schema-targets.mjs");
@@ -89,7 +89,7 @@ try {
   const settledPage=async()=>{for(let attempt=0;attempt<600;attempt+=1){const targets=await fetch(`http://127.0.0.1:${port}/json/list`).then((response)=>response.json()),candidate=targets.find(({type,url})=>type==="page"&&url?.startsWith(pageUrl));if(candidate)return candidate;await wait(25);}throw new Error("Extension page did not settle after opening");};
   reconnectTarget=async()=>{const next=await settledPage(),connection=new DevtoolsSocket(next.webSocketDebuggerUrl);await connection.connect();await connection.call("Runtime.enable");await connection.call("Page.enable");await wait(100);return connection;};
   socket=await reconnectTarget();activeSocket=socket;await ready(socket,"#create-project-form");
-  const evidence=await evaluate(socket,initialLayeredInstalledExpression);
+  const evidence=await evaluate(socket,reliableLayeredEntityCreationProgram(initialLayeredInstalledExpression));
     const {optionalRuleConditionEvidence,installedOptionalRuleEvidence,repositoryConditionalRuleEvidence,
     authoringCorrectionEvidence,canonicalFacetEvidence,authoring045Evidence}=await runLayeredEditorCompleteWorkflow({
     evidence,evaluate,socket,activeSocket,ready,wait,assert,authoring034Expression,

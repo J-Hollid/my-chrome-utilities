@@ -27,6 +27,22 @@ function validateCausalExplanation(value) {
   return value;
 }
 
+export function timeoutRepairDiagnosedBoundary(incident) {
+  validateIncident(incident);
+  if (incident.failure.retryScope) return structuredClone(incident.failure.retryScope);
+  const { failure } = incident;
+  const logicalTargetId = failure.failedBoundary?.logicalTargetId;
+  if (failure.failureClass !== "explicit-logical-failure" ||
+      failure.task?.stage !== "browser-observation" ||
+      failure.failedBoundary?.boundary !== undefined ||
+      typeof logicalTargetId !== "string" || !logicalTargetId ||
+      !failure.task.logicalTargetIds?.includes(logicalTargetId)) {
+    throw new Error(`Timeout incident ${incident.id} has no trusted repair boundary`);
+  }
+  return { kind:"target", logicalTargetIds:[logicalTargetId],
+    executionArgs:["scripts/run-browser-observation.mjs", logicalTargetId] };
+}
+
 export function timeoutRepairFocusedTaskKeys(incident, changedPaths, regressionKey) {
   validateIncident(incident);
   const keys = new Set([incident.failure.task.key, regressionKey]);
@@ -46,6 +62,7 @@ export function timeoutRepairFocusedTaskKeys(incident, changedPaths, regressionK
 
 export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionKey, canonicalIdentities) {
   validateIncident(incident);
+  const diagnosedBoundary = timeoutRepairDiagnosedBoundary(incident);
   if (!Array.isArray(canonicalIdentities)) throw new Error("Canonical repair task identities are required");
   const canonical = new Map(canonicalIdentities.map((identity) => [identity.key, normalized(identity)]));
   const expectedKeys = timeoutRepairFocusedTaskKeys(incident, changedPaths, regressionKey);
@@ -69,8 +86,8 @@ export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionK
     }
     const descriptor = { identity, roles:[...(roles.get(key) ?? new Set())].sort() };
     if (key === incident.failure.task.key) {
-      descriptor.executionArgs = [...incident.failure.retryScope.executionArgs];
-      descriptor.executionLogicalTargetIds = [...(incident.failure.retryScope.logicalTargetIds ?? [])];
+      descriptor.executionArgs = [...diagnosedBoundary.executionArgs];
+      descriptor.executionLogicalTargetIds = [...(diagnosedBoundary.logicalTargetIds ?? [])];
     }
     return descriptor;
   });
@@ -90,6 +107,7 @@ function regressionProtocol(document, regressionKey, incidentId) {
 }
 
 function validateRegressionEvidence(incident, proposal, protocol) {
+  const diagnosedBoundary = timeoutRepairDiagnosedBoundary(incident);
   const invalidEvidence = () => new Error("Timeout repair causal regression must contain bounded cause-specific fixture evidence with an observed pre-repair failure and repaired result");
   if (!protocol?.fixture || typeof protocol.fixture !== "object" || Array.isArray(protocol.fixture) ||
       !protocol.preRepairResult || typeof protocol.preRepairResult !== "object" ||
@@ -108,7 +126,7 @@ function validateRegressionEvidence(incident, proposal, protocol) {
       protocol.failureDigest !== incident.failureDigest ||
       !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(fixture.id ?? "") ||
       fixture.causalCategory !== proposal.causalCategory || encodedFixture.length > 16_384 ||
-      fixture.diagnosedBoundaryDigest !== timeoutIncidentDigest(incident.failure.retryScope) ||
+      fixture.diagnosedBoundaryDigest !== timeoutIncidentDigest(diagnosedBoundary) ||
       !fixture.expectedPreRepairFailure || !fixture.expectedRepairResult ||
       JSON.stringify(normalized(fixture.expectedPreRepairFailure)) ===
         JSON.stringify(normalized(fixture.expectedRepairResult)) ||
@@ -150,7 +168,7 @@ export async function validateRepairReceiptSemantics(incident, proposal, regress
             logicalTargetIds:executionLogicalTargetIds ?? [] })))) {
     throw new Error("Timeout repair focused repair plan contains unrelated or missing tasks");
   }
-  return { ...proposal, diagnosedBoundary:structuredClone(incident.failure.retryScope),
+  return { ...proposal, diagnosedBoundary:timeoutRepairDiagnosedBoundary(incident),
     causalProtocol:protocol, focusedTaskPlan:expectedTaskPlan };
 }
 

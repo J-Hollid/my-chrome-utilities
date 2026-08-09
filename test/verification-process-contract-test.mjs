@@ -96,6 +96,7 @@ import {
   resolvedVerificationDeadlines,
   timeoutIncidentDigest,
   timeoutRepairCausalCategory,
+  timeoutRepairDiagnosedBoundary,
   timeoutRepairPackageTaskIdentity,
   timeoutRepairPackIds,
   timeoutRepairFocusedTaskPlan,
@@ -245,8 +246,9 @@ try {
     environmentClass:"normal-linux", capabilityRoutes:{ "local-loopback":"scoped-command-approval" },
   });
   let ownerAlive = true;
+  let checkpointTimestamp = Date.parse("2026-08-09T00:00:00.000Z");
   const attemptStore = createCheckpointAttemptStore({ directory:checkpointAttemptRoot,
-    now:() => "2026-08-09T00:00:00.000Z", ownerAlive:async() => ownerAlive });
+    now:() => new Date(checkpointTimestamp++).toISOString(), ownerAlive:async() => ownerAlive });
   const createdAttempt = await attemptStore.claim(attemptIdentity,
     ["unit:a", "browser:b", "package:extension"], { pid:41, token:"owner-41" });
   assert.equal(createdAttempt.action, "created");
@@ -319,6 +321,10 @@ try {
   assert.equal(observedPromotionScopes["completed receipt finalization is interrupted"],
     "receipt-finalization");
   await attemptStore.markPromotion(createdAttempt.attempt.id, "receipt-finalized");
+  const receiptPromotion = (await attemptStore.read(createdAttempt.attempt.id));
+  assert.equal(receiptPromotion.promotion["receipt-finalized"].at,
+    receiptPromotion.transitions.find(({type}) => type === "receipt-finalized").at,
+  "one promotion event retains one timestamp even when the clock advances per read");
   observedPromotionScopes["pending evidence creation is interrupted"] =
     (await attemptStore.recovery(createdAttempt.attempt.id)).scope;
   assert.equal(observedPromotionScopes["pending evidence creation is interrupted"],
@@ -809,6 +815,24 @@ try {
       [...timeoutCanonicalIdentities, canonicalTask]),
     `${task.key} remains repairable without guessing causal files from command arguments`);
   }
+  const browserTask = verificationTaskIdentity({ key:"browser-observation:SHARED",
+    stage:"browser-observation", packId:"schemas", executable:"node",
+    args:["scripts/run-browser-observation.mjs", "SHARED"], logicalTargetIds:["SHARED"] });
+  const { retryScope:discardedRetryScope, ...legacyBoundaryFailure } = {
+    ...first.failure, failureClass:"explicit-logical-failure", task:browserTask,
+    failedBoundary:{ logicalTargetId:"SHARED" },
+    retryScope:{ kind:"target", logicalTargetIds:["discarded"], executionArgs:["discarded"] },
+  };
+  assert.ok(discardedRetryScope);
+  const legacyBoundaryIncident = { ...first, failure:legacyBoundaryFailure,
+    failureDigest:timeoutIncidentDigest(legacyBoundaryFailure) };
+  assert.deepEqual(timeoutRepairDiagnosedBoundary(legacyBoundaryIncident), {
+    kind:"target", logicalTargetIds:["SHARED"],
+    executionArgs:["scripts/run-browser-observation.mjs", "SHARED"],
+  }, "an immutable explicit logical failure from the pre-boundary runner remains narrowly repairable");
+  assert.doesNotThrow(() => timeoutRepairFocusedTaskPlan(legacyBoundaryIncident,
+    ["scripts/run-focused-acceptance.mjs"], "unit:test/verification-process-contract-test.mjs",
+    [...timeoutCanonicalIdentities, browserTask]));
   const receiptDirectory = path.join(incidentFixtureRoot, "tmp", "verification-receipts");
   await mkdir(receiptDirectory, { recursive:true });
   const writeRunnerReceipt = async(name, receipt) => {
@@ -5460,9 +5484,13 @@ if (process.platform !== "win32") {
     process.env.VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES = "4096";
     const context = createVerificationReceiptContext(1, 2, { receiptDirectory:commandReceiptDirectory });
     let commandFailureNumber = 0;
+    const commandFailures = [];
     const runner = createVerificationCommandRunner(context, { incidentStore:{
-      create:async() => ({ id:`incident-command-fixture-${++commandFailureNumber}`,
-        failureDigest:"d".repeat(64) }),
+      create:async(failure) => {
+        commandFailures.push(failure);
+        return { id:`incident-command-fixture-${++commandFailureNumber}`,
+          failureDigest:"d".repeat(64) };
+      },
     } });
     const envTask = {
       key:"unit:environment", stage:"unit", packId:"process", executable:process.execPath,
@@ -5579,6 +5607,10 @@ if (process.platform !== "win32") {
     await assert.rejects(() => runner(mixedProtocolTask.display, mixedProtocolTask),
       /Browser target result incomplete or failed/u,
       "an isolated-target protocol cannot omit one target result after emitting another");
+    assert.deepEqual(commandFailures.at(-1).failedBoundary,
+      { boundary:"target", logicalTargetId:"NEW_SECOND", phase:undefined,
+        assertionSite:undefined, caseId:undefined, deadlineOwner:undefined, state:undefined },
+    "an explicit failed logical result retains a trusted target boundary for diagnostic scope");
 
     process.env.VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES = "32";
     const overflowContext = createVerificationReceiptContext(1, 2, { receiptDirectory:commandReceiptDirectory });

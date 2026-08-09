@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {createHash} from "node:crypto";
 import {
   compileLayeredSchema,
   resolveConditionalLayeredSchema,
@@ -15,6 +16,47 @@ import {documentPageGroupStructure,evaluatePageGroupFixture,pageGroupStructuralS
 import {composedSchemaWorkspace} from "../dist/data-layer-composed-schema-workspace.js";
 import {flowDocumentationSnapshotFromState} from "../dist/data-layer-flow-table-documentation-export-ui.js";
 import {applySchemaTablePropertyEditorAllocation,schemaTablePropertyEditorAllocation} from "../dist/data-layer-schema-table.js";
+import {initialLayeredInstalledExpression,layeredCreatedEntityReadinessState,reliableLayeredEntityCreationProgram} from "./support/layered-schema-workflows.mjs";
+
+const createdEntityCases=[
+  {dialogConnected:false,durableEntityId:"property-set:checkout",workspaceEntityId:"property-set:checkout"},
+  {dialogConnected:true,durableEntityId:"property-set:checkout",workspaceEntityId:"property-set:checkout"},
+  {dialogConnected:false,durableEntityId:undefined,workspaceEntityId:"property-set:checkout"},
+  {dialogConnected:false,durableEntityId:"property-set:checkout",workspaceEntityId:"profile:sitewide"},
+];
+assert.deepEqual(createdEntityCases.map(layeredCreatedEntityReadinessState),[true,false,false,false],
+  "Layered entity creation settles only on matching durable and rendered entity identities");
+const reliableCreationProgram=reliableLayeredEntityCreationProgram(initialLayeredInstalledExpression);
+assert.match(reliableCreationProgram,/durable=loaded\?\.state\.project\.collections\[kind\]/u,
+  "the installed Layered workflow observes the durable entity before accepting creation");
+assert.match(reliableCreationProgram,/data-project-entity-workspace=/u,
+  "the installed Layered workflow recovers and observes the exact created workspace identity");
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
+    normalized=(value)=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"
+      ?Object.fromEntries(Object.entries(value).filter(([,nested])=>nested!==undefined)
+        .sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)]))
+      :value,
+    digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
+    transient={dialogConnected:false,durableEntityId:undefined,workspaceEntityId:"stale-workspace"},
+    exact={dialogConnected:false,durableEntityId:"property-set:checkout",
+      workspaceEntityId:"property-set:checkout"},
+    fixture={id:"layered-durable-entity-readiness-v1",causalCategory:"readiness or settling",
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:{transient,exact},
+      expectedPreRepairFailure:{transientSettled:true,exactSettled:true},
+      expectedRepairResult:{transientSettled:false,exactSettled:true}},
+    preRepairResult={transientSettled:transient.dialogConnected===false&&Boolean(transient.workspaceEntityId),
+      exactSettled:exact.dialogConnected===false&&Boolean(exact.workspaceEntityId)},
+    repairResult={transientSettled:layeredCreatedEntityReadinessState(transient),
+      exactSettled:layeredCreatedEntityReadinessState(exact)},fixtureDigest=digest(fixture);
+  assert.deepEqual(preRepairResult,fixture.expectedPreRepairFailure);
+  assert.deepEqual(repairResult,fixture.expectedRepairResult);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:preRepairResult},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}}}));
+}
 
 const propertyEditorHeading={style:{},dataset:{},setAttribute(name,value){this[name]=value;}},propertyEditorCell={style:{},dataset:{}},propertyEditorAction={style:{},dataset:{}};
 applySchemaTablePropertyEditorAllocation(propertyEditorHeading,propertyEditorCell,propertyEditorAction);

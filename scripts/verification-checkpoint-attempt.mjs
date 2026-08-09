@@ -308,9 +308,10 @@ export function createCheckpointAttemptStore({ directory, now = () => new Date()
               .some((prior) => !attempt.promotion[prior])) {
           throw new Error(`Checkpoint attempt ${id} promotion step is out of order`);
         }
-        const promotion = { ...attempt.promotion, [step]:{ at:now() } };
+        const at = now();
+        const promotion = { ...attempt.promotion, [step]:{ at } };
         return { ...attempt, promotion, state:step === "handoff-eligible" ? "promoted" : attempt.state,
-          transitions:[...attempt.transitions, { type:step, at:now() }] };
+          transitions:[...attempt.transitions, { type:step, at }] };
       });
     },
     async recovery(id) {

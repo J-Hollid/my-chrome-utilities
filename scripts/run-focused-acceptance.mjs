@@ -32,6 +32,7 @@ import {
   reliabilityFailureFingerprint,
   resolvedVerificationDeadlines,
   timeoutRepairCausalCategory,
+  timeoutRepairDiagnosedBoundary,
   timeoutRepairFocusedTaskPlan,
   timeoutRepairPackageTaskIdentity,
   timeoutRepairPackIds,
@@ -593,6 +594,7 @@ export function createVerificationCommandRunner(context, options = {}) {
       const failedLogicalResult = Object.entries(logicalResults ?? {})
         .find(([, logicalResult]) => logicalResult.status !== "passed");
       const failedBoundary = failedLogicalResult ? {
+        boundary:"target",
         logicalTargetId:failedLogicalResult[0],
         phase:failedLogicalResult[1].phase,
         assertionSite:failedLogicalResult[1].assertionSite,
@@ -780,7 +782,7 @@ export async function runTimeoutRepairFocused(id, {
   await context.write();
   console.error(`[verify:receipt] ${path.relative(repositoryRoot, context.receiptPath)}`);
   const regressionContext = { version:1, incidentId:id, failureDigest:incident.failureDigest,
-    diagnosedBoundary:incident.failure.retryScope, causalCategory, causalExplanation };
+    diagnosedBoundary:timeoutRepairDiagnosedBoundary(incident), causalCategory, causalExplanation };
   const runner = commandRunnerFactory(context, { strictAcceptanceReceipt:false });
   for (const descriptor of taskPlan) {
     const task = { ...structuredClone(descriptor.identity),
