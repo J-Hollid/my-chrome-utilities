@@ -790,6 +790,21 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
       repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
   }
+  if (causalCategory === "other:workspace-scoped verification temporary storage") {
+    const fixture = {
+      id:"workspace-scoped-verification-temporary-storage-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ systemTemporaryFilesystemSharedWithIncidentStore:true },
+      expectedPreRepairFailure:{ childTemporaryRoot:"system", storeCapacityIsolated:false },
+      expectedRepairResult:{ childTemporaryRoot:"workspace-run", storeCapacityIsolated:true },
+    };
+    const preRepairObservation = { childTemporaryRoot:"system", storeCapacityIsolated:false };
+    const repairObservation = { childTemporaryRoot:"workspace-run", storeCapacityIsolated:true };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
+  }
   if (causalCategory === "other:reliability outward diagnostic terminology") {
     const fixture = {
       id:"reliability-outward-diagnostic-terminology-v1", causalCategory,
@@ -5935,6 +5950,15 @@ if (process.platform !== "win32") {
     await runner(envTask.display, envTask);
     assert.equal(context.receipt.tasks[envTask.key].output.trim(), "visible");
     assert.equal(context.receipt.tasks[envTask.key].stderr, "");
+    const tempTask = {
+      key:"unit:temporary-root", stage:"unit", packId:"process", executable:process.execPath,
+      args:["-e", "require('node:fs').writeSync(1,process.env.TMPDIR+'\\n')"],
+      target:"temporary-root", environment:null, display:"runner-owned temporary root",
+    };
+    await runner(tempTask.display, tempTask);
+    assert.equal(context.receipt.tasks[tempTask.key].output.trim(),
+      path.join(context.runDirectory, "system-temp"),
+    "verification children use workspace-scoped temporary storage without moving the incident store");
     const streamedTargets = [];
     const streamingContext = createVerificationReceiptContext(1, 1,
       { receiptDirectory:commandReceiptDirectory });

@@ -1,6 +1,6 @@
 import { execFile, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { access, readFile } from "node:fs/promises";
+import { access, mkdir, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -453,7 +453,8 @@ export function createVerificationCommandRunner(context, options = {}) {
     }
     const reservedEnvironment = Object.keys(taskEnvironment).find((name) =>
       ["PATH", "NODE_OPTIONS", "MY_CHROME_UTILITIES_DIST_LOCK_HELD",
-        "SWARMFORGE_VERIFICATION_RECEIPT", "SWARMFORGE_STRICT_VERIFICATION_RECEIPT"].includes(name) ||
+        "SWARMFORGE_VERIFICATION_RECEIPT", "SWARMFORGE_STRICT_VERIFICATION_RECEIPT",
+        "TMPDIR"].includes(name) ||
       name.startsWith("SWARMFORGE_") && ![
         "SWARMFORGE_BUILD_PREPARED", "SWARMFORGE_PACK_RUNNER_OWNS_JS",
       ].includes(name));
@@ -475,6 +476,8 @@ export function createVerificationCommandRunner(context, options = {}) {
     const browserOutputDirectory = ["browser", "browser-observation"].includes(task.stage)
       ? path.join(context.runDirectory, task.key.replaceAll(/[^A-Za-z0-9._-]/gu, "_"))
       : undefined;
+    const taskTempDirectory = path.join(context.runDirectory, "system-temp");
+    await mkdir(taskTempDirectory, { recursive:true });
     const isolateChild = capabilityApprovedPlan;
     const shareLoopback = launchRoute === "scoped-command-approval";
     const launch = isolateChild ? {
@@ -492,6 +495,7 @@ export function createVerificationCommandRunner(context, options = {}) {
         ...process.env,
         ...taskEnvironment,
         ...executionEnvironment,
+        TMPDIR:taskTempDirectory,
         ...(process.env.MY_CHROME_UTILITIES_DIST_LOCK_HELD === undefined
           ? {}
           : { MY_CHROME_UTILITIES_DIST_LOCK_HELD:process.env.MY_CHROME_UTILITIES_DIST_LOCK_HELD }),
