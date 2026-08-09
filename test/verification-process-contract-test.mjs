@@ -835,6 +835,21 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
       repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
   }
+  if (causalCategory === "other:short Chrome singleton socket route") {
+    const fixture = {
+      id:"short-chrome-singleton-socket-route-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ browserStageKnownBeforeLaunch:true, singletonSocketLimit:true },
+      expectedPreRepairFailure:{ firstTemporaryRoute:"workspace-long", socketEligible:false },
+      expectedRepairResult:{ firstTemporaryRoute:"system-short", socketEligible:true },
+    };
+    const preRepairObservation = { firstTemporaryRoute:"workspace-long", socketEligible:false };
+    const repairObservation = { firstTemporaryRoute:"system-short", socketEligible:true };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
+  }
   if (causalCategory === "other:reliability outward diagnostic terminology") {
     const fixture = {
       id:"reliability-outward-diagnostic-terminology-v1", causalCategory,
@@ -5989,6 +6004,16 @@ if (process.platform !== "win32") {
     assert.equal(context.receipt.tasks[tempTask.key].output.trim(),
       path.join(context.runDirectory, "system-temp"),
     "verification children use workspace-scoped temporary storage without moving the incident store");
+    const browserTempTask = {
+      key:"browser:temporary-root", stage:"browser", packId:"process", executable:process.execPath,
+      args:["-e", "require('node:fs').writeSync(1,process.env.TMPDIR+'\\n')"],
+      target:"browser-temporary-root", environment:null, requiredCapabilities:[],
+      display:"browser short temporary root",
+    };
+    await runner(browserTempTask.display, browserTempTask);
+    assert.equal(context.receipt.tasks[browserTempTask.key].output.trim(),
+      path.join("/tmp", "sf-chrome", context.receipt.runId.slice(0, 8)),
+    "known Chrome tasks use the short singleton-socket route on their first launch");
     const streamedTargets = [];
     const streamingContext = createVerificationReceiptContext(1, 1,
       { receiptDirectory:commandReceiptDirectory });
