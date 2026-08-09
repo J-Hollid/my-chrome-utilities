@@ -48,6 +48,7 @@ import {
 import {
   compatibleTimeoutRepairIncidentIds,
   checkpointPreflight,
+  createCheckpointIdentityGuard,
   createVerificationCommandRunner,
   createVerificationReceiptContext,
   focusedAcceptanceOptions,
@@ -140,6 +141,21 @@ const prerequisiteTasks = [{ key:"browser-observation:known-loopback", stage:"br
   executable:"node", args:["browser.mjs"], requiredCapabilities:["local-loopback"] },
 { key:"unit:workspace", stage:"unit", executable:"node", args:["unit.mjs"],
   requiredCapabilities:[] }];
+const gitMetadataTask = { key:"evidence:git-note", stage:"evidence", executable:"node",
+  args:["scripts/verification-evidence.mjs", "record", "pending.json"],
+  requiredCapabilities:["git-metadata-write"] };
+assert.deepEqual(preflightExecutionPrerequisites([gitMetadataTask, prerequisiteTasks[1]], {
+  availableCapabilities:["git-metadata-write"],
+  approvalRoutes:{ "git-metadata-write":"scoped-git-metadata-approval" },
+}).tasks.map(({ key, route }) => [key, route]), [
+  ["evidence:git-note", "scoped-git-metadata-approval"],
+  ["unit:workspace", "workspace-sandbox"],
+], "Git metadata writes receive a scoped route without widening workspace-only tasks");
+assert.equal((await probeExecutionPrerequisiteEnvironment([gitMetadataTask], {
+  executableProbe:async() => true, outputCapacityProbe:async() => true,
+  capabilityProbe:async(capability) => capability === "git-metadata-write",
+  requestedCapabilities:["git-metadata-write"],
+})).launchable, true, "declared Git metadata access has a usable first-use probe");
 assert.deepEqual(preflightExecutionPrerequisites(prerequisiteTasks, {
   availableCapabilities:["local-loopback"],
   approvalRoutes:{ "local-loopback":"scoped-command-approval" },
@@ -242,6 +258,7 @@ try {
   const attemptIdentity = checkpointAttemptIdentity({
     candidate:{ commit:"a".repeat(40), tree:"b".repeat(40) }, baseCommit:"c".repeat(40),
     evidenceTask:"vtd014", planDigest:"d".repeat(64), artifactInputDigest:"e".repeat(64),
+    artifactOutputDigest:"1".repeat(64), artifactBuildIdentity:"2".repeat(64),
     registryDigest:"f".repeat(64), toolchainDigest:"0".repeat(64),
     environmentClass:"normal-linux", capabilityRoutes:{ "local-loopback":"scoped-command-approval" },
   });
@@ -289,7 +306,7 @@ try {
     "the locked toolchain identity changes":{ ...attemptIdentity,
       toolchainDigest:"4".repeat(64) },
     "the built artifact identity changes":{ ...attemptIdentity,
-      artifactInputDigest:"5".repeat(64) },
+      artifactOutputDigest:"5".repeat(64), artifactBuildIdentity:"6".repeat(64) },
   };
   const driftRows = {};
   for (const [drift, driftIdentity] of Object.entries(driftIdentities)) {
@@ -307,11 +324,30 @@ try {
     assert.deepEqual(Object.values(driftRows[drift]), [true, true, true, true],
       `${drift} stops the existing attempt without forging a fresh attempt`);
   }
+  const partialTargetResult = attemptResult("browser:b", "browser");
+  partialTargetResult.receiptTask.identity.logicalTargetIds = ["BROWSER_FIRST", "BROWSER_SECOND"];
+  partialTargetResult.receiptTask.status = "failed";
+  partialTargetResult.receiptTask.logicalResults = {
+    BROWSER_FIRST:{ id:"BROWSER_FIRST", status:"passed", durationMs:3 },
+    BROWSER_SECOND:{ id:"BROWSER_SECOND" },
+  };
+  await attemptStore.recordLogicalTargets(createdAttempt.attempt.id, "browser:b",
+    partialTargetResult.receiptTask, { token:"owner-42" });
+  const targetDurability = await attemptStore.read(createdAttempt.attempt.id);
+  assert.deepEqual(targetDurability.logicalResults["browser:b"], {
+    BROWSER_FIRST:{ id:"BROWSER_FIRST", status:"passed", durationMs:3 },
+  }, "each completed browser target is durable before its whole batch passes");
+  await attemptStore.interrupt(createdAttempt.attempt.id, "browser:b", { token:"owner-42" });
+  const targetContinuation = await attemptStore.claim(attemptIdentity,
+    ["unit:a", "browser:b", "package:extension"], { pid:44, token:"owner-44" });
+  assert.deepEqual(targetContinuation.attempt.logicalResults["browser:b"], {
+    BROWSER_FIRST:{ id:"BROWSER_FIRST", status:"passed", durationMs:3 },
+  }, "continuation preserves completed targets and reruns only interrupted or unstarted targets");
   await attemptStore.recordTask(createdAttempt.attempt.id, "browser:b",
-    attemptResult("browser:b", "browser"), { token:"owner-42" });
+    attemptResult("browser:b", "browser"), { token:"owner-44" });
   await attemptStore.recordTask(createdAttempt.attempt.id, "package:extension",
-    attemptResult("package:extension", "package"), { token:"owner-42" });
-  await attemptStore.markTasksComplete(createdAttempt.attempt.id, { token:"owner-42" });
+    attemptResult("package:extension", "package"), { token:"owner-44" });
+  await attemptStore.markTasksComplete(createdAttempt.attempt.id, { token:"owner-44" });
   assert.equal((await attemptStore.claim(attemptIdentity,
     ["unit:a", "browser:b", "package:extension"], { pid:43, token:"owner-43" })).action,
   "promotion-only", "a completed attempt rejects duplicate task execution");
@@ -421,6 +457,27 @@ try {
 } finally {
   await rm(checkpointAttemptRoot, { recursive:true, force:true });
 }
+
+const guardIncidents = [];
+let guardedSnapshot = {
+  commit:"a".repeat(40), tree:"b".repeat(40), artifactInputDigest:"c".repeat(64),
+  artifactOutputDigest:"d".repeat(64), artifactBuildIdentity:"e".repeat(64), trackedChanges:"",
+};
+const checkpointGuard = createCheckpointIdentityGuard({
+  expected:structuredClone(guardedSnapshot),
+  snapshot:async() => structuredClone(guardedSnapshot),
+  createIncident:async(failure) => { guardIncidents.push(failure); return { id:"between-task-drift" }; },
+  attemptId:"attempt-guard", routeFor:() => "workspace-sandbox",
+});
+await checkpointGuard.assertBefore({ key:"unit:first", stage:"unit", executable:"node",
+  args:["first.mjs"], requiredCapabilities:[] });
+guardedSnapshot.trackedChanges = " M tracked-file.mjs";
+await assert.rejects(() => checkpointGuard.assertBefore({
+  key:"unit:second", stage:"unit", requiredCapabilities:[],
+  executable:"node", args:["second.mjs"],
+}), /between-task-drift/u, "a tracked mutation between same-stage tasks stops the next child");
+assert.equal(guardIncidents.length, 1,
+  "an actual between-task mutation creates an execution-contract incident");
 assert.deepEqual(resolvedVerificationDeadlines({
   timeoutMs:600000, terminationGraceMs:5000,
   environment:{ DIST_ARTIFACT_LOCK_TIMEOUT_MS:"1", CUSTOM_SETUP_TIMEOUT_MS:"27" },
@@ -5422,6 +5479,20 @@ assert.throws(() => resumeVerificationPlan(
   partialObservationPlan, partialObservationReceipt, resumeIdentity,
 ), /Reliability incident retry.*browser-observation/u,
 "a failed browser batch must use its incident-owned isolated retry rather than ordinary resume");
+const [durableObservationTarget] = observationTask.logicalTargetIds;
+const interruptedObservationReceipt = { version:2, resumeIdentity, tasks:{
+  [observationTask.key]:{
+    identity:verificationTaskIdentity(observationTask), status:"interrupted", durationMs:3,
+    output:"", stderr:"", logicalResults:{
+      [durableObservationTarget]:{ id:durableObservationTarget, status:"passed", durationMs:3 },
+    },
+  },
+} };
+const interruptedObservationResume = resumeVerificationPlan(
+  partialObservationPlan, interruptedObservationReceipt, resumeIdentity);
+assert.deepEqual(interruptedObservationResume.tasks[0].executionLogicalTargetIds,
+  observationTask.logicalTargetIds.slice(1),
+"durable logical-target continuation launches only unfinished targets");
 assert.equal(verificationResumeIdentity(resumablePlan, {
   receipt:{ environment:{ node:"24", typescript:"5", platform:"linux", concurrency:1,
     observationConcurrency:1 } },
@@ -6040,7 +6111,8 @@ try {
     },
     baseCommit:baseline, evidenceTask:"multi-pack-task",
     planDigest:verificationDigest(alphaPlan.tasks.map(verificationTaskIdentity)),
-    artifactInputDigest:artifact.inputDigest,
+    artifactInputDigest:artifact.inputDigest, artifactOutputDigest:artifact.outputDigest,
+    artifactBuildIdentity:artifact.buildIdentity,
     registryDigest:verificationDigest(evidencePacks),
     toolchainDigest:verificationDigest(alphaReceiptDocument.environment),
     environmentClass:verificationDigest(alphaReceiptDocument.environment),

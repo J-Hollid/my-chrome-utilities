@@ -13,8 +13,11 @@ export async function defaultCheckpointAttemptDirectory(root) {
 }
 
 const identityFields = ["candidate", "baseCommit", "evidenceTask", "planDigest",
-  "artifactInputDigest", "registryDigest", "toolchainDigest", "environmentClass",
+  "artifactInputDigest", "artifactOutputDigest", "artifactBuildIdentity",
+  "registryDigest", "toolchainDigest", "environmentClass",
   "capabilityRoutes"];
+const legacyIdentityFields = identityFields.filter((field) =>
+  !["artifactOutputDigest", "artifactBuildIdentity"].includes(field));
 const attemptStates = new Set(["active", "interrupted", "tasks-complete", "promoted"]);
 const promotionOrder = ["receipt-finalized", "pending-evidence-created", "git-note-recorded",
   "handoff-eligible"];
@@ -53,6 +56,7 @@ function validateAttemptHistory(attempt) {
   let interruptedTask = null;
   let previousTime = Date.parse(attempt.createdAt);
   const passed = new Set();
+  const logicalResults = {};
   const promotions = [];
   for (const [index, transition] of attempt.transitions.entries()) {
     const at = Date.parse(transition?.at);
@@ -68,6 +72,16 @@ function validateAttemptHistory(attempt) {
         throw new Error(`Checkpoint attempt ${attempt.id} has an impossible task transition`);
       }
       passed.add(transition.taskKey);
+      continue;
+    }
+    if (transition.type === "logical-target-passed") {
+      if (phase !== "active" || !attempt.taskKeys.includes(transition.taskKey) ||
+          passed.has(transition.taskKey) || typeof transition.logicalTargetId !== "string" ||
+          !transition.logicalTargetId || logicalResults[transition.taskKey]?.has(transition.logicalTargetId)) {
+        throw new Error(`Checkpoint attempt ${attempt.id} has an impossible logical target transition`);
+      }
+      logicalResults[transition.taskKey] ??= new Set();
+      logicalResults[transition.taskKey].add(transition.logicalTargetId);
       continue;
     }
     if (transition.type === "interrupted") {
@@ -108,7 +122,7 @@ function validateAttemptHistory(attempt) {
     }
     throw new Error(`Checkpoint attempt ${attempt.id} has an unknown transition`);
   }
-  return { phase, owner, interruptedTask, passed, promotions };
+  return { phase, owner, interruptedTask, passed, logicalResults, promotions };
 }
 
 export function checkpointAttemptIdentity(value) {
@@ -128,19 +142,27 @@ export function checkpointAttemptIdentity(value) {
 }
 
 function envelope(attempt) {
-  return { version:1, attempt, digest:timeoutIncidentDigest(attempt) };
+  return { version:attempt.version, attempt, digest:timeoutIncidentDigest(attempt) };
 }
 
 function validateAttempt(document, expectedId) {
   const attempt = document?.attempt;
-  if (document?.version !== 1 || attempt?.id !== expectedId ||
+  const legacy = document?.version === 1 && attempt?.version === 1;
+  const current = document?.version === 2 && attempt?.version === 2;
+  const expectedIdentity = legacy
+    ? normalized(Object.fromEntries(legacyIdentityFields.map((field) =>
+      [field, structuredClone(attempt?.identity?.[field]) ])))
+    : checkpointAttemptIdentity(attempt?.identity);
+  if ((!legacy && !current) || attempt?.id !== expectedId ||
       document.digest !== timeoutIncidentDigest(attempt) ||
       attempt.identityDigest !== timeoutIncidentDigest(attempt.identity) ||
-      !same(attempt.identity, checkpointAttemptIdentity(attempt.identity)) ||
-      attempt.version !== 1 || !Array.isArray(attempt.taskKeys) || !attempt.taskKeys.length ||
+      !same(attempt.identity, expectedIdentity) ||
+      !Array.isArray(attempt.taskKeys) || !attempt.taskKeys.length ||
       attempt.taskKeys.some((key) => typeof key !== "string" || !key) ||
       new Set(attempt.taskKeys).size !== attempt.taskKeys.length ||
       !attempt.results || typeof attempt.results !== "object" || Array.isArray(attempt.results) ||
+      (!legacy && (!attempt.logicalResults || typeof attempt.logicalResults !== "object" ||
+        Array.isArray(attempt.logicalResults))) ||
       !attempt.promotion || typeof attempt.promotion !== "object" || Array.isArray(attempt.promotion) ||
       !attemptStates.has(attempt.state)) {
     throw new Error(`Checkpoint attempt ${expectedId} is malformed or digest-mismatched`);
@@ -148,8 +170,21 @@ function validateAttempt(document, expectedId) {
   for (const [key, result] of Object.entries(attempt.results)) {
     validateAttemptResult(attempt, key, result);
   }
+  const durableLogicalResults = attempt.logicalResults ?? {};
+  for (const [key, results] of Object.entries(durableLogicalResults)) {
+    if (!attempt.taskKeys.includes(key) || !results || typeof results !== "object" ||
+        Array.isArray(results) || Object.entries(results).some(([targetId, result]) =>
+          !targetId || result?.id !== targetId || result.status !== "passed" ||
+          !Number.isFinite(result.durationMs))) {
+      throw new Error(`Checkpoint attempt ${expectedId} has malformed logical target results`);
+    }
+  }
   const history = validateAttemptHistory(attempt);
   if (!same([...history.passed].sort(), Object.keys(attempt.results).sort()) ||
+      !same(Object.fromEntries(Object.entries(history.logicalResults)
+        .map(([key, values]) => [key, [...values].sort()])),
+      Object.fromEntries(Object.entries(durableLogicalResults)
+        .map(([key, values]) => [key, Object.keys(values).sort()]))) ||
       history.phase !== attempt.state ||
       attempt.state === "active" && (!validOwner(attempt.owner) || !same(attempt.owner, history.owner) ||
         attempt.currentTask !== null) ||
@@ -166,7 +201,7 @@ function validateAttempt(document, expectedId) {
     attempt.promotion[step].at !== attempt.transitions.find(({ type }) => type === step)?.at)) {
     throw new Error(`Checkpoint attempt ${expectedId} has promotion state drift`);
   }
-  return attempt;
+  return { ...attempt, logicalResults:durableLogicalResults };
 }
 
 async function defaultOwnerAlive(owner) {
@@ -249,8 +284,8 @@ export function createCheckpointAttemptStore({ directory, now = () => new Date()
             throw new Error(`Incompatible checkpoint attempt ${attempt.id} is owned by pid ${attempt.owner.pid}`);
           }
         }
-        const attempt = { version:1, id, identity, identityDigest:id, taskKeys:[...taskKeys],
-          state:"active", owner:structuredClone(owner), currentTask:null, results:{},
+        const attempt = { version:2, id, identity, identityDigest:id, taskKeys:[...taskKeys],
+          state:"active", owner:structuredClone(owner), currentTask:null, results:{}, logicalResults:{},
           promotion:{}, createdAt:now(), transitions:[{ type:"created", at:now(),
             owner:structuredClone(owner) }] };
         await writeExclusive(target(id), envelope(attempt));
@@ -276,6 +311,30 @@ export function createCheckpointAttemptStore({ directory, now = () => new Date()
         return { ...attempt, currentTask:null,
           results:{ ...attempt.results, [key]:structuredClone(result) },
           transitions:[...attempt.transitions, { type:"task-passed", taskKey:key, at:now() }] };
+      });
+    },
+    recordLogicalTargets(id, key, receiptTask, owner) {
+      return update(id, (attempt) => {
+        requireOwner(attempt, owner);
+        const identity = receiptTask?.identity;
+        if (attempt.state !== "active" || !attempt.taskKeys.includes(key) ||
+            identity?.key !== key || !Array.isArray(identity.logicalTargetIds)) {
+          throw new Error(`Checkpoint attempt ${id} cannot record logical targets for ${key}`);
+        }
+        const prior = attempt.logicalResults[key] ?? {};
+        const additions = Object.entries(receiptTask.logicalResults ?? {})
+          .filter(([targetId, result]) => identity.logicalTargetIds.includes(targetId) &&
+            result?.id === targetId && result.status === "passed" && Number.isFinite(result.durationMs) &&
+            !prior[targetId]);
+        if (!additions.length) return attempt;
+        return { ...attempt,
+          logicalResults:{ ...attempt.logicalResults,
+            [key]:{ ...prior, ...Object.fromEntries(additions.map(([targetId, result]) =>
+              [targetId, structuredClone(result)])) } },
+          transitions:[...attempt.transitions, ...additions.map(([logicalTargetId]) => ({
+            type:"logical-target-passed", taskKey:key, logicalTargetId, at:now(),
+          }))],
+        };
       });
     },
     interrupt(id, currentTask, owner) {

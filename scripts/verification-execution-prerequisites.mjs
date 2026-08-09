@@ -122,10 +122,27 @@ function scopedLoopbackAvailable(workspaceRoot) {
   ], { cwd:workspaceRoot }, (error) => resolve(!error)));
 }
 
+function gitMetadataAvailable(workspaceRoot) {
+  const probeRef = `refs/swarmforge/capability-probe/${process.pid}-${randomUUID()}`;
+  const run = (...args) => new Promise((resolve, reject) => execFile("git", args,
+    { cwd:workspaceRoot }, (error, stdout, stderr) => error
+      ? reject(new Error(stderr.trim() || error.message)) : resolve(stdout.trim())));
+  return run("update-ref", probeRef, "HEAD")
+    .then(async() => {
+      const [probe, head] = await Promise.all([
+        run("rev-parse", probeRef), run("rev-parse", "HEAD^{commit}"),
+      ]);
+      return probe === head;
+    })
+    .catch(() => false)
+    .finally(() => run("update-ref", "-d", probeRef).catch(() => {}));
+}
+
 async function capabilityAvailable(capability, { workspaceRoot = process.cwd() } = {}) {
   if (capability === "local-loopback") {
     return await loopbackAvailable() && scopedLoopbackAvailable(workspaceRoot);
   }
+  if (capability === "git-metadata-write") return gitMetadataAvailable(workspaceRoot);
   return false;
 }
 
