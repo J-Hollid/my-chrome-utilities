@@ -14,7 +14,9 @@ import {
 
 export async function runSidePanelBrowserFixture({
   definitions = [], fixturePrograms = {}, processResources,
-  manageLifecycle = true, targetContext:suppliedTargetContext, emit = console.log,
+  environment = process.env, manageLifecycle = true,
+  targetContext:suppliedTargetContext, emit = console.log,
+  recordAssertion, recordViewport,
 } = {}) {
 
 const console = Object.freeze({ log:emit });
@@ -23,8 +25,19 @@ const deferredAssertions = suppliedTargetContext?.deferredAssertions;
 const assertionMethods = [
   "deepEqual", "doesNotMatch", "equal", "fail", "match", "notDeepEqual", "notEqual", "ok",
 ];
+const assertionSite = (method) => {
+  const frames = String(new Error().stack).split(/\r?\n/u)
+    .filter((line) => line.includes("side-panel-browser-fixture-primitives.mjs:"));
+  const location = frames[2]?.match(/:(\d+):(\d+)\)?$/u);
+  if (!location) throw new Error(`Cannot identify direct assertion site for ${method}`);
+  return `${method}@${location[1]}:${location[2]}`;
+};
 const assert = Object.freeze(Object.fromEntries(assertionMethods.map((method) => [method, (...args) => {
-  if (!deferredAssertions) return nodeAssert[method](...args);
+  if (!deferredAssertions) {
+    const result = nodeAssert[method](...args);
+    recordAssertion?.(assertionSite(method));
+    return result;
+  }
   const snapshots = args.map((value) => {
     try { return structuredClone(value); } catch { return value; }
   });
@@ -116,7 +129,7 @@ let schemaDeclaredPropertyExceptionsObservation;
 let jsonSchemaExportObservation;
 let arrayValidationRollupObservation;
 
-const plannerEnvironment = Object.freeze({ ...(suppliedTargetContext?.environment ?? process.env) });
+const plannerEnvironment = Object.freeze({ ...(suppliedTargetContext?.environment ?? environment) });
 let activeBrowserTargetEnvironment = plannerEnvironment;
 let activeLogicalTargetId = "side-panel-component-layout";
 const targetDefinitions = new Map(definitions.map((definition) => [definition.id, definition]));
@@ -1413,6 +1426,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
     try {
     const executeFixture=async()=>{
     for (const width of componentWidths) {
+    recordViewport?.(width);
     const specificationScenarioId=activeBrowserTargetEnvironment.SPECIFICATION_PROJECT_SCENARIO_ID??"",capturedContinuationScenario=activeBrowserTargetEnvironment.SPECIFICATION_PROJECT_BROWSER_ADAPTER==="1"&&specificationScenarioId.includes("canonical project schema drafts runtime 021");
     const socket = activeBrowserTargetEnvironment.SPECIFICATION_PROJECT_BROWSER_ADAPTER === "1" ? await openSpecificationBuilder(port,width,900,capturedContinuationScenario?`chrome-extension://${extensionId}/specification-builder.html`:undefined) : suppliedTargetContext?.acquireInstalledSocket ? await suppliedTargetContext.acquireInstalledSocket(width) : await openPanel(port, width);
     if (browserTargetId&&!browserTargetStoragePrepared&&!suppliedTargetContext?.resetEvidence) {

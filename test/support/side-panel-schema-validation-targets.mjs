@@ -424,7 +424,7 @@ const liveValidationVisualsRuntime = `(async () => {
   const issueFocus = document.activeElement?.id;
   const originalPayload = JSON.stringify(events[2].payload); elements.eventInspector.querySelector("#live-raw-json").open = true;
   const unchanged = JSON.stringify(events[2].payload) === originalPayload;
-  const scrollBefore = 37; elements.eventInspector.scrollTop = scrollBefore; statusButton.id = "revalidation-focus"; statusButton.focus();
+  const scrollBefore = 37; elements.eventInspector.style.height = "120px"; elements.eventInspector.style.overflow = "auto"; elements.eventInspector.scrollTop = scrollBefore; statusButton.id = "revalidation-focus"; statusButton.focus();
   const validEvent = { ...events[2], validation:"Valid", validationDetails:{ ...details, issues:[], evaluations:details.evaluations.filter(({ status }) => status === "pass") } };
   ui.renderLiveObserverState(elements, { view:"Live", status:"Live", pageUrl:base.pageUrl, sources:[], events:events.map((event) => event.id === "error" ? validEvent : event), inspectorEventId:"error", listVisible:true }, () => {});
   ui.renderLiveInspector(elements, validEvent, handlers); elements.eventInspector.querySelector(".live-property-status")?.focus({ preventScroll:true }); elements.eventInspector.scrollTop = scrollBefore; ui.setEventValidationUpdateStatus(elements, "Validation changed to Valid.");

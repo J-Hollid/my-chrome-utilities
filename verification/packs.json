@@ -5329,6 +5329,12 @@
         ]
       },
       {
+        "path": "test/support/side-panel-browser-direct-assertion-map.mjs",
+        "consumers": [
+          "shell"
+        ]
+      },
+      {
         "path": "test/support/side-panel-browser-session.mjs",
         "consumers": [
           "capture",

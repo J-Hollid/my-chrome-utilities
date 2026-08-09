@@ -7,6 +7,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
 
+import "./acceptance/side-panel-browser-session-contract.mjs";
 import { acquireDistArtifactLock, withDistArtifactLock } from "../scripts/dist-artifact-lock.mjs";
 import {
   selectedBrowserTargetConfigurations,
@@ -1047,8 +1048,7 @@ const vtd006RegisteredPrograms = new Set([
   "test/browser-packs/side-panel-shell.mjs",
 ]);
 const conservedEvidenceProfile = (pack) => Object.fromEntries(exactEvidenceKeys.map((key) => [key,
-  pack[key].filter((path) => !vtd006RegisteredPrograms.has(path) &&
-    path !== "test/side-panel-browser-session-test.mjs"),
+  pack[key].filter((path) => !vtd006RegisteredPrograms.has(path)),
 ]));
 const baseProjectManagementPack = vtd004BasePacks.find(({ id }) => id === "project_management");
 const projectEvidenceProfile = conservedEvidenceProfile(projectManagementPack);
@@ -1076,17 +1076,13 @@ const normalizedVtd006Identity = (task) => {
   for (const [current, previous] of vtd006ProgramMigration) encoded = encoded.replaceAll(current, previous);
   return JSON.parse(encoded);
 };
-const terminalIdentities = (plan) => plan.tasks
-  .filter(({ target }) => target !== "test/side-panel-browser-session-test.mjs")
-  .map(normalizedVtd006Identity);
-const conservedCurrentTasks = currentTerminalPlan.tasks.filter(({ target }) =>
-  target !== "test/side-panel-browser-session-test.mjs");
-assert.deepEqual(conservedCurrentTasks.map(normalizedVtd006Identity),
+const terminalIdentities = (plan) => plan.tasks.map(normalizedVtd006Identity);
+assert.deepEqual(currentTerminalPlan.tasks.map(normalizedVtd006Identity),
   baseTerminalPlan.tasks.map(verificationTaskIdentity),
   "terminal-full planning conserves every migrated exact task identity and ordering");
 assert.equal(currentTerminalPlan.tasks.filter(({ target }) =>
-  target === "test/side-panel-browser-session-test.mjs").length, 1,
-"terminal-full planning adds the focused VTD-006 session contract once");
+  target === "test/acceptance/side-panel-browser-session-contract.mjs").length, 0,
+"terminal-full planning does not add the focused VTD-006 session contract as a permanent task");
 assert.equal(currentTerminalPlan.checkpointTasks.filter(({ display }) =>
   display === "npm run package").length, 1,
 "terminal-full planning executes the package check exactly once");

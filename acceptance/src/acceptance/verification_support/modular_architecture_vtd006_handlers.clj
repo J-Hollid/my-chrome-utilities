@@ -17,8 +17,10 @@
 
 (defn- production-evidence! []
   (or @evidence
-      (let [result (support/verified-command-result
-                    "node" "test/side-panel-browser-session-test.mjs")
+      (let [result (support/verified-command-or-prepared-task-result
+                    ["node" "test/acceptance/side-panel-browser-session-contract.mjs"]
+                    "unit:test/verification-process-contract-test.mjs"
+                    ["node" "test/verification-process-contract-test.mjs"])
             line (first (filter #(str/starts-with? % "{\"vtd006Acceptance\"")
                                 (str/split-lines (:out result))))]
         (support/assert! (zero? (:exit result))
@@ -289,24 +291,15 @@
                         "The direct component-layout command is not a thin launcher."))}
    {:pattern #"^npm run test:unit:component-layout retains its current no-target assertions and viewport behavior without copied fixture logic$"
     :handler (fn [world _ _]
-               (let [direct (get-in world [:vtd006/evidence :launcher :directContract])
-                     target-ids (vec (:targetIds direct))
-                     expected-target-ids (set (map name (keys (get-in world [:vtd006/evidence
-                                                                             :contract :targets]))))]
+               (let [direct (get-in world [:vtd006/evidence :launcher :directContract])]
                  (assert! world
-                          (and (= 63 (:targetCount direct))
-                               (= 67 (:outputCount direct))
-                               (= 6910 (:assertionLeafCount direct))
-                               (= 1118 (:deferredAssertionCount direct))
-                               (= 63 (count target-ids))
-                               (= 63 (count (set target-ids)))
-                               (= expected-target-ids (set target-ids))
-                               (true? (:targetIdsExact direct))
-                               (true? (:expectedObservations direct))
+                          (and (= 247 (:assertionLeafCount direct))
+                               (string? (:assertionMapDigest direct))
+                               (= 64 (count (:assertionMapDigest direct)))
+                               (true? (:assertionMapExact direct))
                                (true? (get-in world [:vtd006/evidence :launcher :noOpRejected]))
-                               (= (zipmap (map keyword ["320" "320,720" "360,520" "720"])
-                                          [20 1 1 41])
-                                  (:viewportCounts direct)))
+                               (true? (get-in world [:vtd006/evidence :launcher :missingLeafRejected]))
+                               (= [320 360 520 720] (:viewportWidths direct)))
                           "The direct no-target command did not execute the conserved assertion and viewport corpus.")))}
    {:pattern #"^the five registered entry programs use the VTD-007 readiness, protocol-deadline, syntax-check, lifecycle, and phase-timing controls$"
     :handler (fn [world _ _]
@@ -325,7 +318,3 @@
     :handler (fn [world _ _]
                (assert! world (= 5 (count (get-in world [:vtd006/evidence :contract :packInventory])))
                         "VTD-006 checkpoint evidence is incomplete."))}])
-
-;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-09T00:58:20.809228442+02:00", :module-hash "-2009014110", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "1339117946"} {:id "form/1/defonce", :kind "defonce", :line 6, :end-line 6, :hash "701185655"} {:id "def/module-paths", :kind "def", :line 8, :end-line 16, :hash "415945835"} {:id "defn-/production-evidence!", :kind "defn-", :line 18, :end-line 28, :hash "59277045"} {:id "defn-/prepared", :kind "defn-", :line 30, :end-line 31, :hash "-223598626"} {:id "defn-/values", :kind "defn-", :line 33, :end-line 35, :hash "-45555851"} {:id "defn-/assert!", :kind "defn-", :line 37, :end-line 39, :hash "-1884999679"} {:id "defn-/pack-facts", :kind "defn-", :line 41, :end-line 43, :hash "1935968671"} {:id "defn-/consumer-scope", :kind "defn-", :line 45, :end-line 48, :hash "-640295098"} {:id "defn-/helper-planning", :kind "defn-", :line 50, :end-line 52, :hash "3897991"} {:id "defn/handlers", :kind "defn", :line 54, :end-line 327, :hash "-1613618921"}]}
-;; clj-mutate-manifest-end

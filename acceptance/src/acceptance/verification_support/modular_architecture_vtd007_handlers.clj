@@ -202,7 +202,7 @@
        "if(ids.length!==20)throw new Error('expected 20 runnable packs');"
        "const migration=new Map(['capture','event-library','schemas','defects','shell'].map(x=>[`test/browser-packs/side-panel-${x}.mjs`,'test/side-panel-component-layout-runtime-test.mjs']));"
        "const normalize=x=>{let s=JSON.stringify(x);for(const [a,b]of migration)s=s.replaceAll(a,b);return JSON.parse(s)};"
-       "const identity=p=>p.tasks.filter(x=>x.target!=='test/side-panel-browser-session-test.mjs').map(x=>normalize(verificationTaskIdentity(x))),same=(a,b)=>JSON.stringify(a)===JSON.stringify(b),unique=(xs,k)=>new Set(xs.map(x=>x[k])).size===xs.length;"
+       "const identity=p=>p.tasks.map(x=>normalize(verificationTaskIdentity(x))),same=(a,b)=>JSON.stringify(a)===JSON.stringify(b),unique=(xs,k)=>new Set(xs.map(x=>x[k])).size===xs.length;"
        "const exact=planVerification(current,{packIds:ids,includeProperties:true}),baseExact=planVerification(base,{packIds:ids,includeProperties:true}),terminal=planVerification(current,{terminalFull:true}),baseTerminal=planVerification(base,{terminalFull:true});"
        "const executions=packs=>normalize({targets:packs.flatMap(p=>(p.browserObservations??[]).map(x=>({packId:p.id,id:x.id,path:x.path,environment:x.environment,features:x.features}))),features:packs.flatMap(p=>(p.features??[]).map(feature=>({packId:p.id,feature}))),handlers:packs.flatMap(p=>(p.handlers??[]).map(handler=>({packId:p.id,handler}))),evidence:packs.flatMap(p=>(p.browserEvidencePartitions??[]).map(x=>({packId:p.id,path:x.path,sessionBatch:x.sessionBatch,originalLeaves:x.originalLeaves,targets:x.targets}))) });"
        "const now=executions(current),prior=executions(base);"

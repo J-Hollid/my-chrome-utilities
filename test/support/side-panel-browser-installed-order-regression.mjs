@@ -2,8 +2,6 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 
-import { runBrowserObservation } from "../../scripts/run-browser-observation.mjs";
-
 export const installedOrderPairs = Object.freeze({
   capture:["FRESH_LIVE_SESSION_BROWSER_ADAPTER", "PAYLOAD_PATH_FILTER_BROWSER_ADAPTER"],
   schemas:["SCHEMA_WORKSPACE_BROWSER_ADAPTER:default", "ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER"],
@@ -30,11 +28,14 @@ export function normalizeInstalledObservation(value) {
 const digest = (value) => createHash("sha256")
   .update(JSON.stringify(normalizeInstalledObservation(value))).digest("hex");
 
-export async function runInstalledOrderRegression() {
+export async function runInstalledOrderRegression({ runObservation } = {}) {
+  if (!runObservation) {
+    ({ runBrowserObservation:runObservation } = await import("../../scripts/run-browser-observation.mjs"));
+  }
   const pairEvidence = {};
   for (const [pack, pair] of Object.entries(installedOrderPairs)) {
-    const canonical = await runBrowserObservation(...pair);
-    const permuted = await runBrowserObservation(...[...pair].reverse());
+    const canonical = await runObservation(...pair);
+    const permuted = await runObservation(...[...pair].reverse());
     const canonicalNormalized = normalizeInstalledObservation(canonical);
     const permutedNormalized = normalizeInstalledObservation(permuted);
     assert.deepEqual(permutedNormalized, canonicalNormalized,
@@ -42,7 +43,7 @@ export async function runInstalledOrderRegression() {
     pairEvidence[pack] = { pair, canonicalDigest:digest(canonicalNormalized),
       permutedDigest:digest(permutedNormalized), equal:true };
   }
-  await runBrowserObservation("LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER");
+  await runObservation("LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER");
   return { verifiedPacks:Object.keys(installedOrderPairs), singleTargetPack:"event-library", pairEvidence };
 }
 

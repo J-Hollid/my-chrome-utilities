@@ -289,6 +289,36 @@ export async function runInstalledSidePanelSession({
   });
 }
 
+export async function runInstalledSidePanelCompatibility({
+  fixturePrograms = {}, environment = process.env,
+  emit = (record) => console.log(JSON.stringify(record)),
+  startProcess = startInstalledBrowserProcess,
+  stopProcess = stopInstalledBrowserProcess,
+  executeCompatibility = runSidePanelBrowserFixture,
+} = {}) {
+  const processResources = await startProcess();
+  const assertionLeaves = [];
+  const viewportWidths = [];
+  try {
+    await executeCompatibility({
+      definitions:[],
+      fixturePrograms,
+      processResources,
+      environment,
+      manageLifecycle:false,
+      emit,
+      recordAssertion:(leaf) => assertionLeaves.push(leaf),
+      recordViewport:(width) => viewportWidths.push(width),
+    });
+  } finally {
+    await stopProcess(processResources, "side-panel-component-layout");
+  }
+  return Object.freeze({
+    assertionLeaves:Object.freeze(assertionLeaves),
+    viewportWidths:Object.freeze(viewportWidths),
+  });
+}
+
 async function installedDebuggingPort(context) {
   if (context.debuggingPort) return context.debuggingPort;
   if (context.process.debuggingPort) {
