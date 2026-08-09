@@ -18,6 +18,7 @@ const identityFields = ["candidate", "baseCommit", "evidenceTask", "planDigest",
   "capabilityRoutes"];
 const legacyIdentityFields = identityFields.filter((field) =>
   !["artifactOutputDigest", "artifactBuildIdentity"].includes(field));
+const artifactIdentityFields = ["artifactOutputDigest", "artifactBuildIdentity"];
 const attemptStates = new Set(["active", "interrupted", "tasks-complete", "promoted"]);
 const promotionOrder = ["receipt-finalized", "pending-evidence-created", "git-note-recorded",
   "handoff-eligible"];
@@ -58,6 +59,7 @@ function validateAttemptHistory(attempt) {
   const passed = new Set();
   const logicalResults = {};
   const promotions = [];
+  let artifactIdentity;
   for (const [index, transition] of attempt.transitions.entries()) {
     const at = Date.parse(transition?.at);
     if (!validTimestamp(transition?.at) || at < previousTime ||
@@ -66,6 +68,16 @@ function validateAttemptHistory(attempt) {
     }
     previousTime = at;
     if (index === 0) continue;
+    if (transition.type === "artifact-bound") {
+      if (phase !== "active" || artifactIdentity || passed.size ||
+          artifactIdentityFields.some((field) => typeof transition[field] !== "string" ||
+            !transition[field])) {
+        throw new Error(`Checkpoint attempt ${attempt.id} has an impossible artifact transition`);
+      }
+      artifactIdentity = Object.fromEntries(artifactIdentityFields.map((field) =>
+        [field, transition[field]]));
+      continue;
+    }
     if (transition.type === "task-passed") {
       if (phase !== "active" || !attempt.taskKeys.includes(transition.taskKey) ||
           passed.has(transition.taskKey)) {
@@ -122,10 +134,10 @@ function validateAttemptHistory(attempt) {
     }
     throw new Error(`Checkpoint attempt ${attempt.id} has an unknown transition`);
   }
-  return { phase, owner, interruptedTask, passed, logicalResults, promotions };
+  return { phase, owner, interruptedTask, passed, logicalResults, promotions, artifactIdentity };
 }
 
-export function checkpointAttemptIdentity(value) {
+function validatedCheckpointIdentity(value, { allowUnboundArtifact = false } = {}) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Checkpoint attempt identity must be an object");
   }
@@ -133,12 +145,22 @@ export function checkpointAttemptIdentity(value) {
     structuredClone(value[field]) ]));
   if (typeof identity.candidate?.commit !== "string" || !identity.candidate.commit ||
       typeof identity.candidate?.tree !== "string" || !identity.candidate.tree ||
-      identityFields.slice(1, -1).some((field) => typeof identity[field] !== "string" ||
-        !identity[field]) || !identity.capabilityRoutes ||
+      identityFields.slice(1, -1).some((field) => allowUnboundArtifact &&
+        artifactIdentityFields.includes(field) ? identity[field] !== null :
+        typeof identity[field] !== "string" || !identity[field]) || !identity.capabilityRoutes ||
       typeof identity.capabilityRoutes !== "object" || Array.isArray(identity.capabilityRoutes)) {
     throw new Error("Checkpoint attempt identity is incomplete");
   }
   return normalized(identity);
+}
+
+export function checkpointAttemptIdentity(value) {
+  return validatedCheckpointIdentity(value);
+}
+
+export function checkpointAttemptInputIdentity(value) {
+  return validatedCheckpointIdentity({ ...value, artifactOutputDigest:null,
+    artifactBuildIdentity:null }, { allowUnboundArtifact:true });
 }
 
 function envelope(attempt) {
@@ -152,8 +174,12 @@ function validateAttempt(document, expectedId) {
   const expectedIdentity = legacy
     ? normalized(Object.fromEntries(legacyIdentityFields.map((field) =>
       [field, structuredClone(attempt?.identity?.[field]) ])))
-    : checkpointAttemptIdentity(attempt?.identity);
-  if ((!legacy && !current) || attempt?.id !== expectedId ||
+    : attempt?.identity?.artifactOutputDigest === null && attempt?.identity?.artifactBuildIdentity === null
+      ? checkpointAttemptInputIdentity(attempt?.identity)
+      : checkpointAttemptIdentity(attempt?.identity);
+  const validIdentityId = legacy || [timeoutIncidentDigest(expectedIdentity),
+    timeoutIncidentDigest(checkpointAttemptInputIdentity(expectedIdentity))].includes(expectedId);
+  if ((!legacy && !current) || attempt?.id !== expectedId || !validIdentityId ||
       document.digest !== timeoutIncidentDigest(attempt) ||
       attempt.identityDigest !== timeoutIncidentDigest(attempt.identity) ||
       !same(attempt.identity, expectedIdentity) ||
@@ -180,6 +206,12 @@ function validateAttempt(document, expectedId) {
     }
   }
   const history = validateAttemptHistory(attempt);
+  if (history.artifactIdentity && !same(history.artifactIdentity,
+    Object.fromEntries(artifactIdentityFields.map((field) => [field, attempt.identity[field]]))) ||
+      !history.artifactIdentity && attempt.transitions[0]?.identityDigest &&
+        attempt.transitions[0].identityDigest !== attempt.identityDigest) {
+    throw new Error(`Checkpoint attempt ${expectedId} has artifact identity drift`);
+  }
   if (!same([...history.passed].sort(), Object.keys(attempt.results).sort()) ||
       !same(Object.fromEntries(Object.entries(history.logicalResults)
         .map(([key, values]) => [key, [...values].sort()])),
@@ -248,17 +280,20 @@ export function createCheckpointAttemptStore({ directory, now = () => new Date()
     read,
     list,
     async claim(identityValue, taskKeys, owner) {
-      const identity = checkpointAttemptIdentity(identityValue);
+      const inputIdentity = checkpointAttemptInputIdentity(identityValue);
+      const identity = identityValue?.artifactOutputDigest && identityValue?.artifactBuildIdentity
+        ? checkpointAttemptIdentity(identityValue) : inputIdentity;
       if (!Array.isArray(taskKeys) || !taskKeys.length || new Set(taskKeys).size !== taskKeys.length ||
           taskKeys.some((key) => typeof key !== "string" || !key) ||
           !Number.isInteger(owner?.pid) || typeof owner?.token !== "string" || !owner.token) {
         throw new Error("Checkpoint attempt claim requires unique tasks and a stable owner");
       }
-      const id = timeoutIncidentDigest(identity);
+      const id = timeoutIncidentDigest(inputIdentity);
       await storeDirectory();
       return withIncidentLock(directory, "checkpoint-attempt-claim", async() => {
         const attempts = await list();
-        const existing = attempts.find((attempt) => attempt.id === id);
+        const existing = attempts.find((attempt) =>
+          same(checkpointAttemptInputIdentity(attempt.identity), inputIdentity));
         if (existing) {
           if (JSON.stringify(existing.taskKeys) !== JSON.stringify(taskKeys)) {
             throw new Error(`Checkpoint attempt ${id} task identity drift`);
@@ -284,21 +319,48 @@ export function createCheckpointAttemptStore({ directory, now = () => new Date()
             throw new Error(`Incompatible checkpoint attempt ${attempt.id} is owned by pid ${attempt.owner.pid}`);
           }
         }
-        const attempt = { version:2, id, identity, identityDigest:id, taskKeys:[...taskKeys],
+        const attempt = { version:2, id, identity, identityDigest:timeoutIncidentDigest(identity),
+          taskKeys:[...taskKeys],
           state:"active", owner:structuredClone(owner), currentTask:null, results:{}, logicalResults:{},
           promotion:{}, createdAt:now(), transitions:[{ type:"created", at:now(),
-            owner:structuredClone(owner) }] };
+            owner:structuredClone(owner), identityDigest:timeoutIncidentDigest(identity) }] };
         await writeExclusive(target(id), envelope(attempt));
         return { action:"created", attempt, reusableTaskKeys:[], pendingTaskKeys:[...taskKeys] };
       });
     },
     assertIdentity(id, identityValue) {
-      const digest = timeoutIncidentDigest(checkpointAttemptIdentity(identityValue));
       return read(id).then((attempt) => {
-        if (attempt.identityDigest !== digest) {
+        const expected = identityValue?.artifactOutputDigest && identityValue?.artifactBuildIdentity
+          ? checkpointAttemptIdentity(identityValue) : checkpointAttemptInputIdentity(identityValue);
+        const actual = identityValue?.artifactOutputDigest && identityValue?.artifactBuildIdentity
+          ? attempt.identity : checkpointAttemptInputIdentity(attempt.identity);
+        if (!same(actual, expected)) {
           throw new Error(`Checkpoint attempt ${id} identity drift`);
         }
         return attempt;
+      });
+    },
+    bindArtifactIdentity(id, artifact, owner) {
+      return update(id, (attempt) => {
+        requireOwner(attempt, owner);
+        const values = Object.fromEntries(artifactIdentityFields.map((field) => [field, artifact?.[field]]));
+        if (artifactIdentityFields.some((field) => typeof values[field] !== "string" || !values[field])) {
+          throw new Error(`Checkpoint attempt ${id} requires a complete artifact identity`);
+        }
+        if (attempt.identity.artifactOutputDigest !== null ||
+            attempt.identity.artifactBuildIdentity !== null) {
+          if (!same(values, Object.fromEntries(artifactIdentityFields.map((field) =>
+            [field, attempt.identity[field]])))) {
+            throw new Error(`Checkpoint attempt ${id} artifact identity drift`);
+          }
+          return attempt;
+        }
+        if (attempt.state !== "active" || Object.keys(attempt.results).length) {
+          throw new Error(`Checkpoint attempt ${id} cannot bind its artifact identity`);
+        }
+        const identity = checkpointAttemptIdentity({ ...attempt.identity, ...values });
+        return { ...attempt, identity, identityDigest:timeoutIncidentDigest(identity),
+          transitions:[...attempt.transitions, { type:"artifact-bound", at:now(), ...values }] };
       });
     },
     recordTask(id, key, result, owner) {

@@ -10,6 +10,9 @@ import ts from "typescript";
 import "./acceptance/side-panel-browser-session-contract.mjs";
 import { acquireDistArtifactLock, withDistArtifactLock } from "../scripts/dist-artifact-lock.mjs";
 import {
+  assertFreshDistArtifact, createDistInputFingerprint, writeDistArtifactManifest,
+} from "../scripts/dist-artifact.mjs";
+import {
   selectedBrowserTargetConfigurations,
   summarizeBrowserTargetResults,
 } from "./support/browser-target-session.mjs";
@@ -47,8 +50,10 @@ import {
 } from "../scripts/verification-timing-ledger.mjs";
 import {
   compatibleTimeoutRepairIncidentIds,
+  applyCheckpointPrerequisitePlan,
   checkpointPreflight,
   createCheckpointIdentityGuard,
+  createRepositoryCheckpointIdentityGuard,
   createVerificationCommandRunner,
   createVerificationReceiptContext,
   focusedAcceptanceOptions,
@@ -58,10 +63,12 @@ import {
   validateCurrentArtifactForConsumers,
   validateExplicitChangedPaths,
   verificationArtifactIdentity,
+  verificationPromotionTasks,
   verificationResumeIdentity,
 } from "../scripts/run-focused-acceptance.mjs";
 import {
   createPendingVerificationEvidence,
+  preflightGitNotePromotion,
   probeGitMetadataWrite,
   recordPendingVerificationEvidence,
   validateVerificationCandidateClean,
@@ -113,6 +120,7 @@ import {
   validateTaskExecutionPrerequisites,
 } from "../scripts/verification-execution-prerequisites.mjs";
 import {
+  checkpointAttemptInputIdentity,
   checkpointAttemptIdentity,
   createCheckpointAttemptStore,
   defaultCheckpointAttemptDirectory,
@@ -144,6 +152,26 @@ const prerequisiteTasks = [{ key:"browser-observation:known-loopback", stage:"br
 const gitMetadataTask = { key:"evidence:git-note", stage:"evidence", executable:"node",
   args:["scripts/verification-evidence.mjs", "record", "pending.json"],
   requiredCapabilities:["git-metadata-write"] };
+assert.deepEqual(verificationPromotionTasks("tmp/evidence.pending.json").map((task) => ({
+  key:task.key, capabilities:task.requiredCapabilities,
+})), [
+  { key:"promotion:pending-evidence", capabilities:[] },
+  { key:"promotion:git-note", capabilities:["git-metadata-write"] },
+], "the real evidence promotion operations are canonical prerequisite tasks");
+const partitionedPrerequisiteReceipt = { plan:{} };
+applyCheckpointPrerequisitePlan(partitionedPrerequisiteReceipt,
+  [{ key:"unit:one" }], { tasks:[
+    { key:"unit:one", route:"workspace-sandbox", requiredCapabilities:[] },
+    { key:"promotion:pending-evidence", route:"workspace-sandbox", requiredCapabilities:[] },
+    { key:"promotion:git-note", route:"scoped-git-metadata-approval",
+      requiredCapabilities:["git-metadata-write"] },
+  ] });
+assert.deepEqual(partitionedPrerequisiteReceipt.plan.executionPrerequisites,
+  [{ key:"unit:one", route:"workspace-sandbox", requiredCapabilities:[] }],
+"the evidence receipt task routes remain an exact verification-plan set");
+assert.deepEqual(partitionedPrerequisiteReceipt.plan.promotionExecutionPrerequisites.map(({ key }) => key),
+  ["promotion:pending-evidence", "promotion:git-note"],
+"promotion routes remain durable without being forged as completed verification tasks");
 assert.deepEqual(preflightExecutionPrerequisites([gitMetadataTask, prerequisiteTasks[1]], {
   availableCapabilities:["git-metadata-write"],
   approvalRoutes:{ "git-metadata-write":"scoped-git-metadata-approval" },
@@ -156,6 +184,9 @@ assert.equal((await probeExecutionPrerequisiteEnvironment([gitMetadataTask], {
   capabilityProbe:async(capability) => capability === "git-metadata-write",
   requestedCapabilities:["git-metadata-write"],
 })).launchable, true, "declared Git metadata access has a usable first-use probe");
+assert.equal((await preflightGitNotePromotion(path.resolve("tmp/promotion-probe.pending.json"))).route,
+  "scoped-git-metadata-approval",
+"the actual Git-note recording operation probes and selects its declared scoped route");
 assert.deepEqual(preflightExecutionPrerequisites(prerequisiteTasks, {
   availableCapabilities:["local-loopback"],
   approvalRoutes:{ "local-loopback":"scoped-command-approval" },
@@ -262,14 +293,24 @@ try {
     registryDigest:"f".repeat(64), toolchainDigest:"0".repeat(64),
     environmentClass:"normal-linux", capabilityRoutes:{ "local-loopback":"scoped-command-approval" },
   });
+  const attemptInputIdentity = checkpointAttemptInputIdentity(attemptIdentity);
   let ownerAlive = true;
   let checkpointTimestamp = Date.parse("2026-08-09T00:00:00.000Z");
   const attemptStore = createCheckpointAttemptStore({ directory:checkpointAttemptRoot,
     now:() => new Date(checkpointTimestamp++).toISOString(), ownerAlive:async() => ownerAlive });
-  const createdAttempt = await attemptStore.claim(attemptIdentity,
+  const createdAttempt = await attemptStore.claim(attemptInputIdentity,
     ["unit:a", "browser:b", "package:extension"], { pid:41, token:"owner-41" });
   assert.equal(createdAttempt.action, "created");
-  const attachedAttempt = await attemptStore.claim(attemptIdentity,
+  assert.equal(createdAttempt.attempt.identity.artifactOutputDigest, null,
+    "the repository-common attempt is acquired before the build child starts");
+  await attemptStore.bindArtifactIdentity(createdAttempt.attempt.id, {
+    artifactOutputDigest:attemptIdentity.artifactOutputDigest,
+    artifactBuildIdentity:attemptIdentity.artifactBuildIdentity,
+  }, { token:"owner-41" });
+  const boundAttempt = await attemptStore.read(createdAttempt.attempt.id);
+  assert.equal(boundAttempt.identityDigest, verificationDigest(attemptIdentity),
+    "the single owned build durably establishes the attempt output identity");
+  const attachedAttempt = await attemptStore.claim(attemptInputIdentity,
     ["unit:a", "browser:b", "package:extension"], { pid:42, token:"owner-42" });
   assert.equal(attachedAttempt.action, "attached");
   assert.equal(attachedAttempt.attempt.id, createdAttempt.attempt.id,
@@ -293,7 +334,7 @@ try {
   await attemptStore.recordTask(createdAttempt.attempt.id, "unit:a", attemptResult("unit:a"),
     { token:"owner-41" });
   await attemptStore.interrupt(createdAttempt.attempt.id, "browser:b", { token:"owner-41" });
-  const continuedAttempt = await attemptStore.claim(attemptIdentity,
+  const continuedAttempt = await attemptStore.claim(attemptInputIdentity,
     ["unit:a", "browser:b", "package:extension"], { pid:42, token:"owner-42" });
   assert.equal(continuedAttempt.action, "continued");
   assert.deepEqual(continuedAttempt.reusableTaskKeys, ["unit:a"]);
@@ -348,7 +389,7 @@ try {
   await attemptStore.recordTask(createdAttempt.attempt.id, "package:extension",
     attemptResult("package:extension", "package"), { token:"owner-44" });
   await attemptStore.markTasksComplete(createdAttempt.attempt.id, { token:"owner-44" });
-  assert.equal((await attemptStore.claim(attemptIdentity,
+  assert.equal((await attemptStore.claim(attemptInputIdentity,
     ["unit:a", "browser:b", "package:extension"], { pid:43, token:"owner-43" })).action,
   "promotion-only", "a completed attempt rejects duplicate task execution");
   const observedPromotionScopes = {};
@@ -5581,6 +5622,92 @@ if (process.platform !== "win32") {
     await runner(envTask.display, envTask);
     assert.equal(context.receipt.tasks[envTask.key].output.trim(), "visible");
     assert.equal(context.receipt.tasks[envTask.key].stderr, "");
+    const streamedTargets = [];
+    const streamingContext = createVerificationReceiptContext(1, 1,
+      { receiptDirectory:commandReceiptDirectory });
+    const streamingRunner = createVerificationCommandRunner(streamingContext, {
+      onLogicalTargetResult:async(task, receiptTask) => {
+        streamedTargets.push({ task:task.key, logicalResults:structuredClone(receiptTask.logicalResults) });
+      },
+      incidentStore:{ create:async() => ({ id:"incident-stream-interruption",
+        failureDigest:"a".repeat(64) }) },
+    });
+    const streamingTask = { key:"browser:stream-before-exit", stage:"browser", packId:"process",
+      executable:process.execPath, target:"stream-before-exit", environment:null,
+      logicalTargetIds:["FIRST", "SECOND"], requiredCapabilities:[], display:"streaming browser task",
+      args:["-e", [
+        "const emit=(value)=>process.stdout.write(JSON.stringify(value)+'\\n');",
+        "emit({swarmforgeBrowserTargetResult:{id:'FIRST',status:'passed'}});",
+        "emit({swarmforgeBrowserTargetTiming:{id:'FIRST',durationMs:3}});",
+        "setInterval(()=>{},1000);",
+      ].join("")],
+    };
+    process.env.VERIFICATION_COMMAND_TIMEOUT_MS = "100";
+    await assert.rejects(() => streamingRunner(streamingTask.display, streamingTask), /timed out/u);
+    process.env.VERIFICATION_COMMAND_TIMEOUT_MS = "2000";
+    assert.deepEqual(streamedTargets, [{ task:streamingTask.key, logicalResults:{
+      FIRST:{ id:"FIRST", status:"passed", durationMs:3 },
+    } }], "a completed live target is persisted before its interrupted batch child exits");
+    const mutationRepository = await mkdtemp(path.join(os.tmpdir(), "vtd014-live-mutation-"));
+    try {
+      await mkdir(path.join(mutationRepository, "src"));
+      await mkdir(path.join(mutationRepository, "dist"));
+      await writeFile(path.join(mutationRepository, "src", "tracked.ts"), "export const value = 1;\n");
+      await writeFile(path.join(mutationRepository, "dist", "tracked.js"), "export const value = 1;\n");
+      const artifactToolchain = { node:process.versions.node, typescript:ts.version };
+      const artifactInputs = { inputPaths:["src"], toolchain:artifactToolchain };
+      const mutationInput = await createDistInputFingerprint({ root:mutationRepository,
+        ...artifactInputs });
+      const mutationArtifact = await writeDistArtifactManifest({ root:mutationRepository,
+        inputFingerprint:mutationInput, ...artifactInputs });
+      await exec("git", ["init", "-q"], { cwd:mutationRepository });
+      await exec("git", ["config", "user.email", "vtd014@example.invalid"], { cwd:mutationRepository });
+      await exec("git", ["config", "user.name", "VTD 014"], { cwd:mutationRepository });
+      await exec("git", ["add", "."], { cwd:mutationRepository });
+      await exec("git", ["commit", "-qm", "fixture"], { cwd:mutationRepository });
+      const mutationCommit = (await exec("git", ["rev-parse", "HEAD^{commit}"],
+        { cwd:mutationRepository })).trim();
+      const mutationTree = (await exec("git", ["rev-parse", "HEAD^{tree}"],
+        { cwd:mutationRepository })).trim();
+      const mutationContext = createVerificationReceiptContext(1, 1,
+        { receiptDirectory:path.join(mutationRepository, "receipts") });
+      mutationContext.receipt.candidate = { commit:mutationCommit, tree:mutationTree };
+      mutationContext.receipt.artifact = mutationArtifact;
+      mutationContext.receipt.plan = { mode:"exact" };
+      const liveGuard = createRepositoryCheckpointIdentityGuard({
+        repositoryRoot:mutationRepository,
+        expected:{ commit:mutationCommit, tree:mutationTree,
+          artifactInputDigest:mutationArtifact.inputDigest,
+          artifactOutputDigest:mutationArtifact.outputDigest,
+          artifactBuildIdentity:mutationArtifact.buildIdentity, trackedChanges:"" },
+        context:mutationContext, attemptId:"live-attempt", launchRoutes:new Map(),
+        inputFingerprintOptions:artifactInputs,
+        artifactValidator:({ root }) => assertFreshDistArtifact({ root, ...artifactInputs }),
+      });
+      const liveBaseRunner = createVerificationCommandRunner(mutationContext);
+      const liveRunner = async(display, task) => {
+        await liveGuard.assertBefore(task);
+        return liveBaseRunner(display, task);
+      };
+      const firstLiveTask = { ...envTask, key:"unit:live-first", environment:null,
+        args:["-e", "process.exitCode=0"] };
+      await liveRunner("live first child", firstLiveTask);
+      await writeFile(path.join(mutationRepository, "src", "tracked.ts"),
+        "export const value = 2;\n");
+      const secondSentinel = path.join(mutationRepository, "second-launched");
+      const secondLiveTask = { ...envTask, key:"unit:live-second", environment:null,
+        args:["-e", `require('node:fs').writeFileSync(${JSON.stringify(secondSentinel)},'yes')`] };
+      await assert.rejects(() => liveRunner("live second child", secondLiveTask),
+        /execution-contract incident/u);
+      await assert.rejects(() => access(secondSentinel), { code:"ENOENT" },
+        "the second live child is not launched after a real tracked-file mutation");
+      const mutationIncidents = await createTimeoutIncidentStore({ root:mutationRepository }).list();
+      assert.equal(mutationIncidents.length, 1);
+      assert.equal(mutationIncidents[0].failure.failureClass, "execution-contract-failure",
+        "the production incident store persists the live runner-boundary mutation");
+    } finally {
+      await rm(mutationRepository, { recursive:true, force:true });
+    }
     const routedContext = createVerificationReceiptContext(1, 2,
       { receiptDirectory:commandReceiptDirectory });
     const routedTask = { ...envTask, key:"browser:routed-boundary", stage:"browser",
@@ -5976,6 +6103,12 @@ try {
           route:verificationTaskIdentity(task).requiredCapabilities.length
             ? "scoped-command-approval" : "workspace-sandbox",
         })),
+        promotionExecutionPrerequisites:verificationPromotionTasks().map((task) => ({
+          key:task.key,
+          requiredCapabilities:verificationTaskIdentity(task).requiredCapabilities,
+          route:verificationTaskIdentity(task).requiredCapabilities.length
+            ? "scoped-command-approval" : "workspace-sandbox",
+        })),
       },
       environment:{
         node:lockedRuntime.node, typescript:lockedRuntime.typescript,
@@ -6116,7 +6249,10 @@ try {
     registryDigest:verificationDigest(evidencePacks),
     toolchainDigest:verificationDigest(alphaReceiptDocument.environment),
     environmentClass:verificationDigest(alphaReceiptDocument.environment),
-    capabilityRoutes:Object.fromEntries(alphaReceiptDocument.plan.executionPrerequisites
+    capabilityRoutes:Object.fromEntries([
+      ...alphaReceiptDocument.plan.executionPrerequisites,
+      ...alphaReceiptDocument.plan.promotionExecutionPrerequisites,
+    ]
       .map(({ key, route }) => [key, route])),
   });
   const alphaAttemptOwner = { pid:process.pid, token:"evidence-promotion-owner" };
@@ -6132,6 +6268,8 @@ try {
   await alphaAttemptStore.markPromotion(alphaAttempt.attempt.id, "receipt-finalized");
   alphaReceiptDocument.checkpointAttempt = { id:alphaAttempt.attempt.id,
     identityDigest:alphaAttempt.attempt.identityDigest, action:alphaAttempt.action };
+  assert.notEqual(alphaAttempt.attempt.id, alphaAttempt.attempt.identityDigest,
+    "the pre-build lease identity remains distinct from its durably bound artifact identity");
   await writeFile(alphaReceipt, JSON.stringify(alphaReceiptDocument));
   const pendingAlpha = await createPendingVerificationEvidence({
     task:"multi-pack-task", plan:alphaPlan, receiptPath:alphaReceipt,

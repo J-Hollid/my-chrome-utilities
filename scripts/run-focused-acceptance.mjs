@@ -43,8 +43,11 @@ import {
   probeExecutionPrerequisiteEnvironment,
 } from "./verification-execution-prerequisites.mjs";
 import {
-  checkpointAttemptIdentity, createCheckpointAttemptStore, defaultCheckpointAttemptDirectory,
+  checkpointAttemptIdentity, checkpointAttemptInputIdentity, createCheckpointAttemptStore,
+  defaultCheckpointAttemptDirectory,
 } from "./verification-checkpoint-attempt.mjs";
+export { verificationPromotionTasks } from "./verification-promotion-plan.mjs";
+import { verificationPromotionTasks } from "./verification-promotion-plan.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const defaultTimeoutMs = 600_000;
@@ -506,12 +509,49 @@ export function createVerificationCommandRunner(context, options = {}) {
       }
     };
     const progress = createVerificationProgressTracker({ taskKey:task.key });
+    const executionLogicalTargetIds = task.executionLogicalTargetIds ?? task.logicalTargetIds;
+    const streamedLogicalResults = Object.fromEntries((executionLogicalTargetIds ?? [])
+      .map((id) => [id, {}]));
+    const persistedLogicalTargets = new Set();
+    let logicalPersistence = Promise.resolve();
+    let logicalPersistenceError;
+    const captureLogicalRecord = (line) => {
+      if (!executionLogicalTargetIds?.length) return;
+      let record;
+      try { record = JSON.parse(line); }
+      catch { return; }
+      const resultRecord = record.swarmforgeBrowserTargetResult;
+      const timingRecord = record.swarmforgeBrowserTargetTiming;
+      if (resultRecord && Object.hasOwn(streamedLogicalResults, resultRecord.id)) {
+        Object.assign(streamedLogicalResults[resultRecord.id], resultRecord);
+      }
+      if (timingRecord && Object.hasOwn(streamedLogicalResults, timingRecord.id)) {
+        streamedLogicalResults[timingRecord.id].durationMs = timingRecord.durationMs;
+      }
+      for (const [id, result] of Object.entries(streamedLogicalResults)) {
+        if (persistedLogicalTargets.has(id) || result.id !== id || result.status !== "passed" ||
+            !Number.isFinite(result.durationMs)) continue;
+        persistedLogicalTargets.add(id);
+        if (options.onLogicalTargetResult) {
+          const receiptTask = { identity, status:"interrupted", provenance:"fresh", durationMs:result.durationMs,
+            output:"", stderr:"", logicalResults:{ [id]:structuredClone(result) } };
+          logicalPersistence = logicalPersistence.then(() =>
+            options.onLogicalTargetResult(task, receiptTask)).catch((error) => {
+            logicalPersistenceError = error;
+            requestTermination(`Cannot persist logical target ${id}: ${error.message}`);
+          });
+        }
+      }
+    };
     let progressBuffer = "";
     const captureProgress = (chunk) => {
       progressBuffer += chunk.toString();
       const lines = progressBuffer.split(/\r?\n/u);
       progressBuffer = lines.pop() ?? "";
-      for (const line of lines) progress.acceptLine(line);
+      for (const line of lines) {
+        progress.acceptLine(line);
+        captureLogicalRecord(line);
+      }
     };
     child.stdout.on("data", (chunk) => {
       process.stdout.write(chunk);
@@ -536,11 +576,16 @@ export function createVerificationCommandRunner(context, options = {}) {
       child.once("error", (error) => { spawnError = error; });
       child.once("close", (code, signal) => resolve({ code, signal, spawnError }));
     });
+    await logicalPersistence;
     untrackChild();
     clearTimeout(timeout);
     clearTimeout(killTimer);
     const freshDurationMs = Date.now() - started;
-    if (progressBuffer) progress.acceptLine(progressBuffer);
+    if (progressBuffer) {
+      progress.acceptLine(progressBuffer);
+      captureLogicalRecord(progressBuffer);
+      await logicalPersistence;
+    }
     const freshOut = Buffer.concat(output).toString();
     const freshErr = Buffer.concat(stderr).toString();
     const priorTask = task.priorReceiptTask;
@@ -568,7 +613,6 @@ export function createVerificationCommandRunner(context, options = {}) {
       }
       return values;
     };
-    const executionLogicalTargetIds = task.executionLogicalTargetIds ?? task.logicalTargetIds;
     const freshLogicalResults = executionLogicalTargetIds?.length
       ? parseLogicalResults(freshOut, executionLogicalTargetIds)
       : undefined;
@@ -577,8 +621,9 @@ export function createVerificationCommandRunner(context, options = {}) {
       : undefined;
     const logicalPassed = !logicalResults || Object.values(logicalResults)
       .every(({ status, durationMs }) => status === "passed" && Number.isFinite(durationMs));
-    const passed = !termination && !result.spawnError && result.code === 0 && logicalPassed;
-    const failure = termination ?? result.spawnError?.message ??
+    const passed = !logicalPersistenceError && !termination && !result.spawnError &&
+      result.code === 0 && logicalPassed;
+    const failure = logicalPersistenceError?.message ?? termination ?? result.spawnError?.message ??
       (!logicalPassed ? `Browser target result incomplete or failed: ${display}`
         : `Verification command failed (${result.signal ?? result.code}): ${display}`);
     const taskProvenance = priorTask ? { provenance:"mixed" } : { provenance:"fresh" };
@@ -942,6 +987,55 @@ function planPackageTask(plan) {
     stages:{ ...plan.stages, package:[] } };
 }
 
+export function createRepositoryCheckpointIdentityGuard({
+  repositoryRoot:root = repositoryRoot, expected, context, attemptId, launchRoutes = new Map(),
+  inputFingerprintOptions = {}, artifactValidator = ({ root:artifactRoot }) =>
+    assertFreshDist({ root:artifactRoot }),
+}) {
+  const gitValue = (...arguments_) => new Promise((resolve, reject) => {
+    execFile("git", arguments_, { cwd:root }, (error, stdout, stderr) => error
+      ? reject(new Error(stderr.trim() || error.message)) : resolve(stdout.trim()));
+  });
+  return createCheckpointIdentityGuard({ expected,
+    snapshot:async() => {
+      const [commit, tree, input, trackedChanges, artifact] = await Promise.all([
+        gitValue("rev-parse", "HEAD^{commit}"), gitValue("rev-parse", "HEAD^{tree}"),
+        createDistInputFingerprint({ root, ...inputFingerprintOptions }),
+        gitValue("status", "--porcelain", "--untracked-files=no"),
+        expected.artifactOutputDigest === null ? null : artifactValidator({ root }),
+      ]);
+      return { commit, tree, artifactInputDigest:input.inputDigest ?? input.digest,
+        artifactOutputDigest:artifact?.outputDigest ?? null,
+        artifactBuildIdentity:artifact?.buildIdentity ?? null,
+        trackedChanges };
+    },
+    createIncident:async(failure) => createTimeoutIncidentStore({ root }).create({
+      runnerRunId:context.receipt.runId,
+      sourceReceipt:path.relative(root, context.receiptPath),
+      lineage:{ commit:expected.commit, tree:expected.tree },
+      failureClass:failure.failureClass, task:failure.task,
+      fingerprint:reliabilityFailureFingerprint({ failureClass:failure.failureClass,
+        task:failure.task, failedBoundary:failure.failedBoundary, error:"Checkpoint identity drift" }),
+      environment:context.receipt.environment,
+      artifact:context.receipt.artifact ?? context.receipt.artifactInput ?? null,
+      planDigest:verificationDigest(context.receipt.plan ?? {}),
+      failedBoundary:failure.failedBoundary,
+      executionPrerequisite:failure.executionPrerequisite,
+    }),
+    attemptId,
+    routeFor:(boundary) => boundary?.key ? launchRoutes.get(boundary.key) : "promotion-boundary",
+  });
+}
+
+export function applyCheckpointPrerequisitePlan(receipt, verificationTasks, prerequisitePlan) {
+  const verificationKeys = new Set(verificationTasks.map(({ key }) => key));
+  receipt.plan ??= {};
+  receipt.plan.executionPrerequisites = prerequisitePlan.tasks
+    .filter(({ key }) => verificationKeys.has(key));
+  receipt.plan.promotionExecutionPrerequisites = prerequisitePlan.tasks
+    .filter(({ key }) => !verificationKeys.has(key));
+}
+
 export async function checkpointPreflight({
   packs,
   plan,
@@ -1153,12 +1247,19 @@ export async function runFocusedAcceptance(
   if (options.skipBuild) buildManifest = await validateCurrentArtifactForConsumers({
     root:repositoryRoot, artifactValidator,
   });
-  const prerequisitePlan = await checkpointPreflight({
+  await checkpointPreflight({
     packs, plan, receiptContext:context, inputFingerprint, evidenceTask, changedSince,
     validationNames:evidenceTask
-      ? ["registry", "plan", "artifact", "prerequisites"]
-      : ["registry", "plan", "receipt", "artifact", "evidence", "prerequisites"],
+      ? ["registry", "plan", "artifact"]
+      : ["registry", "plan", "receipt", "artifact", "evidence"],
   });
+  const promotionTasks = evidenceTask ? verificationPromotionTasks() : [];
+  if (evidenceTask) plan.promotionTasks = promotionTasks;
+  const prerequisitePlan = await checkpointPreflight({
+    packs, plan:{ ...plan, tasks:[...plan.tasks, ...promotionTasks] }, receiptContext:context,
+    inputFingerprint, evidenceTask, changedSince, validationNames:["prerequisites"],
+  });
+  applyCheckpointPrerequisitePlan(context.receipt, plan.tasks, prerequisitePlan);
   const launchRoutes = new Map(prerequisitePlan.tasks.map(({ key, route }) => [key, route]));
   let executionPlan = { ...plan };
   let checkpointAttempt;
@@ -1166,13 +1267,13 @@ export async function runFocusedAcceptance(
   let checkpointOwner;
   let checkpointIdentity;
   let promotionOnly = false;
-  const initializeCheckpointAttempt = async(artifact) => {
+  const initializeCheckpointAttempt = async() => {
     if (!evidenceTask || checkpointAttempt) return;
-    checkpointIdentity = checkpointAttemptIdentity({
+    const inputIdentity = checkpointAttemptInputIdentity({
       candidate:{ commit:candidateCommit, tree:candidateTree }, baseCommit:changedSince,
       evidenceTask, planDigest:verificationDigest(plan.tasks.map(verificationTaskIdentity)),
-      artifactInputDigest:artifact.inputDigest, artifactOutputDigest:artifact.outputDigest,
-      artifactBuildIdentity:artifact.buildIdentity, registryDigest:verificationDigest(packs),
+      artifactInputDigest:inputFingerprint.inputDigest ?? inputFingerprint.digest,
+      registryDigest:verificationDigest(packs),
       toolchainDigest:verificationDigest(context.receipt.environment),
       environmentClass:verificationDigest(context.receipt.environment),
       capabilityRoutes:Object.fromEntries(prerequisitePlan.tasks.map(({ key, route }) => [key, route])),
@@ -1181,8 +1282,9 @@ export async function runFocusedAcceptance(
       directory:await defaultCheckpointAttemptDirectory(repositoryRoot),
     });
     checkpointOwner = { pid:process.pid, token:randomUUID() };
-    checkpointAttempt = await checkpointAttemptStore.claim(checkpointIdentity,
+    checkpointAttempt = await checkpointAttemptStore.claim(inputIdentity,
       plan.tasks.map(({ key }) => key), checkpointOwner);
+    checkpointIdentity = checkpointAttempt.attempt.identity;
     context.receipt.checkpointAttempt = { id:checkpointAttempt.attempt.id,
       action:checkpointAttempt.action, identityDigest:checkpointAttempt.attempt.identityDigest };
     if (checkpointAttempt.action === "attached") {
@@ -1190,6 +1292,10 @@ export async function runFocusedAcceptance(
         checkpointAttempt.owner.pid}; no duplicate all-pack process launched`);
     }
     if (checkpointAttempt.action === "promotion-only") {
+      buildManifest = await validateCurrentArtifactForConsumers({
+        root:repositoryRoot, artifactValidator,
+      });
+      checkpointIdentity = checkpointAttemptIdentity(checkpointAttempt.attempt.identity);
       const recovery = await checkpointAttemptStore.recovery(checkpointAttempt.attempt.id);
       const priorTasks = Object.fromEntries(Object.entries(checkpointAttempt.attempt.results)
         .map(([key, result]) => [key, result.receiptTask]));
@@ -1227,23 +1333,18 @@ export async function runFocusedAcceptance(
         Object.values(checkpointAttempt.attempt.logicalResults)
           .reduce((count, results) => count + Object.keys(results).length, 0)} logical target(s)`);
     }
-    await checkpointPreflight({
-      packs, plan, receiptContext:context, inputFingerprint, evidenceTask, changedSince,
-      validationNames:["receipt", "evidence"],
-    });
-    const buildTask = plan.tasks.find(({ stage }) => stage === "build");
-    if (buildTask && !checkpointAttempt.attempt.results[buildTask.key]) {
-      await checkpointAttemptStore.recordTask(checkpointAttempt.attempt.id, buildTask.key, {
-        status:"passed", identityDigest:verificationDigest(verificationTaskIdentity(buildTask)),
-        receiptTask:structuredClone(context.receipt.tasks[buildTask.key]),
-      }, checkpointOwner);
-    }
   };
   if (!commandRunner) {
     await context.write();
     console.error(`[verify:receipt] ${path.relative(repositoryRoot, context.receiptPath)}`);
   }
   const baseRunner = commandRunner ?? createVerificationCommandRunner(context, { launchRoutes,
+    onLogicalTargetResult:async(task, receiptTask) => {
+      if (checkpointAttempt) {
+        await checkpointAttemptStore.recordLogicalTargets(checkpointAttempt.attempt.id,
+          task.key, receiptTask, checkpointOwner);
+      }
+    },
     onTaskResult:async(task, receiptTask) => {
       if (checkpointAttempt && receiptTask.logicalResults) {
         await checkpointAttemptStore.recordLogicalTargets(checkpointAttempt.attempt.id,
@@ -1253,37 +1354,12 @@ export async function runFocusedAcceptance(
   });
   let activeAttemptTask;
   let checkpointGuard;
-  const createGuard = () => createCheckpointIdentityGuard({
-    expected:{ commit:candidateCommit, tree:candidateTree,
+  const createGuard = () => createRepositoryCheckpointIdentityGuard({
+    repositoryRoot, expected:{ commit:candidateCommit, tree:candidateTree,
       artifactInputDigest:checkpointIdentity.artifactInputDigest,
       artifactOutputDigest:checkpointIdentity.artifactOutputDigest,
       artifactBuildIdentity:checkpointIdentity.artifactBuildIdentity, trackedChanges:"" },
-    snapshot:async() => {
-      const [commit, tree, input, trackedChanges, artifact] = await Promise.all([
-        gitValue("rev-parse", "HEAD^{commit}"), gitValue("rev-parse", "HEAD^{tree}"),
-        createDistInputFingerprint({ root:repositoryRoot }),
-        gitValue("status", "--porcelain", "--untracked-files=no"),
-        validateCurrentArtifactForConsumers({ root:repositoryRoot, artifactValidator }),
-      ]);
-      return { commit, tree, artifactInputDigest:input.inputDigest ?? input.digest,
-        artifactOutputDigest:artifact.outputDigest, artifactBuildIdentity:artifact.buildIdentity,
-        trackedChanges };
-    },
-    createIncident:async(failure) => createTimeoutIncidentStore().create({
-      runnerRunId:context.receipt.runId,
-      sourceReceipt:path.relative(repositoryRoot, context.receiptPath),
-      lineage:{ commit:candidateCommit, tree:candidateTree },
-      failureClass:failure.failureClass, task:failure.task,
-      fingerprint:reliabilityFailureFingerprint({ failureClass:failure.failureClass,
-        task:failure.task, failedBoundary:failure.failedBoundary, error:"Checkpoint identity drift" }),
-      environment:context.receipt.environment,
-      artifact:context.receipt.artifact ?? context.receipt.artifactInput ?? null,
-      planDigest:verificationDigest(context.receipt.plan ?? {}),
-      failedBoundary:failure.failedBoundary,
-      executionPrerequisite:failure.executionPrerequisite,
-    }),
-    attemptId:checkpointAttempt.attempt.id,
-    routeFor:(boundary) => boundary?.key ? launchRoutes.get(boundary.key) : "promotion-boundary",
+    context, attemptId:checkpointAttempt.attempt.id, launchRoutes, artifactValidator,
   });
   const runner = async(display, task) => {
     if (!checkpointAttempt) return baseRunner(display, task);
@@ -1291,6 +1367,10 @@ export async function runFocusedAcceptance(
     await checkpointGuard.assertBefore(task);
     await checkpointAttemptStore.assertIdentity(checkpointAttempt.attempt.id, checkpointIdentity);
     const result = await baseRunner(display, task);
+    if (task.stage === "build" && checkpointIdentity.artifactOutputDigest === null) {
+      activeAttemptTask = undefined;
+      return result;
+    }
     await checkpointAttemptStore.recordTask(checkpointAttempt.attempt.id, task.key, {
       status:"passed", identityDigest:verificationDigest(verificationTaskIdentity(task)),
       receiptTask:structuredClone(context.receipt.tasks[task.key]),
@@ -1298,9 +1378,30 @@ export async function runFocusedAcceptance(
     activeAttemptTask = undefined;
     return result;
   };
-  if (options.skipBuild && evidenceTask) {
-    await initializeCheckpointAttempt(buildManifest);
+  const bindCheckpointArtifact = async(artifact) => {
+    if (!checkpointAttempt || checkpointIdentity.artifactOutputDigest !== null) return;
+    await checkpointGuard.assertBefore({ kind:"artifact-binding" });
+    checkpointAttempt = { ...checkpointAttempt,
+      attempt:await checkpointAttemptStore.bindArtifactIdentity(checkpointAttempt.attempt.id, {
+        artifactOutputDigest:artifact.outputDigest, artifactBuildIdentity:artifact.buildIdentity,
+      }, checkpointOwner) };
+    checkpointIdentity = checkpointAttemptIdentity(checkpointAttempt.attempt.identity);
+    context.receipt.checkpointAttempt.identityDigest = checkpointAttempt.attempt.identityDigest;
     checkpointGuard = createGuard();
+    await checkpointPreflight({ packs, plan, receiptContext:context, inputFingerprint, evidenceTask,
+      changedSince, validationNames:["receipt", "evidence"] });
+    const buildTask = plan.tasks.find(({ stage }) => stage === "build");
+    if (buildTask && !checkpointAttempt.attempt.results[buildTask.key]) {
+      await checkpointAttemptStore.recordTask(checkpointAttempt.attempt.id, buildTask.key, {
+        status:"passed", identityDigest:verificationDigest(verificationTaskIdentity(buildTask)),
+        receiptTask:structuredClone(context.receipt.tasks[buildTask.key]),
+      }, checkpointOwner);
+    }
+  };
+  if (evidenceTask) {
+    await initializeCheckpointAttempt();
+    checkpointGuard = createGuard();
+    if (options.skipBuild) await bindCheckpointArtifact(buildManifest);
   }
   if (resumeReceiptPath) {
     let priorReceipt;
@@ -1347,8 +1448,7 @@ export async function runFocusedAcceptance(
       };
       await context.write();
       if (evidenceTask) {
-        await initializeCheckpointAttempt(buildManifest);
-        checkpointGuard = createGuard();
+        await bindCheckpointArtifact(buildManifest);
         context.receipt.resumeIdentity = verificationResumeIdentity(plan, context, buildManifest);
         await context.write();
       }
@@ -1418,6 +1518,7 @@ export async function runFocusedAcceptance(
       toolchainValidator:async() => {},
     });
     plan.pendingEvidencePath = pending.path;
+    plan.promotionTasks = verificationPromotionTasks(path.relative(repositoryRoot, pending.path));
     if (checkpointAttempt) {
       await checkpointAttemptStore.markPromotion(checkpointAttempt.attempt.id,
         "pending-evidence-created");

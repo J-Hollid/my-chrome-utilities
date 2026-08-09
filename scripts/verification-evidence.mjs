@@ -17,6 +17,13 @@ import {
   defaultCheckpointAttemptDirectory,
 } from "./verification-checkpoint-attempt.mjs";
 import {
+  preflightExecutionPrerequisites, probeExecutionPrerequisiteEnvironment,
+} from "./verification-execution-prerequisites.mjs";
+import {
+  verificationGitNotePromotionTask,
+  verificationPromotionTasks,
+} from "./verification-promotion-plan.mjs";
+import {
   assertNoBlockingTimeoutIncidents,
   createTimeoutIncidentStore,
   timeoutRepairPackageTaskIdentity,
@@ -233,6 +240,7 @@ export async function validateCanonicalVerificationCheckpoint({
   }
   const parsed = await parsedReceipt(receiptPath, plan, {
     allowLegacyPrerequisites:legacySeparatePackage,
+    allowLegacyPromotionPrerequisites:allowLegacySeparatePackage,
   });
   const results = Object.values(receipt.tasks);
   if (results.some((result) => result.provenance !== "fresh" || result.reliabilityIncidentId ||
@@ -251,7 +259,10 @@ async function assertCanonicalPlan(recordPlan, details) {
   return canonical;
 }
 
-async function parsedReceipt(receiptPath, plan, { allowLegacyPrerequisites = false } = {}) {
+async function parsedReceipt(receiptPath, plan, {
+  allowLegacyPrerequisites = false,
+  allowLegacyPromotionPrerequisites = false,
+} = {}) {
   if (!receiptPath) throw new Error("Provide the verification receipt produced by this run");
   const bytes = await readFile(receiptPath);
   let receipt;
@@ -285,6 +296,29 @@ async function parsedReceipt(receiptPath, plan, { allowLegacyPrerequisites = fal
       throw new Error(`Verification receipt has an invalid execution route for ${task.key}`);
     }
   }
+  const promotionTasks = verificationPromotionTasks();
+  const promotionPrerequisiteRows = receipt.plan?.promotionExecutionPrerequisites;
+  const legacyPromotionPrerequisites = allowLegacyPromotionPrerequisites &&
+    !Array.isArray(promotionPrerequisiteRows);
+  if (!legacyPromotionPrerequisites) {
+    const expectedPromotionKeys = promotionTasks.map(({ key }) => key).sort();
+    if (!Array.isArray(promotionPrerequisiteRows) ||
+        !same(promotionPrerequisiteRows.map(({ key }) => key).sort(), expectedPromotionKeys)) {
+      throw new Error(`Verification receipt execution prerequisites do not cover the exact promotion plan (expected ${
+        expectedPromotionKeys.join(",")}; received ${Array.isArray(promotionPrerequisiteRows)
+          ? promotionPrerequisiteRows.map(({ key }) => key).sort().join(",") : "none"})`);
+    }
+    for (const task of promotionTasks) {
+      const identity = verificationTaskIdentity(task);
+      const row = promotionPrerequisiteRows.find(({ key }) => key === task.key);
+      const workspaceOnly = identity.requiredCapabilities.length === 0;
+      if (!row || !same(row.requiredCapabilities, identity.requiredCapabilities) ||
+          typeof row.route !== "string" || !row.route || row.route === "blocked" ||
+          workspaceOnly !== (row.route === "workspace-sandbox")) {
+        throw new Error(`Verification receipt has an invalid promotion route for ${task.key}`);
+      }
+    }
+  }
   const expectedPlanSummary = {
     mode:plan.mode,
     requestedPackIds:plan.requestedPackIds,
@@ -294,7 +328,11 @@ async function parsedReceipt(receiptPath, plan, { allowLegacyPrerequisites = fal
     changeSetDigest:verificationDigest(plan.changeSet),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
     ...(!legacyPrerequisites ? { executionPrerequisites:plan.tasks.map((task) =>
-      prerequisiteRows.find(({ key }) => key === task.key)) } : {}),
+      prerequisiteRows.find(({ key }) => key === task.key)),
+    ...(!legacyPromotionPrerequisites ? {
+      promotionExecutionPrerequisites:promotionTasks.map((task) =>
+        promotionPrerequisiteRows.find(({ key }) => key === task.key)),
+    } : {}) } : {}),
   };
   if (!same(receipt.plan, expectedPlanSummary)) {
     throw new Error("Verification receipt plan selection summary does not match the executed plan");
@@ -334,7 +372,7 @@ async function parsedReceipt(receiptPath, plan, { allowLegacyPrerequisites = fal
   }
   const checkpointAttempt = receipt.checkpointAttempt;
   if (checkpointAttempt && (!shaPattern.test(checkpointAttempt.id ?? "") ||
-      checkpointAttempt.identityDigest !== checkpointAttempt.id ||
+      !shaPattern.test(checkpointAttempt.identityDigest ?? "") ||
       !["created", "continued", "stale-owner-recovered", "promotion-only"]
         .includes(checkpointAttempt.action))) {
     throw new Error("Verification receipt has an invalid checkpoint attempt identity");
@@ -560,7 +598,7 @@ function validateRecordDocument(record, { allowLegacyExecutionLoad = false } = {
   }
   if (record.checkpointAttempt &&
       (!shaPattern.test(record.checkpointAttempt.id ?? "") ||
-       record.checkpointAttempt.identityDigest !== record.checkpointAttempt.id)) {
+       !shaPattern.test(record.checkpointAttempt.identityDigest ?? ""))) {
     throw new Error("Verification evidence has an invalid checkpoint attempt identity");
   }
   if (record.identities.artifact.schemaVersion !== 1) {
@@ -695,6 +733,27 @@ export async function probeGitMetadataWrite(repositoryRoot) {
   } finally {
     await git(repositoryRoot, "update-ref", "-d", probeRef);
   }
+}
+
+export async function preflightGitNotePromotion(pendingPath, {
+  repositoryRoot = repository,
+  availableCapabilities = (process.env.SWARMFORGE_VERIFICATION_CAPABILITIES ?? "")
+    .split(",").map((value) => value.trim()).filter(Boolean),
+} = {}) {
+  const task = verificationGitNotePromotionTask(path.relative(repositoryRoot, pendingPath));
+  const planned = preflightExecutionPrerequisites([task], { availableCapabilities,
+    approvalRoutes:{ "git-metadata-write":"scoped-git-metadata-approval" } });
+  const environment = await probeExecutionPrerequisiteEnvironment([task], {
+    requestedCapabilities:availableCapabilities, workspaceRoot:repositoryRoot,
+    outputDirectory:path.dirname(pendingPath), outputLimitBytes:4096,
+  });
+  if (!planned.launchable || !environment.launchable) {
+    const blocked = [...planned.blocked, ...environment.blocked];
+    throw new Error(`Git-note promotion prerequisite blocked before metadata write: ${
+      blocked.map(({ taskKey, capability, prerequisite, route, value }) =>
+        `${taskKey}:${capability ?? prerequisite}:${route ?? value}`).join(", ")}`);
+  }
+  return { task, route:planned.tasks[0].route, environment };
 }
 
 export async function recordPendingVerificationEvidence(
@@ -938,7 +997,11 @@ export const recordVerificationEvidence = recordPendingVerificationEvidence;
 async function main(args) {
   const [operation, ...rest] = args;
   if (operation === "record" && rest.length === 1) {
-    const evidence = await recordPendingVerificationEvidence(path.resolve(rest[0]));
+    const pendingPath = path.resolve(rest[0]);
+    await preflightGitNotePromotion(pendingPath);
+    const evidence = await recordPendingVerificationEvidence(pendingPath, {
+      metadataValidator:async() => {},
+    });
     console.log(`verification evidence recorded: ${evidence.task} (${evidence.packIds.join(",")}) ${evidence.planDigest}`);
     return;
   }
