@@ -8,7 +8,7 @@ import {
 const causalCategories = new Set([
   "viewport/visibility/hit testing", "readiness or settling", "readiness",
   "cleanup/resource lifecycle", "target isolation", "artifact/process locking",
-  "duplicated or unbounded workload",
+  "duplicated or unbounded workload", "sandbox capability declaration/first-run routing",
 ]);
 
 export function timeoutRepairCausalCategory(value) {
@@ -172,6 +172,11 @@ export async function validateTimeoutRepairProposal(incident, proposal, { isAnce
     throw new Error("Timeout repair is rejected as a limit-only or unrelated change");
   }
   timeoutRepairCausalCategory(proposal.causalCategory);
+  const capabilityRoutingCategory = "sandbox capability declaration/first-run routing";
+  if ((incident.failure.failureClass === "environment-contract-failure") !==
+      (proposal.causalCategory === capabilityRoutingCategory)) {
+    throw new Error("Environment-contract failures and capability-routing repairs cannot relabel another incident class");
+  }
   validateCausalExplanation(proposal.causalExplanation);
   if (typeof proposal.checkpoint?.baseCommit !== "string" || !proposal.checkpoint.baseCommit ||
       typeof proposal.checkpoint?.evidenceTask !== "string" || !proposal.checkpoint.evidenceTask) {

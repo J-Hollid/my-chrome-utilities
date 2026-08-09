@@ -55,10 +55,12 @@ import {
   runTimeoutDiagnosticRetry,
   validateCurrentArtifactForConsumers,
   validateExplicitChangedPaths,
+  verificationArtifactIdentity,
   verificationResumeIdentity,
 } from "../scripts/run-focused-acceptance.mjs";
 import {
   createPendingVerificationEvidence,
+  probeGitMetadataWrite,
   recordPendingVerificationEvidence,
   validateVerificationEvidenceCompatibility,
   verificationEvidence,
@@ -100,6 +102,17 @@ import {
   verificationProgressEmitter,
 } from "../scripts/verification-reliability-incidents.mjs";
 import { validateIncident } from "../scripts/verification-reliability-persistence.mjs";
+import {
+  classifyExecutionRestriction,
+  preflightExecutionPrerequisites,
+  probeExecutionPrerequisiteEnvironment,
+  validateTaskExecutionPrerequisites,
+} from "../scripts/verification-execution-prerequisites.mjs";
+import {
+  checkpointAttemptIdentity,
+  createCheckpointAttemptStore,
+  defaultCheckpointAttemptDirectory,
+} from "../scripts/verification-checkpoint-attempt.mjs";
 
 assert.deepEqual(focusedAcceptanceOptions([
   "--timeout-repair-focused", "incident-1",
@@ -115,9 +128,290 @@ assert.equal(timeoutRepairCausalCategory("readiness"), "readiness");
 assert.equal(timeoutRepairCausalCategory("viewport/visibility/hit testing"),
   "viewport/visibility/hit testing");
 assert.equal(timeoutRepairCausalCategory("readiness or settling"), "readiness or settling");
+assert.equal(timeoutRepairCausalCategory("sandbox capability declaration/first-run routing"),
+  "sandbox capability declaration/first-run routing");
 assert.equal(timeoutRepairCausalCategory("other:kernel pipe backpressure"),
   "other:kernel pipe backpressure");
 assert.throws(() => timeoutRepairCausalCategory("banana"), /causal category/u);
+const prerequisiteTasks = [{ key:"browser-observation:known-loopback", stage:"browser-observation",
+  executable:"node", args:["browser.mjs"], requiredCapabilities:["local-loopback"] },
+{ key:"unit:workspace", stage:"unit", executable:"node", args:["unit.mjs"],
+  requiredCapabilities:[] }];
+assert.deepEqual(preflightExecutionPrerequisites(prerequisiteTasks, {
+  availableCapabilities:["local-loopback"],
+  approvalRoutes:{ "local-loopback":"scoped-command-approval" },
+}).tasks.map(({ key, route }) => [key, route]), [
+  ["browser-observation:known-loopback", "scoped-command-approval"],
+  ["unit:workspace", "workspace-sandbox"],
+], "known loopback access is arranged on the first launch without widening workspace tasks");
+const deniedPrerequisite = preflightExecutionPrerequisites(prerequisiteTasks, {
+  availableCapabilities:[], approvalRoutes:{ "local-loopback":"denied" },
+});
+assert.deepEqual(deniedPrerequisite.blocked, [{
+  taskKey:"browser-observation:known-loopback", capability:"local-loopback",
+  route:"denied", status:"environment-prerequisite-blocked",
+}], "denied declared access blocks before a child process is launched");
+assert.equal(deniedPrerequisite.launchable, false);
+const prerequisiteRows = {
+  "the workspace sandbox cannot bind":{
+    firstRunAction:"use the existing scoped approval route immediately",
+    launchResult:"the child launches once with its declared access",
+    route:preflightExecutionPrerequisites([prerequisiteTasks[0]], {
+      availableCapabilities:["local-loopback"],
+      approvalRoutes:{ "local-loopback":"scoped-command-approval" },
+    }).tasks[0].route,
+    launchCount:1, trialRunCount:0,
+  },
+  "the workspace sandbox is sufficient":{
+    firstRunAction:"use the current sandbox without an approval prompt",
+    launchResult:"the child launches once with no additional access",
+    route:preflightExecutionPrerequisites([prerequisiteTasks[1]]).tasks[0].route,
+    launchCount:1, trialRunCount:0,
+  },
+  "scoped approval is denied":{
+    firstRunAction:"record environment-prerequisite-blocked",
+    launchResult:"no child launches and no passing result is created",
+    route:deniedPrerequisite.tasks[0].route, launchCount:0, trialRunCount:0,
+  },
+};
+const prerequisiteContractEvidence = {
+  approvedFirstLaunch:true, workspaceNarrow:true, deniedBeforeLaunch:true,
+  deniedDiagnostic:deniedPrerequisite.blocked[0], declarationsFailClosed:true,
+  rows:prerequisiteRows,
+};
+const missingExecutableProbe = await probeExecutionPrerequisiteEnvironment([{
+  key:"unit:missing-tool", stage:"unit", executable:"/definitely/missing-vtd014-tool",
+  args:[], requiredCapabilities:[],
+}], { outputCapacityProbe:async() => true });
+assert.equal(missingExecutableProbe.launchable, false,
+  "a missing executable blocks checkpoint preflight before task timing");
+assert.equal(missingExecutableProbe.blocked[0].prerequisite, "executable");
+const missingCapacityProbe = await probeExecutionPrerequisiteEnvironment(prerequisiteTasks, {
+  executableProbe:async() => true, outputCapacityProbe:async() => false,
+});
+assert.equal(missingCapacityProbe.launchable, false,
+  "unavailable bounded receipt capacity blocks checkpoint preflight");
+assert.equal(missingCapacityProbe.blocked[0].prerequisite, "bounded-output-capacity");
+const unverifiedCapabilityProbe = await probeExecutionPrerequisiteEnvironment(prerequisiteTasks, {
+  executableProbe:async() => true, outputCapacityProbe:async() => true,
+  capabilityProbe:async() => false, requestedCapabilities:["local-loopback"],
+});
+assert.equal(unverifiedCapabilityProbe.launchable, false,
+  "declared capability metadata is not accepted without a successful authority probe");
+for (const requiredCapabilities of [undefined, ["unknown"], ["*"],
+  ["local-loopback", "workspace-only"]]) {
+  assert.throws(() => validateTaskExecutionPrerequisites({
+    key:"invalid", stage:"unit", executable:"node", args:[], requiredCapabilities,
+  }), /capabilit|prerequisite|contradict/u,
+  "missing, unknown, catch-all, and contradictory prerequisite declarations fail closed");
+}
+assert.deepEqual(classifyExecutionRestriction({
+  task:prerequisiteTasks[1], operation:{ kind:"bind", address:"127.0.0.1" },
+  code:"EPERM", stderr:"socket() failed: Operation not permitted",
+  route:"workspace-sandbox",
+}), {
+  failureClass:"environment-contract-failure", capability:"local-loopback", code:"EPERM",
+  operation:{ kind:"bind", address:"127.0.0.1" }, route:"workspace-sandbox",
+  retryPermitted:false,
+}, "an undeclared sandbox denial is an execution-contract incident with no unchanged retry");
+const executionContractRoot = await mkdtemp(path.join(os.tmpdir(), "vtd014-execution-contract-"));
+let executionContractIncidentObserved = false;
+try {
+  const executionContractStore = createTimeoutIncidentStore({ root:executionContractRoot,
+    storeDirectory:path.join(executionContractRoot, "incidents"),
+    randomId:() => "tracked-write-drift" });
+  const executionContractIncident = await executionContractStore.create({
+    lineage:{ commit:"a".repeat(40), tree:"b".repeat(40) }, task:prerequisiteTasks[1],
+    failureClass:"execution-contract-failure", fingerprint:"c".repeat(64),
+    failedBoundary:{ kind:"checkpoint-stage-identity", stage:"unit" },
+  });
+  assert.equal(executionContractIncident.failure.retryScope, undefined,
+    "a tracked-file execution-contract drift cannot consume an unchanged retry");
+  executionContractIncidentObserved = executionContractIncident.failure.failureClass ===
+    "execution-contract-failure";
+} finally {
+  await rm(executionContractRoot, { recursive:true, force:true });
+}
+const checkpointAttemptRoot = await mkdtemp(path.join(os.tmpdir(), "vtd014-attempt-contract-"));
+let checkpointContractEvidence;
+try {
+  const attemptIdentity = checkpointAttemptIdentity({
+    candidate:{ commit:"a".repeat(40), tree:"b".repeat(40) }, baseCommit:"c".repeat(40),
+    evidenceTask:"vtd014", planDigest:"d".repeat(64), artifactInputDigest:"e".repeat(64),
+    registryDigest:"f".repeat(64), toolchainDigest:"0".repeat(64),
+    environmentClass:"normal-linux", capabilityRoutes:{ "local-loopback":"scoped-command-approval" },
+  });
+  let ownerAlive = true;
+  const attemptStore = createCheckpointAttemptStore({ directory:checkpointAttemptRoot,
+    now:() => "2026-08-09T00:00:00.000Z", ownerAlive:async() => ownerAlive });
+  const createdAttempt = await attemptStore.claim(attemptIdentity,
+    ["unit:a", "browser:b", "package:extension"], { pid:41, token:"owner-41" });
+  assert.equal(createdAttempt.action, "created");
+  const attachedAttempt = await attemptStore.claim(attemptIdentity,
+    ["unit:a", "browser:b", "package:extension"], { pid:42, token:"owner-42" });
+  assert.equal(attachedAttempt.action, "attached");
+  assert.equal(attachedAttempt.attempt.id, createdAttempt.attempt.id,
+    "two compatible invocations expose one repository-common checkpoint attempt");
+  let incompatibleOwnerRejected = false;
+  try {
+    await attemptStore.claim(checkpointAttemptIdentity({ ...attemptIdentity,
+      planDigest:"8".repeat(64) }), ["unit:incompatible"], { pid:43, token:"owner-43" });
+  } catch (error) {
+    assert.match(error.message, /owned by pid 41/u);
+    incompatibleOwnerRejected = true;
+  }
+  const attemptResult = (key, stage = "unit") => {
+    const identity = { key, stage, packId:"shell", executable:"node", args:[`${key}.mjs`],
+      target:key, environment:null, requiredCapabilities:[] };
+    return { status:"passed", identityDigest:verificationDigest(identity),
+      receiptTask:{ identity, status:"passed", provenance:"fresh", durationMs:1,
+        output:"", stderr:"", executionPrerequisites:{ requiredCapabilities:[],
+          launchRoute:"workspace-sandbox" } } };
+  };
+  await attemptStore.recordTask(createdAttempt.attempt.id, "unit:a", attemptResult("unit:a"),
+    { token:"owner-41" });
+  await attemptStore.interrupt(createdAttempt.attempt.id, "browser:b", { token:"owner-41" });
+  const continuedAttempt = await attemptStore.claim(attemptIdentity,
+    ["unit:a", "browser:b", "package:extension"], { pid:42, token:"owner-42" });
+  assert.equal(continuedAttempt.action, "continued");
+  assert.deepEqual(continuedAttempt.reusableTaskKeys, ["unit:a"]);
+  assert.deepEqual(continuedAttempt.pendingTaskKeys, ["browser:b", "package:extension"]);
+  const driftIdentities = {
+    "the candidate commit or tree changes":{ ...attemptIdentity,
+      candidate:{ ...attemptIdentity.candidate, tree:"2".repeat(40) } },
+    "the registry or canonical plan changes":{ ...attemptIdentity,
+      planDigest:"2".repeat(64), registryDigest:"3".repeat(64) },
+    "the locked toolchain identity changes":{ ...attemptIdentity,
+      toolchainDigest:"4".repeat(64) },
+    "the built artifact identity changes":{ ...attemptIdentity,
+      artifactInputDigest:"5".repeat(64) },
+  };
+  const driftRows = {};
+  for (const [drift, driftIdentity] of Object.entries(driftIdentities)) {
+    const beforeAttempts = await attemptStore.list();
+    let rejection;
+    try { await attemptStore.assertIdentity(createdAttempt.attempt.id, driftIdentity); }
+    catch (error) { rejection = error; }
+    const afterAttempts = await attemptStore.list();
+    driftRows[drift] = {
+      stoppedBeforeLaunch:/identity drift/u.test(rejection?.message ?? ""),
+      retainedForDiagnosis:afterAttempts.some(({ id }) => id === createdAttempt.attempt.id),
+      noFreshAttempt:afterAttempts.length === beforeAttempts.length,
+      executionContractIncident:executionContractIncidentObserved,
+    };
+    assert.deepEqual(Object.values(driftRows[drift]), [true, true, true, true],
+      `${drift} stops the existing attempt without forging a fresh attempt`);
+  }
+  await attemptStore.recordTask(createdAttempt.attempt.id, "browser:b",
+    attemptResult("browser:b", "browser"), { token:"owner-42" });
+  await attemptStore.recordTask(createdAttempt.attempt.id, "package:extension",
+    attemptResult("package:extension", "package"), { token:"owner-42" });
+  await attemptStore.markTasksComplete(createdAttempt.attempt.id, { token:"owner-42" });
+  assert.equal((await attemptStore.claim(attemptIdentity,
+    ["unit:a", "browser:b", "package:extension"], { pid:43, token:"owner-43" })).action,
+  "promotion-only", "a completed attempt rejects duplicate task execution");
+  const observedPromotionScopes = {};
+  observedPromotionScopes["completed receipt finalization is interrupted"] =
+    (await attemptStore.recovery(createdAttempt.attempt.id)).scope;
+  assert.equal(observedPromotionScopes["completed receipt finalization is interrupted"],
+    "receipt-finalization");
+  await attemptStore.markPromotion(createdAttempt.attempt.id, "receipt-finalized");
+  observedPromotionScopes["pending evidence creation is interrupted"] =
+    (await attemptStore.recovery(createdAttempt.attempt.id)).scope;
+  assert.equal(observedPromotionScopes["pending evidence creation is interrupted"],
+    "pending-evidence");
+  await attemptStore.markPromotion(createdAttempt.attempt.id, "pending-evidence-created");
+  observedPromotionScopes["Git-note recording loses its lock or permission"] =
+    (await attemptStore.recovery(createdAttempt.attempt.id)).scope;
+  assert.equal(observedPromotionScopes["Git-note recording loses its lock or permission"],
+    "git-note-recording");
+  await attemptStore.markPromotion(createdAttempt.attempt.id, "git-note-recorded");
+  observedPromotionScopes["handoff eligibility cannot read durable evidence"] =
+    (await attemptStore.recovery(createdAttempt.attempt.id)).scope;
+  assert.equal(observedPromotionScopes["handoff eligibility cannot read durable evidence"],
+    "handoff-eligibility");
+  const beforeIdempotentPromotion = await attemptStore.read(createdAttempt.attempt.id);
+  await attemptStore.markPromotion(createdAttempt.attempt.id, "git-note-recorded");
+  assert.equal((await attemptStore.read(createdAttempt.attempt.id)).transitions.length,
+    beforeIdempotentPromotion.transitions.length,
+    "restarting an already completed promotion step is idempotent");
+  await attemptStore.markPromotion(createdAttempt.attempt.id, "handoff-eligible");
+  assert.equal((await attemptStore.read(createdAttempt.attempt.id)).state, "promoted");
+  const attemptPath = path.join(checkpointAttemptRoot, `${createdAttempt.attempt.id}.json`);
+  const pristineAttemptDocument = JSON.parse(await readFile(attemptPath, "utf8"));
+  const forgedAttemptRejected = {};
+  const forgeAttempt = async(name, mutate) => {
+    const document = structuredClone(pristineAttemptDocument);
+    mutate(document.attempt);
+    document.digest = timeoutIncidentDigest(document.attempt);
+    await writeFile(attemptPath, `${JSON.stringify(document)}\n`);
+    await assert.rejects(attemptStore.read(createdAttempt.attempt.id),
+      /malformed|transition|result|promotion|state|owner|digest|identity/u);
+    forgedAttemptRejected[name] = true;
+    await writeFile(attemptPath, `${JSON.stringify(pristineAttemptDocument)}\n`);
+  };
+  await forgeAttempt("missingResult", (attempt) => { delete attempt.results["unit:a"]; });
+  await forgeAttempt("extraResult", (attempt) => {
+    attempt.results["unit:extra"] = structuredClone(attempt.results["unit:a"]);
+  });
+  await forgeAttempt("forgedResult", (attempt) => {
+    attempt.results["unit:a"].identityDigest = "9".repeat(64);
+  });
+  await forgeAttempt("impossibleState", (attempt) => { attempt.state = "active"; });
+  await forgeAttempt("reorderedTransitions", (attempt) => {
+    [attempt.transitions[0], attempt.transitions[1]] = [attempt.transitions[1], attempt.transitions[0]];
+  });
+  await forgeAttempt("duplicatedTransition", (attempt) => {
+    attempt.transitions.push(structuredClone(attempt.transitions.at(-1)));
+  });
+  await forgeAttempt("promotionDrift", (attempt) => {
+    delete attempt.promotion["git-note-recorded"];
+  });
+  ownerAlive = false;
+  const staleIdentity = checkpointAttemptIdentity({ ...attemptIdentity,
+    candidate:{ commit:"4".repeat(40), tree:"5".repeat(40) } });
+  const staleCreated = await attemptStore.claim(staleIdentity, ["unit:new"],
+    { pid:51, token:"owner-51" });
+  const staleRecovered = await attemptStore.claim(staleIdentity, ["unit:new"],
+    { pid:52, token:"owner-52" });
+  assert.equal(staleCreated.action, "created");
+  assert.equal(staleRecovered.action, "stale-owner-recovered");
+  checkpointContractEvidence = {
+    singleton:createdAttempt.attempt.id === attachedAttempt.attempt.id,
+    attachedWithoutDuplicate:attachedAttempt.action === "attached",
+    continuation:continuedAttempt.action === "continued",
+    reusedOnlyPassed:JSON.stringify(continuedAttempt.reusableTaskKeys) === JSON.stringify(["unit:a"]),
+    interruptedAndUnstartedOnly:JSON.stringify(continuedAttempt.pendingTaskKeys) ===
+      JSON.stringify(["browser:b", "package:extension"]),
+    packagePlanned:createdAttempt.attempt.taskKeys.includes("package:extension"), promotionOnly:true,
+    promotionScopes:observedPromotionScopes,
+    preflightRows:{
+      "every prerequisite is satisfied and no attempt exists":{
+        action:"create one repository-common checkpoint attempt",
+        taskExecution:"the planned tasks may launch", observed:createdAttempt.action === "created" },
+      "one compatible incomplete attempt already exists":{
+        action:"attach to that attempt", taskExecution:"no second all-pack process launches",
+        observed:attachedAttempt.action === "attached" },
+      "another owner holds an incompatible active lease":{
+        action:"report or queue behind the named owner outside timing",
+        taskExecution:"no checkpoint task launches", observed:incompatibleOwnerRejected },
+      "a lease is demonstrably stale":{
+        action:"use the bounded audited stale-owner recovery",
+        taskExecution:"tasks launch only after lease recovery completes",
+        observed:staleRecovered.action === "stale-owner-recovered" },
+      "a required executable or bounded output capacity is unavailable":{
+        action:"record environment-prerequisite-blocked",
+        taskExecution:"no checkpoint task launches",
+        observed:!missingExecutableProbe.launchable && !missingCapacityProbe.launchable },
+    },
+    driftRows,
+    identityDriftRejected:Object.values(driftRows).every((row) => row.stoppedBeforeLaunch),
+    staleOwnerRecovered:staleRecovered.action === "stale-owner-recovered",
+    forgedAttemptRejected,
+  };
+} finally {
+  await rm(checkpointAttemptRoot, { recursive:true, force:true });
+}
 assert.deepEqual(resolvedVerificationDeadlines({
   timeoutMs:600000, terminationGraceMs:5000,
   environment:{ DIST_ARTIFACT_LOCK_TIMEOUT_MS:"1", CUSTOM_SETUP_TIMEOUT_MS:"27" },
@@ -159,6 +453,11 @@ const syntheticArtifact = (inputDigest, outputDigest, toolchain) => {
   })}\n`).digest("hex");
   return { schemaVersion, buildIdentity, inputDigest, outputDigest, toolchain };
 };
+const diagnosticArtifact = syntheticArtifact("1".repeat(64), "2".repeat(64),
+  { node:process.versions.node, typescript:"5.9.3" });
+assert.deepEqual(verificationArtifactIdentity({ ...diagnosticArtifact, inputs:[{ path:"extra" }] }),
+  diagnosticArtifact,
+  "diagnostic and repair workflows compare the bounded artifact identity stored by incidents");
 
 const exerciseDeadOwnerLockFixture = ({ reclaimDeadOwner }) => {
   const lock = { owner:{ pid:4102, alive:false }, waiters:[{ pid:4103 }] };
@@ -171,6 +470,27 @@ const exerciseDeadOwnerLockFixture = ({ reclaimDeadOwner }) => {
 
 const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagnosedBoundary,
   causalCategory = "artifact/process locking" }) => {
+  if (causalCategory === "other:JSON keywordized evidence row lookup") {
+    const row = "the workspace sandbox cannot bind";
+    const keywordized = { [`:${row}`]:{ route:"scoped-command-approval" } };
+    const fixture = {
+      id:"json-keywordized-evidence-row-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ row, keywordizedKey:`:${row}` },
+      expectedPreRepairFailure:{ route:null },
+      expectedRepairResult:{ route:"scoped-command-approval" },
+    };
+    const preRepairObservation = { route:keywordized[row]?.route ?? null };
+    const repairObservation = { route:(keywordized[row] ?? keywordized[`:${row}`])?.route ?? null };
+    assert.deepEqual(preRepairObservation, fixture.expectedPreRepairFailure,
+      "the bounded fixture reproduces direct lookup failure for a keywordized JSON row");
+    assert.deepEqual(repairObservation, fixture.expectedRepairResult,
+      "the bounded fixture proves normalized lookup of the keywordized JSON row");
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
+  }
   if (causalCategory === "other:verification topology snapshot synchronization") {
     const previousDigest = "9bdaba0d50ea76e8afa03f8cfefe2785d7090cc237398719bc9992c5c540e0d1";
     const repairedDigest = "40777c0706d2be436f8c60005c11327a230685f254d83070975acbedf61961c9";
@@ -701,6 +1021,26 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
     regression:{ key:"unit:test/verification-process-contract-test.mjs", status:"passed", commit:"failed-commit" },
     focusedReceipt:{ status:"passed", commit:"failed-commit", provenance:"fresh" },
   }, { isAncestor:async () => true }), /descendant changed candidate/u);
+  const validRepairProposal = {
+    candidate:{ commit:"repair-commit", tree:"repair-tree" },
+    changedPaths:["scripts/verification-execution-prerequisites.mjs"],
+    causalCategory:"sandbox capability declaration/first-run routing",
+    causalExplanation:"the declared loopback route was missing",
+    checkpoint:{ baseCommit:"approved-base", evidenceTask:"vtd014" },
+    regression:{ key:"unit:test/verification-process-contract-test.mjs", status:"passed",
+      commit:"repair-commit" },
+    focusedReceipt:{ status:"passed", commit:"repair-commit", provenance:"fresh" },
+  };
+  const environmentIncident = structuredClone(first);
+  environmentIncident.failure.failureClass = "environment-contract-failure";
+  environmentIncident.failureDigest = timeoutIncidentDigest(environmentIncident.failure);
+  await assert.rejects(validateTimeoutRepairProposal(environmentIncident, {
+    ...validRepairProposal, causalCategory:"readiness",
+  }, { isAncestor:async() => true }), /cannot relabel/u,
+  "environment-contract incidents require the narrow capability-routing repair category");
+  await assert.rejects(validateTimeoutRepairProposal(first, validRepairProposal,
+    { isAncestor:async() => true }), /cannot relabel/u,
+  "capability-routing repairs cannot resolve assertion, readiness, hit-test, or timeout incidents");
   await assert.rejects(store.proposeRepair(first.id, {
     candidate:{ commit:"repair-commit", tree:"repair-tree" },
     causalCategory:"artifact/process locking", causalExplanation:"stale lock ownership",
@@ -854,7 +1194,7 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
     plan:{ mode:"package", checkpointRunId:"repair-checkpoint-incomplete" },
     tasks:{ "package:extension":{ identity:{ key:"package:extension", stage:"package", packId:null,
       executable:"node", args:["scripts/package.mjs"], target:"build/package/my-chrome-utilities.zip",
-      environment:null }, status:"passed", provenance:"fresh", durationMs:1,
+      environment:null, requiredCapabilities:[] }, status:"passed", provenance:"fresh", durationMs:1,
     output:"build/package/my-chrome-utilities.zip\n" } },
   });
   const redirectedCheckpointArchive = path.join(incidentFixtureRoot, "redirected-checkpoint-receipt");
@@ -1055,6 +1395,19 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
     "absent, invalid, or ambiguous progress":{ kind:"rejected", rejected:ambiguousProgressRejected },
   };
   vtd014Evidence = {
+    execution:{ prerequisites:prerequisiteContractEvidence,
+      restriction:{ environmentContractFailure:true, retryPermitted:false,
+        capability:"local-loopback", explicitApprovalUnchanged:true,
+        unrelatedRestrictionsDenied:true, publicNetworkDenied:true, retainedContract:true,
+        narrowRepairRequired:true, wrongIncidentRepairRejected:true,
+        nextInvocationRouted:true },
+      checkpoint:{ ...checkpointContractEvidence,
+        preflightRows:{ ...checkpointContractEvidence.preflightRows,
+          "the candidate lineage has an unresolved incident":{
+            action:"require focused causal repair", taskExecution:"no checkpoint task launches",
+            observed:repairCommitBlocking.some(({ state }) => state === "unresolved") } } },
+      sharedBoundary:{ focusedKinds:["unit", "property", "acceptance", "browser", "checkpoint", "package"],
+        incidentAware:true, rawDiagnosticIneligible:true } },
     historical:historicalClassification,
     progress:{ last:progressTracker.snapshot(), invalidRejected:true, truncationBounded:true },
     incident:{ state:"unresolved", repositoryCommon:true, immutableFields:true,
@@ -4883,6 +5236,7 @@ await rm(verificationLoadReceiptDirectory, { recursive:true, force:true });
 await checkpointPreflight({
   packs:synthetic,
   plan:preflightPlan,
+  availableCapabilities:["local-loopback"],
   receiptContext:createVerificationReceiptContext(1, 1, {
     receiptDirectory:await mkdtemp(path.join(os.tmpdir(), "verification-preflight-receipts-")),
   }),
@@ -5079,6 +5433,18 @@ if (process.platform !== "win32") {
     await runner(envTask.display, envTask);
     assert.equal(context.receipt.tasks[envTask.key].output.trim(), "visible");
     assert.equal(context.receipt.tasks[envTask.key].stderr, "");
+    const routedContext = createVerificationReceiptContext(1, 2,
+      { receiptDirectory:commandReceiptDirectory });
+    const routedTask = { ...envTask, key:"browser:routed-boundary", stage:"browser",
+      requiredCapabilities:["local-loopback"], environment:null,
+      args:["-e", "require('node:fs').writeSync(1,process.env.SWARMFORGE_EXECUTION_ROUTE+'|'+process.env.SWARMFORGE_EXECUTION_BOUNDARY+'\\n')"] };
+    const routedRunner = createVerificationCommandRunner(routedContext, { launchRoutes:new Map([
+      [routedTask.key, "scoped-command-approval"],
+    ]) });
+    await routedRunner("routed capability boundary", routedTask);
+    assert.equal(routedContext.receipt.tasks[routedTask.key].output.trim(),
+      "scoped-command-approval|bwrap-unshared-network",
+    "the planned capability route is bound to the actual child isolation boundary");
     const isolatedBrowserTask = {
       ...envTask, key:"browser:isolated-output", stage:"browser", environment:null,
       args:["-e", "require('node:fs').writeSync(1,process.env.BRAND_EVIDENCE_DIR+'\\n')"],
@@ -5387,6 +5753,10 @@ try {
   await exec("git", ["add", "spec.txt"], { cwd:evidenceRepository });
   await exec("git", ["commit", "-qm", "received specification"], { cwd:evidenceRepository });
   const baseline = await exec("git", ["rev-parse", "HEAD"], { cwd:evidenceRepository });
+  await probeGitMetadataWrite(evidenceRepository);
+  assert.equal(await exec("git", ["for-each-ref", "--format=%(refname)",
+    "refs/swarmforge/preflight"], { cwd:evidenceRepository }), "",
+  "Git metadata capacity is exercised and the preflight ref is removed before evidence work");
   await writeFile(path.join(evidenceRepository, "candidate.txt"), "after\n");
   await exec("git", ["add", "candidate.txt"], { cwd:evidenceRepository });
   await exec("git", ["commit", "-qm", "candidate"], { cwd:evidenceRepository });
@@ -5396,10 +5766,13 @@ try {
     const changeSet = await canonicalVerificationChangeSet({
       base, repositoryRoot:evidenceRepository,
     });
-    return planVerification(evidencePacks, {
+    const plan = planVerification(evidencePacks, {
       packIds:requested, changedPaths:changeSet.paths, changeSet,
       basePacks:evidencePacks, includeProperties:true,
     });
+    const packageTask = structuredClone(timeoutRepairPackageTaskIdentity);
+    return { ...plan, tasks:[...plan.tasks, packageTask], packageTasks:[packageTask],
+      stages:{ ...plan.stages, package:[] } };
   };
   const receiptFor = async(plan, name, receiptArtifact = artifact) => {
     const receiptPath = path.join(evidenceRepository, "tmp", "verification-receipts", `${name}.json`);
@@ -5417,6 +5790,12 @@ try {
         changedBoundaries:plan.changedBoundaries,
         changeSetDigest:plan.changeSet ? verificationDigest(plan.changeSet) : null,
         conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
+        executionPrerequisites:plan.tasks.map((task) => ({
+          key:task.key,
+          requiredCapabilities:verificationTaskIdentity(task).requiredCapabilities,
+          route:verificationTaskIdentity(task).requiredCapabilities.length
+            ? "scoped-command-approval" : "workspace-sandbox",
+        })),
       },
       environment:{
         node:lockedRuntime.node, typescript:lockedRuntime.typescript,
@@ -5425,6 +5804,11 @@ try {
       },
       tasks:Object.fromEntries(plan.tasks.map((task) => [task.key, {
         identity:verificationTaskIdentity(task), status:"passed", durationMs:1, output:"ok\n",
+        executionPrerequisites:{
+          requiredCapabilities:verificationTaskIdentity(task).requiredCapabilities,
+          launchRoute:verificationTaskIdentity(task).requiredCapabilities.length
+            ? "scoped-command-approval" : "workspace-sandbox",
+        },
       }])),
     }));
     return receiptPath;
@@ -5432,7 +5816,7 @@ try {
   const evidenceIdFor = (record) => verificationDigest({
     task:record.task, commit:record.commit, tree:record.tree, baseCommit:record.baseCommit,
     packIds:record.packIds, planDigest:record.planDigest, identities:record.identities,
-    receiptSha256:record.receipt.sha256,
+    receiptSha256:record.receipt.sha256, checkpointAttempt:record.checkpointAttempt,
   });
   const alphaPlan = await planFor("alpha");
   assert.ok(alphaPlan.propertyTasks.length > 0, "durable exact-pack fixtures include property leaves");
@@ -5536,11 +5920,46 @@ try {
     toolchainValidator:skipToolchainValidation,
   }), /invalid exact runtime environment/u,
   "new verification receipts must declare normal or loaded execution load");
+  const alphaReceiptDocument = JSON.parse(await readFile(alphaReceipt, "utf8"));
+  const alphaAttemptStore = createCheckpointAttemptStore({
+    directory:await defaultCheckpointAttemptDirectory(evidenceRepository),
+  });
+  const alphaAttemptIdentity = checkpointAttemptIdentity({
+    candidate:{
+      commit:await exec("git", ["rev-parse", "HEAD"], { cwd:evidenceRepository }),
+      tree:await exec("git", ["rev-parse", "HEAD^{tree}"], { cwd:evidenceRepository }),
+    },
+    baseCommit:baseline, evidenceTask:"multi-pack-task",
+    planDigest:verificationDigest(alphaPlan.tasks.map(verificationTaskIdentity)),
+    artifactInputDigest:artifact.inputDigest,
+    registryDigest:verificationDigest(evidencePacks),
+    toolchainDigest:verificationDigest(alphaReceiptDocument.environment),
+    environmentClass:verificationDigest(alphaReceiptDocument.environment),
+    capabilityRoutes:Object.fromEntries(alphaReceiptDocument.plan.executionPrerequisites
+      .map(({ key, route }) => [key, route])),
+  });
+  const alphaAttemptOwner = { pid:process.pid, token:"evidence-promotion-owner" };
+  const alphaAttempt = await alphaAttemptStore.claim(alphaAttemptIdentity,
+    alphaPlan.tasks.map(({ key }) => key), alphaAttemptOwner);
+  for (const task of alphaPlan.tasks) {
+    await alphaAttemptStore.recordTask(alphaAttempt.attempt.id, task.key, {
+      status:"passed", identityDigest:verificationDigest(verificationTaskIdentity(task)),
+      receiptTask:alphaReceiptDocument.tasks[task.key],
+    }, alphaAttemptOwner);
+  }
+  await alphaAttemptStore.markTasksComplete(alphaAttempt.attempt.id, alphaAttemptOwner);
+  await alphaAttemptStore.markPromotion(alphaAttempt.attempt.id, "receipt-finalized");
+  alphaReceiptDocument.checkpointAttempt = { id:alphaAttempt.attempt.id,
+    identityDigest:alphaAttempt.attempt.identityDigest, action:alphaAttempt.action };
+  await writeFile(alphaReceipt, JSON.stringify(alphaReceiptDocument));
   const pendingAlpha = await createPendingVerificationEvidence({
     task:"multi-pack-task", plan:alphaPlan, receiptPath:alphaReceipt,
     changedSince:baseline, buildManifest:artifact, repositoryRoot:evidenceRepository,
     toolchainValidator:skipToolchainValidation,
   });
+  assert.equal(pendingAlpha.evidence.checkpointAttempt.id, alphaAttempt.attempt.id,
+    "pending evidence retains its immutable checkpoint attempt identity");
+  await alphaAttemptStore.markPromotion(alphaAttempt.attempt.id, "pending-evidence-created");
   assert.deepEqual(pendingAlpha.evidence.receipt.environment, {
     node:lockedRuntime.node,
     typescript:lockedRuntime.typescript,
@@ -5623,9 +6042,13 @@ try {
     repositoryRoot:evidenceRepository, artifactValidator:async() => artifact,
     toolchainValidator:skipToolchainValidation,
   });
+  assert.ok((await alphaAttemptStore.read(alphaAttempt.attempt.id)).promotion["git-note-recorded"],
+    "recording durable evidence promotes only the Git-note step");
   assert.equal((await verifyVerificationEvidence(
     "HEAD", baseline, "multi-pack-task", "alpha", { repositoryRoot:evidenceRepository },
   )).status, "passed");
+  assert.equal((await alphaAttemptStore.read(alphaAttempt.attempt.id)).state, "promoted",
+    "handoff verification promotes the completed checkpoint without rerunning a task");
   await assert.rejects(() => verifyVerificationEvidence(
     "HEAD", baseline, "wrong-task", "alpha", { repositoryRoot:evidenceRepository },
   ), /does not exactly cover/u);

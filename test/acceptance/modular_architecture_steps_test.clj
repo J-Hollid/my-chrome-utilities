@@ -75,10 +75,10 @@
 
 (deftest vtd014-steps-use-dedicated-production-backed-semantics
   (let [feature (gherkin/parse-file "features/modular-verification-packs.feature")
-        scenarios (filter #(re-matches #"Modular verification packs 1(?:0[4-9]|1[0-2])" (:name %))
+        scenarios (filter #(re-matches #"Modular verification packs 1(?:0[4-9]|1[0-9])" (:name %))
                           (:scenarios feature))
         steps (mapcat :steps scenarios)]
-    (is (= 9 (count scenarios)))
+    (is (= 16 (count scenarios)))
     (doseq [{:keys [text]} steps]
       (let [handler (first (filter #(re-matches (:pattern %) text) modular/handlers))]
         (is (some? handler) text)
@@ -97,9 +97,16 @@
               (:vtd014/failure-boundary
                (runtime/run-execution! execution modular/handlers)))))))
 
+(deftest vtd014-row-evidence-resolves-json-keywordized-outline-values
+  (is (= "observed"
+         (#'vtd014/row-value
+          {:vtd014/evidence {:execution {:rows {(keyword "outline row")
+                                                   {:result "observed"}}}}}
+          [:execution :rows] "outline row" :result))))
+
 (deftest vtd014-scenarios-execute-with-their-dedicated-production-evidence
   (let [feature (gherkin/parse-file "features/modular-verification-packs.feature")
-        executions (filter #(re-matches #"Modular verification packs 1(?:0[4-9]|1[0-2])/example_\d+"
+        executions (filter #(re-matches #"Modular verification packs 1(?:0[4-9]|1[0-9])/example_\d+"
                                         (:name %))
                            (runtime/expand-executions feature))
         digest (apply str (repeat 64 "a"))
@@ -172,8 +179,76 @@
                                  :currentPackContractDigest digest :masterPackContractDigest digest
                                  :currentCalibrationDigest digest :masterCalibrationDigest digest
                                  :diagnosticRetryOnPassingRun false :allPackCount 20
-                                 :packageTask "scripts/package.mjs"}}]
-    (is (= 23 (count executions)))
+                                 :packageTask "scripts/package.mjs"}
+                  :execution {:prerequisites {:approvedFirstLaunch true :workspaceNarrow true
+                                              :deniedBeforeLaunch true :declarationsFailClosed true
+                                              :rows {"the workspace sandbox cannot bind"
+                                                     {:firstRunAction "use the existing scoped approval route immediately"
+                                                      :launchResult "the child launches once with its declared access"
+                                                      :route "scoped-command-approval" :launchCount 1
+                                                      :trialRunCount 0}
+                                                     "the workspace sandbox is sufficient"
+                                                     {:firstRunAction "use the current sandbox without an approval prompt"
+                                                      :launchResult "the child launches once with no additional access"
+                                                      :route "workspace-sandbox" :launchCount 1 :trialRunCount 0}
+                                                     "scoped approval is denied"
+                                                     {:firstRunAction "record environment-prerequisite-blocked"
+                                                      :launchResult "no child launches and no passing result is created"
+                                                      :route "blocked" :launchCount 0 :trialRunCount 0}}}
+                              :restriction {:environmentContractFailure true :retryPermitted false
+                                            :capability "local-loopback"
+                                            :explicitApprovalUnchanged true
+                                            :unrelatedRestrictionsDenied true :publicNetworkDenied true
+                                            :retainedContract true :narrowRepairRequired true
+                                            :wrongIncidentRepairRejected true :nextInvocationRouted true}
+                              :checkpoint {:singleton true :attachedWithoutDuplicate true
+                                           :continuation true :reusedOnlyPassed true
+                                           :interruptedAndUnstartedOnly true :packagePlanned true
+                                           :promotionOnly true :identityDriftRejected true
+                                           :staleOwnerRecovered true
+                                           :forgedAttemptRejected
+                                           {:missingResult true :extraResult true :forgedResult true
+                                            :impossibleState true :reorderedTransitions true
+                                            :duplicatedTransition true :promotionDrift true}
+                                           :promotionScopes
+                                           {"completed receipt finalization is interrupted" "receipt-finalization"
+                                            "pending evidence creation is interrupted" "pending-evidence"
+                                            "Git-note recording loses its lock or permission" "git-note-recording"
+                                            "handoff eligibility cannot read durable evidence" "handoff-eligibility"}
+                                           :preflightRows
+                                           {"every prerequisite is satisfied and no attempt exists"
+                                            {:action "create one repository-common checkpoint attempt"
+                                             :taskExecution "the planned tasks may launch" :observed true}
+                                            "one compatible incomplete attempt already exists"
+                                            {:action "attach to that attempt"
+                                             :taskExecution "no second all-pack process launches" :observed true}
+                                            "another owner holds an incompatible active lease"
+                                            {:action "report or queue behind the named owner outside timing"
+                                             :taskExecution "no checkpoint task launches" :observed true}
+                                            "a lease is demonstrably stale"
+                                            {:action "use the bounded audited stale-owner recovery"
+                                             :taskExecution "tasks launch only after lease recovery completes"
+                                             :observed true}
+                                            "a required executable or bounded output capacity is unavailable"
+                                            {:action "record environment-prerequisite-blocked"
+                                             :taskExecution "no checkpoint task launches" :observed true}
+                                            "the candidate lineage has an unresolved incident"
+                                            {:action "require focused causal repair"
+                                             :taskExecution "no checkpoint task launches" :observed true}}
+                                           :driftRows
+                                           (into {} (map (fn [drift]
+                                                          [drift {:stoppedBeforeLaunch true
+                                                                  :retainedForDiagnosis true
+                                                                  :noFreshAttempt true
+                                                                  :executionContractIncident true}])
+                                                        ["the candidate commit or tree changes"
+                                                         "the registry or canonical plan changes"
+                                                         "the locked toolchain identity changes"
+                                                         "the built artifact identity changes"]))}
+                              :sharedBoundary {:incidentAware true :rawDiagnosticIneligible true
+                                               :focusedKinds ["unit" "property" "acceptance"
+                                                              "browser" "checkpoint" "package"]}}}]
+    (is (= 48 (count executions)))
     (with-redefs-fn {#'vtd014/production-evidence! (constantly evidence)}
       #(doseq [execution executions]
          (is (map? (runtime/run-execution! execution modular/handlers)) (:name execution))))))
