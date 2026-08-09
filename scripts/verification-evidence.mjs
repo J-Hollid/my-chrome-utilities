@@ -737,14 +737,15 @@ export async function probeGitMetadataWrite(repositoryRoot) {
 
 export async function preflightGitNotePromotion(pendingPath, {
   repositoryRoot = repository,
-  availableCapabilities = (process.env.SWARMFORGE_VERIFICATION_CAPABILITIES ?? "")
-    .split(",").map((value) => value.trim()).filter(Boolean),
+  executableProbe,
+  outputCapacityProbe,
 } = {}) {
   const task = verificationGitNotePromotionTask(path.relative(repositoryRoot, pendingPath));
-  const planned = preflightExecutionPrerequisites([task], { availableCapabilities,
+  const planned = preflightExecutionPrerequisites([task], {
+    availableCapabilities:["git-metadata-write"],
     approvalRoutes:{ "git-metadata-write":"scoped-git-metadata-approval" } });
   const environment = await probeExecutionPrerequisiteEnvironment([task], {
-    requestedCapabilities:availableCapabilities, workspaceRoot:repositoryRoot,
+    executableProbe, outputCapacityProbe, requestedCapabilities:[], workspaceRoot:repositoryRoot,
     outputDirectory:path.dirname(pendingPath), outputLimitBytes:4096,
   });
   if (!planned.launchable || !environment.launchable) {
@@ -767,7 +768,12 @@ export async function recordPendingVerificationEvidence(
 ) {
   const pending = await readPending(pendingPath);
   if (pending.status !== "pending") throw new Error("Only pending verification evidence can be recorded");
-  await metadataValidator(repositoryRoot);
+  try {
+    await metadataValidator(repositoryRoot);
+  } catch (error) {
+    throw new Error(`Git-note promotion prerequisite blocked before metadata write: promotion:git-note:git-metadata-write:scoped-git-metadata-approval: ${
+      error.message}`);
+  }
   await toolchainValidator({ repositoryRoot });
   return withRepositoryArtifactLock(repositoryRoot, async() => {
     // Global lock order is artifact first, Git notes second. Keeping both for
@@ -999,9 +1005,7 @@ async function main(args) {
   if (operation === "record" && rest.length === 1) {
     const pendingPath = path.resolve(rest[0]);
     await preflightGitNotePromotion(pendingPath);
-    const evidence = await recordPendingVerificationEvidence(pendingPath, {
-      metadataValidator:async() => {},
-    });
+    const evidence = await recordPendingVerificationEvidence(pendingPath);
     console.log(`verification evidence recorded: ${evidence.task} (${evidence.packIds.join(",")}) ${evidence.planDigest}`);
     return;
   }

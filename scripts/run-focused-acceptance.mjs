@@ -69,9 +69,9 @@ function environmentInteger(name, fallback, { maximum = Number.MAX_SAFE_INTEGER 
   return value;
 }
 
-function configuredExecutionCapabilities(environment = process.env) {
-  const encoded = environment.SWARMFORGE_VERIFICATION_CAPABILITIES ?? "";
-  return encoded ? encoded.split(",").map((value) => value.trim()).filter(Boolean) : [];
+function plannedExecutionCapabilities(plan) {
+  return [...new Set((plan?.tasks ?? []).flatMap((task) =>
+    Array.isArray(task.requiredCapabilities) ? task.requiredCapabilities : []))];
 }
 
 function valueArgument(args, index, option) {
@@ -1036,6 +1036,34 @@ export function applyCheckpointPrerequisitePlan(receipt, verificationTasks, prer
     .filter(({ key }) => !verificationKeys.has(key));
 }
 
+export async function prepareCheckpointExecution({
+  packs,
+  plan,
+  receiptContext,
+  inputFingerprint,
+  evidenceTask,
+  changedSince,
+  promotionTasks = [],
+  preflight = checkpointPreflight,
+}) {
+  await preflight({
+    packs, plan, receiptContext, inputFingerprint, evidenceTask, changedSince,
+    validationNames:evidenceTask
+      ? ["registry", "plan", "artifact"]
+      : ["registry", "plan", "receipt", "artifact", "evidence"],
+  });
+  const prerequisitePlan = await preflight({
+    packs, plan:{ ...plan, tasks:[...plan.tasks, ...promotionTasks] }, receiptContext,
+    inputFingerprint, evidenceTask, changedSince, validationNames:["prerequisites"],
+  });
+  applyCheckpointPrerequisitePlan(receiptContext.receipt, plan.tasks, prerequisitePlan);
+  if (evidenceTask) await preflight({
+    packs, plan, receiptContext, inputFingerprint, evidenceTask, changedSince,
+    validationNames:["receipt", "evidence"],
+  });
+  return prerequisitePlan;
+}
+
 export async function checkpointPreflight({
   packs,
   plan,
@@ -1043,7 +1071,7 @@ export async function checkpointPreflight({
   inputFingerprint,
   evidenceTask,
   changedSince,
-  availableCapabilities = configuredExecutionCapabilities(),
+  availableCapabilities = plannedExecutionCapabilities(plan),
   root = repositoryRoot,
   validators = {},
   validationNames = ["registry", "plan", "receipt", "artifact", "evidence", "prerequisites"],
@@ -1247,19 +1275,12 @@ export async function runFocusedAcceptance(
   if (options.skipBuild) buildManifest = await validateCurrentArtifactForConsumers({
     root:repositoryRoot, artifactValidator,
   });
-  await checkpointPreflight({
-    packs, plan, receiptContext:context, inputFingerprint, evidenceTask, changedSince,
-    validationNames:evidenceTask
-      ? ["registry", "plan", "artifact"]
-      : ["registry", "plan", "receipt", "artifact", "evidence"],
-  });
   const promotionTasks = evidenceTask ? verificationPromotionTasks() : [];
-  if (evidenceTask) plan.promotionTasks = promotionTasks;
-  const prerequisitePlan = await checkpointPreflight({
-    packs, plan:{ ...plan, tasks:[...plan.tasks, ...promotionTasks] }, receiptContext:context,
-    inputFingerprint, evidenceTask, changedSince, validationNames:["prerequisites"],
+  const prerequisitePlan = await prepareCheckpointExecution({
+    packs, plan, receiptContext:context, inputFingerprint, evidenceTask, changedSince,
+    promotionTasks,
   });
-  applyCheckpointPrerequisitePlan(context.receipt, plan.tasks, prerequisitePlan);
+  if (evidenceTask) plan.promotionTasks = promotionTasks;
   const launchRoutes = new Map(prerequisitePlan.tasks.map(({ key, route }) => [key, route]));
   let executionPlan = { ...plan };
   let checkpointAttempt;
@@ -1388,8 +1409,6 @@ export async function runFocusedAcceptance(
     checkpointIdentity = checkpointAttemptIdentity(checkpointAttempt.attempt.identity);
     context.receipt.checkpointAttempt.identityDigest = checkpointAttempt.attempt.identityDigest;
     checkpointGuard = createGuard();
-    await checkpointPreflight({ packs, plan, receiptContext:context, inputFingerprint, evidenceTask,
-      changedSince, validationNames:["receipt", "evidence"] });
     const buildTask = plan.tasks.find(({ stage }) => stage === "build");
     if (buildTask && !checkpointAttempt.attempt.results[buildTask.key]) {
       await checkpointAttemptStore.recordTask(checkpointAttempt.attempt.id, buildTask.key, {
@@ -1524,7 +1543,7 @@ export async function runFocusedAcceptance(
         "pending-evidence-created");
     }
     console.error(`[verify:evidence-pending] ${pending.path}`);
-    console.error(`[verify:evidence-record] node scripts/verification-evidence.mjs record ${pending.path}`);
+    console.error(`[verify:evidence-record] route=scoped-git-metadata-approval command=node scripts/verification-evidence.mjs record ${pending.path}`);
   }
   return plan;
 }

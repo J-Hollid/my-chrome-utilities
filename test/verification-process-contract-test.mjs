@@ -57,6 +57,7 @@ import {
   createVerificationCommandRunner,
   createVerificationReceiptContext,
   focusedAcceptanceOptions,
+  prepareCheckpointExecution,
   resumeVerificationPlan,
   runTimeoutRepairFocused,
   runTimeoutDiagnosticRetry,
@@ -172,6 +173,42 @@ assert.deepEqual(partitionedPrerequisiteReceipt.plan.executionPrerequisites,
 assert.deepEqual(partitionedPrerequisiteReceipt.plan.promotionExecutionPrerequisites.map(({ key }) => key),
   ["promotion:pending-evidence", "promotion:git-note"],
 "promotion routes remain durable without being forged as completed verification tasks");
+const cheapPreflightOrder = [];
+const cheapPreflightReceipt = { receipt:{ plan:{} } };
+await prepareCheckpointExecution({
+  packs:[], plan:{ tasks:[prerequisiteTasks[1]] }, receiptContext:cheapPreflightReceipt,
+  inputFingerprint:{ inputDigest:"a".repeat(64) }, evidenceTask:"vtd014",
+  changedSince:"approved-base", promotionTasks:verificationPromotionTasks(),
+  preflight:async({ validationNames, plan }) => {
+    cheapPreflightOrder.push(validationNames.join("+"));
+    if (validationNames[0] === "prerequisites") return {
+      tasks:plan.tasks.map((task) => ({ key:task.key,
+        requiredCapabilities:task.requiredCapabilities,
+        route:task.requiredCapabilities.length
+          ? "scoped-git-metadata-approval" : "workspace-sandbox" })),
+    };
+    return undefined;
+  },
+});
+cheapPreflightOrder.push("build-child");
+assert.deepEqual(cheapPreflightOrder, [
+  "registry+plan+artifact", "prerequisites", "receipt+evidence", "build-child",
+], "cheap receipt and evidence compatibility preflight completes before the leased build child");
+let malformedReceiptBuildLaunches = 0;
+await assert.rejects(() => prepareCheckpointExecution({
+  packs:[], plan:{ tasks:[prerequisiteTasks[1]] }, receiptContext:{ receipt:{ plan:{} } },
+  inputFingerprint:{ inputDigest:"a".repeat(64) }, evidenceTask:"vtd014",
+  changedSince:"approved-base", promotionTasks:verificationPromotionTasks(),
+  preflight:async({ validationNames, plan }) => {
+    if (validationNames[0] === "prerequisites") return {
+      tasks:plan.tasks.map((task) => ({ key:task.key,
+        requiredCapabilities:task.requiredCapabilities, route:"workspace-sandbox" })),
+    };
+    if (validationNames.includes("receipt")) throw new Error("malformed receipt contract");
+  },
+}).then(() => { malformedReceiptBuildLaunches += 1; }), /malformed receipt contract/u);
+assert.equal(malformedReceiptBuildLaunches, 0,
+  "a deterministic receipt blocker launches no build child");
 assert.deepEqual(preflightExecutionPrerequisites([gitMetadataTask, prerequisiteTasks[1]], {
   availableCapabilities:["git-metadata-write"],
   approvalRoutes:{ "git-metadata-write":"scoped-git-metadata-approval" },
@@ -6332,6 +6369,12 @@ try {
   }), /Claimed pack has no executed verification stage/u);
   await assert.rejects(() => verificationEvidence("HEAD", { repositoryRoot:evidenceRepository }), /No durable/u,
     "long verification only emits pending evidence and does not write Git notes");
+  await assert.rejects(() => recordPendingVerificationEvidence(pendingAlpha.path, {
+    repositoryRoot:evidenceRepository, artifactValidator:async() => artifact,
+    toolchainValidator:skipToolchainValidation,
+    metadataValidator:async() => { throw new Error("EACCES protected Git metadata"); },
+  }), /promotion:git-note:git-metadata-write:scoped-git-metadata-approval.*EACCES/u,
+  "denied Git metadata authority fails closed at the declared promotion route");
   const missingReceipt = JSON.parse(await readFile(alphaReceipt, "utf8"));
   delete missingReceipt.tasks[alphaPlan.tasks.at(-1).key];
   const missingPath = path.join(evidenceRepository, "tmp", "verification-receipts", "missing.json");
