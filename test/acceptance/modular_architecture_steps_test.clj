@@ -75,10 +75,10 @@
 
 (deftest vtd014-steps-use-dedicated-production-backed-semantics
   (let [feature (gherkin/parse-file "features/modular-verification-packs.feature")
-        scenarios (filter #(re-matches #"Modular verification packs 1(?:0[4-9]|1[01])" (:name %))
+        scenarios (filter #(re-matches #"Modular verification packs 1(?:0[4-9]|1[0-2])" (:name %))
                           (:scenarios feature))
         steps (mapcat :steps scenarios)]
-    (is (= 8 (count scenarios)))
+    (is (= 9 (count scenarios)))
     (doseq [{:keys [text]} steps]
       (let [handler (first (filter #(re-matches (:pattern %) text) modular/handlers))]
         (is (some? handler) text)
@@ -90,13 +90,13 @@
                                  (runtime/expand-executions feature)))
         evidence {:incident {:retryClaimedBeforeExecution true}}]
     (with-redefs-fn {#'vtd014/production-evidence! (constantly evidence)}
-      #(is (= "target TARGET-A in phase persistence"
+      #(is (= "an assertion inside logical target TARGET-A"
               (:vtd014/failure-boundary
                (runtime/run-execution! execution modular/handlers)))))))
 
 (deftest vtd014-scenarios-execute-with-their-dedicated-production-evidence
   (let [feature (gherkin/parse-file "features/modular-verification-packs.feature")
-        executions (filter #(re-matches #"Modular verification packs 1(?:0[4-9]|1[01])/example_\d+"
+        executions (filter #(re-matches #"Modular verification packs 1(?:0[4-9]|1[0-2])/example_\d+"
                                         (:name %))
                            (runtime/expand-executions feature))
         digest (apply str (repeat 64 "a"))
@@ -106,12 +106,23 @@
                   :progress {:truncationBounded true}
                   :incident {:state "unresolved" :repositoryCommon true :immutableFields true
                              :ordinaryResumeBlocked true :retryClaimedBeforeExecution true}
+                  :failures {:boundaries #{["a runner-owned timeout during target cleanup"
+                                            "the logical target and cleanup phase"]
+                                           ["an offscreen control hit-test assertion"
+                                            "the logical browser target and assertion site"]
+                                           ["a Property Set settling assertion"
+                                            "the executable target or case and unsettled state"]
+                                           ["an indivisible task assertion or nonzero exit"
+                                            "the canonical task and diagnostic fingerprint"]}}
+                  :non-timeout-fixtures {:hitTest true :propertySetSettling true
+                                         :confirmedFlaky true :repairBlocking true}
                   :retry {:classifications {:passed "confirmed-flaky"
-                                            :timeout "reproduced-timeout"
+                                            :sameFailure "reproduced-failure"
                                             :failed "changed-failure"
                                             :identityChanged "diagnostic-contract-failure"}
                           :secondRetryRejected true}
-                  :repair {:limitOnlyRejected true :unprovenRejected true :staleRejected true
+                  :repair {:symptomSuppressionRejected true :limitOnlyRejected true
+                           :unprovenRejected true :staleRejected true
                            :unrelatedRejected true :eligible true :descendant true :freshFocused true}
                   :store {:concurrentIndependentIds true :tamperRejected true :symlinkRejected true
                           :malformedRejected true :unrelatedLineageExcluded true}
@@ -122,7 +133,7 @@
                                  :workersUnchanged true :shardsUnchanged true
                                  :ordinaryResumeRetained true :diagnosticRetryOnPassingRun false
                                  :productUnchanged true :productionBoundariesUnchanged true}}]
-    (is (= 18 (count executions)))
+    (is (= 23 (count executions)))
     (with-redefs-fn {#'vtd014/production-evidence! (constantly evidence)}
       #(doseq [execution executions]
          (is (map? (runtime/run-execution! execution modular/handlers)) (:name execution))))))

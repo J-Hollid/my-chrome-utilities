@@ -25,66 +25,71 @@
     (if (seq resolved) resolved captures)))
 
 (def ^:private retry-scopes
-  {"target TARGET-A in phase persistence" "TARGET-A only"
-   "shared artifact setup before any target" "the artifact setup boundary only and no target workflow"
+  {"an assertion inside logical target TARGET-A" "TARGET-A only"
+   "an executable scenario or generated case" "that case only"
+   "shared artifact setup before any target" "the setup boundary only and no target workflow"
    "an indivisible non-browser task" "that exact task"
    "absent, invalid, or ambiguous progress" "no retry until the progress contract is repaired"})
 
 (def ^:private retry-outcomes
   {"passes" "confirmed-flaky"
-   "reaches the same timeout boundary" "reproduced-timeout"
-   "fails at another boundary" "changed-failure"
+   "repeats the same normalized failure" "reproduced-failure"
+   "fails with another fingerprint" "changed-failure"
    "cannot conserve the isolated identity" "diagnostic-contract-failure"})
 
 (def ^:private repair-outcomes
   {"descendant code, a causal regression, and fresh focused verification"
    "eligible for one fresh all-pack checkpoint"
-   "only a larger timeout, budget, calibration, worker count, or environment label"
+   "only a larger timeout, added sleep, repeated polling count, or weakened assertion"
+   "rejected as symptom suppression"
+   "only a budget, calibration, worker count, or environment label"
    "rejected as a limit-only change"
    "a verbal explanation without a deterministic causal regression"
    "rejected as unproven"
-   "reused focused results or results from the pre-repair tree"
-   "rejected as stale"
-   "no changed candidate or an unrelated change"
-   "rejected as non-causal"})
+   "reused focused results, pre-repair results, no changed candidate, or an unrelated change"
+   "rejected as stale or non-causal"})
 
 (defn handlers [{:keys [example-values]}]
-  [{:pattern #"^a canonical verification command reaches its runner-owned outer deadline$"
-    :handler (fn [world _ _] (prepared world))}
-   {:pattern #"^its child emitted bounded structured progress before termination$"
-    :handler (fn [world _ _]
-               (assert! world (true? (get-in world [:vtd014/evidence :progress :truncationBounded]))
-                        "Structured timeout progress was not retained."))}
-   {:pattern #"^the runner records the timeout$"
+  [{:pattern #"^the canonical verification runner manifests (.+)$"
+    :handler (fn [world example captures]
+               (assoc (prepared world) :vtd014/first-failure
+                      (first (values example-values example captures))))}
+   {:pattern #"^it records the failure before any unchanged retry$"
     :handler (fn [world _ _]
                (assert! world (= "unresolved" (get-in world [:vtd014/evidence :incident :state]))
-                        "The outer timeout did not create an unresolved incident."))}
-   {:pattern #"^(?:one repository-common incident identifies .+|the incident is visible from coder, refactorer, architect, and specifier worktrees|output truncation or outer SIGKILL cannot remove the last valid progress record|the timed-out task cannot later become passed merely by combining its output with a resumed receipt)$"
+                        "The manifested failure did not create an unresolved incident."))}
+   {:pattern #"^one repository-common reliability incident identifies (.+)$"
+    :handler (fn [world example captures]
+               (let [boundary (first (values example-values example captures))]
+                 (assert! world (some #{[(:vtd014/first-failure world) boundary]}
+                                      (get-in world [:vtd014/evidence :failures :boundaries]))
+                          "The reliability incident did not retain its smallest boundary.")))}
+   {:pattern #"^(?:it retains the candidate lineage, canonical task, owning pack, failure class, normalized fingerprint, phase, bounded final state, receipt, artifact, and toolchain|the incident is visible from coder, refactorer, architect, and specifier worktrees|the failed result cannot later become passed merely by combining its output with a resumed receipt)$"
     :handler (fn [world _ _]
                (let [incident (get-in world [:vtd014/evidence :incident])]
                  (assert! world (and (:repositoryCommon incident) (:immutableFields incident)
                                      (:ordinaryResumeBlocked incident))
-                          "Timeout incident identity, visibility, or resume blocking failed.")))}
+                          "Reliability incident identity, visibility, or resume blocking failed.")))}
 
-   {:pattern #"^a timeout's last trusted boundary is (.+)$"
+   {:pattern #"^a reliability incident's last trusted boundary is (.+)$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/failure-boundary
                       (first (values example-values example captures))))}
-   {:pattern #"^the incident grants its one unchanged diagnostic retry$"
+   {:pattern #"^the agent uses its one unchanged diagnostic retry$"
     :handler (fn [world _ _]
                (assert! world (contains? retry-scopes (:vtd014/failure-boundary world))
-                        "The timeout boundary has no deterministic diagnostic scope."))}
+                        "The failure boundary has no deterministic diagnostic scope."))}
    {:pattern #"^it executes (.+)$"
     :handler (fn [world example captures]
                (assert! world (= (retry-scopes (:vtd014/failure-boundary world))
                                  (first (values example-values example captures)))
                         "The diagnostic retry widened beyond the smallest failed boundary."))}
-   {:pattern #"^(?:no previously passing task or compatible sibling target executes|the candidate tree, artifact, toolchain, execution-load class, task configuration, environment, outer timeout, and applicable inner deadlines are unchanged)$"
+   {:pattern #"^(?:no previously passing task or compatible sibling target executes|the candidate tree, artifact, toolchain, execution-load class, task configuration, environment, and applicable limits are unchanged)$"
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd014/evidence :incident :retryClaimedBeforeExecution]))
                         "Diagnostic identity was not conserved and claimed before execution."))}
 
-   {:pattern #"^a timeout incident has not used its diagnostic retry$"
+   {:pattern #"^a reliability incident has not used its diagnostic retry$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^the unchanged isolated retry (.+)$"
     :handler (fn [world example captures]
@@ -95,7 +100,7 @@
                (assert! world (= (retry-outcomes (:vtd014/retry-outcome world))
                                  (first (values example-values example captures)))
                         "Diagnostic retry classification changed."))}
-   {:pattern #"^(?:it remains unresolved and blocks evidence and Git handoff|another unchanged retry or a normal resume containing the timed-out task is rejected)$"
+   {:pattern #"^(?:it remains unresolved and blocks evidence and Git handoff|another unchanged retry or a normal resume containing the failed task is rejected)$"
     :handler (fn [world _ _]
                (assert! world (and (true? (get-in world [:vtd014/evidence :retry :secondRetryRejected]))
                                    (true? (get-in world [:vtd014/evidence :incident :ordinaryResumeBlocked])))
@@ -112,14 +117,21 @@
                                      (false? (:retroactiveIncident historical)))
                           "Historical Capture timeout classification is not exact.")))}
 
-   {:pattern #"^a timeout incident has a proposed repair with (.+)$"
+   {:pattern #"^one fixture forces an offscreen control hit-test failure and another forces a Property Set settling failure$"
+    :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^(?:each exact failed boundary passes on its one unchanged isolated retry|both incidents are classified confirmed-flaky without requiring a pre-registered failure message|each retains its target or case, phase, assertion site, normalized fingerprint, and bounded observed geometry or unsettled state|neither passing retry supplies handoff evidence|both require a causal repair and deterministic regression)$"
+    :handler (fn [world _ _]
+               (assert! world (every? true? (vals (get-in world [:vtd014/evidence :non-timeout-fixtures])))
+                        "Non-timeout reliability fixtures did not retain their blocking contract."))}
+
+   {:pattern #"^a reliability incident has a proposed repair with (.+)$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/repair-evidence
                       (first (values example-values example captures))))}
    {:pattern #"^the resolution gate validates the proposal$"
     :handler (fn [world _ _]
                (assert! world (contains? repair-outcomes (:vtd014/repair-evidence world))
-                        "Unknown timeout repair proposal class."))}
+                        "Unknown reliability repair proposal class."))}
    {:pattern #"^the proposal is (.+)$"
     :handler (fn [world example captures]
                (let [repair-evidence (:vtd014/repair-evidence world)
@@ -128,48 +140,48 @@
                      observed? (case repair-evidence
                                  "descendant code, a causal regression, and fresh focused verification"
                                  (and (:eligible repair) (:descendant repair) (:freshFocused repair))
-                                 "only a larger timeout, budget, calibration, worker count, or environment label"
+                                 "only a larger timeout, added sleep, repeated polling count, or weakened assertion"
+                                 (:symptomSuppressionRejected repair)
+                                 "only a budget, calibration, worker count, or environment label"
                                  (:limitOnlyRejected repair)
                                  "a verbal explanation without a deterministic causal regression"
                                  (:unprovenRejected repair)
-                                 "reused focused results or results from the pre-repair tree"
-                                 (:staleRejected repair)
-                                 "no changed candidate or an unrelated change"
-                                 (:unrelatedRejected repair)
+                                 "reused focused results, pre-repair results, no changed candidate, or an unrelated change"
+                                 (and (:staleRejected repair) (:unrelatedRejected repair))
                                  false)]
                  (assert! world (and (= (repair-outcomes repair-evidence) outcome) observed?)
-                          "Timeout causal repair gate accepted the wrong proposal class.")))}
+                          "Reliability causal repair gate accepted the wrong proposal class.")))}
 
-   {:pattern #"^timeout incidents and their state transitions are written concurrently$"
+   {:pattern #"^reliability incidents and their state transitions are written concurrently$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^(?:repository-common incident state is loaded for evidence or handoff|every stable incident id and immutable failure digest is retained exactly once|atomic state transitions cannot overwrite another writer|a redirected, symlinked, traversing, malformed, truncated, duplicate, out-of-order, or digest-mismatched record fails closed|an unrelated candidate lineage is not blocked|abandoning or rebasing the affected lineage cannot discard its unresolved incident without a separate specifier-approved user decision)$"
     :handler (fn [world _ _]
                (assert! world (every? true? (vals (get-in world [:vtd014/evidence :store])))
-                        "Repository-common timeout state did not fail closed."))}
+                        "Repository-common reliability state did not fail closed."))}
 
-   {:pattern #"^a causal timeout repair and its fresh focused regression have passed$"
+   {:pattern #"^a causal reliability repair and its fresh focused regression have passed$"
     :handler (fn [world _ _] (prepared world))}
-   {:pattern #"^one fresh canonical all-20 checkpoint and node scripts/package.mjs pass without reused tasks or another timeout$"
+   {:pattern #"^one fresh canonical all-20 checkpoint and node scripts/package.mjs pass without reused tasks or another failure$"
     :handler (fn [world _ _]
                (let [resolution (get-in world [:vtd014/evidence :resolution])]
                  (assert! world (and (= 20 (:allPackCount resolution))
                                      (zero? (:reusedTaskCount resolution))
                                      (:packagePassed resolution))
-                          "Timeout resolution did not use a fresh all-20 checkpoint and package.")))}
-   {:pattern #"^(?:the incident resolution binds .+|Git-note verification recomputes every resolution link|the current candidate lineage has no unresolved incident or unused diagnostic allowance|git_handoff is permitted while repair note handoffs remained available throughout the blocked state|a later timeout in a downstream role creates a new incident rather than reopening or hiding the resolved one)$"
+                          "Reliability resolution did not use a fresh all-20 checkpoint and package.")))}
+   {:pattern #"^(?:the incident resolution binds .+|Git-note verification recomputes every resolution link|the current candidate lineage has no unresolved incident or retry result awaiting repair|git_handoff is permitted while repair note handoffs remained available throughout the blocked state|a later failure in a downstream role creates a new incident rather than reopening or hiding the resolved one)$"
     :handler (fn [world _ _]
                (let [resolution (get-in world [:vtd014/evidence :resolution :evidence])]
                  (assert! world (and (= 64 (count (:failureDigest resolution)))
                                      (= 64 (count (:resolutionDigest resolution))))
-                          "Timeout resolution evidence is not digest-bound.")))}
+                          "Reliability resolution evidence is not digest-bound.")))}
 
-   {:pattern #"^VTD-014 changes shared timeout, evidence, and handoff infrastructure for all 20 runnable packs$"
+   {:pattern #"^VTD-014 changes shared reliability, evidence, and handoff infrastructure for all 20 runnable packs$"
     :handler (fn [world _ _] (prepared world))}
-   {:pattern #"^a verification run completes without a runner-owned timeout$"
+   {:pattern #"^a verification run completes without a failure$"
     :handler (fn [world _ _]
                (assert! world (false? (get-in world [:vtd014/evidence :conservation :diagnosticRetryOnPassingRun]))
-                        "A passing run executed a timeout retry."))}
-   {:pattern #"^(?:its exact task identities, logical targets, observations, assertion leaves, batching, budgets, calibrations, worker limits, shards, and package check are unchanged|no diagnostic retry executes|ordinary non-timeout receipt resume retains its current successful-task reuse|no src product file, product behavior, saved value, accessibility result, feature owner, handler owner, pack dependency, target budget, calibration, worker limit, or shard changes|production impact boundaries are unchanged|the one-time delivery checkpoint runs all 20 runnable packs in canonical order followed by node scripts/package.mjs)$"
+                        "A passing run executed a reliability retry."))}
+   {:pattern #"^(?:its exact task identities, logical targets, observations, assertion leaves, batching, budgets, calibrations, worker limits, shards, and package check are unchanged|no diagnostic retry executes|previously passing work may be reused for diagnosis but no failed result can bypass incident classification|no final post-repair checkpoint reuses a pre-repair result|no src product file, product behavior, saved value, accessibility result, feature owner, handler owner, pack dependency, target budget, calibration, worker limit, or shard changes|production impact boundaries are unchanged|the one-time delivery checkpoint runs all 20 runnable packs in canonical order followed by node scripts/package.mjs)$"
     :handler (fn [world _ _]
                (let [conservation (get-in world [:vtd014/evidence :conservation])]
                  (assert! world (and (false? (:diagnosticRetryOnPassingRun conservation))

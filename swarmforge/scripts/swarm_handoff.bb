@@ -421,13 +421,13 @@
             [(str "Durable verification evidence is missing or invalid: "
                   (str/trim (str (:err result) " " (:out result))))]))))))
 
-(defn timeout-incident-errors [headers canonical-commit]
+(defn reliability-incident-errors [headers canonical-commit]
   (if (and (= "git_handoff" (get headers "type")) (not (str/blank? canonical-commit)))
-    (let [result (command "." "node" "scripts/verification-timeout-incidents.mjs"
+    (let [result (command "." "node" "scripts/verification-reliability-incidents.mjs"
                           "assert-handoff" canonical-commit)]
       (if (zero? (:exit result))
         []
-        [(str "Git handoff is blocked by timeout incident state: "
+        [(str "Git handoff is blocked by reliability incident state: "
               (str/trim (str (:err result) " " (:out result))))]))
     []))
 
@@ -444,8 +444,8 @@
       (let [{:keys [headers ordered details errors]} (parse-draft draft)
             validation (validate headers ordered details)
             evidence-errors (verification-errors sender headers (:canonical-commit validation) (:canonical-base validation))
-            timeout-errors (timeout-incident-errors headers (:canonical-commit validation))
-            all-errors (vec (concat errors (:errors validation) evidence-errors timeout-errors))]
+            reliability-errors (reliability-incident-errors headers (:canonical-commit validation))
+            all-errors (vec (concat errors (:errors validation) evidence-errors reliability-errors))]
         (when (seq all-errors)
           (error-report draft all-errors)
           (System/exit 2))

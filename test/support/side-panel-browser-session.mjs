@@ -20,6 +20,13 @@ import {
 
 const phases = ["setup", "navigation", "fixture", "interaction", "persistence", "assertion", "cleanup"];
 
+function stableAssertionSite(error) {
+  const frame = String(error?.stack ?? "").split(/\r?\n/u).find((line) =>
+    /(?:test\/browser-packs|test\/support)\/[^:]+:\d+:\d+/u.test(line) &&
+    !line.includes("side-panel-browser-session.mjs"));
+  return frame?.match(/((?:test\/browser-packs|test\/support)\/[^:]+:\d+:\d+)/u)?.[1];
+}
+
 function primitiveLeafPaths(value, prefix = []) {
   if (Array.isArray(value)) return value.flatMap((nested, index) =>
     primitiveLeafPaths(nested, [...prefix, index]));
@@ -219,6 +226,7 @@ export async function runSidePanelBrowserSession({
         id:definition.id,
         status:"failed",
         phase:failedAtPhase,
+        ...(stableAssertionSite(failure) ? { assertionSite:stableAssertionSite(failure) } : {}),
         cause:failure.deadlineOwner ? "infrastructure" : "readiness-or-product",
         durationMs:timing.durationMs,
         finalState:boundedDiagnostic({
@@ -229,6 +237,8 @@ export async function runSidePanelBrowserSession({
       } : { id:definition.id, status:"passed", durationMs:timing.durationMs } });
       emitProgress({ boundary:"target", logicalTargetId:definition.id,
         phase:failedAtPhase ?? "assertion",
+        ...(failure && stableAssertionSite(failure)
+          ? { assertionSite:stableAssertionSite(failure) } : {}),
         state:{ status:failure ? "failed" : "passed" } });
       if (!failure) executions.push(Object.freeze({
         id:definition.id,

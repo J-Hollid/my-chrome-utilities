@@ -8,7 +8,7 @@ import {
   browserObservationSessionBatch,
   loadVerificationPacks,
 } from "./verification-packs.mjs";
-import { verificationProgressEmitter } from "./verification-timeout-incidents.mjs";
+import { verificationProgressEmitter } from "./verification-reliability-incidents.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 

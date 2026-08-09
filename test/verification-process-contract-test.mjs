@@ -86,13 +86,14 @@ import {
   createTimeoutIncidentStore,
   createVerificationProgressTracker,
   diagnosticRetryScope,
+  reliabilityFailureFingerprint,
   timeoutIncidentDigest,
   timeoutRepairCausalCategory,
   timeoutRepairPackIds,
   timeoutRepairFocusedTaskPlan,
   timeoutResolutionEvidence,
   validateTimeoutRepairProposal,
-} from "../scripts/verification-timeout-incidents.mjs";
+} from "../scripts/verification-reliability-incidents.mjs";
 
 assert.deepEqual(focusedAcceptanceOptions([
   "--timeout-repair-focused", "incident-1",
@@ -101,10 +102,37 @@ assert.deepEqual(focusedAcceptanceOptions([
   "--timeout-causal-explanation", "stale lock ownership survives a dead process",
   "--changed-since", "approved-base", "--prepare-evidence", "vtd014",
 ]).timeoutRepairFocused, "incident-1", "the runner exposes a repair-focused mode");
+assert.equal(focusedAcceptanceOptions([
+  "--reliability-diagnostic-retry", "incident-2",
+]).timeoutDiagnosticRetry, "incident-2", "the runner exposes failure-neutral incident options");
 assert.equal(timeoutRepairCausalCategory("readiness"), "readiness");
+assert.equal(timeoutRepairCausalCategory("viewport/visibility/hit testing"),
+  "viewport/visibility/hit testing");
+assert.equal(timeoutRepairCausalCategory("readiness or settling"), "readiness or settling");
 assert.equal(timeoutRepairCausalCategory("other:kernel pipe backpressure"),
   "other:kernel pipe backpressure");
 assert.throws(() => timeoutRepairCausalCategory("banana"), /causal category/u);
+
+const stableFailureIdentity = {
+  failureClass:"explicit-logical-failure",
+  task:{ key:"browser-observation:LAYOUT_TARGET" },
+  failedBoundary:{ logicalTargetId:"LAYOUT_TARGET", phase:"assertion",
+    assertionSite:"layout-target.mjs:42:7" },
+};
+assert.equal(
+  reliabilityFailureFingerprint({ ...stableFailureIdentity,
+    error:"failed at 2026-08-09T07:00:01.123Z on 127.0.0.1:43117 in /tmp/run-one/result" }),
+  reliabilityFailureFingerprint({ ...stableFailureIdentity,
+    error:"failed at 2026-08-09T07:01:02.456Z on 127.0.0.1:53218 in /tmp/run-two/result" }),
+  "failure fingerprints exclude timestamps, local ports, and temporary paths",
+);
+assert.notEqual(
+  reliabilityFailureFingerprint({ ...stableFailureIdentity, error:"center point was offscreen" }),
+  reliabilityFailureFingerprint({ ...stableFailureIdentity,
+    failedBoundary:{ ...stableFailureIdentity.failedBoundary, assertionSite:"layout-target.mjs:51:3" },
+    error:"center point was offscreen" }),
+  "failure fingerprints conserve the assertion site",
+);
 
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
@@ -266,6 +294,26 @@ assert.deepEqual(diagnosticRetryScope({ task:{ stage:"browser-observation", args
 assert.throws(() => diagnosticRetryScope({ task:{ stage:"browser-observation", args:[] } }),
   /trusted progress/u);
 
+const assertionProgress = createVerificationProgressTracker({ taskKey:"browser-observation:TARGET-A" });
+assert.equal(assertionProgress.accept({
+  version:1, sequence:1, monotonicMs:10, boundary:"target", taskKey:"browser-observation:TARGET-A",
+  logicalTargetId:"TARGET-A", phase:"assertion", caseId:"property-set-settles",
+  assertionSite:"property-set-workflow.mjs:184", failureFingerprint:"f".repeat(64),
+  state:{ settled:false },
+}), true);
+assert.deepEqual(assertionProgress.snapshot(), {
+  version:1, sequence:1, monotonicMs:10, boundary:"target", taskKey:"browser-observation:TARGET-A",
+  logicalTargetId:"TARGET-A", phase:"assertion", caseId:"property-set-settles",
+  assertionSite:"property-set-workflow.mjs:184", failureFingerprint:"f".repeat(64),
+  state:{ settled:false },
+}, "assertion progress retains its executable case, assertion site, and fingerprint");
+assert.deepEqual(diagnosticRetryScope({
+  task:{ key:"acceptance:feature", stage:"acceptance", args:["run", "feature"] },
+  lastProgress:{ boundary:"process", caseId:"scenario-17", executionArgs:["run", "feature", "scenario-17"] },
+}), {
+  kind:"case", caseId:"scenario-17", executionArgs:["run", "feature", "scenario-17"],
+}, "a stable executable case is the smallest diagnostic retry boundary");
+
 const incidentFixtureRoot = await mkdtemp(path.join(os.tmpdir(), "vtd014-incident-contract-"));
 let vtd014Evidence;
 try {
@@ -313,6 +361,7 @@ try {
     task:{ key:"browser-observation:A+B", stage:"browser-observation", packId:"capture",
       executable:"node", args:["scripts/run-browser-observation.mjs", "A", "B"],
       logicalTargetIds:["A", "B"] },
+    failureClass:"runner-timeout", fingerprint:"9".repeat(64),
     configuredTimeoutMs:600000, durationMs:600014, termination:{ signal:"SIGTERM", escalatedTo:"SIGKILL" },
     environment:{ node:"24.19.0", typescript:"5.9.3", platform:"linux-x64",
       executionLoad:"normal", concurrency:4, observationConcurrency:1 },
@@ -369,7 +418,7 @@ try {
     diagnostic:{ incidentId:first.id, retryIdentity:first.failure.retryIdentity,
       scope:first.failure.retryScope },
     tasks:{ [failure.task.key]:{ identity:failure.task, status:"failed", provenance:"fresh",
-      runnerOwnedTimeout:true } },
+      runnerOwnedTimeout:true, reliabilityFailureFingerprint:failure.fingerprint } },
   });
   await store.classifyDiagnosticRetry(first.id, firstDiagnosticReceipt);
   const classifications = {};
@@ -378,7 +427,7 @@ try {
   await assert.rejects(store.classifyDiagnosticRetry(fabricated.id, { outcome:"passed" }),
     /runner receipt path/u, "caller-asserted outcomes are never classification evidence");
   for (const [outcome, classification] of Object.entries({
-    passed:"confirmed-flaky", timeout:"reproduced-timeout", failed:"changed-failure",
+    passed:"confirmed-flaky", sameFailure:"reproduced-failure", failed:"changed-failure",
     identityChanged:"diagnostic-contract-failure",
   })) {
     const separate = await store.create({ ...failure, runnerRunId:`run-${outcome}` });
@@ -391,12 +440,48 @@ try {
         scope:separate.failure.retryScope },
       tasks:{ [failure.task.key]:{ identity:failure.task,
         status:outcome === "passed" ? "passed" : "failed", provenance:"fresh",
-        ...(outcome === "timeout" ? { runnerOwnedTimeout:true } : {}) } },
+        ...(outcome === "sameFailure"
+          ? { reliabilityFailureFingerprint:failure.fingerprint }
+          : { reliabilityFailureFingerprint:"8".repeat(64) }) } },
     });
     const classified = await store.classifyDiagnosticRetry(separate.id, diagnosticReceipt);
     assert.equal(classified.retry.classification, classification);
     assert.equal(classified.state, "unresolved");
     classifications[outcome] = classified.retry.classification;
+  }
+  const nonTimeoutFailures = [{
+    name:"hit-test",
+    failure:{ ...failure, runnerRunId:"run-hit-test", failureClass:"explicit-logical-failure",
+      fingerprint:"6".repeat(64), failedBoundary:{ boundary:"target", logicalTargetId:"LAYOUT_TARGET",
+        phase:"assertion", assertionSite:"layout-target.mjs:42:7",
+        state:{ message:"center point is outside the visible control", x:412, y:37 } } },
+  }, {
+    name:"property-set-settling",
+    failure:{ ...failure, runnerRunId:"run-property-set-settling",
+      failureClass:"explicit-logical-failure", fingerprint:"7".repeat(64),
+      task:{ key:"acceptance:property-set-settling", stage:"acceptance", packId:"property_set_flow_sections",
+        executable:"bb", args:["acceptance-pack-runner", "property-set"] },
+      failedBoundary:{ boundary:"process", caseId:"property-set-settles", phase:"assertion",
+        assertionSite:"property-set-workflow.mjs:184:11",
+        executionArgs:["acceptance-pack-runner", "property-set", "property-set-settles"],
+        state:{ settled:false, renderedApplications:1, durableApplications:0 } } },
+  }];
+  for (const fixture of nonTimeoutFailures) {
+    const incident = await store.create(fixture.failure);
+    assert.ok(["target", "case"].includes(incident.failure.retryScope.kind),
+      `${fixture.name} retains its smallest executable boundary`);
+    await store.claimDiagnosticRetry(incident.id, incident.failure.retryIdentity);
+    const diagnosticReceipt = await writeRunnerReceipt(`diagnostic-${fixture.name}`, {
+      candidate:{ commit:"failed-commit", tree:"failed-tree" },
+      environment:failure.environment, artifact:failure.artifact,
+      diagnostic:{ incidentId:incident.id, retryIdentity:incident.failure.retryIdentity,
+        scope:incident.failure.retryScope },
+      tasks:{ [fixture.failure.task.key]:{ identity:fixture.failure.task,
+        status:"passed", provenance:"fresh" } },
+    });
+    const classified = await store.classifyDiagnosticRetry(incident.id, diagnosticReceipt);
+    assert.equal(classified.retry.classification, "confirmed-flaky",
+      `${fixture.name} remains blocking after an unchanged pass`);
   }
   const runnerRegressionPath = path.join(incidentFixtureRoot, "artifact-lock-runner-regression.mjs");
   await writeFile(runnerRegressionPath, `
@@ -672,7 +757,7 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
   await rm(checkpointArchivePath);
   const resolved = await store.resolve(first.id, { checkpointReceiptPath, packageReceiptPath });
   assert.equal(resolved.state, "resolved");
-  assert.equal((await store.blocking({ commit:"repair-commit" })).length, 7,
+  assert.equal((await store.blocking({ commit:"repair-commit" })).length, 9,
     "other classified flakes remain blocking while the repaired incident is resolved");
   const evidence = timeoutResolutionEvidence(resolved);
   assert.equal(evidence.resolutionDigest, resolved.resolution.digest);
@@ -721,12 +806,21 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
     progress:{ last:progressTracker.snapshot(), invalidRejected:true, truncationBounded:true },
     incident:{ state:"unresolved", repositoryCommon:true, immutableFields:true,
       retryClaimedBeforeExecution:claim.retry.status === "claimed", ordinaryResumeBlocked:true },
+    failures:{ boundaries:[
+      ["a runner-owned timeout during target cleanup", "the logical target and cleanup phase"],
+      ["an offscreen control hit-test assertion", "the logical browser target and assertion site"],
+      ["a Property Set settling assertion", "the executable target or case and unsettled state"],
+      ["an indivisible task assertion or nonzero exit", "the canonical task and diagnostic fingerprint"],
+    ] },
+    nonTimeoutFixtures:{ hitTest:true, propertySetSettling:true,
+      confirmedFlaky:true, repairBlocking:true },
     retry:{ target:diagnosticRetryScope({ task:failure.task,
       lastProgress:{ boundary:"target", logicalTargetId:"A", phase:"persistence" } }),
       setup:diagnosticRetryScope({ task:failure.task,
         lastProgress:{ boundary:"artifact/setup", phase:"dist-artifact-lock" } }),
       classifications, secondRetryRejected:true },
-    repair:{ limitOnlyRejected:true, unprovenRejected:true, staleRejected:true,
+    repair:{ symptomSuppressionRejected:true, limitOnlyRejected:true,
+      unprovenRejected:true, staleRejected:true,
       unrelatedRejected:true, eligible:proposal.repair.status === "eligible",
       descendant:true, freshFocused:true },
     store:{ concurrentIndependentIds:concurrentIncidents.length === 2, tamperRejected:true,
@@ -4688,7 +4782,11 @@ if (process.platform !== "win32") {
     process.env.VERIFICATION_TERMINATION_GRACE_MS = "100";
     process.env.VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES = "4096";
     const context = createVerificationReceiptContext(1, 2, { receiptDirectory:commandReceiptDirectory });
-    const runner = createVerificationCommandRunner(context);
+    let commandFailureNumber = 0;
+    const runner = createVerificationCommandRunner(context, { incidentStore:{
+      create:async() => ({ id:`incident-command-fixture-${++commandFailureNumber}`,
+        failureDigest:"d".repeat(64) }),
+    } });
     const envTask = {
       key:"unit:environment", stage:"unit", packId:"process", executable:process.execPath,
       args:["-e", "require('node:fs').writeSync(1,process.env.VERIFICATION_TEST_VALUE+'\\n')"], target:"environment",
@@ -4771,15 +4869,46 @@ if (process.platform !== "win32") {
 
     process.env.VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES = "32";
     const overflowContext = createVerificationReceiptContext(1, 2, { receiptDirectory:commandReceiptDirectory });
-    const overflowRunner = createVerificationCommandRunner(overflowContext);
+    const overflowFailures = [];
+    const overflowRunner = createVerificationCommandRunner(overflowContext, { incidentStore:{
+      create:async(failure) => {
+        overflowFailures.push(failure);
+        return { id:"incident-output-limit", failureDigest:"c".repeat(64) };
+      },
+    } });
     const overflowTask = {
       key:"unit:stderr-overflow", stage:"unit", packId:"process", executable:process.execPath,
       args:["-e", "require('node:fs').writeSync(2,'x'.repeat(64));setInterval(()=>{},1000)"],
       target:"overflow", environment:null, display:"stderr overflow task",
     };
     await assert.rejects(() => overflowRunner(overflowTask.display, overflowTask), /output exceeded 32 bytes/u);
+    assert.equal(overflowFailures[0].failureClass, "output-limit",
+      "output-limit termination creates a distinct reliability incident class");
 
     process.env.VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES = "4096";
+    const ordinaryFailureContext = createVerificationReceiptContext(1, 2,
+      { receiptDirectory:commandReceiptDirectory });
+    const recordedReliabilityFailures = [];
+    const ordinaryFailureRunner = createVerificationCommandRunner(ordinaryFailureContext, {
+      incidentStore:{ create:async (failure) => {
+        recordedReliabilityFailures.push(failure);
+        return { id:"incident-ordinary-failure", failureDigest:"b".repeat(64) };
+      } },
+    });
+    const ordinaryFailureTask = {
+      key:"unit:ordinary-failure", stage:"unit", packId:"process", executable:process.execPath,
+      args:["-e", "console.error('expected 7 but observed 6');process.exit(1)"],
+      target:"ordinary failure", environment:null, display:"ordinary failure task",
+    };
+    await assert.rejects(() => ordinaryFailureRunner(ordinaryFailureTask.display, ordinaryFailureTask),
+      /Verification command failed/u);
+    assert.equal(recordedReliabilityFailures.length, 1,
+      "every manifested canonical runner failure creates one incident");
+    assert.equal(recordedReliabilityFailures[0].failureClass, "nonzero-exit");
+    assert.match(recordedReliabilityFailures[0].fingerprint, /^[a-f0-9]{64}$/u);
+    assert.equal(ordinaryFailureContext.receipt.tasks[ordinaryFailureTask.key].reliabilityIncidentId,
+      "incident-ordinary-failure");
+
     process.env.VERIFICATION_COMMAND_TIMEOUT_MS = "100";
     const timeoutContext = createVerificationReceiptContext(1, 2, { receiptDirectory:commandReceiptDirectory });
     const recordedTimeoutFailures = [];
@@ -4796,7 +4925,9 @@ if (process.platform !== "win32") {
     };
     await assert.rejects(() => timeoutRunner(timeoutTask.display, timeoutTask), /timed out/u);
     assert.equal(recordedTimeoutFailures.length, 1,
-      "only the runner-owned outer deadline creates one durable incident");
+      "the runner-owned outer deadline creates one durable reliability incident");
+    assert.equal(recordedTimeoutFailures[0].failureClass, "runner-timeout");
+    assert.match(recordedTimeoutFailures[0].fingerprint, /^[a-f0-9]{64}$/u);
     assert.equal(timeoutContext.receipt.tasks[timeoutTask.key].timeoutIncidentId,
       "incident-timeout-tree");
     const descendant = Number(timeoutContext.receipt.tasks[timeoutTask.key].output.trim());
@@ -5394,12 +5525,12 @@ try {
   await mkdir(path.join(handoffRepository, ".swarmforge"), { recursive:true });
   await mkdir(path.join(handoffRepository, "docs"), { recursive:true });
   await mkdir(path.join(handoffRepository, "scripts"), { recursive:true });
-  await writeFile(path.join(handoffRepository, "scripts", "verification-timeout-incidents.mjs"), [
+  await writeFile(path.join(handoffRepository, "scripts", "verification-reliability-incidents.mjs"), [
     'import { access } from "node:fs/promises";',
     'import path from "node:path";',
     'if (process.argv[2] !== "assert-handoff") process.exit(2);',
-    'try { await access(path.join(process.cwd(), ".block-timeout-handoff"));',
-    '  console.error("unresolved timeout incident fixture"); process.exit(1); } catch {}',
+    'try { await access(path.join(process.cwd(), ".block-reliability-handoff"));',
+    '  console.error("unresolved reliability incident fixture"); process.exit(1); } catch {}',
     '',
   ].join("\n"));
   await writeFile(path.join(handoffRepository, ".swarmforge", "roles.tsv"),
@@ -5426,14 +5557,14 @@ try {
   }), /HANDOFF QUEUED/u, "specification-only handoffs retain the explicit not-required path");
   const blockedDraft = path.join(handoffRepository, "blocked.handoff-draft");
   await writeFile(blockedDraft, [
-    "type: git_handoff", "to: refactorer", "priority: 00", "task: blocked-timeout",
+    "type: git_handoff", "to: refactorer", "priority: 00", "task: blocked-reliability",
     `commit: ${specificationCommit}`, `base: ${handoffBase}`, "verified: not-required", "",
   ].join("\n"));
-  await writeFile(path.join(handoffRepository, ".block-timeout-handoff"), "blocked\n");
+  await writeFile(path.join(handoffRepository, ".block-reliability-handoff"), "blocked\n");
   await assert.rejects(() => exec("bb", [handoffScript, blockedDraft], {
     cwd:handoffRepository, env:{ ...process.env, SWARMFORGE_ROLE:"specifier" },
-  }), /Git handoff is blocked by timeout incident state/u);
-  await rm(path.join(handoffRepository, ".block-timeout-handoff"));
+  }), /Git handoff is blocked by reliability incident state/u);
+  await rm(path.join(handoffRepository, ".block-reliability-handoff"));
   const queuedHandoffNames = (await readdir(
     path.join(handoffRepository, ".swarmforge", "handoffs", "outbox"),
   )).filter((name) => name.endsWith(".handoff"));

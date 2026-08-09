@@ -15,7 +15,7 @@ import { planVerification, verificationTaskIdentity } from "./verification-packs
 import {
   assertNoBlockingTimeoutIncidents,
   createTimeoutIncidentStore,
-} from "./verification-timeout-incidents.mjs";
+} from "./verification-reliability-incidents.mjs";
 
 const repository = fileURLToPath(new URL("../", import.meta.url));
 const notesRef = "refs/notes/swarmforge-verification";
@@ -215,7 +215,8 @@ export async function validateCanonicalVerificationCheckpoint({
   }
   const parsed = await parsedReceipt(receiptPath, plan);
   const results = Object.values(receipt.tasks);
-  if (results.some((result) => result.provenance !== "fresh" || result.timeoutIncidentId ||
+  if (results.some((result) => result.provenance !== "fresh" || result.reliabilityIncidentId ||
+      result.timeoutIncidentId ||
       result.runnerOwnedTimeout)) {
     throw new Error("Canonical checkpoint requires a complete fresh task set without reuse or timeout");
   }
@@ -456,9 +457,11 @@ function evidenceId(record) {
     task:record.task, commit:record.commit, tree:record.tree, baseCommit:record.baseCommit,
     packIds:record.packIds, planDigest:record.planDigest, identities:record.identities,
     receiptSha256:record.receipt.sha256,
-    ...((record.timeoutResolutions ?? []).length
-      ? { timeoutResolutions:record.timeoutResolutions }
-      : {}),
+    ...((record.reliabilityResolutions ?? []).length
+      ? { reliabilityResolutions:record.reliabilityResolutions }
+      : (record.timeoutResolutions ?? []).length
+        ? { timeoutResolutions:record.timeoutResolutions }
+        : {}),
   });
 }
 
@@ -512,14 +515,14 @@ function validateRecordDocument(record, { allowLegacyExecutionLoad = false } = {
       throw new Error(`Invalid verification receipt result: ${result.key}`);
     }
   }
-  const timeoutResolutions = record.timeoutResolutions ?? [];
-  if (!Array.isArray(timeoutResolutions) || timeoutResolutions.some((resolution) =>
+  const reliabilityResolutions = record.reliabilityResolutions ?? record.timeoutResolutions ?? [];
+  if (!Array.isArray(reliabilityResolutions) || reliabilityResolutions.some((resolution) =>
     !incidentIdPattern.test(resolution?.incidentId ?? "") ||
     !shaPattern.test(resolution?.failureDigest ?? "") ||
     !shaPattern.test(resolution?.resolutionDigest ?? "")) ||
-    !same(timeoutResolutions.map(({ incidentId }) => incidentId),
-      [...timeoutResolutions.map(({ incidentId }) => incidentId)].sort())) {
-    throw new Error("Verification evidence has invalid timeout resolution links");
+    !same(reliabilityResolutions.map(({ incidentId }) => incidentId),
+      [...reliabilityResolutions.map(({ incidentId }) => incidentId)].sort())) {
+    throw new Error("Verification evidence has invalid reliability resolution links");
   }
   if (record.evidenceId && record.evidenceId !== evidenceId(record)) throw new Error("Verification evidence id does not match its content");
   return record;
@@ -544,7 +547,7 @@ export async function createPendingVerificationEvidence({
     task, plan, receiptPath, changedSince, buildManifest, repositoryRoot,
     requireCompletedReceipt:true,
   });
-  const timeoutResolutions = await createTimeoutIncidentStore({ root:repositoryRoot })
+  const reliabilityResolutions = await createTimeoutIncidentStore({ root:repositoryRoot })
     .resolutions({ commit });
   const record = {
     version:2,
@@ -560,7 +563,7 @@ export async function createPendingVerificationEvidence({
     planDigest:verificationDigest(planRecord),
     identities:{ ...sourceIdentity, artifact },
     receipt:{ sourcePath:receiptSourcePath, sha256:verificationDigest(bytes), environment, tasks:results },
-    timeoutResolutions:timeoutResolutions.sort((left, right) =>
+    reliabilityResolutions:reliabilityResolutions.sort((left, right) =>
       left.incidentId.localeCompare(right.incidentId)),
     preparedAt:new Date().toISOString(),
   };
@@ -636,11 +639,11 @@ export async function recordPendingVerificationEvidence(
         throw new Error("Pending evidence does not match the current commit and tree");
       }
       await assertNoBlockingTimeoutIncidents(commit, { root:repositoryRoot });
-      const currentTimeoutResolutions = await createTimeoutIncidentStore({ root:repositoryRoot })
+      const currentReliabilityResolutions = await createTimeoutIncidentStore({ root:repositoryRoot })
         .resolutions({ commit });
-      if (!same(currentTimeoutResolutions.sort((left, right) => left.incidentId.localeCompare(right.incidentId)),
-        pending.timeoutResolutions ?? [])) {
-        throw new Error("Timeout incident resolutions changed after verification");
+      if (!same(currentReliabilityResolutions.sort((left, right) => left.incidentId.localeCompare(right.incidentId)),
+        pending.reliabilityResolutions ?? pending.timeoutResolutions ?? [])) {
+        throw new Error("Reliability incident resolutions changed after verification");
       }
       if (!same(sourceIdentity, {
         registrySha256:pending.identities.registrySha256,
@@ -749,11 +752,11 @@ async function validateRecordedEvidence(record, canonical, tree, repositoryRoot)
     packIds:record.packIds,
     repositoryRoot,
   });
-  if (record.timeoutResolutions) {
+  if (record.reliabilityResolutions || record.timeoutResolutions) {
     const current = await createTimeoutIncidentStore({ root:repositoryRoot }).resolutions({ commit:canonical });
     if (!same(current.sort((left, right) => left.incidentId.localeCompare(right.incidentId)),
-      record.timeoutResolutions)) {
-      throw new Error("Verification evidence timeout resolution links do not match repository-common state");
+      record.reliabilityResolutions ?? record.timeoutResolutions)) {
+      throw new Error("Verification evidence reliability resolution links do not match repository-common state");
     }
   }
   return record;

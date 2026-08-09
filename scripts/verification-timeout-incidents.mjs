@@ -12,7 +12,7 @@ const incidentIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
 const shaPattern = /^[a-f0-9]{64}$/u;
 const retryClassifications = Object.freeze({
   passed:"confirmed-flaky",
-  timeout:"reproduced-timeout",
+  sameFailure:"reproduced-failure",
   failed:"changed-failure",
   identityChanged:"diagnostic-contract-failure",
 });
@@ -38,6 +38,38 @@ export function timeoutIncidentDigest(value) {
   return createHash("sha256").update(
     typeof value === "string" || Buffer.isBuffer(value) ? value : JSON.stringify(normalized(value)),
   ).digest("hex");
+}
+
+function stableDiagnosticShape(value) {
+  return String(value ?? "")
+    .replaceAll(/\b\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z\b/gu, "<timestamp>")
+    .replaceAll(/(?:\/tmp|tmp\/)[^\s:'"]+/gu, "<temporary-path>")
+    .replaceAll(/\b(?:localhost|127\.0\.0\.1):\d+\b/gu, "<local-port>")
+    .replaceAll(/\bpid[=: ]+\d+\b/giu, "pid=<pid>")
+    .replaceAll(/\s+/gu, " ")
+    .trim()
+    .slice(0, 2048);
+}
+
+export function reliabilityFailureFingerprint({
+  failureClass, task, failedBoundary, lastProgress, exitCode, signal, error, stderr,
+} = {}) {
+  if (typeof failureClass !== "string" || !failureClass) {
+    throw new Error("Reliability failure fingerprint requires a failure class");
+  }
+  const boundary = failedBoundary ?? lastProgress ?? {};
+  return timeoutIncidentDigest({
+    failureClass,
+    taskKey:task?.key,
+    logicalTargetId:boundary.logicalTargetId,
+    caseId:boundary.caseId,
+    phase:boundary.phase,
+    assertionSite:boundary.assertionSite,
+    deadlineOwner:boundary.deadlineOwner,
+    exitCode:exitCode ?? null,
+    signal:signal ?? null,
+    diagnostic:stableDiagnosticShape(boundary.state?.message || error || stderr),
+  });
 }
 
 function exactObject(value, name) {
@@ -93,6 +125,10 @@ export function createVerificationProgressTracker({ taskKey, maximumStateCharact
           boundary:record.boundary,
           ...(record.logicalTargetId ? { logicalTargetId:record.logicalTargetId } : {}),
           ...(record.phase ? { phase:record.phase } : {}),
+          ...(record.caseId ? { caseId:record.caseId } : {}),
+          ...(record.assertionSite ? { assertionSite:record.assertionSite } : {}),
+          ...(record.deadlineOwner ? { deadlineOwner:record.deadlineOwner } : {}),
+          ...(record.failureFingerprint ? { failureFingerprint:record.failureFingerprint } : {}),
           ...(record.completed === true ? { completed:true } : {}),
           ...(record.state === undefined ? {} : { state:boundedState(record.state, maximumStateCharacters) }),
         };
@@ -123,11 +159,14 @@ export function verificationProgressEmitter({ emit = console.log, now = () => pe
 }
 
 export function diagnosticRetryScope({ task, lastProgress } = {}) {
-  exactObject(task, "Timed-out task");
+  exactObject(task, "Failed task");
+  if (lastProgress?.caseId && Array.isArray(lastProgress.executionArgs)) {
+    return { kind:"case", caseId:lastProgress.caseId, executionArgs:[...lastProgress.executionArgs] };
+  }
   if (task.stage !== "browser-observation") {
     return { kind:"task", taskKey:task.key, executionArgs:[...(task.args ?? [])] };
   }
-  if (!lastProgress) throw new Error("A browser timeout has no trusted progress; repair the progress contract first");
+  if (!lastProgress) throw new Error("A browser failure has no trusted progress; repair the progress contract first");
   if (lastProgress.boundary === "target" && lastProgress.logicalTargetId) {
     return {
       kind:"target", logicalTargetIds:[lastProgress.logicalTargetId],
@@ -140,7 +179,7 @@ export function diagnosticRetryScope({ task, lastProgress } = {}) {
       executionArgs:["scripts/run-browser-observation.mjs", "--setup-only"],
     };
   }
-  throw new Error("A browser timeout has no unambiguous trusted target or setup boundary");
+  throw new Error("A browser failure has no unambiguous trusted target or setup boundary");
 }
 
 export function classifyHistoricalTimeoutFixture(fixture) {
@@ -253,7 +292,7 @@ function validatePackageReceipt(document, checkpointDocument, incident) {
 async function defaultStoreDirectory(root) {
   const common = await git(root, "rev-parse", "--git-common-dir");
   const commonDirectory = path.isAbsolute(common) ? common : path.resolve(root, common);
-  return path.join(commonDirectory, "swarmforge-timeout-incidents");
+  return path.join(commonDirectory, "swarmforge-reliability-incidents");
 }
 
 async function ensureSafeDirectory(directory, { create = true } = {}) {
@@ -386,8 +425,10 @@ async function withIncidentLock(directory, id, operation) {
 function retryIdentity(failure) {
   return timeoutIncidentDigest({
     lineage:failure.lineage, task:failure.task, configuredTimeoutMs:failure.configuredTimeoutMs,
+    applicableLimit:failure.applicableLimit, fingerprint:failure.fingerprint,
     environment:failure.environment, artifact:failure.artifact, planDigest:failure.planDigest,
-    scope:diagnosticRetryScope({ task:failure.task, lastProgress:failure.lastProgress }),
+    scope:diagnosticRetryScope({ task:failure.task,
+      lastProgress:failure.failedBoundary ?? failure.lastProgress }),
   });
 }
 
@@ -396,7 +437,8 @@ function transition(incident, type, at, details = {}) {
 }
 
 const timeoutRepairCausalCategories = new Set([
-  "readiness", "cleanup/resource lifecycle", "target isolation", "artifact/process locking",
+  "viewport/visibility/hit testing", "readiness or settling", "readiness",
+  "cleanup/resource lifecycle", "target isolation", "artifact/process locking",
   "duplicated or unbounded workload",
 ]);
 
@@ -425,7 +467,8 @@ export function timeoutRepairFocusedTaskKeys(incident, changedPaths, regressionK
     keys.add("unit:test/verification-process-contract-test.mjs");
   }
   if (changedPaths.some((changedPath) => changedPath.startsWith("swarmforge/") ||
-      ["scripts/verification-evidence.mjs", "scripts/verification-timeout-incidents.mjs",
+      ["scripts/verification-evidence.mjs", "scripts/verification-reliability-incidents.mjs",
+        "scripts/verification-timeout-incidents.mjs",
         "scripts/run-focused-acceptance.mjs"].includes(changedPath))) {
     keys.add("unit:test/swarmforge-process-contract-test.mjs");
   }
@@ -650,10 +693,15 @@ export function createTimeoutIncidentStore({
       return Promise.all(ids.sort().map(read));
     },
     async create(failure) {
-      exactObject(failure, "Timeout failure");
+      exactObject(failure, "Reliability failure");
+      if (typeof failure.failureClass !== "string" || !failure.failureClass ||
+          !shaPattern.test(failure.fingerprint ?? "")) {
+        throw new Error("Reliability failure requires a class and normalized fingerprint");
+      }
       const id = stableIncidentId(randomId());
       const scoped = (() => {
-        try { return diagnosticRetryScope({ task:failure.task, lastProgress:failure.lastProgress }); }
+        try { return diagnosticRetryScope({ task:failure.task,
+          lastProgress:failure.failedBoundary ?? failure.lastProgress }); }
         catch { return undefined; }
       })();
       const immutableFailure = structuredClone({ ...failure,
@@ -702,8 +750,9 @@ export function createTimeoutIncidentStore({
           Object.keys(document.receipt.tasks).length !== 1 ||
           JSON.stringify(normalized(task?.identity)) !== JSON.stringify(normalized(incident.failure.task));
         const outcome = identityChanged ? "identityChanged"
-          : task.runnerOwnedTimeout ? "timeout"
-            : task.status === "passed" ? "passed" : "failed";
+          : task.status === "passed" ? "passed"
+            : task.reliabilityFailureFingerprint === incident.failure.fingerprint
+              ? "sameFailure" : "failed";
         const classification = retryClassifications[outcome];
         return transition({ ...incident, retry:{ ...incident.retry, status:"classified", outcome,
           classification, receiptPath:document.path, receiptSha256:document.sha256, classifiedAt:now() } },
@@ -713,8 +762,11 @@ export function createTimeoutIncidentStore({
     async proposeRepair(id, { causalCategory, causalExplanation, regressionKey, regressionReceiptPath,
       focusedReceiptPath } = {}) {
       const current = await read(id);
-      if (current.retry?.status !== "classified") {
-        throw new Error(`Timeout incident ${id} requires its one classified diagnostic retry`);
+      if (current.retry?.status === "claimed") {
+        throw new Error(`Reliability incident ${id} has an incomplete diagnostic retry`);
+      }
+      if (current.retry && current.retry.status !== "classified") {
+        throw new Error(`Reliability incident ${id} has invalid diagnostic state`);
       }
       const candidate = await currentCandidate();
       const [regressionDocument, focusedDocument, paths] = await Promise.all([
@@ -739,8 +791,10 @@ export function createTimeoutIncidentStore({
       const semanticProposal = await validateRepairReceiptSemantics(current, proposal,
         regressionDocument, focusedDocument, canonicalRepairTaskIdentities);
       const eligible = await validateTimeoutRepairProposal(current, semanticProposal, { isAncestor });
-      return update(id, (incident) => transition({ ...incident, repair:eligible },
-        "repair-proposed", now(), { commit:eligible.candidate.commit }));
+      return update(id, (incident) => transition({ ...incident,
+        retry:incident.retry ?? { status:"invalidated-by-repair", classification:"not-retried-repaired",
+          invalidatedAt:now() }, repair:eligible },
+      "repair-proposed", now(), { commit:eligible.candidate.commit }));
     },
     claimRepairCheckpoint(id, runId) {
       return update(id, (incident) => {
@@ -857,17 +911,17 @@ export async function assertNoBlockingTimeoutIncidents(commit = "HEAD", options 
   const canonical = await git(root, "rev-parse", `${commit}^{commit}`);
   const incidents = await createTimeoutIncidentStore({ ...options, root }).blocking({ commit:canonical });
   if (incidents.length) {
-    throw new Error(`Unresolved timeout incident(s) block verification evidence and Git handoff: ${
+    throw new Error(`Unresolved reliability incident(s) block verification evidence and Git handoff: ${
       incidents.map(({ id }) => id).join(", ")}. Complete a causal repair and fresh checkpoint.`);
   }
   return [];
 }
 
-async function main(args) {
+export async function runReliabilityIncidentCli(args) {
   const [command, commit = "HEAD"] = args;
   if (command === "assert-handoff" || command === "assert-evidence") {
     await assertNoBlockingTimeoutIncidents(commit);
-    console.log("timeout incident gate passed");
+    console.log("reliability incident gate passed");
     return;
   }
   if (command === "list") {
@@ -883,9 +937,10 @@ async function main(args) {
     console.log(JSON.stringify({ incidentId:incident.id, repair:incident.repair }, null, 2));
     return;
   }
-  throw new Error("Use: verification-timeout-incidents.mjs assert-handoff|assert-evidence [commit] | list | propose-repair <id> <causal-category> <causal-explanation> <regression-key> <regression-receipt> <focused-receipt>");
+  throw new Error("Use: verification-reliability-incidents.mjs assert-handoff|assert-evidence [commit] | list | propose-repair <id> <causal-category> <causal-explanation> <regression-key> <regression-receipt> <focused-receipt>");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main(process.argv.slice(2)).catch((error) => { console.error(error.message); process.exitCode = 1; });
+  runReliabilityIncidentCli(process.argv.slice(2))
+    .catch((error) => { console.error(error.message); process.exitCode = 1; });
 }

@@ -5561,6 +5561,7 @@
     "scripts/run-browser-observation.mjs",
     "scripts/run-focused-acceptance.mjs",
     "scripts/verification-evidence.mjs",
+    "scripts/verification-reliability-incidents.mjs",
     "scripts/verification-timeout-incidents.mjs",
       "side-panel-brand.css",
       "side-panel.css",

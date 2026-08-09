@@ -29,11 +29,12 @@ import {
   assertNoBlockingTimeoutIncidents,
   createTimeoutIncidentStore,
   createVerificationProgressTracker,
+  reliabilityFailureFingerprint,
   timeoutRepairCausalCategory,
   timeoutRepairFocusedTaskPlan,
   timeoutRepairPackageTaskIdentity,
   timeoutRepairPackIds,
-} from "./verification-timeout-incidents.mjs";
+} from "./verification-reliability-incidents.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const defaultTimeoutMs = 600_000;
@@ -99,13 +100,21 @@ export function focusedAcceptanceOptions(args) {
     withDependencies:false, skipBuild:false, changedSince:undefined, shard:undefined,
     prepareEvidence:undefined, browserTargetIds:[],
   };
+  const reliabilityOptionAliases = new Map([
+    ["--reliability-diagnostic-retry", "--timeout-diagnostic-retry"],
+    ["--reliability-repair-incident", "--timeout-repair-incident"],
+    ["--reliability-repair-focused", "--timeout-repair-focused"],
+    ["--reliability-regression", "--timeout-regression"],
+    ["--reliability-causal-category", "--timeout-causal-category"],
+    ["--reliability-causal-explanation", "--timeout-causal-explanation"],
+  ]);
   const seen = new Set();
   const once = (name) => {
     if (seen.has(name)) throw new Error(`Specify ${name} once`);
     seen.add(name);
   };
   for (let index = 0; index < args.length; index += 1) {
-    const argument = args[index];
+    const argument = reliabilityOptionAliases.get(args[index]) ?? args[index];
     if (["--full", "--property", "--with-dependencies", "--no-build"].includes(argument)) {
       once(argument);
       if (argument === "--full") options.terminalFull = true;
@@ -132,7 +141,7 @@ export function focusedAcceptanceOptions(args) {
       once(argument);
       const value = valueArgument(args, index, argument);
       if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(value)) {
-        throw new Error(`Use a stable timeout incident id with ${argument}`);
+        throw new Error(`Use a stable reliability incident id with ${argument}`);
       }
       if (argument === "--timeout-diagnostic-retry") options.timeoutDiagnosticRetry = value;
       else if (argument === "--timeout-repair-incident") options.timeoutRepairIncident = value;
@@ -533,9 +542,33 @@ export function createVerificationCommandRunner(context, options = {}) {
     };
     context.receipt.tasks[task.key] = receiptTask;
     await context.write();
-    if (runnerTimedOut) {
+    if (!passed && !receivedParentSignal) {
+      const failedLogicalResult = Object.entries(logicalResults ?? {})
+        .find(([, logicalResult]) => logicalResult.status !== "passed");
+      const failedBoundary = failedLogicalResult ? {
+        logicalTargetId:failedLogicalResult[0],
+        phase:failedLogicalResult[1].phase,
+        assertionSite:failedLogicalResult[1].assertionSite,
+        caseId:failedLogicalResult[1].caseId,
+        deadlineOwner:failedLogicalResult[1].deadlineOwner,
+        state:failedLogicalResult[1].finalState,
+      } : progress.snapshot();
+      const failureClass = runnerTimedOut ? "runner-timeout"
+        : result.spawnError ? "spawn-failure"
+          : termination?.startsWith("Verification output exceeded") ? "output-limit"
+            : failedLogicalResult?.[1].assertionSite ? "assertion-failure"
+              : failedLogicalResult?.[1].status === "failed" ? "explicit-logical-failure"
+              : logicalResults && !logicalPassed ? "incomplete-result"
+                : result.code !== 0 ? "nonzero-exit" : "incomplete-result";
+      const fingerprint = reliabilityFailureFingerprint({
+        failureClass, task:identity, failedBoundary, lastProgress:progress.snapshot(),
+        exitCode:result.code, signal:result.signal, error:failure, stderr:freshErr,
+      });
+      receiptTask.failureClass = failureClass;
+      receiptTask.reliabilityFailureFingerprint = fingerprint;
       if (options.diagnosticIncidentId) {
-        receiptTask.runnerOwnedTimeout = true;
+        if (runnerTimedOut) receiptTask.runnerOwnedTimeout = true;
+        receiptTask.reliabilityIncidentId = options.diagnosticIncidentId;
         receiptTask.timeoutIncidentId = options.diagnosticIncidentId;
         await context.write();
       } else {
@@ -545,19 +578,30 @@ export function createVerificationCommandRunner(context, options = {}) {
         sourceReceipt:path.relative(repositoryRoot, context.receiptPath),
         lineage:context.receipt.candidate ?? {},
         task:identity,
+        failureClass,
+        fingerprint,
         configuredTimeoutMs:timeoutMs,
+        applicableLimit:runnerTimedOut ? { kind:"runner-timeout", milliseconds:timeoutMs }
+          : failureClass === "output-limit" ? { kind:"output-bytes", bytes:outputLimit } : null,
         durationMs:freshDurationMs,
+        exitResult:{ code:result.code, signal:result.signal },
         termination:{ signal:result.signal, escalatedTo:result.signal === "SIGKILL" ? "SIGKILL" : null },
         environment:context.receipt.environment,
         artifact:context.receipt.artifact ?? context.receipt.artifactInput ?? null,
         planDigest:verificationDigest(context.receipt.plan ?? {}),
         outputSha256:verificationDigest(freshOut),
         stderrSha256:verificationDigest(freshErr),
+        failedBoundary,
         lastProgress:progress.snapshot(),
         progressDiagnostics:progress.diagnostics(),
         });
-        receiptTask.timeoutIncidentId = incident.id;
-        receiptTask.timeoutFailureDigest = incident.failureDigest;
+        receiptTask.reliabilityIncidentId = incident.id;
+        receiptTask.reliabilityFailureDigest = incident.failureDigest;
+        if (runnerTimedOut) {
+          receiptTask.runnerOwnedTimeout = true;
+          receiptTask.timeoutIncidentId = incident.id;
+          receiptTask.timeoutFailureDigest = incident.failureDigest;
+        }
         await context.write();
       }
     }
@@ -691,16 +735,21 @@ export async function runTimeoutRepairFocused(id, {
   return { incident:repaired, receiptPath:context.receiptPath, taskPlan };
 }
 
+export const runReliabilityDiagnosticRetry = runTimeoutDiagnosticRetry;
+export const runReliabilityRepairFocused = runTimeoutRepairFocused;
+
 function sameIdentity(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
 export function resumeVerificationPlan(plan, priorReceipt, resumeIdentity) {
-  const timedOut = Object.entries(priorReceipt?.tasks ?? {})
-    .filter(([, result]) => result?.timeoutIncidentId || /command timed out after/iu.test(result?.error ?? ""));
-  if (timedOut.length) {
-    throw new Error(`Timeout incident retry cannot use ordinary receipt resume: ${
-      timedOut.map(([key, result]) => result.timeoutIncidentId ?? key).join(", ")}`);
+  const failed = Object.entries(priorReceipt?.tasks ?? {})
+    .filter(([, result]) => result?.status === "failed" || result?.reliabilityIncidentId ||
+      result?.timeoutIncidentId);
+  if (failed.length) {
+    throw new Error(`Reliability incident retry cannot use ordinary receipt resume: ${
+      failed.map(([key, result]) => result.reliabilityIncidentId ?? result.timeoutIncidentId ?? key)
+        .join(", ")}`);
   }
   const reusable = priorReceipt?.version === 2 &&
     sameIdentity(priorReceipt.resumeIdentity, resumeIdentity);
