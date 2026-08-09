@@ -1428,11 +1428,13 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
   preRepairResult:{ status:"failed", fixtureDigest, observed:observe(false) },
   repairResult:{ status:"passed", fixtureDigest, observed:observe(true) },
 } }));
+console.log("repairTmp=" + process.env.TMPDIR);
 `);
   const runnerTask = verificationTaskIdentity({
     key:"unit:artifact-lock-runner-regression", stage:"unit", packId:"shell",
     executable:"node", args:[runnerRegressionPath],
   });
+  const runnerRuntimeTask = { ...runnerTask, temporaryPathClass:"chrome-short" };
   const runnerStore = createTimeoutIncidentStore({
     root:incidentFixtureRoot,
     storeDirectory:path.join(incidentFixtureRoot, "runner-incidents"),
@@ -1467,7 +1469,7 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
     store:runnerStore,
     candidateIdentity:async() => ({ commit:"repair-commit", tree:"repair-tree", branch:"candidate" }),
     artifactIdentity:async() => failure.artifact,
-    canonicalPlan:{ tasks:[runnerTask] },
+    canonicalPlan:{ tasks:[runnerRuntimeTask] },
     strictToolchainValidator:async() => {},
     candidateCleanValidator:async() => {},
     changeSetLoader:async() => ({ version:1, baseCommit:"approved-base", commit:"repair-commit",
@@ -1486,6 +1488,8 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
   assert.match(runnerReceipt.tasks[runnerTask.key].output,
     /artifact-lock-dead-owner-runner-v1/u,
   "runner-owned evidence contains the bounded result produced by the selected causal fixture");
+  assert.match(runnerReceipt.tasks[runnerTask.key].output, /repairTmp=\/tmp\/sf-chrome\//u,
+    "incident replay reattaches the registered short temporary route before launch");
   const repairRejections = {};
   const captureRepairRejection = async(name, operation, pattern) => {
     try { await operation; }

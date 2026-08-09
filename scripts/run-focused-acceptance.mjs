@@ -856,6 +856,7 @@ export async function runTimeoutRepairFocused(id, {
     packIds:timeoutRepairPackIds, includeProperties:true, changedPaths:changeSet.paths, changeSet,
   });
   const canonicalIdentities = plan.tasks.map(verificationTaskIdentity);
+  const registeredRuntimeTasks = new Map(plan.tasks.map((task) => [task.key, task]));
   const taskPlan = timeoutRepairFocusedTaskPlan(incident, incidentChangedPaths, regressionKey,
     canonicalIdentities);
   const context = receiptContextFactory(incident.failure.environment.concurrency,
@@ -872,7 +873,10 @@ export async function runTimeoutRepairFocused(id, {
     diagnosedBoundary:timeoutRepairDiagnosedBoundary(incident), causalCategory, causalExplanation };
   const runner = commandRunnerFactory(context, { strictAcceptanceReceipt:false });
   for (const descriptor of taskPlan) {
+    const registeredTask = registeredRuntimeTasks.get(descriptor.identity.key);
     const task = { ...structuredClone(descriptor.identity),
+      ...(registeredTask?.temporaryPathClass
+        ? { temporaryPathClass:registeredTask.temporaryPathClass } : {}),
       ...(descriptor.executionArgs ? { executionArgs:[...descriptor.executionArgs] } : {}),
       ...(descriptor.executionLogicalTargetIds
         ? { executionLogicalTargetIds:[...descriptor.executionLogicalTargetIds] } : {}),
