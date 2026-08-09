@@ -476,11 +476,14 @@ export function createVerificationCommandRunner(context, options = {}) {
     const browserOutputDirectory = ["browser", "browser-observation"].includes(task.stage)
       ? path.join(context.runDirectory, task.key.replaceAll(/[^A-Za-z0-9._-]/gu, "_"))
       : undefined;
-    const taskTempDirectory = task.temporaryPathClass === "chrome-short" ||
-      ["browser", "browser-observation"].includes(task.stage)
-      ? path.join("/tmp", "sf-chrome", context.receipt.runId.slice(0, 8))
-      : path.join(context.runDirectory, "system-temp");
+    const workspaceTempDirectory = path.join(context.runDirectory, "system-temp");
+    const chromeTempDirectory = path.join("/tmp", "sf-chrome", context.receipt.runId.slice(0, 8));
+    const usesShortChromeRoute = task.temporaryPathClass === "chrome-short" ||
+      ["browser", "browser-observation"].includes(task.stage);
+    const taskTempDirectory = usesShortChromeRoute && task.stage !== "acceptance-session"
+      ? chromeTempDirectory : workspaceTempDirectory;
     await mkdir(taskTempDirectory, { recursive:true });
+    if (usesShortChromeRoute) await mkdir(chromeTempDirectory, { recursive:true });
     const isolateChild = capabilityApprovedPlan;
     const shareLoopback = launchRoute === "scoped-command-approval";
     const launch = isolateChild ? {
@@ -499,6 +502,7 @@ export function createVerificationCommandRunner(context, options = {}) {
         ...taskEnvironment,
         ...executionEnvironment,
         TMPDIR:taskTempDirectory,
+        ...(usesShortChromeRoute ? { SWARMFORGE_CHROME_TMPDIR:chromeTempDirectory } : {}),
         ...(process.env.MY_CHROME_UTILITIES_DIST_LOCK_HELD === undefined
           ? {}
           : { MY_CHROME_UTILITIES_DIST_LOCK_HELD:process.env.MY_CHROME_UTILITIES_DIST_LOCK_HELD }),

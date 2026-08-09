@@ -68,7 +68,8 @@ async function startInstalledBrowserProcess() {
   const chrome = spawn(
     resolveChromeExecutable(),
     headlessChromeArguments(chromeProfile, distributionRoot),
-    { stdio:["ignore", "ignore", "pipe"] },
+    { stdio:["ignore", "ignore", "pipe"], env:{ ...process.env,
+      TMPDIR:process.env.SWARMFORGE_CHROME_TMPDIR ?? process.env.TMPDIR } },
   );
   return { assetPort, assetServer, chrome, chromeProfile };
 }

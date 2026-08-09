@@ -6070,6 +6070,18 @@ if (process.platform !== "win32") {
     assert.equal(context.receipt.tasks[browserTempTask.key].output.trim(),
       path.join("/tmp", "sf-chrome", context.receipt.runId.slice(0, 8)),
     "known Chrome tasks use the short singleton-socket route on their first launch");
+    const acceptanceChromeTask = {
+      key:"acceptance-session:temporary-root", stage:"acceptance-session", packId:"process",
+      executable:process.execPath,
+      args:["-e", "process.stdout.write(JSON.stringify([process.env.TMPDIR,process.env.SWARMFORGE_CHROME_TMPDIR]))"],
+      target:"acceptance-temporary-root", environment:null, requiredCapabilities:[],
+      temporaryPathClass:"chrome-short", display:"acceptance Chrome temporary roots",
+    };
+    await runner(acceptanceChromeTask.display, acceptanceChromeTask);
+    assert.deepEqual(JSON.parse(context.receipt.tasks[acceptanceChromeTask.key].output), [
+      path.join(context.runDirectory, "system-temp"),
+      path.join("/tmp", "sf-chrome", context.receipt.runId.slice(0, 8)),
+    ], "acceptance keeps non-Chrome work scoped while routing Chrome children short before launch");
     const streamedTargets = [];
     const streamingContext = createVerificationReceiptContext(1, 1,
       { receiptDirectory:commandReceiptDirectory });
