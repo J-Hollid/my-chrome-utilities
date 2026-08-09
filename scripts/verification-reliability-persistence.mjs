@@ -146,12 +146,13 @@ function validateTransitionHistory(incident) {
           typeof mapping.toTree !== "string" || !mapping.toTree || anchors.has(mapping.toCommit)) {
         transitionHistoryError(incident.id, "rebase transition has an invalid replacement");
       }
+      anchors.delete(mapping.fromCommit);
       anchors.add(mapping.toCommit);
     } else if (mapping.userDecision?.approvedBy !== "specifier" ||
         mapping.userDecision?.approved !== true ||
         typeof mapping.userDecision?.reference !== "string" || !mapping.userDecision.reference.trim()) {
       transitionHistoryError(incident.id, "abandonment lacks a specifier-approved user decision");
-    }
+    } else anchors.delete(mapping.fromCommit);
   }
   const lineageEvents = incident.transitions.filter(({ type }) => type.startsWith("lineage-"));
   if (JSON.stringify(normalized(lineageEvents.map(({ type, ...record }) => ({

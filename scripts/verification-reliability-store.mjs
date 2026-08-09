@@ -208,11 +208,25 @@ async function commitDescendsFrom({ root, isAncestor, ancestor, commit }) {
   catch { return false; }
 }
 
+function activeLineageAnchors(incident) {
+  const active = new Set([incident.failure?.lineage?.commit]);
+  for (const mapping of incident.lineageTransitions ?? []) {
+    active.delete(mapping.fromCommit);
+    if (mapping.kind === "rebase") active.add(mapping.toCommit);
+  }
+  return active;
+}
+
+function recordedLineageTree(incident, commit) {
+  if (incident.failure?.lineage?.commit === commit) return incident.failure.lineage.tree;
+  return (incident.lineageTransitions ?? []).find(
+    ({ kind, toCommit }) => kind === "rebase" && toCommit === commit)?.toTree;
+}
+
 async function lineageApplies({ root, isAncestor, incident, commit, resolution = false }) {
   const anchors = resolution
     ? [incident.repair?.candidate?.commit]
-    : [incident.failure?.lineage?.commit, ...(incident.lineageTransitions ?? [])
-      .filter(({ kind }) => kind === "rebase").map(({ toCommit }) => toCommit)];
+    : [...activeLineageAnchors(incident)];
   for (const ancestor of anchors) {
     if (await commitDescendsFrom({ root, isAncestor, ancestor, commit })) return true;
   }
@@ -222,6 +236,13 @@ async function lineageApplies({ root, isAncestor, incident, commit, resolution =
 export function createTimeoutIncidentStore({
   storeDirectory, root = repositoryRoot, now = () => new Date().toISOString(),
   randomId = () => randomUUID(), isAncestor,
+  resolveCandidate = async(revision) => {
+    const [commit, tree] = await Promise.all([
+      git(root, "rev-parse", `${revision}^{commit}`),
+      git(root, "rev-parse", `${revision}^{tree}`),
+    ]);
+    return { commit, tree };
+  },
   currentCandidate = async() => ({
     commit:await git(root, "rev-parse", "HEAD^{commit}"),
     tree:await git(root, "rev-parse", "HEAD^{tree}"),
@@ -310,11 +331,10 @@ export function createTimeoutIncidentStore({
     },
     recordLineageTransition(id, mapping) {
       exactObject(mapping, "Reliability lineage transition");
-      return access.update(id, (incident) => {
+      return access.update(id, async(incident) => {
         if (incident.state !== "unresolved") throw new Error(`Timeout incident ${id} is resolved`);
         const transitions = incident.lineageTransitions ?? [];
-        const anchors = new Set([incident.failure.lineage?.commit,
-          ...transitions.filter(({ kind }) => kind === "rebase").map(({ toCommit }) => toCommit)]);
+        const anchors = activeLineageAnchors(incident);
         if (typeof mapping.fromCommit !== "string" || !anchors.has(mapping.fromCommit)) {
           throw new Error(`Timeout incident ${id} lineage transition has an unknown source`);
         }
@@ -325,6 +345,25 @@ export function createTimeoutIncidentStore({
               typeof mapping.toTree !== "string" || !mapping.toTree ||
               mapping.toCommit === mapping.fromCommit || anchors.has(mapping.toCommit)) {
             throw new Error(`Timeout incident ${id} rebase transition requires a distinct candidate and tree`);
+          }
+          let source;
+          let replacement;
+          try {
+            [source, replacement] = await Promise.all([
+              resolveCandidate(mapping.fromCommit), resolveCandidate(mapping.toCommit),
+            ]);
+          } catch (error) {
+            throw new Error(`Timeout incident ${id} rebase identity cannot be resolved by Git: ${error.message}`);
+          }
+          const sourceTree = recordedLineageTree(incident, mapping.fromCommit);
+          if (source?.commit !== mapping.fromCommit || source?.tree !== sourceTree ||
+              replacement?.commit !== mapping.toCommit || replacement?.tree !== mapping.toTree) {
+            throw new Error(`Timeout incident ${id} rebase commit or tree disagrees with Git identity`);
+          }
+          const preservesLineage = await commitDescendsFrom({ root, isAncestor,
+            ancestor:mapping.fromCommit, commit:mapping.toCommit });
+          if (!preservesLineage && source.tree !== replacement.tree) {
+            throw new Error(`Timeout incident ${id} rebase replacement is unrelated to the affected lineage or change set`);
           }
           durable = { kind:"rebase", fromCommit:mapping.fromCommit,
             toCommit:mapping.toCommit, toTree:mapping.toTree, at };

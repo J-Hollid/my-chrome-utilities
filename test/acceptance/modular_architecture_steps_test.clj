@@ -152,10 +152,13 @@
                   :store {:concurrentIndependentIds true :tamperRejected true :symlinkRejected true
                           :malformedRejected true
                           :lineage {:unrelatedExcluded true :rebasePreserved true
-                                    :abandonmentDecisionRequired true}
+                                    :invalidTreeRejected true :unrelatedRebaseRejected true
+                                    :abandonmentDecisionRequired true :abandonmentReleased true
+                                    :abandonedReuseRejected true}
                           :transitionHistory {:duplicateRejected true :reorderedRejected true
                                               :missingRejected true :inconsistentRejected true
-                                              :earlierTimestampRejected true}}
+                                              :earlierTimestampRejected true
+                                              :duplicateLineageRejected true}}
                   :resolution {:allPackCount 20 :reusedTaskCount 0 :packagePassed true
                                :archiveVerified true :resolvedIncidentExcludedFromBlocking true
                                :handoffGate true :downstreamIncidentDistinct true

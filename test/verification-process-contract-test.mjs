@@ -381,7 +381,12 @@ try {
     now:() => "2026-08-09T00:00:00.000Z",
     randomId:() => `incident-${++incidentNumber}`,
     isAncestor:async (ancestor, descendant) => ancestor === descendant ||
-      ancestor === "failed-commit" && descendant === "repair-commit",
+      ancestor === "failed-commit" && ["repair-commit", "rebased-commit"].includes(descendant),
+    resolveCandidate:async(commit) => ({
+      commit,
+      tree:{ "failed-commit":"failed-tree", "repair-commit":"repair-tree",
+        "rebased-commit":"rebased-tree", "genuinely-unrelated":"unrelated-tree" }[commit],
+    }),
     currentCandidate:async() => ({ commit:"repair-commit", tree:"repair-tree" }),
     changedPaths:async() => ["scripts/dist-artifact-lock.mjs"],
     canonicalRepairTaskIdentities:async() => canonicalRepairIdentities,
@@ -918,6 +923,30 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
   }
   assert.equal(abandonmentDecisionRequired, true,
     "candidate abandonment cannot release an incident without a separate specifier decision");
+  await assert.rejects(store.recordLineageTransition(concurrentIncidents[1].id, {
+    kind:"rebase", fromCommit:"failed-commit", toCommit:"rebased-commit", toTree:"invented-tree",
+  }), /Git|tree|identity/u,
+  "a caller-authored tree cannot create a durable replacement identity");
+  const invalidTreeRejected = true;
+  await assert.rejects(store.recordLineageTransition(concurrentIncidents[1].id, {
+    kind:"rebase", fromCommit:"failed-commit", toCommit:"genuinely-unrelated",
+    toTree:"unrelated-tree",
+  }), /lineage|change.?set|unrelated/u,
+  "a genuine unrelated branch cannot inherit the affected incident");
+  const unrelatedRebaseRejected = true;
+  const abandoned = await store.recordLineageTransition(concurrentIncidents[1].id, {
+    kind:"abandon", fromCommit:"failed-commit",
+    userDecision:{ approvedBy:"specifier", approved:true, reference:"user-decision-42" },
+  });
+  const abandonmentReleased = !(await store.blocking({ commit:"failed-commit" })).some(
+    ({ id }) => id === concurrentIncidents[1].id);
+  assert.equal(abandonmentReleased, true,
+  "a valid abandonment releases its source anchor under the approved user decision");
+  await assert.rejects(store.recordLineageTransition(concurrentIncidents[1].id, {
+    kind:"rebase", fromCommit:"failed-commit", toCommit:"rebased-commit", toTree:"rebased-tree",
+  }), /unknown source|inactive|abandoned/u,
+  "an abandoned anchor cannot later be reused for a rebase");
+  const abandonedReuseRejected = true;
 
   const classifiedForHistory = classifiedFirst;
   const malformedHistories = [];
@@ -936,6 +965,12 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
   const earlierTransition = structuredClone(classifiedForHistory);
   earlierTransition.transitions.at(-1).at = "2026-08-08T23:59:59.000Z";
   malformedHistories.push(earlierTransition);
+  const duplicateLineageTransition = structuredClone(abandoned);
+  duplicateLineageTransition.lineageTransitions.push(
+    structuredClone(duplicateLineageTransition.lineageTransitions.at(-1)));
+  duplicateLineageTransition.transitions.push(
+    structuredClone(duplicateLineageTransition.transitions.at(-1)));
+  malformedHistories.push(duplicateLineageTransition);
   const transitionRejections = malformedHistories.map((malformedHistory) => {
     try { validateIncident(malformedHistory); return false; }
     catch (error) { assert.match(error.message, /transition|history/u); return true; }
@@ -1040,10 +1075,12 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
       malformedRejected:Boolean(storeRejections.malformed),
       lineage:{ unrelatedExcluded:unrelatedLineageBlocking.length === 0,
         rebasePreserved:rebased.lineageTransitions[0].toCommit === "rebased-commit",
-        abandonmentDecisionRequired },
+        invalidTreeRejected, unrelatedRebaseRejected, abandonmentDecisionRequired,
+        abandonmentReleased, abandonedReuseRejected },
       transitionHistory:{ duplicateRejected:transitionRejections[0],
         reorderedRejected:transitionRejections[1], missingRejected:transitionRejections[2],
-        inconsistentRejected:transitionRejections[3], earlierTimestampRejected:transitionRejections[4] } },
+        inconsistentRejected:transitionRejections[3], earlierTimestampRejected:transitionRejections[4],
+        duplicateLineageRejected:transitionRejections[5] } },
     resolution:{ evidence, allPackCount:resolved.resolution.checkpoint.packIds.length,
       reusedTaskCount:resolved.resolution.checkpoint.reusedTaskCount,
       packagePassed:resolved.resolution.package.status === "passed",

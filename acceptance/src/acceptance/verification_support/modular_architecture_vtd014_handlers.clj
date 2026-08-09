@@ -252,9 +252,13 @@
                         "An unrelated lineage was blocked."))}
    {:pattern #"^abandoning or rebasing the affected lineage cannot discard its unresolved incident without a separate specifier-approved user decision$"
     :handler (fn [world _ _]
-               (assert! world (and (true? (get-in world [:vtd014/evidence :store :lineage :rebasePreserved]))
-                                   (true? (get-in world [:vtd014/evidence :store :lineage :abandonmentDecisionRequired])))
-                        "An affected lineage discarded its unresolved incident."))}
+               (let [lineage (get-in world [:vtd014/evidence :store :lineage])]
+                 (assert! world (every? true? ((juxt :rebasePreserved :invalidTreeRejected
+                                                    :unrelatedRebaseRejected
+                                                    :abandonmentDecisionRequired
+                                                    :abandonmentReleased
+                                                    :abandonedReuseRejected) lineage))
+                          "An affected lineage discarded its unresolved incident.")))}
 
    {:pattern #"^a causal reliability repair and its fresh focused regression have passed$"
     :handler (fn [world _ _] (prepared world))}
