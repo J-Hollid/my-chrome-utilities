@@ -1147,6 +1147,19 @@ try {
       [...timeoutCanonicalIdentities, canonicalTask]),
     `${task.key} remains repairable without guessing causal files from command arguments`);
   }
+  const preCapabilityTask = verificationTaskIdentity({ ...failure.task, requiredCapabilities:[] });
+  const currentCapabilityTask = verificationTaskIdentity({ ...failure.task,
+    requiredCapabilities:["local-loopback"] });
+  const preCapabilityFailure = { ...first.failure, task:preCapabilityTask,
+    retryScope:first.failure.retryScope };
+  const preCapabilityIncident = { ...first, failure:preCapabilityFailure,
+    failureDigest:timeoutIncidentDigest(preCapabilityFailure) };
+  const capabilityRepairPlan = timeoutRepairFocusedTaskPlan(preCapabilityIncident,
+    ["verification/packs.json"], preCapabilityTask.key,
+    [...timeoutCanonicalIdentities.filter(({ key }) => key !== preCapabilityTask.key),
+      currentCapabilityTask]);
+  assert.deepEqual(capabilityRepairPlan[0].identity, currentCapabilityTask,
+    "a pre-declaration incident is repaired through the canonical current capability route");
   const browserTask = verificationTaskIdentity({ key:"browser-observation:SHARED",
     stage:"browser-observation", packId:"schemas", executable:"node",
     args:["scripts/run-browser-observation.mjs", "SHARED"], logicalTargetIds:["SHARED"] });

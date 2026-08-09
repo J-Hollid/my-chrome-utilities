@@ -89,10 +89,13 @@ export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionK
       "unit:test/swarmforge-process-contract-test.mjs"].includes(key)) addRole(key, "affected-process-contract");
   }
   const taskPlan = expectedKeys.map((key) => {
-    const identity = key === incident.failure.task.key
-      ? normalized(incident.failure.task) : canonical.get(key);
-    if (!identity || !canonical.has(key) || (key === incident.failure.task.key &&
-        JSON.stringify(identity) !== JSON.stringify(canonical.get(key)))) {
+    const identity = canonical.get(key);
+    const priorIdentity = key === incident.failure.task.key
+      ? normalized(incident.failure.task) : undefined;
+    const executionIdentity = (value) => value && Object.fromEntries(Object.entries(value)
+      .filter(([field]) => field !== "requiredCapabilities"));
+    if (!identity || (priorIdentity && JSON.stringify(executionIdentity(priorIdentity)) !==
+        JSON.stringify(executionIdentity(identity)))) {
       throw new Error(`Reliability repair task ${key} is not a canonical current task identity`);
     }
     const descriptor = { identity, roles:[...(roles.get(key) ?? new Set())].sort() };
