@@ -1679,3 +1679,110 @@ Feature: Modular verification packs
     And no src product file, product behavior, saved value, accessibility result, feature owner, handler owner, pack dependency, target budget, calibration, worker limit, or shard changes
     And production impact boundaries are unchanged
     And the one-time delivery checkpoint runs all 20 runnable packs in canonical order followed by node scripts/package.mjs
+
+  # Modular verification packs 113
+  Scenario Outline: Modular verification packs 113
+    Given canonical task <task_kind> declares <required_access>
+    And its current agent environment is <sandbox_state>
+    When execution prerequisites are resolved before the first task process is launched
+    Then the first-run action is <first_run_action>
+    And the launch result is <launch_result>
+    And no known-incompatible trial run or unchanged reliability retry occurs
+    And no task inherits unrelated access from another task in its pack
+
+    Examples:
+      | task_kind                  | required_access                   | sandbox_state                       | first_run_action                                    | launch_result                                      |
+      | a browser observation task | local loopback binding and access | the workspace sandbox cannot bind   | use the existing scoped approval route immediately | the child launches once with its declared access   |
+      | a workspace-only unit task | no restricted host capability    | the workspace sandbox is sufficient | use the current sandbox without an approval prompt | the child launches once with no additional access  |
+      | a browser observation task | local loopback binding and access | scoped approval is denied            | record environment-prerequisite-blocked            | no child launches and no passing result is created |
+
+  # Modular verification packs 114
+  Scenario: Modular verification packs 114
+    Given a canonical task is declared workspace-only but an injected loopback bind reports a sandbox permission denial after preflight
+    When VTD-014 handles the unexpected restriction
+    Then it creates an environment-contract-failure incident at the execution-prerequisite boundary
+    And the incident retains the task, structured operation, capability, error code, sandbox route, and candidate lineage
+    And no unchanged retry is permitted and Git handoff remains blocked
+    And resolution requires a narrow declaration or first-run routing repair, a deterministic preflight regression, and fresh focused verification
+    And the repair cannot resolve an assertion, readiness, settling, hit-test, or timeout incident
+    And the next planned invocation arranges the declared capability before launching the task
+    And missing, unknown, contradictory, or catch-all capability declarations fail plan validation
+    And explicit approval, unrelated host restrictions, and public-network denial remain unchanged
+
+  # Modular verification packs 115
+  Scenario Outline: Modular verification packs 115
+    Given an all-pack checkpoint preflight finds <preflight_state>
+    When it resolves the state before checkpoint task timing begins
+    Then its action is <preflight_action>
+    And <task_execution>
+    And no duplicate checkpoint receipt is created
+
+    Examples:
+      | preflight_state                                      | preflight_action                                      | task_execution                                  |
+      | every prerequisite is satisfied and no attempt exists | create one repository-common checkpoint attempt      | the planned tasks may launch                    |
+      | one compatible incomplete attempt already exists     | attach to that attempt                               | no second all-pack process launches              |
+      | another owner holds an incompatible active lease     | report or queue behind the named owner outside timing | no checkpoint task launches                      |
+      | a lease is demonstrably stale                         | use the bounded audited stale-owner recovery          | tasks launch only after lease recovery completes |
+      | a required executable or bounded output capacity is unavailable | record environment-prerequisite-blocked       | no checkpoint task launches                      |
+      | the candidate lineage has an unresolved incident      | require focused causal repair                         | no checkpoint task launches                      |
+
+  # Modular verification packs 116
+  Scenario: Modular verification packs 116
+    Given one immutable post-repair checkpoint attempt has durably passed some tasks and is externally interrupted during another task
+    When the exact candidate, plan, artifact, toolchain, environment class, and capability routes restart verification
+    Then the runner automatically discovers the one compatible incomplete attempt without a supplied receipt path
+    And it retains the same attempt identity and reuses only its durably passed tasks and logical targets
+    And it runs only the interrupted and unstarted boundaries
+    And continuation consumes no unchanged diagnostic retry and creates no duplicate receipt
+    And no result from a pre-repair tree, another attempt, or another environment class is reused
+    And ambiguous, tampered, or identity-mismatched recovery state blocks with a diagnostic instead of silently running all packs again
+
+  # Modular verification packs 117
+  Scenario Outline: Modular verification packs 117
+    Given every planned task including packaging has passed in one immutable attempt and its exact results are durable
+    When <promotion_failure> prevents handoff readiness
+    Then recovery retries <recovery_scope>
+    And no unit, property, acceptance, browser, checkpoint, or package task executes again
+    And a duplicate all-pack invocation is rejected with the recoverable attempt identity
+    And changed candidate, artifact, plan, registry, or toolchain identity instead requires genuinely fresh verification
+
+    Examples:
+      | promotion_failure                              | recovery_scope                    |
+      | completed receipt finalization is interrupted  | receipt finalization only         |
+      | pending evidence creation is interrupted       | pending evidence creation only    |
+      | Git-note recording loses its lock or permission | Git-note recording only          |
+      | handoff eligibility cannot read durable evidence | handoff eligibility checking only |
+
+  # Modular verification packs 118
+  Scenario Outline: Modular verification packs 118
+    Given a checkpoint attempt has completed one stage with immutable identities
+    When <drift> occurs before the next stage
+    Then the attempt stops before another child process launches
+    And passed results are retained for diagnosis but cannot be mixed with the changed identity
+    And no automatic fresh all-pack attempt begins
+    And an unexpected tracked-file write by a verification task creates an execution-contract incident
+
+    Examples:
+      | drift                                      |
+      | the candidate commit or tree changes       |
+      | the registry or canonical plan changes     |
+      | the locked toolchain identity changes      |
+      | the built artifact identity changes        |
+
+  # Modular verification packs 119
+  Scenario Outline: Modular verification packs 119
+    Given a SwarmForge role runs <verification_kind> for delivery
+    When the registered task manifests a failure
+    Then the shared incident-aware execution boundary records it before any unchanged rerun
+    And the same isolation, classification, causal repair, regression, and resolution rules apply
+    And a raw direct diagnostic rerun cannot provide passing evidence or Git handoff eligibility
+    And the closing all-pack checkpoint cannot start while the candidate lineage owns the unresolved focused incident
+
+    Examples:
+      | verification_kind             |
+      | a focused unit test            |
+      | a focused property test        |
+      | a focused acceptance scenario  |
+      | a focused browser target       |
+      | a checkpoint command           |
+      | the package task               |
