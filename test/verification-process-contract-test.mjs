@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { access, chmod, mkdtemp, mkdir, readFile, readdir, rename, rm, symlink, writeFile } from "node:fs/promises";
+import { access, chmod, copyFile, mkdtemp, mkdir, readFile, readdir, rename, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -126,6 +126,12 @@ import {
   createCheckpointAttemptStore,
   defaultCheckpointAttemptDirectory,
 } from "../scripts/verification-checkpoint-attempt.mjs";
+
+const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
+  execFile(command, args, options, (error, stdout, stderr) => error
+    ? reject(new Error(stderr || error.message))
+    : resolve(stdout.trim()));
+});
 
 assert.deepEqual(focusedAcceptanceOptions([
   "--timeout-repair-focused", "incident-1",
@@ -536,6 +542,116 @@ try {
   await rm(checkpointAttemptRoot, { recursive:true, force:true });
 }
 
+const cliContentionRoot = await mkdtemp(path.join(os.tmpdir(), "vtd014-cli-contention-"));
+const cliContentionRepository = path.join(cliContentionRoot, "repository");
+const cliProcesses = new Set();
+try {
+  await exec("git", ["clone", "--quiet", "--no-hardlinks", path.resolve("."), cliContentionRepository]);
+  const cliContentionBase = await exec("git", ["rev-parse", "HEAD"]);
+  await exec("git", ["checkout", "--quiet", "--detach", cliContentionBase], {
+    cwd:cliContentionRepository,
+  });
+  await exec("git", ["config", "user.name", "CLI Contention Test"], { cwd:cliContentionRepository });
+  await exec("git", ["config", "user.email", "cli-contention@example.test"], {
+    cwd:cliContentionRepository,
+  });
+  const cliRunnerPath = path.join(cliContentionRepository, "scripts/run-focused-acceptance.mjs");
+  await copyFile(path.resolve("scripts/run-focused-acceptance.mjs"), cliRunnerPath);
+  const buildOwnerFile = path.join(cliContentionRepository, "tmp", "cli-contention-build-owner");
+  await writeFile(path.join(cliContentionRepository, "scripts/build.mjs"), [
+    'import { writeFile } from "node:fs/promises";',
+    'import { withDistArtifactLock } from "./dist-artifact-lock.mjs";',
+    `await withDistArtifactLock(async() => { await writeFile(${JSON.stringify(buildOwnerFile)}, process.ppid + " " + process.pid + "\\n"); await new Promise(() => setInterval(() => {}, 1000)); });`,
+    "",
+  ].join("\n"));
+  await mkdir(path.join(cliContentionRepository, "tmp"), { recursive:true });
+  await symlink(path.resolve("node_modules"), path.join(cliContentionRepository, "node_modules"), "dir");
+  await symlink(path.resolve("tmp/tools"), path.join(cliContentionRepository, "tmp/tools"), "dir");
+  await writeFile(path.join(cliContentionRepository, ".git/info/exclude"),
+    "node_modules\n.swarmforge\n");
+  await exec("git", ["add", "scripts/run-focused-acceptance.mjs", "scripts/build.mjs"], {
+    cwd:cliContentionRepository,
+  });
+  await exec("git", ["commit", "-qm", "cli contention fixture"], { cwd:cliContentionRepository });
+
+  const packIds = JSON.parse(await readFile(path.join(cliContentionRepository,
+    "verification/packs.json"), "utf8"))
+    .filter((pack) => ["unit", "property", "features", "browserAdapters",
+      "browserObservations", "checkpointCommands"].some((key) => pack[key]?.length))
+    .map(({ id }) => id);
+  const checkpointArgs = ["scripts/run-focused-acceptance.mjs",
+    ...packIds.flatMap((id) => ["--pack", id]), "--property", "--changed-since", "HEAD^",
+    "--prepare-evidence", "vtd014-cli-contention"];
+  const observeCli = (args, environment = {}) => {
+    const child = spawn(process.execPath, args, {
+      cwd:cliContentionRepository, stdio:["ignore", "pipe", "pipe"],
+      env:{ ...process.env, ...environment },
+    });
+    cliProcesses.add(child);
+    const observation = { child, stdout:"", stderr:"" };
+    child.stdout.on("data", (chunk) => { observation.stdout += chunk; });
+    child.stderr.on("data", (chunk) => { observation.stderr += chunk; });
+    observation.closed = new Promise((resolve) => child.once("close", (code, signal) => {
+      cliProcesses.delete(child);
+      resolve({ code, signal });
+    }));
+    return observation;
+  };
+  const waitForCli = async(observation, predicate, description, timeoutMs = 30_000) => {
+    const deadline = Date.now() + timeoutMs;
+    while (!await predicate(observation) && observation.child.exitCode === null &&
+        observation.child.signalCode === null && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    assert.ok(await predicate(observation), `${description}: ${observation.stdout}${observation.stderr}`);
+  };
+  const firstCli = observeCli(checkpointArgs);
+  await waitForCli(firstCli, ({ stderr }) => stderr.includes("[verify:start] npm run build"),
+    "the first real CLI did not claim its checkpoint before starting the build");
+  await waitForCli(firstCli, async() => {
+    try { return Boolean((await readFile(buildOwnerFile, "utf8")).trim()); }
+    catch (error) { if (error?.code === "ENOENT") return false; throw error; }
+  }, "the first real CLI build did not acquire the artifact lease");
+
+  const compatibleCli = observeCli(checkpointArgs, { DIST_ARTIFACT_LOCK_TIMEOUT_MS:"100" });
+  const compatibleExit = await compatibleCli.closed;
+  assert.equal(compatibleExit.code, 1);
+  assert.match(compatibleCli.stderr, /Compatible checkpoint attempt [a-f0-9]{64} is already active/u);
+  assert.match(compatibleCli.stderr, /no duplicate all-pack process launched/u);
+  assert.doesNotMatch(compatibleCli.stderr, /\[verify:start\]|Timed out waiting.*dist artifact lock/u,
+    "a compatible CLI must attach before task timing or artifact-lock waiting");
+
+  const incompatibleArgs = [...checkpointArgs.slice(0, -1), "vtd014-cli-contention-incompatible"];
+  const incompatibleCli = observeCli(incompatibleArgs, { DIST_ARTIFACT_LOCK_TIMEOUT_MS:"100" });
+  const incompatibleExit = await incompatibleCli.closed;
+  assert.equal(incompatibleExit.code, 1);
+  assert.match(incompatibleCli.stderr, /Incompatible checkpoint attempt [a-f0-9]{64} is owned by pid/u);
+  assert.doesNotMatch(incompatibleCli.stderr, /\[verify:start\]|Timed out waiting.*dist artifact lock/u,
+    "an incompatible CLI must report the named owner before task timing or artifact-lock waiting");
+
+  const [buildGroupPid] = (await readFile(buildOwnerFile, "utf8")).trim().split(" ").map(Number);
+  firstCli.child.kill("SIGKILL");
+  try { process.kill(-buildGroupPid, "SIGKILL"); }
+  catch (error) { if (error?.code !== "ESRCH") throw error; }
+  await firstCli.closed;
+  await rm(buildOwnerFile, { force:true });
+
+  const staleCli = observeCli(checkpointArgs, { DIST_ARTIFACT_LOCK_TIMEOUT_MS:"3000" });
+  await waitForCli(staleCli, ({ stderr }) => stderr.includes("[verify:checkpoint-continue]"),
+    "a replacement real CLI did not recover the stale checkpoint owner");
+  await waitForCli(staleCli, ({ stderr }) => stderr.includes("[verify:start] npm run build"),
+    "the stale-owner replacement did not proceed after recovery");
+  assert.ok(staleCli.stderr.indexOf("[verify:checkpoint-continue]") <
+    staleCli.stderr.indexOf("[verify:start] npm run build"),
+  "stale-owner recovery must complete outside and before task timing");
+  staleCli.child.kill("SIGTERM");
+  await staleCli.closed;
+} finally {
+  for (const child of cliProcesses) child.kill("SIGKILL");
+  await Promise.all([...cliProcesses].map((child) => new Promise((resolve) => child.once("close", resolve))));
+  await rm(cliContentionRoot, { recursive:true, force:true });
+}
+
 const guardIncidents = [];
 let guardedSnapshot = {
   commit:"a".repeat(40), tree:"b".repeat(40), artifactInputDigest:"c".repeat(64),
@@ -583,12 +699,6 @@ assert.notEqual(
     error:"center point was offscreen" }),
   "failure fingerprints conserve the assertion site",
 );
-
-const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
-  execFile(command, args, options, (error, stdout, stderr) => error
-    ? reject(new Error(stderr || error.message))
-    : resolve(stdout.trim()));
-});
 
 const syntheticArtifact = (inputDigest, outputDigest, toolchain) => {
   const schemaVersion = 1;

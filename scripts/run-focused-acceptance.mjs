@@ -6,7 +6,6 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { assertFreshDist, atomicWriteFile, createDistInputFingerprint } from "./dist-artifact.mjs";
-import { withDistArtifactLock } from "./dist-artifact-lock.mjs";
 import {
   executeAcceptancePlan,
   loadVerificationPacks,
@@ -1549,7 +1548,7 @@ export async function runFocusedAcceptance(
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  withDistArtifactLock(() => runFocusedAcceptance(process.argv.slice(2))).catch((error) => {
+  runFocusedAcceptance(process.argv.slice(2)).catch((error) => {
     console.error(error.message);
     if (!receivedParentSignal) process.exitCode = 1;
   });
