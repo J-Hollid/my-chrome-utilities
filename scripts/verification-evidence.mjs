@@ -384,7 +384,8 @@ export async function validateStrictVerificationToolchain({ repositoryRoot = rep
 }
 
 async function cleanCandidate(repositoryRoot) {
-  const dirty = await git(repositoryRoot, "status", "--porcelain", "--untracked-files=all");
+  const dirty = await git(repositoryRoot, "-c", "core.excludesFile=/dev/null",
+    "status", "--porcelain", "--untracked-files=all");
   if (dirty) throw new Error("Commit candidate changes before preparing or recording verification evidence");
 }
 

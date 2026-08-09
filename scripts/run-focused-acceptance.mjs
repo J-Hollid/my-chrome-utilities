@@ -283,6 +283,25 @@ export function focusedAcceptanceOptions(args) {
   return options;
 }
 
+export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, candidateCommit,
+  candidateTree, baseCommit, evidenceTask, requestedPackIds }) {
+  if (!blocking.some(({ id }) => id === requestedId)) {
+    throw new Error("Repair checkpoint requires an applicable timeout incident");
+  }
+  if (JSON.stringify([...requestedPackIds].sort()) !== JSON.stringify(timeoutRepairPackIds)) {
+    throw new Error("Repair checkpoint requires the eligible repair candidate and exact all-20 plan");
+  }
+  const incompatible = blocking.find((incident) => incident.repair?.status !== "eligible" ||
+    incident.repair.candidate.commit !== candidateCommit ||
+    incident.repair.candidate.tree !== candidateTree ||
+    incident.repair.checkpoint.baseCommit !== baseCommit ||
+    incident.repair.checkpoint.evidenceTask !== evidenceTask);
+  if (incompatible) {
+    throw new Error(`Repair checkpoint is blocked by incompatible timeout incident ${incompatible.id}`);
+  }
+  return blocking.map(({ id }) => id).sort();
+}
+
 function terminateProcessGroup(child, signal) {
   if (process.platform === "win32") return child.kill(signal);
   try { process.kill(-child.pid, signal); return true; }
@@ -1070,25 +1089,20 @@ export async function runFocusedAcceptance(
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };
   let timeoutStore;
+  let timeoutRepairIncidentIds = [];
   if (timeoutRepairIncident) {
     timeoutStore = createTimeoutIncidentStore();
-    const [incident, blocking] = await Promise.all([
-      timeoutStore.read(timeoutRepairIncident), timeoutStore.blocking({ commit:candidateCommit }),
-    ]);
-    if (blocking.some(({ id }) => id !== timeoutRepairIncident) ||
-        !blocking.some(({ id }) => id === timeoutRepairIncident)) {
-      throw new Error("Repair checkpoint can bypass only its single applicable timeout incident");
+    const blocking = await timeoutStore.blocking({ commit:candidateCommit });
+    timeoutRepairIncidentIds = compatibleTimeoutRepairIncidentIds({
+      requestedId:timeoutRepairIncident, blocking, candidateCommit, candidateTree,
+      baseCommit:changedSince, evidenceTask, requestedPackIds:plan.requestedPackIds,
+    });
+    context.receipt.timeoutRepairCheckpoint = {
+      incidentId:timeoutRepairIncident, incidentIds:timeoutRepairIncidentIds,
+    };
+    for (const incidentId of timeoutRepairIncidentIds) {
+      await timeoutStore.claimRepairCheckpoint(incidentId, context.receipt.runId);
     }
-    if (incident.repair?.status !== "eligible" ||
-        incident.repair.candidate.commit !== candidateCommit ||
-        incident.repair.candidate.tree !== candidateTree ||
-        incident.repair.checkpoint.baseCommit !== changedSince ||
-        incident.repair.checkpoint.evidenceTask !== evidenceTask ||
-        JSON.stringify([...plan.requestedPackIds].sort()) !== JSON.stringify(timeoutRepairPackIds)) {
-      throw new Error("Repair checkpoint requires the eligible repair candidate and exact all-20 plan");
-    }
-    context.receipt.timeoutRepairCheckpoint = { incidentId:timeoutRepairIncident };
-    await timeoutStore.claimRepairCheckpoint(timeoutRepairIncident, context.receipt.runId);
   }
   let buildManifest;
   if (options.skipBuild) buildManifest = await validateCurrentArtifactForConsumers({
@@ -1310,10 +1324,12 @@ export async function runFocusedAcceptance(
         context.receipt.tasks[timeoutRepairPackageTaskIdentity.key]);
       packageContext.receipt.completedAt = new Date().toISOString();
       await packageContext.write();
-      await timeoutStore.resolve(timeoutRepairIncident, {
-        checkpointReceiptPath:context.receiptPath,
-        packageReceiptPath:packageContext.receiptPath,
-      });
+      for (const incidentId of timeoutRepairIncidentIds) {
+        await timeoutStore.resolve(incidentId, {
+          checkpointReceiptPath:context.receiptPath,
+          packageReceiptPath:packageContext.receiptPath,
+        });
+      }
       await assertNoBlockingTimeoutIncidents("HEAD");
     }
     // A continued attempt can restore hundreds of durable task results into a

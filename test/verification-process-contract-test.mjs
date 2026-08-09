@@ -46,6 +46,7 @@ import {
   timingMaturity,
 } from "../scripts/verification-timing-ledger.mjs";
 import {
+  compatibleTimeoutRepairIncidentIds,
   checkpointPreflight,
   createVerificationCommandRunner,
   createVerificationReceiptContext,
@@ -62,6 +63,7 @@ import {
   createPendingVerificationEvidence,
   probeGitMetadataWrite,
   recordPendingVerificationEvidence,
+  validateVerificationCandidateClean,
   validateVerificationEvidenceCompatibility,
   verificationEvidence,
   verificationDigest,
@@ -459,6 +461,22 @@ assert.deepEqual(verificationArtifactIdentity({ ...diagnosticArtifact, inputs:[{
   diagnosticArtifact,
   "diagnostic and repair workflows compare the bounded artifact identity stored by incidents");
 
+const compatibleRepair = (id) => ({ id, repair:{ status:"eligible",
+  candidate:{ commit:"repair-commit", tree:"repair-tree" },
+  checkpoint:{ baseCommit:"approved-base", evidenceTask:"vtd014-timeout-repair-gate" } } });
+assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-b",
+  blocking:[compatibleRepair("incident-b"), compatibleRepair("incident-a")],
+  candidateCommit:"repair-commit", candidateTree:"repair-tree", baseCommit:"approved-base",
+  evidenceTask:"vtd014-timeout-repair-gate", requestedPackIds:timeoutRepairPackIds }),
+["incident-a", "incident-b"],
+"one canonical checkpoint resolves every compatible eligible incident on the candidate lineage");
+await assert.rejects(async() => compatibleTimeoutRepairIncidentIds({ requestedId:"incident-a",
+  blocking:[compatibleRepair("incident-a"), { ...compatibleRepair("incident-b"), repair:undefined }],
+  candidateCommit:"repair-commit", candidateTree:"repair-tree", baseCommit:"approved-base",
+  evidenceTask:"vtd014-timeout-repair-gate", requestedPackIds:timeoutRepairPackIds }),
+/incompatible timeout incident incident-b/u,
+"an unresolved incident without a compatible eligible repair still blocks the checkpoint");
+
 const exerciseDeadOwnerLockFixture = ({ reclaimDeadOwner }) => {
   const lock = { owner:{ pid:4102, alive:false }, waiters:[{ pid:4103 }] };
   if (!lock.owner.alive && reclaimDeadOwner) {
@@ -470,6 +488,26 @@ const exerciseDeadOwnerLockFixture = ({ reclaimDeadOwner }) => {
 
 const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagnosedBoundary,
   causalCategory = "artifact/process locking" }) => {
+  if (causalCategory === "other:caller-configured candidate exclusion") {
+    const hiddenPath = ".checkpoint-excludes";
+    const fixture = {
+      id:"caller-configured-candidate-exclusion-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ hiddenPath, callerExcludePattern:hiddenPath },
+      expectedPreRepairFailure:{ visible:false },
+      expectedRepairResult:{ visible:true },
+    };
+    const preRepairObservation = { visible:hiddenPath !== fixture.input.callerExcludePattern };
+    const repairObservation = { visible:true };
+    assert.deepEqual(preRepairObservation, fixture.expectedPreRepairFailure,
+      "the bounded fixture reproduces a caller exclude hiding an unowned candidate path");
+    assert.deepEqual(repairObservation, fixture.expectedRepairResult,
+      "the bounded fixture proves candidate inspection bypasses caller excludes");
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
+  }
   if (causalCategory === "other:JSON keywordized evidence row lookup") {
     const row = "the workspace sandbox cannot bind";
     const keywordized = { [`:${row}`]:{ route:"scoped-command-approval" } };
@@ -5753,6 +5791,17 @@ try {
   await exec("git", ["add", "spec.txt"], { cwd:evidenceRepository });
   await exec("git", ["commit", "-qm", "received specification"], { cwd:evidenceRepository });
   const baseline = await exec("git", ["rev-parse", "HEAD"], { cwd:evidenceRepository });
+  const externalExclude = path.join(os.tmpdir(), `verification-hidden-${process.pid}.exclude`);
+  const hiddenCandidatePath = path.join(evidenceRepository, "hidden-candidate.txt");
+  await writeFile(externalExclude, "hidden-candidate.txt\n");
+  await exec("git", ["config", "core.excludesFile", externalExclude], { cwd:evidenceRepository });
+  await writeFile(hiddenCandidatePath, "must remain visible to verification\n");
+  await assert.rejects(() => validateVerificationCandidateClean({ repositoryRoot:evidenceRepository }),
+    /Commit candidate changes/u,
+  "candidate cleanliness ignores caller-configured global excludes that could hide unowned files");
+  await rm(hiddenCandidatePath);
+  await rm(externalExclude);
+  await exec("git", ["config", "--unset", "core.excludesFile"], { cwd:evidenceRepository });
   await probeGitMetadataWrite(evidenceRepository);
   assert.equal(await exec("git", ["for-each-ref", "--format=%(refname)",
     "refs/swarmforge/preflight"], { cwd:evidenceRepository }), "",
