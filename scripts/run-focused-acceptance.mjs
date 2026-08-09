@@ -714,7 +714,7 @@ export async function runTimeoutRepairFocused(id, {
   await context.write();
   console.error(`[verify:receipt] ${path.relative(repositoryRoot, context.receiptPath)}`);
   const regressionContext = { version:1, incidentId:id, failureDigest:incident.failureDigest,
-    diagnosedBoundary:incident.failure.retryScope };
+    diagnosedBoundary:incident.failure.retryScope, causalCategory, causalExplanation };
   const runner = commandRunnerFactory(context);
   for (const descriptor of taskPlan) {
     const task = { ...structuredClone(descriptor.identity),

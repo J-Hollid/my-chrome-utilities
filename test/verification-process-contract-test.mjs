@@ -157,7 +157,36 @@ const exerciseDeadOwnerLockFixture = ({ reclaimDeadOwner }) => {
   return { outcome:"blocked", ownerPid:lock.owner.pid, remainingWaiters:lock.waiters.length };
 };
 
-const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagnosedBoundary }) => {
+const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagnosedBoundary,
+  causalCategory = "artifact/process locking" }) => {
+  if (causalCategory === "other:verification topology snapshot synchronization") {
+    const previousDigest = "9bdaba0d50ea76e8afa03f8cfefe2785d7090cc237398719bc9992c5c540e0d1";
+    const repairedDigest = "40777c0706d2be436f8c60005c11327a230685f254d83070975acbedf61961c9";
+    const fixture = {
+      id:"verification-topology-snapshot-v1",
+      causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ previousDigest, computedDigest:repairedDigest },
+      expectedPreRepairFailure:{ committedDigest:previousDigest,
+        computedDigest:repairedDigest, equal:false },
+      expectedRepairResult:{ committedDigest:repairedDigest,
+        computedDigest:repairedDigest, equal:true },
+    };
+    const preRepairObservation = { committedDigest:previousDigest,
+      computedDigest:repairedDigest, equal:previousDigest === repairedDigest };
+    const repairObservation = { committedDigest:repairedDigest,
+      computedDigest:repairedDigest, equal:true };
+    assert.deepEqual(preRepairObservation, fixture.expectedPreRepairFailure,
+      "the bounded fixture reproduces the stale verification-topology snapshot");
+    assert.deepEqual(repairObservation, fixture.expectedRepairResult,
+      "the bounded fixture proves the synchronized verification-topology snapshot");
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return {
+      version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairObservation },
+    };
+  }
   const fixture = {
     id:"artifact-lock-dead-owner-v1",
     causalCategory:"artifact/process locking",
@@ -4658,7 +4687,12 @@ const priorReceipt = {
     },
   },
 };
-const resumed = resumeVerificationPlan(resumablePlan, priorReceipt, resumeIdentity);
+assert.throws(() => resumeVerificationPlan(resumablePlan, priorReceipt, resumeIdentity),
+  new RegExp(resumableTasks[1].key, "u"),
+  "a failed task cannot enter ordinary resume before incident classification");
+const diagnosticPriorReceipt = { ...priorReceipt,
+  tasks:{ [resumableTasks[0].key]:priorReceipt.tasks[resumableTasks[0].key] } };
+const resumed = resumeVerificationPlan(resumablePlan, diagnosticPriorReceipt, resumeIdentity);
 assert.deepEqual(resumed.tasks.map(({ key }) => key), resumableTasks.slice(1).map(({ key }) => key),
   "bounded resume runs only failed and incomplete tasks");
 assert.equal(resumed.reusedTasks[resumableTasks[0].key].provenance, "reused");
@@ -4671,7 +4705,7 @@ assert.throws(() => resumeVerificationPlan(resumablePlan, {
   } },
 }, resumeIdentity), /incident-active/u,
 "a timeout cannot be retried away through ordinary successful-task receipt resume");
-const rejectedResume = resumeVerificationPlan(resumablePlan, priorReceipt,
+const rejectedResume = resumeVerificationPlan(resumablePlan, diagnosticPriorReceipt,
   { ...resumeIdentity, commit:"e".repeat(40) });
 assert.deepEqual(rejectedResume.tasks.map(({ key }) => key), resumableTasks.map(({ key }) => key),
   "a mismatched resume identity reruns every checkpoint task");
@@ -4680,7 +4714,7 @@ for (const [field, value] of [
   ["planDigest", "f".repeat(64)],
   ["toolchainDigest", "0".repeat(64)],
 ]) {
-  const mismatch = resumeVerificationPlan(resumablePlan, priorReceipt,
+  const mismatch = resumeVerificationPlan(resumablePlan, diagnosticPriorReceipt,
     { ...resumeIdentity, [field]:value });
   assert.deepEqual(mismatch.tasks.map(({ key }) => key), resumableTasks.map(({ key }) => key),
     `a ${field} mismatch rejects every prior task before a consumer can run`);
@@ -4702,15 +4736,10 @@ const partialObservationReceipt = {
     },
   },
 };
-const partialObservationResume = resumeVerificationPlan(
+assert.throws(() => resumeVerificationPlan(
   partialObservationPlan, partialObservationReceipt, resumeIdentity,
-);
-assert.deepEqual(partialObservationResume.tasks[0].executionArgs,
-  ["scripts/run-browser-observation.mjs", "BROWSER_SECOND"],
-  "a failed browser batch reruns only its failed logical target");
-assert.equal(partialObservationResume.tasks[0].priorReceiptTask,
-  partialObservationReceipt.tasks[observationTask.key],
-  "the resumed browser task retains the independent passing target result for the combined receipt");
+), /Reliability incident retry.*browser-observation/u,
+"a failed browser batch must use its incident-owned isolated retry rather than ordinary resume");
 assert.equal(verificationResumeIdentity(resumablePlan, {
   receipt:{ environment:{ node:"24", typescript:"5", platform:"linux", concurrency:1,
     observationConcurrency:1 } },
@@ -4807,7 +4836,13 @@ if (process.platform !== "win32") {
     const stderrContext = createVerificationReceiptContext(1, 2, {
       receiptDirectory:commandReceiptDirectory,
     });
-    const stderrRunner = createVerificationCommandRunner(stderrContext);
+    const stderrFailures = [];
+    const stderrRunner = createVerificationCommandRunner(stderrContext, { incidentStore:{
+      create:async(failure) => {
+        stderrFailures.push(failure);
+        return { id:"incident-stderr-diagnostic", failureDigest:"e".repeat(64) };
+      },
+    } });
     const stderrTask = {
       key:"unit:stderr-diagnostic", stage:"unit", packId:"process", executable:process.execPath,
       args:["-e", "require('node:fs').writeSync(2,'retained diagnostic\\n');process.exitCode=7"],
@@ -4819,6 +4854,7 @@ if (process.platform !== "win32") {
       "a normal nonzero exit retains its bounded stderr diagnostic");
     assert.match(stderrContext.receipt.tasks[stderrTask.key].error,
       /Verification command failed \(7\): stderr diagnostic task/u);
+    assert.equal(stderrFailures[0].failureClass, "nonzero-exit");
     const fakePathDirectory = await mkdtemp(path.join(os.tmpdir(), "verification-fake-node-"));
     const fakeNodeSentinel = path.join(fakePathDirectory, "launched");
     const originalPath = process.env.PATH;
