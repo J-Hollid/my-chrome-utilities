@@ -1396,7 +1396,10 @@ console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
     strictToolchainValidator:async() => {},
     candidateCleanValidator:async() => {},
     changeSetLoader:async() => ({ version:1, baseCommit:"approved-base", commit:"repair-commit",
-      entries:[{ status:"M", path:"src/repair.ts" }], paths:["src/repair.ts"] }),
+      entries:[{ status:"M", path:"src/repair.ts" },
+        { status:"M", path:"swarmforge/roles/coder.prompt" }],
+      paths:["src/repair.ts", "swarmforge/roles/coder.prompt"] }),
+    incidentChangedPathsLoader:async() => ["src/repair.ts"],
     verificationPacksLoader:async() => ({}),
     verificationPacksValidator:async() => {},
     receiptContextFactory:(concurrency, observationConcurrency) => createVerificationReceiptContext(

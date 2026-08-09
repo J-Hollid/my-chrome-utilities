@@ -818,6 +818,10 @@ export async function runTimeoutRepairFocused(id, {
   strictToolchainValidator = () => validateStrictVerificationToolchain({ repositoryRoot }),
   candidateCleanValidator = () => validateVerificationCandidateClean({ repositoryRoot }),
   changeSetLoader = (base) => canonicalVerificationChangeSet({ base, repositoryRoot }),
+  incidentChangedPathsLoader = (failedCommit) => new Promise((resolve, reject) =>
+    execFile("git", ["diff", "--name-only", `${failedCommit}..HEAD`], { cwd:repositoryRoot },
+      (error, stdout, stderr) => error ? reject(new Error(stderr.trim() || error.message))
+        : resolve(stdout.split(/\r?\n/u).filter(Boolean)))),
   verificationPacksLoader = loadVerificationPacks,
   verificationPacksValidator = validateVerificationPacks,
   receiptContextFactory = createVerificationReceiptContext,
@@ -835,16 +839,17 @@ export async function runTimeoutRepairFocused(id, {
   await strictToolchainValidator();
   await candidateCleanValidator();
   const incident = await store.read(id);
-  const [candidate, artifact, changeSet, packs] = await Promise.all([
+  const [candidate, artifact, changeSet, packs, incidentChangedPaths] = await Promise.all([
     candidateIdentity(), artifactIdentity(),
     changeSetLoader(baseCommit), verificationPacksLoader(),
+    incidentChangedPathsLoader(incident.failure.lineage.commit),
   ]);
   await verificationPacksValidator(packs);
   const plan = canonicalPlan ?? planVerification(packs, {
     packIds:timeoutRepairPackIds, includeProperties:true, changedPaths:changeSet.paths, changeSet,
   });
   const canonicalIdentities = plan.tasks.map(verificationTaskIdentity);
-  const taskPlan = timeoutRepairFocusedTaskPlan(incident, changeSet.paths, regressionKey,
+  const taskPlan = timeoutRepairFocusedTaskPlan(incident, incidentChangedPaths, regressionKey,
     canonicalIdentities);
   const context = receiptContextFactory(incident.failure.environment.concurrency,
     incident.failure.environment.observationConcurrency);
