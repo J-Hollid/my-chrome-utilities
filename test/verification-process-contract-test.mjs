@@ -2718,6 +2718,8 @@ assert.equal(focusedAcceptancePlan.tasks[0].key, "build:dist");
 assert.equal(focusedAcceptancePlan.tasks.at(-1).key, "acceptance-session:shell");
 assert.deepEqual(focusedAcceptancePlan.tasks.at(-1).requiredCapabilities, ["local-loopback"],
   "the acceptance session declares authority required by its nested Chrome production probes");
+assert.equal(focusedAcceptancePlan.tasks.at(-1).temporaryPathClass, "chrome-short",
+  "the acceptance session routes nested Chrome sockets through the short path before launch");
 assert.ok(focusedAcceptancePlan.parserTasks.length > 0 &&
   focusedAcceptancePlan.parserTasks.length === focusedAcceptancePlan.generatorTasks.length,
 "the focused acceptance session retains only its registered parse and generation prerequisites");

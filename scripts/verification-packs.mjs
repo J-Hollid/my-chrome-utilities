@@ -1041,12 +1041,15 @@ function featureTasks(features, packs) {
     if (!packArtifacts.length) return null;
     const requiredCapabilities = [...new Set(values(pack, "executionPrerequisites")
       .flatMap((declaration) => declaration.requiredCapabilities ?? []))];
+    const temporaryPathClass = values(pack, "executionPrerequisites")
+      .some((declaration) => declaration.temporaryPathClass === "chrome-short")
+      ? "chrome-short" : "workspace";
     return commandTask({
       key:`acceptance-session:${pack.id}`, stage:"acceptance-session", packId:pack.id,
       executable:"bb",
       args:["acceptance-pack-runner", pack.id, ...packArtifacts.flatMap(({ generated, ir }) => [generated, ir])],
       target:packArtifacts.map(({ feature }) => feature).join(","),
-      requiredCapabilities,
+      requiredCapabilities, temporaryPathClass,
     });
   }).filter(Boolean);
   return { parser, generator, sessions };
