@@ -93,6 +93,7 @@ import {
   timeoutRepairFocusedTaskPlan,
   timeoutResolutionEvidence,
   validateTimeoutRepairProposal,
+  verificationProgressEmitter,
 } from "../scripts/verification-reliability-incidents.mjs";
 
 assert.deepEqual(focusedAcceptanceOptions([
@@ -342,6 +343,12 @@ assert.deepEqual(diagnosticRetryScope({
 }), {
   kind:"case", caseId:"scenario-17", executionArgs:["run", "feature", "scenario-17"],
 }, "a stable executable case is the smallest diagnostic retry boundary");
+const unboundedCaseProgress = createVerificationProgressTracker({ taskKey:"acceptance:feature" });
+assert.equal(unboundedCaseProgress.accept({
+  version:1, sequence:1, monotonicMs:1, boundary:"process", caseId:"scenario-17",
+  executionArgs:Array.from({ length:33 }, (_, index) => `argument-${index}`),
+}), false, "unbounded executable case commands cannot enter trusted progress");
+assert.equal(unboundedCaseProgress.snapshot(), undefined);
 
 const incidentFixtureRoot = await mkdtemp(path.join(os.tmpdir(), "vtd014-incident-contract-"));
 let vtd014Evidence;
@@ -438,6 +445,37 @@ try {
     concurrentIncidents.some((incident) => incident.id === id)).length, 2,
   "concurrent incident writers retain both immutable documents");
   assert.equal((await store.blocking({ commit:"failed-commit" })).length, 3);
+  const caseProgressLines = [];
+  let caseProgressNow = 100;
+  const emitCaseProgress = verificationProgressEmitter({
+    emit:(line) => caseProgressLines.push(line),
+    now:() => caseProgressNow,
+  });
+  emitCaseProgress({
+    boundary:"process", caseId:"scenario-17", phase:"assertion",
+    executionArgs:["acceptance-pack-runner", "property-set", "scenario-17"],
+    state:{ settled:false },
+  });
+  caseProgressNow += 1;
+  const caseTask = {
+    key:"acceptance:property-set-case", stage:"acceptance", packId:"property_set_flow_sections",
+    executable:"bb", args:["acceptance-pack-runner", "property-set"],
+  };
+  const caseProgressTracker = createVerificationProgressTracker({ taskKey:caseTask.key });
+  assert.equal(caseProgressTracker.acceptLine(caseProgressLines[0]), true);
+  const caseStore = createTimeoutIncidentStore({
+    root:incidentFixtureRoot,
+    storeDirectory:path.join(incidentFixtureRoot, "case-incidents"),
+    randomId:() => "case-integration-incident",
+  });
+  const caseIncident = await caseStore.create({
+    ...failure, runnerRunId:"run-case-integration", task:caseTask,
+    failedBoundary:caseProgressTracker.snapshot(), lastProgress:undefined,
+  });
+  assert.deepEqual(caseIncident.failure.retryScope, {
+    kind:"case", caseId:"scenario-17",
+    executionArgs:["acceptance-pack-runner", "property-set", "scenario-17"],
+  }, "emitted executable case identity survives tracker, incident creation, and retry selection");
   const claim = await store.claimDiagnosticRetry(first.id, first.failure.retryIdentity);
   assert.equal(claim.retry.status, "claimed", "retry allowance is consumed before execution starts");
   await assert.rejects(store.claimDiagnosticRetry(first.id, first.failure.retryIdentity), /already used/u);
