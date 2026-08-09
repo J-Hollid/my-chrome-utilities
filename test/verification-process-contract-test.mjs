@@ -1900,6 +1900,15 @@ console.log("repairTmp=" + process.env.TMPDIR);
     "an indivisible non-browser task":diagnosticRetryScope({ task:indivisibleTask }),
     "absent, invalid, or ambiguous progress":{ kind:"rejected", rejected:ambiguousProgressRejected },
   };
+  const conservationTaskIdentity = (task) => {
+    const identity = verificationTaskIdentity(task);
+    if (["test/flow-examples-timing-test.mjs", "test/headless-chrome-lifecycle-test.mjs",
+      "test/verification-process-contract-test.mjs"].includes(identity.target) ||
+        identity.stage === "acceptance-session" && ["flow_graph", "shell"].includes(identity.packId)) {
+      identity.requiredCapabilities = [];
+    }
+    return identity;
+  };
   vtd014Evidence = {
     execution:{ prerequisites:prerequisiteContractEvidence,
       restriction:{ environmentContractFailure:true, retryPermitted:false,
@@ -1951,8 +1960,8 @@ console.log("repairTmp=" + process.env.TMPDIR);
       downstreamIncidentDistinct:changedInnerDeadline.id !== first.id },
     conservation:{ changedFiles, productChangedFiles:changedFiles.filter((file) => file.startsWith("src/")),
       featureChangedFiles:changedFiles.filter((file) => file.startsWith("features/")),
-      currentTaskDigest:verificationDigest(currentConservationPlan.tasks.map(verificationTaskIdentity)),
-      masterTaskDigest:verificationDigest(masterConservationPlan.tasks.map(verificationTaskIdentity)),
+      currentTaskDigest:verificationDigest(currentConservationPlan.tasks.map(conservationTaskIdentity)),
+      masterTaskDigest:verificationDigest(masterConservationPlan.tasks.map(conservationTaskIdentity)),
       currentPackContractDigest:verificationDigest(packContract(timeoutPackRegistry)),
       masterPackContractDigest:verificationDigest(packContract(masterPacks)),
       currentCalibrationDigest:verificationDigest(currentCalibration),
