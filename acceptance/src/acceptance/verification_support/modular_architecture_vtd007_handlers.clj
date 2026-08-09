@@ -39,9 +39,13 @@
 
 (defn- run-production-probes! []
   (let [unit (shell/sh "env" "SWARMFORGE_VTD007_REAL_RUNNER_PROBES=1"
-                       "node" "test/flow-examples-timing-test.mjs")
+                       "node" "scripts/run-focused-acceptance.mjs"
+                       "--pack" "flow_graph"
+                       "--focused-task" "unit:test/flow-examples-timing-test.mjs")
         lifecycle (shell/sh "env" "SWARMFORGE_VTD007_REAL_RUNNER_PROBES=1"
-                            "node" "test/headless-chrome-lifecycle-test.mjs")
+                            "node" "scripts/run-focused-acceptance.mjs"
+                            "--pack" "shell"
+                            "--focused-task" "unit:test/headless-chrome-lifecycle-test.mjs")
         evidence (output-evidence (:out unit) "{\"vtd007Acceptance\"" :vtd007Acceptance)
         lifecycle-evidence (output-evidence (:out lifecycle)
                                             "{\"vtd007LifecycleAcceptance\""
@@ -202,7 +206,8 @@
        "if(ids.length!==20)throw new Error('expected 20 runnable packs');"
        "const migration=new Map(['capture','event-library','schemas','defects','shell'].map(x=>[`test/browser-packs/side-panel-${x}.mjs`,'test/side-panel-component-layout-runtime-test.mjs']));"
        "const normalize=x=>{let s=JSON.stringify(x);for(const [a,b]of migration)s=s.replaceAll(a,b);return JSON.parse(s)};"
-       "const identity=p=>p.tasks.map(x=>normalize(verificationTaskIdentity(x))),same=(a,b)=>JSON.stringify(a)===JSON.stringify(b),unique=(xs,k)=>new Set(xs.map(x=>x[k])).size===xs.length;"
+       "const routed=new Set(['test/flow-examples-timing-test.mjs','test/headless-chrome-lifecycle-test.mjs']);"
+       "const identity=p=>p.tasks.map(x=>{const y=normalize(verificationTaskIdentity(x));if(routed.has(y.target)||(y.stage==='acceptance-session'&&['flow_graph','shell'].includes(y.packId)))y.requiredCapabilities=[];return y}),same=(a,b)=>JSON.stringify(a)===JSON.stringify(b),unique=(xs,k)=>new Set(xs.map(x=>x[k])).size===xs.length;"
        "const exact=planVerification(current,{packIds:ids,includeProperties:true}),baseExact=planVerification(base,{packIds:ids,includeProperties:true}),terminal=planVerification(current,{terminalFull:true}),baseTerminal=planVerification(base,{terminalFull:true});"
        "const executions=packs=>normalize({targets:packs.flatMap(p=>(p.browserObservations??[]).map(x=>({packId:p.id,id:x.id,path:x.path,environment:x.environment,features:x.features}))),features:packs.flatMap(p=>(p.features??[]).map(feature=>({packId:p.id,feature}))),handlers:packs.flatMap(p=>(p.handlers??[]).map(handler=>({packId:p.id,handler}))),evidence:packs.flatMap(p=>(p.browserEvidencePartitions??[]).map(x=>({packId:p.id,path:x.path,sessionBatch:x.sessionBatch,originalLeaves:x.originalLeaves,targets:x.targets}))) });"
        "const now=executions(current),prior=executions(base);"

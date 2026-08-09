@@ -35,6 +35,13 @@ function declaredTaskExecutionPrerequisites(pack, target, stage) {
   return matches[0]?.requiredCapabilities ?? defaultTaskExecutionPrerequisites(stage);
 }
 
+function declaredTaskTemporaryPathClass(pack, target, stage) {
+  const declaration = values(pack, "executionPrerequisites")
+    .find(({ path:declaredPath }) => declaredPath === target);
+  return declaration?.temporaryPathClass ??
+    (["browser", "browser-observation"].includes(stage) ? "chrome-short" : "workspace");
+}
+
 export function staticallyResolvableModuleImports(source, importerPath) {
   const sourceFile = ts.createSourceFile(
     importerPath,
@@ -746,9 +753,12 @@ function validateDeclaredTasks(packs) {
   for (const pack of packs) {
     for (const declaration of values(pack, "executionPrerequisites")) {
       if (!declaration || Array.isArray(declaration) ||
-          Object.keys(declaration).sort().join(",") !== "path,requiredCapabilities" ||
+          !["path,requiredCapabilities", "path,requiredCapabilities,temporaryPathClass"]
+            .includes(Object.keys(declaration).sort().join(",")) ||
           typeof declaration.path !== "string" ||
-          !registeredTestPaths.has(declaration.path)) {
+          !registeredTestPaths.has(declaration.path) ||
+          declaration.temporaryPathClass !== undefined &&
+            !["workspace", "chrome-short"].includes(declaration.temporaryPathClass)) {
         throw new Error(`Use an exact registered test execution prerequisite in pack ${pack.id}`);
       }
       validateTaskExecutionPrerequisites({ key:`declared:${declaration.path}`, stage:"unit",
@@ -986,9 +996,11 @@ function commandTask({
   key, stage, packId = null, executable, args, target = null, environment = null,
   logicalTargetIds = undefined, aliasCommands = undefined,
   requiredCapabilities = defaultTaskExecutionPrerequisites(stage),
+  temporaryPathClass = ["browser", "browser-observation"].includes(stage)
+    ? "chrome-short" : "workspace",
 }) {
   const task = { key, stage, packId, executable, args:[...args], target, environment,
-    requiredCapabilities:[...requiredCapabilities] };
+    requiredCapabilities:[...requiredCapabilities], temporaryPathClass };
   if (logicalTargetIds) task.logicalTargetIds = [...logicalTargetIds];
   if (aliasCommands) task.aliasCommands = aliasCommands.map((command) => [...command]);
   return { ...task, display:[executable, ...args].map(displayArgument).join(" ") };
@@ -1027,11 +1039,14 @@ function featureTasks(features, packs) {
   const sessions = packs.map((pack) => {
     const packArtifacts = artifacts.filter(({ feature }) => values(pack, "features").includes(feature));
     if (!packArtifacts.length) return null;
+    const requiredCapabilities = [...new Set(values(pack, "executionPrerequisites")
+      .flatMap((declaration) => declaration.requiredCapabilities ?? []))];
     return commandTask({
       key:`acceptance-session:${pack.id}`, stage:"acceptance-session", packId:pack.id,
       executable:"bb",
       args:["acceptance-pack-runner", pack.id, ...packArtifacts.flatMap(({ generated, ir }) => [generated, ir])],
       target:packArtifacts.map(({ feature }) => feature).join(","),
+      requiredCapabilities,
     });
   }).filter(Boolean);
   return { parser, generator, sessions };
@@ -1278,11 +1293,13 @@ export function planVerification(
   const unitTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) => values(pack, "unit").map((path) => commandTask({
     key:`unit:${path}`, stage:"unit", packId:pack.id, executable:"node", args:[path], target:path,
     requiredCapabilities:declaredTaskExecutionPrerequisites(pack, path, "unit"),
+    temporaryPathClass:declaredTaskTemporaryPathClass(pack, path, "unit"),
   })));
   const propertyTasks = !browserTargetIds.length && (terminalFull || includeProperties)
     ? executionPacks.flatMap((pack) => values(pack, "property").map((path) => commandTask({
       key:`property:${path}`, stage:"property", packId:pack.id, executable:"node", args:[path], target:path,
       requiredCapabilities:declaredTaskExecutionPrerequisites(pack, path, "property"),
+      temporaryPathClass:declaredTaskTemporaryPathClass(pack, path, "property"),
     })))
     : [];
   const observedAdapterPaths = new Set(executionPacks.flatMap((pack) =>
@@ -1296,6 +1313,7 @@ export function planVerification(
       .map((path) => commandTask({
       key:`browser:${path}`, stage:"browser", packId:pack.id, executable:"node", args:[path], target:path,
       requiredCapabilities:declaredTaskExecutionPrerequisites(pack, path, "browser"),
+      temporaryPathClass:declaredTaskTemporaryPathClass(pack, path, "browser"),
     })));
 
   const executionIds = new Set(executionPacks.map(({ id }) => id));

@@ -850,6 +850,21 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
       repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
   }
+  if (causalCategory === "other:registered focused nested production probe") {
+    const fixture = {
+      id:"registered-focused-nested-production-probe-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ browserDependencyKnownBeforeLaunch:true, registeredTask:true },
+      expectedPreRepairFailure:{ launcher:"raw-node", firstTemporaryRoute:"workspace-long" },
+      expectedRepairResult:{ launcher:"focused-task", firstTemporaryRoute:"system-short" },
+    };
+    const preRepairObservation = { launcher:"raw-node", firstTemporaryRoute:"workspace-long" };
+    const repairObservation = { launcher:"focused-task", firstTemporaryRoute:"system-short" };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
+  }
   if (causalCategory === "other:reliability outward diagnostic terminology") {
     const fixture = {
       id:"reliability-outward-diagnostic-terminology-v1", causalCategory,
@@ -2662,6 +2677,34 @@ const focusedShellPlan = selectFocusedVerificationTasks(planVerification(packs, 
 assert.deepEqual(focusedShellPlan.tasks.map(({ key }) => key),
   ["unit:test/verification-process-contract-test.mjs"],
 "the focused delivery path launches the exact registered unit leaf without unrelated work");
+const shortChromeUnitTasks = planVerification(packs, {
+  packIds:["flow_graph", "shell"],
+}).unitTasks.filter(({ target }) => [
+  "test/flow-examples-timing-test.mjs",
+  "test/headless-chrome-lifecycle-test.mjs",
+].includes(target));
+assert.equal(shortChromeUnitTasks.length, 2,
+  "both nested production probes remain registered verification tasks");
+for (const task of shortChromeUnitTasks) {
+  assert.equal(task.temporaryPathClass, "chrome-short",
+    `${task.target} receives its short Chrome route before first launch`);
+  assert.deepEqual(task.requiredCapabilities, ["local-loopback"],
+    `${task.target} declares Chrome socket authority before first launch`);
+  assert.equal(Object.hasOwn(verificationTaskIdentity(task), "temporaryPathClass"), false,
+    `${task.target} routing metadata does not change canonical topology identity`);
+}
+const modularVtd007HandlerSource = await readFile(new URL(
+  "../acceptance/src/acceptance/verification_support/modular_architecture_vtd007_handlers.clj",
+  import.meta.url), "utf8");
+assert.match(modularVtd007HandlerSource,
+  /run-focused-acceptance\.mjs[\s\S]*--focused-task[\s\S]*flow-examples-timing-test\.mjs/u,
+  "the nested Flow production probe enters through the registered focused launcher");
+assert.match(modularVtd007HandlerSource,
+  /run-focused-acceptance\.mjs[\s\S]*--focused-task[\s\S]*headless-chrome-lifecycle-test\.mjs/u,
+  "the nested lifecycle production probe enters through the registered focused launcher");
+assert.doesNotMatch(modularVtd007HandlerSource,
+  /shell\/sh\s+"node"\s+"test\/(?:flow-examples-timing|headless-chrome-lifecycle)-test\.mjs"/u,
+  "the acceptance handler cannot bypass focused routing with a raw registered test command");
 const focusedPropertyPlan = selectFocusedVerificationTasks(planVerification(packs, {
   packIds:["shell"], includeProperties:true,
 }), ["property:test/workspace-tabs-property-test.mjs"]);
@@ -2673,6 +2716,8 @@ const focusedAcceptancePlan = selectFocusedVerificationTasks(planVerification(pa
 }), ["acceptance-session:shell"]);
 assert.equal(focusedAcceptancePlan.tasks[0].key, "build:dist");
 assert.equal(focusedAcceptancePlan.tasks.at(-1).key, "acceptance-session:shell");
+assert.deepEqual(focusedAcceptancePlan.tasks.at(-1).requiredCapabilities, ["local-loopback"],
+  "the acceptance session declares authority required by its nested Chrome production probes");
 assert.ok(focusedAcceptancePlan.parserTasks.length > 0 &&
   focusedAcceptancePlan.parserTasks.length === focusedAcceptancePlan.generatorTasks.length,
 "the focused acceptance session retains only its registered parse and generation prerequisites");
@@ -2959,6 +3004,11 @@ const normalizedVtd006Identity = (task) => {
   for (const [current, previous] of vtd006ProgramMigration) encoded = encoded.replaceAll(current, previous);
   const identity = JSON.parse(encoded);
   if (identity.target === "test/verification-process-contract-test.mjs") {
+    identity.requiredCapabilities = [];
+  }
+  if (["test/flow-examples-timing-test.mjs", "test/headless-chrome-lifecycle-test.mjs"]
+    .includes(identity.target) || identity.stage === "acceptance-session" &&
+      ["flow_graph", "shell"].includes(identity.packId)) {
     identity.requiredCapabilities = [];
   }
   return identity;

@@ -476,7 +476,8 @@ export function createVerificationCommandRunner(context, options = {}) {
     const browserOutputDirectory = ["browser", "browser-observation"].includes(task.stage)
       ? path.join(context.runDirectory, task.key.replaceAll(/[^A-Za-z0-9._-]/gu, "_"))
       : undefined;
-    const taskTempDirectory = ["browser", "browser-observation"].includes(task.stage)
+    const taskTempDirectory = task.temporaryPathClass === "chrome-short" ||
+      ["browser", "browser-observation"].includes(task.stage)
       ? path.join("/tmp", "sf-chrome", context.receipt.runId.slice(0, 8))
       : path.join(context.runDirectory, "system-temp");
     await mkdir(taskTempDirectory, { recursive:true });

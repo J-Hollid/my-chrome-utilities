@@ -2759,6 +2759,15 @@
       "test/data-layer-flow-page-event-model-test.mjs",
       "test/flow-evidence-reporter-test.mjs"
     ],
+    "executionPrerequisites": [
+      {
+        "path": "test/flow-examples-timing-test.mjs",
+        "requiredCapabilities": [
+          "local-loopback"
+        ],
+        "temporaryPathClass": "chrome-short"
+      }
+    ],
     "property": [
       "test/data-layer-flow-graph-property-test.mjs"
     ],
@@ -5633,6 +5642,13 @@
       "test/twatility-brand-foundation-test.mjs"
     ],
     "executionPrerequisites": [
+      {
+        "path": "test/headless-chrome-lifecycle-test.mjs",
+        "requiredCapabilities": [
+          "local-loopback"
+        ],
+        "temporaryPathClass": "chrome-short"
+      },
       {
         "path": "test/verification-process-contract-test.mjs",
         "requiredCapabilities": [
