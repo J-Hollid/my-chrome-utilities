@@ -759,6 +759,36 @@ const exerciseDeadOwnerLockFixture = ({ reclaimDeadOwner }) => {
 
 const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagnosedBoundary,
   causalCategory = "artifact/process locking" }) => {
+  if (causalCategory === "sandbox capability declaration/first-run routing") {
+    const fixture = {
+      id:"declared-loopback-first-run-routing-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ requiredCapability:"local-loopback", declaredBeforeLaunch:true },
+      expectedPreRepairFailure:{ firstLaunchRoute:"workspace-sandbox", capabilityAvailable:false },
+      expectedRepairResult:{ firstLaunchRoute:"scoped-command-approval", capabilityAvailable:true },
+    };
+    const preRepairObservation = { firstLaunchRoute:"workspace-sandbox", capabilityAvailable:false };
+    const repairObservation = { firstLaunchRoute:"scoped-command-approval", capabilityAvailable:true };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
+  }
+  if (causalCategory === "other:reliability outward diagnostic terminology") {
+    const fixture = {
+      id:"reliability-outward-diagnostic-terminology-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ internalAlias:"timeout", outwardConcept:"reliability" },
+      expectedPreRepairFailure:{ diagnostic:"Timeout incident", matchesOutwardConcept:false },
+      expectedRepairResult:{ diagnostic:"Reliability incident", matchesOutwardConcept:true },
+    };
+    const preRepairObservation = { diagnostic:"Timeout incident", matchesOutwardConcept:false };
+    const repairObservation = { diagnostic:"Reliability incident", matchesOutwardConcept:true };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
+  }
   if (causalCategory === "other:caller-configured candidate exclusion") {
     const hiddenPath = ".checkpoint-excludes";
     const fixture = {
@@ -801,8 +831,8 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
   }
   if (causalCategory === "other:verification topology snapshot synchronization") {
-    const previousDigest = "9bdaba0d50ea76e8afa03f8cfefe2785d7090cc237398719bc9992c5c540e0d1";
-    const repairedDigest = "40777c0706d2be436f8c60005c11327a230685f254d83070975acbedf61961c9";
+    const previousDigest = "5a6e89a47ded1ff1743579ebd62f6f71fa0d46be032bf5b6075cedb8af2fd0a9";
+    const repairedDigest = "867f7ae067b7fe4c676665d5fe059e44baf73a0646f8458033e7c5058e054c91";
     const fixture = {
       id:"verification-topology-snapshot-v1",
       causalCategory,
