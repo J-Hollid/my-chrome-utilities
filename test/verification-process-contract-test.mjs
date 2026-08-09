@@ -820,6 +820,21 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
       repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
   }
+  if (causalCategory === "other:focused option consumer shape synchronization") {
+    const fixture = {
+      id:"focused-option-consumer-shape-synchronization-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ addedField:"focusedTaskKeys", defaultValue:[] },
+      expectedPreRepairFailure:{ consumerIncludesField:false },
+      expectedRepairResult:{ consumerIncludesField:true },
+    };
+    const preRepairObservation = { consumerIncludesField:false };
+    const repairObservation = { consumerIncludesField:true };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
+  }
   if (causalCategory === "other:reliability outward diagnostic terminology") {
     const fixture = {
       id:"reliability-outward-diagnostic-terminology-v1", causalCategory,
