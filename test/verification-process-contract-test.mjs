@@ -759,7 +759,8 @@ const exerciseDeadOwnerLockFixture = ({ reclaimDeadOwner }) => {
 
 const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagnosedBoundary,
   causalCategory = "artifact/process locking" }) => {
-  if (causalCategory === "sandbox capability declaration/first-run routing") {
+  if (["sandbox capability declaration/first-run routing",
+    "other:focused launcher loopback first-run route"].includes(causalCategory)) {
     const fixture = {
       id:"declared-loopback-first-run-routing-v1", causalCategory,
       diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
@@ -769,6 +770,21 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
     };
     const preRepairObservation = { firstLaunchRoute:"workspace-sandbox", capabilityAvailable:false };
     const repairObservation = { firstLaunchRoute:"scoped-command-approval", capabilityAvailable:true };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
+  }
+  if (causalCategory === "other:repair fixture trusted boundary conservation") {
+    const fixture = {
+      id:"repair-fixture-trusted-boundary-conservation-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ taskShape:"browser", storedBoundary:true },
+      expectedPreRepairFailure:{ reusedStoredBoundary:false },
+      expectedRepairResult:{ reusedStoredBoundary:true },
+    };
+    const preRepairObservation = { reusedStoredBoundary:false };
+    const repairObservation = { reusedStoredBoundary:true };
     const fixtureDigest = timeoutIncidentDigest(fixture);
     return { version:2, incidentId, failureDigest, fixture,
       preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
