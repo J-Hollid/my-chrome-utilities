@@ -3416,7 +3416,7 @@ delivery checkpoint runs all 20 runnable packs in canonical order followed by
 `node scripts/package.mjs`. Future changes to a domain module use the narrower
 declared ownership above; the broad delivery checkpoint is not a permanent fan-out.
 
-## Verification throughput program — candidate VTD-014 timeout repair gate (2026-08-09)
+## Verification throughput program — candidate VTD-014 unreliable-test repair gate (2026-08-09)
 
 VTD-014 is the only active specification package. It remains a candidate and grants
 no implementation authority until the user explicitly approves the bounded coder
@@ -3424,33 +3424,36 @@ handoff. VTD-008 and VTD-010 through VTD-012 remain inactive.
 
 ### Plain-language outcome
 
-Today a verification command can run for ten minutes, time out, and then disappear
-from the story if an agent tries the unchanged command again and it passes. That is
-particularly expensive during Specification Studio work because the all-20 delivery
-checkpoint is used repeatedly, and the retry can repeat successful work without
-removing the flaky behavior that will slow the next change.
+Today any verification failure can disappear from the story if an agent tries the
+unchanged check again and it passes. A ten-minute timeout is the most expensive
+example, but the same weakness hides short offscreen-control hit-test failures,
+Property Set settling failures, readiness races, cleanup leaks, and other unreliable
+assertions. That is particularly disruptive during Specification Studio work because
+the all-20 delivery checkpoint is used repeatedly.
 
-After this package, a timeout becomes a repair ticket the verification system creates
-automatically. It records exactly what was running and the last progress seen. The
-agent gets one diagnostic retry of only that smallest failed piece. If it passes, the
-system calls it a confirmed flake rather than green. The candidate cannot be handed
-to the next role until someone fixes the cause, adds a quick regression check, and
-proves the repair with focused verification plus one fresh all-20 checkpoint.
+After this package, every failure seen by the canonical verification runner becomes a
+repair ticket the system creates automatically before any unchanged retry. It records
+exactly what failed and the last progress seen. The agent may try only that smallest
+failed piece once without changing the code. If it passes, the system calls it a
+confirmed flake rather than green. The candidate cannot be handed to the next role
+until someone fixes the cause, adds a quick regression check, and proves the repair
+with focused verification plus one fresh all-20 checkpoint.
 
-The tangible benefit is that the team pays the timeout cost once and turns it into a
-permanent fix. A ten-minute artifact-lock, cleanup, readiness, isolation, or runaway
-workload problem cannot remain active merely because the next attempt happened to
-finish.
+The tangible benefit is that the team pays for an unreliable failure once and turns
+it into a permanent fix. An offscreen control, unsettled Property Set, ten-minute
+artifact lock, cleanup race, readiness race, isolation leak, or runaway workload
+cannot remain active merely because the next attempt happened to finish.
 
-### Timeout incident and durable ownership
+### Reliability incident and durable ownership
 
-Only a runner-owned command deadline creates a VTD-014 timeout incident. An explicit
-parent interruption, ordinary assertion failure, nonzero exit, product-readiness
-deadline, DevTools deadline, Chrome startup deadline, Chrome shutdown deadline, and
-profile-cleanup deadline retain their existing distinct identities. If one of those
-inner deadlines is then allowed to reach the outer runner deadline, the incident
-records both the inner progress owner and the outer kill owner rather than relabelling
-the failure.
+Every canonical runner failure creates a provisional VTD-014 reliability incident:
+an explicit failed logical result, assertion failure, nonzero exit, incomplete result,
+spawn failure, output-limit termination, or runner-owned timeout. Explicit parent
+interruption retains its current interrupted identity and does not consume a
+diagnostic retry. Product-readiness, DevTools, Chrome startup, Chrome shutdown,
+profile-cleanup, and runner deadlines remain distinct failure classes. If an inner
+deadline reaches the outer runner deadline, the incident records both owners rather
+than relabelling the failure.
 
 The runner writes each incident atomically to repository-common runtime state that is
 visible from the coder, refactorer, architect, and specifier worktrees. It is not a
@@ -3467,12 +3470,13 @@ The immutable failure record contains:
 - incident id, runner run id, source receipt, created time, and current state;
 - current worktree/role and candidate branch, commit, tree, base, evidence task, and
   affected change-set identity when available;
-- canonical task key and identity, stage, owning pack, structured command, configured
-  outer timeout, termination signal/escalation, duration, and bounded output digests;
+- canonical task key and identity, stage, owning pack, structured command, failure
+  class and normalized fingerprint, exit or termination result, duration, applicable
+  limit, and bounded output digests;
 - artifact input, output, and build identities plus Node, TypeScript, platform,
   execution-load class, worker counts, and plan digest;
-- last process boundary, logical target, phase, monotonic progress time, and bounded
-  last state; and
+- last process boundary, logical target, scenario or generated case when available,
+  phase, assertion site, monotonic progress time, and bounded last state; and
 - the exact diagnostic retry identity and every later repair/resolution transition.
 
 An incident applies only to its candidate lineage. It does not block an unrelated
@@ -3482,20 +3486,23 @@ or rebasing a candidate cannot silently discard it; an explicit lineage transiti
 must preserve the incident until it is resolved or the specifier obtains a separate
 user decision.
 
-### Progress survives an outer kill
+### Failure progress and fingerprints
 
 The command runner persists bounded structured progress as output arrives, not only
 after the child exits. Browser-observation entry points emit process startup, shared
-setup, target start, every VTD-007 phase transition, target result, cleanup, and
-process shutdown. Other multi-boundary verification programs use the same additive
-progress record when they can isolate smaller work; an indivisible leaf identifies
-itself as the active task.
+setup, target start, every VTD-007 phase transition, assertion failure, target result,
+cleanup, and process shutdown. Acceptance, property, and other multi-boundary
+verification programs use the same additive progress record when they can isolate a
+scenario or generated case; an indivisible leaf identifies itself as the active task.
 
 Progress records are monotonic and scoped to the canonical task identity. Unknown,
 duplicate, out-of-order, cross-task, or post-completion progress is diagnostic input
-but cannot forge a passed target. Output truncation retains the last valid bounded
-progress record separately from ordinary stdout and stderr. Therefore SIGTERM or
-SIGKILL at the outer deadline still leaves enough state to select the smallest retry.
+but cannot forge a passed target or case. The normalized fingerprint conserves the
+failure class, target/case identity, phase, assertion site or inner deadline owner,
+and stable diagnostic shape while excluding timestamps, temporary paths, ports, and
+other run noise. Output truncation retains the last valid bounded progress and
+fingerprint separately from ordinary stdout and stderr. Therefore an assertion exit,
+SIGTERM, or SIGKILL still leaves enough state to select and compare the smallest retry.
 
 The captured 2026-08-07 receipt with run id
 `1686032b-39aa-4140-a4db-f4f265e28eb5` becomes a sanitized process-contract fixture.
@@ -3506,22 +3513,41 @@ snapshot, and exclude all five browser targets and all 274 passed tasks from the
 diagnostic retry. The historical fixture proves the contract; it is not retroactively
 an unresolved incident in the new runtime store.
 
+Non-timeout fixtures prove the same process with two currently relevant symptoms.
+One forces an offscreen-control center-point hit-test assertion to fail inside its
+logical browser target; another forces a Property Set workflow to report that its
+rendered or durable state did not settle. Each fixture retains its exact target,
+phase, assertion site, bounded observed geometry or unsettled state, and normalized
+failure fingerprint. Neither is pre-labelled transient. If its unchanged isolated
+retry passes, it is a confirmed flake and remains a repair blocker exactly like a
+timeout that passes on retry.
+
+The mechanism is failure-class neutral. New assertion text, a different product
+area, or a previously unseen infrastructure error does not need a registry entry
+before it can become an incident. Stable structured identities improve isolation;
+when only an indivisible task is available, the complete task is the smallest retry
+and its first failure still cannot be erased.
+
 ### Exactly one unchanged isolated retry
 
-The existing general receipt resume remains available for ordinary non-timeout
-failures. A timeout takes the VTD-014 path instead. The runner permits exactly one
-unchanged diagnostic retry per incident:
+No failed task may enter the existing general receipt resume before VTD-014 records
+its incident. An agent may patch the failure immediately, which invalidates the
+unchanged diagnostic allowance, or may use that allowance once to determine whether
+the unchanged smallest boundary is unreliable. The runner permits at most one such
+retry per incident:
 
-| Failure boundary at timeout | Permitted diagnostic retry |
+| Failure boundary | Permitted diagnostic retry |
 |---|---|
+| A browser assertion fails inside a logical target | only that logical target |
+| A scenario or generated case has a stable executable identity | only that case |
 | A logical target has started | only that logical target, with no compatible siblings |
 | Shared setup failed before any target | only the named setup boundary, with no target workflow |
 | An indivisible non-browser leaf failed | only that exact task |
 | Progress is absent or cannot be trusted | no broad retry; repair the progress contract first |
 
 The diagnostic retry must use the same candidate commit and tree, artifact identities,
-toolchain, execution-load class, canonical task configuration, environment, outer
-timeout, and applicable inner deadlines. It may narrow execution to the isolated
+toolchain, execution-load class, canonical task configuration, environment, and
+applicable limits and inner deadlines. It may narrow execution to the isolated
 boundary but cannot change code, increase a limit, lower concurrency, skip setup
 owned by that boundary, reuse a passing target as proof, or rerun previously passed
 tasks. The retry record links to the original incident before execution starts, so a
@@ -3529,15 +3555,19 @@ crash cannot make the retry allowance reusable.
 
 Exactly one of these blocking classifications is recorded:
 
-- `confirmed-flaky` when the unchanged isolated retry passes;
-- `reproduced-timeout` when the same timeout boundary repeats;
+- `confirmed-flaky` when the unchanged isolated retry passes, regardless of the
+  original failure class;
+- `reproduced-failure` when the same normalized failure fingerprint repeats, with
+  `timeout` retained as a subtype when applicable;
 - `changed-failure` when the retry fails differently; or
 - `diagnostic-contract-failure` when the smallest boundary cannot be selected or its
   identity has changed.
 
 All four remain unresolved. A second unchanged retry, a normal resume that includes
-the timed-out task, or a fresh evidence run intended to evade the incident is
-rejected with the incident id and required repair action.
+any failed task before incident handling, or a fresh evidence run intended to evade
+the incident is rejected with the incident id and required repair action. Patching
+before retry is allowed, but the repair must still satisfy the causal regression and
+fresh-evidence contract below.
 
 ### Causal repair and regression
 
@@ -3545,17 +3575,19 @@ An owning role resolves the incident by changing the candidate and recording a
 bounded repair proposal. When the cause lies outside that role's authority, it sends
 one normal file-based repair note to the appropriate upstream role; it does not send
 the candidate onward as complete. The proposal names the diagnosed boundary and one
-or more causal categories: readiness, cleanup/resource lifecycle, target isolation,
-artifact/process locking, duplicated or unbounded workload, or another explicitly
-testable cause.
+or more causal categories: viewport/visibility/hit testing, readiness or settling,
+cleanup/resource lifecycle, target isolation, artifact/process locking, duplicated
+or unbounded workload, or another explicitly testable cause.
 
 The repair must include a deterministic regression that exercises the cause with an
 injected clock, fake process/resource, bounded fixture, or otherwise short proof. It
 must not sleep for the production timeout. The regression demonstrates the failure
 against the pre-repair behavior or an equivalent forced fixture, and passes on the
-repaired candidate. A changed timeout number, budget, calibration, worker count, or
-environment label alone is not a repair. A limit may change only as part of separate
-specifier-approved measured authority; VTD-014 itself changes no limit.
+repaired candidate. A changed timeout number, added sleep, repeated polling count,
+swallowed assertion, weakened geometry or settling expectation, budget, calibration,
+worker count, or environment label alone is not a repair. A limit may change only as
+part of separate specifier-approved measured authority; VTD-014 itself changes no
+limit or assertion meaning.
 
 Before the closing checkpoint, validation requires a descendant candidate tree,
 the exact changed files, causal explanation, regression identity and result, and a
@@ -3568,9 +3600,9 @@ tree fail closed.
 
 Once the repair proposal passes focused verification, exactly one fresh canonical
 all-20 checkpoint is permitted for that proposal. It reuses no pre-incident or
-diagnostic task result. A new timeout creates its own incident and again requires a
-repair; it cannot be folded into the prior resolution. The package check follows the
-successful all-20 run.
+diagnostic task result. A new failure of any class creates its own incident and again
+requires a repair; it cannot be folded into the prior resolution. The package check
+follows the successful all-20 run.
 
 The successful checkpoint atomically marks the incident resolved and attaches its
 failure digest, diagnostic classification, repair commit/tree, causal category,
@@ -3580,13 +3612,14 @@ the note carries stable identities and digests rather than copying unbounded log
 Evidence verification recomputes those links.
 
 `swarmforge/scripts/swarm_handoff.sh` rejects a `git_handoff` when the sender's
-candidate lineage has an unresolved incident, an unconsumed diagnostic allowance, a
+candidate lineage has an unresolved incident, a retry result awaiting repair, a
 repair proposal awaiting its fresh checkpoint, a missing resolution digest, or a
 resolution not present in current commit-bound evidence. It reports every blocking
-incident id once. `note` handoffs remain usable for repair routing. Downstream roles
-validate the same Git-note resolution without replaying a completed checkpoint, and
-a later timeout in their own verification creates a new incident under their current
-lineage.
+incident id once. An unused diagnostic allowance is invalidated by a causal repair;
+it is never permission to retry repaired code as though unchanged. `note` handoffs
+remain usable for repair routing. Downstream roles validate the same Git-note
+resolution without replaying a completed checkpoint, and a later failure in their
+own verification creates a new incident under their current lineage.
 
 ### Conservation and delivery checkpoint
 
@@ -3594,20 +3627,22 @@ VTD-014 changes shared verification and SwarmForge handoff infrastructure only. 
 changes no `src/` product file, visible or saved product behavior, logical target,
 observation output, assertion leaf, feature or handler owner, pack dependency,
 changed-path production boundary, budget, calibration, timeout value, worker limit,
-shard, or ordinary browser batching. A run without a timeout has the same canonical
-task identities and executes no retry. Ordinary non-timeout receipt resume retains
-its current successful-task reuse.
+shard, or ordinary browser batching. A run without a failure has the same canonical
+task identities and executes no retry. Receipt resume may retain previously passed
+work for diagnosis, but no failed task can become passed without incident
+classification and no final post-repair checkpoint may reuse pre-repair results.
 
-The timeout incident helper and progress/evidence contracts are shared verification
+The reliability incident helper and progress/evidence contracts are shared verification
 infrastructure and declare all 20 runnable packs as their exact consumers. Focused
-process-contract tests use injected clocks and child processes to cover incident
-creation, progress persistence, isolation, single-use retry, every classification,
-tamper/concurrency rejection, causal repair validation, evidence binding, and the
-handoff gate without waiting for a real production timeout.
+process-contract tests use injected clocks, assertion fixtures, and child processes
+to cover incident creation, offscreen hit testing, Property Set settling, progress
+persistence, isolation, single-use retry, every classification, tamper/concurrency
+rejection, causal repair validation, evidence binding, and the handoff gate without
+waiting for a real production timeout.
 
 Because this package changes the runner, evidence gate, shared runtime state, and
 Git handoff gate used by every pack and role, its one-time delivery checkpoint runs
 all 20 runnable packs in canonical order followed by `node scripts/package.mjs`.
-The accepted result must contain no unresolved timeout incident and no reused task.
+The accepted result must contain no unresolved reliability incident and no reused task.
 This broad checkpoint verifies the shared process change; it does not make later
 pack-local changes global.

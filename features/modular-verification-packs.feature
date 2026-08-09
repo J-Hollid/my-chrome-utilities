@@ -1569,44 +1569,51 @@ Feature: Modular verification packs
     And the one-time delivery checkpoint runs all 20 runnable packs in canonical order followed by node scripts/package.mjs
 
   # Modular verification packs 104
-  Scenario: Modular verification packs 104
-    Given a canonical verification command reaches its runner-owned outer deadline
-    And its child emitted bounded structured progress before termination
-    When the runner records the timeout
-    Then one repository-common incident identifies the candidate lineage, canonical task, owning pack, exact timeout, termination result, receipt, artifact, toolchain, last logical target, active phase, and bounded last state
+  Scenario Outline: Modular verification packs 104
+    Given the canonical verification runner manifests <first_failure>
+    When it records the failure before any unchanged retry
+    Then one repository-common reliability incident identifies <smallest_boundary>
+    And it retains the candidate lineage, canonical task, owning pack, failure class, normalized fingerprint, phase, bounded final state, receipt, artifact, and toolchain
     And the incident is visible from coder, refactorer, architect, and specifier worktrees
-    And output truncation or outer SIGKILL cannot remove the last valid progress record
-    And the timed-out task cannot later become passed merely by combining its output with a resumed receipt
+    And the failed result cannot later become passed merely by combining its output with a resumed receipt
+
+    Examples:
+      | first_failure                                  | smallest_boundary                                  |
+      | a runner-owned timeout during target cleanup   | the logical target and cleanup phase               |
+      | an offscreen control hit-test assertion        | the logical browser target and assertion site      |
+      | a Property Set settling assertion              | the executable target or case and unsettled state  |
+      | an indivisible task assertion or nonzero exit  | the canonical task and diagnostic fingerprint      |
 
   # Modular verification packs 105
   Scenario Outline: Modular verification packs 105
-    Given a timeout's last trusted boundary is <failure_boundary>
-    When the incident grants its one unchanged diagnostic retry
+    Given a reliability incident's last trusted boundary is <failure_boundary>
+    When the agent uses its one unchanged diagnostic retry
     Then it executes <retry_scope>
     And no previously passing task or compatible sibling target executes
-    And the candidate tree, artifact, toolchain, execution-load class, task configuration, environment, outer timeout, and applicable inner deadlines are unchanged
+    And the candidate tree, artifact, toolchain, execution-load class, task configuration, environment, and applicable limits are unchanged
 
     Examples:
-      | failure_boundary                         | retry_scope                                                    |
-      | target TARGET-A in phase persistence     | TARGET-A only                                                   |
-      | shared artifact setup before any target  | the artifact setup boundary only and no target workflow         |
-      | an indivisible non-browser task          | that exact task                                                 |
-      | absent, invalid, or ambiguous progress   | no retry until the progress contract is repaired                |
+      | failure_boundary                                      | retry_scope                                             |
+      | an assertion inside logical target TARGET-A           | TARGET-A only                                           |
+      | an executable scenario or generated case              | that case only                                          |
+      | shared artifact setup before any target                | the setup boundary only and no target workflow          |
+      | an indivisible non-browser task                        | that exact task                                         |
+      | absent, invalid, or ambiguous progress                 | no retry until the progress contract is repaired        |
 
   # Modular verification packs 106
   Scenario Outline: Modular verification packs 106
-    Given a timeout incident has not used its diagnostic retry
+    Given a reliability incident has not used its diagnostic retry
     When the unchanged isolated retry <retry_outcome>
     Then the incident classification is <classification>
     And it remains unresolved and blocks evidence and Git handoff
-    And another unchanged retry or a normal resume containing the timed-out task is rejected
+    And another unchanged retry or a normal resume containing the failed task is rejected
 
     Examples:
-      | retry_outcome                              | classification              |
-      | passes                                     | confirmed-flaky             |
-      | reaches the same timeout boundary          | reproduced-timeout          |
-      | fails at another boundary                  | changed-failure             |
-      | cannot conserve the isolated identity      | diagnostic-contract-failure |
+      | retry_outcome                                  | classification              |
+      | passes                                         | confirmed-flaky             |
+      | repeats the same normalized failure            | reproduced-failure          |
+      | fails with another fingerprint                 | changed-failure             |
+      | cannot conserve the isolated identity          | diagnostic-contract-failure |
 
   # Modular verification packs 107
   Scenario: Modular verification packs 107
@@ -1619,22 +1626,31 @@ Feature: Modular verification packs
     And the fixture does not create a retroactive live incident in repository-common state
 
   # Modular verification packs 108
-  Scenario Outline: Modular verification packs 108
-    Given a timeout incident has a proposed repair with <repair_evidence>
+  Scenario: Modular verification packs 108
+    Given one fixture forces an offscreen control hit-test failure and another forces a Property Set settling failure
+    When each exact failed boundary passes on its one unchanged isolated retry
+    Then both incidents are classified confirmed-flaky without requiring a pre-registered failure message
+    And each retains its target or case, phase, assertion site, normalized fingerprint, and bounded observed geometry or unsettled state
+    And neither passing retry supplies handoff evidence
+    And both require a causal repair and deterministic regression
+
+  # Modular verification packs 109
+  Scenario Outline: Modular verification packs 109
+    Given a reliability incident has a proposed repair with <repair_evidence>
     When the resolution gate validates the proposal
     Then the proposal is <outcome>
 
     Examples:
-      | repair_evidence                                                                    | outcome                                                                    |
-      | descendant code, a causal regression, and fresh focused verification               | eligible for one fresh all-pack checkpoint                                 |
-      | only a larger timeout, budget, calibration, worker count, or environment label     | rejected as a limit-only change                                             |
-      | a verbal explanation without a deterministic causal regression                      | rejected as unproven                                                        |
-      | reused focused results or results from the pre-repair tree                           | rejected as stale                                                           |
-      | no changed candidate or an unrelated change                                         | rejected as non-causal                                                      |
+      | repair_evidence                                                                                             | outcome                                      |
+      | descendant code, a causal regression, and fresh focused verification                                        | eligible for one fresh all-pack checkpoint   |
+      | only a larger timeout, added sleep, repeated polling count, or weakened assertion                           | rejected as symptom suppression               |
+      | only a budget, calibration, worker count, or environment label                                               | rejected as a limit-only change                |
+      | a verbal explanation without a deterministic causal regression                                               | rejected as unproven                           |
+      | reused focused results, pre-repair results, no changed candidate, or an unrelated change                     | rejected as stale or non-causal                |
 
-  # Modular verification packs 109
-  Scenario: Modular verification packs 109
-    Given timeout incidents and their state transitions are written concurrently
+  # Modular verification packs 110
+  Scenario: Modular verification packs 110
+    Given reliability incidents and their state transitions are written concurrently
     When repository-common incident state is loaded for evidence or handoff
     Then every stable incident id and immutable failure digest is retained exactly once
     And atomic state transitions cannot overwrite another writer
@@ -1642,23 +1658,24 @@ Feature: Modular verification packs
     And an unrelated candidate lineage is not blocked
     And abandoning or rebasing the affected lineage cannot discard its unresolved incident without a separate specifier-approved user decision
 
-  # Modular verification packs 110
-  Scenario: Modular verification packs 110
-    Given a causal timeout repair and its fresh focused regression have passed
-    When one fresh canonical all-20 checkpoint and node scripts/package.mjs pass without reused tasks or another timeout
-    Then the incident resolution binds its failure, diagnostic, repair commit and tree, causal category, regression, focused receipt, checkpoint receipt, and digests into commit-bound verification evidence
-    And Git-note verification recomputes every resolution link
-    And the current candidate lineage has no unresolved incident or unused diagnostic allowance
-    And git_handoff is permitted while repair note handoffs remained available throughout the blocked state
-    And a later timeout in a downstream role creates a new incident rather than reopening or hiding the resolved one
-
   # Modular verification packs 111
   Scenario: Modular verification packs 111
-    Given VTD-014 changes shared timeout, evidence, and handoff infrastructure for all 20 runnable packs
-    When a verification run completes without a runner-owned timeout
+    Given a causal reliability repair and its fresh focused regression have passed
+    When one fresh canonical all-20 checkpoint and node scripts/package.mjs pass without reused tasks or another failure
+    Then the incident resolution binds its failure, diagnostic, repair commit and tree, causal category, regression, focused receipt, checkpoint receipt, and digests into commit-bound verification evidence
+    And Git-note verification recomputes every resolution link
+    And the current candidate lineage has no unresolved incident or retry result awaiting repair
+    And git_handoff is permitted while repair note handoffs remained available throughout the blocked state
+    And a later failure in a downstream role creates a new incident rather than reopening or hiding the resolved one
+
+  # Modular verification packs 112
+  Scenario: Modular verification packs 112
+    Given VTD-014 changes shared reliability, evidence, and handoff infrastructure for all 20 runnable packs
+    When a verification run completes without a failure
     Then its exact task identities, logical targets, observations, assertion leaves, batching, budgets, calibrations, worker limits, shards, and package check are unchanged
     And no diagnostic retry executes
-    And ordinary non-timeout receipt resume retains its current successful-task reuse
+    And previously passing work may be reused for diagnosis but no failed result can bypass incident classification
+    And no final post-repair checkpoint reuses a pre-repair result
     And no src product file, product behavior, saved value, accessibility result, feature owner, handler owner, pack dependency, target budget, calibration, worker limit, or shard changes
     And production impact boundaries are unchanged
     And the one-time delivery checkpoint runs all 20 runnable packs in canonical order followed by node scripts/package.mjs
