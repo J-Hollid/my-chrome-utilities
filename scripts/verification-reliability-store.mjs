@@ -274,7 +274,7 @@ export function createTimeoutIncidentStore({
         throw new Error("Reliability failure requires a class and normalized fingerprint");
       }
       const id = stableIncidentId(randomId());
-      const scoped = (() => {
+      const scoped = failure.failureClass.endsWith("contract-failure") ? undefined : (() => {
         try { return diagnosticRetryScope({ task:failure.task,
           lastProgress:failure.failedBoundary ?? failure.lastProgress }); }
         catch { return undefined; }
@@ -317,8 +317,12 @@ export function createTimeoutIncidentStore({
         const packageDocument = await archivedReceiptDocument(
           path.join(directory, incident.resolution.archive.packageReceipt));
         const packageBytes = await safeStoreFile(path.join(directory, incident.resolution.archive.packageZip));
-        const canonical = await canonicalCheckpointValidator({ document:checkpointDocument, incident, root });
-        validatePackageReceipt(packageDocument, checkpointDocument, incident);
+        const canonical = await canonicalCheckpointValidator({
+          document:checkpointDocument, incident, root, allowLegacySeparatePackage:true,
+        });
+        validatePackageReceipt(packageDocument, checkpointDocument, incident, {
+          allowLegacyPrerequisites:true,
+        });
         if (canonical.receipt.runId !== incident.resolution.checkpoint.runId ||
             checkpointDocument.sha256 !== incident.resolution.checkpoint.receiptSha256 ||
             packageDocument.sha256 !== incident.resolution.package.receiptSha256 ||

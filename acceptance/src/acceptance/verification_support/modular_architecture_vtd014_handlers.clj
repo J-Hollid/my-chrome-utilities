@@ -27,6 +27,20 @@
 (defn- evidence-value [mapping key]
   (or (get mapping key) (get mapping (keyword key))))
 
+(defn- row-value [world path row field]
+  (get-in world (into [:vtd014/evidence] (concat path [row field]))))
+
+(def ^:private promotion-scope-keys
+  {"receipt finalization only" "receipt-finalization"
+   "pending evidence creation only" "pending-evidence"
+   "Git-note recording only" "git-note-recording"
+   "handoff eligibility checking only" "handoff-eligibility"})
+
+(def ^:private prerequisite-routes
+  {"the workspace sandbox cannot bind" "scoped-command-approval"
+   "the workspace sandbox is sufficient" "workspace-sandbox"
+   "scoped approval is denied" "blocked"})
+
 (defn- non-timeout-fixtures [world]
   (vals (or (get-in world [:vtd014/evidence :nonTimeoutFixtures])
             (get-in world [:vtd014/evidence :non-timeout-fixtures]))))
@@ -62,7 +76,7 @@
    "reused focused results, pre-repair results, no changed candidate, or an unrelated change"
    "rejected as stale or non-causal"})
 
-(defn handlers [{:keys [example-values]}]
+(defn- incident-handlers [example-values]
   [{:pattern #"^the canonical verification runner manifests (.+)$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/first-failure
@@ -195,8 +209,10 @@
                (assert! world (and (true? (get-in world [:vtd014/evidence :repair :unprovenRejected]))
                                    (every? #(= "unresolved" (:state %))
                                            (non-timeout-fixtures world)))
-                        "A non-timeout flake bypassed causal repair."))}
+                        "A non-timeout flake bypassed causal repair."))}])
 
+(defn- repair-handlers [example-values]
+  [
    {:pattern #"^a reliability incident has a proposed repair with (.+)$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/repair-evidence
@@ -223,8 +239,10 @@
                                  (and (:staleRejected repair) (:unrelatedRejected repair))
                                  false)]
                  (assert! world (and (= (repair-outcomes repair-evidence) outcome) observed?)
-                          "Reliability causal repair gate accepted the wrong proposal class.")))}
+                          "Reliability causal repair gate accepted the wrong proposal class.")))}])
 
+(defn- store-handlers [_example-values]
+  [
    {:pattern #"^reliability incidents and their state transitions are written concurrently$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^repository-common incident state is loaded for evidence or handoff$"
@@ -258,8 +276,10 @@
                                                     :abandonmentDecisionRequired
                                                     :abandonmentReleased
                                                     :abandonedReuseRejected) lineage))
-                          "An affected lineage discarded its unresolved incident.")))}
+                          "An affected lineage discarded its unresolved incident.")))}])
 
+(defn- resolution-handlers [_example-values]
+  [
    {:pattern #"^a causal reliability repair and its fresh focused regression have passed$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^one fresh canonical all-20 checkpoint and node scripts/package.mjs pass without reused tasks or another failure$"
@@ -293,7 +313,219 @@
    {:pattern #"^a later failure in a downstream role creates a new incident rather than reopening or hiding the resolved one$"
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd014/evidence :resolution :downstreamIncidentDistinct]))
-                        "A later failure reused the resolved incident identity."))}
+                        "A later failure reused the resolved incident identity."))}])
+
+(defn- prerequisite-handlers [example-values]
+  [
+   {:pattern #"^canonical task (.+) declares (.+)$"
+    :handler (fn [world example captures]
+               (let [[task access] (values example-values example captures)]
+                 (assoc (prepared world) :vtd014/prerequisite-row {:task task :access access})))}
+   {:pattern #"^its current agent environment is (.+)$"
+    :handler (fn [world example captures]
+               (assoc-in world [:vtd014/prerequisite-row :sandbox]
+                         (first (values example-values example captures))))}
+   {:pattern #"^execution prerequisites are resolved before the first task process is launched$"
+    :handler (fn [world _ _]
+               (assert! world (every? true? ((juxt :approvedFirstLaunch :workspaceNarrow
+                                                    :deniedBeforeLaunch)
+                                              (get-in world [:vtd014/evidence :execution :prerequisites])))
+                        "Execution prerequisites were not resolved before launch."))}
+   {:pattern #"^the first-run action is (.+)$"
+    :handler (fn [world example captures]
+               (let [expected (first (values example-values example captures))
+                     sandbox (get-in world [:vtd014/prerequisite-row :sandbox])
+                     row (get-in world [:vtd014/evidence :execution :prerequisites :rows sandbox])]
+                 (assert! world (and (= expected (:firstRunAction row))
+                                     (= (prerequisite-routes sandbox) (:route row)))
+                          "The declared first-run route was not used.")))}
+   {:pattern #"^the launch result is (.+)$"
+    :handler (fn [world example captures]
+               (let [expected (first (values example-values example captures))
+                     sandbox (get-in world [:vtd014/prerequisite-row :sandbox])
+                     row (get-in world [:vtd014/evidence :execution :prerequisites :rows sandbox])
+                     expected-count (if (= "scoped approval is denied" sandbox) 0 1)]
+                 (assert! world (and (= expected (:launchResult row))
+                                     (= expected-count (:launchCount row)))
+                          "The prerequisite launch result was not enforced.")))}
+   {:pattern #"^no known-incompatible trial run or unchanged reliability retry occurs$"
+    :handler (fn [world _ _]
+               (let [sandbox (get-in world [:vtd014/prerequisite-row :sandbox])]
+                 (assert! world (zero? (row-value world [:execution :prerequisites :rows]
+                                                  sandbox :trialRunCount))
+                        "A predictable sandbox trial run occurred.")))}
+   {:pattern #"^no task inherits unrelated access from another task in its pack$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :prerequisites :workspaceNarrow]))
+                        "A workspace task inherited unrelated access."))}
+
+   {:pattern #"^a canonical task is declared workspace-only but an injected loopback bind reports a sandbox permission denial after preflight$"
+    :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^VTD-014 handles the unexpected restriction$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :restriction :environmentContractFailure]))
+                        "The unexpected sandbox restriction was not classified."))}
+   {:pattern #"^it creates an environment-contract-failure incident at the execution-prerequisite boundary$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :restriction :environmentContractFailure]))
+                        "No execution-contract incident was created."))}
+   {:pattern #"^the incident retains the task, structured operation, capability, error code, sandbox route, and candidate lineage$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :restriction :retainedContract]))
+                        "The execution-contract incident lost required identity."))}
+   {:pattern #"^no unchanged retry is permitted and Git handoff remains blocked$"
+    :handler (fn [world _ _]
+               (assert! world (false? (get-in world [:vtd014/evidence :execution
+                                                      :restriction :retryPermitted]))
+                        "An execution-contract failure admitted an unchanged retry."))}
+   {:pattern #"^resolution requires a narrow declaration or first-run routing repair, a deterministic preflight regression, and fresh focused verification$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :restriction :narrowRepairRequired]))
+                        "Execution-contract repair requirements were incomplete."))}
+   {:pattern #"^the repair cannot resolve an assertion, readiness, settling, hit-test, or timeout incident$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :restriction :wrongIncidentRepairRejected]))
+                        "A capability repair relabelled another incident class."))}
+   {:pattern #"^the next planned invocation arranges the declared capability before launching the task$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :restriction :nextInvocationRouted]))
+                        "The repaired invocation did not arrange access before launch."))}
+   {:pattern #"^missing, unknown, contradictory, or catch-all capability declarations fail plan validation$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :prerequisites :declarationsFailClosed]))
+                        "Invalid capability declarations did not fail closed."))}
+   {:pattern #"^explicit approval, unrelated host restrictions, and public-network denial remain unchanged$"
+    :handler (fn [world _ _]
+               (let [restriction (get-in world [:vtd014/evidence :execution :restriction])]
+                 (assert! world (every? true? ((juxt :explicitApprovalUnchanged
+                                                    :unrelatedRestrictionsDenied
+                                                    :publicNetworkDenied) restriction))
+                          "Capability metadata widened privilege policy.")))}])
+
+(defn- checkpoint-handlers [example-values]
+  [
+   {:pattern #"^an all-pack checkpoint preflight finds (.+)$"
+    :handler (fn [world example captures]
+               (assoc (prepared world) :vtd014/preflight-state
+                      (first (values example-values example captures))))}
+   {:pattern #"^it resolves the state before checkpoint task timing begins$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :checkpoint :singleton]))
+                        "Checkpoint state was not resolved before task timing."))}
+   {:pattern #"^its action is (.+)$"
+    :handler (fn [world example captures]
+               (let [expected (first (values example-values example captures))
+                     state (:vtd014/preflight-state world)]
+                 (assert! world (and (= expected (row-value world [:execution :checkpoint :preflightRows]
+                                                            state :action))
+                                     (true? (row-value world [:execution :checkpoint :preflightRows]
+                                                       state :observed)))
+                          "Checkpoint preflight action was not bounded.")))}
+   {:pattern #"^(the planned tasks may launch|no second all-pack process launches|no checkpoint task launches|tasks launch only after lease recovery completes)$"
+    :handler (fn [world _ captures]
+               (let [expected (first captures) state (:vtd014/preflight-state world)]
+                 (assert! world (= expected (row-value world [:execution :checkpoint :preflightRows]
+                                                       state :taskExecution))
+                          "Checkpoint task launch did not honor the singleton lease.")))}
+   {:pattern #"^<task_execution>$"
+    :handler (fn [world _ _]
+               (prepared world))}
+   {:pattern #"^no duplicate checkpoint receipt is created$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :checkpoint :singleton]))
+                        "A duplicate checkpoint receipt was created."))}
+
+   {:pattern #"^one immutable post-repair checkpoint attempt has durably passed some tasks and is externally interrupted during another task$"
+    :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^the exact candidate, plan, artifact, toolchain, environment class, and capability routes restart verification$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :checkpoint :continuation]))
+                        "The exact checkpoint attempt was not continued."))}
+   {:pattern #"^(?:the runner automatically discovers the one compatible incomplete attempt without a supplied receipt path|it retains the same attempt identity and reuses only its durably passed tasks and logical targets|it runs only the interrupted and unstarted boundaries|continuation consumes no unchanged diagnostic retry and creates no duplicate receipt|no result from a pre-repair tree, another attempt, or another environment class is reused)$"
+    :handler (fn [world _ _]
+               (let [checkpoint (get-in world [:vtd014/evidence :execution :checkpoint])]
+                 (assert! world (every? true? ((juxt :continuation :reusedOnlyPassed
+                                                    :interruptedAndUnstartedOnly
+                                                    :identityDriftRejected) checkpoint))
+                          "Checkpoint continuation evidence is incomplete.")))}
+   {:pattern #"^ambiguous, tampered, or identity-mismatched recovery state blocks with a diagnostic instead of silently running all packs again$"
+    :handler (fn [world _ _]
+               (assert! world (every? true? (vals (get-in world [:vtd014/evidence :execution
+                                                                 :checkpoint :forgedAttemptRejected])))
+                        "A recomputed forged checkpoint attempt was accepted."))}
+
+   {:pattern #"^every planned task including packaging has passed in one immutable attempt and its exact results are durable$"
+    :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^(.+) prevents handoff readiness$"
+    :handler (fn [world example captures]
+               (assoc world :vtd014/promotion-failure
+                      (first (values example-values example captures))))}
+   {:pattern #"^recovery retries (.+)$"
+    :handler (fn [world example captures]
+               (let [expected (first (values example-values example captures))
+                     failure (:vtd014/promotion-failure world)
+                     observed (get-in world [:vtd014/evidence :execution :checkpoint
+                                             :promotionScopes failure])]
+                 (assert! world (= (promotion-scope-keys expected) observed)
+                          "Promotion recovery reran verification work.")))}
+   {:pattern #"^no unit, property, acceptance, browser, checkpoint, or package task executes again$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :checkpoint :promotionOnly]))
+                        "Promotion recovery executed a completed task."))}
+   {:pattern #"^a duplicate all-pack invocation is rejected with the recoverable attempt identity$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :checkpoint :promotionOnly]))
+                        "A completed attempt admitted duplicate execution."))}
+   {:pattern #"^changed candidate, artifact, plan, registry, or toolchain identity instead requires genuinely fresh verification$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :checkpoint :identityDriftRejected]))
+                        "Changed checkpoint identity reused prior results."))}
+
+   {:pattern #"^a checkpoint attempt has completed one stage with immutable identities$"
+    :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^(.+) occurs before the next stage$"
+    :handler (fn [world example captures]
+               (assoc world :vtd014/checkpoint-drift
+                      (first (values example-values example captures))))}
+   {:pattern #"^(?:the attempt stops before another child process launches|passed results are retained for diagnosis but cannot be mixed with the changed identity|no automatic fresh all-pack attempt begins|an unexpected tracked-file write by a verification task creates an execution-contract incident)$"
+    :handler (fn [world _ _]
+               (let [row (get-in world [:vtd014/evidence :execution :checkpoint :driftRows
+                                        (:vtd014/checkpoint-drift world)])]
+                 (assert! world (every? true? ((juxt :stoppedBeforeLaunch :retainedForDiagnosis
+                                                    :noFreshAttempt :executionContractIncident) row))
+                          "Checkpoint identity drift did not fail closed.")))}])
+
+(defn- shared-boundary-handlers [example-values]
+  [
+   {:pattern #"^a SwarmForge role runs (.+) for delivery$"
+    :handler (fn [world example captures]
+               (assoc (prepared world) :vtd014/verification-kind
+                      (first (values example-values example captures))))}
+   {:pattern #"^the registered task manifests a failure$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :sharedBoundary :incidentAware]))
+                        "The registered failure bypassed the incident boundary."))}
+   {:pattern #"^(?:the shared incident-aware execution boundary records it before any unchanged rerun|the same isolation, classification, causal repair, regression, and resolution rules apply|a raw direct diagnostic rerun cannot provide passing evidence or Git handoff eligibility|the closing all-pack checkpoint cannot start while the candidate lineage owns the unresolved focused incident)$"
+    :handler (fn [world _ _]
+               (let [boundary (get-in world [:vtd014/evidence :execution :sharedBoundary])]
+                 (assert! world (and (:incidentAware boundary) (:rawDiagnosticIneligible boundary)
+                                     (= 6 (count (:focusedKinds boundary))))
+                          "A delivery verification path bypassed shared incident handling.")))}
 
    {:pattern #"^VTD-014 changes shared reliability, evidence, and handoff infrastructure for all 20 runnable packs$"
     :handler (fn [world _ _] (prepared world))}
@@ -317,3 +549,12 @@
                                      (= 20 (:allPackCount conservation))
                                      (= "scripts/package.mjs" (:packageTask conservation)))
                         "VTD-014 conservation evidence is incomplete.")))}])
+
+(defn handlers [{:keys [example-values]}]
+  (vec (concat (incident-handlers example-values)
+               (repair-handlers example-values)
+               (store-handlers example-values)
+               (resolution-handlers example-values)
+               (prerequisite-handlers example-values)
+               (checkpoint-handlers example-values)
+               (shared-boundary-handlers example-values))))

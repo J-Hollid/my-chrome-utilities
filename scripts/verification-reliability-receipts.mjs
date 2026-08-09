@@ -38,7 +38,9 @@ export function freshPassingReceipt(document, candidate, description) {
   return tasks;
 }
 
-export async function defaultCanonicalCheckpointValidator({ document, incident, root }) {
+export async function defaultCanonicalCheckpointValidator({
+  document, incident, root, allowLegacySeparatePackage = false,
+}) {
   const { validateCanonicalVerificationCheckpoint } = await import("./verification-evidence.mjs");
   return validateCanonicalVerificationCheckpoint({
     receiptPath:path.resolve(root, document.path),
@@ -48,6 +50,7 @@ export async function defaultCanonicalCheckpointValidator({ document, incident, 
     evidenceTask:incident.repair.checkpoint.evidenceTask,
     packIds:timeoutRepairPackIds,
     repositoryRoot:root,
+    allowLegacySeparatePackage,
   });
 }
 
@@ -62,9 +65,12 @@ export async function defaultCanonicalRepairTaskIdentities() {
 export const timeoutRepairPackageTaskIdentity = Object.freeze({
   key:"package:extension", stage:"package", packId:null, executable:"node",
   args:["scripts/package.mjs"], target:"build/package/my-chrome-utilities.zip", environment:null,
+  requiredCapabilities:[],
 });
 
-export function validatePackageReceipt(document, checkpointDocument, incident) {
+export function validatePackageReceipt(
+  document, checkpointDocument, incident, { allowLegacyPrerequisites = false } = {},
+) {
   const receipt = document.receipt;
   const entries = Object.entries(receipt.tasks);
   const [key, result] = entries[0] ?? [];
@@ -78,8 +84,13 @@ export function validatePackageReceipt(document, checkpointDocument, incident) {
       packageStartedAt < checkpointCompletedAt ||
       entries.length !== 1 || key !== timeoutRepairPackageTaskIdentity.key || result.status !== "passed" ||
       result.provenance !== "fresh" || !Number.isFinite(result.durationMs) ||
-      JSON.stringify(normalized(result.identity)) !==
-        JSON.stringify(normalized(timeoutRepairPackageTaskIdentity)) ||
+      ![timeoutRepairPackageTaskIdentity,
+        ...(allowLegacyPrerequisites ? [Object.fromEntries(
+          Object.entries(timeoutRepairPackageTaskIdentity)
+            .filter(([field]) => field !== "requiredCapabilities"),
+        )] : []),
+      ].some((identity) => JSON.stringify(normalized(result.identity)) ===
+        JSON.stringify(normalized(identity))) ||
       result.output?.trim() !== timeoutRepairPackageTaskIdentity.target) {
     throw new Error("Resolution requires a runner-owned package command receipt after the checkpoint");
   }

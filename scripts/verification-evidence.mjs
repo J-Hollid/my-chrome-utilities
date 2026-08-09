@@ -13,8 +13,13 @@ import {
 } from "./verification-changes.mjs";
 import { planVerification, verificationTaskIdentity } from "./verification-packs.mjs";
 import {
+  createCheckpointAttemptStore,
+  defaultCheckpointAttemptDirectory,
+} from "./verification-checkpoint-attempt.mjs";
+import {
   assertNoBlockingTimeoutIncidents,
   createTimeoutIncidentStore,
+  timeoutRepairPackageTaskIdentity,
 } from "./verification-reliability-incidents.mjs";
 
 const repository = fileURLToPath(new URL("../", import.meta.url));
@@ -180,7 +185,15 @@ function planDocument(plan) {
   };
 }
 
-async function canonicalPlanDocument({ commit, baseCommit, changeSet, packIds, repositoryRoot }) {
+function withEvidencePackageTask(plan) {
+  const task = structuredClone(timeoutRepairPackageTaskIdentity);
+  return { ...plan, tasks:[...plan.tasks, task], packageTasks:[task],
+    stages:{ ...plan.stages, package:[] } };
+}
+
+async function canonicalPlanDocument({
+  commit, baseCommit, changeSet, packIds, repositoryRoot, includePackage = true,
+}) {
   const candidatePacks = await verificationPacksAtCommit(commit, { repositoryRoot });
   let basePacks;
   let historicalRegistryFallback = false;
@@ -189,31 +202,38 @@ async function canonicalPlanDocument({ commit, baseCommit, changeSet, packIds, r
   } catch {
     historicalRegistryFallback = true;
   }
-  return planDocument(planVerification(candidatePacks, {
+  const plan = planVerification(candidatePacks, {
     packIds,
     changedPaths:changeSet.paths,
     includeProperties:true,
     changeSet,
     basePacks,
     historicalRegistryFallback,
-  }));
+  });
+  return planDocument(includePackage ? withEvidencePackageTask(plan) : plan);
 }
 
 export async function validateCanonicalVerificationCheckpoint({
   receiptPath, commit, tree, baseCommit, evidenceTask, packIds, repositoryRoot = repository,
+  allowLegacySeparatePackage = false,
 } = {}) {
   const changeSet = await canonicalVerificationChangeSet({ base:baseCommit, commit, repositoryRoot });
+  const receipt = JSON.parse(await readFile(receiptPath, "utf8"));
+  const legacySeparatePackage = allowLegacySeparatePackage &&
+    !receipt.tasks?.[timeoutRepairPackageTaskIdentity.key];
   const plan = await canonicalPlanDocument({
     commit, baseCommit, changeSet, packIds:sortedUnique(packIds ?? []), repositoryRoot,
+    includePackage:!legacySeparatePackage,
   });
-  const receipt = JSON.parse(await readFile(receiptPath, "utf8"));
   if (receipt.candidate?.commit !== commit || receipt.candidate?.tree !== tree ||
       receipt.candidate?.baseCommit !== baseCommit ||
       receipt.candidate?.evidenceTask !== evidenceTask ||
       receipt.candidate?.changeSetDigest !== verificationDigest(changeSet)) {
     throw new Error("Canonical checkpoint candidate, base, task, or change set is not bound to the repair");
   }
-  const parsed = await parsedReceipt(receiptPath, plan);
+  const parsed = await parsedReceipt(receiptPath, plan, {
+    allowLegacyPrerequisites:legacySeparatePackage,
+  });
   const results = Object.values(receipt.tasks);
   if (results.some((result) => result.provenance !== "fresh" || result.reliabilityIncidentId ||
       result.timeoutIncidentId ||
@@ -231,7 +251,7 @@ async function assertCanonicalPlan(recordPlan, details) {
   return canonical;
 }
 
-async function parsedReceipt(receiptPath, plan) {
+async function parsedReceipt(receiptPath, plan, { allowLegacyPrerequisites = false } = {}) {
   if (!receiptPath) throw new Error("Provide the verification receipt produced by this run");
   const bytes = await readFile(receiptPath);
   let receipt;
@@ -245,6 +265,26 @@ async function parsedReceipt(receiptPath, plan) {
   }
   const environment = receiptEnvironment(receipt.environment);
   const receiptArtifact = artifactIdentity(receipt.artifact);
+  const legacyPrerequisites = allowLegacyPrerequisites &&
+    !Array.isArray(receipt.plan?.executionPrerequisites);
+  const prerequisiteRows = legacyPrerequisites
+    ? plan.tasks.map((task) => ({ key:task.key, requiredCapabilities:[], route:"workspace-sandbox" }))
+    : receipt.plan?.executionPrerequisites;
+  const expectedPrerequisiteKeys = plan.tasks.map(({ key }) => key).sort();
+  if (!Array.isArray(prerequisiteRows) ||
+      !same(prerequisiteRows.map(({ key }) => key).sort(), expectedPrerequisiteKeys)) {
+    throw new Error("Verification receipt execution prerequisites do not cover the exact task plan");
+  }
+  for (const task of plan.tasks) {
+    const identity = verificationTaskIdentity(task);
+    const row = prerequisiteRows.find(({ key }) => key === task.key);
+    const workspaceOnly = identity.requiredCapabilities.length === 0;
+    if (!row || !legacyPrerequisites && !same(row.requiredCapabilities, identity.requiredCapabilities) ||
+        typeof row.route !== "string" || !row.route || row.route === "blocked" ||
+        !legacyPrerequisites && workspaceOnly !== (row.route === "workspace-sandbox")) {
+      throw new Error(`Verification receipt has an invalid execution route for ${task.key}`);
+    }
+  }
   const expectedPlanSummary = {
     mode:plan.mode,
     requestedPackIds:plan.requestedPackIds,
@@ -253,6 +293,8 @@ async function parsedReceipt(receiptPath, plan) {
     changedBoundaries:plan.changedBoundaries,
     changeSetDigest:verificationDigest(plan.changeSet),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
+    ...(!legacyPrerequisites ? { executionPrerequisites:plan.tasks.map((task) =>
+      prerequisiteRows.find(({ key }) => key === task.key)) } : {}),
   };
   if (!same(receipt.plan, expectedPlanSummary)) {
     throw new Error("Verification receipt plan selection summary does not match the executed plan");
@@ -268,10 +310,20 @@ async function parsedReceipt(receiptPath, plan) {
   for (const [key, identity] of expected) {
     const result = receipt.tasks[key];
     if (result?.status !== "passed") throw new Error(`Required verification task did not pass: ${key}`);
-    if (!same(result.identity, identity)) throw new Error(`Receipt task identity does not match the plan: ${key}`);
+    const expectedIdentity = legacyPrerequisites
+      ? Object.fromEntries(Object.entries(identity).filter(([field]) => field !== "requiredCapabilities"))
+      : identity;
+    if (!same(result.identity, expectedIdentity)) {
+      throw new Error(`Receipt task identity does not match the plan: ${key}`);
+    }
     if (!Number.isFinite(result.durationMs) || result.durationMs < 0) {
       throw new Error(`Receipt task has no valid duration: ${key}`);
     }
+    const prerequisite = prerequisiteRows.find(({ key:taskKey }) => taskKey === key);
+    if (!legacyPrerequisites && !same(result.executionPrerequisites, {
+      requiredCapabilities:identity.requiredCapabilities,
+      launchRoute:prerequisite.route,
+    })) throw new Error(`Receipt task execution route does not match the plan: ${key}`);
     results.push({
       key,
       identity,
@@ -280,7 +332,17 @@ async function parsedReceipt(receiptPath, plan) {
       outputSha256:verificationDigest(result.output ?? ""),
     });
   }
-  return { bytes, results, environment, artifact:receiptArtifact };
+  const checkpointAttempt = receipt.checkpointAttempt;
+  if (checkpointAttempt && (!shaPattern.test(checkpointAttempt.id ?? "") ||
+      checkpointAttempt.identityDigest !== checkpointAttempt.id ||
+      !["created", "continued", "stale-owner-recovered", "promotion-only"]
+        .includes(checkpointAttempt.action))) {
+    throw new Error("Verification receipt has an invalid checkpoint attempt identity");
+  }
+  return { bytes, results, environment, artifact:receiptArtifact,
+    checkpointAttempt:checkpointAttempt ? {
+      id:checkpointAttempt.id, identityDigest:checkpointAttempt.identityDigest,
+    } : undefined };
 }
 
 async function repositoryIdentity(repositoryRoot) {
@@ -386,7 +448,7 @@ export async function validateVerificationEvidenceCompatibility({
       receiptSourcePath, environment,
     };
   }
-  const [{ bytes, results, environment, artifact:receiptArtifact }] = await Promise.all([
+  const [{ bytes, results, environment, artifact:receiptArtifact, checkpointAttempt }] = await Promise.all([
     parsedReceipt(absoluteReceiptPath, planRecord),
   ]);
   const artifact = artifactIdentity(buildManifest);
@@ -397,7 +459,7 @@ export async function validateVerificationEvidenceCompatibility({
   }
   return {
     commit, tree, baseCommit, sourceIdentity, planRecord, actualChangeSet,
-    receiptSourcePath, bytes, results, environment, artifact,
+    receiptSourcePath, bytes, results, environment, artifact, checkpointAttempt,
   };
 }
 
@@ -456,7 +518,7 @@ function evidenceId(record) {
   return verificationDigest({
     task:record.task, commit:record.commit, tree:record.tree, baseCommit:record.baseCommit,
     packIds:record.packIds, planDigest:record.planDigest, identities:record.identities,
-    receiptSha256:record.receipt.sha256,
+    receiptSha256:record.receipt.sha256, checkpointAttempt:record.checkpointAttempt,
     ...((record.reliabilityResolutions ?? []).length
       ? { reliabilityResolutions:record.reliabilityResolutions }
       : (record.timeoutResolutions ?? []).length
@@ -494,6 +556,11 @@ function validateRecordDocument(record, { allowLegacyExecutionLoad = false } = {
   }
   if (!validRawReceiptPath(record.receipt?.sourcePath)) {
     throw new Error("Verification evidence requires a runner-owned raw receipt under tmp/verification-receipts");
+  }
+  if (record.checkpointAttempt &&
+      (!shaPattern.test(record.checkpointAttempt.id ?? "") ||
+       record.checkpointAttempt.identityDigest !== record.checkpointAttempt.id)) {
+    throw new Error("Verification evidence has an invalid checkpoint attempt identity");
   }
   if (record.identities.artifact.schemaVersion !== 1) {
     throw new Error("Verification evidence has an unsupported artifact identity schema");
@@ -542,7 +609,7 @@ export async function createPendingVerificationEvidence({
   await assertNoBlockingTimeoutIncidents("HEAD", { root:repositoryRoot });
   const {
     commit, tree, baseCommit, sourceIdentity, planRecord, actualChangeSet,
-    receiptSourcePath, bytes, results, environment, artifact,
+    receiptSourcePath, bytes, results, environment, artifact, checkpointAttempt,
   } = await validateVerificationEvidenceCompatibility({
     task, plan, receiptPath, changedSince, buildManifest, repositoryRoot,
     requireCompletedReceipt:true,
@@ -562,6 +629,7 @@ export async function createPendingVerificationEvidence({
     plan:planRecord,
     planDigest:verificationDigest(planRecord),
     identities:{ ...sourceIdentity, artifact },
+    ...(checkpointAttempt ? { checkpointAttempt } : {}),
     receipt:{ sourcePath:receiptSourcePath, sha256:verificationDigest(bytes), environment, tasks:results },
     reliabilityResolutions:reliabilityResolutions.sort((left, right) =>
       left.incidentId.localeCompare(right.incidentId)),
@@ -609,16 +677,37 @@ async function withRepositoryArtifactLock(repositoryRoot, operation) {
   finally { await release(); }
 }
 
+async function checkpointAttemptStore(repositoryRoot) {
+  return createCheckpointAttemptStore({
+    directory:await defaultCheckpointAttemptDirectory(repositoryRoot),
+  });
+}
+
+export async function probeGitMetadataWrite(repositoryRoot) {
+  const probeRef = `refs/swarmforge/preflight/${process.pid}-${randomUUID()}`;
+  await git(repositoryRoot, "update-ref", probeRef, "HEAD");
+  try {
+    if (await git(repositoryRoot, "rev-parse", probeRef) !==
+        await git(repositoryRoot, "rev-parse", "HEAD^{commit}")) {
+      throw new Error("Git metadata preflight wrote an unexpected object identity");
+    }
+  } finally {
+    await git(repositoryRoot, "update-ref", "-d", probeRef);
+  }
+}
+
 export async function recordPendingVerificationEvidence(
   pendingPath,
   {
     repositoryRoot = repository,
     artifactValidator = ({ root }) => assertFreshDist({ root }),
     toolchainValidator = validateStrictVerificationToolchain,
+    metadataValidator = probeGitMetadataWrite,
   } = {},
 ) {
   const pending = await readPending(pendingPath);
   if (pending.status !== "pending") throw new Error("Only pending verification evidence can be recorded");
+  await metadataValidator(repositoryRoot);
   await toolchainValidator({ repositoryRoot });
   return withRepositoryArtifactLock(repositoryRoot, async() => {
     // Global lock order is artifact first, Git notes second. Keeping both for
@@ -699,6 +788,14 @@ export async function recordPendingVerificationEvidence(
       };
       await gitInput(repositoryRoot,
         ["notes", `--ref=${notesRef}`, "add", "-f", "-F", "-", commit], JSON.stringify(note));
+      if (pending.checkpointAttempt) {
+        const store = await checkpointAttemptStore(repositoryRoot);
+        const attempt = await store.read(pending.checkpointAttempt.id);
+        if (attempt.identityDigest !== pending.checkpointAttempt.identityDigest) {
+          throw new Error("Checkpoint attempt identity changed before Git-note promotion");
+        }
+        await store.markPromotion(pending.checkpointAttempt.id, "git-note-recorded");
+      }
       return passed;
     } finally {
       await releaseNotes();
@@ -813,6 +910,12 @@ export async function verifyVerificationEvidence(
   const records = evidenceCover(validated, requestedPacks);
   if (!records) {
     throw new Error(`Verification evidence for ${canonical} does not exactly cover base ${canonicalBase}, task ${task}, and packs ${requestedPacks.join(",")}`);
+  }
+  const attemptIds = [...new Set(records.flatMap((record) =>
+    record.checkpointAttempt ? [record.checkpointAttempt.id] : []))];
+  if (attemptIds.length) {
+    const store = await checkpointAttemptStore(repositoryRoot);
+    for (const id of attemptIds) await store.markPromotion(id, "handoff-eligible");
   }
   return {
     version:2,

@@ -2,6 +2,9 @@ import { execFile, spawn } from "node:child_process";
 import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { defaultTaskExecutionPrerequisites,
+  validateTaskExecutionPrerequisites } from "./verification-execution-prerequisites.mjs";
 import ts from "typescript";
 
 const registryUrl = new URL("../verification/packs.json", import.meta.url);
@@ -962,14 +965,20 @@ function displayArgument(argument) {
 function commandTask({
   key, stage, packId = null, executable, args, target = null, environment = null,
   logicalTargetIds = undefined, aliasCommands = undefined,
+  requiredCapabilities = defaultTaskExecutionPrerequisites(stage),
 }) {
-  const task = { key, stage, packId, executable, args:[...args], target, environment };
+  const task = { key, stage, packId, executable, args:[...args], target, environment,
+    requiredCapabilities:[...requiredCapabilities] };
   if (logicalTargetIds) task.logicalTargetIds = [...logicalTargetIds];
   if (aliasCommands) task.aliasCommands = aliasCommands.map((command) => [...command]);
   return { ...task, display:[executable, ...args].map(displayArgument).join(" ") };
 }
 
 export function verificationTaskIdentity(task) {
+  const declared = task.requiredCapabilities === undefined
+    ? { ...task, requiredCapabilities:defaultTaskExecutionPrerequisites(task.stage) }
+    : task;
+  const requiredCapabilities = validateTaskExecutionPrerequisites(declared);
   const identity = {
     key:task.key,
     stage:task.stage,
@@ -978,6 +987,7 @@ export function verificationTaskIdentity(task) {
     args:[...task.args],
     target:task.target ?? null,
     environment:task.environment ?? null,
+    requiredCapabilities,
   };
   if (task.logicalTargetIds) identity.logicalTargetIds = [...task.logicalTargetIds];
   if (task.aliasCommands) identity.aliasCommands = task.aliasCommands.map((command) => [...command]);
@@ -1449,4 +1459,5 @@ export async function executeAcceptancePlan(
   await runBounded(group("generatorTasks", "generatorCommands", "acceptance-generate"), concurrency, runCommand);
   for (const task of group("checkpointTasks", "checkpointCommands", "checkpoint")) await invoke(task, runCommand);
   await runBounded(group("sessionTasks", "sessionCommands", "acceptance-session"), concurrency, runCommand);
+  for (const task of group("packageTasks", "packageCommands", "package")) await invoke(task, runCommand);
 }
