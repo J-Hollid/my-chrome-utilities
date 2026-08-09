@@ -3444,9 +3444,115 @@ it into a permanent fix. An offscreen control, unsettled Property Set, ten-minut
 artifact lock, cleanup race, readiness race, isolation leak, or runaway workload
 cannot remain active merely because the next attempt happened to finish.
 
+Known execution restrictions must not create that first failure in the first place.
+If a browser check is already known to need local socket binding or another restricted
+host capability, the plan declares it and the agent arranges the existing scoped
+approval before launching the check. The team no longer waits for a predictable
+`EPERM`, `EACCES`, or socket-denial failure and then runs the same work again with the
+permission it was known to need.
+
+### Declared execution prerequisites and first-run routing
+
+Every canonical verification task declares the restricted host capabilities it needs,
+if any, as validated plan metadata. The initial catalogue distinguishes ordinary
+workspace execution from local loopback binding/connection used by asset servers,
+Chrome, and DevTools, protected Git-metadata writes used by evidence recording, and
+any separately approved capability added later. A task cannot inherit privileged
+execution merely because another task in the same pack needs it. Missing, unknown,
+contradictory, or catch-all declarations fail plan validation before a test process
+starts.
+
+Before the first invocation of each planned task, the execution preflight compares its
+declared prerequisites with the current agent sandbox. When the current sandbox is
+known to be insufficient, the agent uses the existing explicit, scoped approval route
+for the exact command or safe reusable prefix on its first attempt. It does not first
+launch the command in the known-inadequate sandbox. A granted approval launches the
+task once with the declared access. A denied, unavailable, or expired approval records
+`environment-prerequisite-blocked`, names the task, capability, and requested route,
+and launches no child process. That block cannot produce passing evidence or handoff,
+but it is not a flaky-test incident and consumes no diagnostic retry because the test
+never ran.
+
+This contract does not grant permissions, bypass approval, or turn all verification
+into unrestricted execution. Public network access and unrelated host capabilities
+remain denied. Workspace-only tasks retain the existing sandbox and generate no extra
+approval prompt. Plan and receipt output expose the declared capability and the route
+actually used without persisting approval credentials or sensitive environment data.
+
+If an undeclared sandbox denial nevertheless appears after preflight, the system has
+found a verification execution-contract defect rather than a product-test result. It
+creates a blocking `environment-contract-failure` incident at the prerequisite or
+launch boundary, preserves the structured operation, error code, capability and task,
+and permits no unchanged retry. Resolution must correct the narrow capability
+declaration or first-run routing, add a deterministic preflight regression, and then
+run fresh focused verification. Future executions of that task must arrange the
+capability before launch.
+
+### One checkpoint attempt and no-waste recovery
+
+The long checkpoint has one repository-common attempt identity for its candidate
+commit and tree, base, evidence task, canonical plan, artifact inputs, toolchain,
+environment class, and declared capability routes. Before that attempt starts any
+child, preflight validates the clean candidate, locked tools and required executables,
+registry and exact plan, artifact inputs, receipt/output writability and bounded free
+space, current-lineage incident state, and every execution prerequisite. Cheap,
+deterministic blockers are resolved before expensive verification begins.
+
+Preflight also acquires one bounded checkpoint/artifact lease. A second compatible
+invocation attaches to or reports the existing attempt instead of starting another
+all-20 run. An incompatible owner is named and queued outside checkpoint timing or
+reported as a prerequisite block; a demonstrably stale lease has one deterministic,
+audited recovery path and is never blindly deleted. Therefore known lock contention,
+including the historical dist-artifact pattern, cannot spend a task timeout or create
+a duplicate receipt before work begins.
+
+The candidate commit, tree, registry, toolchain, plan, and artifact identities remain
+immutable for the attempt. They are checked before each stage and again before
+finalization. Drift stops the attempt before another child launches and identifies
+what changed; results from two trees or artifacts are never combined. A test or tool
+that unexpectedly writes tracked candidate files creates an execution-contract
+incident that requires a causal fix. An intentional code change creates a new
+candidate and must use a fresh checkpoint.
+
+Every completed task and logical target is durably recorded as it finishes. If the
+runner, agent, tmux session, or host is interrupted without a test failure, restarting
+the exact candidate automatically discovers its single compatible incomplete attempt
+and continues only interrupted or unstarted boundaries. It does not require an agent
+to find and type a receipt path, and it cannot silently choose a new full run. This is
+continuation of the same attempt, not the unchanged diagnostic retry. Ambiguous,
+tampered, or identity-mismatched receipts fail closed with a recovery diagnostic.
+
+A fresh post-repair checkpoint may continue after such an external interruption using
+only results produced by that same post-repair attempt. It never imports a passing
+task from the failed pre-repair tree, another attempt, or another environment class.
+If the interruption killed an active task, that boundary runs again because it never
+recorded a pass; already durable passing boundaries do not.
+
+The package check is a planned task and must pass before the receipt becomes
+`tasks-complete`. Once every planned task is durably passed, recovery can finish the
+receipt and create or recreate pending evidence without executing a test. A failure
+while finalizing the receipt, recording its Git note, or checking handoff eligibility
+retries only that short promotion step after its prerequisite or process defect is
+resolved. While the commit, tree, artifact, plan, and completed receipt remain exact,
+the runner rejects a duplicate all-20 invocation and points to the recoverable attempt.
+If any of those identities changed, promotion remains blocked and the new candidate
+requires genuinely fresh verification.
+
+### All verification paths use the same failure boundary
+
+The incident-aware execution boundary covers every repository-declared unit,
+property, acceptance, browser, checkpoint, and package task used for delivery,
+whether it is run alone, as a focused target, as an exact pack, or in the all-20
+checkpoint. Focused work uses the same structured task identity and progress contract
+as the broad runner. A raw diagnostic invocation cannot provide handoff evidence; if
+it manifests a failure, the agent must register that failure before any rerun. No
+closing checkpoint may start while its candidate lineage has an unresolved focused
+or broad verification incident.
+
 ### Reliability incident and durable ownership
 
-Every canonical runner failure creates a provisional VTD-014 reliability incident:
+After declared prerequisites are satisfied, every registered verification failure
+creates a provisional VTD-014 reliability incident:
 an explicit failed logical result, assertion failure, nonzero exit, incomplete result,
 spawn failure, output-limit termination, or runner-owned timeout. Explicit parent
 interruption retains its current interrupted identity and does not consume a
@@ -3474,7 +3580,8 @@ The immutable failure record contains:
   class and normalized fingerprint, exit or termination result, duration, applicable
   limit, and bounded output digests;
 - artifact input, output, and build identities plus Node, TypeScript, platform,
-  execution-load class, worker counts, and plan digest;
+  execution-load class, worker counts, declared execution prerequisites, actual
+  launch route, and plan digest;
 - last process boundary, logical target, scenario or generated case when available,
   phase, assertion site, monotonic progress time, and bounded last state; and
 - the exact diagnostic retry identity and every later repair/resolution transition.
@@ -3528,7 +3635,7 @@ before it can become an incident. Stable structured identities improve isolation
 when only an indivisible task is available, the complete task is the smallest retry
 and its first failure still cannot be erased.
 
-### Exactly one unchanged isolated retry
+### At most one unchanged isolated retry
 
 No failed task may enter the existing general receipt resume before VTD-014 records
 its incident. An agent may patch the failure immediately, which invalidates the
@@ -3543,6 +3650,7 @@ retry per incident:
 | A logical target has started | only that logical target, with no compatible siblings |
 | Shared setup failed before any target | only the named setup boundary, with no target workflow |
 | An indivisible non-browser leaf failed | only that exact task |
+| An undeclared sandbox denial escaped preflight | no retry; repair the execution-prerequisite contract first |
 | Progress is absent or cannot be trusted | no broad retry; repair the progress contract first |
 
 The diagnostic retry must use the same candidate commit and tree, artifact identities,
@@ -3577,7 +3685,8 @@ one normal file-based repair note to the appropriate upstream role; it does not 
 the candidate onward as complete. The proposal names the diagnosed boundary and one
 or more causal categories: viewport/visibility/hit testing, readiness or settling,
 cleanup/resource lifecycle, target isolation, artifact/process locking, duplicated
-or unbounded workload, or another explicitly testable cause.
+or unbounded workload, sandbox capability declaration/first-run routing, or another
+explicitly testable cause.
 
 The repair must include a deterministic regression that exercises the cause with an
 injected clock, fake process/resource, bounded fixture, or otherwise short proof. It
@@ -3587,7 +3696,10 @@ repaired candidate. A changed timeout number, added sleep, repeated polling coun
 swallowed assertion, weakened geometry or settling expectation, budget, calibration,
 worker count, or environment label alone is not a repair. A limit may change only as
 part of separate specifier-approved measured authority; VTD-014 itself changes no
-limit or assertion meaning.
+limit or assertion meaning. Correcting an exact capability declaration or first-run
+route is a valid repair only for an `environment-contract-failure`, with its causal
+preflight regression; it cannot resolve an assertion, readiness, settling, hit-test,
+or timeout incident.
 
 Before the closing checkpoint, validation requires a descendant candidate tree,
 the exact changed files, causal explanation, regression identity and result, and a
@@ -3602,7 +3714,7 @@ Once the repair proposal passes focused verification, exactly one fresh canonica
 all-20 checkpoint is permitted for that proposal. It reuses no pre-incident or
 diagnostic task result. A new failure of any class creates its own incident and again
 requires a repair; it cannot be folded into the prior resolution. The package check
-follows the successful all-20 run.
+is the final planned task in that same checkpoint attempt after the 20 packs pass.
 
 The successful checkpoint atomically marks the incident resolved and attaches its
 failure digest, diagnostic classification, repair commit/tree, causal category,
@@ -3627,7 +3739,8 @@ VTD-014 changes shared verification and SwarmForge handoff infrastructure only. 
 changes no `src/` product file, visible or saved product behavior, logical target,
 observation output, assertion leaf, feature or handler owner, pack dependency,
 changed-path production boundary, budget, calibration, timeout value, worker limit,
-shard, or ordinary browser batching. A run without a failure has the same canonical
+shard, or ordinary browser batching. Capability metadata changes launch routing, not
+task selection or privilege policy. A run without a failure has the same canonical
 task identities and executes no retry. Receipt resume may retain previously passed
 work for diagnosis, but no failed task can become passed without incident
 classification and no final post-repair checkpoint may reuse pre-repair results.
@@ -3637,8 +3750,9 @@ infrastructure and declare all 20 runnable packs as their exact consumers. Focus
 process-contract tests use injected clocks, assertion fixtures, and child processes
 to cover incident creation, offscreen hit testing, Property Set settling, progress
 persistence, isolation, single-use retry, every classification, tamper/concurrency
-rejection, causal repair validation, evidence binding, and the handoff gate without
-waiting for a real production timeout.
+rejection, declared sandbox preflight and denial, causal repair validation, evidence
+binding, and the handoff gate without waiting for a real production timeout or making
+a real privileged network request.
 
 Because this package changes the runner, evidence gate, shared runtime state, and
 Git handoff gate used by every pack and role, its one-time delivery checkpoint runs
