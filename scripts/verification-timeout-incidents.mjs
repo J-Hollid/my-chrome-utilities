@@ -508,12 +508,12 @@ export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionK
   return taskPlan.sort((left, right) => left.identity.key.localeCompare(right.identity.key));
 }
 
-function timeoutRepairRegressionProtocol(document, regressionKey) {
+function timeoutRepairRegressionProtocol(document, regressionKey, incidentId) {
   const output = document.receipt.tasks[regressionKey]?.output ?? "";
   const records = output.split(/\r?\n/u).filter(Boolean).flatMap((line) => {
     try {
       const parsed = JSON.parse(line).swarmforgeTimeoutRepairRegression;
-      return parsed ? [parsed] : [];
+      return parsed?.incidentId === incidentId ? [parsed] : [];
     } catch { return []; }
   });
   if (records.length !== 1) throw new Error("Timeout repair requires one causal regression protocol record");
@@ -560,7 +560,7 @@ async function validateRepairReceiptSemantics(incident, proposal, regressionDocu
   timeoutRepairCausalCategory(proposal.causalCategory);
   validateCausalExplanation(proposal.causalExplanation);
   const protocol = validateTimeoutRepairRegressionEvidence(incident, proposal,
-    timeoutRepairRegressionProtocol(regressionDocument, proposal.regression.key));
+    timeoutRepairRegressionProtocol(regressionDocument, proposal.regression.key, incident.id));
   const canonicalIdentities = await canonicalRepairTaskIdentities({ incident, proposal });
   const expectedTaskPlan = timeoutRepairFocusedTaskPlan(incident, proposal.changedPaths,
     proposal.regression.key, canonicalIdentities);
