@@ -772,7 +772,8 @@ for(const {phase,shape} of validProgramCases){
 assert.equal(transmittedPrograms,transmissionsBeforeInvalid,
   "invalid generated syntax in every real program shape must fail before protocol transmission");
 let realRunnerEvidence;
-if(process.env.SWARMFORGE_VTD007_REAL_RUNNER_PROBES==="1"){
+if(process.env.SWARMFORGE_VTD007_REAL_RUNNER_PROBES==="1" ||
+   process.env.SWARMFORGE_VERIFICATION_RECEIPT){
   let flowFailure;
   try{
     await execFileAsync(process.execPath,["test/browser-packs/flow-graph.mjs"],{env:{...process.env,

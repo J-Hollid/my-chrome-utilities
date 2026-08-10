@@ -57,6 +57,9 @@ export async function auditVtd014Closure({
   if (regression.receipt.candidate.commit !== candidateCommit) {
     throw new Error("Closure audit regression does not belong to the selected candidate");
   }
+  if (!await isAncestor(manifest.assessmentCandidate, candidateCommit, root)) {
+    throw new Error("Closure audit candidate does not descend from the approved assessment candidate");
+  }
   const incidents = (await store.list()).filter(({ state }) => state === "unresolved");
   const manifestIds = Object.keys(manifest.records).sort();
   const incidentIds = incidents.map(({ id }) => id).sort();
@@ -68,8 +71,7 @@ export async function auditVtd014Closure({
   const results = [];
   for (const incident of incidents) {
     const declaration = manifest.records[incident.id];
-    const ancestor = await isAncestor(incident.failure.lineage.commit,
-      manifest.assessmentCandidate, root);
+    const ancestor = await isAncestor(incident.failure.lineage.commit, candidateCommit, root);
     let disposition;
     if (declaration.disposition === "lineage-retired") {
       if (ancestor) throw new Error(`Incident ${incident.id} is not off the selected assessment lineage`);

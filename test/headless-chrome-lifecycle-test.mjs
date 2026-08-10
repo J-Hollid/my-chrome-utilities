@@ -141,7 +141,8 @@ await assert.rejects(() => removeChromeProfile("/tmp/profile-hung", {
   error.targetId === "TARGET-DEADLINE" && !error.message.includes("readiness predicate"));
 
 let installedRunnerEvidence;
-if(process.env.SWARMFORGE_VTD007_REAL_RUNNER_PROBES==="1"){
+if(process.env.SWARMFORGE_VTD007_REAL_RUNNER_PROBES==="1" ||
+   process.env.SWARMFORGE_VERIFICATION_RECEIPT){
   const installedLines=[];
   const originalLog=console.log;
   console.log=(...values)=>installedLines.push(values.join(" "));
