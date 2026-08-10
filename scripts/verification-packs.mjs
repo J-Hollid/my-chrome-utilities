@@ -751,12 +751,13 @@ function validateDeclaredTasks(packs) {
   const observationIds = new Set();
   const registeredTestPaths = new Set(packs.flatMap((pack) => testPathKeys.flatMap((key) => values(pack, key))));
   for (const pack of packs) {
+    const ownedTestPaths = new Set(testPathKeys.flatMap((key) => values(pack, key)));
     for (const declaration of values(pack, "executionPrerequisites")) {
       if (!declaration || Array.isArray(declaration) ||
           !["path,requiredCapabilities", "path,requiredCapabilities,temporaryPathClass"]
             .includes(Object.keys(declaration).sort().join(",")) ||
           typeof declaration.path !== "string" ||
-          !registeredTestPaths.has(declaration.path) ||
+          !ownedTestPaths.has(declaration.path) ||
           declaration.temporaryPathClass !== undefined &&
             !["workspace", "chrome-short"].includes(declaration.temporaryPathClass)) {
         throw new Error(`Use an exact registered test execution prerequisite in pack ${pack.id}`);
@@ -1039,17 +1040,12 @@ function featureTasks(features, packs) {
   const sessions = packs.map((pack) => {
     const packArtifacts = artifacts.filter(({ feature }) => values(pack, "features").includes(feature));
     if (!packArtifacts.length) return null;
-    const requiredCapabilities = [...new Set(values(pack, "executionPrerequisites")
-      .flatMap((declaration) => declaration.requiredCapabilities ?? []))];
-    const temporaryPathClass = values(pack, "executionPrerequisites")
-      .some((declaration) => declaration.temporaryPathClass === "chrome-short")
-      ? "chrome-short" : "workspace";
     return commandTask({
       key:`acceptance-session:${pack.id}`, stage:"acceptance-session", packId:pack.id,
       executable:"bb",
       args:["acceptance-pack-runner", pack.id, ...packArtifacts.flatMap(({ generated, ir }) => [generated, ir])],
       target:packArtifacts.map(({ feature }) => feature).join(","),
-      requiredCapabilities, temporaryPathClass,
+      requiredCapabilities:[], temporaryPathClass:"workspace",
     });
   }).filter(Boolean);
   return { parser, generator, sessions };

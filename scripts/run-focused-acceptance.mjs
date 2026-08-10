@@ -55,6 +55,16 @@ const defaultOutputLimitBytes = 16 * 1024 * 1024;
 const maximumOutputLimitBytes = 64 * 1024 * 1024;
 const require = createRequire(import.meta.url);
 
+async function legacyCheckpointAttemptDirectory(root) {
+  const common = await new Promise((resolve, reject) => {
+    execFile("git", ["rev-parse", "--git-common-dir"], { cwd:root },
+      (error, stdout, stderr) => error
+        ? reject(new Error(stderr.trim() || error.message)) : resolve(stdout.trim()));
+  });
+  return path.join(path.isAbsolute(common) ? common : path.resolve(root, common),
+    "swarmforge-checkpoint-attempts");
+}
+
 function installedTypeScriptVersion() {
   return require("typescript/package.json").version;
 }
@@ -1140,21 +1150,24 @@ export async function prepareCheckpointExecution({
   evidenceTask,
   changedSince,
   promotionTasks = [],
+  probeEnvironment = true,
   preflight = checkpointPreflight,
 }) {
   await preflight({
     packs, plan, receiptContext, inputFingerprint, evidenceTask, changedSince,
+    probeEnvironment,
     validationNames:evidenceTask
       ? ["registry", "plan", "artifact"]
       : ["registry", "plan", "receipt", "artifact", "evidence"],
   });
   const prerequisitePlan = await preflight({
     packs, plan:{ ...plan, tasks:[...plan.tasks, ...promotionTasks] }, receiptContext,
-    inputFingerprint, evidenceTask, changedSince, validationNames:["prerequisites"],
+    inputFingerprint, evidenceTask, changedSince, probeEnvironment, validationNames:["prerequisites"],
   });
   applyCheckpointPrerequisitePlan(receiptContext.receipt, plan.tasks, prerequisitePlan);
   if (evidenceTask) await preflight({
     packs, plan, receiptContext, inputFingerprint, evidenceTask, changedSince,
+    probeEnvironment,
     validationNames:["receipt", "evidence"],
   });
   return prerequisitePlan;
@@ -1168,6 +1181,7 @@ export async function checkpointPreflight({
   evidenceTask,
   changedSince,
   availableCapabilities = plannedExecutionCapabilities(plan),
+  probeEnvironment = true,
   root = repositoryRoot,
   validators = {},
   validationNames = ["registry", "plan", "receipt", "artifact", "evidence", "prerequisites"],
@@ -1242,10 +1256,12 @@ export async function checkpointPreflight({
     prerequisites:async() => {
       const outputLimitBytes = environmentInteger("VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES",
         defaultOutputLimitBytes, { maximum:maximumOutputLimitBytes });
-      const environment = await probeExecutionPrerequisiteEnvironment(plan.tasks, {
-        outputDirectory:path.dirname(receiptContext.receiptPath), outputLimitBytes,
-        requestedCapabilities:availableCapabilities, workspaceRoot:root,
-      });
+      const environment = probeEnvironment
+        ? await probeExecutionPrerequisiteEnvironment(plan.tasks, {
+          outputDirectory:path.dirname(receiptContext.receiptPath), outputLimitBytes,
+          requestedCapabilities:availableCapabilities, workspaceRoot:root,
+        })
+        : { launchable:true, blocked:[], probes:[] };
       const result = preflightExecutionPrerequisites(plan.tasks, {
         availableCapabilities,
         approvalRoutes:{ "local-loopback":"scoped-command-approval",
@@ -1386,7 +1402,7 @@ export async function runFocusedAcceptance(
   const promotionTasks = evidenceTask ? verificationPromotionTasks() : [];
   const prerequisitePlan = await prepareCheckpointExecution({
     packs, plan, receiptContext:context, inputFingerprint, evidenceTask, changedSince,
-    promotionTasks,
+    promotionTasks, probeEnvironment:!commandRunner,
   });
   if (evidenceTask) plan.promotionTasks = promotionTasks;
   const launchRoutes = new Map(prerequisitePlan.tasks.map(({ key, route }) => [key, route]));
@@ -1409,6 +1425,7 @@ export async function runFocusedAcceptance(
     });
     checkpointAttemptStore = createCheckpointAttemptStore({
       directory:await defaultCheckpointAttemptDirectory(repositoryRoot),
+      legacyDirectories:[await legacyCheckpointAttemptDirectory(repositoryRoot)],
     });
     checkpointOwner = { pid:process.pid, token:randomUUID() };
     checkpointAttempt = await checkpointAttemptStore.claim(inputIdentity,

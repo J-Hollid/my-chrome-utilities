@@ -358,6 +358,30 @@ try {
   const attemptInputIdentity = checkpointAttemptInputIdentity(attemptIdentity);
   let ownerAlive = true;
   let checkpointTimestamp = Date.parse("2026-08-09T00:00:00.000Z");
+  const legacyAttemptDirectory = path.join(checkpointAttemptRoot, "legacy");
+  const primaryAttemptDirectory = path.join(checkpointAttemptRoot, "primary");
+  const legacyAttemptStore = createCheckpointAttemptStore({ directory:legacyAttemptDirectory,
+    now:() => new Date(checkpointTimestamp++).toISOString(), ownerAlive:async() => true });
+  await legacyAttemptStore.claim(attemptInputIdentity,
+    ["unit:legacy"], { pid:39, token:"owner-39" });
+  const compatibleAttemptStore = createCheckpointAttemptStore({ directory:primaryAttemptDirectory,
+    legacyDirectories:[legacyAttemptDirectory],
+    now:() => new Date(checkpointTimestamp++).toISOString(), ownerAlive:async() => true });
+  const compatibleLegacyAttempt = await compatibleAttemptStore.claim(attemptInputIdentity,
+    ["unit:legacy"], { pid:40, token:"owner-40" });
+  assert.equal(compatibleLegacyAttempt.action, "attached",
+    "a compatible active legacy checkpoint prevents duplicate repository work");
+  assert.equal((await compatibleAttemptStore.list()).length, 1,
+    "the authoritative attempt view unions the writable and legacy namespaces");
+  const recoveringAttemptStore = createCheckpointAttemptStore({ directory:primaryAttemptDirectory,
+    legacyDirectories:[legacyAttemptDirectory],
+    now:() => new Date(checkpointTimestamp++).toISOString(), ownerAlive:async() => false });
+  const recoveredLegacyAttempt = await recoveringAttemptStore.claim(attemptInputIdentity,
+    ["unit:legacy"], { pid:41, token:"owner-41" });
+  assert.equal(recoveredLegacyAttempt.action, "stale-owner-recovered",
+    "a stale legacy attempt migrates before its lease is recovered");
+  assert.equal((await recoveringAttemptStore.read(recoveredLegacyAttempt.attempt.id)).owner.token,
+    "owner-41", "the migrated attempt remains readable from the authoritative namespace");
   const attemptStore = createCheckpointAttemptStore({ directory:checkpointAttemptRoot,
     now:() => new Date(checkpointTimestamp++).toISOString(), ownerAlive:async() => ownerAlive });
   const createdAttempt = await attemptStore.claim(attemptInputIdentity,
@@ -1266,6 +1290,36 @@ try {
     lastProgress:{ boundary:"artifact/setup", phase:"dist-artifact-lock", monotonicMs:599000,
       state:{ pending:true } },
   };
+  const legacyIncidentDirectory = path.join(incidentFixtureRoot, "legacy-incidents");
+  const primaryIncidentDirectory = path.join(incidentFixtureRoot, "primary-incidents");
+  const legacyIncidentStore = createTimeoutIncidentStore({ root:incidentFixtureRoot,
+    storeDirectory:legacyIncidentDirectory, randomId:() => "legacy-resolution",
+    now:() => "2026-08-09T00:00:00.000Z" });
+  const legacyNamespaceIncident = await legacyIncidentStore.create({
+    ...failure, runnerRunId:"legacy-run" });
+  const compatibleIncidentStore = createTimeoutIncidentStore({ root:incidentFixtureRoot,
+    storeDirectory:primaryIncidentDirectory, legacyStoreDirectories:[legacyIncidentDirectory],
+    randomId:() => "primary-incident", now:() => "2026-08-09T00:00:00.000Z" });
+  await mkdir(primaryIncidentDirectory, { recursive:true });
+  const legacyIncidentPath = path.join(legacyIncidentDirectory, "legacy-resolution.json");
+  const forgedNamespaceDocument = JSON.parse(await readFile(legacyIncidentPath, "utf8"));
+  forgedNamespaceDocument.incident.createdAt = "2026-08-09T00:00:01.000Z";
+  forgedNamespaceDocument.digest = timeoutIncidentDigest(forgedNamespaceDocument.incident);
+  const collidingIncidentPath = path.join(primaryIncidentDirectory, "legacy-resolution.json");
+  await writeFile(collidingIncidentPath, `${JSON.stringify(forgedNamespaceDocument, null, 2)}\n`);
+  await assert.rejects(() => compatibleIncidentStore.list(), /diverges across repository namespaces/u,
+    "an unaccounted duplicate incident id fails closed");
+  await rm(collidingIncidentPath);
+  assert.deepEqual((await compatibleIncidentStore.list()).map(({ id }) => id),
+    ["legacy-resolution"], "the authoritative incident view includes legacy resolutions");
+  await compatibleIncidentStore.claimDiagnosticRetry(legacyNamespaceIncident.id,
+    legacyNamespaceIncident.failure.retryIdentity);
+  assert.equal((await compatibleIncidentStore.read(legacyNamespaceIncident.id)).retry.status,
+    "claimed", "a legacy incident migrates before an authoritative state transition");
+  await compatibleIncidentStore.create({ ...failure, runnerRunId:"primary-run" });
+  assert.deepEqual((await compatibleIncidentStore.list()).map(({ id }) => id),
+    ["legacy-resolution", "primary-incident"],
+    "the authoritative incident view unions legacy and writable namespaces");
   canonicalRepairIdentities = [...timeoutCanonicalIdentities, failure.task];
   const first = await store.create(failure);
   const changedInnerDeadline = await store.create({ ...failure, runnerRunId:"run-inner-deadline-change",
@@ -1992,12 +2046,15 @@ console.log("repairTmp=" + process.env.TMPDIR);
     "an indivisible non-browser task":diagnosticRetryScope({ task:indivisibleTask }),
     "absent, invalid, or ambiguous progress":{ kind:"rejected", rejected:ambiguousProgressRejected },
   };
-  const conservationTaskIdentity = (task) => {
+  const expectedVtd014Capabilities = new Map([
+    ["test/flow-examples-timing-test.mjs", ["local-loopback"]],
+    ["test/headless-chrome-lifecycle-test.mjs", ["local-loopback"]],
+    ["test/verification-process-contract-test.mjs", ["local-loopback"]],
+  ]);
+  const expectedVtd014TaskIdentity = (task) => {
     const identity = verificationTaskIdentity(task);
-    if (["test/flow-examples-timing-test.mjs", "test/headless-chrome-lifecycle-test.mjs",
-      "test/verification-process-contract-test.mjs"].includes(identity.target) ||
-        identity.stage === "acceptance-session" && ["flow_graph", "shell"].includes(identity.packId)) {
-      identity.requiredCapabilities = [];
+    if (expectedVtd014Capabilities.has(identity.target)) {
+      identity.requiredCapabilities = [...expectedVtd014Capabilities.get(identity.target)];
     }
     return identity;
   };
@@ -2052,8 +2109,8 @@ console.log("repairTmp=" + process.env.TMPDIR);
       downstreamIncidentDistinct:changedInnerDeadline.id !== first.id },
     conservation:{ changedFiles, productChangedFiles:changedFiles.filter((file) => file.startsWith("src/")),
       featureChangedFiles:changedFiles.filter((file) => file.startsWith("features/")),
-      currentTaskDigest:verificationDigest(currentConservationPlan.tasks.map(conservationTaskIdentity)),
-      masterTaskDigest:verificationDigest(masterConservationPlan.tasks.map(conservationTaskIdentity)),
+      currentTaskDigest:verificationDigest(currentConservationPlan.tasks.map(verificationTaskIdentity)),
+      masterTaskDigest:verificationDigest(masterConservationPlan.tasks.map(expectedVtd014TaskIdentity)),
       currentPackContractDigest:verificationDigest(packContract(timeoutPackRegistry)),
       masterPackContractDigest:verificationDigest(packContract(masterPacks)),
       currentCalibrationDigest:verificationDigest(currentCalibration),
@@ -2776,6 +2833,11 @@ assert.equal(maximumActiveSessions, 2, "independent pack sessions use the bounde
 
 const packs = await loadVerificationPacks();
 await validateVerificationPacks(packs);
+await assert.rejects(() => validateVerificationPacks(packs.map((pack) =>
+  pack.id === "project_management" ? { ...pack, executionPrerequisites:[{
+    path:"test/flow-examples-timing-test.mjs", requiredCapabilities:["local-loopback"],
+  }] } : pack)), /exact registered test execution prerequisite in pack project_management/u,
+"a pack cannot grant authority to a task owned by another pack");
 const focusedShellPlan = selectFocusedVerificationTasks(planVerification(packs, {
   packIds:["shell"],
 }), ["unit:test/verification-process-contract-test.mjs"]);
@@ -2827,10 +2889,10 @@ const focusedAcceptancePlan = selectFocusedVerificationTasks(planVerification(pa
 }), ["acceptance-session:shell"]);
 assert.equal(focusedAcceptancePlan.tasks[0].key, "build:dist");
 assert.equal(focusedAcceptancePlan.tasks.at(-1).key, "acceptance-session:shell");
-assert.deepEqual(focusedAcceptancePlan.tasks.at(-1).requiredCapabilities, ["local-loopback"],
-  "the acceptance session declares authority required by its nested Chrome production probes");
-assert.equal(focusedAcceptancePlan.tasks.at(-1).temporaryPathClass, "chrome-short",
-  "the acceptance session routes nested Chrome sockets through the short path before launch");
+assert.deepEqual(focusedAcceptancePlan.tasks.at(-1).requiredCapabilities, [],
+  "an acceptance session does not inherit authority from separately launched unit tasks");
+assert.equal(focusedAcceptancePlan.tasks.at(-1).temporaryPathClass, "workspace",
+  "an acceptance session keeps its own workspace route");
 assert.ok(focusedAcceptancePlan.parserTasks.length > 0 &&
   focusedAcceptancePlan.parserTasks.length === focusedAcceptancePlan.generatorTasks.length,
 "the focused acceptance session retains only its registered parse and generation prerequisites");
@@ -3108,20 +3170,21 @@ const vtd006ProgramMigration = new Map([
 const normalizedVtd006Identity = (task) => {
   let encoded = JSON.stringify(verificationTaskIdentity(task));
   for (const [current, previous] of vtd006ProgramMigration) encoded = encoded.replaceAll(current, previous);
-  const identity = JSON.parse(encoded);
-  if (identity.target === "test/verification-process-contract-test.mjs") {
-    identity.requiredCapabilities = [];
-  }
-  if (["test/flow-examples-timing-test.mjs", "test/headless-chrome-lifecycle-test.mjs"]
-    .includes(identity.target) || identity.stage === "acceptance-session" &&
-      ["flow_graph", "shell"].includes(identity.packId)) {
-    identity.requiredCapabilities = [];
-  }
+  return JSON.parse(encoded);
+};
+const expectedVtd014TerminalIdentity = (task) => {
+  const identity = verificationTaskIdentity(task);
+  const capabilities = new Map([
+    ["test/flow-examples-timing-test.mjs", ["local-loopback"]],
+    ["test/headless-chrome-lifecycle-test.mjs", ["local-loopback"]],
+    ["test/verification-process-contract-test.mjs", ["local-loopback"]],
+  ]).get(identity.target);
+  if (capabilities) identity.requiredCapabilities = capabilities;
   return identity;
 };
 const terminalIdentities = (plan) => plan.tasks.map(normalizedVtd006Identity);
 assert.deepEqual(currentTerminalPlan.tasks.map(normalizedVtd006Identity),
-  baseTerminalPlan.tasks.map(verificationTaskIdentity),
+  baseTerminalPlan.tasks.map(expectedVtd014TerminalIdentity),
   "terminal-full planning conserves every migrated exact task identity and ordering");
 assert.equal(currentTerminalPlan.tasks.filter(({ target }) =>
   target === "test/acceptance/side-panel-browser-session-contract.mjs").length, 0,

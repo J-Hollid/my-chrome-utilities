@@ -4,7 +4,8 @@ import path from "node:path";
 
 import { diagnosticRetryScope, retryIdentity } from "./verification-reliability-progress.mjs";
 import {
-  archiveBytes, archivedReceiptDocument, archiveNames, atomicReplace, defaultStoreDirectory,
+  archiveBytes, archivedReceiptDocument, archiveNames, atomicReplace, defaultLegacyStoreDirectory,
+  defaultStoreDirectory,
   ensureSafeDirectory, incidentEnvelope, safeStoreFile, transition, validateArchiveNames,
   validateEnvelope, validateIncident, withIncidentLock, writeExclusive,
 } from "./verification-reliability-persistence.mjs";
@@ -21,32 +22,65 @@ import {
   stableIncidentId, timeoutIncidentDigest,
 } from "./verification-reliability-values.mjs";
 
-function createStoreAccess({ root, storeDirectory }) {
+function createStoreAccess({ root, storeDirectory, legacyStoreDirectories }) {
   const directory = async({ create = true } = {}) => ensureSafeDirectory(
     storeDirectory ?? await defaultStoreDirectory(root), { create },
   );
+  const legacyDirectories = async() => Promise.all((legacyStoreDirectories ??
+    (storeDirectory === undefined ? [await defaultLegacyStoreDirectory(root)] : []))
+    .map((entry) => ensureSafeDirectory(entry, { create:false })));
+  const readableDirectories = async() => [await directory(), ...(await legacyDirectories()).filter(Boolean)];
+  const markerTarget = async(id) => path.join(await directory(), `${id}.legacy-source`);
+  const matches = async(id) => {
+    const found = [];
+    for (const store of await readableDirectories()) {
+      try { found.push({ store, bytes:await safeStoreFile(path.join(store, `${id}.json`)) }); }
+      catch (error) { if (error.code !== "ENOENT") throw error; }
+    }
+    if (found.length > 1 && found.some(({ bytes }) => !bytes.equals(found[0].bytes))) {
+      let marker;
+      try { marker = JSON.parse(await safeStoreFile(await markerTarget(id))); }
+      catch (error) { if (error.code !== "ENOENT") throw error; }
+      const primary = await directory();
+      const legacyDigests = found.filter(({ store }) => store !== primary)
+        .map(({ bytes }) => timeoutIncidentDigest(bytes)).sort();
+      if (marker?.version !== 1 || marker.id !== id ||
+          JSON.stringify(marker.legacyDigests) !== JSON.stringify(legacyDigests) ||
+          found[0].store !== primary) {
+        throw new Error(`Reliability incident ${id} diverges across repository namespaces`);
+      }
+    }
+    return found;
+  };
   const read = async(id) => {
     stableIncidentId(id);
-    const store = await directory({ create:false });
-    if (!store) throw new Error(`Unknown reliability incident ${id}`);
+    const found = await matches(id);
+    if (!found.length) throw new Error(`Unknown reliability incident ${id}`);
     let envelope;
-    try { envelope = JSON.parse(await safeStoreFile(path.join(store, `${id}.json`))); }
+    try { envelope = JSON.parse(found[0].bytes); }
     catch (error) { throw new Error(`Cannot read reliability incident ${id}: ${error.message}`); }
     return validateEnvelope(envelope, id);
   };
+  const sourceDirectory = async(id) => (await matches(stableIncidentId(id)))[0]?.store;
   const update = async(id, operation) => {
     const store = await directory();
     return withIncidentLock(store, stableIncidentId(id), async() => {
+      const found = await matches(id);
       const current = await read(id);
       const next = validateIncident(await operation(structuredClone(current)));
       if (next.id !== id || next.failureDigest !== current.failureDigest) {
         throw new Error(`Reliability incident ${id} immutable failure record changed`);
       }
       await atomicReplace(path.join(store, `${id}.json`), incidentEnvelope(next));
+      const legacyDigests = found.filter(({ store:source }) => source !== store)
+        .map(({ bytes }) => timeoutIncidentDigest(bytes)).sort();
+      if (legacyDigests.length) {
+        await atomicReplace(await markerTarget(id), { version:1, id, legacyDigests });
+      }
       return next;
     });
   };
-  return { directory, read, update };
+  return { directory, legacyDirectories, readableDirectories, sourceDirectory, read, update };
 }
 
 function diagnosticOperations({ root, now, read, update }) {
@@ -271,7 +305,7 @@ async function lineageApplies({ root, isAncestor, incident, commit, resolution =
 }
 
 export function createTimeoutIncidentStore({
-  storeDirectory, root = repositoryRoot, now = () => new Date().toISOString(),
+  storeDirectory, legacyStoreDirectories, root = repositoryRoot, now = () => new Date().toISOString(),
   randomId = () => randomUUID(), isAncestor,
   resolveCandidate = async(revision) => {
     const [commit, tree] = await Promise.all([
@@ -289,19 +323,19 @@ export function createTimeoutIncidentStore({
   canonicalCheckpointValidator = defaultCanonicalCheckpointValidator,
   canonicalRepairTaskIdentities = defaultCanonicalRepairTaskIdentities,
 } = {}) {
-  const access = createStoreAccess({ root, storeDirectory });
+  const access = createStoreAccess({ root, storeDirectory, legacyStoreDirectories });
   const store = {
     read:access.read,
     async list() {
-      const directory = await access.directory({ create:false });
-      if (!directory) return [];
-      const names = await readdir(directory);
+      const names = (await Promise.all((await access.readableDirectories()).map((entry) =>
+        readdir(entry)))).flat();
       const unexpected = names.filter((name) => !name.endsWith(".lock") &&
+        !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}\.legacy-source$/u.test(name) &&
         !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}\.(?:checkpoint-receipt|package-receipt|package-zip)$/u.test(name) &&
         !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}\.json$/u.test(name));
       if (unexpected.length) throw new Error(`Malformed reliability incident store entry: ${unexpected[0]}`);
-      const ids = names.filter((name) => name.endsWith(".json")).map((name) => name.slice(0, -5));
-      if (new Set(ids).size !== ids.length) throw new Error("Duplicate reliability incident ids");
+      const ids = [...new Set(names.filter((name) => name.endsWith(".json"))
+        .map((name) => name.slice(0, -5)))];
       return Promise.all(ids.sort().map(access.read));
     },
     async create(failure) {
@@ -347,7 +381,7 @@ export function createTimeoutIncidentStore({
       for (const incident of await this.list()) {
         if (incident.state !== "resolved" || !await lineageApplies({ root, isAncestor,
           incident, commit, resolution:true })) continue;
-        const directory = await access.directory({ create:false });
+        const directory = await access.sourceDirectory(incident.id);
         validateArchiveNames(incident.id, incident.resolution.archive);
         const checkpointDocument = await archivedReceiptDocument(
           path.join(directory, incident.resolution.archive.checkpointReceipt));

@@ -2,13 +2,17 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import {
-  atomicReplace, defaultRepositoryRuntimeDirectory, ensureSafeDirectory, safeStoreFile,
+  atomicReplace, defaultRepositoryRuntimeDirectory, ensureSafeDirectory, legacyGitCommonDirectory, safeStoreFile,
   withIncidentLock, writeExclusive,
 } from "./verification-reliability-persistence.mjs";
 import { git, normalized, timeoutIncidentDigest } from "./verification-reliability-values.mjs";
 
 export async function defaultCheckpointAttemptDirectory(root) {
   return path.join(await defaultRepositoryRuntimeDirectory(root), "checkpoint-attempts");
+}
+
+export async function defaultLegacyCheckpointAttemptDirectory(root) {
+  return path.join(await legacyGitCommonDirectory(root), "swarmforge-checkpoint-attempts");
 }
 
 const identityFields = ["candidate", "baseCommit", "evidenceTask", "planDigest",
@@ -241,33 +245,65 @@ async function defaultOwnerAlive(owner) {
   catch { return false; }
 }
 
-export function createCheckpointAttemptStore({ directory, now = () => new Date().toISOString(),
+export function createCheckpointAttemptStore({ directory, legacyDirectories = [], now = () => new Date().toISOString(),
   ownerAlive = defaultOwnerAlive } = {}) {
   if (typeof directory !== "string" || !directory) {
     throw new Error("Checkpoint attempt store requires a repository-common directory");
   }
+  if (!Array.isArray(legacyDirectories) || legacyDirectories.some((entry) =>
+    typeof entry !== "string" || !entry)) {
+    throw new Error("Checkpoint attempt legacy directories must be paths");
+  }
   const storeDirectory = () => ensureSafeDirectory(directory);
+  const readableDirectories = async() => [await storeDirectory(), ...(await Promise.all(
+    legacyDirectories.map((entry) => ensureSafeDirectory(entry, { create:false }))))
+    .filter(Boolean)];
   const target = (id) => path.join(directory, `${id}.json`);
+  const markerTarget = (id) => path.join(directory, `${id}.legacy-source`);
+  const locate = async(id) => {
+    const matches = [];
+    for (const store of await readableDirectories()) {
+      try { matches.push({ store, bytes:await safeStoreFile(path.join(store, `${id}.json`)) }); }
+      catch (error) { if (error.code !== "ENOENT") throw error; }
+    }
+    if (!matches.length) throw new Error(`Unknown checkpoint attempt ${id}`);
+    if (matches.some(({ bytes }) => !bytes.equals(matches[0].bytes))) {
+      let marker;
+      try { marker = JSON.parse(await safeStoreFile(markerTarget(id))); }
+      catch (error) { if (error.code !== "ENOENT") throw error; }
+      const legacyDigests = matches.filter(({ store }) => store !== directory)
+        .map(({ bytes }) => timeoutIncidentDigest(bytes)).sort();
+      if (marker?.version !== 1 || marker.id !== id || !same(marker.legacyDigests, legacyDigests) ||
+          matches[0].store !== directory) {
+        throw new Error(`Checkpoint attempt ${id} diverges across repository namespaces`);
+      }
+    }
+    return matches;
+  };
   const read = async(id) => {
-    await storeDirectory();
-    let document;
-    try { document = JSON.parse(await safeStoreFile(target(id))); }
+    const matches = await locate(id);
+    try { return validateAttempt(JSON.parse(matches[0].bytes), id); }
     catch (error) { throw new Error(`Cannot read checkpoint attempt ${id}: ${error.message}`); }
-    return validateAttempt(document, id);
   };
   const update = async(id, operation) => {
     await storeDirectory();
     return withIncidentLock(directory, id, async() => {
+      const matches = await locate(id);
       const current = await read(id);
       const next = await operation(structuredClone(current));
       validateAttempt(envelope(next), id);
       await atomicReplace(target(id), envelope(next));
+      const legacyDigests = matches.filter(({ store }) => store !== directory)
+        .map(({ bytes }) => timeoutIncidentDigest(bytes)).sort();
+      if (legacyDigests.length) {
+        await atomicReplace(markerTarget(id), { version:1, id, legacyDigests });
+      }
       return next;
     });
   };
   const list = async() => {
-    await storeDirectory();
-    const names = (await readdir(directory)).filter((name) => name.endsWith(".json")).sort();
+    const names = [...new Set((await Promise.all((await readableDirectories()).map((store) =>
+      readdir(store)))).flat().filter((name) => name.endsWith(".json")))].sort();
     return Promise.all(names.map((name) => read(name.slice(0, -5))));
   };
   const requireOwner = (attempt, owner) => {

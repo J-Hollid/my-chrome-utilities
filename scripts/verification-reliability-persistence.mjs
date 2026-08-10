@@ -21,6 +21,15 @@ export async function defaultStoreDirectory(root) {
   return path.join(await defaultRepositoryRuntimeDirectory(root), "reliability-incidents");
 }
 
+export async function legacyGitCommonDirectory(root) {
+  const common = await git(root, "rev-parse", "--git-common-dir");
+  return path.isAbsolute(common) ? common : path.resolve(root, common);
+}
+
+export async function defaultLegacyStoreDirectory(root) {
+  return path.join(await legacyGitCommonDirectory(root), "swarmforge-reliability-incidents");
+}
+
 export async function ensureSafeDirectory(directory, { create = true } = {}) {
   const resolved = path.resolve(directory);
   try {

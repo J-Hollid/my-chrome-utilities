@@ -14,7 +14,7 @@ import {
 import { planVerification, verificationTaskIdentity } from "./verification-packs.mjs";
 import {
   createCheckpointAttemptStore,
-  defaultCheckpointAttemptDirectory,
+  defaultCheckpointAttemptDirectory, defaultLegacyCheckpointAttemptDirectory,
 } from "./verification-checkpoint-attempt.mjs";
 import {
   preflightExecutionPrerequisites, probeExecutionPrerequisiteEnvironment,
@@ -723,6 +723,7 @@ async function withRepositoryArtifactLock(repositoryRoot, operation) {
 async function checkpointAttemptStore(repositoryRoot) {
   return createCheckpointAttemptStore({
     directory:await defaultCheckpointAttemptDirectory(repositoryRoot),
+    legacyDirectories:[await defaultLegacyCheckpointAttemptDirectory(repositoryRoot)],
   });
 }
 
