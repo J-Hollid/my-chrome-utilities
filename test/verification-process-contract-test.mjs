@@ -1549,7 +1549,16 @@ console.log("repairTmp=" + process.env.TMPDIR);
   };
   const environmentIncident = structuredClone(first);
   environmentIncident.failure.failureClass = "environment-contract-failure";
+  environmentIncident.failure.task = verificationTaskIdentity({
+    key:"unit:test/environment-contract-test.mjs", stage:"unit", packId:"shell",
+    executable:"node", args:["test/environment-contract-test.mjs"],
+  });
+  delete environmentIncident.failure.retryScope;
   environmentIncident.failureDigest = timeoutIncidentDigest(environmentIncident.failure);
+  assert.deepEqual(timeoutRepairDiagnosedBoundary(environmentIncident), {
+    kind:"task", taskKey:environmentIncident.failure.task.key,
+    executionArgs:[...environmentIncident.failure.task.args],
+  }, "an immutable pre-scope environment incident remains narrowly repairable by canonical task");
   await assert.rejects(validateTimeoutRepairProposal(environmentIncident, {
     ...validRepairProposal, causalCategory:"readiness",
   }, { isAncestor:async() => true }), /cannot relabel/u,

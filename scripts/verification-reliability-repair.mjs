@@ -31,6 +31,12 @@ export function timeoutRepairDiagnosedBoundary(incident) {
   validateIncident(incident);
   if (incident.failure.retryScope) return structuredClone(incident.failure.retryScope);
   const { failure } = incident;
+  if (failure.failureClass === "environment-contract-failure" &&
+      failure.task?.stage !== "browser-observation" &&
+      typeof failure.task?.key === "string" && failure.task.key &&
+      Array.isArray(failure.task.args)) {
+    return { kind:"task", taskKey:failure.task.key, executionArgs:[...failure.task.args] };
+  }
   const logicalTargetId = failure.failedBoundary?.logicalTargetId;
   if (failure.failureClass !== "explicit-logical-failure" ||
       failure.task?.stage !== "browser-observation" ||
