@@ -1175,13 +1175,25 @@ export function selectFocusedVerificationTasks(plan, requestedKeys, canonicalPla
 export function closeVerificationPlanPrerequisites(plan, canonicalPlan = plan) {
   const closedTasks = expandVerificationTaskPrerequisites(plan.tasks, canonicalPlan.tasks,
     { mode:plan.mode });
-  const selected = new Set(closedTasks.map(({ key }) => key));
-  const groups = Object.fromEntries(focusedTaskGroups.map((group) => [group,
-    (canonicalPlan[group] ?? []).filter(({ key }) => selected.has(key))]));
-  const tasks = canonicalPlan.tasks.filter(({ key }) => selected.has(key));
-  if (tasks.length !== selected.size) {
-    throw new Error("Verification plan prerequisites are not registered by the canonical pack set");
+  const taskGroups = new Map();
+  for (const source of [canonicalPlan, plan]) {
+    for (const group of focusedTaskGroups) {
+      for (const task of source[group] ?? []) {
+        const existing = taskGroups.get(task.key);
+        if (existing && existing !== group) {
+          throw new Error(`Verification task has ambiguous execution groups: ${task.key}`);
+        }
+        taskGroups.set(task.key, group);
+      }
+    }
   }
+  const groups = Object.fromEntries(focusedTaskGroups.map((group) => [group,
+    closedTasks.filter(({ key }) => taskGroups.get(key) === group)]));
+  const grouped = new Set(Object.values(groups).flat().map(({ key }) => key));
+  if (grouped.size !== closedTasks.length) {
+    throw new Error("Verification plan prerequisites are not registered by a canonical or requested execution group");
+  }
+  const tasks = focusedTaskGroups.flatMap((group) => groups[group]);
   const commandsFor = (group) => groups[group].map(({ display }) => display);
   return { ...plan, ...groups, tasks,
     preparationCommands:commandsFor("preparationTasks"),

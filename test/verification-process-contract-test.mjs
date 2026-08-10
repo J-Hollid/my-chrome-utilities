@@ -3298,6 +3298,16 @@ assert.ok(ordinaryShellPlan.tasks.indexOf(ordinaryShellPlan.tasks.find(({ key })
   ordinaryShellPlan.tasks.indexOf(ordinaryShellPlan.tasks.find(({ key }) =>
     key === "acceptance-session:shell")),
 "the ordinary cross-pack predecessor runs before its acceptance consumer");
+const prerequisiteTerminalPlan = planVerification(packs, { terminalFull:true });
+const closedTerminalPlan = closeVerificationPlanPrerequisites(prerequisiteTerminalPlan,
+  planVerification(packs, { packIds:timeoutRepairPackIds,
+    includeProperties:prerequisiteTerminalPlan.includeProperties }));
+assert.ok(closedTerminalPlan.tasks.some(({ key }) =>
+  key === "checkpoint:shell:prepared-dist-freshness"),
+"terminal-only requested leaves remain registered while canonical prerequisites are added");
+assert.equal(new Set(closedTerminalPlan.tasks.map(({ key }) => key)).size,
+  closedTerminalPlan.tasks.length,
+  "terminal prerequisite closure records each canonical or requested task exactly once");
 const repairCanonicalPlan = planVerification(packs, {
   packIds:timeoutRepairPackIds, includeProperties:true,
 });
