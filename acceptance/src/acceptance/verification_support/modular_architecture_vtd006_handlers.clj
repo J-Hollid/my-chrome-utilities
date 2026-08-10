@@ -179,7 +179,7 @@
 
    {:pattern #"^an early side-panel target is forced to fail during an active browser phase$"
     :handler (fn [world _ _] (prepared world))}
-   {:pattern #"^(?:EVENT_LIBRARY_RENDERED_SMOKE_TARGET|LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER) fails in its .+ phase$"
+   {:pattern #"^<failed_target> fails in its <failed_phase> phase$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^later compatible targets remain in the same process group$"
     :handler (fn [world _ _]
