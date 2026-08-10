@@ -1228,6 +1228,21 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       repairResult:{ status:"passed", fixtureDigest,
         observed:structuredClone(fixture.expectedRepairResult) } };
   }
+  if (causalCategory === "other:later-approved Flow repair conservation baseline") {
+    const fixture = {
+      id:"later-approved-flow-repair-conservation-baseline-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ infrastructureBaseline:"bfc9ac9f22", approvedFlowBaseline:"6358897239" },
+      expectedPreRepairFailure:{ approvedProductRepairClassifiedAsVtd014Drift:true },
+      expectedRepairResult:{ postFlowProductDrift:[], postFlowFeatureDrift:[] },
+    };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:structuredClone(fixture.expectedPreRepairFailure) },
+      repairResult:{ status:"passed", fixtureDigest,
+        observed:structuredClone(fixture.expectedRepairResult) } };
+  }
   if (causalCategory === "other:transitive strict-receipt prerequisite closure") {
     const fixture = {
       id:"transitive-strict-receipt-prerequisite-closure-v1", causalCategory,
@@ -2492,8 +2507,14 @@ console.log("repairTmp=" + process.env.TMPDIR);
       proposal.repair.focusedReceipt.commit === "repair-commit",
   };
   const vtd014AcceptedBaseCommit = "bfc9ac9f220ffeed710bb3e9f9b917dfbef6de86";
+  const vtd014ApprovedFlowBaselineCommit = "6358897239e77322ae2fa8fc0f7bcc43fedc0ab8";
   const changedFiles = await new Promise((resolve, reject) => execFile("git",
     ["diff", "--name-only", vtd014AcceptedBaseCommit],
+    { cwd:path.resolve(new URL("../", import.meta.url).pathname) },
+    (error, stdout, stderr) => error ? reject(new Error(stderr.trim() || error.message))
+      : resolve(stdout.trim().split(/\r?\n/u).filter(Boolean))));
+  const postFlowChangedFiles = await new Promise((resolve, reject) => execFile("git",
+    ["diff", "--name-only", vtd014ApprovedFlowBaselineCommit],
     { cwd:path.resolve(new URL("../", import.meta.url).pathname) },
     (error, stdout, stderr) => error ? reject(new Error(stderr.trim() || error.message))
       : resolve(stdout.trim().split(/\r?\n/u).filter(Boolean))));
@@ -2724,8 +2745,9 @@ console.log("repairTmp=" + process.env.TMPDIR);
         descendant:terminalClosureExecution({ attempt:"verifier-descendant", runnablePackCount:20 }) } },
     flowReloadLifecycle:flowReloadLifecycleEvidence,
     taskSuccession:taskSuccessionEvidence,
-    conservation:{ changedFiles, productChangedFiles:changedFiles.filter((file) => file.startsWith("src/")),
-      featureChangedFiles:changedFiles.filter((file) => file.startsWith("features/")),
+    conservation:{ changedFiles,
+      productChangedFiles:postFlowChangedFiles.filter((file) => file.startsWith("src/")),
+      featureChangedFiles:postFlowChangedFiles.filter((file) => file.startsWith("features/")),
       currentTaskDigest:verificationDigest(currentConservationPlan.tasks.filter(({key})=>![
         "unit:test/flow-reload-lifecycle-test.mjs",
       ].includes(key)).map(verificationTaskIdentity)),
