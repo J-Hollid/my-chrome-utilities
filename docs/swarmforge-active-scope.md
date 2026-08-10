@@ -3996,18 +3996,120 @@ session. If a predecessor fails, that predecessor owns the new incident and the
 dependent session does not launch. Missing generated output therefore cannot be
 reported as a Hotkeys product failure.
 
-The final descendant candidate must prepare both incident proposals against the same
-commit, tree, base `0adee4fa84a0a7c7e84be9d2ddb555e9346c1c1b`, and evidence task
-`vtd008-installed-hotkeys-controller`. Each proposal keeps its own causal explanation,
-regression, diagnosed boundary, and fresh focused receipt. One fresh canonical all-20
-checkpoint and `node scripts/package.mjs` then claim and resolve both incident ids;
-any incompatible or unresolved incident blocks before a checkpoint task launches.
+Before their first checkpoint claim, both incident proposals bind candidate
+`72f8d865c670a483b8c059e77b45065199cb28b0`, base
+`0adee4fa84a0a7c7e84be9d2ddb555e9346c1c1b`, and evidence task
+`vtd008-installed-hotkeys-controller`. A failure manifested by that checkpoint does
+not reopen or renew either claimed proposal. Their eligible proposals, causal
+explanations, regressions, diagnosed boundaries, and focused receipts remain
+immutable.
 
-Permitted correction paths are the repair-focused runner or repair planner, their
-focused process-contract regressions, generated documentation, and this specification
-record. No `src/` product file, Hotkeys behavior, saved value, accessibility result,
-canonical task identity, pack dependency, impact boundary, budget, calibration,
-timeout, worker limit, shard, or ordinary focused-plan result changes. Because the
-correction changes shared verification infrastructure used by all packs and roles,
-its delivery checkpoint remains the fresh all-20 run plus package required to resolve
-the two incidents.
+Candidate `4466ba8b9d37bcd38124781ad8d8d70be13d28cb` already has explicit
+rebase transitions from `72f8d865c670a483b8c059e77b45065199cb28b0` for incidents
+`87784c7d-7434-46ae-a8e1-79e4c9348859` and
+`3193bb88-7ae5-49fe-ae37-79f9706d0720`. Those transitions make the effective
+repair candidates share the final commit and tree without rewriting their evidence.
+The failed checkpoint claim is reclaimed once on the descendant through the existing
+audited reclaim path. A post-claim `repair-renewed` transition or a store change that
+permits one is outside this correction.
+
+One fresh canonical all-20 checkpoint and `node scripts/package.mjs` then claim and
+resolve the compatible incident set. Any incompatible or unresolved incident blocks
+before a checkpoint task launches.
+
+Permitted correction paths are the canonical runner, prerequisite planner and task
+registry, acceptance dependency declarations, focused process-contract regressions,
+generated documentation, and this specification record. No `src/` product file,
+Hotkeys behavior, saved value, accessibility result, pack dependency, impact boundary,
+budget, calibration, timeout, worker limit, shard, or evidence meaning changes.
+Because the correction changes shared verification infrastructure used by all packs
+and roles, its delivery checkpoint remains the fresh all-20 run plus package required
+to resolve the incident set.
+
+### Active universal prerequisite and launch-authorization correction
+
+The two collateral incidents expose preventable preflight gaps and are not candidates
+for abandonment. The user approved this additional shared-runner correction on
+2026-08-10 for the normal coder chain.
+
+The root defect is broader than either failure. Ordinary focused and exact execution
+uses canonical preflight, but unchanged diagnostic retry and repair-focused execution
+construct command runners directly. A direct command runner silently assigns the
+workspace route when it receives no validated route map. Separately, focused dependency
+closure knows about build, artifact, parse, and generation predecessors but not every
+upstream verification result consumed through the strict receipt. Sixty-three current
+acceptance step or support files use those receipt-backed verification operations, so
+a Shell-only evidence flag would leave the same defect available to other packs.
+
+Every registered runner mode must therefore enter one shared prerequisite gate before
+its first child process: ordinary focused, exact, impact, terminal, unchanged
+diagnostic retry, repair-focused execution, a fresh or reclaimed repair checkpoint,
+and checkpoint promotion. The gate produces task-bound launch authorizations. Each
+authorization binds the exact task identity, invocation mode, complete predecessor
+closure, declared capabilities, actual execution route, candidate and run identity,
+artifact identity, and receipt. The command runner has no default authorization or
+route: a missing, reused, altered, or wrong-mode authorization fails before `spawn`.
+
+Prerequisites are typed declarations with registered satisfiers, not conditionals for
+known incident names. The initial kinds cover upstream task results consumed through
+the strict receipt; build, artifact, parse, generation, and other file-producing
+tasks; required executables and bounded output resources; restricted host capabilities
+and their actual routes; and candidate, evidence, incident, checkpoint-attempt, and
+promotion identities. Adding another kind later requires one registered validator and
+satisfier. Unknown, ambiguous, cyclic, duplicate, contradictory, or catch-all
+declarations invalidate the plan before execution.
+
+For any registered kind, the gate computes its complete transitive closure. One
+available satisfier allowed by the requested mode is added exactly once and ordered
+before its consumer. A missing, denied, unavailable, or mode-incompatible satisfier
+blocks before the first child and reports the task, typed prerequisite, observed
+state, and required action. No reliability incident, diagnostic retry, task result,
+or passing evidence is created because no verification task ran. If an authorized
+child later requests an undeclared prerequisite, that is an execution-contract
+incident against the incomplete declaration. A test failure after all prerequisites
+were authorized remains an ordinary reliability incident. Classification therefore
+depends on the lifecycle boundary, not an exhaustive list of error messages or
+product areas.
+
+Mode and prerequisite-kind inventories are canonical registries consumed by the
+process-contract evidence. The evidence matrix proves, for every registered mode,
+that an authorized task launches and an unauthorized task cannot reach `spawn`. For
+every registered prerequisite kind it proves satisfied, blocked, and undeclared-after-
+authorization outcomes. Adding a mode or kind without its validator, satisfier, and
+generated matrix coverage fails registry validation. The two live incidents remain
+causal fixtures, not branches in production classification logic.
+
+Incident `d5e9fd9d-03e2-4abd-bdb1-a7807fa51e8c` belongs to a standalone Shell
+diagnostic at `72f8d865c670a483b8c059e77b45065199cb28b0` with no approved base,
+evidence task, or change-set identity. Its indivisible Shell acceptance session
+consumed six upstream verification results that its focused plan had not selected.
+Under the general contract, those receipt dependencies are canonical task prerequisites.
+The gate either adds their permitted closure in canonical order or rejects a mode that
+cannot satisfy that closure before any task begins.
+
+Incident `809dd54e-27e6-4fc3-a8ea-865796aac864` belongs to a diagnostic process-
+contract invocation at `4466ba8b9d37bcd38124781ad8d8d70be13d28cb`. Its canonical
+task declares `local-loopback`, but the recorded launch route was `workspace-sandbox`.
+The unchanged task passes through its declared approved-loopback route. Before any
+focused, repair-focused, or checkpoint child launches, the runner must compare the
+task's declared capabilities with the actual invocation route. A known-inadequate
+route returns `environment-prerequisite-blocked`, names the task, capability, and
+required scoped route, and creates neither a reliability incident nor a diagnostic
+retry.
+
+The descendant correction supplies deterministic preflight regressions for both
+misuses, the registry-generated mode and prerequisite-kind matrix, and the no-default-
+authorization boundary. It prepares causal repair proposals for both existing
+incidents. Their records remain durable and active until the final compatible
+checkpoint resolves them; no `lineage-abandoned` transition is authorized. Checkpoint Shell incident
+`e9572d6b-e91e-4a1c-b297-7a7b82c0c494` also remains active for its separate causal
+repair, while the two original Hotkeys/runner incidents retain their immutable
+proposals through explicit rebase and checkpoint reclaim.
+
+The final descendant therefore carries five compatible incident repairs: the two
+original Hotkeys/runner incidents, the genuine Shell checkpoint incident, and the two
+diagnostic-preflight incidents. One fresh canonical all-20 checkpoint plus package
+resolves that complete set. The correction changes no product behavior, pack
+selection from changed paths, evidence meaning, permission grant, or timeout. Focused
+task selection may add only the newly declared transitive prerequisites of the
+requested task; that is dependency correctness rather than unrelated fan-out.

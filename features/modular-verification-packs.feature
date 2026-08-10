@@ -1892,7 +1892,60 @@ Feature: Modular verification packs
   Scenario: Modular verification packs 128
     Given one current-lineage incident has an eligible Hotkeys repair and a later incident requires the repair-focused prerequisite correction
     When both repairs are prepared for the closing checkpoint
-    Then both eligible proposals bind the same final descendant commit, tree, approved base, and evidence task
+    Then both effective repair candidates resolve through explicit rebase transitions to the same final descendant commit and tree
+    And their approved base, evidence task, eligible proposals, regressions, and focused receipts remain immutable
+    And the failed checkpoint claim is reclaimed once for the final descendant without a repair-renewed transition
     And each proposal retains its own cause, regression, diagnosed boundary, and fresh focused receipt
     And the one fresh all-20 checkpoint claims and resolves both incident ids atomically
     And an incompatible or unresolved proposal prevents every checkpoint task from launching
+
+  # Modular verification packs 129
+  Scenario Outline: Modular verification packs 129
+    Given <runner_mode> selects canonical verification tasks
+    When that mode requests its first child process
+    Then one shared prerequisite gate validates the complete executable plan
+    And each permitted task receives one launch authorization bound to its identity, mode, predecessors, capabilities, actual route, run identity, artifact, and receipt
+    And command execution rejects a missing, reused, altered, or wrong-mode authorization before spawning a child
+
+    Examples:
+      | runner_mode                                                   |
+      | ordinary focused, exact, impact, or terminal execution        |
+      | one unchanged diagnostic retry                                |
+      | repair-focused execution                                      |
+      | a fresh or reclaimed repair checkpoint and its promotion      |
+
+  # Modular verification packs 130
+  Scenario Outline: Modular verification packs 130
+    Given the executable plan records <prerequisite_declaration> for one task
+    And the invocation has <prerequisite_state>
+    When the shared gate computes the transitive prerequisite closure
+    Then the gate response is <gate_result>
+    And every selected predecessor is ordered once before its consumer while unrelated work remains excluded
+
+    Examples:
+      | prerequisite_declaration                         | prerequisite_state                                      | gate_result                                                               |
+      | any registered typed prerequisite                | exactly one satisfier allowed by the requested mode     | the satisfier is added and its own prerequisites are resolved             |
+      | any registered typed prerequisite                | missing, denied, unavailable, or incompatible           | execution is blocked before the first child with its exact required action |
+      | an unknown, ambiguous, cyclic, or catch-all item  | any state                                               | plan validation fails closed before launch                                |
+
+  # Modular verification packs 131
+  Scenario Outline: Modular verification packs 131
+    Given prerequisite evaluation reaches <boundary>
+    When the runner classifies the outcome
+    Then it records <classification>
+    And the candidate receives <candidate_effect>
+
+    Examples:
+      | boundary                                                        | classification                         | candidate_effect                                                     |
+      | a declared prerequisite is unsatisfied before authorization     | a structured prerequisite block        | no incident, retry, task result, or passing evidence                  |
+      | an authorized child requests an undeclared prerequisite         | an execution-contract incident          | repair of the declaration and a causal regression are required       |
+      | an authorized child fails after every prerequisite is satisfied | the task's normal reliability failure  | the existing isolation, repair, and resolution rules apply           |
+
+  # Modular verification packs 132
+  Scenario: Modular verification packs 132
+    Given the canonical registries enumerate every runner mode and typed prerequisite kind
+    When shared process-contract evidence iterates those registries
+    Then every mode proves that an authorized task launches and an unauthorized task cannot spawn
+    And every prerequisite kind proves satisfied, blocked, and undeclared-after-authorization outcomes
+    And adding a mode or prerequisite kind without its validator, satisfier, and generated matrix coverage fails registry validation
+    And the Shell missing-result fixture and process-contract wrong-route fixture remain causal examples rather than special-case branches

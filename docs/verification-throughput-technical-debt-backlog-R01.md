@@ -1008,6 +1008,22 @@ so one fresh all-20 checkpoint plus package can resolve them together. This cand
 changes shared reliability tooling only. It does not broaden VTD-008 product behavior
 or activate another controller extraction.
 
+Approved checkpoint-recovery and universal-prerequisite clarification (2026-08-10): once an eligible repair
+has claimed its checkpoint, a later checkpoint failure does not permit that proposal
+or its focused evidence to be renewed. Explicit rebase transitions move the effective
+repair candidates to the descendant, and the existing audited reclaim operation gives
+that descendant one new checkpoint claim. Diagnostic incidents `d5e9fd9d` and
+`809dd54e` exposed a general bypass: not every runner mode obtains a validated,
+task-bound launch authorization, and focused dependency closure omits upstream strict-
+receipt results. The systematic correction routes every mode through one typed,
+transitive prerequisite gate, rejects unknown kinds and unauthorized spawns, and
+classifies failures by whether they occur before or after authorization. A registry-
+generated matrix makes every future mode and prerequisite kind supply its validator,
+satisfier, authorized path, blocked path, and contract-failure path before it can be
+registered. Both incidents receive causal repairs rather than abandonment. Checkpoint incident
+`e9572d6b` and the two original repair incidents also remain active, so the final
+compatible checkpoint resolves all five without changing product behavior.
+
 ## Recommended sequence
 
 ### Phase A — Establish measurement truth
