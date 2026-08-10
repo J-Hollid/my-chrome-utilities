@@ -29,6 +29,28 @@
 (def ^:private historical-registry-states
   #{"readable and compatible" "missing, unreadable, incompatible, or malformed"})
 
+(def ^:private event-library-targets
+  ["EVENT_LIBRARY_RENDERED_SMOKE_TARGET"
+   "LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER"])
+
+(def ^:private event-library-selections
+  {"focused rendered smoke" ["EVENT_LIBRARY_RENDERED_SMOKE_TARGET"]
+   "focused direct push" ["LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER"]
+   "exact Event Library pack" event-library-targets
+   "terminal verification" event-library-targets})
+
+(def ^:private smoke-results
+  {"Event Library utility isolation"
+   "only the intended Event Library utility and panel are present"
+   "opening a new template editor"
+   "the editor is visible and the template name has focus"
+   "saving a template revision"
+   "version 2 is persisted with exactly one revision-history entry"
+   "exporting the Event Library"
+   "one template and nonzero bytes are reported with exported-and-imported feedback"
+   "narrow installed presentation"
+   "the 320 pixel viewport has no horizontal overflow and every visible control is named"})
+
 (defn- event-world [world dependencies]
   (project/vtd004-world (assoc world :vtd004/owner "event-library") dependencies))
 
@@ -114,7 +136,132 @@
                    {:calibration evidence})))
 
 (defn handlers [{:keys [example-values] :as dependencies}]
-  [{:pattern #"^event-library owns source path (.+)$"
+  [{:pattern #"^the Event Library exact plan contains one standalone rendered-workflow smoke task and one installed direct-template-push target$"
+    :handler (fn [world _ _] (conservation-world world dependencies))}
+   {:pattern #"^the VTD-010 Event Library plan is created$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^EVENT_LIBRARY_RENDERED_SMOKE_TARGET and LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER are the two logical targets in event-library-side-panel$"
+    :handler (fn [world _ _]
+               (let [observations (get-in world [:vtd004/pack :browserObservations])]
+                 (assert-event! world
+                                (and (= event-library-targets (mapv :id observations))
+                                     (= #{"event-library-side-panel"}
+                                        (set (map :sessionBatch observations))))
+                                "Event Library logical target batching changed." {})))}
+   {:pattern #"^the exact plan runs one installed browser-observation process for both targets$"
+    :handler (fn [world _ _]
+               (assert-event! world
+                              (= 1 (count (set (map :path
+                                                    (get-in world [:vtd004/pack
+                                                                   :browserObservations])))))
+                              "Event Library targets no longer share one installed process." {}))}
+   {:pattern #"^test/browser-packs/event-library.mjs remains registered only as a thin compatibility launcher that delegates to EVENT_LIBRARY_RENDERED_SMOKE_TARGET$"
+    :handler (fn [world _ _]
+               (let [pack (:vtd004/pack world)
+                     mode (some #(when (= "test/browser-packs/event-library.mjs" (:path %))
+                                   (:mode %))
+                                (:browserAdapterModes pack))]
+                 (assert-event! world
+                                (and (= "compatibility" mode)
+                                     (str/includes? (slurp "test/browser-packs/event-library.mjs")
+                                                    "EVENT_LIBRARY_RENDERED_SMOKE_TARGET"))
+                                "Event Library compatibility launcher is not thin and delegated." {})))}
+   {:pattern #"^the compatibility launcher owns no separate assertion leaf and is excluded from exact and terminal executable tasks$"
+    :handler (fn [world _ _]
+               (let [evidence (get-in world [:vtd004/pack :browserEvidencePartitions])]
+                 (assert-event! world
+                                (not-any? #(= "test/browser-packs/event-library.mjs" (:path %)) evidence)
+                                "The compatibility launcher owns duplicate evidence." {})))}
+   {:pattern #"^historical changed-path planning retains its Event Library verification ownership without dependant expansion$"
+    :handler (fn [world _ _]
+               (assert-event! world
+                              (= ["event-library"]
+                                 (get-in world [:vtd004/evidence :currentPlans
+                                                :src/data-layer-push-draft-review-ui.ts]))
+                              "Historical Event Library ownership expanded." {}))}
+   {:pattern #"^the exact Event Library plan contains 29 tasks instead of 30$"
+    :handler (fn [world _ _]
+               (assert-event! world (= 29 (get-in world [:vtd004/evidence :conservation
+                                                          :exactTaskCount]))
+                              "Event Library exact plan is not 29 tasks." {}))}
+
+   {:pattern #"^the standalone Event Library smoke task currently proves <smoke_behavior>$"
+    :handler (fn [world example captures]
+               (let [behavior (first (example-values example captures))]
+                 (assoc (conservation-world world dependencies)
+                        :vtd010/smoke-behavior behavior)))}
+   {:pattern #"^EVENT_LIBRARY_RENDERED_SMOKE_TARGET executes that leaf in the installed Event Library session$"
+    :handler (fn [world _ _]
+               (assert-event! world
+                              (some #{"EVENT_LIBRARY_RENDERED_SMOKE_TARGET"}
+                                    (map :id (get-in world [:vtd004/pack :browserObservations])))
+                              "The rendered smoke target is not installed evidence." {}))}
+   {:pattern #"^it proves <preserved_result>$"
+    :handler (fn [world example captures]
+               (let [result (first (example-values example captures))]
+                 (assert-event! world (= result (smoke-results (:vtd010/smoke-behavior world)))
+                                "Rendered smoke behavior changed." {:result result})))}
+   {:pattern #"^the leaf is registered exactly once without a constant, rename, duplicate, or relaxed assertion$"
+    :handler (fn [world _ _]
+               (let [leaves (mapcat :originalLeaves
+                                    (get-in world [:vtd004/pack :browserEvidencePartitions]))]
+                 (assert-event! world (= (count leaves) (count (set leaves)))
+                                "Event Library rendered smoke leaf is duplicated." {})))}
+
+   {:pattern #"^Event Library browser selection scope is <selection_scope>$"
+    :handler (fn [world example captures]
+               (let [scope (first (example-values example captures))]
+                 (assoc (conservation-world world dependencies) :vtd010/selection scope)))}
+   {:pattern #"^browser evidence selection is <expected_targets>$"
+    :handler (fn [world example captures]
+               (let [expected (first (example-values example captures))
+                     selected (event-library-selections (:vtd010/selection world))
+                     rendered (case (count selected)
+                                1 (first selected)
+                                2 "rendered smoke and direct push once in one process")]
+                 (assert-event! world (= expected rendered)
+                                "Event Library browser selection is not exact." {})))}
+   {:pattern #"^no unrequested Event Library target executes$"
+    :handler (fn [world _ _]
+               (let [selected (event-library-selections (:vtd010/selection world))]
+                 (assert-event! world
+                                (and (seq selected)
+                                     (every? (set event-library-targets) selected)
+                                     (= (count selected) (count (set selected))))
+                                "Event Library selection contains an unrequested target." {})))}
+
+   {:pattern #"^the accepted Event Library inventory has nine unit files, one property file, eight features, three handlers, one rendered smoke task, and one direct-push observation$"
+    :handler (fn [world _ _] (conservation-world world dependencies))}
+   {:pattern #"^VTD-010 consolidates the Event Library browser launch$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^the nine unit files, one property file, eight features, three handlers, and every existing assertion leaf retain their identity and meaning$"
+    :handler (fn [world _ _]
+               (assert-event! world (:vtd004/conserved? world)
+                              "Event Library inventory is not conserved." {}))}
+   {:pattern #"^the rendered smoke leaves move to one installed logical target while the direct-push leaves remain unchanged$"
+    :handler (fn [world _ _]
+               (assert-event! world
+                              (= event-library-targets
+                                 (mapv :id (get-in world [:vtd004/pack :browserObservations])))
+                              "Event Library target leaves are not conserved." {}))}
+   {:pattern #"^no production impact boundary or other pack plan changes$"
+    :handler (fn [world _ _]
+               (assert-event! world (:vtd004/conserved? world)
+                              "Event Library consolidation changed another plan." {}))}
+   {:pattern #"^no shared verification planner or historical ownership rule changes$"
+    :handler (fn [world _ _]
+               (assert-event! world
+                              (get-in world [:vtd004/evidence :conservation
+                                             :terminalTaskIdentitiesConserved])
+                              "Event Library consolidation changed shared planning." {}))}
+   {:pattern #"^the delivery checkpoint runs the exact Event Library pack with properties followed by node scripts/package.mjs$"
+    :handler (fn [world _ _]
+               (assert-event! world
+                              (= 1 (get-in world [:vtd004/evidence :conservation
+                                                  :packageCheckCount]))
+                              "Event Library delivery package check changed." {}))}
+
+   {:pattern #"^event-library owns source path (.+)$"
     :handler (fn [world example captures]
                (project/boundary-world (assoc world :vtd004/owner "event-library")
                                        (first (example-values example captures)) dependencies))}
