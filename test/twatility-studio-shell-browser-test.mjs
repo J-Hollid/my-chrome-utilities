@@ -112,9 +112,12 @@ class DevtoolsSocket {
   call(method, params = {}) {
     const id = this.nextId++;
     this.send({ id, method, params });
+    const diagnosticMethod = method === "Runtime.evaluate"
+      ? `${method}:${String(params.expression).replaceAll(/\s+/gu, " ").slice(0, 96)}`
+      : method;
     return withDevtoolsProtocolDeadline({
       targetId: "twatility-studio-shell",
-      method,
+      method: diagnosticMethod,
       limitMs: 30_000,
       work: () => new Promise((resolve, reject) =>
         this.pending.set(id, { resolve, reject }),
