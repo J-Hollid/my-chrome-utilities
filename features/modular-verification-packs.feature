@@ -2023,3 +2023,68 @@ Feature: Modular verification packs
     And the package task executes freshly against the final candidate tree
     And record or promotion failure retries only its failed boundary while exact completed task results remain immutable
     And acceptance requires one current proof for every planned task and no blocking current-lineage causal incident
+
+  # Modular verification packs 139
+  Scenario Outline: Modular verification packs 139
+    Given one sealed candidate selects FLOW_WORKSPACE_CONTROLS_TARGET through <runner_mode>
+    When the target crosses a registered browser reload boundary
+    Then it retains the canonical page target, origin, storage, active project, requested Flow, and reload sequence
+    And the target observes the same lifecycle stages and assertions in every runner mode
+    And the runner mode changes only reliability governance and evidence recording
+
+    Examples:
+      | runner_mode                |
+      | ordinary focused execution |
+      | repair-focused execution   |
+
+  # Modular verification packs 140
+  Scenario Outline: Modular verification packs 140
+    Given FLOW_WORKSPACE_CONTROLS_TARGET has begun one registered browser reload
+    When lifecycle readiness observes <observed_state>
+    Then readiness produces <readiness_result>
+    And a deadline diagnostic names the earliest unmet lifecycle stage and its bounded state
+
+    Examples:
+      | observed_state                                                             | readiness_result                      |
+      | the current document generation has not completed initialization           | wait for the current initialization   |
+      | the repository is not open or the expected project is not active           | wait for the expected active project  |
+      | a connected project tree has no populated navigation                       | wait for populated project navigation |
+      | the requested Flow route is not mounted and painted                        | wait for the requested Flow workspace |
+      | every preceding stage is complete and the requested Flow is stably painted | report ready                          |
+      | the current initialization reports an error                                | fail with that initialization stage   |
+
+  # Modular verification packs 141
+  Scenario Outline: Modular verification packs 141
+    Given a launched FLOW_WORKSPACE_CONTROLS_TARGET does not restore its requested Flow after reload
+    When the lifecycle comparison establishes <causal_boundary>
+    Then the failure is <failure_domain>
+    And repair requires <repair_obligation>
+    And one passing invocation alone cannot establish the failure domain
+
+    Examples:
+      | causal_boundary                                                                                       | failure_domain         | repair_obligation                                                    |
+      | the canonical lifecycle is identical across modes and product initialization or route restoration fails | product-runtime        | repair the product lifecycle and prove the causal product regression |
+      | repair-focused execution changes page, origin, storage, active project, requested Flow, or reload sequence | verification-execution | repair the runner or harness and prove canonical mode equivalence     |
+
+  # Modular verification packs 142
+  Scenario Outline: Modular verification packs 142
+    Given a Flow reload failure has a canonical target, reload boundary, earliest unmet lifecycle stage, and diagnostic shape
+    When a later failure has <causal_relation>
+    Then incident storage performs <incident_action>
+    And each occurrence retains its exact candidate, tree, receipt, and observed lifecycle state
+
+    Examples:
+      | causal_relation                                                                                           | incident_action                                  |
+      | the same semantic key but different attempt ids, temporary paths, elapsed durations, or polling counts   | append an occurrence to the same causal incident |
+      | a different reload boundary, lifecycle stage, initializer error, or semantic identity                    | create a distinct causal incident                |
+
+  # Modular verification packs 143
+  Scenario: Modular verification packs 143
+    Given the 360 pixel Focus Canvas containment repair is retained on one sealed candidate
+    When the Flow reload lifecycle correction is delivered
+    Then deterministic fixtures prove delayed initialization and active-project hydration are awaited without accepting an empty shell
+    And the fixtures prove an initialization failure is reported at its lifecycle stage
+    And FLOW_WORKSPACE_CONTROLS_TARGET passes with the same registered reload sequence in ordinary focused and repair-focused execution
+    And no behavioral reload is removed or reordered without separate conservation proof
+    And no timeout is increased, arbitrary wait is added, target scope is broadened, or product assertion is weakened
+    And the bounded VTD-014 closure policy selects every additional affected task and fresh final package proof
