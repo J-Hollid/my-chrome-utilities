@@ -123,6 +123,7 @@ import {
 } from "../scripts/verification-reliability-persistence.mjs";
 import {
   boundedClosureContractRevision,
+  boundedClosureEvidenceTask,
   causalFailureIdentity,
   classifyReliabilityFailureDomain,
   closureDisposition,
@@ -1034,6 +1035,20 @@ assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-reba
   baseCommit:"approved-base", evidenceTask:"vtd014-timeout-repair-gate",
   requestedPackIds:timeoutRepairPackIds }), ["incident-rebased"],
 "an explicitly rebased failed repair checkpoint can use its descendant repair candidate");
+const boundedCompatible = { ...rebasedCompatible,
+  closureAudit:{ kind:"blocking-verification-repair", blocking:true, resolved:false,
+    failureDomain:"verification-execution" } };
+assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-rebased",
+  blocking:[boundedCompatible], candidateCommit:"repair-commit", candidateTree:"repair-tree",
+  baseCommit:boundedClosureContractRevision, evidenceTask:boundedClosureEvidenceTask,
+  requestedPackIds:timeoutRepairPackIds }), ["incident-rebased"],
+"the frozen bounded closure checkpoint preserves an audited verifier repair's original proposal binding");
+await assert.rejects(async() => compatibleTimeoutRepairIncidentIds({
+  requestedId:"incident-rebased", blocking:[rebasedCompatible], candidateCommit:"repair-commit",
+  candidateTree:"repair-tree", baseCommit:boundedClosureContractRevision,
+  evidenceTask:boundedClosureEvidenceTask, requestedPackIds:timeoutRepairPackIds,
+}), /incompatible reliability incident incident-rebased/u,
+"the bounded closure checkpoint cannot carry an unaudited repair proposal");
 await assert.rejects(async() => compatibleTimeoutRepairIncidentIds({ requestedId:"incident-a",
   blocking:[compatibleRepair("incident-a"), { ...compatibleRepair("incident-b"), repair:undefined }],
   candidateCommit:"repair-commit", candidateTree:"repair-tree", baseCommit:"approved-base",
