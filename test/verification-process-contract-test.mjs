@@ -320,9 +320,10 @@ assert.deepEqual(classifyExecutionRestriction({
 const executionContractRoot = await mkdtemp(path.join(os.tmpdir(), "vtd014-execution-contract-"));
 let executionContractIncidentObserved = false;
 try {
+  let executionContractIncidentNumber = 0;
   const executionContractStore = createTimeoutIncidentStore({ root:executionContractRoot,
     storeDirectory:path.join(executionContractRoot, "incidents"),
-    randomId:() => "tracked-write-drift" });
+    randomId:() => `contract-${++executionContractIncidentNumber}` });
   const executionContractIncident = await executionContractStore.create({
     lineage:{ commit:"a".repeat(40), tree:"b".repeat(40) }, task:prerequisiteTasks[1],
     failureClass:"execution-contract-failure", fingerprint:"c".repeat(64),
@@ -330,6 +331,15 @@ try {
   });
   assert.equal(executionContractIncident.failure.retryScope, undefined,
     "a tracked-file execution-contract drift cannot consume an unchanged retry");
+  const environmentContractIncident = await executionContractStore.create({
+    lineage:{ commit:"a".repeat(40), tree:"b".repeat(40) }, task:prerequisiteTasks[1],
+    failureClass:"environment-contract-failure", fingerprint:"d".repeat(64),
+    failedBoundary:{ kind:"capability-route", capability:"local-loopback" },
+  });
+  assert.deepEqual(environmentContractIncident.failure.retryScope, {
+    kind:"task", taskKey:prerequisiteTasks[1].key,
+    executionArgs:[...prerequisiteTasks[1].args],
+  }, "an environment-contract failure retains the trusted task boundary needed for causal repair");
   executionContractIncidentObserved = executionContractIncident.failure.failureClass ===
     "execution-contract-failure";
 } finally {

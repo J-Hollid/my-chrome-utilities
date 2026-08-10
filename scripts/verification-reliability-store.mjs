@@ -299,7 +299,7 @@ export function createTimeoutIncidentStore({
         throw new Error("Reliability failure requires a class and normalized fingerprint");
       }
       const id = stableIncidentId(randomId());
-      const scoped = failure.failureClass.endsWith("contract-failure") ? undefined : (() => {
+      const scoped = failure.failureClass === "execution-contract-failure" ? undefined : (() => {
         try { return diagnosticRetryScope({ task:failure.task,
           lastProgress:failure.failedBoundary ?? failure.lastProgress }); }
         catch { return undefined; }
