@@ -622,7 +622,9 @@
     "dependencies": [
       "command-palette"
     ],
-    "unit": [],
+    "unit": [
+      "test/hotkey-installed-controller-test.mjs"
+    ],
     "property": [
       "test/hotkey-binding-property-test.mjs",
       "test/modular-utility-architecture-property-test.mjs"

@@ -83,8 +83,22 @@ export function createHotkeyEditor(options) {
             container.append(section);
         }
     }
+    let bound = false;
+    const bind = () => {
+        if (bound)
+            return;
+        bound = true;
+        filter?.addEventListener("input", renderHotkeyEditor);
+    };
+    const unbind = () => {
+        if (!bound)
+            return;
+        bound = false;
+        filter?.removeEventListener("input", renderHotkeyEditor);
+    };
     return {
-        bind: () => filter?.addEventListener("input", renderHotkeyEditor),
+        bind,
+        unbind,
         render: renderHotkeyEditor,
     };
 }

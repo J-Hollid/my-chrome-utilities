@@ -5,6 +5,7 @@ import { blankHotkeyKeymap } from "../../hotkey-keymap.js";
 import { listCommands } from "../../commands.js";
 export { createHotkeyEditor } from "../../hotkey-editor.js";
 export * from "../../hotkey-keymap.js";
+export * from "./installed-controller.js";
 const hotkeyCommandIds = ["navigation.show-hotkeys"];
 function mountHotkeyEditor(root) {
     const container = root.querySelector("#hotkey-editor-commands");
