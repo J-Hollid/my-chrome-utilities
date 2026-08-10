@@ -170,14 +170,18 @@ try {
     transitionPhase("fixture setup");
     const seeded = await evaluate(`(async()=>{const {createSpecificationProject,addProjectEntity}=await import('./data-layer-specification-project.js'),{createFlowSection,addFlowPageFrameToSection}=await import('./data-layer-property-set-flow-section.js'),{addGraphOccurrence,saveGraphRelationship}=await import('./data-layer-flow-graph.js'),{openIndexedDbProjectRepository}=await import('./data-layer-durable-project-repository.js');let n=0,id=(kind)=>kind+':runtime:'+ ++n,state=createSpecificationProject({name:'Flow runtime',site:'runtime.example',id});const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);},propertySet=add('propertySets',{name:'Checkout',schemaConstraints:[{path:'/currency',type:'string',examples:['EUR']}]}),application=(name)=>({id:id('application'),name:'Checkout',propertySetId:propertySet.id}),confirmation=add('pages',{name:'Confirmation',propertySetApplications:[application()]}),payment=add('pages',{name:'Payment',propertySetApplications:[application()]}),receipt=add('pages',{name:'Receipt',propertySetApplications:[application()]}),purchase=add('events',{name:'Purchase',eventName:'purchase',schemaConstraints:[{path:'/event',type:'string',examples:['purchase']}]}),review=add('events',{name:'Review',eventName:'review'}),flow=add('flows',{name:'Checkout journey',steps:[]}),otherFlow=add('flows',{name:'Returns journey',steps:[]});state=addFlowPageFrameToSection(state,otherFlow.id,receipt.id,undefined,id);state=createFlowSection(state,flow.id,{name:'Checkout',bounds:{x:20,y:20,width:760,height:300}},id);state=createFlowSection(state,flow.id,{name:'Completion',bounds:{x:20,y:360,width:760,height:260}},id);let graph=state.project.documentationFlowGraphs[flow.id],sections=graph.sections;for(const [page,sectionId]of[[confirmation,sections[0].id],[payment,sections[0].id],[receipt,sections[1].id],[confirmation,undefined]])state=addFlowPageFrameToSection(state,flow.id,page.id,sectionId,id);graph=state.project.documentationFlowGraphs[flow.id];const frames=graph.pageFrames;state=addGraphOccurrence(state,flow.id,{name:'Purchase',pageFrameId:frames[0].id,pageId:confirmation.id,eventId:purchase.id,obligation:'Required',minimum:1,maximum:1,x:24,y:70},id);state=addGraphOccurrence(state,flow.id,{name:'Review',pageFrameId:frames[1].id,pageId:payment.id,eventId:review.id,obligation:'Required',minimum:1,maximum:1,x:24,y:70},id);state=saveGraphRelationship(state,flow.id,frames[0].id,{toStepId:frames[1].id,sourcePort:'right',targetPort:'left',label:'Checkout route'},id);state=saveGraphRelationship(state,flow.id,frames[0].id,{toStepId:frames[2].id,sourcePort:'top',targetPort:'bottom'},id);graph=state.project.documentationFlowGraphs[flow.id];const repository=await openIndexedDbProjectRepository();await repository.putProject(state,{active:true,navigation:{kind:'flows',id:flow.id}});return{projectId:state.project.id,flowId:flow.id,otherFlowId:otherFlow.id,pageIds:[confirmation.id,payment.id,receipt.id],frameIds:graph.pageFrames.map(({id})=>id),occurrenceIds:graph.occurrences.map(({id})=>id),relationshipIds:graph.relationships.map(({id})=>id),sectionIds:graph.sections.map(({id})=>id)};})()`);
     const ensureFlowWorkspace = async (predicate) => {
-        await waitForBrowser("navigation", `${predicate}: project tree mounted`, "#project-tree");
+        await observeBrowserReadiness({targetId,phase:"navigation",predicateDescription:`${predicate}: connected project tree`,timeoutMs:5000,pollIntervalMs:25,stabilityMs:100,maximumSnapshotCharacters:400,observe:async()=>evaluate("(()=>{const tree=document.querySelector('#project-tree'),box=tree?.getBoundingClientRect();return{ready:Boolean(tree?.isConnected),readyState:document.readyState,width:box?.width??0,height:box?.height??0};})()"),ready:({ready})=>ready,snapshot:(state)=>state});
         if (!await evaluate("Boolean(document.querySelector('[aria-label=\"Flow toolbar\"]')?.getBoundingClientRect().width)")) {
             await waitForBrowser("interaction", "Flows navigation mounted", "[data-kind=\"flows\"]");
             await evaluate("document.querySelector('[data-kind=\"flows\"]')?.click()");
             await observeBrowserReadiness({targetId,phase:"interaction",predicateDescription:"Checkout journey row mounted",timeoutMs:4000,pollIntervalMs:25,maximumSnapshotCharacters:400,observe:async()=>evaluate("(()=>{const rows=[...document.querySelectorAll('.entity-row button')],row=rows.find(item=>item.textContent==='Checkout journey');return{ready:Boolean(row),texts:rows.map(item=>item.textContent).slice(0,20)}})()"),ready:({ready})=>ready,snapshot:({texts})=>({texts})});
             await evaluate("(()=>{const row=[...document.querySelectorAll('.entity-row button')].find(item=>item.textContent==='Checkout journey');row.click();return true;})()");
         }
-        await waitForBrowser("readiness", predicate, "[aria-label=\"Flow toolbar\"]");
+        await observeBrowserReadiness({targetId,phase:"readiness",predicateDescription:predicate,timeoutMs:5000,pollIntervalMs:25,stabilityMs:100,maximumSnapshotCharacters:400,observe:async()=>evaluate("(()=>{const toolbar=[...document.querySelectorAll('[aria-label=\"Flow toolbar\"]')].find(item=>{const box=item.getBoundingClientRect();return box.width>0&&box.height>0;});const box=toolbar?.getBoundingClientRect();return{ready:Boolean(toolbar?.isConnected),width:box?.width??0,height:box?.height??0};})()"),ready:({ready})=>ready,snapshot:(state)=>state});
+    };
+    const ensureFlowPanWorkspace = async (predicate) => {
+        await ensureFlowWorkspace(predicate);
+        await observeBrowserReadiness({targetId,phase:"readiness",predicateDescription:`${predicate}: rendered graph item`,timeoutMs:5000,pollIntervalMs:25,stabilityMs:100,maximumSnapshotCharacters:400,observe:async()=>evaluate("(()=>{const items=[...document.querySelectorAll('[aria-label=\"Interactive directional Flow canvas\"] [data-flow-section-id],[aria-label=\"Interactive directional Flow canvas\"] [data-page-frame-id]')],painted=items.filter(item=>{const box=item.getBoundingClientRect();return box.width>0&&box.height>0;});return{ready:painted.length>0,itemCount:items.length,paintedCount:painted.length};})()"),ready:({ready})=>ready,snapshot:(state)=>state});
     };
     const runtime = {};
     if (browserShard !== "examples") transitionPhase("interaction");
@@ -200,7 +204,7 @@ try {
         activePhase = "runtime027";
         const originalPanState = await evaluate(flowR02PreparePanGraph(seeded));
         await socket.call("Page.reload", { ignoreCache: true });
-        await waitForBrowser("navigation", "Flow canvas mounted for runtime027", "[aria-label=\"Flow canvas viewport\"]");
+        await ensureFlowPanWorkspace("Flow canvas mounted for runtime027");
         const panRows = [
             [false, "primary", 120, 80, "mainPrimaryBlank"], [true, "primary", -90, -60, "focusPrimaryBlank"],
             [false, "space", 110, -70, "mainSpaceItem"], [true, "space", -100, 75, "focusSpaceItem"],
@@ -217,13 +221,15 @@ try {
         for (const [focused, kind, dx, dy, label] of panRows) {
             await socket.call("Emulation.setTouchEmulationEnabled", { enabled: false });
             await socket.call("Page.reload", { ignoreCache: true });
-            await waitForBrowser("navigation", `Flow canvas mounted for ${label}`, "[aria-label=\"Flow canvas viewport\"]");
+            await ensureFlowPanWorkspace(`Flow canvas mounted for ${label}`);
             if (kind === "touch")
                 await socket.call("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 1 });
-            await evaluate(`(async()=>{const toolbar=document.querySelector('[aria-label="Flow toolbar"]'),button=(text)=>{const found=[...toolbar.querySelectorAll('button')].find(item=>item.textContent.trim()===text);if(!found)throw new Error('Missing pan setup control '+text+' from '+[...toolbar.querySelectorAll('button')].map(item=>item.textContent.trim()).join('|'));return found;},active=document.body.classList.contains('flow-focus-canvas');if(active!==${focused})button(active?'Exit Focus Canvas':'Focus Canvas').click();/* Observe focus-layout animation before measuring Fit Flow. */await new Promise(resolve=>setTimeout(resolve,10));button('Fit Flow').click();/* Repeat the Zoom in control to observe bounded key-repeat behavior. */for(let count=0;count<20&&document.querySelector('[aria-label="Flow zoom percentage"]').textContent!=='200%';count+=1)button('Zoom in').click();document.querySelector('[aria-label="Flow canvas viewport"]').focus();})()`);
+            await evaluate(`(async()=>{const painted=(selector)=>[...document.querySelectorAll(selector)].find(item=>{const box=item.getBoundingClientRect();return box.width>0&&box.height>0;}),toolbar=painted('[aria-label="Flow toolbar"]'),button=(text)=>{const found=[...toolbar.querySelectorAll('button')].find(item=>item.textContent.trim()===text);if(!found)throw new Error('Missing pan setup control '+text+' from '+[...toolbar.querySelectorAll('button')].map(item=>item.textContent.trim()).join('|'));return found;},active=document.body.classList.contains('flow-focus-canvas');if(active!==${focused})button(active?'Exit Focus Canvas':'Focus Canvas').click();/* Observe focus-layout animation before measuring Fit Flow. */await new Promise(resolve=>setTimeout(resolve,10));button('Fit Flow').click();/* Repeat the Zoom in control to observe bounded key-repeat behavior. */for(let count=0;count<20&&painted('[aria-label="Flow zoom percentage"]').textContent!=='200%';count+=1)button('Zoom in').click();painted('[aria-label="Flow canvas viewport"]').focus();})()`);
             const before = await evaluate(flowR02PanProbe(seeded));
-            if (kind === "keyboard")
+            if (kind === "keyboard") {
+                await evaluate(`(()=>{const viewport=[...document.querySelectorAll('[aria-label="Flow canvas viewport"]')].find(item=>{const box=item.getBoundingClientRect();return box.width>0&&box.height>0;});viewport.focus({preventScroll:true});})()`);
                 await keyboardPan(dx, dy);
+            }
             else if (kind === "touch") {
                 await socket.call("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: before.blank.x, y: before.blank.y, id: 77, radiusX: 1, radiusY: 1, force: 1 }] });
                 // The press duration is the touch-pan gesture under test.
@@ -252,8 +258,8 @@ try {
             await socket.call("Emulation.setTouchEmulationEnabled", { enabled: false });
             await evaluate(`(()=>{const key=${JSON.stringify(flowR02ViewStorageKey(seeded))},prior=JSON.parse(sessionStorage.getItem(key)??'{}');sessionStorage.setItem(key,JSON.stringify({...prior,selectedItems:[]}));})()`);
             await socket.call("Page.reload", { ignoreCache: true });
-            await waitForBrowser("navigation", `Flow canvas mounted for ${label}`, "[aria-label=\"Flow canvas viewport\"]");
-            await evaluate(`(async()=>{const toolbar=document.querySelector('[aria-label="Flow toolbar"]'),button=(text)=>[...toolbar.querySelectorAll('button')].find(item=>item.textContent.trim()===text),active=document.body.classList.contains('flow-focus-canvas');if(active!==${focused})button(active?'Exit Focus Canvas':'Focus Canvas').click();/* Observe focus-layout animation before measuring Fit Flow. */await new Promise(resolve=>setTimeout(resolve,10));button('Fit Flow').click();document.querySelector('[aria-label="Flow canvas viewport"]').focus();})()`);
+            await ensureFlowPanWorkspace(`Flow canvas mounted for ${label}`);
+            await evaluate(`(async()=>{const painted=(selector)=>[...document.querySelectorAll(selector)].find(item=>{const box=item.getBoundingClientRect();return box.width>0&&box.height>0;}),toolbar=painted('[aria-label="Flow toolbar"]'),button=(text)=>[...toolbar.querySelectorAll('button')].find(item=>item.textContent.trim()===text),active=document.body.classList.contains('flow-focus-canvas');if(active!==${focused})button(active?'Exit Focus Canvas':'Focus Canvas').click();/* Observe focus-layout animation before measuring Fit Flow. */await new Promise(resolve=>setTimeout(resolve,10));button('Fit Flow').click();painted('[aria-label="Flow canvas viewport"]').focus();})()`);
             await socket.call("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 2 });
             const before = await evaluate(flowR02PanProbe(seeded)), first = { x: before.blank.x + 45, y: before.blank.y + 30, id: 91, radiusX: 1, radiusY: 1, force: 1 }, second = { x: first.x + 70, y: first.y, id: 92, radiusX: 1, radiusY: 1, force: 1 };
             await socket.call("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ ...first, x: before.blank.x, y: before.blank.y }] });
@@ -268,7 +274,7 @@ try {
             await mousePan(after.item, 0, 0);
             // Observe item activation before asserting selection.
             await wait(20);
-            const itemActivated = await evaluate(flowR02ItemActivationResult(after.item.id)), control = await evaluate(`(()=>{const button=[...document.querySelectorAll('[aria-label="Flow toolbar"] button')].find(item=>item.textContent.trim()==='Zoom in'),box=button.getBoundingClientRect();return{x:box.left+box.width/2,y:box.top+box.height/2,zoom:JSON.parse(document.querySelector('[aria-label="Interactive directional Flow canvas"]').dataset.viewport).zoom};})()`);
+            const itemActivated = await evaluate(flowR02ItemActivationResult(after.item.id)), control = await evaluate(`(()=>{const painted=(selector)=>[...document.querySelectorAll(selector)].find(item=>{const box=item.getBoundingClientRect();return box.width>0&&box.height>0;}),toolbar=painted('[aria-label="Flow toolbar"]'),button=[...toolbar.querySelectorAll('button')].find(item=>item.textContent.trim()==='Zoom in'),box=button.getBoundingClientRect();return{x:box.left+box.width/2,y:box.top+box.height/2,zoom:JSON.parse(painted('[aria-label="Interactive directional Flow canvas"]').dataset.viewport).zoom};})()`);
             await mousePan(control, 0, 0);
             // Observe toolbar animation before asserting its zoom effect.
             await wait(20);
@@ -277,7 +283,7 @@ try {
                 panEvidence[`${label}_${key}`] = value;
         }
         runtime.runtime027 = panEvidence;
-        await evaluate(`(()=>{if(document.body.classList.contains('flow-focus-canvas'))[...document.querySelectorAll('[aria-label="Flow toolbar"] button')].find(button=>button.textContent.trim()==='Exit Focus Canvas')?.click();})()`);
+        await evaluate(`(()=>{if(document.body.classList.contains('flow-focus-canvas')){const toolbar=[...document.querySelectorAll('[aria-label="Flow toolbar"]')].find(item=>{const box=item.getBoundingClientRect();return box.width>0&&box.height>0;});[...toolbar.querySelectorAll('button')].find(button=>button.textContent.trim()==='Exit Focus Canvas')?.click();}})()`);
         // Observe Focus Canvas exit animation before restoring the persisted graph.
         await wait(50);
         await evaluate(flowR02RestorePanGraph(seeded, originalPanState));

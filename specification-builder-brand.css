@@ -287,6 +287,10 @@ body.flow-focus-canvas .documentary-flow[data-canvas-first-r02="true"] .flow-wor
   inset-block-start: 0.5rem;
   inset-inline: 0.5rem;
   z-index: 8;
+  box-sizing: border-box;
+  max-inline-size: calc(100dvw - 1rem);
+  flex-wrap: wrap;
+  overflow-x: visible;
 }
 @media (max-width: 760px) {
   .twatility-studio #project-workspace:not([hidden]):has(.documentary-flow[data-canvas-first-r02="true"]) {

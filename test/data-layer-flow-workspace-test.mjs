@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {createHash} from "node:crypto";
 import {readFile} from "node:fs/promises";
 
 import {
@@ -134,6 +135,9 @@ assert.deepEqual(sectionBoundsAfterKeyboardInput(sectionBounds,"ArrowRight",true
 assert.deepEqual(sectionBoundsAfterKeyboardInput({x:0,y:0,width:240,height:140},"ArrowLeft",true),{x:0,y:0,width:240,height:140},"keyboard resize respects the minimum Section size");
 
 const flowCss=await readFile(new URL("../specification-builder-brand.css",import.meta.url),"utf8");
+const flowWorkspaceUi=await readFile(new URL("../src/flow-graph/workspace-ui.ts",import.meta.url),"utf8");
+const flowBrowserEvidence=await readFile(new URL("./browser-packs/flow-graph.mjs",import.meta.url),"utf8");
+const flowCorrectionEvidence=await readFile(new URL("./support/flow-r02-correction-evidence.mjs",import.meta.url),"utf8");
 assert.match(flowCss,/#workspace-pane:has\(\.documentary-flow\[data-canvas-first-r02="true"\]\)[^{]*\{[^}]*display:\s*grid[^}]*grid-template-rows:\s*auto minmax\(0, 1fr\)[^}]*overflow:\s*hidden/su,"the active Flow allocates a shared-chrome row and an explicit remaining route row");
 assert.match(flowCss,/#workspace-content\s*\{[^}]*display:\s*grid[^}]*grid-template-rows:\s*minmax\(0, 1fr\)/su,"the Flow host gives its documentary workspace a definite remaining-height grid area");
 assert.match(flowCss,/#project-workspace:not\(\[hidden\]\):has\(\.documentary-flow\[data-canvas-first-r02="true"\]\):has\(> nav\[hidden\]\)\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)\s+clamp\(16rem, 20vw, 21rem\)/su,"hidden Flow navigation releases its desktop grid track while the Inspector is open");
@@ -142,7 +146,44 @@ assert.match(flowCss,/#project-workspace:has\(\.documentary-flow\[data-canvas-fi
 assert.match(flowCss,/#project-workspace:has\(\.documentary-flow\[data-canvas-first-r02="true"\]\):has\(> nav\[hidden\]\) > #workspace-pane\s*\{[^}]*grid-column:\s*1/su,"the Flow workspace moves into the released navigation track");
 assert.match(flowCss,/\.documentary-flow\[data-canvas-first-r02="true"\][^{]*\{[^}]*position:\s*absolute[^}]*inset:\s*0[^}]*display:\s*flex[^}]*flex-direction:\s*column[^}]*block-size:\s*100%/su,"the ordinary Flow fills its explicit remaining route instead of escaping beneath shared chrome");
 assert.match(flowCss,/body\.flow-focus-canvas \.documentary-flow\[data-canvas-first-r02="true"\][^{]*\{[^}]*position:\s*fixed[^}]*inset:\s*0[^}]*block-size:\s*100dvh/su,"Focus Canvas covers the complete browser viewport");
+assert.match(flowCss,/body\.flow-focus-canvas \.documentary-flow\[data-canvas-first-r02="true"\] \.flow-workspace-toolbar\s*\{[^}]*box-sizing:\s*border-box[^}]*max-inline-size:\s*calc\(100dvw - 1rem\)[^}]*flex-wrap:\s*wrap[^}]*overflow-x:\s*visible/su,"the 360px Focus Canvas toolbar wraps every control inside its viewport overlay without horizontal discovery");
+assert.match(flowWorkspaceUi,/toolbar\.append\(skip, navigationToggle, add, focusCanvas, \.\.\.cameraUi\.controls, outlineButton, details, tidy, minimapToggle\)/u,"Add and the Focus Canvas entry precede secondary tools while camera controls stay immediately available");
 assert.doesNotMatch(flowCss,/^\.twatility-studio \.flow-canvas-viewport\s*\{[^}]*(?:max-block-size|aspect-ratio|block-size:\s*min\()/msu,"the ordinary canvas viewport has no fixed, maximum, or aspect-ratio height cap");
 assert.doesNotMatch(flowCss,/\.documentary-flow\[data-canvas-first-r02="true"\][^{]*\.flow-canvas-viewport\s*\{[^}]*block-size:\s*(?:clamp|min|max)\(/su,"later branding rules cannot restore a capped Flow canvas track");
+
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
+    normalized=(value)=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"
+      ?Object.fromEntries(Object.entries(value).filter(([,nested])=>nested!==undefined)
+        .sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)]))
+      :value,
+    digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
+    readiness=context.causalCategory==="readiness or settling",
+    expectedPreRepairFailure=readiness
+      ?{routeRestored:true,paintedInstanceSelected:false}
+      :{entryControlContained:false,focusToolbarWrapped:false,requiredControlsPrecedeSecondary:false},
+    expectedRepairResult=readiness
+      ?{routeRestored:true,paintedInstanceSelected:true}
+      :{entryControlContained:true,focusToolbarWrapped:true,requiredControlsPrecedeSecondary:true},
+    fixture={id:readiness?"flow-pan-painted-instance-readiness-v1":"focus-canvas-360-control-containment-v1",
+      causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:readiness
+        ?{preRepair:{historicalCanvas:{width:0,height:0},liveCanvas:{width:360,height:800},selection:"first DOM match"}}
+        :{viewport:{width:360,height:800},preRepair:{focusControl:{x:424.4375,width:88.765625},toolbar:{left:0,right:360},horizontalDiscoveryRequired:true}},
+      expectedPreRepairFailure,expectedRepairResult},
+    repairResult=readiness?{
+      routeRestored:/ensureFlowPanWorkspace/u.test(flowBrowserEvidence),
+      paintedInstanceSelected:/painted=\(s\)=>all\(s\)\.find/u.test(flowCorrectionEvidence)&&/const painted=\(selector\)=>\[\.\.\.document\.querySelectorAll\(selector\)\]\.find/u.test(flowBrowserEvidence),
+    }:{
+      entryControlContained:/toolbar\.append\(skip, navigationToggle, add, focusCanvas/u.test(flowWorkspaceUi),
+      focusToolbarWrapped:/max-inline-size:\s*calc\(100dvw - 1rem\)[^}]*flex-wrap:\s*wrap[^}]*overflow-x:\s*visible/su.test(flowCss),
+      requiredControlsPrecedeSecondary:/add, focusCanvas, \.\.\.cameraUi\.controls, outlineButton, details, tidy/u.test(flowWorkspaceUi),
+    },fixtureDigest=digest(fixture);
+  assert.deepEqual(repairResult,expectedRepairResult);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}}}));
+}
 
 console.log("data-layer Flow workspace tests passed");

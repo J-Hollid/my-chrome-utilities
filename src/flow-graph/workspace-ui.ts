@@ -160,7 +160,7 @@ export function upgradeFlowWorkspace(root: HTMLElement): void {
     minimapToggle.setAttribute("aria-pressed", String(view.minimap));
   });
   minimapToggle.setAttribute("aria-pressed", String(view.minimap));
-  toolbar.append(skip, navigationToggle, add, outlineButton, details, tidy, focusCanvas, ...cameraUi.controls, minimapToggle);
+  toolbar.append(skip, navigationToggle, add, focusCanvas, ...cameraUi.controls, outlineButton, details, tidy, minimapToggle);
 
   decorateCompactFlowCards(canvas, duplicateFrames, outline);
   if (actions?.getAttribute("aria-label")?.includes("Page instance")) {
