@@ -18,6 +18,7 @@ import {
 } from "./verification-checkpoint-attempt.mjs";
 import {
   preflightExecutionPrerequisites, probeExecutionPrerequisiteEnvironment,
+  validateTaskExecutionPrerequisites,
 } from "./verification-execution-prerequisites.mjs";
 import {
   verificationGitNotePromotionTask,
@@ -245,6 +246,7 @@ export async function validateCanonicalVerificationCheckpoint({
   const parsed = await parsedReceipt(receiptPath, plan, {
     allowLegacyPrerequisites:legacySeparatePackage,
     allowLegacyPromotionPrerequisites:allowLegacySeparatePackage,
+    allowLegacyAcceptanceSessionPrerequisites:allowLegacySeparatePackage,
   });
   const results = Object.values(receipt.tasks);
   if (results.some((result) => result.provenance !== "fresh" || result.reliabilityIncidentId ||
@@ -253,6 +255,29 @@ export async function validateCanonicalVerificationCheckpoint({
     throw new Error("Canonical checkpoint requires a complete fresh task set without reuse or timeout");
   }
   return { plan, changeSet, receipt, ...parsed };
+}
+
+export function legacyAcceptanceSessionPrerequisiteCompatibility({
+  allowed = false, task, identity, prerequisite, result,
+} = {}) {
+  if (!allowed || task?.stage !== "acceptance-session" ||
+      identity?.requiredCapabilities?.length !== 0 ||
+      !Array.isArray(prerequisite?.requiredCapabilities) ||
+      prerequisite.requiredCapabilities.length === 0 ||
+      typeof prerequisite.route !== "string" || !prerequisite.route ||
+      ["blocked", "workspace-sandbox"].includes(prerequisite.route)) return false;
+  let requiredCapabilities;
+  try {
+    requiredCapabilities = validateTaskExecutionPrerequisites({
+      ...identity, requiredCapabilities:prerequisite.requiredCapabilities,
+    });
+  } catch {
+    return false;
+  }
+  const legacyIdentity = { ...identity, requiredCapabilities };
+  return same(result?.identity, legacyIdentity) && same(result?.executionPrerequisites, {
+    requiredCapabilities, launchRoute:prerequisite.route,
+  });
 }
 
 async function assertCanonicalPlan(recordPlan, details) {
@@ -266,6 +291,7 @@ async function assertCanonicalPlan(recordPlan, details) {
 async function parsedReceipt(receiptPath, plan, {
   allowLegacyPrerequisites = false,
   allowLegacyPromotionPrerequisites = false,
+  allowLegacyAcceptanceSessionPrerequisites = false,
 } = {}) {
   if (!receiptPath) throw new Error("Provide the verification receipt produced by this run");
   const bytes = await readFile(receiptPath);
@@ -294,9 +320,15 @@ async function parsedReceipt(receiptPath, plan, {
     const identity = verificationTaskIdentity(task);
     const row = prerequisiteRows.find(({ key }) => key === task.key);
     const workspaceOnly = identity.requiredCapabilities.length === 0;
-    if (!row || !legacyPrerequisites && !same(row.requiredCapabilities, identity.requiredCapabilities) ||
+    const legacyAcceptanceSession = legacyAcceptanceSessionPrerequisiteCompatibility({
+      allowed:allowLegacyAcceptanceSessionPrerequisites,
+      task, identity, prerequisite:row, result:receipt.tasks[task.key],
+    });
+    if (!row || !legacyPrerequisites && !legacyAcceptanceSession &&
+          !same(row.requiredCapabilities, identity.requiredCapabilities) ||
         typeof row.route !== "string" || !row.route || row.route === "blocked" ||
-        !legacyPrerequisites && workspaceOnly !== (row.route === "workspace-sandbox")) {
+        !legacyPrerequisites && !legacyAcceptanceSession &&
+          workspaceOnly !== (row.route === "workspace-sandbox")) {
       throw new Error(`Verification receipt has an invalid execution route for ${task.key}`);
     }
   }
@@ -352,7 +384,14 @@ async function parsedReceipt(receiptPath, plan, {
   for (const [key, identity] of expected) {
     const result = receipt.tasks[key];
     if (result?.status !== "passed") throw new Error(`Required verification task did not pass: ${key}`);
-    const expectedIdentity = legacyPrerequisites
+    const prerequisite = prerequisiteRows.find(({ key:taskKey }) => taskKey === key);
+    const legacyAcceptanceSession = legacyAcceptanceSessionPrerequisiteCompatibility({
+      allowed:allowLegacyAcceptanceSessionPrerequisites,
+      task:identity, identity, prerequisite, result,
+    });
+    const expectedIdentity = legacyAcceptanceSession
+      ? { ...identity, requiredCapabilities:[...prerequisite.requiredCapabilities] }
+      : legacyPrerequisites
       ? Object.fromEntries(Object.entries(identity).filter(([field]) => field !== "requiredCapabilities"))
       : identity;
     if (!same(result.identity, expectedIdentity)) {
@@ -361,9 +400,9 @@ async function parsedReceipt(receiptPath, plan, {
     if (!Number.isFinite(result.durationMs) || result.durationMs < 0) {
       throw new Error(`Receipt task has no valid duration: ${key}`);
     }
-    const prerequisite = prerequisiteRows.find(({ key:taskKey }) => taskKey === key);
     if (!legacyPrerequisites && !same(result.executionPrerequisites, {
-      requiredCapabilities:identity.requiredCapabilities,
+      requiredCapabilities:legacyAcceptanceSession
+        ? prerequisite.requiredCapabilities : identity.requiredCapabilities,
       launchRoute:prerequisite.route,
     })) throw new Error(`Receipt task execution route does not match the plan: ${key}`);
     results.push({

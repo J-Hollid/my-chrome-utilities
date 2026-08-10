@@ -70,6 +70,7 @@ import {
 } from "../scripts/run-focused-acceptance.mjs";
 import {
   createPendingVerificationEvidence,
+  legacyAcceptanceSessionPrerequisiteCompatibility,
   preflightGitNotePromotion,
   probeGitMetadataWrite,
   recordPendingVerificationEvidence,
@@ -2908,6 +2909,32 @@ assert.deepEqual(focusedAcceptancePlan.tasks.at(-1).requiredCapabilities, [],
   "an acceptance session does not inherit authority from separately launched unit tasks");
 assert.equal(focusedAcceptancePlan.tasks.at(-1).temporaryPathClass, "workspace",
   "an acceptance session keeps its own workspace route");
+const currentAcceptanceIdentity = verificationTaskIdentity(focusedAcceptancePlan.tasks.at(-1));
+const legacyAcceptancePrerequisite = {
+  key:currentAcceptanceIdentity.key,
+  requiredCapabilities:["local-loopback"], route:"scoped-command-approval",
+};
+const legacyAcceptanceResult = {
+  identity:{ ...currentAcceptanceIdentity, requiredCapabilities:["local-loopback"] },
+  executionPrerequisites:{
+    requiredCapabilities:["local-loopback"], launchRoute:"scoped-command-approval",
+  },
+};
+assert.equal(legacyAcceptanceSessionPrerequisiteCompatibility({
+  allowed:true, task:focusedAcceptancePlan.tasks.at(-1), identity:currentAcceptanceIdentity,
+  prerequisite:legacyAcceptancePrerequisite, result:legacyAcceptanceResult,
+}), true, "archived incident evidence accepts the former inherited acceptance-session route");
+assert.equal(legacyAcceptanceSessionPrerequisiteCompatibility({
+  allowed:false, task:focusedAcceptancePlan.tasks.at(-1), identity:currentAcceptanceIdentity,
+  prerequisite:legacyAcceptancePrerequisite, result:legacyAcceptanceResult,
+}), false, "new checkpoints cannot opt into the historical acceptance-session route");
+assert.equal(legacyAcceptanceSessionPrerequisiteCompatibility({
+  allowed:true, task:focusedAcceptancePlan.tasks.at(-1), identity:currentAcceptanceIdentity,
+  prerequisite:legacyAcceptancePrerequisite,
+  result:{ ...legacyAcceptanceResult, executionPrerequisites:{
+    requiredCapabilities:["local-loopback"], launchRoute:"workspace-sandbox",
+  } },
+}), false, "archived route compatibility remains bound to its recorded execution result");
 assert.ok(focusedAcceptancePlan.parserTasks.length > 0 &&
   focusedAcceptancePlan.parserTasks.length === focusedAcceptancePlan.generatorTasks.length,
 "the focused acceptance session retains only its registered parse and generation prerequisites");
