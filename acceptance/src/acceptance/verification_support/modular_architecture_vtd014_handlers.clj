@@ -564,6 +564,102 @@
                                                     :noFreshAttempt :executionContractIncident) row))
                           "Checkpoint identity drift did not fail closed.")))}])
 
+(defn- universal-prerequisite-gate-handlers [example-values]
+  [{:pattern #"^(.+) selects canonical verification tasks$"
+    :handler (fn [world example captures]
+               (assoc (prepared world) :vtd014/runner-mode
+                      (first (values example-values example captures))))}
+   {:pattern #"^that mode requests its first child process$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^one shared prerequisite gate validates the complete executable plan$"
+    :handler (fn [world _ _]
+               (assert! world (every? #(and (:authorized %) (:unauthorizedBlocked %))
+                                      (vals (get-in world [:vtd014/evidence :execution
+                                                           :prerequisiteGate :modeMatrix])))
+                        "A registered runner mode bypassed the shared gate."))}
+   {:pattern #"^each permitted task receives one launch authorization bound to its identity, mode, predecessors, capabilities, actual route, run identity, artifact, and receipt$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :prerequisiteGate :authorization :taskBound]))
+                        "Launch authorization identity is incomplete."))}
+   {:pattern #"^command execution rejects a missing, reused, altered, or wrong-mode authorization before spawning a child$"
+    :handler (fn [world _ _]
+               (let [authorization (get-in world [:vtd014/evidence :execution
+                                                   :prerequisiteGate :authorization])]
+                 (assert! world (every? true? ((juxt :noDefault :missingBlocked :reusedBlocked
+                                                    :alteredBlocked :wrongModeBlocked) authorization))
+                          "An unauthorized command reached the spawn boundary.")))}
+
+   {:pattern #"^the executable plan records (.+) for one task$"
+    :handler (fn [world example captures]
+               (assoc (prepared world) :vtd014/typed-prerequisite
+                      (first (values example-values example captures))))}
+   {:pattern #"^the invocation has (.+)$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^the shared gate computes the transitive prerequisite closure$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :prerequisiteGate :closure :transitive]))
+                        "The prerequisite closure was not transitive."))}
+   {:pattern #"^the gate response is (.+)$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :prerequisiteGate :closure
+                                                     :invalidDeclarationsBlocked]))
+                        "A typed prerequisite response did not fail closed."))}
+   {:pattern #"^every selected predecessor is ordered once before its consumer while unrelated work remains excluded$"
+    :handler (fn [world _ _]
+               (let [closure (get-in world [:vtd014/evidence :execution
+                                             :prerequisiteGate :closure])]
+                 (assert! world (and (:canonicalOrder closure) (:unrelatedExcluded closure))
+                          "Prerequisite closure order or focus changed.")))}
+
+   {:pattern #"^prerequisite evaluation reaches (.+)$"
+    :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^the runner classifies the outcome$"
+    :handler (fn [world _ _]
+               (assert! world (every? true? (vals (get-in world [:vtd014/evidence :execution
+                                                                  :prerequisiteGate
+                                                                  :classifications])))
+                        "A prerequisite outcome was misclassified."))}
+   {:pattern #"^it records (.+)$" :handler (fn [world _ _] world)}
+   {:pattern #"^the candidate receives (.+)$" :handler (fn [world _ _] world)}
+
+   {:pattern #"^the canonical registries enumerate every runner mode and typed prerequisite kind$"
+    :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^shared process-contract evidence iterates those registries$"
+    :handler (fn [world _ _]
+               (assert! world (and (seq (get-in world [:vtd014/evidence :execution
+                                                        :prerequisiteGate :modeMatrix]))
+                                   (seq (get-in world [:vtd014/evidence :execution
+                                                        :prerequisiteGate :kindMatrix])))
+                        "Prerequisite registry evidence is empty."))}
+   {:pattern #"^every mode proves that an authorized task launches and an unauthorized task cannot spawn$"
+    :handler (fn [world _ _]
+               (assert! world (every? #(and (:authorized %) (:unauthorizedBlocked %))
+                                      (vals (get-in world [:vtd014/evidence :execution
+                                                           :prerequisiteGate :modeMatrix])))
+                        "Runner-mode matrix coverage is incomplete."))}
+   {:pattern #"^every prerequisite kind proves satisfied, blocked, and undeclared-after-authorization outcomes$"
+    :handler (fn [world _ _]
+               (assert! world (every? #(every? true? ((juxt :satisfied :blocked
+                                                           :undeclaredAfterAuthorization) %))
+                                      (vals (get-in world [:vtd014/evidence :execution
+                                                           :prerequisiteGate :kindMatrix])))
+                        "Prerequisite-kind matrix coverage is incomplete."))}
+   {:pattern #"^adding a mode or prerequisite kind without its validator, satisfier, and generated matrix coverage fails registry validation$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :execution
+                                                     :prerequisiteGate :closure
+                                                     :invalidDeclarationsBlocked]))
+                        "Registry validation admitted incomplete coverage."))}
+   {:pattern #"^the Shell missing-result fixture and process-contract wrong-route fixture remain causal examples rather than special-case branches$"
+    :handler (fn [world _ _]
+               (assert! world (every? true? (vals (get-in world [:vtd014/evidence :execution
+                                                                  :prerequisiteGate
+                                                                  :causalFixtures])))
+                        "Causal prerequisite fixtures became special-case branches."))}])
+
 (defn- shared-boundary-handlers [example-values]
   [
    {:pattern #"^a SwarmForge role runs (.+) for delivery$"
@@ -611,6 +707,7 @@
                (store-handlers example-values)
                (resolution-handlers example-values)
                (prerequisite-handlers example-values)
+               (universal-prerequisite-gate-handlers example-values)
                (checkpoint-handlers example-values)
                (shared-boundary-handlers example-values))))
 

@@ -39,8 +39,10 @@ import {
   timeoutRepairPackIds,
 } from "./verification-reliability-incidents.mjs";
 import {
-  classifyExecutionRestriction, preflightExecutionPrerequisites,
-  probeExecutionPrerequisiteEnvironment,
+  classifyExecutionRestriction, consumeVerificationLaunchAuthorization,
+  createVerificationLaunchAuthorizations, defaultTaskExecutionPrerequisites,
+  expandVerificationTaskPrerequisites,
+  preflightExecutionPrerequisites, probeExecutionPrerequisiteEnvironment,
 } from "./verification-execution-prerequisites.mjs";
 import {
   checkpointAttemptIdentity, checkpointAttemptInputIdentity, createCheckpointAttemptStore,
@@ -82,6 +84,44 @@ function environmentInteger(name, fallback, { maximum = Number.MAX_SAFE_INTEGER 
 function plannedExecutionCapabilities(plan) {
   return [...new Set((plan?.tasks ?? []).flatMap((task) =>
     Array.isArray(task.requiredCapabilities) ? task.requiredCapabilities : []))];
+}
+
+async function prepareTaskLaunchAuthorizations(context, tasks, mode, identity = {}) {
+  const availableCapabilities = plannedExecutionCapabilities({ tasks });
+  const outputLimitBytes = environmentInteger("VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES",
+    defaultOutputLimitBytes, { maximum:maximumOutputLimitBytes });
+  const environment = await probeExecutionPrerequisiteEnvironment(tasks, {
+    outputDirectory:path.dirname(context.receiptPath), outputLimitBytes,
+    requestedCapabilities:availableCapabilities, workspaceRoot:repositoryRoot,
+  });
+  const prerequisitePlan = preflightExecutionPrerequisites(tasks, {
+    availableCapabilities,
+    approvalRoutes:{ "local-loopback":"scoped-command-approval",
+      "git-metadata-write":"scoped-git-metadata-approval" },
+  });
+  context.receipt.plan ??= {};
+  context.receipt.plan.executionPrerequisites = prerequisitePlan.tasks;
+  if (!prerequisitePlan.launchable || !environment.launchable) {
+    const blocked = [...prerequisitePlan.blocked, ...environment.blocked];
+    context.receipt.environmentPrerequisiteBlocked = blocked;
+    await context.write();
+    throw new Error(`Verification environment prerequisite blocked before task launch: ${
+      blocked.map(({ taskKey, capability, prerequisite, route, value }) =>
+        `${taskKey}:${capability ?? prerequisite}:${route ?? value}`).join(", ")}`);
+  }
+  const launchRoutes = new Map(prerequisitePlan.tasks.map(({ key, route }) => [key, route]));
+  const authorizationContext = {
+    mode, candidate:structuredClone(identity.candidate ?? context.receipt.candidate ?? null),
+    runId:context.receipt.runId,
+    artifact:structuredClone(identity.artifact ?? context.receipt.artifact ?? null),
+    receiptPath:context.receiptPath,
+    checkpointAttempt:structuredClone(identity.checkpointAttempt ?? null),
+    promotion:structuredClone(identity.promotion ?? null),
+  };
+  return { launchRoutes, authorizationContext,
+    launchAuthorizations:createVerificationLaunchAuthorizations({
+      tasks, routes:launchRoutes, ...authorizationContext,
+    }) };
 }
 
 function valueArgument(args, index, option) {
@@ -471,7 +511,14 @@ export function createVerificationCommandRunner(context, options = {}) {
       ].includes(name));
     if (reservedEnvironment) throw new Error(`Verification task cannot override reserved environment: ${reservedEnvironment}`);
     const identity = verificationTaskIdentity(task);
-    const launchRoute = options.launchRoutes?.get(task.key) ?? "workspace-sandbox";
+    const launchRoute = options.launchRoutes?.get(task.key);
+    consumeVerificationLaunchAuthorization(options.launchAuthorizations, task, {
+      ...options.authorizationContext,
+      route:launchRoute,
+      completedPredecessorKeys:Object.entries(context.receipt.tasks)
+        .filter(([, result]) => result?.status === "passed")
+        .map(([key]) => key),
+    });
     const resolvedDeadlines = resolvedVerificationDeadlines({ timeoutMs, terminationGraceMs,
       environment:{ ...process.env, ...taskEnvironment } });
     const executionArgs = task.executionArgs ?? task.args;
@@ -808,12 +855,17 @@ export async function runTimeoutDiagnosticRetry(id, {
   if (JSON.stringify(context.receipt.environment) !== JSON.stringify(incident.failure.environment)) {
     throw new Error(`Reliability incident ${id} diagnostic environment identity changed`);
   }
-  await store.claimDiagnosticRetry(id, incident.failure.retryIdentity);
-  await context.write();
   const task = { ...structuredClone(incident.failure.task),
+    requiredCapabilities:[...(incident.failure.task.requiredCapabilities ??
+      defaultTaskExecutionPrerequisites(incident.failure.task.stage))],
     executionArgs:[...incident.failure.retryScope.executionArgs],
     executionLogicalTargetIds:incident.failure.retryScope.logicalTargetIds ?? [] };
-  const runner = createVerificationCommandRunner(context, { diagnosticIncidentId:id,
+  const launch = await prepareTaskLaunchAuthorizations(context, [task], "timeout-diagnostic", {
+    candidate:context.receipt.candidate, artifact:context.receipt.artifact,
+  });
+  await store.claimDiagnosticRetry(id, incident.failure.retryIdentity);
+  await context.write();
+  const runner = createVerificationCommandRunner(context, { ...launch, diagnosticIncidentId:id,
     timeoutMs:incident.failure.configuredTimeoutMs, strictAcceptanceReceipt:false });
   try { await runner(`diagnostic retry ${id}`, task); }
   catch { /* the persisted runner receipt is the classification authority */ }
@@ -902,11 +954,19 @@ export async function runTimeoutRepairFocused(id, {
   context.receipt.artifact = structuredClone(artifact);
   context.receipt.plan = { mode:"timeout-repair-focused", incidentId:id, causalCategory,
     causalExplanation, taskPlan, executionTaskPlan };
+  const runtimeExecutionTasks = executionTaskPlan.map((descriptor) => ({
+    ...structuredClone(descriptor.identity),
+    ...(registeredRuntimeTasks.get(descriptor.identity.key)?.temporaryPathClass
+      ? { temporaryPathClass:registeredRuntimeTasks.get(descriptor.identity.key).temporaryPathClass } : {}),
+  }));
+  const launch = await prepareTaskLaunchAuthorizations(context, runtimeExecutionTasks,
+    "timeout-repair-focused", { candidate:context.receipt.candidate,
+      artifact:context.receipt.artifact });
   await context.write();
   console.error(`[verify:receipt] ${path.relative(repositoryRoot, context.receiptPath)}`);
   const regressionContext = { version:1, incidentId:id, failureDigest:incident.failureDigest,
     diagnosedBoundary:timeoutRepairDiagnosedBoundary(incident), causalCategory, causalExplanation };
-  const runner = commandRunnerFactory(context, { strictAcceptanceReceipt:false });
+  const runner = commandRunnerFactory(context, { ...launch, strictAcceptanceReceipt:false });
   await executeTimeoutRepairTaskPlan(executionTaskPlan,
     { registeredRuntimeTasks, runner, regressionContext });
   context.receipt.completedAt = new Date().toISOString();
@@ -1053,31 +1113,21 @@ const focusedTaskGroups = [
   "parserTasks", "generatorTasks", "checkpointTasks", "sessionTasks", "packageTasks",
 ];
 
-export function selectFocusedVerificationTasks(plan, requestedKeys) {
+export function selectFocusedVerificationTasks(plan, requestedKeys, canonicalPlan = plan) {
   if (!Array.isArray(requestedKeys) || !requestedKeys.length ||
       new Set(requestedKeys).size !== requestedKeys.length) {
     throw new Error("Focused verification requires unique canonical task keys");
   }
   const withPackage = requestedKeys.includes(timeoutRepairPackageTaskIdentity.key)
-    ? planPackageTask(plan) : plan;
+    ? planPackageTask(canonicalPlan) : canonicalPlan;
   const candidates = new Map(withPackage.tasks.map((task) => [task.key, task]));
   for (const key of requestedKeys) {
     if (!candidates.has(key)) throw new Error(`Focused verification task is not registered by the selected pack: ${key}`);
   }
-  const selected = new Set(requestedKeys);
-  const artifactStages = new Set(["browser", "browser-observation", "checkpoint", "acceptance-session", "package"]);
-  if (requestedKeys.some((key) => artifactStages.has(candidates.get(key).stage))) {
-    selected.add("build:dist");
-  }
-  if (requestedKeys.some((key) => candidates.get(key).stage === "acceptance-session")) {
-    const features = new Set(requestedKeys
-      .map((key) => candidates.get(key))
-      .filter(({ stage }) => stage === "acceptance-session")
-      .flatMap(({ target }) => target?.split(",") ?? []));
-    for (const task of [...withPackage.parserTasks, ...withPackage.generatorTasks]) {
-      if (features.has(task.target)) selected.add(task.key);
-    }
-  }
+  const closedTasks = expandVerificationTaskPrerequisites(
+    requestedKeys.map((key) => candidates.get(key)), withPackage.tasks,
+    { mode:"ordinary-focused" });
+  const selected = new Set(closedTasks.map(({ key }) => key));
   const groups = Object.fromEntries(focusedTaskGroups.map((group) => [group,
     (withPackage[group] ?? []).filter(({ key }) => selected.has(key))]));
   const tasks = withPackage.tasks.filter(({ key }) => selected.has(key));
@@ -1086,7 +1136,7 @@ export function selectFocusedVerificationTasks(plan, requestedKeys) {
   }
   const commandsFor = (group) => groups[group].map(({ display }) => display);
   return {
-    ...withPackage,
+    ...plan,
     ...groups,
     mode:"focused-task",
     tasks,
@@ -1358,7 +1408,10 @@ export async function runFocusedAcceptance(
   await validateVerificationPacks(packs);
   let plan = planVerification(packs, options);
   if (options.focusedTaskKeys.length) {
-    plan = selectFocusedVerificationTasks(plan, options.focusedTaskKeys);
+    const canonicalFocusedPlan = planVerification(packs, {
+      packIds:timeoutRepairPackIds, includeProperties:true,
+    });
+    plan = selectFocusedVerificationTasks(plan, options.focusedTaskKeys, canonicalFocusedPlan);
   }
   if (evidenceTask) plan = planPackageTask(plan);
   const concurrency = environmentInteger("VERIFICATION_CONCURRENCY", 4, { maximum:64 });
@@ -1495,24 +1548,6 @@ export async function runFocusedAcceptance(
           .reduce((count, results) => count + Object.keys(results).length, 0)} logical target(s)`);
     }
   };
-  if (!commandRunner) {
-    await context.write();
-    console.error(`[verify:receipt] ${path.relative(repositoryRoot, context.receiptPath)}`);
-  }
-  const baseRunner = commandRunner ?? createVerificationCommandRunner(context, { launchRoutes,
-    onLogicalTargetResult:async(task, receiptTask) => {
-      if (checkpointAttempt) {
-        await checkpointAttemptStore.recordLogicalTargets(checkpointAttempt.attempt.id,
-          task.key, receiptTask, checkpointOwner);
-      }
-    },
-    onTaskResult:async(task, receiptTask) => {
-      if (checkpointAttempt && receiptTask.logicalResults) {
-        await checkpointAttemptStore.recordLogicalTargets(checkpointAttempt.attempt.id,
-          task.key, receiptTask, checkpointOwner);
-      }
-    },
-  });
   let activeAttemptTask;
   let checkpointGuard;
   const createGuard = () => createRepositoryCheckpointIdentityGuard({
@@ -1522,23 +1557,6 @@ export async function runFocusedAcceptance(
       artifactBuildIdentity:checkpointIdentity.artifactBuildIdentity, trackedChanges:"" },
     context, attemptId:checkpointAttempt.attempt.id, launchRoutes, artifactValidator,
   });
-  const runner = async(display, task) => {
-    if (!checkpointAttempt) return baseRunner(display, task);
-    activeAttemptTask = task.key;
-    await checkpointGuard.assertBefore(task);
-    await checkpointAttemptStore.assertIdentity(checkpointAttempt.attempt.id, checkpointIdentity);
-    const result = await baseRunner(display, task);
-    if (task.stage === "build" && checkpointIdentity.artifactOutputDigest === null) {
-      activeAttemptTask = undefined;
-      return result;
-    }
-    await checkpointAttemptStore.recordTask(checkpointAttempt.attempt.id, task.key, {
-      status:"passed", identityDigest:verificationDigest(verificationTaskIdentity(task)),
-      receiptTask:structuredClone(context.receipt.tasks[task.key]),
-    }, checkpointOwner);
-    activeAttemptTask = undefined;
-    return result;
-  };
   const bindCheckpointArtifact = async(artifact) => {
     if (!checkpointAttempt || checkpointIdentity.artifactOutputDigest !== null) return;
     await checkpointGuard.assertBefore({ kind:"artifact-binding" });
@@ -1562,6 +1580,54 @@ export async function runFocusedAcceptance(
     checkpointGuard = createGuard();
     if (options.skipBuild) await bindCheckpointArtifact(buildManifest);
   }
+  if (!commandRunner) {
+    await context.write();
+    console.error(`[verify:receipt] ${path.relative(repositoryRoot, context.receiptPath)}`);
+  }
+  const authorizationContext = {
+    mode:plan.mode,
+    candidate:structuredClone(context.receipt.candidate),
+    runId:context.receipt.runId,
+    artifact:structuredClone(context.receipt.artifactInput),
+    receiptPath:context.receiptPath,
+    checkpointAttempt:structuredClone(context.receipt.checkpointAttempt ?? null),
+    promotion:evidenceTask ? promotionTasks.map(verificationTaskIdentity) : null,
+  };
+  const launchAuthorizations = commandRunner ? undefined : createVerificationLaunchAuthorizations({
+    tasks:plan.tasks, routes:launchRoutes, ...authorizationContext,
+  });
+  const baseRunner = commandRunner ?? createVerificationCommandRunner(context, { launchRoutes,
+    launchAuthorizations, authorizationContext,
+    onLogicalTargetResult:async(task, receiptTask) => {
+      if (checkpointAttempt) {
+        await checkpointAttemptStore.recordLogicalTargets(checkpointAttempt.attempt.id,
+          task.key, receiptTask, checkpointOwner);
+      }
+    },
+    onTaskResult:async(task, receiptTask) => {
+      if (checkpointAttempt && receiptTask.logicalResults) {
+        await checkpointAttemptStore.recordLogicalTargets(checkpointAttempt.attempt.id,
+          task.key, receiptTask, checkpointOwner);
+      }
+    },
+  });
+  const runner = async(display, task) => {
+    if (!checkpointAttempt) return baseRunner(display, task);
+    activeAttemptTask = task.key;
+    await checkpointGuard.assertBefore(task);
+    await checkpointAttemptStore.assertIdentity(checkpointAttempt.attempt.id, checkpointIdentity);
+    const result = await baseRunner(display, task);
+    if (task.stage === "build" && checkpointIdentity.artifactOutputDigest === null) {
+      activeAttemptTask = undefined;
+      return result;
+    }
+    await checkpointAttemptStore.recordTask(checkpointAttempt.attempt.id, task.key, {
+      status:"passed", identityDigest:verificationDigest(verificationTaskIdentity(task)),
+      receiptTask:structuredClone(context.receipt.tasks[task.key]),
+    }, checkpointOwner);
+    activeAttemptTask = undefined;
+    return result;
+  };
   if (resumeReceiptPath) {
     let priorReceipt;
     try {

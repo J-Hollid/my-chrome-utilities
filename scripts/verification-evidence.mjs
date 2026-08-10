@@ -17,6 +17,7 @@ import {
   defaultCheckpointAttemptDirectory, defaultLegacyCheckpointAttemptDirectory,
 } from "./verification-checkpoint-attempt.mjs";
 import {
+  consumeVerificationLaunchAuthorization, createVerificationLaunchAuthorizations,
   preflightExecutionPrerequisites, probeExecutionPrerequisiteEnvironment,
   validateTaskExecutionPrerequisites,
 } from "./verification-execution-prerequisites.mjs";
@@ -812,6 +813,22 @@ export async function recordPendingVerificationEvidence(
 ) {
   const pending = await readPending(pendingPath);
   if (pending.status !== "pending") throw new Error("Only pending verification evidence can be recorded");
+  const promotionPreflight = await preflightGitNotePromotion(pendingPath, { repositoryRoot });
+  const promotionContext = {
+    mode:"checkpoint-promotion", candidate:{ commit:pending.commit, tree:pending.tree },
+    runId:pending.receipt.runId ?? pending.receipt.sha256,
+    artifact:pending.identities.artifact, receiptPath:pending.receipt.sourcePath,
+    checkpointAttempt:pending.checkpointAttempt ?? null,
+    promotion:{ pendingPath:path.relative(repositoryRoot, pendingPath) },
+  };
+  const promotionAuthorizations = createVerificationLaunchAuthorizations({
+    tasks:[promotionPreflight.task],
+    routes:new Map([[promotionPreflight.task.key, promotionPreflight.route]]),
+    ...promotionContext,
+  });
+  consumeVerificationLaunchAuthorization(promotionAuthorizations, promotionPreflight.task, {
+    ...promotionContext, route:promotionPreflight.route, completedPredecessorKeys:[],
+  });
   try {
     await metadataValidator(repositoryRoot);
   } catch (error) {

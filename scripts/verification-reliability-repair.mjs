@@ -4,6 +4,7 @@ import {
 import {
   exactObject, git, normalized, repositoryRoot, timeoutIncidentDigest,
 } from "./verification-reliability-values.mjs";
+import { expandVerificationTaskPrerequisites } from "./verification-execution-prerequisites.mjs";
 
 const causalCategories = new Set([
   "viewport/visibility/hit testing", "readiness or settling", "readiness",
@@ -128,18 +129,10 @@ export function timeoutRepairFocusedExecutionTaskPlan(taskPlan, canonicalIdentit
   if (selectedIdentities.some((identity) => !identity)) {
     throw new Error("Reliability repair execution task is not a canonical current identity");
   }
-  const artifactStages = new Set([
-    "browser", "browser-observation", "checkpoint", "acceptance-session", "package",
-  ]);
-  if (selectedIdentities.some(({ stage }) => artifactStages.has(stage))) selected.add("build:dist");
-  const acceptanceFeatures = new Set(selectedIdentities
-    .filter(({ stage }) => stage === "acceptance-session")
-    .flatMap(({ target }) => target?.split(",") ?? []));
-  for (const identity of canonicalIdentities) {
-    if (["acceptance-parse", "acceptance-generate"].includes(identity.stage) &&
-        acceptanceFeatures.has(identity.target)) selected.add(identity.key);
-  }
-  const executionTaskPlan = canonicalIdentities.filter(({ key }) => selected.has(key))
+  const closedIdentities = expandVerificationTaskPrerequisites(
+    selectedIdentities, canonicalIdentities, { mode:"repair-focused" });
+  for (const { key } of closedIdentities) selected.add(key);
+  const executionTaskPlan = closedIdentities
     .map((identity) => descriptors.get(identity.key) ?? {
       identity:structuredClone(identity), roles:["prerequisite"],
     });

@@ -1,11 +1,15 @@
 (ns acceptance.verification-support.modular-architecture-vtd007-handlers
   (:require [acceptance.steps.support :as support]
+            [acceptance.verification-support.modular-architecture-process-evidence :as process-evidence]
             [cheshire.core :as json]
             [clojure.java.shell :as shell]
             [clojure.set :as set]
             [clojure.string :as str]))
 
 (def ^:private specification-commit "0642b1d4c8")
+
+(defonce ^:private production-evidence (atom nil))
+(defonce ^:private lifecycle-production-evidence (atom nil))
 
 (def ^:private migrated-entry-points
   ["test/browser-packs/shared-harness.mjs"
@@ -30,34 +34,26 @@
 (defn- topology-without-helper-registry [packs]
   (mapv #(if (= "shell" (get % "id")) (dissoc % "verificationHelpers") %) packs))
 
-(defn- output-evidence [output prefix key]
-  (some->> (str/split-lines output)
-           (filter #(str/starts-with? % prefix))
-           first
-           (#(json/parse-string % true))
-           key))
-
 (defn- run-production-probes! []
-  (let [unit (shell/sh "env" "SWARMFORGE_VTD007_REAL_RUNNER_PROBES=1"
-                       "node" "scripts/run-focused-acceptance.mjs"
-                       "--pack" "flow_graph"
-                       "--focused-task" "unit:test/flow-examples-timing-test.mjs")
-        lifecycle (shell/sh "env" "SWARMFORGE_VTD007_REAL_RUNNER_PROBES=1"
-                            "node" "scripts/run-focused-acceptance.mjs"
-                            "--pack" "shell"
-                            "--focused-task" "unit:test/headless-chrome-lifecycle-test.mjs")
-        evidence (output-evidence (:out unit) "{\"vtd007Acceptance\"" :vtd007Acceptance)
-        lifecycle-evidence (output-evidence (:out lifecycle)
-                                            "{\"vtd007LifecycleAcceptance\""
-                                            :vtd007LifecycleAcceptance)]
-    (assert! (zero? (:exit unit)) "Shared browser control production tests failed."
-             {:stderr (:err unit)})
-    (assert! (zero? (:exit lifecycle)) "Concrete browser lifecycle tests failed."
-             {:stderr (:err lifecycle)})
-    (assert! evidence "Shared browser control acceptance evidence is missing."
-             {:output (:out unit)})
-    (assert! lifecycle-evidence "Browser lifecycle acceptance evidence is missing."
-             {:output (:out lifecycle)})
+  (let [evidence (process-evidence/load! production-evidence
+                   {:command ["env" "SWARMFORGE_VTD007_REAL_RUNNER_PROBES=1" "node"
+                              "scripts/run-focused-acceptance.mjs" "--pack" "flow_graph"
+                              "--focused-task" "unit:test/flow-examples-timing-test.mjs"]
+                    :prepared-task "unit:test/flow-examples-timing-test.mjs"
+                    :fallback ["node" "test/flow-examples-timing-test.mjs"]
+                    :prefix "{\"vtd007Acceptance\"" :key :vtd007Acceptance
+                    :failure "Shared browser control production tests failed."
+                    :missing "Shared browser control acceptance evidence is missing."})
+        lifecycle-evidence (process-evidence/load! lifecycle-production-evidence
+                             {:command ["env" "SWARMFORGE_VTD007_REAL_RUNNER_PROBES=1" "node"
+                                        "scripts/run-focused-acceptance.mjs" "--pack" "shell"
+                                        "--focused-task" "unit:test/headless-chrome-lifecycle-test.mjs"]
+                              :prepared-task "unit:test/headless-chrome-lifecycle-test.mjs"
+                              :fallback ["node" "test/headless-chrome-lifecycle-test.mjs"]
+                              :prefix "{\"vtd007LifecycleAcceptance\""
+                              :key :vtd007LifecycleAcceptance
+                              :failure "Concrete browser lifecycle tests failed."
+                              :missing "Browser lifecycle acceptance evidence is missing."})]
     {:evidence evidence :lifecycle-evidence lifecycle-evidence}))
 
 (defn- registry-context! []
