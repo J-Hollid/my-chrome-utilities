@@ -15,6 +15,7 @@ export async function runEventLibrarySidePanel(environment = process.env) {
     return runSidePanelPack({
       owningPack:"event-library",
       moduleLoaders:{ "event-library":() => import("../support/side-panel-event-library-targets.mjs") },
+      environment,
     });
   }
   const registry = createSidePanelTargetRegistry(eventLibraryTargets.eventLibraryTargetContract, {

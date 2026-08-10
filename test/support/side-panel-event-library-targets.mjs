@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 
 import { createExecutableTargetDefinitions } from "./side-panel-browser-target-contract.mjs";
 import { observeBrowserReadiness, transmitDevtoolsProgram } from "./browser-observation-control.mjs";
-import { sharedHarnessReadinessState } from "../browser-packs/shared-harness.mjs";
 import { fixturePrograms } from "./side-panel-event-library-fixtures.mjs";
 
 const renderedSmokeLeaves = Object.freeze([
@@ -65,6 +64,11 @@ async function evaluate(context, { source, phase, awaitPromise = false }) {
   return response.result.value;
 }
 
+function eventLibraryPanelReady({ documentReadyState, shellReady, isolation, libraryPanel }) {
+  return documentReadyState === "complete" && shellReady === "true" &&
+    isolation === "data-layer" && libraryPanel;
+}
+
 async function observeRenderedSmoke(context) {
   await context.runPhaseScoped("navigation", async () => {
     const query = new URLSearchParams([
@@ -86,7 +90,7 @@ async function observeRenderedSmoke(context) {
         phase:"navigation",
         source:"({documentReadyState:document.readyState,shellReady:document.querySelector('#side-panel-root')?.dataset.utilityShellReady??null,isolation:document.documentElement.dataset.utilityIsolation??'',libraryPanel:Boolean(document.querySelector('#data-layer-panel-library')),href:location.href})",
       }),
-      ready:(state) => sharedHarnessReadinessState(state, "data-layer") && state.libraryPanel,
+      ready:eventLibraryPanelReady,
       snapshot:(state) => state,
     });
   });
@@ -107,7 +111,10 @@ export const eventLibraryTargetContract = Object.freeze([
   renderedSmokeTarget, Object.freeze({ ...directPushTarget, processGroup:"event-library-side-panel" }),
 ]);
 async function executeFixture({ context, fixturePrograms:programs, target }) {
-  return context.executeFixture({ fixturePrograms:programs, target }); } export { fixturePrograms };
+  return context.executeFixture({ fixturePrograms:programs, target });
+}
+
+export { fixturePrograms };
 export const definitions = Object.freeze([
   Object.freeze({
     ...renderedSmokeTarget,
