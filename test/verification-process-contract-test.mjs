@@ -709,6 +709,22 @@ try {
 const cliContentionRoot = await mkdtemp(path.join(os.tmpdir(), "vtd014-cli-contention-"));
 const cliContentionRepository = path.join(cliContentionRoot, "repository");
 const cliProcesses = new Set();
+const cliBuildProcessGroups = new Set();
+const cliBuildProcessGroup = async() => {
+  const owner = (await readFile(path.join(cliContentionRepository,
+    "tmp", "cli-contention-build-owner"), "utf8")).trim().split(" ").map(Number);
+  const buildPid = owner[1];
+  const group = Number((await exec("ps", ["-o", "pgid=", "-p", String(buildPid)])).trim());
+  assert.ok(Number.isInteger(group) && group > 1 && group !== process.pid,
+    "the contention fixture must resolve the nested build process group");
+  cliBuildProcessGroups.add(group);
+  return group;
+};
+const terminateCliBuildGroup = (group) => {
+  try { process.kill(-group, "SIGKILL"); }
+  catch (error) { if (error?.code !== "ESRCH") throw error; }
+  cliBuildProcessGroups.delete(group);
+};
 try {
   await exec("git", ["clone", "--quiet", "--no-hardlinks", path.resolve("."), cliContentionRepository]);
   const cliContentionBase = await exec("git", ["rev-parse", "HEAD"]);
@@ -818,10 +834,9 @@ try {
   assert.doesNotMatch(incompatibleCli.stderr, /\[verify:start\]|Timed out waiting.*dist artifact lock/u,
     "an incompatible CLI must report the named owner before task timing or artifact-lock waiting");
 
-  const [buildGroupPid] = (await readFile(buildOwnerFile, "utf8")).trim().split(" ").map(Number);
+  const buildGroupPid = await cliBuildProcessGroup();
   firstCli.child.kill("SIGKILL");
-  try { process.kill(-buildGroupPid, "SIGKILL"); }
-  catch (error) { if (error?.code !== "ESRCH") throw error; }
+  terminateCliBuildGroup(buildGroupPid);
   await firstCli.closed;
   await rm(buildOwnerFile, { force:true });
 
@@ -833,11 +848,14 @@ try {
   assert.ok(staleCli.stderr.indexOf("[verify:checkpoint-continue]") <
     staleCli.stderr.indexOf("[verify:start] npm run build"),
   "stale-owner recovery must complete outside and before task timing");
+  const staleBuildGroupPid = await cliBuildProcessGroup();
   staleCli.child.kill("SIGTERM");
   await staleCli.closed;
+  terminateCliBuildGroup(staleBuildGroupPid);
 } finally {
   for (const child of cliProcesses) child.kill("SIGKILL");
   await Promise.all([...cliProcesses].map((child) => new Promise((resolve) => child.once("close", resolve))));
+  for (const group of cliBuildProcessGroups) terminateCliBuildGroup(group);
   await removeVerificationFixtureRoot(cliContentionRoot);
 }
 
@@ -1188,8 +1206,10 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       id:"concurrent-verification-fixture-cleanup-v1", causalCategory,
       diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
       input:{ terminatingNestedRunner:true, nodeCompileCacheMayStillPopulate:true },
-      expectedPreRepairFailure:{ recursiveRemovalRetries:0, outcome:"ENOTEMPTY" },
-      expectedRepairResult:{ recursiveRemovalRetries:8, retryDelayMs:50, outcome:"removed" },
+      expectedPreRepairFailure:{ recursiveRemovalRetries:0, nestedBuildProcessGroupReaped:false,
+        outcome:"ENOTEMPTY" },
+      expectedRepairResult:{ recursiveRemovalRetries:8, retryDelayMs:50,
+        nestedBuildProcessGroupReaped:true, outcome:"removed" },
     };
     const fixtureDigest = timeoutIncidentDigest(fixture);
     return { version:2, incidentId, failureDigest, fixture,
