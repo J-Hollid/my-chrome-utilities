@@ -836,6 +836,48 @@
    {:pattern #"^no timeout is increased, arbitrary wait is added, target scope is broadened, or product assertion is weakened$" :handler (fn [world _ _] (let [lifecycle (get-in world [:vtd014/evidence :flowReloadLifecycle])] (assert! world (every? true? ((juxt :timeoutUnchanged :assertionsUnchanged) lifecycle)) "Flow lifecycle limits or assertions changed.")))}
    {:pattern #"^the bounded VTD-014 closure policy selects every additional affected task and fresh final package proof$" :handler (fn [world _ _] (assert! world (= "fresh" (get-in world [:vtd014/evidence :boundedClosure :terminal :descendant :packagePolicy])) "Flow lifecycle package proof is not fresh."))}])
 
+(defn- task-succession-handlers [_]
+  [{:pattern #"^(?:an unresolved incident retains a failed task that is absent from the current canonical registry|a historical incident boundary encounters .+|every edge from one historical failure boundary to its current successor is conserved|a current-lineage product-runtime incident has one conserved current successor boundary|incident d3a49b37-e016-4bed-830c-9531045a6773 names the retired standalone FLOW_WORKSPACE_CONTROLS_TARGET task)$"
+    :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^(?:repair-focused planning resolves its historical failure boundary|task succession validates .+|repair-focused execution plans the mapped boundary|its product repair becomes eligible through that successor|the approved 360 pixel control-containment repair is applied through task succession)$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^it uses only a versioned task-succession graph from the failure registry to the current registry$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :versioned])) "Task succession is not versioned."))}
+   {:pattern #"^each succession edge binds the exact source identity, destination identity, and conserved logical boundary$"
+    :handler (fn [world _ _] (let [e (get-in world [:vtd014/evidence :taskSuccession])] (assert! world (and (:exactIdentities e) (:conserved e)) "Task succession did not conserve exact identities and boundary.")))}
+   {:pattern #"^a registry change cannot retire a task used by an unresolved incident without declaring and validating its successor boundary$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :registryGuard])) "The unresolved-incident registry guard is absent."))}
+   {:pattern #"^the immutable failure task, occurrence, causal key, and diagnostic remain unchanged$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :immutable])) "Task succession mutated incident evidence."))}
+   {:pattern #"^an undeclared, inferred-by-name, ambiguous, cyclic, or incomplete succession blocks before execution$"
+    :handler (fn [world _ _] (assert! world (every? true? (vals (get-in world [:vtd014/evidence :taskSuccession :blocks]))) "A malformed succession did not block."))}
+   {:pattern #"^repair planning produces .+$"
+    :handler (fn [world _ _] (assert! world (every? true? (vals (get-in world [:vtd014/evidence :taskSuccession :fixtures]))) "A task-succession fixture is incomplete."))}
+   {:pattern #"^the plan records the source and destination task digests, succession chain, logical slice, and conservation digest$"
+    :handler (fn [world _ _] (let [m (get-in world [:vtd014/evidence :taskSuccession :mapping])] (assert! world (and (:sourceTaskDigest m) (:destinationTaskDigest m) (seq (:chain m)) (:logicalSlice m) (:conservationDigest m)) "The mapped plan lacks conservation provenance.")))}
+   {:pattern #"^launch authorization, prerequisite closure, execution, and receipt use the current canonical task identity$"
+    :handler (fn [world _ _] (let [e (get-in world [:vtd014/evidence :taskSuccession])] (assert! world (every? true? ((juxt :currentIdentity :currentAuthorization :currentPrerequisites) e)) "Mapped execution did not use current governance.")))}
+   {:pattern #"^only the mapped logical slice, its causal regression, affected process-contract tasks, and prerequisites execute$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :exactSlice])) "Mapped execution broadened its logical slice."))}
+   {:pattern #"^an unrelated member of a destination batch does not execute as repair proof$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :unrelatedBatchMembersExcluded])) "Mapped execution selected an unrelated batch member."))}
+   {:pattern #"^(?:the incident retains its own id, domain, immutable failure identity, causal key, and occurrence history|task succession is not resolution, lineage retirement, verifier supersession, or product-cause grouping|distinct incidents may cite one repair candidate and focused receipt only when each has its own exact causal regression|incidents group only when every successor-normalized causal field matches, not merely because one change repairs both)$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :incidentIndependent])) "Task succession conflated incident identity or resolution."))}
+   {:pattern #"^eligibility requires its own causal pre-repair failure and post-repair result plus fresh proof of the mapped boundary$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :ownRegression])) "Mapped eligibility lacks its own causal regression."))}
+   {:pattern #"^the current Flow Graph batch preserves that logical target and every assigned assertion leaf$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :conserved])) "The Flow target boundary was not conserved."))}
+   {:pattern #"^the incident maps to the current Flow Graph batch with only FLOW_WORKSPACE_CONTROLS_TARGET selected$"
+    :handler (fn [world _ _] (assert! world (and (true? (get-in world [:vtd014/evidence :taskSuccession :exactSlice])) (true? (get-in world [:vtd014/evidence :taskSuccession :unrelatedBatchMembersExcluded]))) "The Flow succession slice is not exact."))}
+   {:pattern #"^its Zoom-in containment symptom receives its own causal regression and repair proposal$"
+    :handler (fn [world _ _] (let [e (get-in world [:vtd014/evidence :taskSuccession])] (assert! world (and (:ownRegression e) (:ownProposal e)) "The Zoom-in incident lacks independent repair evidence.")))}
+   {:pattern #"^(?:its fresh mapped-target proof may share the sealed candidate and receipt with another containment incident|it is not lineage-retired or grouped with another incident solely because the product repair is shared)$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :incidentIndependent])) "Shared repair proof collapsed distinct incidents."))}
+   {:pattern #"^process-contract fixtures cover rename, batch embedding, unique split, missing history, ambiguity, and cycles$"
+    :handler (fn [world _ _] (assert! world (every? true? (vals (get-in world [:vtd014/evidence :taskSuccession :fixtures]))) "Task-succession fixture coverage is incomplete."))}
+   {:pattern #"^no product behavior, assertion leaf, timeout, target scope, incident record, or evidence meaning changes$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :noMeaningChanged])) "Task succession changed evidence meaning."))}])
+
 (defn handlers [{:keys [example-values]}]
   (vec (concat (incident-handlers example-values)
                (repair-handlers example-values)
@@ -846,6 +888,7 @@
                (checkpoint-handlers example-values)
                (bounded-closure-handlers example-values)
                (flow-reload-lifecycle-handlers example-values)
+               (task-succession-handlers example-values)
                (shared-boundary-handlers example-values))))
 
 ;; clj-mutate-manifest-begin

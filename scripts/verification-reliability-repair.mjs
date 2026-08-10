@@ -5,6 +5,9 @@ import {
   exactObject, git, normalized, repositoryRoot, timeoutIncidentDigest,
 } from "./verification-reliability-values.mjs";
 import { expandVerificationTaskPrerequisites } from "./verification-execution-prerequisites.mjs";
+import {
+  resolveIncidentTaskSuccession, verificationTaskDigest,
+} from "./verification-task-succession.mjs";
 
 const causalCategories = new Set([
   "viewport/visibility/hit testing", "readiness or settling", "readiness",
@@ -61,9 +64,9 @@ export function timeoutRepairCandidate(incident) {
   return candidate;
 }
 
-export function timeoutRepairFocusedTaskKeys(incident, changedPaths, regressionKey) {
+export function timeoutRepairFocusedTaskKeys(incident, changedPaths, regressionKey, taskSuccession) {
   validateIncident(incident);
-  const keys = new Set([incident.failure.task.key, regressionKey]);
+  const keys = new Set([taskSuccession?.destinationIdentity?.key ?? incident.failure.task.key, regressionKey]);
   if (changedPaths.some((changedPath) => changedPath.startsWith("scripts/") ||
       changedPath.startsWith("test/support/") ||
       changedPath.startsWith("acceptance/src/acceptance/verification_support/"))) {
@@ -78,18 +81,29 @@ export function timeoutRepairFocusedTaskKeys(incident, changedPaths, regressionK
   return [...keys].sort();
 }
 
-export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionKey, canonicalIdentities) {
+export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionKey, canonicalIdentities,
+  taskSuccession = undefined) {
   validateIncident(incident);
   const diagnosedBoundary = timeoutRepairDiagnosedBoundary(incident);
   if (!Array.isArray(canonicalIdentities)) throw new Error("Canonical repair task identities are required");
   const canonical = new Map(canonicalIdentities.map((identity) => [identity.key, normalized(identity)]));
-  const expectedKeys = timeoutRepairFocusedTaskKeys(incident, changedPaths, regressionKey);
+  const incidentTaskDigest = verificationTaskDigest(incident.failure.task);
+  const successionDestinationKey = taskSuccession?.destinationIdentity?.key;
+  if (taskSuccession && (taskSuccession.sourceTaskDigest !== incidentTaskDigest ||
+      taskSuccession.destinationTaskDigest !== verificationTaskDigest(taskSuccession.destinationIdentity) ||
+      !taskSuccession.chain?.length || !taskSuccession.conservationDigest ||
+      !taskSuccession.execution?.identity ||
+      JSON.stringify(normalized(taskSuccession.execution.identity)) !==
+        JSON.stringify(normalized(taskSuccession.destinationIdentity)))) {
+    throw new Error("Reliability repair task succession does not bind the immutable incident task");
+  }
+  const expectedKeys = timeoutRepairFocusedTaskKeys(incident, changedPaths, regressionKey, taskSuccession);
   const roles = new Map();
   const addRole = (key, role) => {
     if (!roles.has(key)) roles.set(key, new Set());
     roles.get(key).add(role);
   };
-  addRole(incident.failure.task.key, "diagnosed-boundary");
+  addRole(successionDestinationKey ?? incident.failure.task.key, "diagnosed-boundary");
   addRole(regressionKey, "causal-regression");
   for (const key of expectedKeys) {
     if (key.startsWith("unit:test/") && ["unit:test/verification-process-contract-test.mjs",
@@ -97,7 +111,7 @@ export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionK
   }
   const taskPlan = expectedKeys.map((key) => {
     const identity = canonical.get(key);
-    const priorIdentity = key === incident.failure.task.key
+    const priorIdentity = key === incident.failure.task.key && !taskSuccession
       ? normalized(incident.failure.task) : undefined;
     const executionIdentity = (value) => value && Object.fromEntries(Object.entries(value)
       .filter(([field]) => field !== "requiredCapabilities"));
@@ -106,9 +120,18 @@ export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionK
       throw new Error(`Reliability repair task ${key} is not a canonical current task identity`);
     }
     const descriptor = { identity, roles:[...(roles.get(key) ?? new Set())].sort() };
-    if (key === incident.failure.task.key) {
-      descriptor.executionArgs = [...diagnosedBoundary.executionArgs];
-      descriptor.executionLogicalTargetIds = [...(diagnosedBoundary.logicalTargetIds ?? [])];
+    if (key === (successionDestinationKey ?? incident.failure.task.key)) {
+      descriptor.executionArgs = [...(taskSuccession?.execution.args ?? diagnosedBoundary.executionArgs)];
+      descriptor.executionLogicalTargetIds = [...(taskSuccession?.execution.logicalTargetIds ??
+        diagnosedBoundary.logicalTargetIds ?? [])];
+      if (taskSuccession) descriptor.taskSuccession = {
+        version:taskSuccession.version,
+        sourceTaskDigest:taskSuccession.sourceTaskDigest,
+        destinationTaskDigest:taskSuccession.destinationTaskDigest,
+        chain:structuredClone(taskSuccession.chain),
+        logicalSlice:structuredClone(taskSuccession.logicalSlice),
+        conservationDigest:taskSuccession.conservationDigest,
+      };
     }
     return descriptor;
   });
@@ -196,8 +219,16 @@ export async function validateRepairReceiptSemantics(incident, proposal, regress
   const protocol = validateRegressionEvidence(incident, proposal,
     regressionProtocol(regressionDocument, proposal.regression.key, incident.id));
   const canonicalIdentities = await canonicalRepairTaskIdentities({ incident, proposal });
+  const hasIncidentIdentity = canonicalIdentities.some((identity) =>
+    verificationTaskDigest(identity) === verificationTaskDigest(incident.failure.task));
+  let taskSuccession;
+  if (!hasIncidentIdentity) {
+    const { loadVerificationPacks } = await import("./verification-packs.mjs");
+    taskSuccession = await resolveIncidentTaskSuccession({ incident, currentIdentities:canonicalIdentities,
+      currentPacks:await loadVerificationPacks() });
+  }
   const expectedTaskPlan = timeoutRepairFocusedTaskPlan(incident, proposal.changedPaths,
-    proposal.regression.key, canonicalIdentities);
+    proposal.regression.key, canonicalIdentities, taskSuccession);
   const expectedExecutionTaskPlan = timeoutRepairFocusedExecutionTaskPlan(
     expectedTaskPlan, canonicalIdentities);
   const expectedFocusedKeys = expectedExecutionTaskPlan.map(({ identity }) => identity.key);
@@ -206,6 +237,8 @@ export async function validateRepairReceiptSemantics(incident, proposal, regress
       focusedDocument.receipt.plan?.causalCategory !== proposal.causalCategory ||
       focusedDocument.receipt.plan?.causalExplanation !== proposal.causalExplanation ||
       regressionDocument.sha256 !== focusedDocument.sha256 ||
+      JSON.stringify(normalized(focusedDocument.receipt.plan.taskSuccession)) !==
+        JSON.stringify(normalized(taskSuccession)) ||
       JSON.stringify(normalized(focusedDocument.receipt.plan.taskPlan)) !==
         JSON.stringify(normalized(expectedTaskPlan)) ||
       JSON.stringify(normalized(focusedDocument.receipt.plan.executionTaskPlan)) !==

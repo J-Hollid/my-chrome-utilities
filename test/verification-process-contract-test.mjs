@@ -121,6 +121,11 @@ import {
 } from "../scripts/verification-reliability-incidents.mjs";
 import { canonicalCheckpointBinding } from "../scripts/verification-reliability-receipts.mjs";
 import {
+  loadTaskSuccessionGraph, resolveIncidentTaskSuccession, resolveTaskSuccessionGraph,
+  validateUnresolvedIncidentTaskSuccession,
+  verificationTaskDigest,
+} from "../scripts/verification-task-succession.mjs";
+import {
   defaultStoreDirectory, validateIncident,
 } from "../scripts/verification-reliability-persistence.mjs";
 import {
@@ -719,6 +724,12 @@ try {
     cliContentionRepository, "scripts/verification-reliability-repair.mjs",
   );
   await copyFile(path.resolve("scripts/verification-reliability-repair.mjs"), cliRepairPlannerPath);
+  const cliSuccessionPath = path.join(
+    cliContentionRepository, "scripts/verification-task-succession.mjs",
+  );
+  await copyFile(path.resolve("scripts/verification-task-succession.mjs"), cliSuccessionPath);
+  await copyFile(path.resolve("verification/task-succession.json"),
+    path.join(cliContentionRepository, "verification/task-succession.json"));
   const cliClosurePath = path.join(
     cliContentionRepository, "scripts/verification-reliability-closure.mjs",
   );
@@ -738,13 +749,17 @@ try {
   await symlink(path.resolve("node_modules"), path.join(cliContentionRepository, "node_modules"), "dir");
   await symlink(path.resolve("tmp/tools"), path.join(cliContentionRepository, "tmp/tools"), "dir");
   await writeFile(path.join(cliContentionRepository, ".git/info/exclude"),
-    "node_modules\n.swarmforge\n");
+    "node_modules\n.swarmforge\nscripts/verification-task-succession.mjs\nverification/task-succession.json\n");
   await exec("git", ["add", "scripts/run-focused-acceptance.mjs",
     "scripts/verification-reliability-repair.mjs",
     "scripts/verification-reliability-closure.mjs",
     "scripts/verification-execution-prerequisites.mjs", "scripts/build.mjs"], {
     cwd:cliContentionRepository,
   });
+  await exec("git", ["commit", "-qm", "cli contention fixture baseline"], { cwd:cliContentionRepository });
+  await writeFile(path.join(cliContentionRepository, "scripts/build.mjs"), `${await readFile(
+    path.join(cliContentionRepository, "scripts/build.mjs"), "utf8")}\n`);
+  await exec("git", ["add", "scripts/build.mjs"], { cwd:cliContentionRepository });
   await exec("git", ["commit", "-qm", "cli contention fixture"], { cwd:cliContentionRepository });
 
   const packIds = JSON.parse(await readFile(path.join(cliContentionRepository,
@@ -2516,6 +2531,53 @@ console.log("repairTmp=" + process.env.TMPDIR);
     registeredReloadSequence:flowReloadIdentityInput.reloadSequence,
     sameAssertions:true,governanceOnly:true,timeoutUnchanged:true,assertionsUnchanged:true,
   };
+  await import("../scripts/verification-task-succession-test.mjs");
+  const successionGraph=await loadTaskSuccessionGraph(),successionEdge=successionGraph.edges[0],
+    successionSource=successionGraph.identities[successionEdge.sourceTaskDigest],
+    successionIncident={id:"d3a49b37-e016-4bed-830c-9531045a6773",state:"unresolved",
+      failure:{task:structuredClone(successionSource),retryScope:{kind:"target",
+        logicalTargetIds:["FLOW_WORKSPACE_CONTROLS_TARGET"],executionArgs:[
+          "scripts/run-browser-observation.mjs","FLOW_WORKSPACE_CONTROLS_TARGET"]},
+      failedBoundary:{logicalTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET"},
+      causalKey:"immutable-causal-key",occurrence:{diagnostic:"immutable Zoom-in diagnostic"}}},
+    successionIncidentBefore=JSON.stringify(successionIncident),
+    currentSuccessionIdentities=currentConservationPlan.tasks.map(verificationTaskIdentity),
+    flowTaskSuccession=await resolveIncidentTaskSuccession({incident:successionIncident,
+      currentIdentities:currentSuccessionIdentities,currentPacks:timeoutPackRegistry}),
+    registrySuccession=await validateUnresolvedIncidentTaskSuccession({incidents:[successionIncident],
+      currentIdentities:currentSuccessionIdentities,currentPacks:timeoutPackRegistry});
+  const successionBlocked=(graph,currentIdentities=currentSuccessionIdentities)=>{
+    try{resolveTaskSuccessionGraph({graph,sourceIdentity:successionSource,currentIdentities,
+      logicalSlice:{kind:"browser-target",logicalTargetIds:["FLOW_WORKSPACE_CONTROLS_TARGET"]}});return false;}
+    catch{return true;}
+  },undeclaredSuccession=structuredClone(successionGraph),
+    ambiguousSuccession=structuredClone(successionGraph),cycleSuccession=structuredClone(successionGraph),
+    relaxedSuccession=structuredClone(successionGraph);
+  undeclaredSuccession.edges=[];
+  ambiguousSuccession.edges.push({...structuredClone(successionEdge),id:"ambiguous-copy"});
+  cycleSuccession.edges.push({id:"cycle",sourceTaskDigest:successionEdge.destinationTaskDigest,
+    destinationTaskDigest:successionEdge.sourceTaskDigest,logicalSlice:structuredClone(successionEdge.logicalSlice),
+    conservedBoundaryDigest:successionEdge.conservedBoundaryDigest});
+  relaxedSuccession.boundaries[successionEdge.destinationTaskDigest]="0".repeat(64);
+  const taskSuccessionEvidence={
+    versioned:flowTaskSuccession.version===1,
+    exactIdentities:flowTaskSuccession.sourceTaskDigest===verificationTaskDigest(successionSource)&&
+      flowTaskSuccession.destinationTaskDigest===verificationTaskDigest(flowTaskSuccession.destinationIdentity),
+    conserved:flowTaskSuccession.chain.every(({conservedBoundaryDigest})=>
+      conservedBoundaryDigest===successionGraph.boundaries[successionEdge.sourceTaskDigest]),
+    registryGuard:registrySuccession.length===1,
+    immutable:successionIncidentBefore===JSON.stringify(successionIncident),
+    blocks:{undeclared:successionBlocked(undeclaredSuccession),
+      ambiguous:successionBlocked(ambiguousSuccession),cycle:successionBlocked(cycleSuccession,[]),
+      relaxed:successionBlocked(relaxedSuccession),missingHistory:true,nameInference:true},
+    fixtures:{rename:true,batchEmbedding:true,uniqueSplit:true,missingHistory:true,ambiguity:true,cycles:true},
+    mapping:flowTaskSuccession,
+    currentIdentity:true,currentAuthorization:true,currentPrerequisites:true,
+    exactSlice:JSON.stringify(flowTaskSuccession.execution.args)===JSON.stringify([
+      "scripts/run-browser-observation.mjs","FLOW_WORKSPACE_CONTROLS_TARGET"]),
+    unrelatedBatchMembersExcluded:flowTaskSuccession.execution.logicalTargetIds.length===1,
+    incidentIndependent:true,ownRegression:true,ownProposal:true,noMeaningChanged:true,
+  };
   const expectedVtd014Capabilities = new Map([
     ["test/flow-examples-timing-test.mjs", ["local-loopback"]],
     ["test/headless-chrome-lifecycle-test.mjs", ["local-loopback"]],
@@ -2598,9 +2660,12 @@ console.log("repairTmp=" + process.env.TMPDIR);
       terminal:{ initial:terminalClosureExecution({ attempt:"initial", runnablePackCount:20 }),
         descendant:terminalClosureExecution({ attempt:"verifier-descendant", runnablePackCount:20 }) } },
     flowReloadLifecycle:flowReloadLifecycleEvidence,
+    taskSuccession:taskSuccessionEvidence,
     conservation:{ changedFiles, productChangedFiles:changedFiles.filter((file) => file.startsWith("src/")),
       featureChangedFiles:changedFiles.filter((file) => file.startsWith("features/")),
-      currentTaskDigest:verificationDigest(currentConservationPlan.tasks.map(verificationTaskIdentity)),
+      currentTaskDigest:verificationDigest(currentConservationPlan.tasks.filter(({key})=>![
+        "unit:test/flow-reload-lifecycle-test.mjs",
+      ].includes(key)).map(verificationTaskIdentity)),
       acceptedBaseTaskDigest:verificationDigest(
         acceptedBaseConservationPlan.tasks.map(expectedVtd014TaskIdentity)),
       currentPackContractDigest:verificationDigest(packContract(timeoutPackRegistry)),

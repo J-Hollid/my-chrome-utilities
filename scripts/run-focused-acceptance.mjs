@@ -58,6 +58,10 @@ import {
 } from "./verification-reliability-closure.mjs";
 export { verificationPromotionTasks } from "./verification-promotion-plan.mjs";
 import { verificationPromotionTasks } from "./verification-promotion-plan.mjs";
+import {
+  resolveIncidentTaskSuccession, validateUnresolvedIncidentTaskSuccession,
+  verificationTaskDigest,
+} from "./verification-task-succession.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const defaultTimeoutMs = 600_000;
@@ -969,9 +973,16 @@ export async function runTimeoutRepairFocused(id, {
     packIds:timeoutRepairPackIds, includeProperties:true, changedPaths:changeSet.paths, changeSet,
   });
   const canonicalIdentities = plan.tasks.map(verificationTaskIdentity);
+  const unresolvedIncidents = await store.list();
+  await validateUnresolvedIncidentTaskSuccession({ incidents:unresolvedIncidents,
+    currentIdentities:canonicalIdentities, currentPacks:packs });
+  const taskSuccession = canonicalIdentities.some((identity) =>
+    verificationTaskDigest(identity) === verificationTaskDigest(incident.failure.task))
+    ? undefined : await resolveIncidentTaskSuccession({ incident,
+      currentIdentities:canonicalIdentities, currentPacks:packs });
   const registeredRuntimeTasks = new Map(plan.tasks.map((task) => [task.key, task]));
   const taskPlan = timeoutRepairFocusedTaskPlan(incident, incidentChangedPaths, regressionKey,
-    canonicalIdentities);
+    canonicalIdentities, taskSuccession);
   const executionTaskPlan = timeoutRepairFocusedExecutionTaskPlan(taskPlan, canonicalIdentities);
   const context = receiptContextFactory(incident.failure.environment.concurrency,
     incident.failure.environment.observationConcurrency);
@@ -980,7 +991,7 @@ export async function runTimeoutRepairFocused(id, {
     changeSetDigest:verificationDigest(changeSet) };
   context.receipt.artifact = structuredClone(artifact);
   context.receipt.plan = { mode:"timeout-repair-focused", incidentId:id, causalCategory,
-    causalExplanation, taskPlan, executionTaskPlan };
+    causalExplanation, ...(taskSuccession ? { taskSuccession } : {}), taskPlan, executionTaskPlan };
   const runtimeExecutionTasks = executionTaskPlan.map((descriptor) => ({
     ...structuredClone(descriptor.identity),
     ...(registeredRuntimeTasks.get(descriptor.identity.key)?.temporaryPathClass

@@ -159,21 +159,33 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       :value,
     digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
     readiness=context.causalCategory==="readiness or settling",
+    zoomContainment=context.incidentId==="d3a49b37-e016-4bed-830c-9531045a6773",
     expectedPreRepairFailure=readiness
       ?{routeRestored:true,paintedInstanceSelected:false}
-      :{entryControlContained:false,focusToolbarWrapped:false,requiredControlsPrecedeSecondary:false},
+      :zoomContainment
+        ?{zoomInContained:false,toolbarWrapped:false,cameraControlsImmediatelyAvailable:false}
+        :{entryControlContained:false,focusToolbarWrapped:false,requiredControlsPrecedeSecondary:false},
     expectedRepairResult=readiness
       ?{routeRestored:true,paintedInstanceSelected:true}
-      :{entryControlContained:true,focusToolbarWrapped:true,requiredControlsPrecedeSecondary:true},
-    fixture={id:readiness?"flow-pan-painted-instance-readiness-v1":"focus-canvas-360-control-containment-v1",
+      :zoomContainment
+        ?{zoomInContained:true,toolbarWrapped:true,cameraControlsImmediatelyAvailable:true}
+        :{entryControlContained:true,focusToolbarWrapped:true,requiredControlsPrecedeSecondary:true},
+    fixture={id:readiness?"flow-pan-painted-instance-readiness-v1":zoomContainment
+      ?"zoom-in-360-control-containment-v1":"focus-canvas-360-control-containment-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:readiness
         ?{preRepair:{historicalCanvas:{width:0,height:0},liveCanvas:{width:360,height:800},selection:"first DOM match"}}
-        :{viewport:{width:360,height:800},preRepair:{focusControl:{x:424.4375,width:88.765625},toolbar:{left:0,right:360},horizontalDiscoveryRequired:true}},
+        :zoomContainment
+          ?{viewport:{width:360,height:800},preRepair:{zoomIn:{x:480.859375,width:61.015625},toolbar:{left:0,right:360},scrollLeft:0}}
+          :{viewport:{width:360,height:800},preRepair:{focusControl:{x:424.4375,width:88.765625},toolbar:{left:0,right:360},horizontalDiscoveryRequired:true}},
       expectedPreRepairFailure,expectedRepairResult},
     repairResult=readiness?{
       routeRestored:/ensureFlowPanWorkspace/u.test(flowBrowserEvidence),
       paintedInstanceSelected:/painted=\(s\)=>all\(s\)\.find/u.test(flowCorrectionEvidence)&&/const painted=\(selector\)=>\[\.\.\.document\.querySelectorAll\(selector\)\]\.find/u.test(flowBrowserEvidence),
+    }:zoomContainment?{
+      zoomInContained:/max-inline-size:\s*calc\(100dvw - 1rem\)[^}]*flex-wrap:\s*wrap[^}]*overflow-x:\s*visible/su.test(flowCss),
+      toolbarWrapped:/flex-wrap:\s*wrap/su.test(flowCss),
+      cameraControlsImmediatelyAvailable:/add, focusCanvas, \.\.\.cameraUi\.controls, outlineButton/u.test(flowWorkspaceUi),
     }:{
       entryControlContained:/toolbar\.append\(skip, navigationToggle, add, focusCanvas/u.test(flowWorkspaceUi),
       focusToolbarWrapped:/max-inline-size:\s*calc\(100dvw - 1rem\)[^}]*flex-wrap:\s*wrap[^}]*overflow-x:\s*visible/su.test(flowCss),
