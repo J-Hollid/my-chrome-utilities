@@ -31,13 +31,14 @@ import {
 
 const repository = fileURLToPath(new URL("../", import.meta.url));
 const notesRef = "refs/notes/swarmforge-verification";
+const gitOutputMaxBuffer = 16 * 1024 * 1024;
 const shaPattern = /^[a-f0-9]{64}$/u;
 const incidentIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
 const runtimeVersionPattern = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/u;
 
 function git(repositoryRoot, ...args) {
   return new Promise((resolve, reject) => {
-    execFile("git", args, { cwd:repositoryRoot }, (error, stdout, stderr) => error
+    execFile("git", args, { cwd:repositoryRoot, maxBuffer:gitOutputMaxBuffer }, (error, stdout, stderr) => error
       ? reject(new Error(stderr.trim() || error.message))
       : resolve(stdout.trim()));
   });
@@ -45,7 +46,7 @@ function git(repositoryRoot, ...args) {
 
 function gitBytes(repositoryRoot, ...args) {
   return new Promise((resolve, reject) => {
-    execFile("git", args, { cwd:repositoryRoot, encoding:"buffer" }, (error, stdout, stderr) => error
+    execFile("git", args, { cwd:repositoryRoot, encoding:"buffer", maxBuffer:gitOutputMaxBuffer }, (error, stdout, stderr) => error
       ? reject(new Error(stderr.toString().trim() || error.message))
       : resolve(stdout));
   });
@@ -53,7 +54,10 @@ function gitBytes(repositoryRoot, ...args) {
 
 function gitInput(repositoryRoot, args, input) {
   return new Promise((resolve, reject) => {
-    const child = execFile("git", args, { cwd:repositoryRoot }, (error, stdout, stderr) => error
+    const child = execFile("git", args, {
+      cwd:repositoryRoot,
+      maxBuffer:gitOutputMaxBuffer,
+    }, (error, stdout, stderr) => error
       ? reject(new Error(stderr.trim() || error.message))
       : resolve(stdout.trim()));
     child.stdin.on("error", () => {});

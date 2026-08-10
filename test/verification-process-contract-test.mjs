@@ -830,6 +830,21 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
       repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
   }
+  if (causalCategory === "other:durable evidence note buffer") {
+    const fixture = {
+      id:"durable-evidence-note-buffer-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ noteBytes:(1024 * 1024) + 1, defaultChildProcessBufferBytes:1024 * 1024 },
+      expectedPreRepairFailure:{ readable:false, failure:"maxBuffer" },
+      expectedRepairResult:{ readable:true, failure:null },
+    };
+    const preRepairObservation = { readable:false, failure:"maxBuffer" };
+    const repairObservation = { readable:true, failure:null };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
+  }
   if (causalCategory === "other:workspace temporary repository detection") {
     const fixture = {
       id:"workspace-temporary-repository-detection-v1", causalCategory,
@@ -6922,6 +6937,20 @@ try {
   ), /does not exactly cover/u, "handoff evidence is bound to its received base");
 
   const genuineNote = await verificationEvidence("HEAD", { repositoryRoot:evidenceRepository });
+  const oversizedNotePath = path.join(evidenceRepository, "oversized-verification-note.json");
+  await writeFile(oversizedNotePath, JSON.stringify({
+    ...genuineNote,
+    retainedIncidentHistory:"x".repeat((1024 * 1024) + 1),
+  }));
+  await exec("git", ["notes", "--ref=refs/notes/swarmforge-verification", "add", "-f", "-F",
+    oversizedNotePath, "HEAD"], { cwd:evidenceRepository });
+  assert.equal((await verificationEvidence("HEAD", {
+    repositoryRoot:evidenceRepository,
+  })).records.length, genuineNote.records.length,
+  "durable evidence remains readable after retained incident history exceeds the default child-process buffer");
+  await exec("git", ["notes", "--ref=refs/notes/swarmforge-verification", "add", "-f", "-m",
+    JSON.stringify(genuineNote), "HEAD"], { cwd:evidenceRepository });
+  await rm(oversizedNotePath);
   const legacyEvidenceRecord = structuredClone(recordedAlpha);
   delete legacyEvidenceRecord.receipt.environment.executionLoad;
   await exec("git", ["notes", "--ref=refs/notes/swarmforge-verification", "add", "-f", "-m",
