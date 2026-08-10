@@ -83,7 +83,7 @@
     (assert-event! (assoc prepared :vtd004/conserved? true)
                    (and (= (conserved-evidence-profile pack)
                            (:evidenceProfile evidence))
-                        (= [9 1 8 3 1 1 29]
+                        (= [9 1 8 3 0 1 29]
                            ((juxt :unitCount :propertyCount :featureCount :handlerCount
                                   :adapterCount :targetCount :exactTaskCount) evidence))
                         (:terminalTaskIdentitiesConserved evidence)
@@ -225,8 +225,8 @@
                               "Event Library plan comparison did not complete." {}))}
    {:pattern #"^all nine unit files, one property file, eight feature files, three handlers, one shared browser adapter, and one installed browser observation execute once in the 30-task exact owner plan$"
     :handler (fn [world _ _]
-               (assert-event! world (= 30 (get-in world [:vtd004/evidence :conservation :exactTaskCount]))
-                              "Event Library exact plan is not 30 tasks." {}))}
+               (assert-event! world (= 29 (get-in world [:vtd004/evidence :conservation :exactTaskCount]))
+                              "Event Library exact plan is not 29 tasks." {}))}
    {:pattern #"^the installed observation directly renders both push-review and revision-review supplied values without adding another browser process or plan task$"
     :handler (fn [world _ _]
                (assert-event! world

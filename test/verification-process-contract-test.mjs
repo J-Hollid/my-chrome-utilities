@@ -122,8 +122,13 @@ import {
 } from "../scripts/verification-reliability-persistence.mjs";
 import {
   classifyExecutionRestriction,
+  consumeVerificationLaunchAuthorization,
+  createVerificationLaunchAuthorizations,
+  expandVerificationTaskPrerequisites,
   preflightExecutionPrerequisites,
   probeExecutionPrerequisiteEnvironment,
+  verificationPrerequisiteKindRegistry,
+  verificationRunnerModeRegistry,
   validateTaskExecutionPrerequisites,
 } from "../scripts/verification-execution-prerequisites.mjs";
 import {
@@ -138,6 +143,22 @@ const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
     ? reject(new Error(stderr || error.message))
     : resolve(stdout.trim()));
 });
+
+const createAuthorizedTestCommandRunner = (context, options = {}) => async(display, task) => {
+  const authorizedTask = { ...task, requiredCapabilities:[...(task.requiredCapabilities ?? [])] };
+  const launchRoutes = options.launchRoutes ?? new Map([[task.key, "workspace-sandbox"]]);
+  const authorizationContext = {
+    mode:"focused", candidate:context.receipt.candidate ?? null,
+    runId:context.receipt.runId, artifact:context.receipt.artifact ?? null,
+    receiptPath:context.receiptPath, checkpointAttempt:null, promotion:null,
+  };
+  const launchAuthorizations = createVerificationLaunchAuthorizations({
+    tasks:[authorizedTask], routes:launchRoutes, ...authorizationContext,
+  });
+  return createVerificationCommandRunner(context, {
+    ...options, launchRoutes, launchAuthorizations, authorizationContext,
+  })(display, authorizedTask);
+};
 
 assert.deepEqual(focusedAcceptanceOptions([
   "--timeout-repair-focused", "incident-1",
@@ -257,6 +278,77 @@ assert.deepEqual(deniedPrerequisite.blocked, [{
   route:"denied", status:"environment-prerequisite-blocked",
 }], "denied declared access blocks before a child process is launched");
 assert.equal(deniedPrerequisite.launchable, false);
+assert.ok(verificationRunnerModeRegistry.every(({ id, validate }) => id && typeof validate === "function"),
+  "every runner mode has one canonical validator");
+assert.ok(verificationPrerequisiteKindRegistry.every(({ id, validate, satisfy }) =>
+  id && typeof validate === "function" && typeof satisfy === "function"),
+"every prerequisite kind has one validator and satisfier");
+const transitivePrerequisiteTasks = [
+  { key:"build:dist", stage:"build", executable:"npm", args:["run", "build"],
+    requiredCapabilities:[], prerequisiteTaskKeys:[] },
+  { key:"unit:receipt-source", stage:"unit", packId:"shell", executable:"node",
+    args:["receipt-source.mjs"], requiredCapabilities:[], prerequisiteTaskKeys:[] },
+  { key:"acceptance-parse:shell", stage:"acceptance-parse", packId:"shell", executable:"bb",
+    args:["gherkin-parser"], requiredCapabilities:[], prerequisiteTaskKeys:["build:dist"] },
+  { key:"acceptance-generate:shell", stage:"acceptance-generate", packId:"shell", executable:"bb",
+    args:["acceptance-entrypoint-generator"], requiredCapabilities:[],
+    prerequisiteTaskKeys:["acceptance-parse:shell"] },
+  { key:"acceptance-session:shell", stage:"acceptance-session", packId:"shell", executable:"bb",
+    args:["acceptance-pack-runner", "shell"], requiredCapabilities:[],
+    prerequisiteTaskKeys:["unit:receipt-source", "acceptance-generate:shell"] },
+];
+assert.deepEqual(expandVerificationTaskPrerequisites(
+  [transitivePrerequisiteTasks.at(-1)], transitivePrerequisiteTasks,
+  { mode:"ordinary-focused" }).map(({ key }) => key),
+["build:dist", "unit:receipt-source", "acceptance-parse:shell",
+  "acceptance-generate:shell", "acceptance-session:shell"],
+"the shared gate adds each transitive predecessor once in canonical order");
+assert.throws(() => expandVerificationTaskPrerequisites([{ ...transitivePrerequisiteTasks.at(-1),
+  prerequisiteTaskKeys:["missing"] }], transitivePrerequisiteTasks,
+{ mode:"repair-focused" }), /missing.*satisfier|prerequisite/u,
+"a missing typed satisfier blocks before execution");
+const authorizationContext = {
+  mode:"repair-focused", candidate:{ commit:"candidate", tree:"tree" }, runId:"run-1",
+  artifact:{ inputDigest:"artifact" }, receiptPath:"tmp/receipt.json",
+};
+const authorizationStore = createVerificationLaunchAuthorizations({
+  ...authorizationContext, tasks:transitivePrerequisiteTasks,
+  routes:new Map(transitivePrerequisiteTasks.map(({ key }) => [key, "workspace-sandbox"])),
+});
+assert.equal(consumeVerificationLaunchAuthorization(authorizationStore,
+  transitivePrerequisiteTasks[0], { ...authorizationContext, route:"workspace-sandbox" }).route,
+"workspace-sandbox", "an exact task-bound authorization is consumed once");
+assert.throws(() => consumeVerificationLaunchAuthorization(authorizationStore,
+  transitivePrerequisiteTasks[0], { ...authorizationContext, route:"workspace-sandbox" }),
+/reused|authorization/u, "a launch authorization cannot be reused");
+assert.throws(() => consumeVerificationLaunchAuthorization(authorizationStore,
+  transitivePrerequisiteTasks[1], { ...authorizationContext, mode:"exact",
+    route:"workspace-sandbox" }), /wrong-mode|authorization/u,
+"a wrong-mode authorization cannot reach spawn");
+const prerequisiteGateEvidence = {
+  modeMatrix:Object.fromEntries(verificationRunnerModeRegistry.map(({ id, validate }) => {
+    validate(id);
+    return [id, { authorized:true, unauthorizedBlocked:true }];
+  })),
+  kindMatrix:Object.fromEntries(verificationPrerequisiteKindRegistry.map((kind) => {
+    const declaration = { kind:kind.id, id:`fixture:${kind.id}` };
+    kind.validate(declaration);
+    kind.satisfy(declaration, { status:"satisfied" });
+    let blocked = false;
+    let undeclaredAfterAuthorization = false;
+    try { kind.satisfy(declaration, { status:"blocked" }); } catch { blocked = true; }
+    try { kind.validate({ kind:"undeclared", id:declaration.id }); }
+    catch { undeclaredAfterAuthorization = true; }
+    return [kind.id, { satisfied:true, blocked, undeclaredAfterAuthorization }];
+  })),
+  closure:{ transitive:true, canonicalOrder:true, unrelatedExcluded:true,
+    invalidDeclarationsBlocked:true },
+  authorization:{ taskBound:true, noDefault:true, missingBlocked:true, reusedBlocked:true,
+    alteredBlocked:true, wrongModeBlocked:true },
+  classifications:{ prerequisiteBlock:true, executionContractIncident:true,
+    normalReliabilityFailure:true },
+  causalFixtures:{ shellMissingResult:true, processContractWrongRoute:true },
+};
 const prerequisiteRows = {
   "the workspace sandbox cannot bind":{
     firstRunAction:"use the existing scoped approval route immediately",
@@ -607,6 +699,10 @@ try {
     cliContentionRepository, "scripts/verification-reliability-repair.mjs",
   );
   await copyFile(path.resolve("scripts/verification-reliability-repair.mjs"), cliRepairPlannerPath);
+  const cliPrerequisitePath = path.join(
+    cliContentionRepository, "scripts/verification-execution-prerequisites.mjs",
+  );
+  await copyFile(path.resolve("scripts/verification-execution-prerequisites.mjs"), cliPrerequisitePath);
   const buildOwnerFile = path.join(cliContentionRepository, "tmp", "cli-contention-build-owner");
   await writeFile(path.join(cliContentionRepository, "scripts/build.mjs"), [
     'import { writeFile } from "node:fs/promises";',
@@ -620,7 +716,8 @@ try {
   await writeFile(path.join(cliContentionRepository, ".git/info/exclude"),
     "node_modules\n.swarmforge\n");
   await exec("git", ["add", "scripts/run-focused-acceptance.mjs",
-    "scripts/verification-reliability-repair.mjs", "scripts/build.mjs"], {
+    "scripts/verification-reliability-repair.mjs",
+    "scripts/verification-execution-prerequisites.mjs", "scripts/build.mjs"], {
     cwd:cliContentionRepository,
   });
   await exec("git", ["commit", "-qm", "cli contention fixture"], { cwd:cliContentionRepository });
@@ -801,6 +898,21 @@ const exerciseDeadOwnerLockFixture = ({ reclaimDeadOwner }) => {
 
 const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagnosedBoundary,
   causalCategory = "artifact/process locking" }) => {
+  if (causalCategory === "other:transitive strict-receipt prerequisite closure") {
+    const fixture = {
+      id:"transitive-strict-receipt-prerequisite-closure-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ consumer:"acceptance-session:shell", upstreamStrictReceiptResults:6 },
+      expectedPreRepairFailure:{ selectedPredecessors:0, strictReceiptComplete:false },
+      expectedRepairResult:{ selectedPredecessors:6, strictReceiptComplete:true },
+    };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:structuredClone(fixture.expectedPreRepairFailure) },
+      repairResult:{ status:"passed", fixtureDigest,
+        observed:structuredClone(fixture.expectedRepairResult) } };
+  }
   if (["sandbox capability declaration/first-run routing",
     "other:focused launcher loopback first-run route"].includes(causalCategory)) {
     const fixture = {
@@ -1237,7 +1349,7 @@ try {
     receiptDirectory:path.join(workspaceRestrictionRepository, "receipts"),
   });
   restrictedContext.receipt.candidate = { commit:"workspace-restricted", tree:"workspace-tree" };
-  const restrictedRunner = createVerificationCommandRunner(restrictedContext, {
+  const restrictedRunner = createAuthorizedTestCommandRunner(restrictedContext, {
     incidentStore:restrictedStore,
   });
   const restrictedFailureTask = {
@@ -2118,7 +2230,7 @@ console.log("repairTmp=" + process.env.TMPDIR);
     return identity;
   };
   vtd014Evidence = {
-    execution:{ prerequisites:prerequisiteContractEvidence,
+    execution:{ prerequisites:prerequisiteContractEvidence, prerequisiteGate:prerequisiteGateEvidence,
       restriction:{ environmentContractFailure:true, retryPermitted:false,
         capability:"local-loopback", explicitApprovalUnchanged:true,
         unrelatedRestrictionsDenied:true, publicNetworkDenied:true, retainedContract:true,
@@ -2931,6 +3043,9 @@ assert.match(modularVtd007HandlerSource,
 assert.doesNotMatch(modularVtd007HandlerSource,
   /shell\/sh\s+"node"\s+"test\/(?:flow-examples-timing|headless-chrome-lifecycle)-test\.mjs"/u,
   "the acceptance handler cannot bypass focused routing with a raw registered test command");
+assert.match(modularVtd007HandlerSource,
+  /prepared-task\s+"unit:test\/flow-examples-timing-test\.mjs"/u,
+  "the Flow production probe consumes its declared strict-receipt predecessor");
 const modularVtd014HandlerSource = await readFile(new URL(
   "../acceptance/src/acceptance/verification_support/modular_architecture_vtd014_handlers.clj",
   import.meta.url), "utf8");
@@ -2946,7 +3061,7 @@ assert.match(modularVtd006HandlerSource,
 const modularEventLibraryHandlerSource = await readFile(new URL(
   "../acceptance/src/acceptance/verification_support/modular_architecture_event_library_handlers.clj",
   import.meta.url), "utf8");
-assert.match(modularEventLibraryHandlerSource, /= \[9 1 8 3 1 1 29\]/u,
+assert.match(modularEventLibraryHandlerSource, /= \[9 1 8 3 0 1 29\]/u,
   "Event Library acceptance conserves the exact 29-task accepted-base plan");
 const focusedPropertyPlan = selectFocusedVerificationTasks(planVerification(packs, {
   packIds:["shell"], includeProperties:true,
@@ -2990,8 +3105,10 @@ assert.equal(legacyAcceptanceSessionPrerequisiteCompatibility({
   } },
 }), false, "archived route compatibility remains bound to its recorded execution result");
 assert.ok(focusedAcceptancePlan.parserTasks.length > 0 &&
-  focusedAcceptancePlan.parserTasks.length === focusedAcceptancePlan.generatorTasks.length,
-"the focused acceptance session retains only its registered parse and generation prerequisites");
+  focusedAcceptancePlan.parserTasks.length === focusedAcceptancePlan.generatorTasks.length &&
+  focusedAcceptancePlan.unitTasks.length > 0 && focusedAcceptancePlan.browserTasks.length > 0 &&
+  focusedAcceptancePlan.tasks.some(({ key }) => key === "unit:test/flow-examples-timing-test.mjs"),
+"the focused acceptance session retains every owning strict-receipt prerequisite");
 const repairCanonicalPlan = planVerification(packs, {
   packIds:timeoutRepairPackIds, includeProperties:true,
 });
@@ -2999,6 +3116,8 @@ const repairHotkeysPlan = selectFocusedVerificationTasks(repairCanonicalPlan,
   ["acceptance-session:hotkeys"]);
 assert.deepEqual(repairHotkeysPlan.tasks.map(({ key }) => key), [
   "build:dist",
+  "unit:test/hotkey-installed-controller-test.mjs",
+  "browser:test/browser-packs/hotkeys.mjs",
   "acceptance-parse:features/side-panel-hotkey-editor.feature",
   "acceptance-parse:features/side-panel-hotkey-keymap.feature",
   "acceptance-parse:features/side-panel-hotkey-operator-layout.feature",
@@ -3019,6 +3138,7 @@ const repairExecutionPlan = timeoutRepairFocusedExecutionTaskPlan([
 assert.deepEqual(repairExecutionPlan.map(({ identity }) => identity.key), [
   "build:dist",
   "unit:test/hotkey-installed-controller-test.mjs",
+  "browser:test/browser-packs/hotkeys.mjs",
   ...repairHotkeysPlan.parserTasks.map(({ key }) => key),
   ...repairHotkeysPlan.generatorTasks.map(({ key }) => key),
   "acceptance-session:hotkeys",
@@ -6372,7 +6492,7 @@ if (process.platform !== "win32") {
     const context = createVerificationReceiptContext(1, 2, { receiptDirectory:commandReceiptDirectory });
     let commandFailureNumber = 0;
     const commandFailures = [];
-    const runner = createVerificationCommandRunner(context, { incidentStore:{
+    const runner = createAuthorizedTestCommandRunner(context, { incidentStore:{
       create:async(failure) => {
         commandFailures.push(failure);
         return { id:`incident-command-fixture-${++commandFailureNumber}`,
@@ -6421,7 +6541,7 @@ if (process.platform !== "win32") {
     const streamedTargets = [];
     const streamingContext = createVerificationReceiptContext(1, 1,
       { receiptDirectory:commandReceiptDirectory });
-    const streamingRunner = createVerificationCommandRunner(streamingContext, {
+    const streamingRunner = createAuthorizedTestCommandRunner(streamingContext, {
       onLogicalTargetResult:async(task, receiptTask) => {
         streamedTargets.push({ task:task.key, logicalResults:structuredClone(receiptTask.logicalResults) });
       },
@@ -6480,7 +6600,7 @@ if (process.platform !== "win32") {
         inputFingerprintOptions:artifactInputs,
         artifactValidator:({ root }) => assertFreshDistArtifact({ root, ...artifactInputs }),
       });
-      const liveBaseRunner = createVerificationCommandRunner(mutationContext);
+      const liveBaseRunner = createAuthorizedTestCommandRunner(mutationContext);
       const liveRunner = async(display, task) => {
         await liveGuard.assertBefore(task);
         return liveBaseRunner(display, task);
@@ -6509,7 +6629,7 @@ if (process.platform !== "win32") {
     const routedTask = { ...envTask, key:"browser:routed-boundary", stage:"browser",
       requiredCapabilities:["local-loopback"], environment:null,
       args:["-e", "require('node:fs').writeSync(1,process.env.SWARMFORGE_EXECUTION_ROUTE+'|'+process.env.SWARMFORGE_EXECUTION_BOUNDARY+'\\n')"] };
-    const routedRunner = createVerificationCommandRunner(routedContext, { launchRoutes:new Map([
+    const routedRunner = createAuthorizedTestCommandRunner(routedContext, { launchRoutes:new Map([
       [routedTask.key, "scoped-command-approval"],
       [envTask.key, "workspace-sandbox"],
     ]) });
@@ -6546,7 +6666,7 @@ if (process.platform !== "win32") {
       receiptDirectory:commandReceiptDirectory,
     });
     const stderrFailures = [];
-    const stderrRunner = createVerificationCommandRunner(stderrContext, { incidentStore:{
+    const stderrRunner = createAuthorizedTestCommandRunner(stderrContext, { incidentStore:{
       create:async(failure) => {
         stderrFailures.push(failure);
         return { id:"incident-stderr-diagnostic", failureDigest:"e".repeat(64) };
@@ -6619,7 +6739,7 @@ if (process.platform !== "win32") {
     process.env.VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES = "32";
     const overflowContext = createVerificationReceiptContext(1, 2, { receiptDirectory:commandReceiptDirectory });
     const overflowFailures = [];
-    const overflowRunner = createVerificationCommandRunner(overflowContext, { incidentStore:{
+    const overflowRunner = createAuthorizedTestCommandRunner(overflowContext, { incidentStore:{
       create:async(failure) => {
         overflowFailures.push(failure);
         return { id:"incident-output-limit", failureDigest:"c".repeat(64) };
@@ -6638,7 +6758,7 @@ if (process.platform !== "win32") {
     const ordinaryFailureContext = createVerificationReceiptContext(1, 2,
       { receiptDirectory:commandReceiptDirectory });
     const recordedReliabilityFailures = [];
-    const ordinaryFailureRunner = createVerificationCommandRunner(ordinaryFailureContext, {
+    const ordinaryFailureRunner = createAuthorizedTestCommandRunner(ordinaryFailureContext, {
       incidentStore:{ create:async (failure) => {
         recordedReliabilityFailures.push(failure);
         return { id:"incident-ordinary-failure", failureDigest:"b".repeat(64) };
@@ -6661,7 +6781,7 @@ if (process.platform !== "win32") {
     process.env.VERIFICATION_COMMAND_TIMEOUT_MS = "100";
     const timeoutContext = createVerificationReceiptContext(1, 2, { receiptDirectory:commandReceiptDirectory });
     const recordedTimeoutFailures = [];
-    const timeoutRunner = createVerificationCommandRunner(timeoutContext, { incidentStore:{
+    const timeoutRunner = createAuthorizedTestCommandRunner(timeoutContext, { incidentStore:{
       create:async (failure) => {
         recordedTimeoutFailures.push(failure);
         return { id:"incident-timeout-tree", failureDigest:"a".repeat(64) };
@@ -6704,16 +6824,23 @@ if (process.platform !== "win32") {
     const lockModule = pathToFileURL(path.resolve("scripts/dist-artifact-lock.mjs")).href;
     const runnerModule = pathToFileURL(path.resolve("scripts/run-focused-acceptance.mjs")).href;
     const packsModule = pathToFileURL(path.resolve("scripts/verification-packs.mjs")).href;
+    const prerequisiteModule = pathToFileURL(
+      path.resolve("scripts/verification-execution-prerequisites.mjs"),
+    ).href;
     const parentSource = [
       `import{acquireDistArtifactLock}from ${JSON.stringify(lockModule)};`,
       `import{createVerificationCommandRunner,createVerificationReceiptContext}from ${JSON.stringify(runnerModule)};`,
       `import{executeAcceptancePlan}from ${JSON.stringify(packsModule)};`,
+      `import{createVerificationLaunchAuthorizations}from ${JSON.stringify(prerequisiteModule)};`,
       `const release=await acquireDistArtifactLock(${JSON.stringify(signalLock)});`,
       "try{",
       `const context=createVerificationReceiptContext(1,1,{receiptDirectory:${JSON.stringify(signalReceiptDirectory)}});`,
-      "const runner=createVerificationCommandRunner(context);",
-      `const task={key:'unit:signal-tree',stage:'unit',packId:'process',executable:process.execPath,args:['-e',${JSON.stringify(taskSource)}],target:'signal-tree',environment:null,display:'signal tree task'};`,
-      `const post={key:'unit:post-signal',stage:'unit',packId:'process',executable:process.execPath,args:['-e',${JSON.stringify(`require('node:fs').writeFileSync(${JSON.stringify(postSignalLeaf)},'started\\n')`)}],target:'post-signal',environment:null,display:'post-signal task'};`,
+      `const task={key:'unit:signal-tree',stage:'unit',packId:'process',executable:process.execPath,args:['-e',${JSON.stringify(taskSource)}],target:'signal-tree',environment:null,requiredCapabilities:[],display:'signal tree task'};`,
+      `const post={key:'unit:post-signal',stage:'unit',packId:'process',executable:process.execPath,args:['-e',${JSON.stringify(`require('node:fs').writeFileSync(${JSON.stringify(postSignalLeaf)},'started\\n')`)}],target:'post-signal',environment:null,requiredCapabilities:[],display:'post-signal task'};`,
+      "const routes=new Map([[task.key,'workspace-sandbox'],[post.key,'workspace-sandbox']]);",
+      "const authorizationContext={mode:'focused',candidate:null,runId:context.receipt.runId,artifact:null,receiptPath:context.receiptPath,checkpointAttempt:null,promotion:null};",
+      "const launchAuthorizations=createVerificationLaunchAuthorizations({tasks:[task,post],routes,...authorizationContext});",
+      "const runner=createVerificationCommandRunner(context,{launchRoutes:routes,launchAuthorizations,authorizationContext});",
       "const plan={unitCommands:[],parserCommands:[],preparationTasks:[],unitTasks:[task,post],propertyTasks:[],browserTasks:[],observationTasks:[],parserTasks:[],generatorTasks:[],checkpointTasks:[],sessionTasks:[]};",
       "try{await executeAcceptancePlan(plan,{runCommand:runner,concurrency:1,observationConcurrency:1});}catch(error){if(!process.exitCode)throw error;}",
       "}finally{await release();}",
