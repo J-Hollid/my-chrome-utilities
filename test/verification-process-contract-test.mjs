@@ -27,6 +27,7 @@ import {
   parseBrowserObservationOutput,
   validateBrowserObservationBatch,
 } from "../scripts/run-browser-observation.mjs";
+import { removeVerificationFixtureRoot } from "../scripts/verification-fixture-cleanup.mjs";
 import {
   boundedStageMilliseconds,
   checkVerificationPerformanceBudgets,
@@ -837,7 +838,7 @@ try {
 } finally {
   for (const child of cliProcesses) child.kill("SIGKILL");
   await Promise.all([...cliProcesses].map((child) => new Promise((resolve) => child.once("close", resolve))));
-  await rm(cliContentionRoot, { recursive:true, force:true });
+  await removeVerificationFixtureRoot(cliContentionRoot);
 }
 
 const guardIncidents = [];
@@ -1104,7 +1105,16 @@ const diagnosticArtifact = syntheticArtifact("1".repeat(64), "2".repeat(64),
   { node:process.versions.node, typescript:"5.9.3" });
 assert.deepEqual(verificationArtifactIdentity({ ...diagnosticArtifact, inputs:[{ path:"extra" }] }),
   diagnosticArtifact,
-  "diagnostic and repair workflows compare the bounded artifact identity stored by incidents");
+"diagnostic and repair workflows compare the bounded artifact identity stored by incidents");
+
+const cleanupCalls = [];
+await removeVerificationFixtureRoot("/tmp/deterministic-verification-fixture", {
+  remove:async(root, options) => cleanupCalls.push({ root, options }),
+});
+assert.deepEqual(cleanupCalls, [{
+  root:"/tmp/deterministic-verification-fixture",
+  options:{ recursive:true, force:true, maxRetries:8, retryDelay:50 },
+}], "verification fixture cleanup tolerates bounded ENOTEMPTY races from terminating descendants");
 
 const compatibleRepair = (id) => ({ id, repair:{ status:"eligible",
   candidate:{ commit:"repair-commit", tree:"repair-tree" },
@@ -1141,6 +1151,14 @@ assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-reba
   baseCommit:boundedClosureContractRevision, evidenceTask:boundedClosureEvidenceTask,
   requestedPackIds:timeoutRepairPackIds }), ["incident-rebased"],
 "the frozen bounded closure checkpoint preserves an audited verifier repair's original proposal binding");
+const boundedProductCompatible = { ...rebasedCompatible,
+  closureAudit:{ kind:"blocking-product-repair", blocking:true, resolved:false,
+    failureDomain:"product-runtime" } };
+assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-rebased",
+  blocking:[boundedProductCompatible], candidateCommit:"repair-commit", candidateTree:"repair-tree",
+  baseCommit:boundedClosureContractRevision, evidenceTask:boundedClosureEvidenceTask,
+  requestedPackIds:timeoutRepairPackIds }), ["incident-rebased"],
+"the frozen bounded closure checkpoint retains an audited eligible product repair");
 await assert.rejects(async() => compatibleTimeoutRepairIncidentIds({
   requestedId:"incident-rebased", blocking:[rebasedCompatible], candidateCommit:"repair-commit",
   candidateTree:"repair-tree", baseCommit:boundedClosureContractRevision,
@@ -1165,6 +1183,36 @@ const exerciseDeadOwnerLockFixture = ({ reclaimDeadOwner }) => {
 
 const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagnosedBoundary,
   causalCategory = "artifact/process locking" }) => {
+  if (causalCategory === "other:concurrent verification fixture cleanup") {
+    const fixture = {
+      id:"concurrent-verification-fixture-cleanup-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ terminatingNestedRunner:true, nodeCompileCacheMayStillPopulate:true },
+      expectedPreRepairFailure:{ recursiveRemovalRetries:0, outcome:"ENOTEMPTY" },
+      expectedRepairResult:{ recursiveRemovalRetries:8, retryDelayMs:50, outcome:"removed" },
+    };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:structuredClone(fixture.expectedPreRepairFailure) },
+      repairResult:{ status:"passed", fixtureDigest,
+        observed:structuredClone(fixture.expectedRepairResult) } };
+  }
+  if (causalCategory === "other:shell canonical task topology conservation") {
+    const fixture = {
+      id:"shell-canonical-task-topology-conservation-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ canonicalShellTaskCount:59, standaloneSuccessionTestIsRegistryTask:false },
+      expectedPreRepairFailure:{ observedShellTaskCount:60, scenario085Passed:false },
+      expectedRepairResult:{ observedShellTaskCount:59, scenario085Passed:true },
+    };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:structuredClone(fixture.expectedPreRepairFailure) },
+      repairResult:{ status:"passed", fixtureDigest,
+        observed:structuredClone(fixture.expectedRepairResult) } };
+  }
   if (causalCategory === "other:transitive strict-receipt prerequisite closure") {
     const fixture = {
       id:"transitive-strict-receipt-prerequisite-closure-v1", causalCategory,

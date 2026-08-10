@@ -8,7 +8,11 @@ import {
   closureDisposition,
 } from "./verification-reliability-closure.mjs";
 import { createTimeoutIncidentStore } from "./verification-reliability-store.mjs";
-import { git, normalized, timeoutIncidentDigest } from "./verification-reliability-values.mjs";
+import { loadVerificationPacks, planVerification,
+  verificationTaskIdentity } from "./verification-packs.mjs";
+import { resolveIncidentTaskSuccession } from "./verification-task-succession.mjs";
+import { git, normalized, timeoutIncidentDigest,
+  timeoutRepairPackIds } from "./verification-reliability-values.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const defaultManifest = path.join(repositoryRoot, "verification", "vtd014-closure-audit.json");
@@ -68,6 +72,10 @@ export async function auditVtd014Closure({
   }
   const selectedLineage = { commit:candidateCommit, tree:candidateTree,
     assessmentCandidate:manifest.assessmentCandidate };
+  const packs = await loadVerificationPacks();
+  const currentIdentities = planVerification(packs, {
+    packIds:timeoutRepairPackIds, includeProperties:true,
+  }).tasks.map(verificationTaskIdentity);
   const results = [];
   for (const incident of incidents) {
     const declaration = manifest.records[incident.id];
@@ -80,15 +88,28 @@ export async function auditVtd014Closure({
     } else {
       if (!ancestor) throw new Error(`Incident ${incident.id} cannot be carried from an unrelated lineage`);
       if (declaration.domain !== "verification-execution") {
-        throw new Error(`Incident ${incident.id} lacks a declared verification execution domain`);
+        if (declaration.disposition !== "blocking-product-repair" ||
+            declaration.domain !== "product-runtime") {
+          throw new Error(`Incident ${incident.id} lacks a declared failure domain`);
+        }
       }
-      if (declaration.disposition === "blocking-verification-repair") {
+      if (declaration.disposition === "blocking-product-repair") {
+        disposition = { ...closureDisposition({ lineageCondition:"ancestor-product-runtime" }),
+          failureDomain:declaration.domain };
+      } else if (declaration.disposition === "blocking-verification-repair") {
         disposition = { kind:"blocking-verification-repair", blocking:true, resolved:false,
           failureDomain:declaration.domain };
       } else if (declaration.disposition === "verifier-cause-superseded") {
-        const receiptTask = regression.receipt.tasks[incident.failure.task.key];
+        let receiptTask = regression.receipt.tasks[incident.failure.task.key];
+        let receiptTaskKey = incident.failure.task.key;
+        if (!receiptTask) {
+          const succession = await resolveIncidentTaskSuccession({ incident,
+            currentIdentities, currentPacks:packs });
+          receiptTaskKey = succession.destinationIdentity.key;
+          receiptTask = regression.receipt.tasks[receiptTaskKey];
+        }
         if (receiptTask?.status !== "passed" || receiptTask.provenance !== "fresh") {
-          throw new Error(`Regression receipt lacks fresh influenced task ${incident.failure.task.key}`);
+          throw new Error(`Regression receipt lacks fresh influenced task ${receiptTaskKey}`);
         }
         const causal = causalFailureIdentity({ domain:declaration.domain,
           task:incident.failure.task, executableBoundary:incident.failure.task.target,
@@ -98,7 +119,7 @@ export async function auditVtd014Closure({
           causalKey:causal.key, regressionReceiptSha256:regression.sha256 }),
           failureDomain:declaration.domain, causalIdentity:causal,
           regression:{ receiptPath:path.relative(root, regression.path),
-            receiptSha256:regression.sha256, taskKey:incident.failure.task.key,
+            receiptSha256:regression.sha256, taskKey:receiptTaskKey,
             resultDigest:timeoutIncidentDigest(receiptTask) } };
       } else {
         throw new Error(`Incident ${incident.id} has an unsupported audit disposition`);

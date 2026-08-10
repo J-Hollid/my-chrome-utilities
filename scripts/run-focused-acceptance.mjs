@@ -386,8 +386,8 @@ export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, cand
     repairCandidate?.tree !== candidateTree ||
     (!boundedClosureCheckpoint && (incident.repair.checkpoint.baseCommit !== baseCommit ||
       incident.repair.checkpoint.evidenceTask !== evidenceTask)) ||
-    (boundedClosureCheckpoint &&
-      incident.closureAudit?.kind !== "blocking-verification-repair");
+    (boundedClosureCheckpoint && !["blocking-product-repair", "blocking-verification-repair"]
+      .includes(incident.closureAudit?.kind));
   });
   if (incompatible) {
     throw new Error(`Repair checkpoint is blocked by incompatible reliability incident ${incompatible.id}`);

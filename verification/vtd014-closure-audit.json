@@ -3,7 +3,7 @@
   "contractRevision": "2f609d7a19fd966eb82c54b2938df1fd78e2d836",
   "assessmentCandidate": "159c565970d86f1a96083505955afc2007aeade8",
   "approvedAssessedCount": 17,
-  "repositoryCommonOpenCount": 26,
+  "repositoryCommonOpenCount": 30,
   "additionalOpenRecordReason": "Repository-common reconciliation and the approved Flow reload lifecycle correction exposed additional durable records; off-lineage experiments retire while current-lineage verifier occurrences retain causal proof.",
   "records": {
     "02e0c2b4-8c51-4278-92f2-ce31db4a5159": { "disposition": "lineage-retired", "reason": "Event Library failure commit is outside the selected assessment ancestry." },
@@ -32,6 +32,10 @@
     "e5f1d686-85cf-4d67-8613-1f75390132ca": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "Modular verification packs 079/example_1", "assertionSite": "Event Library evidence row", "diagnosticShape": "No matching clause for the zero-adapter Event Library row." },
     "a95ad2d9-81d6-403d-b6f8-23992f1d29b4": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "FLOW_WORKSPACE_CONTROLS_TARGET", "assertionSite": "registered Flow browser reload lifecycle", "diagnosticShape": "The requested Flow workspace was absent after a registered reload boundary." },
     "cb3efafa-d466-4022-bdfd-e631dda59c87": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "FLOW_WORKSPACE_CONTROLS_TARGET", "assertionSite": "registered Flow browser reload lifecycle", "diagnosticShape": "The populated Flow navigation was absent after a registered reload boundary." },
-    "d8f27de0-8bd9-4f58-8c88-3ae17b84f10b": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "FLOW_WORKSPACE_CONTROLS_TARGET", "assertionSite": "registered Flow browser reload lifecycle", "diagnosticShape": "The populated Flow navigation was absent after a registered reload boundary." }
+    "d8f27de0-8bd9-4f58-8c88-3ae17b84f10b": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "FLOW_WORKSPACE_CONTROLS_TARGET", "assertionSite": "registered Flow browser reload lifecycle", "diagnosticShape": "The populated Flow navigation was absent after a registered reload boundary." },
+    "3243445f-a9de-4156-b160-2f1c8fbf500f": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
+    "40546fb0-a607-4c8b-ac04-872a0668e20a": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
+    "d3a49b37-e016-4bed-830c-9531045a6773": { "disposition": "blocking-product-repair", "domain": "product-runtime" },
+    "fbc7d757-1ad9-4304-a7f9-d387189a77cc": { "disposition": "blocking-product-repair", "domain": "product-runtime" }
   }
 }
