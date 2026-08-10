@@ -36,8 +36,10 @@ import { mountPropertyCompositionWorkspace } from "./data-layer-property-set-flo
 import { pagePropertySetEvaluatorRevision } from "./data-layer-property-set-flow-section.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search), startupProjectId = routeParameters.get("project") ?? undefined, startupKind = routeParameters.get("kind") ?? undefined, startupEntityId = routeParameters.get("entity") ?? undefined, startupRoute = startupKind ? durableProjectRouteForWorkspace(startupKind, startupEntityId) : undefined;
 installStudioChoiceControls(document.body);
+document.documentElement.dataset.specificationStudioInitialization = "opening-repository";
 const durableProjectRuntime = await openDurableProjectRuntime(globalThis.localStorage, globalThis.indexedDB, { ...(startupProjectId ? { projectId: startupProjectId } : {}), ...(startupRoute ? { route: startupRoute } : {}) }).catch((error) => { const status = document.querySelector("#project-state"); if (status)
     status.textContent = `Durable project storage unavailable: ${error instanceof Error ? error.message : String(error)}`; document.querySelectorAll("button,input,select,textarea").forEach((control) => { control.disabled = true; }); return new Promise(() => { }); }), projectStorage = durableProjectRuntime.storage;
+document.documentElement.dataset.specificationStudioRepository = "open";
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
     throw new Error(`Missing ${selector}`); return element; };
 const projectInspector = q("#project-inspector"), projectInspectorToggle = q("#toggle-project-inspector"), projectWorkspace = q("#project-workspace");
@@ -1876,4 +1878,5 @@ if (requestedProject && requestedProject !== library.activeProjectId) {
 }
 else
     applyRequestedRoute();
+document.documentElement.dataset.specificationStudioInitialization = "complete";
 //# sourceMappingURL=specification-builder.js.map

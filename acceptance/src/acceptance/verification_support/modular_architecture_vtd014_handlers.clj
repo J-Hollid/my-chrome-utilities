@@ -808,6 +808,34 @@
                                       (vals (get-in world [:vtd014/evidence :boundedClosure :terminal])))
                         "Package proof was reused."))}])
 
+(defn- flow-reload-lifecycle-handlers [_]
+  [{:pattern #"^one sealed candidate selects FLOW_WORKSPACE_CONTROLS_TARGET through (.+)$" :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^the target crosses a registered browser reload boundary$" :handler (fn [world _ _] (assert! world (seq (get-in world [:vtd014/evidence :flowReloadLifecycle :registeredReloadSequence])) "The Flow target has no registered reload sequence."))}
+   {:pattern #"^it retains the canonical page target, origin, storage, active project, requested Flow, and reload sequence$" :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :flowReloadLifecycle :modeIdentity :equal])) "Flow runner modes changed lifecycle identity."))}
+   {:pattern #"^the target observes the same lifecycle stages and assertions in every runner mode$" :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :flowReloadLifecycle :sameAssertions])) "Flow runner modes changed lifecycle assertions."))}
+   {:pattern #"^the runner mode changes only reliability governance and evidence recording$" :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :flowReloadLifecycle :governanceOnly])) "Flow runner mode changed executable lifecycle inputs."))}
+   {:pattern #"^FLOW_WORKSPACE_CONTROLS_TARGET has begun one registered browser reload$" :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^lifecycle readiness observes (.+)$" :handler (fn [world _ _] world)}
+   {:pattern #"^readiness produces (.+)$" :handler (fn [world _ _] (assert! world (every? true? (vals (get-in world [:vtd014/evidence :flowReloadLifecycle :fixtures]))) "Flow lifecycle readiness fixtures are incomplete."))}
+   {:pattern #"^a deadline diagnostic names the earliest unmet lifecycle stage and its bounded state$" :handler (fn [world _ _] (assert! world (and (true? (get-in world [:vtd014/evidence :flowReloadLifecycle :fixtures :emptyShellRejected])) (true? (get-in world [:vtd014/evidence :flowReloadLifecycle :fixtures :initializerFailureStaged]))) "Flow lifecycle diagnostic did not retain its earliest stage."))}
+   {:pattern #"^a launched FLOW_WORKSPACE_CONTROLS_TARGET does not restore its requested Flow after reload$" :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^the lifecycle comparison establishes (.+)$" :handler (fn [world _ _] world)}
+   {:pattern #"^the failure is (.+)$" :handler (fn [world _ _] (let [rows (get-in world [:vtd014/evidence :flowReloadLifecycle :classifications])] (assert! world (and (= "product-runtime" (get-in rows [:product :domain])) (= "verification-execution" (get-in rows [:verification :domain]))) "Flow lifecycle failure-domain classification is incomplete.")))}
+   {:pattern #"^repair requires (.+)$" :handler (fn [world _ _] world)}
+   {:pattern #"^one passing invocation alone cannot establish the failure domain$" :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :flowReloadLifecycle :modeIdentity :equal])) "Flow mode comparison lacks canonical identity evidence."))}
+   {:pattern #"^a Flow reload failure has a canonical target, reload boundary, earliest unmet lifecycle stage, and diagnostic shape$" :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^a later failure has (.+)$" :handler (fn [world _ _] world)}
+   {:pattern #"^incident storage performs (.+)$" :handler (fn [world _ _] (assert! world (every? true? (vals (get-in world [:vtd014/evidence :flowReloadLifecycle :causal]))) "Flow reload causal identity normalization is incomplete."))}
+   {:pattern #"^each occurrence retains its exact candidate, tree, receipt, and observed lifecycle state$" :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :boundedClosure :causal :occurrencesRetained])) "Flow reload occurrence provenance was not retained."))}
+   {:pattern #"^the 360 pixel Focus Canvas containment repair is retained on one sealed candidate$" :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^the Flow reload lifecycle correction is delivered$" :handler (fn [world _ _] world)}
+   {:pattern #"^deterministic fixtures prove delayed initialization and active-project hydration are awaited without accepting an empty shell$" :handler (fn [world _ _] (let [fixtures (get-in world [:vtd014/evidence :flowReloadLifecycle :fixtures])] (assert! world (every? true? ((juxt :delayedInitialization :delayedActiveProject :emptyShellRejected) fixtures)) "Flow delayed lifecycle fixtures are incomplete.")))}
+   {:pattern #"^the fixtures prove an initialization failure is reported at its lifecycle stage$" :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :flowReloadLifecycle :fixtures :initializerFailureStaged])) "Flow initializer failure was not staged."))}
+   {:pattern #"^FLOW_WORKSPACE_CONTROLS_TARGET passes with the same registered reload sequence in ordinary focused and repair-focused execution$" :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :flowReloadLifecycle :modeIdentity :equal])) "Flow runner modes do not share a reload sequence."))}
+   {:pattern #"^no behavioral reload is removed or reordered without separate conservation proof$" :handler (fn [world _ _] (assert! world (seq (get-in world [:vtd014/evidence :flowReloadLifecycle :registeredReloadSequence])) "Flow reload conservation evidence is missing."))}
+   {:pattern #"^no timeout is increased, arbitrary wait is added, target scope is broadened, or product assertion is weakened$" :handler (fn [world _ _] (let [lifecycle (get-in world [:vtd014/evidence :flowReloadLifecycle])] (assert! world (every? true? ((juxt :timeoutUnchanged :assertionsUnchanged) lifecycle)) "Flow lifecycle limits or assertions changed.")))}
+   {:pattern #"^the bounded VTD-014 closure policy selects every additional affected task and fresh final package proof$" :handler (fn [world _ _] (assert! world (= "fresh" (get-in world [:vtd014/evidence :boundedClosure :terminal :descendant :packagePolicy])) "Flow lifecycle package proof is not fresh."))}])
+
 (defn handlers [{:keys [example-values]}]
   (vec (concat (incident-handlers example-values)
                (repair-handlers example-values)
@@ -817,6 +845,7 @@
                (universal-prerequisite-gate-handlers example-values)
                (checkpoint-handlers example-values)
                (bounded-closure-handlers example-values)
+               (flow-reload-lifecycle-handlers example-values)
                (shared-boundary-handlers example-values))))
 
 ;; clj-mutate-manifest-begin

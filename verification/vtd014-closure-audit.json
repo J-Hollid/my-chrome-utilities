@@ -3,20 +3,18 @@
   "contractRevision": "2f609d7a19fd966eb82c54b2938df1fd78e2d836",
   "assessmentCandidate": "159c565970d86f1a96083505955afc2007aeade8",
   "approvedAssessedCount": 17,
-  "repositoryCommonOpenCount": 24,
-  "additionalOpenRecordReason": "Repository-common and legacy namespace reconciliation plus bounded focused repairs exposed seven additional durable open records; the same approved audit rules apply.",
+  "repositoryCommonOpenCount": 26,
+  "additionalOpenRecordReason": "Repository-common reconciliation and the approved Flow reload lifecycle correction exposed additional durable records; off-lineage experiments retire while current-lineage verifier occurrences retain causal proof.",
   "records": {
     "02e0c2b4-8c51-4278-92f2-ce31db4a5159": { "disposition": "lineage-retired", "reason": "Event Library failure commit is outside the selected assessment ancestry." },
     "5dbcb625-6592-4c51-916e-80c5d1200318": { "disposition": "lineage-retired", "reason": "Historical Shell failure commit is outside the selected assessment ancestry." },
     "97bbc501-2b5c-4a9a-a1f4-9b5d2245a252": { "disposition": "lineage-retired", "reason": "Historical Shell failure commit is outside the selected assessment ancestry." },
     "9cfcabed-037f-4533-b921-191838fce3ce": { "disposition": "lineage-retired", "reason": "Historical process-contract failure commit is outside the selected assessment ancestry." },
     "fc094f54-15a1-4cb0-81ec-f65644d08581": { "disposition": "lineage-retired", "reason": "Historical Shell failure commit is outside the selected assessment ancestry." },
-
-    "3193bb88-7ae5-49fe-ae37-79f9706d0720": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "809dd54e-27e6-4fc3-a8ea-865796aac864": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "87784c7d-7434-46ae-a8e1-79e4c9348859": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "d5e9fd9d-03e2-4abd-bdb1-a7807fa51e8c": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "e9572d6b-e91e-4a1c-b297-7a7b82c0c494": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
+    "0bb5aca1-1314-40a3-93d6-29b1878be0ca": { "disposition": "lineage-retired", "reason": "Discarded Flow reload experiment is outside the selected delivery ancestry." },
+    "25e9d23c-8300-476c-8831-6b7c943d1b67": { "disposition": "lineage-retired", "reason": "Discarded Flow reload experiment is outside the selected delivery ancestry." },
+    "3ecb89e6-5603-4375-9c63-2bc7c029b60c": { "disposition": "lineage-retired", "reason": "Discarded Flow reload experiment is outside the selected delivery ancestry." },
+    "5cd849c3-30c2-47b6-b9c0-ace2fd457ad3": { "disposition": "lineage-retired", "reason": "Discarded Flow reload experiment is outside the selected delivery ancestry." },
 
     "29fb9dc0-6981-4e1e-9f06-2890e22fa030": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "Modular verification packs 112/example_1", "assertionSite": "VTD-014 conservation evidence", "diagnosticShape": "VTD-014 conservation evidence is incomplete." },
     "2c9a4a35-cf36-42e8-93ef-e0524137a561": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "Modular verification packs 088/example_1", "assertionSite": "strict receipt prerequisite lookup", "diagnosticShape": "Verification command was not declared or did not pass before acceptance" },
@@ -31,6 +29,9 @@
     "913b955d-8010-4f4d-9c0b-667a9c103cce": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "Modular verification packs 088/example_1", "assertionSite": "VTD-007 product conservation", "diagnosticShape": "VTD-007 changed product behavior." },
     "a3df05cf-8f5f-4bda-975c-ab8736617348": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "Modular verification packs 122/example_1", "assertionSite": "browser process shutdown accounting", "diagnosticShape": "Process shutdown count changed." },
     "e27df54a-7c75-4407-beb5-b3f9c7434ac5": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "process-contract transitive prerequisite closure", "assertionSite": "focused task prerequisite planner", "diagnosticShape": "Missing prerequisite satisfier for the Flow examples timing task." },
-    "e5f1d686-85cf-4d67-8613-1f75390132ca": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "Modular verification packs 079/example_1", "assertionSite": "Event Library evidence row", "diagnosticShape": "No matching clause for the zero-adapter Event Library row." }
+    "e5f1d686-85cf-4d67-8613-1f75390132ca": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "Modular verification packs 079/example_1", "assertionSite": "Event Library evidence row", "diagnosticShape": "No matching clause for the zero-adapter Event Library row." },
+    "a95ad2d9-81d6-403d-b6f8-23992f1d29b4": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "FLOW_WORKSPACE_CONTROLS_TARGET", "assertionSite": "registered Flow browser reload lifecycle", "diagnosticShape": "The requested Flow workspace was absent after a registered reload boundary." },
+    "cb3efafa-d466-4022-bdfd-e631dda59c87": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "FLOW_WORKSPACE_CONTROLS_TARGET", "assertionSite": "registered Flow browser reload lifecycle", "diagnosticShape": "The populated Flow navigation was absent after a registered reload boundary." },
+    "d8f27de0-8bd9-4f58-8c88-3ae17b84f10b": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "FLOW_WORKSPACE_CONTROLS_TARGET", "assertionSite": "registered Flow browser reload lifecycle", "diagnosticShape": "The populated Flow navigation was absent after a registered reload boundary." }
   }
 }

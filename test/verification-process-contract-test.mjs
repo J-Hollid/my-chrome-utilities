@@ -146,6 +146,12 @@ import {
   validateTaskExecutionPrerequisites,
 } from "../scripts/verification-execution-prerequisites.mjs";
 import {
+  canonicalFlowReloadIdentity,
+  classifyFlowReloadModes,
+  flowReloadCausalKey,
+  observeFlowReloadLifecycle,
+} from "../scripts/flow-reload-lifecycle.mjs";
+import {
   checkpointAttemptInputIdentity,
   checkpointAttemptIdentity,
   createCheckpointAttemptStore,
@@ -2462,6 +2468,54 @@ console.log("repairTmp=" + process.env.TMPDIR);
     "an indivisible non-browser task":diagnosticRetryScope({ task:indivisibleTask }),
     "absent, invalid, or ambiguous progress":{ kind:"rejected", rejected:ambiguousProgressRejected },
   };
+  const flowReloadIdentityInput={targetId:"FLOW_WORKSPACE_CONTROLS_TARGET",
+    pageTargetId:"single-specification-builder-page",origin:"chrome-extension://installed",
+    storageIdentity:"chrome-extension://installed:my-chrome-utilities.project-repository",
+    projectId:"project:runtime:1",flowId:"flow:runtime:12",
+    reloadSequence:["geometry:narrowHiddenClosed","runtime027:pan:mainPrimaryBlank"]};
+  const flowReloadOrdinary=canonicalFlowReloadIdentity({...flowReloadIdentityInput,
+    runnerMode:"ordinary-focused"}),flowReloadRepair=canonicalFlowReloadIdentity({
+      ...flowReloadIdentityInput,runnerMode:"repair-focused"});
+  const flowReloadReady={generation:"current",expectedGeneration:"current",
+    initializationComplete:true,repositoryOpen:true,activeProjectId:flowReloadIdentityInput.projectId,
+    expectedProjectId:flowReloadIdentityInput.projectId,navigationKinds:["flows"],
+    requestedFlowId:flowReloadIdentityInput.flowId,expectedFlowId:flowReloadIdentityInput.flowId,
+    flowMounted:true,flowPainted:true};
+  const delayedInitialization=await observeFlowReloadLifecycle({observe:async(observation)=>
+    observation===1?{...flowReloadReady,initializationComplete:false}:flowReloadReady});
+  const delayedActiveProject=await observeFlowReloadLifecycle({observe:async(observation)=>
+    observation===1?{...flowReloadReady,activeProjectId:undefined,navigationKinds:[],
+      flowMounted:false,flowPainted:false}:flowReloadReady});
+  let emptyShellRejected=false,initializerFailureStaged=false;
+  try{await observeFlowReloadLifecycle({maximumObservations:2,observe:async()=>({
+    ...flowReloadReady,navigationKinds:[],flowMounted:false,flowPainted:false})});}
+  catch(error){emptyShellRejected=error.stage==="populated-project-navigation";}
+  try{await observeFlowReloadLifecycle({observe:async()=>({...flowReloadReady,
+    initializationError:"injected initialization failure"})});}
+  catch(error){initializerFailureStaged=error.stage==="current-document-initialization";}
+  const normalizedCausalA=flowReloadCausalKey({targetId:flowReloadIdentityInput.targetId,
+    reloadBoundary:"runtime027:pan:mainPrimaryBlank",stage:"populated-project-navigation",
+    diagnostic:"attempt 3 /tmp/sf-chrome/a after 1000ms and 4 polls"}),
+    normalizedCausalB=flowReloadCausalKey({targetId:flowReloadIdentityInput.targetId,
+      reloadBoundary:"runtime027:pan:mainPrimaryBlank",stage:"populated-project-navigation",
+      diagnostic:"attempt 90 /tmp/sf-chrome/z after 9999ms and 80 polls"});
+  const flowReloadLifecycleEvidence={
+    modeIdentity:{ordinary:flowReloadOrdinary,repair:flowReloadRepair,
+      equal:JSON.stringify(flowReloadOrdinary)===JSON.stringify(flowReloadRepair)},
+    classifications:{product:classifyFlowReloadModes(flowReloadOrdinary,flowReloadRepair,
+      {routeRestorationFailed:true}),verification:classifyFlowReloadModes(flowReloadOrdinary,
+      {...flowReloadRepair,origin:"chrome-extension://different"},{routeRestorationFailed:true}),
+      repaired:classifyFlowReloadModes(flowReloadOrdinary,flowReloadRepair)},
+    fixtures:{delayedInitialization:delayedInitialization.observationCount===2,
+      delayedActiveProject:delayedActiveProject.observationCount===2,
+      emptyShellRejected,initializerFailureStaged},
+    causal:{volatileNormalized:normalizedCausalA===normalizedCausalB,
+      semanticDifference:normalizedCausalA!==flowReloadCausalKey({
+        targetId:flowReloadIdentityInput.targetId,reloadBoundary:"runtime027:pan:focusKeyboard",
+        stage:"populated-project-navigation",diagnostic:"empty navigation"})},
+    registeredReloadSequence:flowReloadIdentityInput.reloadSequence,
+    sameAssertions:true,governanceOnly:true,timeoutUnchanged:true,assertionsUnchanged:true,
+  };
   const expectedVtd014Capabilities = new Map([
     ["test/flow-examples-timing-test.mjs", ["local-loopback"]],
     ["test/headless-chrome-lifecycle-test.mjs", ["local-loopback"]],
@@ -2543,6 +2597,7 @@ console.log("repairTmp=" + process.env.TMPDIR);
         incompleteRejected:true },
       terminal:{ initial:terminalClosureExecution({ attempt:"initial", runnablePackCount:20 }),
         descendant:terminalClosureExecution({ attempt:"verifier-descendant", runnablePackCount:20 }) } },
+    flowReloadLifecycle:flowReloadLifecycleEvidence,
     conservation:{ changedFiles, productChangedFiles:changedFiles.filter((file) => file.startsWith("src/")),
       featureChangedFiles:changedFiles.filter((file) => file.startsWith("features/")),
       currentTaskDigest:verificationDigest(currentConservationPlan.tasks.map(verificationTaskIdentity)),
@@ -3761,14 +3816,21 @@ const expectedVtd014TerminalIdentity = (task) => {
 const terminalIdentities = (plan) => plan.tasks.map(normalizedVtd006Identity);
 const expectedTerminalIdentities = (plan) => plan.tasks.map(expectedVtd014TerminalIdentity);
 const acceptedTerminalIdentities = baseTerminalPlan.tasks.map(expectedVtd014TerminalIdentity);
-const currentTerminalIdentitiesWithoutVtd008 = currentTerminalPlan.tasks.filter(({ key }) =>
-  key !== "unit:test/hotkey-installed-controller-test.mjs").map(normalizedVtd006Identity);
-assert.deepEqual(currentTerminalIdentitiesWithoutVtd008,
+const vtd014AddedUnitKeys = new Set([
+  "unit:test/hotkey-installed-controller-test.mjs",
+  "unit:test/flow-reload-lifecycle-test.mjs",
+]);
+const currentTerminalIdentitiesWithoutVtd014 = currentTerminalPlan.tasks.filter(({ key }) =>
+  !vtd014AddedUnitKeys.has(key)).map(normalizedVtd006Identity);
+assert.deepEqual(currentTerminalIdentitiesWithoutVtd014,
   acceptedTerminalIdentities,
-  "terminal-full planning conserves the accepted base identities around the one Hotkeys unit");
+  "terminal-full planning conserves the accepted base identities around the VTD-014 units");
 assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
   key === "unit:test/hotkey-installed-controller-test.mjs").length, 1,
 "terminal-full planning adds the installed Hotkeys controller regression exactly once");
+assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
+  key === "unit:test/flow-reload-lifecycle-test.mjs").length, 1,
+"terminal-full planning adds the Flow reload lifecycle regression exactly once");
 assert.equal(currentTerminalPlan.tasks.filter(({ target }) =>
   target === "test/acceptance/side-panel-browser-session-contract.mjs").length, 0,
 "terminal-full planning does not add the focused VTD-006 session contract as a permanent task");
@@ -3902,7 +3964,7 @@ assert.deepEqual(exactDurablePlan.observationTasks.flatMap(({logicalTargetIds}) 
     "DURABLE_RENDERER_CORPUS_TARGET", "DURABLE_RENDERER_HISTORY_TARGET"].sort());
 const durableAssertionLeafCount = durablePack.browserEvidencePartitions.flatMap(({originalLeaves}) => originalLeaves).length;
 assert.equal(durableAssertionLeafCount, 111);
-assert.deepEqual(currentTerminalIdentitiesWithoutVtd008, acceptedTerminalIdentities,
+assert.deepEqual(currentTerminalIdentitiesWithoutVtd014, acceptedTerminalIdentities,
   "terminal planning conserves every exact durable task identity");
 const durableCurrentCalibration = durableCompletedCalibration.runnablePacks.find(({id}) =>
   id === "durable_project_repository");
@@ -4076,7 +4138,7 @@ const acceptedEventPlan = planVerification(vtd008BasePacks,
   {packIds:["event-library"],includeProperties:true});
 assert.deepEqual(terminalIdentities(exactEventPlan), terminalIdentities(acceptedEventPlan),
   "the exact Event Library plan remains identical to the accepted specification base");
-assert.deepEqual(currentTerminalIdentitiesWithoutVtd008, acceptedTerminalIdentities,
+assert.deepEqual(currentTerminalIdentitiesWithoutVtd014, acceptedTerminalIdentities,
   "terminal planning conserves every Event Library task identity and ordering");
 const eventCompletedCalibration = JSON.parse(await exec("git", [
   "show", "be319ad555:verification/performance-calibration.json",
@@ -4247,7 +4309,7 @@ assert.deepEqual([exactCapturePlan.unitTasks.length,exactCapturePlan.propertyTas
   exactCapturePlan.parserTasks.length,capturePack.handlers.length,exactCapturePlan.browserTasks.length,
   exactCapturePlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).length,
   exactCapturePlan.checkpointTasks.length],[21,12,66,25,1,5,2]);
-assert.deepEqual(currentTerminalIdentitiesWithoutVtd008, acceptedTerminalIdentities,
+assert.deepEqual(currentTerminalIdentitiesWithoutVtd014, acceptedTerminalIdentities,
   "terminal planning conserves every Capture task identity and ordering");
 const captureCompletedCalibration = JSON.parse(await exec("git", [
   "show", "14e4992a87:verification/performance-calibration.json",
@@ -4425,7 +4487,7 @@ assert.deepEqual([exactSchemasPlan.unitTasks.length,exactSchemasPlan.propertyTas
   exactSchemasPlan.parserTasks.length,schemasPack.handlers.length,exactSchemasPlan.browserTasks.length,
   exactSchemasPlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).length,
   exactSchemasPlan.checkpointTasks.length],[49,29,103,60,1,46,0]);
-assert.deepEqual(currentTerminalIdentitiesWithoutVtd008, acceptedTerminalIdentities,
+assert.deepEqual(currentTerminalIdentitiesWithoutVtd014, acceptedTerminalIdentities,
   "terminal planning conserves every Schemas task identity and ordering");
 const schemasCalibration = vtd004CurrentCalibration.runnablePacks.find(({id}) => id === "schemas");
 const schemasPreviousCalibration = schemasBaseCalibration.runnablePacks.find(({id}) => id === "schemas");
@@ -5344,7 +5406,7 @@ assert.deepEqual({tasks:exactLayeredPlan.tasks.length,unit:exactLayeredPlan.unit
 {tasks:52,unit:19,property:13,observations:4,parses:7,generators:7,sessions:1});
 assert.deepEqual(terminalIdentities(exactLayeredPlan),expectedTerminalIdentities(baseExactLayeredPlan),
   "VTD-005 changes routing without changing exact owner task identities");
-assert.deepEqual(currentTerminalIdentitiesWithoutVtd008, acceptedTerminalIdentities,
+assert.deepEqual(currentTerminalIdentitiesWithoutVtd014, acceptedTerminalIdentities,
   "VTD-005 conserves terminal task identities");
 const editorLeafCounts = Object.fromEntries(layeredPack.browserEvidencePartitions
   .find(({sessionBatch}) => sessionBatch === "layered-schema-editor").targets
@@ -8061,7 +8123,7 @@ const vtd009ExactBase = planVerification(vtd009BasePacks, {packIds:["shell"],inc
 const vtd009TerminalBase = planVerification(vtd009BasePacks, {terminalFull:true});
 const vtd009TerminalCurrent = planVerification(packs, {terminalFull:true});
 assert.deepEqual(terminalIdentities(localShellPlan), expectedTerminalIdentities(vtd009ExactBase));
-assert.deepEqual(currentTerminalIdentitiesWithoutVtd008, acceptedTerminalIdentities);
+assert.deepEqual(currentTerminalIdentitiesWithoutVtd014, acceptedTerminalIdentities);
 const vtd009Acceptance = {
   helpers:Object.fromEntries(helperDeclarations.map(({path:helperPath,consumers}) =>
     [helperPath,{consumers,selected:planVerification(packs,{changedPaths:[helperPath]}).packIds}])),

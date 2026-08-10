@@ -14,6 +14,7 @@ import { boundedFlowExamplesReadiness, createFlowExamplesPhaseTimer,
 import { createBrowserPhaseTimer, observeBrowserReadiness, transmitDevtoolsProgram,
     waitForChromeDebuggingPort, withDevtoolsProtocolDeadline,
     withLogicalTargetLifecycle } from "../support/browser-observation-control.mjs";
+import { assessFlowReloadLifecycle, canonicalFlowReloadIdentity, FLOW_WORKSPACE_CONTROLS_RELOAD_SEQUENCE } from "../../scripts/flow-reload-lifecycle.mjs";
 class DevtoolsSocket {
     constructor(url, targetId, { callLimitMilliseconds, forcedHangMethod } = {}) { this.url = new URL(url); this.targetId = targetId; this.callLimitMilliseconds = callLimitMilliseconds ?? (() => 120000); this.forcedHangMethod = forcedHangMethod; this.nextId = 1; this.pending = new Map(); this.handlers = new Map(); this.buffer = Buffer.alloc(0); }
     async connect() { await new Promise((resolve, reject) => { this.socket = net.createConnection({ host: this.url.hostname, port: Number(this.url.port) }); this.socket.once("error", reject); this.socket.once("connect", () => { const key = Buffer.from(String(Math.random())).toString("base64"); this.socket.write([`GET ${this.url.pathname}${this.url.search} HTTP/1.1`, `Host: ${this.url.host}`, "Upgrade: websocket", "Connection: Upgrade", `Sec-WebSocket-Key: ${key}`, "Sec-WebSocket-Version: 13", "\r\n"].join("\r\n")); }); let handshake = ""; const receive = (chunk) => { handshake += chunk.toString("binary"); const end = handshake.indexOf("\r\n\r\n"); if (end < 0)
@@ -122,7 +123,7 @@ try {
     );
     activeTargetTimer=phaseTimer;activeTargetId=targetId;
     activePhase = `${targetId}:startup`;
-    let flowGraph, phaseTiming, lifecycleFailedAtPhase;
+    let flowGraph, phaseTiming, lifecycleFailedAtPhase, initializationError;
     const targetLimitMilliseconds=browserShard==="examples"?flowExamplesTargetLimitMilliseconds:120000;
     await withLogicalTargetLifecycle({targetId,boundary:"Flow logical target",
     limitMs:targetLimitMilliseconds,onTimeout:()=>socket?.close(),work:async({remainingMilliseconds})=>{
@@ -141,6 +142,7 @@ try {
     await socket.connect();
     await socket.call("Runtime.enable");
     await socket.call("Page.enable");
+    socket.on("Runtime.exceptionThrown",({exceptionDetails})=>{initializationError=exceptionDetails?.exception?.description??exceptionDetails?.text??"Unknown initializer error";});
     await socket.call("Storage.clearDataForOrigin", { origin, storageTypes: "all" });
     await socket.call("Page.reload", { ignoreCache: true });
     for (const name of ["flowEvidencePhase", "flowNativeKey"])
@@ -169,6 +171,24 @@ try {
     activePhase = "seed";
     transitionPhase("fixture setup");
     const seeded = await evaluate(`(async()=>{const {createSpecificationProject,addProjectEntity}=await import('./data-layer-specification-project.js'),{createFlowSection,addFlowPageFrameToSection}=await import('./data-layer-property-set-flow-section.js'),{addGraphOccurrence,saveGraphRelationship}=await import('./data-layer-flow-graph.js'),{openIndexedDbProjectRepository}=await import('./data-layer-durable-project-repository.js');let n=0,id=(kind)=>kind+':runtime:'+ ++n,state=createSpecificationProject({name:'Flow runtime',site:'runtime.example',id});const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);},propertySet=add('propertySets',{name:'Checkout',schemaConstraints:[{path:'/currency',type:'string',examples:['EUR']}]}),application=(name)=>({id:id('application'),name:'Checkout',propertySetId:propertySet.id}),confirmation=add('pages',{name:'Confirmation',propertySetApplications:[application()]}),payment=add('pages',{name:'Payment',propertySetApplications:[application()]}),receipt=add('pages',{name:'Receipt',propertySetApplications:[application()]}),purchase=add('events',{name:'Purchase',eventName:'purchase',schemaConstraints:[{path:'/event',type:'string',examples:['purchase']}]}),review=add('events',{name:'Review',eventName:'review'}),flow=add('flows',{name:'Checkout journey',steps:[]}),otherFlow=add('flows',{name:'Returns journey',steps:[]});state=addFlowPageFrameToSection(state,otherFlow.id,receipt.id,undefined,id);state=createFlowSection(state,flow.id,{name:'Checkout',bounds:{x:20,y:20,width:760,height:300}},id);state=createFlowSection(state,flow.id,{name:'Completion',bounds:{x:20,y:360,width:760,height:260}},id);let graph=state.project.documentationFlowGraphs[flow.id],sections=graph.sections;for(const [page,sectionId]of[[confirmation,sections[0].id],[payment,sections[0].id],[receipt,sections[1].id],[confirmation,undefined]])state=addFlowPageFrameToSection(state,flow.id,page.id,sectionId,id);graph=state.project.documentationFlowGraphs[flow.id];const frames=graph.pageFrames;state=addGraphOccurrence(state,flow.id,{name:'Purchase',pageFrameId:frames[0].id,pageId:confirmation.id,eventId:purchase.id,obligation:'Required',minimum:1,maximum:1,x:24,y:70},id);state=addGraphOccurrence(state,flow.id,{name:'Review',pageFrameId:frames[1].id,pageId:payment.id,eventId:review.id,obligation:'Required',minimum:1,maximum:1,x:24,y:70},id);state=saveGraphRelationship(state,flow.id,frames[0].id,{toStepId:frames[1].id,sourcePort:'right',targetPort:'left',label:'Checkout route'},id);state=saveGraphRelationship(state,flow.id,frames[0].id,{toStepId:frames[2].id,sourcePort:'top',targetPort:'bottom'},id);graph=state.project.documentationFlowGraphs[flow.id];const repository=await openIndexedDbProjectRepository();await repository.putProject(state,{active:true,navigation:{kind:'flows',id:flow.id}});return{projectId:state.project.id,flowId:flow.id,otherFlowId:otherFlow.id,pageIds:[confirmation.id,payment.id,receipt.id],frameIds:graph.pageFrames.map(({id})=>id),occurrenceIds:graph.occurrences.map(({id})=>id),relationshipIds:graph.relationships.map(({id})=>id),sectionIds:graph.sections.map(({id})=>id)};})()`);
+    await evaluate(`(()=>{const url=new URL(location.href);url.searchParams.set('project',${JSON.stringify(seeded.projectId)});url.searchParams.set('kind','flows');url.searchParams.set('entity',${JSON.stringify(seeded.flowId)});history.replaceState(null,'',url);})()`);
+    const reloadSequence=[];
+    const reloadIdentity=()=>canonicalFlowReloadIdentity({targetId,pageTargetId:"single-specification-builder-page",origin,storageIdentity:`${origin}:my-chrome-utilities.project-repository`,projectId:seeded.projectId,flowId:seeded.flowId,reloadSequence});
+    const reloadFlowPage=async(boundary)=>{
+        if(targetId!=="FLOW_WORKSPACE_CONTROLS_TARGET"){
+            await socket.call("Page.reload",{ignoreCache:true});
+            return;
+        }
+        reloadSequence.push(boundary);
+        const identityBefore=reloadIdentity(),priorGeneration=await evaluate("performance.timeOrigin"),currentUrl=await evaluate("location.href");
+        initializationError=undefined;
+        await socket.call("Page.navigate",{url:currentUrl});
+        await observeBrowserReadiness({targetId,phase:"navigation",predicateDescription:`Flow reload ${boundary} lifecycle`,timeoutMs:5000,pollIntervalMs:25,stabilityMs:150,maximumSnapshotCharacters:900,observe:async()=>{
+            const observed=await evaluate(`(()=>{const generation=performance.timeOrigin,root=document.documentElement,initializationComplete=root?.dataset.specificationStudioInitialization==='complete',repositoryOpen=root?.dataset.specificationStudioRepository==='open',activeProjectId=repositoryOpen&&document.title.includes(${JSON.stringify(` · ${seeded.projectId}`)})?${JSON.stringify(seeded.projectId)}:undefined,navigationKinds=[...document.querySelectorAll('#project-tree [data-kind]')].map(item=>item.dataset.kind).filter(Boolean),workspace=document.querySelector(${JSON.stringify(`[data-flow-section-workspace="${seeded.flowId}"]`)}),toolbar=workspace?.querySelector('[aria-label="Flow toolbar"]'),box=toolbar?.getBoundingClientRect();return{generation,initializationComplete,repositoryOpen,initializationStage:root?.dataset.specificationStudioInitialization,activeProjectId,navigationKinds,requestedFlowId:workspace?.dataset.flowSectionWorkspace,flowMounted:Boolean(workspace),flowPainted:Boolean(toolbar&&box.width>0&&box.height>0)};})()`);
+            const generationChanged=observed.generation!==priorGeneration;
+            return assessFlowReloadLifecycle({...observed,generation:generationChanged?"current":"previous",expectedGeneration:"current",expectedProjectId:seeded.projectId,expectedFlowId:seeded.flowId,...(initializationError?{initializationError}:{})});
+        },ready:({ready})=>ready,snapshot:({stage,state})=>({identity:identityBefore,boundary,stage,state})});
+    };
     const ensureFlowWorkspace = async (predicate) => {
         await observeBrowserReadiness({targetId,phase:"navigation",predicateDescription:`${predicate}: connected project tree`,timeoutMs:5000,pollIntervalMs:25,stabilityMs:100,maximumSnapshotCharacters:400,observe:async()=>evaluate("(()=>{const tree=document.querySelector('#project-tree'),box=tree?.getBoundingClientRect();return{ready:Boolean(tree?.isConnected),readyState:document.readyState,width:box?.width??0,height:box?.height??0};})()"),ready:({ready})=>ready,snapshot:(state)=>state});
         if (!await evaluate("Boolean(document.querySelector('[aria-label=\"Flow toolbar\"]')?.getBoundingClientRect().width)")) {
@@ -190,7 +210,7 @@ try {
         for (const [width, height, visible, inspectorOpen, label] of geometryRows) {
             await socket.call("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
             await evaluate(`(()=>{const key=${JSON.stringify(flowR02ViewStorageKey(seeded))},prior=JSON.parse(sessionStorage.getItem(key)??'{}');sessionStorage.setItem(key,JSON.stringify({...prior,navigationVisible:${visible}}));})()`);
-            await socket.call("Page.reload", { ignoreCache: true });
+            await reloadFlowPage(`geometry:${label}`);
             await ensureFlowWorkspace("Flow toolbar mounted after geometry reload");
             await evaluate(`(()=>{const inspector=document.querySelector('#project-inspector'),toggle=document.querySelector('#toggle-project-inspector');if(Boolean(inspector&&!inspector.hidden)!==${inspectorOpen})toggle?.click();})()`);
             await observeBrowserReadiness({targetId,phase:"readiness",predicateDescription:`Flow geometry row ${label} has live toolbar, viewport, and Add action geometry`,timeoutMs:7500,pollIntervalMs:25,stabilityMs:250,maximumSnapshotCharacters:600,observe:async()=>evaluate("(()=>{const toolbar=document.querySelector('[aria-label=\"Flow toolbar\"]'),viewport=document.querySelector('.flow-canvas-viewport'),add=[...(toolbar?.querySelectorAll('button')??[])].find(button=>button.textContent.trim()==='Add'),toolbarBox=toolbar?.getBoundingClientRect(),viewportBox=viewport?.getBoundingClientRect(),addBox=add?.getBoundingClientRect();return{ready:(toolbarBox?.width??0)>0&&(viewportBox?.height??0)>0&&(addBox?.width??0)>0,toolbarWidth:toolbarBox?.width??0,viewportHeight:viewportBox?.height??0,addWidth:addBox?.width??0};})()"),ready:({ready})=>ready,snapshot:(state)=>state});
@@ -199,11 +219,11 @@ try {
                 geometryEvidence[`${label}_${key}`] = value;
         }
         activePhase = "runtime001";
-        await socket.call("Page.reload", { ignoreCache: true });
+        await reloadFlowPage("runtime001");
         await waitForBrowser("navigation", "Flow canvas mounted for runtime001", "[aria-label=\"Flow canvas viewport\"]");
         activePhase = "runtime027";
         const originalPanState = await evaluate(flowR02PreparePanGraph(seeded));
-        await socket.call("Page.reload", { ignoreCache: true });
+        await reloadFlowPage("runtime027:setup");
         await ensureFlowPanWorkspace("Flow canvas mounted for runtime027");
         const panRows = [
             [false, "primary", 120, 80, "mainPrimaryBlank"], [true, "primary", -90, -60, "focusPrimaryBlank"],
@@ -220,7 +240,7 @@ try {
             } };
         for (const [focused, kind, dx, dy, label] of panRows) {
             await socket.call("Emulation.setTouchEmulationEnabled", { enabled: false });
-            await socket.call("Page.reload", { ignoreCache: true });
+            await reloadFlowPage(`runtime027:pan:${label}`);
             await ensureFlowPanWorkspace(`Flow canvas mounted for ${label}`);
             if (kind === "touch")
                 await socket.call("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 1 });
@@ -257,7 +277,7 @@ try {
         for (const [focused, label] of [[false, "mainPanPinch"], [true, "focusPanPinch"]]) {
             await socket.call("Emulation.setTouchEmulationEnabled", { enabled: false });
             await evaluate(`(()=>{const key=${JSON.stringify(flowR02ViewStorageKey(seeded))},prior=JSON.parse(sessionStorage.getItem(key)??'{}');sessionStorage.setItem(key,JSON.stringify({...prior,selectedItems:[]}));})()`);
-            await socket.call("Page.reload", { ignoreCache: true });
+            await reloadFlowPage(`runtime027:pinch:${label}`);
             await ensureFlowPanWorkspace(`Flow canvas mounted for ${label}`);
             await evaluate(`(async()=>{const painted=(selector)=>[...document.querySelectorAll(selector)].find(item=>{const box=item.getBoundingClientRect();return box.width>0&&box.height>0;}),toolbar=painted('[aria-label="Flow toolbar"]'),button=(text)=>[...toolbar.querySelectorAll('button')].find(item=>item.textContent.trim()===text),active=document.body.classList.contains('flow-focus-canvas');if(active!==${focused})button(active?'Exit Focus Canvas':'Focus Canvas').click();/* Observe focus-layout animation before measuring Fit Flow. */await new Promise(resolve=>setTimeout(resolve,10));button('Fit Flow').click();painted('[aria-label="Flow canvas viewport"]').focus();})()`);
             await socket.call("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 2 });
@@ -287,7 +307,7 @@ try {
         // Observe Focus Canvas exit animation before restoring the persisted graph.
         await wait(50);
         await evaluate(flowR02RestorePanGraph(seeded, originalPanState));
-        await socket.call("Page.reload", { ignoreCache: true });
+        await reloadFlowPage("runtime027:restore");
         await waitForBrowser("navigation", "project tree mounted after pan restoration", "#project-tree");
         if (!await evaluate("Boolean(document.querySelector('[aria-label=\"Flow toolbar\"]'))")) {
             await waitForBrowser("interaction", "Flows navigation mounted after pan restoration", "[data-kind=\"flows\"]");
@@ -299,7 +319,7 @@ try {
         Object.assign(runtime, await evaluate(flowGraphCorrectiveWorkflow(seeded, { stopAfterRuntime: 20, targetId })));
         runtime.runtime001 = geometryEvidence;
         runtime.runtime027 = panEvidence;
-        await socket.call("Page.reload", { ignoreCache: true });
+        await reloadFlowPage("core-workflow:evidence");
         await waitForBrowser("navigation", "interactive Flow canvas mounted after core workflow", "[aria-label=\"Interactive directional Flow canvas\"]");
         const reloadEvidence = await evaluate(flowGraphReloadEvidence(seeded));
         for (const [key, value] of Object.entries(reloadEvidence))
@@ -372,6 +392,7 @@ try {
         runtime.runtime024 = { ...runtime.runtime024, ...await evaluate(flowGraphRepeatedInstanceEvidence(seeded, repeatedInstances)) };
     }
     transitionPhase("assertion");
+    if(targetId==="FLOW_WORKSPACE_CONTROLS_TARGET")assert.deepEqual(reloadSequence,FLOW_WORKSPACE_CONTROLS_RELOAD_SEQUENCE,"Flow controls reload sequence changed");
     const fallbackCore = browserShard === "core" && targetId === "FLOW_GRAPH_FALLBACK_TARGET", supplemental = new Set(["runtime017", "runtime021", "runtime022", "runtime025"]), missing = fallbackCore ? FLOW_RUNTIME_KEYS.filter(key => !supplemental.has(key) && !runtime[key]).map(path => ({ path, value: "unexecuted" })) : [], falseLeaves = Object.entries(runtime).flatMap(([runtimeKey, evidence]) => Object.entries(evidence).filter(([, value]) => value !== true).map(([key, value]) => ({ path: `${runtimeKey}.${key}`, value }))), shardFailures = [...missing, ...falseLeaves, ...(fallbackCore && runtime.installedBoundary !== true ? [{ path: "installedBoundary", value: runtime.installedBoundary }] : [])];
     assert.deepEqual(shardFailures, [], `Flow browser ${browserShard} evidence contains a false value`);
     const controlRuntimeKeys = new Set(["runtime001", "runtime016", "runtime018", "runtime020", "runtime027"]);
