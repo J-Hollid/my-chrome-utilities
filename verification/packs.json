@@ -1216,9 +1216,14 @@
       "acceptance/src/acceptance/steps/library_direct_template_push.clj"
     ],
     "browserAdapters": [
+      "test/browser-packs/event-library.mjs",
       "test/browser-packs/side-panel-event-library.mjs"
     ],
     "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/event-library.mjs",
+        "mode": "compatibility"
+      },
       {
         "path": "test/browser-packs/side-panel-event-library.mjs",
         "mode": "integration"

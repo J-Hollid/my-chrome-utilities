@@ -55,7 +55,20 @@ assert.equal(discardDraft(setDraftProperty(revised, "/transaction_id", "other"))
 
 const packs = JSON.parse(await readFile(new URL("../verification/packs.json", import.meta.url), "utf8"));
 const eventLibraryPack = packs.find(({ id }) => id === "event-library");
-assert.deepEqual(eventLibraryPack.browserAdapters, ["test/browser-packs/side-panel-event-library.mjs"]);
+assert.deepEqual(eventLibraryPack.browserAdapters, [
+  "test/browser-packs/event-library.mjs",
+  "test/browser-packs/side-panel-event-library.mjs",
+]);
+assert.deepEqual(eventLibraryPack.browserAdapterModes, [
+  { path:"test/browser-packs/event-library.mjs", mode:"compatibility" },
+  { path:"test/browser-packs/side-panel-event-library.mjs", mode:"integration" },
+]);
+const compatibilityLauncher = await readFile(
+  new URL("./browser-packs/event-library.mjs", import.meta.url), "utf8");
+assert.equal(compatibilityLauncher.trim().split(/\r?\n/u).length <= 3, true);
+assert.match(compatibilityLauncher, /EVENT_LIBRARY_RENDERED_SMOKE_TARGET/u);
+assert.match(compatibilityLauncher, /side-panel-event-library\.mjs/u);
+assert.doesNotMatch(compatibilityLauncher, /shared-harness|runRenderedWorkflow/u);
 assert.deepEqual(eventLibraryPack.browserObservations.map(({ id }) => id), [
   "EVENT_LIBRARY_RENDERED_SMOKE_TARGET",
   "LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER",
