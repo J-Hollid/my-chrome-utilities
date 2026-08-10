@@ -1864,3 +1864,35 @@ Feature: Modular verification packs
     And no production impact boundary or other pack plan changes
     And no shared verification planner or historical ownership rule changes
     And the delivery checkpoint runs the exact Event Library pack with properties followed by node scripts/package.mjs
+
+  # Modular verification packs 126
+  Scenario Outline: Modular verification packs 126
+    Given repair-focused execution selects <repair_leaf>
+    When the runner derives its executable plan from the current canonical registry
+    Then <required_predecessors> execute before the repair leaf in canonical stage order
+    And the repair leaf, its causal regression, affected process-contract tasks, and required predecessors are each recorded once with fresh provenance
+    And executable scope contains only those repair and predecessor tasks
+
+    Examples:
+      | repair_leaf                         | required_predecessors                                              |
+      | the Hotkeys acceptance session      | build plus its three Hotkeys parse and three generation tasks      |
+      | a registered browser artifact task  | build                                                              |
+      | a workspace-only unit task          | no additional task                                                 |
+
+  # Modular verification packs 127
+  Scenario: Modular verification packs 127
+    Given the Hotkeys generated acceptance entrypoints and intermediate representations are absent before repair-focused execution
+    When the Hotkeys acceptance session is the diagnosed repair boundary
+    Then build and the three Hotkeys parse and generation pairs pass before the session starts
+    And the session consumes only the freshly generated registered paths
+    And a failed predecessor records that predecessor as the failed task and prevents the dependent session from launching
+    And missing generated output cannot be misclassified as a failure of the repaired Hotkeys product boundary
+
+  # Modular verification packs 128
+  Scenario: Modular verification packs 128
+    Given one current-lineage incident has an eligible Hotkeys repair and a later incident requires the repair-focused prerequisite correction
+    When both repairs are prepared for the closing checkpoint
+    Then both eligible proposals bind the same final descendant commit, tree, approved base, and evidence task
+    And each proposal retains its own cause, regression, diagnosed boundary, and fresh focused receipt
+    And the one fresh all-20 checkpoint claims and resolves both incident ids atomically
+    And an incompatible or unresolved proposal prevents every checkpoint task from launching

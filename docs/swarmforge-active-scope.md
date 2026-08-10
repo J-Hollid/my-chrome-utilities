@@ -3963,3 +3963,51 @@ worker limit, shard, or browser batch changes. Because the extraction necessaril
 edits the currently global `src/side-panel.ts`, the one-time delivery checkpoint runs
 all 20 runnable packs in canonical order followed by `node scripts/package.mjs`.
 That broad delivery proof does not broaden future controller-only changes.
+
+## Verification reliability correction — active repair-focused prerequisite closure (2026-08-10)
+
+The user approved this separate correction to the completed VTD-014 reliability
+runner on 2026-08-10 for the normal coder chain. It does not widen the installed
+Hotkeys controller's product behavior, controller boundary, pack ownership, or
+future change impact.
+
+Coder candidate `b4d3c22d6932df32dce4275e7fe49503d9345ae7` causally repaired
+Hotkeys incident `87784c7d-7434-46ae-a8e1-79e4c9348859` and made that repair
+eligible. The repair-focused runner then launched `acceptance-session:hotkeys`
+without its canonical build, parse, and generation predecessors. The missing
+generated entrypoints created current-lineage incident
+`3193bb88-7ae5-49fe-ae37-79f9706d0720`. Both incidents remain unresolved, and the
+closing checkpoint must not start until their proposals are eligible on one
+compatible final candidate.
+
+The correction makes repair-focused execution close every selected repair leaf over
+the same canonical prerequisites as ordinary focused delivery. An acceptance session
+receives build plus only its owning pack's registered parse and generation tasks; an
+artifact consumer receives build; and a workspace-only unit receives no additional
+task. Predecessors execute in canonical stage order before their consumer and appear
+once with fresh provenance in the repair receipt. The diagnosed boundary, causal
+regression, and directly affected process-contract tasks remain the only repair work;
+dependency closure cannot select unrelated pack evidence.
+
+Absent or stale generated Hotkeys acceptance outputs are a deterministic process-
+contract fixture. The repair-focused run must build and generate all three registered
+Hotkeys feature entrypoints and intermediate representations before launching the
+session. If a predecessor fails, that predecessor owns the new incident and the
+dependent session does not launch. Missing generated output therefore cannot be
+reported as a Hotkeys product failure.
+
+The final descendant candidate must prepare both incident proposals against the same
+commit, tree, base `0adee4fa84a0a7c7e84be9d2ddb555e9346c1c1b`, and evidence task
+`vtd008-installed-hotkeys-controller`. Each proposal keeps its own causal explanation,
+regression, diagnosed boundary, and fresh focused receipt. One fresh canonical all-20
+checkpoint and `node scripts/package.mjs` then claim and resolve both incident ids;
+any incompatible or unresolved incident blocks before a checkpoint task launches.
+
+Permitted correction paths are the repair-focused runner or repair planner, their
+focused process-contract regressions, generated documentation, and this specification
+record. No `src/` product file, Hotkeys behavior, saved value, accessibility result,
+canonical task identity, pack dependency, impact boundary, budget, calibration,
+timeout, worker limit, shard, or ordinary focused-plan result changes. Because the
+correction changes shared verification infrastructure used by all packs and roles,
+its delivery checkpoint remains the fresh all-20 run plus package required to resolve
+the two incidents.

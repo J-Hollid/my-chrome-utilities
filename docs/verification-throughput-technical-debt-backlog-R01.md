@@ -70,9 +70,12 @@ here.
 - The bounded VTD-010 Event Library slice completed its coder, refactorer, and
   architect sequence and was integrated into `master` at
   `cc2c9a01b6c2398a35cb03731eb1fd7c2934916c`. The user then approved the bounded
-  VTD-008 installed Hotkeys controller slice for the normal coder chain. The
-  remaining VTD-008 controllers, remaining VTD-010 pack slices, and VTD-011 through
-  VTD-012 remain queued and inactive.
+  VTD-008 installed Hotkeys controller slice for the normal coder chain. Its product
+  candidate exposed a separate repair-focused prerequisite-closure defect in the
+  completed VTD-014 runner. The user approved that shared-runner correction for the
+  normal coder chain; the two current-lineage reliability incidents remain unresolved
+  until its checkpoint passes. The remaining VTD-008 controllers, remaining VTD-010
+  pack slices, and VTD-011 through VTD-012 remain queued and inactive.
 
 ## Executive assessment
 
@@ -993,6 +996,17 @@ Expected effect: developers stop paying repeated retry penalties for hidden test
 problems, predictable environment failures, lock collisions, interrupted attempts,
 and failed receipt promotion. The process preserves good work, fixes genuine debt,
 and reruns all 20 packs only when a changed candidate truly needs fresh proof.
+
+Approved repair-focused prerequisite correction (2026-08-10): a VTD-008 repair run
+proved that ordinary focused planning closes acceptance sessions over build, parse,
+and generation tasks, while repair-focused planning launched the session leaf alone.
+The correction must derive the same canonical predecessor closure without adding
+unrelated evidence, prove absent Hotkeys generated outputs are created before the
+session launches, and attribute any predecessor failure to that predecessor. It must
+also renew both current-lineage incident proposals on one final descendant candidate
+so one fresh all-20 checkpoint plus package can resolve them together. This candidate
+changes shared reliability tooling only. It does not broaden VTD-008 product behavior
+or activate another controller extraction.
 
 ## Recommended sequence
 
