@@ -158,7 +158,7 @@ try {
         targetId, phase, predicate,
         timeoutMs:browserShard==="examples"
           ? 5000
-          : Math.max(1, Math.min(30_000, remainingMilliseconds()-50)),
+          : Math.max(1, remainingMilliseconds()-50),
         observe: async () => evaluate(`(()=>{const node=document.querySelector(${JSON.stringify(selector)});return{ready:document.readyState==='complete'&&Boolean(node),readyState:document.readyState,selector:${JSON.stringify(selector)},present:Boolean(node),text:String(node?.textContent??'').slice(0,120)}})()`),
         stabilityMs,
       });

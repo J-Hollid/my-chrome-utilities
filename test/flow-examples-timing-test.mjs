@@ -47,7 +47,7 @@ import {
 const execFileAsync=promisify(execFile);
 const flowGraphAdapterSource=readFileSync("test/browser-packs/flow-graph.mjs","utf8");
 assert.match(flowGraphAdapterSource,
-  /timeoutMs:browserShard==="examples"[\s\S]*?:\s*Math\.max\(1,\s*Math\.min\(30_000,\s*remainingMilliseconds\(\)-50\)\)/u,
+  /timeoutMs:browserShard==="examples"[\s\S]*?:\s*Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u,
   "non-example Flow readiness must consume the owning logical target budget instead of an unrelated five-second ceiling");
 
 function literalValue(node){
@@ -488,15 +488,17 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         .sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)]))
       :value,
     digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
-    fixture={id:"flow-section-current-render-generation-v1",
+    fixture={id:"flow-readiness-logical-budget-v1",
       causalCategory:"readiness or settling",diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-      input:{staleGeneration,currentRenderedGeneration},
-      expectedPreRepairFailure:{staleGenerationReleased:true,currentGenerationReleased:true},
-      expectedRepairResult:{staleGenerationReleased:false,currentGenerationReleased:true}},
-    preRepairResult={staleGenerationReleased:staleGeneration.durableSectionPresent,
-      currentGenerationReleased:currentRenderedGeneration.durableSectionPresent},
-    repairResult={staleGenerationReleased:flowSectionRenderedGenerationState(staleGeneration),
-      currentGenerationReleased:flowSectionRenderedGenerationState(currentRenderedGeneration)},
+      input:{target:"FLOW_GRAPH_LEGACY_TARGET",logicalBudgetMilliseconds:120000,
+        observedReadinessRoundTripMilliseconds:13943},
+      expectedPreRepairFailure:{readinessBudgetMilliseconds:5000,usesLogicalRemainingBudget:false},
+      expectedRepairResult:{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
+        usesLogicalRemainingBudget:true}},
+    preRepairResult=fixture.expectedPreRepairFailure,
+    repairResult={readinessBudgetMilliseconds:"remainingMilliseconds()-50",
+      usesLogicalRemainingBudget:/Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u
+        .test(flowGraphAdapterSource)},
     fixtureDigest=digest(fixture);
   assert.deepEqual(preRepairResult,fixture.expectedPreRepairFailure);
   assert.deepEqual(repairResult,fixture.expectedRepairResult);

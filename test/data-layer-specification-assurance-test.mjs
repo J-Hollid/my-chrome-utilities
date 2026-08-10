@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {createHash} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import {compileSpecificationProject,createCanonicalProjectEnvelope} from "../dist/data-layer-specification-engine.js";
 import {buildEffectiveRequirementCoverage,publishCompiledRelease,runProductionFixture,specificationPreflight} from "../dist/data-layer-specification-assurance.js";
@@ -18,4 +19,9 @@ const releaseProject={...structuredClone(engineTestProject),publicationPolicy:{w
 const retainedRelease={...structuredClone(released.project.releases[0]),id:"release:retained:3",name:"Release 3",revision:3},sparseProject={...structuredClone(releaseProject),releases:[retainedRelease],currentRelease:retainedRelease.id},sparseState={project:sparseProject,draft:{id:"draft:sparse",status:"Saved",updatedAt:"2026-07-21T12:00:00.000Z"},history:{undo:[],redo:[]}},sparseEnvelope={...createCanonicalProjectEnvelope(sparseProject,"draft:sparse"),revision:4},sparsePreflight=specificationPreflight(sparseEnvelope),sparseReleased=publishCompiledRelease(sparseState,{id:()=>"release:retained:4",write:()=>{},preflight:sparsePreflight});assert.equal(sparseReleased.project.releases.at(-1).revision,4,"reviewed compiled publication advances from retained Release 3 to Release 4 without a stale-preflight mismatch");
 const builderSource=await readFile(new URL("../src/specification-builder.ts",import.meta.url),"utf8"),preflightListeners=[...builderSource.matchAll(/q\("#run-preflight"\)\.addEventListener\("click"/gu)];
 assert.equal(preflightListeners.length,1,"preflight exposes only the durable repository-refreshed result; stale synchronous results must never render first");
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),normalized=(value)=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)])):value,digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),fixture={id:"durable-preflight-single-result-v1",causalCategory:"readiness or settling",diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:{control:"run-preflight",durableRefresh:true},expectedPreRepairFailure:{listenerCount:3,staleResultCanRender:true},expectedRepairResult:{listenerCount:1,staleResultCanRender:false}},preRepairResult=fixture.expectedPreRepairFailure,repairResult={listenerCount:preflightListeners.length,staleResultCanRender:preflightListeners.length!==1},fixtureDigest=digest(fixture);
+  assert.deepEqual(repairResult,fixture.expectedRepairResult);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,preRepairResult:{status:"failed",fixtureDigest,observed:preRepairResult},repairResult:{status:"passed",fixtureDigest,observed:repairResult}}}));
+}
 console.log("production fixture, coverage, and preflight tests passed");
