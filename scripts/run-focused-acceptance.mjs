@@ -48,6 +48,7 @@ import {
   checkpointAttemptIdentity, checkpointAttemptInputIdentity, createCheckpointAttemptStore,
   defaultCheckpointAttemptDirectory,
 } from "./verification-checkpoint-attempt.mjs";
+import { reliabilityFailureContract } from "./verification-reliability-closure.mjs";
 export { verificationPromotionTasks } from "./verification-promotion-plan.mjs";
 import { verificationPromotionTasks } from "./verification-promotion-plan.mjs";
 
@@ -770,6 +771,18 @@ export function createVerificationCommandRunner(context, options = {}) {
         await context.write();
       } else {
         const store = options.incidentStore ?? createTimeoutIncidentStore();
+        const closureContract = reliabilityFailureContract({
+          task:identity, failureClass, failedBoundary, lastProgress:progress.snapshot(),
+          stderr:freshErr, error:failure,
+          resultDigestInputs:{
+            commit:context.receipt.candidate?.commit,
+            tree:context.receipt.candidate?.tree,
+            outputSha256:verificationDigest(freshOut),
+            stderrSha256:verificationDigest(freshErr),
+            exitCode:result.code,
+            signal:result.signal,
+          },
+        });
         const incident = await store.create({
         runnerRunId:context.receipt.runId,
         sourceReceipt:path.relative(repositoryRoot, context.receiptPath),
@@ -792,6 +805,7 @@ export function createVerificationCommandRunner(context, options = {}) {
         failedBoundary,
         lastProgress:progress.snapshot(),
         progressDiagnostics:progress.diagnostics(),
+        ...closureContract,
         ...(restriction ? { executionPrerequisite:restriction } : {}),
         });
         receiptTask.reliabilityIncidentId = incident.id;

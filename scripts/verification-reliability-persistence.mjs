@@ -63,7 +63,7 @@ function validateTransitionHistory(incident) {
   const allowed = new Set(["diagnostic-retry-claimed", "diagnostic-retry-classified",
     "repair-proposed", "repair-renewed", "repair-checkpoint-claimed", "repair-checkpoint-reclaimed",
     "resolved", "lineage-rebased",
-    "lineage-abandoned"]);
+    "lineage-abandoned", "occurrence-appended", "closure-audited"]);
   let previousTime = Date.parse(incident.createdAt);
   let previousRank = 0;
   let terminal = false;
@@ -177,11 +177,34 @@ function validateTransitionHistory(incident) {
       transitionHistoryError(incident.id, "abandonment lacks a specifier-approved user decision");
     } else anchors.delete(mapping.fromCommit);
   }
-  const lineageEvents = incident.transitions.filter(({ type }) => type.startsWith("lineage-"));
+  const lineageEvents = incident.transitions.filter(({ type }) =>
+    ["lineage-rebased", "lineage-abandoned"].includes(type));
   if (JSON.stringify(normalized(lineageEvents.map(({ type, ...record }) => ({
     kind:type === "lineage-rebased" ? "rebase" : "abandon", ...record,
   })))) !== JSON.stringify(normalized(lineageTransitions))) {
     transitionHistoryError(incident.id, "lineage events disagree with durable mappings");
+  }
+  if (incident.causalKey !== undefined) {
+    if (!shaPattern.test(incident.causalKey) || incident.failureDomain !== incident.causalIdentity?.domain ||
+        incident.causalIdentity?.key !== incident.causalKey ||
+        !Array.isArray(incident.occurrences) || !incident.occurrences.length ||
+        incident.occurrences.some((occurrence) => typeof occurrence?.commit !== "string" ||
+          typeof occurrence?.tree !== "string" || !shaPattern.test(occurrence?.resultDigest ?? "") ||
+          typeof occurrence?.diagnostic !== "string") ||
+        matchingTransitions(incident, "occurrence-appended").length !== incident.occurrences.length - 1) {
+      transitionHistoryError(incident.id, "causal identity or occurrences are malformed");
+    }
+  }
+  if (incident.closureAudit !== undefined) {
+    const audit = incident.closureAudit;
+    const validKind = ["lineage-retired", "blocking-product-repair",
+      "blocking-verification-repair", "verifier-cause-superseded"].includes(audit?.kind);
+    if (!validKind || typeof audit.blocking !== "boolean" || audit.resolved !== false ||
+        matchingTransitions(incident, "closure-audited").length !== 1) {
+      transitionHistoryError(incident.id, "bounded closure audit is malformed");
+    }
+  } else if (matchingTransitions(incident, "closure-audited").length) {
+    transitionHistoryError(incident.id, "closure audit transition has no disposition");
   }
 }
 

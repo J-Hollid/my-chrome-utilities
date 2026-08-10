@@ -703,6 +703,111 @@
                                      (= "scripts/package.mjs" (:packageTask conservation)))
                         "VTD-014 conservation evidence is incomplete.")))}])
 
+(defn- bounded-closure-handlers [example-values]
+  [{:pattern #"^VTD-014 closure has one user-approved contract revision$"
+    :handler (fn [world _ _]
+               (let [prepared-world (prepared world)]
+                 (assert! prepared-world
+                          (and (true? (get-in prepared-world [:vtd014/evidence :boundedClosure :frozen]))
+                               (= "2f609d7a19fd966eb82c54b2938df1fd78e2d836"
+                                  (get-in prepared-world [:vtd014/evidence :boundedClosure
+                                                          :contractRevision])))
+                          "The VTD-014 closure contract was not frozen.")))}
+   {:pattern #"^a later observation would add another rigor requirement$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^(?:the new requirement is recorded outside the closure candidate for separate approval|only an implementation defect or failure of the frozen contract may change the closure candidate|behavior already prohibited by the frozen contract remains a defect rather than new scope|no assertion, incident record, or evidence-integrity rule is weakened to reach closure)$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :boundedClosure :frozen]))
+                        "Frozen closure scope or integrity changed."))}
+
+   {:pattern #"^a frozen-contract run reaches (.+)$"
+    :handler (fn [world example captures]
+               (assoc (prepared world) :vtd014/observed-boundary
+                      (first (values example-values example captures))))}
+   {:pattern #"^declared ownership and the executed influence boundary classify the result$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^its failure domain is (.+)$"
+    :handler (fn [world example captures]
+               (let [domain (first (values example-values example captures))]
+                 (assert! world (true? (evidence-value
+                                        (get-in world [:vtd014/evidence :boundedClosure :domains])
+                                        domain))
+                          "A frozen-contract failure domain was not declared.")))}
+   {:pattern #"^closure requires (.+)$" :handler (fn [world _ _] world)}
+
+   {:pattern #"^an unresolved causal incident exists on an ancestor of the current candidate$"
+    :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^a descendant manifests (.+)$"
+    :handler (fn [world example captures]
+               (assoc world :vtd014/causal-relation
+                      (first (values example-values example captures))))}
+   {:pattern #"^the store performs (.+)$"
+    :handler (fn [world _ _]
+               (let [causal (get-in world [:vtd014/evidence :boundedClosure :causal])]
+                 (assert! world (every? true? ((juxt :volatileGrouped :occurrencesRetained
+                                                    :distinctCases) causal))
+                          "Structured causal occurrence handling is incomplete.")))}
+   {:pattern #"^every occurrence retains its own commit, tree, result digest, and observed diagnostic$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :boundedClosure
+                                                     :causal :occurrencesRetained]))
+                        "A causal occurrence lost immutable provenance."))}
+
+   {:pattern #"^an open incident is audited against the selected closure candidate$"
+    :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^(.+) applies$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^its audited disposition is (.+)$"
+    :handler (fn [world _ _]
+               (assert! world (every? true? (vals (get-in world [:vtd014/evidence
+                                                                  :boundedClosure :dispositions])))
+                        "An incident disposition was not audited."))}
+   {:pattern #"^its integrity effect is (.+)$" :handler (fn [world _ _] world)}
+
+   {:pattern #"^a frozen closure attempt contains (.+)$"
+    :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^a descendant changes verification-only files$" :handler (fn [world _ _] world)}
+   {:pattern #"^the complete task input closure has (.+)$" :handler (fn [world _ _] world)}
+   {:pattern #"^the descendant uses (.+)$"
+    :handler (fn [world _ _]
+               (assert! world (every? true? (vals (get-in world [:vtd014/evidence
+                                                                  :boundedClosure
+                                                                  :inputEquivalence])))
+                        "Task input equivalence did not fail closed."))}
+   {:pattern #"^changed-path labels alone cannot establish equivalence$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :boundedClosure
+                                                     :inputEquivalence :changed]))
+                        "Changed-path classification established false equivalence."))}
+
+   {:pattern #"^the closure contract is frozen and every known current-cause repair has focused proof$"
+    :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^the terminal checkpoint begins on one sealed candidate$" :handler (fn [world _ _] world)}
+   {:pattern #"^its initial attempt executes all 20 runnable packs freshly in canonical order$"
+    :handler (fn [world _ _]
+               (let [initial (get-in world [:vtd014/evidence :boundedClosure :terminal :initial])]
+                 (assert! world (and (= "fresh-all" (:taskPolicy initial))
+                                     (= 20 (:runnablePackCount initial)))
+                          "The initial bounded checkpoint was not fresh all-20.")))}
+   {:pattern #"^a verifier-only descendant reruns every task whose complete input closure changed while retaining only proven input-equivalent passes$"
+    :handler (fn [world _ _]
+               (assert! world (= "fresh-or-input-equivalent"
+                                 (get-in world [:vtd014/evidence :boundedClosure :terminal
+                                                :descendant :taskPolicy]))
+                        "Verifier-descendant proof was not bounded by complete inputs."))}
+   {:pattern #"^a product-runtime failure or unknown influence keeps closure open and cannot use carried proof$"
+    :handler (fn [world _ _]
+               (assert! world (and (true? (get-in world [:vtd014/evidence :boundedClosure
+                                                         :dispositions :productBlocking]))
+                                   (true? (get-in world [:vtd014/evidence :boundedClosure
+                                                         :inputEquivalence :incompleteRejected])))
+                        "Product or unknown proof was carried into closure."))}
+   {:pattern #"^the package task executes freshly against the final candidate tree$"
+    :handler (fn [world _ _]
+               (assert! world (every? #(= "fresh" (:packagePolicy %))
+                                      (vals (get-in world [:vtd014/evidence :boundedClosure :terminal])))
+                        "Package proof was reused."))}])
+
 (defn handlers [{:keys [example-values]}]
   (vec (concat (incident-handlers example-values)
                (repair-handlers example-values)
@@ -711,6 +816,7 @@
                (prerequisite-handlers example-values)
                (universal-prerequisite-gate-handlers example-values)
                (checkpoint-handlers example-values)
+               (bounded-closure-handlers example-values)
                (shared-boundary-handlers example-values))))
 
 ;; clj-mutate-manifest-begin

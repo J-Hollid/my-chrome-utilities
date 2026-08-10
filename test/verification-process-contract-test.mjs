@@ -121,6 +121,16 @@ import {
   defaultStoreDirectory, validateIncident,
 } from "../scripts/verification-reliability-persistence.mjs";
 import {
+  boundedClosureContractRevision,
+  causalFailureIdentity,
+  classifyReliabilityFailureDomain,
+  closureDisposition,
+  completeTaskInputClosure,
+  inputEquivalentTaskProof,
+  reliabilityFailureContract,
+  terminalClosureExecution,
+} from "../scripts/verification-reliability-closure.mjs";
+import {
   classifyExecutionRestriction,
   consumeVerificationLaunchAuthorization,
   createVerificationLaunchAuthorizations,
@@ -699,6 +709,10 @@ try {
     cliContentionRepository, "scripts/verification-reliability-repair.mjs",
   );
   await copyFile(path.resolve("scripts/verification-reliability-repair.mjs"), cliRepairPlannerPath);
+  const cliClosurePath = path.join(
+    cliContentionRepository, "scripts/verification-reliability-closure.mjs",
+  );
+  await copyFile(path.resolve("scripts/verification-reliability-closure.mjs"), cliClosurePath);
   const cliPrerequisitePath = path.join(
     cliContentionRepository, "scripts/verification-execution-prerequisites.mjs",
   );
@@ -717,6 +731,7 @@ try {
     "node_modules\n.swarmforge\n");
   await exec("git", ["add", "scripts/run-focused-acceptance.mjs",
     "scripts/verification-reliability-repair.mjs",
+    "scripts/verification-reliability-closure.mjs",
     "scripts/verification-execution-prerequisites.mjs", "scripts/build.mjs"], {
     cwd:cliContentionRepository,
   });
@@ -847,6 +862,144 @@ assert.notEqual(
     error:"center point was offscreen" }),
   "failure fingerprints conserve the assertion site",
 );
+
+assert.equal(boundedClosureContractRevision, "2f609d7a19fd966eb82c54b2938df1fd78e2d836",
+  "the bounded closure contract is frozen at the approved specification");
+const domainFixtures = [
+  [{ launchAuthorized:true, ownership:"product", boundary:"runtime" }, "product-runtime"],
+  [{ launchAuthorized:true, ownership:"verification", boundary:"runner" }, "verification-execution"],
+  [{ taskResultImmutable:true, ownership:"verification", boundary:"promotion" }, "verification-record"],
+  [{ launchAuthorized:false, ownership:"verification", boundary:"capability" }, "environment-prerequisite"],
+];
+for (const [input, expected] of domainFixtures) {
+  assert.equal(classifyReliabilityFailureDomain(input), expected,
+    `declared ownership and the executed ${input.boundary} boundary select ${expected}`);
+}
+assert.throws(() => classifyReliabilityFailureDomain({
+  launchAuthorized:true, ownership:"unknown", boundary:"runner",
+}), /declared ownership/u, "paths or an agent label cannot choose a failure domain");
+
+const causalFixture = {
+  domain:"verification-execution",
+  task:{ key:"acceptance-session:shell", executable:"bb", args:["acceptance-pack-runner", "shell"] },
+  executableBoundary:"acceptance.pack-session/run-session!",
+  caseId:"Modular verification packs 123/example_1",
+  assertionSite:"modular_architecture_vtd006_handlers.clj:418",
+  diagnostic:"Aggregate failure at /tmp/run-a on 127.0.0.1:43117 at 2026-08-10T12:00:00Z",
+};
+const causalIdentity = causalFailureIdentity(causalFixture);
+assert.equal(causalIdentity.key, causalFailureIdentity({ ...causalFixture,
+  diagnostic:"Aggregate failure at /tmp/run-b on 127.0.0.1:53218 at 2026-08-10T12:01:00Z",
+}).key, "volatile diagnostics append an occurrence to the same causal incident");
+assert.notEqual(causalIdentity.key, causalFailureIdentity({ ...causalFixture,
+  caseId:"Modular verification packs 124/example_1",
+}).key, "a different generated case creates a distinct causal incident");
+assert.notEqual(causalIdentity.key, causalFailureIdentity({ ...causalFixture,
+  assertionSite:"modular_architecture_vtd006_handlers.clj:419",
+}).key, "a different assertion site creates a distinct causal incident");
+
+const causalStoreRoot = await mkdtemp(path.join(os.tmpdir(), "vtd014-causal-store-"));
+let causalGroupingEvidence;
+try {
+  const causalStoreIds = ["causal-primary", "causal-distinct"];
+  const causalStore = createTimeoutIncidentStore({ root:causalStoreRoot,
+    storeDirectory:path.join(causalStoreRoot, "incidents"),
+    randomId:() => causalStoreIds.shift(),
+    isAncestor:(ancestor, descendant) => ancestor === descendant ||
+      ancestor === "ancestor-commit" && descendant === "descendant-commit" });
+  const causalTask = { key:"acceptance-session:shell", stage:"acceptance-session", packId:"shell",
+    executable:"bb", args:["acceptance-pack-runner", "shell"], target:"verification acceptance" };
+  const boundedFailure = ({ commit, tree, message }) => ({
+    runnerRunId:`run-${commit}`, sourceReceipt:`tmp/${commit}.json`,
+    lineage:{ commit, tree }, task:causalTask, failureClass:"nonzero-exit",
+    fingerprint:"d".repeat(64),
+    ...reliabilityFailureContract({ task:causalTask, failureClass:"nonzero-exit", stderr:message,
+      resultDigestInputs:{ commit, tree, stderrSha256:timeoutIncidentDigest(message) } }),
+  });
+  const firstCausalIncident = await causalStore.create(boundedFailure({
+    commit:"ancestor-commit", tree:"ancestor-tree",
+    message:"Acceptance execution failed: Modular verification packs 123/example_1: Aggregate failure preempted a target result.",
+  }));
+  const groupedCausalIncident = await causalStore.create(boundedFailure({
+    commit:"descendant-commit", tree:"descendant-tree",
+    message:"Acceptance execution failed: Modular verification packs 123/example_1: Aggregate failure preempted a target result.",
+  }));
+  assert.equal(groupedCausalIncident.id, firstCausalIncident.id,
+    "a descendant occurrence with the same structured cause does not create another blocker");
+  assert.equal(groupedCausalIncident.occurrences.length, 2,
+    "each grouped occurrence retains its own immutable lineage and result digest");
+  const distinctCausalIncident = await causalStore.create(boundedFailure({
+    commit:"descendant-commit", tree:"descendant-tree",
+    message:"Acceptance execution failed: Modular verification packs 124/example_1: null",
+  }));
+  assert.notEqual(distinctCausalIncident.id, firstCausalIncident.id,
+    "a different generated case creates its own repair obligation in the store");
+  const supersededCausalIncident = await causalStore.recordClosureDisposition(
+    firstCausalIncident.id, closureDisposition({ lineageCondition:"grouped-verifier-cause",
+      causalKey:firstCausalIncident.causalKey, regressionReceiptSha256:"a".repeat(64) }));
+  assert.equal(supersededCausalIncident.state, "unresolved",
+    "verifier supersession does not rewrite an incident as a product resolution");
+  assert.equal((await causalStore.blocking({ commit:"descendant-commit" })).some(
+    ({ id }) => id === firstCausalIncident.id), false,
+  "an audited verifier supersession releases only its exact causal blocker");
+  causalGroupingEvidence = { grouped:firstCausalIncident.id === groupedCausalIncident.id,
+    occurrenceCount:groupedCausalIncident.occurrences.length,
+    distinct:distinctCausalIncident.id !== firstCausalIncident.id };
+} finally {
+  await rm(causalStoreRoot, { recursive:true, force:true });
+}
+
+assert.deepEqual(closureDisposition({ lineageCondition:"off-lineage",
+  selectedLineage:{ commit:"candidate", tree:"tree" }, reason:"failed commit is not an ancestor" }), {
+  kind:"lineage-retired", blocking:false, resolved:false,
+  selectedLineage:{ commit:"candidate", tree:"tree" }, reason:"failed commit is not an ancestor",
+}, "off-lineage retirement is durable without claiming resolution");
+assert.deepEqual(closureDisposition({ lineageCondition:"ancestor-product-runtime" }), {
+  kind:"blocking-product-repair", blocking:true, resolved:false,
+}, "an ancestor product failure remains blocking even after an unchanged passing retry");
+assert.deepEqual(closureDisposition({ lineageCondition:"grouped-verifier-cause",
+  causalKey:causalIdentity.key, regressionReceiptSha256:"a".repeat(64) }), {
+  kind:"verifier-cause-superseded", blocking:false, resolved:false,
+  causalKey:causalIdentity.key, regressionReceiptSha256:"a".repeat(64),
+}, "one exact verifier repair can supersede grouped verifier occurrences without a product claim");
+
+const completeInput = {
+  contractRevision:boundedClosureContractRevision,
+  task:{ identity:{ key:"acceptance-session:shell" }, configuration:{ strictReceipt:true } },
+  transitiveCode:{ digest:"1".repeat(64), complete:true },
+  featureInputs:{ digest:"2".repeat(64), complete:true },
+  handlerInputs:{ digest:"3".repeat(64), complete:true },
+  generatedInputs:{ digest:"4".repeat(64), complete:true },
+  productArtifact:{ digest:"5".repeat(64) },
+  runnerSemantics:{ digest:"6".repeat(64) },
+  prerequisiteSemantics:{ digest:"7".repeat(64) },
+  environment:{ digest:"8".repeat(64) },
+  toolchain:{ digest:"9".repeat(64) },
+  limits:{ digest:"a".repeat(64) },
+};
+const inputClosure = completeTaskInputClosure(completeInput);
+const priorPass = { status:"passed", commit:"prior", tree:"prior-tree",
+  receiptPath:"tmp/prior.json", resultDigest:"b".repeat(64), inputDigest:inputClosure.digest };
+assert.equal(inputEquivalentTaskProof({ priorResult:priorPass, priorInput:completeInput,
+  currentInput:structuredClone(completeInput) }).action, "input-equivalent",
+"a passing task with identical complete inputs retains explicit prior provenance");
+for (const invalidPrior of [{ ...priorPass, status:"failed" }, { ...priorPass, status:"interrupted" }]) {
+  assert.equal(inputEquivalentTaskProof({ priorResult:invalidPrior, priorInput:completeInput,
+    currentInput:completeInput }).action, "fresh",
+  "failed and interrupted results never become carried proof");
+}
+assert.equal(inputEquivalentTaskProof({ priorResult:priorPass, priorInput:completeInput,
+  currentInput:{ ...completeInput, runnerSemantics:{ digest:"c".repeat(64) } } }).action, "fresh",
+"a shared runner semantic change forces fresh execution");
+assert.throws(() => completeTaskInputClosure({ ...completeInput,
+  transitiveCode:{ digest:"1".repeat(64), complete:false } }), /complete influence/u,
+"unknown or incomplete influence fails closed");
+assert.deepEqual(terminalClosureExecution({ attempt:"initial", runnablePackCount:20 }), {
+  taskPolicy:"fresh-all", runnablePackCount:20, packagePolicy:"fresh",
+}, "the initial sealed attempt is fresh all-20 and package is always fresh");
+assert.deepEqual(terminalClosureExecution({ attempt:"verifier-descendant", runnablePackCount:20 }), {
+  taskPolicy:"fresh-or-input-equivalent", runnablePackCount:20, packagePolicy:"fresh",
+}, "a verifier descendant can retain only complete input-equivalent passes");
 
 const syntheticArtifact = (inputDigest, outputDigest, toolchain) => {
   const schemaVersion = 1;
@@ -2164,7 +2317,7 @@ console.log("repairTmp=" + process.env.TMPDIR);
       proposal.repair.focusedReceipt.provenance === "fresh" &&
       proposal.repair.focusedReceipt.commit === "repair-commit",
   };
-  const vtd014AcceptedBaseCommit = "87b29bf11423d54849c04b3108bf45018c71c191";
+  const vtd014AcceptedBaseCommit = "bfc9ac9f220ffeed710bb3e9f9b917dfbef6de86";
   const changedFiles = await new Promise((resolve, reject) => execFile("git",
     ["diff", "--name-only", vtd014AcceptedBaseCommit],
     { cwd:path.resolve(new URL("../", import.meta.url).pathname) },
@@ -2280,6 +2433,26 @@ console.log("repairTmp=" + process.env.TMPDIR);
       handoffGate:resolved.state === "resolved" &&
         !repairCommitBlocking.some(({ id }) => id === first.id),
       downstreamIncidentDistinct:changedInnerDeadline.id !== first.id },
+    boundedClosure:{ contractRevision:boundedClosureContractRevision,
+      frozen:true,
+      domains:Object.fromEntries(domainFixtures.map(([, domain]) => [domain, true])),
+      causal:{ volatileGrouped:causalGroupingEvidence.grouped,
+        occurrencesRetained:causalGroupingEvidence.occurrenceCount === 2,
+        distinctCases:causalGroupingEvidence.distinct },
+      dispositions:{ lineageRetired:closureDisposition({ lineageCondition:"off-lineage",
+        selectedLineage:{ commit:"candidate", tree:"tree" }, reason:"off lineage" }).blocking === false,
+        productBlocking:closureDisposition({ lineageCondition:"ancestor-product-runtime" }).blocking,
+        verifierSuperseded:closureDisposition({ lineageCondition:"grouped-verifier-cause",
+          causalKey:causalIdentity.key, regressionReceiptSha256:"a".repeat(64) }).blocking === false },
+      inputEquivalence:{ identical:inputEquivalentTaskProof({ priorResult:priorPass,
+        priorInput:completeInput, currentInput:completeInput }).action === "input-equivalent",
+        changed:inputEquivalentTaskProof({ priorResult:priorPass, priorInput:completeInput,
+          currentInput:{ ...completeInput, limits:{ digest:"c".repeat(64) } } }).action === "fresh",
+        failedRejected:inputEquivalentTaskProof({ priorResult:{ ...priorPass, status:"failed" },
+          priorInput:completeInput, currentInput:completeInput }).action === "fresh",
+        incompleteRejected:true },
+      terminal:{ initial:terminalClosureExecution({ attempt:"initial", runnablePackCount:20 }),
+        descendant:terminalClosureExecution({ attempt:"verifier-descendant", runnablePackCount:20 }) } },
     conservation:{ changedFiles, productChangedFiles:changedFiles.filter((file) => file.startsWith("src/")),
       featureChangedFiles:changedFiles.filter((file) => file.startsWith("features/")),
       currentTaskDigest:verificationDigest(currentConservationPlan.tasks.map(verificationTaskIdentity)),

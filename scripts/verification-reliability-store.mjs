@@ -346,7 +346,15 @@ export function createTimeoutIncidentStore({
           !shaPattern.test(failure.fingerprint ?? "")) {
         throw new Error("Reliability failure requires a class and normalized fingerprint");
       }
-      const id = stableIncidentId(randomId());
+      const boundedClosure = failure.contractRevision !== undefined;
+      if (boundedClosure && (failure.failureDomain === "environment-prerequisite" ||
+          failure.contractRevision !== "2f609d7a19fd966eb82c54b2938df1fd78e2d836" ||
+          !shaPattern.test(failure.causalKey ?? "") ||
+          failure.causalIdentity?.key !== failure.causalKey ||
+          failure.occurrence?.commit !== failure.lineage?.commit ||
+          failure.occurrence?.tree !== failure.lineage?.tree)) {
+        throw new Error("Bounded reliability failure has an invalid causal contract or prelaunch domain");
+      }
       const scoped = failure.failureClass === "execution-contract-failure" ? undefined : (() => {
         try { return diagnosticRetryScope({ task:failure.task,
           lastProgress:failure.failedBoundary ?? failure.lastProgress }); }
@@ -357,24 +365,59 @@ export function createTimeoutIncidentStore({
           lineage:failure.lineage, task:failure.task, progressContract:"untrusted",
         }),
       });
-      const incident = validateIncident({
-        version:1, id, createdAt:now(), state:"unresolved", failure:immutableFailure,
-        lineageTransitions:[],
-        failureDigest:timeoutIncidentDigest(immutableFailure), transitions:[],
-      });
       const directory = await access.directory();
-      try { await writeExclusive(path.join(directory, `${id}.json`), incidentEnvelope(incident)); }
-      catch (error) {
-        if (error.code === "EEXIST") throw new Error(`Duplicate reliability incident id ${id}`);
-        throw error;
-      }
-      return incident;
+      return withIncidentLock(directory, boundedClosure ? "causal-index" : `create-${randomUUID()}`, async() => {
+        if (boundedClosure) {
+          let matching;
+          for (const incident of await store.list()) {
+            if (incident.state !== "unresolved" || incident.causalKey !== failure.causalKey ||
+                incident.closureAudit?.blocking === false) continue;
+            const descendantOccurrence = await Promise.all(incident.occurrences.map((occurrence) =>
+              commitDescendsFrom({ root, isAncestor, ancestor:occurrence.commit,
+                commit:failure.occurrence.commit })));
+            if (descendantOccurrence.some(Boolean)) { matching = incident; break; }
+          }
+          if (matching) {
+            if (matching.occurrences.some(({ resultDigest }) =>
+              resultDigest === failure.occurrence.resultDigest)) return matching;
+            return access.update(matching.id, (incident) => {
+              const at = now();
+              return transition({ ...incident,
+                occurrences:[...incident.occurrences, structuredClone(failure.occurrence)] },
+              "occurrence-appended", at, {
+                commit:failure.occurrence.commit,
+                tree:failure.occurrence.tree,
+                resultDigest:failure.occurrence.resultDigest,
+              });
+            });
+          }
+        }
+        const id = stableIncidentId(randomId());
+        const incident = validateIncident({
+          version:1, id, createdAt:now(), state:"unresolved", failure:immutableFailure,
+          lineageTransitions:[],
+          ...(boundedClosure ? {
+            contractRevision:failure.contractRevision,
+            failureDomain:failure.failureDomain,
+            causalIdentity:structuredClone(failure.causalIdentity),
+            causalKey:failure.causalKey,
+            occurrences:[structuredClone(failure.occurrence)],
+          } : {}),
+          failureDigest:timeoutIncidentDigest(immutableFailure), transitions:[],
+        });
+        try { await writeExclusive(path.join(directory, `${id}.json`), incidentEnvelope(incident)); }
+        catch (error) {
+          if (error.code === "EEXIST") throw new Error(`Duplicate reliability incident id ${id}`);
+          throw error;
+        }
+        return incident;
+      });
     },
     async blocking({ commit }) {
       const applicable = [];
       for (const incident of await this.list()) {
         if (await lineageApplies({ root, isAncestor, incident, commit }) &&
-            incident.state !== "resolved") applicable.push(incident);
+            incident.state !== "resolved" && incident.closureAudit?.blocking !== false) applicable.push(incident);
       }
       return applicable;
     },
@@ -458,6 +501,32 @@ export function createTimeoutIncidentStore({
         return transition({ ...incident, lineageTransitions:[...transitions, durable] },
           durable.kind === "rebase" ? "lineage-rebased" : "lineage-abandoned", at,
           Object.fromEntries(Object.entries(durable).filter(([key]) => !["kind", "at"].includes(key))));
+      });
+    },
+    recordClosureDisposition(id, disposition) {
+      exactObject(disposition, "Reliability closure disposition");
+      return access.update(id, (incident) => {
+        if (incident.state !== "unresolved") throw new Error(`Reliability incident ${id} is resolved`);
+        if (incident.closureAudit) throw new Error(`Reliability incident ${id} was already audited`);
+        if (!["lineage-retired", "blocking-product-repair", "blocking-verification-repair",
+          "verifier-cause-superseded"].includes(disposition.kind) ||
+            typeof disposition.blocking !== "boolean" || disposition.resolved !== false) {
+          throw new Error(`Reliability incident ${id} has an invalid bounded closure disposition`);
+        }
+        if (disposition.kind === "lineage-retired" &&
+            (typeof disposition.selectedLineage?.commit !== "string" ||
+             typeof disposition.selectedLineage?.tree !== "string" ||
+             typeof disposition.reason !== "string" || !disposition.reason.trim())) {
+          throw new Error(`Reliability incident ${id} lineage retirement is not audited`);
+        }
+        if (disposition.kind === "verifier-cause-superseded" &&
+            (!shaPattern.test(disposition.causalKey ?? "") ||
+             !shaPattern.test(disposition.regressionReceiptSha256 ?? ""))) {
+          throw new Error(`Reliability incident ${id} verifier supersession lacks exact causal proof`);
+        }
+        const at = now();
+        return transition({ ...incident, closureAudit:structuredClone(disposition) },
+          "closure-audited", at, { kind:disposition.kind, blocking:disposition.blocking });
       });
     },
   };
