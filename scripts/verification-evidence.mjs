@@ -18,6 +18,7 @@ import {
 } from "./verification-checkpoint-attempt.mjs";
 import {
   consumeVerificationLaunchAuthorization, createVerificationLaunchAuthorizations,
+  expandVerificationTaskPrerequisites,
   preflightExecutionPrerequisites, probeExecutionPrerequisiteEnvironment,
   validateTaskExecutionPrerequisites,
 } from "./verification-execution-prerequisites.mjs";
@@ -204,6 +205,25 @@ function withEvidencePackageTask(plan) {
     stages:{ ...plan.stages, package:[] } };
 }
 
+const evidenceTaskGroups = [
+  "preparationTasks", "unitTasks", "propertyTasks", "browserTasks", "observationTasks",
+  "parserTasks", "generatorTasks", "checkpointTasks", "sessionTasks", "packageTasks",
+];
+
+function closeEvidencePlanPrerequisites(plan, canonicalPlan) {
+  const tasks = expandVerificationTaskPrerequisites(plan.tasks, canonicalPlan.tasks,
+    { mode:plan.mode });
+  const groupsByTask = new Map();
+  for (const source of [canonicalPlan, plan]) {
+    for (const group of evidenceTaskGroups) {
+      for (const task of source[group] ?? []) groupsByTask.set(task.key, group);
+    }
+  }
+  const groups = Object.fromEntries(evidenceTaskGroups.map((group) => [group,
+    tasks.filter(({ key }) => groupsByTask.get(key) === group)]));
+  return { ...plan, ...groups, tasks:evidenceTaskGroups.flatMap((group) => groups[group]) };
+}
+
 async function canonicalPlanDocument({
   commit, baseCommit, changeSet, packIds, repositoryRoot, includePackage = true,
 }) {
@@ -215,7 +235,7 @@ async function canonicalPlanDocument({
   } catch {
     historicalRegistryFallback = true;
   }
-  const plan = planVerification(candidatePacks, {
+  let plan = planVerification(candidatePacks, {
     packIds,
     changedPaths:changeSet.paths,
     includeProperties:true,
@@ -223,6 +243,9 @@ async function canonicalPlanDocument({
     basePacks,
     historicalRegistryFallback,
   });
+  plan = closeEvidencePlanPrerequisites(plan, planVerification(candidatePacks, {
+    packIds, includeProperties:true,
+  }));
   return planDocument(includePackage ? withEvidencePackageTask(plan) : plan);
 }
 
