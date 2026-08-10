@@ -3071,7 +3071,9 @@ assert.deepEqual(focusedPropertyPlan.tasks.map(({ key }) => key),
 "the focused delivery path launches the exact registered property leaf");
 const focusedAcceptancePlan = selectFocusedVerificationTasks(planVerification(packs, {
   packIds:["shell"],
-}), ["acceptance-session:shell"]);
+}), ["acceptance-session:shell"], planVerification(packs, {
+  packIds:timeoutRepairPackIds, includeProperties:true,
+}));
 assert.equal(focusedAcceptancePlan.tasks[0].key, "build:dist");
 assert.equal(focusedAcceptancePlan.tasks.at(-1).key, "acceptance-session:shell");
 assert.deepEqual(focusedAcceptancePlan.tasks.at(-1).requiredCapabilities, [],
