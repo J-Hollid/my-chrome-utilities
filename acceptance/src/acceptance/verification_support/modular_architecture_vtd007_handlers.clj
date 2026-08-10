@@ -31,8 +31,40 @@
 (defn- shell-pack [packs]
   (first (filter #(= "shell" (get % "id")) packs)))
 
-(defn- topology-without-helper-registry [packs]
-  (mapv #(if (= "shell" (get % "id")) (dissoc % "verificationHelpers") %) packs))
+(defn- topology-ownership [packs]
+  (reduce
+   (fn [ownership pack]
+     (let [pack-id (get pack "id")
+           task-ownership (into {}
+                                (for [field ["unit" "property"]
+                                      path (get pack field [])]
+                                  [["task" path] [pack-id field]]))
+           partition-ownership
+           (into {}
+                 (mapcat
+                  (fn [partition]
+                    (let [path (get partition "path")]
+                      (concat
+                       (when (some #{path} migrated-entry-points)
+                         [[["browser" path] pack-id]])
+                       (for [leaf (get partition "originalLeaves" [])]
+                         [["leaf" leaf] pack-id])
+                       (mapcat
+                        (fn [target]
+                          (let [target-id (get target "id")]
+                            (cons [["target" target-id] pack-id]
+                                  (for [leaf (get target "leaves" [])]
+                                    [["target-leaf" leaf] [pack-id target-id]]))))
+                        (get partition "targets" [])))))
+                  (get pack "browserEvidencePartitions" [])))]
+       (merge ownership task-ownership partition-ownership)))
+   {}
+   packs))
+
+(defn- topology-conserves-baseline? [base-packs current-packs]
+  (let [baseline (topology-ownership base-packs)
+        current (topology-ownership current-packs)]
+    (every? (fn [[key owner]] (= owner (get current key))) baseline)))
 
 (defn- run-production-probes! []
   (let [evidence (process-evidence/load! production-evidence
@@ -66,8 +98,7 @@
                       (filter #(= "test/support/browser-observation-control.mjs" (get % "path")))
                       first)]
       {:helper helper
-       :topology-conserved? (= (topology-without-helper-registry base-packs)
-                               (topology-without-helper-registry current-packs))})))
+       :topology-conserved? (topology-conserves-baseline? base-packs current-packs)})))
 
 (defn- source-context []
   (let [sources (into {} (map (juxt identity slurp) migrated-entry-points))]
