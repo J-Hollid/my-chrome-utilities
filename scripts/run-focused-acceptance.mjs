@@ -48,7 +48,11 @@ import {
   checkpointAttemptIdentity, checkpointAttemptInputIdentity, createCheckpointAttemptStore,
   defaultCheckpointAttemptDirectory,
 } from "./verification-checkpoint-attempt.mjs";
-import { reliabilityFailureContract } from "./verification-reliability-closure.mjs";
+import {
+  boundedClosureContractRevision,
+  boundedClosureEvidenceTask,
+  reliabilityFailureContract,
+} from "./verification-reliability-closure.mjs";
 export { verificationPromotionTasks } from "./verification-promotion-plan.mjs";
 import { verificationPromotionTasks } from "./verification-promotion-plan.mjs";
 
@@ -366,13 +370,17 @@ export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, cand
   if (JSON.stringify([...requestedPackIds].sort()) !== JSON.stringify(timeoutRepairPackIds)) {
     throw new Error("Repair checkpoint requires the eligible repair candidate and exact all-20 plan");
   }
+  const boundedClosureCheckpoint = baseCommit === boundedClosureContractRevision &&
+    evidenceTask === boundedClosureEvidenceTask;
   const incompatible = blocking.find((incident) => {
     const repairCandidate = timeoutRepairCandidate(incident);
     return incident.repair?.status !== "eligible" ||
     repairCandidate?.commit !== candidateCommit ||
     repairCandidate?.tree !== candidateTree ||
-    incident.repair.checkpoint.baseCommit !== baseCommit ||
-    incident.repair.checkpoint.evidenceTask !== evidenceTask;
+    (!boundedClosureCheckpoint && (incident.repair.checkpoint.baseCommit !== baseCommit ||
+      incident.repair.checkpoint.evidenceTask !== evidenceTask)) ||
+    (boundedClosureCheckpoint &&
+      incident.closureAudit?.kind !== "blocking-verification-repair");
   });
   if (incompatible) {
     throw new Error(`Repair checkpoint is blocked by incompatible reliability incident ${incompatible.id}`);

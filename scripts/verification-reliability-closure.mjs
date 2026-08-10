@@ -1,6 +1,7 @@
 import { normalized, timeoutIncidentDigest } from "./verification-reliability-values.mjs";
 
 export const boundedClosureContractRevision = "2f609d7a19fd966eb82c54b2938df1fd78e2d836";
+export const boundedClosureEvidenceTask = "vtd014-bounded-closure";
 
 const failureDomains = new Set([
   "product-runtime",

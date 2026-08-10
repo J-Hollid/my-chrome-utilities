@@ -5,6 +5,10 @@ import {
   normalized, timeoutIncidentDigest, timeoutRepairPackIds,
 } from "./verification-reliability-values.mjs";
 import { timeoutRepairCandidate } from "./verification-reliability-repair.mjs";
+import {
+  boundedClosureContractRevision,
+  boundedClosureEvidenceTask,
+} from "./verification-reliability-closure.mjs";
 
 export async function receiptDocument(root, receiptPath) {
   if (typeof receiptPath !== "string" || !receiptPath) throw new Error("Provide a runner receipt path");
@@ -39,17 +43,28 @@ export function freshPassingReceipt(document, candidate, description) {
   return tasks;
 }
 
+export function canonicalCheckpointBinding(incident, receipt) {
+  const boundedClosure = receipt?.candidate?.baseCommit === boundedClosureContractRevision &&
+    receipt?.candidate?.evidenceTask === boundedClosureEvidenceTask &&
+    incident.closureAudit?.kind === "blocking-verification-repair";
+  return boundedClosure ? {
+    baseCommit:receipt.candidate.baseCommit,
+    evidenceTask:receipt.candidate.evidenceTask,
+  } : structuredClone(incident.repair.checkpoint);
+}
+
 export async function defaultCanonicalCheckpointValidator({
   document, incident, root, allowLegacySeparatePackage = false,
 }) {
   const { validateCanonicalVerificationCheckpoint } = await import("./verification-evidence.mjs");
   const candidate = timeoutRepairCandidate(incident);
+  const binding = canonicalCheckpointBinding(incident, document.receipt);
   return validateCanonicalVerificationCheckpoint({
     receiptPath:path.resolve(root, document.path),
     commit:candidate.commit,
     tree:candidate.tree,
-    baseCommit:incident.repair.checkpoint.baseCommit,
-    evidenceTask:incident.repair.checkpoint.evidenceTask,
+    baseCommit:binding.baseCommit,
+    evidenceTask:binding.evidenceTask,
     packIds:timeoutRepairPackIds,
     repositoryRoot:root,
     allowLegacySeparatePackage,
