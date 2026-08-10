@@ -4233,3 +4233,60 @@ affected static layout evidence. The bounded VTD-014 policy decides every additi
 task from the complete input-influence closure: changed or uncertain inputs rerun,
 proven input-equivalent passes remain attributable to their original receipts, and the
 package task runs freshly on the final tree. No geometry assertion may be weakened.
+
+### Approved Flow reload lifecycle reliability correction
+
+The user approved this separate correction under the frozen VTD-014 closure policy on
+2026-08-10. It does not dispose of a current-lineage failure, add Flow product
+behavior, or reopen the wider canvas-first workspace design.
+
+Candidate `6d9517c28cf8bdfd7624be4aec49c07a2905d849` retains the causal 360px Focus
+Canvas product repair and passes the raw focused target, but governed repair-focused
+attempts repeatedly reach a connected empty project-tree shell after browser reload
+without populated Flow
+navigation or a painted Flow workspace. A prior governed attempt on sibling candidate
+`bd7d10c9752dd5f71da8ca0db03ae20ece90c1f8` passed. That combination establishes an
+unreliable lifecycle boundary; it does not establish whether the remaining cause
+belongs to product initialization or to a runner-mode difference. One passing
+invocation cannot dispose of the failures.
+
+`FLOW_WORKSPACE_CONTROLS_TARGET` has one canonical lifecycle in ordinary focused and
+repair-focused execution. Both modes use the same browser page target, extension
+origin, storage, active project, requested Flow, and registered reload sequence. A
+mode may change incident governance and evidence recording, but it cannot change the
+test's page identity, state inputs, navigation inputs, reload order, or assertions.
+
+Every registered reload is observed as an ordered lifecycle: the current document
+generation initializes without error, the durable repository opens, the expected
+project becomes active, project navigation is populated, and the requested Flow route
+mounts and paints stably. A connected `#project-tree` with no navigation is an
+intermediate shell, not readiness. A bounded deadline diagnostic identifies the first
+incomplete stage and its state; an initializer error fails at that stage rather than
+appearing later as a missing selector.
+
+Classification follows the observed causal boundary. If the lifecycle inputs and
+sequence are identical across modes and product initialization or route restoration
+fails, the incident is `product-runtime` and requires a causal product repair. If the
+ordinary lifecycle succeeds because repair-focused execution supplied a different
+page, origin, storage, active project, requested Flow, or reload sequence, the incident
+is `verification-execution` and requires a runner or harness repair. A single pass in
+either mode is insufficient evidence for classification.
+
+Flow reload incident identity includes the canonical target, registered reload
+boundary, earliest unmet lifecycle stage, and normalized diagnostic shape. Attempt
+ids, temporary paths, elapsed durations, and polling counts are occurrence data and do
+not create new blockers. A different reload boundary, lifecycle stage, initializer
+error, or semantic project/route identity remains distinct. Incidents from discarded
+experimental candidates are audited through the existing `lineage-retired` policy;
+current-lineage occurrences remain blocking until their causal group is repaired.
+
+The correction supplies deterministic fixtures that delay initialization and active-
+project hydration past at least one readiness observation, prove that an empty shell is
+not accepted, and surface an injected initialization error at the correct stage. The
+same sealed candidate and registered reload sequence must then pass
+`FLOW_WORKSPACE_CONTROLS_TARGET` in ordinary focused and repair-focused execution.
+No behavioral reload may be removed or reordered without separate conservation proof.
+No timeout increase, arbitrary wait, broader target, weakened geometry assertion, or
+change to Flow graph, camera, navigation-memory, persistence, or Undo behavior is
+authorized. The bounded VTD-014 input-influence closure selects additional affected
+tasks, and the package task remains fresh on the final tree.
