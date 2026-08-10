@@ -938,8 +938,12 @@ export function verificationPerformanceCalibration(
     if (!targetBudget) throw new Error(`Performance calibration is missing browser target ${id}`);
     return [id, targetBudget];
   }));
-  if (runnablePacks.length !== 20 || Object.keys(browserTargets).length !== 81) {
-    throw new Error("Performance calibration must cover 20 runnable packs and 81 browser targets");
+  const declaredBrowserTargetCount = new Set(packs.flatMap((pack) =>
+    (pack.browserObservations ?? []).map(({ id }) => id))).size;
+  if (runnablePacks.length !== 20 ||
+      Object.keys(browserTargets).length !== declaredBrowserTargetCount) {
+    throw new Error(`Performance calibration must cover 20 runnable packs and ${
+      declaredBrowserTargetCount} browser targets`);
   }
   const declaredFallbackTarget = packs
     .flatMap((pack) => pack.browserAdapterPerformance ?? [])

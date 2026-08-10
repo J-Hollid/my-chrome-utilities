@@ -291,7 +291,8 @@ const directFixtureModuleSources = await Promise.all(directFixtureModulePaths.ma
 ]));
 for (const [modulePath, source] of targetModuleSources) {
   const expectedSubstantive = modulePath.startsWith("side-panel-schema-") ||
-    modulePath === "side-panel-shell-targets.mjs";
+    modulePath === "side-panel-shell-targets.mjs" ||
+    modulePath === "side-panel-event-library-targets.mjs";
   assert.equal(source.trim().split(/\r?\n/u).length > 20, expectedSubstantive,
     `${modulePath} must keep only its approved target-module scope`);
   assert.match(source, /executeFixture/u,
