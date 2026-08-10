@@ -114,6 +114,41 @@ export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionK
   return taskPlan.sort((left, right) => left.identity.key.localeCompare(right.identity.key));
 }
 
+export function timeoutRepairFocusedExecutionTaskPlan(taskPlan, canonicalIdentities) {
+  if (!Array.isArray(taskPlan) || !Array.isArray(canonicalIdentities)) {
+    throw new Error("Reliability repair execution requires canonical task plans");
+  }
+  const descriptors = new Map(taskPlan.map((descriptor) => [descriptor.identity?.key, descriptor]));
+  if (descriptors.size !== taskPlan.length || descriptors.has(undefined)) {
+    throw new Error("Reliability repair execution requires unique repair task identities");
+  }
+  const canonical = new Map(canonicalIdentities.map((identity) => [identity.key, identity]));
+  const selected = new Set(descriptors.keys());
+  const selectedIdentities = [...selected].map((key) => canonical.get(key));
+  if (selectedIdentities.some((identity) => !identity)) {
+    throw new Error("Reliability repair execution task is not a canonical current identity");
+  }
+  const artifactStages = new Set([
+    "browser", "browser-observation", "checkpoint", "acceptance-session", "package",
+  ]);
+  if (selectedIdentities.some(({ stage }) => artifactStages.has(stage))) selected.add("build:dist");
+  const acceptanceFeatures = new Set(selectedIdentities
+    .filter(({ stage }) => stage === "acceptance-session")
+    .flatMap(({ target }) => target?.split(",") ?? []));
+  for (const identity of canonicalIdentities) {
+    if (["acceptance-parse", "acceptance-generate"].includes(identity.stage) &&
+        acceptanceFeatures.has(identity.target)) selected.add(identity.key);
+  }
+  const executionTaskPlan = canonicalIdentities.filter(({ key }) => selected.has(key))
+    .map((identity) => descriptors.get(identity.key) ?? {
+      identity:structuredClone(identity), roles:["prerequisite"],
+    });
+  if (executionTaskPlan.length !== selected.size) {
+    throw new Error("Reliability repair prerequisites are not canonical current task identities");
+  }
+  return executionTaskPlan;
+}
+
 function regressionProtocol(document, regressionKey, incidentId) {
   const output = document.receipt.tasks[regressionKey]?.output ?? "";
   const records = output.split(/\r?\n/u).filter(Boolean).flatMap((line) => {
@@ -170,7 +205,9 @@ export async function validateRepairReceiptSemantics(incident, proposal, regress
   const canonicalIdentities = await canonicalRepairTaskIdentities({ incident, proposal });
   const expectedTaskPlan = timeoutRepairFocusedTaskPlan(incident, proposal.changedPaths,
     proposal.regression.key, canonicalIdentities);
-  const expectedFocusedKeys = expectedTaskPlan.map(({ identity }) => identity.key);
+  const expectedExecutionTaskPlan = timeoutRepairFocusedExecutionTaskPlan(
+    expectedTaskPlan, canonicalIdentities);
+  const expectedFocusedKeys = expectedExecutionTaskPlan.map(({ identity }) => identity.key);
   if (focusedDocument.receipt.plan?.mode !== "timeout-repair-focused" ||
       focusedDocument.receipt.plan?.incidentId !== incident.id ||
       focusedDocument.receipt.plan?.causalCategory !== proposal.causalCategory ||
@@ -178,9 +215,11 @@ export async function validateRepairReceiptSemantics(incident, proposal, regress
       regressionDocument.sha256 !== focusedDocument.sha256 ||
       JSON.stringify(normalized(focusedDocument.receipt.plan.taskPlan)) !==
         JSON.stringify(normalized(expectedTaskPlan)) ||
+      JSON.stringify(normalized(focusedDocument.receipt.plan.executionTaskPlan)) !==
+        JSON.stringify(normalized(expectedExecutionTaskPlan)) ||
       JSON.stringify(Object.keys(focusedDocument.receipt.tasks).sort()) !==
         JSON.stringify([...expectedFocusedKeys].sort()) ||
-      expectedTaskPlan.some(({ identity }) => JSON.stringify(normalized(
+      expectedExecutionTaskPlan.some(({ identity }) => JSON.stringify(normalized(
         focusedDocument.receipt.tasks[identity.key]?.identity)) !== JSON.stringify(normalized(identity))) ||
       expectedTaskPlan.some(({ identity, executionArgs, executionLogicalTargetIds }) => executionArgs &&
         JSON.stringify(normalized(focusedDocument.receipt.tasks[identity.key]?.execution)) !==

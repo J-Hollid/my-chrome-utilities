@@ -33,6 +33,7 @@ import {
   timeoutRepairCausalCategory,
   timeoutRepairCandidate,
   timeoutRepairDiagnosedBoundary,
+  timeoutRepairFocusedExecutionTaskPlan,
   timeoutRepairFocusedTaskPlan,
   timeoutRepairPackageTaskIdentity,
   timeoutRepairPackIds,
@@ -823,6 +824,25 @@ export async function runTimeoutDiagnosticRetry(id, {
   return { incident:classified, receiptPath:context.receiptPath };
 }
 
+export async function executeTimeoutRepairTaskPlan(executionTaskPlan, {
+  registeredRuntimeTasks = new Map(), runner, regressionContext,
+}) {
+  for (const descriptor of executionTaskPlan) {
+    const registeredTask = registeredRuntimeTasks.get(descriptor.identity.key);
+    const task = { ...structuredClone(descriptor.identity),
+      ...(registeredTask?.temporaryPathClass
+        ? { temporaryPathClass:registeredTask.temporaryPathClass } : {}),
+      ...(descriptor.executionArgs ? { executionArgs:[...descriptor.executionArgs] } : {}),
+      ...(descriptor.executionLogicalTargetIds
+        ? { executionLogicalTargetIds:[...descriptor.executionLogicalTargetIds] } : {}),
+      ...(descriptor.roles.includes("causal-regression") ? { executionEnvironment:{
+        SWARMFORGE_TIMEOUT_REPAIR_REGRESSION:JSON.stringify(regressionContext),
+      } } : {}),
+    };
+    await runner(`reliability repair ${descriptor.roles.join("+")} ${task.key}`, task);
+  }
+}
+
 export async function runTimeoutRepairFocused(id, {
   regressionKey, causalCategory, causalExplanation, baseCommit, evidenceTask,
   store = createTimeoutIncidentStore(),
@@ -873,6 +893,7 @@ export async function runTimeoutRepairFocused(id, {
   const registeredRuntimeTasks = new Map(plan.tasks.map((task) => [task.key, task]));
   const taskPlan = timeoutRepairFocusedTaskPlan(incident, incidentChangedPaths, regressionKey,
     canonicalIdentities);
+  const executionTaskPlan = timeoutRepairFocusedExecutionTaskPlan(taskPlan, canonicalIdentities);
   const context = receiptContextFactory(incident.failure.environment.concurrency,
     incident.failure.environment.observationConcurrency);
   context.receipt.candidate = { role:process.env.SWARMFORGE_ROLE ?? null, branch:candidate.branch ?? null,
@@ -880,32 +901,20 @@ export async function runTimeoutRepairFocused(id, {
     changeSetDigest:verificationDigest(changeSet) };
   context.receipt.artifact = structuredClone(artifact);
   context.receipt.plan = { mode:"timeout-repair-focused", incidentId:id, causalCategory,
-    causalExplanation, taskPlan };
+    causalExplanation, taskPlan, executionTaskPlan };
   await context.write();
   console.error(`[verify:receipt] ${path.relative(repositoryRoot, context.receiptPath)}`);
   const regressionContext = { version:1, incidentId:id, failureDigest:incident.failureDigest,
     diagnosedBoundary:timeoutRepairDiagnosedBoundary(incident), causalCategory, causalExplanation };
   const runner = commandRunnerFactory(context, { strictAcceptanceReceipt:false });
-  for (const descriptor of taskPlan) {
-    const registeredTask = registeredRuntimeTasks.get(descriptor.identity.key);
-    const task = { ...structuredClone(descriptor.identity),
-      ...(registeredTask?.temporaryPathClass
-        ? { temporaryPathClass:registeredTask.temporaryPathClass } : {}),
-      ...(descriptor.executionArgs ? { executionArgs:[...descriptor.executionArgs] } : {}),
-      ...(descriptor.executionLogicalTargetIds
-        ? { executionLogicalTargetIds:[...descriptor.executionLogicalTargetIds] } : {}),
-      ...(descriptor.roles.includes("causal-regression") ? { executionEnvironment:{
-        SWARMFORGE_TIMEOUT_REPAIR_REGRESSION:JSON.stringify(regressionContext),
-      } } : {}),
-    };
-    await runner(`reliability repair ${descriptor.roles.join("+")} ${task.key}`, task);
-  }
+  await executeTimeoutRepairTaskPlan(executionTaskPlan,
+    { registeredRuntimeTasks, runner, regressionContext });
   context.receipt.completedAt = new Date().toISOString();
   await context.write();
   const repaired = await store.proposeRepair(id, { causalCategory, causalExplanation, regressionKey,
     regressionReceiptPath:context.receiptPath, focusedReceiptPath:context.receiptPath });
   console.error(`[verify:reliability-repair-focused] ${id} ${repaired.repair.status}`);
-  return { incident:repaired, receiptPath:context.receiptPath, taskPlan };
+  return { incident:repaired, receiptPath:context.receiptPath, taskPlan, executionTaskPlan };
 }
 
 export const runReliabilityDiagnosticRetry = runTimeoutDiagnosticRetry;
@@ -1061,7 +1070,13 @@ export function selectFocusedVerificationTasks(plan, requestedKeys) {
     selected.add("build:dist");
   }
   if (requestedKeys.some((key) => candidates.get(key).stage === "acceptance-session")) {
-    for (const task of [...withPackage.parserTasks, ...withPackage.generatorTasks]) selected.add(task.key);
+    const features = new Set(requestedKeys
+      .map((key) => candidates.get(key))
+      .filter(({ stage }) => stage === "acceptance-session")
+      .flatMap(({ target }) => target?.split(",") ?? []));
+    for (const task of [...withPackage.parserTasks, ...withPackage.generatorTasks]) {
+      if (features.has(task.target)) selected.add(task.key);
+    }
   }
   const groups = Object.fromEntries(focusedTaskGroups.map((group) => [group,
     (withPackage[group] ?? []).filter(({ key }) => selected.has(key))]));
