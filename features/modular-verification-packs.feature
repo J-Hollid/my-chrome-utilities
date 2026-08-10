@@ -2088,3 +2088,58 @@ Feature: Modular verification packs
     And no behavioral reload is removed or reordered without separate conservation proof
     And no timeout is increased, arbitrary wait is added, target scope is broadened, or product assertion is weakened
     And the bounded VTD-014 closure policy selects every additional affected task and fresh final package proof
+
+  # Modular verification packs 144
+  Scenario: Modular verification packs 144
+    Given an unresolved incident retains a failed task that is absent from the current canonical registry
+    When repair-focused planning resolves its historical failure boundary
+    Then it uses only a versioned task-succession graph from the failure registry to the current registry
+    And each succession edge binds the exact source identity, destination identity, and conserved logical boundary
+    And a registry change cannot retire a task used by an unresolved incident without declaring and validating its successor boundary
+    And the immutable failure task, occurrence, causal key, and diagnostic remain unchanged
+    And an undeclared, inferred-by-name, ambiguous, cyclic, or incomplete succession blocks before execution
+
+  # Modular verification packs 145
+  Scenario Outline: Modular verification packs 145
+    Given a historical incident boundary encounters <task_change>
+    When task succession validates <conservation_evidence>
+    Then repair planning produces <mapping_result>
+
+    Examples:
+      | task_change                                      | conservation_evidence                                                                     | mapping_result                                     |
+      | a task-key rename                                | one successor preserves the exact executable boundary and result semantics                | that current task                                  |
+      | a standalone browser target enters a batch       | one batch member preserves its target id, program, inputs, leaves, result, limits, and route | that current batch task and exact logical target   |
+      | one task is split                                | the complete failed boundary belongs to exactly one successor                             | that unique current task and boundary              |
+      | a boundary is removed, divided, duplicated, or relaxed | no unique lossless successor exists                                                   | a prelaunch succession block                       |
+      | registry history or any succession edge is unavailable | the complete chain cannot be verified                                                  | a prelaunch succession block                       |
+
+  # Modular verification packs 146
+  Scenario: Modular verification packs 146
+    Given every edge from one historical failure boundary to its current successor is conserved
+    When repair-focused execution plans the mapped boundary
+    Then the plan records the source and destination task digests, succession chain, logical slice, and conservation digest
+    And launch authorization, prerequisite closure, execution, and receipt use the current canonical task identity
+    And only the mapped logical slice, its causal regression, affected process-contract tasks, and prerequisites execute
+    And an unrelated member of a destination batch does not execute as repair proof
+
+  # Modular verification packs 147
+  Scenario: Modular verification packs 147
+    Given a current-lineage product-runtime incident has one conserved current successor boundary
+    When its product repair becomes eligible through that successor
+    Then the incident retains its own id, domain, immutable failure identity, causal key, and occurrence history
+    And task succession is not resolution, lineage retirement, verifier supersession, or product-cause grouping
+    And eligibility requires its own causal pre-repair failure and post-repair result plus fresh proof of the mapped boundary
+    And distinct incidents may cite one repair candidate and focused receipt only when each has its own exact causal regression
+    And incidents group only when every successor-normalized causal field matches, not merely because one change repairs both
+
+  # Modular verification packs 148
+  Scenario: Modular verification packs 148
+    Given incident d3a49b37-e016-4bed-830c-9531045a6773 names the retired standalone FLOW_WORKSPACE_CONTROLS_TARGET task
+    And the current Flow Graph batch preserves that logical target and every assigned assertion leaf
+    When the approved 360 pixel control-containment repair is applied through task succession
+    Then the incident maps to the current Flow Graph batch with only FLOW_WORKSPACE_CONTROLS_TARGET selected
+    And its Zoom-in containment symptom receives its own causal regression and repair proposal
+    And its fresh mapped-target proof may share the sealed candidate and receipt with another containment incident
+    And it is not lineage-retired or grouped with another incident solely because the product repair is shared
+    And process-contract fixtures cover rename, batch embedding, unique split, missing history, ambiguity, and cycles
+    And no product behavior, assertion leaf, timeout, target scope, incident record, or evidence meaning changes

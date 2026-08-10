@@ -4290,3 +4290,64 @@ No timeout increase, arbitrary wait, broader target, weakened geometry assertion
 change to Flow graph, camera, navigation-memory, persistence, or Undo behavior is
 authorized. The bounded VTD-014 input-influence closure selects additional affected
 tasks, and the package task remains fresh on the final tree.
+
+### Approved verification task-succession conservation correction
+
+The user approved this separate reliability correction under the frozen VTD-014
+closure policy on 2026-08-10. It governs historical incidents whose immutable task
+identity is no longer present because verification work was renamed, batched, or
+split. It does not create a new incident disposition or permit a current-lineage
+failure to disappear.
+
+Candidate `6358897239e77322ae2fa8fc0f7bcc43fedc0ab8` seals the approved Flow reload
+lifecycle correction. Current-lineage product incident
+`d3a49b37-e016-4bed-830c-9531045a6773` predates browser batching and retains canonical
+task `browser-observation:FLOW_WORKSPACE_CONTROLS_TARGET`. The current registry instead
+places that unchanged logical target inside the four-target Flow Graph batch. Repair-
+focused planning correctly rejects the old task as noncanonical, but neither lineage
+retirement nor name-based substitution would preserve incident integrity.
+
+Historical failure boundaries resolve through a versioned task-succession graph. Every
+edge binds the exact source registry identity, destination registry identity, and
+conserved logical boundary. A registry change cannot retire a task referenced by an
+unresolved incident unless that same change declares and validates its successor
+boundary. A valid task-key rename preserves the executable boundary and result
+semantics. A valid standalone-to-batch edge preserves the target id,
+program, target inputs, feature and assertion-leaf ownership, observation result,
+applicable inner limit, required capabilities, and execution route. A split is valid
+only when the complete failed boundary belongs to exactly one successor. The immutable
+failure task, occurrence, causal key, and diagnostic are never rewritten.
+
+One or more valid edges compose to exactly one current canonical task and logical
+slice. The repair plan and receipt record the source and destination task digests, full
+succession chain, logical slice, and conservation digest. Current launch authorization
+and prerequisite closure apply to the destination task, while repair-focused execution
+runs only the mapped slice, its causal regression, affected process-contract tasks, and
+prerequisites. Unrelated batch members do not become repair proof. Missing registry
+history, an undeclared edge, name inference, ambiguity, a cycle, or a removed, divided,
+duplicated, or relaxed failure boundary blocks before launch.
+
+Task succession changes how an old boundary is executed; it is not resolution,
+lineage retirement, verifier-cause supersession, or causal grouping. A mapped product-
+runtime incident remains blocking until its own causal fixture reproduces the exact
+pre-repair failure, proves the post-repair result, and receives fresh proof of the
+mapped logical target. Distinct incidents may reference the same repair candidate and
+focused receipt only when each has its own exact regression protocol. They group only
+when domain, successor-normalized task and executable boundary, case, assertion site,
+and normalized diagnostic all match. A shared source fix alone is insufficient.
+
+Under the general rule, incident `d3a49b37-e016-4bed-830c-9531045a6773` maps to the
+current Flow Graph batch with only `FLOW_WORKSPACE_CONTROLS_TARGET` selected. The
+retained containment change may support both this incident and Focus Canvas incident
+`fbc7d757-1ad9-4304-a7f9-d387189a77cc`, and their fresh mapped-target proof may share
+one sealed candidate and receipt. The Zoom-in symptom nevertheless receives its own
+causal regression and repair proposal; the two incidents are not grouped merely because
+one product change repairs both.
+
+Process-contract fixtures cover a task-key rename, standalone target embedded in a
+batch, a split with one unique successor, missing history, ambiguity, and cycles. No
+product behavior, assertion leaf, timeout, target scope, incident record, or evidence
+meaning changes. Confirmed-flaky verifier-cleanup incident
+`3243445f-a9de-4156-b160-2f1c8fbf500f` remains a separate existing VTD-014 repair
+obligation and receives no disposition from this correction. The bounded input-
+influence policy determines additional reruns, and package proof remains fresh.
