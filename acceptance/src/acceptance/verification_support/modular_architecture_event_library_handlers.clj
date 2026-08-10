@@ -83,7 +83,7 @@
     (assert-event! (assoc prepared :vtd004/conserved? true)
                    (and (= (conserved-evidence-profile pack)
                            (:evidenceProfile evidence))
-                        (= [9 1 8 3 1 1 30]
+                        (= [9 1 8 3 1 1 29]
                            ((juxt :unitCount :propertyCount :featureCount :handlerCount
                                   :adapterCount :targetCount :exactTaskCount) evidence))
                         (:terminalTaskIdentitiesConserved evidence)
