@@ -61,7 +61,7 @@ function matchingTransitions(incident, type) {
 
 function validateTransitionHistory(incident) {
   const allowed = new Set(["diagnostic-retry-claimed", "diagnostic-retry-classified",
-    "repair-proposed", "repair-renewed", "repair-checkpoint-claimed", "repair-checkpoint-reclaimed",
+    "repair-proposed", "repair-checkpoint-claimed", "repair-checkpoint-reclaimed",
     "resolved", "lineage-rebased",
     "lineage-abandoned", "occurrence-appended", "closure-audited"]);
   let previousTime = Date.parse(incident.createdAt);
@@ -82,9 +82,6 @@ function validateTransitionHistory(incident) {
     if (rank[record.type]) {
       if (rank[record.type] <= previousRank) transitionHistoryError(incident.id, "events are duplicated or reordered");
       previousRank = rank[record.type];
-    }
-    if (record.type === "repair-renewed" && previousRank !== rank["repair-proposed"]) {
-      transitionHistoryError(incident.id, "repair renewal is outside the eligible proposal phase");
     }
     if (record.type === "resolved") terminal = true;
   }
@@ -138,8 +135,7 @@ function validateTransitionHistory(incident) {
       classified.classification !== incident.retry.classification)) {
     transitionHistoryError(incident.id, "diagnostic classification disagrees");
   }
-  const repair = incident.transitions.filter(({ type }) =>
-    type === "repair-proposed" || type === "repair-renewed").at(-1);
+  const repair = matchingTransitions(incident, "repair-proposed")[0];
   if (repair && repair.commit !== incident.repair.candidate?.commit) {
     transitionHistoryError(incident.id, "repair candidate disagrees");
   }

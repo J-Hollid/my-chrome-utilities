@@ -751,6 +751,20 @@ function validateDeclaredTasks(packs) {
   const observationIds = new Set();
   const registeredTestPaths = new Set(packs.flatMap((pack) => testPathKeys.flatMap((key) => values(pack, key))));
   for (const pack of packs) {
+    const reliabilityPrefixes = new Set();
+    for (const declaration of values(pack, "reliabilityBoundaries")) {
+      if (!declaration || Array.isArray(declaration) ||
+          Object.keys(declaration).sort().join(",") !==
+            "boundary,casePrefix,feature,ownership" ||
+          !values(pack, "features").includes(declaration.feature) ||
+          typeof declaration.casePrefix !== "string" || !declaration.casePrefix ||
+          declaration.ownership !== "verification" ||
+          declaration.boundary !== "verification-acceptance" ||
+          reliabilityPrefixes.has(declaration.casePrefix)) {
+        throw new Error(`Use exact unique acceptance reliability boundaries in pack ${pack.id}`);
+      }
+      reliabilityPrefixes.add(declaration.casePrefix);
+    }
     const ownedTestPaths = new Set(testPathKeys.flatMap((key) => values(pack, key)));
     for (const declaration of values(pack, "executionPrerequisites")) {
       if (!declaration || Array.isArray(declaration) ||
@@ -995,7 +1009,7 @@ function displayArgument(argument) {
 
 function commandTask({
   key, stage, packId = null, executable, args, target = null, environment = null,
-  logicalTargetIds = undefined, aliasCommands = undefined,
+  logicalTargetIds = undefined, aliasCommands = undefined, reliabilityBoundaries = undefined,
   requiredCapabilities = defaultTaskExecutionPrerequisites(stage),
   temporaryPathClass = ["browser", "browser-observation"].includes(stage)
     ? "chrome-short" : "workspace",
@@ -1004,6 +1018,7 @@ function commandTask({
     requiredCapabilities:[...requiredCapabilities], temporaryPathClass };
   if (logicalTargetIds) task.logicalTargetIds = [...logicalTargetIds];
   if (aliasCommands) task.aliasCommands = aliasCommands.map((command) => [...command]);
+  if (reliabilityBoundaries) task.reliabilityBoundaries = structuredClone(reliabilityBoundaries);
   return { ...task, display:[executable, ...args].map(displayArgument).join(" ") };
 }
 
@@ -1046,6 +1061,7 @@ function featureTasks(features, packs) {
       args:["acceptance-pack-runner", pack.id, ...packArtifacts.flatMap(({ generated, ir }) => [generated, ir])],
       target:packArtifacts.map(({ feature }) => feature).join(","),
       requiredCapabilities:[], temporaryPathClass:"workspace",
+      reliabilityBoundaries:values(pack, "reliabilityBoundaries"),
     });
   }).filter(Boolean);
   return { parser, generator, sessions };

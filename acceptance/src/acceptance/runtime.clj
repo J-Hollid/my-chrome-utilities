@@ -1,5 +1,6 @@
 (ns acceptance.runtime
-  (:require [clojure.string :as str]))
+  (:require [cheshire.core :as json]
+            [clojure.string :as str]))
 
 (defn- scenario-examples [scenario]
   (let [examples (:examples scenario)]
@@ -58,6 +59,17 @@
                          :acceptance/scenario-index (:scenario-index execution)
                          :acceptance/scenario-steps (mapv :text (get-in execution [:scenario :steps]))})
         (catch Throwable t
+          (binding [*out* *err*]
+            (println
+             (json/generate-string
+              {:swarmforgeVerificationProgress
+               {:version 1
+                :sequence 1
+                :monotonicMs 0
+                :boundary "process"
+                :phase "assertion"
+                :caseId (:name execution)
+                :state {:status "failed"}}})))
           (throw (ex-info (format "Acceptance execution failed: %s: %s"
                                   (:name execution)
                                   (ex-message t))

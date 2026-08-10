@@ -5736,6 +5736,20 @@
       "features/side-panel-visual-system.feature",
       "features/side-panel-workspace-tabs.feature"
     ],
+    "reliabilityBoundaries": [
+      {
+        "feature": "features/modular-chrome-utility-architecture.feature",
+        "casePrefix": "Modular Chrome utility architecture ",
+        "ownership": "verification",
+        "boundary": "verification-acceptance"
+      },
+      {
+        "feature": "features/modular-verification-packs.feature",
+        "casePrefix": "Modular verification packs ",
+        "ownership": "verification",
+        "boundary": "verification-acceptance"
+      }
+    ],
     "handlers": [
       "acceptance/src/acceptance/steps/all.clj",
       "acceptance/src/acceptance/steps/information_architecture.clj",

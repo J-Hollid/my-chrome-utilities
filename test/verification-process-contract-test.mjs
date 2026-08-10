@@ -58,6 +58,7 @@ import {
   createVerificationCommandRunner,
   createVerificationReceiptContext,
   executeTimeoutRepairTaskPlan,
+  enforceTerminalClosureReceipt,
   focusedAcceptanceOptions,
   selectFocusedVerificationTasks,
   prepareCheckpointExecution,
@@ -882,6 +883,29 @@ assert.throws(() => classifyReliabilityFailureDomain({
   launchAuthorized:true, ownership:"unknown", boundary:"runner",
 }), /declared ownership/u, "paths or an agent label cannot choose a failure domain");
 
+const mixedAcceptanceTask = {
+  key:"acceptance-session:shell", stage:"acceptance-session", packId:"shell",
+  executable:"bb", args:["acceptance-pack-runner", "shell"], target:"mixed acceptance",
+  reliabilityBoundaries:[{
+    casePrefix:"Modular verification packs ", ownership:"verification",
+    boundary:"verification-acceptance",
+  }],
+};
+assert.equal(reliabilityFailureContract({
+  task:mixedAcceptanceTask, failureClass:"nonzero-exit",
+  failedBoundary:{ caseId:"Side panel visual system 001/example_1" },
+  stderr:"Acceptance execution failed: Modular verification packs 133/example_1: misleading text",
+  resultDigestInputs:{ commit:"candidate", tree:"tree" },
+}).failureDomain, "product-runtime",
+"diagnostic text cannot override the authoritative executed acceptance boundary");
+assert.equal(reliabilityFailureContract({
+  task:mixedAcceptanceTask, failureClass:"nonzero-exit",
+  failedBoundary:{ caseId:"Modular verification packs 133/example_1" },
+  stderr:"Acceptance execution failed: Side panel visual system 001/example_1: misleading text",
+  resultDigestInputs:{ commit:"candidate", tree:"tree" },
+}).failureDomain, "verification-execution",
+"declared ownership plus the actual executed case selects verification execution");
+
 const causalFixture = {
   domain:"verification-execution",
   task:{ key:"acceptance-session:shell", executable:"bb", args:["acceptance-pack-runner", "shell"] },
@@ -1003,6 +1027,50 @@ assert.deepEqual(terminalClosureExecution({ attempt:"initial", runnablePackCount
 assert.deepEqual(terminalClosureExecution({ attempt:"verifier-descendant", runnablePackCount:20 }), {
   taskPolicy:"fresh-or-input-equivalent", runnablePackCount:20, packagePolicy:"fresh",
 }, "a verifier descendant can retain only complete input-equivalent passes");
+
+const terminalPackageKey = "package:extension";
+const terminalFreshTasks = {
+  "acceptance-session:shell":{ status:"passed", provenance:"fresh" },
+  [terminalPackageKey]:{ status:"passed", provenance:"fresh" },
+};
+assert.equal(enforceTerminalClosureReceipt({
+  attempt:"initial", runnablePackCount:20, tasks:terminalFreshTasks,
+  currentInputs:{ "acceptance-session:shell":completeInput, [terminalPackageKey]:completeInput },
+  packageTaskKey:terminalPackageKey,
+}).taskPolicy, "fresh-all", "the production receipt boundary accepts an initial fresh checkpoint");
+const validEquivalent = {
+  status:"passed", provenance:"input-equivalent",
+  inputEquivalentProof:{ priorResult:priorPass, priorInput:completeInput },
+};
+assert.equal(enforceTerminalClosureReceipt({
+  attempt:"verifier-descendant", runnablePackCount:20,
+  tasks:{ "acceptance-session:shell":validEquivalent,
+    [terminalPackageKey]:terminalFreshTasks[terminalPackageKey] },
+  currentInputs:{ "acceptance-session:shell":completeInput, [terminalPackageKey]:completeInput },
+  packageTaskKey:terminalPackageKey,
+}).taskPolicy, "fresh-or-input-equivalent",
+"the production receipt boundary accepts complete identical carried proof");
+await assert.rejects(async() => enforceTerminalClosureReceipt({
+  attempt:"verifier-descendant", runnablePackCount:20,
+  tasks:{ "acceptance-session:shell":{
+    ...validEquivalent,
+    inputEquivalentProof:{ priorResult:priorPass,
+      priorInput:{ ...completeInput, transitiveCode:{ complete:false, digest:"1".repeat(64) } } },
+  }, [terminalPackageKey]:terminalFreshTasks[terminalPackageKey] },
+  currentInputs:{ "acceptance-session:shell":completeInput, [terminalPackageKey]:completeInput },
+  packageTaskKey:terminalPackageKey,
+}), /incomplete influence/u,
+"the real terminal receipt boundary rejects incomplete carried influence");
+await assert.rejects(async() => enforceTerminalClosureReceipt({
+  attempt:"verifier-descendant", runnablePackCount:20,
+  tasks:{ "acceptance-session:shell":validEquivalent,
+    [terminalPackageKey]:terminalFreshTasks[terminalPackageKey] },
+  currentInputs:{ "acceptance-session:shell":{
+    ...completeInput, runnerSemantics:{ digest:"c".repeat(64) },
+  }, [terminalPackageKey]:completeInput },
+  packageTaskKey:terminalPackageKey,
+}), /task input changed/u,
+"the real terminal receipt boundary rejects changed carried input");
 
 const syntheticArtifact = (inputDigest, outputDigest, toolchain) => {
   const schemaVersion = 1;
@@ -2118,17 +2186,14 @@ console.log("repairTmp=" + process.env.TMPDIR);
     regressionReceiptPath:focusedReceiptPath, focusedReceiptPath,
   });
   assert.equal(proposal.repair.status, "eligible");
-  const renewedProposal = await store.proposeRepair(first.id, {
+  await assert.rejects(store.proposeRepair(first.id, {
     causalCategory, causalExplanation, regressionKey,
     regressionReceiptPath:focusedReceiptPath, focusedReceiptPath,
-  });
-  assert.equal(renewedProposal.repair.status, "eligible",
-    "an unresolved eligible incident can renew its proposal with fresh candidate-bound evidence");
-  assert.equal(renewedProposal.transitions.filter(({ type }) =>
-    type === "repair-proposed").length, 1);
-  assert.equal(renewedProposal.transitions.filter(({ type }) =>
-    type === "repair-renewed").length, 1,
-  "repair renewal remains an explicit durable transition");
+  }), /already has an eligible repair/u,
+  "an eligible repair is frozen and cannot be renewed after proposal");
+  assert.equal(proposal.transitions.filter(({ type }) => type === "repair-proposed").length, 1);
+  assert.equal(proposal.transitions.some(({ type }) => type === "repair-renewed"), false,
+    "the frozen repair state machine never emits repair-renewed");
   const checkpointPacks = ["branding_polish", "capture", "command-palette", "defects",
     "durable_project_repository", "event-library", "flow_export", "flow_graph", "guided_test_cases",
     "hotkeys", "layered_schema", "live_flow_testing", "project_assurance_severity",

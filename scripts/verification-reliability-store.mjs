@@ -139,8 +139,10 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
       if (current.retry?.status === "claimed") {
         throw new Error(`Reliability incident ${id} has an incomplete diagnostic retry`);
       }
-      const renewingEligibleRepair = current.repair?.status === "eligible";
-      if (current.retry && current.retry.status !== "classified" && !renewingEligibleRepair) {
+      if (current.repair?.status === "eligible") {
+        throw new Error(`Reliability incident ${id} already has an eligible repair`);
+      }
+      if (current.retry && current.retry.status !== "classified") {
         throw new Error(`Reliability incident ${id} has invalid diagnostic state`);
       }
       const candidate = await currentCandidate();
@@ -171,8 +173,7 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
         return transition({ ...incident,
           retry:incident.retry ?? { status:"invalidated-by-repair", classification:"not-retried-repaired",
             invalidatedAt:at }, repair:eligible },
-        renewingEligibleRepair ? "repair-renewed" : "repair-proposed", at,
-        { commit:eligible.candidate.commit });
+        "repair-proposed", at, { commit:eligible.candidate.commit });
       });
     },
     claimRepairCheckpoint(id, runId) {

@@ -106,26 +106,29 @@
                           "focus-app-hotkeys"
                           "chrome.runtime.sendMessage"]))
 
+(defn- includes-any-alternative? [source alternatives]
+  (boolean (some #(support/includes-all? source %) alternatives)))
+
 (defn app-hotkey-focus-wired? [source]
-  (or (support/includes-all? source
-                             ["activateHotkeyFocus" "panelRoot.focus()"
-                              "dataset.hotkeyFocus" "focus-app-hotkeys"
-                              "chrome.runtime.onMessage"])
-      (support/includes-all? source
-                             ["hotkeyController.focus()" "elements.root.focus()"
-                              "dataset.hotkeyFocus" "focus-app-hotkeys"
-                              "runtimeMessages"])))
+  (includes-any-alternative?
+   source
+   [["activateHotkeyFocus" "panelRoot.focus()" "dataset.hotkeyFocus"
+     "focus-app-hotkeys" "chrome.runtime.onMessage"]
+    ["hotkeyController.focus()" "elements.root.focus()" "dataset.hotkeyFocus"
+     "focus-app-hotkeys" "runtimeMessages"]]))
 
 (defn stored-keymap-wired? [source]
   (and (str/includes? source "HOTKEY_KEYMAP_STORAGE_KEY")
-       (or (support/includes-all? source ["hotkeyStorage.setItem" "hotkeyStorage.getItem"])
-           (support/includes-all? source ["storage.setItem" "storage.getItem"]))))
+       (includes-any-alternative?
+        source
+        [["hotkeyStorage.setItem" "hotkeyStorage.getItem"]
+         ["storage.setItem" "storage.getItem"]])))
 
 (defn sequence-run-wired? [source]
-  (or (support/includes-all? source
-                             ["handleHotkeyKeydown" "advanceHotkeySequence" "runCommandById"])
-      (support/includes-all? source
-                             ["const keydown" "advanceHotkeySequence" "executeCommand"])))
+  (includes-any-alternative?
+   source
+   [["handleHotkeyKeydown" "advanceHotkeySequence" "runCommandById"]
+    ["const keydown" "advanceHotkeySequence" "executeCommand"]]))
 
 (defn text-input-guard-wired? [source]
   (and (str/includes? source "HTMLInputElement")
@@ -140,16 +143,18 @@
 
 (defn cancel-pending-wired? [source]
   (and (str/includes? source "Escape")
-       (or (support/includes-all? source ["pendingHotkeySequence" "clearPendingHotkeySequence"])
-           (support/includes-all? source ["pending.length > 0" "pending = []"]))))
+       (includes-any-alternative?
+        source
+        [["pendingHotkeySequence" "clearPendingHotkeySequence"]
+         ["pending.length > 0" "pending = []"]])))
 
 (defn keymap-update-status-wired? [source]
-  (or (support/includes-all? source
-                             ["function updateKeymapStatus" "setKeymapStatus("
-                              "`Keymap updated: added ${added.length}, removed ${removed.length}`"])
-      (support/includes-all? source
-                             ["updateHotkeyKeymap(keymap, commands)" "setStatus("
-                              "`Keymap updated: added ${summary.added.length}, removed ${summary.removed.length}`"])))
+  (includes-any-alternative?
+   source
+   [["function updateKeymapStatus" "setKeymapStatus("
+     "`Keymap updated: added ${added.length}, removed ${removed.length}`"]
+    ["updateHotkeyKeymap(keymap, commands)" "setStatus("
+     "`Keymap updated: added ${summary.added.length}, removed ${summary.removed.length}`"]]))
 
 (defn- inspect-keymap [world]
   (let [root (or (:root world) (support/repository-root))]

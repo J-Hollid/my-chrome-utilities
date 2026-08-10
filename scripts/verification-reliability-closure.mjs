@@ -90,12 +90,19 @@ function acceptanceFailureCase(diagnostic) {
   return match ? { caseId:match[1].trim(), assertion:match[2].trim() } : {};
 }
 
-function verificationOwnedTask(task, diagnostic) {
-  if (/^(?:unit:)?test\/verification-|^unit:test\/swarmforge-|^promotion:/u.test(task?.key ?? "")) {
-    return true;
+function executedReliabilityBoundary(task, observed) {
+  const declarations = task?.reliabilityBoundaries ?? [];
+  if (!Array.isArray(declarations)) {
+    throw new Error("Reliability boundary declarations must be an array");
   }
-  return task?.stage === "acceptance-session" &&
-    /modular-(?:verification-packs|chrome-utility-architecture)/u.test(String(diagnostic ?? ""));
+  const caseId = observed?.caseId;
+  const matches = declarations.filter(({ casePrefix }) =>
+    typeof caseId === "string" && caseId.startsWith(casePrefix));
+  if (matches.length > 1) {
+    throw new Error(`Executed case ${caseId} has ambiguous reliability ownership`);
+  }
+  if (matches.length === 1) return matches[0];
+  return { ownership:"product", boundary:"runtime" };
 }
 
 export function reliabilityFailureContract({
@@ -110,18 +117,16 @@ export function reliabilityFailureContract({
   resultDigestInputs = {},
 } = {}) {
   const diagnostic = String(stderr || error || failedBoundary?.state?.message || "");
-  const verificationOwned = verificationOwnedTask(task, diagnostic);
-  const boundary = launchAuthorized === false ? "capability"
-    : taskResultImmutable ? "promotion"
-      : verificationOwned && task?.stage === "acceptance-session" ? "verification-acceptance"
-        : verificationOwned ? "runner" : "runtime";
+  const observed = failedBoundary ?? lastProgress ?? {};
+  const executed = launchAuthorized === false ? { ownership:"verification", boundary:"capability" }
+    : taskResultImmutable ? { ownership:"verification", boundary:"promotion" }
+      : executedReliabilityBoundary(task, observed);
   const domain = classifyReliabilityFailureDomain({
     launchAuthorized, taskResultImmutable,
-    ownership:verificationOwned || taskResultImmutable ? "verification" : "product",
-    boundary,
+    ownership:executed.ownership,
+    boundary:executed.boundary,
   });
   const acceptance = acceptanceFailureCase(diagnostic);
-  const observed = failedBoundary ?? lastProgress ?? {};
   const causal = causalFailureIdentity({
     domain,
     task,

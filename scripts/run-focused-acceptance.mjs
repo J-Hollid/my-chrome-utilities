@@ -51,7 +51,10 @@ import {
 import {
   boundedClosureContractRevision,
   boundedClosureEvidenceTask,
+  completeTaskInputClosure,
+  inputEquivalentTaskProof,
   reliabilityFailureContract,
+  terminalClosureExecution,
 } from "./verification-reliability-closure.mjs";
 export { verificationPromotionTasks } from "./verification-promotion-plan.mjs";
 import { verificationPromotionTasks } from "./verification-promotion-plan.mjs";
@@ -780,7 +783,9 @@ export function createVerificationCommandRunner(context, options = {}) {
       } else {
         const store = options.incidentStore ?? createTimeoutIncidentStore();
         const closureContract = reliabilityFailureContract({
-          task:identity, failureClass, failedBoundary, lastProgress:progress.snapshot(),
+          task:{ ...identity, ...(task.reliabilityBoundaries
+            ? { reliabilityBoundaries:structuredClone(task.reliabilityBoundaries) } : {}) },
+          failureClass, failedBoundary, lastProgress:progress.snapshot(),
           stderr:freshErr, error:failure,
           resultDigestInputs:{
             commit:context.receipt.candidate?.commit,
@@ -1047,6 +1052,67 @@ export function resumeVerificationPlan(plan, priorReceipt, resumeIdentity) {
     .filter(([key, value]) => key.endsWith("Tasks") && Array.isArray(value))
     .map(([key, value]) => [key, value.filter(({ key:taskKey }) => selectedKeys.has(taskKey))]));
   return { ...plan, ...filtered, tasks, reusedTasks, resumeAccepted:reusable };
+}
+
+export function terminalTaskInputClosure({ task, candidate, artifact, environment,
+  planDigest, registryDigest, prerequisitePlan, limits } = {}) {
+  const repositoryTree = candidate?.tree;
+  if (typeof repositoryTree !== "string" || !repositoryTree) {
+    throw new Error("Terminal task input closure requires the candidate tree");
+  }
+  const completeRepositoryInput = (kind) => ({ complete:true,
+    digest:verificationDigest({ kind, repositoryTree }) });
+  return completeTaskInputClosure({
+    contractRevision:boundedClosureContractRevision,
+    task:{ identity:verificationTaskIdentity(task), configuration:{ planDigest, registryDigest } },
+    transitiveCode:completeRepositoryInput("transitive-task-code-and-imports"),
+    featureInputs:completeRepositoryInput("feature-inputs"),
+    handlerInputs:completeRepositoryInput("acceptance-handler-inputs"),
+    generatedInputs:completeRepositoryInput("generated-inputs"),
+    productArtifact:verificationArtifactIdentity(artifact),
+    runnerSemantics:{ digest:verificationDigest({ repositoryTree, planDigest }) },
+    prerequisiteSemantics:{ digest:verificationDigest({ repositoryTree, prerequisitePlan }) },
+    environment:structuredClone(environment),
+    toolchain:{ node:environment?.node, typescript:environment?.typescript },
+    limits:structuredClone(limits),
+  });
+}
+
+export function enforceTerminalClosureReceipt({ attempt, runnablePackCount, tasks,
+  currentInputs, packageTaskKey } = {}) {
+  const policy = terminalClosureExecution({ attempt, runnablePackCount });
+  if (!tasks || Array.isArray(tasks) || !currentInputs || Array.isArray(currentInputs)) {
+    throw new Error("Terminal closure requires receipt tasks and complete current inputs");
+  }
+  for (const [key, result] of Object.entries(tasks)) {
+    completeTaskInputClosure(currentInputs[key]);
+    if (result?.status !== "passed") {
+      throw new Error(`Terminal closure task ${key} is not passed`);
+    }
+    if (key === packageTaskKey) {
+      if (result.provenance !== "fresh") {
+        throw new Error("Terminal closure package task must be fresh");
+      }
+      continue;
+    }
+    if (result.provenance === "fresh") continue;
+    if (policy.taskPolicy === "fresh-all") {
+      throw new Error(`Initial terminal closure task ${key} must be fresh`);
+    }
+    if (result.provenance !== "input-equivalent") {
+      throw new Error(`Terminal closure task ${key} has unsupported provenance ${result.provenance}`);
+    }
+    const proof = inputEquivalentTaskProof({
+      priorResult:result.inputEquivalentProof?.priorResult,
+      priorInput:result.inputEquivalentProof?.priorInput,
+      currentInput:currentInputs[key],
+    });
+    if (proof.action !== "input-equivalent") {
+      throw new Error(`Terminal closure task ${key} rejected ${proof.reason.replaceAll("-", " ")}: ${
+        proof.diagnostic ?? "proof is not identical"}`);
+    }
+  }
+  return policy;
 }
 
 export function verificationResumeIdentity(plan, receiptContext, artifact) {
@@ -1439,6 +1505,8 @@ export async function runFocusedAcceptance(
   const evidenceTask = options.prepareEvidence;
   const resumeReceiptPath = options.resumeReceipt;
   const timeoutRepairIncident = options.timeoutRepairIncident;
+  const boundedTerminalAttempt = evidenceTask === boundedClosureEvidenceTask
+    ? (resumeReceiptPath ? "verifier-descendant" : "initial") : undefined;
   if (evidenceTask) {
     if (!timeoutRepairIncident) await assertNoBlockingTimeoutIncidents("HEAD");
     await validateStrictVerificationToolchain({ repositoryRoot });
@@ -1506,6 +1574,13 @@ export async function runFocusedAcceptance(
     changeSetDigest:plan.changeSet ? verificationDigest(plan.changeSet) : null,
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };
+  if (boundedTerminalAttempt) {
+    context.receipt.plan.terminalClosure = terminalClosureExecution({
+      attempt:boundedTerminalAttempt,
+      runnablePackCount:plan.requestedPackIds.length,
+    });
+    context.receipt.plan.terminalClosure.attempt = boundedTerminalAttempt;
+  }
   let timeoutStore;
   let timeoutRepairIncidentIds = [];
   if (timeoutRepairIncident) {
@@ -1756,7 +1831,6 @@ export async function runFocusedAcceptance(
     if (artifactRequired) buildManifest = buildManifest ?? await validateCurrentArtifactForConsumers({
       root:repositoryRoot, artifactValidator,
     });
-    context.receipt.completedAt = new Date().toISOString();
     if (buildManifest) context.receipt.artifact = {
       schemaVersion:buildManifest.schemaVersion,
       buildIdentity:buildManifest.buildIdentity,
@@ -1764,6 +1838,40 @@ export async function runFocusedAcceptance(
       outputDigest:buildManifest.outputDigest,
       toolchain:{ ...buildManifest.toolchain },
     };
+    if (boundedTerminalAttempt) {
+      const planDigest = verificationDigest(plan.tasks.map(verificationTaskIdentity));
+      const registryDigest = verificationDigest(packs);
+      const limits = {
+        ...resolvedVerificationDeadlines({ timeoutMs:defaultTimeoutMs,
+          terminationGraceMs:defaultTerminationGraceMs, environment:process.env }),
+        outputLimitBytes:environmentInteger("VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES",
+          defaultOutputLimitBytes, { maximum:maximumOutputLimitBytes }),
+      };
+      const currentInputs = {};
+      for (const task of plan.tasks) {
+        const closure = terminalTaskInputClosure({
+          task, candidate:context.receipt.candidate, artifact:context.receipt.artifact,
+          environment:context.receipt.environment, planDigest, registryDigest,
+          prerequisitePlan:prerequisitePlan.tasks, limits,
+        });
+        currentInputs[task.key] = closure.input;
+        const result = context.receipt.tasks[task.key];
+        if (result?.provenance === "fresh") {
+          result.terminalInputClosure = closure.input;
+          result.terminalInputDigest = closure.digest;
+          result.resultDigest = verificationDigest({
+            identity:result.identity, status:result.status, output:result.output,
+            stderr:result.stderr, logicalResults:result.logicalResults,
+          });
+        }
+      }
+      enforceTerminalClosureReceipt({
+        attempt:boundedTerminalAttempt, runnablePackCount:plan.requestedPackIds.length,
+        tasks:context.receipt.tasks, currentInputs,
+        packageTaskKey:timeoutRepairPackageTaskIdentity.key,
+      });
+    }
+    context.receipt.completedAt = new Date().toISOString();
     if (checkpointGuard) await checkpointGuard.assertBefore({ kind:"receipt-finalization" });
     await context.write();
     plan.receiptPath = context.receiptPath;
