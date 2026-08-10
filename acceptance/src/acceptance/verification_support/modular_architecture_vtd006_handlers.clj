@@ -170,6 +170,8 @@
                (assert! world (and (= 67 (get-in world [:vtd006/evidence :contract :outputCount]))
                                    (true? (get-in world [:vtd006/evidence :isolation :freshSecondContext])))
                         "Target state, result, timing, or output ownership is incomplete."))}
+   {:pattern #"^the Event Library installed session requests targets in order .+$"
+    :handler (fn [world _ _] (prepared world))}
    {:pattern #"^process shutdown occurs once after all target results$"
     :handler (fn [world _ _]
                (assert! world (= 1 (get-in world [:vtd006/evidence :process :stops]))
