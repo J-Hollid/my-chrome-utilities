@@ -674,6 +674,13 @@ process. That target and the unchanged direct-push target form the reusable
 results, focused selection, permutation equivalence, failure attribution, and
 cleanup before the process shuts down once.
 
+`test/browser-packs/event-library.mjs` remains registered only as a thin
+`compatibility` launcher that delegates direct invocations to the installed smoke
+target. Canonical exact and terminal plans do not schedule it, and it owns no
+separate evidence leaf. Retaining its Event Library ownership keeps the candidate
+within existing historical changed-path behavior; this slice does not delete the
+path, change shared planner rules, or select Event Library dependants.
+
 The exact Event Library plan therefore changes from 30 tasks with two browser
 processes to 29 tasks with one two-target browser process. All nine unit files,
 one property file, eight features, three isolated handlers, direct-push leaves,
