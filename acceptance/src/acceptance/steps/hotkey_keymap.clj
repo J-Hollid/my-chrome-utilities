@@ -88,7 +88,8 @@
        (str/includes? source "updateKeymapButton")
        (str/includes? source "loadKeymapButton")
        (str/includes? source "keymapFileInput")
-       (str/includes? source "downloadHotkeyKeymapFile")))
+       (or (str/includes? source "downloadHotkeyKeymapFile")
+           (str/includes? source "my-chrome-utilities-hotkey-keymap.json"))))
 
 (defn manifest-global-shortcut? [manifest shortcut]
   (boolean
@@ -106,30 +107,31 @@
                           "chrome.runtime.sendMessage"]))
 
 (defn app-hotkey-focus-wired? [source]
-  (support/includes-all? source
-                         ["activateHotkeyFocus"
-                          "panelRoot.focus()"
-                          "dataset.hotkeyFocus"
-                          "focus-app-hotkeys"
-                          "chrome.runtime.onMessage"]))
+  (or (support/includes-all? source
+                             ["activateHotkeyFocus" "panelRoot.focus()"
+                              "dataset.hotkeyFocus" "focus-app-hotkeys"
+                              "chrome.runtime.onMessage"])
+      (support/includes-all? source
+                             ["hotkeyController.focus()" "elements.root.focus()"
+                              "dataset.hotkeyFocus" "focus-app-hotkeys"
+                              "runtimeMessages"])))
 
 (defn stored-keymap-wired? [source]
-  (support/includes-all? source
-                         ["HOTKEY_KEYMAP_STORAGE_KEY"
-                          "hotkeyStorage.setItem"
-                          "hotkeyStorage.getItem"]))
+  (and (str/includes? source "HOTKEY_KEYMAP_STORAGE_KEY")
+       (or (support/includes-all? source ["hotkeyStorage.setItem" "hotkeyStorage.getItem"])
+           (support/includes-all? source ["storage.setItem" "storage.getItem"]))))
 
 (defn sequence-run-wired? [source]
-  (support/includes-all? source
-                         ["handleHotkeyKeydown"
-                          "advanceHotkeySequence"
-                          "runCommandById"]))
+  (or (support/includes-all? source
+                             ["handleHotkeyKeydown" "advanceHotkeySequence" "runCommandById"])
+      (support/includes-all? source
+                             ["const keydown" "advanceHotkeySequence" "executeCommand"])))
 
 (defn text-input-guard-wired? [source]
-  (support/includes-all? source
-                         ["shouldIgnoreHotkeyTarget"
-                          "HTMLInputElement"
-                          "history-path"]))
+  (and (str/includes? source "HTMLInputElement")
+       (str/includes? source "history-path")
+       (or (str/includes? source "shouldIgnoreHotkeyTarget")
+           (str/includes? source "ignoresTarget"))))
 
 (defn duplicate-rejection-wired? [source]
   (support/includes-all? source
@@ -137,16 +139,17 @@
                           "keymapWarning"]))
 
 (defn cancel-pending-wired? [source]
-  (support/includes-all? source
-                         ["Escape"
-                          "pendingHotkeySequence"
-                          "clearPendingHotkeySequence"]))
+  (and (str/includes? source "Escape")
+       (or (support/includes-all? source ["pendingHotkeySequence" "clearPendingHotkeySequence"])
+           (support/includes-all? source ["pending.length > 0" "pending = []"]))))
 
 (defn keymap-update-status-wired? [source]
-  (support/includes-all? source
-                         ["function updateKeymapStatus"
-                          "setKeymapStatus("
-                          "`Keymap updated: added ${added.length}, removed ${removed.length}`"]))
+  (or (support/includes-all? source
+                             ["function updateKeymapStatus" "setKeymapStatus("
+                              "`Keymap updated: added ${added.length}, removed ${removed.length}`"])
+      (support/includes-all? source
+                             ["updateHotkeyKeymap(keymap, commands)" "setStatus("
+                              "`Keymap updated: added ${summary.added.length}, removed ${summary.removed.length}`"])))
 
 (defn- inspect-keymap [world]
   (let [root (or (:root world) (support/repository-root))]
@@ -155,7 +158,11 @@
            :manifest (support/read-json (fs/path root "manifest.json"))
            :background-source (support/source-file root "src/background.ts")
            :side-panel-html (support/source-file root "side-panel.html")
-           :side-panel-source (support/source-file root "src/side-panel.ts")
+           :side-panel-source (str/join
+                               "\n"
+                               (map #(support/source-file root %)
+                                    ["src/side-panel.ts"
+                                     "src/utilities/hotkeys/installed-controller.ts"]))
            :commands-source (support/source-file root "src/commands.ts"))))
 
 (defn- command-ids [world]

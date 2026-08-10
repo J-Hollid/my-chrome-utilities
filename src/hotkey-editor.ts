@@ -6,6 +6,7 @@ import {
 
 export interface HotkeyEditorController {
   bind(): void;
+  unbind(): void;
   render(): void;
 }
 
@@ -130,8 +131,21 @@ export function createHotkeyEditor(
     }
   }
 
+  let bound = false;
+  const bind = (): void => {
+    if (bound) return;
+    bound = true;
+    filter?.addEventListener("input", renderHotkeyEditor);
+  };
+  const unbind = (): void => {
+    if (!bound) return;
+    bound = false;
+    filter?.removeEventListener("input", renderHotkeyEditor);
+  };
+
   return {
-    bind: () => filter?.addEventListener("input", renderHotkeyEditor),
+    bind,
+    unbind,
     render: renderHotkeyEditor,
   };
 }
