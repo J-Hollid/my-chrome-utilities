@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { readFileSync } from "node:fs";
 import { promisify } from "node:util";
@@ -38,6 +39,7 @@ import {
 } from "./support/flow-graph-corrective-workflow.mjs";
 import {
   flowSectionDrawActionabilityState,
+  flowSectionRenderedGenerationState,
   flowWorkspaceReadinessLimitMilliseconds,
   flowWorkspaceR02Runtime,
 } from "./support/flow-workspace-r02-runtime.mjs";
@@ -434,11 +436,15 @@ assert.match(flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"}),
   /addEventListener\('focusin',observeDeletionSourceFocus,true\)/u,
   "the authoring observation must latch the transient production focus event");
 const drawRuntimeProgram=flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"});
+const wrappedPersistence=drawRuntimeProgram.indexOf("'wrapped Section'");
+const wrappedGeneration=drawRuntimeProgram.indexOf("'wrapped Section current rendered generation'");
 const drawActivation=drawRuntimeProgram.indexOf("click('Draw Section',surface())");
 const drawBoundaryWait=drawRuntimeProgram.indexOf("'actionable Section draw mode'");
 const drawPointerInput=drawRuntimeProgram.indexOf("pointer(canvas,'pointerdown'",drawActivation);
 assert.ok(drawActivation>=0&&drawActivation<drawBoundaryWait&&drawBoundaryWait<drawPointerInput,
   "the real Section gesture must wait for its actionable draw boundary");
+assert.ok(wrappedPersistence>=0&&wrappedPersistence<wrappedGeneration&&wrappedGeneration<drawActivation,
+  "the next Section action must wait for the durable mutation's current rendered generation");
 assert.match(drawRuntimeProgram,
   /const drawBoundary=await waitFor\([^]*'actionable Section draw mode',drawActionable,state=>state,50\);const drawBox=/u,
   "the real Section gesture must await the conserved predicate and stability boundary");
@@ -457,6 +463,44 @@ for(const [field,value] of [["drawingMode",false],["canvasConnected",false],
     `draw actionability requires ${field}`);
 }
 assert.equal(flowSectionDrawActionabilityState(undefined),false);
+const currentRenderedGeneration={durableSectionPresent:true,renderedSectionPresent:true,
+  canvasConnected:true,currentCanvas:true};
+assert.equal(flowSectionRenderedGenerationState(currentRenderedGeneration),true);
+for(const [field,value] of [["durableSectionPresent",false],["renderedSectionPresent",false],
+  ["canvasConnected",false],["currentCanvas",false]]){
+  assert.equal(flowSectionRenderedGenerationState({...currentRenderedGeneration,[field]:value}),false,
+    `render generation readiness requires ${field}`);
+}
+assert.equal(flowSectionRenderedGenerationState(undefined),false);
+const staleGeneration={...currentRenderedGeneration,renderedSectionPresent:false,currentCanvas:false};
+assert.equal(staleGeneration.durableSectionPresent,true,
+  "the pre-repair durable-only boundary releases while the UI generation is stale");
+assert.equal(flowSectionRenderedGenerationState(staleGeneration),false,
+  "the repaired boundary retains a stale UI generation deterministically");
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
+    normalized=(value)=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"
+      ?Object.fromEntries(Object.entries(value).filter(([,nested])=>nested!==undefined)
+        .sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)]))
+      :value,
+    digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
+    fixture={id:"flow-section-current-render-generation-v1",
+      causalCategory:"readiness or settling",diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{staleGeneration,currentRenderedGeneration},
+      expectedPreRepairFailure:{staleGenerationReleased:true,currentGenerationReleased:true},
+      expectedRepairResult:{staleGenerationReleased:false,currentGenerationReleased:true}},
+    preRepairResult={staleGenerationReleased:staleGeneration.durableSectionPresent,
+      currentGenerationReleased:currentRenderedGeneration.durableSectionPresent},
+    repairResult={staleGenerationReleased:flowSectionRenderedGenerationState(staleGeneration),
+      currentGenerationReleased:flowSectionRenderedGenerationState(currentRenderedGeneration)},
+    fixtureDigest=digest(fixture);
+  assert.deepEqual(preRepairResult,fixture.expectedPreRepairFailure);
+  assert.deepEqual(repairResult,fixture.expectedRepairResult);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:preRepairResult},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}}}));
+}
 const delayedDrawStates=[
   {...actionableDrawFixture,drawingMode:false},
   {...actionableDrawFixture,canvasConnected:false,currentCanvas:false},
