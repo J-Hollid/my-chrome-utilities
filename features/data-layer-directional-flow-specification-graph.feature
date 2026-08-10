@@ -16,7 +16,8 @@ Feature: Data layer directional Flow specification graph
     And Outline and Details are closed and reserve no canvas space
     And project navigation uses its remembered visibility without pushing the canvas below the initial viewport
     When the operator selects Cart, changes the viewport, and enters Focus Canvas
-    Then project chrome is hidden while Add, camera controls, and Exit Focus remain available
+    Then project chrome is hidden while Add, camera controls, and Exit Focus remain immediately visible and operable
+    And every required control hit target is contained by the viewport and toolbar before any horizontal toolbar scrolling
     And the canvas covers the complete viewport while those Focus Canvas controls overlay it without reserving canvas width or height
     And current selection and viewport remain unchanged
     When the operator exits Focus Canvas
