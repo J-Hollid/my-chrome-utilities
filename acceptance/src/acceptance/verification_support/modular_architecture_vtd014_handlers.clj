@@ -408,8 +408,8 @@
                (let [prerequisites (get-in world [:vtd014/evidence :execution :prerequisites])]
                  (assert! world
                           (and (true? (:workspaceNarrow prerequisites))
-                               (= {:scoped "scoped-command-approval|bwrap-unshared-network"
-                                   :workspace "workspace-sandbox|workspace-sandbox"}
+                               (= {:scoped "scoped-command-approval|bwrap-shared-loopback"
+                                   :workspace "workspace-sandbox|bwrap-unshared-network"}
                                   (:mixedRouteObservation prerequisites)))
                         "A workspace task inherited unrelated access.")))}
 

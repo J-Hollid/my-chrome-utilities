@@ -2718,6 +2718,12 @@ assert.match(modularVtd007HandlerSource,
 assert.doesNotMatch(modularVtd007HandlerSource,
   /shell\/sh\s+"node"\s+"test\/(?:flow-examples-timing|headless-chrome-lifecycle)-test\.mjs"/u,
   "the acceptance handler cannot bypass focused routing with a raw registered test command");
+const modularVtd014HandlerSource = await readFile(new URL(
+  "../acceptance/src/acceptance/verification_support/modular_architecture_vtd014_handlers.clj",
+  import.meta.url), "utf8");
+assert.match(modularVtd014HandlerSource,
+  /scoped-command-approval\|bwrap-shared-loopback[\s\S]*workspace-sandbox\|bwrap-unshared-network/u,
+  "acceptance evidence matches the tested mixed-plan capability isolation boundaries");
 const focusedPropertyPlan = selectFocusedVerificationTasks(planVerification(packs, {
   packIds:["shell"], includeProperties:true,
 }), ["property:test/workspace-tabs-property-test.mjs"]);
