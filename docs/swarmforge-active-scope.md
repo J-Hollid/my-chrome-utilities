@@ -3766,3 +3766,88 @@ VTD-014 completed the normal coder, refactorer, and architect chain and was merg
 against correction base `b1ed18574c1fbe403c633f917a02f5cce632c945` with all 20
 packs, the package task, 835 fresh passing task results, and no blocking reliability
 incident.
+
+## Verification throughput program — active VTD-010 Event Library launch consolidation (2026-08-10)
+
+The user approved this Event Library package on 2026-08-10 as the only active VTD-010
+implementation slice. The specifier may commit and send its bounded coder handoff.
+VTD-008, the Capture, Schemas, and Defects VTD-010 slices, and VTD-011 through
+VTD-012 remain inactive.
+
+### Bounded outcome
+
+The current exact Event Library plan runs two browser processes. The standalone
+`test/browser-packs/event-library.mjs` shared-harness task opens the built Event
+Library at 320 pixels and checks isolation, editor opening and focus, one saved
+revision, one exported template, nonzero transfer bytes and feedback, containment,
+and visible-control accessibility. The separate installed
+`LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER` target checks saved-template push and
+review behavior through `test/browser-packs/side-panel-event-library.mjs`. Accepted
+receipts still show approximately 3.6–3.7 seconds for the standalone smoke process.
+
+VTD-010 moves only the standalone smoke leaves into a new installed logical target,
+`EVENT_LIBRARY_RENDERED_SMOKE_TARGET`. That target and the unchanged
+`LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER` target execute in one reusable
+`event-library-side-panel` process. The former standalone adapter is no longer a
+registered browser task. This removes one Chrome startup and shutdown without
+merging assertion identities or making the smoke behavior an incidental side effect
+of direct-push verification.
+
+### Installed target and isolation contract
+
+The rendered-smoke target retains the existing 320 CSS pixel viewport and proves all
+of these leaves exactly once:
+
+- only the intended Event Library utility and panel are present;
+- opening a new event template shows the property editor and focuses the template
+  name;
+- saving the template produces persisted version 2 with exactly one revision-history
+  entry;
+- export reports one template, a positive byte count, and exported-and-imported
+  feedback;
+- the document has no horizontal overflow; and
+- every visible control has an accessible name and every programmatic reference
+  resolves.
+
+The direct-push target retains its id, 720 CSS pixel viewport, configuration,
+`libraryDirectTemplatePush` observation, feature mapping, fixture behavior, and every
+deep assertion leaf. The new smoke target has a separate stable observation identity
+and exact feature mapping; a constant pass, renamed leaf, duplicate assertion, or
+relaxed result cannot satisfy its evidence.
+
+Each target can be selected alone. Exact Event Library and terminal plans select both
+targets once in their canonical order and run one installed process. The process
+also accepts the reverse order in deterministic regression coverage. Each target
+receives a fresh page and socket, clean served and installed storage origins, its
+declared viewport, observation map, phase timer, and cleanup stack. Cleanup completes
+before the next target. Normalized results are order-independent.
+
+A failed target retains its own target id, VTD-007 phase, bounded state, timing, and
+failure result. Its compatible sibling still runs and reports independently. One
+aggregate process failure is emitted only after both results and cleanups, followed by
+one process shutdown. A focused request never initializes or executes the unrequested
+target.
+
+### Evidence conservation
+
+| Evidence class | Before | Candidate |
+|---|---|---|
+| Unit | Nine registered Event Library unit files | The same nine files |
+| Property | `test/data-layer-selected-target-push-property-test.mjs` | Unchanged |
+| Feature | Eight registered Event Library feature files | The same eight files and scenarios |
+| Handler | Three isolated Event Library handlers | The same handlers and isolation |
+| Rendered smoke | One standalone `test/browser-packs/event-library.mjs` task | The same leaves under `EVENT_LIBRARY_RENDERED_SMOKE_TARGET` in the installed process |
+| Direct push | One installed `LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER` task | The same target and leaves in the two-target batch |
+| Exact plan | 30 tasks, including two browser processes | 29 tasks, including one two-target browser process |
+
+No `src/` product file, visible or saved behavior, accessibility outcome, feature or
+handler owner, pack dependency, changed-path production boundary, target or pack
+budget, calibration, worker limit, shard, or another pack's plan changes. The current
+14-second Event Library exact-pack and representative-change limits remain guardrails;
+the approximately 3.6–3.7 second avoided launch is an expected effect, not authority
+to recalibrate or loosen a limit.
+
+The task-scoped delivery checkpoint is the exact `event-library` pack with properties,
+followed by `node scripts/package.mjs`. It uses the VTD-014 incident-aware fresh
+checkpoint and promotion path. This pack-local checkpoint does not activate another
+VTD-010 slice or widen the candidate into shared verification infrastructure.

@@ -1786,3 +1786,78 @@ Feature: Modular verification packs
       | a focused browser target       |
       | a checkpoint command           |
       | the package task               |
+
+  # Modular verification packs 120
+  Scenario: Modular verification packs 120
+    Given the Event Library exact plan contains one standalone rendered-workflow smoke task and one installed direct-template-push target
+    When the VTD-010 Event Library plan is created
+    Then EVENT_LIBRARY_RENDERED_SMOKE_TARGET and LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER are the two logical targets in event-library-side-panel
+    And the exact plan runs one installed browser-observation process for both targets
+    And test/browser-packs/event-library.mjs is no longer a registered adapter or executable task
+    And the exact Event Library plan contains 29 tasks instead of 30
+
+  # Modular verification packs 121
+  Scenario Outline: Modular verification packs 121
+    Given the standalone Event Library smoke task currently proves <smoke_behavior>
+    When EVENT_LIBRARY_RENDERED_SMOKE_TARGET executes that leaf in the installed Event Library session
+    Then it proves <preserved_result>
+    And the leaf is registered exactly once without a constant, rename, duplicate, or relaxed assertion
+
+    Examples:
+      | smoke_behavior                    | preserved_result                                                                    |
+      | Event Library utility isolation   | only the intended Event Library utility and panel are present                       |
+      | opening a new template editor     | the editor is visible and the template name has focus                               |
+      | saving a template revision        | version 2 is persisted with exactly one revision-history entry                      |
+      | exporting the Event Library       | one template and nonzero bytes are reported with exported-and-imported feedback     |
+      | narrow installed presentation     | the 320 pixel viewport has no horizontal overflow and every visible control is named |
+
+  # Modular verification packs 122
+  Scenario Outline: Modular verification packs 122
+    Given the Event Library installed session requests targets in order <target_order>
+    When both logical targets complete
+    Then each target receives a fresh page, socket, storage origin, viewport, observation map, timer, and cleanup stack
+    And their normalized observations equal the canonical-order observations
+    And each target emits its own result and phase timing
+    And process shutdown occurs once after all target results
+
+    Examples:
+      | target_order                                                           |
+      | rendered smoke then direct template push                               |
+      | direct template push then rendered smoke                               |
+
+  # Modular verification packs 123
+  Scenario Outline: Modular verification packs 123
+    Given <failed_target> fails in its <failed_phase> phase
+    When the Event Library installed batch runs
+    Then the failure record names <failed_target> and <failed_phase>
+    And <remaining_target> still executes and reports independently
+    And one aggregate failure is thrown only after every requested target has emitted a result
+
+    Examples:
+      | failed_target                                | failed_phase | remaining_target                              |
+      | EVENT_LIBRARY_RENDERED_SMOKE_TARGET          | assertion    | LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER |
+      | LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER | interaction  | EVENT_LIBRARY_RENDERED_SMOKE_TARGET          |
+
+  # Modular verification packs 124
+  Scenario Outline: Modular verification packs 124
+    Given Event Library browser selection scope is <selection_scope>
+    When the VTD-010 Event Library plan is created
+    Then browser evidence selection is <expected_targets>
+    And no unrequested Event Library target executes
+
+    Examples:
+      | selection_scope          | expected_targets                                           |
+      | focused rendered smoke   | EVENT_LIBRARY_RENDERED_SMOKE_TARGET                       |
+      | focused direct push      | LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER              |
+      | exact Event Library pack | rendered smoke and direct push once in one process        |
+      | terminal verification    | rendered smoke and direct push once in one process        |
+
+  # Modular verification packs 125
+  Scenario: Modular verification packs 125
+    Given the accepted Event Library inventory has nine unit files, one property file, eight features, three handlers, one rendered smoke task, and one direct-push observation
+    When VTD-010 consolidates the Event Library browser launch
+    Then the nine unit files, one property file, eight features, three handlers, and every existing assertion leaf retain their identity and meaning
+    And the rendered smoke leaves move to one installed logical target while the direct-push leaves remain unchanged
+    And no src product file, product behavior, saved value, accessibility result, feature owner, handler owner, pack dependency, target budget, calibration, worker limit, or shard changes
+    And no production impact boundary or other pack plan changes
+    And the delivery checkpoint runs the exact Event Library pack with properties followed by node scripts/package.mjs

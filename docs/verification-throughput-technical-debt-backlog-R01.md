@@ -66,8 +66,10 @@ here.
 - VTD-006 completed the normal coder, refactorer, and architect chain and merged at
   `51ef49a2f9e3b39fb564ddde1869c9b8b2c84a8d`.
 - VTD-014 completed the normal coder, refactorer, and architect chain and merged at
-  `4e18da3e601dde88abe0b85071ba7319f3b81d80`. VTD-008 and VTD-010 through
-  VTD-012 remain queued and inactive.
+  `4e18da3e601dde88abe0b85071ba7319f3b81d80`.
+- The user approved the bounded VTD-010 Event Library specification on 2026-08-10;
+  that slice is active for the normal coder chain. VTD-008, the remaining VTD-010
+  pack slices, and VTD-011 through VTD-012 remain queued and inactive.
 
 ## Executive assessment
 
@@ -656,6 +658,29 @@ Dependencies: VTD-006 may make consolidation simpler.
 Expected effect: about 3.6–3.7 seconds per affected exact pack. This is a small
 absolute optimization and must not precede larger fan-out work.
 
+Candidate first slice (2026-08-10): Event Library only. Its current exact plan
+runs `test/browser-packs/event-library.mjs` as a standalone 320-pixel rendered
+smoke process and runs `LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER` through the
+installed `test/browser-packs/side-panel-event-library.mjs` process. Recent
+accepted receipts continue to place the standalone smoke near 3.6–3.7 seconds.
+
+The smoke process uniquely checks installed Event Library isolation, editor
+visibility and initial focus, revision version/history persistence, export count,
+nonzero export bytes and feedback, 320-pixel containment, and visible-control
+accessibility. The candidate moves those exact leaves to the distinct logical
+target `EVENT_LIBRARY_RENDERED_SMOKE_TARGET` in the installed Event Library
+process. That target and the unchanged direct-push target form the reusable
+`event-library-side-panel` batch. They retain fresh target contexts, independent
+results, focused selection, permutation equivalence, failure attribution, and
+cleanup before the process shuts down once.
+
+The exact Event Library plan therefore changes from 30 tasks with two browser
+processes to 29 tasks with one two-target browser process. All nine unit files,
+one property file, eight features, three isolated handlers, direct-push leaves,
+budgets, calibration, ownership, dependencies, and production impact boundaries
+remain unchanged. The user approved this Event Library slice on 2026-08-10. It
+activates no other VTD-010 pack slice.
+
 ### VTD-011 — Balance terminal CI using measured critical-path weights
 
 Priority: P2
@@ -1001,8 +1026,9 @@ maintenance no longer requires editing several monolithic infrastructure files.
 VTD-001 through VTD-007, VTD-009, VTD-013, and VTD-014 are delivered, including
 corrected scheduling, canonical timing evidence, representative budgets, narrower
 ownership, shared readiness, the modular side-panel browser program, and the
-reliability-repair gate. VTD-010 is the next recommended package; it remains inactive
-until the specifier writes a bounded contract and obtains explicit user approval.
+reliability-repair gate. The bounded Event Library VTD-010 specification is
+user-approved and active for the normal coder chain. Other VTD-010 pack slices
+remain inactive.
 
 After measurement truth, the fastest direct development-time wins are precise
 impact boundaries and layered editor target partitioning. Preserve terminal
