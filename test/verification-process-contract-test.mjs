@@ -3173,7 +3173,7 @@ const normalizedVtd006Identity = (task) => {
   return JSON.parse(encoded);
 };
 const expectedVtd014TerminalIdentity = (task) => {
-  const identity = verificationTaskIdentity(task);
+  const identity = normalizedVtd006Identity(task);
   const capabilities = new Map([
     ["test/flow-examples-timing-test.mjs", ["local-loopback"]],
     ["test/headless-chrome-lifecycle-test.mjs", ["local-loopback"]],
@@ -3183,6 +3183,7 @@ const expectedVtd014TerminalIdentity = (task) => {
   return identity;
 };
 const terminalIdentities = (plan) => plan.tasks.map(normalizedVtd006Identity);
+const expectedTerminalIdentities = (plan) => plan.tasks.map(expectedVtd014TerminalIdentity);
 assert.deepEqual(currentTerminalPlan.tasks.map(normalizedVtd006Identity),
   baseTerminalPlan.tasks.map(expectedVtd014TerminalIdentity),
   "terminal-full planning conserves every migrated exact task identity and ordering");
@@ -3320,7 +3321,7 @@ assert.deepEqual(exactDurablePlan.observationTasks.flatMap(({logicalTargetIds}) 
 const durableAssertionLeafCount = durablePack.browserEvidencePartitions.flatMap(({originalLeaves}) => originalLeaves).length;
 assert.equal(durableAssertionLeafCount, 111);
 assert.deepEqual(terminalIdentities(planVerification(packs, {terminalFull:true})),
-  terminalIdentities(planVerification(durableBasePacks, {terminalFull:true})),
+  expectedTerminalIdentities(planVerification(durableBasePacks, {terminalFull:true})),
   "terminal planning conserves every exact durable task identity");
 const durableCurrentCalibration = durableCompletedCalibration.runnablePacks.find(({id}) =>
   id === "durable_project_repository");
@@ -3499,7 +3500,7 @@ assert.equal(exactEventPlan.browserTasks.length,1);
 assert.deepEqual(exactEventPlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds),
   ["LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER"]);
 assert.deepEqual(terminalIdentities(planVerification(packs,{terminalFull:true})),
-  terminalIdentities(planVerification(eventLibraryBasePacks,{terminalFull:true})),
+  expectedTerminalIdentities(planVerification(eventLibraryBasePacks,{terminalFull:true})),
   "terminal planning conserves every Event Library task identity and ordering");
 const eventCompletedCalibration = JSON.parse(await exec("git", [
   "show", "be319ad555:verification/performance-calibration.json",
@@ -3671,7 +3672,7 @@ assert.deepEqual([exactCapturePlan.unitTasks.length,exactCapturePlan.propertyTas
   exactCapturePlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).length,
   exactCapturePlan.checkpointTasks.length],[21,12,66,25,1,5,2]);
 assert.deepEqual(terminalIdentities(planVerification(packs,{terminalFull:true})),
-  terminalIdentities(planVerification(captureBasePacks,{terminalFull:true})),
+  expectedTerminalIdentities(planVerification(captureBasePacks,{terminalFull:true})),
   "terminal planning conserves every Capture task identity and ordering");
 const captureCompletedCalibration = JSON.parse(await exec("git", [
   "show", "14e4992a87:verification/performance-calibration.json",
@@ -3850,7 +3851,7 @@ assert.deepEqual([exactSchemasPlan.unitTasks.length,exactSchemasPlan.propertyTas
   exactSchemasPlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).length,
   exactSchemasPlan.checkpointTasks.length],[49,29,103,60,1,46,0]);
 assert.deepEqual(terminalIdentities(planVerification(packs,{terminalFull:true})),
-  terminalIdentities(planVerification(schemasBasePacks,{terminalFull:true})),
+  expectedTerminalIdentities(planVerification(schemasBasePacks,{terminalFull:true})),
   "terminal planning conserves every Schemas task identity and ordering");
 const schemasCalibration = vtd004CurrentCalibration.runnablePacks.find(({id}) => id === "schemas");
 const schemasPreviousCalibration = schemasBaseCalibration.runnablePacks.find(({id}) => id === "schemas");
@@ -4766,10 +4767,10 @@ assert.deepEqual({tasks:exactLayeredPlan.tasks.length,unit:exactLayeredPlan.unit
   parses:exactLayeredPlan.parserTasks.length,generators:exactLayeredPlan.generatorTasks.length,
   sessions:exactLayeredPlan.sessionTasks.length},
 {tasks:52,unit:19,property:13,observations:4,parses:7,generators:7,sessions:1});
-assert.deepEqual(terminalIdentities(exactLayeredPlan),terminalIdentities(baseExactLayeredPlan),
+assert.deepEqual(terminalIdentities(exactLayeredPlan),expectedTerminalIdentities(baseExactLayeredPlan),
   "VTD-005 changes routing without changing exact owner task identities");
 assert.deepEqual(terminalIdentities(planVerification(packs,{terminalFull:true})),
-  terminalIdentities(planVerification(layeredBasePacks,{terminalFull:true})),
+  expectedTerminalIdentities(planVerification(layeredBasePacks,{terminalFull:true})),
   "VTD-005 conserves terminal task identities");
 const editorLeafCounts = Object.fromEntries(layeredPack.browserEvidencePartitions
   .find(({sessionBatch}) => sessionBatch === "layered-schema-editor").targets
@@ -7472,8 +7473,8 @@ assert.deepEqual(committedCalibrationReport.browserTargets, vtd009BaseCalibratio
 const vtd009ExactBase = planVerification(vtd009BasePacks, {packIds:["shell"],includeProperties:true});
 const vtd009TerminalBase = planVerification(vtd009BasePacks, {terminalFull:true});
 const vtd009TerminalCurrent = planVerification(packs, {terminalFull:true});
-assert.deepEqual(terminalIdentities(localShellPlan), terminalIdentities(vtd009ExactBase));
-assert.deepEqual(terminalIdentities(vtd009TerminalCurrent), terminalIdentities(vtd009TerminalBase));
+assert.deepEqual(terminalIdentities(localShellPlan), expectedTerminalIdentities(vtd009ExactBase));
+assert.deepEqual(terminalIdentities(vtd009TerminalCurrent), expectedTerminalIdentities(vtd009TerminalBase));
 const vtd009Acceptance = {
   helpers:Object.fromEntries(helperDeclarations.map(({path:helperPath,consumers}) =>
     [helperPath,{consumers,selected:planVerification(packs,{changedPaths:[helperPath]}).packIds}])),
