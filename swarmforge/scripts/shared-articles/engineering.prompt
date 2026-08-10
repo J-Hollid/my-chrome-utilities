@@ -37,7 +37,6 @@
 ## Verification
 - Before running language, build, or test commands, prefer project-local cache/configuration paths inside the assigned worktree. The `swarmforge/scripts/clj` wrapper keeps Clojure configuration, Maven artifacts, and gitlibs there. Avoid default cache locations that write outside the project and may trigger sandbox or permission restrictions.
 - Let the focused verification runner parallelize independent unit, parser, generator, and receipt-backed pack-session leaves within its bounded worker limit. Keep Chrome adapters sequential; the runner consolidates independent pack-session failures after checkpoints complete.
-- Run every registered focused leaf through `node scripts/run-focused-acceptance.mjs --pack <owner> --focused-task <canonical-task-key>`. Raw registered commands are diagnostic output only and cannot become delivery or retry evidence. If the plan declares local-loopback or Git-metadata capability, use the matching scoped approval on the runner's first tool invocation; do not spend an unprivileged trial launch. Workspace-only focused plans use no approval, and mixed approved plans re-sandbox workspace-only children.
 - Avoid running whole-suite language test commands concurrently with acceptance generation.
 - Run the relevant local verification command before handoff whenever the project has one.
 - Treat verification-pack dependencies as build or contract dependencies, not permission to run their complete regression suites. Use `--with-dependencies` only when impact evidence requires it.
