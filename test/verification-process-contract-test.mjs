@@ -1205,6 +1205,24 @@ const exerciseDeadOwnerLockFixture = ({ reclaimDeadOwner }) => {
 
 const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagnosedBoundary,
   causalCategory = "artifact/process locking" }) => {
+  if (causalCategory === "other:stable synthetic pointer release routing") {
+    const fixture = {
+      id:"stable-synthetic-pointer-release-routing-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ pointerDownTarget:"rendered Section node", productionReleaseListener:"window",
+        pointerMoveMayDetachPressedNode:true },
+      expectedPreRepairFailure:{ releaseTarget:"detached pressed node",
+        productionReleaseDelivered:false, durableMove:false },
+      expectedRepairResult:{ releaseTarget:"window", productionReleaseDelivered:true,
+        durableMove:true },
+    };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:structuredClone(fixture.expectedPreRepairFailure) },
+      repairResult:{ status:"passed", fixtureDigest,
+        observed:structuredClone(fixture.expectedRepairResult) } };
+  }
   if (causalCategory === "other:concurrent verification fixture cleanup") {
     const fixture = {
       id:"concurrent-verification-fixture-cleanup-v1", causalCategory,

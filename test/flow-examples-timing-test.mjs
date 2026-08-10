@@ -454,6 +454,9 @@ assert.match(drawRuntimeProgram,
   "the real Section gesture must await the conserved predicate and stability boundary");
 assert.equal(drawRuntimeProgram.match(/pointer\(canvas,'pointerdown',\{pointerId:51/gu)?.length,1,
   "the draw proof must retain one real semantic pointer gesture");
+assert.match(drawRuntimeProgram,
+  /pointer\(salesGroup,'pointerdown',\{pointerId:52[^]*pointer\(window,'pointermove',\{pointerId:52[^]*pointer\(window,'pointerup',\{pointerId:52/u,
+  "the Section move proof must finish through the stable production window listener after rendering detaches the pressed node");
 assert.match(drawRuntimeProgram,/expectedSectionCount/u,
   "draw persistence timeout diagnostics must retain section-count state");
 const actionableDrawFixture={drawingMode:true,canvasConnected:true,surfaceOpen:false,
