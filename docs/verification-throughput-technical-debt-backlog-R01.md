@@ -1024,6 +1024,24 @@ registered. Both incidents receive causal repairs rather than abandonment. Check
 `e9572d6b` and the two original repair incidents also remain active, so the final
 compatible checkpoint resolves all five without changing product behavior.
 
+Approved bounded closure policy (2026-08-10): live closure work exposed 17 unresolved
+records, including nine successive Shell records with one coarse task fingerprint but
+different failing scenarios or assertions. The approved steady-state rule freezes the
+approved VTD-014 contract for closure, classifies product execution separately from
+verification execution and post-result recording, and keys repeated occurrences by a
+structured causal boundary rather than candidate commit or task fingerprint alone.
+Off-lineage incidents are retired from the selected delivery without being called
+resolved; ancestor product failures still require causal repair, while one exact verifier
+repair may supersede every occurrence of the same cause without claiming a product fix.
+
+The terminal checkpoint starts with one fresh all-20 run. A verifier-only repair
+after that start may retain an earlier passing task only when a complete digest proves its
+contract, executable, transitive code and inputs, product artifact, runner semantics,
+environment, toolchain, and limits are identical. Changed, failed, interrupted, unknown,
+or incompletely mapped inputs rerun; package always runs freshly on the final tree. This
+prevents bookkeeping-only changes from recursively discarding unrelated product proof
+without allowing a real or uncertain product failure to pass.
+
 ## Recommended sequence
 
 ### Phase A — Establish measurement truth

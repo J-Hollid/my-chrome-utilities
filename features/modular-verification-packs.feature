@@ -1949,3 +1949,77 @@ Feature: Modular verification packs
     And every prerequisite kind proves satisfied, blocked, and undeclared-after-authorization outcomes
     And adding a mode or prerequisite kind without its validator, satisfier, and generated matrix coverage fails registry validation
     And the Shell missing-result fixture and process-contract wrong-route fixture remain causal examples rather than special-case branches
+
+  # Modular verification packs 133
+  Scenario: Modular verification packs 133
+    Given VTD-014 closure has one user-approved contract revision
+    When a later observation would add another rigor requirement
+    Then the new requirement is recorded outside the closure candidate for separate approval
+    And only an implementation defect or failure of the frozen contract may change the closure candidate
+    And behavior already prohibited by the frozen contract remains a defect rather than new scope
+    And no assertion, incident record, or evidence-integrity rule is weakened to reach closure
+
+  # Modular verification packs 134
+  Scenario Outline: Modular verification packs 134
+    Given a frozen-contract run reaches <observed_boundary>
+    When declared ownership and the executed influence boundary classify the result
+    Then its failure domain is <failure_domain>
+    And closure requires <closure_effect>
+
+    Examples:
+      | observed_boundary                                                       | failure_domain           | closure_effect                                                                    |
+      | a product or runtime task fails after its authorized launch             | product-runtime          | causal repair and fresh proof for every affected product input                    |
+      | runner, planner, harness, or verification-only acceptance logic fails   | verification-execution   | a process regression and fresh proof only for influenced verification inputs      |
+      | storage, evidence, history, or promotion fails after a task result       | verification-record      | repair and retry of the failed record boundary while the immutable result remains |
+      | a declared prerequisite blocks before launch authorization              | environment-prerequisite | no incident, task result, diagnostic retry, or passing evidence                   |
+
+  # Modular verification packs 135
+  Scenario Outline: Modular verification packs 135
+    Given an unresolved causal incident exists on an ancestor of the current candidate
+    When a descendant manifests <causal_relation>
+    Then the store performs <incident_action>
+    And every occurrence retains its own commit, tree, result digest, and observed diagnostic
+
+    Examples:
+      | causal_relation                                                                                          | incident_action                                                                          |
+      | the same domain, task, executable boundary, scenario or case, assertion site, and diagnostic shape      | append one occurrence to the existing incident without another blocker or retry allowance |
+      | a different scenario, case, assertion site, or normalized diagnostic shape                              | create a distinct incident with its own repair obligation                                 |
+
+  # Modular verification packs 136
+  Scenario Outline: Modular verification packs 136
+    Given an open incident is audited against the selected closure candidate
+    When <lineage_condition> applies
+    Then its audited disposition is <disposition>
+    And its integrity effect is <integrity_effect>
+
+    Examples:
+      | lineage_condition                                                                   | disposition                          | integrity_effect                                                                  |
+      | the failed commit is not an ancestor of the selected candidate                      | retired from this delivery lineage   | the record stays durable, is not called resolved, and does not block this lineage |
+      | an ancestor product-runtime failure occurred, including a confirmed flake           | blocking product repair              | causal regression and affected fresh product proof remain mandatory               |
+      | one verifier cause repairs every grouped occurrence and passes its exact regression | verifier cause superseded            | the occurrences close without claiming that a product repair resolved them        |
+      | the same unresolved verifier cause occurs again on a descendant                     | another occurrence in its causal group | no duplicate blocker, retry budget, or repair proposal is created               |
+
+  # Modular verification packs 137
+  Scenario Outline: Modular verification packs 137
+    Given a frozen closure attempt contains <earlier_result>
+    And a descendant changes verification-only files
+    When the complete task input closure has <input_relation>
+    Then the descendant uses <evidence_action>
+    And changed-path labels alone cannot establish equivalence
+
+    Examples:
+      | earlier_result                 | input_relation                                         | evidence_action                                                   |
+      | one passing task result        | an identical input digest and complete influence proof | that pass as input-equivalent proof with explicit prior provenance |
+      | one passing task result        | a changed input or an unknown or incomplete influence  | a fresh execution of that task                                     |
+      | a failed or interrupted result | any relation                                           | no carried proof                                                   |
+
+  # Modular verification packs 138
+  Scenario: Modular verification packs 138
+    Given the closure contract is frozen and every known current-cause repair has focused proof
+    When the terminal checkpoint begins on one sealed candidate
+    Then its initial attempt executes all 20 runnable packs freshly in canonical order
+    And a verifier-only descendant reruns every task whose complete input closure changed while retaining only proven input-equivalent passes
+    And a product-runtime failure or unknown influence keeps closure open and cannot use carried proof
+    And the package task executes freshly against the final candidate tree
+    And record or promotion failure retries only its failed boundary while exact completed task results remain immutable
+    And acceptance requires one current proof for every planned task and no blocking current-lineage causal incident

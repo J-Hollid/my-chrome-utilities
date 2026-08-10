@@ -4113,3 +4113,84 @@ resolves that complete set. The correction changes no product behavior, pack
 selection from changed paths, evidence meaning, permission grant, or timeout. Focused
 task selection may add only the newly declared transitive prerequisites of the
 requested task; that is dependency correctness rather than unrelated fan-out.
+
+### Approved bounded VTD-014 closure policy
+
+The user approved this policy on 2026-08-10 for the normal coder chain. It addresses
+verifier changes repeatedly invalidating their own proof while retaining VTD-014's
+original rule that a genuine product failure cannot disappear after a rerun.
+
+At assessment candidate `159c565970d86f1a96083505955afc2007aeade8`, the repository-
+common store contains 17 unresolved incident records. Nine records on successive
+ancestor commits share task-level Shell fingerprint `75c65b3a9d`, although their
+receipts name different failing acceptance scenarios and assertions. One Event
+Library incident belongs to a commit outside the selected lineage. This proves both
+that the current fingerprint is too coarse for causal identity and that one verifier
+cause can multiply blockers as bookkeeping commits advance.
+
+The closure contract freezes at this approved specification commit. An observation
+that violates an already approved general rule remains an implementation defect. A
+newly desired rigor requirement is recorded for a later slice and cannot expand this
+closure candidate without another user decision. The freeze cannot weaken a product
+assertion, erase an incident, relax evidence integrity, or reclassify a real failure
+merely to reach green.
+
+Every failure receives a declared domain from ownership plus the boundary that actually
+ran. `product-runtime` covers product and runtime task failures after authorized launch.
+`verification-execution` covers runner, planner, harness, and verification-only
+acceptance failures. `verification-record` covers incident storage, evidence lookup,
+historical recording, receipt finalization, and promotion after an immutable task result
+exists. `environment-prerequisite` retains the universal prelaunch block semantics.
+Paths, error text, or an agent's label alone cannot choose a domain.
+
+A product-runtime failure, including an unchanged retry that passes, remains blocking
+until a causal regression and fresh proof for every affected product input pass. A
+verification-execution failure requires a deterministic process regression and fresh
+proof only for tasks influenced by that verifier change. A verification-record failure
+retries its short failed boundary after repair and cannot invalidate an exact immutable
+task result. A prelaunch prerequisite block creates neither an incident nor a task
+result.
+
+Incident identity becomes causal rather than commit-scoped. The causal key contains the
+failure domain, canonical task, stable executable boundary, scenario or generated case,
+assertion site, and normalized diagnostic shape. A descendant occurrence with the same
+key appends its commit, tree, result digest, and diagnostic to the existing incident; it
+does not create another blocker, retry allowance, or repair proposal. A different
+scenario, case, assertion site, or diagnostic shape creates a distinct incident. The
+current task-level fingerprint alone is never sufficient to merge occurrences.
+
+Every currently open record receives an audited disposition. A failed commit outside
+the selected candidate ancestry receives a durable `lineage-retired` transition naming
+the selected lineage and reason. It is not called resolved and does not block that
+delivery. An ancestor product-runtime incident remains blocking. Grouped verifier
+occurrences may close through one exact causal repair and regression using a
+`verifier-cause-superseded` transition that makes no product-repair claim. Repetition of
+that same cause on later ancestors appends occurrences rather than manufacturing more
+blockers. No unaudited deletion, blanket abandonment, or fingerprint-only mass closure
+is permitted.
+
+The terminal closure attempt starts only after the frozen verifier contract, all known
+current-cause repairs, their deterministic regressions, and their affected focused tasks
+pass. Its initial sealed candidate executes all 20 runnable packs freshly in canonical
+order. If that attempt exposes a verifier-only defect and the repair creates a
+descendant, the runner computes a complete task input closure. That closure binds the
+contract revision, task executable and configuration, transitive task code and imports,
+features, handlers and generated inputs, product artifact, runner and prerequisite
+semantics, environment, toolchain, and applicable limits.
+
+A prior pass may become explicit `input-equivalent` proof only when that complete digest
+is identical and the influence graph is complete. The evidence retains the prior commit,
+tree, receipt, and result digest. A changed input, unknown or incomplete influence,
+shared execution-semantic change, failed result, or interrupted result requires fresh
+execution. Changed-path classification alone is insufficient. Consequently an
+acceptance-handler repair reruns its influenced acceptance task, while a shared runner
+semantic change invalidates every task that uses that runner. The package task always
+runs freshly against the final tree.
+
+The final checkpoint therefore contains one current proof for every planned task: fresh
+on the final candidate or explicitly input-equivalent under the complete closure above.
+Product-runtime failure or uncertain influence keeps closure open. Evidence finalization
+or promotion failure retries only that boundary while exact task results remain
+immutable. Success requires the package result and no blocking causal incident applicable
+to the final lineage. It does not require another blanket all-20 execution solely because
+a verifier-record or input-equivalent verifier repair changed the commit.
