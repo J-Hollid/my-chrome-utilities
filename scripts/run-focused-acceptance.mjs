@@ -1172,6 +1172,34 @@ export function selectFocusedVerificationTasks(plan, requestedKeys, canonicalPla
   };
 }
 
+export function closeVerificationPlanPrerequisites(plan, canonicalPlan = plan) {
+  const closedTasks = expandVerificationTaskPrerequisites(plan.tasks, canonicalPlan.tasks,
+    { mode:plan.mode });
+  const selected = new Set(closedTasks.map(({ key }) => key));
+  const groups = Object.fromEntries(focusedTaskGroups.map((group) => [group,
+    (canonicalPlan[group] ?? []).filter(({ key }) => selected.has(key))]));
+  const tasks = canonicalPlan.tasks.filter(({ key }) => selected.has(key));
+  if (tasks.length !== selected.size) {
+    throw new Error("Verification plan prerequisites are not registered by the canonical pack set");
+  }
+  const commandsFor = (group) => groups[group].map(({ display }) => display);
+  return { ...plan, ...groups, tasks,
+    preparationCommands:commandsFor("preparationTasks"),
+    unitCommands:commandsFor("unitTasks"),
+    propertyCommands:commandsFor("propertyTasks"),
+    browserCommands:commandsFor("browserTasks"),
+    observationCommands:commandsFor("observationTasks"),
+    parserCommands:commandsFor("parserTasks"),
+    generatorCommands:commandsFor("generatorTasks"),
+    checkpointCommands:commandsFor("checkpointTasks"),
+    sessionCommands:commandsFor("sessionTasks"),
+    packageCommands:commandsFor("packageTasks"),
+    acceptanceCommands:[...commandsFor("parserTasks"), ...commandsFor("generatorTasks"),
+      ...commandsFor("sessionTasks")],
+    commands:tasks.map(({ display }) => display),
+  };
+}
+
 export function createRepositoryCheckpointIdentityGuard({
   repositoryRoot:root = repositoryRoot, expected, context, attemptId, launchRoutes = new Map(),
   inputFingerprintOptions = {}, artifactValidator = ({ root:artifactRoot }) =>
@@ -1421,12 +1449,12 @@ export async function runFocusedAcceptance(
   delete options.timeoutRepairIncident;
   await validateVerificationPacks(packs);
   let plan = planVerification(packs, options);
+  const canonicalPlan = planVerification(packs, {
+    packIds:timeoutRepairPackIds, includeProperties:plan.includeProperties,
+  });
   if (options.focusedTaskKeys.length) {
-    const canonicalFocusedPlan = planVerification(packs, {
-      packIds:timeoutRepairPackIds, includeProperties:true,
-    });
-    plan = selectFocusedVerificationTasks(plan, options.focusedTaskKeys, canonicalFocusedPlan);
-  }
+    plan = selectFocusedVerificationTasks(plan, options.focusedTaskKeys, canonicalPlan);
+  } else plan = closeVerificationPlanPrerequisites(plan, canonicalPlan);
   if (evidenceTask) plan = planPackageTask(plan);
   const concurrency = environmentInteger("VERIFICATION_CONCURRENCY", 4, { maximum:64 });
   const observationConcurrency = environmentInteger("VERIFICATION_OBSERVATION_CONCURRENCY", 2, { maximum:4 });

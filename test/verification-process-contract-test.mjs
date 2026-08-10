@@ -52,6 +52,7 @@ import {
   compatibleTimeoutRepairIncidentIds,
   applyCheckpointPrerequisitePlan,
   checkpointPreflight,
+  closeVerificationPlanPrerequisites,
   createCheckpointIdentityGuard,
   createRepositoryCheckpointIdentityGuard,
   createVerificationCommandRunner,
@@ -3287,6 +3288,16 @@ assert.ok(focusedAcceptancePlan.parserTasks.length > 0 &&
   focusedAcceptancePlan.unitTasks.length > 0 && focusedAcceptancePlan.browserTasks.length > 0 &&
   focusedAcceptancePlan.tasks.some(({ key }) => key === "unit:test/flow-examples-timing-test.mjs"),
 "the focused acceptance session retains every owning strict-receipt prerequisite");
+const ordinaryShellPlan = closeVerificationPlanPrerequisites(planVerification(packs, {
+  packIds:["shell"],
+}), planVerification(packs, { packIds:timeoutRepairPackIds }));
+assert.ok(ordinaryShellPlan.tasks.some(({ key }) => key === "unit:test/flow-examples-timing-test.mjs"),
+  "ordinary pack execution receives the same cross-pack strict-receipt closure");
+assert.ok(ordinaryShellPlan.tasks.indexOf(ordinaryShellPlan.tasks.find(({ key }) =>
+  key === "unit:test/flow-examples-timing-test.mjs")) <
+  ordinaryShellPlan.tasks.indexOf(ordinaryShellPlan.tasks.find(({ key }) =>
+    key === "acceptance-session:shell")),
+"the ordinary cross-pack predecessor runs before its acceptance consumer");
 const repairCanonicalPlan = planVerification(packs, {
   packIds:timeoutRepairPackIds, includeProperties:true,
 });

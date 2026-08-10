@@ -3,8 +3,8 @@
   "contractRevision": "2f609d7a19fd966eb82c54b2938df1fd78e2d836",
   "assessmentCandidate": "159c565970d86f1a96083505955afc2007aeade8",
   "approvedAssessedCount": 17,
-  "repositoryCommonOpenCount": 21,
-  "additionalOpenRecordReason": "Repository-common and legacy namespace reconciliation exposed four additional durable open records; the same approved audit rules apply.",
+  "repositoryCommonOpenCount": 22,
+  "additionalOpenRecordReason": "Repository-common and legacy namespace reconciliation plus the bounded focused repair exposed five additional durable open records; the same approved audit rules apply.",
   "records": {
     "02e0c2b4-8c51-4278-92f2-ce31db4a5159": { "disposition": "lineage-retired", "reason": "Event Library failure commit is outside the selected assessment ancestry." },
     "5dbcb625-6592-4c51-916e-80c5d1200318": { "disposition": "lineage-retired", "reason": "Historical Shell failure commit is outside the selected assessment ancestry." },
@@ -19,6 +19,7 @@
     "e9572d6b-e91e-4a1c-b297-7a7b82c0c494": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
 
     "29fb9dc0-6981-4e1e-9f06-2890e22fa030": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "Modular verification packs 112/example_1", "assertionSite": "VTD-014 conservation evidence", "diagnosticShape": "VTD-014 conservation evidence is incomplete." },
+    "2c9a4a35-cf36-42e8-93ef-e0524137a561": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "Modular verification packs 088/example_1", "assertionSite": "strict receipt prerequisite lookup", "diagnosticShape": "Verification command was not declared or did not pass before acceptance" },
     "2ecd7a5a-a3d9-4f10-bb32-569215b1ad51": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "Modular verification packs 123/example_1", "assertionSite": "aggregate browser result", "diagnosticShape": "Aggregate failure preempted a target result." },
     "4034d3f2-9ed7-493f-b1e1-c3019c2e76a1": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "Modular verification packs 123/example_1", "assertionSite": "aggregate browser result", "diagnosticShape": "Aggregate failure preempted a target result." },
     "42e30dc0-1273-4622-8166-468461a66ee8": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "Modular verification packs 124/example_1", "assertionSite": "failure outline", "diagnosticShape": "null failure outline" },
