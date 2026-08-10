@@ -3767,12 +3767,13 @@ against correction base `b1ed18574c1fbe403c633f917a02f5cce632c945` with all 20
 packs, the package task, 835 fresh passing task results, and no blocking reliability
 incident.
 
-## Verification throughput program — active VTD-010 Event Library launch consolidation (2026-08-10)
+## Verification throughput program — completed VTD-010 Event Library launch consolidation (2026-08-10)
 
-The user approved this Event Library package on 2026-08-10 as the only active VTD-010
-implementation slice. The specifier may commit and send its bounded coder handoff.
-VTD-008, the Capture, Schemas, and Defects VTD-010 slices, and VTD-011 through
-VTD-012 remain inactive.
+The user approved this Event Library package on 2026-08-10. It completed the coder,
+refactorer, and architect sequence and was integrated into `master` at
+`cc2c9a01b6c2398a35cb03731eb1fd7c2934916c`. VTD-008, the Capture, Schemas, and
+Defects VTD-010 slices, and VTD-011 through VTD-012 remain inactive without later
+user authority.
 
 ### Bounded outcome
 

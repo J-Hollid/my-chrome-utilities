@@ -67,9 +67,12 @@ here.
   `51ef49a2f9e3b39fb564ddde1869c9b8b2c84a8d`.
 - VTD-014 completed the normal coder, refactorer, and architect chain and merged at
   `4e18da3e601dde88abe0b85071ba7319f3b81d80`.
-- The user approved the bounded VTD-010 Event Library specification on 2026-08-10;
-  that slice is active for the normal coder chain. VTD-008, the remaining VTD-010
-  pack slices, and VTD-011 through VTD-012 remain queued and inactive.
+- The bounded VTD-010 Event Library slice completed its coder, refactorer, and
+  architect sequence and was integrated into `master` at
+  `cc2c9a01b6c2398a35cb03731eb1fd7c2934916c`. The user then requested the next
+  refinement, a bounded VTD-008 installed Hotkeys controller candidate that awaits
+  explicit approval. The remaining VTD-008 controllers, remaining VTD-010 pack
+  slices, and VTD-011 through VTD-012 remain queued and inactive.
 
 ## Executive assessment
 
@@ -1033,8 +1036,10 @@ maintenance no longer requires editing several monolithic infrastructure files.
 VTD-001 through VTD-007, VTD-009, VTD-013, and VTD-014 are delivered, including
 corrected scheduling, canonical timing evidence, representative budgets, narrower
 ownership, shared readiness, the modular side-panel browser program, and the
-reliability-repair gate. The bounded Event Library VTD-010 specification is
-user-approved and active for the normal coder chain. Other VTD-010 pack slices
+reliability-repair gate. The bounded Event Library VTD-010 implementation completed
+the coder, refactorer, and architect sequence and is integrated in current `master`
+at `cc2c9a01`. The installed Hotkeys controller is the next bounded VTD-008 candidate
+and awaits explicit approval. Other VTD-008 controllers and VTD-010 pack slices
 remain inactive.
 
 After measurement truth, the fastest direct development-time wins are precise
