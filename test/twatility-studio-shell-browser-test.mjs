@@ -10,6 +10,7 @@ import {
   resolveChromeExecutable,
   stopHeadlessChrome,
 } from "./support/headless-chrome.mjs";
+import { withDevtoolsProtocolDeadline } from "./support/browser-observation-control.mjs";
 
 const wait = (milliseconds) =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -111,11 +112,21 @@ class DevtoolsSocket {
   call(method, params = {}) {
     const id = this.nextId++;
     this.send({ id, method, params });
-    return new Promise((resolve, reject) =>
-      this.pending.set(id, { resolve, reject }),
-    );
+    return withDevtoolsProtocolDeadline({
+      targetId: "twatility-studio-shell",
+      method,
+      limitMs: 30_000,
+      work: () => new Promise((resolve, reject) =>
+        this.pending.set(id, { resolve, reject }),
+      ),
+      onTimeout: () => this.pending.delete(id),
+    });
   }
   close() {
+    for (const pending of this.pending.values()) {
+      pending.reject(new Error("twatility-studio-shell DevTools socket closed"));
+    }
+    this.pending.clear();
     this.socket?.destroy();
   }
 }

@@ -1536,10 +1536,6 @@ function renderAssuranceFindings(host, result) {
     host.replaceChildren(region("Warnings", result.warnings), region("Blocking issues", result.blockers));
 }
 function applyDeveloperExportGate(result) { const control = q("#export-standard-schema"); control.disabled = Boolean(result.blockers.length || !result.plan); control.title = control.disabled ? `Repair ${result.blockers.length} canonical or effective-schema blocking issues before developer export.` : "Developer export is available; project-assurance warnings are advisory."; }
-q("#run-preflight").addEventListener("click", () => { if (state)
-    applyDeveloperExportGate(projectPreflight(state, nextProjectReleaseRevision(state, publishedRevision))); });
-q("#run-preflight").addEventListener("click", () => { if (!state)
-    return; releasePreflight = projectPreflight(state, nextProjectReleaseRevision(state, publishedRevision)); const result = releasePreflight, content = q("#workspace-content"), section = document.createElement("section"), title = document.createElement("h2"), summary = document.createElement("p"), findings = document.createElement("div"); title.textContent = "Production evaluator preflight"; summary.className = "status-text"; summary.textContent = result.blockers.length ? `${result.contentIdentity} · ${result.warnings.length} warnings · ${result.blockers.length} blocking issues · ${result.fixtures.length} fixtures evaluated` : `${result.contentIdentity} · Ready to publish from the compiled production plan · ${result.warnings.length} warnings · 0 blocking issues`; findings.id = "preflight-assurance"; findings.setAttribute("aria-label", "Project assurance"); renderAssuranceFindings(findings, result); section.append(title, summary, findings); content.prepend(section); });
 q("#show-coverage").addEventListener("click", () => renderCoverage());
 q("#publish-project").addEventListener("click", () => { releasePreflight = undefined; const renderReviewedAssurance = (attempt = 0) => { if (releasePreflight) {
     renderAssuranceFindings(q("#release-assurance"), releasePreflight);

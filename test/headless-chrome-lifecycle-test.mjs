@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
+import { readFile } from "node:fs/promises";
 import {
   chromeExecutableCandidates,
   headlessChromeArguments,
@@ -132,6 +133,16 @@ try {
 assert.equal(profileFailure?.deadlineOwner,"profile cleanup");
 assert.equal(profileFailure?.targetId,"TARGET-DEADLINE");
 assert.doesNotMatch(profileFailure.message,/readiness predicate/u);
+
+const studioShellSource = await readFile(
+  new URL("./twatility-studio-shell-browser-test.mjs", import.meta.url),
+  "utf8",
+);
+assert.match(
+  studioShellSource,
+  /withDevtoolsProtocolDeadline\(\{[\s\S]*?targetId:\s*"twatility-studio-shell"[\s\S]*?method[\s\S]*?onTimeout:\s*\(\)\s*=>\s*this\.pending\.delete\(id\)/u,
+  "the Studio shell adapter must bound every pending DevTools call and release its pending entry",
+);
 
 await assert.rejects(() => removeChromeProfile("/tmp/profile-hung", {
   targetId:"TARGET-DEADLINE", deadlineMilliseconds:10,

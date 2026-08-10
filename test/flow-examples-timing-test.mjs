@@ -45,6 +45,10 @@ import {
 } from "./support/flow-workspace-r02-runtime.mjs";
 
 const execFileAsync=promisify(execFile);
+const flowGraphAdapterSource=readFileSync("test/browser-packs/flow-graph.mjs","utf8");
+assert.match(flowGraphAdapterSource,
+  /timeoutMs:browserShard==="examples"[\s\S]*?:\s*Math\.max\(1,\s*Math\.min\(30_000,\s*remainingMilliseconds\(\)-50\)\)/u,
+  "non-example Flow readiness must consume the owning logical target budget instead of an unrelated five-second ceiling");
 
 function literalValue(node){
   if(!node)return undefined;

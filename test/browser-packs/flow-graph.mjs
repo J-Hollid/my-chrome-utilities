@@ -155,7 +155,10 @@ try {
         throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text); return result.result.value; };
     const waitForBrowser = async (phase, predicate, selector, stabilityMs = 0) => {
       const readiness=()=>boundedFlowExamplesReadiness({
-        targetId, phase, predicate, timeoutMs: 5000,
+        targetId, phase, predicate,
+        timeoutMs:browserShard==="examples"
+          ? 5000
+          : Math.max(1, Math.min(30_000, remainingMilliseconds()-50)),
         observe: async () => evaluate(`(()=>{const node=document.querySelector(${JSON.stringify(selector)});return{ready:document.readyState==='complete'&&Boolean(node),readyState:document.readyState,selector:${JSON.stringify(selector)},present:Boolean(node),text:String(node?.textContent??'').slice(0,120)}})()`),
         stabilityMs,
       });
