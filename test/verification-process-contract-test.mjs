@@ -1213,6 +1213,21 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       repairResult:{ status:"passed", fixtureDigest,
         observed:structuredClone(fixture.expectedRepairResult) } };
   }
+  if (causalCategory === "other:Flow stability evidence inclusion") {
+    const fixture = {
+      id:"flow-stability-evidence-inclusion-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ observedStabilityMilliseconds:[150, 100, 100, 100, 250], required:250 },
+      expectedPreRepairFailure:{ comparison:"exact-vector", accepted:false },
+      expectedRepairResult:{ comparison:"required-member", accepted:true },
+    };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:structuredClone(fixture.expectedPreRepairFailure) },
+      repairResult:{ status:"passed", fixtureDigest,
+        observed:structuredClone(fixture.expectedRepairResult) } };
+  }
   if (causalCategory === "other:transitive strict-receipt prerequisite closure") {
     const fixture = {
       id:"transitive-strict-receipt-prerequisite-closure-v1", causalCategory,

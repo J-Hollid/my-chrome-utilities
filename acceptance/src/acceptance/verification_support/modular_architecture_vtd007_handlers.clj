@@ -191,7 +191,7 @@
                   "create-project form mounted"
                   "Flows navigation mounted"
                   "[aria-label=\"Flow canvas viewport\"]"}
-    :stabilityMilliseconds [250]}})
+    :stabilityMilliseconds #{250}}})
 
 (defn- contract-value-matches? [actual expected]
   (if (set? expected)
