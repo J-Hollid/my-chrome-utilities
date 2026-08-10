@@ -1,6 +1,5 @@
 import { listCommands, commandsForUtilityShell, runCommandById, createPaletteController, } from "./utilities/command-palette/index.js";
-import { advanceHotkeySequence, blankHotkeyKeymap, duplicateSequences, HOTKEY_KEYMAP_STORAGE_KEY, keyTokenFromKeyboardEvent, updateHotkeyKeymap, validateHotkeyKeymap, } from "./utilities/hotkeys/index.js";
-import { createHotkeyEditor } from "./utilities/hotkeys/index.js";
+import { createInstalledHotkeyController, HOTKEY_KEYMAP_STORAGE_KEY, } from "./utilities/hotkeys/index.js";
 import { extensionShell, utilityRegistry } from "./utility-registry.js";
 import { bindUtilityPanels, mountUtilityShell, renderUtilityDirectory } from "./platform/utility-shell-dom.js";
 import { createUtilityStorage } from "./platform/utility-storage.js";
@@ -106,7 +105,6 @@ import { panelEmptyState } from "./panel-empty-states.js";
 import { createManualFlowDefectEvent, mountLiveFlowTestingUi } from "./utilities/data-layer/live-inspection.js";
 import { findPanelEmptyStateElements, renderPanelEmptyState, } from "./panel-empty-states-ui.js";
 import { adoptSavedSchema, applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements, compileSpecificationProject, commitCanonicalProjectState, configureProjectEventTransport, createGuidedTestCase, createFixtureFromCapturedValidation, evaluateSpecificationObservation, recordSpecificationCapture, recordSpecificationNavigation, projectEventTransport, seedLibraryDestination, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, } from "./utilities/data-layer/schemas.js";
-const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
 const utilityDirectory = document.querySelector("#utility-directory");
@@ -640,8 +638,6 @@ let pendingStandardSchemaExport;
 const guidedValidationRoot = document.querySelector("#guided-validation-flow");
 const sequenceReplayElements = findSequenceReplayElements();
 const allCommands = [...commandsForUtilityShell(listCommands(), extensionShell.commands)];
-let activeHotkeyKeymap = loadStoredHotkeyKeymap() ?? blankHotkeyKeymap(allCommands);
-let pendingHotkeySequence = [];
 let dataLayerSessionState = restoreSession(dataLayerStorage);
 let savedEventFeedFilterLibrary = restoreSavedEventFeedFilterLibrary(dataLayerStorage.getItem(SAVED_EVENT_FEED_FILTER_STORAGE_KEY));
 let savedEventFeedFilterFeedback = "";
@@ -934,8 +930,7 @@ function newDataLayerSessionId(tabId) {
         ?? `${Date.now()}-${nextSessionSequence}`;
     return `tab-${tabId}-session-${unique}`;
 }
-// The authored header owns the branded wordmark and accessible name. Keep
-// PROJECT_NAME for established export filenames and internal contracts.
+// The authored header owns the branded wordmark and accessible name.
 if (app)
     app.setAttribute("aria-label", "TWAtility Belt");
 function renderHistoryPath(path, fieldValue = path, status = "Selection required") {
@@ -6637,172 +6632,57 @@ const paletteController = createPaletteController({
     commands: allCommands,
     runCommand: (command) => runCommandById(command.id, commandRunContext),
 });
-function setKeymapStatus(message) {
-    if (keymapStatus) {
-        keymapStatus.textContent = message;
-    }
-}
-function setKeymapWarning(message) {
-    if (keymapWarning) {
-        keymapWarning.textContent = message;
-    }
-}
 const workspaceTabsController = createWorkspaceTabsController(workspaceTabList, shellStorage);
-const hotkeyEditor = createHotkeyEditor({
+const hotkeyController = createInstalledHotkeyController({
     commands: allCommands,
-    container: hotkeyEditorCommands,
-    filter: hotkeyEditorFilter,
-    getKeymap: () => activeHotkeyKeymap,
-    setKeymap: (keymap) => {
-        activeHotkeyKeymap = keymap;
-        storeHotkeyKeymap(keymap);
+    storage: hotkeyStorage,
+    elements: {
+        root: panelRoot,
+        createButton: createKeymapButton,
+        updateButton: updateKeymapButton,
+        loadButton: loadKeymapButton,
+        fileInput: keymapFileInput,
+        status: keymapStatus,
+        warning: keymapWarning,
+        editorContainer: hotkeyEditorCommands,
+        editorFilter: hotkeyEditorFilter,
     },
-    setStatus: setKeymapStatus,
-    setWarning: setKeymapWarning,
+    documentEvents: document,
+    pageLifecycle: window,
+    ...(typeof chrome !== "undefined" && chrome.runtime?.onMessage ? {
+        runtimeMessages: {
+            addListener: (listener) => chrome.runtime.onMessage.addListener(listener),
+            removeListener: (listener) => chrome.runtime.onMessage.removeListener(listener),
+        },
+    } : {}),
+    download: ({ filename, contents, type }) => {
+        const url = URL.createObjectURL(new Blob([contents], { type }));
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        link.click();
+        return () => URL.revokeObjectURL(url);
+    },
+    executeCommand: (commandId) => runCommandById(commandId, commandRunContext),
+    shellClaimsKey: (event) => {
+        if (pushDraftReview?.open || (observationTargetPicker && !observationTargetPicker.hidden)) {
+            return true;
+        }
+        if (event.key === "Escape" && liveObserverState.inspectorEventId) {
+            event.preventDefault();
+            event.stopPropagation();
+            closeInspectorAndReturnToEvents();
+            return true;
+        }
+        return false;
+    },
+    ignoresTarget: (target) => target instanceof Element && (target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)),
 });
 function showWorkspace(tab, focus = false) {
     workspaceTabsController.show(tab, focus);
-}
-function activateHotkeyFocus() {
-    if (!panelRoot) {
-        return;
-    }
-    panelRoot.focus();
-    panelRoot.dataset.hotkeyFocus = "active";
-}
-function hotkeyFocusActive() {
-    return panelRoot?.dataset.hotkeyFocus === "active";
-}
-function clearPendingHotkeySequence() {
-    pendingHotkeySequence = [];
-}
-function keymapFileName() {
-    return `${PROJECT_NAME}-hotkey-keymap.json`;
-}
-function downloadHotkeyKeymapFile(keymap) {
-    const blob = new Blob([`${JSON.stringify(keymap, null, 2)}\n`], {
-        type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = keymapFileName();
-    link.click();
-    URL.revokeObjectURL(url);
-}
-function updateKeymapStatus(added, removed) {
-    setKeymapStatus(`Keymap updated: added ${added.length}, removed ${removed.length}`);
-}
-function shouldIgnoreHotkeyTarget(target) {
-    if (!(target instanceof Element)) {
-        return false;
-    }
-    return (target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement ||
-        (target instanceof HTMLElement && target.isContentEditable));
-}
-function storeHotkeyKeymap(keymap) {
-    hotkeyStorage.setItem(HOTKEY_KEYMAP_STORAGE_KEY, JSON.stringify(keymap));
-}
-function loadStoredHotkeyKeymap() {
-    const stored = hotkeyStorage.getItem(HOTKEY_KEYMAP_STORAGE_KEY);
-    if (!stored) {
-        return undefined;
-    }
-    try {
-        const validation = validateHotkeyKeymap(JSON.parse(stored), allCommands);
-        return validation.valid ? validation.keymap : undefined;
-    }
-    catch {
-        return undefined;
-    }
-}
-function loadHotkeyKeymap(value) {
-    const validation = validateHotkeyKeymap(value, allCommands);
-    const duplicates = validation.keymap
-        ? duplicateSequences(validation.keymap)
-        : validation.duplicateSequences;
-    if (!validation.valid || !validation.keymap) {
-        const duplicateSequence = duplicates[0]?.sequence;
-        setKeymapWarning(duplicateSequence
-            ? `Duplicate key sequence: ${duplicateSequence}`
-            : (validation.error ?? "Invalid hotkey keymap."));
-        return false;
-    }
-    activeHotkeyKeymap = validation.keymap;
-    storeHotkeyKeymap(activeHotkeyKeymap);
-    hotkeyEditor.render();
-    clearPendingHotkeySequence();
-    setKeymapWarning("");
-    setKeymapStatus("Keymap loaded");
-    activateHotkeyFocus();
-    return true;
-}
-function createHotkeyKeymapFile() {
-    activeHotkeyKeymap = blankHotkeyKeymap(allCommands);
-    downloadHotkeyKeymapFile(activeHotkeyKeymap);
-    hotkeyEditor.render();
-    setKeymapWarning("");
-    setKeymapStatus("Blank keymap created");
-}
-function updateHotkeyKeymapFile() {
-    const summary = updateHotkeyKeymap(activeHotkeyKeymap, allCommands);
-    activeHotkeyKeymap = summary.keymap;
-    downloadHotkeyKeymapFile(activeHotkeyKeymap);
-    hotkeyEditor.render();
-    setKeymapWarning("");
-    updateKeymapStatus(summary.added, summary.removed);
-}
-async function loadHotkeyKeymapFile() {
-    const file = keymapFileInput?.files?.[0];
-    if (!file) {
-        return;
-    }
-    try {
-        loadHotkeyKeymap(JSON.parse(await file.text()));
-    }
-    catch {
-        setKeymapWarning("Keymap file must contain valid JSON.");
-    }
-    finally {
-        if (keymapFileInput) {
-            keymapFileInput.value = "";
-        }
-    }
-}
-function handleHotkeyKeydown(event) {
-    if (!hotkeyFocusActive() || shouldIgnoreHotkeyTarget(event.target)) {
-        return;
-    }
-    if (event.key === "Escape" && pendingHotkeySequence.length > 0) {
-        event.preventDefault();
-        clearPendingHotkeySequence();
-        return;
-    }
-    const hadPendingSequence = pendingHotkeySequence.length > 0;
-    const advance = advanceHotkeySequence(activeHotkeyKeymap, pendingHotkeySequence, keyTokenFromKeyboardEvent(event));
-    if (advance.status === "pending") {
-        event.preventDefault();
-        pendingHotkeySequence = advance.pending;
-        return;
-    }
-    if (advance.status === "matched" && advance.commandId) {
-        event.preventDefault();
-        clearPendingHotkeySequence();
-        runCommandById(advance.commandId, commandRunContext);
-        return;
-    }
-    clearPendingHotkeySequence();
-    if (hadPendingSequence) {
-        event.preventDefault();
-    }
-}
-function isFocusHotkeysMessage(message) {
-    return (typeof message === "object" &&
-        message !== null &&
-        "type" in message &&
-        message.type === "focus-app-hotkeys");
 }
 startTestingButton?.addEventListener("click", () => {
     runCommandById("data-layer.start-testing", commandRunContext);
@@ -6811,7 +6691,7 @@ endTestingButton?.addEventListener("click", () => {
     runCommandById("data-layer.end-testing", commandRunContext);
 });
 workspaceTabsController.bind();
-hotkeyEditor.bind();
+hotkeyController.mount();
 paletteController.bind();
 dataLayerViewList?.addEventListener("click", (event) => {
     const button = event.target.closest("[role=tab]");
@@ -7737,14 +7617,6 @@ confirmSavedSessionDeleteButton?.addEventListener("click", () => {
 backToEventsButton?.addEventListener("click", () => {
     closeInspectorAndReturnToEvents();
 });
-createKeymapButton?.addEventListener("click", createHotkeyKeymapFile);
-updateKeymapButton?.addEventListener("click", updateHotkeyKeymapFile);
-loadKeymapButton?.addEventListener("click", () => {
-    keymapFileInput?.click();
-});
-keymapFileInput?.addEventListener("change", () => {
-    void loadHotkeyKeymapFile();
-});
 const targetPathStatusController = createTargetPathStatusController({
     render: (path, fieldValue, status) => {
         currentTargetPathStatus = status;
@@ -7805,25 +7677,6 @@ observationTargetSearch?.addEventListener("input", renderObservationTargetPicker
 observationTargetSearch?.addEventListener("keydown", (event) => handleObservationTargetSearchKeydown(observationTargetElements, event));
 observationTargetList?.addEventListener("keydown", (event) => handleObservationTargetListKeydown(observationTargetElements, event));
 observationTargetPicker?.addEventListener("keydown", (event) => handleObservationTargetDialogKeydown(observationTargetElements, event));
-document.addEventListener("keydown", (event) => {
-    if (pushDraftReview?.open || (observationTargetPicker && !observationTargetPicker.hidden)) {
-        return;
-    }
-    if (event.key === "Escape" && liveObserverState.inspectorEventId) {
-        event.preventDefault();
-        event.stopPropagation();
-        closeInspectorAndReturnToEvents();
-        return;
-    }
-    handleHotkeyKeydown(event);
-}, true);
-if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
-    chrome.runtime.onMessage.addListener((message) => {
-        if (isFocusHotkeysMessage(message)) {
-            activateHotkeyFocus();
-        }
-    });
-}
 if (typeof chrome !== "undefined" && chrome.tabs?.onUpdated) {
     chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         if (changeInfo.url !== undefined) {
@@ -7901,7 +7754,6 @@ if (!savedSessionLiveFeed)
 renderSessionState();
 renderObserverState();
 showWorkspace(workspaceTabsController.activeTab());
-hotkeyEditor.render();
 showDataLayerView("Live");
 renderLiveObserver();
 if (savedSessionLiveFeed && liveObserverElements.eventList)
@@ -7915,7 +7767,7 @@ renderSchemas();
 renderSchemaWorkflowRows();
 renderSchemaValidationRecords();
 renderSequences();
-activateHotkeyFocus();
+hotkeyController.focus();
 isolateUtilityDomFromSearch(document, globalThis.location.search);
 if (panelRoot) {
     const chromeRuntime = typeof chrome === "undefined" ? undefined : chrome;

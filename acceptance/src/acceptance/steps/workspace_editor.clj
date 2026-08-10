@@ -9,7 +9,8 @@
            :source (str/join "\n" (map #(support/source-file root %)
                                         ["src/side-panel.ts"
                                          "src/workspace-tabs-ui.ts"
-                                         "src/hotkey-editor.ts"]))
+                                         "src/hotkey-editor.ts"
+                                         "src/utilities/hotkeys/installed-controller.ts"]))
            :commands (support/source-file root "src/commands.ts"))))
 
 (defn tabs-wired? [html source]
@@ -210,7 +211,9 @@
    {:pattern #"^command <([A-Za-z0-9_]+)> is shown as unassigned$"
     :handler (fn [world example [id-key]] (support/assert! (str/blank? (sequence world (command-id example id-key))) "Command is still assigned." {}) world)}
    {:pattern #"^the cleared key sequence remains unassigned after the side panel reloads$"
-    :handler (fn [world _ _] (support/assert! (str/includes? (:source world) "storeHotkeyKeymap") "Cleared binding is not persisted." {}) world)}
+    :handler (fn [world _ _] (support/assert! (or (str/includes? (:source world) "storeHotkeyKeymap")
+                                                   (support/includes-all? (:source world) ["setKeymap" "persist(next)"]))
+                                             "Cleared binding is not persisted." {}) world)}
    {:pattern #"^the user assigns key sequence <([A-Za-z0-9_]+)> to command <([A-Za-z0-9_]+)> in the hotkey editor$"
     :handler (fn [world example [sequence-key id-key]] (assoc world :attempted-sequence (command-id example sequence-key) :attempted-command (command-id example id-key)))}
    {:pattern #"^the hotkey change is rejected$"
