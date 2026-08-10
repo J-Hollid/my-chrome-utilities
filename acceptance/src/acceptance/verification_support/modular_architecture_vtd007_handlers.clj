@@ -7,6 +7,7 @@
             [clojure.string :as str]))
 
 (def ^:private specification-commit "0642b1d4c8")
+(def ^:private delivery-commit "49d97de8441bb87c054842a449eb362faa394215")
 
 (defonce ^:private production-evidence (atom nil))
 (defonce ^:private lifecycle-production-evidence (atom nil))
@@ -146,7 +147,8 @@
                                                    ":verification/performance-calibration.json"))
         base (when (zero? (:exit base-result)) (json/parse-string (:out base-result)))
         without-digest #(update % "conservation" dissoc "verificationTopologyDigest")
-        src-diff (:out (shell/sh "git" "diff" "--name-only" specification-commit "--" "src/"))
+        src-diff (:out (shell/sh "git" "diff" "--name-only" specification-commit
+                                 delivery-commit "--" "src/"))
         characterization-diff (:out (shell/sh "git" "diff" "--name-only" specification-commit "--"
                                               "verification/flow-examples-characterization.json"))]
     {:characterization characterization
