@@ -686,14 +686,16 @@
                         "A passing run executed a reliability retry."))}
    {:pattern #"^(?:its exact task identities, logical targets, observations, assertion leaves, batching, budgets, calibrations, worker limits, shards, and package check are unchanged|no diagnostic retry executes|previously passing work may be reused for diagnosis but no failed result can bypass incident classification|no final post-repair checkpoint reuses a pre-repair result|no src product file, product behavior, saved value, accessibility result, feature owner, handler owner, pack dependency, target budget, calibration, worker limit, or shard changes|production impact boundaries are unchanged|the one-time delivery checkpoint runs all 20 runnable packs in canonical order followed by node scripts/package.mjs)$"
     :handler (fn [world _ _]
-               (let [conservation (get-in world [:vtd014/evidence :conservation])
+               (let [prepared-world (prepared world)
+                     conservation (get-in prepared-world [:vtd014/evidence :conservation])
                      digests-match? (and (= (:currentTaskDigest conservation)
                                             (:acceptedBaseTaskDigest conservation))
                                          (= (:currentPackContractDigest conservation)
                                             (:acceptedBasePackContractDigest conservation))
                                          (= (:currentCalibrationDigest conservation)
                                             (:acceptedBaseCalibrationDigest conservation)))]
-                 (assert! world (and (false? (:diagnosticRetryOnPassingRun conservation))
+                 (assert! prepared-world
+                          (and (false? (:diagnosticRetryOnPassingRun conservation))
                                      (empty? (:productChangedFiles conservation))
                                      (empty? (:featureChangedFiles conservation))
                                      digests-match?
