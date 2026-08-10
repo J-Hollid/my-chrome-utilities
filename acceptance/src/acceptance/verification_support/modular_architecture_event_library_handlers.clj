@@ -213,6 +213,7 @@
                (let [scope (first (example-values example captures))]
                  (assoc (conservation-world world dependencies) :vtd010/selection scope)))}
    {:pattern #"^browser evidence selection is <expected_targets>$"
+    :applies? #(contains? % :vtd010/selection)
     :handler (fn [world example captures]
                (let [expected (first (example-values example captures))
                      selected (event-library-selections (:vtd010/selection world))
