@@ -3859,4 +3859,107 @@ handling, or expand through Event Library's product dependants.
 The task-scoped delivery checkpoint is the exact `event-library` pack with properties,
 followed by `node scripts/package.mjs`. It uses the VTD-014 incident-aware fresh
 checkpoint and promotion path. This pack-local checkpoint does not activate another
-VTD-010 slice or widen the candidate into shared verification infrastructure.
+VTD-010 slice or widen the candidate into shared verification infrastructure. The
+accepted implementation is integrated at `cc2c9a01b6c2398a35cb03731eb1fd7c2934916c`.
+
+## Verification throughput program — active VTD-008 installed Hotkeys controller extraction (2026-08-10)
+
+The user approved this installed Hotkeys controller package on 2026-08-10 as the
+only active VTD-008 implementation slice. The specifier may commit and send its
+bounded coder handoff. The Event Library VTD-010 implementation is integrated in
+current `master` at `cc2c9a01b6c2398a35cb03731eb1fd7c2934916c`. This package
+changes neither that completed work nor any later VTD-008 controller slice; the
+remaining VTD-008 controllers and VTD-011 through VTD-012 remain inactive.
+
+### Bounded outcome and current seam
+
+This first VTD-008 slice extracts only the installed Hotkeys controller. It does not
+combine the Command Palette, utility-shell bootstrap, Data Layer controls, or another
+domain into the same package. Current `src/side-panel.ts` remains 6,534 lines and
+493,298 bytes with 113 imports. Its installed Hotkeys responsibilities currently
+include owned storage creation, eight element lookups, active keymap and pending
+sequence state, editor creation, keymap serialization and file operations, key
+dispatch, runtime-message focus, control listeners, rendering, and initial focus.
+
+The candidate moves those responsibilities behind one controller exported from the
+existing `src/utilities/hotkeys/index.ts` public entry. The side-panel composition
+root constructs and passes the registered command list, owned storage adapter,
+command-execution callback, shell key-arbitration callback, DOM and file adapters,
+runtime-message subscription, and page lifecycle. It then mounts the controller and
+requests late initial focus after the rest of the application has rendered. The
+controller exposes explicit `mount`, `render`, `focus`, and `dispose` operations.
+
+This boundary is dependency injection, not a new shared framework. The controller
+does not import Command Palette implementation, Data Layer implementation, shell
+composition state, or another utility's private files. The root retains the existing
+shell-owned priority decision for open push review, the observation-target picker,
+and inspector Escape handling; the controller receives only whether the shell claimed
+the key event. Matched hotkeys execute through the injected command callback.
+
+### Lifecycle and behavior conservation
+
+Mounting binds one editor/filter owner, one set of create/update/load controls, one
+captured document key handler, and one `focus-app-hotkeys` subscription. A redundant
+mount does not duplicate them. Disposal removes every owned listener and runtime
+subscription, clears pending sequence state, and is idempotent. Page hide disposes
+the controller; a later mount loads the persisted keymap and owns one fresh listener
+set. Temporary object URLs are revoked and the file input is reset after every load
+attempt.
+
+The extraction retains the current keyboard arbitration exactly:
+
+- shell-claimed events never reach keymap state;
+- input, textarea, select, and content-editable targets remain ignored;
+- a prefix becomes pending and prevents default handling;
+- Escape clears a pending prefix;
+- a matching completion executes one injected command and clears pending state;
+- a nonmatching completion after a prefix clears pending state without executing;
+  and
+- an unmatched key with no pending prefix preserves default handling.
+
+The current schema-version-1 keymap, storage key and Hotkeys namespace, generated
+filename, normalization, validation, duplicate rejection, create/update/load
+semantics, status and warning text, command ids, key sequences, initial focus,
+runtime focus message, editor presentation, and accessibility results do not change.
+Invalid input cannot replace the active or persisted keymap.
+
+### Ownership and development-speed effect
+
+`src/side-panel.ts` is currently in the global `shell_platform_runtime` boundary, so
+a change selects all 20 runnable packs; the current non-property plan contains 751
+tasks. A source file below `src/utilities/hotkeys` is already owned by the `hotkeys`
+pack, whose only production dependant is `shell`. After adding one focused controller
+unit file, a controller-only change therefore selects exactly `hotkeys` and `shell`,
+67 tasks under the current topology, and excludes the other 18 packs. This is about
+a 91% reduction in planned task count for later controller-only edits. It is not a
+new wall-time budget or a promise that every selected task has equal cost.
+
+Direct changes to `src/side-panel.ts`, the utility registry, shared platform
+adapters, storage contracts, or shell semantics retain their existing broad impact.
+No new planner rule or impact-boundary exception is part of this candidate.
+
+### Evidence conservation and delivery
+
+| Evidence class | Before | Candidate |
+|---|---|---|
+| Hotkeys unit | None | One focused installed-controller lifecycle and dependency regression |
+| Hotkeys property | `test/hotkey-binding-property-test.mjs` and `test/modular-utility-architecture-property-test.mjs` | Both unchanged |
+| Hotkeys feature | Three registered feature files | The same files, scenarios, and behavior |
+| Hotkeys handler | `hotkey_keymap.clj` and `workspace_editor.clj` | Both unchanged |
+| Hotkeys browser | `test/browser-packs/hotkeys.mjs` | Unchanged standalone lifecycle and rendered-workflow leaves |
+| Other packs | Existing Command Palette, Shell, and remaining pack evidence | Every task and assertion leaf unchanged |
+| Exact Hotkeys plan | Nine tasks, or eleven with properties | Ten tasks, or twelve with properties, solely because of the new unit regression |
+
+The focused unit regression uses injected storage, command, runtime, document, file,
+URL, and shell-arbitration adapters to prove mount/dispose/remount behavior without
+constructing the full side panel. Existing Hotkeys acceptance and browser evidence
+continue to prove externally visible behavior. Shell and terminal evidence conserves
+installed integration, background shortcut focus, workspace navigation, runtime
+capabilities, and every unrelated product workflow.
+
+No command, hotkey, panel, saved byte, storage namespace, migration, visible result,
+accessibility result, manifest capability, pack dependency, budget, calibration,
+worker limit, shard, or browser batch changes. Because the extraction necessarily
+edits the currently global `src/side-panel.ts`, the one-time delivery checkpoint runs
+all 20 runnable packs in canonical order followed by `node scripts/package.mjs`.
+That broad delivery proof does not broaden future controller-only changes.

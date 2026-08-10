@@ -69,10 +69,10 @@ here.
   `4e18da3e601dde88abe0b85071ba7319f3b81d80`.
 - The bounded VTD-010 Event Library slice completed its coder, refactorer, and
   architect sequence and was integrated into `master` at
-  `cc2c9a01b6c2398a35cb03731eb1fd7c2934916c`. The user then requested the next
-  refinement, a bounded VTD-008 installed Hotkeys controller candidate that awaits
-  explicit approval. The remaining VTD-008 controllers, remaining VTD-010 pack
-  slices, and VTD-011 through VTD-012 remain queued and inactive.
+  `cc2c9a01b6c2398a35cb03731eb1fd7c2934916c`. The user then approved the bounded
+  VTD-008 installed Hotkeys controller slice for the normal coder chain. The
+  remaining VTD-008 controllers, remaining VTD-010 pack slices, and VTD-011 through
+  VTD-012 remain queued and inactive.
 
 ## Executive assessment
 
@@ -591,6 +591,41 @@ provide focused browser fixtures during extraction.
 Expected effect: lower implementation and review time, fewer conflicts, and
 smaller blast radius. Do not claim a direct wall-time reduction until measured.
 
+Approved first slice (2026-08-10): extract only the installed Hotkeys controller
+from `src/side-panel.ts`. The root currently owns Hotkeys storage creation, eight DOM
+lookups, active keymap and pending-sequence state, editor construction, keymap file
+operations, captured key dispatch, runtime-message focus, listener binding, render,
+and initial focus. Command Palette, utility-shell, and Data Layer controller
+extraction remain separate later slices.
+
+The candidate exposes the installed controller through
+`src/utilities/hotkeys/index.ts` with explicit mount, render, focus, and idempotent
+dispose operations. The composition root injects registered commands, Hotkeys-owned
+storage, command execution, shell key arbitration, DOM/file/URL adapters, runtime
+message subscription, and page lifecycle. The controller imports no Command Palette
+or Data Layer implementation and owns each of its listeners exactly once. Disposal
+removes them, clears pending input, and supports a clean remount. The root retains
+only construction, shell priority arbitration, mounting, late initial focus, and
+disposal.
+
+Every existing Hotkeys property, feature, handler, browser, storage, keymap, command,
+focus, file, status, warning, and accessibility contract remains unchanged. One new
+focused unit file proves injected dependencies, mount/dispose/remount, keyboard
+arbitration, cleanup, and invalid-file conservation without constructing the full
+side panel. The Hotkeys exact plan grows from 9 to 10 tasks, or 11 to 12 with
+properties, solely for that regression.
+
+The current global `src/side-panel.ts` changed-path plan selects 20 packs and 751
+non-property tasks. A later controller-only change selects `hotkeys` and its sole
+dependant `shell`; with the new unit regression this is 67 tasks and excludes the
+other 18 packs, about a 91% planned-task reduction. This does not establish a new
+wall-time budget. The extraction's one-time delivery remains all 20 runnable packs
+plus `node scripts/package.mjs` because the candidate necessarily edits the global
+composition root.
+
+The user approved this installed Hotkeys controller slice on 2026-08-10. It
+activates no other VTD-008 controller extraction.
+
 ### VTD-009 — Tighten shell and verification-helper ownership
 
 Priority: P1
@@ -1038,8 +1073,8 @@ corrected scheduling, canonical timing evidence, representative budgets, narrowe
 ownership, shared readiness, the modular side-panel browser program, and the
 reliability-repair gate. The bounded Event Library VTD-010 implementation completed
 the coder, refactorer, and architect sequence and is integrated in current `master`
-at `cc2c9a01`. The installed Hotkeys controller is the next bounded VTD-008 candidate
-and awaits explicit approval. Other VTD-008 controllers and VTD-010 pack slices
+at `cc2c9a01`. The installed Hotkeys controller is the user-approved active VTD-008
+slice for the normal coder chain. Other VTD-008 controllers and VTD-010 pack slices
 remain inactive.
 
 After measurement truth, the fastest direct development-time wins are precise

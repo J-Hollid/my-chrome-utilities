@@ -77,3 +77,80 @@ Feature: Modular Chrome utility architecture
     And the packaged extension retains the same manifest capabilities and browser entry points
     And restructuring does not alter stored user data or published schema semantics
 
+  # Modular Chrome utility architecture 008
+  Scenario: Modular Chrome utility architecture 008
+    Given the full side panel supplies registered commands, owned hotkey storage, command execution, shell key arbitration, document and file adapters, and runtime message subscription
+    When the installed hotkey controller is mounted through the hotkeys public entry point
+    Then it loads the valid stored keymap or creates the canonical blank keymap
+    And it binds the editor, keymap file controls, captured document keydown, and focus-app-hotkeys subscription exactly once
+    And it renders the current assignments and exposes explicit render, focus, and dispose operations
+    And its Hotkeys integration in src/side-panel.ts retains only dependency construction, shell key arbitration, controller mounting, late initial focus, and disposal
+    And src/side-panel.ts owns no Hotkeys keymap state, serialization, file operation, editor binding, sequence transition, or runtime-message listener
+
+  # Modular Chrome utility architecture 009
+  Scenario Outline: Modular Chrome utility architecture 009
+    Given an installed Hotkeys lifecycle begins in state <initial_state>
+    When lifecycle operation <operation> occurs
+    Then its lifecycle result is <result>
+    And one user input can cause at most one controller action
+
+    Examples:
+      | initial_state | operation                 | result                                                                      |
+      | new           | mount                     | one listener set and one initial render are active                          |
+      | mounted       | mount again               | no listener, subscription, or render ownership is duplicated                |
+      | mounted       | dispose                   | every owned listener and subscription is removed and pending input is cleared |
+      | disposed      | dispose again             | disposal is an idempotent no-op                                             |
+      | disposed      | mount again               | one fresh listener set and the persisted keymap are active                   |
+      | mounted       | pagehide                  | disposal completes before the page lifecycle ends                            |
+
+  # Modular Chrome utility architecture 010
+  Scenario Outline: Modular Chrome utility architecture 010
+    Given app-level hotkey focus is active with sequence state <sequence_state>
+    When keyboard input <input> occurs at <input_scope>
+    Then the installed hotkey controller produces <controller_result>
+    And default handling is <default_handling>
+
+    Examples:
+      | sequence_state | input                    | input_scope                       | controller_result                                  | default_handling          |
+      | empty          | a shell-claimed key      | shell-owned modal or inspector    | no keymap state or command changes                 | owned by the shell guard  |
+      | empty          | a bound sequence         | input, textarea, select, or content-editable element | no keymap state or command changes               | preserved                 |
+      | empty          | a valid prefix           | side-panel application            | the normalized prefix becomes pending              | prevented                 |
+      | pending        | Escape                   | side-panel application            | the pending sequence is cleared                    | prevented                 |
+      | pending        | its matching completion  | side-panel application            | one injected command executes and pending clears   | prevented                 |
+      | pending        | a nonmatching completion | side-panel application            | no command executes and pending clears             | prevented                 |
+      | empty          | an unmatched key         | side-panel application            | no command executes and sequence state stays empty | preserved                 |
+
+  # Modular Chrome utility architecture 011
+  Scenario Outline: Modular Chrome utility architecture 011
+    Given the installed hotkey controller performs keymap operation <operation>
+    When the operation reaches result <result>
+    Then active and persisted keymap state, status, warning, focus, and download are <expected_state>
+    And an attempted load clears its file input while a created download always revokes its object URL
+
+    Examples:
+      | operation | result                    | expected_state                                                                                                                           |
+      | create    | blank keymap downloaded   | active schema version 1 has every registered command blank, persisted bytes stay unchanged, Blank keymap created is visible, and focus stays unchanged |
+      | update    | updated keymap downloaded | active bindings are conserved and reconciled, persisted bytes stay unchanged, added and removed counts are visible, and focus stays unchanged          |
+      | load      | valid unique keymap       | active and canonical persisted keymaps equal the loaded keymap, Keymap loaded is visible without a warning, and app-level hotkey focus is active       |
+      | load      | invalid JSON or schema    | prior active and persisted keymaps and focus stay unchanged and the existing validation warning is visible                                           |
+      | load      | duplicate sequence        | prior active and persisted keymaps and focus stay unchanged and the warning names the conflicting sequence                                           |
+
+  # Modular Chrome utility architecture 012
+  Scenario: Modular Chrome utility architecture 012
+    Given the installed hotkey controller is implemented under src/utilities/hotkeys
+    When module and changed-path ownership are inspected
+    Then the controller is exported through src/utilities/hotkeys/index.ts and src/side-panel.ts imports only that public entry point
+    And command execution, storage, DOM, runtime messaging, downloads, and shell key arbitration enter through explicit controller dependencies
+    And the controller imports no command-palette implementation, data-layer implementation, or shell composition state
+    And a later controller-only change selects exactly hotkeys and shell under the existing dependency graph
+    And direct changes to src/side-panel.ts, shared platform adapters, or utility registry semantics retain their current broad impact
+
+  # Modular Chrome utility architecture 013
+  Scenario: Modular Chrome utility architecture 013
+    Given the Hotkeys pack has no unit file, two property files, three feature files, two handlers, and one shared browser adapter before VTD-008
+    When the installed hotkey controller is extracted from src/side-panel.ts
+    Then one focused controller unit file proves dependency use, lifecycle idempotence, keyboard arbitration, file cleanup, and disposal
+    And the two property files, three feature files, two handlers, shared browser adapter, and every existing assertion leaf remain unchanged
+    And every other runnable pack's evidence remains unchanged
+    And no command id, key sequence, keymap byte, storage key or namespace, filename, status, warning, focus result, manifest capability, visible behavior, or accessibility result changes
+    And the one-time delivery checkpoint runs all 20 runnable packs in canonical order followed by node scripts/package.mjs
