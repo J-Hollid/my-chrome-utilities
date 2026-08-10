@@ -809,6 +809,21 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
       repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
   }
+  if (causalCategory === "other:isolated-cli-fixture-module-contract") {
+    const fixture = {
+      id:"isolated-cli-fixture-module-contract-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ fixtureCheckpointModuleVersion:"prior", launcherVersion:"candidate" },
+      expectedPreRepairFailure:{ outcome:"module-link-error", legacyPathSource:"new-module-export" },
+      expectedRepairResult:{ outcome:"passed", legacyPathSource:"launcher-local-git-common" },
+    };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:structuredClone(fixture.expectedPreRepairFailure) },
+      repairResult:{ status:"passed", fixtureDigest,
+        observed:structuredClone(fixture.expectedRepairResult) } };
+  }
   if (causalCategory === "other:repair fixture trusted boundary conservation") {
     const fixture = {
       id:"repair-fixture-trusted-boundary-conservation-v1", causalCategory,
