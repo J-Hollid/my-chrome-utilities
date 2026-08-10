@@ -305,7 +305,8 @@
                (assert! world (every? true? (vals (get-in world [:vtd006/evidence :controls])))
                         "A VTD-007 browser control is missing."))}
    {:pattern #"^no src product file, product behavior, saved value, accessibility result, feature owner, handler owner, pack dependency, target budget, calibration, worker limit, or shard changes$"
-    :applies? (fn [world] (nil? (:vtd014/evidence world)))
+    :applies? (fn [world] (and (contains? world :vtd006/evidence)
+                               (nil? (:vtd014/evidence world))))
     :handler (fn [world _ _]
                (assert! world (= 63 (get-in world [:vtd006/evidence :contract :targetCount]))
                         "The infrastructure-only contract changed product topology."))}

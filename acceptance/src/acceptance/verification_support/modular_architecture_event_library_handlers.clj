@@ -185,7 +185,7 @@
                                                           :exactTaskCount]))
                               "Event Library exact plan is not 29 tasks." {}))}
 
-   {:pattern #"^the standalone Event Library smoke task currently proves <smoke_behavior>$"
+   {:pattern #"^the standalone Event Library smoke task currently proves (.+)$"
     :handler (fn [world example captures]
                (let [behavior (first (example-values example captures))]
                  (assoc (conservation-world world dependencies)
@@ -196,7 +196,7 @@
                               (some #{"EVENT_LIBRARY_RENDERED_SMOKE_TARGET"}
                                     (map :id (get-in world [:vtd004/pack :browserObservations])))
                               "The rendered smoke target is not installed evidence." {}))}
-   {:pattern #"^it proves <preserved_result>$"
+   {:pattern #"^it proves (.+)$"
     :handler (fn [world example captures]
                (let [result (first (example-values example captures))]
                  (assert-event! world (= result (smoke-results (:vtd010/smoke-behavior world)))
@@ -208,11 +208,11 @@
                  (assert-event! world (= (count leaves) (count (set leaves)))
                                 "Event Library rendered smoke leaf is duplicated." {})))}
 
-   {:pattern #"^Event Library browser selection scope is <selection_scope>$"
+   {:pattern #"^Event Library browser selection scope is (.+)$"
     :handler (fn [world example captures]
                (let [scope (first (example-values example captures))]
                  (assoc (conservation-world world dependencies) :vtd010/selection scope)))}
-   {:pattern #"^browser evidence selection is <expected_targets>$"
+   {:pattern #"^browser evidence selection is (.+)$"
     :applies? #(contains? % :vtd010/selection)
     :handler (fn [world example captures]
                (let [expected (first (example-values example captures))
