@@ -688,11 +688,11 @@
     :handler (fn [world _ _]
                (let [conservation (get-in world [:vtd014/evidence :conservation])
                      digests-match? (and (= (:currentTaskDigest conservation)
-                                            (:masterTaskDigest conservation))
+                                            (:acceptedBaseTaskDigest conservation))
                                          (= (:currentPackContractDigest conservation)
-                                            (:masterPackContractDigest conservation))
+                                            (:acceptedBasePackContractDigest conservation))
                                          (= (:currentCalibrationDigest conservation)
-                                            (:masterCalibrationDigest conservation)))]
+                                            (:acceptedBaseCalibrationDigest conservation)))]
                  (assert! world (and (false? (:diagnosticRetryOnPassingRun conservation))
                                      (empty? (:productChangedFiles conservation))
                                      (empty? (:featureChangedFiles conservation))
