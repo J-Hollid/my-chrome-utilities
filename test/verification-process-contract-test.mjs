@@ -815,6 +815,21 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
       repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
   }
+  if (causalCategory === "other:reclaimed reliability archive recovery") {
+    const fixture = {
+      id:"reclaimed-reliability-archive-recovery-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ incompleteArchiveFromPriorRun:true, checkpointReclaimed:true },
+      expectedPreRepairFailure:{ archiveResult:"EEXIST", incidentResolved:false },
+      expectedRepairResult:{ archiveResult:"atomically-replaced", incidentResolved:true },
+    };
+    const preRepairObservation = { archiveResult:"EEXIST", incidentResolved:false };
+    const repairObservation = { archiveResult:"atomically-replaced", incidentResolved:true };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
+  }
   if (causalCategory === "other:workspace temporary repository detection") {
     const fixture = {
       id:"workspace-temporary-repository-detection-v1", causalCategory,
@@ -1179,11 +1194,13 @@ try {
     now:() => "2026-08-09T00:00:00.000Z",
     randomId:() => `incident-${++incidentNumber}`,
     isAncestor:async (ancestor, descendant) => ancestor === descendant ||
-      ancestor === "failed-commit" && ["repair-commit", "rebased-commit"].includes(descendant),
+      ancestor === "failed-commit" && ["repair-commit", "rebased-commit", "reclaimed-commit"].includes(descendant) ||
+      ancestor === "repair-commit" && descendant === "reclaimed-commit",
     resolveCandidate:async(commit) => ({
       commit,
       tree:{ "failed-commit":"failed-tree", "repair-commit":"repair-tree",
-        "rebased-commit":"rebased-tree", "genuinely-unrelated":"unrelated-tree" }[commit],
+        "rebased-commit":"rebased-tree", "reclaimed-commit":"repair-tree",
+        "genuinely-unrelated":"unrelated-tree" }[commit],
     }),
     currentCandidate:async() => ({ commit:"repair-commit", tree:"repair-tree" }),
     changedPaths:async() => ["scripts/dist-artifact-lock.mjs"],
@@ -1737,14 +1754,43 @@ console.log("repairTmp=" + process.env.TMPDIR);
     store.resolve(first.id, { checkpointReceiptPath, packageReceiptPath }),
     /symlink|canonical regular file/u);
   await rm(checkpointArchivePath);
-  const resolved = await store.resolve(first.id, { checkpointReceiptPath, packageReceiptPath });
+  await store.recordLineageTransition(first.id, {
+    kind:"rebase", fromCommit:"repair-commit", toCommit:"reclaimed-commit", toTree:"repair-tree",
+  });
+  const reclaimedRunId = "repair-checkpoint-reclaimed";
+  await store.claimRepairCheckpoint(first.id, reclaimedRunId);
+  const reclaimedReceiptBase = { ...repairReceiptBase,
+    candidate:{ commit:"reclaimed-commit", tree:"repair-tree",
+      baseCommit:"approved-base", evidenceTask:"vtd014" } };
+  const reclaimedCheckpointReceiptPath = await writeRunnerReceipt("repair-checkpoint-reclaimed", {
+    ...reclaimedReceiptBase, runId:reclaimedRunId,
+    plan:{ mode:"exact", requestedPackIds:[...timeoutRepairPackIds],
+      selectedPackIds:[...timeoutRepairPackIds] }, tasks:completeTasks,
+  });
+  const reclaimedPackageReceiptPath = await writeRunnerReceipt("package-reclaimed", {
+    ...reclaimedReceiptBase, startedAt:"2026-08-09T00:00:03.000Z",
+    plan:{ mode:"package", checkpointRunId:reclaimedRunId },
+    tasks:{ "package:extension":{ identity:{ key:"package:extension", stage:"package", packId:null,
+      executable:"node", args:["scripts/package.mjs"], target:"build/package/my-chrome-utilities.zip",
+      environment:null, requiredCapabilities:[] }, status:"passed", provenance:"fresh", durationMs:1,
+    output:"build/package/my-chrome-utilities.zip\n" } },
+  });
+  const incidentArchiveRoot = path.join(incidentFixtureRoot, "incidents");
+  await Promise.all(["checkpoint-receipt", "package-receipt", "package-zip"].map((suffix) =>
+    writeFile(path.join(incidentArchiveRoot, `${first.id}.${suffix}`), `partial-${suffix}`)));
+  const resolved = await store.resolve(first.id, {
+    checkpointReceiptPath:reclaimedCheckpointReceiptPath,
+    packageReceiptPath:reclaimedPackageReceiptPath,
+  });
   assert.equal(resolved.state, "resolved");
+  assert.equal(resolved.repairCheckpoint.reclaimCount, 1,
+    "a reclaimed checkpoint atomically replaces incomplete archives from its failed predecessor");
   const repairCommitBlocking = await store.blocking({ commit:"repair-commit" });
   assert.equal(repairCommitBlocking.length, 10,
     "other classified flakes remain blocking while the repaired incident is resolved");
   const evidence = timeoutResolutionEvidence(resolved);
   assert.equal(evidence.resolutionDigest, resolved.resolution.digest);
-  const verifiedResolutions = await store.resolutions({ commit:"repair-commit" });
+  const verifiedResolutions = await store.resolutions({ commit:"reclaimed-commit" });
   assert.equal(verifiedResolutions[0].packageDigest,
     resolved.resolution.package.digest,
   "Git-note resolution loading recomputes archived checkpoint and package links");
@@ -1763,7 +1809,7 @@ console.log("repairTmp=" + process.env.TMPDIR);
   const archiveBackupPath = path.join(incidentFixtureRoot, `${resolved.id}.package-zip.backup`);
   await rename(archivePath, archiveBackupPath);
   await symlink(archiveBackupPath, archivePath);
-  await captureStoreRejection("archiveReadSymlink", store.resolutions({ commit:"repair-commit" }),
+  await captureStoreRejection("archiveReadSymlink", store.resolutions({ commit:"reclaimed-commit" }),
     /symlink|canonical regular file/u);
   await rm(archivePath);
   await rename(archiveBackupPath, archivePath);

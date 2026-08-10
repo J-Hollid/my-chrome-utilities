@@ -218,7 +218,23 @@ export async function atomicReplace(target, value) {
   }
 }
 
-export async function archiveBytes(target, bytes) {
+async function replaceArchiveBytes(target, bytes) {
+  const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
+  let handle;
+  try {
+    handle = await open(temporary, "wx", 0o600);
+    await handle.writeFile(bytes);
+    await handle.sync();
+    await handle.close();
+    handle = undefined;
+    await rename(temporary, target);
+  } finally {
+    if (handle) await handle.close();
+    await rm(temporary, { force:true });
+  }
+}
+
+export async function archiveBytes(target, bytes, { replaceExisting = false } = {}) {
   let handle;
   try {
     handle = await open(target, "wx", 0o600);
@@ -227,8 +243,11 @@ export async function archiveBytes(target, bytes) {
     await handle.close();
     handle = undefined;
   } catch (error) {
-    if (error.code !== "EEXIST" || timeoutIncidentDigest(await safeStoreFile(target)) !==
-        timeoutIncidentDigest(bytes)) throw error;
+    if (error.code !== "EEXIST") throw error;
+    const existingDigest = timeoutIncidentDigest(await safeStoreFile(target));
+    if (existingDigest === timeoutIncidentDigest(bytes)) return;
+    if (!replaceExisting) throw error;
+    await replaceArchiveBytes(target, bytes);
   } finally {
     if (handle) await handle.close();
   }

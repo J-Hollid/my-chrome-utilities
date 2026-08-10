@@ -176,19 +176,31 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
         document:checkpointDocument, incident:incidentBeforeResolution, root,
       });
       validatePackageReceipt(packageDocument, checkpointDocument, incidentBeforeResolution);
+      if (incidentBeforeResolution.state !== "unresolved" ||
+          incidentBeforeResolution.repair?.status !== "eligible") {
+        throw new Error(`Reliability incident ${id} has no eligible repair`);
+      }
+      const checkpoint = checkpointDocument.receipt;
+      if (incidentBeforeResolution.repairCheckpoint?.status !== "claimed" ||
+          incidentBeforeResolution.repairCheckpoint.runId !== checkpoint.runId ||
+          canonicalCheckpoint.receipt.runId !== checkpoint.runId) {
+        throw new Error(`Reliability incident ${id} resolution requires one canonical all-20 checkpoint and package`);
+      }
       const packageBytes = await readFile(resolvedPackagePath);
       const store = await directory();
       const archive = archiveNames(id);
+      const replaceExisting = Number(incidentBeforeResolution.repairCheckpoint.reclaimCount ?? 0) > 0;
       await Promise.all([
-        archiveBytes(path.join(store, archive.checkpointReceipt), checkpointDocument.bytes),
-        archiveBytes(path.join(store, archive.packageReceipt), packageDocument.bytes),
-        archiveBytes(path.join(store, archive.packageZip), packageBytes),
+        archiveBytes(path.join(store, archive.checkpointReceipt), checkpointDocument.bytes,
+          { replaceExisting }),
+        archiveBytes(path.join(store, archive.packageReceipt), packageDocument.bytes,
+          { replaceExisting }),
+        archiveBytes(path.join(store, archive.packageZip), packageBytes, { replaceExisting }),
       ]);
       return update(id, (incident) => {
         if (incident.state !== "unresolved" || incident.repair?.status !== "eligible") {
           throw new Error(`Reliability incident ${id} has no eligible repair`);
         }
-        const checkpoint = checkpointDocument.receipt;
         if (incident.repairCheckpoint?.status !== "claimed" ||
             incident.repairCheckpoint.runId !== checkpoint.runId ||
             canonicalCheckpoint.receipt.runId !== checkpoint.runId) {
