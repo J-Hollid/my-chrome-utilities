@@ -65,8 +65,9 @@ here.
   `95c79a42d69078c3bca7018e528f3559a1a49668`.
 - VTD-006 completed the normal coder, refactorer, and architect chain and merged at
   `51ef49a2f9e3b39fb564ddde1869c9b8b2c84a8d`.
-- VTD-014 has a bounded candidate specification awaiting user approval. VTD-008
-  and VTD-010 through VTD-012 remain queued and inactive.
+- VTD-014 completed the normal coder, refactorer, and architect chain and merged at
+  `4e18da3e601dde88abe0b85071ba7319f3b81d80`. VTD-008 and VTD-010 through
+  VTD-012 remain queued and inactive.
 
 ## Executive assessment
 
@@ -997,10 +998,11 @@ maintenance no longer requires editing several monolithic infrastructure files.
 
 ## Handover summary
 
-Proceed with the bounded VTD-014 candidate after explicit user approval. VTD-001
-through VTD-007, VTD-009, and VTD-013 are delivered, including corrected scheduling,
-canonical timing evidence, representative budgets, narrower ownership, shared
-readiness, and the modular side-panel browser program.
+VTD-001 through VTD-007, VTD-009, VTD-013, and VTD-014 are delivered, including
+corrected scheduling, canonical timing evidence, representative budgets, narrower
+ownership, shared readiness, the modular side-panel browser program, and the
+reliability-repair gate. VTD-010 is the next recommended package; it remains inactive
+until the specifier writes a bounded contract and obtains explicit user approval.
 
 After measurement truth, the fastest direct development-time wins are precise
 impact boundaries and layered editor target partitioning. Preserve terminal
@@ -1011,12 +1013,7 @@ target-specific initialization, not 46 independent Chrome launches.
 The Flow editor is no longer the leading general bottleneck for a simple UI change:
 its representative path is about 27 seconds and remains under the 35-second
 guardrail, and its isolated examples regression was stabilized by VTD-013. The
-shared one-megabyte side-panel runtime was modularized by VTD-006. VTD-014 is next
-because current exact-checkpoint retry behavior can still hide timeouts, hit-test
-races, settling failures, and other unreliable tests instead of forcing their causes
-to be repaired. The largest remaining product-code debt is the `src/side-panel.ts`
-composition root.
-
-The VTD-014 specification is not an implementation handoff. The specifier must
-obtain user approval before committing it and sending the normal SwarmForge coder
-handoff.
+shared one-megabyte side-panel runtime was modularized by VTD-006. VTD-014 now stops
+exact-checkpoint retries from hiding timeouts, hit-test races, settling failures, and
+other unreliable tests without a causal repair. The largest remaining product-code
+debt is the `src/side-panel.ts` composition root.

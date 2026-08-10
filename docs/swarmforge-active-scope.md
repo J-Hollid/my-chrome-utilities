@@ -3760,3 +3760,9 @@ all 20 runnable packs in canonical order followed by `node scripts/package.mjs`.
 The accepted result must contain no unresolved reliability incident and no reused task.
 This broad checkpoint verifies the shared process change; it does not make later
 pack-local changes global.
+
+VTD-014 completed the normal coder, refactorer, and architect chain and was merged at
+`4e18da3e601dde88abe0b85071ba7319f3b81d80`. Its terminal checkpoint is recorded
+against correction base `b1ed18574c1fbe403c633f917a02f5cce632c945` with all 20
+packs, the package task, 835 fresh passing task results, and no blocking reliability
+incident.
