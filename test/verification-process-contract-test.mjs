@@ -2164,27 +2164,29 @@ console.log("repairTmp=" + process.env.TMPDIR);
       proposal.repair.focusedReceipt.provenance === "fresh" &&
       proposal.repair.focusedReceipt.commit === "repair-commit",
   };
+  const vtd014AcceptedBaseCommit = "87b29bf11423d54849c04b3108bf45018c71c191";
   const changedFiles = await new Promise((resolve, reject) => execFile("git",
-    ["diff", "--name-only", "master"], { cwd:path.resolve(new URL("../", import.meta.url).pathname) },
+    ["diff", "--name-only", vtd014AcceptedBaseCommit],
+    { cwd:path.resolve(new URL("../", import.meta.url).pathname) },
     (error, stdout, stderr) => error ? reject(new Error(stderr.trim() || error.message))
       : resolve(stdout.trim().split(/\r?\n/u).filter(Boolean))));
-  const masterPacks = await verificationPacksAtCommit("master");
+  const acceptedBasePacks = await verificationPacksAtCommit(vtd014AcceptedBaseCommit);
   const allPackIds = [...timeoutRepairPackIds];
   const currentConservationPlan = planVerification(timeoutPackRegistry,
     { packIds:allPackIds, includeProperties:true });
-  const masterConservationPlan = planVerification(masterPacks,
+  const acceptedBaseConservationPlan = planVerification(acceptedBasePacks,
     { packIds:allPackIds, includeProperties:true });
   const packContract = (packs) => packs.filter(({ id }) => allPackIds.includes(id))
     .map(({ id, dependencies, browserObservations,
       checkpointCommands }) => ({ id, dependencies, browserObservations, checkpointCommands }));
   const currentCalibration = JSON.parse(await readFile(
     new URL("../verification/performance-calibration.json", import.meta.url), "utf8"));
-  const masterCalibration = JSON.parse(await new Promise((resolve, reject) => execFile("git",
-    ["show", "master:verification/performance-calibration.json"],
+  const acceptedBaseCalibration = JSON.parse(await new Promise((resolve, reject) => execFile("git",
+    ["show", `${vtd014AcceptedBaseCommit}:verification/performance-calibration.json`],
     { cwd:path.resolve(new URL("../", import.meta.url).pathname) },
     (error, stdout, stderr) => error ? reject(new Error(stderr.trim() || error.message)) : resolve(stdout))));
   delete currentCalibration.conservation.verificationTopologyDigest;
-  delete masterCalibration.conservation.verificationTopologyDigest;
+  delete acceptedBaseCalibration.conservation.verificationTopologyDigest;
   const indivisibleTask = { key:"unit:indivisible", stage:"unit", packId:"shell",
     executable:"node", args:["test/indivisible-test.mjs"] };
   const observedFailureBoundaries = [
@@ -2281,11 +2283,12 @@ console.log("repairTmp=" + process.env.TMPDIR);
     conservation:{ changedFiles, productChangedFiles:changedFiles.filter((file) => file.startsWith("src/")),
       featureChangedFiles:changedFiles.filter((file) => file.startsWith("features/")),
       currentTaskDigest:verificationDigest(currentConservationPlan.tasks.map(verificationTaskIdentity)),
-      masterTaskDigest:verificationDigest(masterConservationPlan.tasks.map(expectedVtd014TaskIdentity)),
+      acceptedBaseTaskDigest:verificationDigest(
+        acceptedBaseConservationPlan.tasks.map(expectedVtd014TaskIdentity)),
       currentPackContractDigest:verificationDigest(packContract(timeoutPackRegistry)),
-      masterPackContractDigest:verificationDigest(packContract(masterPacks)),
+      acceptedBasePackContractDigest:verificationDigest(packContract(acceptedBasePacks)),
       currentCalibrationDigest:verificationDigest(currentCalibration),
-      masterCalibrationDigest:verificationDigest(masterCalibration),
+      acceptedBaseCalibrationDigest:verificationDigest(acceptedBaseCalibration),
       diagnosticRetryOnPassingRun:false,
       allPackCount:timeoutRepairPackIds.length,
       packageTask:timeoutRepairPackageTaskIdentity.args.join(" ") },
