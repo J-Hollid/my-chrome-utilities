@@ -847,6 +847,21 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
       repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
   }
+  if (causalCategory === "other:accepted-base verification evidence conservation") {
+    const fixture = {
+      id:"accepted-base-verification-evidence-conservation-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ standaloneCheckpointStep:true, acceptedEventLibraryTaskCount:29 },
+      expectedPreRepairFailure:{ evidenceLoaded:false, assertedEventLibraryTaskCount:30 },
+      expectedRepairResult:{ evidenceLoaded:true, assertedEventLibraryTaskCount:29 },
+    };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:structuredClone(fixture.expectedPreRepairFailure) },
+      repairResult:{ status:"passed", fixtureDigest,
+        observed:structuredClone(fixture.expectedRepairResult) } };
+  }
   if (causalCategory === "other:workspace-scoped verification temporary storage") {
     const fixture = {
       id:"workspace-scoped-verification-temporary-storage-v1", causalCategory,
@@ -2922,6 +2937,17 @@ const modularVtd014HandlerSource = await readFile(new URL(
 assert.match(modularVtd014HandlerSource,
   /scoped-command-approval\|bwrap-shared-loopback[\s\S]*workspace-sandbox\|bwrap-unshared-network/u,
   "acceptance evidence matches the tested mixed-plan capability isolation boundaries");
+const modularVtd006HandlerSource = await readFile(new URL(
+  "../acceptance/src/acceptance/verification_support/modular_architecture_vtd006_handlers.clj",
+  import.meta.url), "utf8");
+assert.match(modularVtd006HandlerSource,
+  /the one-time delivery checkpoint[\s\S]*\(let \[prepared \(prepared world\)\][\s\S]*:packInventory/u,
+  "the standalone VTD-006 checkpoint step loads its production evidence before asserting it");
+const modularEventLibraryHandlerSource = await readFile(new URL(
+  "../acceptance/src/acceptance/verification_support/modular_architecture_event_library_handlers.clj",
+  import.meta.url), "utf8");
+assert.match(modularEventLibraryHandlerSource, /= \[9 1 8 3 1 1 29\]/u,
+  "Event Library acceptance conserves the exact 29-task accepted-base plan");
 const focusedPropertyPlan = selectFocusedVerificationTasks(planVerification(packs, {
   packIds:["shell"], includeProperties:true,
 }), ["property:test/workspace-tabs-property-test.mjs"]);
