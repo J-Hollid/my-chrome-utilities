@@ -16,7 +16,8 @@ Feature: Data layer directional Flow specification graph runtime
     And closed Outline and Details surfaces are absent from layout
     And project navigation matches saved UI state without displacing the canvas below the viewport
     When actual controls select Cart, set a non-default camera transform, and enter Focus Canvas
-    Then measured project chrome disappears while installed Add, camera, and Exit Focus controls remain operable
+    Then measured project chrome disappears while installed Add, camera, and Exit Focus controls remain immediately visible and operable
+    And every required control hit rectangle is contained by the browser viewport and toolbar before any horizontal toolbar scrolling
     And the installed canvas bounding rectangle equals <width> by <height> at viewport origin while Focus Canvas controls overlay it without consuming layout space
     And production selection ID and camera transform remain unchanged
     When actual controls exit Focus Canvas

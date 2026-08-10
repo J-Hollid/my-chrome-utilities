@@ -4194,3 +4194,42 @@ or promotion failure retries only that boundary while exact task results remain
 immutable. Success requires the package result and no blocking causal incident applicable
 to the final lineage. It does not require another blanket all-20 execution solely because
 a verifier-record or input-equivalent verifier repair changed the commit.
+
+### Approved causal Focus Canvas control-containment repair
+
+The user approved this product repair on 2026-08-10 for the normal coder chain. It
+clarifies existing directional Flow graph scenario 001 rather than adding a new Flow
+capability or reopening the broader R02 workspace design.
+
+The initial bounded VTD-014 all-20 checkpoint on candidate
+`543d19a1636b6d2c3274e74151ae28bfcc461452` created product-runtime incident
+`fbc7d757-1ad9-4304-a7f9-d387189a77cc`. At the 360px browser viewport,
+`FLOW_WORKSPACE_CONTROLS_TARGET` measured the Focus Canvas control at x `424.4375`
+with width `88.765625` while its toolbar ended at x `360`. The control was therefore
+outside both the viewport and toolbar hit-test boundary. The failed target was fresh;
+the checkpoint had already completed 274 of its 275 task groups.
+
+The approved Flow behavior already requires the 360 by 800 example to hide project
+chrome, keep Add, camera controls, and Exit Focus operable, and place those controls over
+a full-viewport canvas. The clarification makes operable deterministic: every required
+control is immediately visible, and its hit target is fully contained by the browser
+viewport and Focus Canvas toolbar before any horizontal toolbar scrolling. The toolbar
+may wrap or compact its presentation, but no required control may begin outside the
+viewport, require discovery by horizontal scrolling, or reserve canvas width or height.
+
+The causal product repair may change `specification-builder-brand.css` and, only when
+needed for the same containment behavior, `src/flow-graph/workspace-ui.ts`, their built
+outputs, focused Flow layout evidence, and this specification record. It may not change
+the Flow graph model, selection, camera transform, Add choices, command meanings,
+keyboard labels, project navigation memory, durable bytes, Undo, viewport dimensions,
+or another product surface.
+
+The deterministic regression exercises the incident's 360px Focus Canvas geometry and
+proves the required control centers and hit rectangles were outside the pre-repair
+toolbar but are contained after repair. It must retain the full-viewport canvas,
+overlay-only toolbar, current selection and camera transform, and invoking-focus return.
+The smallest focused product proof is `FLOW_WORKSPACE_CONTROLS_TARGET` plus directly
+affected static layout evidence. The bounded VTD-014 policy decides every additional
+task from the complete input-influence closure: changed or uncertain inputs rerun,
+proven input-equivalent passes remain attributable to their original receipts, and the
+package task runs freshly on the final tree. No geometry assertion may be weakened.
