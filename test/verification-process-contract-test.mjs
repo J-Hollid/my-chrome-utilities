@@ -845,6 +845,10 @@ try {
     "a replacement real CLI did not recover the stale checkpoint owner");
   await waitForCli(staleCli, ({ stderr }) => stderr.includes("[verify:start] npm run build"),
     "the stale-owner replacement did not proceed after recovery");
+  await waitForCli(staleCli, async() => {
+    try { return Boolean((await readFile(buildOwnerFile, "utf8")).trim()); }
+    catch (error) { if (error?.code === "ENOENT") return false; throw error; }
+  }, "the stale-owner replacement build did not publish its cleanup identity");
   assert.ok(staleCli.stderr.indexOf("[verify:checkpoint-continue]") <
     staleCli.stderr.indexOf("[verify:start] npm run build"),
   "stale-owner recovery must complete outside and before task timing");

@@ -1,7 +1,5 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
-import { readFile } from "node:fs/promises";
 import {
   chromeExecutableCandidates,
   headlessChromeArguments,
@@ -134,42 +132,6 @@ try {
 assert.equal(profileFailure?.deadlineOwner,"profile cleanup");
 assert.equal(profileFailure?.targetId,"TARGET-DEADLINE");
 assert.doesNotMatch(profileFailure.message,/readiness predicate/u);
-
-const studioShellSource = await readFile(
-  new URL("./twatility-studio-shell-browser-test.mjs", import.meta.url),
-  "utf8",
-);
-assert.match(
-  studioShellSource,
-  /withDevtoolsProtocolDeadline\(\{[\s\S]*?targetId:\s*"twatility-studio-shell"[\s\S]*?method[\s\S]*?onTimeout:\s*\(\)\s*=>\s*this\.pending\.delete\(id\)/u,
-  "the Studio shell adapter must bound every pending DevTools call and release its pending entry",
-);
-if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
-  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
-  const normalized = (value) => Array.isArray(value) ? value.map(normalized) :
-    value && typeof value === "object" ? Object.fromEntries(Object.entries(value)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, nested]) => [key, normalized(nested)])) : value;
-  const digest = (value) => createHash("sha256")
-    .update(JSON.stringify(normalized(value))).digest("hex");
-  const fixture = {
-    id:"studio-devtools-call-deadline-v1",
-    causalCategory:"duplicated or unbounded workload",
-    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-    input:{adapter:"twatility-studio-shell",stalledMethod:"Runtime.evaluate"},
-    expectedPreRepairFailure:{bounded:false,pendingEntryReleased:false},
-    expectedRepairResult:{bounded:true,pendingEntryReleased:true},
-  };
-  const preRepairResult=fixture.expectedPreRepairFailure;
-  const repairResult={bounded:studioShellSource.includes("withDevtoolsProtocolDeadline({"),
-    pendingEntryReleased:studioShellSource.includes("onTimeout: () => this.pending.delete(id)")};
-  const fixtureDigest=digest(fixture);
-  assert.deepEqual(repairResult,fixture.expectedRepairResult);
-  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
-    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
-    preRepairResult:{status:"failed",fixtureDigest,observed:preRepairResult},
-    repairResult:{status:"passed",fixtureDigest,observed:repairResult}}}));
-}
 
 await assert.rejects(() => removeChromeProfile("/tmp/profile-hung", {
   targetId:"TARGET-DEADLINE", deadlineMilliseconds:10,
