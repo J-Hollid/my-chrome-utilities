@@ -80,6 +80,20 @@ export async function auditVtd014Closure({
   for (const incident of incidents) {
     const declaration = manifest.records[incident.id];
     const ancestor = await isAncestor(incident.failure.lineage.commit, candidateCommit, root);
+    if (incident.closureAudit) {
+      const audit = incident.closureAudit;
+      const declaredKind = declaration.disposition;
+      const compatibleRetirement = declaredKind === "lineage-retired" &&
+        audit.kind === declaredKind && audit.reason === declaration.reason &&
+        await isAncestor(audit.selectedLineage.commit, candidateCommit, root);
+      const compatibleCarriedAudit = declaredKind !== "lineage-retired" &&
+        audit.kind === declaredKind && audit.failureDomain === declaration.domain;
+      if (!compatibleRetirement && !compatibleCarriedAudit) {
+        throw new Error(`Incident ${incident.id} closure audit differs from the frozen manifest`);
+      }
+      results.push(incident);
+      continue;
+    }
     let disposition;
     if (declaration.disposition === "lineage-retired") {
       if (ancestor) throw new Error(`Incident ${incident.id} is not off the selected assessment lineage`);
@@ -125,14 +139,7 @@ export async function auditVtd014Closure({
         throw new Error(`Incident ${incident.id} has an unsupported audit disposition`);
       }
     }
-    if (incident.closureAudit) {
-      if (!same(incident.closureAudit, disposition)) {
-        throw new Error(`Incident ${incident.id} closure audit differs from the frozen manifest`);
-      }
-      results.push(incident);
-    } else {
-      results.push(await store.recordClosureDisposition(incident.id, disposition));
-    }
+    results.push(await store.recordClosureDisposition(incident.id, disposition));
   }
   return { contractRevision:boundedClosureContractRevision, selectedLineage,
     audited:results.length,
