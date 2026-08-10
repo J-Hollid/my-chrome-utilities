@@ -3788,10 +3788,12 @@ receipts still show approximately 3.6–3.7 seconds for the standalone smoke pro
 VTD-010 moves only the standalone smoke leaves into a new installed logical target,
 `EVENT_LIBRARY_RENDERED_SMOKE_TARGET`. That target and the unchanged
 `LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER` target execute in one reusable
-`event-library-side-panel` process. The former standalone adapter is no longer a
-registered browser task. This removes one Chrome startup and shutdown without
-merging assertion identities or making the smoke behavior an incidental side effect
-of direct-push verification.
+`event-library-side-panel` process. The former standalone path remains registered
+only as a thin `compatibility` launcher: direct invocation delegates to the installed
+smoke target, while exact and terminal plans never schedule the compatibility path.
+It owns no separate assertion leaf. This removes one Chrome startup and shutdown
+without merging assertion identities or making the smoke behavior an incidental
+side effect of direct-push verification.
 
 ### Installed target and isolation contract
 
@@ -3836,7 +3838,7 @@ target.
 | Property | `test/data-layer-selected-target-push-property-test.mjs` | Unchanged |
 | Feature | Eight registered Event Library feature files | The same eight files and scenarios |
 | Handler | Three isolated Event Library handlers | The same handlers and isolation |
-| Rendered smoke | One standalone `test/browser-packs/event-library.mjs` task | The same leaves under `EVENT_LIBRARY_RENDERED_SMOKE_TARGET` in the installed process |
+| Rendered smoke | One standalone `test/browser-packs/event-library.mjs` task | The same leaves under `EVENT_LIBRARY_RENDERED_SMOKE_TARGET` in the installed process; the old path is a non-scheduled compatibility launcher only |
 | Direct push | One installed `LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER` task | The same target and leaves in the two-target batch |
 | Exact plan | 30 tasks, including two browser processes | 29 tasks, including one two-target browser process |
 
@@ -3846,6 +3848,12 @@ budget, calibration, worker limit, shard, or another pack's plan changes. The cu
 14-second Event Library exact-pack and representative-change limits remain guardrails;
 the approximately 3.6–3.7 second avoided launch is an expected effect, not authority
 to recalibrate or loosen a limit.
+
+The compatibility launcher retains the adapter's existing Event Library ownership,
+so modifications to it and the installed replacement remain verification-only Event
+Library impact under the existing historical changed-path rules. The candidate does
+not delete that owned path, change shared planner logic, weaken historical deletion
+handling, or expand through Event Library's product dependants.
 
 The task-scoped delivery checkpoint is the exact `event-library` pack with properties,
 followed by `node scripts/package.mjs`. It uses the VTD-014 incident-aware fresh

@@ -1793,7 +1793,9 @@ Feature: Modular verification packs
     When the VTD-010 Event Library plan is created
     Then EVENT_LIBRARY_RENDERED_SMOKE_TARGET and LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER are the two logical targets in event-library-side-panel
     And the exact plan runs one installed browser-observation process for both targets
-    And test/browser-packs/event-library.mjs is no longer a registered adapter or executable task
+    And test/browser-packs/event-library.mjs remains registered only as a thin compatibility launcher that delegates to EVENT_LIBRARY_RENDERED_SMOKE_TARGET
+    And the compatibility launcher owns no separate assertion leaf and is excluded from exact and terminal executable tasks
+    And historical changed-path planning retains its Event Library verification ownership without dependant expansion
     And the exact Event Library plan contains 29 tasks instead of 30
 
   # Modular verification packs 121
@@ -1860,4 +1862,5 @@ Feature: Modular verification packs
     And the rendered smoke leaves move to one installed logical target while the direct-push leaves remain unchanged
     And no src product file, product behavior, saved value, accessibility result, feature owner, handler owner, pack dependency, target budget, calibration, worker limit, or shard changes
     And no production impact boundary or other pack plan changes
+    And no shared verification planner or historical ownership rule changes
     And the delivery checkpoint runs the exact Event Library pack with properties followed by node scripts/package.mjs
