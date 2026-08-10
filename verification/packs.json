@@ -1216,20 +1216,31 @@
       "acceptance/src/acceptance/steps/library_direct_template_push.clj"
     ],
     "browserAdapters": [
-      "test/browser-packs/event-library.mjs",
       "test/browser-packs/side-panel-event-library.mjs"
     ],
     "browserAdapterModes": [
-      {
-        "path": "test/browser-packs/event-library.mjs",
-        "mode": "shared"
-      },
       {
         "path": "test/browser-packs/side-panel-event-library.mjs",
         "mode": "integration"
       }
     ],
     "browserObservations": [
+      {
+        "id": "EVENT_LIBRARY_RENDERED_SMOKE_TARGET",
+        "path": "test/browser-packs/side-panel-event-library.mjs",
+        "environment": {
+          "EVENT_LIBRARY_RENDERED_SMOKE_TARGET": "1"
+        },
+        "observationKeys": [
+          "eventLibraryRenderedSmoke"
+        ],
+        "features": [
+          "features/data-layer-event-template-library.feature",
+          "features/data-layer-event-library-import-export.feature",
+          "features/data-layer-template-editor-progressive-disclosure.feature"
+        ],
+        "sessionBatch": "event-library-side-panel"
+      },
       {
         "id": "LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER",
         "path": "test/browser-packs/side-panel-event-library.mjs",
@@ -1241,6 +1252,44 @@
         ],
         "features": [
           "features/data-layer-library-direct-template-push-runtime.feature"
+        ],
+        "sessionBatch": "event-library-side-panel"
+      }
+    ],
+    "browserEvidencePartitions": [
+      {
+        "path": "test/browser-packs/side-panel-event-library.mjs",
+        "sessionBatch": "event-library-side-panel",
+        "originalLeaves": [
+          "eventLibraryRenderedSmoke.isolation",
+          "eventLibraryRenderedSmoke.editorVisible",
+          "eventLibraryRenderedSmoke.templateNameFocused",
+          "eventLibraryRenderedSmoke.persistedVersionTwo",
+          "eventLibraryRenderedSmoke.singleRevisionHistoryEntry",
+          "eventLibraryRenderedSmoke.oneExportedTemplate",
+          "eventLibraryRenderedSmoke.positiveTransferBytes",
+          "eventLibraryRenderedSmoke.transferFeedback",
+          "eventLibraryRenderedSmoke.containedAt320",
+          "eventLibraryRenderedSmoke.visibleControlsNamed",
+          "eventLibraryRenderedSmoke.referencesResolve"
+        ],
+        "targets": [
+          {
+            "id": "EVENT_LIBRARY_RENDERED_SMOKE_TARGET",
+            "leaves": [
+              "eventLibraryRenderedSmoke.isolation",
+              "eventLibraryRenderedSmoke.editorVisible",
+              "eventLibraryRenderedSmoke.templateNameFocused",
+              "eventLibraryRenderedSmoke.persistedVersionTwo",
+              "eventLibraryRenderedSmoke.singleRevisionHistoryEntry",
+              "eventLibraryRenderedSmoke.oneExportedTemplate",
+              "eventLibraryRenderedSmoke.positiveTransferBytes",
+              "eventLibraryRenderedSmoke.transferFeedback",
+              "eventLibraryRenderedSmoke.containedAt320",
+              "eventLibraryRenderedSmoke.visibleControlsNamed",
+              "eventLibraryRenderedSmoke.referencesResolve"
+            ]
+          }
         ]
       }
     ]
