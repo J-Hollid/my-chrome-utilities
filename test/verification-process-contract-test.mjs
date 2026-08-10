@@ -845,6 +845,21 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
       repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
   }
+  if (causalCategory === "other:cross-role prompt ownership correction") {
+    const fixture = {
+      id:"cross-role-prompt-ownership-correction-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ explicitUserDirection:false, affectedRolePromptCount:4, sharedWorkflowArticle:true },
+      expectedPreRepairFailure:{ crossRolePromptRequirements:true, constitutionCompliant:false },
+      expectedRepairResult:{ crossRolePromptRequirements:false, constitutionCompliant:true },
+    };
+    const preRepairObservation = { crossRolePromptRequirements:true, constitutionCompliant:false };
+    const repairObservation = { crossRolePromptRequirements:false, constitutionCompliant:true };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
+  }
   if (causalCategory === "other:workspace temporary repository detection") {
     const fixture = {
       id:"workspace-temporary-repository-detection-v1", causalCategory,
@@ -2836,13 +2851,6 @@ assert.equal(repositoryCommonStore.includes(`${path.sep}.git${path.sep}`), false
 const repositoryCommonAttempts = await defaultCheckpointAttemptDirectory(process.cwd());
 assert.equal(path.dirname(repositoryCommonAttempts), path.dirname(repositoryCommonStore),
   "incidents and checkpoint attempts share one writable repository-common runtime identity");
-for (const role of ["specifier", "coder", "refactorer", "architect"]) {
-  const prompt = await readFile(new URL(`../swarmforge/roles/${role}.prompt`, import.meta.url), "utf8");
-  assert.match(prompt, /--focused-task/u,
-    `${role} uses the incident-aware focused launcher instead of raw registered commands`);
-  assert.match(prompt, /first tool invocation/u,
-    `${role} arranges declared capability authority before starting the runner`);
-}
 for (const modulePath of [
   "../scripts/run-focused-acceptance.mjs",
   "../scripts/verification-reliability-persistence.mjs",
