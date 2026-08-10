@@ -1813,6 +1813,17 @@ console.log("repairTmp=" + process.env.TMPDIR);
     regressionReceiptPath:focusedReceiptPath, focusedReceiptPath,
   });
   assert.equal(proposal.repair.status, "eligible");
+  const renewedProposal = await store.proposeRepair(first.id, {
+    causalCategory, causalExplanation, regressionKey,
+    regressionReceiptPath:focusedReceiptPath, focusedReceiptPath,
+  });
+  assert.equal(renewedProposal.repair.status, "eligible",
+    "an unresolved eligible incident can renew its proposal with fresh candidate-bound evidence");
+  assert.equal(renewedProposal.transitions.filter(({ type }) =>
+    type === "repair-proposed").length, 1);
+  assert.equal(renewedProposal.transitions.filter(({ type }) =>
+    type === "repair-renewed").length, 1,
+  "repair renewal remains an explicit durable transition");
   const checkpointPacks = ["branding_polish", "capture", "command-palette", "defects",
     "durable_project_repository", "event-library", "flow_export", "flow_graph", "guided_test_cases",
     "hotkeys", "layered_schema", "live_flow_testing", "project_assurance_severity",
