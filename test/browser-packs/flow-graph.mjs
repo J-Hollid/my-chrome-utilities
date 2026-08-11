@@ -178,6 +178,7 @@ try {
     const reloadSequence=[];
     const reloadIdentity=()=>canonicalFlowReloadIdentity({targetId,pageTargetId:"single-specification-builder-page",origin,storageIdentity:`${origin}:my-chrome-utilities.project-repository`,projectId:seeded.projectId,flowId:seeded.flowId,reloadSequence});
     const reloadFlowPage=async(boundary)=>{
+        await observeBrowserReadiness({targetId,phase:"persistence",predicateDescription:`Flow persistence settled before ${boundary}`,timeoutMs:5000,pollIntervalMs:20,maximumSnapshotCharacters:300,observe:async()=>evaluate("(()=>{const status=document.documentElement.dataset.specificationStudioPersistence;return{ready:status==='settled',status};})()"),ready:({ready})=>ready,snapshot:(state)=>state});
         if(targetId!=="FLOW_WORKSPACE_CONTROLS_TARGET"){
             await socket.call("Page.reload",{ignoreCache:true});
             return;
@@ -379,10 +380,10 @@ try {
         runtime.runtime025 = { ...pageExampleEvidence, invalid: invalidPageExample, blocked: blockedPageExample };
     }
     if (browserShard === "author") {
-        await socket.call("Page.reload", { ignoreCache: true });
+        await reloadFlowPage("authoring:start");
         await ensureFlowWorkspace("Flow toolbar mounted for authoring");
         Object.assign(runtime, await evaluate(flowGraphCorrectiveWorkflow(seeded, { targetId })));
-        await socket.call("Page.reload", { ignoreCache: true });
+        await reloadFlowPage("authoring:evidence");
         await waitForBrowser("navigation", "interactive Flow canvas mounted after authoring", "[aria-label=\"Interactive directional Flow canvas\"]");
         const reloadEvidence = await evaluate(flowGraphReloadEvidence(seeded));
         for (const [key, value] of Object.entries(reloadEvidence))
@@ -390,7 +391,7 @@ try {
     }
     if ((browserShard === "core" && targetId === "FLOW_GRAPH_FALLBACK_TARGET") || browserShard === "author") {
         const repeatedInstances = await evaluate(flowGraphRepeatedInstanceSeed(seeded));
-        await socket.call("Page.reload", { ignoreCache: true });
+        await reloadFlowPage("runtime024:instances");
         await waitForBrowser("navigation", "project tree mounted for repeated instances", "#project-tree");
         runtime.runtime024 = { ...runtime.runtime024, ...await evaluate(flowGraphRepeatedInstanceEvidence(seeded, repeatedInstances)) };
     }
