@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=4ddd4d07c7360bab93ef07fe47ab5ffed485198df555ecac676653ce416b7bf9
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-08-11T22:13:50.246190390Z","feature_name":"Verification shared artifact parallel execution","feature_path":"features/verification-shared-artifact-parallel-execution.feature","background_hash":"3cdaaaf3126d0ed3c7fec6152d9d4da7f93a71c794c2db1c1edc5ded4a8485a3","implementation_hash":"sha256:30d3791d82d2464e8ce74b388315b3f2729d693bd43a8102a244ff73d70e8da2","scenarios":[{"index":2,"name":"Verification shared artifact parallel execution 003","scenario_hash":"96458492560008142beb62c6880004e39a55c0586c62b47ba9c2aadef9164906","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-08-11T22:13:50.246190390Z"},{"index":0,"name":"Verification shared artifact parallel execution 001","scenario_hash":"21cb0080b02a086eeff80df2768bdac56838616f8ebcb2431950262cc30fae66","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-08-11T22:10:12.504193311Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Verification shared artifact parallel execution
 
   Background:

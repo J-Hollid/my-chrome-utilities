@@ -70,14 +70,24 @@
                         "Read-only artifact access permitted a mutation."))}
    {:pattern #"^parallel scheduling receives a browser task with (.+)$"
     :handler (fn [world example captures]
-               (assoc world :vtd017/isolation-state
-                      (first (values example-values example captures))))}
+               (let [state (first (values example-values example captures))]
+                 (assert! world
+                          (contains? #{"private profile, debugging port, temporary data, evidence path, and cleanup"
+                                       "shared writable state or an unproved dependency"}
+                                     state)
+                          "Concurrent eligibility received an unknown isolation state.")
+                 (assoc world :vtd017/isolation-state state)))}
    {:pattern #"^the scheduler evaluates concurrent eligibility$"
     :handler (fn [world _ _] world)}
-   {:pattern #"^(it assigns an independent browser worker|it keeps the task in one worker or runs it serially)$"
+   {:pattern #"^(<scheduling_result>)$"
     :handler (fn [world example captures]
                (let [result (first (values example-values example captures))
                      private? (str/starts-with? (:vtd017/isolation-state world) "private")]
+                 (assert! world
+                          (contains? #{"it assigns an independent browser worker"
+                                       "it keeps the task in one worker or runs it serially"}
+                                     result)
+                          "Concurrent eligibility produced an unknown scheduling result.")
                  (assert! world
                           (= private? (= result "it assigns an independent browser worker"))
                           "Concurrent eligibility did not preserve writable-state isolation.")))}
@@ -154,3 +164,7 @@
                (assert! world (= #{"task" "base" "commit" "tree" "plan" "artifact" "toolchain"}
                                   (set (get-in world [:vtd017/evidence :final :bindings])))
                         "Final evidence bindings changed."))}])
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-08-12T00:13:57.135156986+02:00", :module-hash "890464730", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "-511802902"} {:id "form/1/defonce", :kind "defonce", :line 6, :end-line 6, :hash "701185655"} {:id "defn-/prepared", :kind "defn-", :line 8, :end-line 16, :hash "1140417774"} {:id "defn-/assert!", :kind "defn-", :line 18, :end-line 20, :hash "-1696981105"} {:id "defn-/values", :kind "defn-", :line 22, :end-line 24, :hash "-170718585"} {:id "defn/handlers", :kind "defn", :line 26, :end-line 166, :hash "1413126420"}]}
+;; clj-mutate-manifest-end
