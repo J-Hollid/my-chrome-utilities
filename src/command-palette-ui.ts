@@ -46,6 +46,12 @@ export function createPaletteController({
   let lastPaletteFocus: HTMLElement | null = null;
   let mounted = false;
 
+  function resetTransientState(): void {
+    visibleCommands = commands;
+    selectedIndex = 0;
+    lastPaletteFocus = null;
+  }
+
   function renderPalette(nextCommands: readonly AppCommand[], selection = 0): void {
     if (!results) return;
 
@@ -159,9 +165,7 @@ export function createPaletteController({
   function mount(): void {
     if (mounted) return;
     mounted = true;
-    visibleCommands = commands;
-    selectedIndex = 0;
-    lastPaletteFocus = null;
+    resetTransientState();
     openButton?.addEventListener("click", open);
     root?.addEventListener("keyup", rootKeyup);
     filter?.addEventListener("input", filterInput);
@@ -181,10 +185,8 @@ export function createPaletteController({
     palette?.removeEventListener("keydown", trapTab);
     if ((palette && !palette.hidden) || lastPaletteFocus) hidePalette();
     else sidePanelContent?.removeAttribute("inert");
-    visibleCommands = commands;
-    selectedIndex = 0;
-    lastPaletteFocus = null;
+    resetTransientState();
   }
 
-  return { mount, render, show:showPalette, hide:hidePalette, dispose };
+  return { mount, render, show: showPalette, hide: hidePalette, dispose };
 }

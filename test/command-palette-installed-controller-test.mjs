@@ -97,6 +97,11 @@ assert.deepEqual([
   palette.count("keydown"),
 ], [1, 1, 1, 1, 1, 1], "mount owns one exact listener set");
 assert.equal(palette.hidden, true, "mount preserves initial dialog visibility");
+filter.value = "two";
+controller.render();
+assert.deepEqual(results.children.map(({ dataset }) => dataset.commandId), ["command.two"],
+  "the public render operation projects the current filter");
+filter.value = "";
 
 const priorFocus = new Element(ownerDocument, "prior-focus");
 priorFocus.focus();
@@ -105,6 +110,9 @@ assert.equal(palette.hidden, false);
 assert.equal(sidePanelContent.hasAttribute("inert"), true);
 assert.equal(ownerDocument.activeElement, filter);
 assert.deepEqual(results.children.map(({ dataset }) => dataset.selected), ["true", "false"]);
+const trappedTab = palette.dispatch("keydown", { key:"Tab" });
+assert.equal(trappedTab.prevented, 1);
+assert.equal(ownerDocument.activeElement, filter, "Tab remains trapped in the palette filter");
 
 filter.value = "two";
 filter.dispatch("input");
@@ -161,9 +169,10 @@ const standaloneRoot = Object.assign(new Element(standaloneDocument, "standalone
 const standalonePage = new Events();
 const standaloneMount = commandPaletteUtility.lifecycle.mount(standaloneRoot, standalonePage);
 assert.equal(standaloneElements["open-palette"].count("click"), 1);
-standaloneMount.unmount();
+standalonePage.dispatch("pagehide");
 assert.equal(standaloneElements["open-palette"].count("click"), 0,
-  "the standalone utility lifecycle returns controller cleanup");
+  "the production page lifecycle disposes the standalone controller");
+standaloneMount.unmount();
 
 const controllerSource = await readFile(
   new URL("../src/command-palette-ui.ts", import.meta.url), "utf8",
@@ -203,18 +212,19 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       : value;
   const digest = (value) => createHash("sha256")
     .update(JSON.stringify(normalized(value))).digest("hex");
-  const expectedPreRepairFailure = { stablePaletteRenderProbe:false };
-  const expectedRepairResult = { stablePaletteRenderProbe:true };
+  const expectedPreRepairFailure = { sourceCompatibleLauncher:false };
+  const expectedRepairResult = { sourceCompatibleLauncher:true };
   const fixture = {
-    id:"command-palette-render-probe-compatibility-v1",
+    id:"command-palette-acceptance-source-compatibility-v1",
     causalCategory:context.causalCategory,
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-    input:{ requiredProbe:"renderPalette(filterCommands" },
+    input:{ requiredProbes:["const openButton = launcher", "function showPalette()"] },
     expectedPreRepairFailure,
     expectedRepairResult,
   };
   const repairResult = {
-    stablePaletteRenderProbe:controllerSource.includes(fixture.input.requiredProbe),
+    sourceCompatibleLauncher:fixture.input.requiredProbes.every((probe) =>
+      controllerSource.includes(probe)),
   };
   assert.deepEqual(repairResult, expectedRepairResult);
   const fixtureDigest = digest(fixture);

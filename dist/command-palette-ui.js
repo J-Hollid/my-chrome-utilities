@@ -6,6 +6,11 @@ export function createPaletteController({ commands, executeCommand, elements, ow
     let selectedIndex = 0;
     let lastPaletteFocus = null;
     let mounted = false;
+    function resetTransientState() {
+        visibleCommands = commands;
+        selectedIndex = 0;
+        lastPaletteFocus = null;
+    }
     function renderPalette(nextCommands, selection = 0) {
         if (!results)
             return;
@@ -111,9 +116,7 @@ export function createPaletteController({ commands, executeCommand, elements, ow
         if (mounted)
             return;
         mounted = true;
-        visibleCommands = commands;
-        selectedIndex = 0;
-        lastPaletteFocus = null;
+        resetTransientState();
         openButton?.addEventListener("click", open);
         root?.addEventListener("keyup", rootKeyup);
         filter?.addEventListener("input", filterInput);
@@ -135,9 +138,7 @@ export function createPaletteController({ commands, executeCommand, elements, ow
             hidePalette();
         else
             sidePanelContent?.removeAttribute("inert");
-        visibleCommands = commands;
-        selectedIndex = 0;
-        lastPaletteFocus = null;
+        resetTransientState();
     }
     return { mount, render, show: showPalette, hide: hidePalette, dispose };
 }

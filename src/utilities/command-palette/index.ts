@@ -40,15 +40,15 @@ function mountCommandPalette(root: UtilityMountHost): void | (() => void) {
         },
       });
     },
-    elements:{
-      root:host,
+    elements: {
+      root: host,
       launcher,
       palette,
       filter,
       results,
-      sidePanelContent:host.querySelector<HTMLElement>("#side-panel-content"),
+      sidePanelContent: host.querySelector<HTMLElement>("#side-panel-content"),
     },
-    ownerDocument:host.ownerDocument,
+    ownerDocument: host.ownerDocument,
   });
   controller.mount();
   return () => controller.dispose();
