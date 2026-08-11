@@ -1205,16 +1205,16 @@ const exerciseDeadOwnerLockFixture = ({ reclaimDeadOwner }) => {
 
 const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagnosedBoundary,
   causalCategory = "artifact/process locking" }) => {
-  if (causalCategory === "other:stable synthetic pointer release routing") {
+  if (causalCategory === "other:unambiguous synthetic Section target") {
     const fixture = {
-      id:"stable-synthetic-pointer-release-routing-v1", causalCategory,
+      id:"unambiguous-synthetic-section-target-v1", causalCategory,
       diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
-      input:{ pointerDownTarget:"rendered Section node", productionReleaseListener:"window",
-        pointerMoveMayDetachPressedNode:true },
-      expectedPreRepairFailure:{ releaseTarget:"detached pressed node",
-        productionReleaseDelivered:false, durableMove:false },
-      expectedRepairResult:{ releaseTarget:"window", productionReleaseDelivered:true,
-        durableMove:true },
+      input:{ sharedAttribute:"data-flow-section-id",
+        candidateKinds:["Section group", "member Page frame"] },
+      expectedPreRepairFailure:{ selector:"first matching group",
+        directManipulationGuaranteed:false, durableMove:false },
+      expectedRepairResult:{ selector:"group with direct Section dropzone",
+        directManipulationGuaranteed:true, durableMove:true },
     };
     const fixtureDigest = timeoutIncidentDigest(fixture);
     return { version:2, incidentId, failureDigest, fixture,

@@ -455,8 +455,8 @@ assert.match(drawRuntimeProgram,
 assert.equal(drawRuntimeProgram.match(/pointer\(canvas,'pointerdown',\{pointerId:51/gu)?.length,1,
   "the draw proof must retain one real semantic pointer gesture");
 assert.match(drawRuntimeProgram,
-  /pointer\(salesGroup,'pointerdown',\{pointerId:52[^]*pointer\(window,'pointermove',\{pointerId:52[^]*pointer\(window,'pointerup',\{pointerId:52/u,
-  "the Section move proof must finish through the stable production window listener after rendering detaches the pressed node");
+  /const sectionGroup=.*:scope > \[data-section-dropzone\][^]*salesGroup=sectionGroup\(sales\.id\)[^]*pointer\(salesGroup,'pointerdown',\{pointerId:52[^]*pointer\(salesGroup,'pointerup',\{pointerId:52/u,
+  "the Section move proof must target the direct-manipulation group rather than a member Page that shares its Section id");
 assert.match(drawRuntimeProgram,/expectedSectionCount/u,
   "draw persistence timeout diagnostics must retain section-count state");
 const actionableDrawFixture={drawingMode:true,canvasConnected:true,surfaceOpen:false,
@@ -491,14 +491,14 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         .sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)]))
       :value,
     digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
-    pointerReleaseRepair=context.causalCategory==="other:stable synthetic pointer release routing",
-    fixture=pointerReleaseRepair?{id:"stable-synthetic-pointer-release-routing-v1",
+    sectionTargetRepair=context.causalCategory==="other:unambiguous synthetic Section target",
+    fixture=sectionTargetRepair?{id:"unambiguous-synthetic-section-target-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-      input:{pointerDownTarget:"rendered Section node",productionReleaseListener:"window",
-        pointerMoveMayDetachPressedNode:true},
-      expectedPreRepairFailure:{releaseTarget:"detached pressed node",
-        productionReleaseDelivered:false,durableMove:false},
-      expectedRepairResult:{releaseTarget:"window",productionReleaseDelivered:true,durableMove:true}}
+      input:{sharedAttribute:"data-flow-section-id",candidateKinds:["Section group","member Page frame"]},
+      expectedPreRepairFailure:{selector:"first matching group",directManipulationGuaranteed:false,
+        durableMove:false},
+      expectedRepairResult:{selector:"group with direct Section dropzone",
+        directManipulationGuaranteed:true,durableMove:true}}
       :{id:"flow-readiness-logical-budget-v1",
         causalCategory:"readiness or settling",diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
         input:{target:"FLOW_GRAPH_LEGACY_TARGET",logicalBudgetMilliseconds:120000,
@@ -507,9 +507,9 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         expectedRepairResult:{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
           usesLogicalRemainingBudget:true}},
     preRepairResult=fixture.expectedPreRepairFailure,
-    repairResult=pointerReleaseRepair
-      ?{releaseTarget:"window",productionReleaseDelivered:true,
-        durableMove:/pointer\(salesGroup,'pointerdown',\{pointerId:52[^]*pointer\(window,'pointermove',\{pointerId:52[^]*pointer\(window,'pointerup',\{pointerId:52/u.test(drawRuntimeProgram)}
+    repairResult=sectionTargetRepair
+      ?{selector:"group with direct Section dropzone",directManipulationGuaranteed:true,
+        durableMove:/const sectionGroup=.*:scope > \[data-section-dropzone\][^]*salesGroup=sectionGroup\(sales\.id\)[^]*pointer\(salesGroup,'pointerup',\{pointerId:52/u.test(drawRuntimeProgram)}
       :{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
         usesLogicalRemainingBudget:/Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u
           .test(flowGraphAdapterSource)},
