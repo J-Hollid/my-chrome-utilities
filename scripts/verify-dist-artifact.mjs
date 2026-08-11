@@ -2,7 +2,7 @@ import {assertFreshDist} from "./dist-artifact.mjs";
 import {withDistArtifactLock} from "./dist-artifact-lock.mjs";
 
 try {
-  const manifest = await withDistArtifactLock(async () => assertFreshDist());
+  const manifest = await withDistArtifactLock(async () => assertFreshDist(), {access:"read"});
   console.log(
     JSON.stringify({
       buildIdentity: manifest.buildIdentity,

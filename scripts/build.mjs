@@ -139,4 +139,4 @@ await withDistArtifactLock(async () => {
   } finally {
     await rm(candidateDirectory, {recursive: true, force: true});
   }
-});
+}, {access:"write"});

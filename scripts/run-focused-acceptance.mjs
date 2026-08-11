@@ -7,6 +7,10 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { assertFreshDist, atomicWriteFile, createDistInputFingerprint } from "./dist-artifact.mjs";
 import {
+  acquireDistArtifactLock,
+  distArtifactLeaseEnvironment,
+} from "./dist-artifact-lock.mjs";
+import {
   executeAcceptancePlan,
   loadVerificationPacks,
   planVerification,
@@ -520,6 +524,7 @@ export function createVerificationCommandRunner(context, options = {}) {
     }
     const reservedEnvironment = Object.keys(taskEnvironment).find((name) =>
       ["PATH", "NODE_OPTIONS", "MY_CHROME_UTILITIES_DIST_LOCK_HELD",
+        "MY_CHROME_UTILITIES_DIST_LOCK_ACCESS",
         "SWARMFORGE_VERIFICATION_RECEIPT", "SWARMFORGE_STRICT_VERIFICATION_RECEIPT",
         "TMPDIR"].includes(name) ||
       name.startsWith("SWARMFORGE_") && ![
@@ -577,9 +582,15 @@ export function createVerificationCommandRunner(context, options = {}) {
         ...executionEnvironment,
         TMPDIR:taskTempDirectory,
         ...(usesShortChromeRoute ? { SWARMFORGE_CHROME_TMPDIR:chromeTempDirectory } : {}),
-        ...(process.env.MY_CHROME_UTILITIES_DIST_LOCK_HELD === undefined
-          ? {}
-          : { MY_CHROME_UTILITIES_DIST_LOCK_HELD:process.env.MY_CHROME_UTILITIES_DIST_LOCK_HELD }),
+        ...(task.artifactLease
+          ? distArtifactLeaseEnvironment(task.artifactLease.token, task.artifactLease.access)
+          : process.env.MY_CHROME_UTILITIES_DIST_LOCK_HELD === undefined
+            ? {}
+            : {
+              MY_CHROME_UTILITIES_DIST_LOCK_HELD:process.env.MY_CHROME_UTILITIES_DIST_LOCK_HELD,
+              MY_CHROME_UTILITIES_DIST_LOCK_ACCESS:
+                process.env.MY_CHROME_UTILITIES_DIST_LOCK_ACCESS ?? "write",
+            }),
         SWARMFORGE_VERIFICATION_RECEIPT:context.receiptPath,
         SWARMFORGE_VERIFICATION_TASK_KEY:task.key,
         SWARMFORGE_EXECUTION_ROUTE:launchRoute,
@@ -1808,6 +1819,17 @@ export async function runFocusedAcceptance(
   try {
     await executeAcceptancePlan(executionPlan, {
       runCommand:runner, concurrency, observationConcurrency,
+      ...(artifactRequired ? {
+        acquireArtifactLease:async() => {
+          const startedAt = Date.now();
+          const release = await acquireDistArtifactLock();
+          return { token:release.token, waitMs:Date.now() - startedAt, release };
+        },
+        onMetrics:async(metrics) => {
+          context.receipt.coordination = metrics;
+          await context.write();
+        },
+      } : {}),
       ...(artifactRequired ? { afterPreparation:async() => {
       buildManifest = await validateCurrentArtifactForConsumers({
         root:repositoryRoot, artifactValidator,

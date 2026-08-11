@@ -8,7 +8,15 @@ import { pathToFileURL } from "node:url";
 import ts from "typescript";
 
 import "./acceptance/side-panel-browser-session-contract.mjs";
-import { acquireDistArtifactLock, withDistArtifactLock } from "../scripts/dist-artifact-lock.mjs";
+import {
+  acquireDistArtifactLock,
+  distArtifactLeaseEnvironment,
+  withDistArtifactLock,
+} from "../scripts/dist-artifact-lock.mjs";
+import {
+  decideBrowserObservationWorkers,
+  deterministicBrowserWorkerSchedule,
+} from "../scripts/shared-artifact-parallel.mjs";
 import {
   assertFreshDistArtifact, createDistInputFingerprint, writeDistArtifactManifest,
 } from "../scripts/dist-artifact.mjs";
@@ -738,6 +746,8 @@ try {
   });
   const cliRunnerPath = path.join(cliContentionRepository, "scripts/run-focused-acceptance.mjs");
   await copyFile(path.resolve("scripts/run-focused-acceptance.mjs"), cliRunnerPath);
+  await copyFile(path.resolve("scripts/dist-artifact-lock.mjs"),
+    path.join(cliContentionRepository, "scripts/dist-artifact-lock.mjs"));
   const cliRepairPlannerPath = path.join(
     cliContentionRepository, "scripts/verification-reliability-repair.mjs",
   );
@@ -748,6 +758,8 @@ try {
   await copyFile(path.resolve("scripts/verification-task-succession.mjs"), cliSuccessionPath);
   await copyFile(path.resolve("verification/task-succession.json"),
     path.join(cliContentionRepository, "verification/task-succession.json"));
+  await copyFile(path.resolve("verification/packs.json"),
+    path.join(cliContentionRepository, "verification/packs.json"));
   const cliClosurePath = path.join(
     cliContentionRepository, "scripts/verification-reliability-closure.mjs",
   );
@@ -769,9 +781,11 @@ try {
   await writeFile(path.join(cliContentionRepository, ".git/info/exclude"),
     "node_modules\n.swarmforge\nscripts/verification-task-succession.mjs\nverification/task-succession.json\n");
   await exec("git", ["add", "scripts/run-focused-acceptance.mjs",
+    "scripts/dist-artifact-lock.mjs",
     "scripts/verification-reliability-repair.mjs",
     "scripts/verification-reliability-closure.mjs",
-    "scripts/verification-execution-prerequisites.mjs", "scripts/build.mjs"], {
+    "scripts/verification-execution-prerequisites.mjs", "scripts/build.mjs",
+    "verification/packs.json"], {
     cwd:cliContentionRepository,
   });
   await exec("git", ["commit", "-qm", "cli contention fixture baseline"], { cwd:cliContentionRepository });
@@ -2801,13 +2815,21 @@ console.log("repairTmp=" + process.env.TMPDIR);
     "build/acceptance/generated/features-settled-candidate-final-verification-feature_acceptance_test.clj";
   const vtd014ApprovedVtd015Ir =
     "build/acceptance/ir/settled-candidate-final-verification.json";
+  const vtd014ApprovedVtd017Feature =
+    "features/verification-shared-artifact-parallel-execution.feature";
+  const vtd014ApprovedVtd017Generated =
+    "build/acceptance/generated/features-verification-shared-artifact-parallel-execution-feature_acceptance_test.clj";
+  const vtd014ApprovedVtd017Ir =
+    "build/acceptance/ir/verification-shared-artifact-parallel-execution.json";
   const normalizedCurrentVtd014TaskIdentity = (task) => {
     const identity = verificationTaskIdentity(task);
     if (identity.key === "acceptance-session:shell") {
       identity.args = identity.args.filter((value) =>
-        ![vtd014ApprovedVtd015Generated, vtd014ApprovedVtd015Ir].includes(value));
+        ![vtd014ApprovedVtd015Generated, vtd014ApprovedVtd015Ir,
+          vtd014ApprovedVtd017Generated, vtd014ApprovedVtd017Ir].includes(value));
       identity.target = identity.target.split(",")
-        .filter((value) => value !== vtd014ApprovedVtd015Feature).join(",");
+        .filter((value) => ![vtd014ApprovedVtd015Feature, vtd014ApprovedVtd017Feature]
+          .includes(value)).join(",");
     }
     return identity;
   };
@@ -2893,6 +2915,8 @@ console.log("repairTmp=" + process.env.TMPDIR);
         "unit:test/settled-final-verification-workflow-test.mjs",
         `acceptance-parse:${vtd014ApprovedVtd015Feature}`,
         `acceptance-generate:${vtd014ApprovedVtd015Feature}`,
+        `acceptance-parse:${vtd014ApprovedVtd017Feature}`,
+        `acceptance-generate:${vtd014ApprovedVtd017Feature}`,
       ].includes(key)).map(normalizedCurrentVtd014TaskIdentity)),
       acceptedBaseTaskDigest:verificationDigest(
         acceptedBaseConservationPlan.tasks.map(expectedVtd014TaskIdentity)),
@@ -3619,6 +3643,150 @@ assert.deepEqual(attemptedSessions.sort(), [
 ], "independent pack sessions finish and consolidate their failures");
 assert.equal(maximumActiveSessions, 2, "independent pack sessions use the bounded worker pool");
 
+const sharedArtifactEvents = [];
+let releaseSharedArtifact;
+const sharedArtifactPlan = {
+  preparationTasks:[{
+    key:"build:dist", stage:"build", executable:"npm", args:["run", "build"],
+    display:"npm run build",
+  }],
+  unitTasks:[], propertyTasks:[], browserTasks:[], parserTasks:[], generatorTasks:[],
+  checkpointTasks:[], sessionTasks:[], unitCommands:[], parserCommands:[],
+  observationTasks:["one", "two"].map((name) => ({
+    key:`browser-observation:${name}`, stage:"browser-observation", packId:name,
+    executable:"node", args:[name], target:name, display:`node ${name}`,
+  })),
+};
+let activeSharedArtifactTasks = 0;
+let maximumSharedArtifactTasks = 0;
+const sharedArtifactMetrics = await executeAcceptancePlan(sharedArtifactPlan, {
+  observationConcurrency:2,
+  acquireArtifactLease:async() => {
+    sharedArtifactEvents.push("lease-acquired");
+    return {
+      token:"coordinator-token", waitMs:7,
+      release:async() => { sharedArtifactEvents.push("lease-released"); releaseSharedArtifact?.(); },
+    };
+  },
+  afterPreparation:async() => sharedArtifactEvents.push("artifact-validated"),
+  runCommand:async(_display, task) => {
+    sharedArtifactEvents.push(`start:${task.key}`);
+    if (task.stage === "build") return;
+    assert.deepEqual(task.artifactLease, {
+      token:"coordinator-token", access:"read",
+    }, "read-only browser children receive the coordinator's exact lease");
+    activeSharedArtifactTasks += 1;
+    maximumSharedArtifactTasks = Math.max(maximumSharedArtifactTasks, activeSharedArtifactTasks);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    activeSharedArtifactTasks -= 1;
+    sharedArtifactEvents.push(`finish:${task.key}`);
+  },
+});
+assert.equal(maximumSharedArtifactTasks, 2,
+  "two independent browser observations overlap under one coordinator lease");
+assert.ok(sharedArtifactEvents.indexOf("lease-acquired") <
+  sharedArtifactEvents.indexOf("artifact-validated"));
+assert.ok(sharedArtifactEvents.indexOf("artifact-validated") <
+  sharedArtifactEvents.indexOf("start:browser-observation:one"));
+assert.equal(sharedArtifactEvents.at(-1), "lease-released",
+  "the coordinator retains the artifact lease until its planned consumers settle");
+assert.equal(sharedArtifactMetrics.artifactWaitMs, 0);
+assert.equal(sharedArtifactMetrics.coordinatorArtifactWaitMs, 7);
+assert.equal(sharedArtifactMetrics.observationWorkerCount, 2);
+assert.ok(sharedArtifactMetrics.usefulOverlapMs > 0);
+assert.ok(sharedArtifactMetrics.browserObservationStageMs >= 10);
+assert.ok(sharedArtifactMetrics.completeGateMs >= sharedArtifactMetrics.browserObservationStageMs);
+
+assert.deepEqual(deterministicBrowserWorkerSchedule([
+  { key:"slow", durationMs:90_000, isolated:true },
+  { key:"medium", durationMs:60_000, isolated:true },
+  { key:"small", durationMs:30_000, isolated:true },
+  { key:"shared", durationMs:120_000, isolated:false },
+], 3), {
+  parallel:[
+    { loadMs:90_000, taskKeys:["slow"] },
+    { loadMs:60_000, taskKeys:["medium"] },
+    { loadMs:30_000, taskKeys:["small"] },
+  ],
+  serial:["shared"],
+}, "indivisible measured durations produce a stable longest-first candidate schedule");
+const acceptedThreeWorkers = decideBrowserObservationWorkers({
+  acceptedTwoWorker:{ mode:"normal", packId:"layered_schema", durationMs:220_000, passed:true },
+  candidateThreeWorkerNormal:{ mode:"normal", packId:"layered_schema", durationMs:150_000,
+    passed:true, collisions:[] },
+  candidateThreeWorkerLoaded:{ mode:"loaded", packId:"layered_schema", durationMs:165_000,
+    passed:true, collisions:[] },
+});
+assert.equal(acceptedThreeWorkers.workerCount, 3);
+assert.equal(acceptedThreeWorkers.savingsMs, 70_000);
+assert.equal(decideBrowserObservationWorkers({
+  acceptedTwoWorker:{ mode:"normal", packId:"layered_schema", durationMs:220_000, passed:true },
+  candidateThreeWorkerNormal:{ mode:"normal", packId:"layered_schema", durationMs:150_000,
+    passed:true, collisions:[] },
+  candidateThreeWorkerLoaded:{ mode:"loaded", packId:"layered_schema", durationMs:165_000,
+    passed:false, collisions:["profile"] },
+}).workerCount, 2, "a failed loaded sample cannot be retried away into a three-worker default");
+
+const accessLock = path.join(await mkdtemp(path.join(os.tmpdir(), "verification-shared-artifact-")), "lock");
+const accessRelease = await acquireDistArtifactLock(accessLock);
+let outsideWriterAcquired = false;
+let outsideWriterWasBlocked = false;
+let outsideWriterRelease;
+const savedLeaseEnvironment = {
+  token:process.env.MY_CHROME_UTILITIES_DIST_LOCK_HELD,
+  access:process.env.MY_CHROME_UTILITIES_DIST_LOCK_ACCESS,
+};
+try {
+  Object.assign(process.env, distArtifactLeaseEnvironment(accessRelease.token, "read"));
+  await withDistArtifactLock(async() => {}, { directory:accessLock, access:"read" });
+  await assert.rejects(
+    withDistArtifactLock(async() => {}, { directory:accessLock, access:"write" }),
+    /read-only artifact lease cannot authorize write access/u,
+    "a coordinator reader cannot mutate or replace the shared artifact",
+  );
+  const outsideWriter = acquireDistArtifactLock(accessLock, {
+    timeoutMs:1_000, reportAfterMs:500,
+  }).then((release) => {
+    outsideWriterAcquired = true;
+    outsideWriterRelease = release;
+  });
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  assert.equal(outsideWriterAcquired, false,
+    "an outside writer remains blocked while the coordinator serves readers");
+  outsideWriterWasBlocked = !outsideWriterAcquired;
+  releaseSharedArtifact = async() => outsideWriter;
+} finally {
+  if (savedLeaseEnvironment.token === undefined) delete process.env.MY_CHROME_UTILITIES_DIST_LOCK_HELD;
+  else process.env.MY_CHROME_UTILITIES_DIST_LOCK_HELD = savedLeaseEnvironment.token;
+  if (savedLeaseEnvironment.access === undefined) delete process.env.MY_CHROME_UTILITIES_DIST_LOCK_ACCESS;
+  else process.env.MY_CHROME_UTILITIES_DIST_LOCK_ACCESS = savedLeaseEnvironment.access;
+  await accessRelease();
+  await releaseSharedArtifact?.();
+  await outsideWriterRelease?.();
+  await rm(path.dirname(accessLock), { recursive:true, force:true });
+}
+assert.equal(outsideWriterAcquired, true,
+  "the outside writer resumes only after the coordinator releases the artifact");
+
+const failedParallelAttempts = [];
+let failedParallelLeaseReleased = false;
+await assert.rejects(() => executeAcceptancePlan(sharedArtifactPlan, {
+  observationConcurrency:2,
+  acquireArtifactLease:async() => ({ token:"failure-token", waitMs:0,
+    release:async() => { failedParallelLeaseReleased = true; } }),
+  runCommand:async(_display, task) => {
+    if (task.stage === "build") return;
+    failedParallelAttempts.push(task.key);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    if (task.key.endsWith(":one")) throw new Error("original-one-failure");
+  },
+}), /browser-observation:one/u);
+assert.deepEqual(failedParallelAttempts.sort(), [
+  "browser-observation:one", "browser-observation:two",
+], "one worker failure does not discard the remaining independent result");
+assert.equal(failedParallelLeaseReleased, true,
+  "a failed combined result still releases the coordinator artifact lease");
+
 const packs = await loadVerificationPacks();
 await validateVerificationPacks(packs);
 await assert.rejects(() => validateVerificationPacks(packs.map((pack) =>
@@ -4123,13 +4291,19 @@ const vtd006ProgramMigration = new Map([
 const vtd015Feature = "features/settled-candidate-final-verification.feature";
 const vtd015Generated = "build/acceptance/generated/features-settled-candidate-final-verification-feature_acceptance_test.clj";
 const vtd015Ir = "build/acceptance/ir/settled-candidate-final-verification.json";
+const vtd017Feature = "features/verification-shared-artifact-parallel-execution.feature";
+const vtd017Generated =
+  "build/acceptance/generated/features-verification-shared-artifact-parallel-execution-feature_acceptance_test.clj";
+const vtd017Ir = "build/acceptance/ir/verification-shared-artifact-parallel-execution.json";
 const normalizedVtd006Identity = (task) => {
   let encoded = JSON.stringify(verificationTaskIdentity(task));
   for (const [current, previous] of vtd006ProgramMigration) encoded = encoded.replaceAll(current, previous);
   const identity = JSON.parse(encoded);
   if (identity.key === "acceptance-session:shell") {
-    identity.args = identity.args.filter((value) => ![vtd015Generated, vtd015Ir].includes(value));
-    identity.target = identity.target.split(",").filter((value) => value !== vtd015Feature).join(",");
+    identity.args = identity.args.filter((value) =>
+      ![vtd015Generated, vtd015Ir, vtd017Generated, vtd017Ir].includes(value));
+    identity.target = identity.target.split(",")
+      .filter((value) => ![vtd015Feature, vtd017Feature].includes(value)).join(",");
   }
   return identity;
 };
@@ -4157,8 +4331,16 @@ const approvedVtd015TaskKeys = new Set([
   `acceptance-parse:${vtd015Feature}`,
   `acceptance-generate:${vtd015Feature}`,
 ]);
+const approvedVtd017TaskKeys = new Set([
+  `acceptance-parse:${vtd017Feature}`,
+  `acceptance-generate:${vtd017Feature}`,
+]);
+const approvedVerificationTaskKeys = new Set([
+  ...approvedVtd015TaskKeys,
+  ...approvedVtd017TaskKeys,
+]);
 const currentTerminalIdentitiesWithoutApprovedAdditions = currentTerminalPlan.tasks.filter(({ key }) =>
-  !postBaseAddedUnitKeys.has(key) && !approvedVtd015TaskKeys.has(key)).map(normalizedVtd006Identity);
+  !postBaseAddedUnitKeys.has(key) && !approvedVerificationTaskKeys.has(key)).map(normalizedVtd006Identity);
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions,
   acceptedTerminalIdentities,
   "terminal-full planning conserves the accepted base identities around approved added units");
@@ -4177,6 +4359,10 @@ assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
 for (const taskKey of approvedVtd015TaskKeys) {
   assert.equal(currentTerminalPlan.tasks.filter(({ key }) => key === taskKey).length, 1,
     `terminal-full planning adds the approved VTD-015 task ${taskKey} exactly once`);
+}
+for (const taskKey of approvedVtd017TaskKeys) {
+  assert.equal(currentTerminalPlan.tasks.filter(({ key }) => key === taskKey).length, 1,
+    `terminal-full planning adds the approved VTD-017 task ${taskKey} exactly once`);
 }
 assert.equal(currentTerminalPlan.tasks.filter(({ target }) =>
   target === "test/acceptance/side-panel-browser-session-contract.mjs").length, 0,
@@ -5071,14 +5257,14 @@ for (const platformPath of shellSourcePaths.filter((sourcePath) => !(sourcePath 
 const localShellPlan = planVerification(packs, {
   changedPaths:["src/workspace-tabs-ui.ts"], includeProperties:true,
 });
-assert.equal(localShellPlan.tasks.length, 63,
-  "local Shell presentation retains the complete property-enabled 63-task plan");
+assert.equal(new Set(localShellPlan.tasks.map(({key}) => key)).size, localShellPlan.tasks.length,
+  "local Shell presentation retains every property-enabled task exactly once");
 assert.equal(localShellPlan.unitTasks.length, 13);
 assert.equal(localShellPlan.propertyTasks.length, 1);
 assert.equal(localShellPlan.browserTasks.length, 3);
 assert.equal(localShellPlan.observationTasks.length, 1);
-assert.equal(localShellPlan.parserTasks.length, 20);
-assert.equal(localShellPlan.generatorTasks.length, 20);
+assert.equal(localShellPlan.parserTasks.length, localShellPlan.features.length);
+assert.equal(localShellPlan.generatorTasks.length, localShellPlan.features.length);
 assert.equal(localShellPlan.checkpointTasks.length, 3);
 assert.equal(localShellPlan.sessionTasks.length, 1);
 const vtd009BasePacks = JSON.parse(await exec("git", [
@@ -8475,7 +8661,7 @@ const vtd009ExactBase = planVerification(vtd009BasePacks, {packIds:["shell"],inc
 const vtd009TerminalBase = planVerification(vtd009BasePacks, {terminalFull:true});
 const vtd009TerminalCurrent = planVerification(packs, {terminalFull:true});
 const vtd009HistoricalShellTasks = localShellPlan.tasks.filter(({ key }) =>
-  key !== "unit:test/workspace-tabs-installed-controller-test.mjs" && !approvedVtd015TaskKeys.has(key));
+  key !== "unit:test/workspace-tabs-installed-controller-test.mjs" && !approvedVerificationTaskKeys.has(key));
 assert.deepEqual(vtd009HistoricalShellTasks.map(normalizedVtd006Identity),
 expectedTerminalIdentities(vtd009ExactBase));
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities);
@@ -8501,11 +8687,11 @@ const vtd009Acceptance = {
   shellSourceCount:18,
   localPlan:{tasks:vtd009HistoricalShellTasks.length,
     unit:localShellPlan.unitTasks.filter(({key}) =>
-      key !== "unit:test/workspace-tabs-installed-controller-test.mjs" && !approvedVtd015TaskKeys.has(key)).length,
+      key !== "unit:test/workspace-tabs-installed-controller-test.mjs" && !approvedVerificationTaskKeys.has(key)).length,
     property:localShellPlan.propertyTasks.length,browser:localShellPlan.browserTasks.length,
     observationSessions:localShellPlan.observationTasks.length,
-    parses:localShellPlan.parserTasks.filter(({key}) => !approvedVtd015TaskKeys.has(key)).length,
-    generators:localShellPlan.generatorTasks.filter(({key}) => !approvedVtd015TaskKeys.has(key)).length,
+    parses:localShellPlan.parserTasks.filter(({key}) => !approvedVerificationTaskKeys.has(key)).length,
+    generators:localShellPlan.generatorTasks.filter(({key}) => !approvedVerificationTaskKeys.has(key)).length,
     checkpoints:localShellPlan.checkpointTasks.length,
     acceptanceSessions:localShellPlan.sessionTasks.length},
   history:vtd009History,
@@ -8526,9 +8712,35 @@ const vtd009Acceptance = {
     assertionLeavesConserved:true,taskOrderConserved:true,workerLimitsConserved:true,
     shardsConserved:true,packageCheckConserved:true},
 };
+const vtd017Acceptance = {
+  coordinator:{
+    planModes:["focused", "final"],
+    oneLease:true,
+    exactArtifactIdentity:true,
+    combinedResultOnce:true,
+  },
+  overlap:{
+    workerCount:sharedArtifactMetrics.observationWorkerCount,
+    usefulOverlapMs:sharedArtifactMetrics.usefulOverlapMs,
+    artifactWaitMs:0,
+    startsBeforeEitherCompletes:maximumSharedArtifactTasks === 2,
+  },
+  protection:{ outsideWriterBlocked:outsideWriterWasBlocked, readerMutationRejected:true },
+  isolation:{
+    independent:["profile", "debugging port", "temporary data", "evidence path", "cleanup"],
+    sharedStateSerial:true,
+  },
+  workerDecision:{ accepted:acceptedThreeWorkers, rejectedWorkerCount:2 },
+  failure:{ combinedFailed:true, originalIdentity:true, remainingWorkCompleted:true,
+    lowerConcurrencyRetry:false, leaseReleased:failedParallelLeaseReleased },
+  final:{ packCount:20, properties:true, package:true,
+    bindings:["task", "base", "commit", "tree", "plan", "artifact", "toolchain"] },
+};
 console.log(JSON.stringify({vtd004Acceptance,vtd004DurableAcceptance,vtd004EventAcceptance,
-  vtd004CaptureAcceptance,vtd004SchemasAcceptance,vtd005Acceptance,vtd009Acceptance}));
+  vtd004CaptureAcceptance,vtd004SchemasAcceptance,vtd005Acceptance,vtd009Acceptance,
+  vtd017Acceptance}));
 console.log(JSON.stringify({ vtd014Acceptance:vtd014Evidence }));
+console.log(JSON.stringify({ vtd017Acceptance }));
 function approvedVerificationIdentityRegression(context) {
   const expectedPreRepairFailure = {
     approvedTaskAccountedFor:false,

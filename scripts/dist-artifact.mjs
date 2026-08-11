@@ -330,7 +330,7 @@ async function runLockedCommand(command, args) {
 async function main(argv) {
   const [subcommand, ...rest] = argv;
   if (subcommand === "validate" && rest.length === 0) {
-    await withDistArtifactLock(async () => assertFreshDistArtifact());
+    await withDistArtifactLock(async () => assertFreshDistArtifact(), {access:"read"});
     console.log("dist artifact is fresh");
     return;
   }
@@ -343,7 +343,7 @@ async function main(argv) {
     await withDistArtifactLock(async () => {
       await assertFreshDistArtifact();
       await runLockedCommand(command, args);
-    });
+    }, {access:"read"});
     return;
   }
   throw new Error("usage: node scripts/dist-artifact.mjs <validate|run -- command...>");

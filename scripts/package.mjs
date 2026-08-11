@@ -143,4 +143,4 @@ await withDistArtifactLock(async () => {
   await assertFreshDist({root: projectRoot, distDirectory: distDir});
   await writeZip(await collectFiles(distDir));
   console.log(path.relative(projectRoot, outputPath));
-});
+}, {access:"write"});

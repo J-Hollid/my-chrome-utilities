@@ -15,6 +15,7 @@ const testPathKeys = ["unit", "property", "browserAdapters"];
 const prefixOwnedPathKeys = ["source", "process"];
 const reservedTaskEnvironment = new Set([
   "PATH", "NODE_OPTIONS", "MY_CHROME_UTILITIES_DIST_LOCK_HELD",
+  "MY_CHROME_UTILITIES_DIST_LOCK_ACCESS",
   "SWARMFORGE_VERIFICATION_RECEIPT", "SWARMFORGE_STRICT_VERIFICATION_RECEIPT",
 ]);
 const allowedSwarmforgeTaskEnvironment = new Set([
@@ -1451,20 +1452,33 @@ export function planVerification(
   };
 }
 
-async function invoke(task, runCommand) {
-  return runCommand(task.display, task);
+function artifactLeaseAccess(task) {
+  if (task.stage === "build" || task.stage === "package" ||
+      task.executable === "npm" && task.args?.includes("package")) return "write";
+  return "read";
 }
 
-async function runBounded(tasks, concurrency, runCommand) {
+async function invoke(task, runCommand, artifactLease) {
+  const executableTask = artifactLease ? {
+    ...task,
+    artifactLease:{ token:artifactLease.token, access:artifactLeaseAccess(task) },
+  } : task;
+  return runCommand(task.display, executableTask);
+}
+
+async function runBounded(tasks, concurrency, runCommand, artifactLease) {
   let next = 0;
   const failures = [];
+  const intervals = [];
   const workers = Array.from(
     { length:Math.min(Math.max(1, concurrency), tasks.length) },
     async() => {
       while (next < tasks.length) {
         const index = next++;
-        try { await invoke(tasks[index], runCommand); }
+        const startedAt = Date.now();
+        try { await invoke(tasks[index], runCommand, artifactLease); }
         catch (error) { failures.push({ task:tasks[index], error }); }
+        finally { intervals.push({ taskKey:tasks[index].key, startedAt, completedAt:Date.now() }); }
       }
     },
   );
@@ -1475,6 +1489,7 @@ async function runBounded(tasks, concurrency, runCommand) {
       `Verification failed in ${failures.length} independent command(s): ${failures.map(({ task }) => task.key ?? task.display).join(", ")}`,
     );
   }
+  return intervals;
 }
 
 function legacyTasks(commands, stage) {
@@ -1483,7 +1498,8 @@ function legacyTasks(commands, stage) {
 
 export async function executeAcceptancePlan(
   plan,
-  { runCommand, concurrency = 4, observationConcurrency = 2, afterPreparation } = {},
+  { runCommand, concurrency = 4, observationConcurrency = 2, afterPreparation,
+    acquireArtifactLease, onMetrics } = {},
 ) {
   if (typeof runCommand !== "function") throw new Error("Provide an acceptance command runner");
   if (!plan.unitCommands && !plan.parserCommands) {
@@ -1491,37 +1507,67 @@ export async function executeAcceptancePlan(
     for (const command of commands) await runCommand(command);
     return;
   }
+  const gateStartedAt = Date.now();
+  const metrics = {
+    artifactWaitMs:0,
+    coordinatorArtifactWaitMs:0,
+    observationWorkerCount:observationConcurrency,
+    usefulOverlapMs:0,
+    browserObservationStageMs:0,
+    completeGateMs:0,
+  };
   const group = (taskKey, commandKey, stage) => plan[taskKey] ?? legacyTasks(plan[commandKey], stage);
   for (const task of group("preparationTasks", "preparationCommands", "build")) await invoke(task, runCommand);
-  if (afterPreparation) await afterPreparation();
-  await runBounded(group("unitTasks", "unitCommands", "unit"), concurrency, runCommand);
-  await runBounded(group("propertyTasks", "propertyCommands", "property"), concurrency, runCommand);
-
-  const browserFailures = [];
-  for (const task of group("browserTasks", "browserCommands", "browser")) {
-    try { await invoke(task, runCommand); }
-    catch (error) { browserFailures.push({ task, error }); }
-  }
-  const observationFailures = [];
+  const artifactLease = acquireArtifactLease ? await acquireArtifactLease() : undefined;
+  metrics.coordinatorArtifactWaitMs = artifactLease?.waitMs ?? 0;
   try {
-    await runBounded(
-      group("observationTasks", "observationCommands", "browser-observation"),
-      observationConcurrency,
-      runCommand,
-    );
-  } catch (error) {
-    observationFailures.push(error);
+    if (afterPreparation) await afterPreparation();
+    await runBounded(group("unitTasks", "unitCommands", "unit"), concurrency, runCommand, artifactLease);
+    await runBounded(group("propertyTasks", "propertyCommands", "property"), concurrency, runCommand, artifactLease);
+
+    const browserFailures = [];
+    for (const task of group("browserTasks", "browserCommands", "browser")) {
+      try { await invoke(task, runCommand, artifactLease); }
+      catch (error) { browserFailures.push({ task, error }); }
+    }
+    const observationFailures = [];
+    const observationStartedAt = Date.now();
+    let observationIntervals = [];
+    try {
+      observationIntervals = await runBounded(
+        group("observationTasks", "observationCommands", "browser-observation"),
+        observationConcurrency,
+        runCommand,
+        artifactLease,
+      );
+    } catch (error) {
+      observationFailures.push(error);
+    }
+    metrics.browserObservationStageMs = Date.now() - observationStartedAt;
+    const observationWorkMs = observationIntervals.reduce(
+      (total, interval) => total + interval.completedAt - interval.startedAt, 0);
+    metrics.usefulOverlapMs = Math.max(0, observationWorkMs - metrics.browserObservationStageMs);
+    if (browserFailures.length || observationFailures.length) {
+      const failedDisplays = browserFailures.map(({ task }) => task.display);
+      const failedObservations = observationFailures.map(({message}) => message).join("; ");
+      throw new AggregateError(
+        [...browserFailures.map(({ error }) => error), ...observationFailures],
+        `Browser verification failed in ${browserFailures.length} adapter(s) and ${observationFailures.length} observation group(s)${failedDisplays.length ? `: ${failedDisplays.join(", ")}` : ""}${failedObservations ? `; ${failedObservations}` : ""}`,
+      );
+    }
+    await runBounded(group("parserTasks", "parserCommands", "acceptance-parse"), concurrency, runCommand, artifactLease);
+    await runBounded(group("generatorTasks", "generatorCommands", "acceptance-generate"), concurrency, runCommand, artifactLease);
+    for (const task of group("checkpointTasks", "checkpointCommands", "checkpoint")) {
+      await invoke(task, runCommand, artifactLease);
+    }
+    await runBounded(group("sessionTasks", "sessionCommands", "acceptance-session"), concurrency, runCommand, artifactLease);
+    for (const task of group("packageTasks", "packageCommands", "package")) {
+      await invoke(task, runCommand, artifactLease);
+    }
+    return metrics;
+  } finally {
+    if (artifactLease?.release) await artifactLease.release();
+    metrics.completeGateMs = Date.now() - gateStartedAt;
+    await onMetrics?.(structuredClone(metrics));
   }
-  if (browserFailures.length || observationFailures.length) {
-    const failedDisplays = browserFailures.map(({ task }) => task.display);
-    throw new AggregateError(
-      [...browserFailures.map(({ error }) => error), ...observationFailures],
-      `Browser verification failed in ${browserFailures.length} adapter(s) and ${observationFailures.length} observation group(s)${failedDisplays.length ? `: ${failedDisplays.join(", ")}` : ""}`,
-    );
-  }
-  await runBounded(group("parserTasks", "parserCommands", "acceptance-parse"), concurrency, runCommand);
-  await runBounded(group("generatorTasks", "generatorCommands", "acceptance-generate"), concurrency, runCommand);
-  for (const task of group("checkpointTasks", "checkpointCommands", "checkpoint")) await invoke(task, runCommand);
-  await runBounded(group("sessionTasks", "sessionCommands", "acceptance-session"), concurrency, runCommand);
-  for (const task of group("packageTasks", "packageCommands", "package")) await invoke(task, runCommand);
 }

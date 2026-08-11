@@ -2,7 +2,10 @@ import { spawn } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { assertFreshDist } from "./dist-artifact.mjs";
-import { withDistArtifactLock } from "./dist-artifact-lock.mjs";
+import {
+  inheritedDistArtifactLockIsHeld,
+  withDistArtifactLock,
+} from "./dist-artifact-lock.mjs";
 import {
   browserObservationEvidenceLeaves,
   browserObservationSessionBatch,
@@ -282,7 +285,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     process.exitCode = 1;
   } else {
     const setupOnly = process.argv[2] === "--setup-only";
-    progress({ boundary:"artifact/setup", phase:"dist-artifact-lock", state:{ status:"waiting" } });
+    const sharedCoordinatorArtifact = await inheritedDistArtifactLockIsHeld();
+    progress({ boundary:"artifact/setup", phase:"dist-artifact-lock", state:sharedCoordinatorArtifact
+      ? { status:"acquired", sharedCoordinatorArtifact:true, waitedMs:0 }
+      : { status:"waiting" } });
     withDistArtifactLock(async() => {
       progress({ boundary:"artifact/setup", phase:"dist-artifact-lock", state:{ status:"acquired" } });
       return setupOnly
@@ -290,7 +296,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
         : runBrowserObservationWithProgress(
           process.argv.slice(2), Math.max(0, performance.now() - progressStarted),
         );
-    }, { onWait:({ waitedMs, owner }) => progress({
+    }, { access:"read", onWait:({ waitedMs, owner }) => progress({
       boundary:"artifact/setup", phase:"dist-artifact-lock", state:{ status:"waiting", waitedMs, owner },
     }) })
       .then((document) => console.log(JSON.stringify(document)))

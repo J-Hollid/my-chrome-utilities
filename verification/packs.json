@@ -5766,6 +5766,7 @@
       "features/portable-build-package-flow.feature",
       "features/project-skeleton.feature",
       "features/settled-candidate-final-verification.feature",
+      "features/verification-shared-artifact-parallel-execution.feature",
       "features/side-panel-accessible-state-communication.feature",
       "features/side-panel-action-feedback.feature",
       "features/side-panel-action-hierarchy.feature",
