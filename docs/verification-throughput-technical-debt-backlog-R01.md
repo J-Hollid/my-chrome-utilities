@@ -73,9 +73,10 @@ here.
 - The bounded VTD-008 installed Hotkeys controller slice and its required
   shared-runner closure corrections are complete in integration baseline
   `9808acce7435343f7005f44cd5346c4395dbb6b5`.
-- The bounded installed Command Palette controller slice is approved in
-  `e1a0c74adb` and active in the normal role chain. Remaining VTD-008 controllers,
-  remaining VTD-010 pack slices, and VTD-011 through VTD-012 remain inactive.
+- The bounded installed Command Palette controller slice completed the normal role
+  chain and is integrated at `5ec9ff34f7a97f28ae887f553c31d8d6f7a788ed`.
+  Remaining VTD-008 controllers, remaining VTD-010 pack slices, and VTD-011 through
+  VTD-012 remain inactive.
 
 ## Executive assessment
 
@@ -718,6 +719,10 @@ registry, its one-time delivery checkpoint runs all 20 runnable packs in canonic
 order with properties, followed by `node scripts/package.mjs`. This approved slice
 authorizes neither Gherkin mutation during specification nor another VTD-008 slice.
 
+The installed Command Palette controller slice completed the coder, refactorer,
+and architect chain and was integrated into `master` at
+`5ec9ff34f7a97f28ae887f553c31d8d6f7a788ed`.
+
 ### VTD-009 — Tighten shell and verification-helper ownership
 
 Priority: P1
@@ -1211,9 +1216,8 @@ ownership, shared readiness, the modular side-panel browser program, and the
 reliability-repair gate. The bounded Event Library VTD-010 implementation completed
 the coder, refactorer, and architect sequence and is integrated in current `master`
 at `cc2c9a01`. The installed Hotkeys controller is complete in integration baseline
-`9808acce74`. The bounded installed Command Palette controller slice is approved in
-`e1a0c74adb` and active in the normal role chain. Other VTD-008 controllers and
-VTD-010 pack slices remain inactive.
+`9808acce74`. The bounded installed Command Palette controller slice is complete at
+`5ec9ff34f7`. Other VTD-008 controllers and VTD-010 pack slices remain inactive.
 
 After measurement truth, the fastest direct development-time wins are precise
 impact boundaries and layered editor target partitioning. Preserve terminal
