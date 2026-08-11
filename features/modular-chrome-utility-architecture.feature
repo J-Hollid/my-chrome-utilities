@@ -154,3 +154,68 @@ Feature: Modular Chrome utility architecture
     And every other runnable pack's evidence remains unchanged
     And no command id, key sequence, keymap byte, storage key or namespace, filename, status, warning, focus result, manifest capability, visible behavior, or accessibility result changes
     And the one-time delivery checkpoint runs all 20 runnable packs in canonical order followed by node scripts/package.mjs
+
+  # Modular Chrome utility architecture 014
+  Scenario: Modular Chrome utility architecture 014
+    Given the full side panel supplies registered commands, command execution, and the owned Command Palette DOM elements
+    When the installed Command Palette controller is mounted through the command-palette public entry point
+    Then it owns the launcher click, side-panel Ctrl+K, filter input and keydown, result click, and dialog Tab listeners exactly once
+    And it exposes explicit mount, render, show, hide, and dispose operations
+    And its integration in src/side-panel.ts retains only dependency construction, command execution routing, controller mounting, and page-lifecycle disposal
+    And src/side-panel.ts owns no Command Palette visibility, filtering, selection, rendering, focus, or event-binding state
+
+  # Modular Chrome utility architecture 015
+  Scenario Outline: Modular Chrome utility architecture 015
+    Given an installed Command Palette lifecycle begins in state <initial_state>
+    When Command Palette lifecycle operation <operation> occurs
+    Then the Command Palette lifecycle result is <result>
+    And one palette input can cause at most one controller action
+
+    Examples:
+      | initial_state | operation                   | result                                                                                                      |
+      | new           | mount                       | one listener set is active and initial dialog visibility is unchanged                                       |
+      | mounted       | mount again                 | no listener or render ownership is duplicated                                                               |
+      | mounted       | dispose while closed        | every owned listener is removed and transient selection and focus state are cleared                          |
+      | mounted       | dispose while open          | listeners are removed, the dialog closes, background inertness is removed, and captured focus is restored   |
+      | disposed      | dispose again               | disposal is an idempotent no-op                                                                              |
+      | disposed      | mount again                 | one fresh listener set is active with canonical initial selection state                                      |
+      | mounted       | pagehide through the shell  | disposal completes before the page lifecycle ends                                                            |
+
+  # Modular Chrome utility architecture 016
+  Scenario Outline: Modular Chrome utility architecture 016
+    Given the mounted Command Palette is <palette_state>
+    When palette input <input> occurs
+    Then the palette result is <palette_result>
+    And the command result is <command_result>
+    And the focus and background result is <focus_result>
+
+    Examples:
+      | palette_state | input                  | palette_result                                      | command_result                     | focus_result                                                    |
+      | closed        | launcher click         | open with current matching commands and first selection | no command executes              | prior focus is captured, background is inert, and filter focuses |
+      | closed        | Ctrl+K                 | open with current matching commands and first selection | no command executes              | prior focus is captured, background is inert, and filter focuses |
+      | open          | filter query           | only matching commands render with valid selection  | no command executes                | filter remains focused and background remains inert             |
+      | open          | Arrow, Home, or End    | the requested valid result becomes selected         | no command executes                | filter remains focused and background remains inert             |
+      | open          | Enter                  | the palette closes                                   | the selected command executes once | background inertness clears and prior focus is restored          |
+      | open          | selected-result click | the palette closes                                   | the clicked command executes once  | background inertness clears and prior focus is restored          |
+      | open          | Escape                 | the palette closes                                   | no command executes                | background inertness clears and prior focus is restored          |
+      | open          | Tab                    | the palette remains open                             | no command executes                | focus stays in the filter and background remains inert           |
+
+  # Modular Chrome utility architecture 017
+  Scenario: Modular Chrome utility architecture 017
+    Given the installed Command Palette controller is exported through src/utilities/command-palette/index.ts
+    When Command Palette module and changed-path ownership are inspected
+    Then command execution, registered commands, DOM ownership, and focus behavior enter through explicit controller dependencies
+    And the controller imports no Hotkeys implementation, Data Layer implementation, or shell composition state
+    And command-registry semantic changes retain their declared dependant propagation
+    And a later controller-only change selects exactly command-palette and shell while excluding Hotkeys and unrelated product packs
+    And the controller boundary does not narrow direct changes to src/side-panel.ts, shared platform adapters, or utility registry semantics
+
+  # Modular Chrome utility architecture 018
+  Scenario: Modular Chrome utility architecture 018
+    Given the Command Palette pack has two unit files, one property file, four feature files, two handlers, and one shared browser adapter before this VTD-008 slice
+    When the installed Command Palette controller lifecycle is completed
+    Then one focused controller unit file proves dependency use, lifecycle idempotence, listener cleanup, open-dialog settlement, focus restoration, and command cardinality
+    And the two existing unit files, property file, four feature files, two handlers, shared browser adapter, and every existing assertion leaf remain registered
+    And every unrelated runnable pack's evidence remains unchanged
+    And no command id, ordering, message, storage value, browser entry point, manifest capability, visible behavior, layout, or accessibility result changes
+    And the one-time delivery checkpoint runs all 20 runnable packs in canonical order with properties followed by node scripts/package.mjs

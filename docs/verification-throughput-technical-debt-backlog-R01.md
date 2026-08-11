@@ -69,13 +69,13 @@ here.
   `4e18da3e601dde88abe0b85071ba7319f3b81d80`.
 - The bounded VTD-010 Event Library slice completed its coder, refactorer, and
   architect sequence and was integrated into `master` at
-  `cc2c9a01b6c2398a35cb03731eb1fd7c2934916c`. The user then approved the bounded
-  VTD-008 installed Hotkeys controller slice for the normal coder chain. Its product
-  candidate exposed a separate repair-focused prerequisite-closure defect in the
-  completed VTD-014 runner. The user approved that shared-runner correction for the
-  normal coder chain; the two current-lineage reliability incidents remain unresolved
-  until its checkpoint passes. The remaining VTD-008 controllers, remaining VTD-010
-  pack slices, and VTD-011 through VTD-012 remain queued and inactive.
+  `cc2c9a01b6c2398a35cb03731eb1fd7c2934916c`.
+- The bounded VTD-008 installed Hotkeys controller slice and its required
+  shared-runner closure corrections are complete in integration baseline
+  `9808acce7435343f7005f44cd5346c4395dbb6b5`.
+- The bounded installed Command Palette controller candidate is awaiting explicit
+  user approval. Remaining VTD-008 controllers, remaining VTD-010 pack slices, and
+  VTD-011 through VTD-012 remain inactive.
 
 ## Executive assessment
 
@@ -629,6 +629,67 @@ composition root.
 The user approved this installed Hotkeys controller slice on 2026-08-10. It
 activates no other VTD-008 controller extraction.
 
+Proposed second slice (2026-08-11; awaiting explicit approval): complete only the
+installed Command Palette controller lifecycle. The current controller in
+`src/command-palette-ui.ts` already owns command filtering and selection, palette
+rendering, focus capture and restoration, background inertness, and six event
+bindings. It exposes `bind` and `show`, but repeated binding duplicates ownership
+and no operation removes its listeners or settles an open dialog. The installed
+side-panel composition root constructs the controller and binds it, while the
+standalone utility lifecycle cannot return controller cleanup.
+
+The candidate gives that controller explicit, idempotent `mount`, `render`,
+`show`, `hide`, and `dispose` operations through the existing
+`src/utilities/command-palette/index.ts` public entry. Registered commands,
+command execution, the owned DOM elements, and document/focus behavior enter as
+explicit dependencies. Mount owns the launcher click, side-panel Ctrl+K, filter
+input and keydown, result click, and dialog Tab listener exactly once. Disposal
+removes that listener set, closes an open palette, removes background inertness,
+restores the captured focus when it remains available, clears transient selection
+state, and supports one clean remount. The standalone Command Palette lifecycle
+returns the same controller cleanup. The composition root retains only dependency
+construction, command execution routing, controller mounting, and page-lifecycle
+disposal; it owns no palette visibility, filtering, selection, rendering, focus,
+or event-binding state.
+
+This package does not extract the utility shell, workspace tabs, command registry,
+Hotkeys, observation target, live-session controls, or another Data Layer domain.
+Launcher and Ctrl+K opening, filtered results, Arrow/Home/End selection, Enter and
+click execution, Escape closing, Tab containment, ARIA selection, background
+inertness, and focus restoration remain unchanged. Command ids, ordering, command
+messages, storage, browser entry points, manifest capabilities, layout,
+accessibility, and durable data remain byte-for-byte or observably equivalent as
+applicable.
+
+The Command Palette pack receives complete VTD-004 classifications for its owned
+source paths. Command-registry semantics in `src/commands.ts` continue to propagate
+to all declared dependants. Palette model and installed-controller paths name
+`shell` as their installed runtime consumer without propagating through Hotkeys,
+which imports neither path. A later controller-only change therefore selects
+exactly `command-palette` and `shell`; changes to `src/commands.ts`,
+`src/side-panel.ts`, the utility registry, or shared platform adapters retain their
+current broader impact.
+
+One focused controller unit file proves explicit dependency use,
+mount/dispose/remount idempotence, exact listener ownership, open-dialog cleanup,
+focus and inertness cleanup, command execution cardinality, and inert input after
+disposal without constructing the full side panel. The Command Palette exact plan
+grows from 13 to 14 tasks, or 14 to 15 with properties. The future
+controller-boundary plan grows from the current exact `command-palette` plus
+`shell` plan of 70 to 71 tasks, or 72 to 73 with properties, solely for that unit
+regression. Against the current 753-task non-property and 835-task property-enabled
+global side-panel plans, the later 71-task and 73-task controller plans exclude
+Hotkeys and the other 17 unrelated packs, about a 91% planned-task reduction. This
+is not a wall-time budget.
+
+Every existing Command Palette unit, property, feature, handler, browser adapter,
+browser observation, and assertion leaf remains registered. The technology
+contract adds the installed-controller lifecycle cases; no product-behavior feature
+changes. Because the extraction edits `src/side-panel.ts` and the canonical pack
+registry, its one-time delivery checkpoint runs all 20 runnable packs in canonical
+order with properties, followed by `node scripts/package.mjs`. This candidate
+authorizes neither Gherkin mutation during specification nor another VTD-008 slice.
+
 ### VTD-009 — Tighten shell and verification-helper ownership
 
 Priority: P1
@@ -1121,9 +1182,10 @@ corrected scheduling, canonical timing evidence, representative budgets, narrowe
 ownership, shared readiness, the modular side-panel browser program, and the
 reliability-repair gate. The bounded Event Library VTD-010 implementation completed
 the coder, refactorer, and architect sequence and is integrated in current `master`
-at `cc2c9a01`. The installed Hotkeys controller is the user-approved active VTD-008
-slice for the normal coder chain. Other VTD-008 controllers and VTD-010 pack slices
-remain inactive.
+at `cc2c9a01`. The installed Hotkeys controller is complete in integration baseline
+`9808acce74`. The bounded installed Command Palette controller candidate awaits
+explicit user approval before coder handoff. Other VTD-008 controllers and VTD-010
+pack slices remain inactive.
 
 After measurement truth, the fastest direct development-time wins are precise
 impact boundaries and layered editor target partitioning. Preserve terminal

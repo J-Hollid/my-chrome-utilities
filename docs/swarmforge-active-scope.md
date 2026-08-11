@@ -17,18 +17,22 @@ The integration baseline immediately before this compaction is
 
 | Program | Current state | Next authority |
 |---|---|---|
-| VTD-008 side-panel composition-root decomposition | Active incremental program | The installed Hotkeys controller slice is complete and integrated in `9808acce74`; no other controller slice is authorized until the user selects and approves it. |
+| VTD-008 side-panel composition-root decomposition | Active incremental program | The installed Hotkeys controller slice is complete and integrated in `9808acce74`. The bounded installed Command Palette controller candidate is awaiting explicit user approval before handoff. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Queued and inactive | Requires a user-approved bounded specification slice. |
 | VTD-012 registry and planner modularization | Queued and inactive | Requires a user-approved bounded specification slice. |
 | Product recovery lineages | Open | Resume in the order listed under **Open product recovery queue**, unless later user direction changes it. |
 
 VTD-008 remains active as a program. Completion of the installed Hotkeys
-controller is completion of one slice only, not completion of VTD-008.
+controller is completion of one slice only, not completion of VTD-008. The next
+candidate is limited to the installed Command Palette controller lifecycle and
+its exact impact boundary; it does not activate utility-shell, workspace-tab, or
+Data Layer controller extraction.
 
 There is no automatically active implementation handoff. A next slice must be
 bounded by the specifier and explicitly approved by the user before the coder is
-notified.
+notified. The Command Palette candidate is bounded but remains inactive until
+that approval.
 
 ## Authority order
 
