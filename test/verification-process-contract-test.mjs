@@ -8478,8 +8478,7 @@ function approvedPostBaselineIdentityRegression(context) {
   };
   const conservation = vtd014Evidence.conservation;
   const repairResult = {
-    approvedTaskAccountedFor:currentConservationPlan.tasks.some(({ key }) =>
-      key === fixture.input.approvedTaskKey),
+    approvedTaskAccountedFor:postBaseAddedUnitKeys.has(fixture.input.approvedTaskKey),
     baselineDigestConserved:conservation.currentTaskDigest === conservation.acceptedBaseTaskDigest,
   };
   assert.deepEqual(repairResult, expectedRepairResult);
