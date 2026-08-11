@@ -56,6 +56,35 @@ function gitShowJson(revision,path){
       ?reject(new Error(stderr.trim()||error.message)):resolve(JSON.parse(stdout))));
 }
 
+function acceptanceArtifacts(feature){
+  const basename=feature.slice(feature.lastIndexOf("/")+1).replace(/\.feature$/u,"");
+  const slug=feature.toLowerCase().replace(/[^a-z0-9]+/gu,"-").replace(/(^-+|-+$)/gu,"");
+  return{ir:`build/acceptance/ir/${basename}.json`,
+    generated:`build/acceptance/generated/${slug}_acceptance_test.clj`};
+}
+
+function historicalRegistryDeclaresTask(identity,packs,plannedIdentities){
+  if(plannedIdentities.some(candidate=>verificationTaskDigest(candidate)===verificationTaskDigest(identity)&&
+      same(candidate,identity)))return true;
+  if(identity.stage==="browser-observation"&&plannedIdentities.some(candidate=>{
+    if(candidate.stage!=="browser-observation")return false;
+    const historical={...identity},planned={...candidate};
+    delete historical.aliasCommands;delete planned.aliasCommands;
+    return same(historical,planned);
+  }))return true;
+  if(identity.stage!=="acceptance-session"||identity.key!==`acceptance-session:${identity.packId}`)
+    return false;
+  const pack=packs.find(candidate=>candidate.id===identity.packId);
+  const features=typeof identity.target==="string"?identity.target.split(",").filter(Boolean):[];
+  if(!pack||features.length===0||new Set(features).size!==features.length||
+      features.some(feature=>!(pack.features??[]).includes(feature)))return false;
+  const expected={key:`acceptance-session:${pack.id}`,stage:"acceptance-session",packId:pack.id,
+    executable:"bb",args:["acceptance-pack-runner",pack.id,...features.flatMap(feature=>{
+      const artifacts=acceptanceArtifacts(feature);return[artifacts.generated,artifacts.ir];})],
+    target:features.join(","),environment:null,requiredCapabilities:[]};
+  return same(expected,identity);
+}
+
 export async function resolveIncidentTaskSuccession({incident,currentIdentities,currentPacks,
   graph=undefined,loadHistoricalPacks=gitShowJson}){
   const diagnosedTarget=incident.failure.retryScope?.logicalTargetIds?.length===1
@@ -84,8 +113,8 @@ export async function resolveIncidentTaskSuccession({incident,currentIdentities,
       :planVerification(historicalPacks,{terminalFull:true});
     const historicalIdentities=historicalPlan.tasks
       .map(verificationTaskIdentity);
-    if(!historicalIdentities.some(identity=>verificationTaskDigest(identity)===step.sourceTaskDigest&&
-        same(identity,successionGraph.identities[step.sourceTaskDigest])))
+    if(!historicalRegistryDeclaresTask(successionGraph.identities[step.sourceTaskDigest],
+      historicalPacks,historicalIdentities))
       throw new Error("Task succession source identity is absent from declared registry history");
     if(logicalSlice.kind==="browser-target"){
       const sourceBoundary=browserTargetSuccessionBoundary(historicalPacks,diagnosedTarget);

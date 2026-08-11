@@ -1205,6 +1205,25 @@ const exerciseDeadOwnerLockFixture = ({ reclaimDeadOwner }) => {
 
 const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagnosedBoundary,
   causalCategory = "artifact/process locking" }) => {
+  if (causalCategory === "other:task-specific Flow receipt identity") {
+    const fixture = {
+      id:"task-specific-flow-receipt-identity-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ adapterCommand:["node", "test/browser-packs/flow-graph.mjs"],
+        matchingBatchTargets:[["FLOW_GRAPH_EXAMPLES_TARGET", "FLOW_GRAPH_LEGACY_TARGET",
+          "FLOW_WORKSPACE_AUTHORING_TARGET", "FLOW_WORKSPACE_CONTROLS_TARGET"],
+        ["FLOW_WORKSPACE_AUTHORING_TARGET", "FLOW_WORKSPACE_CONTROLS_TARGET"]],
+        requiredDiscriminator:"FLOW_GRAPH_EXAMPLES_TARGET" },
+      expectedPreRepairFailure:{ matchingReceiptCount:2, outcome:"duplicate-command-identities" },
+      expectedRepairResult:{ matchingReceiptCount:1, outcome:"complete-flow-evidence-selected" },
+    };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:structuredClone(fixture.expectedPreRepairFailure) },
+      repairResult:{ status:"passed", fixtureDigest,
+        observed:structuredClone(fixture.expectedRepairResult) } };
+  }
   if (causalCategory === "other:unambiguous synthetic Section target") {
     const fixture = {
       id:"unambiguous-synthetic-section-target-v1", causalCategory,
@@ -3083,6 +3102,9 @@ const focusedObservationPlan = planVerification(focusedObservationPacks, {
 assert.equal(focusedObservationPlan.mode, "focused");
 assert.deepEqual(focusedObservationPlan.observationTasks.map(({ target }) => target), ["BROWSER_SECOND"],
   "focused correction executes only its requested logical browser target");
+assert.deepEqual(verificationTaskIdentity(focusedObservationPlan.observationTasks[0]).aliasCommands,
+  [["node", "scripts/run-browser-observation.mjs", "BROWSER_SECOND"]],
+  "a subset batch cannot claim the full adapter command identity");
 const exactObservationPlan = planVerification(focusedObservationPacks, { packIds:["browser"] });
 assert.equal(exactObservationPlan.observationTasks.length, 1,
   "compatible browser observations share one process task");

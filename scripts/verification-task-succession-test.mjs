@@ -81,4 +81,27 @@ await assert.rejects(()=>resolveIncidentTaskSuccession({incident:{failure:{task:
   retryScope:{logicalTargetIds:["FLOW"]}}},currentIdentities:[batch],currentPacks:[],graph:batchGraph,
   loadHistoricalPacks:async()=>{throw new Error("history should not be inferred");}}),/registry history/u);
 
+const runtimeFeature="features/data-layer-directional-flow-specification-graph-runtime.feature";
+const modelFeature="features/data-layer-directional-flow-specification-graph.feature";
+const acceptanceTask=(features)=>({key:"acceptance-session:flow_graph",stage:"acceptance-session",
+  packId:"flow_graph",executable:"bb",args:["acceptance-pack-runner","flow_graph",
+    ...features.flatMap(feature=>{const basename=feature.slice(feature.lastIndexOf("/")+1)
+      .replace(/\.feature$/u,"");const slug=feature.toLowerCase().replace(/[^a-z0-9]+/gu,"-")
+      .replace(/(^-+|-+$)/gu,"");return[`build/acceptance/generated/${slug}_acceptance_test.clj`,
+        `build/acceptance/ir/${basename}.json`];})],target:features.join(","),environment:null,
+  requiredCapabilities:[]});
+const runtimeAcceptance=acceptanceTask([runtimeFeature]);
+const combinedAcceptance=acceptanceTask([runtimeFeature,modelFeature]);
+const acceptanceBoundary=boundary("flow-runtime-acceptance");
+const acceptanceGraph=graph([runtimeAcceptance,combinedAcceptance],[{
+  ...edge("flow-runtime-to-combined-v1",runtimeAcceptance,combinedAcceptance,acceptanceBoundary),
+  sourceRegistryCommit:"historical-flow-registry",
+}],Object.fromEntries([runtimeAcceptance,combinedAcceptance]
+  .map(value=>[verificationTaskDigest(value),acceptanceBoundary])));
+const acceptanceMapped=await resolveIncidentTaskSuccession({incident:{failure:{task:runtimeAcceptance,
+  retryScope:{kind:"task"}}},currentIdentities:[combinedAcceptance],currentPacks:[],graph:acceptanceGraph,
+  loadHistoricalPacks:async()=>[{id:"flow_graph",features:[modelFeature,runtimeFeature]}]});
+assert.equal(acceptanceMapped.destinationIdentity.target,`${runtimeFeature},${modelFeature}`,
+  "a receipt-selected acceptance subset can succeed to the registry-declared combined session");
+
 console.log("verification task succession tests passed");

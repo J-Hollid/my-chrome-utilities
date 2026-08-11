@@ -1376,12 +1376,20 @@ export function planVerification(
   const observationTasks = [...observationGroups.values()].map((group) => {
     const ids = group.map(({ observation }) => observation.id).sort();
     const environment = Object.assign({}, ...group.map(({ observation }) => observation.environment));
+    const declarationPack = group[0].declarationPack;
+    const sessionBatch = browserObservationSessionBatch(declarationPack, group[0].observation);
+    const completeIds = values(declarationPack, "browserObservations")
+      .filter((observation) => observation.path === group[0].observation.path &&
+        browserObservationSessionBatch(declarationPack, observation) === sessionBatch)
+      .map((observation) => observation.id).sort();
+    const completeAdapterBatch = ids.length === completeIds.length &&
+      ids.every((id, index) => id === completeIds[index]);
     return commandTask({
       key:`browser-observation:${ids.join("+")}`, stage:"browser-observation",
-      packId:group[0].declarationPack.id, executable:"node",
+      packId:declarationPack.id, executable:"node",
       args:["scripts/run-browser-observation.mjs", ...ids], target:ids.join(","), environment,
       logicalTargetIds:ids, aliasCommands:[
-        ["node", group[0].observation.path],
+        ...(completeAdapterBatch ? [["node", group[0].observation.path]] : []),
         ...ids.map((id) => ["node", "scripts/run-browser-observation.mjs", id]),
       ],
     });
