@@ -73,9 +73,9 @@ here.
 - The bounded VTD-008 installed Hotkeys controller slice and its required
   shared-runner closure corrections are complete in integration baseline
   `9808acce7435343f7005f44cd5346c4395dbb6b5`.
-- The bounded installed Command Palette controller candidate is awaiting explicit
-  user approval. Remaining VTD-008 controllers, remaining VTD-010 pack slices, and
-  VTD-011 through VTD-012 remain inactive.
+- The bounded installed Command Palette controller slice is approved in
+  `e1a0c74adb` and active in the normal role chain. Remaining VTD-008 controllers,
+  remaining VTD-010 pack slices, and VTD-011 through VTD-012 remain inactive.
 
 ## Executive assessment
 
@@ -93,6 +93,34 @@ The inexpensive leaves should be preserved. In the accepted timing ledger used b
 the audit, median unit duration was about 34 ms, property duration about 80 ms, and
 acceptance parse and generation duration about 21–22 ms. The dominant costs were
 browser targets measured in tens or hundreds of seconds and changed-path fan-out.
+
+## Remaining-VTD verification ratchet
+
+The user approved this durable policy on 2026-08-11. The installed Command Palette
+slice exposed four incident-bound causal repairs even though its product behavior
+was sound. The brittle checks duplicated frozen task inventories, compared
+post-baseline task digests without recognizing approved additions, or inspected
+exact source names and text. Repeating source-shape compatibility workarounds would
+preserve the coupling that VTD-008 is intended to remove.
+
+For all remaining VTD work:
+
+- When legitimate approved work exposes an attributable brittle check, replace
+  that check within the active task rather than adding source-name, magic-text, or
+  frozen-inventory compatibility behavior to production code.
+- Preserve the meaningful invariant with behavioral runtime coverage, structural
+  module or ownership coverage, or inventory accounting derived from the canonical
+  registry and explicit approved additions.
+- Centralize duplicated verification-task accounting when an active slice
+  encounters it. The approved verification-task inventory is the strongest
+  immediate candidate because it has already failed in multiple locations.
+- Keep other cleanup just-in-time. Do not launch a repository-wide cleanup, touch
+  unrelated packs, weaken runtime evidence, remove active assertions, or spend
+  unrelated verification from one incident.
+- Continue to use VTD-014 incident causality, failing-leaf repair loops, and the
+  active slice's exact settled checkpoint. A ratchet repair permanently reduces
+  verification coupling but does not activate another backlog item or controller
+  slice.
 
 ## Evidence snapshot
 
@@ -629,8 +657,8 @@ composition root.
 The user approved this installed Hotkeys controller slice on 2026-08-10. It
 activates no other VTD-008 controller extraction.
 
-Proposed second slice (2026-08-11; awaiting explicit approval): complete only the
-installed Command Palette controller lifecycle. The current controller in
+Approved second slice (2026-08-11): complete only the installed Command Palette
+controller lifecycle. The current controller in
 `src/command-palette-ui.ts` already owns command filtering and selection, palette
 rendering, focus capture and restoration, background inertness, and six event
 bindings. It exposes `bind` and `show`, but repeated binding duplicates ownership
@@ -687,7 +715,7 @@ browser observation, and assertion leaf remains registered. The technology
 contract adds the installed-controller lifecycle cases; no product-behavior feature
 changes. Because the extraction edits `src/side-panel.ts` and the canonical pack
 registry, its one-time delivery checkpoint runs all 20 runnable packs in canonical
-order with properties, followed by `node scripts/package.mjs`. This candidate
+order with properties, followed by `node scripts/package.mjs`. This approved slice
 authorizes neither Gherkin mutation during specification nor another VTD-008 slice.
 
 ### VTD-009 — Tighten shell and verification-helper ownership
@@ -1183,9 +1211,9 @@ ownership, shared readiness, the modular side-panel browser program, and the
 reliability-repair gate. The bounded Event Library VTD-010 implementation completed
 the coder, refactorer, and architect sequence and is integrated in current `master`
 at `cc2c9a01`. The installed Hotkeys controller is complete in integration baseline
-`9808acce74`. The bounded installed Command Palette controller candidate awaits
-explicit user approval before coder handoff. Other VTD-008 controllers and VTD-010
-pack slices remain inactive.
+`9808acce74`. The bounded installed Command Palette controller slice is approved in
+`e1a0c74adb` and active in the normal role chain. Other VTD-008 controllers and
+VTD-010 pack slices remain inactive.
 
 After measurement truth, the fastest direct development-time wins are precise
 impact boundaries and layered editor target partitioning. Preserve terminal
