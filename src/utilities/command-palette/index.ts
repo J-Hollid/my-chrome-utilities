@@ -21,26 +21,37 @@ export function commandsForUtilityShell(
 }
 const commandPaletteCommandIds = ["demo.say-hello"] as const;
 
-function mountCommandPalette(root: UtilityMountHost): void {
+function mountCommandPalette(root: UtilityMountHost): void | (() => void) {
   const host = root as HTMLElement;
-  const requiredElements = ["#open-palette", "#palette-filter", "#palette-results"];
-  if (requiredElements.some((selector) => !host.querySelector(selector))) return;
+  const launcher = host.querySelector<HTMLButtonElement>("#open-palette");
+  const palette = host.querySelector<HTMLElement>("#palette");
+  const filter = host.querySelector<HTMLInputElement>("#palette-filter");
+  const results = host.querySelector<HTMLElement>("#palette-results");
+  if (!launcher || !palette || !filter || !results) return;
 
   const commandLog = host.querySelector<HTMLElement>("#command-log");
   const commands = commandsForUtilityShell(listCommands(), commandPaletteCommandIds);
   const controller = createPaletteController({
-    root: host,
-    sidePanelContent: host.querySelector<HTMLElement>("#side-panel-content"),
     commands,
-    runCommand(command) {
+    executeCommand(command) {
       runCommandById(command.id, {
         record(entry) {
           if (commandLog) commandLog.textContent = entry.message;
         },
       });
     },
+    elements:{
+      root:host,
+      launcher,
+      palette,
+      filter,
+      results,
+      sidePanelContent:host.querySelector<HTMLElement>("#side-panel-content"),
+    },
+    ownerDocument:host.ownerDocument,
   });
-  controller.bind();
+  controller.mount();
+  return () => controller.dispose();
 }
 
 export const commandPaletteUtility = defineUtility({
