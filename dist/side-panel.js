@@ -6643,7 +6643,12 @@ const paletteController = createPaletteController({
     },
     ownerDocument: document,
 });
-const workspaceTabsController = createWorkspaceTabsController(workspaceTabList, shellStorage);
+const workspaceTabsController = createWorkspaceTabsController({
+    storage: shellStorage,
+    tabList: workspaceTabList,
+    root: document,
+    pageLifecycle: window,
+});
 const hotkeyController = createInstalledHotkeyController({
     commands: allCommands,
     storage: hotkeyStorage,
@@ -6701,7 +6706,7 @@ startTestingButton?.addEventListener("click", () => {
 endTestingButton?.addEventListener("click", () => {
     runCommandById("data-layer.end-testing", commandRunContext);
 });
-workspaceTabsController.bind();
+workspaceTabsController.mount();
 hotkeyController.mount();
 paletteController.mount();
 window.addEventListener("pagehide", () => paletteController.dispose(), { once: true });
@@ -7765,7 +7770,6 @@ if (!savedSessionLiveFeed)
     void recoverAttachedObservationTarget();
 renderSessionState();
 renderObserverState();
-showWorkspace(workspaceTabsController.activeTab());
 showDataLayerView("Live");
 renderLiveObserver();
 if (savedSessionLiveFeed && liveObserverElements.eventList)
