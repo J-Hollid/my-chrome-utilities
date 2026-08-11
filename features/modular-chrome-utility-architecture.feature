@@ -219,3 +219,67 @@ Feature: Modular Chrome utility architecture
     And every unrelated runnable pack's evidence remains unchanged
     And no command id, ordering, message, storage value, browser entry point, manifest capability, visible behavior, layout, or accessibility result changes
     And the one-time delivery checkpoint runs all 20 runnable packs in canonical order with properties followed by node scripts/package.mjs
+
+  # Modular Chrome utility architecture 019
+  Scenario: Modular Chrome utility architecture 019
+    Given the full side panel supplies shell-owned storage, the workspace tab list, the workspace DOM query boundary, and page lifecycle
+    When the installed workspace-tabs controller is mounted
+    Then it restores the valid persisted workspace or selects and persists the canonical Data Layer fallback
+    And it owns the tab-list click, tab-list keydown, and page-lifecycle listeners exactly once
+    And it performs one initial render and exposes explicit mount, render, show, and dispose operations
+    And its integration in src/side-panel.ts retains only dependency construction, workspace-navigation command routing, and controller mounting
+    And controller disposal is driven by the injected page lifecycle
+    And src/side-panel.ts owns no workspace selection state, storage read or write, tab or panel rendering, workspace event binding, or workspace disposal closure
+
+  # Modular Chrome utility architecture 020
+  Scenario Outline: Modular Chrome utility architecture 020
+    Given an installed workspace-tabs lifecycle begins in state <initial_state>
+    When workspace-tabs lifecycle operation <operation> occurs
+    Then the workspace-tabs lifecycle result is <result>
+    And one workspace input can cause at most one controller transition
+
+    Examples:
+      | initial_state | operation                  | result                                                                                         |
+      | new           | mount                      | one listener set and one render of the persisted or canonical workspace are active             |
+      | mounted       | mount again                | no listener, storage transition, or initial render is duplicated                               |
+      | mounted       | dispose                    | every owned listener is removed while persisted and rendered selection remain unchanged         |
+      | disposed      | dispose again              | disposal is an idempotent no-op                                                                 |
+      | disposed      | mount again                | one fresh listener set and one render of the persisted workspace are active                     |
+      | mounted       | pagehide through lifecycle | disposal completes before the page lifecycle ends                                               |
+
+  # Modular Chrome utility architecture 021
+  Scenario Outline: Modular Chrome utility architecture 021
+    Given mounted workspace tab <initial_tab> is active
+    When workspace input <input> occurs
+    Then the active workspace result is <workspace_result>
+    And the focus and default-handling result is <interaction_result>
+
+    Examples:
+      | initial_tab | input                         | workspace_result                                             | interaction_result                                  |
+      | Data Layer  | click the Hotkeys tab         | Hotkeys is persisted, selected, and solely visible           | Hotkeys receives focus and click handling is preserved |
+      | Data Layer  | ArrowRight                    | Hotkeys is persisted, selected, and solely visible           | Hotkeys receives focus and the key is prevented     |
+      | Hotkeys     | ArrowRight                    | Data Layer is persisted, selected, and solely visible        | Data Layer receives focus and the key is prevented  |
+      | Hotkeys     | Home                          | Data Layer is persisted, selected, and solely visible        | Data Layer receives focus and the key is prevented  |
+      | Data Layer  | End                           | Hotkeys is persisted, selected, and solely visible           | Hotkeys receives focus and the key is prevented     |
+      | Data Layer  | Escape                        | Data Layer remains persisted, selected, and solely visible   | focus and default handling are preserved            |
+      | Data Layer  | click a non-workspace control | Data Layer remains persisted, selected, and solely visible  | focus and default handling are preserved            |
+
+  # Modular Chrome utility architecture 022
+  Scenario: Modular Chrome utility architecture 022
+    Given the workspace-tabs presentation controller is registered as shell-local presentation
+    When workspace-tabs module and changed-path ownership are inspected
+    Then storage, DOM, focus, and page lifecycle enter through explicit controller dependencies
+    And the controller imports no Command Palette, Hotkeys, Data Layer, utility-registry, or shell-composition state
+    And a later controller-only change selects exactly shell without dependant propagation
+    And a semantic workspace-navigation model change retains command-palette, hotkeys, and shell consumers
+    And those local classifications leave the existing global-impact closure unchanged for src/side-panel.ts, shared platform adapters, and utility-registry semantics
+
+  # Modular Chrome utility architecture 023
+  Scenario: Modular Chrome utility architecture 023
+    Given the canonical registry defines the complete pre-slice shell evidence inventory
+    When the installed workspace-tabs controller lifecycle is completed
+    Then one focused controller unit leaf proves dependency use, persisted restoration, lifecycle idempotence, listener cleanup, navigation, focus, and transition cardinality
+    And every registered pre-slice unit, property, feature, handler, browser adapter, observation, and assertion leaf remains unchanged
+    And verification accounting derives the expected inventory from the canonical registry plus exactly that approved unit addition
+    And no workspace id, order, storage key, namespace, visible state, focus result, navigation command, browser entry point, manifest capability, layout, or accessibility result changes
+    And one-time delivery runs the 20 runnable packs in canonical order with properties before node scripts/package.mjs

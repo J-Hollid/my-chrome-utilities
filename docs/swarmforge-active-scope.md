@@ -12,25 +12,26 @@ used to reactivate completed, rejected, or archived work.
 
 ## Current program state
 
-The integration baseline immediately before this compaction is
-`9808acce7435343f7005f44cd5346c4395dbb6b5`.
+The current integrated VTD-008 implementation baseline is
+`5ec9ff34f7a97f28ae887f553c31d8d6f7a788ed`.
 
 | Program | Current state | Next authority |
 |---|---|---|
-| VTD-008 side-panel composition-root decomposition | Active incremental program | The installed Hotkeys controller slice is complete in `9808acce74`, and the installed Command Palette controller slice is complete in `5ec9ff34f7`; no later controller slice is authorized. |
+| VTD-008 side-panel composition-root decomposition | Active incremental program | The installed Hotkeys controller slice is complete in `9808acce74`, the installed Command Palette controller slice is complete in `5ec9ff34f7`, and the specifier-bounded installed workspace-tabs controller slice awaits explicit user approval. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Queued and inactive | Requires a user-approved bounded specification slice. |
 | VTD-012 registry and planner modularization | Queued and inactive | Requires a user-approved bounded specification slice. |
 | Product recovery lineages | Open | Resume in the order listed under **Open product recovery queue**, unless later user direction changes it. |
 
 VTD-008 remains active as a program. Completion of the installed Hotkeys
-and Command Palette controllers completes two slices only, not VTD-008. The
-completed Command Palette slice was limited to its installed controller lifecycle
-and exact impact boundary; it does not activate utility-shell, workspace-tab, or
-Data Layer controller extraction.
+and Command Palette controllers completes two slices only, not VTD-008. The next
+specifier-bounded candidate completes only the existing workspace-tabs controller
+lifecycle in `src/workspace-tabs-ui.ts`. It does not extract the broader utility
+registry or shell DOM adapter, change workspace-navigation semantics, or activate
+observation-target, live-session, or another Data Layer controller.
 
-There is no active implementation handoff. A next slice must be bounded by the
-specifier and explicitly approved by the user before the coder is notified.
+There is no active implementation handoff. The workspace-tabs candidate must be
+explicitly approved by the user before the coder is notified.
 
 ## Authority order
 

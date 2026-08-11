@@ -723,6 +723,84 @@ The installed Command Palette controller slice completed the coder, refactorer,
 and architect chain and was integrated into `master` at
 `5ec9ff34f7a97f28ae887f553c31d8d6f7a788ed`.
 
+Proposed third slice (2026-08-11; awaiting explicit user approval): complete only
+the installed workspace-tabs controller lifecycle. The existing controller in
+`src/workspace-tabs-ui.ts` already owns the active workspace state, shell-owned
+storage read and write, tab and panel rendering, focus movement, click routing,
+and Home, End, ArrowLeft, and ArrowRight navigation. Its public `bind` operation
+adds anonymous click and keydown listeners on every call, cannot remove them, and
+does not own initial rendering. The side-panel composition root binds it and later
+invokes a separate initial `show`.
+
+The candidate gives the existing controller explicit, idempotent `mount`,
+`render`, `show`, and `dispose` operations. Shell-owned scoped storage, the
+workspace tab list and DOM query boundary, and page lifecycle enter as explicit
+dependencies. Mount reads the valid persisted workspace or selects and persists
+the canonical Data Layer fallback, owns one click, keydown, and page-lifecycle
+listener set, and performs one initial render. `show` remains the single state
+transition: it
+persists the selected workspace, updates `aria-selected`, roving tab index, and
+peer-panel visibility, and focuses the selected tab only when requested. Disposal
+removes every owned listener, leaves the persisted and rendered selection intact,
+and supports one clean remount from persisted state. The composition root retains
+only dependency construction, workspace-navigation command routing, and controller
+mounting; controller disposal belongs to the injected page lifecycle. The root
+owns no workspace selection state, storage read or write, button or panel
+rendering, event binding, or page-lifecycle cleanup closure.
+
+This package does not extract `src/utility-registry.ts`, the utility directory or
+panel bindings in `src/platform/utility-shell-dom.ts`, Command Palette, Hotkeys,
+the workspace-navigation model, observation target, live-session controls, or any
+Data Layer controller. Default Data Layer selection, persisted restoration,
+mouse activation, wraparound and endpoint keyboard navigation, focus, roving tab
+index, ARIA selection, peer-panel visibility, navigation command routing, storage
+key and namespace, layout, accessibility, manifest capabilities, browser entry
+points, and durable bytes remain observably equivalent.
+
+The existing `shell_local_presentation` impact boundary already classifies
+`src/workspace-tabs-ui.ts` without dependant propagation. A later change confined
+to that controller therefore continues to select exactly `shell`. Semantic changes
+to `src/workspace-tabs.ts` continue to select `command-palette`, `hotkeys`, and
+`shell`; direct changes to `src/side-panel.ts`, the utility registry, or shared
+platform adapters retain their current broad impact.
+
+One focused unit file is the only new evidence leaf. It proves injected dependency
+use, valid and invalid persisted-state restoration, one initial render,
+mount/dispose/remount idempotence, exact listener cleanup, navigation and focus,
+one transition per input, inert user input after disposal, and structural
+composition-root ownership without constructing the full side panel. Every
+existing shell unit, property, feature, handler, browser adapter, observation, and
+assertion leaf remains registered. Inventory accounting must be derived from the
+canonical registry plus this one approved addition, not copied into another frozen
+task list.
+
+| Evidence boundary | Conserved baseline | Approved delta |
+|---|---|---|
+| Product workspace behavior | `features/side-panel-workspace-tabs.feature`, its handler coverage, `test/workspace-tabs-property-test.mjs`, and installed containment observations | None |
+| Technology contract | Existing scenarios 001–018 in `features/modular-chrome-utility-architecture.feature` | Append stable scenarios 019–023; no mutation during specification |
+| Focused controller unit | Eleven current shell unit files | Add one installed workspace-tabs controller unit file |
+| Browser and runtime evidence | Five shell browser-adapter paths, two registered containment observations, and every current observation leaf | None |
+| Canonical pack accounting | All current shell features, handlers, properties, adapters, checkpoints, and prerequisites | Register only the new unit leaf and derive totals from the registry plus that approved addition |
+
+At the current baseline, the shell-only plan contains 58 non-property tasks and 59
+property-enabled tasks; the focused unit makes those 59 and 60. The global
+`src/side-panel.ts` plan currently contains 754 non-property tasks and 836
+property-enabled tasks; the approved addition makes those 755 and 837. The later
+59-task or 60-task controller boundary therefore excludes the other 19 runnable
+packs and reduces planned tasks by about 92% or 93%, respectively. These are
+planner snapshots, not wall-time budgets. Because the extraction necessarily
+edits the global composition root and canonical pack registry, its one-time
+delivery checkpoint remains all 20 runnable packs in canonical order with
+properties, followed by `node scripts/package.mjs`.
+
+The remaining-VTD verification ratchet applies. An incident-bound brittle check
+exposed by legitimate work is repaired at this task boundary by preserving its
+behavioral or structural invariant; it does not justify a production compatibility
+shim, weakened evidence, unrelated-pack edits, active-assertion deletion, or a
+repository-wide verification cleanup. This proposal authorizes neither Gherkin
+mutation during specification nor coder notification before explicit user
+approval.
+
 ### VTD-009 — Tighten shell and verification-helper ownership
 
 Priority: P1
