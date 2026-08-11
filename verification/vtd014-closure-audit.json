@@ -35,7 +35,7 @@
     "d8f27de0-8bd9-4f58-8c88-3ae17b84f10b": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "FLOW_WORKSPACE_CONTROLS_TARGET", "assertionSite": "registered Flow browser reload lifecycle", "diagnosticShape": "The populated Flow navigation was absent after a registered reload boundary." },
     "85068fd4-c977-49cf-9771-077bba8d29c0": { "disposition": "blocking-product-repair", "domain": "product-runtime" },
     "44e6343a-1890-46f0-945a-697aaf498411": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "Data layer directional Flow specification graph runtime 019/example_1", "assertionSite": "exact Flow 019 scope and arrangement registry", "diagnosticShape": "Unknown Flow 019 Tidy example." },
-    "7105410f-83f6-4748-809b-94b0873f5643": { "disposition": "lineage-retired", "reason": "Concurrent refactorer Shell failure commit is outside the selected delivery ancestry." },
+    "7105410f-83f6-4748-809b-94b0873f5643": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "Modular verification packs 112/example_1", "assertionSite": "VTD-014 terminal repair conservation baseline", "diagnosticShape": "VTD-014 conservation evidence is incomplete." },
     "9ef85130-693a-4516-8f17-cb7be76e0a7f": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "Modular verification packs 112/example_1", "assertionSite": "VTD-014 terminal repair conservation baseline", "diagnosticShape": "VTD-014 conservation evidence is incomplete." }
   }
 }
