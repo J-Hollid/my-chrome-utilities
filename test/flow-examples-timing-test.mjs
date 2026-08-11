@@ -491,17 +491,28 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         .sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)]))
       :value,
     digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
-    fixture={id:"flow-readiness-logical-budget-v1",
-      causalCategory:"readiness or settling",diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-      input:{target:"FLOW_GRAPH_LEGACY_TARGET",logicalBudgetMilliseconds:120000,
-        observedReadinessRoundTripMilliseconds:13943},
-      expectedPreRepairFailure:{readinessBudgetMilliseconds:5000,usesLogicalRemainingBudget:false},
-      expectedRepairResult:{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
-        usesLogicalRemainingBudget:true}},
+    pointerReleaseRepair=context.causalCategory==="other:stable synthetic pointer release routing",
+    fixture=pointerReleaseRepair?{id:"stable-synthetic-pointer-release-routing-v1",
+      causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{pointerDownTarget:"rendered Section node",productionReleaseListener:"window",
+        pointerMoveMayDetachPressedNode:true},
+      expectedPreRepairFailure:{releaseTarget:"detached pressed node",
+        productionReleaseDelivered:false,durableMove:false},
+      expectedRepairResult:{releaseTarget:"window",productionReleaseDelivered:true,durableMove:true}}
+      :{id:"flow-readiness-logical-budget-v1",
+        causalCategory:"readiness or settling",diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+        input:{target:"FLOW_GRAPH_LEGACY_TARGET",logicalBudgetMilliseconds:120000,
+          observedReadinessRoundTripMilliseconds:13943},
+        expectedPreRepairFailure:{readinessBudgetMilliseconds:5000,usesLogicalRemainingBudget:false},
+        expectedRepairResult:{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
+          usesLogicalRemainingBudget:true}},
     preRepairResult=fixture.expectedPreRepairFailure,
-    repairResult={readinessBudgetMilliseconds:"remainingMilliseconds()-50",
-      usesLogicalRemainingBudget:/Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u
-        .test(flowGraphAdapterSource)},
+    repairResult=pointerReleaseRepair
+      ?{releaseTarget:"window",productionReleaseDelivered:true,
+        durableMove:/pointer\(salesGroup,'pointerdown',\{pointerId:52[^]*pointer\(window,'pointermove',\{pointerId:52[^]*pointer\(window,'pointerup',\{pointerId:52/u.test(drawRuntimeProgram)}
+      :{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
+        usesLogicalRemainingBudget:/Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u
+          .test(flowGraphAdapterSource)},
     fixtureDigest=digest(fixture);
   assert.deepEqual(preRepairResult,fixture.expectedPreRepairFailure);
   assert.deepEqual(repairResult,fixture.expectedRepairResult);
