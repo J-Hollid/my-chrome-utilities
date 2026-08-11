@@ -87,5 +87,5 @@ Feature: Settled candidate final verification
     When the VTD-015 candidate moves through coder, refactorer, architect, and specifier
     Then its handoffs obey the previously integrated verification protocol
     And the new review-ready protocol remains inactive until VTD-015 is integrated
-    And VTD-012 is the first live payback measurement
+    And VTD-017 shared-artifact parallel execution is the first live payback measurement
     And no bootstrap exception bypasses current durable evidence or integration safety

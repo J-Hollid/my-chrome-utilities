@@ -19,13 +19,14 @@ The settled-candidate verification workflow is integrated at
 
 | Program | Current state | Next authority |
 |---|---|---|
-| Feature-development throughput course adjustment | Approved at `2b093eec4f` | `docs/feature-development-throughput-course-adjustment-R01.md` controls the next bounded pre-approval scorecard and work order. |
-| VTD-015 settled-candidate final verification | Complete; live payback unproved | Review its outcome scorecard in `docs/vtd015-settled-final-verification-workflow-R01.md`; VTD-012 remains inactive pending explicit user approval. |
+| Feature-development throughput course adjustment | Approved at `2b093eec4f`; VTD-017 course choice approved on 2026-08-11 | `docs/feature-development-throughput-course-adjustment-R01.md` controls the scorecard and later work order. |
+| VTD-015 settled-candidate final verification | Complete; live payback unproved | Review its outcome scorecard in `docs/vtd015-settled-final-verification-workflow-R01.md`; VTD-017 is the agreed first live payback candidate. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program, paused after three completed slices | The installed Hotkeys, Command Palette, and workspace-tabs slices are complete. No later controller slice is active. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
-| VTD-011 terminal shard balancing | Queued and inactive | Requires a user-approved bounded specification slice. |
-| VTD-012 registry and planner modularization | Queued and inactive | Requires a user-approved bounded specification slice. |
-| VTD-017 bounded isolated browser parallelism | Proposed and inactive | Course-adjusted follow-up after VTD-011 and before VTD-016; requires separate user approval and proceeds only while final-gate time remains material. |
+| VTD-011 terminal shard balancing | Deferred and inactive | The existing two-worker order is within about six seconds of balanced after lock wait is removed; scheduling needed for a possible third worker is bounded inside VTD-017. |
+| VTD-012 registry and planner modularization | Deferred and inactive | Reconsider after broad final-gate and receipt-persistence costs are reduced. |
+| VTD-017 shared-artifact parallel execution | Approved bounded implementation | `docs/vtd017-shared-artifact-parallel-execution-R01.md` and `features/verification-shared-artifact-parallel-execution.feature` control the coder handoff. |
+| VTD-018 incremental verification receipts | Proposed and inactive | Consider only after the VTD-017 scorecard; requires a separate bounded specification and user approval. |
 | Product recovery lineages | Open | Resume in the order listed under **Open product recovery queue**, unless later user direction changes it. |
 
 VTD-008 remains active as a program. Completion of the installed Hotkeys, Command
@@ -35,11 +36,11 @@ in `src/workspace-tabs-ui.ts`. It does not extract the broader utility registry 
 shell DOM adapter, change workspace-navigation semantics, or activate
 observation-target, live-session, or another Data Layer controller.
 
-There is no active implementation slice. Do not select another VTD-008 controller
-or activate VTD-012 automatically. VTD-015 is integrated, but its time-saving
-claim remains provisional until one later slice uses review-ready handoffs. The
-user must review its outcome scorecard and explicitly choose whether VTD-012 is
-that controlled payback measurement.
+The active implementation slice is bounded VTD-017 shared-artifact parallel
+execution. Do not select another VTD-008 controller or activate VTD-012
+automatically. VTD-015 is integrated, but its time-saving claim remains
+provisional until VTD-017 uses review-ready handoffs and reports its settled
+scorecard. The user approved the exact VTD-017 contract on 2026-08-11.
 
 ## Feature-development throughput authority
 
@@ -57,11 +58,12 @@ full suite as an edit loop, and do not accept a successful full result for a tre
 that later changes.
 
 The approved final-gate speed work uses one coordinator and one deduplicated plan,
-not 20 competing pack runners. It first balances existing workers through VTD-011,
-then VTD-017 may add bounded browser workers only for tasks with proved profile,
-port, writable-data, evidence, process-lifecycle, and cleanup isolation. A parallel
-failure remains a recorded failure and cannot be retried at lower concurrency to
-turn it green.
+not 20 competing pack runners. VTD-017 first removes the exclusive artifact wait
+that prevents the existing two browser workers from overlapping. It may make three
+workers the default only after measured scheduling and focused normal and loaded
+evidence prove a material gain for tasks with private profile, port, writable-data,
+evidence, process-lifecycle, and cleanup state. A parallel failure remains a
+recorded failure and cannot be retried at lower concurrency to turn it green.
 
 The workspace-tabs settled all-20 run measured up to 195.4 seconds of exclusive
 `dist` artifact-lock waiting inside a 231.9-second browser task even though two
@@ -70,13 +72,13 @@ artifact use safely shareable, while retaining exclusive build and promotion,
 before testing a higher Chrome worker count. Its scorecard must report useful
 overlap and lock wait, not configured worker count alone.
 
-The approved enabling order after the completed workspace-tabs slice is VTD-015,
-the bounded VTD-012 first slice, VTD-011, the conditional bounded VTD-017 slice,
-then VTD-016 and one modest real-feature payback check. VTD-011 and VTD-017 move
-ahead of VTD-016 because their final-gate savings apply to VTD-016 and nearly all
-later work; VTD-016 mainly accelerates later Shell and VTD-008 changes. Each slice
-must show its expected elapsed-time benefit on the next applicable slice or stop
-automatic continuation for another bottleneck review.
+The current enabling order after completed VTD-015 is bounded VTD-017, then a
+separate decision on VTD-018 incremental receipt recording, followed by the
+remaining bottleneck shown by those scorecards. VTD-012 and the standalone
+VTD-011 terminal-shard slice are deferred. VTD-017 moves first because it models a
+4.5-to-6.5-minute reduction in the approximately 21.5-minute complete gate and
+also accelerates multi-observation focused plans. Each slice must show its expected
+elapsed-time benefit before another slice is approved.
 
 Every enabling slice requires two visible user reviews: a pre-approval baseline,
 target, expected effort, safety trade-off, and stop condition; then a settled
@@ -399,8 +401,8 @@ The user approved the VTD-015 bootstrap terminal scope on 2026-08-11. During
 implementation and review, use only focused process-contract checks. Each
 committed VTD-015 handoff still follows the previously integrated protocol, whose
 shared workflow impact requires the canonical all-20 checkpoint. The new
-review-ready protocol becomes active only after VTD-015 integrates; VTD-012 is its
-first live payback measurement.
+review-ready protocol became active when VTD-015 integrated; VTD-017 is its first
+live payback measurement.
 
 For a new VTD-008 or VTD-010 slice, changed-path preflight and the new bounded
 specification determine the exact pack set. Do not reuse a completed slice's
@@ -432,7 +434,7 @@ is status only.
 | VTD-008 installed Hotkeys controller | `9808acce74` | Complete slice; VTD-008 remains active |
 | VTD-008 installed Command Palette controller | `5ec9ff34f7` | Complete slice; VTD-008 remains active |
 | VTD-008 installed workspace-tabs controller | `ad002047a3` | Complete slice; VTD-008 remains active and paused |
-| VTD-015 settled-candidate final verification | `bdd29f8c87` | Complete; VTD-012 payback measurement not yet approved |
+| VTD-015 settled-candidate final verification | `bdd29f8c87` | Complete; VTD-017 payback contract approved for coder handoff |
 
 ## Historical boundaries
 

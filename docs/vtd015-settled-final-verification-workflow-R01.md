@@ -109,16 +109,16 @@ a separate scope decision.
 VTD-015 changes the protocol that carries VTD-015 itself. Its coder, refactorer,
 architect, and specifier handoffs therefore continue to obey the previously
 integrated protocol until the slice is accepted in `master`. There is no one-time
-safety bypass. VTD-012 is the first live use and payback measurement for the new
-review-ready flow.
+safety bypass. The 2026-08-11 course adjustment selected VTD-017 as the first live
+use and payback measurement for the new review-ready flow.
 
 ## Success measure
 
 VTD-015 implementation succeeds when its deterministic process fixtures prove the
 new states and all existing terminal proof remains required. Its time-saving claim
-remains provisional until VTD-012 completes.
+remains provisional until VTD-017 completes.
 
-VTD-012 will count as evidence of value when:
+VTD-017 will count as evidence of value when:
 
 - coder and refactorer perform no all-20 checkpoint while changes are expected;
 - the architect performs exactly one successful final all-20 run after the last
@@ -155,9 +155,8 @@ Stop and return for user direction if implementation would:
 
 After VTD-015 settles, report its actual approval-to-integration time, role
 intervals, focused and full verification time, successful and invalidated full
-runs, failures, repairs, reruns, and preserved terminal proof. Recommend whether
-to begin the VTD-012 payback measurement, but do not activate it without the
-user's explicit decision.
+runs, failures, repairs, reruns, and preserved terminal proof. Recommend a bounded
+payback measurement, but do not activate it without the user's explicit decision.
 
 ## Settled outcome scorecard
 
@@ -222,10 +221,11 @@ is intended to remove: two successful full passes were invalidated, and two code
 failures that focused checks could likely have found occurred only after broad
 runs had started. The implementation value is therefore still provisional.
 
-Recommendation: use the bounded VTD-012 first slice as one controlled live
+Course-adjusted recommendation: use bounded VTD-017 as one controlled live
 payback measurement. Its coder and refactorer must use focused review-ready
 evidence only. The architect performs the one settled all-20 gate, with a second
 run permitted only after a recorded final failure and repair. If an earlier role
 starts all 20, review-ready work can integrate, terminal evidence shrinks, or the
 elapsed result shows no useful saving, stop the enabling sequence and reassess.
-VTD-012 remains inactive until the user explicitly approves this recommendation.
+The user approved VTD-017's exact bounded contract on 2026-08-11, making it the
+active live payback measurement.

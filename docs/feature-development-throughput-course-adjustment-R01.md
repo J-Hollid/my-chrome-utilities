@@ -1,7 +1,8 @@
 # Feature-development throughput course adjustment R01
 
-Status: approved by the user and committed at `2b093eec4f`; each bounded enabling
-slice still requires its own scorecard and explicit approval
+Status: approved by the user and committed at `2b093eec4f`; bounded VTD-017 was
+approved on 2026-08-11; its scorecard and a new explicit decision are required
+before another enabling slice
 
 Prepared: 2026-08-11
 
@@ -191,9 +192,9 @@ new course.
 The immediate VTD-015 opportunity is concrete: the coder's 21-minute successful
 full run was invalidated by expected later review changes. Moving the one required
 full run to the settled tree should avoid that pass on a comparable slice without
-dropping the final safety gate. This saving is provisional until VTD-012 records
-its own before-and-after role lineage. The recommendation is to present the
-VTD-015 pre-approval scorecard next; it is not automatically approved.
+dropping the final safety gate. This saving remains provisional until the next
+approved slice records its own before-and-after role lineage. The user approved
+bounded VTD-017 as that live payback candidate on 2026-08-11.
 
 ## Order by direct value and enabling value
 
@@ -204,26 +205,26 @@ worth more than saving ten minutes only from one feature type.
 | Slice | Later work it should speed up | Why it belongs where it does |
 |---|---|---|
 | VTD-015 | Every later VTD slice and feature | Prevents review roles from repeatedly invalidating successful full runs |
-| VTD-012 first slice | VTD-011, VTD-017, VTD-016, later verification maintenance, and product work | Splits the large process contract into smaller responsibilities and removes process-only checks from product loops |
-| VTD-011 | VTD-017, VTD-016, VTD-014, and every later terminal gate | Balances the workers already paid for and supplies measured deterministic weights for later parallel scheduling |
-| VTD-017 | VTD-016, VTD-014, later VTD slices, and feature final gates | Shortens the complete browser-heavy safety gate without dropping evidence |
+| VTD-017 | VTD-018, later VTD slices, multi-observation focused work, and feature final gates | Removes measured artifact-lock serialization before conditionally adding one useful browser worker |
+| VTD-018 | Later broad and feature-heavy focused plans plus every final gate | Replaces repeated whole-receipt rewrites with small durable incremental records |
+| VTD-012 first slice | Later verification maintenance and product work | Splits the large process contract only after broader measured gate costs are reduced |
 | VTD-016 | Later Shell features and any future VTD-008 controller slice | Narrows Shell-focused work, but does little for non-Shell VTD slices |
 | VTD-014 audit | Later work only if measurement finds duplicated enforcement | Its possible payoff is broad, but currently less certain than the measured bottlenecks above |
 
-This changes the recommendation: take VTD-011 and VTD-017 before VTD-016. That
-lets VTD-016 itself benefit from the faster final gate, and the same improvement
-then compounds through every later slice. It adds two debt slices before the first
-real-feature payback check, so each must demonstrate elapsed-time value on the
-next slice rather than waiting until the end of the sequence.
+The detailed receipt changes the recommendation. Take VTD-017 first; the existing
+two-worker order is within about six seconds of balanced after lock wait is
+removed, so a standalone VTD-011 slice has negligible immediate value. Consider
+VTD-018 only after VTD-017 reports its actual gate reduction. Each slice must
+demonstrate elapsed-time value before another is approved.
 
 ## Ranked course-adjusted work
 
 | Order | Work | Expected value | Expected effort | Main trade-off |
 |---:|---|---|---|---|
 | 1 | VTD-015: put the full gate after review settles the tree | Very high, broad enablement | Medium | Full-suite-only defects appear later, but still before integration |
-| 2 | VTD-012 first slice: separate product and verification-process checks | High, broad enablement | Medium | Requires careful ownership and historical mapping |
-| 3 | VTD-011: balance terminal lanes using measured task weights | High, broad enablement | Medium | Lane speed depends on indivisible long tasks and available runners |
-| 4 | VTD-017: add bounded isolated browser parallelism | High, broad enablement | Medium, incremental | More workers save time only while the machine has enough capacity |
+| 2 | VTD-017: share one validated artifact across bounded browser workers | Very high, broad enablement | Small–medium | Three workers remain conditional on loaded stability |
+| 3 | VTD-018: record verification results incrementally | High, broad enablement | Medium | Crash recovery and exact evidence binding must remain intact |
+| 4 | VTD-012: split the long process contract when still material | Medium, broad enablement | Medium | Its immediate saving is smaller than the two measured global waits |
 | 5 | VTD-016: divide Shell checks by observable behavior | High for Shell work | Medium | Shared Shell changes must remain broad |
 | 6 | VTD-014 simplification audit | Potentially high | Medium–high | Removing duplicate enforcement needs strong negative tests |
 
@@ -264,9 +265,9 @@ The principal scorecard differs by slice:
 | Slice | Primary elapsed-time evidence | Safety and confidence evidence |
 |---|---|---|
 | VTD-015 | Successful full gates per role lineage and time lost to passes invalidated by later review changes | A repaired failure still forces a fresh settled all-20 run |
-| VTD-012 | Focused product-loop time and verification-process diagnosis time before and after separation | Infrastructure changes retain their complete process contracts and the final gate is unchanged |
-| VTD-011 | Slowest terminal-lane time, total terminal wall time, and slowest-to-fastest imbalance | Every terminal task remains in exactly one deterministic lane |
 | VTD-017 | Browser-stage and complete-gate time at each tested worker bound, separated into normal and loaded environments | Failure pattern, timeout and cleanup incidents, resource contention, and unchanged terminal evidence |
+| VTD-018 | Per-stage bookkeeping time, receipt bytes rewritten, and complete-gate time | Every completed task remains crash-recoverable and final evidence binds the same identities |
+| VTD-012 | Focused verification-process time and complete unit-stage time before and after separation | Infrastructure changes retain their complete process contracts and the final gate retains every leaf |
 | VTD-016 | Focused Shell-product loop time and the later feature's approval-to-integration time | Shared Shell changes remain broad and the all-20 result retains every leaf |
 | VTD-014 audit | Measured process overhead removed and diagnosis or repair time changed | Before-and-after bad-candidate examples remain rejected |
 
@@ -298,74 +299,58 @@ Acceptance evidence must show that a replay of the Command Palette role sequence
 would request one successful final-tree checkpoint rather than three, while a
 failure followed by a repair still requests a fresh all-20 run.
 
-### 2. VTD-012 first slice — Separate product checks from verification-process checks
+### 2. VTD-017 — Share one validated artifact across bounded browser workers
+
+Expected value: very high
+
+Expected effort: small–medium
+
+Use one coordinator-owned artifact lease in focused and final verification so the
+coordinator's independent read-only browser children do not take mutually
+exclusive locks. Keep outside build and package writers blocked. Establish useful
+overlap with the existing two workers before considering a third.
+
+The detailed receipt shows 609.849 seconds in the browser-observation stage and
+566.480 seconds of accumulated lock wait. The same observed work models at
+320.246 seconds with two genuinely free workers. A balanced third worker models
+216.078 seconds, but becomes the default only when the exact
+`--pack layered_schema` normal plan is at least 60 seconds faster and a loaded
+sample introduces no new failure pattern.
+
+Trade-off: a third Chrome process may create resource-driven timeouts. Keep two
+workers when the threshold fails. Every task retains private browser and evidence
+state, and a failed parallel run remains failed.
+
+### 3. VTD-018 — Record verification results incrementally
 
 Expected value: high
 
 Expected effort: medium
 
-Split the verification-process contract by responsibility and register it under a
-verification-infrastructure boundary rather than as an ordinary Shell-product
-unit. Product changes do not run checks that only validate planning, receipt,
-handoff, or reliability machinery. Changes to that machinery run all of their own
-contracts. The final all-20 gate still includes the complete verification-process
-evidence once.
+The detailed run spent about 3 minutes 50 seconds around parse and generation
+although their parallel test work took about 8.5 seconds. Store each completed
+result once in a small durable record and assemble the complete receipt at the
+final boundary instead of rewriting growing receipt and checkpoint documents
+after every cheap task.
 
-Trade-off: ownership rules become more explicit and require a safe historical
-mapping. This costs implementation effort, but it removes about 173 measured
-seconds from the current Shell-product development loop and reduces the chance
-that an ordinary feature becomes a verification-tooling repair project.
+Trade-off: crash recovery, task identity, failure records, and exact final
+evidence must remain unchanged. This item remains inactive until the VTD-017
+scorecard is reviewed and the user separately approves a bounded specification.
 
-### 3. VTD-011 — Balance terminal lanes using measured task weights
+### 4. VTD-012 — Split the long verification-process contract when still material
 
-Expected value: high
+Expected value: medium after the broader waits are removed
 
 Expected effort: medium
 
-Use measured indivisible task durations to rebalance the four terminal lanes. The
-current corrected estimates place about 245 seconds in the slowest lane and about
-124 seconds in the fastest, so the terminal gate waits on avoidable imbalance.
-Keep assignment deterministic and keep every task in exactly one lane.
+Split the approximately three-minute verification-process unit by responsibility
+so independent parts can use the existing unit workers and focused infrastructure
+changes can select their own contracts. Product/process ownership separation is a
+secondary later benefit, not the reason to place this work before VTD-017.
 
-Trade-off: one very long browser task cannot be divided merely to improve the
-numbers, and each isolated terminal runner still needs a safe build. The value is
-broad because every later VTD and feature final gate uses these lanes. VTD-017 can
-also reuse the accepted weights and deterministic assignment rule instead of
-inventing a second scheduling model.
-
-### 4. VTD-017 — Add bounded isolated browser parallelism
-
-Expected value: high
-
-Expected effort: medium and incremental
-
-Use the VTD-011 timing model to balance the workers that already exist. First
-remove false serialization: keep build and artifact-promotion writes exclusive,
-but let proved read-only browser consumers share the same validated immutable
-artifact or private validated snapshots. Prove the artifact identity and absence
-of writes before allowing overlap. Then audit the ordinary browser adapters that
-remain serial and allow two isolated workers for the adapters proved independent.
-Trial browser-observation concurrency three only after the existing two-worker
-schedule has real overlap, is balanced, and focused normal and loaded evidence
-shows adequate machine capacity.
-
-Keep one canonical plan, one prepared candidate, one combined result, and the
-existing stage and dependency boundaries. Each browser worker must own its Chrome
-profile, debugging port, temporary data, evidence directory, and cleanup. A task
-without that proof stays serial. Worker assignment must be deterministic from an
-accepted timing snapshot so the result is explainable and repeatable.
-
-Trade-off: more isolated processes still compete for processor time and memory.
-The measured gain may flatten or reverse at three workers, and overload can create
-timeouts. Accept a higher default only when the typical elapsed time improves and
-focused loaded samples show no new failure pattern. A parallel failure remains a
-real recorded failure; there is no automatic lower-concurrency retry that can turn
-it green.
-
-This work follows VTD-011 because adding workers before balancing existing lanes
-or removing the observed artifact-lock wait could add risk without addressing the
-real waiting path. It precedes VTD-016 so VTD-016 and every later slice receive
-its final-gate benefit.
+Trade-off: the split can save roughly two minutes from the unit stage only if its
+parts remain independent without duplicated setup. Reassess it after VTD-017 and
+receipt recording reveal the new longest path.
 
 ### 5. VTD-016 — Partition Shell product evidence by behavior
 
@@ -412,26 +397,29 @@ controller slice and integrated at `ad002047a3`. Record its
 feature-delivery-style elapsed-time breakdown as a transition measurement. It
 remains technical debt and does not increment the completed-feature count.
 
-With it complete:
+With it complete, and with VTD-015 now integrated:
 
 1. Do not automatically pick another VTD-008 controller.
-2. Specify VTD-015 first.
-3. Follow with the bounded VTD-012 verification-process separation.
-4. Balance terminal lanes through VTD-011 and use its measured scheduling model.
-5. If the final gate remains material, take the bounded VTD-017
-   isolated-parallelism slice.
-6. Partition Shell evidence through VTD-016, now benefiting from the earlier
-   workflow and final-gate improvements.
-7. Deliver one modest real feature and compare its approval-to-integration result
-   with the Command Palette and workspace-tabs transition measurements.
-8. Continue architecture extraction only where that real feature proves the
-   extraction is the next limiting factor.
+2. Take bounded VTD-017 next. Remove the measured artifact-lock wait from focused
+   and final browser plans, then accept three workers only if focused normal and
+   loaded measurements prove that the extra worker is both useful and stable.
+3. Review the VTD-017 scorecard with the user. If durable-result recording remains
+   a leading cost, specify VTD-018 separately; do not activate it automatically.
+4. Follow the new measured longest path. VTD-012 and VTD-016 remain candidates,
+   while standalone VTD-011 stays deferred because the current two-worker order
+   is already within about six seconds of balanced once lock waiting is removed.
+5. Resume product feature delivery when the remaining test-infrastructure cost is
+   acceptable to the user, and compare approval-to-integration time with the
+   Command Palette and workspace-tabs transition measurements.
+6. Continue architecture extraction only where a measured delivery bottleneck
+   shows that it is the next limiting factor.
 
-Measure the enabling claim as the sequence proceeds. VTD-015 must reduce full
-checkpoint count on VTD-012; VTD-012 must make the VTD-011 and VTD-017
-verification changes easier to isolate and diagnose; VTD-011 must shorten the
-VTD-017 terminal gate; and VTD-017 must shorten the VTD-016 final gate. A missed
-payback stops automatic continuation and triggers another bottleneck review.
+Measure each enabling claim as the sequence proceeds. VTD-017 must shorten its
+own final gate and also record whether focused multi-observation plans improve.
+If approved, VTD-018 must demonstrate the VTD-017 saving on its own delivery and
+remove the measured receipt-writing cost. Later work is then chosen from the new
+longest path rather than from the old task order. A missed payback stops automatic
+continuation and triggers another bottleneck review.
 
 After each numbered slice, present its scorecard and recommendation to the user.
 Do not approve or hand off the next enabling slice until the user explicitly

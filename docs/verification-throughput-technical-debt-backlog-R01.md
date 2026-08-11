@@ -290,13 +290,14 @@ Large items must be split into independently reviewable descendants.
 | VTD-008 | P2 | XL, controller slices | Decomposed production side-panel root | VTD-004 |
 | VTD-009 | P1 | S–M | Exact shell/helper ownership | None |
 | VTD-010 | P3 | S per pack | Fewer redundant Chrome launches | VTD-006 preferred |
-| VTD-011 | P1 | M | Measured terminal shard balance | VTD-001, VTD-002 |
-| VTD-012 | P0 first slice, P2 remainder | L, module slices | Separate verification-process work, then modularize registry and planner | VTD-004, VTD-005 |
+| VTD-011 | Deferred | M | Measured terminal shard balance if CI evidence shows a material imbalance | VTD-001, VTD-002 |
+| VTD-012 | P2, deferred | L, module slices | Separate verification-process work, then modularize registry and planner | VTD-004, VTD-005 |
 | VTD-013 | P1 | S–M | Stable Flow examples timing | VTD-002, VTD-007 |
 | VTD-014 | P1 | M | Unreliable tests must be repaired, not retried away | VTD-002, VTD-007 |
 | VTD-015 | P0 | M | Review changing candidates before one final-tree all-20 gate | VTD-014 |
-| VTD-016 | P0 | M | Partition Shell product evidence for a faster inner loop | VTD-004, VTD-006 |
-| VTD-017 | P1 | M, incremental | Bounded isolated parallel browser execution | VTD-001, VTD-002, VTD-007, VTD-011 |
+| VTD-016 | P1, deferred | M | Partition Shell product evidence for a faster inner loop | VTD-004, VTD-006 |
+| VTD-017 | P0 next slice | S–M, bounded | Shared-artifact parallel browser execution in focused and final plans | VTD-001, VTD-002, VTD-007 |
+| VTD-018 | P0 after VTD-017 review | M | Incremental durable task-result recording | VTD-014, VTD-015 |
 
 ## Backlog
 
@@ -940,7 +941,7 @@ activates no other VTD-010 pack slice.
 
 ### VTD-011 — Balance terminal CI using measured critical-path weights
 
-Priority: P1 under the feature-development course adjustment
+Priority: deferred unless fresh CI evidence shows a material lane imbalance
 
 Problem:
 
@@ -977,8 +978,7 @@ weakening coverage.
 
 ### VTD-012 — Modularize verification registry and planner infrastructure
 
-Priority: P0 for the bounded verification-process separation; P2 for remaining
-modularization
+Priority: P2, deferred until the global verification bottlenecks are reduced
 
 Problem:
 
@@ -1259,8 +1259,8 @@ Priority: P0
 Status: integrated at `bdd29f8c87`. The authoritative contract and settled
 scorecard are in `docs/vtd015-settled-final-verification-workflow-R01.md`, with
 executable behavior in `features/settled-candidate-final-verification.feature`.
-The saving remains provisional until the user approves and reviews one VTD-012
-live payback measurement.
+The saving remains provisional until the user approves and reviews the bounded
+VTD-017 live payback measurement.
 
 Problem:
 
@@ -1315,11 +1315,11 @@ Measured target and decision boundary:
   runs, including one 21-minute-21-second pass invalidated by later review work.
 - VTD-015 itself bootstraps under the previously integrated handoff protocol. It
   cannot safely use the state it is still implementing.
-- VTD-012 is the first live payback measurement. While its tree is changing, coder
+- VTD-017 is the first live payback measurement. While its tree is changing, coder
   and refactorer perform no all-20 run. After the final review change, the
   architect owns one successful settled all-20 run unless a recorded failure and
   repair require a fresh second run.
-- The claim remains provisional until the VTD-012 scorecard demonstrates at least
+- The claim remains provisional until the VTD-017 scorecard demonstrates at least
   one invalidated successful full run avoided with every final evidence leaf and
   package result preserved.
 - Stop this slice if it requires weakening VTD-014, permitting review-ready
@@ -1335,12 +1335,12 @@ Settled bootstrap result:
 - The architect's repaired final tree passed all 841 checks and packaging in 21
   minutes 26 seconds; the specifier reused that exact durable evidence and did not
   add another full run.
-- This result proves the cost being targeted, not the saving. VTD-012 remains
-  inactive until the user decides whether to run the one-slice payback test.
+- This result proves the cost being targeted, not the saving. VTD-017 remains
+  inactive until the user approves its exact bounded contract.
 
 ### VTD-016 — Partition Shell product evidence for a faster inner loop
 
-Priority: P0 after the VTD-012 verification-process separation
+Priority: P1 and deferred until VTD-017 and the VTD-018 decision are reviewed
 
 Problem:
 
@@ -1388,9 +1388,11 @@ remains unchanged and negative planner cases prove shared paths stay broad. The
 expected value is high: it removes clearly unrelated work from a common local
 change and gives failures a smaller, more understandable home.
 
-### VTD-017 — Add bounded isolated parallel browser execution
+### VTD-017 — Add bounded shared-artifact parallel browser execution
 
-Priority: P1 after measured lane balancing
+Priority: P0 next bounded slice under the 2026-08-11 course adjustment
+
+Status: exact bounded contract approved by the user on 2026-08-11
 
 Problem:
 
@@ -1407,23 +1409,29 @@ otherwise independent task waited as long as 195.4 seconds; that waiting task to
 231.9 seconds overall. A configured worker count of two is therefore not yet proof
 of useful two-way execution.
 
+The complete detailed stage occupied 609.849 seconds. Its tasks contained 639.265
+seconds of work after measured lock wait was removed, which models at 320.246
+seconds with two balanced workers and 216.078 seconds with three. The current
+two-worker input order is within about six seconds of balanced once lock wait is
+removed, so standalone VTD-011 terminal sharding is not a prerequisite for this
+bounded correction.
+
 Required outcome:
 
-- Keep one coordinator, one canonical deduplicated all-20 plan, one prepared build
-  candidate, and one combined pass or fail result.
-- Use VTD-011 timing weights to balance the existing workers before adding more.
-- Audit the `dist` artifact lease before raising worker counts. Keep build,
-  validation, and promotion writes exclusive, while allowing proved read-only
-  consumers to share the same validated immutable artifact or separate validated
-  snapshots. Preserve artifact digest identity and fail on any consumer mutation.
+- Keep one coordinator, one canonical deduplicated plan, one prepared build
+  candidate, and one combined pass or fail result in focused and final modes.
+- Give the coordinator ownership of the validated artifact while its tasks run.
+  Its read-only children share that exact identity without mutually exclusive
+  per-task reacquisition; build, replacement, and package writes remain exclusive.
+  Preserve artifact digest identity and fail on any consumer mutation.
 - Prove that every parallel browser task owns its Chrome profile, automatically
   selected debugging port, temporary writable data, evidence output, child-process
   lifecycle, and cleanup. Keep an unproved task serial.
-- Audit the ordinary browser adapters, then allow at most two adapter workers for
-  the subset proved independent.
-- Trial browser-observation concurrency three only after the two-worker schedule
-  is balanced. A higher default requires a material typical elapsed-time reduction
-  and focused normal and loaded evidence without a new failure pattern.
+- Keep ordinary browser adapters serial in this bounded slice.
+- Trial browser-observation concurrency three only after two workers demonstrate
+  useful overlap with no per-task artifact wait. Three becomes the default only
+  when the exact `--pack layered_schema` normal plan is at least 60 seconds faster
+  and a loaded sample shows no new failure pattern.
 - Preserve stage ordering, explicit dependencies, shared-session batching, and
   every current assertion and evidence leaf exactly once.
 - Use focused representative stress samples and one ordinary final gate for the
@@ -1455,17 +1463,58 @@ Acceptance criteria:
 - A failed worker makes the combined run fail and preserves its evidence without a
   silent retry.
 
-Dependencies: VTD-001, VTD-002, VTD-007, and VTD-011.
+Dependencies: VTD-001, VTD-002, and VTD-007. VTD-011 is deferred; only the measured
+deterministic assignment needed for a three-worker decision belongs in this slice.
 
 Trade-off and expected value:
 
-The profile, port, and evidence isolation foundations already exist, but the
-artifact lease needs correction before their parallel value is real. The expected
-effort remains medium and can be delivered incrementally. The expected value is
-high when final-gate browser work remains a material share of feature delivery.
-More Chrome processes still compete for processor time and memory, so three
-workers may be slower or less stable on a constrained machine. The accepted
-default is the fastest stable bound, not the largest possible worker count.
+The profile, port, and evidence isolation foundations already exist, and the lock
+already supports inherited ownership. The expected effort is small–medium and the
+target is a 4.5-to-5-minute complete-gate saving with two genuine workers, or a
+5.5-to-6.5-minute total saving if three prove stable. More Chrome processes still
+compete for processor time and memory, so the accepted default is the fastest
+stable bound, not the largest possible worker count.
+
+### VTD-018 — Record verification task results incrementally
+
+Priority: P0 only after the VTD-017 scorecard is reviewed
+
+Problem:
+
+The runner atomically rewrites and synchronizes a growing receipt after every
+task, then records the same completed task in the checkpoint attempt. In the
+detailed 21-minute-42-second receipt, 267 parse tasks contained about 4 seconds of
+parallel work but occupied 115.363 seconds. The 267 generation tasks contained
+about 4.5 seconds of parallel work but occupied 123.266 seconds. Those two cheap
+stages therefore spent about 230 seconds outside their task execution. The later
+VTD-015 receipt shows the same roughly 5-minute-37-second difference between
+modeled task wall time and complete elapsed time.
+
+Required outcome:
+
+- Persist each completed task once in a small durable record rather than
+  rewriting every prior result after each completion.
+- Assemble or compact the canonical receipt at the final boundary without
+  changing its task identities, outputs, hashes, artifact binding, or evidence
+  meaning.
+- Preserve crash recovery at task granularity. A torn or incomplete record is
+  rejected, and recovery reruns only work lacking a complete durable pass.
+- Preserve VTD-014 failure recording and VTD-015 final-ready promotion.
+- Measure stage work separately from recording time in focused and final modes.
+
+Acceptance criteria:
+
+- An interruption after a durable task pass recovers that pass with the same
+  identity and result digest.
+- An interrupted write cannot become a passing task or final receipt.
+- The final compact receipt is accepted by the existing evidence validator and
+  contains every planned result exactly once.
+- Parse and generation recording overhead no longer turns seconds of work into
+  minutes, and complete-gate elapsed time materially improves.
+
+Dependencies: VTD-014 and VTD-015. This item remains inactive until VTD-017
+settles, its scorecard is reviewed, and the user separately approves a bounded
+specification.
 
 ## Enabling-slice user review gate
 
@@ -1502,35 +1551,36 @@ Do not automatically activate another VTD-008 controller afterward.
 
 ### Phase 1 — Remove avoidable delivery-loop overhead
 
-1. VTD-015 — settle the tree before one final all-20 gate.
-2. VTD-012 bounded first slice — separate verification-process contracts from
-   ordinary product checks and split the monolithic process test by responsibility.
+VTD-015 is complete. Use bounded VTD-017 as its first live payback measurement:
+remove per-task artifact-lock serialization in focused and final verification,
+then conditionally accept a third browser worker from focused normal and loaded
+evidence.
 
-Exit condition: later roles do not invalidate successful full runs unnecessarily,
-and later verification changes have smaller, responsibility-specific contracts.
+Exit condition: coder and refactorer start no all-20 run, the architect owns the
+one settled final gate, the browser-observation stage falls to at most 345 seconds,
+the complete gate falls to at most 17 minutes 30 seconds, and all evidence remains.
 
-### Phase 2 — Accelerate the remaining course work
+### Phase 2 — Remove durable-recording amplification
 
-1. VTD-011 — balance terminal work using measured indivisible task weights.
-2. VTD-017 — add bounded isolated parallel browser execution without starting
-   competing pack runners.
+Review VTD-017's scorecard before deciding whether to activate VTD-018. If still
+material, replace repeated whole-receipt and checkpoint rewrites with small durable
+incremental task records while retaining exact crash recovery and final evidence.
 
-Exit condition: the same full evidence finishes faster and remains stable under
-focused normal and loaded measurements. VTD-011 must shorten VTD-017's terminal
-gate; VTD-017 must then shorten VTD-016's final gate. A missed enabling payoff
-stops automatic continuation for another bottleneck review.
+Exit condition: the parse and generation stages no longer spend minutes recording
+seconds of work, and VTD-018's own final gate demonstrates the VTD-017 saving.
 
-### Phase 3 — Narrow the common Shell product loop
+### Phase 3 — Follow the new measured longest path
 
-VTD-016 — partition Shell product evidence by observable behavior. This slice now
-benefits from the workflow, verification-contract, lane-balancing, and browser
-parallelism improvements delivered before it.
+Reassess the approximately three-minute verification-process unit, Shell evidence
+partitioning, ordinary browser-adapter concurrency, and cross-stage scheduling.
+Choose only the item with the largest measured elapsed-time payoff. VTD-011 remains
+deferred unless terminal CI lane imbalance, rather than the local canonical gate,
+becomes the observed delivery bottleneck.
 
-Exit condition: a workspace or similarly small controller change uses only the
-behavior evidence that can observe it, while shared changes and the terminal plan
-retain complete coverage.
+Exit condition: the selected slice has a measured payoff on the next applicable
+delivery and every existing evidence leaf remains covered.
 
-### Phase 4 — Prove the compounded payoff on a real feature
+### Phase 4 — Prove the compounded payoff when feature delivery is economical
 
 Deliver one modest user-visible feature. Count it, record approval-to-integration
 time, and compare its implementation, review, planned-verification, and repair time
@@ -1654,9 +1704,11 @@ shared one-megabyte side-panel runtime was modularized by VTD-006. VTD-014 now s
 exact-checkpoint retries from hiding timeouts, hit-test races, settling failures, and
 other unreliable tests without a causal repair. The largest remaining product-code
 debt is the `src/side-panel.ts` composition root, but debt size no longer determines
-the next work automatically. The next work follows measured feature-delivery
-value: VTD-015, the bounded VTD-012 verification-process separation, VTD-011, the
-conditional bounded VTD-017 parallelism slice, VTD-016, then one real feature
-payback check. This order intentionally lets broad workflow and final-gate
-improvements accelerate the narrower slices that follow. Each enabling claim must
-be checked on the next applicable slice rather than deferred until the end.
+the next work automatically. VTD-015 is complete. The next bounded candidate is
+VTD-017 shared-artifact parallel execution, followed by a user decision on
+VTD-018 incremental result recording. After those scorecards, choose the new
+measured longest path; VTD-012 and VTD-016 remain candidates, while standalone
+VTD-011 remains deferred unless fresh CI evidence shows a material imbalance.
+This order lets broad workflow and final-gate improvements accelerate any
+narrower slice that follows. Each enabling claim must be checked on the next
+applicable slice rather than deferred until the end.
