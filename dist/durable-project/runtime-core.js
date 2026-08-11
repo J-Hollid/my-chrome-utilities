@@ -29,7 +29,7 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         await refreshSchemas();
     const notify = (type, detail) => { if (typeof globalThis.dispatchEvent === "function" && typeof CustomEvent !== "undefined")
         globalThis.dispatchEvent(new CustomEvent(type, { detail })); };
-    const enqueue = (label, operation) => { notify("durable-project-saving", { label }); const pending = tail.then(operation); latest = pending; tail = pending.catch(() => { }); void pending.then(() => { projectionChanged(); notify("durable-project-saved", { label }); }, error => notify("durable-project-save-failed", { label, error })); };
+    const enqueue = (label, operation) => { notify("durable-project-saving", { label }); const pending = tail.then(operation); latest = pending; tail = pending.catch(() => { }); void pending.then(() => { projectionChanged(); notify("durable-project-saved", { label }); }, error => notify("durable-project-save-failed", { label, error })); return pending; };
     const expandPartial = async (projectId, pending, route = partialRoutes.get(projectId)) => {
         const installed = loaded.get(projectId), latest = route ? await repository.loadProject(projectId) : installed ?? await repository.loadProject(projectId), base = route && installed ? { ...latest, draftToken: installed.draftToken, draftSequence: installed.draftSequence } : latest, next = cleanState(pending);
         if (!route)
@@ -274,34 +274,37 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         throw new Error("There is no failed Saved Schema Library batch to export."); return JSON.stringify({ format: "my-chrome-utilities.unsaved-saved-schema-batch", version: 1, label: failedSchema.batch.label, names: failedSchema.batch.names, schemas: failedSchema.batch.schemas, operations: { upserts: failedSchema.batch.upserts.map(({ schema, baseToken }) => ({ schema, ...(baseToken ? { baseToken } : {}) })), deletes: failedSchema.batch.deletes }, conflict: failedSchema.conflict }); };
     const settleFeeds = async () => { while (feedInstalls.size)
         await Promise.all([...feedInstalls]); };
-    const applyHistory = async (projectId, direction) => { await latest; await settleFeeds(); const history = pageHistory(projectId), current = await repository.loadProject(projectId); let command; try {
+    const applyHistory = (projectId, direction) => enqueue(`${direction === "undo" ? "Undo" : "Redo"} project edit`, async () => { if (failed)
+        throw failed.error; await settleFeeds(); const history = pageHistory(projectId), current = await repository.loadProject(projectId); let command; try {
         command = history[direction](current);
     }
     catch (error) {
         const historyConflict = error instanceof DurablePageHistoryConflict ? error : undefined, blockedCommand = { projectId, baseToken: current.draftToken, baseSequence: current.draftSequence, commandId: `blocked-history:${direction}:${historyConflict?.commandId ?? crypto.randomUUID()}`, label: `${direction === "undo" ? "Undo" : "Redo"} ${historyConflict?.label ?? "project edit"}`, patches: historyConflict?.patches ?? [], pendingState: cleanState(current.state) }, conflict = historyConflict ? { status: "conflict", projectId, baseToken: current.draftToken, currentToken: current.draftToken, commandId: blockedCommand.commandId, label: blockedCommand.label, pendingFields: [historyConflict.field], currentFields: [historyConflict.field], conflictingFields: [historyConflict.field], currentValues: { [historyConflict.field]: historyConflict.currentValue }, pendingValues: { [historyConflict.field]: historyConflict.expectedValue } } : undefined;
         failed = { projectId, projectName: current.state.project.name, state: cleanState(current.state), command: blockedCommand, error, ...(conflict ? { conflict } : {}) };
-        notify("durable-project-save-failed", { label: blockedCommand.label, error });
         throw error;
     } if (!command)
-        return; notify("durable-project-saving", { label: command.label }); locallySavingProjects.add(projectId); try {
+        return; locallySavingProjects.add(projectId); try {
         const result = await repository.saveDraft(command);
         if (result.status === "conflict")
             throw new DOMException(`${command.label} conflicts at ${result.conflictingFields.join(", ")}.`, "AbortError");
         failed = undefined;
         await installCurrent(projectId, partialRoutes.get(projectId));
-        projectionChanged();
-        notify("durable-project-saved", { label: command.label });
     }
     catch (error) {
         history.restoreFailed(direction);
         failed = { projectId, projectName: current.state.project.name, state: cleanState(current.state), command, error };
-        notify("durable-project-save-failed", { label: command.label, error });
         throw error;
     }
     finally {
         locallySavingProjects.delete(projectId);
-    } };
-    const settled = async (scope = "all") => { await latest; await settleFeeds(); if (scope !== "schema" && failed)
+    } });
+    const settled = async (scope = "all") => { for (;;) {
+        const pending = latest;
+        await pending;
+        await settleFeeds();
+        if (pending === latest && !feedInstalls.size)
+            break;
+    } if (scope !== "schema" && failed)
         throw failed.error; if (scope !== "project" && failedSchema)
         throw failedSchema.error; };
     const settledProjectCommand = async (projectId, label) => { await settled("project"); const acknowledgement = pageHistory(projectId).snapshot().undo.find((entry) => entry.label === label); if (!acknowledgement)

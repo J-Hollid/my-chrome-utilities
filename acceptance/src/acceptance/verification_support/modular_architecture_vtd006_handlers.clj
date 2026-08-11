@@ -48,6 +48,31 @@
   (get-in world [:vtd006/evidence :contract :helperPlanning
                  (keyword (:vtd006/helper world))]))
 
+(def ^:private registry-rejection-contract
+  {"a duplicate logical target id" {:diagnostic "the duplicate id" :evidence :duplicateId}
+   "an unknown logical target id" {:diagnostic "the unknown id" :evidence :unknownId}
+   "missing or extra planner configuration" {:diagnostic "the exact configuration difference"
+                                               :evidence :configurationDifference}
+   "a target requested through another pack's entry" {:diagnostic "the target id and expected owning pack"
+                                                        :evidence :owningPack}
+   "duplicate observation-key ownership" {:diagnostic "the target ids and duplicated output key"
+                                            :evidence :duplicateOutput}
+   "an incompatible setup, observation, or cleanup hook" {:diagnostic "the target id and invalid hook"
+                                                            :evidence :hookShape}})
+
+(def ^:private event-library-targets
+  ["EVENT_LIBRARY_RENDERED_SMOKE_TARGET" "LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER"])
+
+(def ^:private event-library-order-contract
+  {"rendered smoke then direct template push" event-library-targets
+   "direct template push then rendered smoke" (vec (reverse event-library-targets))})
+
+(def ^:private event-library-failure-contract
+  {"EVENT_LIBRARY_RENDERED_SMOKE_TARGET"
+   {:phase "assertion" :remaining "LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER"}
+   "LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER"
+   {:phase "interaction" :remaining "EVENT_LIBRARY_RENDERED_SMOKE_TARGET"}})
+
 (defn handlers [_dependencies]
   [{:pattern #"^(.+) owns (.+) registered targets and (.+) top-level outputs in the shared side-panel browser program$"
     :handler (fn [world example captures]
@@ -97,17 +122,25 @@
                         "An unselected target module initialized during the selective probe."))}
 
    {:pattern #"^the side-panel target request contains (.+)$"
-    :handler (fn [world _ _] (prepared world))}
+    :handler (fn [world example captures]
+               (let [contract (first (values example captures))]
+                 (assert! (assoc (prepared world) :vtd006/invalid-contract contract)
+                          (contains? registry-rejection-contract contract)
+                          "Unknown side-panel registry rejection contract.")))}
    {:pattern #"^the registry validates it before browser startup$"
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd006/evidence :registryValidation
                                                      :beforeResourcesStarted]))
                         "Registry validation occurred after process resources started."))}
    {:pattern #"^execution is rejected with (.+)$"
-    :handler (fn [world _ _]
-               (assert! world (every? true? (vals (get-in world [:vtd006/evidence
-                                                                  :registryValidation])))
-                        "A registry rejection class is not production-backed."))}
+    :handler (fn [world example captures]
+               (let [diagnostic (first (values example captures))
+                     contract (registry-rejection-contract (:vtd006/invalid-contract world))]
+                 (assert! world
+                          (and (= diagnostic (:diagnostic contract))
+                               (true? (get-in world [:vtd006/evidence :registryValidation
+                                                    (:evidence contract)])))
+                          "Registry rejection diagnostic does not match its invalid contract.")))}
    {:pattern #"^no server, Chrome process, profile, fixture, or target module side effect has started$"
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd006/evidence :registryValidation
@@ -170,8 +203,31 @@
                (assert! world (and (= 67 (get-in world [:vtd006/evidence :contract :outputCount]))
                                    (true? (get-in world [:vtd006/evidence :isolation :freshSecondContext])))
                         "Target state, result, timing, or output ownership is incomplete."))}
-   {:pattern #"^the Event Library installed session requests targets in order .+$"
-    :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^the Event Library installed session requests targets in order (.+)$"
+    :handler (fn [world example captures]
+               (let [order (first (values example captures))]
+                 (assert! (assoc (prepared world) :vtd006/event-order order)
+                          (= (set event-library-targets)
+                             (set (event-library-order-contract order)))
+                          "Unknown Event Library target order.")))}
+   {:pattern #"^both logical targets complete$"
+    :handler (fn [world _ _]
+               (assert! world (and (= 2 (count (event-library-order-contract
+                                                (:vtd006/event-order world))))
+                                   (= 2 (get-in world [:vtd006/evidence :process :results])))
+                        "Event Library target order did not complete both logical targets."))}
+   {:pattern #"^each target receives a fresh page, socket, storage origin, viewport, observation map, timer, and cleanup stack$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd006/evidence :isolation :freshSecondContext]))
+                        "Event Library target contexts were not fresh."))}
+   {:pattern #"^their normalized observations equal the canonical-order observations$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd006/evidence :identityOrder :exactValues]))
+                        "Event Library target order changed normalized observations."))}
+   {:pattern #"^each target emits its own result and phase timing$"
+    :handler (fn [world _ _]
+               (assert! world (= 2 (get-in world [:vtd006/evidence :process :results]))
+                        "Event Library targets did not emit independent results."))}
    {:pattern #"^process shutdown occurs once after all target results$"
     :handler (fn [world _ _]
                (assert! world (= 1 (get-in world [:vtd006/evidence :process :stops]))
@@ -179,8 +235,33 @@
 
    {:pattern #"^an early side-panel target is forced to fail during an active browser phase$"
     :handler (fn [world _ _] (prepared world))}
-   {:pattern #"^<failed_target> fails in its <failed_phase> phase$"
-    :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^(.+) fails in its (.+) phase$"
+    :handler (fn [world example captures]
+               (let [[target phase] (values example captures)
+                     contract (event-library-failure-contract target)]
+                 (assert! (assoc (prepared world) :vtd006/event-failure target)
+                          (= (:phase contract) phase)
+                          "Event Library failure phase does not match its target.")))}
+   {:pattern #"^the Event Library installed batch runs$"
+    :handler (fn [world _ _]
+               (assert! world (contains? event-library-failure-contract
+                                          (:vtd006/event-failure world))
+                        "Event Library batch has no exact failed target."))}
+   {:pattern #"^the failure record names (.+) and (.+)$"
+    :handler (fn [world example captures]
+               (let [[target phase] (values example captures)
+                     expected-target (:vtd006/event-failure world)
+                     contract (event-library-failure-contract expected-target)]
+                 (assert! world (and (= expected-target target) (= (:phase contract) phase)
+                                     (true? (get-in world [:vtd006/evidence :failure :bounded])))
+                          "Event Library failure record lost its target or phase.")))}
+   {:pattern #"^(.+) still executes and reports independently$"
+    :handler (fn [world example captures]
+               (let [remaining (first (values example captures))
+                     contract (event-library-failure-contract (:vtd006/event-failure world))]
+                 (assert! world (and (= (:remaining contract) remaining)
+                                     (true? (get-in world [:vtd006/evidence :failure :laterPassed])))
+                          "Event Library remaining target did not continue independently.")))}
    {:pattern #"^later compatible targets remain in the same process group$"
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd006/evidence :failure :laterPassed]))
@@ -324,5 +405,5 @@
                           "VTD-006 checkpoint evidence is incomplete.")))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-09T20:49:25.591856025+02:00", :module-hash "1221104880", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "583796879"} {:id "form/1/defonce", :kind "defonce", :line 6, :end-line 6, :hash "701185655"} {:id "def/module-paths", :kind "def", :line 8, :end-line 16, :hash "415945835"} {:id "defn-/production-evidence!", :kind "defn-", :line 18, :end-line 25, :hash "246714086"} {:id "defn-/prepared", :kind "defn-", :line 27, :end-line 28, :hash "-223598626"} {:id "defn-/values", :kind "defn-", :line 30, :end-line 32, :hash "555847233"} {:id "defn-/assert!", :kind "defn-", :line 34, :end-line 36, :hash "-1884999679"} {:id "defn-/pack-facts", :kind "defn-", :line 38, :end-line 40, :hash "1935968671"} {:id "defn-/consumer-scope", :kind "defn-", :line 42, :end-line 45, :hash "-640295098"} {:id "defn-/helper-planning", :kind "defn-", :line 47, :end-line 49, :hash "3897991"} {:id "defn/handlers", :kind "defn", :line 51, :end-line 317, :hash "-1600583287"}]}
+;; {:version 1, :tested-at "2026-08-11T09:44:40.705711543+02:00", :module-hash "472583565", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "583796879"} {:id "form/1/defonce", :kind "defonce", :line 6, :end-line 6, :hash "701185655"} {:id "def/module-paths", :kind "def", :line 8, :end-line 16, :hash "415945835"} {:id "defn-/production-evidence!", :kind "defn-", :line 18, :end-line 25, :hash "246714086"} {:id "defn-/prepared", :kind "defn-", :line 27, :end-line 28, :hash "-223598626"} {:id "defn-/values", :kind "defn-", :line 30, :end-line 32, :hash "555847233"} {:id "defn-/assert!", :kind "defn-", :line 34, :end-line 36, :hash "-1884999679"} {:id "defn-/pack-facts", :kind "defn-", :line 38, :end-line 40, :hash "1935968671"} {:id "defn-/consumer-scope", :kind "defn-", :line 42, :end-line 45, :hash "-640295098"} {:id "defn-/helper-planning", :kind "defn-", :line 47, :end-line 49, :hash "3897991"} {:id "def/registry-rejection-contract", :kind "def", :line 51, :end-line 61, :hash "1476805514"} {:id "def/event-library-targets", :kind "def", :line 63, :end-line 64, :hash "-478698114"} {:id "def/event-library-order-contract", :kind "def", :line 66, :end-line 68, :hash "1791955695"} {:id "def/event-library-failure-contract", :kind "def", :line 70, :end-line 74, :hash "1109544827"} {:id "defn/handlers", :kind "defn", :line 76, :end-line 405, :hash "-1509454896"}]}
 ;; clj-mutate-manifest-end

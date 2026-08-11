@@ -2,11 +2,15 @@
   (:require [acceptance.runtime :as runtime]
             [acceptance.steps.modular-architecture :as modular]
             [acceptance.verification-support.isolated-handler-audit :as isolation-audit]
+            [acceptance.verification-support.modular-architecture-vtd006-handlers :as vtd006]
             [acceptance.verification-support.modular-architecture-vtd007-handlers :as vtd007]
             [acceptance.verification-support.modular-architecture-vtd009-handlers :as vtd009]
             [acceptance.verification-support.modular-architecture-vtd014-handlers :as vtd014]
             [aps.gherkin :as gherkin]
             [clojure.test :refer [deftest is]]))
+
+(load "modular_architecture_vtd014_steps_test_fragment")
+(load "modular_architecture_vtd014_scenarios_test_fragment")
 
 (def feature-files
   ["features/modular-chrome-utility-architecture.feature"
@@ -72,189 +76,6 @@
       (let [handler (first (filter #(re-matches (:pattern %) step) modular/handlers))]
         (is (some? handler) step)
         (is (not= "^.*$" (str (:pattern handler))) step)))))
-
-(deftest vtd014-steps-use-dedicated-production-backed-semantics
-  (let [feature (gherkin/parse-file "features/modular-verification-packs.feature")
-        scenarios (filter #(re-matches #"Modular verification packs 1(?:0[4-9]|1[0-9])" (:name %))
-                          (:scenarios feature))
-        steps (mapcat :steps scenarios)]
-    (is (= 16 (count scenarios)))
-    (doseq [{:keys [text]} steps]
-      (let [handler (first (filter #(re-matches (:pattern %) text) modular/handlers))]
-        (is (some? handler) text)
-        (is (not= "^.*$" (str (:pattern handler))) text)))))
-
-(deftest vtd014-outline-captures-resolve-authoritative-example-values
-  (let [feature (gherkin/parse-file "features/modular-verification-packs.feature")
-        execution (first (filter #(= "Modular verification packs 105/example_1" (:name %))
-                                 (runtime/expand-executions feature)))
-        evidence {:incident {:retryClaimedBeforeExecution true}
-                  :retry {:scopes {"an assertion inside logical target TARGET-A"
-                                   {:kind "target" :logicalTargetIds ["TARGET-A"]}}
-                          :innerDeadlineIdentityConserved true}}]
-    (with-redefs-fn {#'vtd014/production-evidence! (constantly evidence)}
-      #(is (= "an assertion inside logical target TARGET-A"
-              (:vtd014/failure-boundary
-               (runtime/run-execution! execution modular/handlers)))))))
-
-(deftest vtd014-row-evidence-resolves-json-keywordized-outline-values
-  (is (= "observed"
-         (#'vtd014/row-value
-          {:vtd014/evidence {:execution {:rows {(keyword "outline row")
-                                                   {:result "observed"}}}}}
-          [:execution :rows] "outline row" :result))))
-
-(deftest vtd014-scenarios-execute-with-their-dedicated-production-evidence
-  (let [feature (gherkin/parse-file "features/modular-verification-packs.feature")
-        executions (filter #(re-matches #"Modular verification packs 1(?:0[4-9]|1[0-9])/example_\d+"
-                                        (:name %))
-                           (runtime/expand-executions feature))
-        digest (apply str (repeat 64 "a"))
-        evidence {:historical {:boundary "artifact/setup" :excludedPassedTaskCount 274
-                               :excludedLogicalTargetIds ["1" "2" "3" "4" "5"]
-                               :retroactiveIncident false}
-                  :progress {:truncationBounded true}
-                  :incident {:state "unresolved" :repositoryCommon true :immutableFields true
-                             :ordinaryResumeBlocked true :retryClaimedBeforeExecution true}
-                  :failures {:boundaries [{:failure "a runner-owned timeout during target cleanup"
-                                           :boundary "the logical target and cleanup phase"
-                                           :observed {:retryScope {:kind "target"} :phase "cleanup"}}
-                                          {:failure "an offscreen control hit-test assertion"
-                                           :boundary "the logical browser target and assertion site"
-                                           :observed {:retryScope {:kind "target"} :assertionSite "layout:1"}}
-                                          {:failure "a Property Set settling assertion"
-                                           :boundary "the executable target or case and unsettled state"
-                                           :observed {:retryScope {:kind "case"}
-                                                      :boundedState {:settled false}}}
-                                          {:failure "an indivisible task assertion or nonzero exit"
-                                           :boundary "the canonical task and diagnostic fingerprint"
-                                           :observed {:retryScope {:kind "task"} :fingerprint digest}}]}
-                  :non-timeout-fixtures {:hit-test {:classification "confirmed-flaky"
-                                                    :state "unresolved"
-                                                    :retryScope {:kind "target"}
-                                                    :phase "assertion" :assertionSite "layout:1"
-                                                    :fingerprint digest :boundedState {:x 1}}
-                                         :property-set-settling {:classification "confirmed-flaky"
-                                                                 :state "unresolved"
-                                                                 :retryScope {:kind "case"}
-                                                                 :phase "assertion" :assertionSite "settling:1"
-                                                                 :fingerprint digest :boundedState {:settled false}}}
-                  :retry {:scopes {"an assertion inside logical target TARGET-A"
-                                   {:kind "target" :logicalTargetIds ["TARGET-A"]}
-                                   "an executable scenario or generated case" {:kind "case"}
-                                   "shared artifact setup before any target"
-                                   {:kind "setup" :logicalTargetIds []}
-                                   "an indivisible non-browser task" {:kind "task"}
-                                   "absent, invalid, or ambiguous progress"
-                                   {:kind "rejected" :rejected true}}
-                          :innerDeadlineIdentityConserved true
-                          :classifications {:passed "confirmed-flaky"
-                                            :sameFailure "reproduced-failure"
-                                            :failed "changed-failure"
-                                            :identityChanged "diagnostic-contract-failure"}
-                          :secondRetryRejected true}
-                  :repair {:symptomSuppressionRejected true :limitOnlyRejected true
-                           :unprovenRejected true :staleRejected true
-                           :unrelatedRejected true :eligible true :descendant true :freshFocused true}
-                  :store {:concurrentIndependentIds true :tamperRejected true :symlinkRejected true
-                          :malformedRejected true
-                          :lineage {:unrelatedExcluded true :rebasePreserved true
-                                    :invalidTreeRejected true :unrelatedRebaseRejected true
-                                    :abandonmentDecisionRequired true :abandonmentReleased true
-                                    :abandonedReuseRejected true}
-                          :transitionHistory {:duplicateRejected true :reorderedRejected true
-                                              :missingRejected true :inconsistentRejected true
-                                              :earlierTimestampRejected true
-                                              :duplicateLineageRejected true}}
-                  :resolution {:allPackCount 20 :reusedTaskCount 0 :packagePassed true
-                               :archiveVerified true :resolvedIncidentExcludedFromBlocking true
-                               :handoffGate true :downstreamIncidentDistinct true
-                               :evidence {:failureDigest digest :resolutionDigest digest
-                                          :repairCommit "repair" :repairTree "tree"
-                                          :causalCategory "readiness" :regression {}
-                                          :focusedReceipt {} :checkpointReceiptSha256 digest}}
-                  :conservation {:changedFiles ["scripts/verification-reliability-store.mjs"]
-                                 :productChangedFiles [] :featureChangedFiles []
-                                 :currentTaskDigest digest :acceptedBaseTaskDigest digest
-                                 :currentPackContractDigest digest :acceptedBasePackContractDigest digest
-                                 :currentCalibrationDigest digest :acceptedBaseCalibrationDigest digest
-                                 :diagnosticRetryOnPassingRun false :allPackCount 20
-                                 :packageTask "scripts/package.mjs"}
-                  :execution {:prerequisites {:approvedFirstLaunch true :workspaceNarrow true
-                                              :mixedRouteObservation
-                                              {:scoped "scoped-command-approval|bwrap-shared-loopback"
-                                               :workspace "workspace-sandbox|bwrap-unshared-network"}
-                                              :deniedBeforeLaunch true :declarationsFailClosed true
-                                              :rows {"the workspace sandbox cannot bind"
-                                                     {:firstRunAction "use the existing scoped approval route immediately"
-                                                      :launchResult "the child launches once with its declared access"
-                                                      :route "scoped-command-approval" :launchCount 1
-                                                      :trialRunCount 0}
-                                                     "the workspace sandbox is sufficient"
-                                                     {:firstRunAction "use the current sandbox without an approval prompt"
-                                                      :launchResult "the child launches once with no additional access"
-                                                      :route "workspace-sandbox" :launchCount 1 :trialRunCount 0}
-                                                     "scoped approval is denied"
-                                                     {:firstRunAction "record environment-prerequisite-blocked"
-                                                      :launchResult "no child launches and no passing result is created"
-                                                      :route "blocked" :launchCount 0 :trialRunCount 0}}}
-                              :restriction {:environmentContractFailure true :retryPermitted false
-                                            :capability "local-loopback"
-                                            :explicitApprovalUnchanged true
-                                            :unrelatedRestrictionsDenied true :publicNetworkDenied true
-                                            :retainedContract true :narrowRepairRequired true
-                                            :wrongIncidentRepairRejected true :nextInvocationRouted true}
-                              :checkpoint {:singleton true :attachedWithoutDuplicate true
-                                           :continuation true :reusedOnlyPassed true
-                                           :interruptedAndUnstartedOnly true :packagePlanned true
-                                           :promotionOnly true :identityDriftRejected true
-                                           :staleOwnerRecovered true
-                                           :forgedAttemptRejected
-                                           {:missingResult true :extraResult true :forgedResult true
-                                            :impossibleState true :reorderedTransitions true
-                                            :duplicatedTransition true :promotionDrift true}
-                                           :promotionScopes
-                                           {"completed receipt finalization is interrupted" "receipt-finalization"
-                                            "pending evidence creation is interrupted" "pending-evidence"
-                                            "Git-note recording loses its lock or permission" "git-note-recording"
-                                            "handoff eligibility cannot read durable evidence" "handoff-eligibility"}
-                                           :preflightRows
-                                           {"every prerequisite is satisfied and no attempt exists"
-                                            {:action "create one repository-common checkpoint attempt"
-                                             :taskExecution "the planned tasks may launch" :observed true}
-                                            "one compatible incomplete attempt already exists"
-                                            {:action "attach to that attempt"
-                                             :taskExecution "no second all-pack process launches" :observed true}
-                                            "another owner holds an incompatible active lease"
-                                            {:action "report or queue behind the named owner outside timing"
-                                             :taskExecution "no checkpoint task launches" :observed true}
-                                            "a lease is demonstrably stale"
-                                            {:action "use the bounded audited stale-owner recovery"
-                                             :taskExecution "tasks launch only after lease recovery completes"
-                                             :observed true}
-                                            "a required executable or bounded output capacity is unavailable"
-                                            {:action "record environment-prerequisite-blocked"
-                                             :taskExecution "no checkpoint task launches" :observed true}
-                                            "the candidate lineage has an unresolved incident"
-                                            {:action "require focused causal repair"
-                                             :taskExecution "no checkpoint task launches" :observed true}}
-                                           :driftRows
-                                           (into {} (map (fn [drift]
-                                                          [drift {:stoppedBeforeLaunch true
-                                                                  :retainedForDiagnosis true
-                                                                  :noFreshAttempt true
-                                                                  :executionContractIncident true}])
-                                                        ["the candidate commit or tree changes"
-                                                         "the registry or canonical plan changes"
-                                                         "the locked toolchain identity changes"
-                                                         "the built artifact identity changes"]))}
-                              :sharedBoundary {:incidentAware true :rawDiagnosticIneligible true
-                                               :focusedKinds ["unit" "property" "acceptance"
-                                                              "browser" "checkpoint" "package"]}}}]
-    (is (= 48 (count executions)))
-    (with-redefs-fn {#'vtd014/production-evidence! (constantly evidence)}
-      #(doseq [execution executions]
-         (is (map? (runtime/run-execution! execution modular/handlers)) (:name execution))))))
 
 (deftest vtd003-steps-use-dedicated-production-backed-semantics
   (let [calibration (#'modular/performance-calibration)
@@ -553,5 +374,5 @@
     :message "Schemas feature metadata cannot conceal a parsed cross-pack step"}))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-11T06:57:29.242803699+02:00", :module-hash "-1791096173", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 9, :hash "1366990184"} {:id "def/feature-files", :kind "def", :line 11, :end-line 15, :hash "-21201147"} {:id "form/2/deftest", :kind "deftest", :line 17, :end-line 22, :hash "-244926829"} {:id "form/3/deftest", :kind "deftest", :line 24, :end-line 38, :hash "-328044063"} {:id "form/4/deftest", :kind "deftest", :line 40, :end-line 74, :hash "228982377"} {:id "form/5/deftest", :kind "deftest", :line 76, :end-line 85, :hash "-2118911970"} {:id "form/6/deftest", :kind "deftest", :line 87, :end-line 98, :hash "1820139466"} {:id "form/7/deftest", :kind "deftest", :line 100, :end-line 105, :hash "-740854160"} {:id "form/8/deftest", :kind "deftest", :line 107, :end-line 257, :hash "-1968283538"} {:id "form/9/deftest", :kind "deftest", :line 259, :end-line 275, :hash "1644470916"} {:id "defn-/assert-dedicated-scenario-handlers!", :kind "defn-", :line 277, :end-line 285, :hash "1569417212"} {:id "form/11/deftest", :kind "deftest", :line 287, :end-line 288, :hash "245194227"} {:id "form/12/deftest", :kind "deftest", :line 290, :end-line 291, :hash "554417531"} {:id "form/13/deftest", :kind "deftest", :line 293, :end-line 294, :hash "1323694502"} {:id "form/14/deftest", :kind "deftest", :line 296, :end-line 297, :hash "138892075"} {:id "form/15/deftest", :kind "deftest", :line 299, :end-line 300, :hash "2013011596"} {:id "form/16/deftest", :kind "deftest", :line 302, :end-line 303, :hash "-1365660205"} {:id "form/17/deftest", :kind "deftest", :line 305, :end-line 306, :hash "-514588585"} {:id "form/18/deftest", :kind "deftest", :line 308, :end-line 309, :hash "-310595953"} {:id "form/19/deftest", :kind "deftest", :line 311, :end-line 312, :hash "802773267"} {:id "form/20/deftest", :kind "deftest", :line 314, :end-line 331, :hash "435291924"} {:id "form/21/deftest", :kind "deftest", :line 333, :end-line 348, :hash "-2047542094"} {:id "form/22/deftest", :kind "deftest", :line 350, :end-line 488, :hash "575408246"} {:id "form/23/deftest", :kind "deftest", :line 490, :end-line 502, :hash "1260497997"} {:id "defn-/assert-parsed-cross-pack-step-consumer!", :kind "defn-", :line 504, :end-line 520, :hash "571745781"} {:id "form/25/deftest", :kind "deftest", :line 522, :end-line 531, :hash "-1052248530"} {:id "form/26/deftest", :kind "deftest", :line 533, :end-line 542, :hash "130986114"} {:id "form/27/deftest", :kind "deftest", :line 544, :end-line 553, :hash "1719726216"}]}
+;; {:version 1, :tested-at "2026-08-11T10:33:54.698500639+02:00", :module-hash "1865389853", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 10, :hash "1702029269"} {:id "form/1/load", :kind "load", :line 12, :end-line 12, :hash "1015067900"} {:id "form/2/load", :kind "load", :line 13, :end-line 13, :hash "1685151164"} {:id "def/feature-files", :kind "def", :line 15, :end-line 19, :hash "-21201147"} {:id "form/4/deftest", :kind "deftest", :line 21, :end-line 26, :hash "-244926829"} {:id "form/5/deftest", :kind "deftest", :line 28, :end-line 42, :hash "-328044063"} {:id "form/6/deftest", :kind "deftest", :line 44, :end-line 78, :hash "228982377"} {:id "form/7/deftest", :kind "deftest", :line 80, :end-line 96, :hash "-2078493593"} {:id "defn-/assert-dedicated-scenario-handlers!", :kind "defn-", :line 98, :end-line 106, :hash "1621011564"} {:id "form/9/deftest", :kind "deftest", :line 108, :end-line 109, :hash "245194227"} {:id "form/10/deftest", :kind "deftest", :line 111, :end-line 112, :hash "554417531"} {:id "form/11/deftest", :kind "deftest", :line 114, :end-line 115, :hash "1323694502"} {:id "form/12/deftest", :kind "deftest", :line 117, :end-line 118, :hash "138892075"} {:id "form/13/deftest", :kind "deftest", :line 120, :end-line 121, :hash "2013011596"} {:id "form/14/deftest", :kind "deftest", :line 123, :end-line 124, :hash "-1365660205"} {:id "form/15/deftest", :kind "deftest", :line 126, :end-line 127, :hash "-514588585"} {:id "form/16/deftest", :kind "deftest", :line 129, :end-line 130, :hash "-310595953"} {:id "form/17/deftest", :kind "deftest", :line 132, :end-line 133, :hash "802773267"} {:id "form/18/deftest", :kind "deftest", :line 135, :end-line 152, :hash "997833335"} {:id "form/19/deftest", :kind "deftest", :line 154, :end-line 169, :hash "-1885039904"} {:id "form/20/deftest", :kind "deftest", :line 171, :end-line 309, :hash "463997460"} {:id "form/21/deftest", :kind "deftest", :line 311, :end-line 323, :hash "1260497997"} {:id "defn-/assert-parsed-cross-pack-step-consumer!", :kind "defn-", :line 325, :end-line 341, :hash "571745781"} {:id "form/23/deftest", :kind "deftest", :line 343, :end-line 352, :hash "-1052248530"} {:id "form/24/deftest", :kind "deftest", :line 354, :end-line 363, :hash "130986114"} {:id "form/25/deftest", :kind "deftest", :line 365, :end-line 374, :hash "1719726216"}]}
 ;; clj-mutate-manifest-end

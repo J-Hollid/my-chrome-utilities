@@ -2584,6 +2584,8 @@ console.log("repairTmp=" + process.env.TMPDIR);
   const vtd014ApprovedSuccessionSpecificationCommit = "120bf26f91";
   const vtd014ApprovedTerminalRepairBaselineCommit =
     "47f6012dfdf7b8f4b6e9a78e8d953cd573ad7530";
+  const vtd014TerminalRepairClosureCommit =
+    "9985943b8cac60e31e1f9e4a6bfb909fa4cef2f8";
   const changedFiles = await new Promise((resolve, reject) => execFile("git",
     ["diff", "--name-only", vtd014AcceptedBaseCommit],
     { cwd:path.resolve(new URL("../", import.meta.url).pathname) },
@@ -2599,7 +2601,8 @@ console.log("repairTmp=" + process.env.TMPDIR);
     ["src/durable-project/persistence-readiness.ts", "src/side-panel.ts",
       "src/specification-builder.ts"]);
   const postTerminalChangedFiles = await new Promise((resolve, reject) => execFile("git",
-    ["diff", "--name-only", vtd014ApprovedTerminalRepairBaselineCommit],
+    ["diff", "--name-only", vtd014ApprovedTerminalRepairBaselineCommit,
+      vtd014TerminalRepairClosureCommit],
     { cwd:path.resolve(new URL("../", import.meta.url).pathname) },
     (error, stdout, stderr) => error ? reject(new Error(stderr.trim() || error.message))
       : resolve(stdout.trim().split(/\r?\n/u).filter(Boolean))));
