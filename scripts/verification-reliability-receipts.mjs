@@ -71,6 +71,7 @@ export async function defaultCanonicalCheckpointValidator({
     packIds:timeoutRepairPackIds,
     repositoryRoot:root,
     allowLegacySeparatePackage,
+    allowLegacyTerminalClosure:allowLegacySeparatePackage,
   });
 }
 

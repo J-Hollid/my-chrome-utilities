@@ -1074,6 +1074,9 @@ assert.deepEqual(terminalClosureExecution({ attempt:"verifier-descendant", runna
 assert.throws(() => terminalClosureExecution({ attempt:undefined, runnablePackCount:20 }),
   /Unsupported terminal closure attempt/u,
 "bounded evidence rejects a receipt whose plan omits its terminal attempt identity");
+assert.match(await readFile(new URL("../scripts/verification-evidence.mjs", import.meta.url), "utf8"),
+  /allowLegacyTerminalClosure && receipt\.plan\?\.terminalClosure === undefined/u,
+"archived pre-policy closure receipts alone may omit terminal closure metadata");
 
 const terminalPackageKey = "package:extension";
 const terminalFreshTasks = {

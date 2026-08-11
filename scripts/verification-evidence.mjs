@@ -255,7 +255,7 @@ async function canonicalPlanDocument({
 
 export async function validateCanonicalVerificationCheckpoint({
   receiptPath, commit, tree, baseCommit, evidenceTask, packIds, repositoryRoot = repository,
-  allowLegacySeparatePackage = false,
+  allowLegacySeparatePackage = false, allowLegacyTerminalClosure = false,
 } = {}) {
   const changeSet = await canonicalVerificationChangeSet({ base:baseCommit, commit, repositoryRoot });
   const receipt = JSON.parse(await readFile(receiptPath, "utf8"));
@@ -275,6 +275,7 @@ export async function validateCanonicalVerificationCheckpoint({
     allowLegacyPrerequisites:legacySeparatePackage,
     allowLegacyPromotionPrerequisites:allowLegacySeparatePackage,
     allowLegacyAcceptanceSessionPrerequisites:allowLegacySeparatePackage,
+    allowLegacyTerminalClosure,
   });
   const results = Object.values(receipt.tasks);
   if (results.some((result) => result.provenance !== "fresh" || result.reliabilityIncidentId ||
@@ -320,6 +321,7 @@ async function parsedReceipt(receiptPath, plan, {
   allowLegacyPrerequisites = false,
   allowLegacyPromotionPrerequisites = false,
   allowLegacyAcceptanceSessionPrerequisites = false,
+  allowLegacyTerminalClosure = false,
 } = {}) {
   if (!receiptPath) throw new Error("Provide the verification receipt produced by this run");
   const bytes = await readFile(receiptPath);
@@ -391,7 +393,8 @@ async function parsedReceipt(receiptPath, plan, {
     changedBoundaries:plan.changedBoundaries,
     changeSetDigest:verificationDigest(plan.changeSet),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
-    ...(receipt.candidate?.evidenceTask === boundedClosureEvidenceTask ? {
+    ...(receipt.candidate?.evidenceTask === boundedClosureEvidenceTask &&
+      !(allowLegacyTerminalClosure && receipt.plan?.terminalClosure === undefined) ? {
       terminalClosure:{
         ...terminalClosureExecution({
           attempt:receipt.plan?.terminalClosure?.attempt,
