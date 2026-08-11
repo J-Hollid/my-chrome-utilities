@@ -3,7 +3,7 @@
   "contractRevision": "2f609d7a19fd966eb82c54b2938df1fd78e2d836",
   "assessmentCandidate": "159c565970d86f1a96083505955afc2007aeade8",
   "approvedAssessedCount": 17,
-  "repositoryCommonOpenCount": 40,
+  "repositoryCommonOpenCount": 41,
   "additionalOpenRecordReason": "Repository-common reconciliation, the approved Flow reload lifecycle correction, and the initial terminal attempt exposed additional durable records; off-lineage experiments retire while current-lineage product and verifier occurrences retain causal proof.",
   "records": {
     "02e0c2b4-8c51-4278-92f2-ce31db4a5159": { "disposition": "lineage-retired", "reason": "Event Library failure commit is outside the selected assessment ancestry." },
@@ -46,6 +46,7 @@
     "11c07991-7d87-40e4-b468-4cded425c48f": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
     "19e36864-ffff-4821-908d-5fda4a206309": { "disposition": "blocking-product-repair", "domain": "product-runtime" },
     "581a5caa-39ea-4a93-97ac-cf15142dab95": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "58ef42a1-7c00-4d9b-bb7c-5e3dc8bc8c6c": { "disposition": "blocking-verification-repair", "domain": "verification-execution" }
+    "58ef42a1-7c00-4d9b-bb7c-5e3dc8bc8c6c": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
+    "f58efe6d-c4b2-4879-b3be-01790ee41d38": { "disposition": "blocking-verification-repair", "domain": "verification-execution" }
   }
 }
