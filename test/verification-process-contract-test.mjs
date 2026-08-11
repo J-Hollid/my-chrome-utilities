@@ -1659,7 +1659,7 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
     const repairObservation = {
       injectedRunnerAcquiresCoordinatorLease:
         coordinatorArtifactLeaseRequired(true, async() => undefined),
-      nestedReadOnlyLeaseCompletes,
+      nestedReadOnlyLeaseCompletes:nestedReadOnlyLeaseCompleted,
       outcome:"completes",
     };
     assert.deepEqual(repairObservation, fixture.expectedRepairResult,
