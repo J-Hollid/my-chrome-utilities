@@ -4066,15 +4066,19 @@ const expectedVtd014TerminalIdentity = (task) => {
 const terminalIdentities = (plan) => plan.tasks.map(normalizedVtd006Identity);
 const expectedTerminalIdentities = (plan) => plan.tasks.map(expectedVtd014TerminalIdentity);
 const acceptedTerminalIdentities = baseTerminalPlan.tasks.map(expectedVtd014TerminalIdentity);
-const vtd014AddedUnitKeys = new Set([
+const postBaseAddedUnitKeys = new Set([
+  "unit:test/command-palette-installed-controller-test.mjs",
   "unit:test/hotkey-installed-controller-test.mjs",
   "unit:test/flow-reload-lifecycle-test.mjs",
 ]);
-const currentTerminalIdentitiesWithoutVtd014 = currentTerminalPlan.tasks.filter(({ key }) =>
-  !vtd014AddedUnitKeys.has(key)).map(normalizedVtd006Identity);
-assert.deepEqual(currentTerminalIdentitiesWithoutVtd014,
+const currentTerminalIdentitiesWithoutApprovedAdditions = currentTerminalPlan.tasks.filter(({ key }) =>
+  !postBaseAddedUnitKeys.has(key)).map(normalizedVtd006Identity);
+assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions,
   acceptedTerminalIdentities,
-  "terminal-full planning conserves the accepted base identities around the VTD-014 units");
+  "terminal-full planning conserves the accepted base identities around approved added units");
+assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
+  key === "unit:test/command-palette-installed-controller-test.mjs").length, 1,
+"terminal-full planning adds the installed Command Palette controller regression exactly once");
 assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
   key === "unit:test/hotkey-installed-controller-test.mjs").length, 1,
 "terminal-full planning adds the installed Hotkeys controller regression exactly once");
@@ -4214,7 +4218,7 @@ assert.deepEqual(exactDurablePlan.observationTasks.flatMap(({logicalTargetIds}) 
     "DURABLE_RENDERER_CORPUS_TARGET", "DURABLE_RENDERER_HISTORY_TARGET"].sort());
 const durableAssertionLeafCount = durablePack.browserEvidencePartitions.flatMap(({originalLeaves}) => originalLeaves).length;
 assert.equal(durableAssertionLeafCount, 111);
-assert.deepEqual(currentTerminalIdentitiesWithoutVtd014, acceptedTerminalIdentities,
+assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,
   "terminal planning conserves every exact durable task identity");
 const durableCurrentCalibration = durableCompletedCalibration.runnablePacks.find(({id}) =>
   id === "durable_project_repository");
@@ -4388,7 +4392,7 @@ const acceptedEventPlan = planVerification(vtd008BasePacks,
   {packIds:["event-library"],includeProperties:true});
 assert.deepEqual(terminalIdentities(exactEventPlan), terminalIdentities(acceptedEventPlan),
   "the exact Event Library plan remains identical to the accepted specification base");
-assert.deepEqual(currentTerminalIdentitiesWithoutVtd014, acceptedTerminalIdentities,
+assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,
   "terminal planning conserves every Event Library task identity and ordering");
 const eventCompletedCalibration = JSON.parse(await exec("git", [
   "show", "be319ad555:verification/performance-calibration.json",
@@ -4559,7 +4563,7 @@ assert.deepEqual([exactCapturePlan.unitTasks.length,exactCapturePlan.propertyTas
   exactCapturePlan.parserTasks.length,capturePack.handlers.length,exactCapturePlan.browserTasks.length,
   exactCapturePlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).length,
   exactCapturePlan.checkpointTasks.length],[21,12,66,25,1,5,2]);
-assert.deepEqual(currentTerminalIdentitiesWithoutVtd014, acceptedTerminalIdentities,
+assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,
   "terminal planning conserves every Capture task identity and ordering");
 const captureCompletedCalibration = JSON.parse(await exec("git", [
   "show", "14e4992a87:verification/performance-calibration.json",
@@ -4737,7 +4741,7 @@ assert.deepEqual([exactSchemasPlan.unitTasks.length,exactSchemasPlan.propertyTas
   exactSchemasPlan.parserTasks.length,schemasPack.handlers.length,exactSchemasPlan.browserTasks.length,
   exactSchemasPlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).length,
   exactSchemasPlan.checkpointTasks.length],[49,29,103,60,1,46,0]);
-assert.deepEqual(currentTerminalIdentitiesWithoutVtd014, acceptedTerminalIdentities,
+assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,
   "terminal planning conserves every Schemas task identity and ordering");
 const schemasCalibration = vtd004CurrentCalibration.runnablePacks.find(({id}) => id === "schemas");
 const schemasPreviousCalibration = schemasBaseCalibration.runnablePacks.find(({id}) => id === "schemas");
@@ -5656,7 +5660,7 @@ assert.deepEqual({tasks:exactLayeredPlan.tasks.length,unit:exactLayeredPlan.unit
 {tasks:52,unit:19,property:13,observations:4,parses:7,generators:7,sessions:1});
 assert.deepEqual(terminalIdentities(exactLayeredPlan),expectedTerminalIdentities(baseExactLayeredPlan),
   "VTD-005 changes routing without changing exact owner task identities");
-assert.deepEqual(currentTerminalIdentitiesWithoutVtd014, acceptedTerminalIdentities,
+assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,
   "VTD-005 conserves terminal task identities");
 const editorLeafCounts = Object.fromEntries(layeredPack.browserEvidencePartitions
   .find(({sessionBatch}) => sessionBatch === "layered-schema-editor").targets
@@ -8373,7 +8377,7 @@ const vtd009ExactBase = planVerification(vtd009BasePacks, {packIds:["shell"],inc
 const vtd009TerminalBase = planVerification(vtd009BasePacks, {terminalFull:true});
 const vtd009TerminalCurrent = planVerification(packs, {terminalFull:true});
 assert.deepEqual(terminalIdentities(localShellPlan), expectedTerminalIdentities(vtd009ExactBase));
-assert.deepEqual(currentTerminalIdentitiesWithoutVtd014, acceptedTerminalIdentities);
+assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities);
 const vtd009Acceptance = {
   helpers:Object.fromEntries(helperDeclarations.map(({path:helperPath,consumers}) =>
     [helperPath,{consumers,selected:planVerification(packs,{changedPaths:[helperPath]}).packIds}])),
@@ -8420,14 +8424,50 @@ const vtd009Acceptance = {
 console.log(JSON.stringify({vtd004Acceptance,vtd004DurableAcceptance,vtd004EventAcceptance,
   vtd004CaptureAcceptance,vtd004SchemasAcceptance,vtd005Acceptance,vtd009Acceptance}));
 console.log(JSON.stringify({ vtd014Acceptance:vtd014Evidence }));
+function approvedVerificationIdentityRegression(context) {
+  const expectedPreRepairFailure = {
+    approvedTaskAccountedFor:false,
+    otherIdentitiesConserved:false,
+  };
+  const expectedRepairResult = {
+    approvedTaskAccountedFor:true,
+    otherIdentitiesConserved:true,
+  };
+  const fixture = {
+    id:"approved-command-palette-unit-identity-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{ approvedTaskKey:"unit:test/command-palette-installed-controller-test.mjs" },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const repairResult = {
+    approvedTaskAccountedFor:postBaseAddedUnitKeys.has(fixture.input.approvedTaskKey) &&
+      currentTerminalPlan.tasks.filter(({ key }) => key === fixture.input.approvedTaskKey).length === 1,
+    otherIdentitiesConserved:JSON.stringify(currentTerminalIdentitiesWithoutApprovedAdditions) ===
+      JSON.stringify(acceptedTerminalIdentities),
+  };
+  assert.deepEqual(repairResult, expectedRepairResult);
+  const fixtureDigest = verificationDigest(fixture);
+  return {
+    version:2,
+    incidentId:context.incidentId,
+    failureDigest:context.failureDigest,
+    fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
+  };
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
   console.log(JSON.stringify({
-    swarmforgeTimeoutRepairRegression:regressionContext.causalCategory ===
-      "other:repair-focused prerequisite closure"
-      ? repairPrerequisiteClosureRegression(regressionContext)
-      : artifactLockTimeoutRepairRegression(regressionContext),
+    swarmforgeTimeoutRepairRegression:
+      regressionContext.causalCategory === "other:approved verification identity conservation"
+        ? approvedVerificationIdentityRegression(regressionContext)
+        : regressionContext.causalCategory === "other:repair-focused prerequisite closure"
+          ? repairPrerequisiteClosureRegression(regressionContext)
+          : artifactLockTimeoutRepairRegression(regressionContext),
   }));
 }
 console.log("verification process contract tests passed");
