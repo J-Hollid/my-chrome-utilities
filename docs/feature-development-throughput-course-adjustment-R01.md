@@ -1,7 +1,7 @@
 # Feature-development throughput course adjustment R01
 
-Status: proposed course adjustment; awaiting explicit user approval before commit
-or implementation handoff
+Status: approved by the user and committed at `2b093eec4f`; each bounded enabling
+slice still requires its own scorecard and explicit approval
 
 Prepared: 2026-08-11
 
@@ -354,12 +354,12 @@ general rule requires a separately visible course decision.
 
 ## Work-order decision
 
-The installed workspace-tabs slice is already approved and in flight. Finish it as
-the last automatic VTD-008 controller slice and record its feature-delivery-style
-elapsed-time breakdown as a transition measurement. It remains technical debt and
-does not increment the completed-feature count.
+The installed workspace-tabs slice completed as the last automatic VTD-008
+controller slice and integrated at `ad002047a3`. Record its
+feature-delivery-style elapsed-time breakdown as a transition measurement. It
+remains technical debt and does not increment the completed-feature count.
 
-After it finishes:
+With it complete:
 
 1. Do not automatically pick another VTD-008 controller.
 2. Specify VTD-015 first.

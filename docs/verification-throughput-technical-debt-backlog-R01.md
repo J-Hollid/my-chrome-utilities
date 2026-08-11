@@ -75,9 +75,10 @@ here.
   `9808acce7435343f7005f44cd5346c4395dbb6b5`.
 - The bounded installed Command Palette controller slice completed the normal role
   chain and is integrated at `5ec9ff34f7a97f28ae887f553c31d8d6f7a788ed`.
-- The installed workspace-tabs controller slice was approved at specification
-  commit `022e8c4e32` and handed to the coder. It is the last automatic VTD-008
-  slice before the feature-development throughput course review.
+- The installed workspace-tabs controller slice completed the normal role chain
+  and integrated at `ad002047a321d58976c0d8cd5c56dde46a1389d0`. It is the last
+  automatic VTD-008 slice before the approved feature-development throughput
+  course order.
 - Remaining VTD-008 controllers, remaining VTD-010 pack slices, and VTD-011 through
   VTD-012 remain inactive unless the course-adjusted order explicitly selects a
   bounded descendant.
@@ -833,6 +834,10 @@ activates no later controller. Under the feature-development course adjustment i
 is the final automatic VTD-008 slice and supplies a transition measurement rather
 than a completed-feature count.
 
+The slice completed the coder, refactorer, and architect chain and integrated at
+`ad002047a321d58976c0d8cd5c56dde46a1389d0`. It activates no later VTD-008
+controller.
+
 ### VTD-009 — Tighten shell and verification-helper ownership
 
 Priority: P1
@@ -1579,10 +1584,10 @@ reliability-repair gate. The bounded Event Library VTD-010 implementation comple
 the coder, refactorer, and architect sequence and is integrated in current `master`
 at `cc2c9a01`. The installed Hotkeys controller is complete in integration baseline
 `9808acce74`. The bounded installed Command Palette controller slice is complete at
-`5ec9ff34f7`. The workspace-tabs controller specification is approved at
-`022e8c4e32` and in flight. It is the last automatic VTD-008 slice before the
-feature-development throughput course adjustment. Other VTD-008 controllers and
-VTD-010 pack slices remain inactive.
+`5ec9ff34f7`. The workspace-tabs controller slice completed at `ad002047a3`. It
+is the last automatic VTD-008 slice before the feature-development throughput
+course adjustment. Other VTD-008 controllers and VTD-010 pack slices remain
+inactive.
 
 After measurement truth, the fastest direct development-time wins are precise
 impact boundaries and layered editor target partitioning. Preserve terminal

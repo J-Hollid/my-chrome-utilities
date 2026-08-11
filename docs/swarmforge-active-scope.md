@@ -13,29 +13,29 @@ used to reactivate completed, rejected, or archived work.
 ## Current program state
 
 The current integrated VTD-008 implementation baseline is
-`5ec9ff34f7a97f28ae887f553c31d8d6f7a788ed`.
+`ad002047a321d58976c0d8cd5c56dde46a1389d0`.
 
 | Program | Current state | Next authority |
 |---|---|---|
-| Feature-development throughput course adjustment | User-directed planning correction | The proposed authority is `docs/feature-development-throughput-course-adjustment-R01.md`; its exact work order awaits explicit user approval before commit or implementation handoff. |
-| VTD-008 side-panel composition-root decomposition | Active incremental program, paused after current slice | The installed Hotkeys and Command Palette slices are complete. The workspace-tabs slice was approved at specification commit `022e8c4e32` and handed to the coder. No later controller slice is active. |
+| Feature-development throughput course adjustment | Approved at `2b093eec4f` | `docs/feature-development-throughput-course-adjustment-R01.md` controls the next bounded pre-approval scorecard and work order. |
+| VTD-008 side-panel composition-root decomposition | Active incremental program, paused after three completed slices | The installed Hotkeys, Command Palette, and workspace-tabs slices are complete. No later controller slice is active. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Queued and inactive | Requires a user-approved bounded specification slice. |
 | VTD-012 registry and planner modularization | Queued and inactive | Requires a user-approved bounded specification slice. |
 | VTD-017 bounded isolated browser parallelism | Proposed and inactive | Course-adjusted follow-up after VTD-011 and before VTD-016; requires separate user approval and proceeds only while final-gate time remains material. |
 | Product recovery lineages | Open | Resume in the order listed under **Open product recovery queue**, unless later user direction changes it. |
 
-VTD-008 remains active as a program. Completion of the installed Hotkeys
-and Command Palette controllers completes two slices only, not VTD-008. The
-approved workspace-tabs slice completes only the existing controller lifecycle in
-`src/workspace-tabs-ui.ts`. It does not extract the broader utility registry or
+VTD-008 remains active as a program. Completion of the installed Hotkeys, Command
+Palette, and workspace-tabs controllers completes three slices only, not VTD-008.
+The completed workspace-tabs slice covers only the existing controller lifecycle
+in `src/workspace-tabs-ui.ts`. It does not extract the broader utility registry or
 shell DOM adapter, change workspace-navigation semantics, or activate
 observation-target, live-session, or another Data Layer controller.
 
-The workspace-tabs implementation handoff is active. After that role chain
-finishes, do not select another VTD-008 controller automatically. Apply the
-feature-development throughput course adjustment and obtain explicit user
-approval for its first bounded implementation slice.
+There is no active implementation handoff. Do not select another VTD-008
+controller automatically. The next course action is the VTD-015 pre-approval
+baseline, target, effort, safety trade-off, success measure, and stop condition;
+obtain explicit user approval before its specification commit or coder handoff.
 
 ## Feature-development throughput authority
 
@@ -52,14 +52,14 @@ focused evidence, and rerun all 20 packs on the changed candidate. Do not use th
 full suite as an edit loop, and do not accept a successful full result for a tree
 that later changes.
 
-The proposed final-gate speed work uses one coordinator and one deduplicated plan,
+The approved final-gate speed work uses one coordinator and one deduplicated plan,
 not 20 competing pack runners. It first balances existing workers through VTD-011,
 then VTD-017 may add bounded browser workers only for tasks with proved profile,
 port, writable-data, evidence, process-lifecycle, and cleanup isolation. A parallel
 failure remains a recorded failure and cannot be retried at lower concurrency to
 turn it green.
 
-The proposed enabling order after the in-flight workspace-tabs slice is VTD-015,
+The approved enabling order after the completed workspace-tabs slice is VTD-015,
 the bounded VTD-012 first slice, VTD-011, the conditional bounded VTD-017 slice,
 then VTD-016 and one modest real-feature payback check. VTD-011 and VTD-017 move
 ahead of VTD-016 because their final-gate savings apply to VTD-016 and nearly all
@@ -76,9 +76,10 @@ hand off the next enabling slice until the user reviews that scorecard and
 explicitly chooses the course. A provisional benefit measured on the next slice
 must close before recommending anything beyond that next slice.
 
-Until the proposed course adjustment is approved, it authorizes planning and audit
-only. It does not change another role's prompt, handoff validation, verification
-selection, or active evidence leaf.
+The approved course adjustment controls backlog selection and measurement. Each
+bounded slice still requires its own explicit user approval. It does not silently
+change another role's prompt, handoff validation, verification selection, or
+active evidence leaf.
 
 ## Authority order
 
