@@ -119,8 +119,8 @@
 (def runtime024-examples
   {["pending" "approved" "manual_review" "declined"] :repeated-page-instances})
 (def flow019-examples
-  {["the selection" "horizontally"] :selection-horizontal
-   ["the selection" "vertically"] :selection-vertical
+  {["selection" "horizontally"] :selection-horizontal
+   ["selection" "vertically"] :selection-vertical
    ["Checkout Section" "horizontally"] :section-horizontal
    ["Checkout Section" "vertically"] :section-vertical})
 (def flow020-examples

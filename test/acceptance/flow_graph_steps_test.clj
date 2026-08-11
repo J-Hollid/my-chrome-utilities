@@ -87,13 +87,13 @@
 
 (deftest flow019-examples-require-exact-scope-and-arrangement
   (is (= :selection-horizontal
-         (flow-graph/flow019-example-key {"scope" "the selection" "arrangement" "horizontally"})))
+         (flow-graph/flow019-example-key {"scope" "selection" "arrangement" "horizontally"})))
   (is (= :section-vertical
          (flow-graph/flow019-example-key {"scope" "Checkout Section" "arrangement" "vertically"})))
   (is (thrown? clojure.lang.ExceptionInfo
                (flow-graph/flow019-example-key {"scope" "the whole Flow" "arrangement" "horizontally"})))
   (is (thrown? clojure.lang.ExceptionInfo
-               (flow-graph/flow019-example-key {"scope" "the selection" "arrangement" "diagonally"}))))
+               (flow-graph/flow019-example-key {"scope" "selection" "arrangement" "diagonally"}))))
 
 (deftest flow020-examples-require-exact-viewport-dimensions
   (is (= :narrow (flow-graph/flow020-example-key {"width" "360" "height" "800"})))

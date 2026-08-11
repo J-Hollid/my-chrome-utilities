@@ -3,7 +3,7 @@
   "contractRevision": "2f609d7a19fd966eb82c54b2938df1fd78e2d836",
   "assessmentCandidate": "159c565970d86f1a96083505955afc2007aeade8",
   "approvedAssessedCount": 17,
-  "repositoryCommonOpenCount": 27,
+  "repositoryCommonOpenCount": 30,
   "additionalOpenRecordReason": "Repository-common reconciliation, the approved Flow reload lifecycle correction, and the initial terminal attempt exposed additional durable records; off-lineage experiments retire while current-lineage product and verifier occurrences retain causal proof.",
   "records": {
     "02e0c2b4-8c51-4278-92f2-ce31db4a5159": { "disposition": "lineage-retired", "reason": "Event Library failure commit is outside the selected assessment ancestry." },
@@ -33,6 +33,9 @@
     "a95ad2d9-81d6-403d-b6f8-23992f1d29b4": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "FLOW_WORKSPACE_CONTROLS_TARGET", "assertionSite": "registered Flow browser reload lifecycle", "diagnosticShape": "The requested Flow workspace was absent after a registered reload boundary." },
     "cb3efafa-d466-4022-bdfd-e631dda59c87": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "FLOW_WORKSPACE_CONTROLS_TARGET", "assertionSite": "registered Flow browser reload lifecycle", "diagnosticShape": "The populated Flow navigation was absent after a registered reload boundary." },
     "d8f27de0-8bd9-4f58-8c88-3ae17b84f10b": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "FLOW_WORKSPACE_CONTROLS_TARGET", "assertionSite": "registered Flow browser reload lifecycle", "diagnosticShape": "The populated Flow navigation was absent after a registered reload boundary." },
-    "85068fd4-c977-49cf-9771-077bba8d29c0": { "disposition": "blocking-product-repair", "domain": "product-runtime" }
+    "85068fd4-c977-49cf-9771-077bba8d29c0": { "disposition": "blocking-product-repair", "domain": "product-runtime" },
+    "44e6343a-1890-46f0-945a-697aaf498411": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "Data layer directional Flow specification graph runtime 019/example_1", "assertionSite": "exact Flow 019 scope and arrangement registry", "diagnosticShape": "Unknown Flow 019 Tidy example." },
+    "7105410f-83f6-4748-809b-94b0873f5643": { "disposition": "lineage-retired", "reason": "Concurrent refactorer Shell failure commit is outside the selected delivery ancestry." },
+    "9ef85130-693a-4516-8f17-cb7be76e0a7f": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "Modular verification packs 112/example_1", "assertionSite": "VTD-014 terminal repair conservation baseline", "diagnosticShape": "VTD-014 conservation evidence is incomplete." }
   }
 }

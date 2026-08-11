@@ -2583,7 +2583,7 @@ console.log("repairTmp=" + process.env.TMPDIR);
   const vtd014ApprovedFlowBaselineCommit = "6358897239e77322ae2fa8fc0f7bcc43fedc0ab8";
   const vtd014ApprovedSuccessionSpecificationCommit = "120bf26f91";
   const vtd014ApprovedTerminalRepairBaselineCommit =
-    "8bfd9d9e6e4e6d9602a7a4933ba624d27e75cfec";
+    "47f6012dfdf7b8f4b6e9a78e8d953cd573ad7530";
   const changedFiles = await new Promise((resolve, reject) => execFile("git",
     ["diff", "--name-only", vtd014AcceptedBaseCommit],
     { cwd:path.resolve(new URL("../", import.meta.url).pathname) },
@@ -2596,7 +2596,8 @@ console.log("repairTmp=" + process.env.TMPDIR);
     (error, stdout, stderr) => error ? reject(new Error(stderr.trim() || error.message))
       : resolve(stdout.trim().split(/\r?\n/u).filter(Boolean))));
   assert.deepEqual(postFlowChangedFiles.filter((file) => file.startsWith("src/")),
-    ["src/specification-builder.ts"]);
+    ["src/durable-project/persistence-readiness.ts", "src/side-panel.ts",
+      "src/specification-builder.ts"]);
   const postTerminalChangedFiles = await new Promise((resolve, reject) => execFile("git",
     ["diff", "--name-only", vtd014ApprovedTerminalRepairBaselineCommit],
     { cwd:path.resolve(new URL("../", import.meta.url).pathname) },
