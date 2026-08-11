@@ -1179,6 +1179,10 @@ assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-reba
 const boundedProductCompatible = { ...rebasedCompatible,
   closureAudit:{ kind:"blocking-product-repair", blocking:true, resolved:false,
     failureDomain:"product-runtime" } };
+assert.deepEqual(canonicalCheckpointBinding(boundedProductCompatible, { candidate:{
+  baseCommit:boundedClosureContractRevision, evidenceTask:boundedClosureEvidenceTask,
+} }), { baseCommit:boundedClosureContractRevision, evidenceTask:boundedClosureEvidenceTask },
+"record validation uses the frozen bounded-closure binding admitted for audited product repairs");
 assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-rebased",
   blocking:[boundedProductCompatible], candidateCommit:"repair-commit", candidateTree:"repair-tree",
   baseCommit:boundedClosureContractRevision, evidenceTask:boundedClosureEvidenceTask,

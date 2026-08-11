@@ -44,9 +44,12 @@ export function freshPassingReceipt(document, candidate, description) {
 }
 
 export function canonicalCheckpointBinding(incident, receipt) {
+  const auditedBlockingRepair = [
+    "blocking-product-repair", "blocking-verification-repair",
+  ].includes(incident.closureAudit?.kind);
   const boundedClosure = receipt?.candidate?.baseCommit === boundedClosureContractRevision &&
     receipt?.candidate?.evidenceTask === boundedClosureEvidenceTask &&
-    incident.closureAudit?.kind === "blocking-verification-repair";
+    auditedBlockingRepair;
   return boundedClosure ? {
     baseCommit:receipt.candidate.baseCommit,
     evidenceTask:receipt.candidate.evidenceTask,
