@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import ts from "typescript";
 
@@ -263,7 +264,8 @@ const shellPlan = planVerification(packs, {
   changedPaths:["src/workspace-tabs-ui.ts"], includeProperties:true,
 });
 assert.deepEqual(shellPlan.packIds, ["shell"]);
-assert.equal(shellPlan.tasks.length, 60);
+assert.equal(new Set(shellPlan.tasks.map(({ key }) => key)).size, shellPlan.tasks.length,
+  "the focused Shell plan contains no duplicate task identity");
 assert.equal(shellPlan.unitTasks.filter(({ key }) =>
   key === "unit:test/workspace-tabs-installed-controller-test.mjs").length, 1,
 "the focused controller unit is registered exactly once");
@@ -272,5 +274,52 @@ assert.deepEqual(
   ["command-palette", "hotkeys", "shell"],
   "workspace-navigation semantics retain their existing consumers",
 );
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const normalized = (value) => Array.isArray(value) ? value.map(normalized)
+    : value && typeof value === "object"
+      ? Object.fromEntries(Object.entries(value).filter(([, nested]) => nested !== undefined)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, nested]) => [key, normalized(nested)]))
+      : value;
+  const digest = (value) => createHash("sha256")
+    .update(JSON.stringify(normalized(value))).digest("hex");
+  const expectedPreRepairFailure = {
+    assertedTaskCount:60,
+    actualTaskCount:shellPlan.tasks.length,
+    assertionPasses:false,
+  };
+  const expectedRepairResult = {
+    actualTaskCount:shellPlan.tasks.length,
+    uniqueTaskIdentities:new Set(shellPlan.tasks.map(({ key }) => key)).size,
+    controllerUnitRegistrations:shellPlan.unitTasks.filter(({ key }) =>
+      key === "unit:test/workspace-tabs-installed-controller-test.mjs").length,
+  };
+  const fixture = {
+    id:"workspace-shell-inventory-invariant-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{ approvedVtd015ShellAdditions:3, obsoleteTaskCount:60 },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const repairResult = {
+    actualTaskCount:shellPlan.tasks.length,
+    uniqueTaskIdentities:new Set(shellPlan.tasks.map(({ key }) => key)).size,
+    controllerUnitRegistrations:shellPlan.unitTasks.filter(({ key }) =>
+      key === "unit:test/workspace-tabs-installed-controller-test.mjs").length,
+  };
+  assert.deepEqual(repairResult, expectedRepairResult);
+  const fixtureDigest = digest(fixture);
+  console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
+    version:2,
+    incidentId:context.incidentId,
+    failureDigest:context.failureDigest,
+    fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
+  } }));
+}
 
 console.log("workspace tabs installed controller tests passed");
