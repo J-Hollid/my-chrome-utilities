@@ -1256,6 +1256,11 @@ without allowing a real or uncertain product failure to pass.
 
 Priority: P0
 
+Status: user-approved bounded implementation slice. The authoritative contract is
+`docs/vtd015-settled-final-verification-workflow-R01.md` with executable behavior
+in `features/settled-candidate-final-verification.feature`. Stable task name:
+`vtd015-settled-final-verification`.
+
 Problem:
 
 The coder must currently attach complete handoff evidence before the refactorer and
@@ -1302,6 +1307,23 @@ integration. The change adds one explicit workflow state and handoff validation.
 Its expected value is very high because it avoids successful full runs that later
 review work immediately invalidates. Replay of the Command Palette sequence must
 demonstrate the saved full runs; task-count reduction alone cannot close the item.
+
+Measured target and decision boundary:
+
+- Workspace tabs provides the immediate baseline: two successful 838-check full
+  runs, including one 21-minute-21-second pass invalidated by later review work.
+- VTD-015 itself bootstraps under the previously integrated handoff protocol. It
+  cannot safely use the state it is still implementing.
+- VTD-012 is the first live payback measurement. While its tree is changing, coder
+  and refactorer perform no all-20 run. After the final review change, the
+  architect owns one successful settled all-20 run unless a recorded failure and
+  repair require a fresh second run.
+- The claim remains provisional until the VTD-012 scorecard demonstrates at least
+  one invalidated successful full run avoided with every final evidence leaf and
+  package result preserved.
+- Stop this slice if it requires weakening VTD-014, permitting review-ready
+  integration, repeated full-suite rehearsals, manual per-role timing ceremony,
+  scheduler or artifact-lock changes, or product behavior changes.
 
 ### VTD-016 — Partition Shell product evidence for a faster inner loop
 

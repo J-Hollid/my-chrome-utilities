@@ -18,6 +18,7 @@ The current integrated VTD-008 implementation baseline is
 | Program | Current state | Next authority |
 |---|---|---|
 | Feature-development throughput course adjustment | Approved at `2b093eec4f` | `docs/feature-development-throughput-course-adjustment-R01.md` controls the next bounded pre-approval scorecard and work order. |
+| VTD-015 settled-candidate final verification | User-approved bounded slice | `docs/vtd015-settled-final-verification-workflow-R01.md` and `features/settled-candidate-final-verification.feature` are the active implementation authority. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program, paused after three completed slices | The installed Hotkeys, Command Palette, and workspace-tabs slices are complete. No later controller slice is active. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Queued and inactive | Requires a user-approved bounded specification slice. |
@@ -32,10 +33,10 @@ in `src/workspace-tabs-ui.ts`. It does not extract the broader utility registry 
 shell DOM adapter, change workspace-navigation semantics, or activate
 observation-target, live-session, or another Data Layer controller.
 
-There is no active implementation handoff. Do not select another VTD-008
-controller automatically. The next course action is the VTD-015 pre-approval
-baseline, target, effort, safety trade-off, success measure, and stop condition;
-obtain explicit user approval before its specification commit or coder handoff.
+VTD-015 is the only active implementation slice. Its stable task name is
+`vtd015-settled-final-verification`. Do not select another VTD-008 controller or
+activate VTD-012 automatically. VTD-015 must settle, receive its outcome
+scorecard, and return to the user before another enabling slice is approved.
 
 ## Feature-development throughput authority
 
@@ -368,6 +369,7 @@ historical rename/delete handling.
 | Property Sets and Flow Sections | `--pack property_set_flow_sections` |
 | Project assurance severity | `--pack project_assurance_severity` |
 | Choice controls, analyst guidance, and generated branding | `--pack branding_polish` |
+| VTD-015 workflow bootstrap | all 20 canonical pack selectors; shared handoff and evidence behavior affects every pack |
 
 Run the selected packs with:
 
@@ -389,6 +391,13 @@ node scripts/verification-evidence.mjs record <printed-pending-file>
 Do not run the terminal suite, broad regression, unrelated packs, or Gherkin
 mutation unless the user explicitly authorizes that work. The package command
 consumes the already validated `dist` tree and does not widen task scope.
+
+The user approved the VTD-015 bootstrap terminal scope on 2026-08-11. During
+implementation and review, use only focused process-contract checks. Each
+committed VTD-015 handoff still follows the previously integrated protocol, whose
+shared workflow impact requires the canonical all-20 checkpoint. The new
+review-ready protocol becomes active only after VTD-015 integrates; VTD-012 is its
+first live payback measurement.
 
 For a new VTD-008 or VTD-010 slice, changed-path preflight and the new bounded
 specification determine the exact pack set. Do not reuse a completed slice's
