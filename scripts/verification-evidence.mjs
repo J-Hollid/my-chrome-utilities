@@ -31,6 +31,10 @@ import {
   createTimeoutIncidentStore,
   timeoutRepairPackageTaskIdentity,
 } from "./verification-reliability-incidents.mjs";
+import {
+  boundedClosureEvidenceTask,
+  terminalClosureExecution,
+} from "./verification-reliability-closure.mjs";
 
 const repository = fileURLToPath(new URL("../", import.meta.url));
 const notesRef = "refs/notes/swarmforge-verification";
@@ -387,6 +391,15 @@ async function parsedReceipt(receiptPath, plan, {
     changedBoundaries:plan.changedBoundaries,
     changeSetDigest:verificationDigest(plan.changeSet),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
+    ...(receipt.candidate?.evidenceTask === boundedClosureEvidenceTask ? {
+      terminalClosure:{
+        ...terminalClosureExecution({
+          attempt:receipt.plan?.terminalClosure?.attempt,
+          runnablePackCount:plan.requestedPackIds.length,
+        }),
+        attempt:receipt.plan?.terminalClosure?.attempt,
+      },
+    } : {}),
     ...(!legacyPrerequisites ? { executionPrerequisites:plan.tasks.map((task) =>
       prerequisiteRows.find(({ key }) => key === task.key)),
     ...(!legacyPromotionPrerequisites ? {

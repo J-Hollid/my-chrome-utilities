@@ -1071,6 +1071,9 @@ assert.deepEqual(terminalClosureExecution({ attempt:"initial", runnablePackCount
 assert.deepEqual(terminalClosureExecution({ attempt:"verifier-descendant", runnablePackCount:20 }), {
   taskPolicy:"fresh-or-input-equivalent", runnablePackCount:20, packagePolicy:"fresh",
 }, "a verifier descendant can retain only complete input-equivalent passes");
+assert.throws(() => terminalClosureExecution({ attempt:undefined, runnablePackCount:20 }),
+  /Unsupported terminal closure attempt/u,
+"bounded evidence rejects a receipt whose plan omits its terminal attempt identity");
 
 const terminalPackageKey = "package:extension";
 const terminalFreshTasks = {
