@@ -25,6 +25,24 @@ import {flowOutlineProjection} from "../dist/flow-graph/workspace-outline-model.
 import {flowPanClickSuppression,flowPanStartAllowed,flowPanToPinch} from "../dist/flow-graph/workspace-camera-ui.js";
 import {sectionBoundsAfterKeyboardInput} from "../dist/flow-graph/workspace-section-geometry.js";
 import {flowSelectionContains,primaryFlowSelection,selectionAfterActivation,selectionAfterRemoval} from "../dist/flow-graph/workspace-selection.js";
+import {createDurablePersistenceReadiness} from "../dist/durable-project/persistence-readiness.js";
+
+const persistenceStatuses=[];
+let releaseSettlement;
+const pendingSettlement=new Promise((resolve)=>{releaseSettlement=resolve;});
+const persistenceReadiness=createDurablePersistenceReadiness((status)=>persistenceStatuses.push(status),()=>pendingSettlement);
+persistenceReadiness.saving();
+persistenceReadiness.saved();
+persistenceReadiness.saving();
+releaseSettlement();
+await Promise.resolve();
+await Promise.resolve();
+assert.deepEqual(persistenceStatuses,["saving","saving"],"an older save completion cannot advertise a settled reload boundary while a newer command is pending");
+const settledStatuses=[];
+const settledReadiness=createDurablePersistenceReadiness((status)=>settledStatuses.push(status),async()=>{});
+settledReadiness.saving();
+await settledReadiness.saved();
+assert.deepEqual(settledStatuses,["saving","settled"],"the reload boundary becomes settled only after the durable queue and projection finish");
 
 const initial=initialFlowWorkspaceView();
 assert.deepEqual(initial,{camera:{x:0,y:0,zoom:1},cameraInitialized:false,surface:undefined,minimap:false,focusCanvas:false,navigationVisible:true});
@@ -136,6 +154,7 @@ assert.deepEqual(sectionBoundsAfterKeyboardInput({x:0,y:0,width:240,height:140},
 
 const flowCss=await readFile(new URL("../specification-builder-brand.css",import.meta.url),"utf8");
 const flowWorkspaceUi=await readFile(new URL("../src/flow-graph/workspace-ui.ts",import.meta.url),"utf8");
+const sidePanelSource=await readFile(new URL("../src/side-panel.ts",import.meta.url),"utf8");
 const flowBrowserEvidence=await readFile(new URL("./browser-packs/flow-graph.mjs",import.meta.url),"utf8");
 const flowCorrectionEvidence=await readFile(new URL("./support/flow-r02-correction-evidence.mjs",import.meta.url),"utf8");
 assert.match(flowCss,/#workspace-pane:has\(\.documentary-flow\[data-canvas-first-r02="true"\]\)[^{]*\{[^}]*display:\s*grid[^}]*grid-template-rows:\s*auto minmax\(0, 1fr\)[^}]*overflow:\s*hidden/su,"the active Flow allocates a shared-chrome row and an explicit remaining route row");
@@ -150,6 +169,7 @@ assert.match(flowCss,/body\.flow-focus-canvas \.documentary-flow\[data-canvas-fi
 assert.match(flowWorkspaceUi,/toolbar\.append\(skip, navigationToggle, add, focusCanvas, \.\.\.cameraUi\.controls, outlineButton, details, tidy, minimapToggle\)/u,"Add and the Focus Canvas entry precede secondary tools while camera controls stay immediately available");
 assert.doesNotMatch(flowCss,/^\.twatility-studio \.flow-canvas-viewport\s*\{[^}]*(?:max-block-size|aspect-ratio|block-size:\s*min\()/msu,"the ordinary canvas viewport has no fixed, maximum, or aspect-ratio height cap");
 assert.doesNotMatch(flowCss,/\.documentary-flow\[data-canvas-first-r02="true"\][^{]*\.flow-canvas-viewport\s*\{[^}]*block-size:\s*(?:clamp|min|max)\(/su,"later branding rules cannot restore a capped Flow canvas track");
+assert.ok(sidePanelSource.indexOf("mountUtilityShell(extensionShell, panelRoot, window)")<sidePanelSource.indexOf("await openDurableProjectRuntime(globalThis.localStorage)"),"the utility Shell becomes ready before the unrelated durable project repository opens");
 
 if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
@@ -158,28 +178,38 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         .sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)]))
       :value,
     digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
-    readiness=context.causalCategory==="readiness or settling",
+    shellReadiness=context.diagnosedBoundary?.taskKey==="browser:test/browser-packs/shell.mjs",
+    readiness=!shellReadiness&&context.causalCategory==="readiness or settling",
     zoomContainment=context.incidentId==="d3a49b37-e016-4bed-830c-9531045a6773",
-    expectedPreRepairFailure=readiness
+    expectedPreRepairFailure=shellReadiness
+      ?{repositoryOpening:true,shellReady:false}
+      :readiness
       ?{routeRestored:true,paintedInstanceSelected:false}
       :zoomContainment
         ?{zoomInContained:false,toolbarWrapped:false,cameraControlsImmediatelyAvailable:false}
         :{entryControlContained:false,focusToolbarWrapped:false,requiredControlsPrecedeSecondary:false},
-    expectedRepairResult=readiness
+    expectedRepairResult=shellReadiness
+      ?{repositoryOpening:true,shellReady:true}
+      :readiness
       ?{routeRestored:true,paintedInstanceSelected:true}
       :zoomContainment
         ?{zoomInContained:true,toolbarWrapped:true,cameraControlsImmediatelyAvailable:true}
         :{entryControlContained:true,focusToolbarWrapped:true,requiredControlsPrecedeSecondary:true},
-    fixture={id:readiness?"flow-pan-painted-instance-readiness-v1":zoomContainment
+    fixture={id:shellReadiness?"shell-readiness-before-repository-v1":readiness?"flow-pan-painted-instance-readiness-v1":zoomContainment
       ?"zoom-in-360-control-containment-v1":"focus-canvas-360-control-containment-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-      input:readiness
+      input:shellReadiness
+        ?{preRepair:{shellMount:"after durable repository await",repositoryOpening:true}}
+        :readiness
         ?{preRepair:{historicalCanvas:{width:0,height:0},liveCanvas:{width:360,height:800},selection:"first DOM match"}}
         :zoomContainment
           ?{viewport:{width:360,height:800},preRepair:{zoomIn:{x:480.859375,width:61.015625},toolbar:{left:0,right:360},scrollLeft:0}}
           :{viewport:{width:360,height:800},preRepair:{focusControl:{x:424.4375,width:88.765625},toolbar:{left:0,right:360},horizontalDiscoveryRequired:true}},
       expectedPreRepairFailure,expectedRepairResult},
-    repairResult=readiness?{
+    repairResult=shellReadiness?{
+      repositoryOpening:sidePanelSource.includes("await openDurableProjectRuntime(globalThis.localStorage)"),
+      shellReady:sidePanelSource.indexOf("mountUtilityShell(extensionShell, panelRoot, window)")<sidePanelSource.indexOf("await openDurableProjectRuntime(globalThis.localStorage)"),
+    }:readiness?{
       routeRestored:/ensureFlowPanWorkspace/u.test(flowBrowserEvidence),
       paintedInstanceSelected:/painted=\(s\)=>all\(s\)\.find/u.test(flowCorrectionEvidence)&&/const painted=\(selector\)=>\[\.\.\.document\.querySelectorAll\(selector\)\]\.find/u.test(flowBrowserEvidence),
     }:zoomContainment?{

@@ -382,6 +382,13 @@ const utilityStorageContract = (id: string) => {
   if (!contract) throw new Error(`Missing utility storage contract: ${id}`);
   return contract;
 };
+if (panelRoot) {
+  mountUtilityShell(extensionShell, panelRoot, window);
+}
+if (utilityDirectory) {
+  renderUtilityDirectory(utilityRegistry, utilityDirectory);
+}
+bindUtilityPanels(utilityRegistry, document);
 const durableProjectRuntime = await openDurableProjectRuntime(globalThis.localStorage).catch((error)=>{
   installDurableRepositoryStartupFailure(document,error);
   return new Promise<never>(()=>{});
@@ -402,13 +409,6 @@ const shellStorage = createUtilityStorage(globalThis.localStorage, {
   version:1,
   legacyKeys:["my-chrome-utilities.workspace-tab.v1"],
 });
-if (panelRoot) {
-  mountUtilityShell(extensionShell, panelRoot, window);
-}
-if (utilityDirectory) {
-  renderUtilityDirectory(utilityRegistry, utilityDirectory);
-}
-bindUtilityPanels(utilityRegistry, document);
 const sidePanelContent = document.querySelector<HTMLElement>("#side-panel-content");
 const commandLog = document.querySelector<HTMLElement>("#command-log");
 const startTestingButton = document.querySelector<HTMLButtonElement>("#start-data-layer-testing");

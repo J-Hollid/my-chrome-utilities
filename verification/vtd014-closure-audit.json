@@ -49,6 +49,7 @@
     "58ef42a1-7c00-4d9b-bb7c-5e3dc8bc8c6c": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
     "f58efe6d-c4b2-4879-b3be-01790ee41d38": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
     "c701247b-d7b2-4f8d-964e-c6b328bfff10": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "c62fb46e-7a71-4721-a4be-257301d84783": { "disposition": "blocking-verification-repair", "domain": "verification-execution" }
+    "c62fb46e-7a71-4721-a4be-257301d84783": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
+    "85068fd4-c977-49cf-9771-077bba8d29c0": { "disposition": "blocking-product-repair", "domain": "product-runtime" }
   }
 }

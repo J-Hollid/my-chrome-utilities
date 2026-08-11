@@ -79,6 +79,28 @@
   (is (= :wide-navigation-visible (flow-graph/flow001-example-key :runtime {"width" "1440" "height" "900" "navigation" "visible"})))
   (is (thrown? clojure.lang.ExceptionInfo (flow-graph/flow001-example-key :runtime {"width" "360" "height" "900" "navigation" "hidden"}))))
 
+(deftest flow002-examples-require-exact-entity-counts
+  (is (= :small-catalog (flow-graph/flow002-example-key {"entity_count" "3"})))
+  (is (= :large-catalog (flow-graph/flow002-example-key {"entity_count" "300"})))
+  (is (thrown? clojure.lang.ExceptionInfo
+               (flow-graph/flow002-example-key {"entity_count" "30"}))))
+
+(deftest flow019-examples-require-exact-scope-and-arrangement
+  (is (= :selection-horizontal
+         (flow-graph/flow019-example-key {"scope" "the selection" "arrangement" "horizontally"})))
+  (is (= :section-vertical
+         (flow-graph/flow019-example-key {"scope" "Checkout Section" "arrangement" "vertically"})))
+  (is (thrown? clojure.lang.ExceptionInfo
+               (flow-graph/flow019-example-key {"scope" "the whole Flow" "arrangement" "horizontally"})))
+  (is (thrown? clojure.lang.ExceptionInfo
+               (flow-graph/flow019-example-key {"scope" "the selection" "arrangement" "diagonally"}))))
+
+(deftest flow020-examples-require-exact-viewport-dimensions
+  (is (= :narrow (flow-graph/flow020-example-key {"width" "360" "height" "800"})))
+  (is (= :wide (flow-graph/flow020-example-key {"width" "1440" "height" "900"})))
+  (is (thrown? clojure.lang.ExceptionInfo
+               (flow-graph/flow020-example-key {"width" "360" "height" "900"}))))
+
 (deftest runtime027-examples-have-distinct-evidence-keys
   (is (= :main-primary-blank (flow-graph/runtime027-example-key :model {"workspace_mode" "the main workspace" "pan_gesture" "primary-drags from unoccupied canvas" "horizontal_distance" "120" "vertical_distance" "80"})))
   (is (= :focus-keyboard (flow-graph/runtime027-example-key :runtime {"workspace_mode" "Focus Canvas" "pan_gesture" "activates the labelled keyboard pan command" "horizontal_distance" "-80" "vertical_distance" "-60"})))
