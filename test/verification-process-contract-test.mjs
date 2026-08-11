@@ -2846,6 +2846,7 @@ console.log("repairTmp=" + process.env.TMPDIR);
       featureChangedFiles:postTerminalChangedFiles
         .filter((file) => file.startsWith("features/")),
       currentTaskDigest:verificationDigest(currentConservationPlan.tasks.filter(({key})=>![
+        "unit:test/command-palette-installed-controller-test.mjs",
         "unit:test/flow-reload-lifecycle-test.mjs",
       ].includes(key)).map(verificationTaskIdentity)),
       acceptedBaseTaskDigest:verificationDigest(
@@ -8458,12 +8459,48 @@ function approvedVerificationIdentityRegression(context) {
     repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
   };
 }
+function approvedPostBaselineIdentityRegression(context) {
+  const expectedPreRepairFailure = {
+    approvedTaskAccountedFor:false,
+    baselineDigestConserved:false,
+  };
+  const expectedRepairResult = {
+    approvedTaskAccountedFor:true,
+    baselineDigestConserved:true,
+  };
+  const fixture = {
+    id:"approved-command-palette-post-baseline-identity-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{ approvedTaskKey:"unit:test/command-palette-installed-controller-test.mjs" },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const conservation = vtd014Evidence.conservation;
+  const repairResult = {
+    approvedTaskAccountedFor:currentConservationPlan.tasks.some(({ key }) =>
+      key === fixture.input.approvedTaskKey),
+    baselineDigestConserved:conservation.currentTaskDigest === conservation.acceptedBaseTaskDigest,
+  };
+  assert.deepEqual(repairResult, expectedRepairResult);
+  const fixtureDigest = verificationDigest(fixture);
+  return {
+    version:2,
+    incidentId:context.incidentId,
+    failureDigest:context.failureDigest,
+    fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
+  };
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
   console.log(JSON.stringify({
     swarmforgeTimeoutRepairRegression:
-      regressionContext.causalCategory === "other:approved verification identity conservation"
+      regressionContext.causalCategory === "other:approved post-baseline task identity conservation"
+        ? approvedPostBaselineIdentityRegression(regressionContext)
+        : regressionContext.causalCategory === "other:approved verification identity conservation"
         ? approvedVerificationIdentityRegression(regressionContext)
         : regressionContext.causalCategory === "other:repair-focused prerequisite closure"
           ? repairPrerequisiteClosureRegression(regressionContext)
