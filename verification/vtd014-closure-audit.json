@@ -3,7 +3,7 @@
   "contractRevision": "2f609d7a19fd966eb82c54b2938df1fd78e2d836",
   "assessmentCandidate": "159c565970d86f1a96083505955afc2007aeade8",
   "approvedAssessedCount": 17,
-  "repositoryCommonOpenCount": 44,
+  "repositoryCommonOpenCount": 27,
   "additionalOpenRecordReason": "Repository-common reconciliation, the approved Flow reload lifecycle correction, and the initial terminal attempt exposed additional durable records; off-lineage experiments retire while current-lineage product and verifier occurrences retain causal proof.",
   "records": {
     "02e0c2b4-8c51-4278-92f2-ce31db4a5159": { "disposition": "lineage-retired", "reason": "Event Library failure commit is outside the selected assessment ancestry." },
@@ -33,23 +33,6 @@
     "a95ad2d9-81d6-403d-b6f8-23992f1d29b4": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "FLOW_WORKSPACE_CONTROLS_TARGET", "assertionSite": "registered Flow browser reload lifecycle", "diagnosticShape": "The requested Flow workspace was absent after a registered reload boundary." },
     "cb3efafa-d466-4022-bdfd-e631dda59c87": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "FLOW_WORKSPACE_CONTROLS_TARGET", "assertionSite": "registered Flow browser reload lifecycle", "diagnosticShape": "The populated Flow navigation was absent after a registered reload boundary." },
     "d8f27de0-8bd9-4f58-8c88-3ae17b84f10b": { "disposition": "verifier-cause-superseded", "domain": "verification-execution", "caseId": "FLOW_WORKSPACE_CONTROLS_TARGET", "assertionSite": "registered Flow browser reload lifecycle", "diagnosticShape": "The populated Flow navigation was absent after a registered reload boundary." },
-    "56e836d5-ea87-4a2e-bdf3-0e28df8a6b9d": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "6c78bd2f-7b52-4612-affc-b78435cfb6cd": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "9551c00f-e46d-4481-93c5-19e0d82fab60": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "69036ced-b651-4fa2-a9cd-16b65a438fb4": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "3243445f-a9de-4156-b160-2f1c8fbf500f": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "40546fb0-a607-4c8b-ac04-872a0668e20a": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "d3a49b37-e016-4bed-830c-9531045a6773": { "disposition": "blocking-product-repair", "domain": "product-runtime" },
-    "fbc7d757-1ad9-4304-a7f9-d387189a77cc": { "disposition": "blocking-product-repair", "domain": "product-runtime" },
-    "c770bcc7-5839-492d-ac97-96bcdca15b4d": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "d6c247c2-989e-41c6-93e2-f5e20de4b34d": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "11c07991-7d87-40e4-b468-4cded425c48f": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "19e36864-ffff-4821-908d-5fda4a206309": { "disposition": "blocking-product-repair", "domain": "product-runtime" },
-    "581a5caa-39ea-4a93-97ac-cf15142dab95": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "58ef42a1-7c00-4d9b-bb7c-5e3dc8bc8c6c": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "f58efe6d-c4b2-4879-b3be-01790ee41d38": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "c701247b-d7b2-4f8d-964e-c6b328bfff10": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
-    "c62fb46e-7a71-4721-a4be-257301d84783": { "disposition": "blocking-verification-repair", "domain": "verification-execution" },
     "85068fd4-c977-49cf-9771-077bba8d29c0": { "disposition": "blocking-product-repair", "domain": "product-runtime" }
   }
 }
