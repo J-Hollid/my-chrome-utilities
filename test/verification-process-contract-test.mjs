@@ -1285,6 +1285,31 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       repairResult:{ status:"passed", fixtureDigest,
         observed:structuredClone(fixture.expectedRepairResult) } };
   }
+  if (causalCategory === "other:approved workspace-tabs Shell inventory accounting") {
+    const fixture = {
+      id:"approved-workspace-tabs-shell-inventory-accounting-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ approvedTaskKey:"unit:test/workspace-tabs-installed-controller-test.mjs",
+        historicalShellTaskCount:59, currentShellTaskCount:60 },
+      expectedPreRepairFailure:{ historicalEvidenceTaskCount:60,
+        currentShellTaskCount:60, approvedTaskCount:1, scenario085Passed:false },
+      expectedRepairResult:{ historicalEvidenceTaskCount:59,
+        currentShellTaskCount:60, approvedTaskCount:1, scenario085Passed:true },
+    };
+    const repairResult = {
+      historicalEvidenceTaskCount:vtd009Acceptance.localPlan.tasks,
+      currentShellTaskCount:localShellPlan.tasks.length,
+      approvedTaskCount:localShellPlan.tasks.filter(({key}) =>
+        key === fixture.input.approvedTaskKey).length,
+      scenario085Passed:vtd009Acceptance.localPlan.tasks === fixture.input.historicalShellTaskCount,
+    };
+    assert.deepEqual(repairResult, fixture.expectedRepairResult);
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:structuredClone(fixture.expectedPreRepairFailure) },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
+  }
   if (causalCategory === "other:Flow stability evidence inclusion") {
     const fixture = {
       id:"flow-stability-evidence-inclusion-v1", causalCategory,
@@ -2849,6 +2874,7 @@ console.log("repairTmp=" + process.env.TMPDIR);
       currentTaskDigest:verificationDigest(currentConservationPlan.tasks.filter(({key})=>![
         "unit:test/command-palette-installed-controller-test.mjs",
         "unit:test/flow-reload-lifecycle-test.mjs",
+        "unit:test/workspace-tabs-installed-controller-test.mjs",
       ].includes(key)).map(verificationTaskIdentity)),
       acceptedBaseTaskDigest:verificationDigest(
         acceptedBaseConservationPlan.tasks.map(expectedVtd014TaskIdentity)),
@@ -4098,6 +4124,7 @@ const postBaseAddedUnitKeys = new Set([
   "unit:test/command-palette-installed-controller-test.mjs",
   "unit:test/hotkey-installed-controller-test.mjs",
   "unit:test/flow-reload-lifecycle-test.mjs",
+  "unit:test/workspace-tabs-installed-controller-test.mjs",
 ]);
 const currentTerminalIdentitiesWithoutApprovedAdditions = currentTerminalPlan.tasks.filter(({ key }) =>
   !postBaseAddedUnitKeys.has(key)).map(normalizedVtd006Identity);
@@ -4113,6 +4140,9 @@ assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
 assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
   key === "unit:test/flow-reload-lifecycle-test.mjs").length, 1,
 "terminal-full planning adds the Flow reload lifecycle regression exactly once");
+assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
+  key === "unit:test/workspace-tabs-installed-controller-test.mjs").length, 1,
+"terminal-full planning adds the installed workspace-tabs controller regression exactly once");
 assert.equal(currentTerminalPlan.tasks.filter(({ target }) =>
   target === "test/acceptance/side-panel-browser-session-contract.mjs").length, 0,
 "terminal-full planning does not add the focused VTD-006 session contract as a permanent task");
@@ -5006,9 +5036,9 @@ for (const platformPath of shellSourcePaths.filter((sourcePath) => !(sourcePath 
 const localShellPlan = planVerification(packs, {
   changedPaths:["src/workspace-tabs-ui.ts"], includeProperties:true,
 });
-assert.equal(localShellPlan.tasks.length, 59,
-  "local Shell presentation retains the complete property-enabled 59-task plan");
-assert.equal(localShellPlan.unitTasks.length, 11);
+assert.equal(localShellPlan.tasks.length, 60,
+  "local Shell presentation retains the complete property-enabled 60-task plan");
+assert.equal(localShellPlan.unitTasks.length, 12);
 assert.equal(localShellPlan.propertyTasks.length, 1);
 assert.equal(localShellPlan.browserTasks.length, 3);
 assert.equal(localShellPlan.observationTasks.length, 1);
@@ -8404,7 +8434,9 @@ assert.deepEqual(committedCalibrationReport.browserTargets, vtd009BaseCalibratio
 const vtd009ExactBase = planVerification(vtd009BasePacks, {packIds:["shell"],includeProperties:true});
 const vtd009TerminalBase = planVerification(vtd009BasePacks, {terminalFull:true});
 const vtd009TerminalCurrent = planVerification(packs, {terminalFull:true});
-assert.deepEqual(terminalIdentities(localShellPlan), expectedTerminalIdentities(vtd009ExactBase));
+assert.deepEqual(localShellPlan.tasks.filter(({ key }) =>
+  key !== "unit:test/workspace-tabs-installed-controller-test.mjs").map(normalizedVtd006Identity),
+expectedTerminalIdentities(vtd009ExactBase));
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities);
 const vtd009Acceptance = {
   helpers:Object.fromEntries(helperDeclarations.map(({path:helperPath,consumers}) =>
@@ -8426,7 +8458,10 @@ const vtd009Acceptance = {
     return [changedPath,{boundary:plan.changedBoundaries[changedPath],packIds:plan.packIds}];
   })),
   shellSourceCount:18,
-  localPlan:{tasks:localShellPlan.tasks.length,unit:localShellPlan.unitTasks.length,
+  localPlan:{tasks:localShellPlan.tasks.filter(({key}) =>
+      key !== "unit:test/workspace-tabs-installed-controller-test.mjs").length,
+    unit:localShellPlan.unitTasks.filter(({key}) =>
+      key !== "unit:test/workspace-tabs-installed-controller-test.mjs").length,
     property:localShellPlan.propertyTasks.length,browser:localShellPlan.browserTasks.length,
     observationSessions:localShellPlan.observationTasks.length,parses:localShellPlan.parserTasks.length,
     generators:localShellPlan.generatorTasks.length,checkpoints:localShellPlan.checkpointTasks.length,

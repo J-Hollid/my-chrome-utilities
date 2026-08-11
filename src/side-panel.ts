@@ -5401,10 +5401,12 @@ const paletteController = createPaletteController({
   ownerDocument:document,
 });
 
-const workspaceTabsController = createWorkspaceTabsController(
-  workspaceTabList,
-  shellStorage,
-);
+const workspaceTabsController = createWorkspaceTabsController({
+  storage:shellStorage,
+  tabList:workspaceTabList,
+  root:document,
+  pageLifecycle:window,
+});
 
 const hotkeyController = createInstalledHotkeyController({
   commands: allCommands,
@@ -5468,7 +5470,7 @@ endTestingButton?.addEventListener("click", () => {
   runCommandById("data-layer.end-testing", commandRunContext);
 });
 
-workspaceTabsController.bind();
+workspaceTabsController.mount();
 hotkeyController.mount();
 paletteController.mount();
 window.addEventListener("pagehide", () => paletteController.dispose(), { once:true });
@@ -6316,7 +6318,6 @@ renderObservationTargetContext();
 if (!savedSessionLiveFeed) void recoverAttachedObservationTarget();
 renderSessionState();
 renderObserverState();
-showWorkspace(workspaceTabsController.activeTab());
 showDataLayerView("Live");
 renderLiveObserver();
 if (savedSessionLiveFeed && liveObserverElements.eventList) liveObserverElements.eventList.scrollTop = savedSessionLiveFeed.savedScrollTop;
