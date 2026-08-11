@@ -7363,9 +7363,9 @@ assert.equal(verificationOwner(packs, "dist/data-layer-schema-verification.js"),
 await withDistArtifactLock(async() => {
   const lockModule = pathToFileURL(path.resolve("scripts/dist-artifact-lock.mjs")).href;
   await exec(process.execPath, ["--input-type=module", "-e",
-    `import {writeSync} from "node:fs"; import {withDistArtifactLock} from ${JSON.stringify(lockModule)}; await withDistArtifactLock(()=>writeSync(1,"nested-lock-ok\\n"));`],
+    `import {writeSync} from "node:fs"; import {withDistArtifactLock} from ${JSON.stringify(lockModule)}; await withDistArtifactLock(()=>writeSync(1,"nested-lock-ok\\n"),{access:"read"});`],
   { timeout:2_000 });
-});
+}, { access:"read" });
 
 if (process.platform !== "win32") {
   const commandReceiptDirectory = await mkdtemp(path.join(os.tmpdir(), "verification-command-receipts-"));

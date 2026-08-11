@@ -1839,7 +1839,7 @@ export async function runFocusedAcceptance(
   try {
     await executeAcceptancePlan(executionPlan, {
       runCommand:runner, concurrency, observationConcurrency,
-      ...(artifactRequired ? {
+      ...(artifactRequired && !commandRunner ? {
         acquireArtifactLease:async() => {
           const startedAt = Date.now();
           const release = await acquireDistArtifactLock();
