@@ -1558,7 +1558,26 @@ export async function runFocusedAcceptance(
   delete options.timeoutDiagnosticRetry;
   delete options.timeoutRepairIncident;
   await validateVerificationPacks(packs);
-  let plan = planVerification(packs, options);
+  let plan;
+  if (options.focusedTaskKeys.length && changedSince) {
+    const bindingPlan = planVerification(packs, { ...options, packIds:[] });
+    const executionPlan = planVerification(packs, {
+      ...options,
+      changedPaths:[],
+      changeSet:null,
+      basePacks:undefined,
+      historicalRegistryFallback:false,
+    });
+    plan = {
+      ...executionPlan,
+      changedPaths:bindingPlan.changedPaths,
+      changeSet:bindingPlan.changeSet,
+      baseCommit:bindingPlan.baseCommit,
+      changedOwners:bindingPlan.changedOwners,
+      changedBoundaries:bindingPlan.changedBoundaries,
+      conservativeHistoricalFallbackReason:bindingPlan.conservativeHistoricalFallbackReason,
+    };
+  } else plan = planVerification(packs, options);
   const canonicalPlan = planVerification(packs, {
     packIds:timeoutRepairPackIds, includeProperties:plan.includeProperties,
   });
