@@ -2,18 +2,20 @@ import { isWorkspaceTabId, WORKSPACE_TAB_STORAGE_KEY, workspaceTabForNavigationK
 export function createWorkspaceTabsController({ storage, tabList, root, pageLifecycle, }) {
     let activeTab = "data-layer";
     let mounted = false;
+    function renderButton(button, selected, focus) {
+        button.setAttribute("aria-selected", String(selected));
+        button.tabIndex = selected ? 0 : -1;
+        if (focus && selected) {
+            button.focus();
+        }
+    }
     function render(focus = false) {
         for (const workspaceTab of workspaceTabs) {
             const button = root.querySelector(`#workspace-tab-${workspaceTab.id}`);
             const panel = root.querySelector(`#workspace-panel-${workspaceTab.id}`);
             const selected = workspaceTab.id === activeTab;
-            if (button) {
-                button.setAttribute("aria-selected", String(selected));
-                button.tabIndex = selected ? 0 : -1;
-                if (focus && selected) {
-                    button.focus();
-                }
-            }
+            if (button)
+                renderButton(button, selected, focus);
             if (panel) {
                 panel.hidden = !selected;
             }

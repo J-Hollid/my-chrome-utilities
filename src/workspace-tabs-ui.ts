@@ -30,6 +30,18 @@ export function createWorkspaceTabsController({
   let activeTab: WorkspaceTabId = "data-layer";
   let mounted = false;
 
+  function renderButton(
+    button: HTMLButtonElement,
+    selected: boolean,
+    focus: boolean,
+  ): void {
+    button.setAttribute("aria-selected", String(selected));
+    button.tabIndex = selected ? 0 : -1;
+    if (focus && selected) {
+      button.focus();
+    }
+  }
+
   function render(focus = false): void {
     for (const workspaceTab of workspaceTabs) {
       const button = root.querySelector<HTMLButtonElement>(
@@ -40,13 +52,7 @@ export function createWorkspaceTabsController({
       );
       const selected = workspaceTab.id === activeTab;
 
-      if (button) {
-        button.setAttribute("aria-selected", String(selected));
-        button.tabIndex = selected ? 0 : -1;
-        if (focus && selected) {
-          button.focus();
-        }
-      }
+      if (button) renderButton(button, selected, focus);
       if (panel) {
         panel.hidden = !selected;
       }
