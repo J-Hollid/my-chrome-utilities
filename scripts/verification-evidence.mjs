@@ -398,7 +398,7 @@ async function parsedReceipt(receiptPath, plan, {
     mode:plan.mode,
     requestedPackIds:plan.requestedPackIds,
     selectedPackIds:plan.selectedPackIds,
-    changedPaths:plan.changedPaths,
+    ...(receipt.plan?.changedPaths === undefined ? {} : {changedPaths:plan.changedPaths}),
     changedOwners:plan.changedOwners,
     changedBoundaries:plan.changedBoundaries,
     changeSetDigest:verificationDigest(plan.changeSet),

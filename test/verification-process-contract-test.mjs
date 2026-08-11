@@ -8075,6 +8075,17 @@ try {
     toolchainValidator:skipToolchainValidation,
   }), /invalid exact runtime environment/u,
   "new verification receipts must declare normal or loaded execution load");
+  const legacyPlanSummaryReceipt = JSON.parse(await readFile(alphaReceipt, "utf8"));
+  delete legacyPlanSummaryReceipt.plan.changedPaths;
+  const legacyPlanSummaryPath = path.join(
+    evidenceRepository, "tmp", "verification-receipts", "legacy-plan-summary.json",
+  );
+  await writeFile(legacyPlanSummaryPath, JSON.stringify(legacyPlanSummaryReceipt));
+  await createPendingVerificationEvidence({
+    task:"legacy-plan-summary", plan:alphaPlan, receiptPath:legacyPlanSummaryPath,
+    changedSince:baseline, buildManifest:artifact, repositoryRoot:evidenceRepository,
+    toolchainValidator:skipToolchainValidation,
+  });
   const alphaReceiptDocument = JSON.parse(await readFile(alphaReceipt, "utf8"));
   const alphaAttemptStore = createCheckpointAttemptStore({
     directory:await defaultCheckpointAttemptDirectory(evidenceRepository),
