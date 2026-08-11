@@ -228,6 +228,17 @@ function closeEvidencePlanPrerequisites(plan, canonicalPlan) {
   return { ...plan, ...groups, tasks:evidenceTaskGroups.flatMap((group) => groups[group]) };
 }
 
+export function closeCanonicalEvidencePlanPrerequisites(plan, candidatePacks) {
+  const runnablePackIds = planVerification(candidatePacks, {
+    terminalFull:true,
+    includeProperties:true,
+  }).selectedPackIds;
+  return closeEvidencePlanPrerequisites(plan, planVerification(candidatePacks, {
+    packIds:runnablePackIds,
+    includeProperties:true,
+  }));
+}
+
 async function canonicalPlanDocument({
   commit, baseCommit, changeSet, packIds, repositoryRoot, includePackage = true,
 }) {
@@ -247,9 +258,7 @@ async function canonicalPlanDocument({
     basePacks,
     historicalRegistryFallback,
   });
-  plan = closeEvidencePlanPrerequisites(plan, planVerification(candidatePacks, {
-    packIds, includeProperties:true,
-  }));
+  plan = closeCanonicalEvidencePlanPrerequisites(plan, candidatePacks);
   return planDocument(includePackage ? withEvidencePackageTask(plan) : plan);
 }
 

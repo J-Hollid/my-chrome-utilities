@@ -73,6 +73,7 @@ import {
   verificationResumeIdentity,
 } from "../scripts/run-focused-acceptance.mjs";
 import {
+  closeCanonicalEvidencePlanPrerequisites,
   createPendingVerificationEvidence,
   legacyAcceptanceSessionPrerequisiteCompatibility,
   preflightGitNotePromotion,
@@ -3693,6 +3694,32 @@ assert.ok(ordinaryShellPlan.tasks.indexOf(ordinaryShellPlan.tasks.find(({ key })
   ordinaryShellPlan.tasks.indexOf(ordinaryShellPlan.tasks.find(({ key }) =>
     key === "acceptance-session:shell")),
 "the ordinary cross-pack predecessor runs before its acceptance consumer");
+const evidenceCommandPaletteShellPlan = closeCanonicalEvidencePlanPrerequisites(
+  planVerification(packs, {
+    packIds:["command-palette", "shell"],
+    includeProperties:true,
+  }),
+  packs,
+);
+assert.deepEqual(evidenceCommandPaletteShellPlan.requestedPackIds,
+  ["command-palette", "shell"],
+  "evidence prerequisite closure does not widen the requested pack set");
+assert.ok(evidenceCommandPaletteShellPlan.tasks.some(({ key }) =>
+  key === "unit:test/flow-examples-timing-test.mjs"),
+"evidence validation uses the repository-wide canonical satisfier registry");
+const runnerCommandPaletteShellPlan = closeVerificationPlanPrerequisites(
+  planVerification(packs, {
+    packIds:["command-palette", "shell"],
+    includeProperties:true,
+  }),
+  planVerification(packs, {
+    packIds:timeoutRepairPackIds,
+    includeProperties:true,
+  }),
+);
+assert.deepEqual(evidenceCommandPaletteShellPlan.tasks.map(({ key }) => key),
+  runnerCommandPaletteShellPlan.tasks.map(({ key }) => key),
+  "runner and evidence validation close over the same exact task identities");
 const prerequisiteTerminalPlan = planVerification(packs, { terminalFull:true });
 const closedTerminalPlan = closeVerificationPlanPrerequisites(prerequisiteTerminalPlan,
   planVerification(packs, { packIds:timeoutRepairPackIds,
