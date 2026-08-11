@@ -209,3 +209,7 @@
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd015/evidence :bootstrap :noBypass]))
                         "The bootstrap bypasses current safety evidence."))}])
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-08-11T21:09:09.996079178+02:00", :module-hash "1754380372", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1551051199"} {:id "form/1/defonce", :kind "defonce", :line 5, :end-line 5, :hash "701185655"} {:id "defn-/production-evidence!", :kind "defn-", :line 7, :end-line 14, :hash "-288875895"} {:id "defn-/prepared", :kind "defn-", :line 16, :end-line 17, :hash "693136156"} {:id "defn-/assert!", :kind "defn-", :line 19, :end-line 21, :hash "-1474981311"} {:id "defn-/values", :kind "defn-", :line 23, :end-line 25, :hash "-170718585"} {:id "defn-/value-at", :kind "defn-", :line 27, :end-line 28, :hash "1199202542"} {:id "defn/handlers", :kind "defn", :line 30, :end-line 211, :hash "1137426894"}]}
+;; clj-mutate-manifest-end
