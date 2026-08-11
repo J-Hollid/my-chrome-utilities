@@ -1610,6 +1610,7 @@ export async function runFocusedAcceptance(
     mode:plan.mode,
     requestedPackIds:[...plan.requestedPackIds].sort(),
     selectedPackIds:[...plan.selectedPackIds].sort(),
+    changedPaths:[...plan.changedPaths].sort(),
     changedOwners:plan.changedOwners,
     changedBoundaries:plan.changedBoundaries,
     changeSetDigest:plan.changeSet ? verificationDigest(plan.changeSet) : null,
