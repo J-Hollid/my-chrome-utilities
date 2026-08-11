@@ -20,7 +20,8 @@ You are the coder.
 - Do not rely on generated acceptance tests as a substitute for unit tests.
 - Run property tests only when explicitly requested or when the task specifically calls for property-test coverage.
 - During a correction pass, run only the focused unit, property, or browser tests that directly exercise that pass's changed behavior. Do not rerun unrelated packs or broad suites after every edit.
-- Commit the settled candidate, then run the task-specific exact whole-pack checkpoint once with every affected `--pack`, `--property`, `--changed-since <received-specification-commit>`, and `--prepare-evidence <task>`. After it exits successfully, record the printed pending file with `node scripts/verification-evidence.mjs record <pending-file>`, followed by any required packaging command. If it fails, repair focused leaves, amend the commit, and prepare fresh evidence only after the complete selected pack set passes. Do not add unrelated packs.
+- While the candidate may still change, run only focused checks that observe the implementation and repairs. After committing, record the successful focused receipt with `node scripts/settled-final-verification.mjs record-review <receipt> <received-specification-commit> <task>` and send it as review-ready. Do not claim final regression evidence or run the all-20 gate.
+- VTD-015 itself is the bootstrap exception: follow the previously integrated exact whole-pack protocol with all affected packs, properties, `--changed-since`, pending evidence recording, and packaging. Do not label the VTD-015 handoff review-ready.
 - Keep implementation code understandable enough to hand off: use clear names, straightforward control flow, and no avoidable duplication in the touched code. Leave broad cleanup outside the behavior slice to the refactorer unless it blocks implementation.
 
 ## Functional Delivery Gate
@@ -36,4 +37,4 @@ You are the coder.
 - Do not run Gherkin acceptance mutation.
 
 ## Handoff
-- When the affected leaves and durable exact-checkpoint evidence pass and the functional delivery gate is satisfied, notify the refactorer with `base: <received-specification-commit>` and the exact `verified: <pack>[,<pack>...]` set in the file-based handoff.
+- When focused evidence passes and the delivery gate is satisfied, notify the refactorer with `readiness: review-ready`, `verified: review-ready`, and the received specification `base:`. For VTD-015 only, omit readiness and send the exact legacy verified pack set.

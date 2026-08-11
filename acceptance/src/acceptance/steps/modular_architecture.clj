@@ -12,6 +12,7 @@
             [acceptance.verification-support.modular-architecture-vtd009-handlers :as vtd009]
             [acceptance.verification-support.modular-architecture-vtd013 :as vtd013]
             [acceptance.verification-support.modular-architecture-vtd014-handlers :as vtd014]
+            [acceptance.verification-support.modular-architecture-vtd015-handlers :as vtd015]
             [acceptance.steps.support :as support]
             [cheshire.core :as json]
             [clojure.string :as str]))
@@ -774,6 +775,7 @@
   (vec (concat (vtd006/handlers {:example-values example-values})
                (vtd007/handlers {:example-values example-values})
                (vtd014/handlers {:example-values example-values})
+               (vtd015/handlers {:example-values example-values})
                (vtd009/handlers
                 {:example-values example-values
                  :verify-throughput! verify-throughput!})

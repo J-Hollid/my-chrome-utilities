@@ -20,6 +20,7 @@
        "task: <short-stable-task-name>\n"
        "commit: <10-char-commit-abbrev>\n"
        "base: <10-char-received-commit-abbrev>\n"
+       "readiness: review-ready|final-ready\n"
        "verified: <pack-id>[,<pack-id>...]|not-required\n\n"
        "type: note\n"
        "to: <role>[,<role>...]\n"
@@ -30,7 +31,7 @@
        "Only note drafts may contain a body."))
 
 (def reserved-fields #{"id" "from" "role" "recipient" "created_at" "enqueued_at" "dequeued_at" "completed_at"})
-(def allowed-fields #{"type" "to" "priority" "task" "commit" "base" "verified" "message"})
+(def allowed-fields #{"type" "to" "priority" "task" "commit" "base" "readiness" "verified" "message"})
 (def allowed-types #{"git_handoff" "note"})
 (def max-note-details-length 4000)
 
@@ -190,6 +191,7 @@
         commit (get headers "commit")
         base (get headers "base")
         task-name (get headers "task")
+        readiness (get headers "readiness")
         verified (get headers "verified")
         note-message (get headers "message")
         [recipients recipient-errors] (validate-recipients to)
@@ -201,6 +203,7 @@
                                           ["git_handoff" "task"] true
                                           ["git_handoff" "commit"] true
                                           ["git_handoff" "base"] true
+                                          ["git_handoff" "readiness"] true
                                           ["git_handoff" "verified"] true
                                           ["note" "type"] true
                                           ["note" "to"] true
@@ -249,6 +252,9 @@
                              (and (not (str/blank? verified))
                                   (not (re-matches #"(?:[a-z0-9][a-z0-9_-]*(?:,[a-z0-9][a-z0-9_-]*)*|not-required)" verified)))
                              (conj (format "Header 'verified' must be comma-separated pack ids or not-required; got '%s'." verified))
+                             (and (not (str/blank? readiness))
+                                  (not (#{"review-ready" "final-ready"} readiness)))
+                             (conj (format "Header 'readiness' must be review-ready or final-ready; got '%s'." readiness))
                              (and (not (str/blank? verified))
                                   (not= verified "not-required")
                                   (not= (count (str/split verified #","))
@@ -332,10 +338,13 @@
                        (str "type: " type)]
                 (= "git_handoff" type)
                 (conj (str "role: " sender)
-                     (str "task: " (get headers "task"))
+                      (str "task: " (get headers "task"))
                       (str "commit: " canonical-commit)
-                      (str "base: " canonical-base)
-                      (str "verified: " (get headers "verified")))
+                      (str "base: " canonical-base))
+                (and (= "git_handoff" type) (get headers "readiness"))
+                (conj (str "readiness: " (get headers "readiness")))
+                (= "git_handoff" type)
+                (conj (str "verified: " (get headers "verified")))
                 (= "note" type)
                 (conj (str "message: " (get headers "message")))
                 true
@@ -402,6 +411,14 @@
 
         (or (str/blank? verified) (str/blank? canonical-commit) (str/blank? canonical-base)) []
 
+        (= verified "review-ready")
+        (let [result (command "." "node" "scripts/settled-final-verification.mjs"
+                              "verify-review" canonical-commit canonical-base (get headers "task"))]
+          (if (zero? (:exit result))
+            []
+            [(str "Bound review-ready evidence is missing or invalid: "
+                  (str/trim (str (:err result) " " (:out result))))]))
+
         (= verified "not-required")
         (let [[changed-paths classification-error]
               (canonical-change-paths canonical-base canonical-commit)
@@ -420,6 +437,20 @@
             []
             [(str "Durable verification evidence is missing or invalid: "
                   (str/trim (str (:err result) " " (:out result))))]))))))
+
+(defn readiness-errors [sender headers recipients canonical-commit canonical-base]
+  (if (and (= "git_handoff" (get headers "type"))
+           (not (str/blank? canonical-commit))
+           (not (str/blank? canonical-base)))
+    (let [result (command "." "node" "scripts/settled-final-verification.mjs"
+                          "validate-handoff" sender (str/join "," recipients)
+                          (get headers "task") (or (get headers "readiness") "legacy")
+                          (get headers "verified"))]
+      (if (zero? (:exit result))
+        []
+        [(str "Git handoff readiness claim is invalid: "
+              (str/trim (str (:err result) " " (:out result))))]))
+    []))
 
 (defn reliability-incident-errors [headers canonical-commit]
   (if (and (= "git_handoff" (get headers "type")) (not (str/blank? canonical-commit)))
@@ -444,8 +475,10 @@
       (let [{:keys [headers ordered details errors]} (parse-draft draft)
             validation (validate headers ordered details)
             evidence-errors (verification-errors sender headers (:canonical-commit validation) (:canonical-base validation))
+            readiness-errors (readiness-errors sender headers (:recipients validation)
+                                               (:canonical-commit validation) (:canonical-base validation))
             reliability-errors (reliability-incident-errors headers (:canonical-commit validation))
-            all-errors (vec (concat errors (:errors validation) evidence-errors reliability-errors))]
+            all-errors (vec (concat errors (:errors validation) evidence-errors readiness-errors reliability-errors))]
         (when (seq all-errors)
           (error-report draft all-errors)
           (System/exit 2))

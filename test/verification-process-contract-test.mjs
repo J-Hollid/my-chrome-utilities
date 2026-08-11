@@ -2796,6 +2796,21 @@ console.log("repairTmp=" + process.env.TMPDIR);
     }
     return identity;
   };
+  const vtd014ApprovedVtd015Feature = "features/settled-candidate-final-verification.feature";
+  const vtd014ApprovedVtd015Generated =
+    "build/acceptance/generated/features-settled-candidate-final-verification-feature_acceptance_test.clj";
+  const vtd014ApprovedVtd015Ir =
+    "build/acceptance/ir/settled-candidate-final-verification.json";
+  const normalizedCurrentVtd014TaskIdentity = (task) => {
+    const identity = verificationTaskIdentity(task);
+    if (identity.key === "acceptance-session:shell") {
+      identity.args = identity.args.filter((value) =>
+        ![vtd014ApprovedVtd015Generated, vtd014ApprovedVtd015Ir].includes(value));
+      identity.target = identity.target.split(",")
+        .filter((value) => value !== vtd014ApprovedVtd015Feature).join(",");
+    }
+    return identity;
+  };
   vtd014Evidence = {
     execution:{ prerequisites:prerequisiteContractEvidence, prerequisiteGate:prerequisiteGateEvidence,
       restriction:{ environmentContractFailure:true, retryPermitted:false,
@@ -2875,7 +2890,10 @@ console.log("repairTmp=" + process.env.TMPDIR);
         "unit:test/command-palette-installed-controller-test.mjs",
         "unit:test/flow-reload-lifecycle-test.mjs",
         "unit:test/workspace-tabs-installed-controller-test.mjs",
-      ].includes(key)).map(verificationTaskIdentity)),
+        "unit:test/settled-final-verification-workflow-test.mjs",
+        `acceptance-parse:${vtd014ApprovedVtd015Feature}`,
+        `acceptance-generate:${vtd014ApprovedVtd015Feature}`,
+      ].includes(key)).map(normalizedCurrentVtd014TaskIdentity)),
       acceptedBaseTaskDigest:verificationDigest(
         acceptedBaseConservationPlan.tasks.map(expectedVtd014TaskIdentity)),
       currentPackContractDigest:verificationDigest(packContract(timeoutPackRegistry)),
@@ -4102,10 +4120,18 @@ const vtd006ProgramMigration = new Map([
   ["test/browser-packs/side-panel-defects.mjs", "test/side-panel-component-layout-runtime-test.mjs"],
   ["test/browser-packs/side-panel-shell.mjs", "test/side-panel-component-layout-runtime-test.mjs"],
 ]);
+const vtd015Feature = "features/settled-candidate-final-verification.feature";
+const vtd015Generated = "build/acceptance/generated/features-settled-candidate-final-verification-feature_acceptance_test.clj";
+const vtd015Ir = "build/acceptance/ir/settled-candidate-final-verification.json";
 const normalizedVtd006Identity = (task) => {
   let encoded = JSON.stringify(verificationTaskIdentity(task));
   for (const [current, previous] of vtd006ProgramMigration) encoded = encoded.replaceAll(current, previous);
-  return JSON.parse(encoded);
+  const identity = JSON.parse(encoded);
+  if (identity.key === "acceptance-session:shell") {
+    identity.args = identity.args.filter((value) => ![vtd015Generated, vtd015Ir].includes(value));
+    identity.target = identity.target.split(",").filter((value) => value !== vtd015Feature).join(",");
+  }
+  return identity;
 };
 const expectedVtd014TerminalIdentity = (task) => {
   const identity = normalizedVtd006Identity(task);
@@ -4126,8 +4152,13 @@ const postBaseAddedUnitKeys = new Set([
   "unit:test/flow-reload-lifecycle-test.mjs",
   "unit:test/workspace-tabs-installed-controller-test.mjs",
 ]);
+const approvedVtd015TaskKeys = new Set([
+  "unit:test/settled-final-verification-workflow-test.mjs",
+  `acceptance-parse:${vtd015Feature}`,
+  `acceptance-generate:${vtd015Feature}`,
+]);
 const currentTerminalIdentitiesWithoutApprovedAdditions = currentTerminalPlan.tasks.filter(({ key }) =>
-  !postBaseAddedUnitKeys.has(key)).map(normalizedVtd006Identity);
+  !postBaseAddedUnitKeys.has(key) && !approvedVtd015TaskKeys.has(key)).map(normalizedVtd006Identity);
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions,
   acceptedTerminalIdentities,
   "terminal-full planning conserves the accepted base identities around approved added units");
@@ -4143,6 +4174,10 @@ assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
 assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
   key === "unit:test/workspace-tabs-installed-controller-test.mjs").length, 1,
 "terminal-full planning adds the installed workspace-tabs controller regression exactly once");
+for (const taskKey of approvedVtd015TaskKeys) {
+  assert.equal(currentTerminalPlan.tasks.filter(({ key }) => key === taskKey).length, 1,
+    `terminal-full planning adds the approved VTD-015 task ${taskKey} exactly once`);
+}
 assert.equal(currentTerminalPlan.tasks.filter(({ target }) =>
   target === "test/acceptance/side-panel-browser-session-contract.mjs").length, 0,
 "terminal-full planning does not add the focused VTD-006 session contract as a permanent task");
@@ -5036,14 +5071,14 @@ for (const platformPath of shellSourcePaths.filter((sourcePath) => !(sourcePath 
 const localShellPlan = planVerification(packs, {
   changedPaths:["src/workspace-tabs-ui.ts"], includeProperties:true,
 });
-assert.equal(localShellPlan.tasks.length, 60,
-  "local Shell presentation retains the complete property-enabled 60-task plan");
-assert.equal(localShellPlan.unitTasks.length, 12);
+assert.equal(localShellPlan.tasks.length, 63,
+  "local Shell presentation retains the complete property-enabled 63-task plan");
+assert.equal(localShellPlan.unitTasks.length, 13);
 assert.equal(localShellPlan.propertyTasks.length, 1);
 assert.equal(localShellPlan.browserTasks.length, 3);
 assert.equal(localShellPlan.observationTasks.length, 1);
-assert.equal(localShellPlan.parserTasks.length, 19);
-assert.equal(localShellPlan.generatorTasks.length, 19);
+assert.equal(localShellPlan.parserTasks.length, 20);
+assert.equal(localShellPlan.generatorTasks.length, 20);
 assert.equal(localShellPlan.checkpointTasks.length, 3);
 assert.equal(localShellPlan.sessionTasks.length, 1);
 const vtd009BasePacks = JSON.parse(await exec("git", [
@@ -8171,6 +8206,11 @@ try {
     '  console.error("unresolved reliability incident fixture"); process.exit(1); } catch {}',
     '',
   ].join("\n"));
+  await writeFile(path.join(handoffRepository, "scripts", "settled-final-verification.mjs"), [
+    'if (process.argv[2] !== "validate-handoff") process.exit(2);',
+    'console.log("handoff readiness fixture passed");',
+    '',
+  ].join("\n"));
   await writeFile(path.join(handoffRepository, ".swarmforge", "roles.tsv"),
     "specifier\tspecifier\nrefactorer\trefactorer\ncoder\tcoder\n");
   await writeFile(path.join(handoffRepository, "README.md"), "base\n");
@@ -8434,8 +8474,9 @@ assert.deepEqual(committedCalibrationReport.browserTargets, vtd009BaseCalibratio
 const vtd009ExactBase = planVerification(vtd009BasePacks, {packIds:["shell"],includeProperties:true});
 const vtd009TerminalBase = planVerification(vtd009BasePacks, {terminalFull:true});
 const vtd009TerminalCurrent = planVerification(packs, {terminalFull:true});
-assert.deepEqual(localShellPlan.tasks.filter(({ key }) =>
-  key !== "unit:test/workspace-tabs-installed-controller-test.mjs").map(normalizedVtd006Identity),
+const vtd009HistoricalShellTasks = localShellPlan.tasks.filter(({ key }) =>
+  key !== "unit:test/workspace-tabs-installed-controller-test.mjs" && !approvedVtd015TaskKeys.has(key));
+assert.deepEqual(vtd009HistoricalShellTasks.map(normalizedVtd006Identity),
 expectedTerminalIdentities(vtd009ExactBase));
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities);
 const vtd009Acceptance = {
@@ -8458,13 +8499,14 @@ const vtd009Acceptance = {
     return [changedPath,{boundary:plan.changedBoundaries[changedPath],packIds:plan.packIds}];
   })),
   shellSourceCount:18,
-  localPlan:{tasks:localShellPlan.tasks.filter(({key}) =>
-      key !== "unit:test/workspace-tabs-installed-controller-test.mjs").length,
+  localPlan:{tasks:vtd009HistoricalShellTasks.length,
     unit:localShellPlan.unitTasks.filter(({key}) =>
-      key !== "unit:test/workspace-tabs-installed-controller-test.mjs").length,
+      key !== "unit:test/workspace-tabs-installed-controller-test.mjs" && !approvedVtd015TaskKeys.has(key)).length,
     property:localShellPlan.propertyTasks.length,browser:localShellPlan.browserTasks.length,
-    observationSessions:localShellPlan.observationTasks.length,parses:localShellPlan.parserTasks.length,
-    generators:localShellPlan.generatorTasks.length,checkpoints:localShellPlan.checkpointTasks.length,
+    observationSessions:localShellPlan.observationTasks.length,
+    parses:localShellPlan.parserTasks.filter(({key}) => !approvedVtd015TaskKeys.has(key)).length,
+    generators:localShellPlan.generatorTasks.filter(({key}) => !approvedVtd015TaskKeys.has(key)).length,
+    checkpoints:localShellPlan.checkpointTasks.length,
     acceptanceSessions:localShellPlan.sessionTasks.length},
   history:vtd009History,
   calibration:{current:vtd009ShellCalibration,previous:vtd009BaseShellCalibration,
@@ -8554,6 +8596,48 @@ function approvedPostBaselineIdentityRegression(context) {
     repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
   };
 }
+function approvedVtd015Vtd014ConservationRegression(context) {
+  const expectedPreRepairFailure = {
+    approvedAdditionsExcluded:false,
+    shellSessionNormalized:false,
+    baselineDigestConserved:false,
+  };
+  const expectedRepairResult = {
+    approvedAdditionsExcluded:true,
+    shellSessionNormalized:true,
+    baselineDigestConserved:true,
+  };
+  const fixture = {
+    id:"approved-vtd015-vtd014-conservation-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{ approvedTaskKeys:[...approvedVtd015TaskKeys].sort(),
+      aggregateTaskKey:"acceptance-session:shell" },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const currentShellTask = currentTerminalPlan.tasks.find(({ key }) =>
+    key === fixture.input.aggregateTaskKey);
+  const normalizedShellIdentity = normalizedVtd006Identity(currentShellTask);
+  const repairResult = {
+    approvedAdditionsExcluded:fixture.input.approvedTaskKeys.every((key) =>
+      currentTerminalPlan.tasks.filter((task) => task.key === key).length === 1),
+    shellSessionNormalized:!normalizedShellIdentity.target.split(",")
+      .includes(vtd015Feature),
+    baselineDigestConserved:vtd014Evidence.conservation.currentTaskDigest ===
+      vtd014Evidence.conservation.acceptedBaseTaskDigest,
+  };
+  assert.deepEqual(repairResult, expectedRepairResult);
+  const fixtureDigest = verificationDigest(fixture);
+  return {
+    version:2,
+    incidentId:context.incidentId,
+    failureDigest:context.failureDigest,
+    fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
+  };
+}
 function causalProtocolScopeRegression(context) {
   const expectedPreRepairFailure = {
     approvedTaskSetReachable:false,
@@ -8593,6 +8677,9 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     swarmforgeTimeoutRepairRegression:
       regressionContext.causalCategory === "other:causal regression scope visibility"
         ? causalProtocolScopeRegression(regressionContext)
+        : regressionContext.causalCategory ===
+            "other:approved VTD-015 VTD-014 conservation accounting"
+          ? approvedVtd015Vtd014ConservationRegression(regressionContext)
         : regressionContext.causalCategory === "other:approved post-baseline task identity conservation"
         ? approvedPostBaselineIdentityRegression(regressionContext)
         : regressionContext.causalCategory === "other:approved verification identity conservation"
