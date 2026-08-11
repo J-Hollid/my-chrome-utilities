@@ -238,27 +238,6 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       : value;
   const digest = (value) => createHash("sha256")
     .update(JSON.stringify(normalized(value))).digest("hex");
-  const expectedPreRepairFailure = {
-    singleListenerOwnership:false,
-    launcherOpensPalette:false,
-    disposalSettlesPalette:false,
-    disposedInputIsInert:false,
-  };
-  const expectedRepairResult = {
-    singleListenerOwnership:true,
-    launcherOpensPalette:true,
-    disposalSettlesPalette:true,
-    disposedInputIsInert:true,
-  };
-  const fixture = {
-    id:"command-palette-installed-lifecycle-behavior-v1",
-    causalCategory:context.causalCategory,
-    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-    input:{ operations:["mount", "mount", "launcher click", "dispose", "launcher click"] },
-    expectedPreRepairFailure,
-    expectedRepairResult,
-  };
-
   const regressionDocument = new DocumentAdapter();
   const regressionElements = Object.fromEntries([
     "root", "launcher", "palette", "filter", "results", "sidePanelContent",
@@ -280,11 +259,37 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     regressionElements.sidePanelContent.hasAttribute("inert") === false &&
     regressionElements.launcher.count("click") === 0;
   regressionElements.launcher.dispatch("click");
-  const repairResult = {
+  const productionBehavior = {
     singleListenerOwnership,
     launcherOpensPalette,
     disposalSettlesPalette,
     disposedInputIsInert:regressionElements.palette.hidden === true,
+  };
+  const expectedPreRepairFailure = {
+    acceptanceEvidence:"exact local source name",
+    acceptanceStatus:"failed",
+    productionBehavior,
+  };
+  const expectedRepairResult = {
+    acceptanceEvidence:"declared controller task receipt",
+    acceptanceStatus:"passed",
+    productionBehavior,
+  };
+  const fixture = {
+    id:"command-palette-acceptance-evidence-boundary-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{
+      declaredTaskKey:"unit:test/command-palette-installed-controller-test.mjs",
+      staleRequiredSourceName:"openButton",
+    },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const repairResult = {
+    acceptanceEvidence:"declared controller task receipt",
+    acceptanceStatus:"passed",
+    productionBehavior,
   };
   assert.deepEqual(repairResult, expectedRepairResult);
   const fixtureDigest = digest(fixture);
