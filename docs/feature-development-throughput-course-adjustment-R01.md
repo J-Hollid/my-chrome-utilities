@@ -137,6 +137,15 @@ and loaded stability samples plus one ordinary final gate. Do not add repeated
 all-20 rehearsals, silently retry a failed parallel run, or accept a higher worker
 count merely because its best run is faster.
 
+The workspace-tabs final checkpoint exposed a more immediate limitation. Although
+the browser-observation scheduler reported two workers, several second workers
+waited for an exclusive `dist` artifact lock while the first browser task ran. The
+largest wait was 195.4 seconds inside a 231.9-second task. The nominal two-worker
+setting therefore did not provide two-way execution for that part of the stage.
+VTD-017 must first separate exclusive build or promotion writes from safe
+read-only use of one validated immutable artifact. Only then is increasing the
+Chrome worker count a meaningful experiment.
+
 ### Shared verification files are development bottlenecks
 
 - `test/verification-process-contract-test.mjs` is 8,570 lines, is registered as
@@ -149,6 +158,42 @@ count merely because its best run is faster.
 A workspace presentation change therefore pays for verification-process contracts
 that cannot observe workspace behavior, while verification maintenance edits a
 shared file that selects every pack. This is coupling, not safety.
+
+### Workspace-tabs transition scorecard
+
+The installed workspace-tabs controller is technical debt, so it adds zero to the
+completed-feature count. It is recorded as the transition baseline for judging the
+new course.
+
+- The specification was approved and committed at 16:29:47. The implementation
+  integrated at 17:58:50: 89 minutes 3 seconds later.
+- The elapsed role intervals were 27 minutes 18 seconds to the coder candidate,
+  33 minutes 10 seconds through refactoring, 10 minutes 22 seconds through
+  architecture review, and 18 minutes 13 seconds for handoff review and
+  integration. These intervals include the work and checks performed by each
+  role; automatic finer-grained activity timing is not installed yet.
+- This handoff straddled approval of the new course. Its settled all-20 checkpoint
+  therefore finished after the merge, at 18:25:26. Approval to safety completion
+  was 1 hour 55 minutes 39 seconds. Future slices must finish this checkpoint
+  before integration.
+- The coder ran all 20 packs and 838 tasks successfully in 21 minutes 21 seconds.
+  The refactorer then changed production code and the architect changed test code,
+  so that successful full result was no longer final-tree proof. Their focused
+  Shell checks took 4 minutes 14 seconds and 4 minutes 18 seconds respectively.
+- The settled tree then ran all 20 packs and 838 tasks successfully in 21 minutes
+  42 seconds, including the package check. Durable evidence is recorded against
+  `7868ac99de` and every task passed.
+- No completed checkpoint failed in the final lineage, no failure was hidden by a
+  retry, and no repair-triggered all-20 rerun occurred. Review still had to correct
+  verification inventory accounting and replace brittle source-text checks, which
+  is maintenance cost rather than product value.
+
+The immediate VTD-015 opportunity is concrete: the coder's 21-minute successful
+full run was invalidated by expected later review changes. Moving the one required
+full run to the settled tree should avoid that pass on a comparable slice without
+dropping the final safety gate. This saving is provisional until VTD-012 records
+its own before-and-after role lineage. The recommendation is to present the
+VTD-015 pre-approval scorecard next; it is not automatically approved.
 
 ## Order by direct value and enabling value
 
@@ -291,11 +336,15 @@ Expected value: high
 
 Expected effort: medium and incremental
 
-Use the VTD-011 timing model to balance the workers that already exist. Then audit
-the ordinary browser adapters that remain serial and allow two isolated workers
-for the adapters proved independent. Trial browser-observation concurrency three
-only after the existing two-worker schedule is balanced and focused normal and
-loaded evidence shows adequate machine capacity.
+Use the VTD-011 timing model to balance the workers that already exist. First
+remove false serialization: keep build and artifact-promotion writes exclusive,
+but let proved read-only browser consumers share the same validated immutable
+artifact or private validated snapshots. Prove the artifact identity and absence
+of writes before allowing overlap. Then audit the ordinary browser adapters that
+remain serial and allow two isolated workers for the adapters proved independent.
+Trial browser-observation concurrency three only after the existing two-worker
+schedule has real overlap, is balanced, and focused normal and loaded evidence
+shows adequate machine capacity.
 
 Keep one canonical plan, one prepared candidate, one combined result, and the
 existing stage and dependency boundaries. Each browser worker must own its Chrome
@@ -311,8 +360,9 @@ real recorded failure; there is no automatic lower-concurrency retry that can tu
 it green.
 
 This work follows VTD-011 because adding workers before balancing existing lanes
-could add risk without addressing the real waiting path. It precedes VTD-016 so
-VTD-016 and every later slice receive its final-gate benefit.
+or removing the observed artifact-lock wait could add risk without addressing the
+real waiting path. It precedes VTD-016 so VTD-016 and every later slice receive
+its final-gate benefit.
 
 ### 5. VTD-016 — Partition Shell product evidence by behavior
 

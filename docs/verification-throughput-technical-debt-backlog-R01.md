@@ -1366,11 +1366,21 @@ gate is dominated by browser work, but simply launching more pack runners would
 duplicate shared checks, contend over the prepared artifact, fragment receipts,
 and risk resource-driven timeouts.
 
+The workspace-tabs settled checkpoint measured a hidden serialization point. One
+browser-observation worker held the exclusive `dist` artifact lock while another
+otherwise independent task waited as long as 195.4 seconds; that waiting task took
+231.9 seconds overall. A configured worker count of two is therefore not yet proof
+of useful two-way execution.
+
 Required outcome:
 
 - Keep one coordinator, one canonical deduplicated all-20 plan, one prepared build
   candidate, and one combined pass or fail result.
 - Use VTD-011 timing weights to balance the existing workers before adding more.
+- Audit the `dist` artifact lease before raising worker counts. Keep build,
+  validation, and promotion writes exclusive, while allowing proved read-only
+  consumers to share the same validated immutable artifact or separate validated
+  snapshots. Preserve artifact digest identity and fail on any consumer mutation.
 - Prove that every parallel browser task owns its Chrome profile, automatically
   selected debugging port, temporary writable data, evidence output, child-process
   lifecycle, and cleanup. Keep an unproved task serial.
@@ -1390,6 +1400,12 @@ Acceptance criteria:
 
 - Process-contract fixtures prove that dependent or shared-writable-state tasks
   cannot enter different workers and that independent tasks can.
+- Two read-only browser consumers overlap against the same validated artifact
+  identity without writing it; build and promotion remain exclusive, and an
+  attempted consumer mutation fails rather than contaminating another task.
+- Measurements separately report scheduled worker count, useful overlap, and
+  artifact-lock wait. Removing lock wait must precede any claim that a higher
+  Chrome worker count improved parallelism.
 - Two concurrent browser fixtures use distinct profiles, debugging ports,
   temporary data, and evidence paths; one fixture cannot read or remove the
   other's state.
@@ -1408,12 +1424,13 @@ Dependencies: VTD-001, VTD-002, VTD-007, and VTD-011.
 
 Trade-off and expected value:
 
-The isolation foundations already exist, so the expected effort is medium and can
-be delivered incrementally. The expected value is high when final-gate browser
-work remains a material share of feature delivery. More Chrome processes still
-compete for processor time and memory, so three workers may be slower or less
-stable on a constrained machine. The accepted default is the fastest stable bound,
-not the largest possible worker count.
+The profile, port, and evidence isolation foundations already exist, but the
+artifact lease needs correction before their parallel value is real. The expected
+effort remains medium and can be delivered incrementally. The expected value is
+high when final-gate browser work remains a material share of feature delivery.
+More Chrome processes still compete for processor time and memory, so three
+workers may be slower or less stable on a constrained machine. The accepted
+default is the fastest stable bound, not the largest possible worker count.
 
 ## Enabling-slice user review gate
 

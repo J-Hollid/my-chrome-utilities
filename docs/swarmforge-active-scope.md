@@ -59,6 +59,13 @@ port, writable-data, evidence, process-lifecycle, and cleanup isolation. A paral
 failure remains a recorded failure and cannot be retried at lower concurrency to
 turn it green.
 
+The workspace-tabs settled all-20 run measured up to 195.4 seconds of exclusive
+`dist` artifact-lock waiting inside a 231.9-second browser task even though two
+observation workers were configured. VTD-017 must make validated read-only
+artifact use safely shareable, while retaining exclusive build and promotion,
+before testing a higher Chrome worker count. Its scorecard must report useful
+overlap and lock wait, not configured worker count alone.
+
 The approved enabling order after the completed workspace-tabs slice is VTD-015,
 the bounded VTD-012 first slice, VTD-011, the conditional bounded VTD-017 slice,
 then VTD-016 and one modest real-feature payback check. VTD-011 and VTD-017 move
@@ -412,6 +419,7 @@ is status only.
 | VTD-010 Event Library launch consolidation | `cc2c9a01b6` | Complete slice; program remains open |
 | VTD-008 installed Hotkeys controller | `9808acce74` | Complete slice; VTD-008 remains active |
 | VTD-008 installed Command Palette controller | `5ec9ff34f7` | Complete slice; VTD-008 remains active |
+| VTD-008 installed workspace-tabs controller | `ad002047a3` | Complete slice; VTD-008 remains active and paused |
 
 ## Historical boundaries
 
