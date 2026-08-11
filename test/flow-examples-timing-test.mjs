@@ -24,7 +24,10 @@ import {
   withLogicalTargetLifecycle,
   withLogicalTargetDeadline,
 } from "./support/browser-observation-control.mjs";
-import { sharedHarnessReadinessState } from "./browser-packs/shared-harness.mjs";
+import {
+  sharedHarnessReadinessState,
+  sharedHarnessReloadEligible,
+} from "./browser-packs/shared-harness.mjs";
 import {
   flowGraphEventExampleSeed,
   flowGraphRuntimeCanvasReady,
@@ -47,6 +50,7 @@ import {
 
 const execFileAsync=promisify(execFile);
 const flowGraphAdapterSource=readFileSync("test/browser-packs/flow-graph.mjs","utf8");
+const sharedHarnessSource=readFileSync("test/browser-packs/shared-harness.mjs","utf8");
 assert.match(flowGraphAdapterSource,
   /timeoutMs:browserShard==="examples"[\s\S]*?:\s*Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u,
   "non-example Flow readiness must consume the owning logical target budget instead of an unrelated five-second ceiling");
@@ -218,6 +222,15 @@ const sharedPredicateOutcomes=sharedPredicateCases.map((state)=>
   sharedHarnessReadinessState(state,"data-layer"));
 assert.deepEqual(sharedPredicateOutcomes,[true,false,false,false],
 "the actual shared-harness predicate must require document, Shell root, and isolation readiness");
+const sharedReloadCases=[
+  {documentReadyState:"complete",shellReady:null,isolation:"data-layer"},
+  {documentReadyState:"loading",shellReady:null,isolation:"data-layer"},
+  {documentReadyState:"complete",shellReady:"false",isolation:"data-layer"},
+  {documentReadyState:"complete",shellReady:null,isolation:"hotkeys"},
+];
+assert.deepEqual(sharedReloadCases.map((state)=>sharedHarnessReloadEligible(state,"data-layer")),
+  [true,false,false,false],
+  "shared-harness reload recovery must be limited to a completed null-ready document in the requested isolation");
 const layeredCreateProjectReadinessState=exportedPredicate(
   "test/support/layered-schema-workflows.mjs","layeredCreateProjectReadinessState");
 const layeredEditorHydrationReadinessState=exportedPredicate(
@@ -510,6 +523,7 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     sectionTargetRepair=context.causalCategory==="other:unambiguous synthetic Section target",
     sectionGenerationRepair=context.causalCategory==="other:current rendered Section gesture target",
     eventSeedRepair=context.causalCategory==="other:fresh durable Event example seed",
+    shellRecoveryRepair=context.causalCategory==="other:bounded shell readiness recovery",
     fixture=sectionTargetRepair?{id:"unambiguous-synthetic-section-target-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{sharedAttribute:"data-flow-section-id",candidateKinds:["Section group","member Page frame"]},
@@ -529,6 +543,13 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
           terminalDiagnostic:"Event example seed conflict"},
         expectedRepairResult:{freshRevisionAttempts:4,rebuildsMutation:true,
           terminalDiagnostic:"Event example seed conflict after 4 fresh revisions"}}
+      :shellRecoveryRepair?{id:"bounded-shell-readiness-recovery-v1",
+        causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+        input:{documentReadyState:"complete",shellReady:null,isolation:"",originalBudgetMilliseconds:15000},
+        expectedPreRepairFailure:{reloadEligible:false,originalBudgetMilliseconds:15000,
+          reloadBudgetUsesRemaining:false},
+        expectedRepairResult:{reloadEligible:true,originalBudgetMilliseconds:15000,
+          reloadBudgetUsesRemaining:true}}
       :{id:"flow-readiness-logical-budget-v1",
         causalCategory:"readiness or settling",diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
         input:{target:"FLOW_GRAPH_LEGACY_TARGET",logicalBudgetMilliseconds:120000,
@@ -547,6 +568,10 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         ?{freshRevisionAttempts:4,
           rebuildsMutation:/for\(let attempt=0;attempt<4;attempt\+=1\)\{const base=await repository\.loadProject/u.test(eventExampleSeedProgram),
           terminalDiagnostic:eventExampleSeedProgram.includes("Event example seed conflict after 4 fresh revisions")?"Event example seed conflict after 4 fresh revisions":"missing"}
+      :shellRecoveryRepair
+        ?{reloadEligible:sharedHarnessReloadEligible(fixture.input,""),
+          originalBudgetMilliseconds:sharedHarnessSource.includes("limitMs=15000")?15000:0,
+          reloadBudgetUsesRemaining:/limitMs-\(performance\.now\(\)-started\)/u.test(sharedHarnessSource)}
       :{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
         usesLogicalRemainingBudget:/Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u
           .test(flowGraphAdapterSource)},

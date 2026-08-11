@@ -19,6 +19,13 @@ export function sharedHarnessReadinessState({
     isolation === expectedIsolation;
 }
 
+export function sharedHarnessReloadEligible({
+  documentReadyState, shellReady, isolation,
+}, expectedIsolation) {
+  return documentReadyState === "complete" && shellReady === null &&
+    isolation === expectedIsolation;
+}
+
 export function sharedHarnessReadinessExpression(expectedIsolation) {
   return `(()=>{const root=document.querySelector('#side-panel-root'),state={documentReadyState:document.readyState,shellReady:root?.dataset.utilityShellReady??null,isolation:document.documentElement.dataset.utilityIsolation??''};return{...state,ready:(${sharedHarnessReadinessState.toString()})(state,${JSON.stringify(expectedIsolation)})};})()`;
 }
@@ -80,7 +87,19 @@ async function executeRenderedWorkflow(id,workflow,options,deadlineControl){
     await socket.call("Page.bringToFront");
     const expectedIsolation=id==="shell"||fullPanel?"":isolationScope(id).utilityId;
     const readinessExpression=sharedHarnessReadinessExpression(expectedIsolation);
-    const ready=async(phase)=>observeBrowserReadiness({targetId,phase,predicateDescription:"complete document, ready Shell root, and requested utility isolation",timeoutMs:15000,pollIntervalMs:50,maximumSnapshotCharacters:600,observe:async()=>{const response=await transmitDevtoolsProgram({targetId,phase,source:readinessExpression,shape:"expression",call,parameters:{returnByValue:true}});return response.result.value;},ready:(state)=>state?.ready===true,snapshot:(state)=>state});
+    const ready=async(phase)=>{
+      const started=performance.now(),limitMs=15000;
+      const observe=async()=>{const response=await transmitDevtoolsProgram({targetId,phase,source:readinessExpression,shape:"expression",call,parameters:{returnByValue:true}});return response.result.value;};
+      const waitForReady=(timeoutMs)=>observeBrowserReadiness({targetId,phase,predicateDescription:"complete document, ready Shell root, and requested utility isolation",timeoutMs,pollIntervalMs:50,maximumSnapshotCharacters:600,observe,ready:(state)=>state?.ready===true,snapshot:(state)=>state});
+      try{return await waitForReady(Math.min(7000,limitMs));}
+      catch(error){
+        const state=await observe();
+        if(!sharedHarnessReloadEligible(state,expectedIsolation))throw error;
+        await socket.call("Page.reload",{ignoreCache:true});
+        const remaining=Math.max(1,limitMs-(performance.now()-started));
+        return waitForReady(remaining);
+      }
+    };
     await ready("navigation");
     if(options.setup){
       timer.transition("fixture");const setup=await transmitDevtoolsProgram({targetId,phase:"fixture",source:options.setup,shape:"statements",call,parameters:{returnByValue:true,awaitPromise:true}});if(setup.exceptionDetails)throw new Error(setup.exceptionDetails.exception?.description??setup.exceptionDetails.text);

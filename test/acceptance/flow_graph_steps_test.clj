@@ -79,6 +79,26 @@
   (is (= :wide-navigation-visible (flow-graph/flow001-example-key :runtime {"width" "1440" "height" "900" "navigation" "visible"})))
   (is (thrown? clojure.lang.ExceptionInfo (flow-graph/flow001-example-key :runtime {"width" "360" "height" "900" "navigation" "hidden"}))))
 
+(deftest flow002-examples-require-exact-entity-counts
+  (is (= :small-entity-set (flow-graph/flow002-example-key {"entity_count" "3"})))
+  (is (= :large-entity-set (flow-graph/flow002-example-key {"entity_count" "300"})))
+  (is (thrown? clojure.lang.ExceptionInfo (flow-graph/flow002-example-key {"entity_count" "30"}))))
+
+(deftest flow019-examples-require-exact-mode-specific-values
+  (is (= :model-selection-horizontal
+         (flow-graph/flow019-example-key :model {"scope" "the selection" "arrangement" "horizontally"})))
+  (is (= :runtime-section-vertical
+         (flow-graph/flow019-example-key :runtime {"scope" "Checkout Section" "arrangement" "vertically"})))
+  (is (thrown? clojure.lang.ExceptionInfo
+               (flow-graph/flow019-example-key :runtime {"scope" "the selection" "arrangement" "horizontally"})))
+  (is (thrown? clojure.lang.ExceptionInfo
+               (flow-graph/flow019-example-key :model {"scope" "Checkout Section" "arrangement" "diagonally"}))))
+
+(deftest flow020-examples-require-exact-viewport-values
+  (is (= :narrow-viewport (flow-graph/flow020-example-key {"width" "360" "height" "800"})))
+  (is (= :wide-viewport (flow-graph/flow020-example-key {"width" "1440" "height" "900"})))
+  (is (thrown? clojure.lang.ExceptionInfo (flow-graph/flow020-example-key {"width" "360" "height" "900"}))))
+
 (deftest runtime027-examples-have-distinct-evidence-keys
   (is (= :main-primary-blank (flow-graph/runtime027-example-key :model {"workspace_mode" "the main workspace" "pan_gesture" "primary-drags from unoccupied canvas" "horizontal_distance" "120" "vertical_distance" "80"})))
   (is (= :focus-keyboard (flow-graph/runtime027-example-key :runtime {"workspace_mode" "Focus Canvas" "pan_gesture" "activates the labelled keyboard pan command" "horizontal_distance" "-80" "vertical_distance" "-60"})))
@@ -123,5 +143,5 @@
          "renamed_page" "Reusable commerce page"}))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-05T20:49:09.870000504+02:00", :module-hash "405547346", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "-1569434453"} {:id "form/1/deftest", :kind "deftest", :line 6, :end-line 7, :hash "1273886876"} {:id "defn-/private-var", :kind "defn-", :line 9, :end-line 10, :hash "1644259952"} {:id "form/3/deftest", :kind "deftest", :line 12, :end-line 27, :hash "-1775439981"} {:id "form/4/deftest", :kind "deftest", :line 29, :end-line 45, :hash "351959116"} {:id "def/complete-evidence", :kind "def", :line 47, :end-line 49, :hash "1423935133"} {:id "form/6/deftest", :kind "deftest", :line 51, :end-line 55, :hash "-974447205"} {:id "form/7/deftest", :kind "deftest", :line 57, :end-line 65, :hash "241758405"} {:id "form/8/deftest", :kind "deftest", :line 67, :end-line 72, :hash "-1791144720"} {:id "form/9/deftest", :kind "deftest", :line 74, :end-line 77, :hash "1603110676"} {:id "form/10/deftest", :kind "deftest", :line 79, :end-line 83, :hash "1534110227"} {:id "form/11/deftest", :kind "deftest", :line 85, :end-line 90, :hash "837333516"} {:id "form/12/deftest", :kind "deftest", :line 92, :end-line 97, :hash "-488421438"} {:id "form/13/deftest", :kind "deftest", :line 99, :end-line 101, :hash "-1819749563"} {:id "form/14/deftest", :kind "deftest", :line 103, :end-line 120, :hash "-13495486"}]}
+;; {:version 1, :tested-at "2026-08-11T06:57:27.750515093+02:00", :module-hash "1889028755", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "-1569434453"} {:id "form/1/deftest", :kind "deftest", :line 6, :end-line 7, :hash "1273886876"} {:id "defn-/private-var", :kind "defn-", :line 9, :end-line 10, :hash "1644259952"} {:id "form/3/deftest", :kind "deftest", :line 12, :end-line 27, :hash "-1775439981"} {:id "form/4/deftest", :kind "deftest", :line 29, :end-line 48, :hash "-2003270486"} {:id "def/complete-evidence", :kind "def", :line 50, :end-line 52, :hash "1423935133"} {:id "form/6/deftest", :kind "deftest", :line 54, :end-line 58, :hash "-974447205"} {:id "form/7/deftest", :kind "deftest", :line 60, :end-line 68, :hash "241758405"} {:id "form/8/deftest", :kind "deftest", :line 70, :end-line 75, :hash "-1791144720"} {:id "form/9/deftest", :kind "deftest", :line 77, :end-line 80, :hash "1603110676"} {:id "form/10/deftest", :kind "deftest", :line 82, :end-line 85, :hash "-628222917"} {:id "form/11/deftest", :kind "deftest", :line 87, :end-line 95, :hash "906304450"} {:id "form/12/deftest", :kind "deftest", :line 97, :end-line 100, :hash "-950724861"} {:id "form/13/deftest", :kind "deftest", :line 102, :end-line 106, :hash "1534110227"} {:id "form/14/deftest", :kind "deftest", :line 108, :end-line 113, :hash "837333516"} {:id "form/15/deftest", :kind "deftest", :line 115, :end-line 120, :hash "-488421438"} {:id "form/16/deftest", :kind "deftest", :line 122, :end-line 124, :hash "-1819749563"} {:id "form/17/deftest", :kind "deftest", :line 126, :end-line 143, :hash "-13495486"}]}
 ;; clj-mutate-manifest-end
