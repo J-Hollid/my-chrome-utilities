@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import ts from "typescript";
 
 import {
   commandPaletteUtility,
@@ -178,13 +179,38 @@ const controllerSource = await readFile(
   new URL("../src/command-palette-ui.ts", import.meta.url), "utf8",
 );
 const sidePanelSource = await readFile(new URL("../src/side-panel.ts", import.meta.url), "utf8");
-assert.doesNotMatch(controllerSource, /utilities\/hotkeys|utilities\/data-layer|side-panel\.js/u,
+function parseTypeScript(name, source) {
+  return ts.createSourceFile(name, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+}
+
+function importsOf(sourceFile) {
+  return sourceFile.statements
+    .filter(ts.isImportDeclaration)
+    .map(({ moduleSpecifier }) => moduleSpecifier.text);
+}
+
+function calledMethodsOf(sourceFile, receiver) {
+  const methods = [];
+  function visit(node) {
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) &&
+      ts.isIdentifier(node.expression.expression) &&
+      node.expression.expression.text === receiver) {
+      methods.push(node.expression.name.text);
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(sourceFile);
+  return methods;
+}
+
+const controllerSyntax = parseTypeScript("src/command-palette-ui.ts", controllerSource);
+const sidePanelSyntax = parseTypeScript("src/side-panel.ts", sidePanelSource);
+assert.deepEqual(importsOf(controllerSyntax).sort(), ["./command-palette.js", "./commands.js"],
   "the installed controller keeps sibling utilities and shell state injected");
-assert.match(sidePanelSource, /from "\.\/utilities\/command-palette\/index\.js"/u);
-assert.doesNotMatch(sidePanelSource, /paletteController\.bind\(/u,
-  "the composition root uses the explicit controller lifecycle");
-assert.match(sidePanelSource, /paletteController\.dispose\(\)/u,
-  "the composition root disposes the controller on page lifecycle teardown");
+assert.equal(importsOf(sidePanelSyntax).includes("./utilities/command-palette/index.js"), true,
+  "the composition root consumes the Command Palette public entry point");
+assert.deepEqual(calledMethodsOf(sidePanelSyntax, "paletteController").sort(), ["dispose", "mount"],
+  "the composition root mounts and disposes the explicit controller lifecycle");
 
 const packs = await loadVerificationPacks();
 assert.deepEqual(
@@ -212,19 +238,53 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       : value;
   const digest = (value) => createHash("sha256")
     .update(JSON.stringify(normalized(value))).digest("hex");
-  const expectedPreRepairFailure = { sourceCompatibleLauncher:false };
-  const expectedRepairResult = { sourceCompatibleLauncher:true };
+  const expectedPreRepairFailure = {
+    singleListenerOwnership:false,
+    launcherOpensPalette:false,
+    disposalSettlesPalette:false,
+    disposedInputIsInert:false,
+  };
+  const expectedRepairResult = {
+    singleListenerOwnership:true,
+    launcherOpensPalette:true,
+    disposalSettlesPalette:true,
+    disposedInputIsInert:true,
+  };
   const fixture = {
-    id:"command-palette-acceptance-source-compatibility-v1",
+    id:"command-palette-installed-lifecycle-behavior-v1",
     causalCategory:context.causalCategory,
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-    input:{ requiredProbes:["const openButton = launcher", "function showPalette()"] },
+    input:{ operations:["mount", "mount", "launcher click", "dispose", "launcher click"] },
     expectedPreRepairFailure,
     expectedRepairResult,
   };
+
+  const regressionDocument = new DocumentAdapter();
+  const regressionElements = Object.fromEntries([
+    "root", "launcher", "palette", "filter", "results", "sidePanelContent",
+  ].map((id) => [id, new Element(regressionDocument, id)]));
+  regressionElements.palette.hidden = true;
+  const regressionController = createPaletteController({
+    commands,
+    executeCommand() {},
+    elements:regressionElements,
+    ownerDocument:regressionDocument,
+  });
+  regressionController.mount();
+  regressionController.mount();
+  const singleListenerOwnership = regressionElements.launcher.count("click") === 1;
+  regressionElements.launcher.dispatch("click");
+  const launcherOpensPalette = regressionElements.palette.hidden === false;
+  regressionController.dispose();
+  const disposalSettlesPalette = regressionElements.palette.hidden === true &&
+    regressionElements.sidePanelContent.hasAttribute("inert") === false &&
+    regressionElements.launcher.count("click") === 0;
+  regressionElements.launcher.dispatch("click");
   const repairResult = {
-    sourceCompatibleLauncher:fixture.input.requiredProbes.every((probe) =>
-      controllerSource.includes(probe)),
+    singleListenerOwnership,
+    launcherOpensPalette,
+    disposalSettlesPalette,
+    disposedInputIsInert:regressionElements.palette.hidden === true,
   };
   assert.deepEqual(repairResult, expectedRepairResult);
   const fixtureDigest = digest(fixture);

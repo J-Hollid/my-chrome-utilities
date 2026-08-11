@@ -1,7 +1,6 @@
 import { filterPaletteCommands, selectedPaletteIndexForKey, } from "./command-palette.js";
 export function createPaletteController({ commands, executeCommand, elements, ownerDocument, }) {
     const { root, launcher, palette, filter, results, sidePanelContent } = elements;
-    const openButton = launcher;
     let visibleCommands = commands;
     let selectedIndex = 0;
     let lastPaletteFocus = null;
@@ -117,7 +116,7 @@ export function createPaletteController({ commands, executeCommand, elements, ow
             return;
         mounted = true;
         resetTransientState();
-        openButton?.addEventListener("click", open);
+        launcher?.addEventListener("click", open);
         root?.addEventListener("keyup", rootKeyup);
         filter?.addEventListener("input", filterInput);
         filter?.addEventListener("keydown", filterKeydown);
@@ -128,7 +127,7 @@ export function createPaletteController({ commands, executeCommand, elements, ow
         if (!mounted)
             return;
         mounted = false;
-        openButton?.removeEventListener("click", open);
+        launcher?.removeEventListener("click", open);
         root?.removeEventListener("keyup", rootKeyup);
         filter?.removeEventListener("input", filterInput);
         filter?.removeEventListener("keydown", filterKeydown);

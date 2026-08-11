@@ -40,7 +40,6 @@ export function createPaletteController({
   ownerDocument,
 }: PaletteOptions): PaletteController {
   const { root, launcher, palette, filter, results, sidePanelContent } = elements;
-  const openButton = launcher;
   let visibleCommands: readonly AppCommand[] = commands;
   let selectedIndex = 0;
   let lastPaletteFocus: HTMLElement | null = null;
@@ -166,7 +165,7 @@ export function createPaletteController({
     if (mounted) return;
     mounted = true;
     resetTransientState();
-    openButton?.addEventListener("click", open);
+    launcher?.addEventListener("click", open);
     root?.addEventListener("keyup", rootKeyup);
     filter?.addEventListener("input", filterInput);
     filter?.addEventListener("keydown", filterKeydown);
@@ -177,7 +176,7 @@ export function createPaletteController({
   function dispose(): void {
     if (!mounted) return;
     mounted = false;
-    openButton?.removeEventListener("click", open);
+    launcher?.removeEventListener("click", open);
     root?.removeEventListener("keyup", rootKeyup);
     filter?.removeEventListener("input", filterInput);
     filter?.removeEventListener("keydown", filterKeydown);
