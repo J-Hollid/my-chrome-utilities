@@ -5,32 +5,52 @@ import {
 } from "./command-palette.js";
 
 export interface PaletteController {
-  bind(): void;
+  mount(): void;
+  render(): void;
   show(): void;
+  hide(): void;
+  dispose(): void;
+}
+
+export interface PaletteElements {
+  root: HTMLElement | null;
+  launcher: HTMLButtonElement | null;
+  palette: HTMLElement | null;
+  filter: HTMLInputElement | null;
+  results: HTMLElement | null;
+  sidePanelContent: HTMLElement | null;
+}
+
+export interface PaletteDocument {
+  readonly activeElement: Element | null;
+  createElement(tagName: "li"): HTMLElement;
 }
 
 export interface PaletteOptions {
-  root: HTMLElement | null;
-  sidePanelContent: HTMLElement | null;
   commands: readonly AppCommand[];
-  runCommand(command: AppCommand): void;
+  executeCommand(command: AppCommand): void;
+  elements: PaletteElements;
+  ownerDocument: PaletteDocument;
 }
 
 export function createPaletteController({
-  root,
-  sidePanelContent,
   commands,
-  runCommand,
+  executeCommand,
+  elements,
+  ownerDocument,
 }: PaletteOptions): PaletteController {
-  const scope: ParentNode = root ?? document;
-  const ownerDocument = root?.ownerDocument ?? document;
-  const openButton = scope.querySelector<HTMLButtonElement>("#open-palette");
-  const palette = scope.querySelector<HTMLElement>("#palette");
-  const filter = scope.querySelector<HTMLInputElement>("#palette-filter");
-  const results = scope.querySelector<HTMLElement>("#palette-results");
+  const { root, launcher, palette, filter, results, sidePanelContent } = elements;
+  const openButton = launcher;
   let visibleCommands: readonly AppCommand[] = commands;
   let selectedIndex = 0;
   let lastPaletteFocus: HTMLElement | null = null;
+  let mounted = false;
+
+  function resetTransientState(): void {
+    visibleCommands = commands;
+    selectedIndex = 0;
+    lastPaletteFocus = null;
+  }
 
   function renderPalette(nextCommands: readonly AppCommand[], selection = 0): void {
     if (!results) return;
@@ -57,14 +77,25 @@ export function createPaletteController({
     return filterPaletteCommands(commands, text);
   }
 
+  function focusableElement(element: Element | null): HTMLElement | null {
+    return element && typeof (element as HTMLElement).focus === "function"
+      ? element as HTMLElement
+      : null;
+  }
+
+  function render(): void {
+    renderPalette(filterCommands(filter?.value ?? ""), selectedIndex);
+  }
+
   function showPalette(): void {
     if (!palette) return;
 
-    lastPaletteFocus = ownerDocument.activeElement instanceof HTMLElement
-      ? ownerDocument.activeElement
-      : null;
+    if (palette.hidden) {
+      lastPaletteFocus = focusableElement(ownerDocument.activeElement);
+    }
     sidePanelContent?.setAttribute("inert", "");
     palette.hidden = false;
+    selectedIndex = 0;
     renderPalette(filterCommands(filter?.value ?? ""));
     filter?.focus();
   }
@@ -72,7 +103,7 @@ export function createPaletteController({
   function hidePalette(): void {
     if (palette) palette.hidden = true;
     sidePanelContent?.removeAttribute("inert");
-    lastPaletteFocus?.focus();
+    if (lastPaletteFocus?.isConnected !== false) lastPaletteFocus?.focus();
     lastPaletteFocus = null;
   }
 
@@ -80,56 +111,82 @@ export function createPaletteController({
     const command = visibleCommands[selectedIndex];
     if (!command) return;
 
-    runCommand(command);
+    executeCommand(command);
     hidePalette();
   }
 
-  function bind(): void {
-    openButton?.addEventListener("click", showPalette);
-    root?.addEventListener("keyup", (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        showPalette();
-      }
-    });
-    filter?.addEventListener("input", () => {
-      renderPalette(filterCommands(filter.value));
-    });
-    filter?.addEventListener("keydown", (event: KeyboardEvent) => {
-      const nextIndex = selectedPaletteIndexForKey(
-        event.key,
-        selectedIndex,
-        visibleCommands.length,
-      );
-      if (nextIndex !== undefined) {
-        event.preventDefault();
-        renderPalette(visibleCommands, nextIndex);
-        return;
-      }
-      if (event.key === "Enter") {
-        event.preventDefault();
-        runSelectedCommand();
-      }
-      if (event.key === "Escape") {
-        event.preventDefault();
-        hidePalette();
-      }
-    });
-    results?.addEventListener("click", (event) => {
-      const item = (event.target as Element).closest<HTMLElement>("[data-command-id]");
-      if (!item) return;
-      const index = Array.from(results.children).indexOf(item);
-      if (index < 0) return;
-      selectedIndex = index;
+  const open = (): void => showPalette();
+  const rootKeyup = (event: KeyboardEvent): void => {
+    if (event.ctrlKey && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      showPalette();
+    }
+  };
+  const filterInput = (): void => {
+    selectedIndex = 0;
+    renderPalette(filterCommands(filter?.value ?? ""));
+  };
+  const filterKeydown = (event: KeyboardEvent): void => {
+    const nextIndex = selectedPaletteIndexForKey(
+      event.key,
+      selectedIndex,
+      visibleCommands.length,
+    );
+    if (nextIndex !== undefined) {
+      event.preventDefault();
+      renderPalette(visibleCommands, nextIndex);
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
       runSelectedCommand();
-    });
-    palette?.addEventListener("keydown", (event: KeyboardEvent) => {
-      if (event.key === "Tab") {
-        event.preventDefault();
-        filter?.focus();
-      }
-    });
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      hidePalette();
+    }
+  };
+  const resultClick = (event: Event): void => {
+    const target = event.target as (Element & { closest?<E extends Element>(selector: string): E | null }) | null;
+    const item = target?.closest?.<HTMLElement>("[data-command-id]");
+    if (!item || !results) return;
+    const index = Array.from(results.children).indexOf(item);
+    if (index < 0) return;
+    selectedIndex = index;
+    runSelectedCommand();
+  };
+  const trapTab = (event: KeyboardEvent): void => {
+    if (event.key === "Tab") {
+      event.preventDefault();
+      filter?.focus();
+    }
+  };
+
+  function mount(): void {
+    if (mounted) return;
+    mounted = true;
+    resetTransientState();
+    openButton?.addEventListener("click", open);
+    root?.addEventListener("keyup", rootKeyup);
+    filter?.addEventListener("input", filterInput);
+    filter?.addEventListener("keydown", filterKeydown);
+    results?.addEventListener("click", resultClick);
+    palette?.addEventListener("keydown", trapTab);
   }
 
-  return { bind, show: showPalette };
+  function dispose(): void {
+    if (!mounted) return;
+    mounted = false;
+    openButton?.removeEventListener("click", open);
+    root?.removeEventListener("keyup", rootKeyup);
+    filter?.removeEventListener("input", filterInput);
+    filter?.removeEventListener("keydown", filterKeydown);
+    results?.removeEventListener("click", resultClick);
+    palette?.removeEventListener("keydown", trapTab);
+    if ((palette && !palette.hidden) || lastPaletteFocus) hidePalette();
+    else sidePanelContent?.removeAttribute("inert");
+    resetTransientState();
+  }
+
+  return { mount, render, show: showPalette, hide: hidePalette, dispose };
 }

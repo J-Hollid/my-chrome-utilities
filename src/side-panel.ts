@@ -411,6 +411,10 @@ const shellStorage = createUtilityStorage(globalThis.localStorage, {
 });
 const sidePanelContent = document.querySelector<HTMLElement>("#side-panel-content");
 const commandLog = document.querySelector<HTMLElement>("#command-log");
+const openPaletteButton = document.querySelector<HTMLButtonElement>("#open-palette");
+const palette = document.querySelector<HTMLElement>("#palette");
+const paletteFilter = document.querySelector<HTMLInputElement>("#palette-filter");
+const paletteResults = document.querySelector<HTMLElement>("#palette-results");
 const startTestingButton = document.querySelector<HTMLButtonElement>("#start-data-layer-testing");
 const endTestingButton = document.querySelector<HTMLButtonElement>("#end-data-layer-testing");
 const historyPathInput = document.querySelector<HTMLInputElement>("#history-path");
@@ -5384,10 +5388,17 @@ const commandRunContext = {
 };
 
 const paletteController = createPaletteController({
-  root: panelRoot,
-  sidePanelContent,
   commands: allCommands,
-  runCommand: (command) => runCommandById(command.id, commandRunContext),
+  executeCommand: (command) => runCommandById(command.id, commandRunContext),
+  elements:{
+    root:panelRoot,
+    launcher:openPaletteButton,
+    palette,
+    filter:paletteFilter,
+    results:paletteResults,
+    sidePanelContent,
+  },
+  ownerDocument:document,
 });
 
 const workspaceTabsController = createWorkspaceTabsController(
@@ -5459,7 +5470,8 @@ endTestingButton?.addEventListener("click", () => {
 
 workspaceTabsController.bind();
 hotkeyController.mount();
-paletteController.bind();
+paletteController.mount();
+window.addEventListener("pagehide", () => paletteController.dispose(), { once:true });
 
 dataLayerViewList?.addEventListener("click", (event) => {
   const button = (event.target as Element).closest<HTMLButtonElement>("[role=tab]");

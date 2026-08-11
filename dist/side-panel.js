@@ -149,6 +149,10 @@ const shellStorage = createUtilityStorage(globalThis.localStorage, {
 });
 const sidePanelContent = document.querySelector("#side-panel-content");
 const commandLog = document.querySelector("#command-log");
+const openPaletteButton = document.querySelector("#open-palette");
+const palette = document.querySelector("#palette");
+const paletteFilter = document.querySelector("#palette-filter");
+const paletteResults = document.querySelector("#palette-results");
 const startTestingButton = document.querySelector("#start-data-layer-testing");
 const endTestingButton = document.querySelector("#end-data-layer-testing");
 const historyPathInput = document.querySelector("#history-path");
@@ -6627,10 +6631,17 @@ const commandRunContext = {
     showDataLayerView: showDataLayerView,
 };
 const paletteController = createPaletteController({
-    root: panelRoot,
-    sidePanelContent,
     commands: allCommands,
-    runCommand: (command) => runCommandById(command.id, commandRunContext),
+    executeCommand: (command) => runCommandById(command.id, commandRunContext),
+    elements: {
+        root: panelRoot,
+        launcher: openPaletteButton,
+        palette,
+        filter: paletteFilter,
+        results: paletteResults,
+        sidePanelContent,
+    },
+    ownerDocument: document,
 });
 const workspaceTabsController = createWorkspaceTabsController(workspaceTabList, shellStorage);
 const hotkeyController = createInstalledHotkeyController({
@@ -6692,7 +6703,8 @@ endTestingButton?.addEventListener("click", () => {
 });
 workspaceTabsController.bind();
 hotkeyController.mount();
-paletteController.bind();
+paletteController.mount();
+window.addEventListener("pagehide", () => paletteController.dispose(), { once: true });
 dataLayerViewList?.addEventListener("click", (event) => {
     const button = event.target.closest("[role=tab]");
     const view = button?.textContent;

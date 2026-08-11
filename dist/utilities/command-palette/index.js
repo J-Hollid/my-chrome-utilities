@@ -18,16 +18,17 @@ export function commandsForUtilityShell(commands, registeredCommandIds) {
 const commandPaletteCommandIds = ["demo.say-hello"];
 function mountCommandPalette(root) {
     const host = root;
-    const requiredElements = ["#open-palette", "#palette-filter", "#palette-results"];
-    if (requiredElements.some((selector) => !host.querySelector(selector)))
+    const launcher = host.querySelector("#open-palette");
+    const palette = host.querySelector("#palette");
+    const filter = host.querySelector("#palette-filter");
+    const results = host.querySelector("#palette-results");
+    if (!launcher || !palette || !filter || !results)
         return;
     const commandLog = host.querySelector("#command-log");
     const commands = commandsForUtilityShell(listCommands(), commandPaletteCommandIds);
     const controller = createPaletteController({
-        root: host,
-        sidePanelContent: host.querySelector("#side-panel-content"),
         commands,
-        runCommand(command) {
+        executeCommand(command) {
             runCommandById(command.id, {
                 record(entry) {
                     if (commandLog)
@@ -35,8 +36,18 @@ function mountCommandPalette(root) {
                 },
             });
         },
+        elements: {
+            root: host,
+            launcher,
+            palette,
+            filter,
+            results,
+            sidePanelContent: host.querySelector("#side-panel-content"),
+        },
+        ownerDocument: host.ownerDocument,
     });
-    controller.bind();
+    controller.mount();
+    return () => controller.dispose();
 }
 export const commandPaletteUtility = defineUtility({
     id: "command-palette",
