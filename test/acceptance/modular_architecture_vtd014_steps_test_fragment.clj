@@ -24,6 +24,26 @@
               (:vtd014/failure-boundary
                (runtime/run-execution! execution modular/handlers)))))))
 
+(deftest vtd014-checkpoint-task-execution-rejects-a-disconnected-example-value
+  (let [feature (gherkin/parse-file "features/modular-verification-packs.feature")
+        execution (first (filter #(= "Modular verification packs 115/example_1" (:name %))
+                                 (runtime/expand-executions feature)))
+        disconnected (update execution :example assoc "task_execution"
+                             "no checkpoint task launches")
+        evidence {:execution
+                  {:checkpoint
+                   {:singleton true
+                    :preflightRows
+                    {"every prerequisite is satisfied and no attempt exists"
+                     {:action "create one repository-common checkpoint attempt"
+                      :taskExecution "the planned tasks may launch"
+                      :observed true}}}}}]
+    (with-redefs-fn {#'vtd014/production-evidence! (constantly evidence)}
+      #(is (thrown-with-msg?
+            clojure.lang.ExceptionInfo
+            #"Checkpoint task launch did not honor the singleton lease"
+            (runtime/run-execution! disconnected modular/handlers))))))
+
 (deftest vtd014-row-evidence-resolves-json-keywordized-outline-values
   (is (= "observed"
          (#'vtd014/row-value
@@ -83,5 +103,5 @@
                                         "readiness produces report ready" ["report ready"]))))))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-11T10:33:55.977667364+02:00", :module-hash "260021734", :forms [{:id "form/0/in-ns", :kind "in-ns", :line 1, :end-line 1, :hash "-1677165460"} {:id "form/1/deftest", :kind "deftest", :line 3, :end-line 12, :hash "1821403176"} {:id "form/2/deftest", :kind "deftest", :line 14, :end-line 25, :hash "-363311847"} {:id "form/3/deftest", :kind "deftest", :line 27, :end-line 32, :hash "-740854160"} {:id "defn-/invoke-handler", :kind "defn-", :line 34, :end-line 39, :hash "-399542774"} {:id "form/5/deftest", :kind "deftest", :line 41, :end-line 83, :hash "-1316076482"}]}
+;; {:version 1, :tested-at "2026-08-11T11:12:34.681128884+02:00", :module-hash "-2127462131", :forms [{:id "form/0/in-ns", :kind "in-ns", :line 1, :end-line 1, :hash "-1677165460"} {:id "form/1/deftest", :kind "deftest", :line 3, :end-line 12, :hash "1821403176"} {:id "form/2/deftest", :kind "deftest", :line 14, :end-line 25, :hash "-363311847"} {:id "form/3/deftest", :kind "deftest", :line 27, :end-line 45, :hash "272130773"} {:id "form/4/deftest", :kind "deftest", :line 47, :end-line 52, :hash "-740854160"} {:id "defn-/invoke-handler", :kind "defn-", :line 54, :end-line 59, :hash "-1395760312"} {:id "form/6/deftest", :kind "deftest", :line 61, :end-line 103, :hash "-1316076482"}]}
 ;; clj-mutate-manifest-end
