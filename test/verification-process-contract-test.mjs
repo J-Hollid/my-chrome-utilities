@@ -4102,10 +4102,18 @@ const vtd006ProgramMigration = new Map([
   ["test/browser-packs/side-panel-defects.mjs", "test/side-panel-component-layout-runtime-test.mjs"],
   ["test/browser-packs/side-panel-shell.mjs", "test/side-panel-component-layout-runtime-test.mjs"],
 ]);
+const vtd015Feature = "features/settled-candidate-final-verification.feature";
+const vtd015Generated = "build/acceptance/generated/features-settled-candidate-final-verification-feature_acceptance_test.clj";
+const vtd015Ir = "build/acceptance/ir/settled-candidate-final-verification.json";
 const normalizedVtd006Identity = (task) => {
   let encoded = JSON.stringify(verificationTaskIdentity(task));
   for (const [current, previous] of vtd006ProgramMigration) encoded = encoded.replaceAll(current, previous);
-  return JSON.parse(encoded);
+  const identity = JSON.parse(encoded);
+  if (identity.key === "acceptance-session:shell") {
+    identity.args = identity.args.filter((value) => ![vtd015Generated, vtd015Ir].includes(value));
+    identity.target = identity.target.split(",").filter((value) => value !== vtd015Feature).join(",");
+  }
+  return identity;
 };
 const expectedVtd014TerminalIdentity = (task) => {
   const identity = normalizedVtd006Identity(task);
@@ -4126,8 +4134,13 @@ const postBaseAddedUnitKeys = new Set([
   "unit:test/flow-reload-lifecycle-test.mjs",
   "unit:test/workspace-tabs-installed-controller-test.mjs",
 ]);
+const approvedVtd015TaskKeys = new Set([
+  "unit:test/settled-final-verification-workflow-test.mjs",
+  `acceptance-parse:${vtd015Feature}`,
+  `acceptance-generate:${vtd015Feature}`,
+]);
 const currentTerminalIdentitiesWithoutApprovedAdditions = currentTerminalPlan.tasks.filter(({ key }) =>
-  !postBaseAddedUnitKeys.has(key)).map(normalizedVtd006Identity);
+  !postBaseAddedUnitKeys.has(key) && !approvedVtd015TaskKeys.has(key)).map(normalizedVtd006Identity);
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions,
   acceptedTerminalIdentities,
   "terminal-full planning conserves the accepted base identities around approved added units");
@@ -4143,6 +4156,10 @@ assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
 assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
   key === "unit:test/workspace-tabs-installed-controller-test.mjs").length, 1,
 "terminal-full planning adds the installed workspace-tabs controller regression exactly once");
+for (const taskKey of approvedVtd015TaskKeys) {
+  assert.equal(currentTerminalPlan.tasks.filter(({ key }) => key === taskKey).length, 1,
+    `terminal-full planning adds the approved VTD-015 task ${taskKey} exactly once`);
+}
 assert.equal(currentTerminalPlan.tasks.filter(({ target }) =>
   target === "test/acceptance/side-panel-browser-session-contract.mjs").length, 0,
 "terminal-full planning does not add the focused VTD-006 session contract as a permanent task");
@@ -5036,14 +5053,14 @@ for (const platformPath of shellSourcePaths.filter((sourcePath) => !(sourcePath 
 const localShellPlan = planVerification(packs, {
   changedPaths:["src/workspace-tabs-ui.ts"], includeProperties:true,
 });
-assert.equal(localShellPlan.tasks.length, 60,
-  "local Shell presentation retains the complete property-enabled 60-task plan");
-assert.equal(localShellPlan.unitTasks.length, 12);
+assert.equal(localShellPlan.tasks.length, 63,
+  "local Shell presentation retains the complete property-enabled 63-task plan");
+assert.equal(localShellPlan.unitTasks.length, 13);
 assert.equal(localShellPlan.propertyTasks.length, 1);
 assert.equal(localShellPlan.browserTasks.length, 3);
 assert.equal(localShellPlan.observationTasks.length, 1);
-assert.equal(localShellPlan.parserTasks.length, 19);
-assert.equal(localShellPlan.generatorTasks.length, 19);
+assert.equal(localShellPlan.parserTasks.length, 20);
+assert.equal(localShellPlan.generatorTasks.length, 20);
 assert.equal(localShellPlan.checkpointTasks.length, 3);
 assert.equal(localShellPlan.sessionTasks.length, 1);
 const vtd009BasePacks = JSON.parse(await exec("git", [
@@ -8171,6 +8188,11 @@ try {
     '  console.error("unresolved reliability incident fixture"); process.exit(1); } catch {}',
     '',
   ].join("\n"));
+  await writeFile(path.join(handoffRepository, "scripts", "settled-final-verification.mjs"), [
+    'if (process.argv[2] !== "validate-handoff") process.exit(2);',
+    'console.log("handoff readiness fixture passed");',
+    '',
+  ].join("\n"));
   await writeFile(path.join(handoffRepository, ".swarmforge", "roles.tsv"),
     "specifier\tspecifier\nrefactorer\trefactorer\ncoder\tcoder\n");
   await writeFile(path.join(handoffRepository, "README.md"), "base\n");
@@ -8434,8 +8456,9 @@ assert.deepEqual(committedCalibrationReport.browserTargets, vtd009BaseCalibratio
 const vtd009ExactBase = planVerification(vtd009BasePacks, {packIds:["shell"],includeProperties:true});
 const vtd009TerminalBase = planVerification(vtd009BasePacks, {terminalFull:true});
 const vtd009TerminalCurrent = planVerification(packs, {terminalFull:true});
-assert.deepEqual(localShellPlan.tasks.filter(({ key }) =>
-  key !== "unit:test/workspace-tabs-installed-controller-test.mjs").map(normalizedVtd006Identity),
+const vtd009HistoricalShellTasks = localShellPlan.tasks.filter(({ key }) =>
+  key !== "unit:test/workspace-tabs-installed-controller-test.mjs" && !approvedVtd015TaskKeys.has(key));
+assert.deepEqual(vtd009HistoricalShellTasks.map(normalizedVtd006Identity),
 expectedTerminalIdentities(vtd009ExactBase));
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities);
 const vtd009Acceptance = {
@@ -8458,13 +8481,14 @@ const vtd009Acceptance = {
     return [changedPath,{boundary:plan.changedBoundaries[changedPath],packIds:plan.packIds}];
   })),
   shellSourceCount:18,
-  localPlan:{tasks:localShellPlan.tasks.filter(({key}) =>
-      key !== "unit:test/workspace-tabs-installed-controller-test.mjs").length,
+  localPlan:{tasks:vtd009HistoricalShellTasks.length,
     unit:localShellPlan.unitTasks.filter(({key}) =>
-      key !== "unit:test/workspace-tabs-installed-controller-test.mjs").length,
+      key !== "unit:test/workspace-tabs-installed-controller-test.mjs" && !approvedVtd015TaskKeys.has(key)).length,
     property:localShellPlan.propertyTasks.length,browser:localShellPlan.browserTasks.length,
-    observationSessions:localShellPlan.observationTasks.length,parses:localShellPlan.parserTasks.length,
-    generators:localShellPlan.generatorTasks.length,checkpoints:localShellPlan.checkpointTasks.length,
+    observationSessions:localShellPlan.observationTasks.length,
+    parses:localShellPlan.parserTasks.filter(({key}) => !approvedVtd015TaskKeys.has(key)).length,
+    generators:localShellPlan.generatorTasks.filter(({key}) => !approvedVtd015TaskKeys.has(key)).length,
+    checkpoints:localShellPlan.checkpointTasks.length,
     acceptanceSessions:localShellPlan.sessionTasks.length},
   history:vtd009History,
   calibration:{current:vtd009ShellCalibration,previous:vtd009BaseShellCalibration,

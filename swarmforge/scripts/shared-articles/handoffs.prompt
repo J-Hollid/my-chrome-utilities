@@ -21,7 +21,8 @@ priority: NN
 task: <short-stable-task-name>
 commit: <10-character-commit-abbrev>
 base: <10-character-base-commit-abbrev>
-verified: <pack-id>[,<pack-id>...]|not-required
+readiness: review-ready|final-ready
+verified: review-ready|<pack-id>[,<pack-id>...]|not-required
 ```
 
 - When your role is an intermediate step in the pack pipeline, always forward
@@ -70,7 +71,8 @@ message: <one line, max 80 chars>
   the first handoff in a task, use the starting repository commit from before the
   work. Preserve it only while forwarding an unchanged candidate; a new candidate
   commit uses the commit from which that role began its changes.
-- `verified: <pack-id>[,<pack-id>...]` is accepted only when the commit has matching
+- `readiness: review-ready` with `verified: review-ready` is accepted only from coder to refactorer or refactorer to architect when the commit has matching focused evidence recorded by `node scripts/settled-final-verification.mjs record-review <receipt> <base> <task>`. It cannot be sent to the specifier or used for integration or completion.
+- `readiness: final-ready` is accepted for an architect-to-specifier completion handoff only when `verified:` names all 20 canonical packs and the commit has matching
   durable evidence in `refs/notes/swarmforge-verification` for that exact base,
   task, and pack set. After committing, run the settled whole-pack checkpoint with
   `--property --changed-since <base> --prepare-evidence <task>`, then run
@@ -80,6 +82,7 @@ message: <one line, max 80 chars>
   forwarding. The helper checks every canonical changed path and rejects mixed
   product, test, registry, build, or executable-tooling ranges. Coder handoffs
   cannot use it.
+- The VTD-015 task itself omits `readiness:` and uses the previously integrated exact-pack protocol through integration. This bootstrap exception cannot be used by another task.
 - Do not hand-edit, merge, stage, or commit handoff runtime state.
 
 ## Receiving Handoffs
@@ -94,6 +97,7 @@ message: <one line, max 80 chars>
   from a workflow label or sentence.
 - If it prints `TASK_NAME: <name>`, use that as the stable task name for any
   work you forward from that task.
+- If it prints `READINESS: review-ready`, treat it only as permission for the named next review. `READINESS: final-ready` is the only state that may reach the specifier for integration.
 - If it prints `BATCH: <path>`, treat each printed `BATCH_ITEM` as part of the
   current batch in helper-delivered order.
 - Use only the task information printed by the helper scripts.
