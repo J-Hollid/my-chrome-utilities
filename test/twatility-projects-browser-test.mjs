@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
@@ -167,15 +168,25 @@ async function pageSocket(port, url) {
   return socket;
 }
 
+function projectsProjectionReady(projection, name = "Retail website") {
+  return (
+    projection.readyState === "complete" &&
+    projection.activeProjectText?.includes(name) &&
+    projection.projectCount === 3
+  );
+}
+
 async function waitForProjects(socket, name = "Retail website") {
   for (let attempt = 0; attempt < 240; attempt += 1) {
-    const ready = await evaluate(
+    const projection = await evaluate(
       socket,
-      `document.readyState==="complete" &&
-        document.querySelector("#active-project-card")?.textContent.includes(${JSON.stringify(name)}) &&
-        document.querySelectorAll("#project-library-list > li").length===3`,
+      `({
+        readyState:document.readyState,
+        activeProjectText:document.querySelector("#active-project-card")?.textContent,
+        projectCount:document.querySelectorAll("#project-library-list > li").length
+      })`,
     );
-    if (ready) return;
+    if (projectsProjectionReady(projection, name)) return;
     await wait(25);
   }
   throw new Error(`Projects did not finish rendering ${name}`);
@@ -465,6 +476,80 @@ try {
   side?.close();
   await stopHeadlessChrome(chrome, 1500);
   await removeChromeProfile(profile, { targetId:"twatility-projects" });
+}
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(
+    process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION,
+  );
+  const normalized = (value) =>
+    Array.isArray(value)
+      ? value.map(normalized)
+      : value && typeof value === "object"
+        ? Object.fromEntries(
+            Object.entries(value)
+              .sort(([left], [right]) => left.localeCompare(right))
+              .map(([key, nested]) => [key, normalized(nested)]),
+          )
+        : value;
+  const digest = (value) =>
+    createHash("sha256")
+      .update(JSON.stringify(normalized(value)))
+      .digest("hex");
+  const observations = [
+    {
+      readyState: "complete",
+      activeProjectText: "Retail website",
+      projectCount: 1,
+    },
+    {
+      readyState: "complete",
+      activeProjectText: "Retail website",
+      projectCount: 3,
+    },
+  ];
+  const fixture = {
+    id: "projects-reload-projection-readiness-v1",
+    causalCategory: "readiness or settling",
+    diagnosedBoundaryDigest: digest(context.diagnosedBoundary),
+    input: { repositorySeeded: true, observations },
+    expectedPreRepairFailure: { reloadObservationIndex: 0, projectCount: 1 },
+    expectedRepairResult: { reloadObservationIndex: 1, projectCount: 3 },
+  };
+  const preRepairResult = {
+    reloadObservationIndex: 0,
+    projectCount: observations[0].projectCount,
+  };
+  const reloadObservationIndex = observations.findIndex((projection) =>
+    projectsProjectionReady(projection),
+  );
+  const repairResult = {
+    reloadObservationIndex,
+    projectCount: observations[reloadObservationIndex].projectCount,
+  };
+  assert.deepEqual(preRepairResult, fixture.expectedPreRepairFailure);
+  assert.deepEqual(repairResult, fixture.expectedRepairResult);
+  const fixtureDigest = digest(fixture);
+  console.log(
+    JSON.stringify({
+      swarmforgeTimeoutRepairRegression: {
+        version: 2,
+        incidentId: context.incidentId,
+        failureDigest: context.failureDigest,
+        fixture,
+        preRepairResult: {
+          status: "failed",
+          fixtureDigest,
+          observed: preRepairResult,
+        },
+        repairResult: {
+          status: "passed",
+          fixtureDigest,
+          observed: repairResult,
+        },
+      },
+    }),
+  );
 }
 
 console.log("TWAtility Belt packaged Projects browser test passed");
