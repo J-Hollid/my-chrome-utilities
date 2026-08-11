@@ -26,6 +26,7 @@ import {
 } from "./support/browser-observation-control.mjs";
 import { sharedHarnessReadinessState } from "./browser-packs/shared-harness.mjs";
 import {
+  flowGraphEventExampleSeed,
   flowGraphRuntimeCanvasReady,
   flowGraphRuntimeDefinitionReady,
   flowGraphRuntimeEditorReady,
@@ -459,6 +460,18 @@ assert.match(drawRuntimeProgram,
   "the Section move proof must target the direct-manipulation group rather than a member Page that shares its Section id");
 assert.match(drawRuntimeProgram,/expectedSectionCount/u,
   "draw persistence timeout diagnostics must retain section-count state");
+const eventExampleSeedProgram=flowGraphEventExampleSeed({
+  projectId:"project:examples",flowId:"flow:examples",occurrenceIds:["occurrence:examples"],
+},"invalid");
+assert.match(eventExampleSeedProgram,/for\(let attempt=0;attempt<4;attempt\+=1\)/u,
+  "Event example seeding must retry a bounded number of fresh durable revisions");
+assert.match(eventExampleSeedProgram,
+  /base=await repository\.loadProject\([^)]*\)[^]*next=structuredClone\(base\.state\)[^]*if\(result\.status==='committed'\)return/u,
+  "every Event example seed attempt must rebuild its mutation from the latest durable base");
+assert.match(eventExampleSeedProgram,/if\(result\.status!=='conflict'\)throw new Error/u,
+  "Event example seeding must reject non-conflict repository failures immediately");
+assert.match(eventExampleSeedProgram,/throw new Error\('Event example seed conflict after 4 fresh revisions'\)/u,
+  "Event example seeding must retain a deterministic terminal conflict diagnostic");
 const actionableDrawFixture={drawingMode:true,canvasConnected:true,surfaceOpen:false,
   currentCanvas:true,canvasFocused:true,geometryStable:true,left:20,top:30,width:640,
   height:420,pointerEvents:"auto"};
@@ -492,6 +505,7 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       :value,
     digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
     sectionTargetRepair=context.causalCategory==="other:unambiguous synthetic Section target",
+    eventSeedRepair=context.causalCategory==="other:fresh durable Event example seed",
     fixture=sectionTargetRepair?{id:"unambiguous-synthetic-section-target-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{sharedAttribute:"data-flow-section-id",candidateKinds:["Section group","member Page frame"]},
@@ -499,6 +513,13 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         durableMove:false},
       expectedRepairResult:{selector:"group with direct Section dropzone",
         directManipulationGuaranteed:true,durableMove:true}}
+      :eventSeedRepair?{id:"fresh-durable-event-example-seed-v1",
+        causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+        input:{repositoryStatus:"conflict",staleRevisionMustNotBeReused:true},
+        expectedPreRepairFailure:{freshRevisionAttempts:1,rebuildsMutation:false,
+          terminalDiagnostic:"Event example seed conflict"},
+        expectedRepairResult:{freshRevisionAttempts:4,rebuildsMutation:true,
+          terminalDiagnostic:"Event example seed conflict after 4 fresh revisions"}}
       :{id:"flow-readiness-logical-budget-v1",
         causalCategory:"readiness or settling",diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
         input:{target:"FLOW_GRAPH_LEGACY_TARGET",logicalBudgetMilliseconds:120000,
@@ -510,6 +531,10 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     repairResult=sectionTargetRepair
       ?{selector:"group with direct Section dropzone",directManipulationGuaranteed:true,
         durableMove:/const sectionGroup=.*:scope > \[data-section-dropzone\][^]*salesGroup=sectionGroup\(sales\.id\)[^]*pointer\(salesGroup,'pointerup',\{pointerId:52/u.test(drawRuntimeProgram)}
+      :eventSeedRepair
+        ?{freshRevisionAttempts:4,
+          rebuildsMutation:/for\(let attempt=0;attempt<4;attempt\+=1\)\{const base=await repository\.loadProject/u.test(eventExampleSeedProgram),
+          terminalDiagnostic:eventExampleSeedProgram.includes("Event example seed conflict after 4 fresh revisions")?"Event example seed conflict after 4 fresh revisions":"missing"}
       :{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
         usesLogicalRemainingBudget:/Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u
           .test(flowGraphAdapterSource)},
