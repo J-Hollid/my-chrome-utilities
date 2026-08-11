@@ -14,11 +14,13 @@ used to reactivate completed, rejected, or archived work.
 
 The current integrated VTD-008 implementation baseline is
 `ad002047a321d58976c0d8cd5c56dde46a1389d0`.
+The settled-candidate verification workflow is integrated at
+`bdd29f8c87ba04638393e204c3f14a99d9b19201`.
 
 | Program | Current state | Next authority |
 |---|---|---|
 | Feature-development throughput course adjustment | Approved at `2b093eec4f` | `docs/feature-development-throughput-course-adjustment-R01.md` controls the next bounded pre-approval scorecard and work order. |
-| VTD-015 settled-candidate final verification | User-approved bounded slice | `docs/vtd015-settled-final-verification-workflow-R01.md` and `features/settled-candidate-final-verification.feature` are the active implementation authority. |
+| VTD-015 settled-candidate final verification | Complete; live payback unproved | Review its outcome scorecard in `docs/vtd015-settled-final-verification-workflow-R01.md`; VTD-012 remains inactive pending explicit user approval. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program, paused after three completed slices | The installed Hotkeys, Command Palette, and workspace-tabs slices are complete. No later controller slice is active. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Queued and inactive | Requires a user-approved bounded specification slice. |
@@ -33,10 +35,11 @@ in `src/workspace-tabs-ui.ts`. It does not extract the broader utility registry 
 shell DOM adapter, change workspace-navigation semantics, or activate
 observation-target, live-session, or another Data Layer controller.
 
-VTD-015 is the only active implementation slice. Its stable task name is
-`vtd015-settled-final-verification`. Do not select another VTD-008 controller or
-activate VTD-012 automatically. VTD-015 must settle, receive its outcome
-scorecard, and return to the user before another enabling slice is approved.
+There is no active implementation slice. Do not select another VTD-008 controller
+or activate VTD-012 automatically. VTD-015 is integrated, but its time-saving
+claim remains provisional until one later slice uses review-ready handoffs. The
+user must review its outcome scorecard and explicitly choose whether VTD-012 is
+that controlled payback measurement.
 
 ## Feature-development throughput authority
 
@@ -429,6 +432,7 @@ is status only.
 | VTD-008 installed Hotkeys controller | `9808acce74` | Complete slice; VTD-008 remains active |
 | VTD-008 installed Command Palette controller | `5ec9ff34f7` | Complete slice; VTD-008 remains active |
 | VTD-008 installed workspace-tabs controller | `ad002047a3` | Complete slice; VTD-008 remains active and paused |
+| VTD-015 settled-candidate final verification | `bdd29f8c87` | Complete; VTD-012 payback measurement not yet approved |
 
 ## Historical boundaries
 

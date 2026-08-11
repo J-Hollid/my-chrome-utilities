@@ -1256,10 +1256,11 @@ without allowing a real or uncertain product failure to pass.
 
 Priority: P0
 
-Status: user-approved bounded implementation slice. The authoritative contract is
-`docs/vtd015-settled-final-verification-workflow-R01.md` with executable behavior
-in `features/settled-candidate-final-verification.feature`. Stable task name:
-`vtd015-settled-final-verification`.
+Status: integrated at `bdd29f8c87`. The authoritative contract and settled
+scorecard are in `docs/vtd015-settled-final-verification-workflow-R01.md`, with
+executable behavior in `features/settled-candidate-final-verification.feature`.
+The saving remains provisional until the user approves and reviews one VTD-012
+live payback measurement.
 
 Problem:
 
@@ -1324,6 +1325,18 @@ Measured target and decision boundary:
 - Stop this slice if it requires weakening VTD-014, permitting review-ready
   integration, repeated full-suite rehearsals, manual per-role timing ceremony,
   scheduler or artifact-lock changes, or product behavior changes.
+
+Settled bootstrap result:
+
+- Approval-to-integration took 3 hours 29 minutes 57 seconds.
+- Six all-20 attempts started: three passed and three failed with causal repairs.
+- Two successful passes were invalidated by later review changes, consuming 42
+  minutes 54 seconds without producing final proof.
+- The architect's repaired final tree passed all 841 checks and packaging in 21
+  minutes 26 seconds; the specifier reused that exact durable evidence and did not
+  add another full run.
+- This result proves the cost being targeted, not the saving. VTD-012 remains
+  inactive until the user decides whether to run the one-slice payback test.
 
 ### VTD-016 — Partition Shell product evidence for a faster inner loop
 

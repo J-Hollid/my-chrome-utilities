@@ -276,8 +276,8 @@ in the samples, and preserved regression protection.
 
 ### 1. VTD-015 — Review first, run the full gate on the settled tree
 
-Status: user-approved bounded slice; implementation authority is
-`docs/vtd015-settled-final-verification-workflow-R01.md`
+Status: integrated at `bdd29f8c87`; implementation authority and outcome
+scorecard are in `docs/vtd015-settled-final-verification-workflow-R01.md`
 
 Expected value: very high
 

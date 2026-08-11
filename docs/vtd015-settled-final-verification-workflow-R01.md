@@ -1,6 +1,7 @@
 # VTD-015 settled-candidate final-verification workflow R01
 
-Status: user-approved bounded specification
+Status: integrated at `bdd29f8c87`; time-saving claim remains provisional until
+the first live payback slice
 
 Approved: 2026-08-11
 
@@ -157,3 +158,74 @@ intervals, focused and full verification time, successful and invalidated full
 runs, failures, repairs, reruns, and preserved terminal proof. Recommend whether
 to begin the VTD-012 payback measurement, but do not activate it without the
 user's explicit decision.
+
+## Settled outcome scorecard
+
+VTD-015 integrated at `bdd29f8c87`. It is technical debt and adds zero to the
+completed-feature count.
+
+### Elapsed delivery time
+
+- Approved specification commit to integration: 3 hours 29 minutes 57 seconds.
+- Coder handoff interval: 1 hour 29 minutes 43 seconds.
+- Refactorer handoff interval: 45 minutes 44 seconds.
+- Architect handoff interval: 1 hour 12 minutes 2 seconds.
+- Specifier final review and integration interval: 2 minutes 7 seconds.
+
+These intervals come from Git and file-handoff timestamps. The 21 seconds between
+the specification commit and its queued coder handoff completes the total.
+
+### Verification cost and failures
+
+The bootstrap used the old protocol exactly as specified, but its cost was worse
+than the initial roughly-one-run forecast:
+
+- Six all-20 attempts started.
+- Three attempts passed. The coder pass took 21 minutes 31 seconds, the
+  refactorer pass took 21 minutes 23 seconds, and the final architect pass took
+  21 minutes 26 seconds.
+- The coder and refactorer passes were invalidated by later expected review
+  changes. They consumed 42 minutes 54 seconds of successful full-run time that
+  could not become final proof.
+- Three attempts failed and each received a causal repair followed by a fresh
+  full run. The failed receipts had already executed 164, 840, and 279 tasks
+  respectively; their incomplete receipts do not contain reliable end timestamps,
+  so failed-attempt wall time is not invented here.
+- The three recorded repair-focused proofs took approximately 5 minutes 12
+  seconds in total. Other focused implementation and review checks are contained
+  in the role intervals but were not centrally aggregated by the old protocol.
+- No failure was retried away. Each failure remained recorded, changed repair
+  code or tests, received focused causal proof, and then forced a fresh all-20
+  attempt.
+
+The three causes were frozen workspace inventory accounting, frozen VTD-014
+conservation accounting, and a Projects browser fixture that reloaded before all
+three durable project records were visible. The final cause was repaired by
+waiting for that exact projection and adding a deterministic regression.
+
+### Final confidence
+
+The final architect candidate `9c412b1fb1` passed all 841 checks across all 20
+packs, properties, and packaging in 21 minutes 26 seconds. Durable evidence is
+recorded for the exact tree. The specifier verified and integrated that evidence
+without running another all-20 checkpoint.
+
+No terminal leaf, package check, failure record, or repair obligation was removed
+or weakened. Review-ready work is now restricted to coder-to-refactorer and
+refactorer-to-architect routes; only architect final-ready evidence can reach the
+specifier for integration.
+
+### Value judgement and next decision
+
+VTD-015 did not make its own delivery faster. Its bootstrap exposed the cost it
+is intended to remove: two successful full passes were invalidated, and two coder
+failures that focused checks could likely have found occurred only after broad
+runs had started. The implementation value is therefore still provisional.
+
+Recommendation: use the bounded VTD-012 first slice as one controlled live
+payback measurement. Its coder and refactorer must use focused review-ready
+evidence only. The architect performs the one settled all-20 gate, with a second
+run permitted only after a recorded final failure and repair. If an earlier role
+starts all 20, review-ready work can integrate, terminal evidence shrinks, or the
+elapsed result shows no useful saving, stop the enabling sequence and reassess.
+VTD-012 remains inactive until the user explicitly approves this recommendation.
