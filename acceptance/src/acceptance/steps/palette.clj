@@ -5,13 +5,20 @@
 
 (def canonical-filter-text "hello")
 
-(defn visible-open-button? [html source]
+(def installed-controller-task-key
+  "unit:test/command-palette-installed-controller-test.mjs")
+
+(def installed-controller-command
+  ["node" "test/command-palette-installed-controller-test.mjs"])
+
+(defn visible-open-button? [html]
   (and (str/includes? html "id=\"open-palette\"")
-       (str/includes? html "<button")
-       (str/includes? source "openButton")
-       (str/includes? source "addEventListener")
-       (str/includes? source "click")
-       (str/includes? source "showPalette")))
+       (str/includes? html "<button")))
+
+(defn- installed-controller-result []
+  (apply support/verified-task-result
+         installed-controller-task-key
+         installed-controller-command))
 
 (defn palette-markup? [html]
   (boolean
@@ -129,10 +136,13 @@
 
    {:pattern #"^a visible button opens the command palette$"
     :handler (fn [world _example _captures]
-               (support/assert! (visible-open-button? (:side-panel-html world)
-                                                       (:side-panel-source world))
-                                "Visible palette button is not wired to open the palette."
+               (support/assert! (visible-open-button? (:side-panel-html world))
+                                "Visible palette button is missing."
                                 {})
+               (let [result (installed-controller-result)]
+                 (support/assert! (= 0 (:exit result))
+                                  "Visible palette button does not open the palette through the installed controller."
+                                  {:stderr (:err result)}))
                world)}
 
    {:pattern #"^shortcut <([A-Za-z0-9_]+)> is pressed inside the side panel$"
@@ -396,5 +406,5 @@
 (def handlers (vec (concat dialog-handlers simple-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-17T17:08:20.518480386+02:00", :module-hash "1644461426", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "38193441"} {:id "def/canonical-filter-text", :kind "def", :line 6, :end-line 6, :hash "1724626866"} {:id "defn/visible-open-button?", :kind "defn", :line 8, :end-line 14, :hash "-316165643"} {:id "defn/palette-markup?", :kind "defn", :line 16, :end-line 21, :hash "1302085553"} {:id "defn/opens-on-shortcut?", :kind "defn", :line 23, :end-line 33, :hash "-808115028"} {:id "defn/lists-registered-commands?", :kind "defn", :line 35, :end-line 37, :hash "-1679333293"} {:id "defn/palette-backed-by-registry?", :kind "defn", :line 39, :end-line 42, :hash "1086146396"} {:id "defn/filters-commands?", :kind "defn", :line 44, :end-line 48, :hash "-256055306"} {:id "defn/runs-selected-command-on-key?", :kind "defn", :line 50, :end-line 55, :hash "259571416"} {:id "defn/closes-on-key?", :kind "defn", :line 57, :end-line 61, :hash "-1867581278"} {:id "def/fuzzy-package-names", :kind "def", :line 63, :end-line 63, :hash "1698743278"} {:id "defn-/dependency-names", :kind "defn-", :line 65, :end-line 67, :hash "-1509705126"} {:id "defn/forbidden-palette-scope-findings", :kind "defn", :line 69, :end-line 80, :hash "646918192"} {:id "defn/forbidden-palette-scope-findings-of-kind", :kind "defn", :line 82, :end-line 83, :hash "720430111"} {:id "defn-/inspect-side-panel", :kind "defn-", :line 85, :end-line 93, :hash "-315356103"} {:id "defn-/inspect-dialog", :kind "defn-", :line 95, :end-line 104, :hash "339008022"} {:id "defn/palette-dialog?", :kind "defn", :line 106, :end-line 113, :hash "-1107160767"} {:id "defn/no-permanent-command-buttons?", :kind "defn", :line 115, :end-line 118, :hash "-963751556"} {:id "defn-/palette-scope", :kind "defn-", :line 120, :end-line 123, :hash "-1191740757"} {:id "def/simple-handlers", :kind "def", :line 125, :end-line 274, :hash "1580740377"} {:id "def/dialog-handlers", :kind "def", :line 276, :end-line 390, :hash "39041107"} {:id "def/handlers", :kind "def", :line 392, :end-line 392, :hash "-649886614"}]}
+;; {:version 1, :tested-at "2026-08-11T15:23:54.828952782+02:00", :module-hash "-2006128476", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "38193441"} {:id "def/canonical-filter-text", :kind "def", :line 6, :end-line 6, :hash "1724626866"} {:id "def/installed-controller-task-key", :kind "def", :line 8, :end-line 9, :hash "1380690152"} {:id "def/installed-controller-command", :kind "def", :line 11, :end-line 12, :hash "280850599"} {:id "defn/visible-open-button?", :kind "defn", :line 14, :end-line 16, :hash "-809914284"} {:id "defn-/installed-controller-result", :kind "defn-", :line 18, :end-line 21, :hash "388149960"} {:id "defn/palette-markup?", :kind "defn", :line 23, :end-line 28, :hash "1302085553"} {:id "defn/opens-on-shortcut?", :kind "defn", :line 30, :end-line 40, :hash "-808115028"} {:id "defn/lists-registered-commands?", :kind "defn", :line 42, :end-line 44, :hash "-1679333293"} {:id "defn/palette-backed-by-registry?", :kind "defn", :line 46, :end-line 49, :hash "1086146396"} {:id "defn/filters-commands?", :kind "defn", :line 51, :end-line 55, :hash "-256055306"} {:id "defn/runs-selected-command-on-key?", :kind "defn", :line 57, :end-line 62, :hash "259571416"} {:id "defn/closes-on-key?", :kind "defn", :line 64, :end-line 68, :hash "-1867581278"} {:id "def/fuzzy-package-names", :kind "def", :line 70, :end-line 70, :hash "1698743278"} {:id "defn-/dependency-names", :kind "defn-", :line 72, :end-line 74, :hash "-1509705126"} {:id "defn/forbidden-palette-scope-findings", :kind "defn", :line 76, :end-line 87, :hash "646918192"} {:id "defn/forbidden-palette-scope-findings-of-kind", :kind "defn", :line 89, :end-line 90, :hash "720430111"} {:id "defn-/inspect-side-panel", :kind "defn-", :line 92, :end-line 100, :hash "-315356103"} {:id "defn-/inspect-dialog", :kind "defn-", :line 102, :end-line 111, :hash "339008022"} {:id "defn/palette-dialog?", :kind "defn", :line 113, :end-line 120, :hash "-1107160767"} {:id "defn/no-permanent-command-buttons?", :kind "defn", :line 122, :end-line 125, :hash "-963751556"} {:id "defn-/palette-scope", :kind "defn-", :line 127, :end-line 130, :hash "-1191740757"} {:id "def/simple-handlers", :kind "def", :line 132, :end-line 288, :hash "1047165912"} {:id "def/dialog-handlers", :kind "def", :line 290, :end-line 404, :hash "39041107"} {:id "def/handlers", :kind "def", :line 406, :end-line 406, :hash "-649886614"}]}
 ;; clj-mutate-manifest-end

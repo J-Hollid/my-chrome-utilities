@@ -30,7 +30,9 @@
    filter.addEventListener('keyup', (event) => { if (event.key === 'Enter') runSelectedCommand(); if (event.key === 'Escape') hidePalette(); });")
 
 (deftest recognizes-visible-palette-controls
-  (is (palette/visible-open-button? palette-html palette-source))
+  (is (palette/visible-open-button? palette-html))
+  (is (not (palette/visible-open-button?
+            "<main id=\"side-panel-root\"><span id=\"open-palette\">Commands</span></main>")))
   (is (palette/palette-markup? palette-html)))
 
 (deftest recognizes-modal-command-palette-boundary
