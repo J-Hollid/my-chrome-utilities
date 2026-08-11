@@ -1,12 +1,24 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { promisify } from "node:util";
+
+import { loadVerificationPacks, planVerification } from "../scripts/verification-packs.mjs";
 
 import {
   createReviewReadyRecord,
   deliveryScorecard,
   finalEvidenceEffect,
   handoffReadinessPolicy,
+  recordReviewReadyEvidence,
+  runSettledFinalVerificationCommand,
   validateReviewReadyRecord,
+  verifyReviewReadyEvidence,
 } from "../scripts/settled-final-verification.mjs";
+
+const exec = promisify(execFile);
 
 const allPacks = [
   "branding_polish", "capture", "command-palette", "defects", "durable_project_repository",
@@ -18,6 +30,15 @@ const allPacks = [
 const baseCommit = "1".repeat(40);
 const candidateCommit = "2".repeat(40);
 const candidateTree = "3".repeat(40);
+const packs = await loadVerificationPacks();
+for (const workflowPath of [
+  "scripts/settled-final-verification.mjs",
+  "scripts/settled-final-verification-policy.mjs",
+  "scripts/settled-final-verification-review.mjs",
+]) {
+  assert.deepEqual(planVerification(packs, { changedPaths:[workflowPath] }).packIds.toSorted(), allPacks,
+    `${workflowPath} retains global workflow impact`);
+}
 const receipt = {
   version:2,
   runId:"focused-run",
@@ -53,12 +74,28 @@ assert.equal(validateReviewReadyRecord(reviewRecord, {
 assert.throws(() => validateReviewReadyRecord(reviewRecord, {
   task:"another-task", baseCommit, candidateCommit, candidateTree,
 }), /task/i);
+assert.throws(() => validateReviewReadyRecord({ ...reviewRecord, finalRegressionClaim:true }, {
+  task:"future-slice", baseCommit, candidateCommit, candidateTree,
+}), /invalid review-ready/i);
+assert.throws(() => validateReviewReadyRecord({
+  ...reviewRecord, focusedScope:{ ...reviewRecord.focusedScope, taskKeys:[] },
+}, { task:"future-slice", baseCommit, candidateCommit, candidateTree }), /incomplete/i);
 assert.throws(() => createReviewReadyRecord({
   task:"future-slice", baseCommit, candidateCommit, candidateTree,
-  changeSet:{ version:1, baseCommit, commit:candidateCommit, paths:[] },
+  changeSet:{ version:1, baseCommit, commit:candidateCommit, paths:["scripts/workflow.mjs"] },
   receipt:{ ...receipt, tasks:{ bad:{ identity:{ key:"bad" }, status:"failed" } } },
   receiptPath:"tmp/verification-receipts/failed.json", receiptSha256:"5".repeat(64),
 }), /passed/i);
+assert.throws(() => createReviewReadyRecord({
+  task:"future-slice", baseCommit, candidateCommit, candidateTree,
+  changeSet:{ version:1, baseCommit, commit:candidateCommit, paths:["src/side-panel.ts"] },
+  receipt, receiptPath:"tmp/verification-receipts/unrelated.json", receiptSha256:"5".repeat(64),
+}), /changed paths/i);
+assert.throws(() => createReviewReadyRecord({
+  task:"future-slice", baseCommit, candidateCommit, candidateTree,
+  changeSet:{ version:2, baseCommit, commit:candidateCommit, paths:["scripts/workflow.mjs"] },
+  receipt, receiptPath:"tmp/verification-receipts/version.json", receiptSha256:"5".repeat(64),
+}), /canonical candidate change set/i);
 
 assert.deepEqual(handoffReadinessPolicy({
   sender:"coder", recipients:["refactorer"], task:"future-slice",
@@ -77,6 +114,10 @@ assert.deepEqual(handoffReadinessPolicy({
   readiness:undefined, verified:allPacks.join(","), allPackIds:allPacks,
 }), { mode:"legacy-bootstrap", requiredEvidence:"legacy-exact" });
 assert.throws(() => handoffReadinessPolicy({
+  sender:"coder", recipients:["refactorer"], task:"vtd015-settled-final-verification",
+  readiness:undefined, verified:"review-ready", allPackIds:allPacks,
+}), /legacy exact/i);
+assert.throws(() => handoffReadinessPolicy({
   sender:"architect", recipients:["specifier"], task:"future-slice",
   readiness:"review-ready", verified:"review-ready", allPackIds:allPacks,
 }), /final-ready/i);
@@ -84,6 +125,26 @@ assert.throws(() => handoffReadinessPolicy({
   sender:"coder", recipients:["refactorer"], task:"future-slice",
   readiness:"final-ready", verified:allPacks.join(","), allPackIds:allPacks,
 }), /review-ready/i);
+assert.throws(() => handoffReadinessPolicy({
+  sender:"coder", recipients:["architect"], task:"future-slice",
+  readiness:"review-ready", verified:"review-ready", allPackIds:allPacks,
+}), /next review role/i);
+assert.throws(() => handoffReadinessPolicy({
+  sender:"refactorer", recipients:["specifier"], task:"future-slice",
+  readiness:undefined, verified:allPacks.join(","), allPackIds:allPacks,
+}), /next review role/i);
+assert.throws(() => handoffReadinessPolicy({
+  sender:"specifier", recipients:["coder"], task:"future-slice",
+  readiness:"final-ready", verified:allPacks.join(","), allPackIds:allPacks,
+}), /architect.*specifier/i);
+assert.throws(() => handoffReadinessPolicy({
+  sender:"architect", recipients:["specifier"], task:"future-slice",
+  readiness:"final-ready", verified:allPacks.slice(1).join(","), allPackIds:allPacks,
+}), /every canonical verification pack/i);
+assert.deepEqual(handoffReadinessPolicy({
+  sender:"specifier", recipients:["coder"], task:"future-slice",
+  readiness:undefined, verified:"not-required", allPackIds:allPacks,
+}), { mode:"ordinary", requiredEvidence:"legacy" });
 
 assert.deepEqual(finalEvidenceEffect({
   changedPaths:["src/side-panel.ts"], boundIdentitiesEqual:false,
@@ -91,6 +152,12 @@ assert.deepEqual(finalEvidenceEffect({
 assert.deepEqual(finalEvidenceEffect({
   changedPaths:["docs/scorecard.md"], boundIdentitiesEqual:true,
 }), { eligible:true, action:"promote-or-integrate" });
+assert.deepEqual(finalEvidenceEffect({
+  changedPaths:["features/changed-contract.feature"], boundIdentitiesEqual:true,
+}), { eligible:false, action:"settle-and-rerun-all-20" });
+assert.deepEqual(finalEvidenceEffect({
+  changedPaths:["manifest.json"], boundIdentitiesEqual:true,
+}), { eligible:false, action:"settle-and-rerun-all-20" });
 assert.deepEqual(finalEvidenceEffect({
   changedPaths:["docs/scorecard.md", "verification/packs.json"], boundIdentitiesEqual:false,
 }), { eligible:false, action:"settle-and-rerun-all-20" });
@@ -119,6 +186,51 @@ assert.equal(scorecard.repairs, 1);
 assert.equal(scorecard.reruns, 1);
 assert.equal(scorecard.terminalEvidencePreserved, true);
 assert.equal(scorecard.modeledAvoidedSuccessfulFullRuns, 1);
+await runSettledFinalVerificationCommand([
+  "validate-handoff", "coder", "refactorer", "vtd015-settled-final-verification",
+  "legacy", allPacks.join(","),
+]);
+await assert.rejects(() => runSettledFinalVerificationCommand(["unknown"]), /use:/i);
+
+const evidenceRepository = await mkdtemp(path.join(os.tmpdir(), "review-ready-evidence-"));
+try {
+  await exec("git", ["init", "-q"], { cwd:evidenceRepository });
+  await exec("git", ["config", "user.name", "Review Evidence Test"], { cwd:evidenceRepository });
+  await exec("git", ["config", "user.email", "review-evidence@example.test"], { cwd:evidenceRepository });
+  await writeFile(path.join(evidenceRepository, ".gitignore"), "tmp/\n");
+  await writeFile(path.join(evidenceRepository, "README.md"), "base\n");
+  await exec("git", ["add", ".gitignore", "README.md"], { cwd:evidenceRepository });
+  await exec("git", ["commit", "-qm", "base"], { cwd:evidenceRepository });
+  const { stdout:base } = await exec("git", ["rev-parse", "HEAD"], { cwd:evidenceRepository });
+  await mkdir(path.join(evidenceRepository, "scripts"));
+  await writeFile(path.join(evidenceRepository, "scripts", "workflow.mjs"), "export const ready = true;\n");
+  await exec("git", ["add", "scripts/workflow.mjs"], { cwd:evidenceRepository });
+  await exec("git", ["commit", "-qm", "candidate"], { cwd:evidenceRepository });
+  const [{ stdout:candidate }, { stdout:tree }] = await Promise.all([
+    exec("git", ["rev-parse", "HEAD"], { cwd:evidenceRepository }),
+    exec("git", ["rev-parse", "HEAD^{tree}"], { cwd:evidenceRepository }),
+  ]);
+  const receiptDirectory = path.join(evidenceRepository, "tmp", "verification-receipts");
+  await mkdir(receiptDirectory, { recursive:true });
+  const receiptFile = path.join(receiptDirectory, "focused.json");
+  await writeFile(receiptFile, JSON.stringify({
+    ...receipt,
+    candidate:{ commit:candidate.trim(), tree:tree.trim() },
+  }));
+  const recorded = await recordReviewReadyEvidence(
+    receiptFile, base.trim(), "future-slice", { repositoryRoot:evidenceRepository },
+  );
+  assert.equal(recorded.changeSet.paths[0], "scripts/workflow.mjs");
+  const verified = await verifyReviewReadyEvidence(
+    candidate.trim(), base.trim(), "future-slice", { repositoryRoot:evidenceRepository },
+  );
+  assert.equal(verified.receipt.sha256, recorded.receipt.sha256);
+  await assert.rejects(() => verifyReviewReadyEvidence(
+    candidate.trim(), base.trim(), "another-task", { repositoryRoot:evidenceRepository },
+  ), /no bound review-ready evidence/i);
+} finally {
+  await rm(evidenceRepository, { recursive:true, force:true });
+}
 
 console.log(JSON.stringify({
   vtd015Acceptance:{
