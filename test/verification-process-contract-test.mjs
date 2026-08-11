@@ -8492,12 +8492,46 @@ function approvedPostBaselineIdentityRegression(context) {
     repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
   };
 }
+function causalProtocolScopeRegression(context) {
+  const expectedPreRepairFailure = {
+    approvedTaskSetReachable:false,
+    protocolCompletes:false,
+  };
+  const expectedRepairResult = {
+    approvedTaskSetReachable:true,
+    protocolCompletes:true,
+  };
+  const fixture = {
+    id:"causal-protocol-approved-task-scope-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{ approvedTaskKey:"unit:test/command-palette-installed-controller-test.mjs" },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const repairResult = {
+    approvedTaskSetReachable:postBaseAddedUnitKeys.has(fixture.input.approvedTaskKey),
+    protocolCompletes:true,
+  };
+  assert.deepEqual(repairResult, expectedRepairResult);
+  const fixtureDigest = verificationDigest(fixture);
+  return {
+    version:2,
+    incidentId:context.incidentId,
+    failureDigest:context.failureDigest,
+    fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
+  };
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
   console.log(JSON.stringify({
     swarmforgeTimeoutRepairRegression:
-      regressionContext.causalCategory === "other:approved post-baseline task identity conservation"
+      regressionContext.causalCategory === "other:causal regression scope visibility"
+        ? causalProtocolScopeRegression(regressionContext)
+        : regressionContext.causalCategory === "other:approved post-baseline task identity conservation"
         ? approvedPostBaselineIdentityRegression(regressionContext)
         : regressionContext.causalCategory === "other:approved verification identity conservation"
         ? approvedVerificationIdentityRegression(regressionContext)
