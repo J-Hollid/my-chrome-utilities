@@ -211,6 +211,12 @@ const focusedSelectorOptions = focusedAcceptanceOptions([
 assert.deepEqual(focusedSelectorOptions.focusedTaskKeys,
   ["unit:test/verification-process-contract-test.mjs"],
 "registered focused leaves have an incident-aware runner selector");
+const reviewBoundFocusedSelectorOptions = focusedAcceptanceOptions([
+  "--pack", "shell", "--focused-task", "unit:test/verification-process-contract-test.mjs",
+  "--changed-since", "approved-base",
+]);
+assert.equal(reviewBoundFocusedSelectorOptions.changedSince, "approved-base",
+  "focused verification can bind its receipt to the complete candidate change set");
 assert.equal(timeoutRepairCausalCategory("readiness"), "readiness");
 assert.equal(timeoutRepairCausalCategory("viewport/visibility/hit testing"),
   "viewport/visibility/hit testing");

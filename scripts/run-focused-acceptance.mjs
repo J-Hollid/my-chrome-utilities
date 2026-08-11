@@ -327,11 +327,11 @@ export function focusedAcceptanceOptions(args) {
     throw new Error("Use --browser-target with one --pack and no other verification mode options");
   }
   if (options.focusedTaskKeys.length && (options.packIds.length !== 1 || options.changedPaths.length ||
-      options.changedSince || options.terminalFull || options.includeProperties || options.withDependencies ||
+      options.terminalFull || options.includeProperties || options.withDependencies ||
       options.skipBuild || options.shard || options.prepareEvidence || options.resumeReceipt ||
       options.browserTargetIds.length || options.timeoutDiagnosticRetry || options.timeoutRepairIncident ||
       options.timeoutRepairFocused)) {
-    throw new Error("Use --focused-task with one owning --pack and no broad or evidence selectors");
+    throw new Error("Use --focused-task with one owning --pack, optional --changed-since, and no broad or evidence selectors");
   }
   if (options.prepareEvidence && !options.timeoutRepairFocused) {
     if (!options.packIds.length || !options.changedSince) {
