@@ -2796,6 +2796,21 @@ console.log("repairTmp=" + process.env.TMPDIR);
     }
     return identity;
   };
+  const vtd014ApprovedVtd015Feature = "features/settled-candidate-final-verification.feature";
+  const vtd014ApprovedVtd015Generated =
+    "build/acceptance/generated/features-settled-candidate-final-verification-feature_acceptance_test.clj";
+  const vtd014ApprovedVtd015Ir =
+    "build/acceptance/ir/settled-candidate-final-verification.json";
+  const normalizedCurrentVtd014TaskIdentity = (task) => {
+    const identity = verificationTaskIdentity(task);
+    if (identity.key === "acceptance-session:shell") {
+      identity.args = identity.args.filter((value) =>
+        ![vtd014ApprovedVtd015Generated, vtd014ApprovedVtd015Ir].includes(value));
+      identity.target = identity.target.split(",")
+        .filter((value) => value !== vtd014ApprovedVtd015Feature).join(",");
+    }
+    return identity;
+  };
   vtd014Evidence = {
     execution:{ prerequisites:prerequisiteContractEvidence, prerequisiteGate:prerequisiteGateEvidence,
       restriction:{ environmentContractFailure:true, retryPermitted:false,
@@ -2875,7 +2890,10 @@ console.log("repairTmp=" + process.env.TMPDIR);
         "unit:test/command-palette-installed-controller-test.mjs",
         "unit:test/flow-reload-lifecycle-test.mjs",
         "unit:test/workspace-tabs-installed-controller-test.mjs",
-      ].includes(key)).map(verificationTaskIdentity)),
+        "unit:test/settled-final-verification-workflow-test.mjs",
+        `acceptance-parse:${vtd014ApprovedVtd015Feature}`,
+        `acceptance-generate:${vtd014ApprovedVtd015Feature}`,
+      ].includes(key)).map(normalizedCurrentVtd014TaskIdentity)),
       acceptedBaseTaskDigest:verificationDigest(
         acceptedBaseConservationPlan.tasks.map(expectedVtd014TaskIdentity)),
       currentPackContractDigest:verificationDigest(packContract(timeoutPackRegistry)),
@@ -8578,6 +8596,48 @@ function approvedPostBaselineIdentityRegression(context) {
     repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
   };
 }
+function approvedVtd015Vtd014ConservationRegression(context) {
+  const expectedPreRepairFailure = {
+    approvedAdditionsExcluded:false,
+    shellSessionNormalized:false,
+    baselineDigestConserved:false,
+  };
+  const expectedRepairResult = {
+    approvedAdditionsExcluded:true,
+    shellSessionNormalized:true,
+    baselineDigestConserved:true,
+  };
+  const fixture = {
+    id:"approved-vtd015-vtd014-conservation-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{ approvedTaskKeys:[...approvedVtd015TaskKeys].sort(),
+      aggregateTaskKey:"acceptance-session:shell" },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const currentShellTask = currentTerminalPlan.tasks.find(({ key }) =>
+    key === fixture.input.aggregateTaskKey);
+  const normalizedShellIdentity = normalizedVtd006Identity(currentShellTask);
+  const repairResult = {
+    approvedAdditionsExcluded:fixture.input.approvedTaskKeys.every((key) =>
+      currentTerminalPlan.tasks.filter((task) => task.key === key).length === 1),
+    shellSessionNormalized:!normalizedShellIdentity.target.split(",")
+      .includes(vtd015Feature),
+    baselineDigestConserved:vtd014Evidence.conservation.currentTaskDigest ===
+      vtd014Evidence.conservation.acceptedBaseTaskDigest,
+  };
+  assert.deepEqual(repairResult, expectedRepairResult);
+  const fixtureDigest = verificationDigest(fixture);
+  return {
+    version:2,
+    incidentId:context.incidentId,
+    failureDigest:context.failureDigest,
+    fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
+  };
+}
 function causalProtocolScopeRegression(context) {
   const expectedPreRepairFailure = {
     approvedTaskSetReachable:false,
@@ -8617,6 +8677,9 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     swarmforgeTimeoutRepairRegression:
       regressionContext.causalCategory === "other:causal regression scope visibility"
         ? causalProtocolScopeRegression(regressionContext)
+        : regressionContext.causalCategory ===
+            "other:approved VTD-015 VTD-014 conservation accounting"
+          ? approvedVtd015Vtd014ConservationRegression(regressionContext)
         : regressionContext.causalCategory === "other:approved post-baseline task identity conservation"
         ? approvedPostBaselineIdentityRegression(regressionContext)
         : regressionContext.causalCategory === "other:approved verification identity conservation"
