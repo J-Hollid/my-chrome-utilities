@@ -178,6 +178,10 @@ export async function validateExplicitChangedPaths(
   }
 }
 
+export function coordinatorArtifactLeaseRequired(artifactRequired, commandRunner) {
+  return artifactRequired && !commandRunner;
+}
+
 export function focusedAcceptanceOptions(args) {
   const options = {
     packIds:[], changedPaths:[], terminalFull:false, includeProperties:false,
@@ -1839,7 +1843,7 @@ export async function runFocusedAcceptance(
   try {
     await executeAcceptancePlan(executionPlan, {
       runCommand:runner, concurrency, observationConcurrency,
-      ...(artifactRequired && !commandRunner ? {
+      ...(coordinatorArtifactLeaseRequired(artifactRequired, commandRunner) ? {
         acquireArtifactLease:async() => {
           const startedAt = Date.now();
           const release = await acquireDistArtifactLock();

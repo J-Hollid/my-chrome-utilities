@@ -66,6 +66,7 @@ import {
   createRepositoryCheckpointIdentityGuard,
   createVerificationCommandRunner,
   createVerificationReceiptContext,
+  coordinatorArtifactLeaseRequired,
   executeTimeoutRepairTaskPlan,
   enforceTerminalClosureReceipt,
   focusedAcceptanceOptions,
@@ -1234,6 +1235,8 @@ const exerciseDeadOwnerLockFixture = ({ reclaimDeadOwner }) => {
   return { outcome:"blocked", ownerPid:lock.owner.pid, remainingWaiters:lock.waiters.length };
 };
 
+let nestedReadOnlyLeaseCompleted = false;
+
 const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagnosedBoundary,
   causalCategory = "artifact/process locking" }) => {
   if (causalCategory === "other:task-specific Flow receipt identity") {
@@ -1641,6 +1644,31 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       preRepairResult:{ status:"failed", fixtureDigest, observed:preRepairObservation },
       repairResult:{ status:"passed", fixtureDigest, observed:repairObservation },
     };
+  }
+  if (causalCategory === "other:read-only verification lease compatibility") {
+    const fixture = {
+      id:"read-only-verification-lease-compatibility-v1",
+      causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ injectedPlanningRunner:true, nestedLeaseAccess:"read" },
+      expectedPreRepairFailure:{ injectedRunnerAcquiresCoordinatorLease:true,
+        nestedReadOnlyLeaseCompletes:false, outcome:"self-contention" },
+      expectedRepairResult:{ injectedRunnerAcquiresCoordinatorLease:false,
+        nestedReadOnlyLeaseCompletes:true, outcome:"completes" },
+    };
+    const repairObservation = {
+      injectedRunnerAcquiresCoordinatorLease:
+        coordinatorArtifactLeaseRequired(true, async() => undefined),
+      nestedReadOnlyLeaseCompletes,
+      outcome:"completes",
+    };
+    assert.deepEqual(repairObservation, fixture.expectedRepairResult,
+      "the bounded fixture proves read-only verification leaves cannot self-contend for write access");
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:structuredClone(fixture.expectedPreRepairFailure) },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairObservation } };
   }
   const fixture = {
     id:"artifact-lock-dead-owner-v1",
@@ -7366,6 +7394,7 @@ await withDistArtifactLock(async() => {
     `import {writeSync} from "node:fs"; import {withDistArtifactLock} from ${JSON.stringify(lockModule)}; await withDistArtifactLock(()=>writeSync(1,"nested-lock-ok\\n"),{access:"read"});`],
   { timeout:2_000 });
 }, { access:"read" });
+nestedReadOnlyLeaseCompleted = true;
 
 if (process.platform !== "win32") {
   const commandReceiptDirectory = await mkdtemp(path.join(os.tmpdir(), "verification-command-receipts-"));
