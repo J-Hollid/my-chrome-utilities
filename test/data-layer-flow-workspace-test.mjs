@@ -155,6 +155,7 @@ assert.deepEqual(sectionBoundsAfterKeyboardInput({x:0,y:0,width:240,height:140},
 const flowCss=await readFile(new URL("../specification-builder-brand.css",import.meta.url),"utf8");
 const flowWorkspaceUi=await readFile(new URL("../src/flow-graph/workspace-ui.ts",import.meta.url),"utf8");
 const sidePanelSource=await readFile(new URL("../src/side-panel.ts",import.meta.url),"utf8");
+const flowGraphStepsSource=await readFile(new URL("../acceptance/src/acceptance/steps/flow_graph.clj",import.meta.url),"utf8");
 const flowBrowserEvidence=await readFile(new URL("./browser-packs/flow-graph.mjs",import.meta.url),"utf8");
 const flowCorrectionEvidence=await readFile(new URL("./support/flow-r02-correction-evidence.mjs",import.meta.url),"utf8");
 assert.match(flowCss,/#workspace-pane:has\(\.documentary-flow\[data-canvas-first-r02="true"\]\)[^{]*\{[^}]*display:\s*grid[^}]*grid-template-rows:\s*auto minmax\(0, 1fr\)[^}]*overflow:\s*hidden/su,"the active Flow allocates a shared-chrome row and an explicit remaining route row");
@@ -179,26 +180,33 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       :value,
     digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
     shellReadiness=context.diagnosedBoundary?.taskKey==="browser:test/browser-packs/shell.mjs",
+    flow019Allowlist=context.causalCategory==="other:mode-aware Flow 019 example allowlist",
     readiness=!shellReadiness&&context.causalCategory==="readiness or settling",
     zoomContainment=context.incidentId==="d3a49b37-e016-4bed-830c-9531045a6773",
-    expectedPreRepairFailure=shellReadiness
+    expectedPreRepairFailure=flow019Allowlist
+      ?{modelSelectionAccepted:true,runtimeSelectionAccepted:false,modeSeparated:false}
+      :shellReadiness
       ?{repositoryOpening:true,shellReady:false}
       :readiness
       ?{routeRestored:true,paintedInstanceSelected:false}
       :zoomContainment
         ?{zoomInContained:false,toolbarWrapped:false,cameraControlsImmediatelyAvailable:false}
         :{entryControlContained:false,focusToolbarWrapped:false,requiredControlsPrecedeSecondary:false},
-    expectedRepairResult=shellReadiness
+    expectedRepairResult=flow019Allowlist
+      ?{modelSelectionAccepted:true,runtimeSelectionAccepted:true,modeSeparated:true}
+      :shellReadiness
       ?{repositoryOpening:true,shellReady:true}
       :readiness
       ?{routeRestored:true,paintedInstanceSelected:true}
       :zoomContainment
         ?{zoomInContained:true,toolbarWrapped:true,cameraControlsImmediatelyAvailable:true}
         :{entryControlContained:true,focusToolbarWrapped:true,requiredControlsPrecedeSecondary:true},
-    fixture={id:shellReadiness?"shell-readiness-before-repository-v1":readiness?"flow-pan-painted-instance-readiness-v1":zoomContainment
+    fixture={id:flow019Allowlist?"mode-aware-flow019-example-allowlist-v1":shellReadiness?"shell-readiness-before-repository-v1":readiness?"flow-pan-painted-instance-readiness-v1":zoomContainment
       ?"zoom-in-360-control-containment-v1":"focus-canvas-360-control-containment-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-      input:shellReadiness
+      input:flow019Allowlist
+        ?{modelRow:{scope:"the selection",arrangement:"horizontally"},runtimeRow:{scope:"selection",arrangement:"horizontally"}}
+        :shellReadiness
         ?{preRepair:{shellMount:"after durable repository await",repositoryOpening:true}}
         :readiness
         ?{preRepair:{historicalCanvas:{width:0,height:0},liveCanvas:{width:360,height:800},selection:"first DOM match"}}
@@ -206,7 +214,11 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
           ?{viewport:{width:360,height:800},preRepair:{zoomIn:{x:480.859375,width:61.015625},toolbar:{left:0,right:360},scrollLeft:0}}
           :{viewport:{width:360,height:800},preRepair:{focusControl:{x:424.4375,width:88.765625},toolbar:{left:0,right:360},horizontalDiscoveryRequired:true}},
       expectedPreRepairFailure,expectedRepairResult},
-    repairResult=shellReadiness?{
+    repairResult=flow019Allowlist?{
+      modelSelectionAccepted:/\[:model \["the selection" "horizontally"\]\]/u.test(flowGraphStepsSource),
+      runtimeSelectionAccepted:/\[:runtime \["selection" "horizontally"\]\]/u.test(flowGraphStepsSource),
+      modeSeparated:/key \[mode row\]/u.test(flowGraphStepsSource),
+    }:shellReadiness?{
       repositoryOpening:sidePanelSource.includes("await openDurableProjectRuntime(globalThis.localStorage)"),
       shellReady:sidePanelSource.indexOf("mountUtilityShell(extensionShell, panelRoot, window)")<sidePanelSource.indexOf("await openDurableProjectRuntime(globalThis.localStorage)"),
     }:readiness?{

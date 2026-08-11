@@ -175,15 +175,15 @@
                                           :focusedReceipt {} :checkpointReceiptSha256 digest}}
                   :conservation {:changedFiles ["scripts/verification-reliability-store.mjs"]
                                  :productChangedFiles [] :featureChangedFiles []
-                                 :currentTaskDigest digest :masterTaskDigest digest
-                                 :currentPackContractDigest digest :masterPackContractDigest digest
-                                 :currentCalibrationDigest digest :masterCalibrationDigest digest
+                                 :currentTaskDigest digest :acceptedBaseTaskDigest digest
+                                 :currentPackContractDigest digest :acceptedBasePackContractDigest digest
+                                 :currentCalibrationDigest digest :acceptedBaseCalibrationDigest digest
                                  :diagnosticRetryOnPassingRun false :allPackCount 20
                                  :packageTask "scripts/package.mjs"}
                   :execution {:prerequisites {:approvedFirstLaunch true :workspaceNarrow true
                                               :mixedRouteObservation
-                                              {:scoped "scoped-command-approval|bwrap-unshared-network"
-                                               :workspace "workspace-sandbox|workspace-sandbox"}
+                                              {:scoped "scoped-command-approval|bwrap-shared-loopback"
+                                               :workspace "workspace-sandbox|bwrap-unshared-network"}
                                               :deniedBeforeLaunch true :declarationsFailClosed true
                                               :rows {"the workspace sandbox cannot bind"
                                                      {:firstRunAction "use the existing scoped approval route immediately"
@@ -551,3 +551,7 @@
     :pattern #"a testing session contains captured events with schema validation results"
     :step "a testing session contains captured events with schema validation results"
     :message "Schemas feature metadata cannot conceal a parsed cross-pack step"}))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-08-11T06:57:29.242803699+02:00", :module-hash "-1791096173", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 9, :hash "1366990184"} {:id "def/feature-files", :kind "def", :line 11, :end-line 15, :hash "-21201147"} {:id "form/2/deftest", :kind "deftest", :line 17, :end-line 22, :hash "-244926829"} {:id "form/3/deftest", :kind "deftest", :line 24, :end-line 38, :hash "-328044063"} {:id "form/4/deftest", :kind "deftest", :line 40, :end-line 74, :hash "228982377"} {:id "form/5/deftest", :kind "deftest", :line 76, :end-line 85, :hash "-2118911970"} {:id "form/6/deftest", :kind "deftest", :line 87, :end-line 98, :hash "1820139466"} {:id "form/7/deftest", :kind "deftest", :line 100, :end-line 105, :hash "-740854160"} {:id "form/8/deftest", :kind "deftest", :line 107, :end-line 257, :hash "-1968283538"} {:id "form/9/deftest", :kind "deftest", :line 259, :end-line 275, :hash "1644470916"} {:id "defn-/assert-dedicated-scenario-handlers!", :kind "defn-", :line 277, :end-line 285, :hash "1569417212"} {:id "form/11/deftest", :kind "deftest", :line 287, :end-line 288, :hash "245194227"} {:id "form/12/deftest", :kind "deftest", :line 290, :end-line 291, :hash "554417531"} {:id "form/13/deftest", :kind "deftest", :line 293, :end-line 294, :hash "1323694502"} {:id "form/14/deftest", :kind "deftest", :line 296, :end-line 297, :hash "138892075"} {:id "form/15/deftest", :kind "deftest", :line 299, :end-line 300, :hash "2013011596"} {:id "form/16/deftest", :kind "deftest", :line 302, :end-line 303, :hash "-1365660205"} {:id "form/17/deftest", :kind "deftest", :line 305, :end-line 306, :hash "-514588585"} {:id "form/18/deftest", :kind "deftest", :line 308, :end-line 309, :hash "-310595953"} {:id "form/19/deftest", :kind "deftest", :line 311, :end-line 312, :hash "802773267"} {:id "form/20/deftest", :kind "deftest", :line 314, :end-line 331, :hash "435291924"} {:id "form/21/deftest", :kind "deftest", :line 333, :end-line 348, :hash "-2047542094"} {:id "form/22/deftest", :kind "deftest", :line 350, :end-line 488, :hash "575408246"} {:id "form/23/deftest", :kind "deftest", :line 490, :end-line 502, :hash "1260497997"} {:id "defn-/assert-parsed-cross-pack-step-consumer!", :kind "defn-", :line 504, :end-line 520, :hash "571745781"} {:id "form/25/deftest", :kind "deftest", :line 522, :end-line 531, :hash "-1052248530"} {:id "form/26/deftest", :kind "deftest", :line 533, :end-line 542, :hash "130986114"} {:id "form/27/deftest", :kind "deftest", :line 544, :end-line 553, :hash "1719726216"}]}
+;; clj-mutate-manifest-end
