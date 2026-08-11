@@ -6,7 +6,10 @@ function positiveWorkerCount(value) {
 }
 
 function measuredTask(task) {
-  if (typeof task?.key !== "string" || !Number.isFinite(task.durationMs) || task.durationMs < 0) {
+  if (typeof task?.key !== "string") {
+    throw new TypeError("A scheduled browser task requires a string key.");
+  }
+  if (!Number.isFinite(task.durationMs) || task.durationMs < 0) {
     throw new TypeError("A scheduled browser task requires a key and non-negative measured duration.");
   }
   return task;
@@ -34,9 +37,12 @@ export function deterministicBrowserWorkerSchedule(tasks, workerCount) {
 }
 
 function validLayeredSample(sample, mode) {
-  return sample?.mode === mode && sample.packId === "layered_schema" &&
-    Number.isFinite(sample.durationMs) && sample.durationMs >= 0 && sample.passed === true &&
-    Array.isArray(sample.collisions ?? []) && (sample.collisions ?? []).length === 0;
+  if (sample?.mode !== mode) return false;
+  if (sample.packId !== "layered_schema") return false;
+  if (!Number.isFinite(sample.durationMs) || sample.durationMs < 0) return false;
+  if (sample.passed !== true) return false;
+  const collisions = sample.collisions ?? [];
+  return Array.isArray(collisions) && collisions.length === 0;
 }
 
 export function decideBrowserObservationWorkers({
@@ -59,4 +65,55 @@ export function decideBrowserObservationWorkers({
     loadedPassed,
     retryAtLowerConcurrency:false,
   };
+}
+
+export function artifactLeaseAccess(task) {
+  if (task.stage === "build" || task.stage === "package") return "write";
+  if (task.executable === "npm" && task.args?.includes("package")) return "write";
+  return "read";
+}
+
+export async function invokeVerificationTask(task, runCommand, artifactLease) {
+  const executableTask = artifactLease ? {
+    ...task,
+    artifactLease:{token:artifactLease.token, access:artifactLeaseAccess(task)},
+  } : task;
+  return runCommand(task.display, executableTask);
+}
+
+export async function runBoundedVerificationTasks(
+  tasks,
+  concurrency,
+  runCommand,
+  artifactLease,
+) {
+  let next = 0;
+  const failures = [];
+  const intervals = [];
+  const runWorker = async() => {
+    while (next < tasks.length) {
+      const index = next++;
+      const startedAt = Date.now();
+      try {
+        await invokeVerificationTask(tasks[index], runCommand, artifactLease);
+      } catch (error) {
+        failures.push({task:tasks[index], error});
+      } finally {
+        intervals.push({taskKey:tasks[index].key, startedAt, completedAt:Date.now()});
+      }
+    }
+  };
+  const workers = Array.from(
+    {length:Math.min(Math.max(1, concurrency), tasks.length)},
+    runWorker,
+  );
+  await Promise.all(workers);
+  if (failures.length) {
+    const failedKeys = failures.map(({task}) => task.key ?? task.display);
+    throw new AggregateError(
+      failures.map(({error}) => error),
+      `Verification failed in ${failures.length} independent command(s): ${failedKeys.join(", ")}`,
+    );
+  }
+  return intervals;
 }

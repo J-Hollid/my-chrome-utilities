@@ -5,6 +5,10 @@ import { fileURLToPath } from "node:url";
 
 import { defaultTaskExecutionPrerequisites,
   validateTaskExecutionPrerequisites } from "./verification-execution-prerequisites.mjs";
+import {
+  invokeVerificationTask,
+  runBoundedVerificationTasks,
+} from "./shared-artifact-parallel.mjs";
 import ts from "typescript";
 
 const registryUrl = new URL("../verification/packs.json", import.meta.url);
@@ -1452,46 +1456,6 @@ export function planVerification(
   };
 }
 
-function artifactLeaseAccess(task) {
-  if (task.stage === "build" || task.stage === "package" ||
-      task.executable === "npm" && task.args?.includes("package")) return "write";
-  return "read";
-}
-
-async function invoke(task, runCommand, artifactLease) {
-  const executableTask = artifactLease ? {
-    ...task,
-    artifactLease:{ token:artifactLease.token, access:artifactLeaseAccess(task) },
-  } : task;
-  return runCommand(task.display, executableTask);
-}
-
-async function runBounded(tasks, concurrency, runCommand, artifactLease) {
-  let next = 0;
-  const failures = [];
-  const intervals = [];
-  const workers = Array.from(
-    { length:Math.min(Math.max(1, concurrency), tasks.length) },
-    async() => {
-      while (next < tasks.length) {
-        const index = next++;
-        const startedAt = Date.now();
-        try { await invoke(tasks[index], runCommand, artifactLease); }
-        catch (error) { failures.push({ task:tasks[index], error }); }
-        finally { intervals.push({ taskKey:tasks[index].key, startedAt, completedAt:Date.now() }); }
-      }
-    },
-  );
-  await Promise.all(workers);
-  if (failures.length) {
-    throw new AggregateError(
-      failures.map(({ error }) => error),
-      `Verification failed in ${failures.length} independent command(s): ${failures.map(({ task }) => task.key ?? task.display).join(", ")}`,
-    );
-  }
-  return intervals;
-}
-
 function legacyTasks(commands, stage) {
   return (commands ?? []).map((display, index) => ({ display, key:`legacy:${stage}:${index}`, stage }));
 }
@@ -1517,24 +1481,30 @@ export async function executeAcceptancePlan(
     completeGateMs:0,
   };
   const group = (taskKey, commandKey, stage) => plan[taskKey] ?? legacyTasks(plan[commandKey], stage);
-  for (const task of group("preparationTasks", "preparationCommands", "build")) await invoke(task, runCommand);
+  for (const task of group("preparationTasks", "preparationCommands", "build")) {
+    await invokeVerificationTask(task, runCommand);
+  }
   const artifactLease = acquireArtifactLease ? await acquireArtifactLease() : undefined;
   metrics.coordinatorArtifactWaitMs = artifactLease?.waitMs ?? 0;
   try {
     if (afterPreparation) await afterPreparation();
-    await runBounded(group("unitTasks", "unitCommands", "unit"), concurrency, runCommand, artifactLease);
-    await runBounded(group("propertyTasks", "propertyCommands", "property"), concurrency, runCommand, artifactLease);
+    await runBoundedVerificationTasks(
+      group("unitTasks", "unitCommands", "unit"), concurrency, runCommand, artifactLease,
+    );
+    await runBoundedVerificationTasks(
+      group("propertyTasks", "propertyCommands", "property"), concurrency, runCommand, artifactLease,
+    );
 
     const browserFailures = [];
     for (const task of group("browserTasks", "browserCommands", "browser")) {
-      try { await invoke(task, runCommand, artifactLease); }
+      try { await invokeVerificationTask(task, runCommand, artifactLease); }
       catch (error) { browserFailures.push({ task, error }); }
     }
     const observationFailures = [];
     const observationStartedAt = Date.now();
     let observationIntervals = [];
     try {
-      observationIntervals = await runBounded(
+      observationIntervals = await runBoundedVerificationTasks(
         group("observationTasks", "observationCommands", "browser-observation"),
         observationConcurrency,
         runCommand,
@@ -1555,14 +1525,17 @@ export async function executeAcceptancePlan(
         `Browser verification failed in ${browserFailures.length} adapter(s) and ${observationFailures.length} observation group(s)${failedDisplays.length ? `: ${failedDisplays.join(", ")}` : ""}${failedObservations ? `; ${failedObservations}` : ""}`,
       );
     }
-    await runBounded(group("parserTasks", "parserCommands", "acceptance-parse"), concurrency, runCommand, artifactLease);
-    await runBounded(group("generatorTasks", "generatorCommands", "acceptance-generate"), concurrency, runCommand, artifactLease);
+    await runBoundedVerificationTasks(group("parserTasks", "parserCommands", "acceptance-parse"),
+      concurrency, runCommand, artifactLease);
+    await runBoundedVerificationTasks(group("generatorTasks", "generatorCommands", "acceptance-generate"),
+      concurrency, runCommand, artifactLease);
     for (const task of group("checkpointTasks", "checkpointCommands", "checkpoint")) {
-      await invoke(task, runCommand, artifactLease);
+      await invokeVerificationTask(task, runCommand, artifactLease);
     }
-    await runBounded(group("sessionTasks", "sessionCommands", "acceptance-session"), concurrency, runCommand, artifactLease);
+    await runBoundedVerificationTasks(group("sessionTasks", "sessionCommands", "acceptance-session"),
+      concurrency, runCommand, artifactLease);
     for (const task of group("packageTasks", "packageCommands", "package")) {
-      await invoke(task, runCommand, artifactLease);
+      await invokeVerificationTask(task, runCommand, artifactLease);
     }
     return metrics;
   } finally {

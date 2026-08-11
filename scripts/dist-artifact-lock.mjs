@@ -4,9 +4,17 @@ import {AsyncLocalStorage} from "node:async_hooks";
 import path from "node:path";
 import {performance} from "node:perf_hooks";
 
+import {
+  artifactAccess,
+  assertArtifactAccessPermits,
+  distArtifactAccessEnvironmentKey,
+  distArtifactLeaseEnvironment,
+  distArtifactLockEnvironmentKey,
+} from "./dist-artifact-lease.mjs";
+
+export {distArtifactLeaseEnvironment} from "./dist-artifact-lease.mjs";
+
 const lockDirectory = new URL("../tmp/.dist-artifact.lock/", import.meta.url);
-const heldEnvironmentKey = "MY_CHROME_UTILITIES_DIST_LOCK_HELD";
-const accessEnvironmentKey = "MY_CHROME_UTILITIES_DIST_LOCK_ACCESS";
 const localLockContext = new AsyncLocalStorage();
 const malformedRecordGraceMs = 1000;
 const pause = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -107,7 +115,7 @@ async function ownerIsLive(owner) {
 
 export async function inheritedDistArtifactLockIsHeld(
   directory = lockDirectory,
-  token = process.env[heldEnvironmentKey],
+  token = process.env[distArtifactLockEnvironmentKey],
 ) {
   if (!token) return false;
   let owner;
@@ -120,23 +128,6 @@ export async function inheritedDistArtifactLockIsHeld(
   if (owner?.token !== token) return false;
   const status = await ownerIsLive(owner);
   return status.recognized && status.live;
-}
-
-function artifactAccess(value) {
-  if (!["read", "write"].includes(value)) {
-    throw new TypeError(`Artifact lease access must be read or write; received ${value}.`);
-  }
-  return value;
-}
-
-export function distArtifactLeaseEnvironment(token, access = "read") {
-  if (typeof token !== "string" || token.length === 0) {
-    throw new TypeError("Artifact lease token must be a non-empty string.");
-  }
-  return {
-    [heldEnvironmentKey]:token,
-    [accessEnvironmentKey]:artifactAccess(access),
-  };
 }
 
 async function olderThanGrace(target) {
@@ -374,29 +365,27 @@ export async function withDistArtifactLock(operation, {
   artifactAccess(access);
   const localAccess = localLockContext.getStore();
   if (localAccess) {
-    if (localAccess === "read" && access === "write") {
-      throw new Error("A read-only artifact lease cannot authorize write access.");
-    }
+    assertArtifactAccessPermits(localAccess, access);
     return operation();
   }
   if (await inheritedDistArtifactLockIsHeld(directory)) {
-    const inheritedAccess = artifactAccess(process.env[accessEnvironmentKey] ?? "write");
-    if (inheritedAccess === "read" && access === "write") {
-      throw new Error("A read-only artifact lease cannot authorize write access.");
-    }
+    const inheritedAccess = artifactAccess(
+      process.env[distArtifactAccessEnvironmentKey] ?? "write",
+    );
+    assertArtifactAccessPermits(inheritedAccess, access);
     return localLockContext.run(inheritedAccess, operation);
   }
   const release = await acquireDistArtifactLock(directory, options);
-  const previous = process.env[heldEnvironmentKey];
-  const previousAccess = process.env[accessEnvironmentKey];
+  const previous = process.env[distArtifactLockEnvironmentKey];
+  const previousAccess = process.env[distArtifactAccessEnvironmentKey];
   Object.assign(process.env, distArtifactLeaseEnvironment(release.token, "write"));
   try {
     return await localLockContext.run("write", operation);
   } finally {
-    if (previous === undefined) delete process.env[heldEnvironmentKey];
-    else process.env[heldEnvironmentKey] = previous;
-    if (previousAccess === undefined) delete process.env[accessEnvironmentKey];
-    else process.env[accessEnvironmentKey] = previousAccess;
+    if (previous === undefined) delete process.env[distArtifactLockEnvironmentKey];
+    else process.env[distArtifactLockEnvironmentKey] = previous;
+    if (previousAccess === undefined) delete process.env[distArtifactAccessEnvironmentKey];
+    else process.env[distArtifactAccessEnvironmentKey] = previousAccess;
     await release();
   }
 }
