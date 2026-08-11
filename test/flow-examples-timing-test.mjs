@@ -458,6 +458,9 @@ assert.equal(drawRuntimeProgram.match(/pointer\(canvas,'pointerdown',\{pointerId
 assert.match(drawRuntimeProgram,
   /const sectionGroup=.*:scope > \[data-section-dropzone\][^]*salesGroup=sectionGroup\(sales\.id\)[^]*pointer\(salesGroup,'pointerdown',\{pointerId:52[^]*pointer\(salesGroup,'pointerup',\{pointerId:52/u,
   "the Section move proof must target the direct-manipulation group rather than a member Page that shares its Section id");
+assert.match(drawRuntimeProgram,
+  /salesGroup\.dispatchEvent\(new MouseEvent\('click'[^]*refresh\(\);salesGroup=await waitFor\(\(\)=>\{const candidate=sectionGroup\(sales\.id\);return candidate\?\.isConnected&&candidate;\},'current Sales Section group'\)[^]*pointer\(salesGroup,'pointerdown',\{pointerId:52/u,
+  "the Section move proof must reacquire the current rendered group after selection rerenders the canvas");
 assert.match(drawRuntimeProgram,/expectedSectionCount/u,
   "draw persistence timeout diagnostics must retain section-count state");
 const eventExampleSeedProgram=flowGraphEventExampleSeed({
@@ -505,6 +508,7 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       :value,
     digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
     sectionTargetRepair=context.causalCategory==="other:unambiguous synthetic Section target",
+    sectionGenerationRepair=context.causalCategory==="other:current rendered Section gesture target",
     eventSeedRepair=context.causalCategory==="other:fresh durable Event example seed",
     fixture=sectionTargetRepair?{id:"unambiguous-synthetic-section-target-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
@@ -513,6 +517,11 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         durableMove:false},
       expectedRepairResult:{selector:"group with direct Section dropzone",
         directManipulationGuaranteed:true,durableMove:true}}
+      :sectionGenerationRepair?{id:"current-rendered-section-gesture-target-v1",
+        causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+        input:{selectionCanRerenderCanvas:true,preSelectionNodeMayDisconnect:true},
+        expectedPreRepairFailure:{reacquiresAfterSelection:false,currentConnectedTarget:false},
+        expectedRepairResult:{reacquiresAfterSelection:true,currentConnectedTarget:true}}
       :eventSeedRepair?{id:"fresh-durable-event-example-seed-v1",
         causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
         input:{repositoryStatus:"conflict",staleRevisionMustNotBeReused:true},
@@ -531,6 +540,9 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     repairResult=sectionTargetRepair
       ?{selector:"group with direct Section dropzone",directManipulationGuaranteed:true,
         durableMove:/const sectionGroup=.*:scope > \[data-section-dropzone\][^]*salesGroup=sectionGroup\(sales\.id\)[^]*pointer\(salesGroup,'pointerup',\{pointerId:52/u.test(drawRuntimeProgram)}
+      :sectionGenerationRepair
+        ?{reacquiresAfterSelection:/salesGroup\.dispatchEvent\(new MouseEvent\('click'[^]*refresh\(\);salesGroup=await waitFor/u.test(drawRuntimeProgram),
+          currentConnectedTarget:/return candidate\?\.isConnected&&candidate;\},'current Sales Section group'/u.test(drawRuntimeProgram)}
       :eventSeedRepair
         ?{freshRevisionAttempts:4,
           rebuildsMutation:/for\(let attempt=0;attempt<4;attempt\+=1\)\{const base=await repository\.loadProject/u.test(eventExampleSeedProgram),
