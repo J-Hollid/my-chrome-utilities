@@ -1,5 +1,6 @@
 import { addProjectEntity, adoptSavedSchema, buildReleaseReview, commitStagedProjectImport, commitSavedSchemaReview, confirmCanonicalMigration, exportSpecificationProjectState, restoreReleaseAsDraft, saveProjectAssignment, searchProjectAssignments, stageProjectImport, stageSavedSchemaSynchronization, transactProject, } from "./data-layer-specification-project.js";
 import { openDurableProjectRuntime } from "./data-layer-durable-project-runtime.js";
+import { createDurablePersistenceReadiness } from "./durable-project/persistence-readiness.js";
 import { durableConflictSemanticField, durableProjectRouteForWorkspace } from "./data-layer-durable-project-repository.js";
 import { applyStagedBulkAction, commitStagedBulkRequirements, stageBulkRequirements } from "./data-layer-specification-bulk.js";
 import { assertDeveloperSchemaExportAvailable, buildEffectiveRequirementCoverage, publishCompiledRelease as publishProjectRelease, runProductionFixture as executeProductionFixture, specificationPreflight } from "./data-layer-specification-assurance.js";
@@ -40,6 +41,8 @@ document.documentElement.dataset.specificationStudioInitialization = "opening-re
 const durableProjectRuntime = await openDurableProjectRuntime(globalThis.localStorage, globalThis.indexedDB, { ...(startupProjectId ? { projectId: startupProjectId } : {}), ...(startupRoute ? { route: startupRoute } : {}) }).catch((error) => { const status = document.querySelector("#project-state"); if (status)
     status.textContent = `Durable project storage unavailable: ${error instanceof Error ? error.message : String(error)}`; document.querySelectorAll("button,input,select,textarea").forEach((control) => { control.disabled = true; }); return new Promise(() => { }); }), projectStorage = durableProjectRuntime.storage;
 document.documentElement.dataset.specificationStudioRepository = "open";
+document.documentElement.dataset.specificationStudioPersistence = "settled";
+const durablePersistenceReadiness = createDurablePersistenceReadiness((status) => { document.documentElement.dataset.specificationStudioPersistence = status; }, () => durableProjectRuntime.settled("project"));
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
     throw new Error(`Missing ${selector}`); return element; };
 const projectInspector = q("#project-inspector"), projectInspectorToggle = q("#toggle-project-inspector"), projectWorkspace = q("#project-workspace");
@@ -1693,6 +1696,9 @@ else {
         builderRecoveryDialog.showModal();
     builderRecoveryDialog.querySelector("h2")?.focus();
 } render(); });
+globalThis.addEventListener("durable-project-saving", () => durablePersistenceReadiness.saving());
+globalThis.addEventListener("durable-project-saved", () => { void durablePersistenceReadiness.saved(); });
+globalThis.addEventListener("durable-project-save-failed", () => durablePersistenceReadiness.failed());
 const flowBuilderContext = () => ({ ...state ? { state } : {}, revision: canonicalRevision, ...(selectedKind === "flows" && selectedId ? { flowId: selectedId } : {}) });
 projectDocumentationWorkspaceUi = installProjectDocumentationWorkspaceUi({ state: () => state, revision: () => canonicalRevision, save: (documentation, label) => { if (!state)
         return; persist(transactProject(state, label, (project) => ({ ...project, documentation: structuredClone(documentation) }))); }, openRepair: (target) => { documentationOpen = false; openProjectEntityWorkspace(target.kind, target.id); if (target.path) {

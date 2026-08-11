@@ -86,6 +86,9 @@
    ["360" "800" "visible"] :narrow-navigation-visible
    ["1440" "900" "hidden"] :wide-navigation-hidden
    ["1440" "900" "visible"] :wide-navigation-visible})
+(def flow002-examples
+  {["3"] :small-catalog
+   ["300"] :large-catalog})
 (def flow005-examples
   {[:model ["Cart" "button_click" "Continue clicked" "chooses button_click from Add by pointer"]] :pointer-activation
    [:model ["Shipping" "add_shipping_info" "Form submitted" "drags add_shipping_info from Add onto Shipping"]] :pointer-drop
@@ -115,6 +118,14 @@
    ["alternative" "Customer details" "ID verification" "no label" "Delete relationship Customer details to ID verification"] :unlabelled})
 (def runtime024-examples
   {["pending" "approved" "manual_review" "declined"] :repeated-page-instances})
+(def flow019-examples
+  {["the selection" "horizontally"] :selection-horizontal
+   ["the selection" "vertically"] :selection-vertical
+   ["Checkout Section" "horizontally"] :section-horizontal
+   ["Checkout Section" "vertically"] :section-vertical})
+(def flow020-examples
+  {["360" "800"] :narrow
+   ["1440" "900"] :wide})
 (def flow026-examples
   {["Generic checkout page" "4" "Customer details" "Payment" "Summary" "Reusable commerce page"]
    :named-page-instances})
@@ -155,6 +166,8 @@
   (when (support/example-value example "navigation")
     (support/assert! (contains? #{:model :runtime} mode) "Unknown Flow 001 evidence mode." {:mode mode})
     (exact-example-key example ["width" "height" "navigation"] ["navigation"] flow001-examples "Unknown Flow 001 viewport example.")))
+(defn flow002-example-key [example]
+  (exact-example-key example ["entity_count"] ["entity_count"] flow002-examples "Unknown Flow 002 entity-count example."))
 (defn runtime009-example-key [example]
   (when (and (support/example-value example "source")
              (support/example-value example "source_port")
@@ -168,6 +181,12 @@
   (exact-example-key example ["kind" "source" "target" "label_state" "accessible_name"] ["label_state" "accessible_name"] runtime023-examples "Unknown runtime023 relationship-deletion example."))
 (defn runtime024-example-key [example]
   (exact-example-key example ["parent_value" "approved_value" "review_value" "declined_value"] ["parent_value"] runtime024-examples "Unknown runtime024 Page-instance example."))
+(defn flow019-example-key [example]
+  (exact-example-key example ["scope" "arrangement"] ["scope" "arrangement"] flow019-examples "Unknown Flow 019 Tidy example."))
+(defn flow020-example-key [example]
+  (when (and (support/example-value example "width")
+             (not (support/example-value example "navigation")))
+    (exact-example-key example ["width" "height"] ["width" "height"] flow020-examples "Unknown Flow 020 viewport example.")))
 (defn flow026-example-key [example]
   (exact-example-key
    example
@@ -181,11 +200,14 @@
     (exact-example-key example ["workspace_mode" "pan_gesture" "horizontal_distance" "vertical_distance"] ["pan_gesture"] (if (= mode :model) flow027-examples runtime027-examples) "Unknown runtime027 pan example.")))
 (defn validate-example! [mode example]
   (flow001-example-key mode example)
+  (flow002-example-key example)
   (flow005-example-key mode example)
   (runtime009-example-key example)
   (runtime010-example-key example)
   (runtime023-example-key example)
   (runtime024-example-key example)
+  (flow019-example-key example)
+  (flow020-example-key example)
   (flow026-example-key example)
   (runtime027-example-key mode example)
   example)
