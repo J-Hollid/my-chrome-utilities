@@ -17,21 +17,68 @@ The current integrated VTD-008 implementation baseline is
 
 | Program | Current state | Next authority |
 |---|---|---|
-| VTD-008 side-panel composition-root decomposition | Active incremental program | The installed Hotkeys controller slice is complete in `9808acce74`, the installed Command Palette controller slice is complete in `5ec9ff34f7`, and the specifier-bounded installed workspace-tabs controller slice awaits explicit user approval. |
+| Feature-development throughput course adjustment | User-directed planning correction | The proposed authority is `docs/feature-development-throughput-course-adjustment-R01.md`; its exact work order awaits explicit user approval before commit or implementation handoff. |
+| VTD-008 side-panel composition-root decomposition | Active incremental program, paused after current slice | The installed Hotkeys and Command Palette slices are complete. The workspace-tabs slice was approved at specification commit `022e8c4e32` and handed to the coder. No later controller slice is active. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Queued and inactive | Requires a user-approved bounded specification slice. |
 | VTD-012 registry and planner modularization | Queued and inactive | Requires a user-approved bounded specification slice. |
+| VTD-017 bounded isolated browser parallelism | Proposed and inactive | Course-adjusted follow-up after VTD-011 and before VTD-016; requires separate user approval and proceeds only while final-gate time remains material. |
 | Product recovery lineages | Open | Resume in the order listed under **Open product recovery queue**, unless later user direction changes it. |
 
 VTD-008 remains active as a program. Completion of the installed Hotkeys
-and Command Palette controllers completes two slices only, not VTD-008. The next
-specifier-bounded candidate completes only the existing workspace-tabs controller
-lifecycle in `src/workspace-tabs-ui.ts`. It does not extract the broader utility
-registry or shell DOM adapter, change workspace-navigation semantics, or activate
+and Command Palette controllers completes two slices only, not VTD-008. The
+approved workspace-tabs slice completes only the existing controller lifecycle in
+`src/workspace-tabs-ui.ts`. It does not extract the broader utility registry or
+shell DOM adapter, change workspace-navigation semantics, or activate
 observation-target, live-session, or another Data Layer controller.
 
-There is no active implementation handoff. The workspace-tabs candidate must be
-explicitly approved by the user before the coder is notified.
+The workspace-tabs implementation handoff is active. After that role chain
+finishes, do not select another VTD-008 controller automatically. Apply the
+feature-development throughput course adjustment and obtain explicit user
+approval for its first bounded implementation slice.
+
+## Feature-development throughput authority
+
+The program's headline outcome is completed user-visible feature slices and their
+elapsed time from approved specification to accepted integration. VTD completion,
+pack count, task count, file size, and lines moved are diagnostic only. A VTD slice
+records an expected payoff and must be checked against later applicable feature
+deliveries.
+
+Safety remains non-negotiable. Use focused checks while a candidate is changing.
+The settled final candidate runs all 20 packs with properties and the package
+check. If that run fails, record and repair the exact cause, prove the repair with
+focused evidence, and rerun all 20 packs on the changed candidate. Do not use the
+full suite as an edit loop, and do not accept a successful full result for a tree
+that later changes.
+
+The proposed final-gate speed work uses one coordinator and one deduplicated plan,
+not 20 competing pack runners. It first balances existing workers through VTD-011,
+then VTD-017 may add bounded browser workers only for tasks with proved profile,
+port, writable-data, evidence, process-lifecycle, and cleanup isolation. A parallel
+failure remains a recorded failure and cannot be retried at lower concurrency to
+turn it green.
+
+The proposed enabling order after the in-flight workspace-tabs slice is VTD-015,
+the bounded VTD-012 first slice, VTD-011, the conditional bounded VTD-017 slice,
+then VTD-016 and one modest real-feature payback check. VTD-011 and VTD-017 move
+ahead of VTD-016 because their final-gate savings apply to VTD-016 and nearly all
+later work; VTD-016 mainly accelerates later Shell and VTD-008 changes. Each slice
+must show its expected elapsed-time benefit on the next applicable slice or stop
+automatic continuation for another bottleneck review.
+
+Every enabling slice requires two visible user reviews: a pre-approval baseline,
+target, expected effort, safety trade-off, and stop condition; then a settled
+plain-language scorecard with actual elapsed-time breakdown, comparable timing,
+full gates, invalidated passes, failures, repairs, reruns, preserved evidence,
+confidence limits, and a continue/adjust/stop recommendation. Do not approve or
+hand off the next enabling slice until the user reviews that scorecard and
+explicitly chooses the course. A provisional benefit measured on the next slice
+must close before recommending anything beyond that next slice.
+
+Until the proposed course adjustment is approved, it authorizes planning and audit
+only. It does not change another role's prompt, handoff validation, verification
+selection, or active evidence leaf.
 
 ## Authority order
 
@@ -130,6 +177,7 @@ Read only the program documents relevant to the selected task.
 | Technical-analyst exact copy | `docs/specification-studio-technical-analyst-copy-R01.md` |
 | Generated branding | `docs/twatility-branding-merge-handover-R02.md` and `assets/brand/ARTWORK.md` |
 | Verification throughput | `docs/verification-throughput-technical-debt-backlog-R01.md` |
+| Feature-development throughput course adjustment | `docs/feature-development-throughput-course-adjustment-R01.md` |
 
 ## Live precedence summary
 

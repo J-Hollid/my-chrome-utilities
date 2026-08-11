@@ -75,8 +75,12 @@ here.
   `9808acce7435343f7005f44cd5346c4395dbb6b5`.
 - The bounded installed Command Palette controller slice completed the normal role
   chain and is integrated at `5ec9ff34f7a97f28ae887f553c31d8d6f7a788ed`.
-  Remaining VTD-008 controllers, remaining VTD-010 pack slices, and VTD-011 through
-  VTD-012 remain inactive.
+- The installed workspace-tabs controller slice was approved at specification
+  commit `022e8c4e32` and handed to the coder. It is the last automatic VTD-008
+  slice before the feature-development throughput course review.
+- Remaining VTD-008 controllers, remaining VTD-010 pack slices, and VTD-011 through
+  VTD-012 remain inactive unless the course-adjusted order explicitly selects a
+  bounded descendant.
 
 ## Executive assessment
 
@@ -122,6 +126,31 @@ For all remaining VTD work:
   active slice's exact settled checkpoint. A ratchet repair permanently reduces
   verification coupling but does not activate another backlog item or controller
   slice.
+
+## Feature-development throughput course adjustment
+
+The user directed a course correction on 2026-08-11. The proposed detailed
+authority is `docs/feature-development-throughput-course-adjustment-R01.md`.
+
+The headline measure becomes completed user-visible feature slices and elapsed
+time from specification approval to accepted integration. Task count, pack count,
+lines moved, and modeled time remain diagnostic only. Behavior-preserving VTD
+slices do not increment the feature count; their claimed payoff must be checked on
+later applicable feature delivery.
+
+The final safety promise remains all 20 packs with properties plus packaging on the
+settled candidate. If that run fails, repair the exact cause with focused evidence
+and rerun all 20 packs on the changed candidate. The course correction targets
+avoidable successful runs on trees that later roles change, overly broad focused
+packs, verification-process coupling, and slow final-gate implementation—not the
+fresh post-repair full run.
+
+Reliable parallel execution is part of the course correction. It means one
+coordinator builds one candidate, creates one deduplicated plan, and assigns only
+independent tasks to bounded isolated workers. It does not mean starting 20
+competing pack runners. Every evidence leaf remains required in the combined
+result, and tasks without proved writable-state and resource isolation remain
+serial.
 
 ## Evidence snapshot
 
@@ -260,10 +289,13 @@ Large items must be split into independently reviewable descendants.
 | VTD-008 | P2 | XL, controller slices | Decomposed production side-panel root | VTD-004 |
 | VTD-009 | P1 | S–M | Exact shell/helper ownership | None |
 | VTD-010 | P3 | S per pack | Fewer redundant Chrome launches | VTD-006 preferred |
-| VTD-011 | P2 | M | Measured terminal shard balance | VTD-001, VTD-002 |
-| VTD-012 | P2 | L, module slices | Modular registry and planner | VTD-004, VTD-005 |
+| VTD-011 | P1 | M | Measured terminal shard balance | VTD-001, VTD-002 |
+| VTD-012 | P0 first slice, P2 remainder | L, module slices | Separate verification-process work, then modularize registry and planner | VTD-004, VTD-005 |
 | VTD-013 | P1 | S–M | Stable Flow examples timing | VTD-002, VTD-007 |
 | VTD-014 | P1 | M | Unreliable tests must be repaired, not retried away | VTD-002, VTD-007 |
+| VTD-015 | P0 | M | Review changing candidates before one final-tree all-20 gate | VTD-014 |
+| VTD-016 | P0 | M | Partition Shell product evidence for a faster inner loop | VTD-004, VTD-006 |
+| VTD-017 | P1 | M, incremental | Bounded isolated parallel browser execution | VTD-001, VTD-002, VTD-007, VTD-011 |
 
 ## Backlog
 
@@ -723,8 +755,8 @@ The installed Command Palette controller slice completed the coder, refactorer,
 and architect chain and was integrated into `master` at
 `5ec9ff34f7a97f28ae887f553c31d8d6f7a788ed`.
 
-Proposed third slice (2026-08-11; awaiting explicit user approval): complete only
-the installed workspace-tabs controller lifecycle. The existing controller in
+Approved third slice (2026-08-11; specification commit `022e8c4e32`): complete
+only the installed workspace-tabs controller lifecycle. The existing controller in
 `src/workspace-tabs-ui.ts` already owns the active workspace state, shell-owned
 storage read and write, tab and panel rendering, focus movement, click routing,
 and Home, End, ArrowLeft, and ArrowRight navigation. Its public `bind` operation
@@ -738,8 +770,7 @@ workspace tab list and DOM query boundary, and page lifecycle enter as explicit
 dependencies. Mount reads the valid persisted workspace or selects and persists
 the canonical Data Layer fallback, owns one click, keydown, and page-lifecycle
 listener set, and performs one initial render. `show` remains the single state
-transition: it
-persists the selected workspace, updates `aria-selected`, roving tab index, and
+transition: it persists the selected workspace, updates `aria-selected`, roving tab index, and
 peer-panel visibility, and focuses the selected tab only when requested. Disposal
 removes every owned listener, leaves the persisted and rendered selection intact,
 and supports one clean remount from persisted state. The composition root retains
@@ -797,9 +828,10 @@ The remaining-VTD verification ratchet applies. An incident-bound brittle check
 exposed by legitimate work is repaired at this task boundary by preserving its
 behavioral or structural invariant; it does not justify a production compatibility
 shim, weakened evidence, unrelated-pack edits, active-assertion deletion, or a
-repository-wide verification cleanup. This proposal authorizes neither Gherkin
-mutation during specification nor coder notification before explicit user
-approval.
+repository-wide verification cleanup. The approved slice is in the role chain and
+activates no later controller. Under the feature-development course adjustment it
+is the final automatic VTD-008 slice and supplies a transition measurement rather
+than a completed-feature count.
 
 ### VTD-009 — Tighten shell and verification-helper ownership
 
@@ -903,7 +935,7 @@ activates no other VTD-010 pack slice.
 
 ### VTD-011 — Balance terminal CI using measured critical-path weights
 
-Priority: P2
+Priority: P1 under the feature-development course adjustment
 
 Problem:
 
@@ -940,7 +972,8 @@ weakening coverage.
 
 ### VTD-012 — Modularize verification registry and planner infrastructure
 
-Priority: P2
+Priority: P0 for the bounded verification-process separation; P2 for remaining
+modularization
 
 Problem:
 
@@ -1214,7 +1247,254 @@ or incompletely mapped inputs rerun; package always runs freshly on the final tr
 prevents bookkeeping-only changes from recursively discarding unrelated product proof
 without allowing a real or uncertain product failure to pass.
 
-## Recommended sequence
+### VTD-015 — Review changing candidates before one final-tree all-20 gate
+
+Priority: P0
+
+Problem:
+
+The coder must currently attach complete handoff evidence before the refactorer and
+architect perform work that may change the candidate. Any later production, test,
+registry, build, or verification change correctly invalidates that passing result
+and forces another full checkpoint. The Command Palette lineage recorded three
+successful 20-pack, 837-task checkpoints before integration.
+
+Required outcome:
+
+- Add an explicit review-ready state that cannot be integrated and does not claim
+  final regression evidence.
+- Coder, refactorer, and architect use focused behavior evidence while the
+  candidate is expected to change.
+- After those roles settle one candidate tree, one named final-verification owner
+  runs all 20 packs with properties and packaging and records durable evidence.
+- Any change to behavior-bearing inputs after that pass invalidates it and requires
+  a new final run.
+- If the final run fails, retain the VTD-014 rule: record the failure, repair and
+  prove the exact cause narrowly, then run all 20 packs freshly on the changed
+  candidate.
+- Record approval, implementation, review, final-verification, repair, and
+  integration timestamps automatically enough to report feature delivery without
+  adding manual ceremony to every role.
+
+Acceptance criteria:
+
+- A simulated candidate changed once by the refactorer and once by the architect
+  performs focused checks during review and exactly one successful all-20 run after
+  the final change.
+- A failing final run followed by a causal repair performs a fresh second all-20
+  run; no earlier failure or passing task is relabelled as final evidence.
+- A review-ready candidate cannot be integrated, broadcast as complete, or reuse
+  an unrelated final receipt.
+- A documentation-only recording step can finish evidence promotion without
+  rerunning unchanged product proof when all bound identities remain equal.
+- All current terminal evidence leaves and the package check remain required on
+  the final tree.
+
+Trade-off and expected value:
+
+Full-suite-only defects are discovered later than they are today, but still before
+integration. The change adds one explicit workflow state and handoff validation.
+Its expected value is very high because it avoids successful full runs that later
+review work immediately invalidates. Replay of the Command Palette sequence must
+demonstrate the saved full runs; task-count reduction alone cannot close the item.
+
+### VTD-016 — Partition Shell product evidence for a faster inner loop
+
+Priority: P0 after the VTD-012 verification-process separation
+
+Problem:
+
+The `shell` pack combines workspace navigation, general presentation, branding,
+package behavior, architectural verification, and verification-process contracts.
+A workspace-tabs controller change therefore selects a roughly 173-second
+verification-process unit, a roughly 92-second combined Schema/workspace browser
+observation, and a roughly 32-second acceptance session containing 19 features.
+
+Required outcome:
+
+- Inventory which Shell evidence can actually observe workspace tabs, general
+  Shell presentation, branding, packaging, architecture, and verification
+  infrastructure.
+- Give those behaviors separate focused boundaries while retaining shared checks
+  wherever one change can genuinely affect several behaviors.
+- Let a workspace-tabs presentation change select its unit and property evidence,
+  its observable accessibility and navigation features, and the workspace
+  containment target without selecting Schema containment or
+  verification-process-only behavior.
+- Keep shared platform, utility-registry, navigation-model, accessibility-kernel,
+  and composition-root changes broad wherever their consumers require it.
+- Preserve all current Shell evidence exactly once in the terminal all-20 plan.
+- Measure focused elapsed time before and after on the same environment class.
+
+Acceptance criteria:
+
+- Changing only the installed workspace-tabs controller does not schedule
+  `test/verification-process-contract-test.mjs` or the Schema-view containment
+  target.
+- Changing the semantic workspace navigation model still selects Command Palette,
+  Hotkeys, and every applicable Shell behavior.
+- Changing `src/side-panel.ts`, the utility registry, or shared platform adapters
+  retains the current broad safety closure.
+- The final terminal plan contains every pre-slice unit, property, feature,
+  handler, browser observation, checkpoint, and package leaf exactly once.
+- A measured focused workspace loop is materially faster; a smaller task count
+  without an elapsed-time improvement does not satisfy the item.
+
+Trade-off and expected value:
+
+The work needs careful evidence mapping because Shell behavior is shared. Incorrect
+partitioning could miss a regression during development, so the final all-20 gate
+remains unchanged and negative planner cases prove shared paths stay broad. The
+expected value is high: it removes clearly unrelated work from a common local
+change and gives failures a smaller, more understandable home.
+
+### VTD-017 — Add bounded isolated parallel browser execution
+
+Priority: P1 after measured lane balancing
+
+Problem:
+
+The runner already uses bounded parallel workers for unit, property, parse,
+generate, acceptance-session, and browser-observation stages. Browser observations
+normally use two workers, while ordinary browser adapters remain serial. The final
+gate is dominated by browser work, but simply launching more pack runners would
+duplicate shared checks, contend over the prepared artifact, fragment receipts,
+and risk resource-driven timeouts.
+
+Required outcome:
+
+- Keep one coordinator, one canonical deduplicated all-20 plan, one prepared build
+  candidate, and one combined pass or fail result.
+- Use VTD-011 timing weights to balance the existing workers before adding more.
+- Prove that every parallel browser task owns its Chrome profile, automatically
+  selected debugging port, temporary writable data, evidence output, child-process
+  lifecycle, and cleanup. Keep an unproved task serial.
+- Audit the ordinary browser adapters, then allow at most two adapter workers for
+  the subset proved independent.
+- Trial browser-observation concurrency three only after the two-worker schedule
+  is balanced. A higher default requires a material typical elapsed-time reduction
+  and focused normal and loaded evidence without a new failure pattern.
+- Preserve stage ordering, explicit dependencies, shared-session batching, and
+  every current assertion and evidence leaf exactly once.
+- Use focused representative stress samples and one ordinary final gate for the
+  concurrency decision. Do not add repeated all-20 rehearsals.
+- Treat a parallel failure as a real recorded failure. Do not automatically retry
+  at lower concurrency or otherwise turn a failing result green.
+
+Acceptance criteria:
+
+- Process-contract fixtures prove that dependent or shared-writable-state tasks
+  cannot enter different workers and that independent tasks can.
+- Two concurrent browser fixtures use distinct profiles, debugging ports,
+  temporary data, and evidence paths; one fixture cannot read or remove the
+  other's state.
+- The canonical plan and combined receipt contain the same terminal tasks,
+  logical targets, assertions, checkpoints, and package result as the serial
+  baseline, with no duplicate leaf.
+- Given the same accepted timing snapshot and worker count, assignment is
+  deterministic and accounts for indivisible long tasks.
+- Focused normal and loaded samples show no new timeout, cleanup, port, profile,
+  or evidence collision pattern. The chosen default improves typical wall time;
+  one unusually fast run is insufficient.
+- A failed worker makes the combined run fail and preserves its evidence without a
+  silent retry.
+
+Dependencies: VTD-001, VTD-002, VTD-007, and VTD-011.
+
+Trade-off and expected value:
+
+The isolation foundations already exist, so the expected effort is medium and can
+be delivered incrementally. The expected value is high when final-gate browser
+work remains a material share of feature delivery. More Chrome processes still
+compete for processor time and memory, so three workers may be slower or less
+stable on a constrained machine. The accepted default is the fastest stable bound,
+not the largest possible worker count.
+
+## Enabling-slice user review gate
+
+The course-adjusted sequence is not an automatic chain. Before each enabling
+slice, provide the user with its measured baseline, target elapsed-time benefit,
+expected effort, safety trade-off, success measure, and stop condition. The slice
+still requires explicit specification approval and the normal coder, refactorer,
+architect, and settled-final-gate review process.
+
+After each slice settles, provide a plain-language scorecard containing its actual
+approval-to-integration time and breakdown, comparable before-and-after elapsed
+times, full-gate count, invalidated passes, failures, repairs, reruns, preserved
+terminal evidence, confidence limits, and continue/adjust/stop recommendation.
+Task count may explain a result but is not the outcome measure.
+
+Do not approve or hand off the next enabling slice until the user has reviewed the
+scorecard and explicitly chosen the course. If the benefit can only be measured on
+the next applicable slice, mark it provisional; that next slice must close the
+payback claim before any further enabling slice is recommended.
+
+## Course-adjusted recommended sequence
+
+The earlier phase order established useful measurement and safety foundations but
+is superseded for new work by the feature-development outcome. Completed items
+remain delivered; they do not create an obligation to finish every remaining item.
+
+### Transition — Finish and measure the in-flight slice
+
+Finish the approved workspace-tabs controller lineage. Record its elapsed-time
+breakdown, successful full checkpoints, failed checkpoints, and verification
+repairs. It is a technical-debt transition measurement, not a completed feature.
+
+Do not automatically activate another VTD-008 controller afterward.
+
+### Phase 1 — Remove avoidable delivery-loop overhead
+
+1. VTD-015 — settle the tree before one final all-20 gate.
+2. VTD-012 bounded first slice — separate verification-process contracts from
+   ordinary product checks and split the monolithic process test by responsibility.
+
+Exit condition: later roles do not invalidate successful full runs unnecessarily,
+and later verification changes have smaller, responsibility-specific contracts.
+
+### Phase 2 — Accelerate the remaining course work
+
+1. VTD-011 — balance terminal work using measured indivisible task weights.
+2. VTD-017 — add bounded isolated parallel browser execution without starting
+   competing pack runners.
+
+Exit condition: the same full evidence finishes faster and remains stable under
+focused normal and loaded measurements. VTD-011 must shorten VTD-017's terminal
+gate; VTD-017 must then shorten VTD-016's final gate. A missed enabling payoff
+stops automatic continuation for another bottleneck review.
+
+### Phase 3 — Narrow the common Shell product loop
+
+VTD-016 — partition Shell product evidence by observable behavior. This slice now
+benefits from the workflow, verification-contract, lane-balancing, and browser
+parallelism improvements delivered before it.
+
+Exit condition: a workspace or similarly small controller change uses only the
+behavior evidence that can observe it, while shared changes and the terminal plan
+retain complete coverage.
+
+### Phase 4 — Prove the compounded payoff on a real feature
+
+Deliver one modest user-visible feature. Count it, record approval-to-integration
+time, and compare its implementation, review, planned-verification, and repair time
+with the transition measurements. If the expected gain is absent, stop and inspect
+the actual new bottleneck before selecting more debt.
+
+### Phase 5 — Continue only from the measured bottleneck
+
+Use VTD-006 and VTD-007 patterns to reduce repeated setup and waiting in the two
+largest layered browser batches only if they still lead the final gate. Audit
+VTD-014 implementation only where measurement shows process overhead, and
+consolidate only demonstrably duplicate enforcement.
+
+Resume VTD-008 or another structural item only when a real upcoming feature would
+otherwise need the global composition root or another proven bottleneck. State the
+expected effort, feature-delivery value, safety trade-off, and later payback check
+before approval.
+
+The historical phase plan below is retained only as delivered-program context.
+
+## Historical recommended sequence
 
 ### Phase A — Establish measurement truth
 
@@ -1272,18 +1552,22 @@ maintenance no longer requires editing several monolithic infrastructure files.
 1. Confirm current `master` and compare it with audit baseline `925efd0b`.
 2. Read the current active-scope document and identify any later verification or
    Flow/schema authority.
-3. Run the locked toolchain checker once.
-4. Inspect `git status`; preserve unrelated user changes.
-5. Use the delivered canonical timing ledger and environment classes; never edit a
+3. Read `docs/feature-development-throughput-course-adjustment-R01.md` and do not
+   reactivate the historical phase order as the current work queue.
+4. Run the locked toolchain checker once.
+5. Inspect `git status`; preserve unrelated user changes.
+6. Use the delivered canonical timing ledger and environment classes; never edit a
    raw receipt to make it eligible.
-6. For VTD-014, inspect repository-common unresolved reliability incidents and the
+7. For VTD-014, inspect repository-common unresolved reliability incidents and the
    sanitized timeout, hit-test, and Property Set settling fixtures before changing
    retry behavior.
-7. Select exactly one backlog id. Do not hand the entire program to one coder as an
+8. Select exactly one backlog id. Do not hand the entire program to one coder as an
    unbounded task.
-8. Write its deterministic contract and evidence-conservation table.
-9. Use task-scoped tests only during specification work; do not run mutation.
-10. Ask the user for explicit approval before committing and sending the coder
+9. State expected effort, expected feature-delivery value, safety trade-off, and
+   the later feature measurement that will prove or reject its payoff.
+10. Write its deterministic contract and evidence-conservation table.
+11. Use task-scoped tests only during specification work; do not run mutation.
+12. Ask the user for explicit approval before committing and sending the coder
     handoff.
 
 ## Handover summary
@@ -1295,7 +1579,10 @@ reliability-repair gate. The bounded Event Library VTD-010 implementation comple
 the coder, refactorer, and architect sequence and is integrated in current `master`
 at `cc2c9a01`. The installed Hotkeys controller is complete in integration baseline
 `9808acce74`. The bounded installed Command Palette controller slice is complete at
-`5ec9ff34f7`. Other VTD-008 controllers and VTD-010 pack slices remain inactive.
+`5ec9ff34f7`. The workspace-tabs controller specification is approved at
+`022e8c4e32` and in flight. It is the last automatic VTD-008 slice before the
+feature-development throughput course adjustment. Other VTD-008 controllers and
+VTD-010 pack slices remain inactive.
 
 After measurement truth, the fastest direct development-time wins are precise
 impact boundaries and layered editor target partitioning. Preserve terminal
@@ -1309,4 +1596,10 @@ guardrail, and its isolated examples regression was stabilized by VTD-013. The
 shared one-megabyte side-panel runtime was modularized by VTD-006. VTD-014 now stops
 exact-checkpoint retries from hiding timeouts, hit-test races, settling failures, and
 other unreliable tests without a causal repair. The largest remaining product-code
-debt is the `src/side-panel.ts` composition root.
+debt is the `src/side-panel.ts` composition root, but debt size no longer determines
+the next work automatically. The next work follows measured feature-delivery
+value: VTD-015, the bounded VTD-012 verification-process separation, VTD-011, the
+conditional bounded VTD-017 parallelism slice, VTD-016, then one real feature
+payback check. This order intentionally lets broad workflow and final-gate
+improvements accelerate the narrower slices that follow. Each enabling claim must
+be checked on the next applicable slice rather than deferred until the end.
