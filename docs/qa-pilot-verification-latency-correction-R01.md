@@ -8,6 +8,13 @@ specification and its first slice on 2026-08-12. This program refines the active
 QA-branch release pilot. It does not reactivate VTD-018, weaken focused or
 terminal coverage, authorize a master promotion, or change product behavior.
 
+During the first slice, incident `95d58b02-80ca-460f-973c-bafe121c29d6`
+exposed a second all-pack route: the reliability handoff gate required terminal
+incident resolution even though the causal fixture repair, exact focused plan,
+and package passed. The user approved a mode-aware correction on 2026-08-12.
+The incident must not be abandoned or resolved in QA and no all-20 checkpoint is
+authorized there.
+
 Each slice is independently reviewable and revertible. The first slice is
 authorized for coder handoff. A later slice requires its own approval after the
 preceding slice's QA scorecard is reviewed.
@@ -29,6 +36,8 @@ same final post-mutation Flow plan twice before recording evidence.
 
 - A product slice never begins an all-20 plan because of an incidental shared
   verification repair. It stops before launch without omitting owned packs.
+- A causally repaired QA reliability incident can advance with durable
+  terminal-verification-deferred state; only master integration resolves it.
 - Flow verification checks observe structured results rather than generated
   source spelling, local names, or statement order.
 - DevTools framing handles standard payload boundaries, while the Flow authoring
@@ -52,8 +61,21 @@ infrastructure slice is specified, approved, integrated into QA, and used as the
 new product base. No override may call an all-20 feature-mode run focused, omit
 owned packs, or claim terminal evidence.
 
-Acceptance authority is Settled candidate final verification 011. The exact
-checkpoint is:
+The same feature-mode boundary applies to the reliability incident gate. After
+an incident has an eligible causal repair, deterministic regression, exact
+focused review-ready evidence, and passing package proof on one candidate, the
+gate records `terminal-verification-deferred`. This permits only the remaining
+focused reviews and QA integration. It preserves the unresolved incident and
+active lineage without calling either the failure or repair terminally proven.
+
+The frozen QA release candidate may later pass such incidents to the architect.
+The one master-integration all-20 checkpoint resolves every matching deferred
+incident on its sealed tree and supplies final-ready evidence. A second all-20
+run is not required. Unrepaired, failing, stale, or identity-mismatched evidence
+continues to block every handoff for which it is insufficient.
+
+Acceptance authority is Settled candidate final verification 011 and 013 plus
+Modular verification packs 150 and 151. The exact checkpoint is:
 
 ```sh
 node scripts/run-focused-acceptance.mjs --pack shell \
@@ -67,6 +89,12 @@ architect QA-ready candidate. By 30 minutes, deterministic preflight fixtures
 must prove both an authorized `flow_graph` plan and a blocked all-20 expansion
 without launching a task. Reaching the ceiling stops the slice for a user
 decision.
+
+The approved mode-aware correction has a separately reported 45-minute ceiling
+from renewed coder receipt and a 20-minute halfway checkpoint. By halfway, a
+fixture must prove that valid focused incident proof permits QA routing while
+final-ready remains blocked, and that the release-candidate route remains open.
+This correction interval does not reset or hide the original slice elapsed time.
 
 ## Slice 2: structured Flow verification proofs
 
