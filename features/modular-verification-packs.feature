@@ -2188,3 +2188,86 @@ Feature: Modular verification packs
       | only its approved specification changes                                             | permit the specifier-to-coder start from current QA                                |
       | changed-path conservation proves no deferred failure, repair, regression, plan, runner, or evidence input changed | permit focused review and QA integration with the ancestor disposition carried |
       | one deferred failure, repair, regression, plan, runner, or evidence input changed    | block until fresh incident-focused proof records a disposition on the exact candidate |
+
+  # Modular verification packs 153
+  Scenario Outline: Modular verification packs 153
+    Given <stylesheet> has declared destination <destination>, style classification <classification>, owner <owner>, consumers <consumers>, QA targets <qa_targets>, and scope root <scope_root>
+    When feature-integration changed-path preflight plans that stylesheet
+    Then the QA plan selects <qa_scope>
+    And the plan records terminal-full obligation <terminal_obligation>
+    And no all-20 feature-mode task launches
+
+    Examples:
+      | stylesheet                              | destination                         | classification | owner      | consumers | qa_targets                       | scope_root        | qa_scope             | terminal_obligation |
+      | src/flow-graph/flow-workspace.css       | flow-graph/flow-workspace.css       | feature-local  | flow_graph | none      | none                             | .documentary-flow | flow_graph           | absent              |
+      | src/flow-graph/flow-workspace-shell.css | flow-graph/flow-workspace-shell.css | shell-bridge   | flow_graph | shell     | none                             | .documentary-flow | flow_graph and shell | absent              |
+      | specification-builder-brand.css         | specification-builder-brand.css     | global         | shell      | none      | STUDIO_GLOBAL_STYLE_SMOKE_TARGET | not applicable    | declared QA targets  | present             |
+
+  # Modular verification packs 154
+  Scenario Outline: Modular verification packs 154
+    Given a stylesheet declaration or its parsed selectors have <invalid_state>
+    When registry validation or feature-integration preflight evaluates the boundary
+    Then validation blocks before changed-path verification starts
+    And the diagnostic identifies the stylesheet, declaration, and violated boundary
+    And no consumer, terminal obligation, or global classification is inferred to make the change pass
+
+    Examples:
+      | invalid_state                                      |
+      | no declared style owner                            |
+      | duplicate or ambiguous ownership                   |
+      | an unknown owner or consumer                       |
+      | an unknown QA smoke target                         |
+      | a feature-local selector escaping its scope root   |
+      | a shell ancestor selector in a feature-local file  |
+      | conflicting local and global classifications       |
+
+  # Modular verification packs 155
+  Scenario Outline: Modular verification packs 155
+    Given current and base registries classify one changed stylesheet with <history_relation>
+    When changed-since planning evaluates its canonical Git change
+    Then planning produces <planning_result>
+    And no path is omitted merely because one registry has narrower ownership
+
+    Examples:
+      | history_relation                                  | planning_result                                                   |
+      | identical valid local declarations                | the exact declared owner and consumer union                        |
+      | a rename between valid local paths                | the conservative union of old and new owners and consumers         |
+      | local ownership changed to a shell bridge         | the conservative union including every newly declared consumer     |
+      | a deletion with readable compatible history       | the historical owner and consumer boundary                         |
+      | missing, malformed, or incompatible history       | a prelaunch conservative-history block                             |
+
+  # Modular verification packs 156
+  Scenario: Modular verification packs 156
+    Given the registry declares every packaged stylesheet once with its verification ownership
+    When the distribution candidate is built
+    Then the build copies every declared stylesheet exactly once
+    And every local HTML stylesheet reference resolves inside the candidate
+    And an undeclared reference, missing declared asset, duplicate destination, or escaping path fails the build
+    And changing static-style declarations cannot silently diverge from the verification registry
+    And a source-to-destination mapping cannot overwrite a compiled or static artifact
+
+  # Modular verification packs 157
+  Scenario: Modular verification packs 157
+    Given Flow presentation rules exist in the two global Specification Studio stylesheets before extraction
+    When they are divided into a Flow-local stylesheet and a Flow-shell bridge
+    Then every moved selector and declaration is accounted for exactly once
+    And every local selector remains beneath the stable Flow root
+    And only the bridge may target the Studio body, workspace pane, navigation, inspector, sticky tools, or Focus Canvas shell
+    And shared brand tokens remain in the global foundation
+    And no unrelated Studio selector moves or changes
+
+  # Modular verification packs 158
+  Scenario Outline: Modular verification packs 158
+    Given the installed Flow workspace renders <presentation_state> before and after stylesheet extraction
+    When its declared style boundary is observed at <viewport> in <display_mode>
+    Then component geometry, computed presentation, visible controls, focus behavior, and responsive containment are equivalent
+    And reduced-motion and forced-colors behavior remain available where applicable
+    And canonical project bytes, Flow revision, and Undo depth remain unchanged
+    And the packaged extension loads the local and bridge assets without a missing reference
+
+    Examples:
+      | presentation_state                          | viewport       | display_mode   |
+      | ordinary canvas with Page and Event cards   | desktop        | ordinary Flow  |
+      | selected Page with visible ports            | 360 by 800     | ordinary Flow  |
+      | open contextual Details and Outline         | desktop        | ordinary Flow  |
+      | complete canvas and overlay controls        | 360 by 800     | Focus Canvas   |

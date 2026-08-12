@@ -21,6 +21,7 @@ The settled-candidate verification workflow is integrated at
 |---|---|---|
 | QA-branch release pilot | Approved for immediate activation on 2026-08-12 | `docs/qa-branch-release-pilot-R01.md` controls feature integration into `qa` and explicit cumulative promotion to `master`. |
 | QA-pilot verification latency correction | Closed after Slice 2 at `e32f9f7c10` by user decision on 2026-08-13 | No coder handoff. Measure the next three ordinary QA product cycles; Slices 3 and 4 remain evidence-triggered backlog items. |
+| QA style verification and Flow modularity | Awaiting one user approval for an ordered overnight batch | On approval, deliver stage-aware style planning, then Flow CSS extraction, then reconstruct and finish Flow relationship snap feedback from each exact QA base without routine user intervention. |
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program, paused after three completed slices | The installed Hotkeys, Command Palette, and workspace-tabs slices are complete. No later controller slice is active. |
@@ -196,6 +197,7 @@ Read only the program documents relevant to the selected task.
 | Verification throughput backlog | `docs/verification-throughput-technical-debt-backlog-R01.md` |
 | QA-branch release pilot | `docs/qa-branch-release-pilot-R01.md` |
 | QA-pilot verification latency correction | `docs/qa-pilot-verification-latency-correction-R01.md` |
+| QA style verification and Flow modularity | `docs/qa-style-verification-and-flow-modularity-program-R01.md` |
 | Stopped VTD-018 experiment | `docs/vtd018-incremental-verification-receipts-R01.md` |
 | Feature-development throughput course adjustment | `docs/feature-development-throughput-course-adjustment-R01.md` |
 
@@ -385,6 +387,8 @@ historical rename/delete handling.
 | Flow verification proof hardening | `--pack flow_graph` |
 | Flow browser-program partitioning | `--pack flow_graph --focused-task unit:test/verification-process-contract-test.mjs` |
 | Flow relationship snap feedback | `--pack flow_graph` |
+| Stage-aware stylesheet ownership | `--pack shell --focused-task unit:test/settled-final-verification-workflow-test.mjs --focused-task unit:test/verification-process-contract-test.mjs` |
+| Flow stylesheet extraction | `--pack flow_graph --pack shell` |
 
 Run the selected packs with:
 

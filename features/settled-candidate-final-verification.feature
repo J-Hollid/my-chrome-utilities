@@ -152,3 +152,27 @@ Feature: Settled candidate final verification
       | qa-ready          | feature integration | permit only QA integration and retain terminal verification deferred           |
       | release-candidate | master integration  | permit only architect terminal review of the frozen QA candidate               |
       | final-ready       | master integration  | block until the deferred incident is resolved by the exact terminal checkpoint |
+
+  # Settled candidate final verification 014
+  Scenario Outline: Settled candidate final verification 014
+    Given a feature-integration candidate changes a stylesheet classified as <style_boundary>
+    When exact changed-path preflight plans QA verification
+    Then it authorizes <qa_verification>
+    And it records terminal-full obligation <terminal_obligation>
+    And QA-ready evidence cannot claim master regression proof
+
+    Examples:
+      | style_boundary                        | qa_verification              | terminal_obligation |
+      | valid feature-local presentation      | owner and declared consumers | absent              |
+      | valid feature-to-shell bridge         | owner and declared consumers | absent              |
+      | shared global presentation foundation | bounded style smoke           | present             |
+      | invalid or undeclared boundary         | no task launch                | absent              |
+
+  # Settled candidate final verification 015
+  Scenario: Settled candidate final verification 015
+    Given the frozen QA release candidate contains one or more recorded style terminal obligations
+    When the architect performs the one user-requested master-integration checkpoint
+    Then all 20 runnable packs execute with properties and package proof on one sealed candidate
+    And a passing final receipt consumes every matching style obligation and supplies final-ready evidence
+    And a failure or behavior-bearing candidate change leaves the obligations active and requires the existing focused repair plus one fresh terminal checkpoint
+    And no additional all-20 run is required for styling merely because the same passing receipt covered other accumulated QA work
