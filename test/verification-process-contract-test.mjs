@@ -9102,12 +9102,36 @@ function terminalDeferralTransitionSchemaRegression(context) {
     preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
     repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
 }
+async function handoffSenderRoutingRegression(context) {
+  const expectedPreRepairFailure = { senderBoundToHelper:false, senderForwardedToGate:false };
+  const expectedRepairResult = { senderBoundToHelper:true, senderForwardedToGate:true };
+  const fixture = {
+    id:"handoff-sender-routing-v1", causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{ helper:"reliability-incident-errors", field:"sender" },
+    expectedPreRepairFailure, expectedRepairResult,
+  };
+  const handoffSource = await readFile(new URL("../swarmforge/scripts/swarm_handoff.bb",
+    import.meta.url), "utf8");
+  const repairResult = {
+    senderBoundToHelper:handoffSource.includes(
+      "(defn reliability-incident-errors [sender headers canonical-commit]"),
+    senderForwardedToGate:handoffSource.includes('(get headers "verified") sender'),
+  };
+  assert.deepEqual(repairResult, expectedRepairResult);
+  const fixtureDigest = verificationDigest(fixture);
+  return { version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
   console.log(JSON.stringify({
     swarmforgeTimeoutRepairRegression:
-      regressionContext.causalCategory === "other:terminal deferral transition schema"
+      regressionContext.causalCategory === "other:handoff sender routing"
+        ? await handoffSenderRoutingRegression(regressionContext)
+        : regressionContext.causalCategory === "other:terminal deferral transition schema"
         ? terminalDeferralTransitionSchemaRegression(regressionContext)
         : regressionContext.causalCategory === "other:isolated CLI fixture dependency closure"
         ? isolatedCliFixtureDependencyRegression(regressionContext)
