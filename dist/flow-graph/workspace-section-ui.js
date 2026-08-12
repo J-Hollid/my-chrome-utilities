@@ -1,6 +1,24 @@
 import { boundsAroundItems, clientPointToFlowPoint, sectionBoundsFromDrag, } from "./workspace.js";
 import { FLOW_PAGE_FRAME_SELECTOR, flowControl, renderedElementBounds } from "./workspace-dom.js";
 import { sectionBoundsAfterKeyboardInput } from "./workspace-section-geometry.js";
+export const FLOW_SECTION_ACTION_LABELS = [
+    "Rename",
+    "Move",
+    "Resize",
+    "Wrap selection",
+    "Remove Section",
+    "Remove with contents",
+];
+export function flowSectionMenuRequest(event) {
+    if (event.type === "contextmenu") {
+        return { clientPosition: { x: event.clientX ?? 0, y: event.clientY ?? 0 } };
+    }
+    if (event.type !== "keydown")
+        return undefined;
+    if (event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey))
+        return {};
+    return undefined;
+}
 const command = (root, detail) => {
     root.dispatchEvent(new CustomEvent("flow-section-command", { bubbles: true, detail }));
 };
@@ -139,7 +157,22 @@ export function installFlowSections(options) {
                 return;
             command(root, { kind: "select", sectionId: id });
         });
+        section.addEventListener("contextmenu", (event) => {
+            if (event.target.closest("[data-page-frame-id],[data-occurrence-id]"))
+                return;
+            const request = flowSectionMenuRequest(event);
+            if (!request)
+                return;
+            event.preventDefault();
+            options.openMenu(section, request);
+        });
         section.addEventListener("keydown", (event) => {
+            const menuRequest = flowSectionMenuRequest(event);
+            if (menuRequest) {
+                event.preventDefault();
+                options.openMenu(section, menuRequest);
+                return;
+            }
             if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
                 command(root, { kind: "select", sectionId: id });
@@ -226,7 +259,9 @@ export function installFlowSections(options) {
                 } }));
         });
         panel.setAttribute("aria-label", `Selected Section ${label} actions`);
-        panel.append(rename, move, resize, wrap, remove, removeContents);
+        const controls = [rename, move, resize, wrap, remove, removeContents];
+        controls.forEach((control, index) => { control.dataset.flowSectionAction = FLOW_SECTION_ACTION_LABELS[index]; });
+        panel.append(...controls);
         return panel;
     };
     return { addPanel, actions };

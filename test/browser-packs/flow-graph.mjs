@@ -54,11 +54,17 @@ class DevtoolsSocket {
     } }
     send(payload) { const body = Buffer.from(JSON.stringify(payload)), mask = Buffer.from([1, 2, 3, 4]); let header; if (body.length < 126)
         header = Buffer.from([129, 128 | body.length]);
-    else {
+    else if (body.length <= 0xffff) {
         header = Buffer.alloc(4);
         header[0] = 129;
         header[1] = 254;
         header.writeUInt16BE(body.length, 2);
+    }
+    else {
+        header = Buffer.alloc(10);
+        header[0] = 129;
+        header[1] = 255;
+        header.writeBigUInt64BE(BigInt(body.length), 2);
     } for (let index = 0; index < body.length; index += 1)
         body[index] ^= mask[index % 4]; this.socket.write(Buffer.concat([header, mask, body])); }
     call(method, params = {}) {

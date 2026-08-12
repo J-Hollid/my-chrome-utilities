@@ -48,6 +48,9 @@ import {
 const execFileAsync=promisify(execFile);
 const flowGraphAdapterSource=readFileSync("test/browser-packs/flow-graph.mjs","utf8");
 assert.match(flowGraphAdapterSource,
+  /body\.length <= 0xffff[^]*header\.writeBigUInt64BE\(BigInt\(body\.length\), 2\)/u,
+  "the Flow DevTools adapter must transmit generated browser programs larger than 65,535 bytes");
+assert.match(flowGraphAdapterSource,
   /timeoutMs:browserShard==="examples"[\s\S]*?:\s*Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u,
   "non-example Flow readiness must consume the owning logical target budget instead of an unrelated five-second ceiling");
 
@@ -456,11 +459,11 @@ assert.match(drawRuntimeProgram,
 assert.equal(drawRuntimeProgram.match(/pointer\(canvas,'pointerdown',\{pointerId:51/gu)?.length,1,
   "the draw proof must retain one real semantic pointer gesture");
 assert.match(drawRuntimeProgram,
-  /const sectionGroup=.*:scope > \[data-section-dropzone\][^]*salesGroup=sectionGroup\(sales\.id\)[^]*pointer\(salesGroup,'pointerdown',\{pointerId:52[^]*pointer\(salesGroup,'pointerup',\{pointerId:52/u,
+  /const sectionGroup=.*:scope > \[data-section-dropzone\][^]*const candidate=sectionGroup\(sales\.id\);return candidate\?\.isConnected&&candidate[^]*pointer\(salesGroup,'pointerdown',\{pointerId:52[^]*pointer\(salesGroup,'pointerup',\{pointerId:52/u,
   "the Section move proof must target the direct-manipulation group rather than a member Page that shares its Section id");
 assert.match(drawRuntimeProgram,
-  /salesGroup\.dispatchEvent\(new MouseEvent\('click'[^]*refresh\(\);salesGroup=await waitFor\(\(\)=>\{const candidate=sectionGroup\(sales\.id\);return candidate\?\.isConnected&&candidate;\},'current Sales Section group'\)[^]*pointer\(salesGroup,'pointerdown',\{pointerId:52/u,
-  "the Section move proof must reacquire the current rendered group after selection rerenders the canvas");
+  /salesGroup=await waitFor\([^]*'current Sales Section group'\)[^]*openSectionMenu\(salesGroup\)[^]*pointer\(salesGroup,'pointerdown',\{pointerId:52/u,
+  "the Section menu and move proofs must share the current rendered direct-manipulation group");
 assert.match(drawRuntimeProgram,/expectedSectionCount/u,
   "draw persistence timeout diagnostics must retain section-count state");
 const eventExampleSeedProgram=flowGraphEventExampleSeed({

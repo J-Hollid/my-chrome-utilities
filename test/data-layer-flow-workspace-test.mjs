@@ -23,6 +23,7 @@ import {
 } from "../dist/flow-graph/workspace.js";
 import {flowOutlineProjection} from "../dist/flow-graph/workspace-outline-model.js";
 import {flowPanClickSuppression,flowPanStartAllowed,flowPanToPinch} from "../dist/flow-graph/workspace-camera-ui.js";
+import {FLOW_SECTION_ACTION_LABELS,flowSectionMenuRequest} from "../dist/flow-graph/workspace-section-ui.js";
 import {sectionBoundsAfterKeyboardInput} from "../dist/flow-graph/workspace-section-geometry.js";
 import {flowSelectionContains,primaryFlowSelection,selectionAfterActivation,selectionAfterRemoval} from "../dist/flow-graph/workspace-selection.js";
 import {createDurablePersistenceReadiness} from "../dist/durable-project/persistence-readiness.js";
@@ -151,6 +152,12 @@ const sectionBounds={x:100,y:80,width:320,height:220};
 assert.deepEqual(sectionBoundsAfterKeyboardInput(sectionBounds,"ArrowRight",false),{x:120,y:80,width:320,height:220});
 assert.deepEqual(sectionBoundsAfterKeyboardInput(sectionBounds,"ArrowRight",true),{x:100,y:80,width:340,height:220},"Arrow keys on the resize handle resize instead of moving the Section");
 assert.deepEqual(sectionBoundsAfterKeyboardInput({x:0,y:0,width:240,height:140},"ArrowLeft",true),{x:0,y:0,width:240,height:140},"keyboard resize respects the minimum Section size");
+assert.deepEqual(FLOW_SECTION_ACTION_LABELS,["Rename","Move","Resize","Wrap selection","Remove Section","Remove with contents"],"the Section context menu exposes the complete existing action set");
+assert.deepEqual(flowSectionMenuRequest({type:"contextmenu",clientX:420,clientY:240}),{clientPosition:{x:420,y:240}},"a secondary pointer action places the Section menu at its invocation point");
+assert.deepEqual(flowSectionMenuRequest({type:"keydown",key:"ContextMenu",shiftKey:false}),{},"the dedicated keyboard context-menu command opens the focused Section menu");
+assert.deepEqual(flowSectionMenuRequest({type:"keydown",key:"F10",shiftKey:true}),{},"Shift+F10 opens the focused Section menu");
+assert.equal(flowSectionMenuRequest({type:"keydown",key:"F10",shiftKey:false}),undefined,"plain F10 does not open the Section menu");
+assert.equal(flowSectionMenuRequest({type:"keydown",key:"Enter",shiftKey:false}),undefined,"ordinary Section activation remains distinct from its context menu");
 
 const flowCss=await readFile(new URL("../specification-builder-brand.css",import.meta.url),"utf8");
 const flowWorkspaceUi=await readFile(new URL("../src/flow-graph/workspace-ui.ts",import.meta.url),"utf8");

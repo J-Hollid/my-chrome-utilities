@@ -59,7 +59,7 @@ export function upgradeFlowWorkspace(root) {
         canvas, viewport, camera: () => view.camera,
         save(camera) { saveView({ ...view, camera, cameraInitialized: true }); },
     });
-    const sectionUi = installFlowSections({ root, canvas, viewport, camera: () => view.camera, closeSurface });
+    const sectionUi = installFlowSections({ root, canvas, viewport, camera: () => view.camera, closeSurface, openMenu: showSectionMenu });
     for (let item = workspace.firstElementChild; item && item !== legacyToolbar;) {
         const next = item.nextElementSibling;
         item.hidden = true;
@@ -112,6 +112,23 @@ export function upgradeFlowWorkspace(root) {
         else
             restoreFlowInvoker(projectId, flowId);
     }
+    function showSectionMenu(section, request) {
+        rememberFlowInvoker(projectId, flowId, section);
+        saveView({ ...view, surface: undefined });
+        surface.hidden = false;
+        restoreDetailsNodes();
+        surfaceBody.replaceChildren(sectionUi.actions(section));
+        surfaceHeading.textContent = `${section.querySelector("text")?.textContent?.trim() || "Section"} actions`;
+        toolbar.querySelectorAll("[data-flow-surface]").forEach((button) => button.setAttribute("aria-expanded", "false"));
+        placeSurface(request.clientPosition);
+        surfaceBody.querySelector("button")?.focus({ preventScroll: true });
+    }
+    surface.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape")
+            return;
+        event.preventDefault();
+        closeSurface();
+    });
     const surfaceButton = (label, kind) => {
         const result = flowControl(label, () => showSurface(view.surface === kind ? undefined : kind, result));
         result.dataset.flowSurface = kind;

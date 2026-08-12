@@ -3,7 +3,7 @@ import { installFlowCamera } from "./workspace-camera-ui.js";
 import { decorateCompactFlowCards } from "./workspace-card-ui.js";
 import { flowControl } from "./workspace-dom.js";
 import { prepareFlowOutline } from "./workspace-outline-ui.js";
-import { installFlowSections } from "./workspace-section-ui.js";
+import { installFlowSections, type FlowSectionMenuRequest } from "./workspace-section-ui.js";
 import { createFlowTidyPanel } from "./workspace-tidy-ui.js";
 import { flowWorkspaceView, rememberFlowInvoker, restoreFlowInvoker, saveFlowWorkspaceView } from "./workspace-view-state.js";
 
@@ -74,7 +74,7 @@ export function upgradeFlowWorkspace(root: HTMLElement): void {
     canvas, viewport, camera: () => view.camera,
     save(camera) { saveView({ ...view, camera, cameraInitialized: true }); },
   });
-  const sectionUi = installFlowSections({ root, canvas, viewport, camera: () => view.camera, closeSurface });
+  const sectionUi = installFlowSections({ root, canvas, viewport, camera: () => view.camera, closeSurface, openMenu: showSectionMenu });
   for (let item = workspace.firstElementChild; item && item !== legacyToolbar;) {
     const next = item.nextElementSibling;
     (item as HTMLElement).hidden = true;
@@ -124,6 +124,22 @@ export function upgradeFlowWorkspace(root: HTMLElement): void {
     if (kind) placeSurface(client);
     else restoreFlowInvoker(projectId, flowId);
   }
+  function showSectionMenu(section: SVGGraphicsElement, request: FlowSectionMenuRequest): void {
+    rememberFlowInvoker(projectId, flowId, section as unknown as HTMLElement);
+    saveView({ ...view, surface: undefined });
+    surface.hidden = false;
+    restoreDetailsNodes();
+    surfaceBody.replaceChildren(sectionUi.actions(section));
+    surfaceHeading.textContent = `${section.querySelector("text")?.textContent?.trim() || "Section"} actions`;
+    toolbar.querySelectorAll<HTMLButtonElement>("[data-flow-surface]").forEach((button) => button.setAttribute("aria-expanded", "false"));
+    placeSurface(request.clientPosition);
+    surfaceBody.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
+  }
+  surface.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    closeSurface();
+  });
   const surfaceButton = (label: string, kind: FlowWorkspaceSurface): HTMLButtonElement => {
     const result = flowControl(label, () => showSurface(view.surface === kind ? undefined : kind, result));
     result.dataset.flowSurface = kind;
