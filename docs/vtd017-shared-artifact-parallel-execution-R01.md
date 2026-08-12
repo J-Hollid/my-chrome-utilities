@@ -1,6 +1,6 @@
 # VTD-017 shared-artifact parallel execution R01
 
-Status: approved by the user for coder handoff on 2026-08-11
+Status: integrated at `723ebf6eb5` on 2026-08-12; settled scorecard recorded
 
 Prepared: 2026-08-11
 
@@ -69,8 +69,9 @@ one universal focused-run claim.
   overlap with no per-task artifact wait.
 - Use measured indivisible job durations for a deterministic three-worker
   candidate. Accept three only when the exact `--pack layered_schema` normal plan
-  is at least 60 seconds faster than two workers and a loaded sample introduces no new
-  timeout, cleanup, port, profile, temporary-data, evidence, or artifact failure.
+  is at least 60 seconds faster than two workers and a loaded sample introduces
+  no new timeout, cleanup, port, profile, temporary-data, evidence, or artifact
+  failure.
 - Keep tasks with shared writable state or unproved dependencies serial or in the
   same worker.
 - Preserve each browser task's private Chrome profile, automatically selected
@@ -135,3 +136,61 @@ final-gate time, worker count, useful overlap, lock wait, failures, repairs,
 reruns, and preserved evidence. The user then decides whether the next bounded
 target is incremental durable receipt recording. That later item remains inactive
 until separately reviewed and approved.
+
+## Settled outcome scorecard
+
+VTD-017 was accepted into `master` at 02:38:17 CEST on 2026-08-12. From the
+approved coder handoff at 23:02:48 CEST, delivery took 3 hours 35 minutes 28
+seconds. That exceeded the 1.5-to-3-hour estimate by 35 minutes 28 seconds.
+
+The durable role records show:
+
+- coder review-ready evidence recorded at 23:41:12 after a 3-minute-9-second
+  focused run;
+- refactorer review-ready evidence recorded at 23:59:40 after a
+  4-minute-49-second focused run;
+- no coder or refactorer all-20 checkpoint;
+- three focused reliability incidents around read-only lease compatibility,
+  each causally repaired with a passing focused regression;
+- two successful architect all-20 checkpoints, both with properties and package
+  proof; and
+- zero failing final checkpoints, but the first successful checkpoint was
+  invalidated by a later executable handoff-validator correction.
+
+The final checkpoint used two observation workers. Its commit-to-evidence upper
+bound was 17 minutes 43 seconds, compared with the 21-minute-26-second VTD-015
+baseline and 21-minute-42-second workspace-tabs baseline. It therefore proves at
+least 3 minutes 43 seconds saved against the newer baseline and at least 3 minutes
+59 seconds against workspace tabs. The less-than-three-minute stop condition did
+not fire. The 17-minute-30-second target cannot be claimed from the durable record;
+the upper bound is 13 seconds above it and includes an unknown small delay before
+the command began.
+
+The exact final task timings reconstruct the two-worker browser-observation stage
+at 5 minutes 17 seconds, inside the 5-minute-45-second target. The 13 jobs contain
+10 minutes 22 seconds of work, giving about 5 minutes 5 seconds of useful overlap.
+This is consistent with removing the old child lock wait. Three workers remain
+disabled because no qualifying exact Layered Schema normal-and-loaded comparison
+was durably recorded.
+
+Every final task passed, every canonical runnable pack appears exactly once, the
+package task passed, and the evidence is bound to one task, base, commit, tree,
+artifact, registry, and toolchain. The integrated validators accept that exact
+final-ready claim. No routine second run was added by the specifier.
+
+Two confidence limits matter:
+
+- The final Git note preserves task durations and identities but not the raw
+  coordination fields for exact complete-gate time, child artifact wait, and
+  measured overlap. The figures above therefore use the conservative
+  commit-to-evidence bound and a deterministic reconstruction from the exact task
+  timings.
+- The modeled critical path of all recorded final tasks is about 11 minutes 16
+  seconds, leaving roughly 6.5 minutes of the observed upper bound outside task
+  execution. Receipt and checkpoint recording remain the strongest measured next
+  bottleneck.
+
+Decision recommendation: accept VTD-017 as a worthwhile but smaller-than-forecast
+gain. Review a bounded VTD-018 proposal next, with durable preservation of the
+timing summary included in that contract. Do not activate VTD-018 or another debt
+slice until the user weighs this scorecard and explicitly approves the next scope.

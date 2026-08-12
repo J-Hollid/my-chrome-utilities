@@ -1,7 +1,7 @@
 # VTD-015 settled-candidate final-verification workflow R01
 
-Status: integrated at `bdd29f8c87`; time-saving claim remains provisional until
-the first live payback slice
+Status: integrated at `bdd29f8c87`; first live payback measured by VTD-017 with a
+mixed process result
 
 Approved: 2026-08-11
 
@@ -227,5 +227,8 @@ evidence only. The architect performs the one settled all-20 gate, with a second
 run permitted only after a recorded final failure and repair. If an earlier role
 starts all 20, review-ready work can integrate, terminal evidence shrinks, or the
 elapsed result shows no useful saving, stop the enabling sequence and reassess.
-The user approved VTD-017's exact bounded contract on 2026-08-11, making it the
-active live payback measurement.
+The user approved VTD-017's exact bounded contract on 2026-08-11. Its coder and
+refactorer used focused review-ready evidence, but the architect needed two
+successful all-20 checkpoints because a later executable validator correction
+invalidated the first. VTD-015 therefore proved that earlier review roles can
+avoid full gates, but did not yet prove a one-checkpoint end-to-end lineage.

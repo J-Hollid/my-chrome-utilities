@@ -296,8 +296,8 @@ Large items must be split into independently reviewable descendants.
 | VTD-014 | P1 | M | Unreliable tests must be repaired, not retried away | VTD-002, VTD-007 |
 | VTD-015 | P0 | M | Review changing candidates before one final-tree all-20 gate | VTD-014 |
 | VTD-016 | P1, deferred | M | Partition Shell product evidence for a faster inner loop | VTD-004, VTD-006 |
-| VTD-017 | P0 next slice | S–M, bounded | Shared-artifact parallel browser execution in focused and final plans | VTD-001, VTD-002, VTD-007 |
-| VTD-018 | P0 after VTD-017 review | M | Incremental durable task-result recording | VTD-014, VTD-015 |
+| VTD-017 | Complete | S–M, bounded | Shared-artifact parallel browser execution in focused and final plans | VTD-001, VTD-002, VTD-007 |
+| VTD-018 | Recommended next decision, inactive | M | Incremental durable task-result recording | VTD-014, VTD-015 |
 
 ## Backlog
 
@@ -1390,9 +1390,10 @@ change and gives failures a smaller, more understandable home.
 
 ### VTD-017 — Add bounded shared-artifact parallel browser execution
 
-Priority: P0 next bounded slice under the 2026-08-11 course adjustment
+Priority: completed bounded slice under the 2026-08-11 course adjustment
 
-Status: exact bounded contract approved by the user on 2026-08-11
+Status: integrated at `723ebf6eb5` on 2026-08-12; settled scorecard is in
+`docs/vtd017-shared-artifact-parallel-execution-R01.md`
 
 Problem:
 
@@ -1477,7 +1478,8 @@ stable bound, not the largest possible worker count.
 
 ### VTD-018 — Record verification task results incrementally
 
-Priority: P0 only after the VTD-017 scorecard is reviewed
+Priority: recommended next decision; inactive until the user reviews the VTD-017
+scorecard and approves an exact bounded contract
 
 Problem:
 
@@ -1489,6 +1491,13 @@ about 4.5 seconds of parallel work but occupied 123.266 seconds. Those two cheap
 stages therefore spent about 230 seconds outside their task execution. The later
 VTD-015 receipt shows the same roughly 5-minute-37-second difference between
 modeled task wall time and complete elapsed time.
+
+The VTD-017 final record reinforces this bottleneck. Its exact task durations
+model to about 11 minutes 16 seconds, while the final commit-to-evidence upper
+bound was 17 minutes 43 seconds. The durable Git note also omitted the raw
+coordination timing summary needed for an exact scorecard. A bounded VTD-018
+contract should therefore preserve that summary while removing repeated growing
+receipt writes.
 
 Required outcome:
 
@@ -1512,8 +1521,8 @@ Acceptance criteria:
 - Parse and generation recording overhead no longer turns seconds of work into
   minutes, and complete-gate elapsed time materially improves.
 
-Dependencies: VTD-014 and VTD-015. This item remains inactive until VTD-017
-settles, its scorecard is reviewed, and the user separately approves a bounded
+Dependencies: VTD-014 and VTD-015. This item remains inactive until the user
+reviews the settled VTD-017 scorecard and separately approves a bounded
 specification.
 
 ## Enabling-slice user review gate
@@ -1551,14 +1560,13 @@ Do not automatically activate another VTD-008 controller afterward.
 
 ### Phase 1 — Remove avoidable delivery-loop overhead
 
-VTD-015 is complete. Use bounded VTD-017 as its first live payback measurement:
-remove per-task artifact-lock serialization in focused and final verification,
-then conditionally accept a third browser worker from focused normal and loaded
-evidence.
+VTD-015 and VTD-017 are complete. VTD-017 removed per-task artifact-lock
+serialization in focused and final verification and retained two browser workers.
 
-Exit condition: coder and refactorer start no all-20 run, the architect owns the
-one settled final gate, the browser-observation stage falls to at most 345 seconds,
-the complete gate falls to at most 17 minutes 30 seconds, and all evidence remains.
+Outcome: coder and refactorer started no all-20 run, the reconstructed browser
+stage fell to 317 seconds, and all evidence remained. A later architect validator
+correction invalidated the first successful all-20 pass, and the durable record
+cannot prove the exact 17-minute-30-second complete-gate target.
 
 ### Phase 2 — Remove durable-recording amplification
 

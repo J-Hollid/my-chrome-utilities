@@ -1,8 +1,8 @@
 # Feature-development throughput course adjustment R01
 
-Status: approved by the user and committed at `2b093eec4f`; bounded VTD-017 was
-approved on 2026-08-11; its scorecard and a new explicit decision are required
-before another enabling slice
+Status: approved by the user and committed at `2b093eec4f`; bounded VTD-017 is
+integrated at `723ebf6eb5`; its settled scorecard and a new explicit decision are
+required before another enabling slice
 
 Prepared: 2026-08-11
 
@@ -143,9 +143,9 @@ the browser-observation scheduler reported two workers, several second workers
 waited for an exclusive `dist` artifact lock while the first browser task ran. The
 largest wait was 195.4 seconds inside a 231.9-second task. The nominal two-worker
 setting therefore did not provide two-way execution for that part of the stage.
-VTD-017 must first separate exclusive build or promotion writes from safe
-read-only use of one validated immutable artifact. Only then is increasing the
-Chrome worker count a meaningful experiment.
+VTD-017 subsequently separated exclusive build or promotion writes from safe
+read-only use of one validated immutable artifact. It retained two workers because
+three did not receive qualifying normal-and-loaded evidence.
 
 ### Shared verification files are development bottlenecks
 
@@ -211,11 +211,11 @@ worth more than saving ten minutes only from one feature type.
 | VTD-016 | Later Shell features and any future VTD-008 controller slice | Narrows Shell-focused work, but does little for non-Shell VTD slices |
 | VTD-014 audit | Later work only if measurement finds duplicated enforcement | Its possible payoff is broad, but currently less certain than the measured bottlenecks above |
 
-The detailed receipt changes the recommendation. Take VTD-017 first; the existing
-two-worker order is within about six seconds of balanced after lock wait is
-removed, so a standalone VTD-011 slice has negligible immediate value. Consider
-VTD-018 only after VTD-017 reports its actual gate reduction. Each slice must
-demonstrate elapsed-time value before another is approved.
+VTD-017 then proved at least a 3-minute-43-second final-gate saving with two
+workers. Its scorecard leaves receipt recording as the strongest measured next
+bottleneck, while standalone VTD-011 still has negligible immediate value. Review
+a bounded VTD-018 proposal next, but do not activate it without a separate user
+decision.
 
 ## Ranked course-adjusted work
 
@@ -397,14 +397,14 @@ controller slice and integrated at `ad002047a3`. Record its
 feature-delivery-style elapsed-time breakdown as a transition measurement. It
 remains technical debt and does not increment the completed-feature count.
 
-With it complete, and with VTD-015 now integrated:
+With workspace tabs, VTD-015, and VTD-017 now complete:
 
 1. Do not automatically pick another VTD-008 controller.
-2. Take bounded VTD-017 next. Remove the measured artifact-lock wait from focused
-   and final browser plans, then accept three workers only if focused normal and
-   loaded measurements prove that the extra worker is both useful and stable.
-3. Review the VTD-017 scorecard with the user. If durable-result recording remains
-   a leading cost, specify VTD-018 separately; do not activate it automatically.
+2. Record VTD-017 as complete with two workers and at least 3 minutes 43 seconds
+   saved from its final gate.
+3. Review the VTD-017 scorecard with the user. Because durable-result recording
+   remains a leading cost, specify VTD-018 separately; do not activate it
+   automatically.
 4. Follow the new measured longest path. VTD-012 and VTD-016 remain candidates,
    while standalone VTD-011 stays deferred because the current two-worker order
    is already within about six seconds of balanced once lock waiting is removed.
@@ -414,12 +414,13 @@ With it complete, and with VTD-015 now integrated:
 6. Continue architecture extraction only where a measured delivery bottleneck
    shows that it is the next limiting factor.
 
-Measure each enabling claim as the sequence proceeds. VTD-017 must shorten its
-own final gate and also record whether focused multi-observation plans improve.
-If approved, VTD-018 must demonstrate the VTD-017 saving on its own delivery and
-remove the measured receipt-writing cost. Later work is then chosen from the new
-longest path rather than from the old task order. A missed payback stops automatic
-continuation and triggers another bottleneck review.
+Measure each enabling claim as the sequence proceeds. VTD-017 shortened its own
+final gate, but its durable note did not preserve exact coordination wall metrics.
+If approved, VTD-018 must preserve those metrics, demonstrate the VTD-017 saving
+on its own delivery, and remove the measured receipt-writing cost. Later work is
+then chosen from the new longest path rather than from the old task order. A
+missed payback stops automatic continuation and triggers another bottleneck
+review.
 
 After each numbered slice, present its scorecard and recommendation to the user.
 Do not approve or hand off the next enabling slice until the user explicitly
