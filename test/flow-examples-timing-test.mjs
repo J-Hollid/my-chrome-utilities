@@ -530,12 +530,21 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       :value,
     digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
     sourceShapeRepair=context.causalCategory==="other:Flow Section evidence source-shape coupling",
+    targetSelectionRepair=context.causalCategory==="other:Flow structured target selection",
     largeFrameRepair=context.causalCategory==="other:Flow DevTools large-program frame encoding",
     keyboardFocusRepair=context.causalCategory==="other:Flow keyboard focus observation ordering",
     sectionTargetRepair=context.causalCategory==="other:unambiguous synthetic Section target",
     sectionGenerationRepair=context.causalCategory==="other:current rendered Section gesture target",
     eventSeedRepair=context.causalCategory==="other:fresh durable Event example seed",
-    fixture=sourceShapeRepair?{id:"flow-section-evidence-structure-v1",
+    fixture=targetSelectionRepair?{id:"flow-structured-target-selection-v1",
+      causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{requestedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",
+        selectedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET"},
+      expectedPreRepairFailure:{supportedTargets:["FLOW_WORKSPACE_AUTHORING_TARGET"],
+        controlsPartitionAccepted:false},
+      expectedRepairResult:{supportedTargets:["FLOW_WORKSPACE_AUTHORING_TARGET",
+        "FLOW_WORKSPACE_CONTROLS_TARGET"],controlsPartitionAccepted:true}}
+      :sourceShapeRepair?{id:"flow-section-evidence-structure-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{sectionTarget:"current direct-manipulation group",invocation:"context menu before move"},
       expectedPreRepairFailure:{currentTargetRecognized:false,menuRouteRecognized:false},
@@ -577,7 +586,12 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         expectedRepairResult:{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
           usesLogicalRemainingBudget:true}},
     preRepairResult=fixture.expectedPreRepairFailure,
-    repairResult=sourceShapeRepair
+    repairResult=targetSelectionRepair
+      ?{supportedTargets:["FLOW_WORKSPACE_AUTHORING_TARGET","FLOW_WORKSPACE_CONTROLS_TARGET"],
+        controlsPartitionAccepted:flowAuthoringProofResult({...flowAuthoringProofContract,
+          requestedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",
+          selectedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET"}).valid}
+      :sourceShapeRepair
       ?{currentTargetRecognized:flowSectionTargetState({connected:true,directDropzone:true}),
         menuRouteRecognized:flowAuthoringProofResult(flowAuthoringProofContract).valid}
       :largeFrameRepair
