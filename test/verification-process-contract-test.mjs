@@ -1884,10 +1884,11 @@ try {
   const timeoutCanonicalIdentities = timeoutCanonicalPlan.tasks.map(verificationTaskIdentity);
   let canonicalRepairIdentities = timeoutCanonicalIdentities;
   let incidentNumber = 0;
+  let incidentNow = "2026-08-09T00:00:00.000Z";
   const store = createTimeoutIncidentStore({
     root:incidentFixtureRoot,
     storeDirectory:path.join(incidentFixtureRoot, "incidents"),
-    now:() => "2026-08-09T00:00:00.000Z",
+    now:() => incidentNow,
     randomId:() => `incident-${++incidentNumber}`,
     isAncestor:async (ancestor, descendant) => ancestor === descendant ||
       ancestor === "failed-commit" && ["repair-commit", "rebased-commit", "reclaimed-commit"].includes(descendant) ||
@@ -2462,6 +2463,18 @@ console.log("repairTmp=" + process.env.TMPDIR);
   assert.equal(deferred.state, "unresolved",
     "feature integration defers terminal proof without resolving the incident");
   assert.equal(deferred.terminalVerificationDeferred.status, "terminal-verification-deferred");
+  incidentNow = "2026-08-09T00:00:01.000Z";
+  const repeatedDeferral = await store.deferTerminalVerification(first.id, {
+    candidate:{ commit:"repair-commit", tree:"repair-tree" },
+    reviewReady:{ task:"qa-pilot-fanout-stop", baseCommit:"approved-base",
+      candidateCommit:"repair-commit", candidateTree:"repair-tree",
+      receiptSha256:"4".repeat(64),
+      focusedTaskKeys:[failure.task.key, regressionKey] },
+    package:{ path:"build/package/my-chrome-utilities.zip", digest:"5".repeat(64) },
+  });
+  assert.equal(repeatedDeferral.transitions.filter(
+    ({ type }) => type === "terminal-verification-deferred").length, 1,
+  "revalidating the same handoff proof does not append a duplicate durable transition");
   assert.equal((await store.blockingForHandoff({ commit:"repair-commit",
     readiness:"review-ready" })).some(({ id }) => id === first.id), false,
   "exact deferred proof permits focused review routing");

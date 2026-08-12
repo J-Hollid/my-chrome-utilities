@@ -68,6 +68,7 @@ import {
 } from "./verification-task-succession.mjs";
 import {
   formatReviewReadyScopePreflight,
+  reviewReadyProductCandidatePath,
   reviewReadyScopePreflight,
 } from "./settled-final-verification-policy.mjs";
 import {
@@ -1575,9 +1576,7 @@ export async function runFocusedAcceptance(
   let bindingPlan;
   if (changedSince && options.packIds.length) {
     bindingPlan = planVerification(packs, { ...options, packIds:[] });
-    const productCandidate = bindingPlan.changedPaths.some((changedPath) =>
-      changedPath.startsWith("src/") || changedPath.startsWith("dist/") ||
-      /^(?:manifest\.json|[^/]+\.(?:css|html))$/u.test(changedPath));
+    const productCandidate = bindingPlan.changedPaths.some(reviewReadyProductCandidatePath);
     if (productCandidate) {
       const timingBaseline = JSON.parse(await readFile(
         path.join(repositoryRoot, "verification", "timing-baseline.json"), "utf8"));

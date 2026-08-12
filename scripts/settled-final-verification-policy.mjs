@@ -5,6 +5,12 @@ function nonNegativeFinite(value, label) {
   return value;
 }
 
+export function reviewReadyProductCandidatePath(changedPath) {
+  return changedPath.startsWith("src/") || changedPath.startsWith("dist/") ||
+    changedPath.startsWith("assets/") ||
+    /^(?:manifest\.json|[^/]+\.(?:css|html))$/u.test(changedPath);
+}
+
 export function reviewReadyScopePreflight({
   approvedPackIds, plannedPackIds, taskCount, criticalPathEstimateMs, changedOwners = {},
   startedAtMs, nowMs = Date.now(), effortCeilingMs, allPackIds,

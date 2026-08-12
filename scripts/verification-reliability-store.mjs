@@ -456,17 +456,25 @@ export function createTimeoutIncidentStore({
             !shaPattern.test(proof.package?.digest ?? "")) {
           throw new Error(`Reliability incident ${id} terminal deferral proof is stale or incomplete`);
         }
-        const at = now();
-        const withoutDigest = {
+        const proofDisposition = {
           status:"terminal-verification-deferred",
           candidate:structuredClone(proof.candidate),
           repairDigest:timeoutIncidentDigest(incident.repair),
           reviewReady:structuredClone(proof.reviewReady),
           package:structuredClone(proof.package),
-          recordedAt:at,
         };
+        const currentProof = incident.terminalVerificationDeferred && {
+          status:incident.terminalVerificationDeferred.status,
+          candidate:incident.terminalVerificationDeferred.candidate,
+          repairDigest:incident.terminalVerificationDeferred.repairDigest,
+          reviewReady:incident.terminalVerificationDeferred.reviewReady,
+          package:incident.terminalVerificationDeferred.package,
+        };
+        if (currentProof && timeoutIncidentDigest(currentProof) ===
+            timeoutIncidentDigest(proofDisposition)) return incident;
+        const at = now();
+        const withoutDigest = { ...proofDisposition, recordedAt:at };
         const disposition = { ...withoutDigest, digest:timeoutIncidentDigest(withoutDigest) };
-        if (incident.terminalVerificationDeferred?.digest === disposition.digest) return incident;
         return transition({ ...incident, terminalVerificationDeferred:disposition },
           "terminal-verification-deferred", at, { dispositionDigest:disposition.digest,
             commit:candidate.commit });

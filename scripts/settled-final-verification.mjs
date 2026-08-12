@@ -16,6 +16,7 @@ import {
   finalEvidenceEffect,
   formatReviewReadyScopePreflight,
   handoffReadinessPolicy,
+  reviewReadyProductCandidatePath,
   reviewReadyScopePreflight,
   terminalVerificationDeferredRoute,
 } from "./settled-final-verification-policy.mjs";
@@ -26,6 +27,7 @@ export {
   finalEvidenceEffect,
   formatReviewReadyScopePreflight,
   handoffReadinessPolicy,
+  reviewReadyProductCandidatePath,
   reviewReadyScopePreflight,
   terminalVerificationDeferredRoute,
   validateReviewReadyRecord,

@@ -13,6 +13,7 @@ import {
   finalEvidenceEffect,
   formatReviewReadyScopePreflight,
   handoffReadinessPolicy,
+  reviewReadyProductCandidatePath,
   reviewReadyScopePreflight,
   terminalVerificationDeferredRoute,
   recordReviewReadyEvidence,
@@ -35,6 +36,14 @@ const baseCommit = "1".repeat(40);
 const candidateCommit = "2".repeat(40);
 const candidateTree = "3".repeat(40);
 const packs = await loadVerificationPacks();
+
+for (const productPath of ["src/commands.ts", "dist/commands.js", "side-panel.html",
+  "side-panel.css", "manifest.json", "assets/brand/icon.svg"]) {
+  assert.equal(reviewReadyProductCandidatePath(productPath), true,
+    `${productPath} is recognized as a product or delivery-asset change`);
+}
+assert.equal(reviewReadyProductCandidatePath("scripts/run-focused-acceptance.mjs"), false,
+  "verification tooling alone is not misclassified as a product candidate");
 
 const focusedScopePreflight = reviewReadyScopePreflight({
   approvedPackIds:["flow_graph"], plannedPackIds:["flow_graph"], taskCount:17,
