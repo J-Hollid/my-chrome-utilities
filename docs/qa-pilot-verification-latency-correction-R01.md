@@ -15,10 +15,12 @@ and package passed. The user approved a mode-aware correction on 2026-08-12.
 The incident must not be abandoned or resolved in QA and no all-20 checkpoint is
 authorized there.
 
-Each slice is independently reviewable and revertible. Slice 1 is QA-integrated
-at `71eaad11af`. After reviewing its scorecard, the user approved Slice 2 for
-coder handoff on 2026-08-12. A later slice requires its own approval after the
-preceding slice's QA scorecard is reviewed.
+Each slice is independently reviewable and revertible. Slice 1 and its
+carry-forward prerequisite are QA-integrated at `71eaad11af` and `db98b161cd`.
+Slice 2 is QA-integrated at `e32f9f7c10`. After reviewing the remaining value and
+risk, the user closed this correction program after Slice 2 on 2026-08-13.
+Slices 3 and 4 are deferred evidence-triggered backlog items; neither has coder
+handoff authority.
 
 ## Observed baseline
 
@@ -41,10 +43,11 @@ same final post-mutation Flow plan twice before recording evidence.
   terminal-verification-deferred state; only master integration resolves it.
 - Flow verification checks observe structured results rather than generated
   source spelling, local names, or statement order.
-- DevTools framing handles standard payload boundaries, while the Flow authoring
-  program is sent as deterministic segments of at most 60000 bytes.
-- The architect performs one evidence-producing focused run after the last
-  candidate change instead of a preliminary duplicate on the same tree.
+- DevTools framing handles standard payload boundaries through independently
+  decoded structured and property proof. Browser-program segmentation is
+  deferred until evidence shows the remaining monolith causes material cost.
+- Unchanged-tree duplicate architect runs remain scorecard telemetry. Automated
+  consolidation is deferred until recurrence shows material cost.
 - Every existing assertion leaf, logical target identity, incident obligation,
   package check, and master-only terminal gate remains intact.
 
@@ -82,11 +85,11 @@ Activation of approved Slice 2 exposed that the integrated gate still allowed
 only the exact Slice 1 candidate, so its ordinary specification handoff could not
 start from the next QA descendant. Modular verification packs 152 is a separate
 Slice 1 prerequisite correction, not part of the Flow proof-hardening change.
-Its ceiling is 30 minutes from coder receipt, with a 15-minute checkpoint proving
-that a specification-only descendant starts, a conserved independent descendant
-reaches QA-ready, and a relevant incident-input change remains blocked pending
-fresh proof. The elapsed correction is reported separately and does not consume
-or reset Slice 2's 45-minute ceiling.
+Its timing expectation was 30 minutes from coder receipt, with a 15-minute
+checkpoint proving that a specification-only descendant starts, a conserved
+independent descendant reaches QA-ready, and a relevant incident-input change
+remains blocked pending fresh proof. The elapsed correction is reported
+separately and does not consume or reset Slice 2's 45-minute expectation.
 
 The carry-forward prerequisite is QA-integrated at `db98b161cd`. Slice 2 starts
 from that corrected QA base; its 45-minute clock begins when the coder receives
@@ -108,21 +111,22 @@ node scripts/run-focused-acceptance.mjs --pack shell \
 node scripts/package.mjs
 ```
 
-The implementation-and-review ceiling is 60 minutes from coder receipt to an
-architect QA-ready candidate. By 30 minutes, deterministic preflight fixtures
+The implementation-and-review expectation is 60 minutes from coder receipt to
+an architect QA-ready candidate. By 30 minutes, deterministic preflight fixtures
 must prove both an authorized `flow_graph` plan and a blocked all-20 expansion
-without launching a task. Reaching the ceiling stops the slice for a user
-decision.
+without launching a task. Variance is reported under the pilot's non-blocking
+timing policy.
 
-The approved mode-aware correction has a separately reported 45-minute ceiling
-from renewed coder receipt and a 20-minute halfway checkpoint. By halfway, a
-fixture must prove that valid focused incident proof permits QA routing while
-final-ready remains blocked, and that the release-candidate route remains open.
-This correction interval does not reset or hide the original slice elapsed time.
+The approved mode-aware correction has a separately reported 45-minute
+expectation from renewed coder receipt and a 20-minute halfway checkpoint. By
+halfway, a fixture must prove that valid focused incident proof permits QA
+routing while final-ready remains blocked, and that the release-candidate route
+remains open. This correction interval does not reset or hide the original slice
+elapsed time.
 
 ## Slice 2: structured Flow verification proofs
 
-Status: approved on 2026-08-12 and active for coder handoff from `db98b161cd`.
+Status: QA-integrated at `e32f9f7c10`.
 
 Replace the context-menu repair's generated-source regular expressions with
 structured helper or planner results and causal fixtures. Harmless formatting,
@@ -137,11 +141,19 @@ node scripts/run-focused-acceptance.mjs --pack flow_graph
 node scripts/package.mjs
 ```
 
-The ceiling is 45 minutes. By 20 minutes, one former source-shape assertion must
-pass after a harmless source transformation and fail after its semantic value is
-changed. Reaching the ceiling stops the slice for a user decision.
+The expectation was 45 minutes with a 20-minute checkpoint. QA-ready status took
+74 minutes 47 seconds. The first passing Flow candidate arrived after about 8
+minutes 32 seconds; later review found disconnected target selection,
+self-decoded framing, a self-derived Section-action oracle, and missing boundary
+property proof. The final exact `flow_graph` run passed 18 tasks in about 72
+seconds, the distinct Shell process-contract repair check passed in about 3
+minutes, package passed, and no all-20 run occurred.
 
 ## Slice 3: bounded Flow browser programs
+
+Status: deferred on 2026-08-13. Reconsider only after another payload or
+transport incident, repeated diagnosis cost attributable to the monolithic
+program, or continued growth that establishes a concrete segmentation benefit.
 
 Retain `FLOW_WORKSPACE_AUTHORING_TARGET` and its session and evidence identity,
 but transmit its installed workflow as ordered evaluation segments. Each segment
@@ -159,12 +171,13 @@ node scripts/run-focused-acceptance.mjs --pack flow_graph \
 node scripts/package.mjs
 ```
 
-The ceiling is 90 minutes. By 45 minutes, framing boundary tests must pass and
-the Section-authoring segment must run independently below 60000 bytes with its
-original evidence leaves. Reaching the ceiling stops the slice for a user
-decision.
+If reactivated, the expectation is 90 minutes with a 45-minute checkpoint.
 
 ## Slice 4: one final review-ready run
+
+Status: deferred on 2026-08-13. Reconsider when unchanged-tree duplication
+recurs often enough that its measured focused runtime materially exceeds the
+cost and risk of changing shared evidence infrastructure.
 
 After the architect's last candidate change, one evidence-producing focused
 invocation verifies the exact tree and supplies the receipt recorded as
@@ -182,10 +195,7 @@ node scripts/run-focused-acceptance.mjs --pack shell \
 node scripts/package.mjs
 ```
 
-The ceiling is 60 minutes. By 30 minutes, a fixture must show that the final
-post-change tree runs its focused plan once, records its receipt, and invalidates
-that evidence after a later change. Reaching the ceiling stops the slice for a
-user decision.
+If reactivated, the expectation is 60 minutes with a 30-minute checkpoint.
 
 ## Scorecards and stopping rules
 
@@ -194,8 +204,16 @@ failures, repairs, reruns, selected packs and tasks, and QA queue time. It also
 reports terminal attempts as zero during feature integration and preserves the
 exact review-ready note and package receipt.
 
-Continue to the next slice only if the current slice meets its stated behavior
-without weakening evidence or silently widening scope. Adjust if a correction
-moves cost into another shared path or adds more verification time than it
-removes. Stop if it needs an all-20 feature-mode run, changes product behavior,
-reopens VTD-018, or cannot deliver within its ceiling without a new user choice.
+Timing expectations surface variance; they do not automatically stop safe,
+bounded work. Pause when scope expands, requirements need reinterpretation,
+failures repeat without a causal explanation, no credible completion path
+remains, or a hard safety boundary needs new authority. An all-20 feature-mode
+run, product-behavior change, or VTD-018 reactivation remains a hard stop.
+
+For the next three ordinary QA product cycles, report time to first passing
+candidate, review and repair time, focused verification time, unchanged-tree
+duplicates, unexpected scope expansion, and avoidable versus incidental
+failures. Reassess Slices 3 and 4 only from that evidence. Also monitor the size
+and processing cost of the recursively retained deferred-incident evidence
+chain; do not open another shared-workflow correction unless it has measurable
+handoff impact.

@@ -30,8 +30,13 @@ reviewable change.
    inherit an abandoned or unrelated task branch.
 2. The specification names the smallest checks that directly observe the change,
    an elapsed effort ceiling, and a checkpoint expected by halfway through that
-   ceiling. Reaching the ceiling without a deliverable candidate stops the slice
-   for a user decision.
+   ceiling. These are reporting expectations rather than automatic intervention
+   gates. At halfway and at the ceiling, report progress, the cause of any
+   variance, remaining work, confidence, and current forecast. Continue by
+   default while scope is unchanged and the completion path is bounded and safe.
+   Pause for a user decision when scope expands, requirements need
+   reinterpretation, failures repeat without a causal explanation, no credible
+   completion path remains, or another safety boundary requires authority.
    Before any review-ready task launches, exact changed-path preflight compares
    the planned scope with that approved scope. If an incidental shared
    verification-infrastructure repair expands a product slice to all 20 packs,

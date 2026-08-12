@@ -20,7 +20,7 @@ The settled-candidate verification workflow is integrated at
 | Program | Current state | Next authority |
 |---|---|---|
 | QA-branch release pilot | Approved for immediate activation on 2026-08-12 | `docs/qa-branch-release-pilot-R01.md` controls feature integration into `qa` and explicit cumulative promotion to `master`. |
-| QA-pilot verification latency correction | Slice 1 carry-forward prerequisite QA-integrated at `db98b161cd`; Slice 2 approved on 2026-08-12 | Hand off structured Flow proof hardening from `db98b161cd` under `docs/qa-pilot-verification-latency-correction-R01.md`. Slice 3 still awaits approval. |
+| QA-pilot verification latency correction | Closed after Slice 2 at `e32f9f7c10` by user decision on 2026-08-13 | No coder handoff. Measure the next three ordinary QA product cycles; Slices 3 and 4 remain evidence-triggered backlog items. |
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program, paused after three completed slices | The installed Hotkeys, Command Palette, and workspace-tabs slices are complete. No later controller slice is active. |
