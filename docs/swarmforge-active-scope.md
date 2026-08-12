@@ -26,7 +26,7 @@ The settled-candidate verification workflow is integrated at
 | VTD-011 terminal shard balancing | Deferred and inactive | The existing two-worker order is within about six seconds of balanced after lock wait is removed; scheduling needed for a possible third worker is bounded inside VTD-017. |
 | VTD-012 registry and planner modularization | Deferred and inactive | Reconsider after broad final-gate and receipt-persistence costs are reduced. |
 | VTD-017 shared-artifact parallel execution | Complete at `723ebf6eb5` | Review the settled scorecard in `docs/vtd017-shared-artifact-parallel-execution-R01.md`. |
-| VTD-018 incremental verification receipts | Recommended next decision, inactive | Its exact scope, effort, safety trade-off, and durable timing evidence require user review and separate approval. |
+| VTD-018 incremental verification receipts | Approved bounded implementation | `docs/vtd018-incremental-verification-receipts-R01.md` and `features/verification-incremental-task-receipts.feature` control the coder handoff. |
 | Product recovery lineages | Open | Resume in the order listed under **Open product recovery queue**, unless later user direction changes it. |
 
 VTD-008 remains active as a program. Completion of the installed Hotkeys, Command
@@ -36,11 +36,13 @@ in `src/workspace-tabs-ui.ts`. It does not extract the broader utility registry 
 shell DOM adapter, change workspace-navigation semantics, or activate
 observation-target, live-session, or another Data Layer controller.
 
-There is no active implementation slice. VTD-017 is integrated and its settled
-scorecard is ready for user review. Do not select another VTD-008 controller,
-activate VTD-012, or hand off VTD-018 automatically. VTD-015's first live payback
-was mixed: coder and refactorer correctly used focused review-ready evidence, but
-a late architect validator correction invalidated one successful all-20 pass.
+The active implementation slice is bounded VTD-018 incremental verification
+receipts. VTD-017 is integrated, its settled scorecard led to this slice, and the
+user approved the exact VTD-018 contract on 2026-08-12. Do not select another
+VTD-008 controller or activate VTD-012 automatically. VTD-015's first live
+payback was mixed: coder and refactorer correctly used focused review-ready
+evidence, but a late architect validator correction invalidated one successful
+all-20 pass.
 
 ## Feature-development throughput authority
 
@@ -72,10 +74,11 @@ before testing a higher Chrome worker count. Its scorecard must report useful
 overlap and lock wait, not configured worker count alone.
 
 VTD-017 is complete and proved at least a 3-minute-43-second final-gate saving.
-The next decision is whether to specify VTD-018 incremental receipt recording,
-followed by the remaining bottleneck shown by that scorecard. VTD-012 and the
-standalone VTD-011 terminal-shard slice remain deferred. Each slice must show its
-expected elapsed-time benefit before another slice is approved.
+Bounded VTD-018 incremental receipt recording is now the active implementation
+slice. Its settled scorecard will identify the remaining bottleneck and next
+decision. VTD-012 and the standalone VTD-011 terminal-shard slice remain
+deferred. Each slice must show its expected elapsed-time benefit before another
+slice is approved.
 
 Every enabling slice requires two visible user reviews: a pre-approval baseline,
 target, expected effort, safety trade-off, and stop condition; then a settled
@@ -187,7 +190,8 @@ Read only the program documents relevant to the selected task.
 | Page Group structural authoring | `docs/data-layer-page-group-structural-authoring-correction-program-R01.md` |
 | Technical-analyst exact copy | `docs/specification-studio-technical-analyst-copy-R01.md` |
 | Generated branding | `docs/twatility-branding-merge-handover-R02.md` and `assets/brand/ARTWORK.md` |
-| Verification throughput | `docs/verification-throughput-technical-debt-backlog-R01.md` |
+| Verification throughput backlog | `docs/verification-throughput-technical-debt-backlog-R01.md` |
+| VTD-018 incremental verification receipts | `docs/vtd018-incremental-verification-receipts-R01.md` |
 | Feature-development throughput course adjustment | `docs/feature-development-throughput-course-adjustment-R01.md` |
 
 ## Live precedence summary
@@ -372,6 +376,7 @@ historical rename/delete handling.
 | Project assurance severity | `--pack project_assurance_severity` |
 | Choice controls, analyst guidance, and generated branding | `--pack branding_polish` |
 | VTD-015 workflow bootstrap | all 20 canonical pack selectors; shared handoff and evidence behavior affects every pack |
+| VTD-018 incremental verification receipts | `--pack shell --focused-task unit:test/verification-process-contract-test.mjs --focused-task acceptance-session:shell` |
 
 Run the selected packs with:
 

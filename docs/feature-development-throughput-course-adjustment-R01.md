@@ -1,8 +1,8 @@
 # Feature-development throughput course adjustment R01
 
 Status: approved by the user and committed at `2b093eec4f`; bounded VTD-017 is
-integrated at `723ebf6eb5`; its settled scorecard and a new explicit decision are
-required before another enabling slice
+integrated at `723ebf6eb5`; bounded VTD-018 was approved on 2026-08-12 and its
+settled scorecard is required before another enabling slice
 
 Prepared: 2026-08-11
 
@@ -213,9 +213,8 @@ worth more than saving ten minutes only from one feature type.
 
 VTD-017 then proved at least a 3-minute-43-second final-gate saving with two
 workers. Its scorecard leaves receipt recording as the strongest measured next
-bottleneck, while standalone VTD-011 still has negligible immediate value. Review
-a bounded VTD-018 proposal next, but do not activate it without a separate user
-decision.
+bottleneck, while standalone VTD-011 still has negligible immediate value. The
+user approved the exact bounded VTD-018 contract on 2026-08-12.
 
 ## Ranked course-adjusted work
 
@@ -334,8 +333,8 @@ final boundary instead of rewriting growing receipt and checkpoint documents
 after every cheap task.
 
 Trade-off: crash recovery, task identity, failure records, and exact final
-evidence must remain unchanged. This item remains inactive until the VTD-017
-scorecard is reviewed and the user separately approves a bounded specification.
+evidence must remain unchanged. The approved bounded behavior, target, and stop
+conditions are in `docs/vtd018-incremental-verification-receipts-R01.md`.
 
 ### 4. VTD-012 — Split the long verification-process contract when still material
 
@@ -402,9 +401,8 @@ With workspace tabs, VTD-015, and VTD-017 now complete:
 1. Do not automatically pick another VTD-008 controller.
 2. Record VTD-017 as complete with two workers and at least 3 minutes 43 seconds
    saved from its final gate.
-3. Review the VTD-017 scorecard with the user. Because durable-result recording
-   remains a leading cost, specify VTD-018 separately; do not activate it
-   automatically.
+3. The user reviewed the VTD-017 scorecard and approved the exact bounded VTD-018
+   contract on 2026-08-12. Deliver it before choosing another enabling slice.
 4. Follow the new measured longest path. VTD-012 and VTD-016 remain candidates,
    while standalone VTD-011 stays deferred because the current two-worker order
    is already within about six seconds of balanced once lock waiting is removed.
@@ -416,8 +414,8 @@ With workspace tabs, VTD-015, and VTD-017 now complete:
 
 Measure each enabling claim as the sequence proceeds. VTD-017 shortened its own
 final gate, but its durable note did not preserve exact coordination wall metrics.
-If approved, VTD-018 must preserve those metrics, demonstrate the VTD-017 saving
-on its own delivery, and remove the measured receipt-writing cost. Later work is
+VTD-018 must preserve those metrics, demonstrate the VTD-017 saving on its own
+delivery, and remove the measured receipt-writing cost. Later work is
 then chosen from the new longest path rather than from the old task order. A
 missed payback stops automatic continuation and triggers another bottleneck
 review.

@@ -297,7 +297,7 @@ Large items must be split into independently reviewable descendants.
 | VTD-015 | P0 | M | Review changing candidates before one final-tree all-20 gate | VTD-014 |
 | VTD-016 | P1, deferred | M | Partition Shell product evidence for a faster inner loop | VTD-004, VTD-006 |
 | VTD-017 | Complete | S–M, bounded | Shared-artifact parallel browser execution in focused and final plans | VTD-001, VTD-002, VTD-007 |
-| VTD-018 | Recommended next decision, inactive | M | Incremental durable task-result recording | VTD-014, VTD-015 |
+| VTD-018 | Approved bounded implementation | M | Incremental durable task-result recording | VTD-014, VTD-015 |
 
 ## Backlog
 
@@ -1478,8 +1478,8 @@ stable bound, not the largest possible worker count.
 
 ### VTD-018 — Record verification task results incrementally
 
-Priority: recommended next decision; inactive until the user reviews the VTD-017
-scorecard and approves an exact bounded contract
+Priority: approved bounded implementation; exact contract approved by the user
+on 2026-08-12
 
 Problem:
 
@@ -1521,9 +1521,9 @@ Acceptance criteria:
 - Parse and generation recording overhead no longer turns seconds of work into
   minutes, and complete-gate elapsed time materially improves.
 
-Dependencies: VTD-014 and VTD-015. This item remains inactive until the user
-reviews the settled VTD-017 scorecard and separately approves a bounded
-specification.
+Dependencies: VTD-014 and VTD-015. The approved behavior, target, bounded surface,
+and stop conditions are in
+`docs/vtd018-incremental-verification-receipts-R01.md`.
 
 ## Enabling-slice user review gate
 
@@ -1570,8 +1570,8 @@ cannot prove the exact 17-minute-30-second complete-gate target.
 
 ### Phase 2 — Remove durable-recording amplification
 
-Review VTD-017's scorecard before deciding whether to activate VTD-018. If still
-material, replace repeated whole-receipt and checkpoint rewrites with small durable
+The user reviewed VTD-017's scorecard and activated bounded VTD-018 on 2026-08-12.
+Replace repeated whole-receipt and checkpoint rewrites with small durable
 incremental task records while retaining exact crash recovery and final evidence.
 
 Exit condition: the parse and generation stages no longer spend minutes recording
@@ -1712,11 +1712,11 @@ shared one-megabyte side-panel runtime was modularized by VTD-006. VTD-014 now s
 exact-checkpoint retries from hiding timeouts, hit-test races, settling failures, and
 other unreliable tests without a causal repair. The largest remaining product-code
 debt is the `src/side-panel.ts` composition root, but debt size no longer determines
-the next work automatically. VTD-015 is complete. The next bounded candidate is
-VTD-017 shared-artifact parallel execution, followed by a user decision on
-VTD-018 incremental result recording. After those scorecards, choose the new
-measured longest path; VTD-012 and VTD-016 remain candidates, while standalone
-VTD-011 remains deferred unless fresh CI evidence shows a material imbalance.
+the next work automatically. VTD-015 and VTD-017 are complete, and bounded VTD-018
+incremental result recording was approved on 2026-08-12. After its scorecard,
+choose the new measured longest path; VTD-012 and VTD-016 remain candidates,
+while standalone VTD-011 remains deferred unless fresh CI evidence shows a
+material imbalance.
 This order lets broad workflow and final-gate improvements accelerate any
 narrower slice that follows. Each enabling claim must be checked on the next
 applicable slice rather than deferred until the end.
