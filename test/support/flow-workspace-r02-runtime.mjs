@@ -1,6 +1,66 @@
+import {randomBytes} from "node:crypto";
+
 import {browserReadinessProgramSource} from "./browser-observation-control.mjs";
 
 export const flowWorkspaceReadinessLimitMilliseconds = 30_000;
+
+function devtoolsFrameHeader(payloadLength) {
+  if (payloadLength < 126) return { bytes:Buffer.from([129, 128 | payloadLength]), form:"short" };
+  if (payloadLength <= 0xffff) {
+    const bytes = Buffer.alloc(4);
+    bytes[0] = 129;
+    bytes[1] = 254;
+    bytes.writeUInt16BE(payloadLength, 2);
+    return { bytes, form:"uint16" };
+  }
+  const bytes = Buffer.alloc(10);
+  bytes[0] = 129;
+  bytes[1] = 255;
+  bytes.writeBigUInt64BE(BigInt(payloadLength), 2);
+  return { bytes, form:"uint64" };
+}
+
+export function encodeDevtoolsTextFrame(payload, mask = randomBytes(4)) {
+  if (!Buffer.isBuffer(mask) || mask.length !== 4) throw new Error("DevTools frame mask must contain 4 bytes");
+  const body = Buffer.from(payload), header = devtoolsFrameHeader(body.length);
+  const masked = Buffer.from(body.map((byte, index) => byte ^ mask[index % mask.length]));
+  const bytes = Buffer.concat([header.bytes, mask, masked]);
+  const encoded = bytes.subarray(header.bytes.length + mask.length);
+  const decodedPayload = Buffer.from(encoded.map(
+    (byte, index) => byte ^ mask[index % mask.length])).toString("utf8");
+  return { bytes, payloadLength:body.length, lengthForm:header.form, decodedPayload };
+}
+
+export const flowAuthoringProofContract = Object.freeze({
+  requestedTargetId:"FLOW_WORKSPACE_AUTHORING_TARGET",
+  selectedTargetId:"FLOW_WORKSPACE_AUTHORING_TARGET",
+  sectionActions:Object.freeze([
+    "Rename", "Move", "Resize", "Wrap selection", "Remove Section", "Remove with contents",
+  ]),
+  focusTransition:Object.freeze(["canvas", "section-menu"]),
+});
+
+function structuredViolation(behavior, expected, observed) {
+  return { behavior, expected, observed,
+    message:`${behavior}: expected ${JSON.stringify(expected)}; observed ${JSON.stringify(observed)}` };
+}
+
+export function flowAuthoringProofResult(observed) {
+  const violations = [];
+  const supportedTargets = ["FLOW_WORKSPACE_AUTHORING_TARGET", "FLOW_WORKSPACE_CONTROLS_TARGET"];
+  if (!supportedTargets.includes(observed?.requestedTargetId) ||
+      observed?.selectedTargetId !== observed?.requestedTargetId) {
+    violations.push(structuredViolation("target selection", observed?.requestedTargetId,
+      observed?.selectedTargetId));
+  }
+  for (const [field, behavior] of [["sectionActions", "Section action inventory"],
+    ["focusTransition", "focus transition"]]) {
+    if (JSON.stringify(observed?.[field]) !== JSON.stringify(flowAuthoringProofContract[field])) {
+      violations.push(structuredViolation(behavior, flowAuthoringProofContract[field], observed?.[field]));
+    }
+  }
+  return { valid:violations.length === 0, violations };
+}
 
 export function flowSectionDrawActionabilityState(state) {
   return Boolean(state?.drawingMode && state?.canvasConnected && state?.currentCanvas &&
@@ -13,7 +73,16 @@ export function flowSectionRenderedGenerationState(state) {
     state?.canvasConnected && state?.currentCanvas);
 }
 
-export function flowWorkspaceR02Runtime(seeded, { stopAfterRuntime, targetId = "FLOW_WORKSPACE_AUTHORING_TARGET" } = {}) {
+export function flowSectionTargetState(state) {
+  return Boolean(state?.connected && state?.directDropzone);
+}
+
+export function flowWorkspaceR02Runtime(seeded, { stopAfterRuntime,
+  targetId = flowAuthoringProofContract.selectedTargetId } = {}) {
+  const proofContract = { ...flowAuthoringProofContract,
+    requestedTargetId:targetId, selectedTargetId:targetId };
+  const proof = flowAuthoringProofResult(proofContract);
+  if (!proof.valid) throw new Error(proof.violations[0].message);
   const stopAfterRuntime020 = stopAfterRuntime === 20 ? "return evidence;" : "";
   const readinessProgram = browserReadinessProgramSource({
     targetId, phase:"interaction", timeoutMs:flowWorkspaceReadinessLimitMilliseconds, pollIntervalMs:25,
@@ -27,6 +96,9 @@ export function flowWorkspaceR02Runtime(seeded, { stopAfterRuntime, targetId = "
   ${readinessProgram}
   const drawActionable=${flowSectionDrawActionabilityState.toString()};
   const renderedGenerationReady=${flowSectionRenderedGenerationState.toString()};
+  const directSectionTarget=${flowSectionTargetState.toString()};
+  const structuredProof=${JSON.stringify({ ...flowAuthoringProofContract,
+    requestedTargetId:targetId, selectedTargetId:targetId })};
   const button=(text,root=document)=>all('button',root).find(candidate=>candidate.textContent.trim()===text);
   const click=(text,root=document)=>{const found=button(text,root);if(!found)throw new Error('Missing Flow control '+text);found.click();return found;};
   const pointer=(target,type,values={})=>target.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:values.pointerId??41,pointerType:values.pointerType??'mouse',button:values.button??0,clientX:values.clientX??0,clientY:values.clientY??0}));
@@ -39,7 +111,7 @@ export function flowWorkspaceR02Runtime(seeded, { stopAfterRuntime, targetId = "
   if(!canvas||canvas.getBoundingClientRect().width===0){q('[data-kind="flows"]')?.click();await waitFor(()=>all('.entity-row button').find(item=>item.textContent==='Checkout journey'),'Flow row').then(item=>item.click());await waitFor(()=>{const candidate=q('[aria-label="Interactive directional Flow canvas"]');return candidate?.getBoundingClientRect().width>0&&candidate;},'visible Flow canvas');refresh();}
   if(!workspace||!toolbar||!viewport||!canvas)throw new Error('Incomplete installed Flow workspace');
   const evidence={},surface=()=>q('[aria-label="Flow contextual surface"]'),surfaceOpen=()=>Boolean(surface()&&!surface().hidden),snapshot=async()=>structuredClone(await graph());
-  const sectionGroup=(id)=>all('g[data-flow-section-id="'+CSS.escape(id)+'"]',canvas).find(candidate=>candidate.querySelector(':scope > [data-section-dropzone]'));
+  const sectionGroup=(id)=>all('g[data-flow-section-id="'+CSS.escape(id)+'"]',canvas).find(candidate=>directSectionTarget({connected:candidate.isConnected,directDropzone:Boolean(candidate.querySelector(':scope > [data-section-dropzone]'))}));
   const initial=await snapshot(),initialDefinitions=JSON.stringify((await load()).state.project.collections.pages),outerBefore=document.documentElement.scrollWidth;
   const selectPage=async(id)=>{refresh();const item=q('g[data-page-frame-id="'+CSS.escape(id)+'"]:not([data-occurrence-id])',canvas);if(!item)throw new Error('Missing Page frame '+id);item.dispatchEvent(new MouseEvent('click',{bubbles:true}));await pause();refresh();return item;};
   const openAddAt=async(client)=>{refresh();canvas.dispatchEvent(new MouseEvent('dblclick',{bubbles:true,clientX:client.x,clientY:client.y}));await waitFor(()=>surfaceOpen(),'Add surface');return surface();};
@@ -75,7 +147,7 @@ export function flowWorkspaceR02Runtime(seeded, { stopAfterRuntime, targetId = "
   const wrapped=await waitFor(async()=>{const value=await snapshot();return value.sections.length===beforeWrap.sections.length+1&&value;},'wrapped Section'),sales=wrapped.sections.find(item=>!beforeWrap.sections.some(previous=>previous.id===item.id));
   await waitFor(async()=>{refresh();const value=await snapshot(),current=q('[aria-label="Interactive directional Flow canvas"]');return{durableSectionPresent:Boolean(sales&&value.sections.some(item=>item.id===sales.id)),renderedSectionPresent:Boolean(sales&&canvas?.querySelector('[data-flow-section-id="'+CSS.escape(sales.id)+'"]')),canvasConnected:Boolean(canvas?.isConnected),currentCanvas:Boolean(canvas&&canvas===current)};},'wrapped Section current rendered generation',renderedGenerationReady,state=>state,50);
   refresh();if(!surfaceOpen())click('Add',toolbar);name=q('[aria-label="New Section name"]',surface());name.value='Checkout drawn';click('Draw Section',surface());let drawGeometrySignature;const drawBoundary=await waitFor(()=>{refresh();const current=q('[aria-label="Interactive directional Flow canvas"]'),rect=canvas?.getBoundingClientRect(),geometrySignature=rect?[rect.left,rect.top,rect.width,rect.height,canvas?.getAttribute('viewBox')].join(':'):'';const state={drawingMode:Boolean(canvas?.classList.contains('is-drawing-section')),canvasConnected:Boolean(canvas?.isConnected),currentCanvas:Boolean(canvas&&canvas===current),surfaceOpen:surfaceOpen(),canvasFocused:document.activeElement===canvas,geometryStable:Boolean(geometrySignature&&geometrySignature===drawGeometrySignature),left:rect?.left??0,top:rect?.top??0,width:rect?.width??0,height:rect?.height??0,pointerEvents:canvas?getComputedStyle(canvas).pointerEvents:'missing'};drawGeometrySignature=geometrySignature;return state;},'actionable Section draw mode',drawActionable,state=>state,50);const drawBox=canvas.getBoundingClientRect(),drawStart={x:drawBox.left+Math.min(70,drawBox.width*.15),y:drawBox.top+Math.min(80,drawBox.height*.18)},drawEnd={x:drawStart.x+250,y:drawStart.y+160},beforeDraw=await snapshot();pointer(canvas,'pointerdown',{pointerId:51,...drawStart});pointer(canvas,'pointermove',{pointerId:51,...drawEnd});const previewedSection=Boolean(q('.flow-section-draw-preview',canvas));pointer(canvas,'pointerup',{pointerId:51,...drawEnd});const afterDrawObservation=await waitFor(async()=>{const value=await snapshot(),current=q('[aria-label="Interactive directional Flow canvas"]');return{value,sectionCount:value.sections.length,expectedSectionCount:beforeDraw.sections.length+1,drawingMode:Boolean(canvas?.classList.contains('is-drawing-section')),previewPresent:Boolean(q('.flow-section-draw-preview',canvas)),canvasConnected:Boolean(canvas?.isConnected),currentCanvas:Boolean(canvas&&canvas===current),drawBoundary};},'drawn Section',state=>state.sectionCount===state.expectedSectionCount,({value,...state})=>state),afterDraw=afterDrawObservation.value,drawn=afterDraw.sections.find(item=>!beforeDraw.sections.some(previous=>previous.id===item.id));
-  refresh();let salesGroup=await waitFor(()=>{const candidate=sectionGroup(sales.id);return candidate?.isConnected&&candidate;},'current Sales Section group'),openedSalesMenu=await openSectionMenu(salesGroup),sectionActions=openedSalesMenu.menu,inventory=['Rename','Move','Resize','Wrap selection','Remove Section','Remove with contents'].every(label=>Boolean(button(label,sectionActions)))&&openedSalesMenu.stateStable&&openedSalesMenu.firstActionFocused;click('Close',surface());const salesBefore=(await snapshot()).sections.find(item=>item.id===sales.id).bounds,salesZoom=JSON.parse(canvas.dataset.viewport).zoom,salesDelta={x:Math.round(40/salesZoom),y:Math.round(25/salesZoom)};pointer(salesGroup,'pointerdown',{pointerId:52,clientX:100,clientY:100});pointer(salesGroup,'pointermove',{pointerId:52,clientX:140,clientY:125});pointer(salesGroup,'pointerup',{pointerId:52,clientX:140,clientY:125});await waitFor(async()=>{const item=(await snapshot()).sections.find(candidate=>candidate.id===sales.id);return item?.bounds.x===salesBefore.x+salesDelta.x&&item?.bounds.y===salesBefore.y+salesDelta.y;},'Sales move');
+  refresh();let salesGroup=await waitFor(()=>sectionGroup(sales.id),'current Sales Section group'),openedSalesMenu=await openSectionMenu(salesGroup),sectionActions=openedSalesMenu.menu,inventory=structuredProof.sectionActions.every(label=>Boolean(button(label,sectionActions)))&&openedSalesMenu.stateStable&&openedSalesMenu.firstActionFocused;click('Close',surface());const salesBefore=(await snapshot()).sections.find(item=>item.id===sales.id).bounds,salesZoom=JSON.parse(canvas.dataset.viewport).zoom,salesDelta={x:Math.round(40/salesZoom),y:Math.round(25/salesZoom)};pointer(salesGroup,'pointerdown',{pointerId:52,clientX:100,clientY:100});pointer(salesGroup,'pointermove',{pointerId:52,clientX:140,clientY:125});pointer(salesGroup,'pointerup',{pointerId:52,clientX:140,clientY:125});await waitFor(async()=>{const item=(await snapshot()).sections.find(candidate=>candidate.id===sales.id);return item?.bounds.x===salesBefore.x+salesDelta.x&&item?.bounds.y===salesBefore.y+salesDelta.y;},'Sales move');
   refresh();let drawnGroup=q('g[data-flow-section-id="'+CSS.escape(drawn.id)+'"]',canvas),resize=q('[data-section-resize-for="'+CSS.escape(drawn.id)+'"]',drawnGroup),drawnBefore=(await snapshot()).sections.find(item=>item.id===drawn.id).bounds,drawnZoom=JSON.parse(canvas.dataset.viewport).zoom,resizeDelta={x:Math.round(45/drawnZoom),y:Math.round(30/drawnZoom)};pointer(resize,'pointerdown',{pointerId:53,clientX:200,clientY:200});pointer(resize,'pointermove',{pointerId:53,clientX:245,clientY:230});pointer(resize,'pointerup',{pointerId:53,clientX:245,clientY:230});const pointerResized=await waitFor(async()=>{const item=(await snapshot()).sections.find(candidate=>candidate.id===drawn.id);return item?.bounds.width===drawnBefore.width+resizeDelta.x&&item?.bounds.height===drawnBefore.height+resizeDelta.y&&item;},'Checkout resize');refresh();drawnGroup=q('g[data-flow-section-id="'+CSS.escape(drawn.id)+'"]',canvas);resize=q('[data-section-resize-for="'+CSS.escape(drawn.id)+'"]',drawnGroup);resize.focus();flowNativeKey(JSON.stringify({key:'ArrowRight'}));const keyboardResized=await waitFor(async()=>{const item=(await snapshot()).sections.find(candidate=>candidate.id===drawn.id);return item?.bounds.width===pointerResized.bounds.width+20&&item;},'Checkout keyboard resize');const beforeNesting=JSON.stringify(await snapshot());salesGroup=q('g[data-flow-section-id="'+CSS.escape(sales.id)+'"]',canvas);salesGroup.dispatchEvent(new DragEvent('dragstart',{bubbles:true}));drawnGroup.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true}));const afterManipulation=await snapshot();
   evidence.runtime003={wrapped:Boolean(sales&&afterManipulation.pageFrames.find(item=>item.id===outsideFrame.id)?.sectionId===sales.id),twoDimensional:[sales,drawn].every(section=>section&&['x','y','width','height'].every(key=>Number.isFinite(section.bounds[key]))),actionInventory:inventory,moveContained:afterManipulation.pageFrames.find(item=>item.id===outsideFrame.id).position.x===wrapped.pageFrames.find(item=>item.id===outsideFrame.id).position.x+salesDelta.x,keyboardResize:keyboardResized.bounds.width===pointerResized.bounds.width+20,resizeMembershipStable:afterManipulation.pageFrames.find(item=>item.id===outsideFrame.id).sectionId===sales.id,noRawGeometry:!q('[aria-label^="Section x"]')&&!q('[aria-label^="Section width"]'),drawPreview:previewedSection,nestingRejected:JSON.stringify(await snapshot())===beforeNesting&&!afterManipulation.sections.some(section=>Object.hasOwn(section,'sectionId'))};
 
@@ -140,7 +212,7 @@ export function flowWorkspaceR02Runtime(seeded, { stopAfterRuntime, targetId = "
   refresh();let tidyCandidates=all('g[data-page-frame-id]:not([data-occurrence-id])',canvas).slice(0,2),tidyFirstId=tidyCandidates[0].dataset.pageFrameId,tidySecondId=tidyCandidates[1].dataset.pageFrameId;tidyCandidates[0].dispatchEvent(new MouseEvent('click',{bubbles:true}));await pause();refresh();q('g[data-page-frame-id="'+CSS.escape(tidySecondId)+'"]',canvas).dispatchEvent(new MouseEvent('click',{bubbles:true,ctrlKey:true}));await pause();refresh();const tidySelectedIds=JSON.parse(sessionStorage.getItem(viewKey)).selectedItems.map(({id})=>id),tidyBase=await snapshot();click('Tidy',toolbar);const tidySurface=surface(),scope=q('[aria-label="Tidy scope"]',tidySurface),direction=q('[aria-label="Tidy arrangement"]',tidySurface);scope.value='selection';direction.value='horizontal';click('Preview Tidy',tidySurface);const previewCount=all('[data-tidy-transform]',canvas).length,edgePreview=all('[data-tidy-edge-preview]',canvas).length,beforeCancel=JSON.stringify(await graph());click('Cancel Tidy',tidySurface);const cancelled=JSON.stringify(await graph())===beforeCancel;
   click('Tidy',toolbar);const secondSurface=surface(),secondScope=q('[aria-label="Tidy scope"]',secondSurface),secondDirection=q('[aria-label="Tidy arrangement"]',secondSurface);secondScope.value='selection';secondDirection.value='vertical';click('Preview Tidy',secondSurface);click('Confirm Tidy',secondSurface);await waitFor(async()=>JSON.stringify((await graph()).pageFrames)!==JSON.stringify(tidyBase.pageFrames),'confirmed Tidy');const tidied=await snapshot(),unselectedStable=tidyBase.pageFrames.filter(({id})=>!tidySelectedIds.includes(id)).every(before=>JSON.stringify(tidied.pageFrames.find(({id})=>id===before.id))===JSON.stringify(before));
   evidence.runtime019={selectionScope:tidySelectedIds.length===2&&previewCount===2,previewed:previewCount>1,edgePreview:edgePreview>0,cancelled,oneCommand:JSON.stringify(tidied.pageFrames)!==JSON.stringify(tidyBase.pageFrames),unselectedStable,semantics:JSON.stringify(tidied.relationships)===JSON.stringify(tidyBase.relationships)&&tidied.pageFrames.every((item,index)=>item.id===tidyBase.pageFrames[index]?.id&&item.sectionId===tidyBase.pageFrames[index]?.sectionId)};
-  refresh();const bottomRect=viewport.getBoundingClientRect();canvas.dispatchEvent(new MouseEvent('dblclick',{bubbles:true,clientX:bottomRect.right-8,clientY:bottomRect.bottom-8}));await waitFor(()=>surfaceOpen(),'bottom-edge Add surface');const bottomSurface=surface().getBoundingClientRect(),bottomContained=bottomSurface.right<=bottomRect.right+2&&bottomSurface.bottom<=bottomRect.bottom+2;click('Close',surface());const skipAgain=button('Skip to canvas',toolbar);skipAgain.focus();flowNativeKey(JSON.stringify({key:' '}));await waitFor(()=>document.activeElement===canvas,'keyboard Skip to canvas');const keyboardSkip=document.activeElement===canvas;refresh();const keyboardSection=sectionGroup(sales.id),keyboardMenuBefore=JSON.stringify(await snapshot()),keyboardMenu=(await openSectionMenu(keyboardSection,'keyboard')).menu,keyboardSectionMenu=['Rename','Move','Resize','Wrap selection','Remove Section','Remove with contents'].every(label=>Boolean(button(label,keyboardMenu)))&&JSON.stringify(await snapshot())===keyboardMenuBefore;flowNativeKey(JSON.stringify({key:'Escape'}));await waitFor(()=>document.activeElement===keyboardSection,'Section focus restored after context-menu dismissal');
+  refresh();const bottomRect=viewport.getBoundingClientRect();canvas.dispatchEvent(new MouseEvent('dblclick',{bubbles:true,clientX:bottomRect.right-8,clientY:bottomRect.bottom-8}));await waitFor(()=>surfaceOpen(),'bottom-edge Add surface');const bottomSurface=surface().getBoundingClientRect(),bottomContained=bottomSurface.right<=bottomRect.right+2&&bottomSurface.bottom<=bottomRect.bottom+2;click('Close',surface());const skipAgain=button('Skip to canvas',toolbar);skipAgain.focus();flowNativeKey(JSON.stringify({key:' '}));await waitFor(()=>document.activeElement===canvas,'keyboard Skip to canvas');const focusTransition=[],keyboardSkip=document.activeElement===canvas;if(keyboardSkip)focusTransition.push('canvas');refresh();const keyboardSection=sectionGroup(sales.id),keyboardMenuBefore=JSON.stringify(await snapshot()),keyboardMenu=(await openSectionMenu(keyboardSection,'keyboard')).menu;focusTransition.push('section-menu');const keyboardSectionMenu=structuredProof.sectionActions.every(label=>Boolean(button(label,keyboardMenu)))&&JSON.stringify(await snapshot())===keyboardMenuBefore&&JSON.stringify(focusTransition)===JSON.stringify(structuredProof.focusTransition);flowNativeKey(JSON.stringify({key:'Escape'}));await waitFor(()=>document.activeElement===keyboardSection,'Section focus restored after context-menu dismissal');
   evidence.runtime020={contained:viewport.getBoundingClientRect().right<=innerWidth+2&&document.documentElement.scrollWidth<=innerWidth+2,focusable:all('button,[tabindex="0"]',workspace).every(item=>item.getAttribute('aria-label')||item.textContent.trim()),bottomSurfaceContained:bottomContained,keyboardSkip:keyboardSkip&&keyboardSectionMenu,outerStable:document.documentElement.scrollWidth<=Math.max(outerBefore,innerWidth)};
   ${stopAfterRuntime020}
 

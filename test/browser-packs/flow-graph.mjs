@@ -15,6 +15,7 @@ import { createBrowserPhaseTimer, observeBrowserReadiness, transmitDevtoolsProgr
     waitForChromeDebuggingPort, withDevtoolsProtocolDeadline,
     withLogicalTargetLifecycle } from "../support/browser-observation-control.mjs";
 import { assessFlowReloadLifecycle, canonicalFlowReloadIdentity, FLOW_WORKSPACE_CONTROLS_RELOAD_SEQUENCE } from "../../scripts/flow-reload-lifecycle.mjs";
+import { encodeDevtoolsTextFrame } from "../support/flow-workspace-r02-runtime.mjs";
 class DevtoolsSocket {
     constructor(url, targetId, { callLimitMilliseconds, forcedHangMethod } = {}) { this.url = new URL(url); this.targetId = targetId; this.callLimitMilliseconds = callLimitMilliseconds ?? (() => 120000); this.forcedHangMethod = forcedHangMethod; this.nextId = 1; this.pending = new Map(); this.handlers = new Map(); this.buffer = Buffer.alloc(0); }
     async connect() { await new Promise((resolve, reject) => { this.socket = net.createConnection({ host: this.url.hostname, port: Number(this.url.port) }); this.socket.once("error", reject); this.socket.once("connect", () => { const key = Buffer.from(String(Math.random())).toString("base64"); this.socket.write([`GET ${this.url.pathname}${this.url.search} HTTP/1.1`, `Host: ${this.url.host}`, "Upgrade: websocket", "Connection: Upgrade", `Sec-WebSocket-Key: ${key}`, "Sec-WebSocket-Version: 13", "\r\n"].join("\r\n")); }); let handshake = ""; const receive = (chunk) => { handshake += chunk.toString("binary"); const end = handshake.indexOf("\r\n\r\n"); if (end < 0)
@@ -52,21 +53,8 @@ class DevtoolsSocket {
         this.pending.delete(message.id);
         message.error ? pending.reject(new Error(message.error.message)) : pending.resolve(message.result);
     } }
-    send(payload) { const body = Buffer.from(JSON.stringify(payload)), mask = Buffer.from([1, 2, 3, 4]); let header; if (body.length < 126)
-        header = Buffer.from([129, 128 | body.length]);
-    else if (body.length <= 0xffff) {
-        header = Buffer.alloc(4);
-        header[0] = 129;
-        header[1] = 254;
-        header.writeUInt16BE(body.length, 2);
-    }
-    else {
-        header = Buffer.alloc(10);
-        header[0] = 129;
-        header[1] = 255;
-        header.writeBigUInt64BE(BigInt(body.length), 2);
-    } for (let index = 0; index < body.length; index += 1)
-        body[index] ^= mask[index % 4]; this.socket.write(Buffer.concat([header, mask, body])); }
+    send(payload) { const frame = encodeDevtoolsTextFrame(JSON.stringify(payload));
+        this.socket.write(frame.bytes); }
     call(method, params = {}) {
         const id = this.nextId++;
         this.send({ id, method, params });

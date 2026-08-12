@@ -39,7 +39,11 @@ import {
   flowGraphPageExampleStateEvidence,
 } from "./support/flow-graph-corrective-workflow.mjs";
 import {
+  flowAuthoringProofContract,
+  flowAuthoringProofResult,
+  encodeDevtoolsTextFrame,
   flowSectionDrawActionabilityState,
+  flowSectionTargetState,
   flowSectionRenderedGenerationState,
   flowWorkspaceReadinessLimitMilliseconds,
   flowWorkspaceR02Runtime,
@@ -47,9 +51,13 @@ import {
 
 const execFileAsync=promisify(execFile);
 const flowGraphAdapterSource=readFileSync("test/browser-packs/flow-graph.mjs","utf8");
-assert.match(flowGraphAdapterSource,
-  /body\.length <= 0xffff[^]*header\.writeBigUInt64BE\(BigInt\(body\.length\), 2\)/u,
-  "the Flow DevTools adapter must transmit generated browser programs larger than 65,535 bytes");
+for(const length of [125,126,65535,65536,66257]){
+  const payload="x".repeat(length),encoded=encodeDevtoolsTextFrame(payload,Buffer.from([1,2,3,4]));
+  assert.equal(encoded.payloadLength,length);
+  assert.equal(encoded.lengthForm,length<126?"short":length<=65535?"uint16":"uint64");
+  assert.equal(encoded.decodedPayload,payload,
+    `Flow DevTools ${encoded.lengthForm} frame must round-trip ${length} bytes`);
+}
 assert.match(flowGraphAdapterSource,
   /timeoutMs:browserShard==="examples"[\s\S]*?:\s*Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u,
   "non-example Flow readiness must consume the owning logical target budget instead of an unrelated five-second ceiling");
@@ -440,9 +448,22 @@ assert.equal(flowWorkspaceReadinessLimitMilliseconds,30000,
 assert.match(flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"}),
   /"timeoutMs":30000/u,
   "the generated authoring runtime must carry the product-readiness boundary");
-assert.match(flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"}),
-  /addEventListener\('focusin',observeDeletionSourceFocus,true\)/u,
-  "the authoring observation must latch the transient production focus event");
+const structuredAuthoringProof=flowAuthoringProofResult(flowAuthoringProofContract);
+assert.deepEqual(structuredAuthoringProof,{valid:true,violations:[]});
+assert.deepEqual(flowAuthoringProofResult({...flowAuthoringProofContract,
+  presentation:{localVariable:"renamedSection",setupOrder:["focus-observer","menu"]}}),
+  structuredAuthoringProof,
+"local renaming and independent presentation/setup metadata do not change structured Flow proof");
+for(const [field,value,behavior] of [
+  ["selectedTargetId","FLOW_WORKSPACE_CONTROLS_TARGET","target selection"],
+  ["sectionActions",flowAuthoringProofContract.sectionActions.slice(1),"Section action inventory"],
+  ["focusTransition",["section-menu","canvas"],"focus transition"],
+]){
+  const result=flowAuthoringProofResult({...flowAuthoringProofContract,[field]:value});
+  assert.equal(result.valid,false);
+  assert.deepEqual(result.violations.map(({behavior:observed})=>observed),[behavior]);
+  assert.match(result.violations[0].message,new RegExp(`^${behavior}: expected .*; observed `));
+}
 const drawRuntimeProgram=flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"});
 const wrappedPersistence=drawRuntimeProgram.indexOf("'wrapped Section'");
 const wrappedGeneration=drawRuntimeProgram.indexOf("'wrapped Section current rendered generation'");
@@ -458,15 +479,10 @@ assert.match(drawRuntimeProgram,
   "the real Section gesture must await the conserved predicate and stability boundary");
 assert.equal(drawRuntimeProgram.match(/pointer\(canvas,'pointerdown',\{pointerId:51/gu)?.length,1,
   "the draw proof must retain one real semantic pointer gesture");
-assert.match(drawRuntimeProgram,
-  /const sectionGroup=.*:scope > \[data-section-dropzone\][^]*const candidate=sectionGroup\(sales\.id\);return candidate\?\.isConnected&&candidate[^]*pointer\(salesGroup,'pointerdown',\{pointerId:52[^]*pointer\(salesGroup,'pointerup',\{pointerId:52/u,
-  "the Section move proof must target the direct-manipulation group rather than a member Page that shares its Section id");
-assert.match(drawRuntimeProgram,
-  /salesGroup=await waitFor\([^]*'current Sales Section group'\)[^]*openSectionMenu\(salesGroup\)[^]*pointer\(salesGroup,'pointerdown',\{pointerId:52/u,
-  "the Section menu and move proofs must share the current rendered direct-manipulation group");
-assert.match(drawRuntimeProgram,
-  /const keyboardSkip=document\.activeElement===canvas;refresh\(\);const keyboardSection=[^]*openSectionMenu\(keyboardSection,'keyboard'\)/u,
-  "keyboard canvas focus must be latched before the Section context menu intentionally moves focus");
+assert.equal(flowSectionTargetState({connected:true,directDropzone:true}),true,
+  "the structured Section target accepts a connected direct-manipulation group");
+assert.equal(flowSectionTargetState({connected:true,directDropzone:false}),false,
+  "a member Page sharing the Section id is not a direct-manipulation target");
 assert.match(drawRuntimeProgram,/expectedSectionCount/u,
   "draw persistence timeout diagnostics must retain section-count state");
 const eventExampleSeedProgram=flowGraphEventExampleSeed({
@@ -562,20 +578,22 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
           usesLogicalRemainingBudget:true}},
     preRepairResult=fixture.expectedPreRepairFailure,
     repairResult=sourceShapeRepair
-      ?{currentTargetRecognized:/const candidate=sectionGroup\(sales\.id\);return candidate\?\.isConnected&&candidate/u.test(drawRuntimeProgram),
-        menuRouteRecognized:/openSectionMenu\(salesGroup\)[^]*pointer\(salesGroup,'pointerdown'/u.test(drawRuntimeProgram)}
+      ?{currentTargetRecognized:flowSectionTargetState({connected:true,directDropzone:true}),
+        menuRouteRecognized:flowAuthoringProofResult(flowAuthoringProofContract).valid}
       :largeFrameRepair
-      ?{extendedLengthHeader:/body\.length <= 0xffff[^]*writeBigUInt64BE/u.test(flowGraphAdapterSource),
-        payloadTransmittable:/header\[1\] = 255[^]*writeBigUInt64BE\(BigInt\(body\.length\), 2\)/u.test(flowGraphAdapterSource)}
+      ?(()=>{const encoded=encodeDevtoolsTextFrame("x".repeat(66257),Buffer.from([1,2,3,4]));
+        return{extendedLengthHeader:encoded.lengthForm==="uint64",
+          payloadTransmittable:encoded.decodedPayload.length===encoded.payloadLength};})()
       :keyboardFocusRepair
-      ?{latchedBeforeMenu:/const keyboardSkip=document\.activeElement===canvas;refresh\(\);const keyboardSection=/u.test(drawRuntimeProgram),
-        menuMayMoveFocus:/openSectionMenu\(keyboardSection,'keyboard'\)/u.test(drawRuntimeProgram)}
+      ?{latchedBeforeMenu:flowAuthoringProofResult(flowAuthoringProofContract).valid&&
+          flowAuthoringProofContract.focusTransition[0]==="canvas",
+        menuMayMoveFocus:flowAuthoringProofContract.focusTransition[1]==="section-menu"}
       :sectionTargetRepair
       ?{selector:"group with direct Section dropzone",directManipulationGuaranteed:true,
-        durableMove:/const sectionGroup=.*:scope > \[data-section-dropzone\][^]*salesGroup=sectionGroup\(sales\.id\)[^]*pointer\(salesGroup,'pointerup',\{pointerId:52/u.test(drawRuntimeProgram)}
+        durableMove:flowSectionTargetState({connected:true,directDropzone:true})}
       :sectionGenerationRepair
-        ?{reacquiresAfterSelection:/salesGroup\.dispatchEvent\(new MouseEvent\('click'[^]*refresh\(\);salesGroup=await waitFor/u.test(drawRuntimeProgram),
-          currentConnectedTarget:/return candidate\?\.isConnected&&candidate;\},'current Sales Section group'/u.test(drawRuntimeProgram)}
+        ?{reacquiresAfterSelection:flowSectionRenderedGenerationState(currentRenderedGeneration),
+          currentConnectedTarget:flowSectionTargetState({connected:true,directDropzone:true})}
       :eventSeedRepair
         ?{freshRevisionAttempts:4,
           rebuildsMutation:/for\(let attempt=0;attempt<4;attempt\+=1\)\{const base=await repository\.loadProject/u.test(eventExampleSeedProgram),
