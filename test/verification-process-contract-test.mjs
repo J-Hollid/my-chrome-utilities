@@ -4481,9 +4481,13 @@ const approvedVtd017TaskKeys = new Set([
   `acceptance-parse:${vtd017Feature}`,
   `acceptance-generate:${vtd017Feature}`,
 ]);
+const approvedFlowProofTaskKeys = new Set([
+  "property:test/flow-verification-proof-property-test.mjs",
+]);
 const approvedVerificationTaskKeys = new Set([
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
+  ...approvedFlowProofTaskKeys,
 ]);
 const currentTerminalIdentitiesWithoutApprovedAdditions = currentTerminalPlan.tasks.filter(({ key }) =>
   !postBaseAddedUnitKeys.has(key) && !approvedVerificationTaskKeys.has(key)).map(normalizedVtd006Identity);
@@ -4509,6 +4513,10 @@ for (const taskKey of approvedVtd015TaskKeys) {
 for (const taskKey of approvedVtd017TaskKeys) {
   assert.equal(currentTerminalPlan.tasks.filter(({ key }) => key === taskKey).length, 1,
     `terminal-full planning adds the approved VTD-017 task ${taskKey} exactly once`);
+}
+for (const taskKey of approvedFlowProofTaskKeys) {
+  assert.equal(currentTerminalPlan.tasks.filter(({ key }) => key === taskKey).length, 1,
+    `terminal-full planning adds the approved Flow proof property ${taskKey} exactly once`);
 }
 assert.equal(currentTerminalPlan.tasks.filter(({ target }) =>
   target === "test/acceptance/side-panel-browser-session-contract.mjs").length, 0,
