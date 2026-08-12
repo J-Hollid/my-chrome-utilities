@@ -15,7 +15,7 @@ import { createBrowserPhaseTimer, observeBrowserReadiness, transmitDevtoolsProgr
     waitForChromeDebuggingPort, withDevtoolsProtocolDeadline,
     withLogicalTargetLifecycle } from "../support/browser-observation-control.mjs";
 import { assessFlowReloadLifecycle, canonicalFlowReloadIdentity, FLOW_WORKSPACE_CONTROLS_RELOAD_SEQUENCE } from "../../scripts/flow-reload-lifecycle.mjs";
-import { encodeDevtoolsTextFrame } from "../support/flow-workspace-r02-runtime.mjs";
+import { encodeDevtoolsTextFrame, planFlowBrowserTargets } from "../support/flow-workspace-r02-runtime.mjs";
 class DevtoolsSocket {
     constructor(url, targetId, { callLimitMilliseconds, forcedHangMethod } = {}) { this.url = new URL(url); this.targetId = targetId; this.callLimitMilliseconds = callLimitMilliseconds ?? (() => 120000); this.forcedHangMethod = forcedHangMethod; this.nextId = 1; this.pending = new Map(); this.handlers = new Map(); this.buffer = Buffer.alloc(0); }
     async connect() { await new Promise((resolve, reject) => { this.socket = net.createConnection({ host: this.url.hostname, port: Number(this.url.port) }); this.socket.once("error", reject); this.socket.once("connect", () => { const key = Buffer.from(String(Math.random())).toString("base64"); this.socket.write([`GET ${this.url.pathname}${this.url.search} HTTP/1.1`, `Host: ${this.url.host}`, "Upgrade: websocket", "Connection: Upgrade", `Sec-WebSocket-Key: ${key}`, "Sec-WebSocket-Version: 13", "\r\n"].join("\r\n")); }); let handshake = ""; const receive = (chunk) => { handshake += chunk.toString("binary"); const end = handshake.indexOf("\r\n\r\n"); if (end < 0)
@@ -67,20 +67,11 @@ class DevtoolsSocket {
     on(method, handler) { this.handlers.set(method, handler); }
     close() { for (const pending of this.pending.values()) pending.reject(new Error(`${this.targetId} DevTools socket closed`)); this.pending.clear(); this.socket?.destroy(); }
 }
-const targetShards = {
-    FLOW_WORKSPACE_CONTROLS_TARGET: "core",
-    FLOW_WORKSPACE_AUTHORING_TARGET: "author",
-    FLOW_GRAPH_LEGACY_TARGET: "legacy",
-    FLOW_GRAPH_EXAMPLES_TARGET: "examples",
-};
 const selectedTargetIds = process.env.SWARMFORGE_BROWSER_TARGET_IDS
     ? JSON.parse(process.env.SWARMFORGE_BROWSER_TARGET_IDS)
     : [];
-const selectedTargets = selectedTargetIds.length
-    ? selectedTargetIds.map((id) => ({ id, shard: targetShards[id] }))
-    : [{ id: "FLOW_GRAPH_FALLBACK_TARGET", shard: process.env.FLOW_GRAPH_BROWSER_SHARD ?? "core" }];
-for (const { id, shard } of selectedTargets)
-    assert.equal(typeof shard, "string", `Unknown Flow browser target ${id}`);
+const selectedTargets = planFlowBrowserTargets(
+    selectedTargetIds, process.env.FLOW_GRAPH_BROWSER_SHARD ?? "core");
 const processStarted = performance.now();
 const configuredProtocolCallLimitMilliseconds = Number(
     process.env.SWARMFORGE_VTD007_PROTOCOL_CALL_LIMIT_MS ?? 120000,
@@ -314,7 +305,8 @@ try {
             await evaluate("(()=>{const row=[...document.querySelectorAll('.entity-row button')].find(item=>item.textContent==='Checkout journey');row.click();return true;})()");
         }
         await waitForBrowser("readiness", "Flow toolbar mounted after pan restoration", "[aria-label=\"Flow toolbar\"]");
-        Object.assign(runtime, await evaluate(flowGraphCorrectiveWorkflow(seeded, { stopAfterRuntime: 20, targetId })));
+        Object.assign(runtime, await evaluate(flowGraphCorrectiveWorkflow(
+            seeded, { stopAfterRuntime: 20, targetId, browserShard })));
         runtime.runtime001 = geometryEvidence;
         runtime.runtime027 = panEvidence;
         await reloadFlowPage("core-workflow:evidence");
@@ -376,7 +368,7 @@ try {
     if (browserShard === "author") {
         await reloadFlowPage("authoring:start");
         await ensureFlowWorkspace("Flow toolbar mounted for authoring");
-        Object.assign(runtime, await evaluate(flowGraphCorrectiveWorkflow(seeded, { targetId })));
+        Object.assign(runtime, await evaluate(flowGraphCorrectiveWorkflow(seeded, { targetId, browserShard })));
         await reloadFlowPage("authoring:evidence");
         await waitForBrowser("navigation", "interactive Flow canvas mounted after authoring", "[aria-label=\"Interactive directional Flow canvas\"]");
         const reloadEvidence = await evaluate(flowGraphReloadEvidence(seeded));

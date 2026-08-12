@@ -41,7 +41,9 @@ import {
 import {
   flowAuthoringProofContract,
   flowAuthoringProofResult,
+  decodeDevtoolsTextFrame,
   encodeDevtoolsTextFrame,
+  planFlowBrowserTargets,
   flowSectionDrawActionabilityState,
   flowSectionTargetState,
   flowSectionMenuInvocationPlan,
@@ -52,13 +54,46 @@ import {
 
 const execFileAsync=promisify(execFile);
 const flowGraphAdapterSource=readFileSync("test/browser-packs/flow-graph.mjs","utf8");
+const requiredSectionActions=[
+  "Rename","Move","Resize","Wrap selection","Remove Section","Remove with contents",
+];
+assert.deepEqual([...flowAuthoringProofContract.sectionActions],requiredSectionActions,
+  "the verification oracle independently retains every required Section action");
+const expectedTargetPlan=[
+  {id:"FLOW_WORKSPACE_CONTROLS_TARGET",shard:"core"},
+  {id:"FLOW_WORKSPACE_AUTHORING_TARGET",shard:"author"},
+  {id:"FLOW_GRAPH_LEGACY_TARGET",shard:"legacy"},
+  {id:"FLOW_GRAPH_EXAMPLES_TARGET",shard:"examples"},
+];
+assert.deepEqual(planFlowBrowserTargets(expectedTargetPlan.map(({id})=>id)),expectedTargetPlan,
+  "the browser pack's real target planner retains every target's semantic shard");
+const mutatedControlsPlan=flowAuthoringProofResult({...flowAuthoringProofContract,
+  requestedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",
+  selectedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",selectedShard:"author"});
+assert.equal(mutatedControlsPlan.valid,false);
+assert.deepEqual(mutatedControlsPlan.violations[0],{
+  behavior:"target selection",
+  expected:{id:"FLOW_WORKSPACE_CONTROLS_TARGET",shard:"core"},
+  observed:{id:"FLOW_WORKSPACE_CONTROLS_TARGET",shard:"author"},
+  message:'target selection: expected {"id":"FLOW_WORKSPACE_CONTROLS_TARGET","shard":"core"}; observed {"id":"FLOW_WORKSPACE_CONTROLS_TARGET","shard":"author"}',
+});
 for(const length of [125,126,65535,65536,66257]){
   const payload="x".repeat(length),encoded=encodeDevtoolsTextFrame(payload,Buffer.from([1,2,3,4]));
-  assert.equal(encoded.payloadLength,length);
-  assert.equal(encoded.lengthForm,length<126?"short":length<=65535?"uint16":"uint64");
-  assert.equal(encoded.decodedPayload,payload,
-    `Flow DevTools ${encoded.lengthForm} frame must round-trip ${length} bytes`);
+  const decoded=decodeDevtoolsTextFrame(encoded.bytes);
+  assert.equal(decoded.valid,true,decoded.message);
+  assert.equal(decoded.payloadLength,length);
+  assert.equal(decoded.lengthForm,length<126?"short":length<=65535?"uint16":"uint64");
+  assert.equal(decoded.payload,payload,
+    `Flow DevTools ${decoded.lengthForm} frame must round-trip ${length} bytes`);
 }
+const invalidEndianFrame=Buffer.from(encodeDevtoolsTextFrame("x".repeat(126),Buffer.from([1,2,3,4])).bytes);
+invalidEndianFrame.writeUInt16LE(126,2);
+const invalidEndianResult=decodeDevtoolsTextFrame(invalidEndianFrame);
+assert.equal(invalidEndianResult.valid,false);
+assert.equal(invalidEndianResult.lengthForm,"uint16");
+assert.equal(invalidEndianResult.payloadLength,32256);
+assert.match(invalidEndianResult.message,/uint16.*32256/u,
+  "frame failures report the independently parsed length form and observed length");
 assert.match(flowGraphAdapterSource,
   /timeoutMs:browserShard==="examples"[\s\S]*?:\s*Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u,
   "non-example Flow readiness must consume the owning logical target budget instead of an unrelated five-second ceiling");
@@ -461,6 +496,7 @@ assert.deepEqual(flowAuthoringProofResult({...flowAuthoringProofContract,
 "local renaming and independent presentation/setup metadata do not change structured Flow proof");
 for(const [field,value,behavior] of [
   ["selectedTargetId","FLOW_WORKSPACE_CONTROLS_TARGET","target selection"],
+  ["selectedShard","core","target selection"],
   ["sectionActions",flowAuthoringProofContract.sectionActions.slice(1),"Section action inventory"],
   ["focusTransition",["section-menu","canvas"],"focus transition"],
 ]){
@@ -542,6 +578,7 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     sectionGenerationRepair=context.causalCategory==="other:current rendered Section gesture target",
     eventSeedRepair=context.causalCategory==="other:fresh durable Event example seed",
     sectionMenuRetry=context.causalCategory==="other:bounded Section pointer menu retry",
+    plannerShardWiring=context.causalCategory==="other:Flow planner shard wiring",
     fixture=targetSelectionRepair?{id:"flow-structured-target-selection-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{requestedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",
@@ -577,6 +614,13 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         input:{selectionCanRerenderCanvas:true,preSelectionNodeMayDisconnect:true},
         expectedPreRepairFailure:{reacquiresAfterSelection:false,currentConnectedTarget:false},
         expectedRepairResult:{reacquiresAfterSelection:true,currentConnectedTarget:true}}
+      :plannerShardWiring?{id:"flow-planner-shard-wiring-v1",
+        causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+        input:{requestedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",plannerConsumedByBrowserPack:true},
+        expectedPreRepairFailure:{selectedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",selectedShard:"author",
+          proofValid:false},
+        expectedRepairResult:{selectedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",selectedShard:"core",
+          proofValid:true}}
       :sectionMenuRetry?{id:"bounded-section-pointer-menu-retry-v1",
         causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
         input:{mode:"pointer",firstInvocationObserved:false,currentRenderedTarget:true},
@@ -601,7 +645,7 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       ?{supportedTargets:["FLOW_WORKSPACE_AUTHORING_TARGET","FLOW_WORKSPACE_CONTROLS_TARGET"],
         controlsPartitionAccepted:flowAuthoringProofResult({...flowAuthoringProofContract,
           requestedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",
-          selectedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET"}).valid}
+          selectedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",selectedShard:"core"}).valid}
       :sourceShapeRepair
       ?{currentTargetRecognized:flowSectionTargetState({connected:true,directDropzone:true}),
         menuRouteRecognized:flowAuthoringProofResult(flowAuthoringProofContract).valid}
@@ -619,6 +663,12 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       :sectionGenerationRepair
         ?{reacquiresAfterSelection:flowSectionRenderedGenerationState(currentRenderedGeneration),
           currentConnectedTarget:flowSectionTargetState({connected:true,directDropzone:true})}
+      :plannerShardWiring
+        ?(()=>{const selected=planFlowBrowserTargets(["FLOW_WORKSPACE_CONTROLS_TARGET"])[0];
+          return{selectedTargetId:selected.id,selectedShard:selected.shard,
+            proofValid:flowAuthoringProofResult({...flowAuthoringProofContract,
+              requestedTargetId:selected.id,selectedTargetId:selected.id,
+              selectedShard:selected.shard}).valid};})()
       :sectionMenuRetry
         ?{invocationDelays:[...flowSectionMenuInvocationPlan("pointer")],
           missedFirstInvocationRecovered:flowSectionMenuInvocationPlan("pointer").length===2}
