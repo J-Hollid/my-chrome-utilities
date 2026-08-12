@@ -464,6 +464,9 @@ assert.match(drawRuntimeProgram,
 assert.match(drawRuntimeProgram,
   /salesGroup=await waitFor\([^]*'current Sales Section group'\)[^]*openSectionMenu\(salesGroup\)[^]*pointer\(salesGroup,'pointerdown',\{pointerId:52/u,
   "the Section menu and move proofs must share the current rendered direct-manipulation group");
+assert.match(drawRuntimeProgram,
+  /const keyboardSkip=document\.activeElement===canvas;refresh\(\);const keyboardSection=[^]*openSectionMenu\(keyboardSection,'keyboard'\)/u,
+  "keyboard canvas focus must be latched before the Section context menu intentionally moves focus");
 assert.match(drawRuntimeProgram,/expectedSectionCount/u,
   "draw persistence timeout diagnostics must retain section-count state");
 const eventExampleSeedProgram=flowGraphEventExampleSeed({
@@ -510,10 +513,28 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         .sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)]))
       :value,
     digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
+    sourceShapeRepair=context.causalCategory==="other:Flow Section evidence source-shape coupling",
+    largeFrameRepair=context.causalCategory==="other:Flow DevTools large-program frame encoding",
+    keyboardFocusRepair=context.causalCategory==="other:Flow keyboard focus observation ordering",
     sectionTargetRepair=context.causalCategory==="other:unambiguous synthetic Section target",
     sectionGenerationRepair=context.causalCategory==="other:current rendered Section gesture target",
     eventSeedRepair=context.causalCategory==="other:fresh durable Event example seed",
-    fixture=sectionTargetRepair?{id:"unambiguous-synthetic-section-target-v1",
+    fixture=sourceShapeRepair?{id:"flow-section-evidence-structure-v1",
+      causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{sectionTarget:"current direct-manipulation group",invocation:"context menu before move"},
+      expectedPreRepairFailure:{currentTargetRecognized:false,menuRouteRecognized:false},
+      expectedRepairResult:{currentTargetRecognized:true,menuRouteRecognized:true}}
+      :largeFrameRepair?{id:"flow-devtools-extended-client-frame-v1",
+        causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+        input:{generatedProgramBytes:66257,legacyMaximumBytes:65535},
+        expectedPreRepairFailure:{extendedLengthHeader:false,payloadTransmittable:false},
+        expectedRepairResult:{extendedLengthHeader:true,payloadTransmittable:true}}
+      :keyboardFocusRepair?{id:"flow-keyboard-focus-observation-order-v1",
+        causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+        input:{skipTarget:"canvas",nextInteraction:"Section context menu"},
+        expectedPreRepairFailure:{latchedBeforeMenu:false,menuMayMoveFocus:true},
+        expectedRepairResult:{latchedBeforeMenu:true,menuMayMoveFocus:true}}
+      :sectionTargetRepair?{id:"unambiguous-synthetic-section-target-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{sharedAttribute:"data-flow-section-id",candidateKinds:["Section group","member Page frame"]},
       expectedPreRepairFailure:{selector:"first matching group",directManipulationGuaranteed:false,
@@ -540,7 +561,16 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         expectedRepairResult:{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
           usesLogicalRemainingBudget:true}},
     preRepairResult=fixture.expectedPreRepairFailure,
-    repairResult=sectionTargetRepair
+    repairResult=sourceShapeRepair
+      ?{currentTargetRecognized:/const candidate=sectionGroup\(sales\.id\);return candidate\?\.isConnected&&candidate/u.test(drawRuntimeProgram),
+        menuRouteRecognized:/openSectionMenu\(salesGroup\)[^]*pointer\(salesGroup,'pointerdown'/u.test(drawRuntimeProgram)}
+      :largeFrameRepair
+      ?{extendedLengthHeader:/body\.length <= 0xffff[^]*writeBigUInt64BE/u.test(flowGraphAdapterSource),
+        payloadTransmittable:/header\[1\] = 255[^]*writeBigUInt64BE\(BigInt\(body\.length\), 2\)/u.test(flowGraphAdapterSource)}
+      :keyboardFocusRepair
+      ?{latchedBeforeMenu:/const keyboardSkip=document\.activeElement===canvas;refresh\(\);const keyboardSection=/u.test(drawRuntimeProgram),
+        menuMayMoveFocus:/openSectionMenu\(keyboardSection,'keyboard'\)/u.test(drawRuntimeProgram)}
+      :sectionTargetRepair
       ?{selector:"group with direct Section dropzone",directManipulationGuaranteed:true,
         durableMove:/const sectionGroup=.*:scope > \[data-section-dropzone\][^]*salesGroup=sectionGroup\(sales\.id\)[^]*pointer\(salesGroup,'pointerup',\{pointerId:52/u.test(drawRuntimeProgram)}
       :sectionGenerationRepair
