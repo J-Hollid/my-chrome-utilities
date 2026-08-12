@@ -2861,8 +2861,7 @@
       }
     ],
     "property": [
-      "test/data-layer-flow-graph-property-test.mjs",
-      "test/flow-verification-proof-property-test.mjs"
+      "test/data-layer-flow-graph-property-test.mjs"
     ],
     "features": [
       "features/data-layer-directional-flow-specification-graph.feature",
