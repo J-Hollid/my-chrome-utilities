@@ -2153,3 +2153,23 @@ Feature: Modular verification packs
     And changing the selected target, Section action inventory, focus transition, frame length form, or decoded payload does fail the check
     And each failure identifies the violated behavior and observed structured value rather than printing the complete generated browser program
     And every registered assertion leaf, browser operation, incident obligation, and focused ownership boundary remains unchanged
+
+  # Modular verification packs 150
+  Scenario: Modular verification packs 150
+    Given a feature-integration reliability incident has an eligible causal repair on the exact candidate
+    And its deterministic regression, complete approved focused plan, and package check pass freshly
+    When review-ready or QA-ready handoff evidence is validated
+    Then the incident receives a durable terminal-verification-deferred disposition for that candidate and evidence
+    And the disposition permits only the remaining focused reviews and QA fast-forward
+    And the incident stays unresolved, retains its active lineage and immutable failure history, and is not abandoned
+    And a change to the failure boundary, repair, regression, plan, runner semantics, candidate tree, or package proof invalidates the disposition and blocks QA until focused proof is refreshed
+    And no feature-integration role claims, launches, or substitutes an all-20 checkpoint
+
+  # Modular verification packs 151
+  Scenario: Modular verification packs 151
+    Given a frozen QA release candidate contains one or more terminal-verification-deferred incidents whose exact repairs remain in its ancestry
+    When the architect runs the one canonical master-integration all-20 checkpoint with properties and package proof
+    Then its passing receipt resolves every matching deferred incident on the sealed candidate
+    And the same receipt supplies final-ready evidence without a second all-20 run
+    And a failed checkpoint leaves every affected incident unresolved and prevents final-ready handoff and master integration
+    And release-candidate routing to the architect remains possible so the required terminal checkpoint can run

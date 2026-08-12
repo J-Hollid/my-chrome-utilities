@@ -134,3 +134,20 @@ Feature: Settled candidate final verification
     And no preliminary invocation of the same plan is required for the same tree
     And the evidence binds the task, base, commit, tree, changed paths, plan, result, and timestamps
     And any later behavior, test, build, registry, runner, workflow, or mutation-metadata change requires one new evidence-producing invocation
+
+  # Settled candidate final verification 013
+  Scenario Outline: Settled candidate final verification 013
+    Given the current candidate has an unresolved reliability incident with an eligible causal repair, deterministic regression, exact focused review-ready evidence, and package proof
+    When a <readiness> handoff is evaluated in <integration_mode>
+    Then the incident gate produces <gate_result>
+    And a QA-eligible incident is recorded as terminal-verification-deferred with its failure, repair candidate and tree, regression, focused receipt, package receipt, and lineage intact
+    And terminal-verification-deferred is neither incident resolution nor lineage abandonment
+    And an unrepaired incident, failing regression, stale focused receipt, failing package, or changed bound identity remains blocking
+    And only one passing master-integration all-20 checkpoint with properties and package proof resolves the deferred incident and supplies final evidence
+
+    Examples:
+      | readiness         | integration_mode    | gate_result                                                                     |
+      | review-ready      | feature integration | permit the next named focused review and retain terminal verification deferred |
+      | qa-ready          | feature integration | permit only QA integration and retain terminal verification deferred           |
+      | release-candidate | master integration  | permit only architect terminal review of the frozen QA candidate               |
+      | final-ready       | master integration  | block until the deferred incident is resolved by the exact terminal checkpoint |

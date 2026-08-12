@@ -41,6 +41,12 @@ reviewable change.
 3. Coder and refactorer run focused checks and record review-ready evidence. The
    architect completes architecture and quality review and runs focused checks
    for any changes or repairs. No role runs the all-20 gate in this mode.
+   A reliability incident with an eligible causal repair, deterministic
+   regression, exact focused review-ready evidence, and passing package proof is
+   recorded as `terminal-verification-deferred`. That unresolved disposition
+   permits focused review and QA integration only; it is neither resolution nor
+   abandonment. Missing, failing, stale, or identity-mismatched proof remains
+   blocking.
 4. The architect sends the exact candidate to the specifier with
    `readiness: qa-ready` and `verified: review-ready`. That claim must have bound
    focused evidence for the exact task, base, commit, tree, changed paths, and
@@ -72,6 +78,11 @@ Use this mode only when the user explicitly requests promotion to `master`.
 3. The architect reviews the cumulative `master..qa` change set, seals one exact
    tree, and runs one fresh canonical all-20 checkpoint with properties and the
    package check.
+   The release-candidate route remains open for terminal-verification-deferred
+   incidents so the architect can perform this checkpoint. Its passing receipt
+   resolves matching deferred incidents and supplies final-ready evidence; no
+   second all-20 run is required. Any unresolved incident still blocks the
+   final-ready handoff and master fast-forward.
 4. A pass produces the existing `final-ready` evidence and architect-to-specifier
    handoff. The specifier verifies its exact base, task, commit, tree, plan, and
    package proof, then fast-forwards `qa` and `master` to that exact tested commit.
