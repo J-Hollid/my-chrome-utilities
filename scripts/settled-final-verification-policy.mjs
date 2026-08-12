@@ -1,5 +1,59 @@
 import { same, sortedUnique } from "./settled-final-verification-review.mjs";
 
+function nonNegativeFinite(value, label) {
+  if (!Number.isFinite(value) || value < 0) throw new Error(`${label} must be non-negative`);
+  return value;
+}
+
+export function reviewReadyScopePreflight({
+  approvedPackIds, plannedPackIds, taskCount, criticalPathEstimateMs, changedOwners = {},
+  startedAtMs, nowMs = Date.now(), effortCeilingMs, allPackIds,
+}) {
+  const approvedPacks = sortedUnique(approvedPackIds);
+  const plannedPacks = sortedUnique(plannedPackIds);
+  const canonicalPacks = sortedUnique(allPackIds);
+  if (!approvedPacks.length || !plannedPacks.length ||
+      [...approvedPacks, ...plannedPacks].some((id) => !canonicalPacks.includes(id))) {
+    throw new Error("Review-ready scope preflight requires canonical approved and planned packs");
+  }
+  if (!Number.isInteger(taskCount) || taskCount < 1) {
+    throw new Error("Review-ready scope preflight requires a positive task count");
+  }
+  nonNegativeFinite(criticalPathEstimateMs, "Critical-path estimate");
+  nonNegativeFinite(startedAtMs, "Effort start");
+  nonNegativeFinite(nowMs, "Current time");
+  nonNegativeFinite(effortCeilingMs, "Effort ceiling");
+  const approved = new Set(approvedPacks);
+  const expansionCausingPaths = Object.entries(changedOwners)
+    .filter(([, owners]) => (owners ?? []).some((id) => !approved.has(id)))
+    .map(([changedPath]) => changedPath).sort();
+  const authorized = same(approvedPacks, plannedPacks);
+  const elapsedMs = Math.max(0, nowMs - startedAtMs);
+  return {
+    status:authorized ? "authorized" : "blocked",
+    approvedPacks,
+    plannedPacks,
+    taskCount,
+    criticalPathEstimateMs,
+    expansionCausingPaths,
+    elapsedMs,
+    remainingEffortCeilingMs:Math.max(0, effortCeilingMs - elapsedMs),
+    launchAuthorizationCount:authorized ? 1 : 0,
+    omittedOwnedPacks:[],
+    terminalClaim:false,
+  };
+}
+
+export function formatReviewReadyScopePreflight(result) {
+  return `Review-ready scope preflight ${result.status}. ` +
+    `Approved packs: ${result.approvedPacks.join(", ")}; ` +
+    `planned packs: ${result.plannedPacks.join(", ")}; ` +
+    `${result.taskCount} tasks; critical-path estimate: ${result.criticalPathEstimateMs}ms; ` +
+    `expansion-causing paths: ${result.expansionCausingPaths.join(", ") || "none"}; ` +
+    `elapsed: ${result.elapsedMs}ms; remaining effort ceiling: ${result.remainingEffortCeilingMs}ms; ` +
+    `no owned packs omitted; terminal claim: false.`;
+}
+
 function exactRecipient(recipientSet, role) {
   return recipientSet.size === 1 && recipientSet.has(role);
 }

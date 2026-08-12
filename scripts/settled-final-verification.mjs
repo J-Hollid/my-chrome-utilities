@@ -14,14 +14,18 @@ import {
 import {
   deliveryScorecard,
   finalEvidenceEffect,
+  formatReviewReadyScopePreflight,
   handoffReadinessPolicy,
+  reviewReadyScopePreflight,
 } from "./settled-final-verification-policy.mjs";
 
 export {
   createReviewReadyRecord,
   deliveryScorecard,
   finalEvidenceEffect,
+  formatReviewReadyScopePreflight,
   handoffReadinessPolicy,
+  reviewReadyScopePreflight,
   validateReviewReadyRecord,
 };
 

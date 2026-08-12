@@ -11,7 +11,9 @@ import {
   createReviewReadyRecord,
   deliveryScorecard,
   finalEvidenceEffect,
+  formatReviewReadyScopePreflight,
   handoffReadinessPolicy,
+  reviewReadyScopePreflight,
   recordReviewReadyEvidence,
   runSettledFinalVerificationCommand,
   validateReviewReadyRecord,
@@ -32,6 +34,36 @@ const baseCommit = "1".repeat(40);
 const candidateCommit = "2".repeat(40);
 const candidateTree = "3".repeat(40);
 const packs = await loadVerificationPacks();
+
+const focusedScopePreflight = reviewReadyScopePreflight({
+  approvedPackIds:["flow_graph"], plannedPackIds:["flow_graph"], taskCount:17,
+  criticalPathEstimateMs:34_900,
+  changedOwners:{ "src/flow-graph/workspace-section-ui.ts":["flow_graph"] },
+  startedAtMs:1_000, nowMs:6_000, effortCeilingMs:60 * 60 * 1000, allPackIds:allPacks,
+});
+assert.deepEqual(focusedScopePreflight, {
+  status:"authorized", approvedPacks:["flow_graph"], plannedPacks:["flow_graph"],
+  taskCount:17, criticalPathEstimateMs:34_900, expansionCausingPaths:[], elapsedMs:5_000,
+  remainingEffortCeilingMs:3_595_000, launchAuthorizationCount:1,
+  omittedOwnedPacks:[], terminalClaim:false,
+});
+const expandedScopePreflight = reviewReadyScopePreflight({
+  approvedPackIds:["flow_graph"], plannedPackIds:allPacks, taskCount:842,
+  criticalPathEstimateMs:1_008_000,
+  changedOwners:{
+    "src/flow-graph/workspace-section-ui.ts":["flow_graph"],
+    "scripts/run-focused-acceptance.mjs":allPacks,
+  },
+  startedAtMs:1_000, nowMs:6_000, effortCeilingMs:60 * 60 * 1000, allPackIds:allPacks,
+});
+assert.equal(expandedScopePreflight.status, "blocked");
+assert.deepEqual(expandedScopePreflight.expansionCausingPaths,
+  ["scripts/run-focused-acceptance.mjs"]);
+assert.equal(expandedScopePreflight.launchAuthorizationCount, 0);
+assert.deepEqual(expandedScopePreflight.omittedOwnedPacks, []);
+assert.equal(expandedScopePreflight.terminalClaim, false);
+assert.match(formatReviewReadyScopePreflight(expandedScopePreflight),
+  /approved packs: flow_graph.*planned packs: branding_polish.*842 tasks.*1008000ms.*scripts\/run-focused-acceptance\.mjs.*elapsed: 5000ms.*remaining effort ceiling: 3595000ms/is);
 for (const workflowPath of [
   "scripts/settled-final-verification.mjs",
   "scripts/settled-final-verification-policy.mjs",
@@ -315,6 +347,7 @@ console.log(JSON.stringify({
     completedFeatureDelta:0,
     recommendationRequired:true,
     qaPilot:{
+      scopePreflight:{ authorized:focusedScopePreflight, blocked:expandedScopePreflight },
       qaReady:{ exactTreeOnly:true, focusedOnly:true, boundFocusedEvidence:true,
         qaFastForwardOnly:true, fullRegressionClaim:false, masterCompletionClaim:false },
       masterIntegration:{ explicitUserRequest:true, qaHeadFrozen:true, masterBaseBound:true,

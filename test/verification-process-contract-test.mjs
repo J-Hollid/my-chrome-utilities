@@ -753,6 +753,8 @@ try {
   });
   const cliRunnerPath = path.join(cliContentionRepository, "scripts/run-focused-acceptance.mjs");
   await copyFile(path.resolve("scripts/run-focused-acceptance.mjs"), cliRunnerPath);
+  await copyFile(path.resolve("scripts/settled-final-verification-policy.mjs"),
+    path.join(cliContentionRepository, "scripts/settled-final-verification-policy.mjs"));
   await copyFile(path.resolve("scripts/dist-artifact-lock.mjs"),
     path.join(cliContentionRepository, "scripts/dist-artifact-lock.mjs"));
   const cliRepairPlannerPath = path.join(
@@ -788,6 +790,7 @@ try {
   await writeFile(path.join(cliContentionRepository, ".git/info/exclude"),
     "node_modules\n.swarmforge\nscripts/verification-task-succession.mjs\nverification/task-succession.json\n");
   await exec("git", ["add", "scripts/run-focused-acceptance.mjs",
+    "scripts/settled-final-verification-policy.mjs",
     "scripts/dist-artifact-lock.mjs",
     "scripts/verification-reliability-repair.mjs",
     "scripts/verification-reliability-closure.mjs",

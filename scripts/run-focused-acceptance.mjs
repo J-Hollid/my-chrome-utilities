@@ -66,6 +66,14 @@ import {
   resolveIncidentTaskSuccession, validateUnresolvedIncidentTaskSuccession,
   verificationTaskDigest,
 } from "./verification-task-succession.mjs";
+import {
+  formatReviewReadyScopePreflight,
+  reviewReadyScopePreflight,
+} from "./settled-final-verification-policy.mjs";
+import {
+  estimatePlanMilliseconds,
+  measuredTimingModel,
+} from "./report-verification-throughput.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const defaultTimeoutMs = 600_000;
@@ -1512,6 +1520,7 @@ export async function runFocusedAcceptance(
   args,
   { commandRunner, artifactValidator = ({ root }) => assertFreshDist({ root }) } = {},
 ) {
+  const reviewPreflightStartedAt = Date.now();
   const packs = await loadVerificationPacks();
   const options = focusedAcceptanceOptions(args);
   if (options.timeoutDiagnosticRetry) {
@@ -1563,8 +1572,41 @@ export async function runFocusedAcceptance(
   delete options.timeoutRepairIncident;
   await validateVerificationPacks(packs);
   let plan;
+  let bindingPlan;
+  if (changedSince && options.packIds.length) {
+    bindingPlan = planVerification(packs, { ...options, packIds:[] });
+    const productCandidate = bindingPlan.changedPaths.some((changedPath) =>
+      changedPath.startsWith("src/") || changedPath.startsWith("dist/") ||
+      /^(?:manifest\.json|[^/]+\.(?:css|html))$/u.test(changedPath));
+    if (productCandidate) {
+      const timingBaseline = JSON.parse(await readFile(
+        path.join(repositoryRoot, "verification", "timing-baseline.json"), "utf8"));
+      const preflight = reviewReadyScopePreflight({
+        approvedPackIds:options.packIds,
+        plannedPackIds:bindingPlan.packIds,
+        taskCount:bindingPlan.tasks.length,
+        criticalPathEstimateMs:estimatePlanMilliseconds(bindingPlan,
+          measuredTimingModel([], timingBaseline), {
+            concurrency:environmentInteger("VERIFICATION_CONCURRENCY", 4, { maximum:64 }),
+            observationConcurrency:environmentInteger("VERIFICATION_OBSERVATION_CONCURRENCY", 2,
+              { maximum:4 }),
+          }),
+        changedOwners:bindingPlan.changedOwners,
+        startedAtMs:Number(process.env.SWARMFORGE_TASK_STARTED_AT_MS ?? reviewPreflightStartedAt),
+        nowMs:Date.now(),
+        effortCeilingMs:environmentInteger("SWARMFORGE_EFFORT_CEILING_MINUTES", 60,
+          { maximum:24 * 60 }) * 60_000,
+        allPackIds:timeoutRepairPackIds,
+      });
+      console.error(`[verify:review-scope] ${formatReviewReadyScopePreflight(preflight)}`);
+      if (preflight.status === "blocked") {
+        throw new Error("Review-ready verification scope expanded before task launch; restore the " +
+          "approved candidate or approve the shared verification repair as a standalone slice");
+      }
+    }
+  }
   if (options.focusedTaskKeys.length && changedSince) {
-    const bindingPlan = planVerification(packs, { ...options, packIds:[] });
+    bindingPlan ??= planVerification(packs, { ...options, packIds:[] });
     const executionPlan = planVerification(packs, {
       ...options,
       changedPaths:[],
