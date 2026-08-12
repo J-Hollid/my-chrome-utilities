@@ -6,7 +6,7 @@ import {
   assertNoBlockingTimeoutIncidents, createTimeoutIncidentStore,
 } from "./verification-reliability-store.mjs";
 import { git, repositoryRoot } from "./verification-reliability-values.mjs";
-import { terminalVerificationDeferredConservation } from "./settled-final-verification-policy.mjs";
+import { terminalVerificationDeferredConservation } from "./verification-reliability-deferred.mjs";
 
 export { createTimeoutIncidentStore };
 

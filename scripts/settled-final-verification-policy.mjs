@@ -77,62 +77,6 @@ export function terminalVerificationDeferredRoute({
   return { permitted:false, mode:"terminal-blocked" };
 }
 
-const deferredWorkflowInputs = Object.freeze([
-  "scripts/build.mjs",
-  "scripts/dist-artifact.mjs",
-  "scripts/dist-artifact-lock.mjs",
-  "scripts/package.mjs",
-  "scripts/run-focused-acceptance.mjs",
-  "scripts/settled-final-verification-policy.mjs",
-  "scripts/settled-final-verification-review.mjs",
-  "scripts/settled-final-verification.mjs",
-  "scripts/verification-evidence.mjs",
-  "scripts/verification-packs.mjs",
-  "scripts/verification-reliability-incidents.mjs",
-  "scripts/verification-reliability-persistence.mjs",
-  "scripts/verification-reliability-receipts.mjs",
-  "scripts/verification-reliability-repair.mjs",
-  "scripts/verification-reliability-runtime.mjs",
-  "scripts/verification-reliability-store.mjs",
-  "scripts/verification-reliability-values.mjs",
-  "swarmforge/scripts/swarm_handoff.bb",
-  "verification/packs.json",
-]);
-
-function repositoryPathCandidate(value, candidates) {
-  if (typeof value !== "string") return null;
-  const canonical = value.replace(/^\.\//u, "");
-  return candidates.has(canonical) ? canonical : null;
-}
-
-function nestedValues(value) {
-  if (value === null || typeof value !== "object") return [];
-  return Object.values(value);
-}
-
-function repositoryPaths(value, candidates, found = new Set()) {
-  const candidate = repositoryPathCandidate(value, candidates);
-  if (candidate) found.add(candidate);
-  for (const nested of nestedValues(value)) repositoryPaths(nested, candidates, found);
-  return found;
-}
-
-export function terminalVerificationDeferredConservation({ incident, changedPaths }) {
-  const canonicalChangedPaths = [...new Set(changedPaths)].sort();
-  const candidates = new Set(canonicalChangedPaths);
-  const inputs = repositoryPaths({
-    failureTask:incident?.failure?.task,
-    repairChangedPaths:incident?.repair?.changedPaths,
-    regression:incident?.repair?.regression,
-    focusedTaskPlan:incident?.repair?.focusedTaskPlan,
-    causalFixture:incident?.repair?.causalProtocol?.fixture,
-    deferredWorkflowInputs,
-  }, candidates);
-  const relevantChangedPaths = canonicalChangedPaths.filter((changedPath) => inputs.has(changedPath));
-  return { conserved:relevantChangedPaths.length === 0, relevantChangedPaths,
-    changedPaths:canonicalChangedPaths };
-}
-
 function exactRecipient(recipientSet, role) {
   return recipientSet.size === 1 && recipientSet.has(role);
 }

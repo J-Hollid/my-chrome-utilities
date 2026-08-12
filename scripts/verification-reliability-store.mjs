@@ -17,7 +17,7 @@ import {
   timeoutResolutionEvidence, validateRepairReceiptSemantics, validateTimeoutRepairProposal,
   timeoutRepairCandidate,
 } from "./verification-reliability-repair.mjs";
-import { terminalVerificationDeferredConservation } from "./settled-final-verification-policy.mjs";
+import { terminalVerificationDeferredConservation } from "./verification-reliability-deferred.mjs";
 import {
   exactObject, git, normalized, repositoryRoot, retryClassifications, shaPattern,
   stableIncidentId, timeoutIncidentDigest,

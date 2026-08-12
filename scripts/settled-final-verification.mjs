@@ -19,8 +19,8 @@ import {
   reviewReadyProductCandidatePath,
   reviewReadyScopePreflight,
   terminalVerificationDeferredRoute,
-  terminalVerificationDeferredConservation,
 } from "./settled-final-verification-policy.mjs";
+import { terminalVerificationDeferredConservation } from "./verification-reliability-deferred.mjs";
 
 export {
   createReviewReadyRecord,

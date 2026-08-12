@@ -118,6 +118,19 @@ assert.deepEqual(terminalVerificationDeferredConservation({
   changedPaths:["scripts/verification-reliability-store.mjs"],
 }), { conserved:false, relevantChangedPaths:["scripts/verification-reliability-store.mjs"],
   changedPaths:["scripts/verification-reliability-store.mjs"] });
+for (const sharedVerificationPath of [
+  "scripts/future-verification-helper.mjs",
+  "swarmforge/scripts/future-handoff-helper.bb",
+  "verification/future-contract.json",
+  "swarmforge/toolchain.lock.json",
+  "package-lock.json",
+]) {
+  assert.deepEqual(terminalVerificationDeferredConservation({
+    incident:deferredIncident, changedPaths:[sharedVerificationPath],
+  }), { conserved:false, relevantChangedPaths:[sharedVerificationPath],
+    changedPaths:[sharedVerificationPath] },
+  `${sharedVerificationPath} invalidates carried proof without a filename allowlist update`);
+}
 const repositoryWideIncident = {
   ...deferredIncident,
   failure:{ task:{ target:"src/relevant-boundary.ts" } },
