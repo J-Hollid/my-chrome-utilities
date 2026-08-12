@@ -19,6 +19,7 @@ import {
   reviewReadyProductCandidatePath,
   reviewReadyScopePreflight,
   terminalVerificationDeferredRoute,
+  terminalVerificationDeferredConservation,
 } from "./settled-final-verification-policy.mjs";
 
 export {
@@ -30,6 +31,7 @@ export {
   reviewReadyProductCandidatePath,
   reviewReadyScopePreflight,
   terminalVerificationDeferredRoute,
+  terminalVerificationDeferredConservation,
   validateReviewReadyRecord,
 };
 

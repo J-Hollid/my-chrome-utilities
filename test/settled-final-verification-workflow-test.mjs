@@ -16,6 +16,7 @@ import {
   reviewReadyProductCandidatePath,
   reviewReadyScopePreflight,
   terminalVerificationDeferredRoute,
+  terminalVerificationDeferredConservation,
   recordReviewReadyEvidence,
   runSettledFinalVerificationCommand,
   validateReviewReadyRecord,
@@ -91,6 +92,32 @@ assert.deepEqual(terminalVerificationDeferredRoute({ incident:deferredIncident,
   candidateDescendsFromDeferred:true }), { permitted:true, mode:"master-checkpoint" });
 assert.deepEqual(terminalVerificationDeferredRoute({ incident:deferredIncident,
   readiness:"final-ready", candidateCommit }), { permitted:false, mode:"terminal-blocked" });
+assert.deepEqual(terminalVerificationDeferredConservation({
+  incident:{ ...deferredIncident, failure:{ task:{ target:"test/verification-process-contract-test.mjs" } },
+    repair:{ ...deferredIncident.repair,
+      changedPaths:["scripts/run-focused-acceptance.mjs"], focusedTaskPlan:[{
+        identity:{ target:"test/verification-process-contract-test.mjs" },
+      }] } },
+  changedPaths:["docs/slice-2.md", "features/flow.feature"],
+}), { conserved:true, relevantChangedPaths:[], changedPaths:["docs/slice-2.md", "features/flow.feature"] });
+assert.deepEqual(terminalVerificationDeferredConservation({
+  incident:{ ...deferredIncident, failure:{ task:{ target:"test/verification-process-contract-test.mjs" } },
+    repair:{ ...deferredIncident.repair,
+      changedPaths:["scripts/run-focused-acceptance.mjs"], focusedTaskPlan:[{
+        identity:{ target:"test/verification-process-contract-test.mjs" },
+      }] } },
+  changedPaths:["src/independent-flow.ts", "test/independent-flow-test.mjs"],
+}), { conserved:true, relevantChangedPaths:[],
+  changedPaths:["src/independent-flow.ts", "test/independent-flow-test.mjs"] });
+assert.deepEqual(terminalVerificationDeferredConservation({
+  incident:{ ...deferredIncident, failure:{ task:{ target:"test/verification-process-contract-test.mjs" } },
+    repair:{ ...deferredIncident.repair,
+      changedPaths:["scripts/run-focused-acceptance.mjs"], focusedTaskPlan:[{
+        identity:{ target:"test/verification-process-contract-test.mjs" },
+      }] } },
+  changedPaths:["scripts/verification-reliability-store.mjs"],
+}), { conserved:false, relevantChangedPaths:["scripts/verification-reliability-store.mjs"],
+  changedPaths:["scripts/verification-reliability-store.mjs"] });
 for (const workflowPath of [
   "scripts/settled-final-verification.mjs",
   "scripts/settled-final-verification-policy.mjs",
@@ -378,6 +405,11 @@ console.log(JSON.stringify({
       terminalVerificationDeferred:{
         unresolved:true, abandoned:false, focusedReview:true, qaIntegration:true,
         releaseCandidate:true, finalReady:false, all20Launched:false,
+      },
+      deferredCarryForward:{
+        specificationOnlyStart:true, changedPathConservation:true,
+        independentDescendant:true, relevantInputRequiresFreshProof:true,
+        unresolved:true, masterOnlyResolution:true,
       },
       qaReady:{ exactTreeOnly:true, focusedOnly:true, boundFocusedEvidence:true,
         qaFastForwardOnly:true, fullRegressionClaim:false, masterCompletionClaim:false },

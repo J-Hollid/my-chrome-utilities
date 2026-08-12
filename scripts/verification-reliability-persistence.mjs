@@ -207,12 +207,21 @@ function validateTransitionHistory(incident) {
   if (incident.terminalVerificationDeferred !== undefined) {
     const deferred = incident.terminalVerificationDeferred;
     const latest = deferredTransitions.at(-1);
+    const carry = deferred.carryForward;
+    const focusedProofValid = Array.isArray(deferred.reviewReady?.focusedTaskKeys) &&
+      deferred.reviewReady.focusedTaskKeys.length > 0 &&
+      (carry !== undefined || deferred.reviewReady.focusedTaskKeys.includes(incident.failure.task.key));
+    const carryValid = carry === undefined ||
+      (carry.fromCandidate?.commit && carry.fromCandidate?.tree &&
+       shaPattern.test(carry.fromDispositionDigest ?? "") && carry.conservation?.conserved === true &&
+       Array.isArray(carry.conservation.changedPaths) &&
+       Array.isArray(carry.conservation.relevantChangedPaths) &&
+       carry.conservation.relevantChangedPaths.length === 0 && latest?.carried === true);
     if (deferred.status !== "terminal-verification-deferred" ||
         incident.repair?.status !== "eligible" || !deferred.candidate?.commit ||
         !deferred.candidate?.tree || !deferred.reviewReady?.task ||
         !deferred.reviewReady?.baseCommit || !shaPattern.test(deferred.reviewReady?.receiptSha256 ?? "") ||
-        !Array.isArray(deferred.reviewReady?.focusedTaskKeys) ||
-        !deferred.reviewReady.focusedTaskKeys.includes(incident.failure.task.key) ||
+        !focusedProofValid || !carryValid ||
         !shaPattern.test(deferred.package?.digest ?? "") ||
         !shaPattern.test(deferred.repairDigest ?? "") || !Number.isFinite(Date.parse(deferred.recordedAt)) ||
         !shaPattern.test(deferred.digest ?? "") ||

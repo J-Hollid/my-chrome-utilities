@@ -1885,22 +1885,26 @@ try {
   let canonicalRepairIdentities = timeoutCanonicalIdentities;
   let incidentNumber = 0;
   let incidentNow = "2026-08-09T00:00:00.000Z";
+  let incidentCandidate = { commit:"repair-commit", tree:"repair-tree" };
+  let incidentCandidateChangedPaths = [];
   const store = createTimeoutIncidentStore({
     root:incidentFixtureRoot,
     storeDirectory:path.join(incidentFixtureRoot, "incidents"),
     now:() => incidentNow,
     randomId:() => `incident-${++incidentNumber}`,
     isAncestor:async (ancestor, descendant) => ancestor === descendant ||
-      ancestor === "failed-commit" && ["repair-commit", "rebased-commit", "reclaimed-commit"].includes(descendant) ||
-      ancestor === "repair-commit" && descendant === "reclaimed-commit",
+      ancestor === "failed-commit" && ["repair-commit", "rebased-commit", "reclaimed-commit",
+        "spec-commit", "carry-commit"].includes(descendant) ||
+      ancestor === "repair-commit" && ["reclaimed-commit", "spec-commit", "carry-commit"].includes(descendant),
     resolveCandidate:async(commit) => ({
       commit,
       tree:{ "failed-commit":"failed-tree", "repair-commit":"repair-tree",
         "rebased-commit":"rebased-tree", "reclaimed-commit":"repair-tree",
         "genuinely-unrelated":"unrelated-tree" }[commit],
     }),
-    currentCandidate:async() => ({ commit:"repair-commit", tree:"repair-tree" }),
+    currentCandidate:async() => incidentCandidate,
     changedPaths:async() => ["scripts/dist-artifact-lock.mjs"],
+    candidateChangedPaths:async() => incidentCandidateChangedPaths,
     canonicalRepairTaskIdentities:async() => canonicalRepairIdentities,
     canonicalCheckpointValidator:async({ document, incident }) => {
       const actualKeys = Object.keys(document.receipt.tasks).sort();
@@ -2484,6 +2488,46 @@ console.log("repairTmp=" + process.env.TMPDIR);
   assert.equal((await store.blockingForHandoff({ commit:"repair-commit",
     readiness:"final-ready" })).some(({ id }) => id === first.id), true,
   "deferred proof cannot authorize final-ready routing");
+  incidentCandidateChangedPaths = ["docs/approved-slice.md", "features/approved-slice.feature"];
+  assert.equal((await store.blockingForHandoff({ commit:"spec-commit", readiness:"legacy",
+    sender:"specifier", verified:"not-required" })).some(({ id }) => id === first.id), false,
+  "a specification-only descendant can start from current QA without rewriting deferred proof");
+  incidentCandidateChangedPaths = ["docs/approved-slice.md", "src/unreviewed-product.ts"];
+  assert.equal((await store.blockingForHandoff({ commit:"spec-commit", readiness:"legacy",
+    sender:"specifier", verified:"not-required" })).some(({ id }) => id === first.id), true,
+  "a mixed specification and product descendant cannot use the specification-start route");
+  incidentCandidate = { commit:"carry-commit", tree:"carry-tree" };
+  incidentCandidateChangedPaths = ["src/independent-flow.ts", "test/independent-flow-test.mjs"];
+  incidentNow = "2026-08-09T00:00:02.000Z";
+  const carried = await store.carryTerminalVerification(first.id, {
+    candidate:incidentCandidate,
+    reviewReady:{ task:"independent-slice", baseCommit:"approved-independent-base",
+      candidateCommit:incidentCandidate.commit, candidateTree:incidentCandidate.tree,
+      receiptSha256:"6".repeat(64), focusedTaskKeys:["unit:test/independent-flow-test.mjs"] },
+    package:{ path:"build/package/my-chrome-utilities.zip", digest:"7".repeat(64) },
+  });
+  assert.equal(carried.state, "unresolved");
+  assert.equal(carried.terminalVerificationDeferred.carryForward.conservation.conserved, true,
+    "an independent descendant durably carries the ancestor terminal obligation");
+  incidentCandidateChangedPaths = ["scripts/verification-reliability-store.mjs"];
+  await assert.rejects(store.carryTerminalVerification(first.id, {
+    candidate:incidentCandidate,
+    reviewReady:{ task:"changed-gate", baseCommit:"approved-independent-base",
+      candidateCommit:incidentCandidate.commit, candidateTree:incidentCandidate.tree,
+      receiptSha256:"8".repeat(64), focusedTaskKeys:["unit:test/independent-flow-test.mjs"] },
+    package:{ path:"build/package/my-chrome-utilities.zip", digest:"9".repeat(64) },
+  }), /fresh incident-focused proof/u,
+  "a changed deferred gate input cannot use carry-forward");
+  incidentCandidate = { commit:"repair-commit", tree:"repair-tree" };
+  incidentCandidateChangedPaths = [];
+  incidentNow = "2026-08-09T00:00:03.000Z";
+  await store.deferTerminalVerification(first.id, {
+    candidate:incidentCandidate,
+    reviewReady:{ task:"qa-pilot-fanout-stop", baseCommit:"approved-base",
+      candidateCommit:"repair-commit", candidateTree:"repair-tree",
+      receiptSha256:"4".repeat(64), focusedTaskKeys:[failure.task.key, regressionKey] },
+    package:{ path:"build/package/my-chrome-utilities.zip", digest:"5".repeat(64) },
+  });
   const checkpointPacks = ["branding_polish", "capture", "command-palette", "defects",
     "durable_project_repository", "event-library", "flow_export", "flow_graph", "guided_test_cases",
     "hotkeys", "layered_schema", "live_flow_testing", "project_assurance_severity",

@@ -476,12 +476,12 @@
       ["QA release candidates are limited to the specifier-to-architect route"]
       [])))
 
-(defn reliability-incident-errors [headers canonical-commit]
+(defn reliability-incident-errors [sender headers canonical-commit]
   (if (and (= "git_handoff" (get headers "type")) (not (str/blank? canonical-commit)))
     (let [result (command "." "node" "scripts/verification-reliability-incidents.mjs"
                           "assert-handoff" canonical-commit (get headers "base")
                           (get headers "task") (or (get headers "readiness") "legacy")
-                          (get headers "verified"))]
+                          (get headers "verified") sender)]
       (if (zero? (:exit result))
         []
         [(str "Git handoff is blocked by reliability incident state: "
@@ -504,7 +504,7 @@
             release-route-errors (release-route-errors sender headers (:recipients validation))
             readiness-errors (readiness-errors sender headers (:recipients validation)
                                                (:canonical-commit validation) (:canonical-base validation))
-            reliability-errors (reliability-incident-errors headers (:canonical-commit validation))
+            reliability-errors (reliability-incident-errors sender headers (:canonical-commit validation))
             all-errors (vec (concat errors (:errors validation) evidence-errors release-route-errors
                                     readiness-errors reliability-errors))]
         (when (seq all-errors)
