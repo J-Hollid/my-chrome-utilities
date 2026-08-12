@@ -2173,3 +2173,18 @@ Feature: Modular verification packs
     And the same receipt supplies final-ready evidence without a second all-20 run
     And a failed checkpoint leaves every affected incident unresolved and prevents final-ready handoff and master integration
     And release-candidate routing to the architect remains possible so the required terminal checkpoint can run
+
+  # Modular verification packs 152
+  Scenario Outline: Modular verification packs 152
+    Given current QA contains a terminal-verification-deferred incident on an ancestor candidate
+    When a later independently approved QA slice has <change_relationship>
+    Then its handoff gate produces <later_slice_result>
+    And any carried disposition retains the original failure, repair, regression, focused receipt, and terminal obligation
+    And the current candidate still requires its own exact approved focused evidence and package proof before QA integration
+    And no carry-forward resolves, abandons, weakens, or substitutes terminal incident evidence
+
+    Examples:
+      | change_relationship                                                                 | later_slice_result                                                                 |
+      | only its approved specification changes                                             | permit the specifier-to-coder start from current QA                                |
+      | changed-path conservation proves no deferred failure, repair, regression, plan, runner, or evidence input changed | permit focused review and QA integration with the ancestor disposition carried |
+      | one deferred failure, repair, regression, plan, runner, or evidence input changed    | block until fresh incident-focused proof records a disposition on the exact candidate |

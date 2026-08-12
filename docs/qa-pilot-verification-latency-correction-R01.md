@@ -65,9 +65,18 @@ owned packs, or claim terminal evidence.
 The same feature-mode boundary applies to the reliability incident gate. After
 an incident has an eligible causal repair, deterministic regression, exact
 focused review-ready evidence, and passing package proof on one candidate, the
-gate records `terminal-verification-deferred`. This permits only the remaining
-focused reviews and QA integration. It preserves the unresolved incident and
-active lineage without calling either the failure or repair terminally proven.
+gate records `terminal-verification-deferred`. This permits the current
+candidate's remaining focused reviews and QA integration. It preserves the
+unresolved incident and active lineage without calling either the failure or
+repair terminally proven.
+
+Later independently approved QA slices may inherit that disposition without
+rerunning its focused tasks when changed-path conservation proves that none of
+its failure, repair, regression, focused-plan, runner-semantic, or evidence
+inputs changed. A specification-only handoff may start such a slice from current
+QA. Its final candidate still needs its own approved focused evidence and package
+proof. A relevant change invalidates carry-forward and requires fresh
+incident-focused proof on that exact candidate.
 
 The frozen QA release candidate may later pass such incidents to the architect.
 The one master-integration all-20 checkpoint resolves every matching deferred
@@ -76,7 +85,7 @@ run is not required. Unrepaired, failing, stale, or identity-mismatched evidence
 continues to block every handoff for which it is insufficient.
 
 Acceptance authority is Settled candidate final verification 011 and 013 plus
-Modular verification packs 150 and 151. The exact checkpoint is:
+Modular verification packs 150, 151, and 152. The exact checkpoint is:
 
 ```sh
 node scripts/run-focused-acceptance.mjs --pack shell \

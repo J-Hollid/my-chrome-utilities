@@ -147,6 +147,7 @@ Feature: Settled candidate final verification
 
     Examples:
       | readiness         | integration_mode    | gate_result                                                                     |
+      | an approved specification | feature integration | permit coder start from current QA while retaining the ancestor deferral |
       | review-ready      | feature integration | permit the next named focused review and retain terminal verification deferred |
       | qa-ready          | feature integration | permit only QA integration and retain terminal verification deferred           |
       | release-candidate | master integration  | permit only architect terminal review of the frozen QA candidate               |

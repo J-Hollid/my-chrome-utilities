@@ -47,6 +47,13 @@ reviewable change.
    permits focused review and QA integration only; it is neither resolution nor
    abandonment. Missing, failing, stale, or identity-mismatched proof remains
    blocking.
+   A later independently approved slice may start from that QA descendant. Its
+   specification-only handoff retains the ancestor disposition. Its review-ready
+   and QA-ready candidates may carry the disposition only when changed-path
+   conservation proves no deferred failure, repair, regression, focused plan,
+   runner semantic, or evidence input changed, and the later slice has its own
+   exact focused evidence and package proof. A relevant change requires fresh
+   incident-focused proof on the exact candidate.
 4. The architect sends the exact candidate to the specifier with
    `readiness: qa-ready` and `verified: review-ready`. That claim must have bound
    focused evidence for the exact task, base, commit, tree, changed paths, and
