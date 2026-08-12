@@ -44,6 +44,7 @@ import {
   encodeDevtoolsTextFrame,
   flowSectionDrawActionabilityState,
   flowSectionTargetState,
+  flowSectionMenuInvocationPlan,
   flowSectionRenderedGenerationState,
   flowWorkspaceReadinessLimitMilliseconds,
   flowWorkspaceR02Runtime,
@@ -61,6 +62,10 @@ for(const length of [125,126,65535,65536,66257]){
 assert.match(flowGraphAdapterSource,
   /timeoutMs:browserShard==="examples"[\s\S]*?:\s*Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u,
   "non-example Flow readiness must consume the owning logical target budget instead of an unrelated five-second ceiling");
+assert.deepEqual(flowSectionMenuInvocationPlan("pointer"),[0,100],
+  "pointer Section menus receive one bounded retry against the current rendered target");
+assert.deepEqual(flowSectionMenuInvocationPlan("keyboard"),[0],
+  "keyboard Section menus remain a single semantic invocation");
 
 function literalValue(node){
   if(!node)return undefined;
@@ -536,6 +541,7 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     sectionTargetRepair=context.causalCategory==="other:unambiguous synthetic Section target",
     sectionGenerationRepair=context.causalCategory==="other:current rendered Section gesture target",
     eventSeedRepair=context.causalCategory==="other:fresh durable Event example seed",
+    sectionMenuRetry=context.causalCategory==="other:bounded Section pointer menu retry",
     fixture=targetSelectionRepair?{id:"flow-structured-target-selection-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{requestedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",
@@ -571,6 +577,11 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         input:{selectionCanRerenderCanvas:true,preSelectionNodeMayDisconnect:true},
         expectedPreRepairFailure:{reacquiresAfterSelection:false,currentConnectedTarget:false},
         expectedRepairResult:{reacquiresAfterSelection:true,currentConnectedTarget:true}}
+      :sectionMenuRetry?{id:"bounded-section-pointer-menu-retry-v1",
+        causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+        input:{mode:"pointer",firstInvocationObserved:false,currentRenderedTarget:true},
+        expectedPreRepairFailure:{invocationDelays:[0],missedFirstInvocationRecovered:false},
+        expectedRepairResult:{invocationDelays:[0,100],missedFirstInvocationRecovered:true}}
       :eventSeedRepair?{id:"fresh-durable-event-example-seed-v1",
         causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
         input:{repositoryStatus:"conflict",staleRevisionMustNotBeReused:true},
@@ -608,6 +619,9 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       :sectionGenerationRepair
         ?{reacquiresAfterSelection:flowSectionRenderedGenerationState(currentRenderedGeneration),
           currentConnectedTarget:flowSectionTargetState({connected:true,directDropzone:true})}
+      :sectionMenuRetry
+        ?{invocationDelays:[...flowSectionMenuInvocationPlan("pointer")],
+          missedFirstInvocationRecovered:flowSectionMenuInvocationPlan("pointer").length===2}
       :eventSeedRepair
         ?{freshRevisionAttempts:4,
           rebuildsMutation:/for\(let attempt=0;attempt<4;attempt\+=1\)\{const base=await repository\.loadProject/u.test(eventExampleSeedProgram),
