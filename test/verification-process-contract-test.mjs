@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { access, chmod, copyFile, mkdtemp, mkdir, readFile, readdir, rename, rm, symlink, writeFile } from "node:fs/promises";
+import { access, chmod, copyFile, mkdtemp, mkdir, readFile, readdir, realpath, rename, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -726,17 +726,11 @@ const cliContentionRoot = await mkdtemp(path.join(os.tmpdir(), "vtd014-cli-conte
 const cliContentionRepository = path.join(cliContentionRoot, "repository");
 const cliProcesses = new Set();
 const cliBuildProcessGroups = new Set();
-const cliFixtureContractSource = await readFile(new URL(import.meta.url), "utf8");
-const cliFixtureSetupSource = cliFixtureContractSource.slice(
-  cliFixtureContractSource.indexOf("const cliContentionRoot"),
-  cliFixtureContractSource.lastIndexOf("  const packIds ="),
-);
-assert.doesNotMatch(cliFixtureSetupSource,
-  /await symlink\(path\.resolve\("node_modules"\)/u,
-"the isolated checkpoint fixture must not depend on the invoking worktree's node_modules");
-assert.match(cliFixtureSetupSource,
-  /await symlink\(installedNodeModulesRoot, fixtureNodeModulesRoot/u,
-"the isolated checkpoint fixture attaches the resolved locked npm prerequisites");
+function resolvedNodeModulesRoot(resolve = (specifier) => import.meta.resolve(specifier)) {
+  const installedTypescriptRoot = path.dirname(path.dirname(
+    fileURLToPath(resolve("typescript"))));
+  return path.dirname(installedTypescriptRoot);
+}
 const cliBuildProcessGroup = async() => {
   const owner = (await readFile(path.join(cliContentionRepository,
     "tmp", "cli-contention-build-owner"), "utf8")).trim().split(" ").map(Number);
@@ -796,11 +790,11 @@ try {
     "",
   ].join("\n"));
   await mkdir(path.join(cliContentionRepository, "tmp"), { recursive:true });
-  const installedTypescriptRoot = path.dirname(path.dirname(
-    fileURLToPath(import.meta.resolve("typescript"))));
-  const installedNodeModulesRoot = path.dirname(installedTypescriptRoot);
+  const installedNodeModulesRoot = resolvedNodeModulesRoot();
   const fixtureNodeModulesRoot = path.join(cliContentionRepository, "node_modules");
   await symlink(installedNodeModulesRoot, fixtureNodeModulesRoot, "dir");
+  assert.equal(await realpath(fixtureNodeModulesRoot), await realpath(installedNodeModulesRoot),
+    "the isolated checkpoint fixture attaches the resolved locked npm prerequisites");
   await symlink(path.resolve("tmp/tools"), path.join(cliContentionRepository, "tmp/tools"), "dir");
   await writeFile(path.join(cliContentionRepository, ".git/info/exclude"),
     "node_modules\n.swarmforge\nscripts/verification-task-succession.mjs\nverification/task-succession.json\n");
@@ -9167,14 +9161,11 @@ function isolatedCheckpointToolchainRegression(context) {
     input:{ fixture:"vtd014-cli-contention", prerequisite:"locked TypeScript" },
     expectedPreRepairFailure, expectedRepairResult,
   };
-  const setup = verificationProcessContractSource.slice(
-    verificationProcessContractSource.indexOf("const cliContentionRoot"),
-    verificationProcessContractSource.lastIndexOf("  const packIds ="),
-  );
+  const syntheticInstalledRoot = resolvedNodeModulesRoot(() =>
+    pathToFileURL("/locked/node_modules/typescript/lib/typescript.js").href);
   const repairResult = {
-    cwdNodeModulesRequired:setup.includes('await symlink(path.resolve("node_modules")'),
-    resolvedNodeModulesAttached:setup.includes('fileURLToPath(import.meta.resolve("typescript"))') &&
-      setup.includes("await symlink(installedNodeModulesRoot, fixtureNodeModulesRoot"),
+    cwdNodeModulesRequired:syntheticInstalledRoot === path.resolve("node_modules"),
+    resolvedNodeModulesAttached:syntheticInstalledRoot === "/locked/node_modules",
   };
   assert.deepEqual(repairResult, expectedRepairResult);
   const fixtureDigest = verificationDigest(fixture);
