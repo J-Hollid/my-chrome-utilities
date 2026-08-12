@@ -99,19 +99,27 @@ const deferredWorkflowInputs = Object.freeze([
   "verification/packs.json",
 ]);
 
-function repositoryPaths(value, found = new Set()) {
-  if (Array.isArray(value)) {
-    for (const nested of value) repositoryPaths(nested, found);
-  } else if (value && typeof value === "object") {
-    for (const nested of Object.values(value)) repositoryPaths(nested, found);
-  } else if (typeof value === "string" && /^(?:scripts|test|verification|swarmforge)\//u.test(value)) {
-    found.add(value);
-  }
+function repositoryPathCandidate(value, candidates) {
+  if (typeof value !== "string") return null;
+  const canonical = value.replace(/^\.\//u, "");
+  return candidates.has(canonical) ? canonical : null;
+}
+
+function nestedValues(value) {
+  if (value === null || typeof value !== "object") return [];
+  return Object.values(value);
+}
+
+function repositoryPaths(value, candidates, found = new Set()) {
+  const candidate = repositoryPathCandidate(value, candidates);
+  if (candidate) found.add(candidate);
+  for (const nested of nestedValues(value)) repositoryPaths(nested, candidates, found);
   return found;
 }
 
 export function terminalVerificationDeferredConservation({ incident, changedPaths }) {
   const canonicalChangedPaths = [...new Set(changedPaths)].sort();
+  const candidates = new Set(canonicalChangedPaths);
   const inputs = repositoryPaths({
     failureTask:incident?.failure?.task,
     repairChangedPaths:incident?.repair?.changedPaths,
@@ -119,7 +127,7 @@ export function terminalVerificationDeferredConservation({ incident, changedPath
     focusedTaskPlan:incident?.repair?.focusedTaskPlan,
     causalFixture:incident?.repair?.causalProtocol?.fixture,
     deferredWorkflowInputs,
-  });
+  }, candidates);
   const relevantChangedPaths = canonicalChangedPaths.filter((changedPath) => inputs.has(changedPath));
   return { conserved:relevantChangedPaths.length === 0, relevantChangedPaths,
     changedPaths:canonicalChangedPaths };

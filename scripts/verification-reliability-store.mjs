@@ -308,6 +308,93 @@ async function lineageApplies({ root, isAncestor, incident, commit, resolution =
   return false;
 }
 
+const specificationPathPrefixes = Object.freeze(["docs/", "features/", "project-briefs/"]);
+
+function approvedSpecificationPath(changedPath) {
+  if (changedPath === "README.md") return true;
+  return specificationPathPrefixes.some((prefix) => changedPath.startsWith(prefix));
+}
+
+function eligibleDeferredIncident(incident) {
+  return [
+    incident.terminalVerificationDeferred?.status === "terminal-verification-deferred",
+    incident.repair?.status === "eligible",
+  ].every(Boolean);
+}
+
+async function handoffCandidateRelationship({ root, isAncestor, candidateChangedPaths,
+  incident, commit, readiness, sender, verified }) {
+  const deferredCommit = incident.terminalVerificationDeferred?.candidate?.commit;
+  const exact = deferredCommit === commit;
+  const descendant = Boolean(deferredCommit) && await commitDescendsFrom({
+    root, isAncestor, ancestor:deferredCommit, commit,
+  });
+  const specificationRoute = [sender === "specifier", verified === "not-required",
+    readiness === "legacy", descendant].every(Boolean);
+  const specificationOnly = specificationRoute &&
+    (await candidateChangedPaths(deferredCommit, commit)).every(approvedSpecificationPath);
+  return { exact, descendant, specificationOnly };
+}
+
+function permittedHandoffRelationship(readiness, relationship) {
+  const routes = new Map([
+    ["review-ready", relationship.exact],
+    ["qa-ready", relationship.exact],
+    ["release-candidate", relationship.descendant],
+    ["legacy", relationship.specificationOnly],
+  ]);
+  return routes.get(readiness) ?? false;
+}
+
+function carrySource(incident, id) {
+  const prior = incident.terminalVerificationDeferred;
+  if ([incident.state === "unresolved", incident.repair?.status === "eligible",
+    prior?.status === "terminal-verification-deferred"].every(Boolean)) return prior;
+  throw new Error(`Reliability incident ${id} has no deferred proof to carry`);
+}
+
+function candidateProofMatches(proof, candidate) {
+  return [proof.candidate?.commit === candidate.commit, proof.candidate?.tree === candidate.tree,
+    proof.reviewReady?.candidateCommit === candidate.commit,
+    proof.reviewReady?.candidateTree === candidate.tree].every(Boolean);
+}
+
+function reviewProofComplete(reviewReady) {
+  return [Boolean(reviewReady?.task), Boolean(reviewReady?.baseCommit),
+    shaPattern.test(String(reviewReady?.receiptSha256)),
+    Array.isArray(reviewReady?.focusedTaskKeys),
+    Boolean(reviewReady?.focusedTaskKeys?.length)].every(Boolean);
+}
+
+function carryProofComplete(proof, candidate) {
+  return [candidateProofMatches(proof, candidate), reviewProofComplete(proof.reviewReady),
+    shaPattern.test(String(proof.package?.digest))].every(Boolean);
+}
+
+async function requireConservedCarry({ root, isAncestor, incident, id, prior, candidate,
+  proof, changedPaths }) {
+  const conservation = terminalVerificationDeferredConservation({ incident, changedPaths });
+  const descendant = await commitDescendsFrom({
+    root, isAncestor, ancestor:prior.candidate.commit, commit:candidate.commit,
+  });
+  if ([conservation.conserved, carryProofComplete(proof, candidate), descendant].every(Boolean)) {
+    return conservation;
+  }
+  throw new Error(`Reliability incident ${id} deferred inputs changed; fresh incident-focused proof is required`);
+}
+
+function carriedDisposition({ prior, proof, conservation, at }) {
+  const withoutDigest = {
+    status:"terminal-verification-deferred",
+    candidate:structuredClone(proof.candidate), repairDigest:prior.repairDigest,
+    reviewReady:structuredClone(proof.reviewReady), package:structuredClone(proof.package),
+    carryForward:{ ancestorDisposition:structuredClone(prior),
+      fromCandidate:structuredClone(prior.candidate),
+      fromDispositionDigest:prior.digest, conservation }, recordedAt:at,
+  };
+  return { ...withoutDigest, digest:timeoutIncidentDigest(withoutDigest) };
+}
+
 export function createTimeoutIncidentStore({
   storeDirectory, legacyStoreDirectories, root = repositoryRoot, now = () => new Date().toISOString(),
   randomId = () => randomUUID(), isAncestor,
@@ -429,20 +516,10 @@ export function createTimeoutIncidentStore({
     async blockingForHandoff({ commit, readiness, sender, verified }) {
       const blocked = [];
       for (const incident of await this.blocking({ commit })) {
-        const deferred = incident.terminalVerificationDeferred;
-        const exactCandidate = deferred?.candidate?.commit === commit;
-        const descendantCandidate = deferred?.candidate?.commit &&
-          await commitDescendsFrom({ root, isAncestor, ancestor:deferred.candidate.commit, commit });
-        const specificationStart = sender === "specifier" && verified === "not-required" &&
-          readiness === "legacy" && descendantCandidate &&
-          (await candidateChangedPaths(deferred.candidate.commit, commit)).every((changedPath) =>
-            changedPath === "README.md" || changedPath.startsWith("docs/") ||
-            changedPath.startsWith("features/") || changedPath.startsWith("project-briefs/") ||
-            changedPath.endsWith(".prompt"));
-        const permitted = deferred?.status === "terminal-verification-deferred" &&
-          incident.repair?.status === "eligible" &&
-          ((["review-ready", "qa-ready"].includes(readiness) && exactCandidate) ||
-           (readiness === "release-candidate" && descendantCandidate) || specificationStart);
+        const relationship = await handoffCandidateRelationship({ root, isAncestor,
+          candidateChangedPaths, incident, commit, readiness, sender, verified });
+        const permitted = eligibleDeferredIncident(incident) &&
+          permittedHandoffRelationship(readiness, relationship);
         if (!permitted) blocked.push(incident);
       }
       return blocked;
@@ -494,33 +571,12 @@ export function createTimeoutIncidentStore({
       exactObject(proof, "Terminal verification carry-forward proof");
       const candidate = await currentCandidate();
       return access.update(id, async(incident) => {
-        const prior = incident.terminalVerificationDeferred;
-        if (incident.state !== "unresolved" || incident.repair?.status !== "eligible" ||
-            prior?.status !== "terminal-verification-deferred") {
-          throw new Error(`Reliability incident ${id} has no deferred proof to carry`);
-        }
+        const prior = carrySource(incident, id);
         const paths = await candidateChangedPaths(prior.candidate.commit, candidate.commit);
-        const conservation = terminalVerificationDeferredConservation({ incident, changedPaths:paths });
-        if (!conservation.conserved || proof.candidate?.commit !== candidate.commit ||
-            proof.candidate?.tree !== candidate.tree ||
-            proof.reviewReady?.candidateCommit !== candidate.commit ||
-            proof.reviewReady?.candidateTree !== candidate.tree || !proof.reviewReady?.task ||
-            !proof.reviewReady?.baseCommit || !shaPattern.test(proof.reviewReady?.receiptSha256 ?? "") ||
-            !Array.isArray(proof.reviewReady?.focusedTaskKeys) ||
-            !proof.reviewReady.focusedTaskKeys.length || !shaPattern.test(proof.package?.digest ?? "") ||
-            !await commitDescendsFrom({ root, isAncestor,
-              ancestor:prior.candidate.commit, commit:candidate.commit })) {
-          throw new Error(`Reliability incident ${id} deferred inputs changed; fresh incident-focused proof is required`);
-        }
+        const conservation = await requireConservedCarry({ root, isAncestor, incident, id,
+          prior, candidate, proof, changedPaths:paths });
         const at = now();
-        const withoutDigest = {
-          status:"terminal-verification-deferred",
-          candidate:structuredClone(proof.candidate), repairDigest:prior.repairDigest,
-          reviewReady:structuredClone(proof.reviewReady), package:structuredClone(proof.package),
-          carryForward:{ fromCandidate:structuredClone(prior.candidate),
-            fromDispositionDigest:prior.digest, conservation }, recordedAt:at,
-        };
-        const disposition = { ...withoutDigest, digest:timeoutIncidentDigest(withoutDigest) };
+        const disposition = carriedDisposition({ prior, proof, conservation, at });
         return transition({ ...incident, terminalVerificationDeferred:disposition },
           "terminal-verification-deferred", at, { dispositionDigest:disposition.digest,
             commit:candidate.commit, carried:true });

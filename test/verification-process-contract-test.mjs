@@ -2492,6 +2492,14 @@ console.log("repairTmp=" + process.env.TMPDIR);
   assert.equal((await store.blockingForHandoff({ commit:"spec-commit", readiness:"legacy",
     sender:"specifier", verified:"not-required" })).some(({ id }) => id === first.id), false,
   "a specification-only descendant can start from current QA without rewriting deferred proof");
+  for (const workflowPrompt of [
+    "swarmforge/roles/refactorer.prompt", "swarmforge/constitution.prompt",
+  ]) {
+    incidentCandidateChangedPaths = ["docs/approved-slice.md", workflowPrompt];
+    assert.equal((await store.blockingForHandoff({ commit:"spec-commit", readiness:"legacy",
+      sender:"specifier", verified:"not-required" })).some(({ id }) => id === first.id), true,
+    `${workflowPrompt} cannot use the specification-only start route`);
+  }
   incidentCandidateChangedPaths = ["docs/approved-slice.md", "src/unreviewed-product.ts"];
   assert.equal((await store.blockingForHandoff({ commit:"spec-commit", readiness:"legacy",
     sender:"specifier", verified:"not-required" })).some(({ id }) => id === first.id), true,
@@ -2509,6 +2517,13 @@ console.log("repairTmp=" + process.env.TMPDIR);
   assert.equal(carried.state, "unresolved");
   assert.equal(carried.terminalVerificationDeferred.carryForward.conservation.conserved, true,
     "an independent descendant durably carries the ancestor terminal obligation");
+  assert.equal(carried.terminalVerificationDeferred.reviewReady.receiptSha256, "6".repeat(64),
+    "the later candidate binds its own focused review proof");
+  assert.equal(carried.terminalVerificationDeferred.package.digest, "7".repeat(64),
+    "the later candidate binds its own package proof");
+  assert.deepEqual(carried.terminalVerificationDeferred.carryForward.ancestorDisposition,
+    deferred.terminalVerificationDeferred,
+    "the immutable ancestor disposition retains its focused receipt, task, base, keys, and package proof");
   incidentCandidateChangedPaths = ["scripts/verification-reliability-store.mjs"];
   await assert.rejects(store.carryTerminalVerification(first.id, {
     candidate:incidentCandidate,

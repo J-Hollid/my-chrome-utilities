@@ -10,40 +10,61 @@ import { terminalVerificationDeferredConservation } from "./settled-final-verifi
 
 export { createTimeoutIncidentStore };
 
-async function recordEligibleHandoffDeferrals(store, incidents, {
-  commit, base, task, readiness, verified,
-}) {
-  if (!["review-ready", "qa-ready"].includes(readiness) || verified !== "review-ready") return;
-  const { verifyReviewReadyEvidence } = await import("./settled-final-verification.mjs");
-  const review = await verifyReviewReadyEvidence(commit, base, task);
+function reviewHandoffRequested(readiness, verified) {
+  return [verified === "review-ready", ["review-ready", "qa-ready"].includes(readiness)].every(Boolean);
+}
+
+function packageProofValid({ details, canonicalPath, packagePath, review }) {
+  return [details.isFile(), !details.isSymbolicLink(), canonicalPath === packagePath,
+    details.mtimeMs >= Date.parse(review.completedAt)].every(Boolean);
+}
+
+async function canonicalPackageProof(review) {
   const packagePath = path.resolve(repositoryRoot, "build/package/my-chrome-utilities.zip");
   const [details, canonicalPath, bytes] = await Promise.all([
     lstat(packagePath), realpath(packagePath), readFile(packagePath),
   ]);
-  if (!details.isFile() || details.isSymbolicLink() || canonicalPath !== packagePath ||
-      details.mtimeMs < Date.parse(review.completedAt)) {
+  if (!packageProofValid({ details, canonicalPath, packagePath, review })) {
     throw new Error("Terminal verification deferral requires a fresh canonical package proof");
   }
+  return { path:path.relative(repositoryRoot, packagePath),
+    digest:createHash("sha256").update(bytes).digest("hex") };
+}
+
+function terminalDeferralProof(review, packageProof) {
+  return {
+    candidate:{ commit:review.candidateCommit, tree:review.candidateTree },
+    reviewReady:{ task:review.task, baseCommit:review.baseCommit,
+      candidateCommit:review.candidateCommit, candidateTree:review.candidateTree,
+      receiptSha256:review.receipt.sha256,
+      focusedTaskKeys:[...review.focusedScope.taskKeys] },
+    package:packageProof,
+  };
+}
+
+async function recordIncidentDeferral(store, incident, review, proof) {
+  const deferredCandidate = incident.terminalVerificationDeferred?.candidate?.commit;
+  if (deferredCandidate === review.candidateCommit) return;
+  if (!deferredCandidate) {
+    await store.deferTerminalVerification(incident.id, proof);
+    return;
+  }
+  const changedPaths = (await git(repositoryRoot, "diff", "--name-only",
+    `${deferredCandidate}..${review.candidateCommit}`)).split(/\r?\n/u).filter(Boolean);
+  const conservation = terminalVerificationDeferredConservation({ incident, changedPaths });
+  const operation = conservation.conserved ? "carryTerminalVerification" : "deferTerminalVerification";
+  await store[operation](incident.id, proof);
+}
+
+async function recordEligibleHandoffDeferrals(store, incidents, {
+  commit, base, task, readiness, verified,
+}) {
+  if (!reviewHandoffRequested(readiness, verified)) return;
+  const { verifyReviewReadyEvidence } = await import("./settled-final-verification.mjs");
+  const review = await verifyReviewReadyEvidence(commit, base, task);
+  const proof = terminalDeferralProof(review, await canonicalPackageProof(review));
   for (const incident of incidents) {
-    if (incident.terminalVerificationDeferred?.candidate?.commit === review.candidateCommit) continue;
-    const proof = {
-      candidate:{ commit:review.candidateCommit, tree:review.candidateTree },
-      reviewReady:{ task:review.task, baseCommit:review.baseCommit,
-        candidateCommit:review.candidateCommit, candidateTree:review.candidateTree,
-        receiptSha256:review.receipt.sha256,
-        focusedTaskKeys:[...review.focusedScope.taskKeys] },
-      package:{ path:path.relative(repositoryRoot, packagePath),
-        digest:createHash("sha256").update(bytes).digest("hex") },
-    };
-    const deferredCandidate = incident.terminalVerificationDeferred?.candidate?.commit;
-    const changedPaths = deferredCandidate
-      ? (await git(repositoryRoot, "diff", "--name-only",
-        `${deferredCandidate}..${review.candidateCommit}`)).split(/\r?\n/u).filter(Boolean)
-      : [];
-    const conservation = deferredCandidate &&
-      terminalVerificationDeferredConservation({ incident, changedPaths });
-    if (conservation?.conserved) await store.carryTerminalVerification(incident.id, proof);
-    else await store.deferTerminalVerification(incident.id, proof);
+    await recordIncidentDeferral(store, incident, review, proof);
   }
 }
 

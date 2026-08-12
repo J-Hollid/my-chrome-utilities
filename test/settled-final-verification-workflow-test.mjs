@@ -118,6 +118,27 @@ assert.deepEqual(terminalVerificationDeferredConservation({
   changedPaths:["scripts/verification-reliability-store.mjs"],
 }), { conserved:false, relevantChangedPaths:["scripts/verification-reliability-store.mjs"],
   changedPaths:["scripts/verification-reliability-store.mjs"] });
+const repositoryWideIncident = {
+  ...deferredIncident,
+  failure:{ task:{ target:"src/relevant-boundary.ts" } },
+  repair:{ ...deferredIncident.repair,
+    changedPaths:["assets/relevant-icon.svg", "test/acceptance/relevant_steps.clj"],
+    causalProtocol:{ fixture:{ nested:{ evidencePath:"features/relevant.feature" } } },
+    focusedTaskPlan:[{ identity:{ target:"project-briefs/relevant.md" } }],
+  },
+};
+for (const relevantPath of [
+  "src/relevant-boundary.ts", "assets/relevant-icon.svg",
+  "test/acceptance/relevant_steps.clj", "features/relevant.feature",
+  "project-briefs/relevant.md",
+]) {
+  const changedPaths = ["docs/unrelated.md", relevantPath].toReversed();
+  assert.deepEqual(terminalVerificationDeferredConservation({
+    incident:repositoryWideIncident, changedPaths,
+  }), { conserved:false, relevantChangedPaths:[relevantPath],
+    changedPaths:[...changedPaths].sort() },
+  `bound incident input ${relevantPath} requires fresh incident-focused proof`);
+}
 for (const workflowPath of [
   "scripts/settled-final-verification.mjs",
   "scripts/settled-final-verification-policy.mjs",
