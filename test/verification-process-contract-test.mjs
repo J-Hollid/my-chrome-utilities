@@ -2185,12 +2185,13 @@ console.log("repairTmp=" + process.env.TMPDIR);
     executable:"node", args:[runnerRegressionPath],
   });
   const runnerRuntimeTask = { ...runnerTask, temporaryPathClass:"chrome-short" };
+  let runnerIncidentSequence = 0;
   const runnerStore = createTimeoutIncidentStore({
     root:incidentFixtureRoot,
     storeDirectory:path.join(incidentFixtureRoot, "runner-incidents"),
     now:() => "2026-08-09T00:00:00.000Z",
-    randomId:() => "runner-path-incident",
-    isAncestor:async() => true,
+    randomId:() => `runner-path-incident-${runnerIncidentSequence += 1}`,
+    isAncestor:async(ancestor) => ancestor !== "off-lineage",
     currentCandidate:async() => ({ commit:"repair-commit", tree:"repair-tree" }),
     changedPaths:async() => ["src/repair.ts"],
     canonicalRepairTaskIdentities:async() => [runnerTask],
@@ -2209,6 +2210,13 @@ console.log("repairTmp=" + process.env.TMPDIR);
       runnerOwnedTimeout:true } },
   });
   await runnerStore.classifyDiagnosticRetry(runnerIncident.id, runnerDiagnosticReceipt);
+  const offLineageTask = verificationTaskIdentity({
+    key:"unit:off-lineage-runner-regression", stage:"unit", packId:"shell",
+    executable:"node", args:[runnerRegressionPath],
+  });
+  await runnerStore.create({ ...runnerFailure, runnerRunId:"off-lineage-runner-path",
+    lineage:{ ...runnerFailure.lineage, commit:"off-lineage", tree:"off-lineage-tree" },
+    task:offLineageTask });
   const runnerReceiptDirectory = path.join(incidentFixtureRoot, "tmp", "verification-receipts");
   const runnerRepair = await runTimeoutRepairFocused(runnerIncident.id, {
     regressionKey:runnerTask.key,

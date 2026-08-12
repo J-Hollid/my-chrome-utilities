@@ -988,7 +988,7 @@ export async function runTimeoutRepairFocused(id, {
     packIds:timeoutRepairPackIds, includeProperties:true, changedPaths:changeSet.paths, changeSet,
   });
   const canonicalIdentities = plan.tasks.map(verificationTaskIdentity);
-  const unresolvedIncidents = await store.list();
+  const unresolvedIncidents = await store.blocking({ commit:candidate.commit });
   await validateUnresolvedIncidentTaskSuccession({ incidents:unresolvedIncidents,
     currentIdentities:canonicalIdentities, currentPacks:packs });
   const taskSuccession = canonicalIdentities.some((identity) =>
