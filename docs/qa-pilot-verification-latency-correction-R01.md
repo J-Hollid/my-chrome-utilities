@@ -15,8 +15,9 @@ and package passed. The user approved a mode-aware correction on 2026-08-12.
 The incident must not be abandoned or resolved in QA and no all-20 checkpoint is
 authorized there.
 
-Each slice is independently reviewable and revertible. The first slice is
-authorized for coder handoff. A later slice requires its own approval after the
+Each slice is independently reviewable and revertible. Slice 1 is QA-integrated
+at `71eaad11af`. After reviewing its scorecard, the user approved Slice 2 for
+coder handoff on 2026-08-12. A later slice requires its own approval after the
 preceding slice's QA scorecard is reviewed.
 
 ## Observed baseline
@@ -97,6 +98,8 @@ final-ready remains blocked, and that the release-candidate route remains open.
 This correction interval does not reset or hide the original slice elapsed time.
 
 ## Slice 2: structured Flow verification proofs
+
+Status: approved for coder handoff on 2026-08-12.
 
 Replace the context-menu repair's generated-source regular expressions with
 structured helper or planner results and causal fixtures. Harmless formatting,
