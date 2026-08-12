@@ -442,3 +442,44 @@ Feature: Data layer directional Flow specification graph runtime
       | Focus Canvas       | sends one-contact touch pan                            | -95                 | 70                |
       | the main workspace | activates the labelled keyboard pan command           | 80                  | 60                |
       | Focus Canvas       | activates the labelled keyboard pan command           | -80                 | -60               |
+
+  # Data layer directional Flow specification graph runtime 028
+  Scenario Outline: Data layer directional Flow specification graph runtime 028
+    Given the installed canvas is at <zoom> percent zoom
+    And actual pointer events start relationship drawing from <source> <source_port>
+    When the pointer enters measured snap geometry around <target> <target_port> without touching the exact port
+    Then the installed preview endpoint equals the center of <target> <target_port>
+    And <target_port> renders primary emphasis while <target> renders secondary valid-target state distinguishable without color
+    And the installed status names <target>, <target_port>, and inferred kind <kind>
+    When pointerup occurs within that port's snap geometry
+    Then production stores one stable relationship ID with kind <kind>, Page-frame endpoint IDs, and semantic port values
+    And canonical Page and Event bytes remain identical while no endpoint or kind form is introduced
+
+    Examples:
+      | zoom | source           | source_port | target          | target_port | kind          |
+      | 25   | Customer details | right       | Payment         | left        | expected_next |
+      | 100  | Customer details | top         | ID verification | bottom      | alternative   |
+      | 200  | ID verification  | bottom      | Payment         | top         | merge         |
+
+  # Data layer directional Flow specification graph runtime 029
+  Scenario Outline: Data layer directional Flow specification graph runtime 029
+    Given the installed canvas is at <zoom> percent zoom
+    And actual pointer events start drawing from Customer details right port with no arbitrary target-port state
+    And measured Payment and Summary left-port snap geometries do not overlap
+    When the pointer moves <snap_distance> CSS pixels from the measured center of Payment left port without touching it
+    Then the installed preview endpoint equals Payment left port and only Payment and that port render valid-target state
+    When the pointer moves <outside_distance> CSS pixels from that port center and no port snap geometry is under it
+    Then Payment's target state clears and the preview endpoint equals the pointer position
+    When actual pointer events target a Page body outside its port snap geometry, Customer details, an Event mini-card, or an incompatible Page port
+    Then no port snap state renders and the direct installed target renders invalid state
+    When the pointer enters measured Summary left-port snap geometry
+    Then the preview endpoint and sole valid-target state transfer to Summary left port without a production write
+    When actual input sends <cancel_input>
+    Then the preview and every target state are absent and focus is Customer details right port
+    And Saved Draft bytes, Flow revision, canonical project bytes, and Undo depth equal their pre-connection values
+
+    Examples:
+      | zoom | snap_distance | outside_distance | cancel_input         |
+      | 25   | 24            | 25               | Escape               |
+      | 100  | 24            | 25               | pointer cancellation |
+      | 200  | 24            | 25               | Escape               |

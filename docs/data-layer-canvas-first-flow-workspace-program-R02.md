@@ -172,6 +172,27 @@ Section, or Remove with contents follows the existing rename, retained-content
 removal, or reviewed destructive-removal behavior; opening or dismissing the
 menu changes no Flow state.
 
+During pointer relationship drawing, each eligible target port has an inclusive
+24 CSS-pixel screen-space snap radius centered on the rendered port at every
+canvas zoom. Entering that halo pins the live preview to the compatible semantic
+port. Releasing anywhere in the acquired port halo creates the same relationship
+as releasing on the exact port. The port receives primary emphasis and its Page
+card receives secondary valid-target treatment with an outline or shape change
+rather than color alone. Accessible status names the Page, port, and inferred
+relationship kind.
+
+The source port still determines the only compatible target port. A direct hit
+on a Page body outside its port halos, the source Page, an Event mini-card, or an
+incompatible port remains invalid and cannot be promoted to a Page-level snap.
+When eligible port halos compete, the nearest compatible port center wins, with
+frontmost presentation order breaking an exact tie. Moving out of the acquired
+port halo clears its target treatment and returns the preview to the pointer;
+moving into another eligible port halo transfers both exactly once. Pointer start
+does not preselect an arbitrary port. Keyboard connection mode retains its
+deterministic spatial candidate. Escape or pointer cancellation clears all
+transient connection state, restores source-port focus, and changes no Draft,
+revision, canonical state, or Undo history.
+
 Dragging a Page connection to empty canvas opens existing-Page search at the
 release point. Choosing a Page atomically creates its Flow instance and the
 relationship. The compatible target port is chosen deterministically from the
@@ -252,6 +273,7 @@ migration or restore Page Groups to Flow authoring.
 | Outline consumes space or becomes a second model | 018 | Closed Outline reserves no width and on-demand navigation uses the same stable graph |
 | Direct manipulation loses keyboard access | 005, 012, 020, 023 | Pointer and keyboard routes have labelled focus, deterministic cancellation, and focus restoration |
 | Relationship meaning drifts with routing | 009–012, 022, 023 | Semantic ports retain the three documentary kinds; Page-only topology and migrations remain stable |
+| Relationship drawing misses a port or gives ambiguous target feedback | 028, 029 | A zoom-independent port snap radius pins the preview to the compatible semantic port, emphasizes exactly one port and its Page without color-only meaning, preserves invalid direct targets, and clears without a write |
 | Existing occurrence and Page-instance semantics regress | 006, 008, 017, 024, 026 | Reuse, migration, sparse contributions, repeated instances, and Flow-specific names retain stable identity |
 | Schema contribution return reintroduces an expanded card | Flow 013, 021, 025 and layered schema 021 | Readiness stays on cards while JSON, repairs, and restored deep detail live in contextual Details |
 
@@ -293,8 +315,30 @@ node scripts/run-focused-acceptance.mjs --pack flow_graph
 node scripts/package.mjs
 ```
 
-The elapsed implementation-and-review ceiling is 60 minutes from coder receipt
-to an architect `qa-ready` candidate. By 30 minutes, the built extension must
-open the Section menu by secondary pointer action and keyboard, and Rename and
-Remove Section must be routed through it in focused Flow evidence. Reaching the
-ceiling without a deliverable candidate stops the slice for a user decision.
+The implementation-and-review expectation is 60 minutes from coder receipt to an
+architect `qa-ready` candidate. By 30 minutes, the built extension is expected to
+open the Section menu by secondary pointer action and keyboard, with Rename and
+Remove Section routed through it in focused Flow evidence. Variance is reported
+with its cause under the pilot's non-blocking timing policy; it does not by itself
+stop safe, bounded work.
+
+## Flow relationship snap-feedback slice
+
+The relationship snap-feedback correction is accepted by directional Flow
+scenarios 028 and 029 and their runtime partners. It changes only transient Flow
+connection targeting and the resulting target-port hit area; relationship semantics,
+canonical definitions, schema composition, empty-canvas creation, and keyboard
+connection behavior remain governed by the existing contracts. Its smallest
+focused checkpoint is:
+
+```sh
+node scripts/run-focused-acceptance.mjs --pack flow_graph
+node scripts/package.mjs
+```
+
+The implementation-and-review expectation is 60 minutes from coder receipt to an
+architect `qa-ready` candidate. At 30 minutes, report whether installed pointer
+evidence has acquired and visibly identified compatible port targets at 25, 100,
+and 200 percent zoom, plus the cause of any variance. Crossing either reporting
+point is not an intervention gate; continue safe, bounded work unless scope or
+safety requires new authority.

@@ -448,3 +448,45 @@ Feature: Data layer directional Flow specification graph
       | Focus Canvas        | uses one-finger touch pan                         | -95                 | 70                |
       | the main workspace  | uses the labelled keyboard pan command           | 80                  | 60                |
       | Focus Canvas        | uses the labelled keyboard pan command           | -80                 | -60               |
+
+  # Data layer directional Flow specification graph 028
+  Scenario Outline: Data layer directional Flow specification graph 028
+    Given the canvas is at <zoom> percent zoom
+    And pointer relationship drawing starts from <source> <source_port>
+    When the pointer enters the snap halo around <target> <target_port> without touching the exact port
+    Then the directed preview endpoint snaps to <target> <target_port>
+    And <target_port> is emphasized while <target> receives secondary valid-target highlighting using an outline or shape change rather than color alone
+    And connection status names <target>, <target_port>, and inferred kind <kind>
+    When the operator releases within that port's snap halo
+    Then one relationship persists with stable identity, kind <kind>, Page-frame endpoints, and connected ports
+    And no relationship endpoint, kind, canonical Page, or Event meaning was inferred from the enlarged port target
+
+    Examples:
+      | zoom | source           | source_port | target          | target_port | kind          |
+      | 25   | Customer details | right       | Payment         | left        | expected_next |
+      | 100  | Customer details | top         | ID verification | bottom      | alternative   |
+      | 200  | ID verification  | bottom      | Payment         | top         | merge         |
+
+  # Data layer directional Flow specification graph 029
+  Scenario Outline: Data layer directional Flow specification graph 029
+    Given the canvas is at <zoom> percent zoom
+    And pointer relationship drawing starts from Customer details right port without highlighting an arbitrary target port
+    And Payment and Summary left ports have non-overlapping snap halos
+    When the pointer moves <snap_distance> CSS pixels from the center of Payment left port without touching it
+    Then the preview endpoint remains snapped to Payment left port
+    And Payment left port and Payment show the only valid target feedback
+    When the pointer moves <outside_distance> CSS pixels from that port center and is outside every port snap halo
+    Then Payment's target highlights clear and the preview endpoint follows the pointer
+    When the operator targets a Page body outside its port halos, the source Page, an Event, or an incompatible Page port
+    Then no port snap is acquired and the direct target is identified as invalid
+    When the pointer enters Summary left port's snap halo
+    Then the preview and the only valid target highlights transfer to Summary left port without a relationship write
+    When the connection is cancelled by <cancel_input>
+    Then the preview and every valid or invalid target highlight clear
+    And focus returns to Customer details right port without a Draft, revision, canonical state, or Undo change
+
+    Examples:
+      | zoom | snap_distance | outside_distance | cancel_input         |
+      | 25   | 24            | 25               | Escape               |
+      | 100  | 24            | 25               | pointer cancellation |
+      | 200  | 24            | 25               | Escape               |

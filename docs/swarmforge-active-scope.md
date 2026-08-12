@@ -384,6 +384,7 @@ historical rename/delete handling.
 | QA release-pilot workflow changes | `--pack shell --focused-task unit:test/settled-final-verification-workflow-test.mjs --focused-task unit:test/verification-process-contract-test.mjs` |
 | Flow verification proof hardening | `--pack flow_graph` |
 | Flow browser-program partitioning | `--pack flow_graph --focused-task unit:test/verification-process-contract-test.mjs` |
+| Flow relationship snap feedback | `--pack flow_graph` |
 
 Run the selected packs with:
 
