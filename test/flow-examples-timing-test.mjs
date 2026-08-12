@@ -47,6 +47,7 @@ import {
   flowSectionDrawActionabilityState,
   flowSectionTargetState,
   flowSectionMenuInvocationPlan,
+  flowSectionMenuInvocationRequired,
   flowSectionRenderedGenerationState,
   flowWorkspaceReadinessLimitMilliseconds,
   flowWorkspaceR02Runtime,
@@ -103,6 +104,10 @@ assert.deepEqual(flowSectionMenuInvocationPlan("pointer"),[0,100],
   "pointer Section menus receive one bounded retry against the current rendered target");
 assert.deepEqual(flowSectionMenuInvocationPlan("keyboard"),[0],
   "keyboard Section menus remain a single semantic invocation");
+assert.equal(flowSectionMenuInvocationRequired({surfaceOpen:false,sectionMenuPresent:false}),true,
+  "the bounded retry remains eligible while the Section menu is absent");
+assert.equal(flowSectionMenuInvocationRequired({surfaceOpen:true,sectionMenuPresent:true}),false,
+  "a delayed successful invocation suppresses a duplicate context-menu dispatch");
 
 function literalValue(node){
   if(!node)return undefined;
@@ -661,8 +666,9 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         menuRouteRecognized:flowAuthoringProofResult(flowAuthoringProofContract).valid}
       :largeFrameRepair
       ?(()=>{const encoded=encodeDevtoolsTextFrame("x".repeat(66257),Buffer.from([1,2,3,4]));
-        return{extendedLengthHeader:encoded.lengthForm==="uint64",
-          payloadTransmittable:encoded.decodedPayload.length===encoded.payloadLength};})()
+        const decoded=decodeDevtoolsTextFrame(encoded.bytes);
+        return{extendedLengthHeader:decoded.lengthForm==="uint64",
+          payloadTransmittable:decoded.valid&&decoded.payload.length===decoded.payloadLength};})()
       :keyboardFocusRepair
       ?{latchedBeforeMenu:flowAuthoringProofResult(flowAuthoringProofContract).valid&&
           flowAuthoringProofContract.focusTransition[0]==="canvas",
@@ -683,7 +689,8 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
               selectedShard:selected.shard}).valid};})()
       :sectionMenuRetry
         ?{invocationDelays:[...flowSectionMenuInvocationPlan("pointer")],
-          missedFirstInvocationRecovered:flowSectionMenuInvocationPlan("pointer").length===2}
+          missedFirstInvocationRecovered:flowSectionMenuInvocationPlan("pointer").length===2&&
+            !flowSectionMenuInvocationRequired({surfaceOpen:true,sectionMenuPresent:true})}
       :eventSeedRepair
         ?{freshRevisionAttempts:4,
           rebuildsMutation:/for\(let attempt=0;attempt<4;attempt\+=1\)\{const base=await repository\.loadProject/u.test(eventExampleSeedProgram),
