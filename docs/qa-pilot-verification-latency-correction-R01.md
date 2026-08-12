@@ -78,6 +78,16 @@ QA. Its final candidate still needs its own approved focused evidence and packag
 proof. A relevant change invalidates carry-forward and requires fresh
 incident-focused proof on that exact candidate.
 
+Activation of approved Slice 2 exposed that the integrated gate still allowed
+only the exact Slice 1 candidate, so its ordinary specification handoff could not
+start from the next QA descendant. Modular verification packs 152 is a separate
+Slice 1 prerequisite correction, not part of the Flow proof-hardening change.
+Its ceiling is 30 minutes from coder receipt, with a 15-minute checkpoint proving
+that a specification-only descendant starts, a conserved independent descendant
+reaches QA-ready, and a relevant incident-input change remains blocked pending
+fresh proof. The elapsed correction is reported separately and does not consume
+or reset Slice 2's 45-minute ceiling.
+
 The frozen QA release candidate may later pass such incidents to the architect.
 The one master-integration all-20 checkpoint resolves every matching deferred
 incident on its sealed tree and supplies final-ready evidence. A second all-20
