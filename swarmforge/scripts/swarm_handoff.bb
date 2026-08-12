@@ -463,6 +463,19 @@
               (str/trim (str (:err result) " " (:out result))))]))
     []))
 
+(defn release-route-errors [sender headers recipients]
+  (let [readiness (get headers "readiness")
+        verified (get headers "verified")
+        release-claim? (or (= readiness "release-candidate")
+                           (= verified "qa-candidate"))]
+    (if (and (= "git_handoff" (get headers "type")) release-claim?
+             (not (and (= sender "specifier")
+                       (= recipients ["architect"])
+                       (= readiness "release-candidate")
+                       (= verified "qa-candidate"))))
+      ["QA release candidates are limited to the specifier-to-architect route"]
+      [])))
+
 (defn reliability-incident-errors [headers canonical-commit]
   (if (and (= "git_handoff" (get headers "type")) (not (str/blank? canonical-commit)))
     (let [result (command "." "node" "scripts/verification-reliability-incidents.mjs"
@@ -486,10 +499,12 @@
       (let [{:keys [headers ordered details errors]} (parse-draft draft)
             validation (validate headers ordered details)
             evidence-errors (verification-errors sender headers (:canonical-commit validation) (:canonical-base validation))
+            release-route-errors (release-route-errors sender headers (:recipients validation))
             readiness-errors (readiness-errors sender headers (:recipients validation)
                                                (:canonical-commit validation) (:canonical-base validation))
             reliability-errors (reliability-incident-errors headers (:canonical-commit validation))
-            all-errors (vec (concat errors (:errors validation) evidence-errors readiness-errors reliability-errors))]
+            all-errors (vec (concat errors (:errors validation) evidence-errors release-route-errors
+                                    readiness-errors reliability-errors))]
         (when (seq all-errors)
           (error-report draft all-errors)
           (System/exit 2))
