@@ -88,6 +88,10 @@ reaches QA-ready, and a relevant incident-input change remains blocked pending
 fresh proof. The elapsed correction is reported separately and does not consume
 or reset Slice 2's 45-minute ceiling.
 
+The carry-forward prerequisite is QA-integrated at `db98b161cd`. Slice 2 starts
+from that corrected QA base; its 45-minute clock begins when the coder receives
+the `qa-pilot-flow-proof-hardening` handoff.
+
 The frozen QA release candidate may later pass such incidents to the architect.
 The one master-integration all-20 checkpoint resolves every matching deferred
 incident on its sealed tree and supplies final-ready evidence. A second all-20
@@ -118,7 +122,7 @@ This correction interval does not reset or hide the original slice elapsed time.
 
 ## Slice 2: structured Flow verification proofs
 
-Status: approved for coder handoff on 2026-08-12.
+Status: approved on 2026-08-12 and active for coder handoff from `db98b161cd`.
 
 Replace the context-menu repair's generated-source regular expressions with
 structured helper or planner results and causal fixtures. Harmless formatting,
