@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { canonicalVerificationChangeSet, requireGitAncestor } from "./verification-changes.mjs";
+import { planVerification } from "./verification-packs.mjs";
 import {
   createReviewReadyRecord,
   same,
@@ -114,7 +115,7 @@ async function validateHandoff([sender, recipientList, task, readiness, verified
   const policy = handoffReadinessPolicy({
     sender, recipients:recipientList.split(",").filter(Boolean), task,
     readiness:readiness === "legacy" ? undefined : readiness, verified,
-    allPackIds:packs.map(({ id }) => id),
+    allPackIds:planVerification(packs, {terminalFull:true}).selectedPackIds,
   });
   console.log(`handoff readiness passed: ${policy.mode}`);
 }
