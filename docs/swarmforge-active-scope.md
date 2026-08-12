@@ -20,6 +20,7 @@ The settled-candidate verification workflow is integrated at
 | Program | Current state | Next authority |
 |---|---|---|
 | QA-branch release pilot | Approved for immediate activation on 2026-08-12 | `docs/qa-branch-release-pilot-R01.md` controls feature integration into `qa` and explicit cumulative promotion to `master`. |
+| QA-pilot verification latency correction | Specification and first slice approved on 2026-08-12 after the Flow Section context-menu scorecard | `docs/qa-pilot-verification-latency-correction-R01.md` defines four independent slices; hand off the focused-scope fan-out stop to the coder. |
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program, paused after three completed slices | The installed Hotkeys, Command Palette, and workspace-tabs slices are complete. No later controller slice is active. |
@@ -194,6 +195,7 @@ Read only the program documents relevant to the selected task.
 | Generated branding | `docs/twatility-branding-merge-handover-R02.md` and `assets/brand/ARTWORK.md` |
 | Verification throughput backlog | `docs/verification-throughput-technical-debt-backlog-R01.md` |
 | QA-branch release pilot | `docs/qa-branch-release-pilot-R01.md` |
+| QA-pilot verification latency correction | `docs/qa-pilot-verification-latency-correction-R01.md` |
 | Stopped VTD-018 experiment | `docs/vtd018-incremental-verification-receipts-R01.md` |
 | Feature-development throughput course adjustment | `docs/feature-development-throughput-course-adjustment-R01.md` |
 
@@ -380,6 +382,8 @@ historical rename/delete handling.
 | Choice controls, analyst guidance, and generated branding | `--pack branding_polish` |
 | VTD-015 workflow bootstrap | all 20 canonical pack selectors; shared handoff and evidence behavior affects every pack |
 | QA release-pilot workflow changes | `--pack shell --focused-task unit:test/settled-final-verification-workflow-test.mjs --focused-task unit:test/verification-process-contract-test.mjs` |
+| Flow verification proof hardening | `--pack flow_graph` |
+| Flow browser-program partitioning | `--pack flow_graph --focused-task unit:test/verification-process-contract-test.mjs` |
 
 Run the selected packs with:
 

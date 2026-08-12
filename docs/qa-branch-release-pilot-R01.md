@@ -32,6 +32,12 @@ reviewable change.
    an elapsed effort ceiling, and a checkpoint expected by halfway through that
    ceiling. Reaching the ceiling without a deliverable candidate stops the slice
    for a user decision.
+   Before any review-ready task launches, exact changed-path preflight compares
+   the planned scope with that approved scope. If an incidental shared
+   verification-infrastructure repair expands a product slice to all 20 packs,
+   task launch stops for a user choice: restore the product-only candidate, or
+   stop it and approve the repair as a standalone infrastructure slice. The
+   planner never omits owned packs to preserve the smaller scope.
 3. Coder and refactorer run focused checks and record review-ready evidence. The
    architect completes architecture and quality review and runs focused checks
    for any changes or repairs. No role runs the all-20 gate in this mode.
@@ -41,6 +47,11 @@ reviewable change.
    receipt.
 5. The specifier may fast-forward `qa` to that exact candidate. QA integration is
    not master integration, release completion, or final regression proof.
+
+After the architect's last candidate change, the required focused check is run
+once in evidence-producing mode. Its receipt records review-ready evidence for
+that exact tree; an ordinary preliminary run of the same plan on the same tree is
+not required. A later change requires one new evidence-producing run.
 
 Feature candidates must be independently understandable and revertible. Partial,
 speculative, or known-failing work stays in task worktrees and never enters

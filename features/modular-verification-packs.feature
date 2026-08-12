@@ -2143,3 +2143,13 @@ Feature: Modular verification packs
     And it is not lineage-retired or grouped with another incident solely because the product repair is shared
     And process-contract fixtures cover rename, batch embedding, unique split, missing history, ambiguity, and cycles
     And no product behavior, assertion leaf, timeout, target scope, incident record, or evidence meaning changes
+
+  # Modular verification packs 149
+  Scenario: Modular verification packs 149
+    Given a Flow verification check recognizes target selection, Section actions, focus order, or frame encoding by matching generated source spelling or statement order
+    When that check is replaced with structured causal evidence
+    Then it invokes an exported planner or helper boundary, or executes a deterministic fixture and inspects its structured result
+    And renaming local variables, reformatting statements, or reordering independent setup without changing the result does not fail the check
+    And changing the selected target, Section action inventory, focus transition, frame length form, or decoded payload does fail the check
+    And each failure identifies the violated behavior and observed structured value rather than printing the complete generated browser program
+    And every registered assertion leaf, browser operation, incident obligation, and focused ownership boundary remains unchanged

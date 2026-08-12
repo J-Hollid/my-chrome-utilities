@@ -174,3 +174,34 @@ Feature: Modular browser runtime adapters
     And no browser task remains for any of the three replaced Flow adapters
     And a focused authoring plan contains one browser observation task with only FLOW_WORKSPACE_AUTHORING_TARGET
     And exact evidence partition validation applies the installed workflow conservation contract
+
+  # Modular browser runtime adapters 017
+  Scenario Outline: Modular browser runtime adapters 017
+    Given the DevTools client must transmit a browser evaluation payload of <payload_bytes> bytes
+    When it encodes and sends the WebSocket client frame
+    Then the payload length uses <length_form>
+    And the masked frame decodes to the exact original payload
+    And no payload-size boundary truncates, rejects, or rewrites the browser program
+
+    Examples:
+      | payload_bytes | length_form             |
+      | 125           | the direct 7-bit length |
+      | 126           | the 16-bit length       |
+      | 65535         | the 16-bit length       |
+      | 65536         | the 64-bit length       |
+      | 66257         | the 64-bit length       |
+
+  # Modular browser runtime adapters 018
+  Scenario Outline: Modular browser runtime adapters 018
+    Given FLOW_WORKSPACE_AUTHORING_TARGET has one <original_program_bytes>-byte evaluation program with Section, Page, Event, relationship, and accessibility evidence
+    When its installed workflow is partitioned into ordered evaluation segments
+    Then no transmitted segment exceeds <maximum_segment_bytes> bytes
+    And each segment declares its logical phase, required setup, and assigned evidence leaves without carrying another Flow target's behavior
+    And the segments use one isolated FLOW_WORKSPACE_AUTHORING_TARGET session in deterministic dependency order
+    And a failed segment identifies its phase and prevents only dependent later segments while preserving independent target results
+    And the union executes every original authoring assertion leaf exactly once with unchanged production operations and evidence identity
+    And focused authoring does not transmit controls, legacy-compatibility, or example-validation programs
+
+    Examples:
+      | original_program_bytes | maximum_segment_bytes |
+      | 66257                  | 60000                 |

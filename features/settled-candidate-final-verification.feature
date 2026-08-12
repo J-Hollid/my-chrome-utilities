@@ -110,3 +110,27 @@ Feature: Settled candidate final verification
     And it accounts for every focused check, terminal attempt, failure, repair, revert, rerun, and the terminal cost per included task
     And it compares actual master-promotion time with the per-task terminal baseline
     And the user decides when another master integration phase begins
+
+  # Settled candidate final verification 011
+  Scenario Outline: Settled candidate final verification 011
+    Given a QA feature slice approves focused scope <approved_scope>
+    And its current candidate contains <candidate_change>
+    When exact changed-path preflight selects <planned_scope> before any task launches
+    Then <authorization_result>
+    And the preflight reports the approved and planned packs, task count, critical-path estimate, expansion-causing paths, and remaining effort ceiling
+    And no owned pack is omitted, no terminal result is claimed, and no task starts before authorization
+
+    Examples:
+      | approved_scope | candidate_change                                  | planned_scope         | authorization_result                                                                                              |
+      | flow_graph     | only the approved Flow product and evidence paths | flow_graph            | the exact focused plan is authorized once                                                                         |
+      | flow_graph     | an incidental shared verification-runner repair   | all 20 runnable packs | execution stops for a user choice to restore product scope or approve and integrate a standalone infrastructure slice |
+
+  # Settled candidate final verification 012
+  Scenario: Settled candidate final verification 012
+    Given the architect has committed the last QA-candidate change
+    And one focused plan can verify that exact tree and produce its review-ready receipt
+    When QA-ready evidence is requested
+    Then one evidence-producing invocation executes the focused plan and supplies the receipt used to record review-ready evidence
+    And no preliminary invocation of the same plan is required for the same tree
+    And the evidence binds the task, base, commit, tree, changed paths, plan, result, and timestamps
+    And any later behavior, test, build, registry, runner, workflow, or mutation-metadata change requires one new evidence-producing invocation
