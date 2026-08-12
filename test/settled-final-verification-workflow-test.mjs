@@ -14,6 +14,7 @@ import {
   formatReviewReadyScopePreflight,
   handoffReadinessPolicy,
   reviewReadyScopePreflight,
+  terminalVerificationDeferredRoute,
   recordReviewReadyEvidence,
   runSettledFinalVerificationCommand,
   validateReviewReadyRecord,
@@ -64,6 +65,23 @@ assert.deepEqual(expandedScopePreflight.omittedOwnedPacks, []);
 assert.equal(expandedScopePreflight.terminalClaim, false);
 assert.match(formatReviewReadyScopePreflight(expandedScopePreflight),
   /approved packs: flow_graph.*planned packs: branding_polish.*842 tasks.*1008000ms.*scripts\/run-focused-acceptance\.mjs.*elapsed: 5000ms.*remaining effort ceiling: 3595000ms/is);
+const deferredIncident = {
+  state:"unresolved", repair:{ status:"eligible", candidate:{ commit:candidateCommit } },
+  terminalVerificationDeferred:{ status:"terminal-verification-deferred",
+    candidate:{ commit:candidateCommit, tree:candidateTree },
+    reviewReady:{ task:"future-slice", baseCommit, receiptSha256:"4".repeat(64) },
+    package:{ digest:"5".repeat(64) },
+  },
+};
+assert.deepEqual(terminalVerificationDeferredRoute({ incident:deferredIncident,
+  readiness:"review-ready", candidateCommit }), { permitted:true, mode:"focused-review" });
+assert.deepEqual(terminalVerificationDeferredRoute({ incident:deferredIncident,
+  readiness:"qa-ready", candidateCommit }), { permitted:true, mode:"qa-integration" });
+assert.deepEqual(terminalVerificationDeferredRoute({ incident:deferredIncident,
+  readiness:"release-candidate", candidateCommit:"later-qa-head",
+  candidateDescendsFromDeferred:true }), { permitted:true, mode:"master-checkpoint" });
+assert.deepEqual(terminalVerificationDeferredRoute({ incident:deferredIncident,
+  readiness:"final-ready", candidateCommit }), { permitted:false, mode:"terminal-blocked" });
 for (const workflowPath of [
   "scripts/settled-final-verification.mjs",
   "scripts/settled-final-verification-policy.mjs",
@@ -348,6 +366,10 @@ console.log(JSON.stringify({
     recommendationRequired:true,
     qaPilot:{
       scopePreflight:{ authorized:focusedScopePreflight, blocked:expandedScopePreflight },
+      terminalVerificationDeferred:{
+        unresolved:true, abandoned:false, focusedReview:true, qaIntegration:true,
+        releaseCandidate:true, finalReady:false, all20Launched:false,
+      },
       qaReady:{ exactTreeOnly:true, focusedOnly:true, boundFocusedEvidence:true,
         qaFastForwardOnly:true, fullRegressionClaim:false, masterCompletionClaim:false },
       masterIntegration:{ explicitUserRequest:true, qaHeadFrozen:true, masterBaseBound:true,

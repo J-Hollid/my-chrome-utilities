@@ -422,6 +422,56 @@ export function createTimeoutIncidentStore({
       }
       return applicable;
     },
+    async blockingForHandoff({ commit, readiness }) {
+      const blocked = [];
+      for (const incident of await this.blocking({ commit })) {
+        const deferred = incident.terminalVerificationDeferred;
+        const exactCandidate = deferred?.candidate?.commit === commit;
+        const descendantCandidate = deferred?.candidate?.commit &&
+          await commitDescendsFrom({ root, isAncestor, ancestor:deferred.candidate.commit, commit });
+        const permitted = deferred?.status === "terminal-verification-deferred" &&
+          incident.repair?.status === "eligible" &&
+          ((["review-ready", "qa-ready"].includes(readiness) && exactCandidate) ||
+           (readiness === "release-candidate" && descendantCandidate));
+        if (!permitted) blocked.push(incident);
+      }
+      return blocked;
+    },
+    async deferTerminalVerification(id, proof) {
+      exactObject(proof, "Terminal verification deferral proof");
+      const candidate = await currentCandidate();
+      return access.update(id, async(incident) => {
+        if (incident.state !== "unresolved" || incident.repair?.status !== "eligible") {
+          throw new Error(`Reliability incident ${id} has no eligible repair to defer`);
+        }
+        if (proof.candidate?.commit !== candidate.commit || proof.candidate?.tree !== candidate.tree ||
+            !await commitDescendsFrom({ root, isAncestor,
+              ancestor:timeoutRepairCandidate(incident)?.commit, commit:candidate.commit }) ||
+            proof.reviewReady?.candidateCommit !== candidate.commit ||
+            proof.reviewReady?.candidateTree !== candidate.tree || !proof.reviewReady?.task ||
+            !proof.reviewReady?.baseCommit ||
+            !shaPattern.test(proof.reviewReady?.receiptSha256 ?? "") ||
+            !Array.isArray(proof.reviewReady?.focusedTaskKeys) ||
+            !proof.reviewReady.focusedTaskKeys.includes(incident.failure.task.key) ||
+            !shaPattern.test(proof.package?.digest ?? "")) {
+          throw new Error(`Reliability incident ${id} terminal deferral proof is stale or incomplete`);
+        }
+        const at = now();
+        const withoutDigest = {
+          status:"terminal-verification-deferred",
+          candidate:structuredClone(proof.candidate),
+          repairDigest:timeoutIncidentDigest(incident.repair),
+          reviewReady:structuredClone(proof.reviewReady),
+          package:structuredClone(proof.package),
+          recordedAt:at,
+        };
+        const disposition = { ...withoutDigest, digest:timeoutIncidentDigest(withoutDigest) };
+        if (incident.terminalVerificationDeferred?.digest === disposition.digest) return incident;
+        return transition({ ...incident, terminalVerificationDeferred:disposition },
+          "terminal-verification-deferred", at, { dispositionDigest:disposition.digest,
+            commit:candidate.commit });
+      });
+    },
     async resolutions({ commit }) {
       const records = [];
       for (const incident of await this.list()) {

@@ -2451,6 +2451,26 @@ console.log("repairTmp=" + process.env.TMPDIR);
   assert.equal(proposal.transitions.filter(({ type }) => type === "repair-proposed").length, 1);
   assert.equal(proposal.transitions.some(({ type }) => type === "repair-renewed"), false,
     "the frozen repair state machine never emits repair-renewed");
+  const deferred = await store.deferTerminalVerification(first.id, {
+    candidate:{ commit:"repair-commit", tree:"repair-tree" },
+    reviewReady:{ task:"qa-pilot-fanout-stop", baseCommit:"approved-base",
+      candidateCommit:"repair-commit", candidateTree:"repair-tree",
+      receiptSha256:"4".repeat(64),
+      focusedTaskKeys:[failure.task.key, regressionKey] },
+    package:{ path:"build/package/my-chrome-utilities.zip", digest:"5".repeat(64) },
+  });
+  assert.equal(deferred.state, "unresolved",
+    "feature integration defers terminal proof without resolving the incident");
+  assert.equal(deferred.terminalVerificationDeferred.status, "terminal-verification-deferred");
+  assert.equal((await store.blockingForHandoff({ commit:"repair-commit",
+    readiness:"review-ready" })).some(({ id }) => id === first.id), false,
+  "exact deferred proof permits focused review routing");
+  assert.equal((await store.blockingForHandoff({ commit:"reclaimed-commit",
+    readiness:"release-candidate" })).some(({ id }) => id === first.id), false,
+  "a descendant frozen QA head retains the architect's master-checkpoint route");
+  assert.equal((await store.blockingForHandoff({ commit:"repair-commit",
+    readiness:"final-ready" })).some(({ id }) => id === first.id), true,
+  "deferred proof cannot authorize final-ready routing");
   const checkpointPacks = ["branding_polish", "capture", "command-palette", "defects",
     "durable_project_repository", "event-library", "flow_export", "flow_graph", "guided_test_cases",
     "hotkeys", "layered_schema", "live_flow_testing", "project_assurance_severity",

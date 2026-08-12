@@ -1,12 +1,65 @@
+import { createHash } from "node:crypto";
+import { lstat, readFile, realpath } from "node:fs/promises";
+import path from "node:path";
+
 import {
   assertNoBlockingTimeoutIncidents, createTimeoutIncidentStore,
 } from "./verification-reliability-store.mjs";
+import { git, repositoryRoot } from "./verification-reliability-values.mjs";
 
 export { createTimeoutIncidentStore };
 
+async function recordEligibleHandoffDeferrals(store, incidents, {
+  commit, base, task, readiness, verified,
+}) {
+  if (!["review-ready", "qa-ready"].includes(readiness) || verified !== "review-ready") return;
+  const { verifyReviewReadyEvidence } = await import("./settled-final-verification.mjs");
+  const review = await verifyReviewReadyEvidence(commit, base, task);
+  const packagePath = path.resolve(repositoryRoot, "build/package/my-chrome-utilities.zip");
+  const [details, canonicalPath, bytes] = await Promise.all([
+    lstat(packagePath), realpath(packagePath), readFile(packagePath),
+  ]);
+  if (!details.isFile() || details.isSymbolicLink() || canonicalPath !== packagePath ||
+      details.mtimeMs < Date.parse(review.completedAt)) {
+    throw new Error("Terminal verification deferral requires a fresh canonical package proof");
+  }
+  for (const incident of incidents) {
+    await store.deferTerminalVerification(incident.id, {
+      candidate:{ commit:review.candidateCommit, tree:review.candidateTree },
+      reviewReady:{ task:review.task, baseCommit:review.baseCommit,
+        candidateCommit:review.candidateCommit, candidateTree:review.candidateTree,
+        receiptSha256:review.receipt.sha256,
+        focusedTaskKeys:[...review.focusedScope.taskKeys] },
+      package:{ path:path.relative(repositoryRoot, packagePath),
+        digest:createHash("sha256").update(bytes).digest("hex") },
+    });
+  }
+}
+
+async function assertReliabilityHandoff(commit, base, task, readiness, verified) {
+  const canonical = await git(repositoryRoot, "rev-parse", `${commit}^{commit}`);
+  const store = createTimeoutIncidentStore();
+  const incidents = await store.blocking({ commit:canonical });
+  await recordEligibleHandoffDeferrals(store, incidents,
+    { commit:canonical, base, task, readiness, verified });
+  const blocked = await store.blockingForHandoff({ commit:canonical, readiness });
+  if (blocked.length) {
+    throw new Error(`Unresolved reliability incident(s) block verification evidence and Git handoff: ${
+      blocked.map(({ id }) => id).join(", ")}. Complete a causal repair and fresh checkpoint.`);
+  }
+}
+
 export async function runReliabilityIncidentCli(args) {
   const [command, commit = "HEAD"] = args;
-  if (command === "assert-handoff" || command === "assert-evidence") {
+  if (command === "assert-handoff") {
+    const [, handoffCommit, base, task, readiness, verified] = args;
+    if (base && task && readiness && verified) {
+      await assertReliabilityHandoff(handoffCommit, base, task, readiness, verified);
+    } else await assertNoBlockingTimeoutIncidents(handoffCommit);
+    console.log("reliability incident gate passed");
+    return;
+  }
+  if (command === "assert-evidence") {
     await assertNoBlockingTimeoutIncidents(commit);
     console.log("reliability incident gate passed");
     return;
@@ -46,5 +99,5 @@ export async function runReliabilityIncidentCli(args) {
       lineageTransition:incident.lineageTransitions.at(-1) }, null, 2));
     return;
   }
-  throw new Error("Use: verification-reliability-incidents.mjs assert-handoff|assert-evidence [commit] | list | propose-repair <id> <causal-category> <causal-explanation> <regression-key> <regression-receipt> <focused-receipt> | record-rebase <id> <from-commit> <to-commit> <to-tree> | record-abandon <id> <from-commit> <user-decision-reference>");
+  throw new Error("Use: verification-reliability-incidents.mjs assert-handoff <commit> [base task readiness verified] | assert-evidence [commit] | list | propose-repair <id> <causal-category> <causal-explanation> <regression-key> <regression-receipt> <focused-receipt> | record-rebase <id> <from-commit> <to-commit> <to-tree> | record-abandon <id> <from-commit> <user-decision-reference>");
 }

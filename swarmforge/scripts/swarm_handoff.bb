@@ -479,7 +479,9 @@
 (defn reliability-incident-errors [headers canonical-commit]
   (if (and (= "git_handoff" (get headers "type")) (not (str/blank? canonical-commit)))
     (let [result (command "." "node" "scripts/verification-reliability-incidents.mjs"
-                          "assert-handoff" canonical-commit)]
+                          "assert-handoff" canonical-commit (get headers "base")
+                          (get headers "task") (or (get headers "readiness") "legacy")
+                          (get headers "verified"))]
       (if (zero? (:exit result))
         []
         [(str "Git handoff is blocked by reliability incident state: "

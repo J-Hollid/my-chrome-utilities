@@ -54,6 +54,23 @@ export function formatReviewReadyScopePreflight(result) {
     `no owned packs omitted; terminal claim: false.`;
 }
 
+export function terminalVerificationDeferredRoute({
+  incident, readiness, candidateCommit, candidateDescendsFromDeferred = false,
+}) {
+  const deferred = incident?.terminalVerificationDeferred;
+  const exactCandidate = deferred?.candidate?.commit === candidateCommit;
+  const valid = incident?.state === "unresolved" && incident?.repair?.status === "eligible" &&
+    deferred?.status === "terminal-verification-deferred";
+  if (valid && exactCandidate && ["review-ready", "qa-ready"].includes(readiness)) {
+    return { permitted:true, mode:readiness === "review-ready" ? "focused-review" : "qa-integration" };
+  }
+  if (valid && readiness === "release-candidate" &&
+      (exactCandidate || candidateDescendsFromDeferred)) {
+    return { permitted:true, mode:"master-checkpoint" };
+  }
+  return { permitted:false, mode:"terminal-blocked" };
+}
+
 function exactRecipient(recipientSet, role) {
   return recipientSet.size === 1 && recipientSet.has(role);
 }

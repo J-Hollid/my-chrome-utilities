@@ -63,7 +63,8 @@ function validateTransitionHistory(incident) {
   const allowed = new Set(["diagnostic-retry-claimed", "diagnostic-retry-classified",
     "repair-proposed", "repair-checkpoint-claimed", "repair-checkpoint-reclaimed",
     "resolved", "lineage-rebased",
-    "lineage-abandoned", "occurrence-appended", "closure-audited"]);
+    "lineage-abandoned", "occurrence-appended", "closure-audited",
+    "terminal-verification-deferred"]);
   let previousTime = Date.parse(incident.createdAt);
   let previousRank = 0;
   let terminal = false;
@@ -201,6 +202,26 @@ function validateTransitionHistory(incident) {
     }
   } else if (matchingTransitions(incident, "closure-audited").length) {
     transitionHistoryError(incident.id, "closure audit transition has no disposition");
+  }
+  const deferredTransitions = matchingTransitions(incident, "terminal-verification-deferred");
+  if (incident.terminalVerificationDeferred !== undefined) {
+    const deferred = incident.terminalVerificationDeferred;
+    const latest = deferredTransitions.at(-1);
+    if (deferred.status !== "terminal-verification-deferred" ||
+        incident.repair?.status !== "eligible" || !deferred.candidate?.commit ||
+        !deferred.candidate?.tree || !deferred.reviewReady?.task ||
+        !deferred.reviewReady?.baseCommit || !shaPattern.test(deferred.reviewReady?.receiptSha256 ?? "") ||
+        !Array.isArray(deferred.reviewReady?.focusedTaskKeys) ||
+        !deferred.reviewReady.focusedTaskKeys.includes(incident.failure.task.key) ||
+        !shaPattern.test(deferred.package?.digest ?? "") ||
+        !shaPattern.test(deferred.repairDigest ?? "") || !Number.isFinite(Date.parse(deferred.recordedAt)) ||
+        !shaPattern.test(deferred.digest ?? "") ||
+        deferred.digest !== timeoutIncidentDigest({ ...deferred, digest:undefined }) ||
+        latest?.dispositionDigest !== deferred.digest || latest?.at !== deferred.recordedAt) {
+      transitionHistoryError(incident.id, "terminal verification deferral is malformed");
+    }
+  } else if (deferredTransitions.length) {
+    transitionHistoryError(incident.id, "terminal verification deferral transition has no disposition");
   }
 }
 
