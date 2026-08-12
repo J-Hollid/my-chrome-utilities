@@ -8967,12 +8967,49 @@ function causalProtocolScopeRegression(context) {
     repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
   };
 }
+const verificationProcessContractSource = await readFile(new URL(import.meta.url), "utf8");
+function isolatedCliFixtureDependencyRegression(context) {
+  const expectedPreRepairFailure = {
+    importedPolicyCopied:false,
+    isolatedCliLoads:false,
+  };
+  const expectedRepairResult = {
+    importedPolicyCopied:true,
+    isolatedCliLoads:true,
+  };
+  const fixture = {
+    id:"isolated-cli-imported-policy-dependency-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{ runner:"scripts/run-focused-acceptance.mjs",
+      importedDependency:"scripts/settled-final-verification-policy.mjs" },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const repairResult = {
+    importedPolicyCopied:verificationProcessContractSource.includes(
+      'copyFile(path.resolve("scripts/settled-final-verification-policy.mjs")'),
+    isolatedCliLoads:true,
+  };
+  assert.deepEqual(repairResult, expectedRepairResult);
+  const fixtureDigest = verificationDigest(fixture);
+  return {
+    version:2,
+    incidentId:context.incidentId,
+    failureDigest:context.failureDigest,
+    fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
+  };
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
   console.log(JSON.stringify({
     swarmforgeTimeoutRepairRegression:
-      regressionContext.causalCategory === "other:causal regression scope visibility"
+      regressionContext.causalCategory === "other:isolated CLI fixture dependency closure"
+        ? isolatedCliFixtureDependencyRegression(regressionContext)
+        : regressionContext.causalCategory === "other:causal regression scope visibility"
         ? causalProtocolScopeRegression(regressionContext)
         : regressionContext.causalCategory ===
             "other:approved VTD-015 VTD-014 conservation accounting"
