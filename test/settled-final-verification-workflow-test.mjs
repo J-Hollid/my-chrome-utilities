@@ -15,6 +15,7 @@ import {
   recordReviewReadyEvidence,
   runSettledFinalVerificationCommand,
   validateReviewReadyRecord,
+  verifyQaReleaseCandidate,
   verifyReviewReadyEvidence,
 } from "../scripts/settled-final-verification.mjs";
 
@@ -107,6 +108,14 @@ assert.deepEqual(handoffReadinessPolicy({
 }), { mode:"review", requiredEvidence:"review-ready" });
 assert.deepEqual(handoffReadinessPolicy({
   sender:"architect", recipients:["specifier"], task:"future-slice",
+  readiness:"qa-ready", verified:"review-ready", allPackIds:allPacks,
+}), { mode:"qa-integration", requiredEvidence:"review-ready" });
+assert.deepEqual(handoffReadinessPolicy({
+  sender:"specifier", recipients:["architect"], task:"qa-master-promotion",
+  readiness:"release-candidate", verified:"qa-candidate", allPackIds:allPacks,
+}), { mode:"master-integration", requiredEvidence:"qa-candidate" });
+assert.deepEqual(handoffReadinessPolicy({
+  sender:"architect", recipients:["specifier"], task:"future-slice",
   readiness:"final-ready", verified:allPacks.join(","), allPackIds:allPacks,
 }), { mode:"final", requiredEvidence:"final-ready" });
 assert.deepEqual(handoffReadinessPolicy({
@@ -120,7 +129,7 @@ assert.throws(() => handoffReadinessPolicy({
 assert.throws(() => handoffReadinessPolicy({
   sender:"architect", recipients:["specifier"], task:"future-slice",
   readiness:"review-ready", verified:"review-ready", allPackIds:allPacks,
-}), /final-ready/i);
+}), /qa-ready/i);
 assert.throws(() => handoffReadinessPolicy({
   sender:"coder", recipients:["refactorer"], task:"future-slice",
   readiness:"final-ready", verified:allPacks.join(","), allPackIds:allPacks,
@@ -137,6 +146,14 @@ assert.throws(() => handoffReadinessPolicy({
   sender:"specifier", recipients:["coder"], task:"future-slice",
   readiness:"final-ready", verified:allPacks.join(","), allPackIds:allPacks,
 }), /architect.*specifier/i);
+assert.throws(() => handoffReadinessPolicy({
+  sender:"architect", recipients:["refactorer"], task:"future-slice",
+  readiness:"qa-ready", verified:"review-ready", allPackIds:allPacks,
+}), /QA-ready.*architect-to-specifier/i);
+assert.throws(() => handoffReadinessPolicy({
+  sender:"specifier", recipients:["coder"], task:"qa-master-promotion",
+  readiness:"release-candidate", verified:"qa-candidate", allPackIds:allPacks,
+}), /QA release candidates.*specifier-to-architect/i);
 assert.throws(() => handoffReadinessPolicy({
   sender:"architect", recipients:["specifier"], task:"future-slice",
   readiness:"final-ready", verified:allPacks.slice(1).join(","), allPackIds:allPacks,
@@ -232,6 +249,32 @@ try {
   await rm(evidenceRepository, { recursive:true, force:true });
 }
 
+const releaseRepository = await mkdtemp(path.join(os.tmpdir(), "qa-release-candidate-"));
+try {
+  await exec("git", ["init", "-q", "--initial-branch=master"], { cwd:releaseRepository });
+  await exec("git", ["config", "user.name", "QA Release Test"], { cwd:releaseRepository });
+  await exec("git", ["config", "user.email", "qa-release@example.test"], { cwd:releaseRepository });
+  await writeFile(path.join(releaseRepository, "README.md"), "master\n");
+  await exec("git", ["add", "README.md"], { cwd:releaseRepository });
+  await exec("git", ["commit", "-qm", "master base"], { cwd:releaseRepository });
+  const { stdout:releaseBase } = await exec("git", ["rev-parse", "HEAD"], { cwd:releaseRepository });
+  await exec("git", ["switch", "-q", "-c", "qa"], { cwd:releaseRepository });
+  await writeFile(path.join(releaseRepository, "feature.txt"), "qa feature\n");
+  await exec("git", ["add", "feature.txt"], { cwd:releaseRepository });
+  await exec("git", ["commit", "-qm", "QA feature"], { cwd:releaseRepository });
+  const { stdout:releaseCandidate } = await exec("git", ["rev-parse", "HEAD"], { cwd:releaseRepository });
+  const verifiedRelease = await verifyQaReleaseCandidate(
+    releaseCandidate.trim(), releaseBase.trim(), { repositoryRoot:releaseRepository },
+  );
+  assert.equal(verifiedRelease.qaHead, releaseCandidate.trim());
+  assert.equal(verifiedRelease.masterHead, releaseBase.trim());
+  await assert.rejects(() => verifyQaReleaseCandidate(
+    releaseBase.trim(), releaseBase.trim(), { repositoryRoot:releaseRepository },
+  ), /exact QA head/u);
+} finally {
+  await rm(releaseRepository, { recursive:true, force:true });
+}
+
 console.log(JSON.stringify({
   vtd015Acceptance:{
     reviewReady:{
@@ -258,7 +301,8 @@ console.log(JSON.stringify({
       noRetry:true, noLowerConcurrency:true, noCarriedLeaf:true, noUnrelatedReceipt:true },
     actions:{
       "focused refactorer or architect review":"permit the next named review role",
-      "integration into the accepted branch":"block because final evidence is absent",
+      "QA integration after an exact architect QA-ready handoff":"permit only the QA fast-forward",
+      "integration into master":"block because final evidence is absent",
       "completion broadcast to the specifier":"block because final evidence is absent",
       "promotion of another task or base receipt as final":"block because its bound identity does not match",
     },
@@ -270,6 +314,20 @@ console.log(JSON.stringify({
       inactiveUntilIntegration:true, firstPayback:"VTD-012", noBypass:true },
     completedFeatureDelta:0,
     recommendationRequired:true,
+    qaPilot:{
+      qaReady:{ exactTreeOnly:true, focusedOnly:true, boundFocusedEvidence:true,
+        qaFastForwardOnly:true, fullRegressionClaim:false, masterCompletionClaim:false },
+      masterIntegration:{ explicitUserRequest:true, qaHeadFrozen:true, masterBaseBound:true,
+        cleanLineage:true, exactPromotionOnly:true, branchesConverge:true,
+        bindings:["masterBase", "releaseTask", "candidateTree", "completePlan", "artifact",
+          "toolchain", "receipt", "timestamps"] },
+      scorecard:{
+        deliveryIntervals:{ approvalToQa:true, qaQueue:true, approvalToMaster:true },
+        verificationMeasures:{ focused:true, finalAttempts:true, failures:true, repairs:true,
+          reverts:true, reruns:true, amortizedFinalGate:true },
+        baselineComparison:true, userControlsPromotion:true,
+      },
+    },
     scorecard,
   },
 }));

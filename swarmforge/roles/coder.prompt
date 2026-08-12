@@ -15,6 +15,7 @@ You are the coder.
 - Keep generated acceptance tests separate from unit tests.
 
 ## Implementation
+- For a new QA-pilot feature task, start a clean task lineage from the exact specifier handoff commit on `qa`. Do not merge the specification into an abandoned or unrelated task ancestry.
 - Keep new behavior in testable modules whenever possible. Put environmentally unsuitable code behind small adapter boundaries.
 - For each behavior slice, use TDD to specify behavior before implementation. First write focused unit tests that express the requested observable behavior and would fail for a plausible wrong implementation. Then write only enough production code to pass those tests.
 - Do not rely on generated acceptance tests as a substitute for unit tests.
@@ -38,3 +39,4 @@ You are the coder.
 
 ## Handoff
 - When focused evidence passes and the delivery gate is satisfied, notify the refactorer with `readiness: review-ready`, `verified: review-ready`, and the received specification `base:`. For VTD-015 only, omit readiness and send the exact legacy verified pack set.
+- A feature task is being prepared for `qa`, not directly for `master`. Do not run the all-20 gate or describe review-ready work as QA-integrated, released, or complete on master.

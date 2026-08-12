@@ -53,10 +53,13 @@ You are the architect.
 
 ## Handoff
 - If a handoff contains no changes, do not hand it off to the other agents.
-- Run differential language mutation and DRY analysis on changed scope, then soft Gherkin acceptance mutation (`--level soft`) only for changed features. Use focused checks for every review repair. After all review and quality work settles one tree, seal it and run exactly one canonical all-20 checkpoint with properties and packaging; record its durable evidence as final-ready. A failure requires causal focused repair and a fresh complete run on the changed tree.
+- Follow the mode carried by the handoff and `docs/qa-branch-release-pilot-R01.md`.
+- In feature integration mode, run differential language mutation and DRY analysis on changed scope, then soft Gherkin acceptance mutation (`--level soft`) only for changed features. Use focused checks for every review repair. Do not run the all-20 checkpoint. After review settles one tree, ensure the exact architect candidate has bound focused evidence, then send only the specifier a `qa-ready` handoff with `verified: review-ready`. This authorizes QA integration only and is not a completion broadcast.
+- In master integration mode, accept only a specifier handoff marked `release-candidate` with `verified: qa-candidate`. Start a clean release lineage at that exact cumulative QA commit rather than merging it into stale task ancestry. Review the cumulative `master..candidate` change set without expanding product scope. After every review and repair settles one tree, seal it and run exactly one canonical all-20 checkpoint with properties and packaging; record its durable evidence as final-ready. A failure requires causal focused repair and a fresh complete run on the changed tree.
 - When the current refactorer task or batch is complete, commit architectural changes and hand off functional work before taking another queued refactorer task or batch:
   - Send `git_handoff` files to the coder and refactorer using `priority: 00` when they have follow-up work to review.
-  - Send a `git_handoff` file to the specifier only when the terminal functional delivery gate is satisfied and the exact sealed tree has final-ready all-20 evidence. Use `readiness: final-ready` and the exact 20-pack `verified:` set.
+  - For a feature-integration task, send a `git_handoff` file only to the specifier when the functional delivery gate and focused architecture review are satisfied. Use `readiness: qa-ready` and `verified: review-ready`.
+  - For a master-integration task, send a `git_handoff` file to the specifier only when the terminal functional delivery gate is satisfied and the exact sealed tree has final-ready all-20 evidence. Use `readiness: final-ready` and the exact 20-pack `verified:` set.
   - Do not send completion notes or `note` handoffs to the specifier.
   - If the completed work produced no changes, or only manifest/non-functional changes, run `done_with_current.sh` and take the next queued task or batch without forwarding it.
 - VTD-015 itself follows the previously integrated exact-pack protocol and omits readiness. Its new protocol becomes active only after integration.

@@ -1,8 +1,8 @@
 # Feature-development throughput course adjustment R01
 
 Status: approved by the user and committed at `2b093eec4f`; bounded VTD-017 is
-integrated at `723ebf6eb5`; bounded VTD-018 was approved on 2026-08-12 and its
-settled scorecard is required before another enabling slice
+integrated at `723ebf6eb5`; VTD-018 stopped unintegrated on 2026-08-12 and the
+user activated the QA-branch release pilot instead of another enabling slice
 
 Prepared: 2026-08-11
 
@@ -39,9 +39,11 @@ diagnostic clues; none is an outcome claim by itself.
 The course adjustment does not reduce final regression confidence.
 
 1. Development and review use the smallest checks that directly cover the current
-   change while the candidate tree is still changing.
-2. The final candidate tree runs all 20 packs with properties and the package
-   check once before integration.
+   change while the candidate tree is still changing. An exact architect-reviewed
+   candidate may then integrate into `qa` without claiming final regression.
+2. When the user requests master integration, the frozen cumulative QA candidate
+   runs all 20 packs with properties and the package check once before `master`
+   advances.
 3. If that final run fails, the failure is recorded. The exact cause is repaired
    and proved with the smallest relevant check. The changed candidate then runs
    all 20 packs again from a fresh valid checkpoint.
@@ -401,13 +403,15 @@ With workspace tabs, VTD-015, and VTD-017 now complete:
 1. Do not automatically pick another VTD-008 controller.
 2. Record VTD-017 as complete with two workers and at least 3 minutes 43 seconds
    saved from its final gate.
-3. The user reviewed the VTD-017 scorecard and approved the exact bounded VTD-018
-   contract on 2026-08-12. Deliver it before choosing another enabling slice.
-4. Follow the new measured longest path. VTD-012 and VTD-016 remain candidates,
-   while standalone VTD-011 stays deferred because the current two-worker order
-   is already within about six seconds of balanced once lock waiting is removed.
-5. Resume product feature delivery when the remaining test-infrastructure cost is
-   acceptable to the user, and compare approval-to-integration time with the
+3. The user reviewed the VTD-017 scorecard and approved bounded VTD-018 on
+   2026-08-12. VTD-018 then exceeded both its 3-to-5-hour delivery estimate and
+   its terminal stop threshold, so it stopped unintegrated. Candidate
+   `c7ad4698f9` is not part of the accepted line.
+4. Freeze further enabling VTD work. VTD-012, VTD-016, and standalone VTD-011
+   remain deferred.
+5. Use `docs/qa-branch-release-pilot-R01.md` to resume ordinary product feature
+   delivery through focused QA integration and one user-triggered cumulative
+   master gate. Compare approval-to-QA and approval-to-master time with the
    Command Palette and workspace-tabs transition measurements.
 6. Continue architecture extraction only where a measured delivery bottleneck
    shows that it is the next limiting factor.

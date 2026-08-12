@@ -28,6 +28,23 @@ function reviewPolicy(sender, recipientSet, readiness, verified) {
   return { mode:"review", requiredEvidence:"review-ready" };
 }
 
+function qaPolicy(sender, recipientSet, readiness, verified) {
+  if (sender !== "architect" || !exactRecipient(recipientSet, "specifier")) return null;
+  if (readiness === "final-ready") return null;
+  if (readiness !== "qa-ready" || verified !== "review-ready") {
+    throw new Error("Architect feature handoffs to the specifier require qa-ready focused evidence");
+  }
+  return { mode:"qa-integration", requiredEvidence:"review-ready" };
+}
+
+function releasePolicy(sender, recipientSet, readiness, verified) {
+  if (sender !== "specifier" || !exactRecipient(recipientSet, "architect")) return null;
+  if (readiness !== "release-candidate" || verified !== "qa-candidate") {
+    throw new Error("Specifier master-integration handoffs to the architect require an exact QA release candidate");
+  }
+  return { mode:"master-integration", requiredEvidence:"qa-candidate" };
+}
+
 function packClaim(verified) {
   return sortedUnique(String(verified ?? "").split(",").filter(Boolean));
 }
@@ -47,6 +64,12 @@ function reviewReadyClaim(readiness, verified) {
 }
 
 function assertNoUnsupportedClaim(sender, recipientSet, readiness, verified) {
+  if (readiness === "qa-ready") {
+    throw new Error("QA-ready evidence is limited to the architect-to-specifier route");
+  }
+  if (readiness === "release-candidate" || verified === "qa-candidate") {
+    throw new Error("QA release candidates are limited to the specifier-to-architect route");
+  }
   if (reviewReadyClaim(readiness, verified)) {
     throw new Error("Review-ready evidence is limited to the named review-role route");
   }
@@ -54,7 +77,7 @@ function assertNoUnsupportedClaim(sender, recipientSet, readiness, verified) {
     throw new Error("Final-ready evidence is limited to the architect-to-specifier route");
   }
   if (sender === "architect" && recipientSet.has("specifier")) {
-    requireFinalReady();
+    throw new Error("Architect-to-specifier handoffs require qa-ready or final-ready evidence");
   }
 }
 
@@ -72,6 +95,10 @@ export function handoffReadinessPolicy({ sender, recipients, task, readiness, ve
   if (bootstrap) return bootstrap;
   const review = reviewPolicy(sender, recipientSet, readiness, verified);
   if (review) return review;
+  const release = releasePolicy(sender, recipientSet, readiness, verified);
+  if (release) return release;
+  const qa = qaPolicy(sender, recipientSet, readiness, verified);
+  if (qa) return qa;
   const final = finalPolicy(sender, recipientSet, readiness, verified, allPackIds);
   if (final) return final;
   assertNoUnsupportedClaim(sender, recipientSet, readiness, verified);

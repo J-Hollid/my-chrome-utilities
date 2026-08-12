@@ -8440,12 +8440,12 @@ try {
     '',
   ].join("\n"));
   await writeFile(path.join(handoffRepository, "scripts", "settled-final-verification.mjs"), [
-    'if (process.argv[2] !== "validate-handoff") process.exit(2);',
+    'if (!["validate-handoff", "verify-review", "verify-release-candidate"].includes(process.argv[2])) process.exit(2);',
     'console.log("handoff readiness fixture passed");',
     '',
   ].join("\n"));
   await writeFile(path.join(handoffRepository, ".swarmforge", "roles.tsv"),
-    "specifier\tspecifier\nrefactorer\trefactorer\ncoder\tcoder\n");
+    "specifier\tspecifier\nrefactorer\trefactorer\ncoder\tcoder\narchitect\tarchitect\n");
   await writeFile(path.join(handoffRepository, "README.md"), "base\n");
   await exec("git", ["init", "-q"], { cwd:handoffRepository });
   await exec("git", ["config", "user.name", "Handoff Boundary Test"], { cwd:handoffRepository });
@@ -8466,6 +8466,33 @@ try {
   assert.match(await exec("bb", [handoffScript, allowedDraft], {
     cwd:handoffRepository, env:{ ...process.env, SWARMFORGE_ROLE:"specifier" },
   }), /HANDOFF QUEUED/u, "specification-only handoffs retain the explicit not-required path");
+  const releaseDraft = path.join(handoffRepository, "release.handoff-draft");
+  await writeFile(releaseDraft, [
+    "type: git_handoff", "to: architect", "priority: 00", "task: qa-master-promotion",
+    `commit: ${specificationCommit}`, `base: ${handoffBase}`,
+    "readiness: release-candidate", "verified: qa-candidate", "",
+  ].join("\n"));
+  assert.match(await exec("bb", [handoffScript, releaseDraft], {
+    cwd:handoffRepository, env:{ ...process.env, SWARMFORGE_ROLE:"specifier" },
+  }), /HANDOFF QUEUED/u, "an explicit QA release candidate routes from specifier to architect");
+  const qaReadyDraft = path.join(handoffRepository, "qa-ready.handoff-draft");
+  await writeFile(qaReadyDraft, [
+    "type: git_handoff", "to: specifier", "priority: 00", "task: qa-feature",
+    `commit: ${specificationCommit}`, `base: ${handoffBase}`,
+    "readiness: qa-ready", "verified: review-ready", "",
+  ].join("\n"));
+  assert.match(await exec("bb", [handoffScript, qaReadyDraft], {
+    cwd:handoffRepository, env:{ ...process.env, SWARMFORGE_ROLE:"architect" },
+  }), /HANDOFF QUEUED/u, "bound focused evidence can route an exact feature candidate to QA");
+  const misroutedReleaseDraft = path.join(handoffRepository, "misrouted-release.handoff-draft");
+  await writeFile(misroutedReleaseDraft, [
+    "type: git_handoff", "to: coder", "priority: 00", "task: qa-master-promotion",
+    `commit: ${specificationCommit}`, `base: ${handoffBase}`,
+    "readiness: release-candidate", "verified: qa-candidate", "",
+  ].join("\n"));
+  await assert.rejects(() => exec("bb", [handoffScript, misroutedReleaseDraft], {
+    cwd:handoffRepository, env:{ ...process.env, SWARMFORGE_ROLE:"specifier" },
+  }), /QA release candidates are limited to the specifier-to-architect route/u);
   const blockedDraft = path.join(handoffRepository, "blocked.handoff-draft");
   await writeFile(blockedDraft, [
     "type: git_handoff", "to: refactorer", "priority: 00", "task: blocked-reliability",
@@ -8479,7 +8506,7 @@ try {
   const queuedHandoffNames = (await readdir(
     path.join(handoffRepository, ".swarmforge", "handoffs", "outbox"),
   )).filter((name) => name.endsWith(".handoff"));
-  assert.equal(queuedHandoffNames.length, 1, "one Git handoff is queued");
+  assert.equal(queuedHandoffNames.length, 3, "the ordinary, QA-ready, and release-candidate handoffs are queued");
   const queuedHandoff = await readFile(path.join(
     handoffRepository, ".swarmforge", "handoffs", "outbox", queuedHandoffNames[0],
   ), "utf8");

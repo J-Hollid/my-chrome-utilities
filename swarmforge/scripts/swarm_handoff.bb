@@ -20,8 +20,8 @@
        "task: <short-stable-task-name>\n"
        "commit: <10-char-commit-abbrev>\n"
        "base: <10-char-received-commit-abbrev>\n"
-       "readiness: review-ready|final-ready\n"
-       "verified: <pack-id>[,<pack-id>...]|not-required\n\n"
+       "readiness: review-ready|qa-ready|release-candidate|final-ready\n"
+       "verified: review-ready|qa-candidate|<pack-id>[,<pack-id>...]|not-required\n\n"
        "type: note\n"
        "to: <role>[,<role>...]\n"
        "priority: NN\n"
@@ -253,8 +253,8 @@
                                   (not (re-matches #"(?:[a-z0-9][a-z0-9_-]*(?:,[a-z0-9][a-z0-9_-]*)*|not-required)" verified)))
                              (conj (format "Header 'verified' must be comma-separated pack ids or not-required; got '%s'." verified))
                              (and (not (str/blank? readiness))
-                                  (not (#{"review-ready" "final-ready"} readiness)))
-                             (conj (format "Header 'readiness' must be review-ready or final-ready; got '%s'." readiness))
+                                  (not (#{"review-ready" "qa-ready" "release-candidate" "final-ready"} readiness)))
+                             (conj (format "Header 'readiness' must be review-ready, qa-ready, release-candidate, or final-ready; got '%s'." readiness))
                              (and (not (str/blank? verified))
                                   (not= verified "not-required")
                                   (not= (count (str/split verified #","))
@@ -302,13 +302,15 @@
     (catch clojure.lang.ExceptionInfo error
       (exit! (or (:exit (ex-data error)) 1) (ex-message error)))))
 
-(defn body [type sender canonical-commit note-message note-details]
+(defn body [type sender canonical-commit readiness note-message note-details]
   (case type
     "git_handoff" (str "Re-read your role and constitution.\n\n"
                        "This is a workflow instruction, not a shell command.\n\n"
                        "Process the Git handoff from role `" sender "` at commit `" canonical-commit "`:\n"
                        "1. Inspect the candidate commit and task scope according to your role.\n"
-                       "2. Merge the candidate into your assigned branch when your review accepts it.\n"
+                       (if (= readiness "release-candidate")
+                         "2. Start a clean release lineage at the exact candidate; do not merge it into stale task ancestry.\n"
+                         "2. Merge the candidate into your assigned branch when your review accepts it.\n")
                        "3. Perform any remaining work or forwarding required by your role.\n"
                        "4. When this handoff is fully handled, run the repository helper "
                        "`swarmforge/scripts/done_with_current.sh`.\n")
@@ -330,7 +332,8 @@
         tmp-dir (fs/path outbox-dir "tmp")
         tmp-file (fs/path tmp-dir (str filename ".tmp"))
         outbox-file (fs/path outbox-dir filename)
-        handoff-body (body type sender canonical-commit (get headers "message") details)
+        handoff-body (body type sender canonical-commit (get headers "readiness")
+                          (get headers "message") details)
         lines (cond-> [(str "id: " id)
                        (str "from: " sender)
                        (str "to: " (str/join "," recipients))
@@ -417,6 +420,14 @@
           (if (zero? (:exit result))
             []
             [(str "Bound review-ready evidence is missing or invalid: "
+                  (str/trim (str (:err result) " " (:out result))))]))
+
+        (= verified "qa-candidate")
+        (let [result (command "." "node" "scripts/settled-final-verification.mjs"
+                              "verify-release-candidate" canonical-commit canonical-base)]
+          (if (zero? (:exit result))
+            []
+            [(str "QA release candidate is missing or invalid: "
                   (str/trim (str (:err result) " " (:out result))))]))
 
         (= verified "not-required")

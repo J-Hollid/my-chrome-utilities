@@ -100,6 +100,22 @@ export async function verifyReviewReadyEvidence(commit, base, task, {
   return record;
 }
 
+export async function verifyQaReleaseCandidate(commit, base, {
+  repositoryRoot = repository,
+} = {}) {
+  const [candidateCommit, baseCommit, qaHead, masterHead] = await Promise.all([
+    git(repositoryRoot, ["rev-parse", `${commit}^{commit}`]),
+    git(repositoryRoot, ["rev-parse", `${base}^{commit}`]),
+    git(repositoryRoot, ["rev-parse", "refs/heads/qa^{commit}"]),
+    git(repositoryRoot, ["rev-parse", "refs/heads/master^{commit}"]),
+  ]);
+  await requireGitAncestor(baseCommit, candidateCommit, { repositoryRoot });
+  if (candidateCommit !== qaHead) throw new Error("Release candidate must be the exact QA head");
+  if (baseCommit !== masterHead) throw new Error("Release candidate base must be the exact master head");
+  if (candidateCommit === baseCommit) throw new Error("QA has no accumulated commit to promote");
+  return { candidateCommit, baseCommit, qaHead, masterHead };
+}
+
 async function recordReview([receipt, base, task]) {
   const record = await recordReviewReadyEvidence(receipt, base, task);
   console.log(`review-ready evidence recorded: ${record.task} (${record.focusedScope.taskKeys.length} focused tasks)`);
@@ -108,6 +124,11 @@ async function recordReview([receipt, base, task]) {
 async function verifyReview([commit, base, task]) {
   const record = await verifyReviewReadyEvidence(commit, base, task);
   console.log(`review-ready evidence passed: ${record.task} (${record.focusedScope.taskKeys.length} focused tasks)`);
+}
+
+async function verifyReleaseCandidate([commit, base]) {
+  const candidate = await verifyQaReleaseCandidate(commit, base);
+  console.log(`QA release candidate passed: ${candidate.candidateCommit.slice(0, 10)} based on ${candidate.baseCommit.slice(0, 10)}`);
 }
 
 async function validateHandoff([sender, recipientList, task, readiness, verified]) {
@@ -123,13 +144,14 @@ async function validateHandoff([sender, recipientList, task, readiness, verified
 const operations = {
   "record-review":{ arity:3, run:recordReview },
   "verify-review":{ arity:3, run:verifyReview },
+  "verify-release-candidate":{ arity:2, run:verifyReleaseCandidate },
   "validate-handoff":{ arity:5, run:validateHandoff },
 };
 
 export async function runSettledFinalVerificationCommand([operation, ...args]) {
   const selected = operations[operation];
   if (!selected || args.length !== selected.arity) {
-    throw new Error("Use: settled-final-verification.mjs record-review <receipt> <base> <task> | verify-review <commit> <base> <task> | validate-handoff <sender> <recipients> <task> <readiness|legacy> <verified>");
+    throw new Error("Use: settled-final-verification.mjs record-review <receipt> <base> <task> | verify-review <commit> <base> <task> | verify-release-candidate <commit> <base> | validate-handoff <sender> <recipients> <task> <readiness|legacy> <verified>");
   }
   await selected.run(args);
 }

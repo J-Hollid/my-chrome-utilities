@@ -19,14 +19,15 @@ The settled-candidate verification workflow is integrated at
 
 | Program | Current state | Next authority |
 |---|---|---|
-| Feature-development throughput course adjustment | Approved at `2b093eec4f`; VTD-017 course choice approved on 2026-08-11 | `docs/feature-development-throughput-course-adjustment-R01.md` controls the scorecard and later work order. |
+| QA-branch release pilot | Approved for immediate activation on 2026-08-12 | `docs/qa-branch-release-pilot-R01.md` controls feature integration into `qa` and explicit cumulative promotion to `master`. |
+| Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program, paused after three completed slices | The installed Hotkeys, Command Palette, and workspace-tabs slices are complete. No later controller slice is active. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Deferred and inactive | The existing two-worker order is within about six seconds of balanced after lock wait is removed; scheduling needed for a possible third worker is bounded inside VTD-017. |
 | VTD-012 registry and planner modularization | Deferred and inactive | Reconsider after broad final-gate and receipt-persistence costs are reduced. |
 | VTD-017 shared-artifact parallel execution | Complete at `723ebf6eb5` | Review the settled scorecard in `docs/vtd017-shared-artifact-parallel-execution-R01.md`. |
-| VTD-018 incremental verification receipts | Approved bounded implementation | `docs/vtd018-incremental-verification-receipts-R01.md` and `features/verification-incremental-task-receipts.feature` control the coder handoff. |
+| VTD-018 incremental verification receipts | Stopped and unintegrated | Candidate `c7ad4698f9` exceeded the terminal threshold and remains outside `qa` and `master`; resume only by a separate explicit user decision. |
 | Product recovery lineages | Open | Resume in the order listed under **Open product recovery queue**, unless later user direction changes it. |
 
 VTD-008 remains active as a program. Completion of the installed Hotkeys, Command
@@ -36,13 +37,12 @@ in `src/workspace-tabs-ui.ts`. It does not extract the broader utility registry 
 shell DOM adapter, change workspace-navigation semantics, or activate
 observation-target, live-session, or another Data Layer controller.
 
-The active implementation slice is bounded VTD-018 incremental verification
-receipts. VTD-017 is integrated, its settled scorecard led to this slice, and the
-user approved the exact VTD-018 contract on 2026-08-12. Do not select another
-VTD-008 controller or activate VTD-012 automatically. VTD-015's first live
-payback was mixed: coder and refactorer correctly used focused review-ready
-evidence, but a late architect validator correction invalidated one successful
-all-20 pass.
+No VTD implementation slice is active. The user stopped autonomous VTD-018 repair
+after its repeated final failure and approved a QA-branch release pilot. At the
+start of the next request, the specifier distinguishes feature integration into
+`qa` from an explicit cumulative promotion to `master`. Do not inherit VTD-018
+candidate `c7ad4698f9`, select another VTD item, or start master integration
+without the corresponding user instruction.
 
 ## Feature-development throughput authority
 
@@ -52,12 +52,14 @@ pack count, task count, file size, and lines moved are diagnostic only. A VTD sl
 records an expected payoff and must be checked against later applicable feature
 deliveries.
 
-Safety remains non-negotiable. Use focused checks while a candidate is changing.
-The settled final candidate runs all 20 packs with properties and the package
-check. If that run fails, record and repair the exact cause, prove the repair with
-focused evidence, and rerun all 20 packs on the changed candidate. Do not use the
-full suite as an edit loop, and do not accept a successful full result for a tree
-that later changes.
+Safety remains non-negotiable. Feature tasks use focused checks while changing and
+may integrate into `qa` only through an exact architect `qa-ready` handoff. The
+all-20 gate does not run per QA-integrated task. When the user explicitly requests
+master integration, freeze the cumulative QA head; that settled release candidate
+runs all 20 packs with properties and the package check. If it fails, record and
+repair or revert the exact cause, prove the change with focused evidence, and rerun
+all 20 packs on the changed candidate. Only the exact final-ready tree may advance
+`master`.
 
 The integrated final-gate speed work uses one coordinator and one deduplicated
 plan, not 20 competing pack runners. VTD-017 removed the exclusive artifact wait
@@ -74,11 +76,11 @@ before testing a higher Chrome worker count. Its scorecard must report useful
 overlap and lock wait, not configured worker count alone.
 
 VTD-017 is complete and proved at least a 3-minute-43-second final-gate saving.
-Bounded VTD-018 incremental receipt recording is now the active implementation
-slice. Its settled scorecard will identify the remaining bottleneck and next
-decision. VTD-012 and the standalone VTD-011 terminal-shard slice remain
-deferred. Each slice must show its expected elapsed-time benefit before another
-slice is approved.
+VTD-018 did not settle: its second terminal occurrence failed 65 Schemas scenarios
+and its 16-minute-16-second gate exceeded the 15-minute-43-second stop threshold.
+The candidate and repair lineage are inactive. VTD-012, VTD-016, and standalone
+VTD-011 remain deferred while ordinary product work proves whether batching one
+terminal gate reduces total delivery time.
 
 Every enabling slice requires two visible user reviews: a pre-approval baseline,
 target, expected effort, safety trade-off, and stop condition; then a settled
@@ -191,7 +193,8 @@ Read only the program documents relevant to the selected task.
 | Technical-analyst exact copy | `docs/specification-studio-technical-analyst-copy-R01.md` |
 | Generated branding | `docs/twatility-branding-merge-handover-R02.md` and `assets/brand/ARTWORK.md` |
 | Verification throughput backlog | `docs/verification-throughput-technical-debt-backlog-R01.md` |
-| VTD-018 incremental verification receipts | `docs/vtd018-incremental-verification-receipts-R01.md` |
+| QA-branch release pilot | `docs/qa-branch-release-pilot-R01.md` |
+| Stopped VTD-018 experiment | `docs/vtd018-incremental-verification-receipts-R01.md` |
 | Feature-development throughput course adjustment | `docs/feature-development-throughput-course-adjustment-R01.md` |
 
 ## Live precedence summary
@@ -376,7 +379,7 @@ historical rename/delete handling.
 | Project assurance severity | `--pack project_assurance_severity` |
 | Choice controls, analyst guidance, and generated branding | `--pack branding_polish` |
 | VTD-015 workflow bootstrap | all 20 canonical pack selectors; shared handoff and evidence behavior affects every pack |
-| VTD-018 incremental verification receipts | `--pack shell --focused-task unit:test/verification-process-contract-test.mjs --focused-task acceptance-session:shell` |
+| QA release-pilot workflow changes | `--pack shell --focused-task unit:test/settled-final-verification-workflow-test.mjs --focused-task unit:test/verification-process-contract-test.mjs` |
 
 Run the selected packs with:
 

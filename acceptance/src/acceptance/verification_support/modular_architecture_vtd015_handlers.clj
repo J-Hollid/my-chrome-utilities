@@ -62,10 +62,25 @@
                         "Review-ready evidence claimed final regression proof."))}
    {:pattern #"^the architect has completed architecture review, applicable quality analysis, focused checks, and every resulting repair on one candidate tree$"
     :handler (fn [world _ _] world)}
-   {:pattern #"^the architect seals that tree for final verification$"
+   {:pattern #"^the architect seals that tree for QA integration$"
     :handler (fn [world _ _]
-               (assert! world (true? (get-in world [:vtd015/evidence :finalReady :sealedTreeOnly]))
-                        "Final verification did not seal one tree."))}
+               (assert! world (true? (get-in world [:vtd015/evidence :qaPilot :qaReady :exactTreeOnly]))
+                        "QA integration did not seal one exact tree."))}
+   {:pattern #"^only that exact tree may receive a QA-ready handoff with bound focused evidence$"
+    :handler (fn [world _ _]
+               (let [qa-ready (get-in world [:vtd015/evidence :qaPilot :qaReady])]
+                 (assert! world (and (:exactTreeOnly qa-ready) (:boundFocusedEvidence qa-ready))
+                          "QA-ready did not bind focused evidence to the exact tree.")))}
+   {:pattern #"^the specifier may fast-forward that exact tree into QA$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd015/evidence :qaPilot :qaReady :qaFastForwardOnly]))
+                        "QA integration is not restricted to an exact fast-forward."))}
+   {:pattern #"^no full regression or master completion is claimed$"
+    :handler (fn [world _ _]
+               (let [qa-ready (get-in world [:vtd015/evidence :qaPilot :qaReady])]
+                 (assert! world (and (false? (:fullRegressionClaim qa-ready))
+                                     (false? (:masterCompletionClaim qa-ready)))
+                          "QA-ready claimed final regression or master completion.")))}
    {:pattern #"^one fresh canonical run executes all 20 packs with properties and the package check$"
     :handler (fn [world _ _]
                (let [final (get-in world [:vtd015/evidence :finalReady])]
@@ -83,7 +98,7 @@
                         "An unsealed candidate could receive a completion handoff."))}
    {:pattern #"^a sealed candidate has passing final verification evidence$"
     :handler (fn [world _ _] world)}
-   {:pattern #"^(.+) occurs before integration$"
+   {:pattern #"^(.+) occurs before master promotion$"
     :handler (fn [world example captures]
                (assoc world :vtd015/change (first (values example-values example captures))))}
    {:pattern #"^the evidence effect is (.+)$"
@@ -208,7 +223,54 @@
    {:pattern #"^no bootstrap exception bypasses current durable evidence or integration safety$"
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd015/evidence :bootstrap :noBypass]))
-                        "The bootstrap bypasses current safety evidence."))}])
+                        "The bootstrap bypasses current safety evidence."))}
+   {:pattern #"^the user explicitly requests master integration and QA contains one or more QA-ready tasks after master$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd015/evidence :qaPilot :masterIntegration :explicitUserRequest]))
+                        "Master integration started without an explicit user request."))}
+   {:pattern #"^the specifier freezes the exact QA head as a release candidate based on current master$"
+    :handler (fn [world _ _]
+               (let [integration (get-in world [:vtd015/evidence :qaPilot :masterIntegration])]
+                 (assert! world (and (:qaHeadFrozen integration) (:masterBaseBound integration))
+                          "The release candidate is not the frozen QA head based on master.")))}
+   {:pattern #"^the architect starts a clean release lineage at that exact candidate$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd015/evidence :qaPilot :masterIntegration :cleanLineage]))
+                        "The release candidate inherited stale task ancestry."))}
+   {:pattern #"^its durable evidence binds the master base, release task, candidate tree, complete plan, artifact, toolchain, receipt, and timestamps$"
+    :handler (fn [world _ _]
+               (assert! world (= #{"masterBase" "releaseTask" "candidateTree" "completePlan"
+                                          "artifact" "toolchain" "receipt" "timestamps"}
+                                 (set (get-in world [:vtd015/evidence :qaPilot :masterIntegration :bindings])))
+                        "Release evidence is not completely bound."))}
+   {:pattern #"^only that passing sealed tree may advance master$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd015/evidence :qaPilot :masterIntegration :exactPromotionOnly]))
+                        "Master could advance to an unverified tree."))}
+   {:pattern #"^QA and master finish on the same verified commit$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd015/evidence :qaPilot :masterIntegration :branchesConverge]))
+                        "QA and master do not converge after promotion."))}
+   {:pattern #"^QA-integrated tasks and a master promotion have durable approval, handoff, receipt, and integration timestamps$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^the pilot scorecard is reported$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^it reports approval-to-QA, QA queue, and approval-to-master time for every included feature$"
+    :handler (fn [world _ _]
+               (assert! world (every? true? (vals (get-in world [:vtd015/evidence :qaPilot :scorecard :deliveryIntervals])))
+                        "The pilot scorecard omits a delivery interval."))}
+   {:pattern #"^it accounts for every focused check, terminal attempt, failure, repair, revert, rerun, and the terminal cost per included task$"
+    :handler (fn [world _ _]
+               (assert! world (every? true? (vals (get-in world [:vtd015/evidence :qaPilot :scorecard :verificationMeasures])))
+                        "The pilot scorecard omits a verification measure."))}
+   {:pattern #"^it compares actual master-promotion time with the per-task terminal baseline$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd015/evidence :qaPilot :scorecard :baselineComparison]))
+                        "The pilot scorecard lacks its terminal baseline comparison."))}
+   {:pattern #"^the user decides when another master integration phase begins$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd015/evidence :qaPilot :scorecard :userControlsPromotion]))
+                        "Master integration can begin without the user."))}])
 
 ;; clj-mutate-manifest-begin
 ;; {:version 1, :tested-at "2026-08-11T21:09:09.996079178+02:00", :module-hash "1754380372", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1551051199"} {:id "form/1/defonce", :kind "defonce", :line 5, :end-line 5, :hash "701185655"} {:id "defn-/production-evidence!", :kind "defn-", :line 7, :end-line 14, :hash "-288875895"} {:id "defn-/prepared", :kind "defn-", :line 16, :end-line 17, :hash "693136156"} {:id "defn-/assert!", :kind "defn-", :line 19, :end-line 21, :hash "-1474981311"} {:id "defn-/values", :kind "defn-", :line 23, :end-line 25, :hash "-170718585"} {:id "defn-/value-at", :kind "defn-", :line 27, :end-line 28, :hash "1199202542"} {:id "defn/handlers", :kind "defn", :line 30, :end-line 211, :hash "1137426894"}]}

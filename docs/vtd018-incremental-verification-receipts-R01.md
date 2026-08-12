@@ -1,6 +1,12 @@
 # VTD-018 incremental verification receipts R01
 
-Status: approved by the user for coder handoff on 2026-08-12
+Status: stopped and unintegrated on 2026-08-12 after the terminal stop threshold;
+candidate `c7ad4698f9` is inactive unless the user explicitly resumes it
+
+The unimplemented Gherkin contract was removed from the executable `features/`
+inventory when the experiment stopped. Its approved wording remains available in
+Git history at specification commit `9f8627f420`; resumption must restore and
+reapprove the contract deliberately rather than silently registering it.
 
 Prepared: 2026-08-12
 

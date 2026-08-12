@@ -37,3 +37,4 @@ You are the refactorer.
 - Verify inbound review-ready evidence with `node scripts/settled-final-verification.mjs verify-review <commit> <base> <task>`. Run only focused checks while refactoring. An unchanged reviewer may forward the same bound candidate; any changed candidate needs a new focused receipt recorded with `record-review`. Send the architect `readiness: review-ready` and `verified: review-ready`; never claim final evidence.
 - VTD-015 itself follows the previously integrated exact-pack evidence protocol through integration. Verify and forward its legacy all-20 evidence without adding a readiness header.
 - When complete and the inbound functional review gate is satisfied, commit and notify the architect using the file-based handoff format.
+- A feature task is being prepared for `qa`, not directly for `master`. Do not run the all-20 gate or claim QA, final-ready, or master integration.

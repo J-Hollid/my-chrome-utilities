@@ -20,15 +20,16 @@ Feature: Settled candidate final verification
   # Settled candidate final verification 002
   Scenario: Settled candidate final verification 002
     Given the architect has completed architecture review, applicable quality analysis, focused checks, and every resulting repair on one candidate tree
-    When the architect seals that tree for final verification
-    Then one fresh canonical run executes all 20 packs with properties and the package check
-    And its durable evidence binds the specification base, task, candidate tree, complete plan, artifact, toolchain, receipt, and timestamps
-    And only that passing sealed tree may receive the completion handoff for integration
+    When the architect seals that tree for QA integration
+    Then the role runs only focused checks that can observe its changes
+    And only that exact tree may receive a QA-ready handoff with bound focused evidence
+    And the specifier may fast-forward that exact tree into QA
+    And no full regression or master completion is claimed
 
   # Settled candidate final verification 003
   Scenario Outline: Settled candidate final verification 003
     Given a sealed candidate has passing final verification evidence
-    When <later_change> occurs before integration
+    When <later_change> occurs before master promotion
     Then the evidence effect is <evidence_effect>
     And the required next action is <required_action>
 
@@ -54,7 +55,8 @@ Feature: Settled candidate final verification
     Examples:
       | requested_action                                  | workflow_result                                   |
       | focused refactorer or architect review            | permit the next named review role                 |
-      | integration into the accepted branch              | block because final evidence is absent             |
+      | QA integration after an exact architect QA-ready handoff | permit only the QA fast-forward              |
+      | integration into master                           | block because final evidence is absent             |
       | completion broadcast to the specifier             | block because final evidence is absent             |
       | promotion of another task or base receipt as final | block because its bound identity does not match    |
 
@@ -89,3 +91,22 @@ Feature: Settled candidate final verification
     And the new review-ready protocol remains inactive until VTD-015 is integrated
     And VTD-017 shared-artifact parallel execution is the first live payback measurement
     And no bootstrap exception bypasses current durable evidence or integration safety
+
+  # Settled candidate final verification 009
+  Scenario: Settled candidate final verification 009
+    Given the user explicitly requests master integration and QA contains one or more QA-ready tasks after master
+    When the specifier freezes the exact QA head as a release candidate based on current master
+    Then the architect starts a clean release lineage at that exact candidate
+    And one fresh canonical run executes all 20 packs with properties and the package check
+    And its durable evidence binds the master base, release task, candidate tree, complete plan, artifact, toolchain, receipt, and timestamps
+    And only that passing sealed tree may advance master
+    And QA and master finish on the same verified commit
+
+  # Settled candidate final verification 010
+  Scenario: Settled candidate final verification 010
+    Given QA-integrated tasks and a master promotion have durable approval, handoff, receipt, and integration timestamps
+    When the pilot scorecard is reported
+    Then it reports approval-to-QA, QA queue, and approval-to-master time for every included feature
+    And it accounts for every focused check, terminal attempt, failure, repair, revert, rerun, and the terminal cost per included task
+    And it compares actual master-promotion time with the per-task terminal baseline
+    And the user decides when another master integration phase begins
