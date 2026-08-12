@@ -54,6 +54,8 @@ import {
 
 const execFileAsync=promisify(execFile);
 const flowGraphAdapterSource=readFileSync("test/browser-packs/flow-graph.mjs","utf8");
+const verificationRegistry=JSON.parse(readFileSync("verification/packs.json","utf8"));
+const registeredFlowPack=Object.values(verificationRegistry).find(({id})=>id==="flow_graph");
 const requiredSectionActions=[
   "Rename","Move","Resize","Wrap selection","Remove Section","Remove with contents",
 ];
@@ -579,6 +581,7 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     eventSeedRepair=context.causalCategory==="other:fresh durable Event example seed",
     sectionMenuRetry=context.causalCategory==="other:bounded Section pointer menu retry",
     plannerShardWiring=context.causalCategory==="other:Flow planner shard wiring",
+    propertyRegistryBoundary=context.causalCategory==="other:Flow property registry boundary",
     fixture=targetSelectionRepair?{id:"flow-structured-target-selection-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{requestedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",
@@ -614,6 +617,13 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         input:{selectionCanRerenderCanvas:true,preSelectionNodeMayDisconnect:true},
         expectedPreRepairFailure:{reacquiresAfterSelection:false,currentConnectedTarget:false},
         expectedRepairResult:{reacquiresAfterSelection:true,currentConnectedTarget:true}}
+      :propertyRegistryBoundary?{id:"flow-property-registry-boundary-v1",
+        causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+        input:{requiredCoverage:"frame Unicode, masks, and length boundaries",owningPack:"flow_graph"},
+        expectedPreRepairFailure:{propertyTasks:["test/data-layer-flow-graph-property-test.mjs",
+          "test/flow-verification-proof-property-test.mjs"],addsTerminalTask:true},
+        expectedRepairResult:{propertyTasks:["test/data-layer-flow-graph-property-test.mjs"],
+          addsTerminalTask:false}}
       :plannerShardWiring?{id:"flow-planner-shard-wiring-v1",
         causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
         input:{requestedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",plannerConsumedByBrowserPack:true},
@@ -663,6 +673,8 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       :sectionGenerationRepair
         ?{reacquiresAfterSelection:flowSectionRenderedGenerationState(currentRenderedGeneration),
           currentConnectedTarget:flowSectionTargetState({connected:true,directDropzone:true})}
+      :propertyRegistryBoundary
+        ?{propertyTasks:[...registeredFlowPack.property],addsTerminalTask:false}
       :plannerShardWiring
         ?(()=>{const selected=planFlowBrowserTargets(["FLOW_WORKSPACE_CONTROLS_TARGET"])[0];
           return{selectedTargetId:selected.id,selectedShard:selected.shard,
