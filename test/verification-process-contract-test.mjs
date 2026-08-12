@@ -9022,12 +9022,37 @@ function isolatedCliFixtureDependencyRegression(context) {
     repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
   };
 }
+function terminalDeferralTransitionSchemaRegression(context) {
+  const expectedPreRepairFailure = { transitionAccepted:false, dispositionDurable:false };
+  const expectedRepairResult = { transitionAccepted:true, dispositionDurable:true };
+  const fixture = {
+    id:"terminal-deferral-transition-schema-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{ transition:"terminal-verification-deferred" },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const repairResult = {
+    transitionAccepted:verificationProcessContractSource.includes(
+      'deferred.terminalVerificationDeferred.status, "terminal-verification-deferred"'),
+    dispositionDurable:verificationProcessContractSource.includes(
+      "store.deferTerminalVerification(first.id"),
+  };
+  assert.deepEqual(repairResult, expectedRepairResult);
+  const fixtureDigest = verificationDigest(fixture);
+  return { version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
   console.log(JSON.stringify({
     swarmforgeTimeoutRepairRegression:
-      regressionContext.causalCategory === "other:isolated CLI fixture dependency closure"
+      regressionContext.causalCategory === "other:terminal deferral transition schema"
+        ? terminalDeferralTransitionSchemaRegression(regressionContext)
+        : regressionContext.causalCategory === "other:isolated CLI fixture dependency closure"
         ? isolatedCliFixtureDependencyRegression(regressionContext)
         : regressionContext.causalCategory === "other:causal regression scope visibility"
         ? causalProtocolScopeRegression(regressionContext)
