@@ -58,8 +58,8 @@ Feature: Data layer directional Flow specification graph
     And draws Section Checkout beside Sales and explicitly moves Cart into it
     Then both Sections retain stable Flow-owned identities and arbitrary two-dimensional bounds
     And each Page has explicit containment in exactly its chosen Section
-    When the operator selects Sales
-    Then contextual controls expose Rename, Move, Resize, Wrap selection, Remove Section, and Remove with contents without a raw geometry form
+    When the operator opens the context menu from Sales
+    Then the Sales context menu exposes Rename, Move, Resize, Wrap selection, Remove Section, and Remove with contents without a raw geometry form
     When the operator moves Sales
     Then Product moves by the same offset while Cart remains fixed
     When the operator resizes Checkout across Product
@@ -108,10 +108,10 @@ Feature: Data layer directional Flow specification graph
   # Data layer directional Flow specification graph 007
   Scenario: Data layer directional Flow specification graph 007
     Given Checkout Section contains Cart with Events and Page relationships
-    When the operator removes Checkout Section
+    When the operator opens the Checkout Section context menu and chooses Remove Section
     Then Cart, its Events, and its relationships remain at the same canvas positions outside every Section
     And only the Section and Cart containment reference are removed in one undoable Flow command
-    When the operator undoes and chooses Remove with contents
+    When the operator undoes, reopens the Checkout Section context menu, and chooses Remove with contents
     Then named impact review identifies Checkout, Cart, its Events, and affected relationships before any write
     When the operator confirms the destructive action
     Then exactly the reviewed Section and contents are removed in one undoable Flow command
@@ -206,7 +206,8 @@ Feature: Data layer directional Flow specification graph
   # Data layer directional Flow specification graph 014
   Scenario: Data layer directional Flow specification graph 014
     Given Sales Section contains Cart and add_payment_info with Page relationships
-    When Sales is renamed Acquisition, Cart Page is renamed Basket page, and add_payment_info Event is renamed payment_details_added
+    When the operator renames Sales to Acquisition from its context menu
+    And Cart Page is renamed Basket page and add_payment_info Event is renamed payment_details_added
     Then canvas, Add search, contextual details, and Outline show the current human names
     And stored Section, Page, Event, occurrence, trigger, and relationship identities remain unchanged
     When the Flow reloads
@@ -289,6 +290,7 @@ Feature: Data layer directional Flow specification graph
     When the operator uses Skip to canvas and navigates Sections, Pages, Events, ports, and relationships by keyboard
     Then focus order and spatial navigation are deterministic and every focused item has a visible labelled state
     And every pointer-only revealed action is also revealed by focus and operable without a pointer
+    And the keyboard context-menu command opens the focused Section's action menu
     When Add, Outline, or Details opens
     Then it remains contained in the viewport and closing it restores invoking focus
     And canvas pan remains internal while the outer document has no horizontal or vertical overflow

@@ -58,8 +58,8 @@ Feature: Data layer directional Flow specification graph runtime
     And actual pointer controls draw Checkout beside Sales and explicitly move Cart into it
     Then canonical Flow state contains two stable Section IDs with independent x, y, width, and height values
     And Product and Cart each store the explicit selected Section reference
-    When actual controls select Sales
-    Then the installed Section toolbar exposes Rename, Move, Resize, Wrap selection, Remove Section, and Remove with contents without numeric geometry inputs
+    When a secondary pointer action opens the installed Sales context menu
+    Then the menu exposes Rename, Move, Resize, Wrap selection, Remove Section, and Remove with contents without numeric geometry inputs
     When actual pointer controls move Sales
     Then stored Product coordinates change by the same delta while Cart coordinates are byte-identical
     When actual resize handles cross Product with the Checkout boundary
@@ -107,10 +107,10 @@ Feature: Data layer directional Flow specification graph runtime
   # Data layer directional Flow specification graph runtime 007
   Scenario: Data layer directional Flow specification graph runtime 007
     Given production Checkout Section contains Cart, its occurrences, and connected relationships
-    When actual controls activate Remove Section
+    When actual controls open the Checkout Section context menu and activate Remove Section
     Then production removes only Checkout and Cart's Section reference while retaining graph coordinates and topology
     And one Undo entry restores Checkout and its containment exactly once
-    When actual controls undo and activate Remove with contents
+    When actual controls undo, reopen the Checkout Section context menu, and activate Remove with contents
     Then installed impact review names Checkout, Cart, its occurrences, and affected relationships before storage changes
     When actual controls confirm Section content removal
     Then production removes exactly the reviewed graph records in one command
@@ -202,7 +202,8 @@ Feature: Data layer directional Flow specification graph runtime
   # Data layer directional Flow specification graph runtime 014
   Scenario: Data layer directional Flow specification graph runtime 014
     Given production Sales contains Cart and add_payment_info with Page relationships
-    When actual collection controls rename Sales to Acquisition, Cart to Basket page, and add_payment_info to payment_details_added
+    When actual controls use the Sales context menu to rename it Acquisition
+    And actual collection controls rename Cart to Basket page and add_payment_info to payment_details_added
     Then installed canvas, Add results, Details, and Outline render the current names
     And canonical Section, Page, Event, occurrence, trigger, and relationship IDs remain byte-identical
     When the built extension reloads
@@ -287,6 +288,7 @@ Feature: Data layer directional Flow specification graph runtime
     When actual controls activate Skip to canvas and keyboard-navigate Sections, Pages, Events, ports, and edges
     Then focus traversal and spatial targets follow a deterministic order with visible accessible names
     And controls revealed by pointer hover are also rendered by keyboard focus and can be activated
+    And the keyboard context-menu command opens the focused Section's action menu
     When actual controls open and close Add, Outline, and Details
     Then each surface stays within viewport bounds and closing restores its invoking element
     And internal canvas navigation changes only its camera while document scroll width and height do not exceed the viewport

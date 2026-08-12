@@ -165,6 +165,13 @@ The selected object determines available actions:
 - Section: Rename, Move, Resize, Wrap selection, Remove Section, and Remove with
   contents.
 
+A Section exposes its complete action set through a Section-specific context
+menu. A secondary pointer action on the Section and the keyboard context-menu
+command on a focused Section open that same menu. Choosing Rename, Remove
+Section, or Remove with contents follows the existing rename, retained-content
+removal, or reviewed destructive-removal behavior; opening or dismissing the
+menu changes no Flow state.
+
 Dragging a Page connection to empty canvas opens existing-Page search at the
 release point. Choosing a Page atomically creates its Flow instance and the
 relationship. The compatible target port is chosen deterministically from the
@@ -274,3 +281,20 @@ sequence is:
 node scripts/run-focused-acceptance.mjs --pack flow_graph --pack layered_schema
 node scripts/package.mjs
 ```
+
+## Flow Section context-menu correction slice
+
+The context-menu correction is accepted by directional Flow scenarios 003, 007,
+014, and 020 and their runtime partners. Because it changes only Section
+authoring presentation, its smallest focused checkpoint is:
+
+```sh
+node scripts/run-focused-acceptance.mjs --pack flow_graph
+node scripts/package.mjs
+```
+
+The elapsed implementation-and-review ceiling is 60 minutes from coder receipt
+to an architect `qa-ready` candidate. By 30 minutes, the built extension must
+open the Section menu by secondary pointer action and keyboard, and Rename and
+Remove Section must be routed through it in focused Flow evidence. Reaching the
+ceiling without a deliverable candidate stops the slice for a user decision.
