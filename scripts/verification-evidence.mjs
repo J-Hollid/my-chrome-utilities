@@ -36,9 +36,18 @@ import {
   terminalClosureExecution,
 } from "./verification-reliability-closure.mjs";
 import {
+  requireVerificationRunIntent,
+  verificationRunIntents,
+} from "./verification-run-intent.mjs";
+import {
   consumeTerminalFullObligations,
   validateReviewReadyRecord,
 } from "./settled-final-verification-review.mjs";
+
+function expectedRunIntentForEvidenceTask(task) {
+  return task === boundedClosureEvidenceTask
+    ? verificationRunIntents.terminal : verificationRunIntents.review;
+}
 
 const repository = fileURLToPath(new URL("../", import.meta.url));
 const notesRef = "refs/notes/swarmforge-verification";
@@ -487,6 +496,8 @@ async function parsedReceipt(receiptPath, plan, {
   if (receipt?.version !== 2 || !receipt.tasks || Array.isArray(receipt.tasks)) {
     throw new Error("Verification evidence requires a version 2 task receipt");
   }
+  const expectedRunIntent = expectedRunIntentForEvidenceTask(receipt.candidate?.evidenceTask);
+  requireVerificationRunIntent(receipt, expectedRunIntent);
   if (!receipt.completedAt || Number.isNaN(Date.parse(receipt.completedAt))) {
     throw new Error("Verification evidence requires a completed task receipt");
   }
@@ -621,7 +632,7 @@ async function parsedReceipt(receiptPath, plan, {
         .includes(checkpointAttempt.action))) {
     throw new Error("Verification receipt has an invalid checkpoint attempt identity");
   }
-  return { bytes, results, environment, artifact:receiptArtifact,
+  return { bytes, results, environment, artifact:receiptArtifact, runIntent:receipt.runIntent,
     checkpointAttempt:checkpointAttempt ? {
       id:checkpointAttempt.id, identityDigest:checkpointAttempt.identityDigest,
     } : undefined };
@@ -722,6 +733,7 @@ export async function validateVerificationEvidenceCompatibility({
     if (receipt?.version !== 2 || !receipt.tasks || Array.isArray(receipt.tasks)) {
       throw new Error("Verification evidence requires a version 2 task receipt contract");
     }
+    requireVerificationRunIntent(receipt, expectedRunIntentForEvidenceTask(task));
     const environment = receiptEnvironment(receipt.environment);
     if (!same({ node:environment.node, typescript:environment.typescript }, sourceIdentity.runtime)) {
       throw new Error("Verification receipt contract and locked runtime identities must match");
@@ -731,7 +743,7 @@ export async function validateVerificationEvidenceCompatibility({
       receiptSourcePath, environment,
     };
   }
-  const [{ bytes, results, environment, artifact:receiptArtifact, checkpointAttempt }] = await Promise.all([
+  const [{ bytes, results, environment, artifact:receiptArtifact, checkpointAttempt, runIntent }] = await Promise.all([
     parsedReceipt(absoluteReceiptPath, planRecord),
   ]);
   const artifact = artifactIdentity(buildManifest);
@@ -742,7 +754,7 @@ export async function validateVerificationEvidenceCompatibility({
   }
   return {
     commit, tree, baseCommit, sourceIdentity, planRecord, actualChangeSet,
-    receiptSourcePath, bytes, results, environment, artifact, checkpointAttempt,
+    receiptSourcePath, bytes, results, environment, artifact, checkpointAttempt, runIntent,
   };
 }
 
@@ -801,7 +813,8 @@ function evidenceId(record) {
   const identity = {
     task:record.task, commit:record.commit, tree:record.tree, baseCommit:record.baseCommit,
     packIds:record.packIds, planDigest:record.planDigest, identities:record.identities,
-    receiptSha256:record.receipt.sha256, checkpointAttempt:record.checkpointAttempt,
+    receiptSha256:record.receipt.sha256, runIntent:record.receipt.runIntent,
+    checkpointAttempt:record.checkpointAttempt,
     ...((record.reliabilityResolutions ?? []).length
       ? { reliabilityResolutions:record.reliabilityResolutions }
       : (record.timeoutResolutions ?? []).length
@@ -844,6 +857,9 @@ function validateRecordDocument(record, { allowLegacyExecutionLoad = false } = {
   if (!validRawReceiptPath(record.receipt?.sourcePath)) {
     throw new Error("Verification evidence requires a runner-owned raw receipt under tmp/verification-receipts");
   }
+  const expectedRunIntent = record.task === boundedClosureEvidenceTask
+    ? verificationRunIntents.terminal : verificationRunIntents.review;
+  requireVerificationRunIntent(record.receipt, expectedRunIntent);
   if (record.checkpointAttempt &&
       (!shaPattern.test(record.checkpointAttempt.id ?? "") ||
        !shaPattern.test(record.checkpointAttempt.identityDigest ?? ""))) {
@@ -903,13 +919,15 @@ export async function createPendingVerificationEvidence({
   toolchainValidator = validateStrictVerificationToolchain,
 }) {
   await toolchainValidator({ repositoryRoot });
-  await assertNoBlockingTimeoutIncidents("HEAD", { root:repositoryRoot });
   const {
     commit, tree, baseCommit, sourceIdentity, planRecord, actualChangeSet,
     receiptSourcePath, bytes, results, environment, artifact, checkpointAttempt,
   } = await validateVerificationEvidenceCompatibility({
     task, plan, receiptPath, changedSince, buildManifest, repositoryRoot,
     requireCompletedReceipt:true,
+  });
+  await assertNoBlockingTimeoutIncidents("HEAD", {
+    root:repositoryRoot, changedPaths:actualChangeSet.paths,
   });
   const reliabilityResolutions = await createTimeoutIncidentStore({ root:repositoryRoot })
     .resolutions({ commit });
@@ -936,7 +954,8 @@ export async function createPendingVerificationEvidence({
     planDigest:verificationDigest(planRecord),
     identities:{ ...sourceIdentity, artifact },
     ...(checkpointAttempt ? { checkpointAttempt } : {}),
-    receipt:{ sourcePath:receiptSourcePath, sha256:verificationDigest(bytes), environment, tasks:results },
+    receipt:{ sourcePath:receiptSourcePath, sha256:verificationDigest(bytes),
+      runIntent, environment, tasks:results },
     ...(terminalEligible ? { consumedTerminalObligations } : {}),
     reliabilityResolutions:reliabilityResolutions.sort((left, right) =>
       left.incidentId.localeCompare(right.incidentId)),
@@ -1078,7 +1097,9 @@ export async function recordPendingVerificationEvidence(
       if (pending.commit !== commit || pending.tree !== tree) {
         throw new Error("Pending evidence does not match the current commit and tree");
       }
-      await assertNoBlockingTimeoutIncidents(commit, { root:repositoryRoot });
+      await assertNoBlockingTimeoutIncidents(commit, {
+        root:repositoryRoot, changedPaths:pending.changeSet.paths,
+      });
       const currentReliabilityResolutions = await createTimeoutIncidentStore({ root:repositoryRoot })
         .resolutions({ commit });
       if (!same(currentReliabilityResolutions.sort((left, right) => left.incidentId.localeCompare(right.incidentId)),

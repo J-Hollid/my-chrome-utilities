@@ -75,6 +75,11 @@ import {
   estimatePlanMilliseconds,
   measuredTimingModel,
 } from "./report-verification-throughput.mjs";
+import {
+  requireVerificationRunIntent,
+  verificationRunIntent,
+  verificationRunIntents,
+} from "./verification-run-intent.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const defaultTimeoutMs = 600_000;
@@ -477,6 +482,7 @@ export function createVerificationReceiptContext(
   {
     receiptDirectory = path.join(repositoryRoot, "tmp", "verification-receipts"),
     executionLoad = process.env.VERIFICATION_EXECUTION_LOAD ?? "normal",
+    runIntent = verificationRunIntents.development,
   } = {},
 ) {
   if (!["normal", "loaded"].includes(executionLoad)) {
@@ -485,6 +491,7 @@ export function createVerificationReceiptContext(
   const receiptPath = path.join(receiptDirectory, `${process.pid}-${randomUUID()}.json`);
   const receipt = {
     version:2,
+    runIntent,
     runId:randomUUID(),
     pid:process.pid,
     startedAt:new Date().toISOString(),
@@ -498,6 +505,7 @@ export function createVerificationReceiptContext(
     },
     tasks:{},
   };
+  requireVerificationRunIntent(receipt);
   let writeQueue = Promise.resolve();
   const write = () => {
     writeQueue = writeQueue.then(async() => {
@@ -808,7 +816,7 @@ export function createVerificationCommandRunner(context, options = {}) {
         receiptTask.reliabilityIncidentId = options.diagnosticIncidentId;
         receiptTask.timeoutIncidentId = options.diagnosticIncidentId;
         await context.write();
-      } else {
+      } else if (context.receipt.runIntent !== verificationRunIntents.development) {
         const store = options.incidentStore ?? createTimeoutIncidentStore();
         const closureContract = reliabilityFailureContract({
           task:{ ...identity, ...(task.reliabilityBoundaries
@@ -900,7 +908,9 @@ export async function runTimeoutDiagnosticRetry(id, {
   }
   const concurrency = incident.failure.environment.concurrency;
   const observationConcurrency = incident.failure.environment.observationConcurrency;
-  const context = createVerificationReceiptContext(concurrency, observationConcurrency);
+  const context = createVerificationReceiptContext(concurrency, observationConcurrency, {
+    runIntent:verificationRunIntents.repair,
+  });
   context.receipt.candidate = { ...structuredClone(incident.failure.lineage), ...candidate };
   context.receipt.artifact = structuredClone(artifact);
   context.receipt.plan = { mode:"timeout-diagnostic", requestedPackIds:[incident.failure.task.packId],
@@ -1009,7 +1019,9 @@ export async function runTimeoutRepairFocused(id, {
     canonicalIdentities, taskSuccession);
   const executionTaskPlan = timeoutRepairFocusedExecutionTaskPlan(taskPlan, canonicalIdentities);
   const context = receiptContextFactory(incident.failure.environment.concurrency,
-    incident.failure.environment.observationConcurrency);
+    incident.failure.environment.observationConcurrency, {
+      runIntent:verificationRunIntents.repair,
+    });
   context.receipt.candidate = { role:process.env.SWARMFORGE_ROLE ?? null, branch:candidate.branch ?? null,
     commit:candidate.commit, tree:candidate.tree, baseCommit:changeSet.baseCommit, evidenceTask,
     changeSetDigest:verificationDigest(changeSet) };
@@ -1524,6 +1536,7 @@ export async function runFocusedAcceptance(
   const reviewPreflightStartedAt = Date.now();
   const packs = await loadVerificationPacks();
   const options = focusedAcceptanceOptions(args);
+  const runIntent = verificationRunIntent({ ...options, boundedClosureEvidenceTask });
   if (options.timeoutDiagnosticRetry) {
     if (commandRunner) throw new Error("Diagnostic retry cannot use an injected command runner");
     return runTimeoutDiagnosticRetry(options.timeoutDiagnosticRetry);
@@ -1544,7 +1557,6 @@ export async function runFocusedAcceptance(
   const boundedTerminalAttempt = evidenceTask === boundedClosureEvidenceTask
     ? (resumeReceiptPath ? "verifier-descendant" : "initial") : undefined;
   if (evidenceTask) {
-    if (!timeoutRepairIncident) await assertNoBlockingTimeoutIncidents("HEAD");
     await validateStrictVerificationToolchain({ repositoryRoot });
     await validateVerificationCandidateClean({ repositoryRoot });
   }
@@ -1565,6 +1577,11 @@ export async function runFocusedAcceptance(
     }
   } else if (options.changedPaths.length) {
     await validateExplicitChangedPaths(options.changedPaths);
+  }
+  if (evidenceTask && !timeoutRepairIncident) {
+    await assertNoBlockingTimeoutIncidents("HEAD", {
+      changedPaths:options.changeSet?.paths ?? options.changedPaths,
+    });
   }
   delete options.changedSince;
   delete options.prepareEvidence;
@@ -1636,7 +1653,7 @@ export async function runFocusedAcceptance(
   if (evidenceTask) plan = planPackageTask(plan);
   const concurrency = environmentInteger("VERIFICATION_CONCURRENCY", 4, { maximum:64 });
   const observationConcurrency = environmentInteger("VERIFICATION_OBSERVATION_CONCURRENCY", 2, { maximum:4 });
-  const context = createVerificationReceiptContext(concurrency, observationConcurrency);
+  const context = createVerificationReceiptContext(concurrency, observationConcurrency, { runIntent });
   const inputFingerprint = await createDistInputFingerprint({ root:repositoryRoot });
   const gitValue = (...arguments_) => new Promise((resolve, reject) => {
     execFile("git", arguments_, { cwd:repositoryRoot }, (error, stdout, stderr) => error

@@ -120,7 +120,7 @@ function validateTransitionHistory(incident) {
     "repair-proposed", "repair-checkpoint-claimed", "repair-checkpoint-reclaimed",
     "resolved", "lineage-rebased",
     "lineage-abandoned", "occurrence-appended", "closure-audited",
-    "terminal-verification-deferred"]);
+    "terminal-verification-deferred", "run-intent-compatibility-classified"]);
   let previousTime = Date.parse(incident.createdAt);
   let previousRank = 0;
   let terminal = false;
@@ -268,6 +268,22 @@ function validateTransitionHistory(incident) {
     }
   } else if (deferredTransitions.length) {
     transitionHistoryError(incident.id, "terminal verification deferral transition has no disposition");
+  }
+  const compatibilityTransitions = matchingTransitions(incident, "run-intent-compatibility-classified");
+  if (incident.runIntentCompatibility !== undefined) {
+    const compatibility = incident.runIntentCompatibility;
+    const latest = compatibilityTransitions.at(-1);
+    if (compatibility.version !== 1 ||
+        !["nonblocking-development-diagnostic", "blocking-ambiguous"]
+          .includes(compatibility.status) ||
+        !Number.isFinite(Date.parse(compatibility.classifiedAt)) ||
+        compatibility.digest !== timeoutIncidentDigest({ ...compatibility, digest:undefined }) ||
+        latest?.at !== compatibility.classifiedAt || latest?.dispositionDigest !== compatibility.digest ||
+        compatibilityTransitions.length !== 1) {
+      transitionHistoryError(incident.id, "run-intent compatibility classification is malformed");
+    }
+  } else if (compatibilityTransitions.length) {
+    transitionHistoryError(incident.id, "run-intent compatibility transition has no disposition");
   }
 }
 

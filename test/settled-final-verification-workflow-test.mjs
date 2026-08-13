@@ -25,6 +25,12 @@ import {
   verifyReviewReadyEvidence,
 } from "../scripts/settled-final-verification.mjs";
 import { canonicalTerminalPlanEligible, validateCanonicalMasterEvidenceRecord } from "../scripts/verification-evidence.mjs";
+import {
+  classifyLegacyIncidentRunIntent,
+  requireVerificationRunIntent,
+  verificationRunIntent,
+  verificationRunIntents,
+} from "../scripts/verification-run-intent.mjs";
 
 const exec = promisify(execFile);
 
@@ -39,6 +45,45 @@ const baseCommit = "1".repeat(40);
 const candidateCommit = "2".repeat(40);
 const candidateTree = "3".repeat(40);
 const packs = await loadVerificationPacks();
+
+assert.equal(verificationRunIntent({}), verificationRunIntents.development);
+assert.equal(verificationRunIntent({ prepareEvidence:"slice" }), verificationRunIntents.review);
+assert.equal(verificationRunIntent({ timeoutRepairFocused:"incident", prepareEvidence:"slice" }),
+  verificationRunIntents.repair);
+assert.equal(verificationRunIntent({ terminalFull:true }), verificationRunIntents.terminal);
+assert.throws(() => requireVerificationRunIntent({}), /missing a valid immutable run intent/i);
+assert.throws(() => requireVerificationRunIntent({ runIntent:verificationRunIntents.development },
+  verificationRunIntents.review), /cannot support review-evidence/i);
+
+const compatibilityRepository = await mkdtemp(path.join(os.tmpdir(), "run-intent-compatibility-"));
+try {
+  const receiptDirectory = path.join(compatibilityRepository, "tmp", "verification-receipts");
+  await mkdir(receiptDirectory, { recursive:true });
+  const sourceReceipt = "tmp/verification-receipts/legacy.json";
+  const legacyReceipt = {
+    version:2, runId:"legacy-run", startedAt:"2026-08-10T10:00:00.000Z",
+    candidate:{ commit:baseCommit, tree:candidateTree, evidenceTask:null },
+    plan:{ mode:"focused-task" }, tasks:{},
+  };
+  await writeFile(path.join(compatibilityRepository, sourceReceipt), JSON.stringify(legacyReceipt));
+  const incident = { failure:{ sourceReceipt } };
+  const compatible = await classifyLegacyIncidentRunIntent({ root:compatibilityRepository, incident });
+  assert.equal(compatible.blocking, false);
+  assert.equal(compatible.reason, "receipt-proven-development-diagnostic");
+  await writeFile(path.join(compatibilityRepository, sourceReceipt), JSON.stringify({
+    ...legacyReceipt, candidate:{ ...legacyReceipt.candidate, evidenceTask:undefined },
+  }));
+  assert.equal((await classifyLegacyIncidentRunIntent({
+    root:compatibilityRepository, incident,
+  })).blocking, true, "ambiguous legacy authority remains blocking");
+  assert.equal((await classifyLegacyIncidentRunIntent({
+    root:compatibilityRepository,
+    incident:{ ...incident, terminalVerificationDeferred:{ status:"terminal-verification-deferred" } },
+  })).reason, "terminal-verification-deferred",
+  "eligible deferred incidents are never reclassified as diagnostics");
+} finally {
+  await rm(compatibilityRepository, { recursive:true, force:true });
+}
 
 for (const productPath of ["src/commands.ts", "dist/commands.js", "side-panel.html",
   "side-panel.css", "manifest.json", "assets/brand/icon.svg"]) {
@@ -164,6 +209,7 @@ for (const workflowPath of [
 }
 const receipt = {
   version:2,
+  runIntent:verificationRunIntents.review,
   runId:"focused-run",
   startedAt:"2026-08-11T10:01:00.000Z",
   completedAt:"2026-08-11T10:02:30.000Z",
@@ -177,6 +223,13 @@ const receipt = {
     },
   },
 };
+assert.throws(() => createReviewReadyRecord({
+  task:"future-slice", baseCommit, candidateCommit, candidateTree,
+  changeSet:{ version:1, baseCommit, commit:candidateCommit, paths:["scripts/workflow.mjs"] },
+  receipt:{ ...receipt, runIntent:verificationRunIntents.development },
+  receiptPath:"tmp/verification-receipts/diagnostic.json", receiptSha256:"4".repeat(64),
+}), /immutable review-evidence receipt intent/i,
+"a passing diagnostic receipt cannot be retrospectively upgraded to review evidence");
 
 const reviewRecord = createReviewReadyRecord({
   task:"future-slice", baseCommit, candidateCommit, candidateTree,

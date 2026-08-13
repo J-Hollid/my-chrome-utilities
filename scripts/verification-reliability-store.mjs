@@ -18,6 +18,7 @@ import {
   timeoutRepairCandidate,
 } from "./verification-reliability-repair.mjs";
 import { terminalVerificationDeferredConservation } from "./verification-reliability-deferred.mjs";
+import { classifyLegacyIncidentRunIntent } from "./verification-run-intent.mjs";
 import {
   exactObject, git, normalized, repositoryRoot, retryClassifications, shaPattern,
   stableIncidentId, timeoutIncidentDigest,
@@ -507,11 +508,48 @@ export function createTimeoutIncidentStore({
     },
     async blocking({ commit }) {
       const applicable = [];
-      for (const incident of await this.list()) {
+      for (let incident of await this.list()) {
         if (await lineageApplies({ root, isAncestor, incident, commit }) &&
-            incident.state !== "resolved" && incident.closureAudit?.blocking !== false) applicable.push(incident);
+            incident.state !== "resolved" && incident.closureAudit?.blocking !== false) {
+          if (!incident.runIntentCompatibility && !incident.terminalVerificationDeferred) {
+            const classification = await classifyLegacyIncidentRunIntent({ root, incident });
+            if (classification.applicable) {
+              incident = await access.update(incident.id, (current) => {
+                const classifiedAt = now();
+                const withoutDigest = {
+                  version:1,
+                  status:classification.blocking
+                    ? "blocking-ambiguous" : "nonblocking-development-diagnostic",
+                  reason:classification.reason,
+                  sourceReceipt:classification.sourceReceipt ?? current.failure.sourceReceipt ?? null,
+                  ...(classification.receiptSha256
+                    ? { receiptSha256:classification.receiptSha256 } : {}),
+                  ...(classification.proof ? { proof:classification.proof } : {}),
+                  classifiedAt,
+                };
+                const disposition = { ...withoutDigest,
+                  digest:timeoutIncidentDigest(withoutDigest) };
+                return transition({ ...current, runIntentCompatibility:disposition },
+                  "run-intent-compatibility-classified", classifiedAt,
+                  { dispositionDigest:disposition.digest });
+              });
+            }
+          }
+          if (incident.runIntentCompatibility?.status !== "nonblocking-development-diagnostic") {
+            applicable.push(incident);
+          }
+        }
       }
       return applicable;
+    },
+    async blockingForEvidence({ commit, changedPaths = [] }) {
+      const blocked = [];
+      for (const incident of await this.blocking({ commit })) {
+        const conservedDeferred = eligibleDeferredIncident(incident) &&
+          terminalVerificationDeferredConservation({ incident, changedPaths }).conserved;
+        if (!conservedDeferred) blocked.push(incident);
+      }
+      return blocked;
     },
     async blockingForHandoff({ commit, readiness, sender, verified }) {
       const blocked = [];
@@ -701,7 +739,10 @@ export function createTimeoutIncidentStore({
 export async function assertNoBlockingTimeoutIncidents(commit = "HEAD", options = {}) {
   const root = options.root ?? repositoryRoot;
   const canonical = await git(root, "rev-parse", `${commit}^{commit}`);
-  const incidents = await createTimeoutIncidentStore({ ...options, root }).blocking({ commit:canonical });
+  const store = createTimeoutIncidentStore({ ...options, root });
+  const incidents = options.changedPaths
+    ? await store.blockingForEvidence({ commit:canonical, changedPaths:options.changedPaths })
+    : await store.blocking({ commit:canonical });
   if (incidents.length) {
     throw new Error(`Unresolved reliability incident(s) block verification evidence and Git handoff: ${
       incidents.map(({ id }) => id).join(", ")}. Complete a causal repair and fresh checkpoint.`);

@@ -48,6 +48,9 @@ function assertReceiptBinding(receipt, candidateCommit, candidateTree) {
       receipt.candidate?.tree !== candidateTree) {
     throw new Error("Review-ready receipt does not match the candidate commit and tree");
   }
+  if (receipt.runIntent !== "review-evidence") {
+    throw new Error("Review-ready evidence requires an immutable review-evidence receipt intent");
+  }
 }
 
 function assertReceiptChangeSet(receipt, changeSet) {
@@ -111,7 +114,8 @@ export function createReviewReadyRecord({
   const record = {
     version:1, kind:"review-ready", result:"passed", task, baseCommit,
     candidateCommit, candidateTree, changeSet, focusedScope:focusedScope(receipt, tasks),
-    receipt:{ path:receiptPath, sha256:receiptSha256, runId:receipt.runId },
+    receipt:{ path:receiptPath, sha256:receiptSha256, runId:receipt.runId,
+      runIntent:receipt.runIntent },
     startedAt:receipt.startedAt, completedAt:receipt.completedAt, recordedAt,
     finalRegressionClaim:false,
   };
@@ -139,6 +143,9 @@ function assertRecordContents(record) {
   const hasReceiptDigest = matches(sha256Pattern, record.receipt?.sha256);
   if (!hasTaskKeys || !hasChangedPaths || !hasReceiptDigest) {
     throw new Error("Review-ready evidence is incomplete");
+  }
+  if (record.receipt?.runIntent !== undefined && record.receipt.runIntent !== "review-evidence") {
+    throw new Error("Review-ready evidence has an invalid run intent");
   }
   const obligations = record.terminalObligations;
   if (obligations !== undefined &&
