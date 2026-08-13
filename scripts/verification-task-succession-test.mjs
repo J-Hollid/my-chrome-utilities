@@ -63,6 +63,16 @@ assert.deepEqual(await validateUnresolvedIncidentTaskSuccession({incidents:[{
     retryScope:{kind:"target",logicalTargetIds:["FLOW"]}},
 }],currentIdentities:[expandedBatch],currentPacks:[],graph:batchGraph}),[],
 "an eligible deferred target with the same selected task key remains pending for focused reassessment when its evidence boundary expands");
+const strengthenedBatchGraph=structuredClone(batchGraph);
+strengthenedBatchGraph.boundaries[verificationTaskDigest(batch)]={...flowBoundary,
+  assertionLeaves:[...flowBoundary.assertionLeaves,"flow.expanded"]};
+assert.deepEqual(await validateUnresolvedIncidentTaskSuccession({incidents:[{
+  state:"unresolved",repair:{status:"eligible"},
+  terminalVerificationDeferred:{status:"terminal-verification-deferred"},
+  failure:{failureClass:"nonzero-exit",task:standalone,
+    retryScope:{kind:"target",logicalTargetIds:["FLOW"]}},
+}],currentIdentities:[batch],currentPacks:[],graph:strengthenedBatchGraph}),[],
+"an eligible deferred target remains pending when its unique declared successor adds assertion coverage");
 await assert.rejects(()=>validateUnresolvedIncidentTaskSuccession({incidents:[{
   state:"unresolved",repair:{status:"eligible"},
   terminalVerificationDeferred:{status:"terminal-verification-deferred"},

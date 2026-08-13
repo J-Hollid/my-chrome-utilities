@@ -156,8 +156,19 @@ export async function validateUnresolvedIncidentTaskSuccession({incidents,curren
     if(incident.repair?.status==="eligible"&&
         incident.terminalVerificationDeferred?.status==="terminal-verification-deferred"&&
         selectedTargetReassessments.length===1)continue;
-    mappings.push({incidentId:incident.id,mapping:await resolveIncidentTaskSuccession({incident,
-      currentIdentities,currentPacks,graph,loadHistoricalPacks})});
+    try {
+      mappings.push({incidentId:incident.id,mapping:await resolveIncidentTaskSuccession({incident,
+        currentIdentities,currentPacks,graph,loadHistoricalPacks})});
+    } catch(error) {
+      const selectedTargetSuccessors=currentIdentities.filter(identity=>diagnosedTargets.length===1&&
+        identity.logicalTargetIds?.includes(diagnosedTargets[0]));
+      const boundaryExpanded=error?.message==="Task succession edge does not preserve its conserved boundary"||
+        error?.message==="Task succession current registry boundary differs from its declaration";
+      if(incident.repair?.status==="eligible"&&
+          incident.terminalVerificationDeferred?.status==="terminal-verification-deferred"&&
+          selectedTargetSuccessors.length===1&&boundaryExpanded)continue;
+      throw error;
+    }
   }
   return mappings;
 }
