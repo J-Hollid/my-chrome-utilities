@@ -2006,6 +2006,7 @@ try {
   const restrictedStore = createTimeoutIncidentStore({ root:workspaceRestrictionRepository });
   const restrictedContext = createVerificationReceiptContext(1, 1, {
     receiptDirectory:path.join(workspaceRestrictionRepository, "receipts"),
+    runIntent:verificationRunIntents.review,
   });
   restrictedContext.receipt.candidate = { commit:"workspace-restricted", tree:"workspace-tree" };
   const restrictedRunner = createAuthorizedTestCommandRunner(restrictedContext, {
@@ -2411,8 +2412,8 @@ console.log("repairTmp=" + process.env.TMPDIR);
     incidentChangedPathsLoader:async() => ["src/repair.ts"],
     verificationPacksLoader:async() => ({}),
     verificationPacksValidator:async() => {},
-    receiptContextFactory:(concurrency, observationConcurrency) => createVerificationReceiptContext(
-      concurrency, observationConcurrency, { receiptDirectory:runnerReceiptDirectory }),
+    receiptContextFactory:(concurrency, observationConcurrency, options) => createVerificationReceiptContext(
+      concurrency, observationConcurrency, { ...options, receiptDirectory:runnerReceiptDirectory }),
   });
   assert.equal(runnerRepair.incident.repair.status, "eligible",
     "the supported focused runner executes and validates the selected causal regression task");
