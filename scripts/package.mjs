@@ -1,9 +1,8 @@
-import {access, readdir, readFile} from "node:fs/promises";
-import {execFileSync} from "node:child_process";
+import {readdir, readFile} from "node:fs/promises";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 
-import {assertFreshDist, atomicWriteFile, DIST_ARTIFACT_MANIFEST} from "./dist-artifact.mjs";
+import {assertFreshDist, atomicWriteFile} from "./dist-artifact.mjs";
 import {withDistArtifactLock} from "./dist-artifact-lock.mjs";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -140,21 +139,6 @@ async function writeZip(files) {
   await atomicWriteFile(outputPath, archive);
 }
 
-async function ensurePublishedDist() {
-  try {
-    await access(path.join(distDir, DIST_ARTIFACT_MANIFEST));
-  } catch (error) {
-    if (error?.code !== "ENOENT") throw error;
-    // A clean focused checkpoint owns the build prerequisite. If its published
-    // artifact is absent, package it reproducibly by invoking that prerequisite
-    // itself; stale or malformed artifacts still fail closed below.
-    execFileSync(process.execPath, [path.join(projectRoot, "scripts/build.mjs")], {
-      cwd:projectRoot, stdio:"inherit",
-    });
-  }
-}
-
-await ensurePublishedDist();
 await withDistArtifactLock(async () => {
   await assertFreshDist({root: projectRoot, distDirectory: distDir});
   await writeZip(await collectFiles(distDir));

@@ -6,10 +6,7 @@ import {
   assertNoBlockingTimeoutIncidents, createTimeoutIncidentStore,
 } from "./verification-reliability-store.mjs";
 import { git, repositoryRoot } from "./verification-reliability-values.mjs";
-import {
-  terminalVerificationDeferredConservation,
-  verificationProcessRevalidationTask,
-} from "./verification-reliability-deferred.mjs";
+import { terminalVerificationDeferredConservation } from "./verification-reliability-deferred.mjs";
 
 export { createTimeoutIncidentStore };
 
@@ -41,15 +38,7 @@ function terminalDeferralProof(review, packageProof) {
       candidateCommit:review.candidateCommit, candidateTree:review.candidateTree,
       receiptSha256:review.receipt.sha256,
       focusedTaskKeys:[...review.focusedScope.taskKeys] },
-    package:{ ...packageProof, fresh:true },
-    verificationRevalidation:{
-      version:1, kind:"verification-process-only",
-      candidateCommit:review.candidateCommit, candidateTree:review.candidateTree,
-      baseCommit:review.baseCommit, changeSetPaths:[...review.changeSet.paths],
-      focusedTask:verificationProcessRevalidationTask,
-      packageDigest:packageProof.digest, packageFresh:true,
-      incidentState:"unresolved", terminalObligation:true,
-    },
+    package:packageProof,
   };
 }
 
@@ -57,20 +46,14 @@ async function recordIncidentDeferral(store, incident, review, proof) {
   const deferredCandidate = incident.terminalVerificationDeferred?.candidate?.commit;
   if (deferredCandidate === review.candidateCommit) return;
   if (!deferredCandidate) {
-    await store.deferTerminalVerification(incident.id, {
-      ...proof,
-      verificationRevalidation:{ ...proof.verificationRevalidation, incidentId:incident.id },
-    });
+    await store.deferTerminalVerification(incident.id, proof);
     return;
   }
   const changedPaths = (await git(repositoryRoot, "diff", "--name-only",
     `${deferredCandidate}..${review.candidateCommit}`)).split(/\r?\n/u).filter(Boolean);
   const conservation = terminalVerificationDeferredConservation({ incident, changedPaths });
   const operation = conservation.conserved ? "carryTerminalVerification" : "deferTerminalVerification";
-  await store[operation](incident.id, {
-    ...proof,
-    verificationRevalidation:{ ...proof.verificationRevalidation, incidentId:incident.id },
-  });
+  await store[operation](incident.id, proof);
 }
 
 async function recordEligibleHandoffDeferrals(store, incidents, {

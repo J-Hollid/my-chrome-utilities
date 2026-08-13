@@ -20,6 +20,7 @@ import { canonicalVerificationChangeSet, verificationPacksAtCommit } from "../sc
 import { createReviewReadyRecord } from "../scripts/settled-final-verification-review.mjs";
 import { timeoutRepairPackageTaskIdentity } from "../scripts/verification-reliability-receipts.mjs";
 import { verificationPromotionTasks } from "../scripts/verification-promotion-plan.mjs";
+import { DIST_ARTIFACT_INPUT_PATHS } from "../scripts/dist-artifact.mjs";
 
 const exec = promisify(execFile);
 const repositoryRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
@@ -45,6 +46,32 @@ assert.ok(mixedStylePlan.unitTasks.some(({ key }) =>
   "a mixed global-style and non-style range retains the non-style unit task");
 assert.ok(mixedStylePlan.unitTasks.length > 0,
   "a mixed global-style and non-style range is not smoke-only");
+const mixedFlowStylePlan = planVerification(packs, {
+  packIds:["flow_graph", "shell"], changedPaths:[
+    "specification-builder-brand.css", "src/flow-graph/workspace-ui.ts",
+  ],
+});
+const mixedFlowTargets = mixedFlowStylePlan.observationTasks
+  .flatMap(({ logicalTargetIds = [] }) => logicalTargetIds);
+assert.ok(mixedFlowTargets.includes("STUDIO_GLOBAL_STYLE_SMOKE_TARGET"),
+  "a mixed range retains the global stylesheet smoke target");
+assert.ok(mixedFlowStylePlan.observationTasks.some(({ packId }) => packId === "flow_graph"),
+  "a mixed range retains the product pack browser observations");
+assert.ok(DIST_ARTIFACT_INPUT_PATHS.includes("verification/packs.json") &&
+  DIST_ARTIFACT_INPUT_PATHS.includes("scripts/verification-styles.mjs"),
+"artifact freshness binds both the canonical stylesheet registry and its build helper");
+
+const malformedHistoricalPacks = structuredClone(packs);
+malformedHistoricalPacks.find(({ id }) => id === "shell").stylesheets
+  .find(({ source }) => source === "specification-builder-brand.css").classification = "invented";
+assert.throws(() => planVerification(packs, {
+  packIds:["shell"], changedPaths:["specification-builder-brand.css"],
+  changeSet:{ version:1, baseCommit:"1".repeat(40), commit:"2".repeat(40),
+    entries:[{ status:"M", path:"specification-builder-brand.css" }],
+    paths:["specification-builder-brand.css"] },
+  basePacks:malformedHistoricalPacks,
+}), /Stylesheet history is unavailable or incompatible/u,
+"malformed historical stylesheet ownership blocks rather than widening feature mode");
 
 async function git(root, ...args) {
   const result = await exec("git", args, { cwd:root, maxBuffer:64 * 1024 * 1024 });

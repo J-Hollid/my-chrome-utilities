@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   stylesheetPlanFor,
   validateStylesheetDeclarations,
+  validateStylesheetOwnership,
 } from "../scripts/verification-packs.mjs";
 
 let seed = 0x51e7a11e;
@@ -82,5 +83,22 @@ assert.throws(() => validateStylesheetDeclarations([{ ...global[0], consumers:["
 assert.throws(() => validateStylesheetDeclarations([{ ...global[0], qaTargets:[] }], {
   packIds:["shell"], sourcePaths:["global.css"],
 }), /QA smoke targets/u);
+assert.doesNotThrow(() => validateStylesheetDeclarations([{
+  source:"functional-pseudo.css", destination:"functional-pseudo.css",
+  classification:"feature-local", owner:"flow_graph", consumers:[], qaTargets:[],
+  scopeRoot:".documentary-flow",
+}], {
+  packIds:["flow_graph"], sourcePaths:["functional-pseudo.css"],
+  stylesheetContents:{
+    "functional-pseudo.css":
+      ".documentary-flow .flow-node:is(:hover, :focus, .is-selected) circle, " +
+      ".documentary-flow [data-port]:not([hidden], [aria-disabled=true]) { stroke: green; }",
+  },
+}), "commas inside functional pseudo-classes do not split the selector list");
+assert.throws(() => validateStylesheetOwnership([
+  { id:"shell", stylesheets:[{ ...global[0], owner:"flow_graph" }] },
+  { id:"flow_graph" },
+]), /declared by its owner pack/u,
+"a stylesheet declaration cannot be stored under a pack other than its declared owner");
 
 console.log("stylesheet declaration property tests passed");

@@ -17,10 +17,7 @@ import {
   timeoutResolutionEvidence, validateRepairReceiptSemantics, validateTimeoutRepairProposal,
   timeoutRepairCandidate,
 } from "./verification-reliability-repair.mjs";
-import {
-  terminalVerificationDeferredConservation,
-  verificationRevalidationValid,
-} from "./verification-reliability-deferred.mjs";
+import { terminalVerificationDeferredConservation } from "./verification-reliability-deferred.mjs";
 import {
   exactObject, git, normalized, repositoryRoot, retryClassifications, shaPattern,
   stableIncidentId, timeoutIncidentDigest,
@@ -534,13 +531,6 @@ export function createTimeoutIncidentStore({
         if (incident.state !== "unresolved" || incident.repair?.status !== "eligible") {
           throw new Error(`Reliability incident ${id} has no eligible repair to defer`);
         }
-        const failedTaskFocused = proof.reviewReady?.focusedTaskKeys?.includes(incident.failure.task.key);
-        const actualRevalidationPaths = proof.verificationRevalidation
-          ? await candidateChangedPaths(proof.reviewReady?.baseCommit, candidate.commit)
-          : [];
-        const revalidated = verificationRevalidationValid({
-          incident, proof, changedPaths:actualRevalidationPaths,
-        });
         if (proof.candidate?.commit !== candidate.commit || proof.candidate?.tree !== candidate.tree ||
             !await commitDescendsFrom({ root, isAncestor,
               ancestor:timeoutRepairCandidate(incident)?.commit, commit:candidate.commit }) ||
@@ -549,7 +539,7 @@ export function createTimeoutIncidentStore({
             !proof.reviewReady?.baseCommit ||
             !shaPattern.test(proof.reviewReady?.receiptSha256 ?? "") ||
             !Array.isArray(proof.reviewReady?.focusedTaskKeys) ||
-            (!failedTaskFocused && !revalidated) ||
+            !proof.reviewReady.focusedTaskKeys.includes(incident.failure.task.key) ||
             !shaPattern.test(proof.package?.digest ?? "")) {
           throw new Error(`Reliability incident ${id} terminal deferral proof is stale or incomplete`);
         }
@@ -559,7 +549,6 @@ export function createTimeoutIncidentStore({
           repairDigest:timeoutIncidentDigest(incident.repair),
           reviewReady:structuredClone(proof.reviewReady),
           package:structuredClone(proof.package),
-          ...(revalidated ? { verificationRevalidation:structuredClone(proof.verificationRevalidation) } : {}),
         };
         const currentProof = incident.terminalVerificationDeferred && {
           status:incident.terminalVerificationDeferred.status,
@@ -567,8 +556,6 @@ export function createTimeoutIncidentStore({
           repairDigest:incident.terminalVerificationDeferred.repairDigest,
           reviewReady:incident.terminalVerificationDeferred.reviewReady,
           package:incident.terminalVerificationDeferred.package,
-          ...(incident.terminalVerificationDeferred.verificationRevalidation
-            ? { verificationRevalidation:incident.terminalVerificationDeferred.verificationRevalidation } : {}),
         };
         if (currentProof && timeoutIncidentDigest(currentProof) ===
             timeoutIncidentDigest(proofDisposition)) return incident;

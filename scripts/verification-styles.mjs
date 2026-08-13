@@ -24,13 +24,52 @@ function relativePath(value, field) {
   return value;
 }
 
+function selectorList(selector) {
+  const selectors = [];
+  let start = 0;
+  let quote = null;
+  let parentheses = 0;
+  let brackets = 0;
+  for (let index = 0; index < selector.length; index += 1) {
+    const character = selector[index];
+    if (character === "\\") { index += 1; continue; }
+    if (quote) {
+      if (character === quote) quote = null;
+      continue;
+    }
+    if (character === "\"" || character === "'") { quote = character; continue; }
+    if (character === "(") { parentheses += 1; continue; }
+    if (character === ")") { parentheses = Math.max(0, parentheses - 1); continue; }
+    if (character === "[") { brackets += 1; continue; }
+    if (character === "]") { brackets = Math.max(0, brackets - 1); continue; }
+    if (character === "," && parentheses === 0 && brackets === 0) {
+      selectors.push(selector.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  selectors.push(selector.slice(start).trim());
+  return selectors.filter(Boolean);
+}
+
 function selectorLeavesRoot(selector, scopeRoot) {
   const root = scopeRoot.trim();
-  return selector.split(",").map((part) => part.trim()).filter(Boolean).every((part) => {
+  return selectorList(selector).every((part) => {
     if (part.startsWith("@")) return true;
     return part === root || part.startsWith(`${root} `) || part.startsWith(`${root}>`) ||
       part.startsWith(`${root}:`) || part.startsWith(`${root}[`);
   });
+}
+
+export function validateStylesheetOwnership(registry) {
+  if (!Array.isArray(registry)) return registry;
+  for (const pack of registry) {
+    for (const declaration of pack?.stylesheets ?? []) {
+      if (declaration?.owner !== pack?.id) {
+        throw new Error(`Stylesheet ${declaration?.source ?? "declaration"} must be declared by its owner pack ${declaration?.owner}`);
+      }
+    }
+  }
+  return registry;
 }
 
 function cssRuleHeaders(source) {
@@ -146,6 +185,7 @@ export function validateStylesheetDeclarations(declarations, {
 export async function validateStylesheetRegistry(registry, {
   repositoryRoot = process.cwd(), packIds = [], sourcePaths = [],
 } = {}) {
+  validateStylesheetOwnership(registry);
   const declarations = stylesheetDeclarations(registry);
   const stylesheetContents = {};
   for (const declaration of declarations) {

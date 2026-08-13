@@ -16,9 +16,15 @@ import {
   stylesheetDeclarationFor,
   validateStylesheetRegistry,
   validateStylesheetDeclarations,
+  validateStylesheetOwnership,
 } from "./verification-styles.mjs";
 const stylesheetQaTargetIds = stylesheetQaTargets;
-export { stylesheetDeclarationFor, stylesheetPlanFor, validateStylesheetDeclarations } from "./verification-styles.mjs";
+export {
+  stylesheetDeclarationFor,
+  stylesheetPlanFor,
+  validateStylesheetDeclarations,
+  validateStylesheetOwnership,
+} from "./verification-styles.mjs";
 import ts from "typescript";
 
 const registryUrl = new URL("../verification/packs.json", import.meta.url);
@@ -1102,14 +1108,14 @@ function historicalRegistryHasPlanningShape(packs, known) {
     "browserObservations", "checkpointCommands", "dependencies", "sharedComponents",
     "verificationInputs", "runtimeInputs", "verificationHelpers", "isolatedVerificationHandlers", "browserAdapterModes",
     "browserAdapterPerformance", "browserObservationBatches", "browserEvidencePartitions",
-    "impactBoundaries", "executionPrerequisites",
+    "impactBoundaries", "executionPrerequisites", "stylesheets",
   ];
   const boundaryIds = Array.isArray(packs)
     ? packs.flatMap((pack) => Array.isArray(pack?.impactBoundaries)
       ? pack.impactBoundaries.map((boundary) => boundary?.id)
       : [])
     : [];
-  return Array.isArray(packs) && packs.length > 0 &&
+  const structurallyCompatible = Array.isArray(packs) && packs.length > 0 &&
     new Set(packs.map((pack) => pack?.id)).size === packs.length &&
     new Set(boundaryIds).size === boundaryIds.length &&
     packs.every((pack) => pack && typeof pack.id === "string" && known.has(pack.id) &&
@@ -1128,6 +1134,16 @@ function historicalRegistryHasPlanningShape(packs, known) {
       values(pack, "browserObservations").every((entry) => entry && typeof entry.path === "string") &&
       values(pack, "checkpointCommands").every((entry) => entry && typeof entry.executable === "string" &&
         Array.isArray(entry.args)));
+  if (!structurallyCompatible) return false;
+  try {
+    validateStylesheetOwnership(packs);
+    validateStylesheetDeclarations(stylesheetDeclarations(packs), {
+      packIds:[...known],
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function planVerification(
@@ -1208,6 +1224,16 @@ export function planVerification(
         JSON.stringify(basePacks.find((pack) => pack.id === id)))
     : [];
   const registryChangeUnmapped = registryChanged && registryPackChanges.length === 0;
+  const historicalStylesheetPaths = !changeSet ? [] : changeSet.entries.flatMap((entry) => {
+    if (entry.status === "A") return [];
+    if (entry.status === "R" || entry.status === "C") return [entry.oldPath];
+    return [entry.path];
+  }).filter((changedPath) => changedPath.endsWith(".css"));
+  if (historicalStylesheetPaths.length && (historicalRegistryFallback ||
+      !historicalPacksCompatible || registryChangeUnmapped ||
+      historicalStylesheetPaths.some((changedPath) => !ownerOf(basePacks, changedPath)))) {
+    throw new Error(`Stylesheet history is unavailable or incompatible for: ${historicalStylesheetPaths.join(", ")}`);
+  }
   const forceAll = Boolean(changeSet) && (registryChangeUnmapped || historicalRegistryFallback ||
     !historicalPacksCompatible || historicalOwnershipUnavailable);
   const conservativeHistoricalFallbackReason = !changeSet ? null
@@ -1365,10 +1391,12 @@ export function planVerification(
         (!explicit.size || explicit.has(pack.id));
     }) : [];
   const ordered = packs.filter(({ id }) => selected.has(id));
-  const runnablePacks = ordered.filter(runnable);
+  const styleAuthorizationIds = new Set(styleSmokeAuthorization.map(({ id }) => id));
+  const authorizedExecutionPacks = packs.filter((pack) => runnable(pack) &&
+    (selected.has(pack.id) || styleAuthorizationIds.has(pack.id)));
   const executionPacks = canonicalRunnableSelection
     ? packs.filter(runnable)
-    : shardedPacks(runnablePacks.length ? runnablePacks : styleSmokeAuthorization.filter(runnable), shard);
+    : shardedPacks(authorizedExecutionPacks, shard);
   if (!executionPacks.some(runnable)) throw new Error("Verification plan has no runnable checks");
 
   const preparationTasks = skipBuild ? [] : [commandTask({
@@ -1400,6 +1428,15 @@ export function planVerification(
       temporaryPathClass:declaredTaskTemporaryPathClass(pack, path, "browser"),
     })));
 
+  const onlyGlobalStyleQaBoundaries = changedPaths.length > 0 && changedPaths.every((changedPath) => {
+    const declaration = stylesheetDeclarationFor(packs, changedPath);
+    return declaration?.classification === "global" && declaration.qaTargets.length > 0;
+  });
+  const styleSmokeOnly = onlyGlobalStyleQaBoundaries &&
+    changedStyleTargets.size === changedPaths.length &&
+    !terminalFull && !canonicalRunnableSelection;
+  const changedStyleTargetIds = new Set(Object.values(Object.fromEntries(changedStyleTargets))
+    .flatMap((targets) => targets));
   const executionIds = new Set(executionPacks.map(({ id }) => id));
   const selectedObservations = packs.flatMap((declarationPack) => {
     if (!executionIds.has(declarationPack.id)) return [];
@@ -1407,23 +1444,24 @@ export function planVerification(
     const changedBoundaryIds = new Set(Object.entries(Object.fromEntries(changedBoundaries))
       .filter(([changedPath]) => changedOwners.get(changedPath)?.includes(declarationPack.id))
       .map(([, boundary]) => boundary));
-    const changedStyleTargetIds = new Set(Object.values(Object.fromEntries(changedStyleTargets))
-      .flatMap((targets) => targets));
     const changedAdapterTargetIds = new Set(
       observations.filter(({ path }) => changedPaths.includes(path)).map(({ id }) => id),
     );
     const boundaryTargets = changedBoundaryIds.size
       ? observations.filter(({ impactBoundaries }) => impactBoundaries?.some((id) => changedBoundaryIds.has(id)))
       : [];
-    const selected = browserTargetIds.length
-      ? observations.filter(({ id }) => browserTargetIds.includes(id))
-      : terminalFull || canonicalRunnableSelection ? observations
-      : changedStyleTargetIds.size ? observations.filter(({ id }) => changedStyleTargetIds.has(id))
+    const styleTargets = observations.filter(({ id }) => changedStyleTargetIds.has(id));
+    const ordinaryTargets = styleSmokeOnly || !selected.has(declarationPack.id) ? []
       : changedAdapterTargetIds.size ? observations.filter(({ id }) => changedAdapterTargetIds.has(id))
       : boundaryTargets.length ? boundaryTargets : observations.filter(({ id }) =>
         !stylesheetQaTargetIds.has(id));
-    return selected.map((observation) => ({
-      declarationPack, observation, boundaryScoped:boundaryTargets.length > 0,
+    const selectedTargets = browserTargetIds.length
+      ? observations.filter(({ id }) => browserTargetIds.includes(id))
+      : terminalFull || canonicalRunnableSelection ? observations
+      : [...new Map([...styleTargets, ...ordinaryTargets].map((item) => [item.id, item])).values()];
+    return selectedTargets.map((observation) => ({
+      declarationPack, observation,
+      boundaryScoped:boundaryTargets.some(({ id }) => id === observation.id),
     }));
   });
   const selectedTargetIds = new Set(selectedObservations.map(({ observation }) => observation.id));
@@ -1472,13 +1510,6 @@ export function planVerification(
       ],
     });
   });
-  const onlyGlobalStyleQaBoundaries = changedPaths.length > 0 && changedPaths.every((changedPath) => {
-    const declaration = stylesheetDeclarationFor(packs, changedPath);
-    return declaration?.classification === "global" && declaration.qaTargets.length > 0;
-  });
-  const styleSmokeOnly = onlyGlobalStyleQaBoundaries &&
-    changedStyleTargets.size === changedPaths.length &&
-    !terminalFull && !canonicalRunnableSelection;
   const mode = browserTargetIds.length ? "focused" : terminalFull ? "terminal" : explicit.size ? "exact" : "impact";
   const checkpointTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) => values(pack, "checkpointCommands")
     .filter((checkpoint) => !checkpoint.modes || checkpoint.modes.includes(mode))

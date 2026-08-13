@@ -47,6 +47,8 @@ export const DIST_ARTIFACT_INPUT_PATHS = Object.freeze([
   "scripts/build.mjs",
   "scripts/dist-artifact-lock.mjs",
   "scripts/dist-artifact.mjs",
+  "scripts/verification-styles.mjs",
+  "verification/packs.json",
 ]);
 
 const compareText = (left, right) => (left < right ? -1 : left > right ? 1 : 0);
