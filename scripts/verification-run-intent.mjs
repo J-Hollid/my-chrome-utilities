@@ -127,6 +127,44 @@ export async function validateRunIntentBootstrapBase({
   return { version:1, baseCommit, contracts:[159, 160], implementationAbsent, implementationAdded };
 }
 
+export function bindRunIntentBootstrapPlan(executionPlan, bindingPlan, packs) {
+  const authorized = new Set(executionPlan.requestedPackIds);
+  const terminalObservations = planVerification(packs, { terminalFull:true }).observationTasks
+    .filter(({ packId }) => authorized.has(packId));
+  const observationTasks = [...new Map([
+    ...executionPlan.observationTasks, ...terminalObservations,
+  ].map((task) => [task.key, task])).values()];
+  const tasks = executionPlan.tasks.flatMap((task) => task.stage === "browser-observation" ? [] : [task]);
+  const insertion = tasks.findIndex(({ stage }) => stage === "acceptance-parse");
+  tasks.splice(insertion < 0 ? tasks.length : insertion, 0, ...observationTasks);
+  return {
+    ...executionPlan,
+    observationTasks,
+    tasks,
+    changedPaths:bindingPlan.changedPaths,
+    changeSet:bindingPlan.changeSet,
+    baseCommit:bindingPlan.baseCommit,
+    changedOwners:bindingPlan.changedOwners,
+    changedBoundaries:bindingPlan.changedBoundaries,
+    styleSmokeTargets:bindingPlan.styleSmokeTargets,
+    terminalFullObligations:bindingPlan.terminalFullObligations,
+    changedStyleTargets:bindingPlan.changedStyleTargets,
+    adapterAuthorizationPackIds:bindingPlan.adapterAuthorizationPackIds,
+    conservativeHistoricalFallbackReason:bindingPlan.conservativeHistoricalFallbackReason,
+  };
+}
+
+export function canonicalRunIntentBootstrapPlan(packs, {
+  packIds, changeSet, basePacks, historicalRegistryFallback = false,
+}) {
+  const bindingPlan = planVerification(packs, {
+    packIds:[], changedPaths:changeSet.paths, changeSet, includeProperties:true,
+    basePacks, historicalRegistryFallback,
+  });
+  const executionPlan = planVerification(packs, { packIds, includeProperties:true });
+  return bindRunIntentBootstrapPlan(executionPlan, bindingPlan, packs);
+}
+
 function eligibleTerminalDeferred(incident) {
   return incident?.state === "unresolved" && incident?.repair?.status === "eligible" &&
     incident?.terminalVerificationDeferred?.status === "terminal-verification-deferred";

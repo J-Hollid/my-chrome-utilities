@@ -36,6 +36,7 @@ import {
   terminalClosureExecution,
 } from "./verification-reliability-closure.mjs";
 import {
+  canonicalRunIntentBootstrapPlan,
   requireVerificationRunIntent,
   runIntentBootstrapCoverage,
   validateRunIntentBootstrapBase,
@@ -354,6 +355,7 @@ export function closeCanonicalEvidencePlanPrerequisites(plan, candidatePacks) {
 
 async function canonicalPlanDocument({
   commit, baseCommit, changeSet, packIds, repositoryRoot, includePackage = true,
+  runIntentBootstrap = false,
 }) {
   const candidatePacks = await verificationPacksAtCommit(commit, { repositoryRoot });
   let basePacks;
@@ -363,14 +365,18 @@ async function canonicalPlanDocument({
   } catch {
     historicalRegistryFallback = true;
   }
-  let plan = planVerification(candidatePacks, {
-    packIds,
-    changedPaths:changeSet.paths,
-    includeProperties:true,
-    changeSet,
-    basePacks,
-    historicalRegistryFallback,
-  });
+  let plan = runIntentBootstrap
+    ? canonicalRunIntentBootstrapPlan(candidatePacks, {
+      packIds, changeSet, basePacks, historicalRegistryFallback,
+    })
+    : planVerification(candidatePacks, {
+      packIds,
+      changedPaths:changeSet.paths,
+      includeProperties:true,
+      changeSet,
+      basePacks,
+      historicalRegistryFallback,
+    });
   plan = closeCanonicalEvidencePlanPrerequisites(plan, candidatePacks);
   return planDocument(includePackage ? withEvidencePackageTask(plan) : plan);
 }
@@ -723,20 +729,22 @@ export async function validateVerificationEvidenceCompatibility({
   if (!same(actualChangeSet, planRecord.changeSet)) {
     throw new Error("Planned canonical change set does not match the committed candidate range");
   }
+  const receiptSourcePath = repositoryRelativePath(repositoryRoot, receiptPath, "Verification receipt");
+  if (!validRawReceiptPath(receiptSourcePath)) {
+    throw new Error("Verification receipt must be runner-owned under tmp/verification-receipts");
+  }
+  const absoluteReceiptPath = path.join(repositoryRoot, receiptSourcePath);
+  const receiptContract = JSON.parse(await readFile(absoluteReceiptPath, "utf8"));
   await assertCanonicalPlan(planRecord, {
     commit,
     baseCommit,
     changeSet:actualChangeSet,
     packIds:planRecord.packIds,
     repositoryRoot,
+    runIntentBootstrap:receiptContract.runIntentBootstrap !== undefined,
   });
-  const receiptSourcePath = repositoryRelativePath(repositoryRoot, receiptPath, "Verification receipt");
-  if (!validRawReceiptPath(receiptSourcePath)) {
-    throw new Error("Verification receipt must be runner-owned under tmp/verification-receipts");
-  }
-  const absoluteReceiptPath = path.join(repositoryRoot, receiptSourcePath);
   if (!requireCompletedReceipt) {
-    const receipt = JSON.parse(await readFile(absoluteReceiptPath, "utf8"));
+    const receipt = receiptContract;
     if (receipt?.version !== 2 || !receipt.tasks || Array.isArray(receipt.tasks)) {
       throw new Error("Verification evidence requires a version 2 task receipt contract");
     }
@@ -1185,6 +1193,7 @@ export async function recordPendingVerificationEvidence(
         changeSet:currentChangeSet,
         packIds:pending.packIds,
         repositoryRoot,
+        runIntentBootstrap:pending.runIntentBootstrap !== undefined,
       });
 
       const candidatePacks = await verificationPacksAtCommit(commit, { repositoryRoot });
@@ -1285,6 +1294,7 @@ async function validateRecordedEvidence(record, canonical, tree, repositoryRoot)
     changeSet:committedChangeSet,
     packIds:record.packIds,
     repositoryRoot,
+    runIntentBootstrap:record.runIntentBootstrap !== undefined,
   });
   if (record.reliabilityResolutions || record.timeoutResolutions) {
     const current = await createTimeoutIncidentStore({ root:repositoryRoot }).resolutions({ commit:canonical });

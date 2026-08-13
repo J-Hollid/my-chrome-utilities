@@ -61,7 +61,6 @@ import {
   compatibleTimeoutRepairIncidentIds,
   applyCheckpointPrerequisitePlan,
   bindVerificationChangeScope,
-  includeAuthorizedTerminalBrowserObservations,
   checkpointPreflight,
   closeVerificationPlanPrerequisites,
   createCheckpointIdentityGuard,
@@ -138,6 +137,7 @@ import {
 } from "../scripts/verification-reliability-incidents.mjs";
 import { canonicalCheckpointBinding } from "../scripts/verification-reliability-receipts.mjs";
 import {
+  bindRunIntentBootstrapPlan,
   classifyLegacyIncidentRunIntent,
   requireVerificationRunIntent,
   runIntentBootstrapCoverage,
@@ -1919,11 +1919,9 @@ assert.deepEqual(bootstrapBoundPlan.packIds.toSorted(), ["flow_graph", "shell"],
   "bootstrap preserves its exact authorized execution packs");
 assert.deepEqual(bootstrapBoundPlan.changedPaths, ["scripts/run-focused-acceptance.mjs"],
   "bootstrap evidence retains the full canonical change set");
-const bootstrapObservationPlan = includeAuthorizedTerminalBrowserObservations({
-  ...bootstrapBoundPlan,
-  tasks:planVerification(timeoutPackRegistry, { packIds:["flow_graph", "shell"],
-    includeProperties:true }).tasks,
-}, timeoutPackRegistry);
+const bootstrapObservationPlan = bindRunIntentBootstrapPlan(
+  planVerification(timeoutPackRegistry, { packIds:["flow_graph", "shell"],
+    includeProperties:true }), bootstrapBoundPlan, timeoutPackRegistry);
 const bootstrapObservationKeys = bootstrapObservationPlan.tasks
   .filter(({ stage }) => stage === "browser-observation").map(({ key }) => key);
 assert(bootstrapObservationKeys.includes("browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET"),
