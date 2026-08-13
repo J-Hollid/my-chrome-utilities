@@ -2950,6 +2950,7 @@ console.log("repairTmp=" + process.env.TMPDIR);
   const approvedStyleSmokeTargetIds = new Set([
     "STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
     "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
+    "FLOW_STYLESHEET_EXTRACTION_TARGET",
   ]);
   const packContract = (packs) => packs.filter(({ id }) => allPackIds.includes(id))
     .map(({ id, dependencies, browserObservations,
@@ -3116,6 +3117,18 @@ console.log("repairTmp=" + process.env.TMPDIR);
     "build/acceptance/ir/verification-shared-artifact-parallel-execution.json";
   const normalizedCurrentVtd014TaskIdentity = (task) => {
     const identity = verificationTaskIdentity(task);
+    if (identity.stage === "browser-observation" &&
+        identity.logicalTargetIds?.includes("FLOW_STYLESHEET_EXTRACTION_TARGET")) {
+      identity.key = identity.key.replace("+FLOW_STYLESHEET_EXTRACTION_TARGET", "");
+      identity.args = identity.args.filter((value) => value !== "FLOW_STYLESHEET_EXTRACTION_TARGET");
+      identity.target = identity.target.split(",")
+        .filter((value) => value !== "FLOW_STYLESHEET_EXTRACTION_TARGET").join(",");
+      delete identity.environment.FLOW_STYLESHEET_EXTRACTION_TARGET;
+      identity.logicalTargetIds = identity.logicalTargetIds
+        .filter((value) => value !== "FLOW_STYLESHEET_EXTRACTION_TARGET");
+      identity.aliasCommands = identity.aliasCommands.filter((command) =>
+        !command.includes("FLOW_STYLESHEET_EXTRACTION_TARGET"));
+    }
     if (identity.key === "acceptance-session:shell") {
       identity.args = identity.args.filter((value) =>
         ![vtd014ApprovedVtd015Generated, vtd014ApprovedVtd015Ir,
@@ -3208,6 +3221,7 @@ console.log("repairTmp=" + process.env.TMPDIR);
         "unit:test/settled-final-verification-workflow-test.mjs",
         "unit:test/package-clean-checkout-contract-test.mjs",
         "unit:test/verification-evidence-production-path-test.mjs",
+        "unit:test/flow-stylesheet-extraction-test.mjs",
         "property:test/stylesheet-declarations-property-test.mjs",
         "browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
         "browser-observation:SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
