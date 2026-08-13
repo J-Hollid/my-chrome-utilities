@@ -53,12 +53,16 @@ reviewable change.
    abandonment. Missing, failing, stale, or identity-mismatched proof remains
    blocking.
    A later independently approved slice may start from that QA descendant. Its
-   specification-only handoff retains the ancestor disposition. Its review-ready
-   and QA-ready candidates may carry the disposition only when changed-path
-   conservation proves no deferred failure, repair, regression, focused plan,
-   runner semantic, or evidence input changed, and the later slice has its own
-   exact focused evidence and package proof. A relevant change requires fresh
-   incident-focused proof on the exact candidate.
+   feature-mode roles do not audit, reverify, mutate, or re-defer every ancestor
+   incident. Changed-path overlap alone creates no incident proof obligation and
+   does not attach the ancestor disposition to the later candidate. The later
+   slice still needs its own exact focused evidence and package proof. Reopen one
+   incident case by case only when ordinary focused work naturally reproduces
+   its diagnosed failure boundary, or when the approved slice intentionally
+   changes that incident's repair, regression, task-succession, runner, or
+   evidence contract. Shared-infrastructure expansion remains subject to the
+   preflight scope-choice rule in step 2. Otherwise leave the ancestor incident
+   unchanged for the frozen master-integration assessment.
 4. The architect sends the exact candidate to the specifier with
    `readiness: qa-ready` and `verified: review-ready`. That claim must have bound
    focused evidence for the exact task, base, commit, tree, changed paths, and
@@ -93,12 +97,16 @@ the source receipt proves that the invocation had no evidence task, repair
 authority, terminal authority, or readiness claim and the disposition retains
 the incident and immutable failure history. Missing or ambiguous authority stays
 blocking. Existing eligible terminal-verification-deferred incidents remain
-unresolved and may cross a later evidence preflight only when changed-path
-conservation proves their failure, repair, regression, plan, runner semantics,
-and evidence inputs are unchanged; the later exact evidence and package proof are
-still required before carry-forward is recorded.
+unresolved on their recorded ancestor candidates. They do not enter a later
+feature evidence preflight merely because changed paths overlap their inputs. No
+carry-forward transition is recorded for an unrelated feature candidate; its
+exact focused evidence and package proof cover its approved scope only. Master
+integration evaluates the accumulated deferred incidents against the frozen
+cumulative tree case by case before the terminal checkpoint.
 
-Because this correction changes shared runner semantics, its first checkpoint
+The following one-time bootstrap is completed and is not a precedent for later
+feature work. Because the original correction changed shared runner semantics,
+its first checkpoint
 cannot satisfy ordinary path-only conservation against older deferred incidents.
 One explicit `--run-intent-bootstrap` review-evidence invocation is permitted only
 when the approved base contains the run-intent contract but lacks its

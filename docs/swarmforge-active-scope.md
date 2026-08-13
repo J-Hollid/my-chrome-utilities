@@ -343,6 +343,21 @@ phase and every unexecuted downstream phase; unexecuted work is never implied to
 have passed. A known-red bounded pre-gate is returned without spending the exact
 pack or package command.
 
+## Feature-mode deferred-incident boundary
+
+An eligible terminal-verification-deferred incident stays attached to the
+ancestor candidate and remains a master-integration obligation. A later feature
+does not audit, reverify, mutate, re-defer, or copy that incident merely because
+its changed paths overlap incident inputs. Its focused evidence and package proof
+cover only its approved scope.
+
+Reopen an ancestor incident during feature work only when ordinary focused work
+naturally reproduces its diagnosed failure boundary, or when the approved slice
+intentionally changes its repair, regression, task-succession, runner, or
+evidence contract. Otherwise leave it unchanged for case-by-case assessment on
+the frozen master-integration candidate. Path overlap alone is not a proof
+obligation and does not authorize an all-20 run.
+
 ## Verification-maintenance ratchet
 
 The user approved this policy on 2026-08-11 for remaining VTD work. When an

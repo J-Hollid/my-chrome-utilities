@@ -1,6 +1,6 @@
 # Verification run-intent correction R01
 
-Status: user-approved and active before Flow relationship snap feedback
+Status: base correction integrated; feature-mode ancestor-incident boundary approved before Flow relationship snap feedback resumes
 
 ## Problem
 
@@ -51,13 +51,23 @@ retroactively upgrade the receipt. A missing source receipt, ambiguous authority
 or contrary readiness metadata remains blocking.
 
 Eligible terminal-verification-deferred incidents are not diagnostic records and
-remain unresolved. Evidence preflight may provisionally admit them only when
-changed-path conservation proves the deferred failure, repair, regression,
-focused plan, runner semantics, and evidence inputs are unchanged. Exact focused
-evidence and package proof remain mandatory, and the handoff gate records the
-carry-forward disposition only after those proofs pass.
+remain unresolved on their recorded ancestor candidates. A later feature does
+not audit, reverify, mutate, or re-defer them merely because its changed paths
+overlap a failure, repair, regression, focused-plan, runner, or evidence input.
+They are outside that feature's evidence preflight, and no carry-forward
+transition is recorded. The later feature still requires exact focused evidence
+and package proof for its own approved scope.
 
-### One-time bootstrap
+One deferred incident re-enters feature-mode work only when an ordinary focused
+check naturally reproduces its diagnosed failure boundary, or when the approved
+slice intentionally changes its repair, regression, task succession, runner, or
+evidence semantics. Handle that incident at the smallest causal boundary; if
+the work expands a product slice into shared verification infrastructure, stop
+for the release-pilot scope choice before launching evidence. Incidents not
+naturally surfaced remain unchanged for case-by-case assessment on the frozen
+master-integration candidate. Path overlap alone is never an incident audit.
+
+### One-time bootstrap (completed; not a feature-mode precedent)
 
 This correction necessarily changes shared runner semantics, so its first
 checkpoint cannot use ordinary path-only conservation. The evidence command uses
@@ -106,8 +116,9 @@ two hours. These are reporting checkpoints, not intervention gates: work continu
 while scope is unchanged, failures have causal explanations, and a bounded safe
 completion path remains. Stop only for the release-pilot pause conditions.
 
-Acceptance authority is Modular verification packs 159 and 160. Proof covers run-intent
+Acceptance authority is Modular verification packs 152, 159, and 160. Proof covers run-intent
 resolution, immutable receipt persistence, diagnostic isolation, review-evidence
 failure recording, repair-focused and terminal preservation, evidence rejection,
-pre-correction compatibility classification, and conserved deferred-incident
-preflight. Gherkin mutation and an all-20 checkpoint are not authorized.
+pre-correction compatibility classification, and feature-mode isolation from
+ancestor deferred incidents. Gherkin mutation and an all-20 checkpoint are not
+authorized.

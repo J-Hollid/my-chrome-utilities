@@ -2179,15 +2179,17 @@ Feature: Modular verification packs
     Given current QA contains a terminal-verification-deferred incident on an ancestor candidate
     When a later independently approved QA slice has <change_relationship>
     Then its handoff gate produces <later_slice_result>
-    And any carried disposition retains the original failure, repair, regression, focused receipt, and terminal obligation
+    And path overlap alone does not audit, reverify, mutate, or re-defer the ancestor incident on the later candidate
+    And the ancestor disposition retains the original failure, repair, regression, focused receipt, and terminal obligation unchanged for master integration
     And the current candidate still requires its own exact approved focused evidence and package proof before QA integration
-    And no carry-forward resolves, abandons, weakens, or substitutes terminal incident evidence
+    And only a naturally reproduced diagnosed failure boundary or an intentional change to its repair contract starts case-by-case incident work in feature mode
 
     Examples:
-      | change_relationship                                                                 | later_slice_result                                                                 |
-      | only its approved specification changes                                             | permit the specifier-to-coder start from current QA                                |
-      | changed-path conservation proves no deferred failure, repair, regression, plan, runner, or evidence input changed | permit focused review and QA integration with the ancestor disposition carried |
-      | one deferred failure, repair, regression, plan, runner, or evidence input changed    | block until fresh incident-focused proof records a disposition on the exact candidate |
+      | change_relationship                                                                                                           | later_slice_result                                                                                                    |
+      | only its approved specification changes                                                                                       | permit the specifier-to-coder start from current QA                                                                   |
+      | its product paths overlap an ancestor incident but ordinary focused work does not reproduce that diagnosed failure boundary | permit focused review and QA integration without changing or carrying the ancestor disposition to the later candidate |
+      | ordinary focused work reproduces the diagnosed failure boundary                                                              | stop at that failure and require the smallest causal incident repair and proof relevant to the current slice           |
+      | the approved slice intentionally changes the deferred repair, regression, task succession, runner, or evidence semantics     | treat that work as explicit verification-infrastructure scope with its own approved focused proof                      |
 
   # Modular verification packs 153
   Scenario Outline: Modular verification packs 153

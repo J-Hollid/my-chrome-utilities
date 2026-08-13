@@ -143,6 +143,8 @@ Feature: Settled candidate final verification
     And a QA-eligible incident is recorded as terminal-verification-deferred with its failure, repair candidate and tree, regression, focused receipt, package receipt, and lineage intact
     And terminal-verification-deferred is neither incident resolution nor lineage abandonment
     And an unrepaired incident, failing regression, stale focused receipt, failing package, or changed bound identity remains blocking
+    And a later feature candidate is not required to audit, reverify, mutate, or re-defer that ancestor incident merely because its changed paths overlap incident inputs
+    And feature-mode incident work resumes only when ordinary focused work reproduces its diagnosed failure boundary or the approved slice intentionally changes its repair contract
     And only one passing master-integration all-20 checkpoint with properties and package proof resolves the deferred incident and supplies final evidence
 
     Examples:
