@@ -71,6 +71,33 @@ once in evidence-producing mode. Its receipt records review-ready evidence for
 that exact tree; an ordinary preliminary run of the same plan on the same tree is
 not required. A later change requires one new evidence-producing run.
 
+### Verification run intent
+
+An ordinary focused invocation is `development-diagnostic` unless it carries
+explicit review-evidence, governed repair-focused, or terminal-checkpoint
+authority. A diagnostic receipt retains task output, timing, and local failure
+detail, but it never creates or mutates repository-common incidents, retry
+allowances, terminal deferrals, or handoff debt. It cannot support review-ready,
+QA-ready, or final-ready evidence and cannot be retrospectively upgraded.
+
+`--prepare-evidence` is explicit review-evidence authority. A failure during that
+run creates the normal durable reliability incident. Governed repair-focused and
+terminal invocations retain their existing durable semantics. Evidence recording
+must validate the receipt's immutable run intent and reject a missing, mismatched,
+diagnostic, or retrospectively upgraded intent. Later diagnostic success does not
+erase an earlier diagnostic receipt.
+
+The first implementation includes an audited compatibility pass for receipts
+created before run intent existed. It may make an incident nonblocking only when
+the source receipt proves that the invocation had no evidence task, repair
+authority, terminal authority, or readiness claim and the disposition retains
+the incident and immutable failure history. Missing or ambiguous authority stays
+blocking. Existing eligible terminal-verification-deferred incidents remain
+unresolved and may cross a later evidence preflight only when changed-path
+conservation proves their failure, repair, regression, plan, runner semantics,
+and evidence inputs are unchanged; the later exact evidence and package proof are
+still required before carry-forward is recorded.
+
 Feature candidates must be independently understandable and revertible. Partial,
 speculative, or known-failing work stays in task worktrees and never enters
 `qa`. Persistence, concurrency, migration, security, packaging, and verification

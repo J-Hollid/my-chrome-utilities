@@ -2271,3 +2271,22 @@ Feature: Modular verification packs
       | selected Page with visible ports            | 360 by 800     | ordinary Flow  |
       | open contextual Details and Outline         | desktop        | ordinary Flow  |
       | complete canvas and overlay controls        | 360 by 800     | Focus Canvas   |
+
+  # Modular verification packs 159
+  Scenario Outline: Modular verification packs 159
+    Given the canonical verification runner starts with <authority>
+    When a registered task <task_result>
+    Then the receipt records run intent <run_intent>
+    And shared reliability state receives <incident_effect>
+    And the receipt has <evidence_effect>
+    And evidence recording applies <recording_rule>
+
+    Examples:
+      | authority                                      | task_result | run_intent            | incident_effect                                                   | evidence_effect                              | recording_rule                                                                    |
+      | no explicit evidence, repair, or terminal flag | fails       | development-diagnostic | no incident, retry allowance, terminal deferral, or handoff debt  | no review-ready or final-ready eligibility   | a later diagnostic pass cannot erase or upgrade the failed diagnostic receipt     |
+      | no explicit evidence, repair, or terminal flag | passes      | development-diagnostic | no incident, retry allowance, terminal deferral, or handoff debt  | no review-ready or final-ready eligibility   | evidence recording rejects the diagnostic receipt                                 |
+      | explicit review-evidence authority             | fails       | review-evidence        | one durable incident before any unchanged diagnostic retry        | no review-ready eligibility                  | causal repair and fresh review evidence are required                               |
+      | governed repair-focused authority              | fails       | repair-focused         | the governed incident retains the failed repair attempt           | no review-ready or final-ready eligibility   | another repair attempt requires a changed causal repair                            |
+      | explicit terminal-checkpoint authority         | fails       | terminal               | one durable terminal failure on the exact release candidate       | no final-ready eligibility                   | a changed release candidate requires one fresh terminal checkpoint                 |
+      | explicit review-evidence authority             | passes      | review-evidence        | no new incident                                                    | review-ready eligibility for the exact scope | recording rejects a missing, mismatched, or retrospectively upgraded run intent    |
+      | explicit terminal-checkpoint authority         | passes      | terminal               | matching deferred incidents are resolved by the exact checkpoint  | final-ready eligibility for the exact scope  | recording rejects a missing, mismatched, or retrospectively upgraded run intent    |
