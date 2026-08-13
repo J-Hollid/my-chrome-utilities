@@ -961,7 +961,8 @@ export async function createPendingVerificationEvidence({
     });
     const incidents = await createTimeoutIncidentStore({ root:repositoryRoot })
       .blocking({ commit });
-    const coverage = await runIntentBootstrapCoverage({ incidents, plan, packs:candidatePacks });
+    const coverage = await runIntentBootstrapCoverage({ incidents, plan, packs:candidatePacks,
+      candidate:{ commit, tree }, root:repositoryRoot, evidenceTask:task });
     if (!same(coverage, runIntentBootstrap.coverage)) {
       throw new Error("Run-intent bootstrap incident coverage changed before evidence preparation");
     }
@@ -1149,6 +1150,7 @@ export async function recordPendingVerificationEvidence(
         ]);
         const coverage = await runIntentBootstrapCoverage({
           incidents, plan:pending.plan, packs:candidatePacks,
+          candidate:{ commit, tree }, root:repositoryRoot, evidenceTask:pending.task,
         });
         if (!same(coverage, pending.runIntentBootstrap.coverage)) {
           throw new Error("Run-intent bootstrap incident coverage changed before recording");

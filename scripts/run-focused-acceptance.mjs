@@ -1725,7 +1725,8 @@ export async function runFocusedAcceptance(
       }),
       store.blocking({ commit:candidateCommit }),
     ]);
-    const coverage = await runIntentBootstrapCoverage({ incidents, plan, packs });
+    const coverage = await runIntentBootstrapCoverage({ incidents, plan, packs,
+      candidate:{ commit:candidateCommit, tree:candidateTree }, root:repositoryRoot, evidenceTask });
     context.receipt.runIntentBootstrap = {
       ...base,
       candidateCommit,

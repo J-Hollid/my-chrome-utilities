@@ -170,10 +170,48 @@ function eligibleTerminalDeferred(incident) {
     incident?.terminalVerificationDeferred?.status === "terminal-verification-deferred";
 }
 
+async function bootstrapReviewIncidentProof({ root, incident, evidenceTask }) {
+  const sourcePath = safeLegacyReceiptPath(root, incident?.failure?.sourceReceipt);
+  if (!sourcePath) return null;
+  try {
+    const bytes = await readFile(sourcePath);
+    const receipt = JSON.parse(bytes);
+    if (receipt.runIntent !== verificationRunIntents.review ||
+        receipt.candidate?.evidenceTask !== evidenceTask ||
+        receipt.runIntentBootstrap?.version !== 1 ||
+        receipt.runIntentBootstrap.candidateCommit !== incident.failure.lineage.commit ||
+        receipt.runIntentBootstrap.candidateTree !== incident.failure.lineage.tree) return null;
+    return { sourceReceipt:incident.failure.sourceReceipt,
+      sourceReceiptSha256:createHash("sha256").update(bytes).digest("hex") };
+  } catch { return null; }
+}
+
+function exactCandidateEligibleRepair(incident, candidate) {
+  const repair = incident?.repair;
+  return incident?.state === "unresolved" && repair?.status === "eligible" &&
+    repair.candidate?.commit === candidate?.commit && repair.candidate?.tree === candidate?.tree &&
+    repair.regression?.status === "passed" && repair.regression.commit === candidate.commit &&
+    repair.focusedReceipt?.status === "passed" && repair.focusedReceipt.commit === candidate.commit &&
+    repair.causalProtocol?.repairResult?.status === "passed";
+}
+
 export async function runIntentBootstrapCoverage({
-  incidents, plan, packs, resolveSuccession = resolveIncidentTaskSuccession,
+  incidents, plan, packs, candidate, root, evidenceTask,
+  resolveSuccession = resolveIncidentTaskSuccession,
+  reviewIncidentProof = bootstrapReviewIncidentProof,
 }) {
-  const ineligible = incidents.filter((incident) => !eligibleTerminalDeferred(incident));
+  const admissions = new Map();
+  for (const incident of incidents) {
+    if (eligibleTerminalDeferred(incident)) {
+      admissions.set(incident.id, { kind:"terminal-deferred" });
+      continue;
+    }
+    if (exactCandidateEligibleRepair(incident, candidate)) {
+      const proof = await reviewIncidentProof({ root, incident, evidenceTask });
+      if (proof) admissions.set(incident.id, { kind:"exact-candidate-causal-repair", ...proof });
+    }
+  }
+  const ineligible = incidents.filter((incident) => !admissions.has(incident.id));
   if (ineligible.length) {
     throw new Error(`Run-intent bootstrap cannot admit ineligible incident(s): ${
       ineligible.map(({ id }) => id).sort().join(", ")}`);
@@ -199,6 +237,7 @@ export async function runIntentBootstrapCoverage({
     }
     coverage.push({
       incidentId:incident.id,
+      admission:admissions.get(incident.id),
       failureTaskKey:incident.failure.task.key,
       selectedTaskKey:selectedIdentity.key,
       selectedTaskDigest:verificationTaskDigest(selectedIdentity),

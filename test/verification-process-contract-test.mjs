@@ -6659,12 +6659,34 @@ const bootstrapIncident = {
 };
 const bootstrapCoverage = await runIntentBootstrapCoverage({
   incidents:[bootstrapIncident], plan:bootstrapPlan, packs,
+  candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
 });
 assert.equal(bootstrapCoverage[0].selectedTaskKey, bootstrapTask.key);
 await assert.rejects(() => runIntentBootstrapCoverage({
   incidents:[{ ...bootstrapIncident, id:"ineligible", repair:null }],
-  plan:bootstrapPlan, packs,
+  plan:bootstrapPlan, packs, candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
 }), /ineligible incident/i);
+const exactBootstrapRepair = { ...bootstrapIncident, id:"exact-bootstrap-repair",
+  terminalVerificationDeferred:undefined, failure:{ ...bootstrapIncident.failure,
+    sourceReceipt:"tmp/verification-receipts/bootstrap-review.json" },
+  repair:{ status:"eligible", candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+    regression:{ status:"passed", commit:"bootstrap-candidate" },
+    focusedReceipt:{ status:"passed", commit:"bootstrap-candidate" },
+    causalProtocol:{ repairResult:{ status:"passed" } } } };
+const exactRepairCoverage = await runIntentBootstrapCoverage({ incidents:[exactBootstrapRepair],
+  plan:bootstrapPlan, packs, candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+  reviewIncidentProof:async()=>({ sourceReceipt:exactBootstrapRepair.failure.sourceReceipt,
+    sourceReceiptSha256:"a".repeat(64) }) });
+assert.equal(exactRepairCoverage[0].admission.kind, "exact-candidate-causal-repair",
+  "a bootstrap review failure with an eligible exact-candidate causal repair is admitted once");
+await assert.rejects(()=>runIntentBootstrapCoverage({ incidents:[exactBootstrapRepair],
+  plan:bootstrapPlan, packs, candidate:{ commit:"later-candidate", tree:"later-tree" },
+  reviewIncidentProof:async()=>({ sourceReceipt:"unused", sourceReceiptSha256:"b".repeat(64) }) }),
+/ineligible incident/i, "a stale-candidate causal repair cannot enter bootstrap coverage");
+await assert.rejects(()=>runIntentBootstrapCoverage({ incidents:[exactBootstrapRepair],
+  plan:bootstrapPlan, packs, candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+  reviewIncidentProof:async()=>null }), /ineligible incident/i,
+"an eligible repair without a bootstrap review-evidence source remains blocking");
 await assert.rejects(() => validateRunIntentBootstrapBase({
   root:"fixture", baseCommit:"implemented-base",
   changedPaths:["scripts/verification-run-intent.mjs"],
