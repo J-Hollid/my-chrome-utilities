@@ -63,15 +63,22 @@ This correction necessarily changes shared runner semantics, so its first
 checkpoint cannot use ordinary path-only conservation. The evidence command uses
 explicit `--run-intent-bootstrap` authority. That authority is valid only when
 the approved base contains Packs 159 and 160 but lacks the run-intent
-implementation and the candidate adds it. Before launch, every applicable
-non-diagnostic incident must already have an eligible
-`terminal-verification-deferred` disposition and the exact focused plan must
-select its failure task or declared successor. Any uncovered or ineligible
-incident blocks.
+implementation and the candidate adds it. Before launch, each applicable
+non-diagnostic incident must be one of:
 
-Before pending evidence is created, every selected deferred failure task or
-successor must have a fresh pass in the same receipt and package proof must pass.
-The incidents remain unresolved; the handoff gate records fresh deferrals on the
+- an eligible `terminal-verification-deferred` incident on an ancestor; or
+- an incident created by an explicit review-evidence attempt for this bootstrap,
+  with an eligible causal repair bound to the exact bootstrap candidate.
+
+The second case exists only to avoid making a bootstrap-created review failure
+impossible to clear: it does not admit an incident from another candidate, an
+unrepaired incident, or an unrelated failure. The exact focused plan must select
+each admitted incident's failure task or declared successor. Any uncovered,
+unrepaired, unrelated, or stale-candidate incident blocks.
+
+Before pending evidence is created, every selected failure task or successor
+must have a fresh pass in the same receipt and package proof must pass. The
+incidents remain unresolved; the handoff gate records fresh deferrals on the
 exact candidate. A later candidate whose base already contains the implementation
 cannot reuse bootstrap authority.
 

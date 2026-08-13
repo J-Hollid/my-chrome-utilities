@@ -2295,10 +2295,10 @@ Feature: Modular verification packs
   Scenario: Modular verification packs 160
     Given an exact review-evidence candidate adds run-intent enforcement to a base that already contains its approved contract but lacks the implementation
     And every applicable legacy diagnostic is receipt-proven or remains blocking
-    And every other applicable incident has an eligible terminal-verification-deferred disposition on an ancestor
+    And every other applicable incident has either an eligible terminal-verification-deferred disposition on an ancestor or an eligible causal repair on the exact bootstrap candidate
     When the one-time run-intent bootstrap preflight evaluates the exact focused plan
-    Then every deferred failure task or declared successor must be selected for fresh execution
-    And no unrelated unresolved incident is admitted
-    And pending evidence requires every selected deferred failure task or successor to pass freshly with package proof
+    Then every deferred or exact-candidate repaired failure task or declared successor must be selected for fresh execution
+    And no unrelated, unrepaired, or stale-candidate unresolved incident is admitted
+    And pending evidence requires every selected failure task or successor to pass freshly with package proof
     And the incidents remain unresolved until the handoff gate re-defers them on the exact candidate
     And a base that already contains run-intent implementation cannot reuse bootstrap authority
