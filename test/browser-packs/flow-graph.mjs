@@ -218,6 +218,7 @@ try {
             for (const [key, value] of Object.entries(row))
                 geometryEvidence[`${label}_${key}`] = value;
         }
+        if (targetId === "FLOW_STYLESHEET_EXTRACTION_TARGET") {
         const styleStateBefore = await evaluate(`(async()=>{const repository=await(await import('./data-layer-durable-project-repository.js')).openIndexedDbProjectRepository(),loaded=await repository.loadProject(${JSON.stringify(seeded.projectId)}),graph=loaded.state.project.documentationFlowGraphs[${JSON.stringify(seeded.flowId)}];return JSON.stringify({project:loaded.state.project,graph,revision:loaded.draftSequence,undo:loaded.state.history.undo.length});})()`);
         assert.ok(flowStyleBaseline, "Flow stylesheet extraction requires its approved-base styles");
         const switchFlowStyles = async (mode) => evaluate(`(async()=>{const mode=${JSON.stringify(mode)},paths={base:'/specification-builder.css',brand:'/specification-builder-brand.css',local:'/flow-graph/flow-workspace.css',bridge:'/flow-graph/flow-workspace-shell.css'},links=[...document.querySelectorAll('link[rel="stylesheet"]')],linkFor=(path)=>links.find(link=>new URL(link.href).pathname===path);document.querySelectorAll('style[data-flow-extraction-baseline]').forEach(node=>node.remove());for(const path of Object.values(paths)){const link=linkFor(path);if(!link)throw new Error('Missing installed stylesheet '+path);link.media=mode==='base'?'not all':'';}if(mode==='base'){for(const [path,source]of[[paths.base,${JSON.stringify(flowStyleBaseline.base)}],[paths.brand,${JSON.stringify(flowStyleBaseline.brand)}]]){const link=linkFor(path),style=document.createElement('style');style.dataset.flowExtractionBaseline=path;style.textContent=source;link.before(style);}}await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));return{mode,baselineCount:document.querySelectorAll('style[data-flow-extraction-baseline]').length,suppressed:links.filter(link=>link.media==='not all').map(link=>new URL(link.href).pathname).sort()};})()`);
@@ -325,6 +326,7 @@ try {
             measurements:{ baseCommit:flowStylesheetExtractionBase, states:stateMeasurements,
                 media:mediaMeasurements, focus:focusMeasurements },
         };
+        }
         if (targetId !== "FLOW_STYLESHEET_EXTRACTION_TARGET") {
         activePhase = "runtime001";
         await reloadFlowPage("runtime001");
