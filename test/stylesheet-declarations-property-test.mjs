@@ -38,6 +38,28 @@ assert.doesNotThrow(() => validateStylesheetDeclarations([{
   stylesheetContents:{ "keyframes.css":keyframesRule(".documentary-flow", 1) },
 }), "keyframe from/to/percentage blocks are not escaping selectors");
 
+assert.doesNotThrow(() => validateStylesheetDeclarations([{
+  source:"after-keyframes.css", destination:"after-keyframes.css", classification:"feature-local", owner:"shell",
+  consumers:[], qaTargets:[], scopeRoot:".documentary-flow",
+}], {
+  packIds:["shell"], sourcePaths:["after-keyframes.css"],
+  stylesheetContents:{
+    "after-keyframes.css":`${keyframesRule(".documentary-flow", 2)} ` +
+      ".documentary-flow .after-keyframes { display: block; }",
+  },
+}), "a scoped selector after keyframes remains in scope");
+
+assert.throws(() => validateStylesheetDeclarations([{
+  source:"after-keyframes-escape.css", destination:"after-keyframes-escape.css",
+  classification:"feature-local", owner:"shell", consumers:[], qaTargets:[], scopeRoot:".documentary-flow",
+}], {
+  packIds:["shell"], sourcePaths:["after-keyframes-escape.css"],
+  stylesheetContents:{
+    "after-keyframes-escape.css":`${keyframesRule(".documentary-flow", 3)} ` +
+      "@media (forced-colors: active) { body { color: red; } }",
+  },
+}), /escaping scope root/u, "an escaping selector after keyframes is still rejected");
+
 assert.throws(() => validateStylesheetDeclarations([{
   source:"escape.css", destination:"escape.css", classification:"feature-local", owner:"shell",
   consumers:[], qaTargets:[], scopeRoot:".documentary-flow",
