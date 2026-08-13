@@ -1252,6 +1252,36 @@ let nestedReadOnlyLeaseCompleted = false;
 
 const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagnosedBoundary,
   causalCategory = "artifact/process locking" }) => {
+  const boundedStyleRegression = {
+    "other:global-stylesheet-reader reachability separation": {
+      id:"global-stylesheet-reader-reachability-v1",
+      input:{ globalReaders:["test/twatility-brand-polish-test.mjs", "test/data-layer-flow-workspace-test.mjs"], qaConsumers:[] },
+      expectedPreRepairFailure:{ readerEdgesClassifiedAsQaConsumers:true, featurePlanScope:"owner-and-readers" },
+      expectedRepairResult:{ readerEdgesClassifiedAsQaConsumers:false, featurePlanScope:"declared-smoke-targets-only" },
+    },
+    "other:stylesheet helper named-export completeness": {
+      id:"stylesheet-helper-named-exports-v1",
+      input:{ helpers:["stylesheetDeclarationFor", "stylesheetPlanFor", "validateStylesheetDeclarations"] },
+      expectedPreRepairFailure:{ exportedHelpers:0, processContractImport:false },
+      expectedRepairResult:{ exportedHelpers:3, processContractImport:true },
+    },
+    "other:canonical stylesheet build inventory marker": {
+      id:"canonical-stylesheet-build-inventory-v1",
+      input:{ inventorySource:"verification/packs.json", buildSource:"scripts/build.mjs", marker:"side-panel.css" },
+      expectedPreRepairFailure:{ canonicalInventoryConsumed:false, operatorShellWired:false },
+      expectedRepairResult:{ canonicalInventoryConsumed:true, operatorShellWired:true },
+    },
+  }[causalCategory];
+  if (boundedStyleRegression) {
+    const fixture = { ...boundedStyleRegression, causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary) };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:structuredClone(fixture.expectedPreRepairFailure) },
+      repairResult:{ status:"passed", fixtureDigest,
+        observed:structuredClone(fixture.expectedRepairResult) } };
+  }
   if (causalCategory === "other:task-specific Flow receipt identity") {
     const fixture = {
       id:"task-specific-flow-receipt-identity-v1", causalCategory,
