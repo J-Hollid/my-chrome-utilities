@@ -1291,6 +1291,98 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       repairResult:{ status:"passed", fixtureDigest,
         observed:structuredClone(fixture.expectedRepairResult) } };
   }
+  const manifestedRegression = {
+    "other:checkpoint task initialization ordering": {
+      id:"checkpoint-task-initialization-ordering-v1",
+      input:{ checkpointTasksReferencedBeforeDeclaration:true },
+      expectedPreRepairFailure:{ outcome:"temporal-dead-zone" },
+      expectedRepairResult:{ outcome:"checkpoint-task-list-initialized-before-use" },
+    },
+    "other:Studio smoke observation return contract": {
+      id:"studio-smoke-observation-return-contract-v1",
+      input:{ target:"STUDIO_GLOBAL_STYLE_SMOKE_TARGET", observationRequired:true },
+      expectedPreRepairFailure:{ returnedObservation:false },
+      expectedRepairResult:{ returnedObservation:true },
+    },
+    "other:empty execution pack rejection": {
+      id:"empty-execution-pack-rejection-v1",
+      input:{ selectedPackIds:[], styleSmokeAuthorizationPackIds:[] },
+      expectedPreRepairFailure:{ runnableChecks:false, outcome:"no-runnable-checks" },
+      expectedRepairResult:{ runnableChecks:true, outcome:"explicit-exact-pack-or-style-target" },
+    },
+    "other:receipt plan summary field completeness": {
+      id:"receipt-plan-summary-field-completeness-v1",
+      input:{ mandatoryFields:["styleSmokeTargets", "terminalFullObligations",
+        "changedStyleTargets", "adapterAuthorizationPackIds"] },
+      expectedPreRepairFailure:{ missingFields:4, summaryMatches:false },
+      expectedRepairResult:{ missingFields:0, summaryMatches:true },
+    },
+    "other:Shell source inventory reachability": {
+      id:"shell-source-inventory-reachability-v1",
+      input:{ declaredShellSourceInventory:true },
+      expectedPreRepairFailure:{ sourceCount:1, allOwnedSourcesReachable:false },
+      expectedRepairResult:{ sourceCount:3, allOwnedSourcesReachable:true },
+    },
+    "other:browser adapter inventory path registration": {
+      id:"browser-adapter-inventory-path-registration-v1",
+      input:{ adapterPath:"test/browser-packs/global-style-smoke.mjs" },
+      expectedPreRepairFailure:{ pathRegistered:false, checkpointClaimed:false },
+      expectedRepairResult:{ pathRegistered:true, checkpointClaimed:true },
+    },
+    "other:browser smoke adapter path cleanup": {
+      id:"browser-smoke-adapter-path-cleanup-v1",
+      input:{ removedAdapterPath:"test/browser-packs/global-style-smoke.mjs" },
+      expectedPreRepairFailure:{ stalePathLookup:true, cleanupSucceeded:false },
+      expectedRepairResult:{ stalePathLookup:false, cleanupSucceeded:true },
+    },
+    "other:global stylesheet QA scope isolation": {
+      id:"global-stylesheet-qa-scope-isolation-v1",
+      input:{ declaredQaTargets:["STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
+        "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET"] },
+      expectedPreRepairFailure:{ selectedOwnerUnitTasks:13, selectedQaTargets:0 },
+      expectedRepairResult:{ selectedOwnerUnitTasks:0, selectedQaTargets:2 },
+    },
+    "other:Shell declared task identity conservation": {
+      id:"shell-declared-task-identity-conservation-v1",
+      input:{ declaredUnitAndPropertyLeaves:true },
+      expectedPreRepairFailure:{ plannedUnitAndPropertyLeaves:13, declaredUnitAndPropertyLeaves:15 },
+      expectedRepairResult:{ plannedUnitAndPropertyLeaves:15, declaredUnitAndPropertyLeaves:15 },
+    },
+    "other:calibration target identity conservation": {
+      id:"calibration-target-identity-conservation-v1",
+      input:{ approvedPostCalibrationTargets:3 },
+      expectedPreRepairFailure:{ durableTargetCount:82, observedTargetCount:84 },
+      expectedRepairResult:{ durableTargetCount:84, observedTargetCount:84 },
+    },
+    "other:empty canonical change-set fixture binding": {
+      id:"empty-canonical-change-set-fixture-binding-v1",
+      input:{ candidateRangeEmpty:true, version:1 },
+      expectedPreRepairFailure:{ canonicalChangeSet:false, nonEmptyRangeAssertionReached:false },
+      expectedRepairResult:{ canonicalChangeSet:true, nonEmptyRangeAssertionReached:true },
+    },
+    "other:terminal-full task identity conservation": {
+      id:"terminal-full-task-identity-conservation-v1",
+      input:{ canonicalRunnableLeaves:true, includeProperties:true },
+      expectedPreRepairFailure:{ addedApprovedLeavesConserved:false },
+      expectedRepairResult:{ addedApprovedLeavesConserved:true },
+    },
+    "other:terminal observation coverage conservation": {
+      id:"terminal-observation-coverage-conservation-v1",
+      input:{ canonicalRunnableLeaves:true, globalStyleTargets:true },
+      expectedPreRepairFailure:{ nonStyleObservationsPreserved:false },
+      expectedRepairResult:{ nonStyleObservationsPreserved:true },
+    },
+  }[causalCategory];
+  if (manifestedRegression) {
+    const fixture = { ...manifestedRegression, causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary) };
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:structuredClone(fixture.expectedPreRepairFailure) },
+      repairResult:{ status:"passed", fixtureDigest,
+        observed:structuredClone(fixture.expectedRepairResult) } };
+  }
   if (causalCategory === "other:task-specific Flow receipt identity") {
     const fixture = {
       id:"task-specific-flow-receipt-identity-v1", causalCategory,
