@@ -1252,12 +1252,16 @@ export function planVerification(
   const allRunnableIds = packs.filter(runnable).map(({ id }) => id);
   const canonicalRunnableSelection = allRunnableIds.length === explicit.size &&
     allRunnableIds.every((id) => explicit.has(id));
+  const hasFocusedFeatureBoundary = changedPaths.some(
+    (changedPath) => !focusedFeaturePolicyPaths.has(changedPath));
   if (terminalFull || canonicalRunnableSelection) selected = new Set(allRunnableIds);
 
   const affectedFor = (registry, changedPath, {
     exactVerificationChange = true, forceVerificationExact = false,
   } = {}) => {
-    if (focusedFeaturePolicyPaths.has(changedPath) && !canonicalRunnableSelection && !terminalFull) {
+    if ((explicit.size || hasFocusedFeatureBoundary) &&
+        focusedFeaturePolicyPaths.has(changedPath) &&
+        !canonicalRunnableSelection && !terminalFull) {
       return { semantic:[], exactSemantic:[], verificationConsumers:[], boundary:null };
     }
     if (changedPath === "dist" || changedPath.startsWith("dist/")) {

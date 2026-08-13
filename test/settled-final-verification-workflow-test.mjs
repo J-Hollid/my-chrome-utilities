@@ -222,6 +222,9 @@ for (const focusedPolicyPath of [
   "scripts/verification-reliability-runtime.mjs",
   "scripts/verification-reliability-store.mjs",
 ]) {
+  assert.deepEqual(planVerification(packs, { changedPaths:[focusedPolicyPath] }).packIds.toSorted(),
+    allPacks,
+  `${focusedPolicyPath} retains global impact without explicit focused-pack authorization`);
   const mixedPlan = planVerification(packs, {
     changedPaths:["src/data-layer-flow-graph-ui.ts", focusedPolicyPath],
   });

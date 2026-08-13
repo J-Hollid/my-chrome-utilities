@@ -17,7 +17,6 @@ import {
   timeoutResolutionEvidence, validateRepairReceiptSemantics, validateTimeoutRepairProposal,
   timeoutRepairCandidate,
 } from "./verification-reliability-repair.mjs";
-import { terminalVerificationDeferredConservation } from "./verification-reliability-deferred.mjs";
 import {
   classifyLegacyIncidentRunIntent, governedRepairAttemptAssociation,
 } from "./verification-run-intent.mjs";
@@ -345,16 +344,16 @@ function eligibleDeferredIncident(incident) {
 }
 
 async function handoffCandidateRelationship({ root, isAncestor, candidateChangedPaths,
-  incident, commit, readiness, sender, verified }) {
+  incident, commit, base, readiness, sender, verified }) {
   const deferredCommit = incident.terminalVerificationDeferred?.candidate?.commit;
   const exact = deferredCommit === commit;
   const descendant = Boolean(deferredCommit) && await commitDescendsFrom({
     root, isAncestor, ancestor:deferredCommit, commit,
   });
   const specificationRoute = [sender === "specifier", verified === "not-required",
-    readiness === "legacy"].every(Boolean);
+    readiness === "legacy", typeof base === "string", Boolean(base)].every(Boolean);
   const specificationOnly = specificationRoute &&
-    (await candidateChangedPaths(`${commit}^`, commit)).every(approvedSpecificationPath);
+    (await candidateChangedPaths(base, commit)).every(approvedSpecificationPath);
   return { exact, descendant, specificationOnly };
 }
 
@@ -362,59 +361,10 @@ function permittedHandoffRelationship(readiness, relationship) {
   const routes = new Map([
     ["review-ready", true],
     ["qa-ready", true],
-    ["release-candidate", relationship.exact || relationship.descendant],
+    ["release-candidate", true],
     ["legacy", relationship.specificationOnly],
   ]);
   return routes.get(readiness) ?? false;
-}
-
-function carrySource(incident, id) {
-  const prior = incident.terminalVerificationDeferred;
-  if ([incident.state === "unresolved", incident.repair?.status === "eligible",
-    prior?.status === "terminal-verification-deferred"].every(Boolean)) return prior;
-  throw new Error(`Reliability incident ${id} has no deferred proof to carry`);
-}
-
-function candidateProofMatches(proof, candidate) {
-  return [proof.candidate?.commit === candidate.commit, proof.candidate?.tree === candidate.tree,
-    proof.reviewReady?.candidateCommit === candidate.commit,
-    proof.reviewReady?.candidateTree === candidate.tree].every(Boolean);
-}
-
-function reviewProofComplete(reviewReady) {
-  return [Boolean(reviewReady?.task), Boolean(reviewReady?.baseCommit),
-    shaPattern.test(String(reviewReady?.receiptSha256)),
-    Array.isArray(reviewReady?.focusedTaskKeys),
-    Boolean(reviewReady?.focusedTaskKeys?.length)].every(Boolean);
-}
-
-function carryProofComplete(proof, candidate) {
-  return [candidateProofMatches(proof, candidate), reviewProofComplete(proof.reviewReady),
-    shaPattern.test(String(proof.package?.digest))].every(Boolean);
-}
-
-async function requireConservedCarry({ root, isAncestor, incident, id, prior, candidate,
-  proof, changedPaths }) {
-  const conservation = terminalVerificationDeferredConservation({ incident, changedPaths });
-  const descendant = await commitDescendsFrom({
-    root, isAncestor, ancestor:prior.candidate.commit, commit:candidate.commit,
-  });
-  if ([conservation.conserved, carryProofComplete(proof, candidate), descendant].every(Boolean)) {
-    return conservation;
-  }
-  throw new Error(`Reliability incident ${id} deferred inputs changed; fresh incident-focused proof is required`);
-}
-
-function carriedDisposition({ prior, proof, conservation, at }) {
-  const withoutDigest = {
-    status:"terminal-verification-deferred",
-    candidate:structuredClone(proof.candidate), repairDigest:prior.repairDigest,
-    reviewReady:structuredClone(proof.reviewReady), package:structuredClone(proof.package),
-    carryForward:{ ancestorDisposition:structuredClone(prior),
-      fromCandidate:structuredClone(prior.candidate),
-      fromDispositionDigest:prior.digest, conservation }, recordedAt:at,
-  };
-  return { ...withoutDigest, digest:timeoutIncidentDigest(withoutDigest) };
 }
 
 export function createTimeoutIncidentStore({
@@ -624,11 +574,11 @@ export function createTimeoutIncidentStore({
       }
       return blocked;
     },
-    async blockingForHandoff({ commit, readiness, sender, verified }) {
+    async blockingForHandoff({ commit, base, readiness, sender, verified }) {
       const blocked = [];
       for (const incident of await this.blocking({ commit })) {
         const relationship = await handoffCandidateRelationship({ root, isAncestor,
-          candidateChangedPaths, incident, commit, readiness, sender, verified });
+          candidateChangedPaths, incident, commit, base, readiness, sender, verified });
         const permitted = eligibleDeferredIncident(incident) &&
           permittedHandoffRelationship(readiness, relationship);
         if (!permitted) blocked.push(incident);
@@ -682,21 +632,6 @@ export function createTimeoutIncidentStore({
         return transition({ ...incident, terminalVerificationDeferred:disposition },
           "terminal-verification-deferred", at, { dispositionDigest:disposition.digest,
             commit:candidate.commit });
-      });
-    },
-    async carryTerminalVerification(id, proof) {
-      exactObject(proof, "Terminal verification carry-forward proof");
-      const candidate = await currentCandidate();
-      return access.update(id, async(incident) => {
-        const prior = carrySource(incident, id);
-        const paths = await candidateChangedPaths(prior.candidate.commit, candidate.commit);
-        const conservation = await requireConservedCarry({ root, isAncestor, incident, id,
-          prior, candidate, proof, changedPaths:paths });
-        const at = now();
-        const disposition = carriedDisposition({ prior, proof, conservation, at });
-        return transition({ ...incident, terminalVerificationDeferred:disposition },
-          "terminal-verification-deferred", at, { dispositionDigest:disposition.digest,
-            commit:candidate.commit, carried:true });
       });
     },
     async resolutions({ commit }) {

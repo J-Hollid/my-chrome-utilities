@@ -68,7 +68,9 @@ async function assertReliabilityHandoff(commit, base, task, readiness, verified,
   const incidents = await store.blocking({ commit:canonical });
   await recordEligibleHandoffDeferrals(store, incidents,
     { commit:canonical, base, task, readiness, verified });
-  const blocked = await store.blockingForHandoff({ commit:canonical, readiness, sender, verified });
+  const blocked = await store.blockingForHandoff({
+    commit:canonical, base, readiness, sender, verified,
+  });
   if (blocked.length) {
     throw new Error(`Unresolved reliability incident(s) block verification evidence and Git handoff: ${
       blocked.map(({ id }) => id).join(", ")}. Complete a causal repair and fresh checkpoint.`);

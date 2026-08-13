@@ -2187,6 +2187,7 @@ try {
   let incidentNow = "2026-08-09T00:00:00.000Z";
   let incidentCandidate = { commit:"repair-commit", tree:"repair-tree" };
   let incidentCandidateChangedPaths = [];
+  let incidentCandidateChangedRange = [];
   const store = createTimeoutIncidentStore({
     root:incidentFixtureRoot,
     storeDirectory:path.join(incidentFixtureRoot, "incidents"),
@@ -2205,7 +2206,10 @@ try {
     }),
     currentCandidate:async() => incidentCandidate,
     changedPaths:async() => ["scripts/dist-artifact-lock.mjs"],
-    candidateChangedPaths:async() => incidentCandidateChangedPaths,
+    candidateChangedPaths:async(fromCommit, toCommit) => {
+      incidentCandidateChangedRange = [fromCommit, toCommit];
+      return incidentCandidateChangedPaths;
+    },
     canonicalRepairTaskIdentities:async() => canonicalRepairIdentities,
     canonicalCheckpointValidator:async({ document, incident }) => {
       const actualKeys = Object.keys(document.receipt.tasks).sort();
@@ -2888,7 +2892,6 @@ console.log("repairTmp=" + process.env.TMPDIR);
   const deferralMutations = [];
   await recordEligibleIncidentDeferral({
     deferTerminalVerification:async(id) => deferralMutations.push(["defer", id]),
-    carryTerminalVerification:async(id) => deferralMutations.push(["carry", id]),
   }, deferredBeforeFeatureRouting, {
     candidateCommit:"parallel-feature-commit",
     focusedScope:{ taskKeys:[deferredBeforeFeatureRouting.failure.task.key] },
@@ -2910,57 +2913,37 @@ console.log("repairTmp=" + process.env.TMPDIR);
   assert.equal((await store.blockingForHandoff({ commit:"reclaimed-commit",
     readiness:"release-candidate" })).some(({ id }) => id === first.id), false,
   "a descendant frozen QA head retains the architect's master-checkpoint route");
+  assert.equal((await store.blockingForHandoff({ commit:"parallel-feature-commit",
+    readiness:"release-candidate" })).some(({ id }) => id === first.id), false,
+  "a parallel deferral retains the frozen QA head's architect checkpoint route");
   assert.equal((await store.blockingForHandoff({ commit:"repair-commit",
     readiness:"final-ready" })).some(({ id }) => id === first.id), true,
   "deferred proof cannot authorize final-ready routing");
   incidentCandidateChangedPaths = ["docs/approved-slice.md", "features/approved-slice.feature"];
-  assert.equal((await store.blockingForHandoff({ commit:"parallel-spec-commit", readiness:"legacy",
+  assert.equal((await store.blockingForHandoff({ commit:"parallel-spec-commit", base:"qa-base",
+    readiness:"legacy",
     sender:"specifier", verified:"not-required" })).some(({ id }) => id === first.id), false,
   "a specification-only candidate can start from current QA without merging a parallel disposition");
-  assert.equal((await store.blockingForHandoff({ commit:"spec-commit", readiness:"legacy",
+  assert.deepEqual(incidentCandidateChangedRange, ["qa-base", "parallel-spec-commit"],
+    "specification-only routing audits the complete handoff change set from its declared base");
+  assert.equal((await store.blockingForHandoff({ commit:"spec-commit", base:"qa-base",
+    readiness:"legacy",
     sender:"specifier", verified:"not-required" })).some(({ id }) => id === first.id), false,
   "a specification-only descendant can start from current QA without rewriting deferred proof");
   for (const workflowPrompt of [
     "swarmforge/roles/refactorer.prompt", "swarmforge/constitution.prompt",
   ]) {
     incidentCandidateChangedPaths = ["docs/approved-slice.md", workflowPrompt];
-    assert.equal((await store.blockingForHandoff({ commit:"spec-commit", readiness:"legacy",
+    assert.equal((await store.blockingForHandoff({ commit:"spec-commit", base:"qa-base",
+      readiness:"legacy",
       sender:"specifier", verified:"not-required" })).some(({ id }) => id === first.id), true,
     `${workflowPrompt} cannot use the specification-only start route`);
   }
   incidentCandidateChangedPaths = ["docs/approved-slice.md", "src/unreviewed-product.ts"];
-  assert.equal((await store.blockingForHandoff({ commit:"spec-commit", readiness:"legacy",
+  assert.equal((await store.blockingForHandoff({ commit:"spec-commit", base:"qa-base",
+    readiness:"legacy",
     sender:"specifier", verified:"not-required" })).some(({ id }) => id === first.id), true,
   "a mixed specification and product descendant cannot use the specification-start route");
-  incidentCandidate = { commit:"carry-commit", tree:"carry-tree" };
-  incidentCandidateChangedPaths = ["src/independent-flow.ts", "test/independent-flow-test.mjs"];
-  incidentNow = "2026-08-09T00:00:02.000Z";
-  const carried = await store.carryTerminalVerification(first.id, {
-    candidate:incidentCandidate,
-    reviewReady:{ task:"independent-slice", baseCommit:"approved-independent-base",
-      candidateCommit:incidentCandidate.commit, candidateTree:incidentCandidate.tree,
-      receiptSha256:"6".repeat(64), focusedTaskKeys:["unit:test/independent-flow-test.mjs"] },
-    package:{ path:"build/package/my-chrome-utilities.zip", digest:"7".repeat(64) },
-  });
-  assert.equal(carried.state, "unresolved");
-  assert.equal(carried.terminalVerificationDeferred.carryForward.conservation.conserved, true,
-    "an independent descendant durably carries the ancestor terminal obligation");
-  assert.equal(carried.terminalVerificationDeferred.reviewReady.receiptSha256, "6".repeat(64),
-    "the later candidate binds its own focused review proof");
-  assert.equal(carried.terminalVerificationDeferred.package.digest, "7".repeat(64),
-    "the later candidate binds its own package proof");
-  assert.deepEqual(carried.terminalVerificationDeferred.carryForward.ancestorDisposition,
-    deferred.terminalVerificationDeferred,
-    "the immutable ancestor disposition retains its focused receipt, task, base, keys, and package proof");
-  incidentCandidateChangedPaths = ["scripts/verification-reliability-store.mjs"];
-  await assert.rejects(store.carryTerminalVerification(first.id, {
-    candidate:incidentCandidate,
-    reviewReady:{ task:"changed-gate", baseCommit:"approved-independent-base",
-      candidateCommit:incidentCandidate.commit, candidateTree:incidentCandidate.tree,
-      receiptSha256:"8".repeat(64), focusedTaskKeys:["unit:test/independent-flow-test.mjs"] },
-    package:{ path:"build/package/my-chrome-utilities.zip", digest:"9".repeat(64) },
-  }), /fresh incident-focused proof/u,
-  "a changed deferred gate input cannot use carry-forward");
   incidentCandidate = { commit:"repair-commit", tree:"repair-tree" };
   incidentCandidateChangedPaths = [];
   incidentNow = "2026-08-09T00:00:03.000Z";
@@ -3656,6 +3639,10 @@ for (const focusedPolicyPath of [
   "scripts/verification-reliability-runtime.mjs",
   "scripts/verification-reliability-store.mjs",
 ]) {
+  assert.deepEqual(planVerification(synthetic, {
+    changedPaths:[focusedPolicyPath],
+  }).packIds, ["process"],
+  "the policy path keeps ordinary process ownership without an explicit focused pack");
   const focusedPolicyPlan = planVerification(synthetic, {
     packIds:["alpha", "beta"],
     changedPaths:["src/alpha/change.ts", focusedPolicyPath],
