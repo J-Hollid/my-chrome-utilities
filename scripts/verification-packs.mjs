@@ -1217,7 +1217,9 @@ export function planVerification(
           : historicalOwnershipUnavailable ? "historical-ownership-unavailable"
             : null;
   const allRunnableIds = packs.filter(runnable).map(({ id }) => id);
-  if (terminalFull) selected = new Set(allRunnableIds);
+  const canonicalRunnableSelection = allRunnableIds.length === explicit.size &&
+    allRunnableIds.every((id) => explicit.has(id));
+  if (terminalFull || canonicalRunnableSelection) selected = new Set(allRunnableIds);
 
   const affectedFor = (registry, changedPath, {
     exactVerificationChange = true, forceVerificationExact = false,
@@ -1468,7 +1470,7 @@ export function planVerification(
       ],
     });
   });
-  const styleSmokeOnly = changedStyleTargets.size > 0;
+  const styleSmokeOnly = changedStyleTargets.size > 0 && !terminalFull && !canonicalRunnableSelection;
   const mode = browserTargetIds.length ? "focused" : terminalFull ? "terminal" : explicit.size ? "exact" : "impact";
   const checkpointTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) => values(pack, "checkpointCommands")
     .filter((checkpoint) => !checkpoint.modes || checkpoint.modes.includes(mode))
