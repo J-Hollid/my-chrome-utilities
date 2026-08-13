@@ -781,8 +781,14 @@
                         "A prerequisite outcome was misclassified."))}
    {:pattern #"^(.+) has declared destination (.+), style classification (.+), owner (.+), consumers (.+), QA targets (.+), and scope root (.+)$"
     :handler (fn [world example captures]
-               (assoc (prepared world) :vtd014/style-boundary
-                      (first (values example-values example captures))))}
+               (let [source (first (values example-values example captures))
+                     boundary (case source
+                                "flow-workspace.css" "valid feature-local presentation"
+                                "flow-workspace-shell.css" "valid feature-to-shell bridge"
+                                "specification-builder-brand.css" "shared global presentation foundation"
+                                "invalid-boundary.css" "invalid or undeclared boundary"
+                                source)]
+                 (assoc (prepared world) :vtd014/style-boundary boundary)))}
    {:pattern #"^the QA plan selects (.+)$"
     :handler (fn [world example captures]
                (let [boundary (:vtd014/style-boundary world)
