@@ -779,7 +779,35 @@
                                                                   :prerequisiteGate
                                                                   :classifications])))
                         "A prerequisite outcome was misclassified."))}
-   {:pattern #"^it records (.+)$"
+   {:pattern #"^(.+) has declared destination (.+), style classification (.+), owner (.+), consumers (.+), QA targets (.+), and scope root (.+)$"
+    :handler (fn [world example captures]
+               (assoc (prepared world) :vtd014/style-boundary
+                      (first (values example-values example captures))))}
+   {:pattern #"^the QA plan selects (.+)$"
+    :handler (fn [world example captures]
+               (let [boundary (:vtd014/style-boundary world)
+                     expected (first (values example-values example captures))
+                     evidence (get-in world [:vtd014/evidence :styles boundary])]
+                 (assert! world (and (= expected (:expectedScope evidence))
+                                     (= expected (:selected evidence))
+                                     (or (= expected "no task launch")
+                                         (and (:plannerInvoked evidence)
+                                              (:reviewEvidencePath evidence))))
+                          "Stylesheet QA scope did not come from the production planner and evidence path.")))}
+   {:pattern #"^(?:the plan records|it records) terminal-full obligation (.+)$"
+    :handler (fn [world example captures]
+               (let [boundary (:vtd014/style-boundary world)
+                     expected (first (values example-values example captures))
+                     evidence (get-in world [:vtd014/evidence :styles boundary])]
+                 (assert! world (= (= "present" expected) (:terminalFullObligation evidence))
+                          "Stylesheet terminal-full obligation does not match the production planner.")))}
+   {:pattern #"^no all-20 feature-mode task launches$"
+    :handler (fn [world _ _]
+               (let [boundary (:vtd014/style-boundary world)
+                     evidence (get-in world [:vtd014/evidence :styles boundary])]
+                 (assert! world (and (map? evidence) (< (count (:selectedPackIds evidence)) 20))
+                          "Feature-integration stylesheet planning broadened to the all-20 terminal scope.")))}
+   {:pattern #"^it records (a structured prerequisite block|an execution-contract incident|the task's normal reliability failure)$"
     :handler (fn [world example captures]
                (let [classification (first (values example-values example captures))
                      contract (prerequisite-outcome-contract (:vtd014/prerequisite-boundary world))]

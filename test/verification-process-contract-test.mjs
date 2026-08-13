@@ -2968,9 +2968,15 @@ console.log("repairTmp=" + process.env.TMPDIR);
     { packIds:allPackIds, includeProperties:true });
   const acceptedBaseConservationPlan = planVerification(acceptedBasePacks,
     { packIds:allPackIds, includeProperties:true });
+  const approvedStyleSmokeTargetIds = new Set([
+    "STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
+    "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
+  ]);
   const packContract = (packs) => packs.filter(({ id }) => allPackIds.includes(id))
     .map(({ id, dependencies, browserObservations,
-      checkpointCommands }) => ({ id, dependencies, browserObservations, checkpointCommands }));
+      checkpointCommands }) => ({ id, dependencies,
+      browserObservations:(browserObservations ?? []).filter(({ id: targetId }) =>
+        !approvedStyleSmokeTargetIds.has(targetId)), checkpointCommands }));
   const currentCalibration = JSON.parse(await readFile(
     new URL("../verification/performance-calibration.json", import.meta.url), "utf8"));
   const acceptedBaseCalibration = JSON.parse(await new Promise((resolve, reject) => execFile("git",
@@ -3221,6 +3227,11 @@ console.log("repairTmp=" + process.env.TMPDIR);
         "unit:test/flow-reload-lifecycle-test.mjs",
         "unit:test/workspace-tabs-installed-controller-test.mjs",
         "unit:test/settled-final-verification-workflow-test.mjs",
+        "unit:test/package-clean-checkout-contract-test.mjs",
+        "unit:test/verification-evidence-production-path-test.mjs",
+        "property:test/stylesheet-declarations-property-test.mjs",
+        "browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
+        "browser-observation:SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
         `acceptance-parse:${vtd014ApprovedVtd015Feature}`,
         `acceptance-generate:${vtd014ApprovedVtd015Feature}`,
         `acceptance-parse:${vtd014ApprovedVtd017Feature}`,
@@ -6138,6 +6149,57 @@ assert.deepEqual(studioStyleImpact.adapterAuthorizationPackIds, ["shell"],
   "global smoke scheduling carries separate adapter authorization metadata");
 assert.equal(studioStyleImpact.unitTasks.length, 0,
   "global feature CSS does not select unrelated owner unit tasks");
+const styleFixtureDeclaration = (source, classification, owner, consumers = []) => ({
+  source, destination:source, classification, owner, consumers, qaTargets:[],
+  scopeRoot:classification === "global" ? null : ".documentary-flow",
+});
+const styleFixtureRegistry = (source, declaration) => packs.map((pack) => pack.id === declaration.owner
+  ? { ...pack, source:[...(pack.source ?? []), source],
+    stylesheets:[...(pack.stylesheets ?? []), declaration] } : pack);
+const styleBoundaryEvidence = {};
+for (const [label, source, declaration, expectedScope] of [
+  ["valid feature-local presentation", "flow-workspace.css",
+    styleFixtureDeclaration("flow-workspace.css", "feature-local", "flow_graph"), "flow_graph"],
+  ["valid feature-to-shell bridge", "flow-workspace-shell.css",
+    styleFixtureDeclaration("flow-workspace-shell.css", "shell-bridge", "flow_graph", ["shell"]),
+    "flow_graph and shell"],
+]) {
+  const registry = styleFixtureRegistry(source, declaration);
+  const stylePlan = stylesheetPlanFor(registry, source);
+  const reviewPlan = planVerification(registry, { changedPaths:[source] });
+  styleBoundaryEvidence[label] = {
+    plannerInvoked:Boolean(stylePlan), reviewEvidencePath:Boolean(reviewPlan),
+    selected:stylePlan.selected.join(" and "), selectedPackIds:reviewPlan.selectedPackIds,
+    terminalFullObligation:stylePlan.terminalFullObligation,
+    terminalFullObligations:reviewPlan.terminalFullObligations,
+    taskCount:reviewPlan.tasks.length, expectedScope,
+  };
+}
+styleBoundaryEvidence["shared global presentation foundation"] = {
+  plannerInvoked:Boolean(studioStylePlan), reviewEvidencePath:Boolean(studioStyleImpact),
+  selected:studioStylePlan.selected.join(" and ") || "declared QA targets",
+  selectedPackIds:studioStyleImpact.selectedPackIds,
+  styleSmokeTargets:studioStylePlan.styleSmokeTargets,
+  terminalFullObligation:studioStylePlan.terminalFullObligation,
+  terminalFullObligations:studioStyleImpact.terminalFullObligations,
+  taskCount:studioStyleImpact.tasks.length, expectedScope:"declared QA targets",
+};
+const invalidStyleDeclaration = {
+  ...styleFixtureDeclaration("invalid-boundary.css", "global", "shell"), qaTargets:[],
+};
+let invalidStyleBlocked = false;
+try {
+  validateStylesheetDeclarations([invalidStyleDeclaration], {
+    packIds:["shell"], sourcePaths:["invalid-boundary.css"],
+  });
+} catch { invalidStyleBlocked = true; }
+styleBoundaryEvidence["invalid or undeclared boundary"] = {
+  plannerInvoked:false, reviewEvidencePath:false, selected:"no task launch",
+  selectedPackIds:[], styleSmokeTargets:[], terminalFullObligation:false,
+  terminalFullObligations:[], taskCount:0, expectedScope:"no task launch",
+  validationBlocked:invalidStyleBlocked,
+};
+vtd014Evidence.styles = styleBoundaryEvidence;
 const smokeAdapterImpact = planVerification(packs, {
   packIds:["shell"], changedPaths:["test/browser-packs/global-style-smoke.mjs"],
 });
