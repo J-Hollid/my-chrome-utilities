@@ -149,6 +149,13 @@ export async function validateUnresolvedIncidentTaskSuccession({incidents,curren
     if(incident.failure?.failureClass==="execution-contract-failure"&&
         incident.failure?.task?.stage==="promotion")continue;
     if(currentDigests.has(verificationTaskDigest(incident.failure.task)))continue;
+    const diagnosedTargets=incident.failure.retryScope?.logicalTargetIds??[];
+    const selectedTargetReassessments=currentIdentities.filter(identity=>
+      identity.key===incident.failure.task.key&&diagnosedTargets.length===1&&
+      identity.logicalTargetIds?.includes(diagnosedTargets[0]));
+    if(incident.repair?.status==="eligible"&&
+        incident.terminalVerificationDeferred?.status==="terminal-verification-deferred"&&
+        selectedTargetReassessments.length===1)continue;
     mappings.push({incidentId:incident.id,mapping:await resolveIncidentTaskSuccession({incident,
       currentIdentities,currentPacks,graph,loadHistoricalPacks})});
   }

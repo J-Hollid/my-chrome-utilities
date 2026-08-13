@@ -55,6 +55,29 @@ assert.deepEqual(await validateUnresolvedIncidentTaskSuccession({incidents:[{
     task:task("promotion:artifact-binding",{stage:"promotion",executable:"internal",args:[]})},
 }],currentIdentities:[batch],currentPacks:[],graph:batchGraph}),[],
 "internal promotion execution contracts do not invent registry task succession");
+const expandedBatch={...batch,environment:{...batch.environment,FLOW_EVIDENCE_REVISION:"2"}};
+assert.deepEqual(await validateUnresolvedIncidentTaskSuccession({incidents:[{
+  state:"unresolved",repair:{status:"eligible"},
+  terminalVerificationDeferred:{status:"terminal-verification-deferred"},
+  failure:{failureClass:"nonzero-exit",task:batch,
+    retryScope:{kind:"target",logicalTargetIds:["FLOW"]}},
+}],currentIdentities:[expandedBatch],currentPacks:[],graph:batchGraph}),[],
+"an eligible deferred target with the same selected task key remains pending for focused reassessment when its evidence boundary expands");
+await assert.rejects(()=>validateUnresolvedIncidentTaskSuccession({incidents:[{
+  state:"unresolved",repair:{status:"eligible"},
+  terminalVerificationDeferred:{status:"terminal-verification-deferred"},
+  failure:{failureClass:"nonzero-exit",task:batch,
+    retryScope:{kind:"target",logicalTargetIds:["FLOW"]}},
+}],currentIdentities:[expandedBatch,{...expandedBatch,environment:{...expandedBatch.environment,variant:"ambiguous"}}],
+currentPacks:[],graph:batchGraph}),/registry history|succession/iu,
+"ambiguous current target reassessment remains fail closed");
+await assert.rejects(()=>validateUnresolvedIncidentTaskSuccession({incidents:[{
+  state:"unresolved",repair:{status:"proposed"},
+  terminalVerificationDeferred:{status:"terminal-verification-deferred"},
+  failure:{failureClass:"nonzero-exit",task:batch,
+    retryScope:{kind:"target",logicalTargetIds:["FLOW"]}},
+}],currentIdentities:[expandedBatch],currentPacks:[],graph:batchGraph}),/registry history|succession/iu,
+"a noneligible repair cannot use deferred focused reassessment");
 
 const splitSource=task("unit:combined"),splitOne=task("unit:split-one"),splitTwo=task("unit:split-two");
 const splitBoundary=boundary("complete-failed-boundary"),otherBoundary=boundary("unrelated-boundary");
