@@ -1366,8 +1366,9 @@ export function planVerification(
     }) : [];
   const ordered = packs.filter(({ id }) => selected.has(id));
   const runnablePacks = ordered.filter(runnable);
-  const executionPacks = shardedPacks(
-    runnablePacks.length ? runnablePacks : styleSmokeAuthorization.filter(runnable), shard);
+  const executionPacks = canonicalRunnableSelection
+    ? packs.filter(runnable)
+    : shardedPacks(runnablePacks.length ? runnablePacks : styleSmokeAuthorization.filter(runnable), shard);
   if (!executionPacks.some(runnable)) throw new Error("Verification plan has no runnable checks");
 
   const preparationTasks = skipBuild ? [] : [commandTask({

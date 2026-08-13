@@ -193,6 +193,12 @@ try {
     packIds:runnablePackIds, changedPaths:terminalChangeSet.paths, changeSet:terminalChangeSet,
     basePacks:packs, includeProperties:true,
   });
+  assert.deepEqual(terminalRawPlan.selectedPackIds, runnablePackIds,
+    "canonical explicit selection retains every runnable selected pack");
+  assert.deepEqual(terminalRawPlan.packIds, runnablePackIds,
+    "canonical explicit selection retains every runnable pack claim");
+  assert.ok(terminalRawPlan.tasks.some(({ packId }) => packId && packId !== "shell"),
+    "canonical execution includes non-Shell pack tasks");
   const terminalPlan = evidencePlan(terminalRawPlan, packs);
   assert.equal(terminalPlan.packIds.length, 20, "terminal fixture uses the canonical runnable pack set");
   assert.ok(terminalPlan.tasks.some(({ key }) => key.startsWith("property:")),
