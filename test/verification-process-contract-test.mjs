@@ -6335,7 +6335,6 @@ const codeReachabilityGaps = [];
 const approvedFlowStyleAuditPaths = new Set([
   "src/flow-graph/flow-workspace.css",
   "src/flow-graph/flow-workspace-shell.css",
-  "test/browser-packs/flow-graph.mjs",
 ]);
 const observedFlowStyleAuditPaths = new Set();
 for (const edge of crossPackCodeEdges) {
