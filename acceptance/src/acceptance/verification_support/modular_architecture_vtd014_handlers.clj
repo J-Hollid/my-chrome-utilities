@@ -1176,33 +1176,50 @@
    {:pattern #"^the installed Flow workspace renders (.+) before and after stylesheet extraction$"
     :handler (fn [world example captures]
                (let [state (first (values example-values example captures))
-                     prepared-world (prepared world)]
+                     prepared-world (prepared world)
+                     rows (get-in prepared-world [:vtd014/evidence :flowStyles :runtimeContract :rows])]
                  (assert! (assoc prepared-world :vtd014/flow-style-state state)
-                          (some #{state} (get-in prepared-world [:vtd014/evidence :flowStyles :displayMatrix]))
+                          (some #(= state (:state %)) rows)
                           "Unknown Flow stylesheet presentation state.")))}
    {:pattern #"^its declared style boundary is observed at (.+) in (.+)$"
     :handler (fn [world example captures]
-               (let [[viewport mode] (values example-values example captures)]
-                 (assert! world
-                          (and (some #{viewport} (get-in world [:vtd014/evidence :flowStyles :viewportMatrix]))
-                               (some #{mode} (get-in world [:vtd014/evidence :flowStyles :modeMatrix]))
-                               (true? (get-in world [:vtd014/evidence :flowStyles :installedObservation])))
+               (let [[viewport mode] (values example-values example captures)
+                     state (:vtd014/flow-style-state world)
+                     contract (get-in world [:vtd014/evidence :flowStyles :runtimeContract])
+                     row (some #(when (= state (:state %)) %) (:rows contract))]
+                 (assert! (assoc world :vtd014/flow-style-row row)
+                          (and (= viewport (:viewport row))
+                               (= mode (:displayMode row))
+                               (= "66b91e38e6" (:baseCommit contract))
+                               (= "browser-observation:FLOW_STYLESHEET_EXTRACTION_TARGET"
+                                  (:observationTask contract))
+                               (= [25 100 200] (:zooms contract)))
                           "Flow installed style observation does not cover its declared matrix.")))}
    {:pattern #"^component geometry, computed presentation, visible controls, focus behavior, and responsive containment are equivalent$"
     :handler (fn [world _ _]
-               (assert! world (true? (get-in world [:vtd014/evidence :flowStyles :computedAndGeometry]))
-                        "Flow computed presentation and geometry evidence is incomplete."))}
+               (let [paths (get-in world [:vtd014/evidence :flowStyles :runtimeContract :resultPaths])]
+                 (assert! world (and (map? (:vtd014/flow-style-row world))
+                                     (= "flowGraph.styles.equivalence" (:equivalence paths))
+                                     (= "flowGraph.styles.keyboardFocus" (:keyboardFocus paths)))
+                          "Flow computed presentation and geometry evidence is incomplete.")))}
    {:pattern #"^reduced-motion and forced-colors behavior remain available where applicable$"
     :handler (fn [world _ _]
-               (assert! world (true? (get-in world [:vtd014/evidence :flowStyles :accessibilityAndMedia]))
-                        "Flow accessibility media evidence is incomplete."))}
+               (let [paths (get-in world [:vtd014/evidence :flowStyles :runtimeContract :resultPaths])]
+                 (assert! world (and (= "flowGraph.styles.reducedMotion" (:reducedMotion paths))
+                                     (= "flowGraph.styles.forcedColors" (:forcedColors paths)))
+                          "Flow accessibility media evidence is incomplete.")))}
    {:pattern #"^canonical project bytes, Flow revision, and Undo depth remain unchanged$"
     :handler (fn [world _ _]
-               (assert! world (true? (get-in world [:vtd014/evidence :flowStyles :canonicalStable]))
+               (assert! world (= "flowGraph.styles.canonicalStable"
+                                 (get-in world [:vtd014/evidence :flowStyles :runtimeContract
+                                                :resultPaths :canonicalStable]))
                         "Flow style observation changes canonical project state."))}
    {:pattern #"^the packaged extension loads the local and bridge assets without a missing reference$"
     :handler (fn [world _ _]
-               (assert! world (true? (get-in world [:vtd014/evidence :flowStyles :packageAssets]))
+               (assert! world (and (true? (get-in world [:vtd014/evidence :flowStyles :packageAssets]))
+                                   (= "flowGraph.styles.assetsLoaded"
+                                      (get-in world [:vtd014/evidence :flowStyles :runtimeContract
+                                                     :resultPaths :packageAssets])))
                         "The installed Flow stylesheet assets are not package-addressable."))}])
 
 (defn- task-succession-handlers [example-values]

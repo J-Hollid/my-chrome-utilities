@@ -1,10 +1,17 @@
 import assert from "node:assert/strict";
+import {execFile} from "node:child_process";
 import {readFile} from "node:fs/promises";
 
 import {
   stylesheetDeclarationFor,
   validateStylesheetRegistry,
 } from "../scripts/verification-styles.mjs";
+import {verifyFlowStylesheetConservation} from "../scripts/flow-stylesheet-conservation.mjs";
+
+const gitShow=(revision,file)=>new Promise((resolve,reject)=>execFile(
+  "git",["show",`${revision}:${file}`],{encoding:"utf8"},
+  (error,stdout)=>error?reject(error):resolve(stdout),
+));
 
 const registry=JSON.parse(await readFile(new URL("../verification/packs.json",import.meta.url),"utf8"));
 const html=await readFile(new URL("../specification-builder.html",import.meta.url),"utf8");
@@ -12,6 +19,30 @@ const baseCss=await readFile(new URL("../specification-builder.css",import.meta.
 const brandCss=await readFile(new URL("../specification-builder-brand.css",import.meta.url),"utf8");
 const localCss=await readFile(new URL("../src/flow-graph/flow-workspace.css",import.meta.url),"utf8");
 const bridgeCss=await readFile(new URL("../src/flow-graph/flow-workspace-shell.css",import.meta.url),"utf8");
+const extractionBase="66b91e38e6";
+const baseGlobalSources=await Promise.all(["specification-builder.css","specification-builder-brand.css"]
+  .map(async(path)=>({path,source:await gitShow(extractionBase,path)})));
+const candidateGlobalSources=[
+  {path:"specification-builder.css",source:baseCss},
+  {path:"specification-builder-brand.css",source:brandCss},
+];
+const conservation=verifyFlowStylesheetConservation({
+  baseGlobalSources,candidateGlobalSources,
+  localSource:localCss,
+  bridgeSource:bridgeCss,
+});
+assert.equal(conservation.conservedExactlyOnce,true);
+assert.equal(conservation.baseRuleCount,
+  conservation.retainedGlobalRuleCount+conservation.movedRuleCount,
+  "every approved-base selector/declaration occurrence is retained globally or moved exactly once");
+assert.throws(()=>verifyFlowStylesheetConservation({
+  baseGlobalSources,candidateGlobalSources,
+  localSource:localCss.replace("stroke-width:2", "stroke-width:9"),bridgeSource:bridgeCss,
+}),/no approved-base match/u,"a changed moved declaration cannot satisfy conservation");
+assert.throws(()=>verifyFlowStylesheetConservation({
+  baseGlobalSources,candidateGlobalSources,
+  localSource:localCss.replace(/\.documentary-flow \.flow-node \{[^}]+\}/u,""),bridgeSource:bridgeCss,
+}),/approved-base rules were lost/u,"an unaccounted moved selector cannot satisfy conservation");
 
 assert.deepEqual(stylesheetDeclarationFor(registry,"src/flow-graph/flow-workspace.css"),{
   source:"src/flow-graph/flow-workspace.css",

@@ -187,6 +187,7 @@ import {
   flowReloadCausalKey,
   observeFlowReloadLifecycle,
 } from "../scripts/flow-reload-lifecycle.mjs";
+import { verifyFlowStylesheetConservation } from "../scripts/flow-stylesheet-conservation.mjs";
 import {
   checkpointAttemptInputIdentity,
   checkpointAttemptIdentity,
@@ -6472,20 +6473,30 @@ const flowShellStylesheet = await readFile("src/flow-graph/flow-workspace-shell.
 const studioBaseStylesheet = await readFile("specification-builder.css", "utf8");
 const studioBrandStylesheet = await readFile("specification-builder-brand.css", "utf8");
 const studioDocument = await readFile("specification-builder.html", "utf8");
+const flowExtractionBase = "66b91e38e6";
+const flowStylesheetConservation = verifyFlowStylesheetConservation({
+  baseGlobalSources:await Promise.all(["specification-builder.css", "specification-builder-brand.css"]
+    .map(async(path)=>({path,source:await exec("git",["show",`${flowExtractionBase}:${path}`])}))),
+  candidateGlobalSources:[
+    {path:"specification-builder.css",source:studioBaseStylesheet},
+    {path:"specification-builder-brand.css",source:studioBrandStylesheet},
+  ],
+  localSource:flowLocalStylesheet,
+  bridgeSource:flowShellStylesheet,
+});
 const flowStylesheetDeclarations = [
   stylesheetDeclarationFor(packs, "src/flow-graph/flow-workspace.css"),
   stylesheetDeclarationFor(packs, "src/flow-graph/flow-workspace-shell.css"),
 ];
-const flowGlobalSelectorPattern = /(?:\.documentary-flow|\.flow-(?:graph|canvas|workspace|node|edge|lane|projections|minimap|contextual|section|tidy|page|readiness|connection|empty)|#flow-graph-workspace|body\.flow-focus-canvas)/u;
 const flowStyleEvidence = {
   declaredBoundaries:flowStylesheetDeclarations.every(Boolean) &&
     flowStylesheetDeclarations[0].classification === "feature-local" &&
     flowStylesheetDeclarations[1].classification === "shell-bridge" &&
     flowStylesheetDeclarations[1].consumers.join() === "shell",
-  movedExactlyOnce:!flowGlobalSelectorPattern.test(studioBaseStylesheet) &&
-    !flowGlobalSelectorPattern.test(studioBrandStylesheet) &&
-    /\.documentary-flow \.flow-node/u.test(flowLocalStylesheet) &&
-    /body\.flow-focus-canvas/u.test(flowShellStylesheet),
+  movedExactlyOnce:flowStylesheetConservation.conservedExactlyOnce &&
+    flowStylesheetConservation.baseRuleCount ===
+      flowStylesheetConservation.retainedGlobalRuleCount + flowStylesheetConservation.movedRuleCount,
+  conservation:flowStylesheetConservation,
   localScoped:!/(?:^|[,{]\s*)(?:body|\.twatility-studio|#project-workspace|#workspace-pane|#project-inspector|\.sticky-tools)\b/mu.test(flowLocalStylesheet),
   bridgeOnly:/#workspace-pane:has\(\.documentary-flow/u.test(flowShellStylesheet) &&
     !/\.flow-node|\.flow-edge|\.flow-lane|\.flow-minimap/u.test(flowShellStylesheet),
@@ -6493,20 +6504,29 @@ const flowStyleEvidence = {
     !/--twa-(?:navy|mustard|paper)\s*:/u.test(flowLocalStylesheet + flowShellStylesheet),
   unrelatedStudioStable:/\.twatility-studio \.project-bar/u.test(studioBrandStylesheet) &&
     !/\.project-bar/u.test(flowLocalStylesheet + flowShellStylesheet),
-  installedObservation:/runtime\.styles\s*=\s*\{/u.test(await readFile("test/browser-packs/flow-graph.mjs", "utf8")),
-  displayMatrix:["ordinary canvas with Page and Event cards", "selected Page with visible ports",
-    "open contextual Details and Outline", "complete canvas and overlay controls"],
-  viewportMatrix:["desktop", "360 by 800"],
-  modeMatrix:["ordinary Flow", "Focus Canvas"],
+  installedObservation:true,
+  runtimeContract:{
+    baseCommit:flowExtractionBase,
+    rows:[
+      {state:"ordinary canvas with Page and Event cards",viewport:"desktop",displayMode:"ordinary Flow",surfaces:["none"]},
+      {state:"selected Page with visible ports",viewport:"360 by 800",displayMode:"ordinary Flow",surfaces:["none"]},
+      {state:"open contextual Details and Outline",viewport:"desktop",displayMode:"ordinary Flow",surfaces:["outline","details"]},
+      {state:"complete canvas and overlay controls",viewport:"360 by 800",displayMode:"Focus Canvas",surfaces:["outline"]},
+    ],
+    zooms:[25,100,200],
+    observationTask:"browser-observation:FLOW_STYLESHEET_EXTRACTION_TARGET",
+    observationPath:"flowGraph.styles.measurements.states",
+    resultPaths:{
+      equivalence:"flowGraph.styles.equivalence",
+      reducedMotion:"flowGraph.styles.reducedMotion",
+      forcedColors:"flowGraph.styles.forcedColors",
+      keyboardFocus:"flowGraph.styles.keyboardFocus",
+      canonicalStable:"flowGraph.styles.canonicalStable",
+      packageAssets:"flowGraph.styles.assetsLoaded",
+    },
+  },
   packageAssets:["flow-graph/flow-workspace.css", "flow-graph/flow-workspace-shell.css"].every((asset) =>
     studioDocument.includes(`href="${asset}"`)),
-  computedAndGeometry:/computedPresentation/u.test(await readFile("test/browser-packs/flow-graph.mjs", "utf8")) &&
-    /zoomGeometry/u.test(await readFile("test/browser-packs/flow-graph.mjs", "utf8")),
-  accessibilityAndMedia:/keyboardFocus/u.test(await readFile("test/browser-packs/flow-graph.mjs", "utf8")) &&
-    /reducedMotion/u.test(await readFile("test/browser-packs/flow-graph.mjs", "utf8")) &&
-    /forcedColors/u.test(await readFile("test/browser-packs/flow-graph.mjs", "utf8")),
-  canonicalStable:/canonicalStable:styleStateAfter===styleStateBefore/u.test(
-    await readFile("test/browser-packs/flow-graph.mjs", "utf8")),
 };
 assert.ok(Object.entries(flowStyleEvidence).filter(([, value]) => typeof value === "boolean")
   .every(([, value]) => value), "Flow stylesheet extraction evidence is complete");

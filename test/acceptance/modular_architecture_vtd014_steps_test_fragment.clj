@@ -51,6 +51,34 @@
                                                    {:result "observed"}}}}}
           [:execution :rows] "outline row" :result))))
 
+(deftest vtd014-flow-style-example-binds-the-installed-observation-contract
+  (let [feature (gherkin/parse-file "features/modular-verification-packs.feature")
+        execution (first (filter #(= "Modular verification packs 158/example_2" (:name %))
+                                 (runtime/expand-executions feature)))
+        contract {:baseCommit "66b91e38e6"
+                  :rows [{:state "selected Page with visible ports"
+                          :viewport "360 by 800" :displayMode "ordinary Flow"
+                          :surfaces ["none"]}]
+                  :zooms [25 100 200]
+                  :observationTask "browser-observation:FLOW_STYLESHEET_EXTRACTION_TARGET"
+                  :observationPath "flowGraph.styles.measurements.states"
+                  :resultPaths {:equivalence "flowGraph.styles.equivalence"
+                                :reducedMotion "flowGraph.styles.reducedMotion"
+                                :forcedColors "flowGraph.styles.forcedColors"
+                                :keyboardFocus "flowGraph.styles.keyboardFocus"
+                                :canonicalStable "flowGraph.styles.canonicalStable"
+                                :packageAssets "flowGraph.styles.assetsLoaded"}}
+        evidence {:flowStyles {:installedObservation true :runtimeContract contract
+                               :packageAssets true}}]
+    (with-redefs-fn {#'vtd014/production-evidence! (constantly evidence)}
+      #(is (map? (runtime/run-execution! execution modular/handlers))))
+    (with-redefs-fn {#'vtd014/production-evidence!
+                     (constantly (assoc-in evidence [:flowStyles :runtimeContract :rows 0 :viewport]
+                                           "desktop"))}
+      #(is (thrown-with-msg? clojure.lang.ExceptionInfo
+                             #"declared matrix"
+                             (runtime/run-execution! execution modular/handlers))))))
+
 (defn- invoke-handler
   ([handlers world text captures]
    (invoke-handler handlers world text captures nil))

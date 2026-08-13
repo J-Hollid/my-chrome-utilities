@@ -3328,7 +3328,8 @@
               "flowGraph.styles.reducedMotion",
               "flowGraph.styles.forcedColors",
               "flowGraph.styles.keyboardFocus",
-              "flowGraph.styles.canonicalStable"
+              "flowGraph.styles.canonicalStable",
+              "flowGraph.styles.equivalence"
             ]
           },
           {

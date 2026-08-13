@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
@@ -72,6 +72,17 @@ const selectedTargetIds = process.env.SWARMFORGE_BROWSER_TARGET_IDS
     : [];
 const selectedTargets = planFlowBrowserTargets(
     selectedTargetIds, process.env.FLOW_GRAPH_BROWSER_SHARD ?? "core");
+const flowStylesheetExtractionBase = "66b91e38e6";
+const gitShow = (revision, file) => new Promise((resolve, reject) => execFile(
+    "git", ["show", `${revision}:${file}`], { encoding:"utf8", maxBuffer:2_000_000 },
+    (error, stdout, stderr) => error ? reject(new Error(stderr || error.message)) : resolve(stdout),
+));
+const flowStyleBaseline = selectedTargets.some(({ id }) => id === "FLOW_STYLESHEET_EXTRACTION_TARGET")
+    ? {
+        base:await gitShow(flowStylesheetExtractionBase, "specification-builder.css"),
+        brand:await gitShow(flowStylesheetExtractionBase, "specification-builder-brand.css"),
+    }
+    : undefined;
 const processStarted = performance.now();
 const configuredProtocolCallLimitMilliseconds = Number(
     process.env.SWARMFORGE_VTD007_PROTOCOL_CALL_LIMIT_MS ?? 120000,
@@ -207,32 +218,114 @@ try {
             for (const [key, value] of Object.entries(row))
                 geometryEvidence[`${label}_${key}`] = value;
         }
-        const styleStateBefore = await evaluate(`(async()=>{const repository=await(await import('./data-layer-durable-project-repository.js')).openIndexedDbProjectRepository(),loaded=await repository.loadProject(${JSON.stringify(seeded.projectId)}),graph=loaded.state.project.documentationFlowGraphs[${JSON.stringify(seeded.flowId)}];return JSON.stringify({graph,revision:loaded.draftSequence,undo:loaded.state.history.undo.length});})()`);
-        const assetPresentation = await evaluate(`(()=>{const hrefs=[...document.styleSheets].flatMap(sheet=>sheet.href?[new URL(sheet.href).pathname]:[]),required=['/flow-graph/flow-workspace.css','/flow-graph/flow-workspace-shell.css'],canvas=document.querySelector('[aria-label="Interactive directional Flow canvas"]'),node=document.querySelector('.flow-page-frame'),port=document.querySelector('[data-input-port-for]'),portBox=port?.getBoundingClientRect(),toolbar=document.querySelector('[aria-label="Flow toolbar"]'),buttons=[...toolbar.querySelectorAll('button')];return{assetsLoaded:required.every(path=>hrefs.includes(path))&&required.every(path=>hrefs.filter(href=>href===path).length===1),computedPresentation:Boolean(canvas&&node&&port&&getComputedStyle(canvas).backgroundColor!=='rgba(0, 0, 0, 0)'&&getComputedStyle(node).fill!=='none'&&getComputedStyle(port).visibility!=='hidden'&&(portBox?.width??0)>0&&(portBox?.height??0)>0),visibleControls:['Add','Focus Canvas','Zoom in','Fit Flow','Outline','Details'].every(label=>{const button=buttons.find(item=>item.textContent.trim()===label),box=button?.getBoundingClientRect();return Boolean(box&&box.width>0&&box.height>0);})};})()`);
-        const zoomGeometry = {};
-        for (const scale of [0.25, 1, 2]) {
-            await socket.call("Emulation.setPageScaleFactor", { pageScaleFactor:scale });
-            zoomGeometry[String(scale)] = await evaluate("(()=>{const canvas=document.querySelector('[aria-label=\"Interactive directional Flow canvas\"]'),viewport=document.querySelector('.flow-canvas-viewport'),canvasBox=canvas?.getBoundingClientRect(),viewportBox=viewport?.getBoundingClientRect();return Boolean(canvasBox&&viewportBox&&canvasBox.width>0&&canvasBox.height>0&&viewportBox.width>0&&viewportBox.height>0);})()");
+        const styleStateBefore = await evaluate(`(async()=>{const repository=await(await import('./data-layer-durable-project-repository.js')).openIndexedDbProjectRepository(),loaded=await repository.loadProject(${JSON.stringify(seeded.projectId)}),graph=loaded.state.project.documentationFlowGraphs[${JSON.stringify(seeded.flowId)}];return JSON.stringify({project:loaded.state.project,graph,revision:loaded.draftSequence,undo:loaded.state.history.undo.length});})()`);
+        assert.ok(flowStyleBaseline, "Flow stylesheet extraction requires its approved-base styles");
+        const switchFlowStyles = async (mode) => evaluate(`(async()=>{const mode=${JSON.stringify(mode)},paths={base:'/specification-builder.css',brand:'/specification-builder-brand.css',local:'/flow-graph/flow-workspace.css',bridge:'/flow-graph/flow-workspace-shell.css'},links=[...document.querySelectorAll('link[rel="stylesheet"]')],linkFor=(path)=>links.find(link=>new URL(link.href).pathname===path);document.querySelectorAll('style[data-flow-extraction-baseline]').forEach(node=>node.remove());for(const path of Object.values(paths)){const link=linkFor(path);if(!link)throw new Error('Missing installed stylesheet '+path);link.media=mode==='base'?'not all':'';}if(mode==='base'){for(const [path,source]of[[paths.base,${JSON.stringify(flowStyleBaseline.base)}],[paths.brand,${JSON.stringify(flowStyleBaseline.brand)}]]){const link=linkFor(path),style=document.createElement('style');style.dataset.flowExtractionBaseline=path;style.textContent=source;link.before(style);}}await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));return{mode,baselineCount:document.querySelectorAll('style[data-flow-extraction-baseline]').length,suppressed:links.filter(link=>link.media==='not all').map(link=>new URL(link.href).pathname).sort()};})()`);
+        const configureFlowState = async ({ focusCanvas, selected, surface }) => evaluate(`(async()=>{const button=(label)=>[...document.querySelectorAll('[aria-label="Flow toolbar"] button')].find(item=>item.textContent.trim()===label),focus=${focusCanvas};if(document.body.classList.contains('flow-focus-canvas')!==focus)button(focus?'Focus Canvas':'Exit Focus Canvas')?.click();const open=[...document.querySelectorAll('[aria-label="Flow toolbar"] [data-flow-surface][aria-expanded="true"]')][0];if(open)open.click();if(${selected}){const frame=document.querySelector('g[data-page-frame-id]:not([data-occurrence-id])');if(!frame)throw new Error('Missing Page frame for style state');if(!frame.classList.contains('is-selected'))frame.dispatchEvent(new MouseEvent('click',{bubbles:true}));}if(${JSON.stringify(surface)}!=='none'){const target=button(${JSON.stringify(surface === "none" ? "" : surface[0].toUpperCase() + surface.slice(1))});if(!target)throw new Error('Missing Flow surface control');target.click();}await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));return{focusCanvas:document.body.classList.contains('flow-focus-canvas'),selected:Boolean(document.querySelector('g[data-page-frame-id].is-selected')),surface:document.querySelector('.flow-workspace-surface')?.dataset.flowWorkspaceSurface??${JSON.stringify(surface)}};})()`);
+        const setFlowZoom = async (percent) => evaluate(`(async()=>{const toolbar=document.querySelector('[aria-label="Flow toolbar"]'),button=(label)=>[...toolbar.querySelectorAll('button')].find(item=>item.textContent.trim()===label),output=toolbar.querySelector('[aria-label="Flow zoom percentage"]'),target=${percent};button('100 percent').click();for(let count=0;count<12&&Number.parseInt(output.textContent,10)!==target;count+=1)button(target<100?'Zoom out':'Zoom in').click();await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));const observed=Number.parseInt(output.textContent,10);if(observed!==target)throw new Error('Flow camera did not reach '+target+'%; observed '+observed+'%');return observed;})()`);
+        const captureFlowPresentation = async ({ state, viewport, displayMode, surface, zoom }) => evaluate(`(()=>{
+            const rect=(node)=>{const box=node?.getBoundingClientRect();return box?Object.fromEntries(['left','top','right','bottom','width','height'].map(key=>[key,Math.round(box[key]*100)/100])):null;};
+            const style=(node,properties)=>{const computed=node?getComputedStyle(node):null;return computed?Object.fromEntries(properties.map(key=>[key,computed[key]])):null;};
+            const painted=(node)=>{const box=node?.getBoundingClientRect();return Boolean(box&&box.width>0&&box.height>0&&getComputedStyle(node).display!=='none'&&getComputedStyle(node).visibility!=='hidden');};
+            const workspace=document.querySelector('.documentary-flow'),toolbar=document.querySelector('[aria-label="Flow toolbar"]'),canvas=document.querySelector('[aria-label="Interactive directional Flow canvas"]'),viewportNode=document.querySelector('.flow-canvas-viewport'),page=document.querySelector('g[data-page-frame-id]:not([data-occurrence-id])'),pageRect=page?.querySelector('.flow-page-frame'),event=document.querySelector('.flow-node'),eventRect=event?.querySelector('rect'),port=page?.querySelector('[data-input-port-for],[data-output-port-for]')??document.querySelector('[data-flow-port-for]'),edge=document.querySelector('.flow-edge'),edgeLine=edge?.querySelector('line'),panel=document.querySelector('.flow-workspace-surface'),minimap=document.querySelector('.flow-minimap');
+            const controls=['Add','Focus Canvas','Exit Focus Canvas','Zoom in','Zoom out','Fit Flow','Outline','Details'];
+            const visibleControls=controls.filter(label=>[...toolbar.querySelectorAll('button')].some(button=>button.textContent.trim()===label&&painted(button)));
+            const boxes={workspace:rect(workspace),toolbar:rect(toolbar),viewport:rect(viewportNode),canvas:rect(canvas),page:rect(page),event:rect(event),port:rect(port),edge:rect(edge),surface:rect(panel),minimap:rect(minimap)};
+            const styles={workspace:style(workspace,['display','position','overflow','backgroundColor','borderTopStyle']),canvas:style(canvas,['display','backgroundColor','borderTopColor','borderTopWidth','touchAction']),page:style(pageRect,['fill','stroke','strokeWidth']),event:style(eventRect,['fill','stroke','strokeWidth','filter']),port:style(port,['fill','stroke','strokeWidth','opacity','visibility','pointerEvents']),edge:style(edgeLine,['stroke','strokeWidth','strokeDasharray']),toolbar:style(toolbar,['display','position','overflowX','backgroundColor','borderTopStyle']),surface:style(panel,['display','position','overflow','backgroundColor','borderTopStyle'])};
+            const shellBoxes=[workspace,toolbar,viewportNode,canvas,...(${JSON.stringify(surface)}==='none'?[]:[panel])].map(rect).filter(Boolean);
+            const horizontalContained=shellBoxes.every(box=>box.left>=-1.5&&box.right<=innerWidth+1.5);
+            const desktopContained=shellBoxes.every(box=>box.left>=-1.5&&box.top>=-1.5&&box.right<=innerWidth+1.5&&box.bottom<=innerHeight+1.5);
+            const selectedPortVisible=${JSON.stringify(state)}!=='selected Page with visible ports'||Boolean(painted(port)&&Number.parseFloat(getComputedStyle(port).opacity)>0);
+            const requiredPainted=[workspace,toolbar,viewportNode,canvas,page,edge,...(${zoom}>=100?[event]:[])].every(painted)&&(${JSON.stringify(surface)}==='none'||painted(panel));
+            const zoomText=document.querySelector('[aria-label="Flow zoom percentage"]')?.textContent?.trim();
+            return{state:${JSON.stringify(state)},viewport:${JSON.stringify(viewport)},displayMode:${JSON.stringify(displayMode)},surface:${JSON.stringify(surface)},zoom:${zoom},zoomText,boxes,styles,visibleControls,requiredPainted,selectedPortVisible,horizontalContained,desktopContained,documentHorizontalOverflow:document.documentElement.scrollWidth>innerWidth,focusCanvas:document.body.classList.contains('flow-focus-canvas'),media:{reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,forcedColors:matchMedia('(forced-colors: active)').matches}};
+        })()`);
+        const equivalentRect = (base, candidate) => base === null || candidate === null
+            ? base === candidate
+            : Object.keys(base).every((key) => Math.abs(base[key] - candidate[key]) <= 0.75);
+        const samePresentation = (base, candidate) =>
+            JSON.stringify(base.styles) === JSON.stringify(candidate.styles) &&
+            JSON.stringify(base.visibleControls) === JSON.stringify(candidate.visibleControls) &&
+            Object.keys(base.boxes).every((key) => equivalentRect(base.boxes[key], candidate.boxes[key])) &&
+            base.zoomText === candidate.zoomText && base.focusCanvas === candidate.focusCanvas &&
+            JSON.stringify(base.media) === JSON.stringify(candidate.media);
+        const equivalentPresentation = (base, candidate, { narrow }) =>
+            samePresentation(base, candidate) && base.requiredPainted && candidate.requiredPainted &&
+            base.selectedPortVisible && base.horizontalContained && !base.documentHorizontalOverflow &&
+            candidate.selectedPortVisible && candidate.horizontalContained && !candidate.documentHorizontalOverflow &&
+            (narrow || (base.desktopContained && candidate.desktopContained));
+        const stateRows = [
+            { state:"ordinary canvas with Page and Event cards", viewport:"desktop", width:1440, height:900, displayMode:"ordinary Flow", focusCanvas:false, selected:false, surfaces:["none"] },
+            { state:"selected Page with visible ports", viewport:"360 by 800", width:360, height:800, displayMode:"ordinary Flow", focusCanvas:false, selected:true, surfaces:["none"] },
+            { state:"open contextual Details and Outline", viewport:"desktop", width:1440, height:900, displayMode:"ordinary Flow", focusCanvas:false, selected:true, surfaces:["outline", "details"] },
+            { state:"complete canvas and overlay controls", viewport:"360 by 800", width:360, height:800, displayMode:"Focus Canvas", focusCanvas:true, selected:true, surfaces:["outline"] },
+        ];
+        const stateMeasurements = [];
+        for (const row of stateRows) {
+            await socket.call("Emulation.setDeviceMetricsOverride", { width:row.width, height:row.height, deviceScaleFactor:1, mobile:false });
+            for (const surface of row.surfaces) {
+                await configureFlowState({ ...row, surface });
+                for (const zoom of [25, 100, 200]) {
+                    await setFlowZoom(zoom);
+                    await switchFlowStyles("base");
+                    const base = await captureFlowPresentation({ ...row, surface, zoom });
+                    await switchFlowStyles("candidate");
+                    const candidate = await captureFlowPresentation({ ...row, surface, zoom });
+                    stateMeasurements.push({ state:row.state, viewport:row.viewport,
+                        displayMode:row.displayMode, surface, zoom, base, candidate,
+                        equivalent:equivalentPresentation(base, candidate, { narrow:row.width === 360 }) });
+                }
+            }
         }
-        await socket.call("Emulation.setPageScaleFactor", { pageScaleFactor:1 });
-        await socket.call("Emulation.setEmulatedMedia", { features:[{name:"prefers-reduced-motion",value:"reduce"}] });
-        const reducedMotion = await evaluate("(()=>{const button=document.querySelector('[aria-label=\"Flow toolbar\"] button');return matchMedia('(prefers-reduced-motion: reduce)').matches&&getComputedStyle(button).transitionProperty==='none';})()");
-        await socket.call("Emulation.setEmulatedMedia", { features:[{name:"forced-colors",value:"active"}] });
-        const forcedColors = await evaluate("(()=>{const root=document.querySelector('.documentary-flow'),node=document.querySelector('.flow-node rect');return matchMedia('(forced-colors: active)').matches&&getComputedStyle(root).borderColor!==''&&getComputedStyle(node).stroke!=='none';})()");
+        const mediaMeasurements = {};
+        await socket.call("Emulation.setDeviceMetricsOverride", { width:1440, height:900, deviceScaleFactor:1, mobile:false });
+        await configureFlowState({ focusCanvas:false, selected:true, surface:"none" });
+        await setFlowZoom(100);
+        for (const [name, features] of [
+            ["reducedMotion", [{name:"prefers-reduced-motion",value:"reduce"}]],
+            ["forcedColors", [{name:"forced-colors",value:"active"}]],
+        ]) {
+            await socket.call("Emulation.setEmulatedMedia", { features });
+            await switchFlowStyles("base");
+            const base = await captureFlowPresentation({ state:name, viewport:"desktop", displayMode:"ordinary Flow", surface:"none", zoom:100 });
+            await switchFlowStyles("candidate");
+            const candidate = await captureFlowPresentation({ state:name, viewport:"desktop", displayMode:"ordinary Flow", surface:"none", zoom:100 });
+            mediaMeasurements[name] = { base, candidate, equivalent:JSON.stringify(base)===JSON.stringify(candidate), active:base.media[name]&&candidate.media[name] };
+        }
         await socket.call("Emulation.setEmulatedMedia", { features:[] });
-        await evaluate("(()=>{const toolbar=document.querySelector('[aria-label=\"Flow toolbar\"]'),button=toolbar.querySelector('button');button.focus();})()");
-        await socket.call("Input.dispatchKeyEvent", {type:"keyDown",key:"Tab",code:"Tab",windowsVirtualKeyCode:9,nativeVirtualKeyCode:9});
-        await socket.call("Input.dispatchKeyEvent", {type:"keyUp",key:"Tab",code:"Tab",windowsVirtualKeyCode:9,nativeVirtualKeyCode:9});
-        const keyboardFocus = await evaluate("(()=>{const active=document.activeElement;return Boolean(active?.closest('.documentary-flow')&&active.matches(':focus-visible')&&(getComputedStyle(active).outlineStyle!=='none'||getComputedStyle(active).borderStyle!=='none'||getComputedStyle(active).boxShadow!=='none'));})()");
-        const styleStateAfter = await evaluate(`(async()=>{const repository=await(await import('./data-layer-durable-project-repository.js')).openIndexedDbProjectRepository(),loaded=await repository.loadProject(${JSON.stringify(seeded.projectId)}),graph=loaded.state.project.documentationFlowGraphs[${JSON.stringify(seeded.flowId)}];return JSON.stringify({graph,revision:loaded.draftSequence,undo:loaded.state.history.undo.length});})()`);
+        const focusMeasurements = {};
+        for (const mode of ["base", "candidate"]) {
+            await switchFlowStyles(mode);
+            await evaluate("document.querySelector('[aria-label=\"Flow toolbar\"] button')?.focus()");
+            await socket.call("Input.dispatchKeyEvent", {type:"keyDown",key:"Tab",code:"Tab",windowsVirtualKeyCode:9,nativeVirtualKeyCode:9});
+            await socket.call("Input.dispatchKeyEvent", {type:"keyUp",key:"Tab",code:"Tab",windowsVirtualKeyCode:9,nativeVirtualKeyCode:9});
+            focusMeasurements[mode] = await evaluate("(()=>{const active=document.activeElement,computed=getComputedStyle(active),box=active.getBoundingClientRect();return{label:active.textContent.trim(),insideFlow:Boolean(active.closest('.documentary-flow')),focusVisible:active.matches(':focus-visible'),affordance:computed.outlineStyle!=='none'||computed.borderStyle!=='none'||computed.boxShadow!=='none',rect:{width:Math.round(box.width*100)/100,height:Math.round(box.height*100)/100},outlineStyle:computed.outlineStyle,borderStyle:computed.borderStyle,boxShadow:computed.boxShadow};})()");
+        }
+        await switchFlowStyles("candidate");
+        const assetPresentation = await evaluate(`(()=>{const hrefs=[...document.querySelectorAll('link[rel="stylesheet"]')].map(link=>new URL(link.href).pathname),required=['/flow-graph/flow-workspace.css','/flow-graph/flow-workspace-shell.css'],toolbar=document.querySelector('[aria-label="Flow toolbar"]'),buttons=[...toolbar.querySelectorAll('button')],visible=(label)=>buttons.some(item=>item.textContent.trim()===label&&item.getBoundingClientRect().width>0);return{assetsLoaded:required.every(path=>hrefs.filter(href=>href===path).length===1),visibleControls:['Add','Zoom in','Fit Flow','Outline','Details'].every(visible)&&(visible('Focus Canvas')||visible('Exit Focus Canvas'))};})()`);
+        const styleStateAfter = await evaluate(`(async()=>{const repository=await(await import('./data-layer-durable-project-repository.js')).openIndexedDbProjectRepository(),loaded=await repository.loadProject(${JSON.stringify(seeded.projectId)}),graph=loaded.state.project.documentationFlowGraphs[${JSON.stringify(seeded.flowId)}];return JSON.stringify({project:loaded.state.project,graph,revision:loaded.draftSequence,undo:loaded.state.history.undo.length});})()`);
+        const equivalence = stateMeasurements.every(({ equivalent }) => equivalent);
+        const reducedMotion = mediaMeasurements.reducedMotion.equivalent && mediaMeasurements.reducedMotion.active;
+        const forcedColors = mediaMeasurements.forcedColors.equivalent && mediaMeasurements.forcedColors.active &&
+            mediaMeasurements.forcedColors.base.styles.page.stroke !== "none";
+        const comparableFocus = ({ boxShadow:unusedBoxShadow, ...measurement }) => measurement;
+        const keyboardFocus = JSON.stringify(comparableFocus(focusMeasurements.base)) ===
+            JSON.stringify(comparableFocus(focusMeasurements.candidate)) &&
+            focusMeasurements.base.insideFlow && focusMeasurements.base.focusVisible && focusMeasurements.base.affordance &&
+            focusMeasurements.base.rect.width > 0 && focusMeasurements.base.rect.height > 0;
         runtime.styles = {
             ...assetPresentation,
-            zoomGeometry:Object.values(zoomGeometry).every(Boolean),
+            computedPresentation:equivalence,
+            zoomGeometry:equivalence && stateMeasurements.every(({ base }) => ["25%", "100%", "200%"].includes(base.zoomText)),
             reducedMotion,
             forcedColors,
             keyboardFocus,
             canonicalStable:styleStateAfter===styleStateBefore,
+            equivalence,
+            measurements:{ baseCommit:flowStylesheetExtractionBase, states:stateMeasurements,
+                media:mediaMeasurements, focus:focusMeasurements },
         };
+        if (targetId !== "FLOW_STYLESHEET_EXTRACTION_TARGET") {
         activePhase = "runtime001";
         await reloadFlowPage("runtime001");
         await waitForBrowser("navigation", "Flow canvas mounted for runtime001", "[aria-label=\"Flow canvas viewport\"]");
@@ -340,6 +433,7 @@ try {
         const reloadEvidence = await evaluate(flowGraphReloadEvidence(seeded));
         for (const [key, value] of Object.entries(reloadEvidence))
             runtime[key] = { ...runtime[key], ...value };
+        }
     }
     if (browserShard === "legacy") {
         const legacyContext = await evaluate(flowGraphLegacyContextSeed(seeded));
@@ -409,8 +503,22 @@ try {
     }
     transitionPhase("assertion");
     if(targetId==="FLOW_WORKSPACE_CONTROLS_TARGET")assert.deepEqual(reloadSequence,FLOW_WORKSPACE_CONTROLS_RELOAD_SEQUENCE,"Flow controls reload sequence changed");
-    const fallbackCore = browserShard === "core" && targetId === "FLOW_GRAPH_FALLBACK_TARGET", supplemental = new Set(["runtime017", "runtime021", "runtime022", "runtime025"]), missing = fallbackCore ? FLOW_RUNTIME_KEYS.filter(key => !supplemental.has(key) && !runtime[key]).map(path => ({ path, value: "unexecuted" })) : [], falseLeaves = Object.entries(runtime).flatMap(([runtimeKey, evidence]) => Object.entries(evidence).filter(([, value]) => value !== true).map(([key, value]) => ({ path: `${runtimeKey}.${key}`, value }))), shardFailures = [...missing, ...falseLeaves, ...(fallbackCore && runtime.installedBoundary !== true ? [{ path: "installedBoundary", value: runtime.installedBoundary }] : [])];
-    assert.deepEqual(shardFailures, [], `Flow browser ${browserShard} evidence contains a false value`);
+    const fallbackCore = browserShard === "core" && targetId === "FLOW_GRAPH_FALLBACK_TARGET", supplemental = new Set(["runtime017", "runtime021", "runtime022", "runtime025"]), missing = fallbackCore ? FLOW_RUNTIME_KEYS.filter(key => !supplemental.has(key) && !runtime[key]).map(path => ({ path, value: "unexecuted" })) : [], falseLeaves = Object.entries(runtime).flatMap(([runtimeKey, evidence]) => Object.entries(evidence).filter(([key, value]) => key !== "measurements" && value !== true).map(([key, value]) => ({ path: `${runtimeKey}.${key}`, value }))), shardFailures = [...missing, ...falseLeaves, ...(fallbackCore && runtime.installedBoundary !== true ? [{ path: "installedBoundary", value: runtime.installedBoundary }] : [])];
+    const styleFailureDetail = targetId === "FLOW_STYLESHEET_EXTRACTION_TARGET"
+        ? JSON.stringify({ states:runtime.styles.measurements.states.filter(({ equivalent }) => !equivalent)
+            .map(({ state, viewport, displayMode, surface, zoom, base, candidate }) => ({
+                state, viewport, displayMode, surface, zoom, identical:JSON.stringify(base)===JSON.stringify(candidate),
+                base:{ requiredPainted:base.requiredPainted, selectedPortVisible:base.selectedPortVisible,
+                    horizontalContained:base.horizontalContained, desktopContained:base.desktopContained,
+                    shell:{workspace:base.boxes.workspace,toolbar:base.boxes.toolbar,viewport:base.boxes.viewport,
+                        canvas:base.boxes.canvas,surface:base.boxes.surface} },
+                candidate:{ requiredPainted:candidate.requiredPainted, selectedPortVisible:candidate.selectedPortVisible,
+                    horizontalContained:candidate.horizontalContained, desktopContained:candidate.desktopContained,
+                    shell:{workspace:candidate.boxes.workspace,toolbar:candidate.boxes.toolbar,viewport:candidate.boxes.viewport,
+                        canvas:candidate.boxes.canvas,surface:candidate.boxes.surface} },
+            })), focus:runtime.styles.measurements.focus }, null, 2)
+        : "";
+    assert.deepEqual(shardFailures, [], `Flow browser ${browserShard} evidence contains a false value${styleFailureDetail ? `\n${styleFailureDetail}` : ""}`);
     const controlRuntimeKeys = new Set(["runtime001", "runtime016", "runtime018", "runtime020", "runtime027"]);
     flowGraph = targetId === "FLOW_STYLESHEET_EXTRACTION_TARGET"
         ? {styles:runtime.styles}
