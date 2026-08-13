@@ -171,14 +171,18 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
       };
       const semanticProposal = await validateRepairReceiptSemantics(current, proposal,
         regressionDocument, focusedDocument, canonicalRepairTaskIdentities);
-      const eligible = await validateTimeoutRepairProposal(current, semanticProposal, { isAncestor });
+      const descendant = (ancestor, commit) =>
+        commitDescendsFrom({ root, isAncestor, ancestor, commit });
+      const eligible = await validateTimeoutRepairProposal(current, semanticProposal,
+        { isAncestor:descendant });
       if (current.repair?.status === "eligible") {
         const conserved = current.repair.causalCategory === eligible.causalCategory &&
           current.repair.causalExplanation === eligible.causalExplanation &&
           current.repair.regression?.key === eligible.regression?.key &&
           JSON.stringify(normalized(current.repair.causalProtocol)) ===
             JSON.stringify(normalized(eligible.causalProtocol));
-        if (!conserved || !(await isAncestor(current.repair.candidate.commit, eligible.candidate.commit)) ||
+        if (!conserved || !(await descendant(
+          current.repair.candidate.commit, eligible.candidate.commit)) ||
             current.repair.candidate.commit === eligible.candidate.commit) {
           throw new Error(`Reliability incident ${id} eligible repair revalidation is not an exact conserved descendant`);
         }
