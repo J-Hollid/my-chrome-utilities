@@ -1,7 +1,6 @@
 (ns acceptance.verification-support.modular-architecture-vtd014-handlers
   (:require [acceptance.steps.support :as support]
-            [acceptance.verification-support.modular-architecture-process-evidence :as process-evidence]
-            [clojure.string :as str]))
+            [acceptance.verification-support.modular-architecture-process-evidence :as process-evidence]))
 
 (defonce ^:private evidence (atom nil))
 
@@ -35,6 +34,12 @@
 
 (defn- style-evidence [world boundary]
   (evidence-value (get-in world [:vtd014/evidence :styles]) boundary))
+
+(def ^:private stylesheet-boundaries
+  {"src/flow-graph/flow-workspace.css" "valid feature-local presentation"
+   "src/flow-graph/flow-workspace-shell.css" "valid feature-to-shell bridge"
+   "specification-builder-brand.css" "shared global presentation foundation"
+   "invalid-boundary.css" "invalid or undeclared boundary"})
 
 (def ^:private promotion-scope-keys
   {"receipt finalization only" "receipt-finalization"
@@ -786,17 +791,12 @@
    {:pattern #"^(.+) has declared destination (.+), style classification (.+), owner (.+), consumers (.+), QA targets (.+), and scope root (.+)$"
     :handler (fn [world example captures]
                (let [source (first (values example-values example captures))
-                     boundary (cond
-                                (str/ends-with? source "flow-workspace-shell.css")
-                                "valid feature-to-shell bridge"
-                                (str/ends-with? source "flow-workspace.css")
-                                "valid feature-local presentation"
-                                (str/ends-with? source "specification-builder-brand.css")
-                                "shared global presentation foundation"
-                                (str/ends-with? source "invalid-boundary.css")
-                                "invalid or undeclared boundary"
-                                :else source)]
+                     boundary (get stylesheet-boundaries source source)]
                  (assoc (prepared world) :vtd014/style-boundary boundary)))}
+   {:pattern #"^a feature-integration candidate changes a stylesheet classified as (.+)$"
+    :handler (fn [world example captures]
+               (assoc (prepared world) :vtd014/style-boundary
+                      (first (values example-values example captures))))}
    {:pattern #"^the QA plan selects (.+)$"
     :handler (fn [world example captures]
                (let [boundary (:vtd014/style-boundary world)
