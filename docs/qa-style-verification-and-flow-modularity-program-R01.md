@@ -210,6 +210,17 @@ The implementation-and-review expectation remains 60 minutes with the existing
 fresh exact candidate and receipt are required; the earlier four-pack receipt and
 blocked handoff are diagnostic history, not reusable evidence.
 
+## Inter-stage correction: verification run intent
+
+Before Stage 3 starts, implement
+`docs/verification-run-intent-correction-R01.md` on the clean Slice 2 lineage.
+The correction was user-approved before port snapping. Slice 2 exposed the
+reason it cannot wait until after QA integration: current evidence preflight is
+blocked by incidents created by ordinary diagnostic and deliberately interrupted
+runs. Apply the exact audited compatibility boundary, produce one evidence-mode
+checkpoint for the resulting candidate, and then continue to Stage 3 from its QA
+integration. Do not substitute an all-20 repair checkpoint.
+
 ## Overnight continuation and stopping rule
 
 The coder, refactorer, architect, and specifier continue through repairs,
