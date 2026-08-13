@@ -8186,6 +8186,10 @@ try {
         changedPaths:[...plan.changedPaths].sort(),
         changedOwners:plan.changedOwners,
         changedBoundaries:plan.changedBoundaries,
+        styleSmokeTargets:[...new Set(plan.styleSmokeTargets ?? [])].sort(),
+        terminalFullObligations:[...new Set(plan.terminalFullObligations ?? [])].sort(),
+        changedStyleTargets:plan.changedStyleTargets ?? {},
+        adapterAuthorizationPackIds:[...new Set(plan.adapterAuthorizationPackIds ?? [])].sort(),
         changeSetDigest:plan.changeSet ? verificationDigest(plan.changeSet) : null,
         conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
         executionPrerequisites:plan.tasks.map((task) => ({
