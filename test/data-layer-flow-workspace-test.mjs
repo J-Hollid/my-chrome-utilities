@@ -233,9 +233,12 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
     shellReadiness=context.diagnosedBoundary?.taskKey==="browser:test/browser-packs/shell.mjs",
     flow019Allowlist=context.causalCategory==="other:mode-aware Flow 019 example allowlist",
+    legacySeededReview=context.causalCategory==="other:seeded Flow legacy review identity",
     readiness=!shellReadiness&&context.causalCategory==="readiness or settling",
     zoomContainment=context.incidentId==="d3a49b37-e016-4bed-830c-9531045a6773",
-    expectedPreRepairFailure=flow019Allowlist
+    expectedPreRepairFailure=legacySeededReview
+      ?{seedNameCarried:false,renderedSeedNameVerified:false,hardcodedLabel:true}
+      :flow019Allowlist
       ?{modelSelectionAccepted:true,runtimeSelectionAccepted:false,modeSeparated:false}
       :shellReadiness
       ?{repositoryOpening:true,shellReady:false}
@@ -244,7 +247,9 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       :zoomContainment
         ?{zoomInContained:false,toolbarWrapped:false,cameraControlsImmediatelyAvailable:false}
         :{entryControlContained:false,focusToolbarWrapped:false,requiredControlsPrecedeSecondary:false},
-    expectedRepairResult=flow019Allowlist
+    expectedRepairResult=legacySeededReview
+      ?{seedNameCarried:true,renderedSeedNameVerified:true,hardcodedLabel:false}
+      :flow019Allowlist
       ?{modelSelectionAccepted:true,runtimeSelectionAccepted:true,modeSeparated:true}
       :shellReadiness
       ?{repositoryOpening:true,shellReady:true}
@@ -253,10 +258,12 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       :zoomContainment
         ?{zoomInContained:true,toolbarWrapped:true,cameraControlsImmediatelyAvailable:true}
         :{entryControlContained:true,focusToolbarWrapped:true,requiredControlsPrecedeSecondary:true},
-    fixture={id:flow019Allowlist?"mode-aware-flow019-example-allowlist-v1":shellReadiness?"shell-readiness-before-repository-v1":readiness?"flow-pan-painted-instance-readiness-v1":zoomContainment
+    fixture={id:legacySeededReview?"seeded-flow-legacy-review-identity-v1":flow019Allowlist?"mode-aware-flow019-example-allowlist-v1":shellReadiness?"shell-readiness-before-repository-v1":readiness?"flow-pan-painted-instance-readiness-v1":zoomContainment
       ?"zoom-in-360-control-containment-v1":"focus-canvas-360-control-containment-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-      input:flow019Allowlist
+      input:legacySeededReview
+        ?{preRepair:{seededPageName:"dynamic",reviewLookup:"Confirmation"}}
+        :flow019Allowlist
         ?{modelRow:{scope:"the selection",arrangement:"horizontally"},runtimeRow:{scope:"selection",arrangement:"horizontally"}}
         :shellReadiness
         ?{preRepair:{shellMount:"after durable repository await",repositoryOpening:true}}
@@ -266,7 +273,11 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
           ?{viewport:{width:360,height:800},preRepair:{zoomIn:{x:480.859375,width:61.015625},toolbar:{left:0,right:360},scrollLeft:0}}
           :{viewport:{width:360,height:800},preRepair:{focusControl:{x:424.4375,width:88.765625},toolbar:{left:0,right:360},horizontalDiscoveryRequired:true}},
       expectedPreRepairFailure,expectedRepairResult},
-    repairResult=flow019Allowlist?{
+    repairResult=legacySeededReview?{
+      seedNameCarried:/pageName:page\.name/u.test(flowCorrectiveWorkflow),
+      renderedSeedNameVerified:/reviewText\.includes\(fixture\.pageName\)/u.test(flowCorrectiveWorkflow),
+      hardcodedLabel:/reviewText\.includes\('Confirmation'\)/u.test(flowCorrectiveWorkflow),
+    }:flow019Allowlist?{
       modelSelectionAccepted:/\[:model \["the selection" "horizontally"\]\]/u.test(flowGraphStepsSource),
       runtimeSelectionAccepted:/\[:runtime \["selection" "horizontally"\]\]/u.test(flowGraphStepsSource),
       modeSeparated:/key \[mode row\]/u.test(flowGraphStepsSource),
