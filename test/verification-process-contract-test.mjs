@@ -7359,9 +7359,14 @@ assert.equal(committedCalibrationReport.browserTargets
 assert.notEqual(committedCalibrationReport.conservation.verificationTopologyDigest,
   calibrationReport.conservation.verificationTopologyDigest,
   "accepted post-calibration evidence changes retain their declared fallback budget boundary");
-assert.equal(acceptedBrowserTargetCount,
-  Object.keys(committedCalibrationReport.browserTargets).length + 1,
-  "the one accepted post-calibration browser target does not rewrite durable timing evidence");
+const acceptedPostCalibrationBrowserTargets = [...new Set(packs.flatMap((pack) =>
+  (pack.browserObservations ?? []).map(({ id }) => id)))]
+  .filter((id) => !(id in committedCalibrationReport.browserTargets)).sort();
+assert.deepEqual(acceptedPostCalibrationBrowserTargets, [
+  "EVENT_LIBRARY_RENDERED_SMOKE_TARGET",
+  "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
+  "STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
+], "only the exact approved post-calibration browser targets defer durable timing evidence");
 assert.deepEqual(committedCalibrationReport.browserTargets,
   committedTimingBaseline.performanceBudgets.browserTargetP90Milliseconds,
   "the durable report and enforced browser-target budgets cannot drift apart");
