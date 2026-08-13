@@ -27,6 +27,24 @@ const packs = await loadVerificationPacks();
 const runnablePackIds = planVerification(packs, {
   terminalFull:true, includeProperties:true,
 }).selectedPackIds;
+const pureStylePlan = planVerification(packs, {
+  changedPaths:["specification-builder-brand.css"],
+});
+assert.equal(pureStylePlan.unitTasks.length, 0,
+  "a pure declared global-style range remains smoke-only");
+assert.deepEqual(pureStylePlan.observationTasks.map(({ key }) => key), [
+  "browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
+]);
+const mixedStylePlan = planVerification(packs, {
+  packIds:["shell"], changedPaths:[
+    "specification-builder-brand.css", "test/verification-process-contract-test.mjs",
+  ],
+});
+assert.ok(mixedStylePlan.unitTasks.some(({ key }) =>
+  key === "unit:test/verification-process-contract-test.mjs"),
+  "a mixed global-style and non-style range retains the non-style unit task");
+assert.ok(mixedStylePlan.unitTasks.length > 0,
+  "a mixed global-style and non-style range is not smoke-only");
 
 async function git(root, ...args) {
   const result = await exec("git", args, { cwd:root, maxBuffer:64 * 1024 * 1024 });

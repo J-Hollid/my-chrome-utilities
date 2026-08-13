@@ -1472,7 +1472,11 @@ export function planVerification(
       ],
     });
   });
-  const styleSmokeOnly = changedStyleTargets.size > 0 &&
+  const onlyGlobalStyleQaBoundaries = changedPaths.length > 0 && changedPaths.every((changedPath) => {
+    const declaration = stylesheetDeclarationFor(packs, changedPath);
+    return declaration?.classification === "global" && declaration.qaTargets.length > 0;
+  });
+  const styleSmokeOnly = onlyGlobalStyleQaBoundaries &&
     changedStyleTargets.size === changedPaths.length &&
     !terminalFull && !canonicalRunnableSelection;
   const mode = browserTargetIds.length ? "focused" : terminalFull ? "terminal" : explicit.size ? "exact" : "impact";
