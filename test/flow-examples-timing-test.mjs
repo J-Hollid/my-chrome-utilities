@@ -518,10 +518,15 @@ const wrappedGeneration=drawRuntimeProgram.indexOf("'wrapped Section current ren
 const drawActivation=drawRuntimeProgram.indexOf("click('Draw Section',surface())");
 const drawBoundaryWait=drawRuntimeProgram.indexOf("'actionable Section draw mode'");
 const drawPointerInput=drawRuntimeProgram.indexOf("pointer(canvas,'pointerdown'",drawActivation);
+const salesMenuClose=drawRuntimeProgram.indexOf("click('Close',surface())",drawActivation);
+const salesTargetAfterMenu=drawRuntimeProgram.indexOf("'current Sales Section group after menu close'",salesMenuClose);
+const salesMovePointer=drawRuntimeProgram.indexOf("pointer(salesGroup,'pointerdown'",salesTargetAfterMenu);
 assert.ok(drawActivation>=0&&drawActivation<drawBoundaryWait&&drawBoundaryWait<drawPointerInput,
   "the real Section gesture must wait for its actionable draw boundary");
 assert.ok(wrappedPersistence>=0&&wrappedPersistence<wrappedGeneration&&wrappedGeneration<drawActivation,
   "the next Section action must wait for the durable mutation's current rendered generation");
+assert.ok(salesMenuClose>=0&&salesMenuClose<salesTargetAfterMenu&&salesTargetAfterMenu<salesMovePointer,
+  "the Sales move must reacquire its current rendered Section after closing the menu");
 assert.match(drawRuntimeProgram,
   /const drawBoundary=await waitFor\([^]*'actionable Section draw mode',drawActionable,state=>state,50\);const drawBox=/u,
   "the real Section gesture must await the conserved predicate and stability boundary");
@@ -585,6 +590,7 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     sectionGenerationRepair=context.causalCategory==="other:current rendered Section gesture target",
     eventSeedRepair=context.causalCategory==="other:fresh durable Event example seed",
     sectionMenuRetry=context.causalCategory==="other:bounded Section pointer menu retry",
+    sectionPostMenuTargetRepair=context.causalCategory==="other:current rendered Section target after menu close",
     plannerShardWiring=context.causalCategory==="other:Flow planner shard wiring",
     propertyRegistryBoundary=context.causalCategory==="other:Flow property registry boundary",
     fixture=targetSelectionRepair?{id:"flow-structured-target-selection-v1",
@@ -636,6 +642,11 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
           proofValid:false},
         expectedRepairResult:{selectedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",selectedShard:"core",
           proofValid:true}}
+      :sectionPostMenuTargetRepair?{id:"current-section-target-after-menu-close-v1",
+        causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+        input:{menuCloseCanRender:true,subsequentGesture:"Sales Section move"},
+        expectedPreRepairFailure:{reacquiresAfterMenuClose:false,currentTargetBeforeMove:false},
+        expectedRepairResult:{reacquiresAfterMenuClose:true,currentTargetBeforeMove:true}}
       :sectionMenuRetry?{id:"bounded-section-pointer-menu-retry-v1",
         causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
         input:{mode:"pointer",firstInvocationObserved:false,currentRenderedTarget:true},
@@ -687,6 +698,9 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
             proofValid:flowAuthoringProofResult({...flowAuthoringProofContract,
               requestedTargetId:selected.id,selectedTargetId:selected.id,
               selectedShard:selected.shard}).valid};})()
+      :sectionPostMenuTargetRepair
+        ?{reacquiresAfterMenuClose:salesMenuClose>=0&&salesMenuClose<salesTargetAfterMenu,
+          currentTargetBeforeMove:salesTargetAfterMenu<salesMovePointer}
       :sectionMenuRetry
         ?{invocationDelays:[...flowSectionMenuInvocationPlan("pointer")],
           missedFirstInvocationRecovered:flowSectionMenuInvocationPlan("pointer").length===2&&
