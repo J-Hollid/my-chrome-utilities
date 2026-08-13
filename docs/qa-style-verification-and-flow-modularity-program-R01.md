@@ -19,6 +19,10 @@ Each stage still integrates into `qa` only from an exact architect `qa-ready`
 handoff with bound focused evidence. The next stage starts from that exact QA
 commit and does not require another routine user approval.
 
+Slice 1 is QA-integrated at `d75132daef`. Slice 2 is active from that exact QA
+head. No all-20 checkpoint was run for Slice 1; terminal integration remains
+reserved for a later explicit master-promotion request.
+
 ## Baseline
 
 `specification-builder-brand.css` is a 1,991-line, 50,979-byte stylesheet that
