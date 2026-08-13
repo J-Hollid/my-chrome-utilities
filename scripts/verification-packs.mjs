@@ -1228,7 +1228,8 @@ export function planVerification(
     if (entry.status === "A") return [];
     if (entry.status === "R" || entry.status === "C") return [entry.oldPath];
     return [entry.path];
-  }).filter((changedPath) => changedPath.endsWith(".css"));
+  }).filter((changedPath) => changedPath.endsWith(".css") &&
+    changedPath !== "dist" && !changedPath.startsWith("dist/"));
   if (historicalStylesheetPaths.length && (historicalRegistryFallback ||
       !historicalPacksCompatible || registryChangeUnmapped ||
       historicalStylesheetPaths.some((changedPath) => !ownerOf(basePacks, changedPath)))) {

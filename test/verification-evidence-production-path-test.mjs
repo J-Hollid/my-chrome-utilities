@@ -72,6 +72,18 @@ assert.throws(() => planVerification(packs, {
   basePacks:malformedHistoricalPacks,
 }), /Stylesheet history is unavailable or incompatible/u,
 "malformed historical stylesheet ownership blocks rather than widening feature mode");
+const generatedStyleHistoryPlan = planVerification(packs, {
+  packIds:["shell"],
+  changedPaths:["dist/specification-builder-brand.css", "specification-builder-brand.css"],
+  changeSet:{ version:1, baseCommit:"1".repeat(40), commit:"2".repeat(40), entries:[
+    { status:"M", path:"dist/specification-builder-brand.css" },
+    { status:"M", path:"specification-builder-brand.css" },
+  ], paths:["dist/specification-builder-brand.css", "specification-builder-brand.css"] },
+  basePacks:packs,
+});
+assert.ok(generatedStyleHistoryPlan.observationTasks.some(({ logicalTargetIds = [] }) =>
+  logicalTargetIds.includes("STUDIO_GLOBAL_STYLE_SMOKE_TARGET")),
+"generated dist styles do not masquerade as historical stylesheet declarations");
 
 async function git(root, ...args) {
   const result = await exec("git", args, { cwd:root, maxBuffer:64 * 1024 * 1024 });
