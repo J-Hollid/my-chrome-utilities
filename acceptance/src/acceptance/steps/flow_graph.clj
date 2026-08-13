@@ -82,7 +82,7 @@
                          {:out (:out result)})
         (reset! browser-observation observed))))
 (def runtime-evidence-keys
-  (set (map #(keyword (format "runtime%03d" %)) (range 1 28))))
+  (set (map #(keyword (format "runtime%03d" %)) (range 1 30))))
 (def required-evidence-keys (conj runtime-evidence-keys :installedBoundary))
 (def flow001-examples
   {["360" "800" "hidden"] :narrow-navigation-hidden
@@ -158,6 +158,14 @@
    ["Focus Canvas" "sends one-contact touch pan" "-95" "70"] :focus-touch
    ["the main workspace" "activates the labelled keyboard pan command" "80" "60"] :main-keyboard
    ["Focus Canvas" "activates the labelled keyboard pan command" "-80" "-60"] :focus-keyboard})
+(def flow028-examples
+  {["25" "Customer details" "right" "Payment" "left" "expected_next"] :expected-next-25
+   ["100" "Customer details" "top" "ID verification" "bottom" "alternative"] :alternative-100
+   ["200" "ID verification" "bottom" "Payment" "top" "merge"] :merge-200})
+(def flow029-examples
+  {["25" "Escape"] :escape-25
+   ["100" "pointer cancellation"] :pointer-cancel-100
+   ["200" "Escape"] :escape-200})
 (defn- exact-example-key [example columns discriminators examples message]
   (let [row (mapv #(support/example-value example %) columns)]
     (when (some #(support/example-value example %) discriminators)
@@ -210,6 +218,15 @@
   (when (support/example-value example "pan_gesture")
     (support/assert! (contains? #{:model :runtime} mode) "Unknown runtime027 evidence mode." {:mode mode})
     (exact-example-key example ["workspace_mode" "pan_gesture" "horizontal_distance" "vertical_distance"] ["pan_gesture"] (if (= mode :model) flow027-examples runtime027-examples) "Unknown runtime027 pan example.")))
+(defn flow028-example-key [example]
+  (when (and (support/example-value example "zoom")
+             (support/example-value example "source"))
+    (exact-example-key example ["zoom" "source" "source_port" "target" "target_port" "kind"] ["zoom" "source"] flow028-examples "Unknown Flow 028 port-snap example.")))
+(defn flow029-example-key [example]
+  (when (and (support/example-value example "zoom")
+             (support/example-value example "cancel_input")
+             (not (support/example-value example "source")))
+    (exact-example-key example ["zoom" "cancel_input"] ["zoom" "cancel_input"] flow029-examples "Unknown Flow 029 snap-cancellation example.")))
 (defn validate-example! [mode example]
   (flow001-example-key mode example)
   (flow002-example-key example)
@@ -222,15 +239,20 @@
   (runtime024-example-key example)
   (flow026-example-key example)
   (runtime027-example-key mode example)
+  (flow028-example-key example)
+  (flow029-example-key example)
   example)
 (defn all-true? [values]
-  (support/all-values-true? values))
+  (support/all-values-true? (when (map? values) (dissoc values :measurements))))
 (defn complete-browser-evidence? [evidence]
-  (support/complete-browser-evidence? evidence required-evidence-keys runtime-evidence-keys))
+  (boolean (and (map? evidence)
+                (= required-evidence-keys (set (keys evidence)))
+                (true? (:installedBoundary evidence))
+                (every? #(all-true? (get evidence %)) runtime-evidence-keys))))
 (defn- assert-runtime! [evidence]
   (support/assert! (seq evidence) "Installed graph evidence is missing." evidence)
   (doseq [runtime-key (sort (filter evidence runtime-evidence-keys))]
-    (support/assert! (support/all-values-true? (get evidence runtime-key))
+    (support/assert! (all-true? (get evidence runtime-key))
                      (str "Installed graph evidence failed for " (name runtime-key) ".")
                      (get evidence runtime-key)))
   (when (contains? evidence :installedBoundary)

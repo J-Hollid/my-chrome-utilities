@@ -1,5 +1,5 @@
 export const FLOW_RUNTIME_KEYS=Array.from(
-  {length:27},
+  {length:29},
   (_,index)=>`runtime${String(index+1).padStart(3,"0")}`,
 );
 export const FLOW_RUNTIME_EXECUTION_PLAN=[...FLOW_RUNTIME_KEYS];
@@ -19,7 +19,7 @@ export function flowEvidenceFailures(evidence){
       failures.push({path:runtime,value:runtimeEvidence,expected:"non-empty evidence object"});
       continue;
     }
-    for(const [leaf,value] of leaves)if(value!==true)failures.push({path:`${runtime}.${leaf}`,value,expected:true});
+    for(const [leaf,value] of leaves)if(leaf!=="measurements"&&value!==true)failures.push({path:`${runtime}.${leaf}`,value,expected:true});
   }
   if(evidence?.installedBoundary!==true)failures.push({path:"installedBoundary",value:evidence?.installedBoundary,expected:true});
   return failures;

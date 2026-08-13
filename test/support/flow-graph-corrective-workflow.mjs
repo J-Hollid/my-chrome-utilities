@@ -146,7 +146,7 @@ export function flowGraphCorrectiveWorkflow(seeded, options){
 
   phase(9);
   const relationshipsBefore=(await graph()).relationships.length,source=q('[data-flow-port-for="'+CSS.escape(seedIds.frameIds[2])+'"][data-flow-port-side="right"]',canvas()),target=q('[data-flow-port-for="'+CSS.escape(outside.id)+'"][data-flow-port-side="left"]',canvas());
-  source.dispatchEvent(new PointerEvent('pointerdown',{pointerId:91,bubbles:true}));target.dispatchEvent(new PointerEvent('pointermove',{pointerId:91,bubbles:true}));const validTarget=target.classList.contains('is-valid-target');target.dispatchEvent(new PointerEvent('pointerup',{pointerId:91,bubbles:true}));await pause();
+  const sourceRect=source.getBoundingClientRect(),targetRect=target.getBoundingClientRect(),sourcePoint={clientX:sourceRect.left+sourceRect.width/2,clientY:sourceRect.top+sourceRect.height/2},targetPoint={clientX:targetRect.left+targetRect.width/2,clientY:targetRect.top+targetRect.height/2};source.dispatchEvent(new PointerEvent('pointerdown',{pointerId:91,bubbles:true,...sourcePoint}));canvas().dispatchEvent(new PointerEvent('pointermove',{pointerId:91,bubbles:true,...targetPoint}));const validTarget=target.classList.contains('is-valid-target');canvas().dispatchEvent(new PointerEvent('pointerup',{pointerId:91,bubbles:true,...targetPoint}));await pause();
   let relationshipGraph=await graph(),pointerRelationship=relationshipGraph.relationships.at(-1),popover=q('[aria-label="Inline relationship popover"]');
   evidence.runtime009={
     pointerConnectionCommitted:relationshipGraph.relationships.length===relationshipsBefore+1,
@@ -168,7 +168,7 @@ export function flowGraphCorrectiveWorkflow(seeded, options){
 
   phase(11);
   const alternativeSource=q('[data-flow-port-for="'+CSS.escape(seedIds.frameIds[0])+'"][data-flow-port-side="top"]',canvas()),alternativeTarget=q('[data-flow-port-for="'+CSS.escape(seedIds.frameIds[2])+'"][data-flow-port-side="bottom"]',canvas());
-  alternativeSource.dispatchEvent(new PointerEvent('pointerdown',{pointerId:111,bubbles:true}));alternativeTarget.dispatchEvent(new PointerEvent('pointerup',{pointerId:111,bubbles:true}));await pause();
+  const alternativeSourceRect=alternativeSource.getBoundingClientRect(),alternativeTargetRect=alternativeTarget.getBoundingClientRect(),alternativeSourcePoint={clientX:alternativeSourceRect.left+alternativeSourceRect.width/2,clientY:alternativeSourceRect.top+alternativeSourceRect.height/2},alternativeTargetPoint={clientX:alternativeTargetRect.left+alternativeTargetRect.width/2,clientY:alternativeTargetRect.top+alternativeTargetRect.height/2};alternativeSource.dispatchEvent(new PointerEvent('pointerdown',{pointerId:111,bubbles:true,...alternativeSourcePoint}));canvas().dispatchEvent(new PointerEvent('pointermove',{pointerId:111,bubbles:true,...alternativeTargetPoint}));canvas().dispatchEvent(new PointerEvent('pointerup',{pointerId:111,bubbles:true,...alternativeTargetPoint}));await pause();
   popover=q('[aria-label="Inline relationship popover"]');const label=q('[aria-label="Optional relationship label"]',popover);change(label,'Fulfilment choice');popover.requestSubmit();await pause();
   relationshipGraph=await graph();const alternative=relationshipGraph.relationships.find(({label})=>label==='Fulfilment choice');
   evidence.runtime011={

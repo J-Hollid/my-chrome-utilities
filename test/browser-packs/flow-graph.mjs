@@ -169,7 +169,7 @@ try {
     await waitForBrowser("target setup", "create-project form mounted", "#create-project-form");
     activePhase = "seed";
     transitionPhase("fixture setup");
-    const seeded = await evaluate(`(async()=>{const {createSpecificationProject,addProjectEntity}=await import('./data-layer-specification-project.js'),{createFlowSection,addFlowPageFrameToSection}=await import('./data-layer-property-set-flow-section.js'),{addGraphOccurrence,saveGraphRelationship}=await import('./data-layer-flow-graph.js'),{openIndexedDbProjectRepository}=await import('./data-layer-durable-project-repository.js');let n=0,id=(kind)=>kind+':runtime:'+ ++n,state=createSpecificationProject({name:'Flow runtime',site:'runtime.example',id});const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);},propertySet=add('propertySets',{name:'Checkout',schemaConstraints:[{path:'/currency',type:'string',examples:['EUR']}]}),application=(name)=>({id:id('application'),name:'Checkout',propertySetId:propertySet.id}),confirmation=add('pages',{name:'Confirmation',propertySetApplications:[application()]}),payment=add('pages',{name:'Payment',propertySetApplications:[application()]}),receipt=add('pages',{name:'Receipt',propertySetApplications:[application()]}),purchase=add('events',{name:'Purchase',eventName:'purchase',schemaConstraints:[{path:'/event',type:'string',examples:['purchase']}]}),review=add('events',{name:'Review',eventName:'review'}),flow=add('flows',{name:'Checkout journey',steps:[]}),otherFlow=add('flows',{name:'Returns journey',steps:[]});state=addFlowPageFrameToSection(state,otherFlow.id,receipt.id,undefined,id);state=createFlowSection(state,flow.id,{name:'Checkout',bounds:{x:20,y:20,width:760,height:300}},id);state=createFlowSection(state,flow.id,{name:'Completion',bounds:{x:20,y:360,width:760,height:260}},id);let graph=state.project.documentationFlowGraphs[flow.id],sections=graph.sections;for(const [page,sectionId]of[[confirmation,sections[0].id],[payment,sections[0].id],[receipt,sections[1].id],[confirmation,undefined]])state=addFlowPageFrameToSection(state,flow.id,page.id,sectionId,id);graph=state.project.documentationFlowGraphs[flow.id];const frames=graph.pageFrames;state=addGraphOccurrence(state,flow.id,{name:'Purchase',pageFrameId:frames[0].id,pageId:confirmation.id,eventId:purchase.id,obligation:'Required',minimum:1,maximum:1,x:24,y:70},id);state=addGraphOccurrence(state,flow.id,{name:'Review',pageFrameId:frames[1].id,pageId:payment.id,eventId:review.id,obligation:'Required',minimum:1,maximum:1,x:24,y:70},id);state=saveGraphRelationship(state,flow.id,frames[0].id,{toStepId:frames[1].id,sourcePort:'right',targetPort:'left',label:'Checkout route'},id);state=saveGraphRelationship(state,flow.id,frames[0].id,{toStepId:frames[2].id,sourcePort:'top',targetPort:'bottom'},id);graph=state.project.documentationFlowGraphs[flow.id];const repository=await openIndexedDbProjectRepository();await repository.putProject(state,{active:true,navigation:{kind:'flows',id:flow.id}});return{projectId:state.project.id,flowId:flow.id,otherFlowId:otherFlow.id,pageIds:[confirmation.id,payment.id,receipt.id],frameIds:graph.pageFrames.map(({id})=>id),occurrenceIds:graph.occurrences.map(({id})=>id),relationshipIds:graph.relationships.map(({id})=>id),sectionIds:graph.sections.map(({id})=>id)};})()`);
+    const seeded = await evaluate(`(async()=>{const {createSpecificationProject,addProjectEntity}=await import('./data-layer-specification-project.js'),{createFlowSection,addFlowPageFrameToSection}=await import('./data-layer-property-set-flow-section.js'),{addGraphOccurrence,saveGraphRelationship}=await import('./data-layer-flow-graph.js'),{openIndexedDbProjectRepository}=await import('./data-layer-durable-project-repository.js');let n=0,id=(kind)=>kind+':runtime:'+ ++n,state=createSpecificationProject({name:'Flow runtime',site:'runtime.example',id});const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);},propertySet=add('propertySets',{name:'Checkout',schemaConstraints:[{path:'/currency',type:'string',examples:['EUR']}]}),application=(name)=>({id:id('application'),name:'Checkout',propertySetId:propertySet.id}),confirmation=add('pages',{name:'Customer details',propertySetApplications:[application()]}),payment=add('pages',{name:'Payment',propertySetApplications:[application()]}),receipt=add('pages',{name:'ID verification',propertySetApplications:[application()]}),summary=add('pages',{name:'Summary',propertySetApplications:[application()]}),purchase=add('events',{name:'Purchase',eventName:'purchase',schemaConstraints:[{path:'/event',type:'string',examples:['purchase']}]}),review=add('events',{name:'Review',eventName:'review'}),flow=add('flows',{name:'Checkout journey',steps:[]}),otherFlow=add('flows',{name:'Returns journey',steps:[]});state=addFlowPageFrameToSection(state,otherFlow.id,receipt.id,undefined,id);state=createFlowSection(state,flow.id,{name:'Checkout',bounds:{x:20,y:20,width:760,height:300}},id);state=createFlowSection(state,flow.id,{name:'Completion',bounds:{x:20,y:360,width:760,height:260}},id);let graph=state.project.documentationFlowGraphs[flow.id],sections=graph.sections;for(const [page,sectionId]of[[confirmation,sections[0].id],[payment,sections[0].id],[receipt,sections[1].id],[confirmation,undefined],[summary,sections[1].id]])state=addFlowPageFrameToSection(state,flow.id,page.id,sectionId,id);graph=state.project.documentationFlowGraphs[flow.id];const frames=graph.pageFrames;state=addGraphOccurrence(state,flow.id,{name:'Purchase',pageFrameId:frames[0].id,pageId:confirmation.id,eventId:purchase.id,obligation:'Required',minimum:1,maximum:1,x:24,y:70},id);state=addGraphOccurrence(state,flow.id,{name:'Review',pageFrameId:frames[1].id,pageId:payment.id,eventId:review.id,obligation:'Required',minimum:1,maximum:1,x:24,y:70},id);state=saveGraphRelationship(state,flow.id,frames[0].id,{toStepId:frames[1].id,sourcePort:'right',targetPort:'left',label:'Checkout route'},id);state=saveGraphRelationship(state,flow.id,frames[0].id,{toStepId:frames[2].id,sourcePort:'top',targetPort:'bottom'},id);graph=state.project.documentationFlowGraphs[flow.id];const repository=await openIndexedDbProjectRepository();await repository.putProject(state,{active:true,navigation:{kind:'flows',id:flow.id}});return{projectId:state.project.id,flowId:flow.id,otherFlowId:otherFlow.id,pageIds:[confirmation.id,payment.id,receipt.id],summaryPageId:summary.id,frameIds:graph.pageFrames.map(({id})=>id),summaryFrameId:graph.pageFrames.find(({pageId})=>pageId===summary.id).id,occurrenceIds:graph.occurrences.map(({id})=>id),relationshipIds:graph.relationships.map(({id})=>id),sectionIds:graph.sections.map(({id})=>id)};})()`);
     await evaluate(`(()=>{const url=new URL(location.href);url.searchParams.set('project',${JSON.stringify(seeded.projectId)});url.searchParams.set('kind','flows');url.searchParams.set('entity',${JSON.stringify(seeded.flowId)});history.replaceState(null,'',url);})()`);
     const reloadSequence=[];
     const reloadIdentity=()=>canonicalFlowReloadIdentity({targetId,pageTargetId:"single-specification-builder-page",origin,storageIdentity:`${origin}:my-chrome-utilities.project-repository`,projectId:seeded.projectId,flowId:seeded.flowId,reloadSequence});
@@ -491,6 +491,91 @@ try {
         await reloadFlowPage("authoring:start");
         await ensureFlowWorkspace("Flow toolbar mounted for authoring");
         Object.assign(runtime, await evaluate(flowGraphCorrectiveWorkflow(seeded, { targetId, browserShard })));
+        const callSnapProbe = (expression) => evaluate(`globalThis.flowRelationshipSnapProbe.${expression}`);
+        const mouse = async (type, point) => socket.call("Input.dispatchMouseEvent", {
+            type, x:point.clientX, y:point.clientY,
+            button:type === "mouseMoved" ? "none" : "left",
+            buttons:type === "mouseReleased" ? 0 : type === "mouseMoved" ? 1 : 1,
+            ...(type === "mousePressed" || type === "mouseReleased" ? {clickCount:1} : {}),
+        });
+        const touch = async (type, point) => socket.call("Input.dispatchTouchEvent", {
+            type, touchPoints:type === "touchCancel" ? [] : [{
+                x:point.clientX, y:point.clientY, id:71, radiusX:1, radiusY:1, force:1,
+            }],
+        });
+        const escape = async () => {
+            const key={key:"Escape",code:"Escape",windowsVirtualKeyCode:27,nativeVirtualKeyCode:27};
+            await socket.call("Input.dispatchKeyEvent",{type:"keyDown",...key});
+            await socket.call("Input.dispatchKeyEvent",{type:"keyUp",...key});
+        };
+        const commitRows=[
+            {zoom:25,source:"Customer details",sourceSide:"right",target:"Payment",targetSide:"left",kind:"expected_next"},
+            {zoom:100,source:"Customer details",sourceSide:"top",target:"ID verification",targetSide:"bottom",kind:"alternative"},
+            {zoom:200,source:"ID verification",sourceSide:"bottom",target:"Payment",targetSide:"top",kind:"merge"},
+        ], commitResults=[];
+        for(const row of commitRows){
+            const prepared=await callSnapProbe(`prepareCommit(${JSON.stringify(row)})`);
+            await mouse("mousePressed",prepared.sourcePoint);
+            const started=await callSnapProbe("started()");
+            const interaction=await callSnapProbe("interactionPoints()");
+            await mouse("mouseMoved",interaction.haloPoint);
+            const acquired=await callSnapProbe("acquired()");
+            if(![acquired.portOnly,acquired.previewPinned,acquired.nonColorEmphasis,acquired.statusNamed].every(Boolean))throw new Error(`Native Flow snap acquisition failed: ${JSON.stringify({row,prepared,interaction,started,acquired})}`);
+            await mouse("mouseReleased",interaction.haloPoint);
+            const finished=await callSnapProbe("finishCommit()");
+            commitResults.push({...row,...prepared,...interaction,...started,...acquired,...finished});
+        }
+        runtime.runtime028={
+            actualPointerInput:commitResults.length===3&&commitResults.every(({preview})=>preview),
+            pageBodyHalo:commitResults.every(({pageBodyHalo})=>pageBodyHalo),
+            exactExamples:commitResults.every(({exactExample})=>exactExample),
+            visibleInteraction:commitResults.every(({visibleInteraction})=>visibleInteraction),
+            noArbitraryTarget:commitResults.every(({noArbitraryTarget})=>noArbitraryTarget),
+            previewPinned:commitResults.every(({previewPinned})=>previewPinned),
+            portOnly:commitResults.every(({portOnly,nonColorEmphasis})=>portOnly&&nonColorEmphasis),
+            statusNamed:commitResults.every(({statusNamed})=>statusNamed),
+            identity:commitResults.every(({identity})=>identity),
+            definitionsStable:commitResults.every(({definitionsStable})=>definitionsStable),
+            noEndpointForm:commitResults.every(({noEndpointForm})=>noEndpointForm),
+            measurements:{relationshipSnap:commitResults},
+        };
+        const cancellationRows=[
+            {zoom:25,source:"Customer details",sourceSide:"right",target:"Payment",targetSide:"left",transfer:"Summary",kind:"expected_next",cancel:"Escape"},
+            {zoom:100,source:"Customer details",sourceSide:"right",target:"Payment",targetSide:"left",transfer:"Summary",kind:"expected_next",cancel:"pointer cancellation"},
+            {zoom:200,source:"Customer details",sourceSide:"right",target:"Payment",targetSide:"left",transfer:"Summary",kind:"expected_next",cancel:"Escape"},
+        ], cancellationResults=[];
+        for(const row of cancellationRows){
+            const prepared=await callSnapProbe(`prepareCancellation(${JSON.stringify(row)})`),pointer=mouse,startType="mousePressed",moveType="mouseMoved";
+            await pointer(startType,prepared.sourcePoint);
+            const started=await callSnapProbe("started()");
+            const interaction=await callSnapProbe("interactionPoints()"),invalidTargets=interaction.invalidTargets;
+            await pointer(moveType,interaction.haloPoint);const acquired=await callSnapProbe("acquired()");
+            await pointer(moveType,interaction.outsidePoint);const cleared=await callSnapProbe("cleared()");
+            const invalid=[];
+            for(const [index,{point}] of invalidTargets.entries()){
+                await pointer(moveType,point);invalid.push(await callSnapProbe(`invalid(${index})`));
+            }
+            if(invalid.some(({directInvalid,noPortSnap})=>!directInvalid||!noPortSnap))throw new Error(`Native Flow invalid-target precedence failed: ${JSON.stringify({row,invalidTargets,invalid})}`);
+            await pointer(moveType,interaction.transferPoint);const transferred=await callSnapProbe("transferred()");
+            if(row.cancel === "pointer cancellation"){await touch("touchStart",interaction.transferPoint);await touch("touchCancel",interaction.transferPoint);}else await escape();
+            const finished=await callSnapProbe("finishCancellation()");
+            await mouse("mouseReleased",interaction.transferPoint);
+            cancellationResults.push({...row,...prepared,...interaction,...started,invalidTargets,acquired,cleared,invalid,transferred,...finished});
+        }
+        runtime.runtime029={
+            actualPointerInput:cancellationResults.length===3&&cancellationResults.every(({preview})=>preview),
+            haloBoundary:cancellationResults.every(({pageBodyHalo,acquired,cleared})=>pageBodyHalo&&acquired.portOnly&&acquired.previewPinned&&cleared.cleared&&cleared.previewAtPointer),
+            exactExamples:cancellationResults.every(({exactExample})=>exactExample),
+            visibleInteraction:cancellationResults.every(({visibleInteraction})=>visibleInteraction),
+            noArbitraryTarget:cancellationResults.every(({noArbitraryTarget})=>noArbitraryTarget),
+            nonOverlappingHalos:cancellationResults.every(({nonOverlappingHalos})=>nonOverlappingHalos),
+            directInvalid:cancellationResults.every(({invalid})=>invalid.length===4&&invalid.every(({directInvalid,noPortSnap})=>directInvalid&&noPortSnap)),
+            transferred:cancellationResults.every(({transferred})=>transferred.transferred&&transferred.noWrite),
+            cancelled:cancellationResults.every(({cancelled})=>cancelled),
+            canonicalStable:cancellationResults.every(({sameGraph,sameBoundary})=>sameGraph&&sameBoundary),
+            measurements:{relationshipSnapCancellation:cancellationResults},
+        };
+        await callSnapProbe("finish()");
         await reloadFlowPage("authoring:evidence");
         await waitForBrowser("navigation", "interactive Flow canvas mounted after authoring", "[aria-label=\"Interactive directional Flow canvas\"]");
         const reloadEvidence = await evaluate(flowGraphReloadEvidence(seeded));
@@ -520,7 +605,11 @@ try {
                         canvas:candidate.boxes.canvas,surface:candidate.boxes.surface} },
             })), focus:runtime.styles.measurements.focus }, null, 2)
         : "";
-    assert.deepEqual(shardFailures, [], `Flow browser ${browserShard} evidence contains a false value${styleFailureDetail ? `\n${styleFailureDetail}` : ""}`);
+    const snapFailureDetail = shardFailures.some(({path}) => path.startsWith("runtime028.") || path.startsWith("runtime029."))
+        ? JSON.stringify({runtime028:runtime.runtime028?.measurements,runtime029:runtime.runtime029?.measurements},null,2)
+        : "";
+    const failureDetail=styleFailureDetail||snapFailureDetail;
+    assert.deepEqual(shardFailures, [], `Flow browser ${browserShard} evidence contains a false value${failureDetail ? `\n${failureDetail}` : ""}`);
     const controlRuntimeKeys = new Set(["runtime001", "runtime016", "runtime018", "runtime020", "runtime027"]);
     flowGraph = targetId === "FLOW_STYLESHEET_EXTRACTION_TARGET"
         ? {styles:runtime.styles}

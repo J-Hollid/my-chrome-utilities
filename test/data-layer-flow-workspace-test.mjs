@@ -26,6 +26,7 @@ import {flowPanClickSuppression,flowPanStartAllowed,flowPanToPinch} from "../dis
 import {FLOW_SECTION_ACTION_LABELS,flowSectionMenuRequest} from "../dist/flow-graph/workspace-section-ui.js";
 import {sectionBoundsAfterKeyboardInput} from "../dist/flow-graph/workspace-section-geometry.js";
 import {flowSelectionContains,primaryFlowSelection,selectionAfterActivation,selectionAfterRemoval} from "../dist/flow-graph/workspace-selection.js";
+import {FLOW_PORT_SNAP_RADIUS,flowPointerSnapTarget,flowPortSnapTarget} from "../dist/flow-graph/relationship-port-snap.js";
 import {createDurablePersistenceReadiness} from "../dist/durable-project/persistence-readiness.js";
 
 const persistenceStatuses=[];
@@ -100,6 +101,23 @@ assert.deepEqual(relationshipDropTarget("top",{x:320,y:40}),{position:{x:320,y:4
 assert.deepEqual(relationshipDropTarget("bottom",{x:320,y:640}),{position:{x:320,y:640},targetPort:"top",kind:"merge"});
 assert.equal(relationshipDropTarget("left",{x:0,y:0}),undefined,"left is not a valid documentary source port");
 
+const snapCandidates=[
+  {endpointId:"page:payment",port:"left",center:{x:100,y:100},presentationOrder:1},
+  {endpointId:"page:summary",port:"left",center:{x:140,y:100},presentationOrder:2},
+];
+assert.equal(FLOW_PORT_SNAP_RADIUS,24,"relationship ports use the approved screen-space snap radius");
+assert.equal(flowPortSnapTarget({x:124,y:100},snapCandidates.slice(0,1))?.endpointId,"page:payment","the inclusive 24 CSS-pixel halo acquires its port");
+assert.equal(flowPortSnapTarget({x:125,y:100},snapCandidates.slice(0,1)),undefined,"25 CSS pixels stays outside every port halo");
+assert.equal(flowPortSnapTarget({x:120,y:100},snapCandidates)?.endpointId,"page:summary","frontmost presentation order breaks an exact distance tie");
+assert.equal(flowPortSnapTarget({x:100,y:100},snapCandidates.filter(({endpointId})=>endpointId!=="page:payment")),undefined,"caller-filtered source and incompatible ports cannot become snap targets");
+const paymentSnap=flowPortSnapTarget({x:116,y:100},snapCandidates.slice(0,1));
+assert.equal(flowPointerSnapTarget({sourceId:"page:customer",compatibleSide:"left",direct:{kind:"page",endpointId:"page:payment"},snap:paymentSnap})?.endpointId,"page:payment","a target Page-body hit inside its compatible port halo acquires that port");
+assert.equal(flowPointerSnapTarget({sourceId:"page:customer",compatibleSide:"left",direct:{kind:"page",endpointId:"page:payment"},snap:undefined}),undefined,"a target Page body outside every compatible halo stays invalid");
+assert.equal(flowPointerSnapTarget({sourceId:"page:customer",compatibleSide:"left",direct:{kind:"page",endpointId:"page:customer"},snap:paymentSnap}),undefined,"the source Page stays invalid even when another halo overlaps it");
+assert.equal(flowPointerSnapTarget({sourceId:"page:customer",compatibleSide:"left",direct:{kind:"event",endpointId:"event:payment"},snap:paymentSnap}),undefined,"an Event mini-card stays directly invalid inside an overlapping halo");
+assert.equal(flowPointerSnapTarget({sourceId:"page:customer",compatibleSide:"left",direct:{kind:"port",endpointId:"page:payment",port:"right"},snap:paymentSnap}),undefined,"an incompatible Page port stays directly invalid inside an overlapping halo");
+assert.equal(flowPointerSnapTarget({sourceId:"page:customer",compatibleSide:"left",direct:{kind:"port",endpointId:"page:payment",port:"left"},snap:paymentSnap})?.endpointId,"page:payment","the exact compatible port remains acquirable");
+
 const items=[
   {id:"page:one",position:{x:80,y:90}},
   {id:"page:two",position:{x:430,y:250}},
@@ -164,6 +182,7 @@ const flowCss=[
   await readFile(new URL("../src/flow-graph/flow-workspace-shell.css",import.meta.url),"utf8"),
 ].join("\n");
 const flowWorkspaceUi=await readFile(new URL("../src/flow-graph/workspace-ui.ts",import.meta.url),"utf8");
+const flowGraphUi=await readFile(new URL("../src/data-layer-flow-graph-ui.ts",import.meta.url),"utf8");
 const sidePanelSource=await readFile(new URL("../src/side-panel.ts",import.meta.url),"utf8");
 const flowGraphStepsSource=await readFile(new URL("../acceptance/src/acceptance/steps/flow_graph.clj",import.meta.url),"utf8");
 const flowBrowserEvidence=await readFile(new URL("./browser-packs/flow-graph.mjs",import.meta.url),"utf8");
@@ -180,6 +199,15 @@ assert.match(flowCss,/body\.flow-focus-canvas \.documentary-flow\[data-canvas-fi
 assert.match(flowWorkspaceUi,/toolbar\.append\(skip, navigationToggle, add, focusCanvas, \.\.\.cameraUi\.controls, outlineButton, details, tidy, minimapToggle\)/u,"Add and the Focus Canvas entry precede secondary tools while camera controls stay immediately available");
 assert.doesNotMatch(flowCss,/^\.twatility-studio \.flow-canvas-viewport\s*\{[^}]*(?:max-block-size|aspect-ratio|block-size:\s*min\()/msu,"the ordinary canvas viewport has no fixed, maximum, or aspect-ratio height cap");
 assert.doesNotMatch(flowCss,/\.documentary-flow\[data-canvas-first-r02="true"\][^{]*\.flow-canvas-viewport\s*\{[^}]*block-size:\s*(?:clamp|min|max)\(/su,"later branding rules cannot restore a capped Flow canvas track");
+assert.match(flowGraphUi,/function emphasizeCompatiblePort\([^)]*\).*classList\.add\("is-valid-target"\)/su,"an acquired root-level relationship port exposes semantic state to Flow-local presentation");
+assert.doesNotMatch(flowGraphUi,/function emphasizeCompatiblePort\([^)]*\)[^{]*\{[^}]*\.style\./su,"compatible-port presentation is not owned by inline script");
+assert.match(flowCss,/\.documentary-flow circle\[data-flow-port-for\]\.is-valid-target\s*\{[^}]*fill:\s*#[0-9a-f]+[^}]*stroke:\s*#[0-9a-f]+[^}]*stroke-width:\s*5/su,"Flow-local CSS gives the acquired root-level port a non-color shape-weight change");
+const connectionStart=flowGraphUi.indexOf("const beginPortConnection="),
+  connectingLayout=flowGraphUi.indexOf('canvasScroll.classList.add("is-connecting")',connectionStart),
+  sourcePortFocus=flowGraphUi.indexOf("port.focus()",connectionStart);
+assert.ok(connectionStart>=0&&connectingLayout>connectionStart&&connectingLayout<sourcePortFocus,
+  "connection layout settles on port-down before focus or target halo measurement");
+assert.match(flowGraphUi,/flowPointerSnapTarget\(\{sourceId:connection\.sourceId,compatibleSide,direct:directFlowSnapTarget\(direct\),snap:compatiblePortSnap/u,"installed pointer targeting delegates Page-body precedence to the bounded snap contract");
 assert.ok(sidePanelSource.indexOf("mountUtilityShell(extensionShell, panelRoot, window)")<sidePanelSource.indexOf("await openDurableProjectRuntime(globalThis.localStorage)"),"the utility Shell becomes ready before the unrelated durable project repository opens");
 
 if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){

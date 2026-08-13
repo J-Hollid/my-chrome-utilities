@@ -69,9 +69,11 @@
 
 .documentary-flow .flow-node circle.is-valid-target {fill:#d9f7df;stroke:#137333}
 
+.documentary-flow circle[data-flow-port-for].is-valid-target {fill:#d9f7df;stroke:#137333;stroke-width:5}
+
 .documentary-flow .flow-node circle.is-invalid-target {fill:#fce8e6;stroke:#b3261e}
 
-.documentary-flow .flow-connection-preview {stroke:#f07c00;stroke-width:3;stroke-dasharray:6 4}
+.documentary-flow .flow-connection-preview {stroke:#f07c00;stroke-width:3;stroke-dasharray:6 4;pointer-events:none}
 
 .documentary-flow .flow-node .flow-node-role {fill:#40566c;font-size:11px;text-transform:uppercase}
 
@@ -266,6 +268,8 @@
 }
 
 .documentary-flow .flow-graph-canvas[data-semantic-detail="identity"] .flow-node { display: none; }
+
+.documentary-flow .flow-canvas-scroll.is-connecting .flow-graph-canvas[data-semantic-detail="identity"] .flow-node { display: inline; }
 
 .documentary-flow .flow-page-source,
 .documentary-flow .flow-readiness { fill: #40566c; font-size: 11px; }

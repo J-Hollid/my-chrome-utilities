@@ -3,6 +3,7 @@ import {documentaryFlowGraph,inferFlowRelationshipKind,renameFlowPageFrame,reset
 import {addFlowPageFrameToSection,createFlowSection} from "../dist/data-layer-property-set-flow-section.js";
 import {addProjectEntity,createSpecificationProject,transactProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 import {boundsAroundItems,cameraFromMinimapPoint,fitFlowBounds,flowWorkspaceKey,panFlowCamera,relationshipDropTarget,sectionBoundsFromDrag,tidyFlowItems,zoomFlowCamera} from "../dist/flow-graph/workspace.js";
+import {FLOW_PORT_SNAP_RADIUS,flowPortSnapTarget} from "../dist/flow-graph/relationship-port-snap.js";
 import {flowOutlineProjection} from "../dist/flow-graph/workspace-outline-model.js";
 import {selectionAfterActivation} from "../dist/flow-graph/workspace-selection.js";
 import {boundedDiagnostic,observeBrowserReadiness} from "./support/browser-observation-control.mjs";
@@ -17,6 +18,22 @@ for(const boundary of [125,126,65535,65536])for(let sample=0;sample<48;sample+=1
 for(let sample=0;sample<256;sample+=1){let timestamp=0;const scale=sample%4===0?.1:1000,timer=createFlowExamplesPhaseTimer({browserStartupMs:random()*1000,now:()=>timestamp});for(const phase of flowExamplesPhaseNames.slice(2)){timestamp+=random()*scale;timer.transition(phase);}timestamp+=random()*scale;const timing=timer.finish(),targetPhases=timing.phases.filter(({scope})=>scope==="target");assert.deepEqual(timing.phases.map(({name})=>name),flowExamplesPhaseNames,"phase identities and order remain stable");assert.ok(targetPhases.every(({durationMs})=>Number.isFinite(durationMs)&&durationMs>=0));assert.ok(Math.abs(targetPhases.reduce((sum,{durationMs})=>sum+durationMs,0)-timing.durationMs)<=.001,"rounded phase durations conserve target wall time");}
 for(let sample=0;sample<128;sample+=1){const timeout=1+Math.floor(random()*500),interval=1+Math.floor(random()*80),readyAt=Math.floor(random()*(timeout+1));let timestamp=0,observations=0;const result=await observeBrowserReadiness({targetId:"PROPERTY_TARGET",phase:"readiness",predicateDescription:"generated deadline",timeoutMs:timeout,pollIntervalMs:interval,maximumSnapshotCharacters:64,now:()=>timestamp,sleep:async(milliseconds)=>{assert.ok(milliseconds>0&&milliseconds<=interval&&timestamp+milliseconds<=timeout,"polling is clamped to the remaining monotonic deadline");timestamp+=milliseconds;},observe:async()=>({ready:timestamp>=readyAt,timestamp,index:observations++}),ready:({ready})=>ready,snapshot:(state)=>state});assert.ok(result.ready&&result.timestamp>=readyAt&&result.timestamp<=timeout,"readiness returns the proved observation without exceeding its deadline");const bound=1+Math.floor(random()*80),diagnostic=boundedDiagnostic({sample,text:"x".repeat(200)},bound);assert.ok(diagnostic.length<=bound,"diagnostic output respects every generated character bound");}
 for(let sample=0;sample<1024;sample+=1){const source=sides[Math.floor(random()*4)],target=sides[Math.floor(random()*4)];assert.equal(inferFlowRelationshipKind(source,target),expected.get(`${source}:${target}`));}
+for(let sample=0;sample<512;sample+=1){
+  const center={x:random()*4000-2000,y:random()*4000-2000},angle=random()*Math.PI*2,unit={x:Math.cos(angle),y:Math.sin(angle)},translation={x:random()*2000-1000,y:random()*2000-1000};
+  const candidate={endpointId:`candidate:${sample}`,port:"left",center,presentationOrder:sample};
+  const at=(radius)=>({x:center.x+unit.x*radius,y:center.y+unit.y*radius});
+  assert.equal(flowPortSnapTarget(at(FLOW_PORT_SNAP_RADIUS),[candidate])?.endpointId,candidate.endpointId,"the generated inclusive radius always acquires its candidate");
+  assert.equal(flowPortSnapTarget(at(FLOW_PORT_SNAP_RADIUS+.001),[candidate]),undefined,"a generated point beyond the radius never acquires its candidate");
+  const translationRadius=random()*FLOW_PORT_SNAP_RADIUS,untranslatedPoint=at(translationRadius),translatedCandidate={...candidate,center:{x:center.x+translation.x,y:center.y+translation.y}},translatedPoint={x:untranslatedPoint.x+translation.x,y:untranslatedPoint.y+translation.y};
+  const originalPoint={x:translatedPoint.x-translation.x,y:translatedPoint.y-translation.y};
+  assert.equal(flowPortSnapTarget(translatedPoint,[translatedCandidate])?.endpointId,flowPortSnapTarget(originalPoint,[candidate])?.endpointId,"translation cannot change snap acquisition");
+  const distances=[2+random()*5,9+random()*5,17+random()*5],candidates=distances.map((distance,index)=>({endpointId:`distance:${index}`,port:"left",center:{x:center.x+distance,y:center.y},presentationOrder:index})),point={...center};
+  assert.equal(flowPortSnapTarget(point,candidates)?.endpointId,"distance:0","the nearest generated candidate wins");
+  assert.equal(flowPortSnapTarget(point,[...candidates].reverse())?.endpointId,"distance:0","candidate iteration order cannot replace a uniquely nearest target");
+  const tied=[1,7,4].map((presentationOrder,index)=>({endpointId:`tie:${presentationOrder}`,port:"left",center:{x:center.x+8,y:center.y},presentationOrder,index}));
+  assert.equal(flowPortSnapTarget(point,tied)?.endpointId,"tie:7","frontmost presentation order breaks a generated distance tie");
+  assert.equal(flowPortSnapTarget(point,[...tied].reverse())?.endpointId,"tie:7","tie resolution is independent of candidate iteration order");
+}
 for(let sample=0;sample<512;sample+=1){
   const camera={x:random()*2000-1000,y:random()*2000-1000,zoom:.25+random()*1.75},anchor={x:random()*900,y:random()*700},factor=.2+random()*4,zoomed=zoomFlowCamera(camera,factor,anchor),worldBefore={x:camera.x+anchor.x/camera.zoom,y:camera.y+anchor.y/camera.zoom},worldAfter={x:zoomed.x+anchor.x/zoomed.zoom,y:zoomed.y+anchor.y/zoomed.zoom};
   assert.ok(zoomed.zoom>=.25&&zoomed.zoom<=2);assert.ok(Math.abs(worldBefore.x-worldAfter.x)<.08&&Math.abs(worldBefore.y-worldAfter.y)<.08,"zoom conserves the anchor world point");

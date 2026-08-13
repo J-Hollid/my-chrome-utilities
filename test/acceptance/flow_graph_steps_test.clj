@@ -67,7 +67,7 @@
         (reset! flow-graph/browser-observation nil)))))
 
 (def complete-evidence
-  (assoc (into {} (map (fn [number] [(keyword (format "runtime%03d" number)) {:exact true}]) (range 1 28)))
+  (assoc (into {} (map (fn [number] [(keyword (format "runtime%03d" number)) {:exact true}]) (range 1 30)))
          :installedBoundary true))
 
 (deftest evidence-maps-cannot-pass-vacuously
@@ -81,9 +81,13 @@
   (is (false? (boolean (flow-graph/complete-browser-evidence? {}))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :runtime020)))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :runtime027)))))
+  (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :runtime028)))))
+  (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :runtime029)))))
   (is (true? (boolean (flow-graph/complete-browser-evidence? (assoc complete-evidence :runtime026 {:exact true})))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :installedBoundary)))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? (assoc-in complete-evidence [:runtime021 :exact] false)))))
+  (is (true? (boolean (flow-graph/complete-browser-evidence? (assoc-in complete-evidence [:runtime009 :measurements] [{:previewDelta 0.0}]))))
+      "causal measurements are retained outside the boolean evidence-leaf contract")
   (is (true? (boolean (flow-graph/complete-browser-evidence? complete-evidence)))))
 
 (deftest flow005-examples-require-exact-mode-specific-values
@@ -130,6 +134,17 @@
   (is (= :eventToPageMerge (flow-graph/runtime009-example-key {"source" "ID verification" "source_port" "bottom" "target" "Payment" "target_port" "top" "kind" "merge"})))
   (is (= :eventInteractionExpectedNext (flow-graph/runtime009-example-key {"source" "Payment" "source_port" "right" "target" "Confirmation" "target_port" "left" "kind" "expected_next"})))
   (is (thrown? clojure.lang.ExceptionInfo (flow-graph/runtime009-example-key {"source" "Customer details" "source_port" "right" "target" "Payment" "target_port" "top" "kind" "merge"}))))
+
+(deftest relationship-snap-examples-require-the-exact-zoom-contract
+  (is (= :expected-next-25 (flow-graph/flow028-example-key {"zoom" "25" "source" "Customer details" "source_port" "right" "target" "Payment" "target_port" "left" "kind" "expected_next"})))
+  (is (= :alternative-100 (flow-graph/flow028-example-key {"zoom" "100" "source" "Customer details" "source_port" "top" "target" "ID verification" "target_port" "bottom" "kind" "alternative"})))
+  (is (= :merge-200 (flow-graph/flow028-example-key {"zoom" "200" "source" "ID verification" "source_port" "bottom" "target" "Payment" "target_port" "top" "kind" "merge"})))
+  (is (= :escape-25 (flow-graph/flow029-example-key {"zoom" "25" "cancel_input" "Escape"})))
+  (is (= :pointer-cancel-100 (flow-graph/flow029-example-key {"zoom" "100" "cancel_input" "pointer cancellation"})))
+  (is (= :escape-200 (flow-graph/flow029-example-key {"zoom" "200" "cancel_input" "Escape"})))
+  (is (thrown? clojure.lang.ExceptionInfo (flow-graph/flow028-example-key {"zoom" "50" "source" "Customer details" "source_port" "right" "target" "Payment" "target_port" "left" "kind" "expected_next"})))
+  (is (thrown? clojure.lang.ExceptionInfo (flow-graph/flow028-example-key {"zoom" "100" "source" "Customer details" "source_port" "top" "target" "Payment" "target_port" "bottom" "kind" "alternative"})))
+  (is (thrown? clojure.lang.ExceptionInfo (flow-graph/flow029-example-key {"zoom" "100" "cancel_input" "click away"}))))
 
 (deftest runtime023-examples-have-distinct-evidence-keys
   (is (= :labelled (flow-graph/runtime023-example-key {"kind" "expected_next" "source" "Customer details" "target" "Payment" "label_state" "label Checkout route" "accessible_name" "Delete relationship Checkout route, Customer details to Payment"})))

@@ -513,6 +513,12 @@ for(const [field,value,behavior] of [
   assert.match(result.violations[0].message,new RegExp(`^${behavior}: expected .*; observed `));
 }
 const drawRuntimeProgram=flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"});
+assert.match(drawRuntimeProgram,
+  /pointer\(target,'pointermove'.*pointer\(target,'pointerup'/u,
+  "the installed relationship helper dispatches acquisition and release at the measured port, avoiding canvas-edge auto-pan");
+assert.ok(drawRuntimeProgram.indexOf("pointer(source,'pointerdown'")<
+  drawRuntimeProgram.indexOf("const targetRect=target.getBoundingClientRect()"),
+"the helper measures its target after source focus may scroll the canvas");
 const wrappedPersistence=drawRuntimeProgram.indexOf("'wrapped Section'");
 const wrappedGeneration=drawRuntimeProgram.indexOf("'wrapped Section current rendered generation'");
 const drawActivation=drawRuntimeProgram.indexOf("click('Draw Section',surface())");

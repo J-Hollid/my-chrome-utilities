@@ -13,7 +13,7 @@ const complete=()=>Object.fromEntries([
 ]);
 
 assert.deepEqual(FLOW_RUNTIME_EXECUTION_PLAN,FLOW_RUNTIME_KEYS);
-assert.equal(FLOW_RUNTIME_KEYS.at(-1),"runtime027","the reporter must audit the newest Flow runtime");
+assert.equal(FLOW_RUNTIME_KEYS.at(-1),"runtime029","the reporter must audit both relationship snap runtimes independently");
 const controlsWorkflow=flowGraphCorrectiveWorkflow({projectId:"project",flowId:"flow"},
   {stopAfterRuntime:20});
 assert.match(controlsWorkflow,/evidence\.runtime020=/u,
@@ -24,10 +24,14 @@ assert.ok(controlsWorkflow.indexOf("return evidence;")<controlsWorkflow.indexOf(
 assert.deepEqual(flowEvidenceFailures(complete()),[]);
 
 const falseNewest=complete();
-falseNewest.runtime027={observed:false};
+falseNewest.runtime029={observed:false};
 assert.deepEqual(flowEvidenceFailures(falseNewest),[
-  {path:"runtime027.observed",value:false,expected:true},
+  {path:"runtime029.observed",value:false,expected:true},
 ]);
+
+const measured=complete();
+measured.runtime009={observed:true,measurements:[{previewDelta:0}]};
+assert.deepEqual(flowEvidenceFailures(measured),[],"causal measurements remain diagnostic rather than boolean evidence leaves");
 
 for(const [label,value,expectedPath] of [
   ["missing",undefined,"runtime008"],
