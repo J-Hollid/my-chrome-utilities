@@ -4597,6 +4597,18 @@ const normalizedVtd006Identity = (task) => {
   let encoded = JSON.stringify(verificationTaskIdentity(task));
   for (const [current, previous] of vtd006ProgramMigration) encoded = encoded.replaceAll(current, previous);
   const identity = JSON.parse(encoded);
+  if (identity.stage === "browser-observation" &&
+      identity.logicalTargetIds?.includes("FLOW_STYLESHEET_EXTRACTION_TARGET")) {
+    identity.key = identity.key.replace("+FLOW_STYLESHEET_EXTRACTION_TARGET", "");
+    identity.args = identity.args.filter((value) => value !== "FLOW_STYLESHEET_EXTRACTION_TARGET");
+    identity.target = identity.target.split(",")
+      .filter((value) => value !== "FLOW_STYLESHEET_EXTRACTION_TARGET").join(",");
+    delete identity.environment.FLOW_STYLESHEET_EXTRACTION_TARGET;
+    identity.logicalTargetIds = identity.logicalTargetIds
+      .filter((value) => value !== "FLOW_STYLESHEET_EXTRACTION_TARGET");
+    identity.aliasCommands = identity.aliasCommands.filter((command) =>
+      !command.includes("FLOW_STYLESHEET_EXTRACTION_TARGET"));
+  }
   if (identity.key === "acceptance-session:shell") {
     identity.args = identity.args.filter((value) =>
       ![vtd015Generated, vtd015Ir, vtd017Generated, vtd017Ir].includes(value));
@@ -4644,7 +4656,6 @@ const approvedStyleVerificationTaskKeys = new Set([
 ]);
 const approvedFlowStyleExtractionTaskKeys = new Set([
   "unit:test/flow-stylesheet-extraction-test.mjs",
-  "browser-observation:FLOW_STYLESHEET_EXTRACTION_TARGET",
 ]);
 const approvedVerificationTaskKeys = new Set([
   ...approvedVtd015TaskKeys,
@@ -4686,6 +4697,9 @@ for (const taskKey of approvedFlowStyleExtractionTaskKeys) {
   assert.equal(currentTerminalPlan.tasks.filter(({ key }) => key === taskKey).length, 1,
     `terminal-full planning adds the approved Flow style-extraction task ${taskKey} exactly once`);
 }
+assert.equal(currentTerminalPlan.observationTasks.filter(({ logicalTargetIds }) =>
+  logicalTargetIds?.includes("FLOW_STYLESHEET_EXTRACTION_TARGET")).length, 1,
+"terminal-full planning adds the approved Flow stylesheet logical target exactly once");
 assert.equal(currentTerminalPlan.tasks.filter(({ target }) =>
   target === "test/acceptance/side-panel-browser-session-contract.mjs").length, 0,
 "terminal-full planning does not add the focused VTD-006 session contract as a permanent task");
