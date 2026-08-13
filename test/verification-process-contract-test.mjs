@@ -87,6 +87,7 @@ import {
   candidatePredatesRunIntentImplementation,
   closeCanonicalEvidencePlanPrerequisites,
   createPendingVerificationEvidence,
+  legacyArchivedCheckpointTaskIdentities,
   legacyAcceptanceSessionPrerequisiteCompatibility,
   preflightGitNotePromotion,
   probeGitMetadataWrite,
@@ -1948,6 +1949,22 @@ assert.equal(await candidatePredatesRunIntentImplementation(
 "the authorized bootstrap base is a Git-proven pre-run-intent candidate");
 assert.equal(await candidatePredatesRunIntentImplementation("HEAD"), false,
 "a candidate containing the run-intent implementation cannot use archive compatibility");
+await assert.rejects(() => candidatePredatesRunIntentImplementation("ambiguous-archive-candidate"),
+  /unknown revision|Needed a single revision|ambiguous/u,
+"an unresolved archive candidate cannot be classified as pre-intent");
+const preIntentArchivePacks = await verificationPacksAtCommit(
+  "66b91e38e6c55d6611daaa572d626ca3dfbb3dd9");
+const preIntentBuildIdentity = verificationTaskIdentity(planVerification(preIntentArchivePacks, {
+  terminalFull:true, includeProperties:true,
+}).tasks.find(({ key }) => key === "build:dist"));
+assert.deepEqual(legacyArchivedCheckpointTaskIdentities({ tasks:{
+  [preIntentBuildIdentity.key]:{ identity:preIntentBuildIdentity },
+} }, preIntentArchivePacks, timeoutRepairPackIds), [preIntentBuildIdentity],
+"a pre-intent archive task remains bound to its candidate registry identity");
+assert.throws(() => legacyArchivedCheckpointTaskIdentities({ tasks:{
+  [preIntentBuildIdentity.key]:{ identity:{ ...preIntentBuildIdentity, executable:"forged" } },
+} }, preIntentArchivePacks, timeoutRepairPackIds), /absent or ambiguous/u,
+"archive compatibility rejects a recorded task field that differs from the candidate registry");
 const bootstrapExactPlan = { packIds:["flow_graph", "shell"],
   selectedPackIds:["flow_graph", "shell"], includeProperties:true, tasks:[] };
 const bootstrapBoundPlan = bindVerificationChangeScope(bootstrapExactPlan, {

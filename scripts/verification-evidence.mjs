@@ -236,6 +236,66 @@ function sortedUnique(values) {
   return [...new Set(values)].sort();
 }
 
+function acceptanceArtifacts(feature) {
+  const basename = feature.slice(feature.lastIndexOf("/") + 1).replace(/\.feature$/u, "");
+  const slug = feature.toLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/(^-+|-+$)/gu, "");
+  return { ir:`build/acceptance/ir/${basename}.json`,
+    generated:`build/acceptance/generated/${slug}_acceptance_test.clj` };
+}
+
+function recordedSubset(recorded, canonical) {
+  if (Array.isArray(recorded)) return Array.isArray(canonical) && recorded.length === canonical.length &&
+    recorded.every((value, index) => recordedSubset(value, canonical[index]));
+  if (recorded && typeof recorded === "object") return canonical && typeof canonical === "object" &&
+    !Array.isArray(canonical) && Object.entries(recorded).every(([key, value]) =>
+      Object.hasOwn(canonical, key) && recordedSubset(value, canonical[key]));
+  return Object.is(recorded, canonical);
+}
+
+export function legacyArchivedCheckpointTaskIdentities(receipt, candidatePacks, packIds) {
+  const candidates = [
+    ...planVerification(candidatePacks, { terminalFull:true, includeProperties:true }).tasks,
+    ...sortedUnique(packIds).flatMap((packId) => planVerification(candidatePacks, {
+      packIds:[packId], includeProperties:true,
+    }).tasks),
+  ].map(verificationTaskIdentity);
+  for (const result of Object.values(receipt.tasks ?? {})) {
+    const identity = result?.identity;
+    if (identity?.stage === "browser-observation" && Array.isArray(identity.logicalTargetIds)) {
+      candidates.push(...planVerification(candidatePacks, {
+        packIds:[identity.packId], browserTargetIds:identity.logicalTargetIds,
+      }).tasks.map(verificationTaskIdentity));
+    }
+    if (identity?.stage === "acceptance-session" && typeof identity.target === "string") {
+      const pack = candidatePacks.find(({ id }) => id === identity.packId);
+      const features = identity.target.split(",").filter(Boolean);
+      if (pack && features.length && features.every((feature) => pack.features?.includes(feature))) {
+        candidates.push({ key:`acceptance-session:${pack.id}`, stage:"acceptance-session",
+          packId:pack.id, executable:"bb", args:["acceptance-pack-runner", pack.id,
+            ...features.flatMap((feature) => {
+              const artifacts = acceptanceArtifacts(feature);
+              return [artifacts.generated, artifacts.ir];
+            })], target:features.join(","), environment:null, requiredCapabilities:[] });
+      }
+    }
+  }
+  candidates.push(timeoutRepairPackageTaskIdentity);
+  return Object.entries(receipt.tasks ?? {}).map(([key, result]) => {
+    const matches = candidates.filter((identity) => identity.key === key &&
+      recordedSubset(result?.identity, identity));
+    const distinctMatches = new Set(matches.map((identity) => JSON.stringify(identity)));
+    if (distinctMatches.size !== 1) {
+      throw new Error(`Legacy archived checkpoint task is absent or ambiguous in its candidate registry: ${key}`);
+    }
+    return structuredClone(result.identity);
+  });
+}
+
+function legacyArchivedChangedOwners(changedOwners) {
+  return Object.fromEntries(Object.entries(changedOwners).map(([changedPath, owners]) =>
+    [changedPath, changedPath.startsWith("dist/") ? [] : owners]));
+}
+
 function assertTaskName(task) {
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/u.test(task ?? "")) {
     throw new Error("Provide a stable task name (letters, numbers, dot, underscore, or hyphen; max 80)");
@@ -416,6 +476,8 @@ export async function validateCanonicalVerificationCheckpoint({
     !receipt.tasks?.[timeoutRepairPackageTaskIdentity.key];
   const legacyArchivedRunIntent = allowLegacySeparatePackage && receipt.runIntent === undefined &&
     await candidatePredatesRunIntentImplementation(commit, { repositoryRoot });
+  const legacyCandidatePacks = legacyArchivedRunIntent
+    ? await verificationPacksAtCommit(commit, { repositoryRoot }) : undefined;
   const plan = await canonicalPlanDocument({
     commit, baseCommit, changeSet, packIds:sortedUnique(packIds ?? []), repositoryRoot,
     includePackage:!legacySeparatePackage,
@@ -432,6 +494,7 @@ export async function validateCanonicalVerificationCheckpoint({
     allowLegacyAcceptanceSessionPrerequisites:allowLegacySeparatePackage,
     allowLegacyTerminalClosure,
     allowLegacyRunIntent:legacyArchivedRunIntent,
+    legacyCandidatePacks,
   });
   const results = Object.values(receipt.tasks);
   if (results.some((result) => result.provenance !== "fresh" || result.reliabilityIncidentId ||
@@ -525,6 +588,7 @@ async function parsedReceipt(receiptPath, plan, {
   allowLegacyAcceptanceSessionPrerequisites = false,
   allowLegacyTerminalClosure = false,
   allowLegacyRunIntent = false,
+  legacyCandidatePacks = undefined,
 } = {}) {
   if (!receiptPath) throw new Error("Provide the verification receipt produced by this run");
   const bytes = await readFile(receiptPath);
@@ -544,17 +608,21 @@ async function parsedReceipt(receiptPath, plan, {
   }
   const environment = receiptEnvironment(receipt.environment);
   const receiptArtifact = artifactIdentity(receipt.artifact);
+  const legacyArchiveTasks = allowLegacyRunIntent
+    ? legacyArchivedCheckpointTaskIdentities(receipt, legacyCandidatePacks, plan.requestedPackIds)
+    : undefined;
+  const validationTasks = legacyArchiveTasks ?? plan.tasks;
   const legacyPrerequisites = allowLegacyPrerequisites &&
     !Array.isArray(receipt.plan?.executionPrerequisites);
   const prerequisiteRows = legacyPrerequisites
-    ? plan.tasks.map((task) => ({ key:task.key, requiredCapabilities:[], route:"workspace-sandbox" }))
+    ? validationTasks.map((task) => ({ key:task.key, requiredCapabilities:[], route:"workspace-sandbox" }))
     : receipt.plan?.executionPrerequisites;
-  const expectedPrerequisiteKeys = plan.tasks.map(({ key }) => key).sort();
+  const expectedPrerequisiteKeys = validationTasks.map(({ key }) => key).sort();
   if (!Array.isArray(prerequisiteRows) ||
       !same(prerequisiteRows.map(({ key }) => key).sort(), expectedPrerequisiteKeys)) {
     throw new Error("Verification receipt execution prerequisites do not cover the exact task plan");
   }
-  for (const task of plan.tasks) {
+  for (const task of validationTasks) {
     const identity = verificationTaskIdentity(task);
     const row = prerequisiteRows.find(({ key }) => key === task.key);
     const workspaceOnly = identity.requiredCapabilities.length === 0;
@@ -598,12 +666,21 @@ async function parsedReceipt(receiptPath, plan, {
     requestedPackIds:plan.requestedPackIds,
     selectedPackIds:plan.selectedPackIds,
     ...(receipt.plan?.changedPaths === undefined ? {} : {changedPaths:plan.changedPaths}),
-    changedOwners:plan.changedOwners,
+    changedOwners:allowLegacyRunIntent
+      ? legacyArchivedChangedOwners(plan.changedOwners) : plan.changedOwners,
     changedBoundaries:plan.changedBoundaries,
-    styleSmokeTargets:sortedUnique(plan.styleSmokeTargets ?? []),
-    terminalFullObligations:sortedUnique(plan.terminalFullObligations ?? []),
-    changedStyleTargets:plan.changedStyleTargets ?? {},
-    adapterAuthorizationPackIds:sortedUnique(plan.adapterAuthorizationPackIds ?? []),
+    ...(!(allowLegacyRunIntent && receipt.plan?.styleSmokeTargets === undefined) ? {
+      styleSmokeTargets:sortedUnique(plan.styleSmokeTargets ?? []),
+    } : {}),
+    ...(!(allowLegacyRunIntent && receipt.plan?.terminalFullObligations === undefined) ? {
+      terminalFullObligations:sortedUnique(plan.terminalFullObligations ?? []),
+    } : {}),
+    ...(!(allowLegacyRunIntent && receipt.plan?.changedStyleTargets === undefined) ? {
+      changedStyleTargets:plan.changedStyleTargets ?? {},
+    } : {}),
+    ...(!(allowLegacyRunIntent && receipt.plan?.adapterAuthorizationPackIds === undefined) ? {
+      adapterAuthorizationPackIds:sortedUnique(plan.adapterAuthorizationPackIds ?? []),
+    } : {}),
     changeSetDigest:verificationDigest(plan.changeSet),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
     ...(receipt.candidate?.evidenceTask === boundedClosureEvidenceTask &&
@@ -616,8 +693,9 @@ async function parsedReceipt(receiptPath, plan, {
         attempt:receipt.plan?.terminalClosure?.attempt,
       },
     } : {}),
-    ...(!legacyPrerequisites ? { executionPrerequisites:plan.tasks.map((task) =>
-      prerequisiteRows.find(({ key }) => key === task.key)),
+    ...(!legacyPrerequisites ? { executionPrerequisites:allowLegacyRunIntent
+      ? prerequisiteRows : validationTasks.map((task) =>
+        prerequisiteRows.find(({ key }) => key === task.key)),
     ...(!legacyPromotionPrerequisites ? {
       promotionExecutionPrerequisites:promotionTasks.map((task) =>
         promotionPrerequisiteRows.find(({ key }) => key === task.key)),
@@ -626,7 +704,7 @@ async function parsedReceipt(receiptPath, plan, {
   if (!same(receipt.plan, expectedPlanSummary)) {
     throw new Error("Verification receipt plan selection summary does not match the executed plan");
   }
-  const expected = new Map(plan.tasks.map((identity) => [identity.key, identity]));
+  const expected = new Map(validationTasks.map((identity) => [identity.key, identity]));
   const actualKeys = Object.keys(receipt.tasks).sort();
   if (!same(actualKeys, [...expected.keys()].sort())) {
     const missing = [...expected.keys()].filter((key) => !actualKeys.includes(key));
