@@ -207,6 +207,32 @@ try {
             for (const [key, value] of Object.entries(row))
                 geometryEvidence[`${label}_${key}`] = value;
         }
+        const styleStateBefore = await evaluate(`(async()=>{const repository=await(await import('./data-layer-durable-project-repository.js')).openIndexedDbProjectRepository(),loaded=await repository.loadProject(${JSON.stringify(seeded.projectId)}),graph=loaded.state.project.documentationFlowGraphs[${JSON.stringify(seeded.flowId)}];return JSON.stringify({graph,revision:loaded.draftSequence,undo:loaded.state.history.undo.length});})()`);
+        const assetPresentation = await evaluate(`(()=>{const hrefs=[...document.styleSheets].flatMap(sheet=>sheet.href?[new URL(sheet.href).pathname]:[]),required=['/flow-graph/flow-workspace.css','/flow-graph/flow-workspace-shell.css'],canvas=document.querySelector('[aria-label="Interactive directional Flow canvas"]'),node=document.querySelector('.flow-page-frame'),port=document.querySelector('[data-input-port-for]'),portBox=port?.getBoundingClientRect(),toolbar=document.querySelector('[aria-label="Flow toolbar"]'),buttons=[...toolbar.querySelectorAll('button')];return{assetsLoaded:required.every(path=>hrefs.includes(path))&&required.every(path=>hrefs.filter(href=>href===path).length===1),computedPresentation:Boolean(canvas&&node&&port&&getComputedStyle(canvas).backgroundColor!=='rgba(0, 0, 0, 0)'&&getComputedStyle(node).fill!=='none'&&getComputedStyle(port).visibility!=='hidden'&&(portBox?.width??0)>0&&(portBox?.height??0)>0),visibleControls:['Add','Focus Canvas','Zoom in','Fit Flow','Outline','Details'].every(label=>{const button=buttons.find(item=>item.textContent.trim()===label),box=button?.getBoundingClientRect();return Boolean(box&&box.width>0&&box.height>0);})};})()`);
+        const zoomGeometry = {};
+        for (const scale of [0.25, 1, 2]) {
+            await socket.call("Emulation.setPageScaleFactor", { pageScaleFactor:scale });
+            zoomGeometry[String(scale)] = await evaluate("(()=>{const canvas=document.querySelector('[aria-label=\"Interactive directional Flow canvas\"]'),viewport=document.querySelector('.flow-canvas-viewport'),canvasBox=canvas?.getBoundingClientRect(),viewportBox=viewport?.getBoundingClientRect();return Boolean(canvasBox&&viewportBox&&canvasBox.width>0&&canvasBox.height>0&&viewportBox.width>0&&viewportBox.height>0);})()");
+        }
+        await socket.call("Emulation.setPageScaleFactor", { pageScaleFactor:1 });
+        await socket.call("Emulation.setEmulatedMedia", { features:[{name:"prefers-reduced-motion",value:"reduce"}] });
+        const reducedMotion = await evaluate("(()=>{const button=document.querySelector('[aria-label=\"Flow toolbar\"] button');return matchMedia('(prefers-reduced-motion: reduce)').matches&&getComputedStyle(button).transitionProperty==='none';})()");
+        await socket.call("Emulation.setEmulatedMedia", { features:[{name:"forced-colors",value:"active"}] });
+        const forcedColors = await evaluate("(()=>{const root=document.querySelector('.documentary-flow'),node=document.querySelector('.flow-node rect');return matchMedia('(forced-colors: active)').matches&&getComputedStyle(root).borderColor!==''&&getComputedStyle(node).stroke!=='none';})()");
+        await socket.call("Emulation.setEmulatedMedia", { features:[] });
+        await evaluate("(()=>{const toolbar=document.querySelector('[aria-label=\"Flow toolbar\"]'),button=toolbar.querySelector('button');button.focus();})()");
+        await socket.call("Input.dispatchKeyEvent", {type:"keyDown",key:"Tab",code:"Tab",windowsVirtualKeyCode:9,nativeVirtualKeyCode:9});
+        await socket.call("Input.dispatchKeyEvent", {type:"keyUp",key:"Tab",code:"Tab",windowsVirtualKeyCode:9,nativeVirtualKeyCode:9});
+        const keyboardFocus = await evaluate("(()=>{const active=document.activeElement;return Boolean(active?.closest('.documentary-flow')&&active.matches(':focus-visible')&&(getComputedStyle(active).outlineStyle!=='none'||getComputedStyle(active).borderStyle!=='none'||getComputedStyle(active).boxShadow!=='none'));})()");
+        const styleStateAfter = await evaluate(`(async()=>{const repository=await(await import('./data-layer-durable-project-repository.js')).openIndexedDbProjectRepository(),loaded=await repository.loadProject(${JSON.stringify(seeded.projectId)}),graph=loaded.state.project.documentationFlowGraphs[${JSON.stringify(seeded.flowId)}];return JSON.stringify({graph,revision:loaded.draftSequence,undo:loaded.state.history.undo.length});})()`);
+        runtime.styles = {
+            ...assetPresentation,
+            zoomGeometry:Object.values(zoomGeometry).every(Boolean),
+            reducedMotion,
+            forcedColors,
+            keyboardFocus,
+            canonicalStable:styleStateAfter===styleStateBefore,
+        };
         activePhase = "runtime001";
         await reloadFlowPage("runtime001");
         await waitForBrowser("navigation", "Flow canvas mounted for runtime001", "[aria-label=\"Flow canvas viewport\"]");
@@ -386,7 +412,9 @@ try {
     const fallbackCore = browserShard === "core" && targetId === "FLOW_GRAPH_FALLBACK_TARGET", supplemental = new Set(["runtime017", "runtime021", "runtime022", "runtime025"]), missing = fallbackCore ? FLOW_RUNTIME_KEYS.filter(key => !supplemental.has(key) && !runtime[key]).map(path => ({ path, value: "unexecuted" })) : [], falseLeaves = Object.entries(runtime).flatMap(([runtimeKey, evidence]) => Object.entries(evidence).filter(([, value]) => value !== true).map(([key, value]) => ({ path: `${runtimeKey}.${key}`, value }))), shardFailures = [...missing, ...falseLeaves, ...(fallbackCore && runtime.installedBoundary !== true ? [{ path: "installedBoundary", value: runtime.installedBoundary }] : [])];
     assert.deepEqual(shardFailures, [], `Flow browser ${browserShard} evidence contains a false value`);
     const controlRuntimeKeys = new Set(["runtime001", "runtime016", "runtime018", "runtime020", "runtime027"]);
-    flowGraph = targetId === "FLOW_WORKSPACE_CONTROLS_TARGET"
+    flowGraph = targetId === "FLOW_STYLESHEET_EXTRACTION_TARGET"
+        ? {styles:runtime.styles}
+        : targetId === "FLOW_WORKSPACE_CONTROLS_TARGET"
         ? Object.fromEntries(Object.entries(runtime).filter(([key]) => controlRuntimeKeys.has(key)))
         : targetId === "FLOW_WORKSPACE_AUTHORING_TARGET"
             ? Object.fromEntries(Object.entries(runtime).filter(([key]) =>

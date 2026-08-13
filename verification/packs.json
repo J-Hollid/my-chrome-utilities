@@ -2777,6 +2777,26 @@
       "src/data-layer-flow-graph-ui-page-frame.ts",
       "src/flow-graph"
     ],
+    "stylesheets": [
+      {
+        "source": "src/flow-graph/flow-workspace.css",
+        "destination": "flow-graph/flow-workspace.css",
+        "classification": "feature-local",
+        "owner": "flow_graph",
+        "consumers": [],
+        "qaTargets": [],
+        "scopeRoot": ".documentary-flow"
+      },
+      {
+        "source": "src/flow-graph/flow-workspace-shell.css",
+        "destination": "flow-graph/flow-workspace-shell.css",
+        "classification": "shell-bridge",
+        "owner": "flow_graph",
+        "consumers": ["shell"],
+        "qaTargets": [],
+        "scopeRoot": ".documentary-flow"
+      }
+    ],
     "dependencies": [
       "durable_project_repository",
       "layered_schema"
@@ -2839,6 +2859,7 @@
       }
     ],
     "unit": [
+      "test/flow-stylesheet-extraction-test.mjs",
       "test/data-layer-flow-graph-test.mjs",
       "test/data-layer-flow-workspace-test.mjs",
       "test/data-layer-flow-relationship-deletion-test.mjs",
@@ -2987,6 +3008,14 @@
           "flowGraph.runtime027.focusPanPinch_selectionClearBefore",
           "flowGraph.runtime027.focusPanPinch_itemActivated",
           "flowGraph.runtime027.focusPanPinch_controlActivated",
+          "flowGraph.styles.assetsLoaded",
+          "flowGraph.styles.computedPresentation",
+          "flowGraph.styles.visibleControls",
+          "flowGraph.styles.zoomGeometry",
+          "flowGraph.styles.reducedMotion",
+          "flowGraph.styles.forcedColors",
+          "flowGraph.styles.keyboardFocus",
+          "flowGraph.styles.canonicalStable",
           "flowGraph.runtime001.narrowHiddenClosed_bounded",
           "flowGraph.runtime001.narrowHiddenClosed_routeEdges",
           "flowGraph.runtime001.narrowHiddenClosed_workspaceEdges",
@@ -3289,6 +3318,19 @@
           "flowGraph.runtime025.blocked"
         ],
         "targets": [
+          {
+            "id": "FLOW_STYLESHEET_EXTRACTION_TARGET",
+            "leaves": [
+              "flowGraph.styles.assetsLoaded",
+              "flowGraph.styles.computedPresentation",
+              "flowGraph.styles.visibleControls",
+              "flowGraph.styles.zoomGeometry",
+              "flowGraph.styles.reducedMotion",
+              "flowGraph.styles.forcedColors",
+              "flowGraph.styles.keyboardFocus",
+              "flowGraph.styles.canonicalStable"
+            ]
+          },
           {
             "id": "FLOW_WORKSPACE_CONTROLS_TARGET",
             "leaves": [
@@ -3714,6 +3756,23 @@
     ],
     "browserObservations": [
       {
+        "id": "FLOW_STYLESHEET_EXTRACTION_TARGET",
+        "path": "test/browser-packs/flow-graph.mjs",
+        "environment": {
+          "FLOW_STYLESHEET_EXTRACTION_TARGET": "1"
+        },
+        "sessionBatch": "flow-graph",
+        "impactBoundaries": [
+          "flow_workspace_surface_composition"
+        ],
+        "observationKeys": [
+          "flowGraph"
+        ],
+        "features": [
+          "features/data-layer-directional-flow-specification-graph-runtime.feature"
+        ]
+      },
+      {
         "id": "FLOW_WORKSPACE_CONTROLS_TARGET",
         "path": "test/browser-packs/flow-graph.mjs",
         "environment": {
@@ -3789,13 +3848,14 @@
     "browserAdapterPerformance": [
       {
         "path": "test/browser-packs/flow-graph.mjs",
-        "singleTargetP90Milliseconds": 30318,
+        "singleTargetP90Milliseconds": 34901,
         "maximumSingleTargetP90Milliseconds": 35000,
         "targetIds": [
           "FLOW_WORKSPACE_CONTROLS_TARGET",
           "FLOW_WORKSPACE_AUTHORING_TARGET",
           "FLOW_GRAPH_LEGACY_TARGET",
-          "FLOW_GRAPH_EXAMPLES_TARGET"
+          "FLOW_GRAPH_EXAMPLES_TARGET",
+          "FLOW_STYLESHEET_EXTRACTION_TARGET"
         ],
         "sessionBatch": "flow-graph"
       }

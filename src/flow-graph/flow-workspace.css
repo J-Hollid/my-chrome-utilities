@@ -1,0 +1,446 @@
+.documentary-flow .flow-projections {display:grid;grid-template-columns:minmax(30rem,2fr) minmax(18rem,1fr);gap:.75rem}
+
+.documentary-flow .flow-projections>section {min-width:0;padding:.6rem;border:1px solid var(--border);border-radius:.35rem;background:#f8fbff}
+
+.documentary-flow .flow-projections li {margin-block:.35rem}
+
+.documentary-flow .flow-projections ol button {width:100%;text-align:start}
+
+.documentary-flow .flow-projections .is-selected {outline:3px solid #f07c00;outline-offset:1px}
+
+.documentary-flow {grid-column:1/-1}
+
+.documentary-flow .flow-node-example summary,
+.documentary-flow .flow-node-example a,
+.documentary-flow .flow-node-example button,
+.documentary-flow .flow-node-example input {min-height:26px;line-height:26px;font-size:14px}
+
+.documentary-flow .flow-node-example a {display:inline-block}
+
+.documentary-flow .flow-canvas-scroll {min-width:0;overflow:auto}
+
+.documentary-flow>[aria-label="Flow component catalogs"] {display:grid;grid-template-columns:repeat(3,minmax(12rem,1fr)) auto;gap:.6rem;align-items:start}
+
+.documentary-flow>[aria-label$=" catalog"],
+.documentary-flow>[aria-label="Page Group lane controls"],
+.documentary-flow>[aria-label="Flow Page frames"],
+.documentary-flow>[aria-label="Selected node inline actions"],
+.documentary-flow>[aria-label="Inline relationship popover"] {padding:.6rem;border:1px solid var(--border);border-radius:.4rem;background:white}
+
+.documentary-flow>[aria-label$=" catalog"] input {width:100%}
+
+.documentary-flow>[aria-label$=" catalog"] div {display:flex;flex-wrap:wrap;gap:.35rem}
+
+.documentary-flow .flow-graph-canvas {display:block;width:100%;min-height:24rem;border:1px solid #9eacbc;border-radius:.45rem;background:#f7faff;touch-action:none;user-select:none}
+
+.documentary-flow .flow-graph-canvas foreignObject { display: none; }
+
+.documentary-flow .flow-lane {fill:#eef4fa;stroke:#c9d6e3;stroke-dasharray:5 4}
+
+.documentary-flow .flow-lane-label {fill:#40566c;font-size:14px;font-weight:700}
+
+.documentary-flow .flow-page-frame {fill:#dfefff66;stroke:#6d8399;stroke-width:2}
+
+.documentary-flow .flow-free-page-frame {fill:#fff8e1;stroke:#c47700}
+
+.documentary-flow .flow-free-edge-target {fill:#fff3cd;stroke:#c47700;stroke-width:2;stroke-dasharray:4 3}
+
+.documentary-flow .flow-free-edge-target+text {fill:#6c4300;font-size:11px;font-weight:700;pointer-events:none}
+
+.documentary-flow .flow-edge line {stroke:#40566c;stroke-width:2}
+
+.documentary-flow .flow-edge polygon {fill:#40566c}
+
+.documentary-flow .flow-edge text {fill:#40566c;font-size:12px}
+
+.documentary-flow .flow-edge.is-selected line {stroke:#f07c00;stroke-width:4}
+
+.documentary-flow .flow-edge.is-selected polygon {fill:#f07c00}
+
+.documentary-flow .flow-node {cursor:grab}
+
+.documentary-flow .flow-node rect {fill:white;stroke:#0b5cab;stroke-width:2;filter:drop-shadow(0 2px 2px #10203022)}
+
+.documentary-flow .flow-node:focus rect {stroke:#f07c00;stroke-width:4}
+
+.documentary-flow .flow-node text {fill:#18212b;font-size:13px;pointer-events:none}
+
+.documentary-flow .flow-node circle {fill:white;stroke:#0b5cab;stroke-width:3;cursor:crosshair}
+
+.documentary-flow .flow-node circle.is-valid-target {fill:#d9f7df;stroke:#137333}
+
+.documentary-flow .flow-node circle.is-invalid-target {fill:#fce8e6;stroke:#b3261e}
+
+.documentary-flow .flow-connection-preview {stroke:#f07c00;stroke-width:3;stroke-dasharray:6 4}
+
+.documentary-flow .flow-node .flow-node-role {fill:#40566c;font-size:11px;text-transform:uppercase}
+
+.documentary-flow .flow-node .flow-node-reference {fill:#40566c;font-size:11px}
+
+.documentary-flow .flow-empty-state {padding:1rem;border:2px dashed var(--border);border-radius:.5rem;background:white}
+
+.documentary-flow .flow-empty-state .primary {background:var(--accent);color:white;border-color:#063d73}
+
+@media(max-width:760px) {.documentary-flow .flow-projections {grid-template-columns:1fr}
+
+.documentary-flow .flow-graph-canvas {min-width:42rem}
+
+.documentary-flow>[aria-label="Flow component catalogs"] {grid-template-columns:1fr}}
+
+.documentary-flow [aria-label="Page Group membership search results"] {display:flex;flex-wrap:wrap;gap:.35rem}
+
+.documentary-flow [data-page-drop-state="valid"] {stroke:#137333;stroke-width:4}
+
+.documentary-flow [data-page-drop-state="invalid"] {stroke:#b3261e;stroke-width:4}
+
+@media(max-width:420px) {.documentary-flow [aria-label="Page Group rule stack"] {max-width:100%;overflow-wrap:anywhere}
+
+.documentary-flow [aria-label="Page Group rule stack"] ol {padding-inline-start:1.2rem}}
+
+.documentary-flow .flow-canvas-scroll.is-connecting {max-height:min(70vh,48rem)}
+
+.documentary-flow[data-canvas-first-r02="true"] {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  min-block-size: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.documentary-flow .flow-workspace-toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  overflow-x: auto;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  background: white;
+}
+
+.documentary-flow .flow-workspace-toolbar button { min-block-size: 36px; }
+
+.documentary-flow .flow-workspace-toolbar output {
+  min-inline-size: 3.5rem;
+  text-align: center;
+  font-weight: 800;
+}
+
+.documentary-flow .flow-canvas-viewport {
+  position: relative;
+  flex: 1 1 0;
+  display: block;
+  min-inline-size: 0;
+  min-block-size: 0;
+  overflow: hidden;
+}
+
+.documentary-flow .flow-canvas-viewport > .flow-canvas-scroll {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  min-block-size: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: #f7faff;
+}
+
+.documentary-flow .flow-canvas-viewport .flow-graph-canvas {
+  inline-size: 100%;
+  block-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 0;
+  border: 0;
+}
+
+.documentary-flow .flow-graph-canvas {
+  border-width: 0.12rem;
+  border-color: var(--twa-navy);
+  background:
+    radial-gradient(circle at 0.08rem 0.08rem, #0b31551a 0 0.05rem, transparent 0.06rem)
+      0 0 / 0.62rem 0.62rem,
+    #fffdf8;
+}
+
+.documentary-flow .flow-workspace-surface {
+  position: absolute;
+  inset-block: 0.5rem;
+  inset-inline-end: 0.5rem;
+  z-index: 6;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: start;
+  gap: 0.5rem;
+  inline-size: min(28rem, calc(100% - 1rem));
+  max-block-size: calc(100% - 1rem);
+  overflow: auto;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: white;
+  box-shadow: 0 0.75rem 2rem #10203033;
+}
+
+.documentary-flow .flow-workspace-surface > div {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0.5rem;
+  min-inline-size: 0;
+}
+
+.documentary-flow .flow-workspace-surface [aria-label$=" catalog"] div {
+  display: grid;
+  grid-template-columns: 1fr;
+  max-block-size: 13rem;
+  overflow: auto;
+}
+
+.documentary-flow .flow-minimap {
+  position: absolute;
+  inset-block-end: 0.75rem;
+  inset-inline-end: 0.75rem;
+  z-index: 5;
+  inline-size: 9rem;
+  block-size: 6rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 0.3rem;
+  background: #f8fbffdd;
+  color: #40566c;
+  font-size: 0.75rem;
+}
+
+.documentary-flow .flow-minimap[hidden] { display: none; }
+
+.documentary-flow .flow-minimap > button {
+  position: relative;
+  inline-size: 100%;
+  block-size: 100%;
+  border: 0;
+  background:
+    linear-gradient(135deg, #dbe9f5 25%, transparent 25%) 0 0 / 1rem 1rem,
+    #f8fbff;
+  overflow: hidden;
+}
+
+.documentary-flow .flow-minimap-viewport {
+  position: absolute;
+  min-inline-size: 0.4rem;
+  min-block-size: 0.4rem;
+  border: 2px solid var(--twa-navy, #123f65);
+  background: #ffffff66;
+  pointer-events: none;
+}
+
+.documentary-flow .flow-section-resize-handle {
+  fill: var(--twatility-mustard, #d9a21b);
+  stroke: var(--twa-navy, #123f65);
+  cursor: nwse-resize;
+}
+
+.documentary-flow .flow-section-draw-preview {
+  fill: #d9a21b1f;
+  stroke: var(--twatility-mustard, #d9a21b);
+  stroke-width: 2;
+  stroke-dasharray: 8 5;
+  pointer-events: none;
+}
+
+.documentary-flow .flow-tidy-edge-preview {
+  stroke: var(--twatility-mustard, #d9a21b);
+  stroke-width: 3;
+  stroke-dasharray: 7 5;
+  pointer-events: none;
+}
+
+.documentary-flow .flow-graph-canvas[data-semantic-detail="identity"] .flow-node { display: none; }
+
+.documentary-flow .flow-page-source,
+.documentary-flow .flow-readiness { fill: #40566c; font-size: 11px; }
+
+.documentary-flow .flow-readiness { font-weight: 800; }
+
+.documentary-flow .flow-contextual-toolbar {
+  position: absolute;
+  inset-block-start: 3.5rem;
+  inset-inline-start: 50%;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  max-inline-size: calc(100% - 1rem);
+  transform: translateX(-50%);
+  padding: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  background: white;
+  box-shadow: 0 0.35rem 1rem #10203022;
+}
+
+.documentary-flow .flow-node circle { opacity: 0; pointer-events: none; }
+
+.documentary-flow .flow-node:is(:hover, :focus, .is-selected) circle,
+.documentary-flow .flow-node circle:is(:focus, .is-valid-target, .is-invalid-target) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.documentary-flow .flow-lane {
+  fill: color-mix(in srgb, var(--twatility-mustard, #d9a21b) 7%, transparent);
+  stroke-width: 1.5;
+}
+
+@media (max-width: 760px) {.documentary-flow .flow-workspace-toolbar { flex-wrap: nowrap; overflow-x: auto; }
+
+.documentary-flow .flow-workspace-toolbar button { flex: 0 0 auto; }
+
+.documentary-flow .flow-workspace-surface {
+    inset-inline: 0.35rem;
+    inset-block: auto 0.35rem;
+    inline-size: auto;
+    max-block-size: 65%;
+  }}
+
+.documentary-flow[data-canvas-first-r02="true"] {
+  min-block-size: 0;
+  max-block-size: none;
+}
+
+.documentary-flow[data-canvas-first-r02="true"] .flow-canvas-viewport {
+  flex: 1 1 0;
+  min-block-size: 0;
+  block-size: auto;
+}
+
+.documentary-flow[data-canvas-first-r02="true"] .flow-workspace-surface {
+  box-sizing: border-box;
+  position: absolute !important;
+  inset: 0.35rem 0.35rem 0.35rem auto !important;
+  max-block-size: calc(100% - 0.7rem) !important;
+}
+
+.documentary-flow[data-canvas-first-r02="true"] .flow-workspace-surface[hidden] {
+  display: none !important;
+}
+
+.documentary-flow[data-canvas-first-r02="true"] .flow-workspace-status {
+  position: absolute;
+  inset-inline-start: 0.75rem;
+  inset-block-end: 0.75rem;
+  z-index: 4;
+  max-inline-size: min(34rem, calc(100% - 10rem));
+  max-block-size: 4.5rem;
+  overflow: auto;
+  margin: 0;
+  padding: 0.35rem 0.5rem;
+  background: #fffdf8e8;
+}
+
+.documentary-flow #flow-graph-workspace {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.documentary-flow .flow-projections {
+  min-width: 0;
+  gap: 0.85rem;
+}
+
+.documentary-flow .flow-projections > section {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--twa-blue-soft) 24%, var(--twa-paper-raised));
+  box-shadow: 0.1rem 0.12rem 0 color-mix(in srgb, var(--twa-ink) 16%, transparent);
+}
+
+.documentary-flow {
+  min-width: 0;
+  padding: 0.78rem;
+  border: 0.1rem solid var(--border);
+  border-block-start: 0.3rem solid var(--twa-mustard);
+  border-radius: var(--twa-radius-medium);
+  background: var(--twa-paper-raised);
+}
+
+.documentary-flow > [aria-label="Flow component catalogs"] {
+  min-width: 0;
+}
+
+.documentary-flow > :is(
+    [aria-label$=" catalog"],
+    [aria-label="Page Group lane controls"],
+    [aria-label="Flow Page frames"],
+    [aria-label="Selected node inline actions"],
+    [aria-label="Inline relationship popover"]
+  ) {
+  min-width: 0;
+  border-color: var(--border);
+  border-inline-start: 0.22rem solid var(--twa-mustard);
+  background: #fffaf0;
+}
+
+.documentary-flow .flow-canvas-scroll {
+  min-width: 0;
+  max-width: 100%;
+  border-radius: var(--twa-radius-medium);
+  scrollbar-color: var(--twa-mustard-dark) var(--twa-paper);
+}
+
+.documentary-flow .flow-node rect {
+  fill: #fffaf0;
+  stroke: var(--twa-navy);
+}
+
+.documentary-flow .flow-node:focus rect,
+.documentary-flow .flow-edge.is-selected line {
+  stroke: var(--twa-red);
+}
+
+.documentary-flow .flow-edge.is-selected polygon {
+  fill: var(--twa-red);
+}
+
+.documentary-flow #flow-step-editor {
+  border-inline-start: 0.24rem solid var(--twa-red);
+}
+
+@media (max-width: 1180px) {.documentary-flow .flow-projections {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+.documentary-flow {
+    grid-column: auto;
+  }
+
+.documentary-flow > [aria-label="Flow component catalogs"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }}
+
+@media (max-width: 760px) {.documentary-flow > [aria-label="Flow component catalogs"] {
+    grid-template-columns: minmax(0, 1fr);
+  }}
+
+@media (forced-colors: active) {.documentary-flow .flow-node:focus rect,
+.documentary-flow .flow-edge.is-selected line {
+    stroke: Highlight;
+  }}
+
+@media (prefers-reduced-motion: reduce) {
+  .documentary-flow button { scroll-behavior: auto; transition: none; }
+}
+
+@media (forced-colors: active) {
+  .documentary-flow,
+  .documentary-flow > [aria-label$=" catalog"] { border-color: CanvasText; }
+}

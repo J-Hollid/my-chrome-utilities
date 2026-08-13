@@ -72,7 +72,7 @@ export function validateStylesheetOwnership(registry) {
   return registry;
 }
 
-function cssRuleHeaders(source) {
+export function cssRuleHeaders(source) {
   const headers = [];
   let segmentStart = 0;
   let quote = null;

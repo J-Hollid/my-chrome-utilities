@@ -1146,6 +1146,65 @@
    {:pattern #"^no timeout is increased, arbitrary wait is added, target scope is broadened, or product assertion is weakened$" :handler (fn [world _ _] (let [lifecycle (get-in world [:vtd014/evidence :flowReloadLifecycle])] (assert! world (every? true? ((juxt :timeoutUnchanged :assertionsUnchanged) lifecycle)) "Flow lifecycle limits or assertions changed.")))}
    {:pattern #"^the bounded VTD-014 closure policy selects every additional affected task and fresh final package proof$" :handler (fn [world _ _] (assert! world (= "fresh" (get-in world [:vtd014/evidence :boundedClosure :terminal :descendant :packagePolicy])) "Flow lifecycle package proof is not fresh."))}])
 
+(defn- flow-stylesheet-handlers [example-values]
+  [{:pattern #"^Flow presentation rules exist in the two global Specification Studio stylesheets before extraction$"
+    :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^they are divided into a Flow-local stylesheet and a Flow-shell bridge$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :flowStyles :declaredBoundaries]))
+                        "Flow stylesheet boundaries are not declared."))}
+   {:pattern #"^every moved selector and declaration is accounted for exactly once$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :flowStyles :movedExactlyOnce]))
+                        "Flow selector extraction is not conserved exactly once."))}
+   {:pattern #"^every local selector remains beneath the stable Flow root$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :flowStyles :localScoped]))
+                        "A Flow-local selector escapes the stable root."))}
+   {:pattern #"^only the bridge may target the Studio body, workspace pane, navigation, inspector, sticky tools, or Focus Canvas shell$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :flowStyles :bridgeOnly]))
+                        "Flow component presentation leaked into the shell bridge."))}
+   {:pattern #"^shared brand tokens remain in the global foundation$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :flowStyles :brandTokensGlobal]))
+                        "Shared brand tokens moved into a Flow-owned asset."))}
+   {:pattern #"^no unrelated Studio selector moves or changes$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :flowStyles :unrelatedStudioStable]))
+                        "Unrelated Studio presentation moved with the Flow rules."))}
+   {:pattern #"^the installed Flow workspace renders (.+) before and after stylesheet extraction$"
+    :handler (fn [world example captures]
+               (let [state (first (values example-values example captures))
+                     prepared-world (prepared world)]
+                 (assert! (assoc prepared-world :vtd014/flow-style-state state)
+                          (some #{state} (get-in prepared-world [:vtd014/evidence :flowStyles :displayMatrix]))
+                          "Unknown Flow stylesheet presentation state.")))}
+   {:pattern #"^its declared style boundary is observed at (.+) in (.+)$"
+    :handler (fn [world example captures]
+               (let [[viewport mode] (values example-values example captures)]
+                 (assert! world
+                          (and (some #{viewport} (get-in world [:vtd014/evidence :flowStyles :viewportMatrix]))
+                               (some #{mode} (get-in world [:vtd014/evidence :flowStyles :modeMatrix]))
+                               (true? (get-in world [:vtd014/evidence :flowStyles :installedObservation])))
+                          "Flow installed style observation does not cover its declared matrix.")))}
+   {:pattern #"^component geometry, computed presentation, visible controls, focus behavior, and responsive containment are equivalent$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :flowStyles :computedAndGeometry]))
+                        "Flow computed presentation and geometry evidence is incomplete."))}
+   {:pattern #"^reduced-motion and forced-colors behavior remain available where applicable$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :flowStyles :accessibilityAndMedia]))
+                        "Flow accessibility media evidence is incomplete."))}
+   {:pattern #"^canonical project bytes, Flow revision, and Undo depth remain unchanged$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :flowStyles :canonicalStable]))
+                        "Flow style observation changes canonical project state."))}
+   {:pattern #"^the packaged extension loads the local and bridge assets without a missing reference$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd014/evidence :flowStyles :packageAssets]))
+                        "The installed Flow stylesheet assets are not package-addressable."))}])
+
 (defn- task-succession-handlers [example-values]
   [{:pattern #"^a historical incident boundary encounters (.+)$"
     :handler (fn [world example captures]
@@ -1219,6 +1278,7 @@
                (checkpoint-handlers example-values)
                (bounded-closure-handlers example-values)
                (flow-reload-lifecycle-handlers example-values)
+               (flow-stylesheet-handlers example-values)
                (task-succession-handlers example-values)
                (shared-boundary-handlers example-values))))
 

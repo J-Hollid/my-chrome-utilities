@@ -5,6 +5,7 @@ import {browserReadinessProgramSource} from "./browser-observation-control.mjs";
 export const flowWorkspaceReadinessLimitMilliseconds = 30_000;
 
 export const FLOW_BROWSER_TARGET_SHARDS = Object.freeze({
+  FLOW_STYLESHEET_EXTRACTION_TARGET:"core",
   FLOW_WORKSPACE_CONTROLS_TARGET:"core",
   FLOW_WORKSPACE_AUTHORING_TARGET:"author",
   FLOW_GRAPH_LEGACY_TARGET:"legacy",
@@ -99,6 +100,7 @@ export function flowAuthoringProofResult(observed) {
   const violations = [];
   const expectedTargetShards = {
     FLOW_WORKSPACE_AUTHORING_TARGET:"author", FLOW_WORKSPACE_CONTROLS_TARGET:"core",
+    FLOW_STYLESHEET_EXTRACTION_TARGET:"core",
   };
   const expectedSelection={id:observed?.requestedTargetId,
     shard:expectedTargetShards[observed?.requestedTargetId]};

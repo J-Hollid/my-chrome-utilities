@@ -159,7 +159,10 @@ assert.deepEqual(flowSectionMenuRequest({type:"keydown",key:"F10",shiftKey:true}
 assert.equal(flowSectionMenuRequest({type:"keydown",key:"F10",shiftKey:false}),undefined,"plain F10 does not open the Section menu");
 assert.equal(flowSectionMenuRequest({type:"keydown",key:"Enter",shiftKey:false}),undefined,"ordinary Section activation remains distinct from its context menu");
 
-const flowCss=await readFile(new URL("../specification-builder-brand.css",import.meta.url),"utf8");
+const flowCss=[
+  await readFile(new URL("../src/flow-graph/flow-workspace.css",import.meta.url),"utf8"),
+  await readFile(new URL("../src/flow-graph/flow-workspace-shell.css",import.meta.url),"utf8"),
+].join("\n");
 const flowWorkspaceUi=await readFile(new URL("../src/flow-graph/workspace-ui.ts",import.meta.url),"utf8");
 const sidePanelSource=await readFile(new URL("../src/side-panel.ts",import.meta.url),"utf8");
 const flowGraphStepsSource=await readFile(new URL("../acceptance/src/acceptance/steps/flow_graph.clj",import.meta.url),"utf8");

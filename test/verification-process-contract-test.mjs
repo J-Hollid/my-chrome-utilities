@@ -782,6 +782,13 @@ try {
   await mkdir(path.join(cliContentionRepository, "test"), { recursive:true });
   await copyFile(path.resolve("test/stylesheet-declarations-property-test.mjs"),
     path.join(cliContentionRepository, "test/stylesheet-declarations-property-test.mjs"));
+  await copyFile(path.resolve("test/flow-stylesheet-extraction-test.mjs"),
+    path.join(cliContentionRepository, "test/flow-stylesheet-extraction-test.mjs"));
+  await mkdir(path.join(cliContentionRepository, "src/flow-graph"), { recursive:true });
+  await copyFile(path.resolve("src/flow-graph/flow-workspace.css"),
+    path.join(cliContentionRepository, "src/flow-graph/flow-workspace.css"));
+  await copyFile(path.resolve("src/flow-graph/flow-workspace-shell.css"),
+    path.join(cliContentionRepository, "src/flow-graph/flow-workspace-shell.css"));
   const cliClosurePath = path.join(
     cliContentionRepository, "scripts/verification-reliability-closure.mjs",
   );
@@ -814,6 +821,8 @@ try {
     "scripts/verification-execution-prerequisites.mjs", "scripts/build.mjs",
     "scripts/verification-styles.mjs", "scripts/verification-packs.mjs",
     "test/browser-packs/global-style-smoke.mjs", "test/stylesheet-declarations-property-test.mjs",
+    "test/flow-stylesheet-extraction-test.mjs", "src/flow-graph/flow-workspace.css",
+    "src/flow-graph/flow-workspace-shell.css",
     "verification/packs.json"], {
     cwd:cliContentionRepository,
   });
@@ -4633,11 +4642,16 @@ const approvedStyleVerificationTaskKeys = new Set([
   "unit:test/verification-evidence-production-path-test.mjs",
   "property:test/stylesheet-declarations-property-test.mjs",
 ]);
+const approvedFlowStyleExtractionTaskKeys = new Set([
+  "unit:test/flow-stylesheet-extraction-test.mjs",
+  "browser-observation:FLOW_STYLESHEET_EXTRACTION_TARGET",
+]);
 const approvedVerificationTaskKeys = new Set([
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
   ...approvedStyleSmokeTaskKeys,
   ...approvedStyleVerificationTaskKeys,
+  ...approvedFlowStyleExtractionTaskKeys,
 ]);
 const currentTerminalIdentitiesWithoutApprovedAdditions = currentTerminalPlan.tasks.filter(({ key }) =>
   !postBaseAddedUnitKeys.has(key) && !approvedVerificationTaskKeys.has(key)).map(normalizedVtd006Identity);
@@ -4667,6 +4681,10 @@ for (const taskKey of approvedVtd017TaskKeys) {
 for (const taskKey of approvedStyleVerificationTaskKeys) {
   assert.equal(currentTerminalPlan.tasks.filter(({ key }) => key === taskKey).length, 1,
     `terminal-full planning adds the approved style-verification task ${taskKey} exactly once`);
+}
+for (const taskKey of approvedFlowStyleExtractionTaskKeys) {
+  assert.equal(currentTerminalPlan.tasks.filter(({ key }) => key === taskKey).length, 1,
+    `terminal-full planning adds the approved Flow style-extraction task ${taskKey} exactly once`);
 }
 assert.equal(currentTerminalPlan.tasks.filter(({ target }) =>
   target === "test/acceptance/side-panel-browser-session-contract.mjs").length, 0,
@@ -5628,9 +5646,10 @@ const flowTargetIds = [
   "FLOW_WORKSPACE_AUTHORING_TARGET",
   "FLOW_GRAPH_LEGACY_TARGET",
   "FLOW_GRAPH_EXAMPLES_TARGET",
+  "FLOW_STYLESHEET_EXTRACTION_TARGET",
 ];
 assert.deepEqual(new Set(flowPack.browserObservations.map(({ id }) => id)), new Set(flowTargetIds),
-  "the three Flow adapters are replaced by four exact logical targets");
+  "the Flow adapter exposes five exact logical targets including stylesheet evidence");
 assert.ok(flowPack.browserObservations.every(({ path:program, sessionBatch }) =>
   program === "test/browser-packs/flow-graph.mjs" && sessionBatch === "flow-graph"),
 "every Flow target shares the installed Flow program and compatible session batch");
@@ -5640,7 +5659,7 @@ const exactFlowPlan = planVerification(packs, { packIds:["flow_graph"] });
 assert.equal(exactFlowPlan.observationTasks.length, 1,
   "exact Flow verification uses one compatible installed-browser process");
 assert.deepEqual(new Set(exactFlowPlan.observationTasks[0].logicalTargetIds), new Set(flowTargetIds),
-  "the exact Flow process retains all four independent logical identities");
+  "the exact Flow process retains all five independent logical identities");
 const authoringFlowPlan = planVerification(packs, {
   changedPaths:["src/flow-graph/workspace-section-ui.ts"],
 });
@@ -6170,6 +6189,50 @@ styleBoundaryEvidence["invalid or undeclared boundary"] = {
   validationBlocked:invalidStyleBlocked,
 };
 vtd014Evidence.styles = styleBoundaryEvidence;
+const flowLocalStylesheet = await readFile("src/flow-graph/flow-workspace.css", "utf8");
+const flowShellStylesheet = await readFile("src/flow-graph/flow-workspace-shell.css", "utf8");
+const studioBaseStylesheet = await readFile("specification-builder.css", "utf8");
+const studioBrandStylesheet = await readFile("specification-builder-brand.css", "utf8");
+const studioDocument = await readFile("specification-builder.html", "utf8");
+const flowStylesheetDeclarations = [
+  stylesheetDeclarationFor(packs, "src/flow-graph/flow-workspace.css"),
+  stylesheetDeclarationFor(packs, "src/flow-graph/flow-workspace-shell.css"),
+];
+const flowGlobalSelectorPattern = /(?:\.documentary-flow|\.flow-(?:graph|canvas|workspace|node|edge|lane|projections|minimap|contextual|section|tidy|page|readiness|connection|empty)|#flow-graph-workspace|body\.flow-focus-canvas)/u;
+const flowStyleEvidence = {
+  declaredBoundaries:flowStylesheetDeclarations.every(Boolean) &&
+    flowStylesheetDeclarations[0].classification === "feature-local" &&
+    flowStylesheetDeclarations[1].classification === "shell-bridge" &&
+    flowStylesheetDeclarations[1].consumers.join() === "shell",
+  movedExactlyOnce:!flowGlobalSelectorPattern.test(studioBaseStylesheet) &&
+    !flowGlobalSelectorPattern.test(studioBrandStylesheet) &&
+    /\.documentary-flow \.flow-node/u.test(flowLocalStylesheet) &&
+    /body\.flow-focus-canvas/u.test(flowShellStylesheet),
+  localScoped:!/(?:^|[,{]\s*)(?:body|\.twatility-studio|#project-workspace|#workspace-pane|#project-inspector|\.sticky-tools)\b/mu.test(flowLocalStylesheet),
+  bridgeOnly:/#workspace-pane:has\(\.documentary-flow/u.test(flowShellStylesheet) &&
+    !/\.flow-node|\.flow-edge|\.flow-lane|\.flow-minimap/u.test(flowShellStylesheet),
+  brandTokensGlobal:/--accent:\s*var\(--twa-navy\)/u.test(studioBrandStylesheet) &&
+    !/--twa-(?:navy|mustard|paper)\s*:/u.test(flowLocalStylesheet + flowShellStylesheet),
+  unrelatedStudioStable:/\.twatility-studio \.project-bar/u.test(studioBrandStylesheet) &&
+    !/\.project-bar/u.test(flowLocalStylesheet + flowShellStylesheet),
+  installedObservation:/runtime\.styles\s*=\s*\{/u.test(await readFile("test/browser-packs/flow-graph.mjs", "utf8")),
+  displayMatrix:["ordinary canvas with Page and Event cards", "selected Page with visible ports",
+    "open contextual Details and Outline", "complete canvas and overlay controls"],
+  viewportMatrix:["desktop", "360 by 800"],
+  modeMatrix:["ordinary Flow", "Focus Canvas"],
+  packageAssets:["flow-graph/flow-workspace.css", "flow-graph/flow-workspace-shell.css"].every((asset) =>
+    studioDocument.includes(`href="${asset}"`)),
+  computedAndGeometry:/computedPresentation/u.test(await readFile("test/browser-packs/flow-graph.mjs", "utf8")) &&
+    /zoomGeometry/u.test(await readFile("test/browser-packs/flow-graph.mjs", "utf8")),
+  accessibilityAndMedia:/keyboardFocus/u.test(await readFile("test/browser-packs/flow-graph.mjs", "utf8")) &&
+    /reducedMotion/u.test(await readFile("test/browser-packs/flow-graph.mjs", "utf8")) &&
+    /forcedColors/u.test(await readFile("test/browser-packs/flow-graph.mjs", "utf8")),
+  canonicalStable:/canonicalStable:styleStateAfter===styleStateBefore/u.test(
+    await readFile("test/browser-packs/flow-graph.mjs", "utf8")),
+};
+assert.ok(Object.entries(flowStyleEvidence).filter(([, value]) => typeof value === "boolean")
+  .every(([, value]) => value), "Flow stylesheet extraction evidence is complete");
+vtd014Evidence.flowStyles = flowStyleEvidence;
 const smokeAdapterImpact = planVerification(packs, {
   packIds:["shell"], changedPaths:["test/browser-packs/global-style-smoke.mjs"],
 });
