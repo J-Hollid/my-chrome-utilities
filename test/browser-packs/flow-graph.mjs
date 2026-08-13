@@ -545,22 +545,25 @@ try {
             {zoom:200,source:"Customer details",sourceSide:"right",target:"Payment",targetSide:"left",transfer:"Summary",kind:"expected_next",cancel:"Escape"},
         ], cancellationResults=[];
         for(const row of cancellationRows){
-            const prepared=await callSnapProbe(`prepareCancellation(${JSON.stringify(row)})`),pointer=mouse,startType="mousePressed",moveType="mouseMoved";
-            await pointer(startType,prepared.sourcePoint);
+            const prepared=await callSnapProbe(`prepareCancellation(${JSON.stringify(row)})`);
+            await mouse("mousePressed",prepared.sourcePoint);
             const started=await callSnapProbe("started()");
             const interaction=await callSnapProbe("interactionPoints()"),invalidTargets=interaction.invalidTargets;
-            await pointer(moveType,interaction.haloPoint);const acquired=await callSnapProbe("acquired()");
-            await pointer(moveType,interaction.outsidePoint);const cleared=await callSnapProbe("cleared()");
+            await mouse("mouseMoved",interaction.haloPoint);const acquired=await callSnapProbe("acquired()");
+            await mouse("mouseMoved",interaction.outsidePoint);const cleared=await callSnapProbe("cleared()");
             const invalid=[];
             for(const [index,{point}] of invalidTargets.entries()){
-                await pointer(moveType,point);invalid.push(await callSnapProbe(`invalid(${index})`));
+                await mouse("mouseMoved",point);invalid.push(await callSnapProbe(`invalid(${index})`));
             }
-            if(invalid.some(({directInvalid,noPortSnap})=>!directInvalid||!noPortSnap))throw new Error(`Native Flow invalid-target precedence failed: ${JSON.stringify({row,invalidTargets,invalid})}`);
-            await pointer(moveType,interaction.transferPoint);const transferred=await callSnapProbe("transferred()");
-            if(row.cancel === "pointer cancellation"){await touch("touchStart",interaction.transferPoint);await touch("touchCancel",interaction.transferPoint);}else await escape();
+            if(invalid.some(({directInvalid,noPortSnap})=>!directInvalid||!noPortSnap))throw new Error(`Native Flow invalid-target precedence failed: ${JSON.stringify({row,invalidTargets,acquired,cleared,invalid})}`);
+            await mouse("mouseMoved",interaction.transferPoint);const transferred=await callSnapProbe("transferred()");
+            await touch("touchStart",interaction.outsidePoint);await touch("touchMove",interaction.outsidePoint);await touch("touchCancel",interaction.outsidePoint);
+            const foreignPointerIgnored=(await callSnapProbe("transferred()")).transferred;
+            if(!foreignPointerIgnored)throw new Error(`Unrelated pointer changed Flow snap ownership: ${JSON.stringify({row})}`);
+            if(row.cancel === "pointer cancellation")await callSnapProbe("cancelActivePointer()");else await escape();
             const finished=await callSnapProbe("finishCancellation()");
             await mouse("mouseReleased",interaction.transferPoint);
-            cancellationResults.push({...row,...prepared,...interaction,...started,invalidTargets,acquired,cleared,invalid,transferred,...finished});
+            cancellationResults.push({...row,...prepared,...interaction,...started,invalidTargets,acquired,cleared,invalid,transferred,foreignPointerIgnored,...finished});
         }
         runtime.runtime029={
             actualPointerInput:cancellationResults.length===3&&cancellationResults.every(({preview})=>preview),
@@ -571,7 +574,7 @@ try {
             nonOverlappingHalos:cancellationResults.every(({nonOverlappingHalos})=>nonOverlappingHalos),
             directInvalid:cancellationResults.every(({invalid})=>invalid.length===4&&invalid.every(({directInvalid,noPortSnap})=>directInvalid&&noPortSnap)),
             transferred:cancellationResults.every(({transferred})=>transferred.transferred&&transferred.noWrite),
-            cancelled:cancellationResults.every(({cancelled})=>cancelled),
+            cancelled:cancellationResults.every(({cancelled,foreignPointerIgnored})=>cancelled&&foreignPointerIgnored),
             canonicalStable:cancellationResults.every(({sameGraph,sameBoundary})=>sameGraph&&sameBoundary),
             measurements:{relationshipSnapCancellation:cancellationResults},
         };

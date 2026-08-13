@@ -480,14 +480,14 @@ export function installFlowGraphBuilder(options) {
         selected = primaryFlowSelection(selectedItems);
         const projection = projectFlowGraph(state.project, flow.id), section = document.createElement("section"), heading = document.createElement("h3"), boundary = document.createElement("p"), toolbar = document.createElement("section"), laneControls = document.createElement("section"), status = document.createElement("p"), frames = document.createElement("section"), views = document.createElement("div"), canvasScroll = document.createElement("div"), canvas = svg("svg"), outline = document.createElement("ol"), popover = document.createElement("section"), actions = document.createElement("section");
         const namedRight = Math.max(940, ...projection.laneBands.map(({ x, width }) => x + width), ...projection.graph.connectionEndpoints.map((endpoint) => endpoint.layout.x + endpoint.width + 60)), viewWidth = Math.max(960, namedRight + 100), viewHeight = Math.max(780, ...projection.laneBands.map(({ y, height }) => y + height + 80), ...projection.graph.connectionEndpoints.map((endpoint) => endpoint.layout.y + endpoint.height + 100));
-        let startConnectionPointerTracking = () => { };
+        let startConnectionPointerTracking = (_pointerId) => { };
         const targetPortFor = (sourcePort) => sourcePort === "right" ? "left" : sourcePort === "top" ? "bottom" : sourcePort === "bottom" ? "top" : undefined;
         const targetPortElement = (endpointId, sourcePort) => { const targetPort = targetPortFor(sourcePort); return targetPort ? canvas.querySelector(`[data-flow-port-for="${CSS.escape(endpointId)}"][data-flow-port-side="${targetPort}"]`) ?? undefined : undefined; };
-        const beginPortConnection = (endpoint, sourcePort, port) => { clearSelectedRelationshipForConnection(); connection?.preview?.remove(); const targetPort = targetPortFor(sourcePort), targets = targetPort ? projection.graph.connectionEndpoints.map(({ id }) => id).filter((id) => id !== endpoint.id) : []; if (!targets.length) {
+        const beginPortConnection = (endpoint, sourcePort, port, pointerId) => { clearSelectedRelationshipForConnection(); connection?.preview?.remove(); const targetPort = targetPortFor(sourcePort), targets = targetPort ? projection.graph.connectionEndpoints.map(({ id }) => id).filter((id) => id !== endpoint.id) : []; if (!targets.length) {
             statusMessage = targetPort ? "Add another Page frame before drawing a relationship." : "This port cannot start a relationship.";
             render();
             return;
-        } const start = flowPortPoint(endpoint.layout, { width: endpoint.width, height: endpoint.height }, sourcePort), preview = svg("line"); preview.classList.add("flow-connection-preview"); preview.setAttribute("x1", String(start.x)); preview.setAttribute("y1", String(start.y)); preview.setAttribute("x2", String(start.x)); preview.setAttribute("y2", String(start.y)); canvas.append(preview); connection = { sourceId: endpoint.id, sourcePort, targets, targetIndex: -1, preview }; startConnectionPointerTracking(); canvasScroll.classList.add("is-connecting"); statusMessage = `Connection mode: choose a ${targetPort} port; Escape cancels.`; status.textContent = statusMessage; port.focus(); };
+        } const start = flowPortPoint(endpoint.layout, { width: endpoint.width, height: endpoint.height }, sourcePort), preview = svg("line"); preview.classList.add("flow-connection-preview"); preview.setAttribute("x1", String(start.x)); preview.setAttribute("y1", String(start.y)); preview.setAttribute("x2", String(start.x)); preview.setAttribute("y2", String(start.y)); canvas.append(preview); connection = { sourceId: endpoint.id, sourcePort, targets, targetIndex: -1, preview, ...(pointerId === undefined ? {} : { pointerId }) }; startConnectionPointerTracking(pointerId); canvasScroll.classList.add("is-connecting"); statusMessage = `Connection mode: choose a ${targetPort} port; Escape cancels.`; status.textContent = statusMessage; port.focus(); };
         section.className = "documentary-flow";
         section.dataset.flowSectionWorkspace = flow.id;
         heading.textContent = "Canvas-first directional Flow";
@@ -547,7 +547,7 @@ export function installFlowGraphBuilder(options) {
             outputPort.tabIndex = 0;
             outputPort.dataset.outputPortFor = frame.id;
             outputPort.setAttribute("aria-label", `Output port for ${endpoint.name}`);
-            outputPort.addEventListener("pointerdown", (event) => { event.stopPropagation(); beginPortConnection(endpoint, "right", outputPort); });
+            outputPort.addEventListener("pointerdown", (event) => { event.stopPropagation(); beginPortConnection(endpoint, "right", outputPort, event.pointerId); });
             outputPort.addEventListener("keydown", (event) => { if (event.key === "Enter" && !connection) {
                 event.preventDefault();
                 beginPortConnection(endpoint, "right", outputPort);
@@ -747,7 +747,7 @@ export function installFlowGraphBuilder(options) {
                 port.dataset.inputPortFor = endpoint.id;
                 port.setAttribute("aria-label", `${side} port for ${endpoint.name}`);
                 port.addEventListener("pointerdown", (event) => { event.stopPropagation(); if (!connection)
-                    beginPortConnection(endpoint, side, port); });
+                    beginPortConnection(endpoint, side, port, event.pointerId); });
                 port.addEventListener("keydown", (event) => { event.stopPropagation(); if (event.key === "Enter" && !connection) {
                     event.preventDefault();
                     beginPortConnection(endpoint, side, port);
@@ -760,7 +760,6 @@ export function installFlowGraphBuilder(options) {
                 } if (event.key.startsWith("Arrow")) {
                     event.preventDefault();
                     clearConnectionFeedback();
-                    connection.acquired = undefined;
                     connection.targetIndex = (connection.targetIndex + (event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 1) + connection.targets.length) % connection.targets.length;
                     const target = targetPortElement(connection.targets[connection.targetIndex], side);
                     if (target)
@@ -777,7 +776,7 @@ export function installFlowGraphBuilder(options) {
             return; const port = document.elementsFromPoint(event.clientX, event.clientY).find((element) => element instanceof SVGCircleElement && Boolean(element.dataset.flowPortFor && element.dataset.flowPortSide)); if (!port)
             return; const rect = port.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)
             return; const endpoint = projection.graph.connectionEndpoints.find(({ id }) => id === port.dataset.flowPortFor), side = port.dataset.flowPortSide; if (!endpoint)
-            return; event.preventDefault(); event.stopImmediatePropagation(); beginPortConnection(endpoint, side, port); }, true);
+            return; event.preventDefault(); event.stopImmediatePropagation(); beginPortConnection(endpoint, side, port, event.pointerId); }, true);
         const compatiblePortSnap = (client) => { if (!connection)
             return undefined; const compatibleSide = targetPortFor(connection.sourcePort ?? "right"); if (!compatibleSide)
             return undefined; const ports = Array.from(canvas.querySelectorAll(`[data-flow-port-side="${compatibleSide}"]`)).filter(({ dataset }) => dataset.flowPortFor !== connection.sourceId), candidates = ports.map((port, presentationOrder) => { const rect = port.getBoundingClientRect(); return { endpointId: port.dataset.flowPortFor, port: compatibleSide, center: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }, presentationOrder, element: port }; }); return flowPortSnapTarget(client, candidates); };
@@ -789,7 +788,8 @@ export function installFlowGraphBuilder(options) {
             const point = new DOMPoint(client.x, client.y).matrixTransform(screenTransform.inverse());
             return { x: point.x, y: point.y };
         } const bounds = canvas.getBoundingClientRect(), viewBox = canvas.viewBox.baseVal; return { x: viewBox.x + (client.x - bounds.left) * viewBox.width / bounds.width, y: viewBox.y + (client.y - bounds.top) * viewBox.height / bounds.height }; };
-        const trackConnectionPointerMove = (event) => { if (!connection?.preview)
+        const ownsConnectionPointer = (event) => connection?.pointerId === event.pointerId;
+        const trackConnectionPointerMove = (event) => { if (!connection?.preview || !ownsConnectionPointer(event))
             return; const direct = pointerDirectAt(event), scrollBounds = canvasScroll.getBoundingClientRect(), edgeSize = 36, edgeStep = 28; if (!direct) {
             if (event.clientX <= scrollBounds.left + edgeSize)
                 canvasScroll.scrollLeft = Math.max(0, canvasScroll.scrollLeft - edgeStep);
@@ -799,7 +799,7 @@ export function installFlowGraphBuilder(options) {
                 canvasScroll.scrollTop = Math.max(0, canvasScroll.scrollTop - edgeStep);
             else if (event.clientY >= scrollBounds.bottom - edgeSize)
                 canvasScroll.scrollTop = Math.min(canvasScroll.scrollHeight - canvasScroll.clientHeight, canvasScroll.scrollTop + edgeStep);
-        } clearConnectionFeedback(); const snap = pointerSnap(event), endpoint = snap && projection.graph.connectionEndpoints.find(({ id }) => id === snap.endpointId), point = previewPoint(snap?.center ?? { x: event.clientX, y: event.clientY }); connection.preview.setAttribute("x2", String(point.x)); connection.preview.setAttribute("y2", String(point.y)); connection.acquired = snap ? { endpointId: snap.endpointId, port: snap.port } : undefined; if (snap) {
+        } clearConnectionFeedback(); const snap = pointerSnap(event), endpoint = snap && projection.graph.connectionEndpoints.find(({ id }) => id === snap.endpointId), point = previewPoint(snap?.center ?? { x: event.clientX, y: event.clientY }); connection.preview.setAttribute("x2", String(point.x)); connection.preview.setAttribute("y2", String(point.y)); if (snap) {
             emphasizeCompatiblePort(snap.element);
             const kind = connection.sourcePort === "top" ? "alternative" : connection.sourcePort === "bottom" ? "merge" : "expected_next";
             status.textContent = `${endpoint?.name ?? snap.endpointId} ${snap.port} port · inferred ${kind}`;
@@ -808,7 +808,7 @@ export function installFlowGraphBuilder(options) {
             direct?.classList.add("is-invalid-target");
             status.textContent = "No compatible relationship port acquired.";
         } };
-        const trackConnectionPointerUp = (event) => { if (!connection)
+        const trackConnectionPointerUp = (event) => { if (!connection || !ownsConnectionPointer(event))
             return; const snap = pointerSnap(event); if (snap) {
             commitConnection(snap.endpointId, snap.port);
             return;
@@ -816,9 +816,10 @@ export function installFlowGraphBuilder(options) {
             cancelConnection(true, true);
             return;
         } canvas.dispatchEvent(new CustomEvent("flow-empty-connection-drop", { bubbles: true, detail: { sourceId, sourcePort, targetPort, position: { x: Math.round(position.x), y: Math.round(position.y) }, sourceElement } })); };
-        const trackConnectionPointerCancel = () => { if (connection)
+        const trackConnectionPointerCancel = (event) => { if (ownsConnectionPointer(event))
             cancelConnection(); };
-        startConnectionPointerTracking = () => { connectionPointerCleanup(); window.addEventListener("pointermove", trackConnectionPointerMove, true); window.addEventListener("pointerup", trackConnectionPointerUp, true); window.addEventListener("pointercancel", trackConnectionPointerCancel, true); connectionPointerCleanup = () => { window.removeEventListener("pointermove", trackConnectionPointerMove, true); window.removeEventListener("pointerup", trackConnectionPointerUp, true); window.removeEventListener("pointercancel", trackConnectionPointerCancel, true); connectionPointerCleanup = () => { }; }; };
+        startConnectionPointerTracking = (pointerId) => { if (pointerId === undefined)
+            return; connectionPointerCleanup(); window.addEventListener("pointermove", trackConnectionPointerMove, true); window.addEventListener("pointerup", trackConnectionPointerUp, true); window.addEventListener("pointercancel", trackConnectionPointerCancel, true); connectionPointerCleanup = () => { window.removeEventListener("pointermove", trackConnectionPointerMove, true); window.removeEventListener("pointerup", trackConnectionPointerUp, true); window.removeEventListener("pointercancel", trackConnectionPointerCancel, true); connectionPointerCleanup = () => { }; }; };
         canvas.addEventListener("keydown", (event) => { if (!connection)
             return; if (event.key === "Escape") {
             event.preventDefault();
