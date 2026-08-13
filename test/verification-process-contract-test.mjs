@@ -5693,7 +5693,8 @@ const compositionFlowPlan = planVerification(packs, {
 });
 assert.deepEqual(compositionFlowPlan.packIds, ["flow_graph"]);
 assert.deepEqual(new Set(compositionFlowPlan.observationTasks[0].logicalTargetIds),
-  new Set(["FLOW_WORKSPACE_AUTHORING_TARGET", "FLOW_WORKSPACE_CONTROLS_TARGET"]));
+  new Set(["FLOW_STYLESHEET_EXTRACTION_TARGET", "FLOW_WORKSPACE_AUTHORING_TARGET",
+    "FLOW_WORKSPACE_CONTROLS_TARGET"]));
 const semanticFlowPlan = planVerification(packs, {
   changedPaths:["src/flow-graph/relationships.ts"],
 });
