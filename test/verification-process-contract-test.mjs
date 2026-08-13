@@ -72,6 +72,7 @@ import {
   focusedAcceptanceOptions,
   selectFocusedVerificationTasks,
   prepareCheckpointExecution,
+  reviewReadyScopeGuardRequired,
   resumeVerificationPlan,
   runTimeoutRepairFocused,
   runTimeoutDiagnosticRetry,
@@ -1898,6 +1899,10 @@ assert.equal(focusedAcceptanceOptions([
   "--pack", "capture", "--changed-since", "base", "--property",
   "--prepare-evidence", "task-17", "--run-intent-bootstrap",
 ]).runIntentBootstrap, true);
+assert.equal(reviewReadyScopeGuardRequired(true, true), false,
+  "the one-time bootstrap uses its exact deferred-task preflight instead of generic all-pack expansion");
+assert.equal(reviewReadyScopeGuardRequired(true, false), true,
+  "ordinary product evidence retains the generic review-scope guard");
 assert.equal(focusedAcceptanceOptions([
   "--pack", "schemas", "--changed-since", "base", "--property",
   "--prepare-evidence", "task-17", "--resume-receipt", "tmp/verification-receipts/prior.json",

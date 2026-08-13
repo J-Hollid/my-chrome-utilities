@@ -198,6 +198,10 @@ export function coordinatorArtifactLeaseRequired(artifactRequired, commandRunner
   return artifactRequired && !commandRunner;
 }
 
+export function reviewReadyScopeGuardRequired(productCandidate, runIntentBootstrap = false) {
+  return productCandidate && !runIntentBootstrap;
+}
+
 export function focusedAcceptanceOptions(args) {
   const options = {
     packIds:[], changedPaths:[], terminalFull:false, includeProperties:false,
@@ -1605,7 +1609,7 @@ export async function runFocusedAcceptance(
   if (changedSince && options.packIds.length) {
     bindingPlan = planVerification(packs, { ...options, packIds:[] });
     const productCandidate = bindingPlan.changedPaths.some(reviewReadyProductCandidatePath);
-    if (productCandidate) {
+    if (reviewReadyScopeGuardRequired(productCandidate, options.runIntentBootstrap)) {
       const timingBaseline = JSON.parse(await readFile(
         path.join(repositoryRoot, "verification", "timing-baseline.json"), "utf8"));
       const preflight = reviewReadyScopePreflight({
