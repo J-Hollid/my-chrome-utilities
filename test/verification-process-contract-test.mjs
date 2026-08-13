@@ -2573,6 +2573,36 @@ console.log("repairTmp=" + process.env.TMPDIR);
     package:{ path:"build/package/my-chrome-utilities.zip", digest:"9".repeat(64) },
   }), /fresh incident-focused proof/u,
   "a changed deferred gate input cannot use carry-forward");
+  incidentCandidate = { commit:"carry-commit", tree:"carry-tree" };
+  incidentCandidateChangedPaths = ["scripts/build.mjs", "scripts/verification-packs.mjs",
+    "scripts/verification-styles.mjs", "test/verification-process-contract-test.mjs",
+    "verification/packs.json"];
+  incidentNow = "2026-08-09T00:00:02.500Z";
+  const revalidated = await store.deferTerminalVerification(first.id, {
+    candidate:incidentCandidate,
+    reviewReady:{ task:"qa-pilot-fanout-stop", baseCommit:"approved-base",
+      candidateCommit:incidentCandidate.commit, candidateTree:incidentCandidate.tree,
+      receiptSha256:"a".repeat(64),
+      focusedTaskKeys:["unit:test/verification-process-contract-test.mjs"] },
+    package:{ path:"build/package/my-chrome-utilities.zip", digest:"b".repeat(64), fresh:true },
+    verificationRevalidation:{
+      version:1, kind:"verification-process-only", incidentId:first.id,
+      candidateCommit:incidentCandidate.commit, candidateTree:incidentCandidate.tree,
+      baseCommit:"approved-base", changeSetPaths:[...incidentCandidateChangedPaths],
+      focusedTask:"unit:test/verification-process-contract-test.mjs", packageDigest:"b".repeat(64),
+      packageFresh:true, incidentState:"unresolved", terminalObligation:true,
+    },
+  });
+  assert.equal(revalidated.state, "unresolved",
+    "bounded process revalidation preserves the unresolved incident");
+  assert.equal(revalidated.terminalVerificationDeferred.verificationRevalidation.kind,
+    "verification-process-only",
+  "the deferral records an explicit bounded verification revalidation object");
+  assert.equal(revalidated.terminalVerificationDeferred.reviewReady.focusedTaskKeys.includes(
+    failure.task.key), false,
+  "a revalidated root does not smuggle the historical failed task into focused scope");
+  assert.doesNotThrow(() => validateIncident(revalidated),
+    "persistence validation accepts the exact bounded process proof for a new root");
   incidentCandidate = { commit:"repair-commit", tree:"repair-tree" };
   incidentCandidateChangedPaths = [];
   incidentNow = "2026-08-09T00:00:03.000Z";

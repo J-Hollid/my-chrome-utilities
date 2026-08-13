@@ -9,6 +9,7 @@ import { setTimeout as pause } from "node:timers/promises";
 import {
   exactObject, git, normalized, shaPattern, stableIncidentId, timeoutIncidentDigest,
 } from "./verification-reliability-values.mjs";
+import { verificationRevalidationValid } from "./verification-reliability-deferred.mjs";
 
 export async function defaultRepositoryRuntimeDirectory(root) {
   const common = await git(root, "rev-parse", "--git-common-dir");
@@ -107,9 +108,13 @@ function deferredProofValid(incident, deferred, latest) {
   const root = chain.at(-1);
   const carriedLinks = chain.slice(0, -1).every((disposition, index) =>
     carryLinkValid(disposition, chain[index + 1]));
+  const rootUsesRevalidation = verificationRevalidationValid({
+    incident, proof:root, changedPaths:root?.verificationRevalidation?.changeSetPaths,
+  });
+  const rootRequiresFailedTask = root?.reviewReady?.focusedTaskKeys?.includes(incident.failure.task.key);
   return [Boolean(chain.length), chain.every(deferredDispositionCoreValid), carriedLinks,
     root?.carryForward === undefined,
-    root?.reviewReady?.focusedTaskKeys?.includes(incident.failure.task.key),
+    rootRequiresFailedTask || rootUsesRevalidation,
     chain.every((disposition) => disposition.repairDigest === deferred.repairDigest),
     latest?.dispositionDigest === deferred.digest, latest?.at === deferred.recordedAt,
     Boolean(latest?.carried) === Boolean(deferred.carryForward)].every(Boolean);
