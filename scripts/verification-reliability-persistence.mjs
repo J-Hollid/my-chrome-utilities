@@ -123,7 +123,7 @@ function deferredProofValid(incident, deferred, latest) {
 
 function validateTransitionHistory(incident) {
   const allowed = new Set(["diagnostic-retry-claimed", "diagnostic-retry-classified",
-    "repair-proposed", "repair-checkpoint-claimed", "repair-checkpoint-reclaimed",
+    "repair-proposed", "repair-revalidated", "repair-checkpoint-claimed", "repair-checkpoint-reclaimed",
     "resolved", "lineage-rebased",
     "lineage-abandoned", "occurrence-appended", "closure-audited",
     "terminal-verification-deferred", "run-intent-compatibility-classified"]);
@@ -186,6 +186,9 @@ function validateTransitionHistory(incident) {
   requireCount("diagnostic-retry-claimed", ["claimed", "classified"].includes(retryStatus) ? 1 : 0);
   requireCount("diagnostic-retry-classified", retryStatus === "classified" ? 1 : 0);
   requireCount("repair-proposed", incident.repair ? 1 : 0);
+  if (!incident.repair && matchingTransitions(incident, "repair-revalidated").length) {
+    transitionHistoryError(incident.id, "repair revalidation has no repair proposal");
+  }
   requireCount("repair-checkpoint-claimed", incident.repairCheckpoint ? 1 : 0);
   requireCount("repair-checkpoint-reclaimed", Number(incident.repairCheckpoint?.reclaimCount ?? 0));
   requireCount("resolved", incident.state === "resolved" ? 1 : 0);
@@ -198,8 +201,13 @@ function validateTransitionHistory(incident) {
       classified.classification !== incident.retry.classification)) {
     transitionHistoryError(incident.id, "diagnostic classification disagrees");
   }
-  const repair = matchingTransitions(incident, "repair-proposed")[0];
-  if (repair && repair.commit !== incident.repair.candidate?.commit) {
+  const repairEvents = incident.transitions.filter(({ type }) =>
+    ["repair-proposed", "repair-revalidated"].includes(type));
+  if (repairEvents.length && repairEvents[0].type !== "repair-proposed") {
+    transitionHistoryError(incident.id, "repair revalidation precedes the original proposal");
+  }
+  const currentRepair = repairEvents.at(-1);
+  if (currentRepair && currentRepair.commit !== incident.repair.candidate?.commit) {
     transitionHistoryError(incident.id, "repair candidate disagrees");
   }
   const checkpoint = [...matchingTransitions(incident, "repair-checkpoint-claimed"),

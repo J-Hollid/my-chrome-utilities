@@ -2937,6 +2937,34 @@ console.log("repairTmp=" + process.env.TMPDIR);
   const earlierTransition = structuredClone(classifiedForHistory);
   earlierTransition.transitions.at(-1).at = "2026-08-08T23:59:59.000Z";
   malformedHistories.push(earlierTransition);
+  const repairRevalidated = structuredClone(proposal);
+  repairRevalidated.repair.candidate = { commit:"revalidated-repair-commit",
+    tree:"revalidated-repair-tree" };
+  repairRevalidated.repair.regression.commit = "revalidated-repair-commit";
+  repairRevalidated.repair.focusedReceipt.commit = "revalidated-repair-commit";
+  repairRevalidated.transitions.push({ type:"repair-revalidated",
+    at:"2026-08-09T00:00:01.500Z", commit:"intermediate-repair-commit" });
+  repairRevalidated.transitions.push({ type:"repair-revalidated",
+    at:"2026-08-09T00:00:02.000Z", commit:"revalidated-repair-commit" });
+  assert.equal(validateIncident(repairRevalidated), repairRevalidated,
+    "durable repair revalidation retains the original proposal and binds the latest identity");
+  assert.equal(repairRevalidated.transitions.filter(
+    ({ type }) => type === "repair-proposed").length, 1,
+  "repair revalidation preserves exactly one original proposal event");
+  const staleRevalidatedIdentity = structuredClone(repairRevalidated);
+  staleRevalidatedIdentity.repair.candidate = structuredClone(proposal.repair.candidate);
+  malformedHistories.push(staleRevalidatedIdentity);
+  const duplicateOriginalProposal = structuredClone(repairRevalidated);
+  duplicateOriginalProposal.transitions.splice(-1, 0, {
+    ...structuredClone(duplicateOriginalProposal.transitions.find(
+      ({ type }) => type === "repair-proposed")), at:"2026-08-09T00:00:01.750Z",
+  });
+  malformedHistories.push(duplicateOriginalProposal);
+  const revalidationBeforeProposal = structuredClone(repairRevalidated);
+  revalidationBeforeProposal.transitions = [revalidationBeforeProposal.transitions.at(-1),
+    ...revalidationBeforeProposal.transitions.slice(0, -1)];
+  revalidationBeforeProposal.transitions[0].at = revalidationBeforeProposal.createdAt;
+  malformedHistories.push(revalidationBeforeProposal);
   const duplicateLineageTransition = structuredClone(abandoned);
   duplicateLineageTransition.lineageTransitions.push(
     structuredClone(duplicateLineageTransition.lineageTransitions.at(-1)));
