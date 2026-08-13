@@ -36,10 +36,6 @@ const focusedFeaturePolicyPaths = new Set([
   "scripts/verification-packs.mjs",
   "scripts/verification-reliability-runtime.mjs",
   "scripts/verification-reliability-store.mjs",
-  "scripts/verification-task-succession-test.mjs",
-  "scripts/verification-task-succession.mjs",
-  "test/verification-process-contract-test.mjs",
-  "verification/task-succession.json",
 ]);
 const testPathKeys = ["unit", "property", "browserAdapters"];
 const prefixOwnedPathKeys = ["source", "process"];
@@ -890,8 +886,6 @@ export async function validateVerificationPacks(packs, { inventory } = {}) {
   validateBrowserEvidencePartitions(packs);
   await validateIsolatedVerificationHandlers(packs);
   const repositoryInventory = { ...await verificationInventory(), ...inventory };
-  const exactTrackedSourcePaths = packs.flatMap((pack) => values(pack, "source"))
-    .filter((sourcePath) => repositoryInventory.tracked.includes(sourcePath));
   await validateStylesheetRegistry(packs, {
     repositoryRoot:repositoryRoot,
     packIds:packs.map(({ id }) => id),
@@ -900,8 +894,7 @@ export async function validateVerificationPacks(packs, { inventory } = {}) {
   await validateVerificationHelpers(packs, repositoryInventory.tracked);
   validateImpactBoundaries(packs, repositoryInventory.source,
     [...repositoryInventory.source, ...repositoryInventory.features]);
-  validatePrefixOwnership(packs,
-    [...new Set([...repositoryInventory.source, ...exactTrackedSourcePaths])], "source");
+  validatePrefixOwnership(packs, repositoryInventory.source, "source");
   validatePrefixOwnership(packs, repositoryInventory.process, "process");
   validateInventoryPaths(packs, repositoryInventory);
   validateTrackedOwnership(packs, repositoryInventory.tracked);
@@ -1387,11 +1380,6 @@ export function planVerification(
         const formerOwner = ownerOf(basePacks, entry.path)?.id;
         const currentOwner = ownerOf(packs, entry.path)?.id;
         if (formerOwner !== currentOwner) {
-          const current = affectedFor(packs, entry.path);
-          if (current.boundary === "flow_workspace_relationship_port_snap") {
-            applyAffected(entry.path, current, [packs, basePacks]);
-            continue;
-          }
           throw new Error(`Conflicting current and historical verification ownership for ${entry.path}: ${formerOwner} -> ${currentOwner}`);
         }
         const currentPack = packs.find(({ id }) => id === currentOwner);
@@ -1402,9 +1390,7 @@ export function planVerification(
           forceVerificationExact:isolatedHandler,
         });
         const current = affectedFor(packs, entry.path);
-        const affected = current.boundary === "flow_workspace_relationship_port_snap"
-          ? current : combinedAffected(former, current);
-        applyAffected(entry.path, affected, [basePacks, packs]);
+        applyAffected(entry.path, combinedAffected(former, current), [basePacks, packs]);
       }
     }
   } else {

@@ -4237,6 +4237,64 @@ assert.throws(() => planVerification([
     pack("beta", { unit:["test/beta-current-test.mjs"] }),
   ],
 }), /Conflicting current and historical verification ownership/u);
+const snapNamedBoundary = {
+  id:"flow_workspace_relationship_port_snap",
+  prefixes:["src/alpha/narrow.ts"],
+  propagateDependants:false,
+};
+const narrowedCurrentOwnershipPacks = [
+  pack("alpha", { impactBoundaries:[snapNamedBoundary] }),
+  pack("beta", { dependencies:["alpha"] }),
+];
+const unnarrowedFormerOwnershipPacks = [
+  pack("alpha"),
+  pack("beta", { dependencies:["alpha"] }),
+];
+const narrowedChange = syntheticChangeSet([{ status:"M", path:"src/alpha/narrow.ts" }]);
+assert.throws(() => planVerification(narrowedCurrentOwnershipPacks, {
+  packIds:["alpha"], changedPaths:narrowedChange.paths,
+  changeSet:narrowedChange, basePacks:unnarrowedFormerOwnershipPacks,
+}), /outside the explicit pack set: beta/u,
+"a newly narrowed boundary cannot discard the historical affected consumer union by name");
+assert.deepEqual(planVerification(narrowedCurrentOwnershipPacks, {
+  packIds:["alpha", "beta"], changedPaths:narrowedChange.paths,
+  changeSet:narrowedChange, basePacks:unnarrowedFormerOwnershipPacks,
+}).packIds, ["alpha", "beta"],
+"ordinary historical ownership admits a narrow boundary only with its conserved former consumers");
+assert.throws(() => planVerification([
+  pack("alpha", { unit:["test/alpha-current-test.mjs"] }),
+  pack("beta", { unit:["test/reassigned-test.mjs"], impactBoundaries:[{
+    ...snapNamedBoundary, prefixes:["test/reassigned-test.mjs"],
+  }] }),
+], {
+  changedPaths:conflictingChange.paths,
+  changeSet:conflictingChange,
+  basePacks:[
+    pack("alpha", { unit:["test/reassigned-test.mjs"] }),
+    pack("beta", { unit:["test/beta-current-test.mjs"] }),
+  ],
+}), /Conflicting current and historical verification ownership/u,
+"a boundary name cannot authorize a current owner to replace its historical owner");
+
+const focusedProcessOwnershipPacks = [
+  pack("flow"),
+  pack("shell", {
+    source:[], process:["scripts/", "verification/"],
+    unit:["test/verification-process-contract-test.mjs"],
+    features:[], handlers:[],
+  }),
+];
+for (const processPath of [
+  "scripts/verification-task-succession-test.mjs",
+  "scripts/verification-task-succession.mjs",
+  "test/verification-process-contract-test.mjs",
+  "verification/task-succession.json",
+]) {
+  assert.throws(() => planVerification(focusedProcessOwnershipPacks, {
+    packIds:["flow"], changedPaths:[processPath],
+  }), /outside the explicit pack set: shell/u,
+  `changed process input retains its declared owner: ${processPath}`);
+}
 
 const executed = [];
 await executeAcceptancePlan(feature, {

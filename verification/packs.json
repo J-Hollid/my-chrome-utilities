@@ -2775,8 +2775,7 @@
       "src/data-layer-flow-graph-ui.ts",
       "src/data-layer-flow-graph-structural.ts",
       "src/data-layer-flow-graph-ui-page-frame.ts",
-      "src/flow-graph",
-      "test/acceptance/flow_graph_steps_test.clj"
+      "src/flow-graph"
     ],
     "stylesheets": [
       {
@@ -2835,9 +2834,7 @@
       {
         "id": "flow_workspace_relationship_port_snap",
         "prefixes": [
-          "src/data-layer-flow-graph-ui.ts",
-          "src/flow-graph/relationship-port-snap.ts",
-          "test/acceptance/flow_graph_steps_test.clj"
+          "src/flow-graph/relationship-port-snap.ts"
         ],
         "propagateDependants": false
       },
@@ -2845,6 +2842,7 @@
         "id": "flow_graph_semantic_model",
         "prefixes": [
           "src/data-layer-flow-graph.ts",
+          "src/data-layer-flow-graph-ui.ts",
           "src/data-layer-flow-graph-structural.ts",
           "src/data-layer-flow-graph-ui-page-frame.ts",
           "src/flow-graph/containment.ts",
