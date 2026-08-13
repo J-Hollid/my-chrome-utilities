@@ -144,7 +144,9 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
       if (current.repair?.status === "eligible" && !allowEligibleRevalidation) {
         throw new Error(`Reliability incident ${id} already has an eligible repair`);
       }
-      if (current.retry && current.retry.status !== "classified") {
+      if (current.retry && current.retry.status !== "classified" &&
+          !(allowEligibleRevalidation && current.repair?.status === "eligible" &&
+            current.retry.status === "invalidated-by-repair")) {
         throw new Error(`Reliability incident ${id} has invalid diagnostic state`);
       }
       const candidate = await currentCandidate();
