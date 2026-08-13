@@ -19,7 +19,7 @@ try {
   });
   const root = fixture;
   await symlink(path.join(repositoryRoot, "node_modules"), path.join(root, "node_modules"), "dir");
-  await rm(path.join(root, "dist", ".dist-artifact.json"));
+  await rm(path.join(root, "dist", ".dist-artifact.json"), { force:true });
   await assert.rejects(run("scripts/package.mjs", root), /ENOENT|dist artifact|manifest/iu,
     "a clean checkout must run the validated build prerequisite before packaging");
 
