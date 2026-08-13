@@ -6082,16 +6082,28 @@ const crossPackCodeEdges = codeEdges.filter(({ requiringOwner, requiredOwner }) 
 assert.ok(crossPackCodeEdges.length > 0,
   "the verification-consumer contract exercises real cross-pack static or literal-read edges");
 const codeReachabilityGaps = [];
+const approvedFlowStyleAuditPaths = new Set([
+  "src/flow-graph/flow-workspace.css",
+  "src/flow-graph/flow-workspace-shell.css",
+  "test/browser-packs/flow-graph.mjs",
+]);
+const observedFlowStyleAuditPaths = new Set();
 for (const edge of crossPackCodeEdges) {
   if (!requiredPathImpacts.has(edge.requiredPath)) {
     requiredPathImpacts.set(edge.requiredPath,
       planVerification(packs, { changedPaths:[edge.requiredPath] }).packIds);
   }
   const globalStylesheetRead = stylesheetDeclarationFor(packs, edge.requiredPath)?.classification === "global";
-  if (!globalStylesheetRead && !requiredPathImpacts.get(edge.requiredPath).includes(edge.requiringOwner)) {
+  const flowStyleAuditRead = edge.requiringPath === "test/verification-process-contract-test.mjs" &&
+    approvedFlowStyleAuditPaths.has(edge.requiredPath);
+  if (flowStyleAuditRead) observedFlowStyleAuditPaths.add(edge.requiredPath);
+  if (!globalStylesheetRead && !flowStyleAuditRead &&
+      !requiredPathImpacts.get(edge.requiredPath).includes(edge.requiringOwner)) {
     codeReachabilityGaps.push(edge);
   }
 }
+assert.deepEqual(observedFlowStyleAuditPaths, approvedFlowStyleAuditPaths,
+"the Flow stylesheet process audit accounts for its exact verification-only inputs");
 const codeReachabilityGapSummary = {};
 for (const edge of codeReachabilityGaps) {
   const pair = `${edge.requiringOwner} -> ${edge.requiredOwner}`;
