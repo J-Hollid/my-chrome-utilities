@@ -1267,6 +1267,117 @@
    {:pattern #"^no product behavior, assertion leaf, timeout, target scope, incident record, or evidence meaning changes$"
     :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :noMeaningChanged])) "Task succession changed evidence meaning."))}])
 
+(def ^:private run-intent-contract
+  {"no explicit evidence, repair, or terminal flag" "development-diagnostic"
+   "explicit review-evidence authority" "review-evidence"
+   "governed repair-focused authority" "repair-focused"
+   "explicit terminal-checkpoint authority" "terminal"})
+
+(defn- run-intent-handlers [example-values]
+  [{:pattern #"^the canonical verification runner starts with (.+)$"
+    :handler (fn [world example captures]
+               (assoc (prepared world) :vtd014/run-authority
+                      (first (values example-values example captures))))}
+   {:pattern #"^a registered task (.+)$"
+    :handler (fn [world example captures]
+               (assoc world :vtd014/task-result
+                      (first (values example-values example captures))))}
+   {:pattern #"^the receipt records run intent (.+)$"
+    :handler (fn [world example captures]
+               (let [expected (first (values example-values example captures))
+                     authority (:vtd014/run-authority world)
+                     key ({"development-diagnostic" :development
+                           "review-evidence" :review
+                           "repair-focused" :repair
+                           "terminal" :terminal} expected)]
+                 (assert! world
+                          (and (= expected (get run-intent-contract authority))
+                               (= expected (get-in world [:vtd014/evidence :runIntent :intents key])))
+                          "Verification run intent did not match its explicit authority.")))}
+   {:pattern #"^shared reliability state receives (.+)$"
+    :handler (fn [world example captures]
+               (let [effect (first (values example-values example captures))
+                     diagnostic? (= (:vtd014/run-authority world)
+                                    "no explicit evidence, repair, or terminal flag")]
+                 (assert! world
+                          (if diagnostic?
+                            (true? (get-in world [:vtd014/evidence :runIntent :diagnosticIsolation]))
+                            (or (= (:vtd014/task-result world) "passes")
+                                (true? (get-in world [:vtd014/evidence :runIntent :reviewIncident]))))
+                          (str "Shared reliability effect was not enforced: " effect))))}
+   {:pattern #"^the receipt has (.+)$"
+    :handler (fn [world _ _]
+               (assert! world
+                        (true? (get-in world [:vtd014/evidence :runIntent :immutableRejection]))
+                        "Receipt evidence eligibility was not bound to immutable run intent."))}
+   {:pattern #"^evidence recording applies (.+)$"
+    :handler (fn [world _ _]
+               (assert! world
+                        (and (true? (get-in world [:vtd014/evidence :runIntent :immutableRejection]))
+                             (true? (get-in world [:vtd014/evidence :runIntent
+                                                   :compatibility :ambiguousBlocking])))
+                        "Evidence recording admitted a missing, ambiguous, or upgraded intent."))}
+
+   {:pattern #"^an exact review-evidence candidate adds run-intent enforcement to a base that already contains its approved contract but lacks the implementation$"
+    :handler (fn [world _ _]
+               (let [prepared-world (prepared world)]
+                 (assert! prepared-world
+                          (and (true? (get-in prepared-world [:vtd014/evidence :runIntent
+                                                              :bootstrap :baseContract]))
+                               (true? (get-in prepared-world [:vtd014/evidence :runIntent
+                                                              :bootstrap :baseImplementationAbsent])))
+                          "Run-intent bootstrap did not bind the one eligible base.")))}
+   {:pattern #"^every applicable legacy diagnostic is receipt-proven or remains blocking$"
+    :handler (fn [world _ _]
+               (assert! world
+                        (and (true? (get-in world [:vtd014/evidence :runIntent
+                                                   :compatibility :receiptProvenOnly]))
+                             (true? (get-in world [:vtd014/evidence :runIntent
+                                                   :compatibility :ambiguousBlocking])))
+                        "Legacy diagnostic compatibility was broadened."))}
+   {:pattern #"^every other applicable incident has an eligible terminal-verification-deferred disposition on an ancestor$"
+    :handler (fn [world _ _]
+               (assert! world
+                        (true? (get-in world [:vtd014/evidence :runIntent :bootstrap :ineligibleBlocked]))
+                        "Bootstrap admitted a non-deferred or ineligible incident."))}
+   {:pattern #"^the one-time run-intent bootstrap preflight evaluates the exact focused plan$"
+    :handler (fn [world _ _]
+               (assert! world
+                        (true? (get-in world [:vtd014/evidence :runIntent :bootstrap :exactCoverage]))
+                        "Bootstrap did not evaluate exact focused task coverage."))}
+   {:pattern #"^every deferred failure task or declared successor must be selected for fresh execution$"
+    :handler (fn [world _ _]
+               (assert! world
+                        (true? (get-in world [:vtd014/evidence :runIntent :bootstrap :freshPass]))
+                        "Bootstrap omitted a deferred task or declared successor."))}
+   {:pattern #"^no unrelated unresolved incident is admitted$"
+    :handler (fn [world _ _]
+               (assert! world
+                        (true? (get-in world [:vtd014/evidence :runIntent :bootstrap :ineligibleBlocked]))
+                        "Bootstrap admitted unrelated unresolved debt."))}
+   {:pattern #"^pending evidence requires every selected deferred failure task or successor to pass freshly with package proof$"
+    :handler (fn [world _ _]
+               (assert! world
+                        (and (true? (get-in world [:vtd014/evidence :runIntent
+                                                   :bootstrap :freshPass]))
+                             (true? (get-in world [:vtd014/evidence :runIntent
+                                                   :bootstrap :packageProof])))
+                        "Bootstrap pending evidence lacked fresh task or package proof."))}
+   {:pattern #"^the incidents remain unresolved until the handoff gate re-defers them on the exact candidate$"
+    :handler (fn [world _ _]
+               (assert! world
+                        (and (true? (get-in world [:vtd014/evidence :runIntent
+                                                   :bootstrap :remainsUnresolved]))
+                             (true? (get-in world [:vtd014/evidence :runIntent
+                                                   :bootstrap :handoffRedefers])))
+                        "Bootstrap changed incident state before the handoff gate."))}
+   {:pattern #"^a base that already contains run-intent implementation cannot reuse bootstrap authority$"
+    :handler (fn [world _ _]
+               (assert! world
+                        (true? (get-in world [:vtd014/evidence :runIntent
+                                              :bootstrap :futureBaseRejected]))
+                        "Run-intent bootstrap authority was reusable."))}])
+
 (defn handlers [{:keys [example-values]}]
   (vec (concat (incident-handlers example-values)
                (repair-handlers example-values)
@@ -1280,6 +1391,7 @@
                (flow-reload-lifecycle-handlers example-values)
                (flow-stylesheet-handlers example-values)
                (task-succession-handlers example-values)
+               (run-intent-handlers example-values)
                (shared-boundary-handlers example-values))))
 
 ;; clj-mutate-manifest-begin

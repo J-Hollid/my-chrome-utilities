@@ -107,6 +107,9 @@ export function createReviewReadyRecord({
   assertReceiptBinding(receipt, candidateCommit, candidateTree);
   assertReceiptChangeSet(receipt, changeSet);
   const tasks = passedTasks(receipt);
+  if (receipt.runIntentBootstrap) {
+    validateRunIntentBootstrapReceipt(receipt, receipt.runIntentBootstrap);
+  }
   assertIsoTimestamp(receipt.startedAt, "Review receipt start");
   assertIsoTimestamp(receipt.completedAt, "Review receipt completion");
   assertIsoTimestamp(recordedAt, "Review evidence recording");
@@ -116,6 +119,8 @@ export function createReviewReadyRecord({
     candidateCommit, candidateTree, changeSet, focusedScope:focusedScope(receipt, tasks),
     receipt:{ path:receiptPath, sha256:receiptSha256, runId:receipt.runId,
       runIntent:receipt.runIntent },
+    ...(receipt.runIntentBootstrap
+      ? { runIntentBootstrap:structuredClone(receipt.runIntentBootstrap) } : {}),
     startedAt:receipt.startedAt, completedAt:receipt.completedAt, recordedAt,
     finalRegressionClaim:false,
   };
@@ -146,6 +151,14 @@ function assertRecordContents(record) {
   }
   if (record.receipt?.runIntent !== undefined && record.receipt.runIntent !== "review-evidence") {
     throw new Error("Review-ready evidence has an invalid run intent");
+  }
+  if (record.runIntentBootstrap !== undefined &&
+      (record.runIntentBootstrap.version !== 1 ||
+       record.runIntentBootstrap.baseCommit !== record.baseCommit ||
+       record.runIntentBootstrap.candidateCommit !== record.candidateCommit ||
+       record.runIntentBootstrap.candidateTree !== record.candidateTree ||
+       !Array.isArray(record.runIntentBootstrap.coverage))) {
+    throw new Error("Review-ready evidence has an invalid run-intent bootstrap binding");
   }
   const obligations = record.terminalObligations;
   if (obligations !== undefined &&
@@ -240,3 +253,4 @@ export function consumeTerminalFullObligations(record, checkpointReceipt, {
       checkpointRunId:checkpointReceipt.runId ?? null },
   };
 }
+import { validateRunIntentBootstrapReceipt } from "./verification-run-intent.mjs";

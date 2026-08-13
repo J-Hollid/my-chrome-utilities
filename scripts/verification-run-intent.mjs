@@ -1,6 +1,13 @@
 import { createHash } from "node:crypto";
+import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+
+import { planVerification, verificationTaskIdentity } from "./verification-packs.mjs";
+import {
+  resolveIncidentTaskSuccession,
+  verificationTaskDigest,
+} from "./verification-task-succession.mjs";
 
 export const verificationRunIntents = Object.freeze({
   development:"development-diagnostic",
@@ -16,7 +23,7 @@ export function verificationRunIntent(options = {}) {
       options.prepareEvidence === options.boundedClosureEvidenceTask) {
     return verificationRunIntents.terminal;
   }
-  if (options.timeoutRepairFocused || options.timeoutRepairIncident || options.timeoutDiagnosticRetry) {
+  if (options.timeoutRepairFocused || options.timeoutDiagnosticRetry) {
     return verificationRunIntents.repair;
   }
   if (options.prepareEvidence) return verificationRunIntents.review;
@@ -88,4 +95,96 @@ export async function classifyLegacyIncidentRunIntent({ root, incident }) {
     proof:{ ordinaryMode, noEvidenceAuthority, noRepairAuthority, noTerminalAuthority,
       noReadinessClaim, receiptShape, interrupted:receipt.completedAt === undefined },
   };
+}
+
+function gitValue(root, ...args) {
+  return new Promise((resolve, reject) => execFile("git", args, {
+    cwd:root, maxBuffer:16 * 1024 * 1024,
+  }, (error, stdout, stderr) => error
+    ? reject(new Error(stderr.trim() || error.message)) : resolve(stdout)));
+}
+
+async function commitFile(root, commit, file) {
+  try { return await gitValue(root, "show", `${commit}:${file}`); }
+  catch { return null; }
+}
+
+export async function validateRunIntentBootstrapBase({
+  root, baseCommit, changedPaths, readCommitFile = commitFile,
+}) {
+  const [feature, implementation] = await Promise.all([
+    readCommitFile(root, baseCommit, "features/modular-verification-packs.feature"),
+    readCommitFile(root, baseCommit, "scripts/verification-run-intent.mjs"),
+  ]);
+  const contractsPresent = typeof feature === "string" &&
+    feature.includes("Modular verification packs 159") &&
+    feature.includes("Modular verification packs 160");
+  const implementationAbsent = implementation === null;
+  const implementationAdded = changedPaths.includes("scripts/verification-run-intent.mjs");
+  if (!contractsPresent || !implementationAbsent || !implementationAdded) {
+    throw new Error("Run-intent bootstrap requires a contract-bearing base without implementation and a candidate that adds it");
+  }
+  return { version:1, baseCommit, contracts:[159, 160], implementationAbsent, implementationAdded };
+}
+
+function eligibleTerminalDeferred(incident) {
+  return incident?.state === "unresolved" && incident?.repair?.status === "eligible" &&
+    incident?.terminalVerificationDeferred?.status === "terminal-verification-deferred";
+}
+
+export async function runIntentBootstrapCoverage({
+  incidents, plan, packs, resolveSuccession = resolveIncidentTaskSuccession,
+}) {
+  const ineligible = incidents.filter((incident) => !eligibleTerminalDeferred(incident));
+  if (ineligible.length) {
+    throw new Error(`Run-intent bootstrap cannot admit ineligible incident(s): ${
+      ineligible.map(({ id }) => id).sort().join(", ")}`);
+  }
+  const selected = new Map(plan.tasks.map((task) => {
+    const identity = verificationTaskIdentity(task);
+    return [verificationTaskDigest(identity), identity];
+  }));
+  const canonical = planVerification(packs, { terminalFull:true }).tasks
+    .map(verificationTaskIdentity);
+  const coverage = [];
+  for (const incident of incidents) {
+    const failureDigest = verificationTaskDigest(incident.failure.task);
+    let selectedIdentity = selected.get(failureDigest);
+    let succession;
+    if (!selectedIdentity) {
+      succession = await resolveSuccession({ incident, currentIdentities:canonical,
+        currentPacks:packs });
+      selectedIdentity = selected.get(succession.destinationTaskDigest);
+    }
+    if (!selectedIdentity) {
+      throw new Error(`Run-intent bootstrap exact plan does not select deferred incident ${incident.id} failure task or successor`);
+    }
+    coverage.push({
+      incidentId:incident.id,
+      failureTaskKey:incident.failure.task.key,
+      selectedTaskKey:selectedIdentity.key,
+      selectedTaskDigest:verificationTaskDigest(selectedIdentity),
+      ...(succession ? { successionDigest:succession.conservationDigest } : {}),
+    });
+  }
+  return coverage.sort((left, right) => left.incidentId.localeCompare(right.incidentId));
+}
+
+export function validateRunIntentBootstrapReceipt(receipt, bootstrap) {
+  if (bootstrap?.version !== 1 || !Array.isArray(bootstrap.coverage)) {
+    throw new Error("Run-intent bootstrap receipt binding is missing or malformed");
+  }
+  for (const row of bootstrap.coverage) {
+    const result = receipt.tasks?.[row.selectedTaskKey];
+    if (result?.status !== "passed" || result.provenance !== "fresh" ||
+        verificationTaskDigest(result.identity) !== row.selectedTaskDigest) {
+      throw new Error(`Run-intent bootstrap requires a fresh pass for ${row.selectedTaskKey}`);
+    }
+  }
+  const packageResult = Object.values(receipt.tasks ?? {})
+    .find(({ identity }) => identity?.stage === "package");
+  if (packageResult?.status !== "passed" || packageResult.provenance !== "fresh") {
+    throw new Error("Run-intent bootstrap requires fresh package proof");
+  }
+  return bootstrap;
 }

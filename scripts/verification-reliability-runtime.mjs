@@ -38,6 +38,8 @@ function terminalDeferralProof(review, packageProof) {
       candidateCommit:review.candidateCommit, candidateTree:review.candidateTree,
       receiptSha256:review.receipt.sha256,
       focusedTaskKeys:[...review.focusedScope.taskKeys] },
+    ...(review.runIntentBootstrap
+      ? { runIntentBootstrap:structuredClone(review.runIntentBootstrap) } : {}),
     package:packageProof,
   };
 }
@@ -52,7 +54,10 @@ async function recordIncidentDeferral(store, incident, review, proof) {
   const changedPaths = (await git(repositoryRoot, "diff", "--name-only",
     `${deferredCandidate}..${review.candidateCommit}`)).split(/\r?\n/u).filter(Boolean);
   const conservation = terminalVerificationDeferredConservation({ incident, changedPaths });
-  const operation = conservation.conserved ? "carryTerminalVerification" : "deferTerminalVerification";
+  const bootstrapCovers = review.runIntentBootstrap?.coverage
+    .some(({ incidentId }) => incidentId === incident.id);
+  const operation = bootstrapCovers ? "deferTerminalVerification"
+    : conservation.conserved ? "carryTerminalVerification" : "deferTerminalVerification";
   await store[operation](incident.id, proof);
 }
 

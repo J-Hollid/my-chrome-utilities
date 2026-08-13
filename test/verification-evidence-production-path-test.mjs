@@ -142,7 +142,8 @@ function receiptFor(plan, commitId, tree, artifact, runId) {
     output:"fixture-pass",
   }]));
   return {
-    version:2, runId, startedAt:"2026-08-13T10:00:00.000Z", completedAt:"2026-08-13T10:00:01.000Z",
+    version:2, runIntent:"review-evidence", runId,
+    startedAt:"2026-08-13T10:00:00.000Z", completedAt:"2026-08-13T10:00:01.000Z",
     candidate:{ commit:commitId, tree, baseCommit:plan.baseCommit, evidenceTask:"fixture-evidence",
       changeSetDigest:verificationDigest(plan.changeSet) },
     plan:planSummary, tasks, environment, artifact,
@@ -193,7 +194,8 @@ try {
     base:masterBase, commit:originCommit, repositoryRoot:root,
   });
   const originReceipt = {
-    version:2, runId:"origin-focused", startedAt:"2026-08-13T10:00:00.000Z",
+    version:2, runIntent:"review-evidence", runId:"origin-focused",
+    startedAt:"2026-08-13T10:00:00.000Z",
     completedAt:"2026-08-13T10:00:01.000Z", candidate:{ commit:originCommit, tree:originTree },
     plan:{ changedPaths:originChangeSet.paths, requestedPackIds:["shell"],
       terminalFullObligations:["specification-builder.css"] },

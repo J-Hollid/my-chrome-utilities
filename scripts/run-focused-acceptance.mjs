@@ -77,6 +77,8 @@ import {
 } from "./report-verification-throughput.mjs";
 import {
   requireVerificationRunIntent,
+  runIntentBootstrapCoverage,
+  validateRunIntentBootstrapBase,
   verificationRunIntent,
   verificationRunIntents,
 } from "./verification-run-intent.mjs";
@@ -225,6 +227,11 @@ export function focusedAcceptanceOptions(args) {
       else options.skipBuild = true;
       continue;
     }
+    if (argument === "--run-intent-bootstrap") {
+      once(argument);
+      options.runIntentBootstrap = true;
+      continue;
+    }
     if (argument === "--changed-since") {
       once(argument);
       const value = valueArgument(args, index, argument);
@@ -361,6 +368,10 @@ export function focusedAcceptanceOptions(args) {
     if (options.withDependencies || options.skipBuild || options.shard || options.terminalFull) {
       throw new Error("Evidence cannot use dependencies, no-build, sharding, or terminal-full mode");
     }
+  }
+  if (options.runIntentBootstrap && (!options.prepareEvidence || options.timeoutRepairFocused ||
+      options.terminalFull || options.resumeReceipt || options.timeoutRepairIncident)) {
+    throw new Error("Run-intent bootstrap requires fresh review evidence authority");
   }
   if (options.resumeReceipt && (!options.packIds.length || !options.changedSince ||
       !options.includeProperties || !options.prepareEvidence)) {
@@ -1578,7 +1589,7 @@ export async function runFocusedAcceptance(
   } else if (options.changedPaths.length) {
     await validateExplicitChangedPaths(options.changedPaths);
   }
-  if (evidenceTask && !timeoutRepairIncident) {
+  if (evidenceTask && !timeoutRepairIncident && !options.runIntentBootstrap) {
     await assertNoBlockingTimeoutIncidents("HEAD", {
       changedPaths:options.changeSet?.paths ?? options.changedPaths,
     });
@@ -1686,6 +1697,22 @@ export async function runFocusedAcceptance(
     changeSetDigest:plan.changeSet ? verificationDigest(plan.changeSet) : null,
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };
+  if (options.runIntentBootstrap) {
+    const store = createTimeoutIncidentStore();
+    const [base, incidents] = await Promise.all([
+      validateRunIntentBootstrapBase({
+        root:repositoryRoot, baseCommit:changedSince, changedPaths:plan.changeSet.paths,
+      }),
+      store.blocking({ commit:candidateCommit }),
+    ]);
+    const coverage = await runIntentBootstrapCoverage({ incidents, plan, packs });
+    context.receipt.runIntentBootstrap = {
+      ...base,
+      candidateCommit,
+      candidateTree,
+      coverage,
+    };
+  }
   if (boundedTerminalAttempt) {
     context.receipt.plan.terminalClosure = terminalClosureExecution({
       attempt:boundedTerminalAttempt,

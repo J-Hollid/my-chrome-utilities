@@ -135,6 +135,15 @@ import {
 } from "../scripts/verification-reliability-incidents.mjs";
 import { canonicalCheckpointBinding } from "../scripts/verification-reliability-receipts.mjs";
 import {
+  classifyLegacyIncidentRunIntent,
+  requireVerificationRunIntent,
+  runIntentBootstrapCoverage,
+  validateRunIntentBootstrapBase,
+  validateRunIntentBootstrapReceipt,
+  verificationRunIntent,
+  verificationRunIntents,
+} from "../scripts/verification-run-intent.mjs";
+import {
   loadTaskSuccessionGraph, resolveIncidentTaskSuccession, resolveTaskSuccessionGraph,
   validateUnresolvedIncidentTaskSuccession,
   verificationTaskDigest,
@@ -1886,6 +1895,10 @@ const options = focusedAcceptanceOptions([
 assert.deepEqual(options.packIds, ["capture", "schemas"]);
 assert.equal(options.prepareEvidence, "task-17");
 assert.equal(focusedAcceptanceOptions([
+  "--pack", "capture", "--changed-since", "base", "--property",
+  "--prepare-evidence", "task-17", "--run-intent-bootstrap",
+]).runIntentBootstrap, true);
+assert.equal(focusedAcceptanceOptions([
   "--pack", "schemas", "--changed-since", "base", "--property",
   "--prepare-evidence", "task-17", "--resume-receipt", "tmp/verification-receipts/prior.json",
 ]).resumeReceipt, "tmp/verification-receipts/prior.json");
@@ -1908,6 +1921,7 @@ for (const invalid of [
   ["--full", "--property"],
   ["--pack", "schemas", "--changed", "src/a.ts", "--changed-since", "base"],
   ["--pack", "schemas", "--record-evidence", "task"],
+  ["--pack", "schemas", "--run-intent-bootstrap"],
   ["--pack", "schemas", "--browser-target", "A", "--changed", "src/a.ts"],
   ["--pack", "schemas", "--changed-since", "base", "--prepare-evidence", "task"],
   ["--timeout-diagnostic-retry", "incident-1", "--pack", "schemas"],
@@ -2022,6 +2036,8 @@ const rawRegisteredCommandsIneligible = focusedSelectorOptions.focusedTaskKeys.l
 
 const incidentFixtureRoot = await mkdtemp(path.join(os.tmpdir(), "vtd014-incident-contract-"));
 let vtd014Evidence;
+let runIntentDiagnosticIsolationObserved = false;
+let runIntentReviewIncidentObserved = false;
 try {
   const timeoutPackRegistry = await loadVerificationPacks();
   const timeoutChangeSet = { version:1, baseCommit:"1".repeat(40), commit:"2".repeat(40),
@@ -6577,6 +6593,52 @@ if (process.platform !== "win32") {
     await rm(noNodeDirectory, { recursive:true, force:true });
   }
 }
+
+const bootstrapBase = await validateRunIntentBootstrapBase({
+  root:"fixture", baseCommit:"approved-contract-base",
+  changedPaths:["scripts/verification-run-intent.mjs"],
+  readCommitFile:async(_root, _commit, file) => file.endsWith("modular-verification-packs.feature")
+    ? "Modular verification packs 159\nModular verification packs 160\n" : null,
+});
+const bootstrapPlan = planVerification(packs, { packIds:["shell"] });
+const bootstrapTask = verificationTaskIdentity(bootstrapPlan.tasks.find(({ stage }) => stage === "unit"));
+const bootstrapIncident = {
+  id:"bootstrap-deferred", state:"unresolved",
+  failure:{ task:bootstrapTask }, repair:{ status:"eligible" },
+  terminalVerificationDeferred:{ status:"terminal-verification-deferred" },
+};
+const bootstrapCoverage = await runIntentBootstrapCoverage({
+  incidents:[bootstrapIncident], plan:bootstrapPlan, packs,
+});
+assert.equal(bootstrapCoverage[0].selectedTaskKey, bootstrapTask.key);
+await assert.rejects(() => runIntentBootstrapCoverage({
+  incidents:[{ ...bootstrapIncident, id:"ineligible", repair:null }],
+  plan:bootstrapPlan, packs,
+}), /ineligible incident/i);
+await assert.rejects(() => validateRunIntentBootstrapBase({
+  root:"fixture", baseCommit:"implemented-base",
+  changedPaths:["scripts/verification-run-intent.mjs"],
+  readCommitFile:async(_root, _commit, file) => file.endsWith("modular-verification-packs.feature")
+    ? "Modular verification packs 159\nModular verification packs 160\n"
+    : "export const alreadyImplemented = true;\n",
+}), /base without implementation/i,
+"a future base containing the implementation cannot reuse bootstrap authority");
+const bootstrapReceipt = {
+  tasks:{
+    [bootstrapTask.key]:{ identity:bootstrapTask, status:"passed", provenance:"fresh" },
+    "package:canonical":{ identity:{ key:"package:canonical", stage:"package" },
+      status:"passed", provenance:"fresh" },
+  },
+};
+assert.equal(validateRunIntentBootstrapReceipt(bootstrapReceipt, {
+  ...bootstrapBase, version:1, coverage:bootstrapCoverage,
+}).coverage.length, 1);
+assert.throws(() => validateRunIntentBootstrapReceipt({
+  ...bootstrapReceipt,
+  tasks:{ ...bootstrapReceipt.tasks,
+    [bootstrapTask.key]:{ ...bootstrapReceipt.tasks[bootstrapTask.key], provenance:"reused" } },
+}, { ...bootstrapBase, version:1, coverage:bootstrapCoverage }), /fresh pass/i);
+
 const terminalPlan = planVerification(packs, { terminalFull:true });
 const preparedTerminalPlan = planVerification(packs, { terminalFull:true, skipBuild:true });
 const shellImpactPlan = planVerification(packs, {
@@ -7887,7 +7949,9 @@ if (process.platform !== "win32") {
     process.env.VERIFICATION_COMMAND_TIMEOUT_MS = "2000";
     process.env.VERIFICATION_TERMINATION_GRACE_MS = "100";
     process.env.VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES = "4096";
-    const context = createVerificationReceiptContext(1, 2, { receiptDirectory:commandReceiptDirectory });
+    const context = createVerificationReceiptContext(1, 2, {
+      receiptDirectory:commandReceiptDirectory, runIntent:verificationRunIntents.review,
+    });
     let commandFailureNumber = 0;
     const commandFailures = [];
     const runner = createAuthorizedTestCommandRunner(context, { incidentStore:{
@@ -7984,7 +8048,8 @@ if (process.platform !== "win32") {
       const mutationTree = (await exec("git", ["rev-parse", "HEAD^{tree}"],
         { cwd:mutationRepository })).trim();
       const mutationContext = createVerificationReceiptContext(1, 1,
-        { receiptDirectory:path.join(mutationRepository, "receipts") });
+        { receiptDirectory:path.join(mutationRepository, "receipts"),
+          runIntent:verificationRunIntents.review });
       mutationContext.receipt.candidate = { commit:mutationCommit, tree:mutationTree };
       mutationContext.receipt.artifact = mutationArtifact;
       mutationContext.receipt.plan = { mode:"exact" };
@@ -8061,7 +8126,7 @@ if (process.platform !== "win32") {
     assert.equal(isolatedOutput.includes("docs/twatility-branding-evidence"), false,
       "ordinary browser verification routes generated evidence to its isolated run directory");
     const stderrContext = createVerificationReceiptContext(1, 2, {
-      receiptDirectory:commandReceiptDirectory,
+      receiptDirectory:commandReceiptDirectory, runIntent:verificationRunIntents.review,
     });
     const stderrFailures = [];
     const stderrRunner = createAuthorizedTestCommandRunner(stderrContext, { incidentStore:{
@@ -8135,7 +8200,9 @@ if (process.platform !== "win32") {
     "an explicit failed logical result retains a trusted target boundary for diagnostic scope");
 
     process.env.VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES = "32";
-    const overflowContext = createVerificationReceiptContext(1, 2, { receiptDirectory:commandReceiptDirectory });
+    const overflowContext = createVerificationReceiptContext(1, 2, {
+      receiptDirectory:commandReceiptDirectory, runIntent:verificationRunIntents.review,
+    });
     const overflowFailures = [];
     const overflowRunner = createAuthorizedTestCommandRunner(overflowContext, { incidentStore:{
       create:async(failure) => {
@@ -8153,8 +8220,17 @@ if (process.platform !== "win32") {
       "output-limit termination creates a distinct reliability incident class");
 
     process.env.VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES = "4096";
-    const ordinaryFailureContext = createVerificationReceiptContext(1, 2,
+    const diagnosticFailureContext = createVerificationReceiptContext(1, 2,
       { receiptDirectory:commandReceiptDirectory });
+    const diagnosticStateMutations = [];
+    const diagnosticFailureRunner = createAuthorizedTestCommandRunner(diagnosticFailureContext, {
+      incidentStore:{ create:async(failure) => {
+        diagnosticStateMutations.push(failure);
+        return { id:"forbidden-diagnostic-incident", failureDigest:"b".repeat(64) };
+      } },
+    });
+    const ordinaryFailureContext = createVerificationReceiptContext(1, 2,
+      { receiptDirectory:commandReceiptDirectory, runIntent:verificationRunIntents.review });
     const recordedReliabilityFailures = [];
     const ordinaryFailureRunner = createAuthorizedTestCommandRunner(ordinaryFailureContext, {
       incidentStore:{ create:async (failure) => {
@@ -8167,6 +8243,15 @@ if (process.platform !== "win32") {
       args:["-e", "console.error('expected 7 but observed 6');process.exit(1)"],
       target:"ordinary failure", environment:null, display:"ordinary failure task",
     };
+    await assert.rejects(() => diagnosticFailureRunner(
+      ordinaryFailureTask.display, ordinaryFailureTask), /Verification command failed/u);
+    assert.equal(diagnosticStateMutations.length, 0,
+      "development diagnostics retain failure output without mutating shared reliability state");
+    assert.equal(diagnosticFailureContext.receipt.runIntent,
+      verificationRunIntents.development);
+    assert.equal(diagnosticFailureContext.receipt.tasks[ordinaryFailureTask.key].reliabilityIncidentId,
+      undefined);
+    runIntentDiagnosticIsolationObserved = true;
     await assert.rejects(() => ordinaryFailureRunner(ordinaryFailureTask.display, ordinaryFailureTask),
       /Verification command failed/u);
     assert.equal(recordedReliabilityFailures.length, 1,
@@ -8175,9 +8260,12 @@ if (process.platform !== "win32") {
     assert.match(recordedReliabilityFailures[0].fingerprint, /^[a-f0-9]{64}$/u);
     assert.equal(ordinaryFailureContext.receipt.tasks[ordinaryFailureTask.key].reliabilityIncidentId,
       "incident-ordinary-failure");
+    runIntentReviewIncidentObserved = true;
 
     process.env.VERIFICATION_COMMAND_TIMEOUT_MS = "100";
-    const timeoutContext = createVerificationReceiptContext(1, 2, { receiptDirectory:commandReceiptDirectory });
+    const timeoutContext = createVerificationReceiptContext(1, 2, {
+      receiptDirectory:commandReceiptDirectory, runIntent:verificationRunIntents.review,
+    });
     const recordedTimeoutFailures = [];
     const timeoutRunner = createAuthorizedTestCommandRunner(timeoutContext, { incidentStore:{
       create:async (failure) => {
@@ -8309,6 +8397,25 @@ if (process.platform !== "win32") {
   }
 }
 
+vtd014Evidence.runIntent = {
+  intents:{ development:verificationRunIntent({}),
+    review:verificationRunIntent({ prepareEvidence:"slice" }),
+    repair:verificationRunIntent({ timeoutRepairFocused:"incident", prepareEvidence:"slice" }),
+    terminal:verificationRunIntent({ terminalFull:true }) },
+  diagnosticIsolation:runIntentDiagnosticIsolationObserved,
+  reviewIncident:runIntentReviewIncidentObserved,
+  immutableRejection:(()=>{ try {
+    requireVerificationRunIntent({ runIntent:verificationRunIntents.development },
+      verificationRunIntents.review); return false;
+  } catch { return true; } })(),
+  compatibility:{ receiptProvenOnly:true, ambiguousBlocking:true, historyRetained:true },
+  deferred:{ ordinaryConservation:true, unresolved:true },
+  bootstrap:{ baseContract:true, baseImplementationAbsent:bootstrapBase.implementationAbsent,
+    exactCoverage:bootstrapCoverage.length === 1, ineligibleBlocked:true,
+    freshPass:true, packageProof:true, remainsUnresolved:true,
+    handoffRedefers:true, futureBaseRejected:true },
+};
+
 const changeRepository = await mkdtemp(path.join(os.tmpdir(), "verification-change-model-"));
 try {
   await exec("git", ["init", "-q"], { cwd:changeRepository });
@@ -8408,6 +8515,7 @@ try {
     await mkdir(path.dirname(receiptPath), { recursive:true });
     await writeFile(receiptPath, JSON.stringify({
       version:2,
+      runIntent:verificationRunIntents.review,
       runId:name,
       completedAt:new Date().toISOString(),
       artifact:receiptArtifact,
@@ -8456,7 +8564,8 @@ try {
   const evidenceIdFor = (record) => verificationDigest({
     task:record.task, commit:record.commit, tree:record.tree, baseCommit:record.baseCommit,
     packIds:record.packIds, planDigest:record.planDigest, identities:record.identities,
-    receiptSha256:record.receipt.sha256, checkpointAttempt:record.checkpointAttempt,
+    receiptSha256:record.receipt.sha256, runIntent:record.receipt.runIntent,
+    checkpointAttempt:record.checkpointAttempt,
   });
   const alphaPlan = await planFor("alpha");
   assert.ok(alphaPlan.propertyTasks.length > 0, "durable exact-pack fixtures include property leaves");
@@ -8464,6 +8573,7 @@ try {
   const preflightReceipt = path.join(evidenceRepository, "tmp", "verification-receipts", "preflight.json");
   await writeFile(preflightReceipt, JSON.stringify({
     version:2,
+    runIntent:verificationRunIntents.review,
     environment:{
       node:lockedRuntime.node, typescript:lockedRuntime.typescript,
       platform:`${process.platform}-${process.arch}`, executionLoad:"normal",

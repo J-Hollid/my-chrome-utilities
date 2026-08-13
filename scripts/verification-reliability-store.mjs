@@ -577,7 +577,9 @@ export function createTimeoutIncidentStore({
             !proof.reviewReady?.baseCommit ||
             !shaPattern.test(proof.reviewReady?.receiptSha256 ?? "") ||
             !Array.isArray(proof.reviewReady?.focusedTaskKeys) ||
-            !proof.reviewReady.focusedTaskKeys.includes(incident.failure.task.key) ||
+            !(proof.reviewReady.focusedTaskKeys.includes(incident.failure.task.key) ||
+              proof.runIntentBootstrap?.coverage?.some(({ incidentId, selectedTaskKey }) =>
+                incidentId === id && proof.reviewReady.focusedTaskKeys.includes(selectedTaskKey))) ||
             !shaPattern.test(proof.package?.digest ?? "")) {
           throw new Error(`Reliability incident ${id} terminal deferral proof is stale or incomplete`);
         }
@@ -586,6 +588,8 @@ export function createTimeoutIncidentStore({
           candidate:structuredClone(proof.candidate),
           repairDigest:timeoutIncidentDigest(incident.repair),
           reviewReady:structuredClone(proof.reviewReady),
+          ...(proof.runIntentBootstrap
+            ? { runIntentBootstrap:structuredClone(proof.runIntentBootstrap) } : {}),
           package:structuredClone(proof.package),
         };
         const currentProof = incident.terminalVerificationDeferred && {
@@ -593,6 +597,8 @@ export function createTimeoutIncidentStore({
           candidate:incident.terminalVerificationDeferred.candidate,
           repairDigest:incident.terminalVerificationDeferred.repairDigest,
           reviewReady:incident.terminalVerificationDeferred.reviewReady,
+          ...(incident.terminalVerificationDeferred.runIntentBootstrap
+            ? { runIntentBootstrap:incident.terminalVerificationDeferred.runIntentBootstrap } : {}),
           package:incident.terminalVerificationDeferred.package,
         };
         if (currentProof && timeoutIncidentDigest(currentProof) ===

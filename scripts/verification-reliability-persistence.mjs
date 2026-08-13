@@ -60,6 +60,9 @@ function matchingTransitions(incident, type) {
 }
 
 function deferredDispositionCoreValid(disposition) {
+  const bootstrapValid = disposition?.runIntentBootstrap === undefined ||
+    (disposition.runIntentBootstrap?.version === 1 &&
+     Array.isArray(disposition.runIntentBootstrap?.coverage));
   return [
     disposition?.status === "terminal-verification-deferred",
     Boolean(disposition?.candidate?.commit), Boolean(disposition?.candidate?.tree),
@@ -72,6 +75,7 @@ function deferredDispositionCoreValid(disposition) {
     Number.isFinite(Date.parse(disposition?.recordedAt)),
     shaPattern.test(String(disposition?.digest)),
     disposition?.digest === timeoutIncidentDigest({ ...disposition, digest:undefined }),
+    bootstrapValid,
   ].every(Boolean);
 }
 
@@ -109,7 +113,9 @@ function deferredProofValid(incident, deferred, latest) {
     carryLinkValid(disposition, chain[index + 1]));
   return [Boolean(chain.length), chain.every(deferredDispositionCoreValid), carriedLinks,
     root?.carryForward === undefined,
-    root?.reviewReady?.focusedTaskKeys?.includes(incident.failure.task.key),
+    (root?.reviewReady?.focusedTaskKeys?.includes(incident.failure.task.key) ||
+      root?.runIntentBootstrap?.coverage?.some(({ incidentId, selectedTaskKey }) =>
+        incidentId === incident.id && root.reviewReady.focusedTaskKeys.includes(selectedTaskKey))),
     chain.every((disposition) => disposition.repairDigest === deferred.repairDigest),
     latest?.dispositionDigest === deferred.digest, latest?.at === deferred.recordedAt,
     Boolean(latest?.carried) === Boolean(deferred.carryForward)].every(Boolean);

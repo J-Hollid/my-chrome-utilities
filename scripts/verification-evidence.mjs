@@ -37,6 +37,9 @@ import {
 } from "./verification-reliability-closure.mjs";
 import {
   requireVerificationRunIntent,
+  runIntentBootstrapCoverage,
+  validateRunIntentBootstrapBase,
+  validateRunIntentBootstrapReceipt,
   verificationRunIntents,
 } from "./verification-run-intent.mjs";
 import {
@@ -632,7 +635,11 @@ async function parsedReceipt(receiptPath, plan, {
         .includes(checkpointAttempt.action))) {
     throw new Error("Verification receipt has an invalid checkpoint attempt identity");
   }
+  if (receipt.runIntentBootstrap) {
+    validateRunIntentBootstrapReceipt(receipt, receipt.runIntentBootstrap);
+  }
   return { bytes, results, environment, artifact:receiptArtifact, runIntent:receipt.runIntent,
+    runIntentBootstrap:receipt.runIntentBootstrap,
     checkpointAttempt:checkpointAttempt ? {
       id:checkpointAttempt.id, identityDigest:checkpointAttempt.identityDigest,
     } : undefined };
@@ -743,7 +750,8 @@ export async function validateVerificationEvidenceCompatibility({
       receiptSourcePath, environment,
     };
   }
-  const [{ bytes, results, environment, artifact:receiptArtifact, checkpointAttempt, runIntent }] = await Promise.all([
+  const [{ bytes, results, environment, artifact:receiptArtifact, checkpointAttempt, runIntent,
+    runIntentBootstrap }] = await Promise.all([
     parsedReceipt(absoluteReceiptPath, planRecord),
   ]);
   const artifact = artifactIdentity(buildManifest);
@@ -755,6 +763,7 @@ export async function validateVerificationEvidenceCompatibility({
   return {
     commit, tree, baseCommit, sourceIdentity, planRecord, actualChangeSet,
     receiptSourcePath, bytes, results, environment, artifact, checkpointAttempt, runIntent,
+    runIntentBootstrap,
   };
 }
 
@@ -814,6 +823,7 @@ function evidenceId(record) {
     task:record.task, commit:record.commit, tree:record.tree, baseCommit:record.baseCommit,
     packIds:record.packIds, planDigest:record.planDigest, identities:record.identities,
     receiptSha256:record.receipt.sha256, runIntent:record.receipt.runIntent,
+    runIntentBootstrap:record.runIntentBootstrap,
     checkpointAttempt:record.checkpointAttempt,
     ...((record.reliabilityResolutions ?? []).length
       ? { reliabilityResolutions:record.reliabilityResolutions }
@@ -904,6 +914,15 @@ function validateRecordDocument(record, { allowLegacyExecutionLoad = false } = {
       [...reliabilityResolutions.map(({ incidentId }) => incidentId)].sort())) {
     throw new Error("Verification evidence has invalid reliability resolution links");
   }
+  if (record.runIntentBootstrap !== undefined &&
+      (record.receipt.runIntent !== verificationRunIntents.review ||
+       record.runIntentBootstrap.version !== 1 ||
+       record.runIntentBootstrap.baseCommit !== record.baseCommit ||
+       record.runIntentBootstrap.candidateCommit !== record.commit ||
+       record.runIntentBootstrap.candidateTree !== record.tree ||
+       !Array.isArray(record.runIntentBootstrap.coverage))) {
+    throw new Error("Verification evidence has an invalid run-intent bootstrap binding");
+  }
   if (record.evidenceId && record.evidenceId !== evidenceId(record)) throw new Error("Verification evidence id does not match its content");
   return record;
 }
@@ -922,16 +941,29 @@ export async function createPendingVerificationEvidence({
   const {
     commit, tree, baseCommit, sourceIdentity, planRecord, actualChangeSet,
     receiptSourcePath, bytes, results, environment, artifact, checkpointAttempt,
+    runIntent, runIntentBootstrap,
   } = await validateVerificationEvidenceCompatibility({
     task, plan, receiptPath, changedSince, buildManifest, repositoryRoot,
     requireCompletedReceipt:true,
   });
-  await assertNoBlockingTimeoutIncidents("HEAD", {
-    root:repositoryRoot, changedPaths:actualChangeSet.paths,
-  });
+  const candidatePacks = await verificationPacksAtCommit(commit, { repositoryRoot });
+  if (runIntentBootstrap) {
+    await validateRunIntentBootstrapBase({
+      root:repositoryRoot, baseCommit, changedPaths:actualChangeSet.paths,
+    });
+    const incidents = await createTimeoutIncidentStore({ root:repositoryRoot })
+      .blocking({ commit });
+    const coverage = await runIntentBootstrapCoverage({ incidents, plan, packs:candidatePacks });
+    if (!same(coverage, runIntentBootstrap.coverage)) {
+      throw new Error("Run-intent bootstrap incident coverage changed before evidence preparation");
+    }
+  } else {
+    await assertNoBlockingTimeoutIncidents("HEAD", {
+      root:repositoryRoot, changedPaths:actualChangeSet.paths,
+    });
+  }
   const reliabilityResolutions = await createTimeoutIncidentStore({ root:repositoryRoot })
     .resolutions({ commit });
-  const candidatePacks = await verificationPacksAtCommit(commit, { repositoryRoot });
   const terminalEligible = canonicalTerminalPlanEligible(planRecord, candidatePacks);
   const consumedTerminalObligations = terminalEligible
     ? await discoverPendingReviewObligations({
@@ -954,6 +986,7 @@ export async function createPendingVerificationEvidence({
     planDigest:verificationDigest(planRecord),
     identities:{ ...sourceIdentity, artifact },
     ...(checkpointAttempt ? { checkpointAttempt } : {}),
+    ...(runIntentBootstrap ? { runIntentBootstrap } : {}),
     receipt:{ sourcePath:receiptSourcePath, sha256:verificationDigest(bytes),
       runIntent, environment, tasks:results },
     ...(terminalEligible ? { consumedTerminalObligations } : {}),
@@ -1097,9 +1130,26 @@ export async function recordPendingVerificationEvidence(
       if (pending.commit !== commit || pending.tree !== tree) {
         throw new Error("Pending evidence does not match the current commit and tree");
       }
-      await assertNoBlockingTimeoutIncidents(commit, {
-        root:repositoryRoot, changedPaths:pending.changeSet.paths,
-      });
+      if (pending.runIntentBootstrap) {
+        await validateRunIntentBootstrapBase({
+          root:repositoryRoot, baseCommit:pending.baseCommit,
+          changedPaths:pending.changeSet.paths,
+        });
+        const [incidents, candidatePacks] = await Promise.all([
+          createTimeoutIncidentStore({ root:repositoryRoot }).blocking({ commit }),
+          verificationPacksAtCommit(commit, { repositoryRoot }),
+        ]);
+        const coverage = await runIntentBootstrapCoverage({
+          incidents, plan:pending.plan, packs:candidatePacks,
+        });
+        if (!same(coverage, pending.runIntentBootstrap.coverage)) {
+          throw new Error("Run-intent bootstrap incident coverage changed before recording");
+        }
+      } else {
+        await assertNoBlockingTimeoutIncidents(commit, {
+          root:repositoryRoot, changedPaths:pending.changeSet.paths,
+        });
+      }
       const currentReliabilityResolutions = await createTimeoutIncidentStore({ root:repositoryRoot })
         .resolutions({ commit });
       if (!same(currentReliabilityResolutions.sort((left, right) => left.incidentId.localeCompare(right.incidentId)),
