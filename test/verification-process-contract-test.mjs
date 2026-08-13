@@ -2445,7 +2445,6 @@ console.log("repairTmp=" + process.env.TMPDIR);
       paths:["src/repair.ts", "swarmforge/roles/coder.prompt"] }),
     incidentChangedPathsLoader:async() => ["src/repair.ts"],
     verificationPacksLoader:async() => ({}),
-    baseVerificationPacksLoader:async() => ({}),
     verificationPacksValidator:async() => {},
     receiptContextFactory:(concurrency, observationConcurrency, options) => createVerificationReceiptContext(
       concurrency, observationConcurrency, { ...options, receiptDirectory:runnerReceiptDirectory }),

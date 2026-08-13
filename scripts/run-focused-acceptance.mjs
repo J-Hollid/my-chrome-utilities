@@ -1013,7 +1013,6 @@ export async function runTimeoutRepairFocused(id, {
       (error, stdout, stderr) => error ? reject(new Error(stderr.trim() || error.message))
         : resolve(stdout.split(/\r?\n/u).filter(Boolean)))),
   verificationPacksLoader = loadVerificationPacks,
-  baseVerificationPacksLoader = (base) => verificationPacksAtCommit(base, { repositoryRoot }),
   verificationPacksValidator = validateVerificationPacks,
   receiptContextFactory = createVerificationReceiptContext,
   commandRunnerFactory = createVerificationCommandRunner,
@@ -1030,15 +1029,14 @@ export async function runTimeoutRepairFocused(id, {
   await strictToolchainValidator();
   await candidateCleanValidator();
   const incident = await store.read(id);
-  const [candidate, artifact, changeSet, packs, basePacks, incidentChangedPaths] = await Promise.all([
+  const [candidate, artifact, changeSet, packs, incidentChangedPaths] = await Promise.all([
     candidateIdentity(), artifactIdentity(),
-    changeSetLoader(baseCommit), verificationPacksLoader(), baseVerificationPacksLoader(baseCommit),
+    changeSetLoader(baseCommit), verificationPacksLoader(),
     incidentChangedPathsLoader(incident.failure.lineage.commit),
   ]);
   await verificationPacksValidator(packs);
   const plan = canonicalPlan ?? planVerification(packs, {
-    packIds:timeoutRepairPackIds, includeProperties:true, changedPaths:changeSet.paths, changeSet,
-    basePacks,
+    packIds:timeoutRepairPackIds, includeProperties:true,
   });
   const canonicalIdentities = plan.tasks.map(verificationTaskIdentity);
   const unresolvedIncidents = await store.blocking({ commit:candidate.commit });
