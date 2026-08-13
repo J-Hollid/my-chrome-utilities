@@ -5490,8 +5490,10 @@ const localShellPlan = planVerification(packs, {
 });
 assert.equal(new Set(localShellPlan.tasks.map(({key}) => key)).size, localShellPlan.tasks.length,
   "local Shell presentation retains every property-enabled task exactly once");
-assert.equal(localShellPlan.unitTasks.length, 13);
-assert.equal(localShellPlan.propertyTasks.length, 1);
+assert.deepEqual(localShellPlan.unitTasks.map(({ target }) => target), shellPack.unit,
+  "local Shell unit tasks conserve the declared Shell unit leaves in canonical order");
+assert.deepEqual(localShellPlan.propertyTasks.map(({ target }) => target), shellPack.property,
+  "local Shell property tasks conserve the declared Shell property leaves in canonical order");
 assert.equal(localShellPlan.browserTasks.length, 3);
 assert.equal(localShellPlan.observationTasks.length, 1);
 assert.equal(localShellPlan.parserTasks.length, localShellPlan.features.length);
