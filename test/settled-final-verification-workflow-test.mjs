@@ -135,6 +135,14 @@ assert.deepEqual(terminalVerificationDeferredRoute({ incident:deferredIncident,
 assert.deepEqual(terminalVerificationDeferredRoute({ incident:deferredIncident,
   readiness:"qa-ready", candidateCommit }), { permitted:true, mode:"qa-integration" });
 assert.deepEqual(terminalVerificationDeferredRoute({ incident:deferredIncident,
+  readiness:"review-ready", candidateCommit:"independent-feature-candidate" }),
+{ permitted:true, mode:"focused-review" },
+"an eligible deferral on a parallel candidate does not block focused feature review");
+assert.deepEqual(terminalVerificationDeferredRoute({ incident:deferredIncident,
+  readiness:"qa-ready", candidateCommit:"independent-feature-candidate" }),
+{ permitted:true, mode:"qa-integration" },
+"an eligible deferral on a parallel candidate does not block QA integration");
+assert.deepEqual(terminalVerificationDeferredRoute({ incident:deferredIncident,
   readiness:"release-candidate", candidateCommit:"later-qa-head",
   candidateDescendsFromDeferred:true }), { permitted:true, mode:"master-checkpoint" });
 assert.deepEqual(terminalVerificationDeferredRoute({ incident:deferredIncident,
@@ -201,11 +209,26 @@ for (const relevantPath of [
 }
 for (const workflowPath of [
   "scripts/settled-final-verification.mjs",
-  "scripts/settled-final-verification-policy.mjs",
   "scripts/settled-final-verification-review.mjs",
+  "scripts/run-focused-acceptance.mjs",
 ]) {
   assert.deepEqual(planVerification(packs, { changedPaths:[workflowPath] }).packIds.toSorted(), allPacks,
     `${workflowPath} retains global workflow impact`);
+}
+const flowUiPlan = planVerification(packs, { changedPaths:["src/data-layer-flow-graph-ui.ts"] });
+for (const focusedPolicyPath of [
+  "scripts/settled-final-verification-policy.mjs",
+  "scripts/verification-packs.mjs",
+  "scripts/verification-reliability-runtime.mjs",
+  "scripts/verification-reliability-store.mjs",
+]) {
+  const mixedPlan = planVerification(packs, {
+    changedPaths:["src/data-layer-flow-graph-ui.ts", focusedPolicyPath],
+  });
+  assert.deepEqual(mixedPlan.packIds, flowUiPlan.packIds,
+    `${focusedPolicyPath} does not suppress or expand an accompanying product boundary`);
+  assert.deepEqual(mixedPlan.changedOwners[focusedPolicyPath], [],
+    `${focusedPolicyPath} remains visible without claiming product-pack ownership`);
 }
 const receipt = {
   version:2,

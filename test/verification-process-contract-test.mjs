@@ -159,6 +159,7 @@ import {
 import {
   defaultStoreDirectory, validateIncident,
 } from "../scripts/verification-reliability-persistence.mjs";
+import { recordEligibleIncidentDeferral } from "../scripts/verification-reliability-runtime.mjs";
 import {
   boundedClosureContractRevision,
   boundedClosureEvidenceTask,
@@ -2193,7 +2194,8 @@ try {
     randomId:() => `incident-${++incidentNumber}`,
     isAncestor:async (ancestor, descendant) => ancestor === descendant ||
       ancestor === "failed-commit" && ["repair-commit", "rebased-commit", "reclaimed-commit",
-        "spec-commit", "carry-commit"].includes(descendant) ||
+        "spec-commit", "carry-commit", "parallel-feature-commit",
+        "parallel-spec-commit"].includes(descendant) ||
       ancestor === "repair-commit" && ["reclaimed-commit", "spec-commit", "carry-commit"].includes(descendant),
     resolveCandidate:async(commit) => ({
       commit,
@@ -2870,6 +2872,41 @@ console.log("repairTmp=" + process.env.TMPDIR);
   assert.equal((await store.blockingForHandoff({ commit:"repair-commit",
     readiness:"review-ready" })).some(({ id }) => id === first.id), false,
   "exact deferred proof permits focused review routing");
+  const deferredBeforeFeatureRouting = structuredClone(await store.read(first.id));
+  assert.equal((await store.blockingForEvidence({ commit:"parallel-feature-commit",
+    changedPaths:["scripts/verification-reliability-store.mjs"] }))
+    .some(({ id }) => id === first.id), false,
+  "path overlap alone does not make an eligible parallel deferral a feature evidence obligation");
+  assert.equal((await store.blockingForHandoff({ commit:"parallel-feature-commit",
+    readiness:"review-ready" })).some(({ id }) => id === first.id), false,
+  "an eligible parallel deferral does not block focused feature review");
+  assert.equal((await store.blockingForHandoff({ commit:"parallel-feature-commit",
+    readiness:"qa-ready" })).some(({ id }) => id === first.id), false,
+  "an eligible parallel deferral does not block QA integration");
+  assert.deepEqual(await store.read(first.id), deferredBeforeFeatureRouting,
+    "feature evidence and handoff routing leave the parallel disposition immutable");
+  const deferralMutations = [];
+  await recordEligibleIncidentDeferral({
+    deferTerminalVerification:async(id) => deferralMutations.push(["defer", id]),
+    carryTerminalVerification:async(id) => deferralMutations.push(["carry", id]),
+  }, deferredBeforeFeatureRouting, {
+    candidateCommit:"parallel-feature-commit",
+    focusedScope:{ taskKeys:[deferredBeforeFeatureRouting.failure.task.key] },
+  }, { candidate:{ commit:"parallel-feature-commit" } });
+  assert.deepEqual(deferralMutations, [],
+    "a passing feature receipt never copies, carries, or re-defers an existing disposition");
+  await recordEligibleIncidentDeferral({
+    deferTerminalVerification:async(id) => deferralMutations.push(["defer", id]),
+  }, {
+    ...deferredBeforeFeatureRouting,
+    repair:{ ...deferredBeforeFeatureRouting.repair,
+      candidate:{ commit:"parallel-feature-commit", tree:"parallel-feature-tree" } },
+  }, {
+    candidateCommit:"parallel-feature-commit",
+    focusedScope:{ taskKeys:[deferredBeforeFeatureRouting.failure.task.key] },
+  }, { candidate:{ commit:"parallel-feature-commit" } });
+  assert.deepEqual(deferralMutations, [["defer", deferredBeforeFeatureRouting.id]],
+    "an explicit eligible repair on the exact current candidate retains case-by-case re-deferral");
   assert.equal((await store.blockingForHandoff({ commit:"reclaimed-commit",
     readiness:"release-candidate" })).some(({ id }) => id === first.id), false,
   "a descendant frozen QA head retains the architect's master-checkpoint route");
@@ -2877,6 +2914,9 @@ console.log("repairTmp=" + process.env.TMPDIR);
     readiness:"final-ready" })).some(({ id }) => id === first.id), true,
   "deferred proof cannot authorize final-ready routing");
   incidentCandidateChangedPaths = ["docs/approved-slice.md", "features/approved-slice.feature"];
+  assert.equal((await store.blockingForHandoff({ commit:"parallel-spec-commit", readiness:"legacy",
+    sender:"specifier", verified:"not-required" })).some(({ id }) => id === first.id), false,
+  "a specification-only candidate can start from current QA without merging a parallel disposition");
   assert.equal((await store.blockingForHandoff({ commit:"spec-commit", readiness:"legacy",
     sender:"specifier", verified:"not-required" })).some(({ id }) => id === first.id), false,
   "a specification-only descendant can start from current QA without rewriting deferred proof");
@@ -3610,6 +3650,26 @@ for (const verificationPath of [
   }).packIds, ["alpha"],
   `verification-only change remains exact to its owning pack: ${verificationPath}`);
 }
+for (const focusedPolicyPath of [
+  "scripts/settled-final-verification-policy.mjs",
+  "scripts/verification-packs.mjs",
+  "scripts/verification-reliability-runtime.mjs",
+  "scripts/verification-reliability-store.mjs",
+]) {
+  const focusedPolicyPlan = planVerification(synthetic, {
+    packIds:["alpha", "beta"],
+    changedPaths:["src/alpha/change.ts", focusedPolicyPath],
+  });
+  assert.deepEqual(focusedPolicyPlan.packIds, ["alpha", "beta"],
+    "the closed focused-policy set does not expand an authorized feature checkpoint");
+  assert.deepEqual(focusedPolicyPlan.changedOwners[focusedPolicyPath], [],
+    "the closed focused-policy path stays visible without a product-pack owner");
+}
+assert.deepEqual(planVerification(synthetic, {
+  packIds:["alpha", "beta", "process"],
+  changedPaths:["src/alpha/change.ts", "scripts/run-focused-acceptance.mjs"],
+}).packIds, ["alpha", "beta", "process"],
+"the central runner remains outside the closed focused-policy exception");
 assert.throws(() => planVerification(synthetic, {
   packIds:["alpha"], changedPaths:["src/alpha/change.ts"],
 }), /outside the explicit pack set: beta/u,

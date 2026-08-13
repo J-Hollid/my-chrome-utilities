@@ -31,6 +31,12 @@ const registryUrl = new URL("../verification/packs.json", import.meta.url);
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const exactOwnedPathKeys = ["unit", "property", "features", "handlers", "browserAdapters"];
 const verificationImplementationPathKeys = ["unit", "property", "browserAdapters"];
+const focusedFeaturePolicyPaths = new Set([
+  "scripts/settled-final-verification-policy.mjs",
+  "scripts/verification-packs.mjs",
+  "scripts/verification-reliability-runtime.mjs",
+  "scripts/verification-reliability-store.mjs",
+]);
 const testPathKeys = ["unit", "property", "browserAdapters"];
 const prefixOwnedPathKeys = ["source", "process"];
 const reservedTaskEnvironment = new Set([
@@ -1251,6 +1257,9 @@ export function planVerification(
   const affectedFor = (registry, changedPath, {
     exactVerificationChange = true, forceVerificationExact = false,
   } = {}) => {
+    if (focusedFeaturePolicyPaths.has(changedPath)) {
+      return { semantic:[], exactSemantic:[], verificationConsumers:[], boundary:null };
+    }
     if (changedPath === "dist" || changedPath.startsWith("dist/")) {
       return { semantic:[], exactSemantic:[], verificationConsumers:[], boundary:null };
     }

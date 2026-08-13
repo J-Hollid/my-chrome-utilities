@@ -6,7 +6,6 @@ import {
   assertNoBlockingTimeoutIncidents, createTimeoutIncidentStore,
 } from "./verification-reliability-store.mjs";
 import { git, repositoryRoot } from "./verification-reliability-values.mjs";
-import { terminalVerificationDeferredConservation } from "./verification-reliability-deferred.mjs";
 
 export { createTimeoutIncidentStore };
 
@@ -44,21 +43,11 @@ function terminalDeferralProof(review, packageProof) {
   };
 }
 
-async function recordIncidentDeferral(store, incident, review, proof) {
+export async function recordEligibleIncidentDeferral(store, incident, review, proof) {
   const deferredCandidate = incident.terminalVerificationDeferred?.candidate?.commit;
-  if (deferredCandidate === review.candidateCommit) return;
-  if (!deferredCandidate) {
-    await store.deferTerminalVerification(incident.id, proof);
-    return;
-  }
-  const changedPaths = (await git(repositoryRoot, "diff", "--name-only",
-    `${deferredCandidate}..${review.candidateCommit}`)).split(/\r?\n/u).filter(Boolean);
-  const conservation = terminalVerificationDeferredConservation({ incident, changedPaths });
-  const bootstrapCovers = review.runIntentBootstrap?.coverage
-    .some(({ incidentId }) => incidentId === incident.id);
-  const operation = bootstrapCovers ? "deferTerminalVerification"
-    : conservation.conserved ? "carryTerminalVerification" : "deferTerminalVerification";
-  await store[operation](incident.id, proof);
+  const exactRepairCandidate = incident.repair?.candidate?.commit === review.candidateCommit;
+  if (deferredCandidate && (!exactRepairCandidate || deferredCandidate === review.candidateCommit)) return;
+  await store.deferTerminalVerification(incident.id, proof);
 }
 
 async function recordEligibleHandoffDeferrals(store, incidents, {
@@ -69,7 +58,7 @@ async function recordEligibleHandoffDeferrals(store, incidents, {
   const review = await verifyReviewReadyEvidence(commit, base, task);
   const proof = terminalDeferralProof(review, await canonicalPackageProof(review));
   for (const incident of incidents) {
-    await recordIncidentDeferral(store, incident, review, proof);
+    await recordEligibleIncidentDeferral(store, incident, review, proof);
   }
 }
 

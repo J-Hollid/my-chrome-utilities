@@ -67,7 +67,7 @@ export function terminalVerificationDeferredRoute({
   const exactCandidate = deferred?.candidate?.commit === candidateCommit;
   const valid = incident?.state === "unresolved" && incident?.repair?.status === "eligible" &&
     deferred?.status === "terminal-verification-deferred";
-  if (valid && exactCandidate && ["review-ready", "qa-ready"].includes(readiness)) {
+  if (valid && ["review-ready", "qa-ready"].includes(readiness)) {
     return { permitted:true, mode:readiness === "review-ready" ? "focused-review" : "qa-integration" };
   }
   if (valid && readiness === "release-candidate" &&

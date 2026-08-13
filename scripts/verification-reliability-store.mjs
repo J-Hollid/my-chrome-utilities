@@ -352,17 +352,17 @@ async function handoffCandidateRelationship({ root, isAncestor, candidateChanged
     root, isAncestor, ancestor:deferredCommit, commit,
   });
   const specificationRoute = [sender === "specifier", verified === "not-required",
-    readiness === "legacy", descendant].every(Boolean);
+    readiness === "legacy"].every(Boolean);
   const specificationOnly = specificationRoute &&
-    (await candidateChangedPaths(deferredCommit, commit)).every(approvedSpecificationPath);
+    (await candidateChangedPaths(`${commit}^`, commit)).every(approvedSpecificationPath);
   return { exact, descendant, specificationOnly };
 }
 
 function permittedHandoffRelationship(readiness, relationship) {
   const routes = new Map([
-    ["review-ready", relationship.exact],
-    ["qa-ready", relationship.exact],
-    ["release-candidate", relationship.descendant],
+    ["review-ready", true],
+    ["qa-ready", true],
+    ["release-candidate", relationship.exact || relationship.descendant],
     ["legacy", relationship.specificationOnly],
   ]);
   return routes.get(readiness) ?? false;
@@ -617,12 +617,10 @@ export function createTimeoutIncidentStore({
       }
       return applicable;
     },
-    async blockingForEvidence({ commit, changedPaths = [] }) {
+    async blockingForEvidence({ commit }) {
       const blocked = [];
       for (const incident of await this.blocking({ commit })) {
-        const conservedDeferred = eligibleDeferredIncident(incident) &&
-          terminalVerificationDeferredConservation({ incident, changedPaths }).conserved;
-        if (!conservedDeferred) blocked.push(incident);
+        if (!eligibleDeferredIncident(incident)) blocked.push(incident);
       }
       return blocked;
     },
