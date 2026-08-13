@@ -32,6 +32,9 @@
           (evidence-value row)
           (evidence-value field)))
 
+(defn- style-evidence [world boundary]
+  (evidence-value (get-in world [:vtd014/evidence :styles]) boundary))
+
 (def ^:private promotion-scope-keys
   {"receipt finalization only" "receipt-finalization"
    "pending evidence creation only" "pending-evidence"
@@ -793,7 +796,7 @@
     :handler (fn [world example captures]
                (let [boundary (:vtd014/style-boundary world)
                      expected (first (values example-values example captures))
-                     evidence (get-in world [:vtd014/evidence :styles boundary])]
+                     evidence (style-evidence world boundary)]
                  (assert! world (and (= expected (:expectedScope evidence))
                                      (= expected (:selected evidence))
                                      (or (= expected "no task launch")
@@ -804,13 +807,13 @@
     :handler (fn [world example captures]
                (let [boundary (:vtd014/style-boundary world)
                      expected (first (values example-values example captures))
-                     evidence (get-in world [:vtd014/evidence :styles boundary])]
+                     evidence (style-evidence world boundary)]
                  (assert! world (= (= "present" expected) (:terminalFullObligation evidence))
                           "Stylesheet terminal-full obligation does not match the production planner.")))}
    {:pattern #"^no all-20 feature-mode task launches$"
     :handler (fn [world _ _]
                (let [boundary (:vtd014/style-boundary world)
-                     evidence (get-in world [:vtd014/evidence :styles boundary])]
+                     evidence (style-evidence world boundary)]
                  (assert! world (and (map? evidence) (< (count (:selectedPackIds evidence)) 20))
                           "Feature-integration stylesheet planning broadened to the all-20 terminal scope.")))}
    {:pattern #"^it records (a structured prerequisite block|an execution-contract incident|the task's normal reliability failure)$"
