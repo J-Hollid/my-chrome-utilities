@@ -103,14 +103,6 @@
       "id": "flow-workspace-controls-standalone-to-flow-graph-batch-v1",
       "sourceRegistryCommit": "b559b9350ede974c4be166b4b76d4edb3e482fdd",
       "sourceTaskDigest": "d6b30cc8a9f2ab2d72c2e496dab054d063c28b56c8ede69b0ea04a006fe98fa5",
-      "destinationTaskDigest": "5dc48c5c3fa79fd30b87384bbe69dc8fac7ffe07c7ea3c313cc65875d8bfaae1",
-      "logicalSlice": {"kind": "browser-target", "logicalTargetIds": ["FLOW_WORKSPACE_CONTROLS_TARGET"]},
-      "conservedBoundaryDigest": "6d424b42fc67d7daf681c0fc3c12b58438f7c1cea6f7429b7e1b5eec30d0d077"
-    },
-    {
-      "id": "flow-graph-batch-add-stylesheet-target-v1",
-      "sourceRegistryCommit": "444f6981cb1de8f0587719f1c5b6fd075079a901",
-      "sourceTaskDigest": "5dc48c5c3fa79fd30b87384bbe69dc8fac7ffe07c7ea3c313cc65875d8bfaae1",
       "destinationTaskDigest": "52edc94f4ae10fb8912fb9cc051432fb1b47384d97e2728640b7b567110752f0",
       "logicalSlice": {"kind": "browser-target", "logicalTargetIds": ["FLOW_WORKSPACE_CONTROLS_TARGET"]},
       "conservedBoundaryDigest": "6d424b42fc67d7daf681c0fc3c12b58438f7c1cea6f7429b7e1b5eec30d0d077"
