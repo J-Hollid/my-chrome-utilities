@@ -8160,11 +8160,12 @@ try {
 
   const planFor = async(ids = ["alpha"], base = baseline) => {
     const requested = Array.isArray(ids) ? ids : [ids];
-    const changeSet = await canonicalVerificationChangeSet({
+    const changeSet = base === null ? null : await canonicalVerificationChangeSet({
       base, repositoryRoot:evidenceRepository,
     });
     const plan = planVerification(evidencePacks, {
-      packIds:requested, changedPaths:changeSet.paths, changeSet,
+      packIds:requested,
+      ...(changeSet ? { changedPaths:changeSet.paths, changeSet } : {}),
       basePacks:evidencePacks, includeProperties:true,
     });
     const packageTask = structuredClone(timeoutRepairPackageTaskIdentity);
@@ -8462,7 +8463,7 @@ try {
     changedSince:divergent, buildManifest:artifact, repositoryRoot:evidenceRepository,
     toolchainValidator:skipToolchainValidation,
   }), /not an ancestor/u);
-  const emptyPlan = await planFor("alpha", "HEAD");
+  const emptyPlan = await planFor("alpha", null);
   const emptyReceipt = await receiptFor(emptyPlan, "empty-receipt");
   await assert.rejects(() => createPendingVerificationEvidence({
     task:"empty-range-task", plan:emptyPlan, receiptPath:emptyReceipt,
