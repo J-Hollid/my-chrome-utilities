@@ -84,12 +84,14 @@ import {
   verificationResumeIdentity,
 } from "../scripts/run-focused-acceptance.mjs";
 import {
+  candidatePredatesRunIntentImplementation,
   closeCanonicalEvidencePlanPrerequisites,
   createPendingVerificationEvidence,
   legacyAcceptanceSessionPrerequisiteCompatibility,
   preflightGitNotePromotion,
   probeGitMetadataWrite,
   recordPendingVerificationEvidence,
+  requireEvidenceReceiptRunIntent,
   validateVerificationCandidateClean,
   validateVerificationEvidenceCompatibility,
   verificationEvidence,
@@ -1921,6 +1923,31 @@ assert.equal(reviewReadyScopeGuardRequired(true, true), false,
   "the one-time bootstrap uses its exact deferred-task preflight instead of generic all-pack expansion");
 assert.equal(reviewReadyScopeGuardRequired(true, false), true,
   "ordinary product evidence retains the generic review-scope guard");
+assert.equal(requireEvidenceReceiptRunIntent({}, "review-evidence", {
+  allowLegacyResolvedArchive:true,
+  candidatePredatesRunIntent:true,
+}), "pre-intent-resolved-archive",
+"an immutable pre-intent resolved archive retains its historical checkpoint shape");
+assert.throws(() => requireEvidenceReceiptRunIntent({}, "review-evidence", {
+  allowLegacyResolvedArchive:true,
+}), /missing a valid immutable run intent/u,
+"archive status without Git-proven pre-intent ancestry cannot waive run intent");
+assert.throws(() => requireEvidenceReceiptRunIntent({}, "review-evidence"),
+  /missing a valid immutable run intent/u,
+"a current evidence receipt cannot omit its immutable run intent");
+assert.throws(() => requireEvidenceReceiptRunIntent({ runIntent:"invented" }, "review-evidence", {
+  allowLegacyResolvedArchive:true, candidatePredatesRunIntent:true,
+}), /missing a valid immutable run intent/u,
+"archive compatibility cannot admit an invalid or ambiguous run intent");
+assert.throws(() => requireEvidenceReceiptRunIntent({ runIntent:"repair-focused" },
+  "review-evidence", { allowLegacyResolvedArchive:true, candidatePredatesRunIntent:true }),
+  /cannot support review-evidence/u,
+"a present valid intent still must match the archived checkpoint purpose");
+assert.equal(await candidatePredatesRunIntentImplementation(
+  "66b91e38e6c55d6611daaa572d626ca3dfbb3dd9"), true,
+"the authorized bootstrap base is a Git-proven pre-run-intent candidate");
+assert.equal(await candidatePredatesRunIntentImplementation("HEAD"), false,
+"a candidate containing the run-intent implementation cannot use archive compatibility");
 const bootstrapExactPlan = { packIds:["flow_graph", "shell"],
   selectedPackIds:["flow_graph", "shell"], includeProperties:true, tasks:[] };
 const bootstrapBoundPlan = bindVerificationChangeScope(bootstrapExactPlan, {

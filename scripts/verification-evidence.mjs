@@ -53,6 +53,31 @@ function expectedRunIntentForEvidenceTask(task) {
     ? verificationRunIntents.terminal : verificationRunIntents.review;
 }
 
+export function requireEvidenceReceiptRunIntent(receipt, expected, {
+  allowLegacyResolvedArchive = false,
+  candidatePredatesRunIntent = false,
+} = {}) {
+  if (allowLegacyResolvedArchive && candidatePredatesRunIntent && receipt?.runIntent === undefined) {
+    return "pre-intent-resolved-archive";
+  }
+  return requireVerificationRunIntent(receipt, expected);
+}
+
+export async function candidatePredatesRunIntentImplementation(candidateCommit, {
+  repositoryRoot = repository,
+} = {}) {
+  await git(repositoryRoot, "rev-parse", "--verify", `${candidateCommit}^{commit}`);
+  try {
+    await git(repositoryRoot, "show", `${candidateCommit}:scripts/verification-run-intent.mjs`);
+    return false;
+  } catch (error) {
+    const entry = await git(repositoryRoot, "ls-tree", "--name-only", candidateCommit, "--",
+      "scripts/verification-run-intent.mjs");
+    if (entry === "") return true;
+    throw new Error(`Cannot verify the archived checkpoint run-intent boundary: ${error.message}`);
+  }
+}
+
 const repository = fileURLToPath(new URL("../", import.meta.url));
 const notesRef = "refs/notes/swarmforge-verification";
 const reviewReadyNotesRef = "refs/notes/swarmforge-review-ready";
@@ -389,6 +414,8 @@ export async function validateCanonicalVerificationCheckpoint({
   const receipt = JSON.parse(await readFile(receiptPath, "utf8"));
   const legacySeparatePackage = allowLegacySeparatePackage &&
     !receipt.tasks?.[timeoutRepairPackageTaskIdentity.key];
+  const legacyArchivedRunIntent = allowLegacySeparatePackage && receipt.runIntent === undefined &&
+    await candidatePredatesRunIntentImplementation(commit, { repositoryRoot });
   const plan = await canonicalPlanDocument({
     commit, baseCommit, changeSet, packIds:sortedUnique(packIds ?? []), repositoryRoot,
     includePackage:!legacySeparatePackage,
@@ -404,6 +431,7 @@ export async function validateCanonicalVerificationCheckpoint({
     allowLegacyPromotionPrerequisites:allowLegacySeparatePackage,
     allowLegacyAcceptanceSessionPrerequisites:allowLegacySeparatePackage,
     allowLegacyTerminalClosure,
+    allowLegacyRunIntent:legacyArchivedRunIntent,
   });
   const results = Object.values(receipt.tasks);
   if (results.some((result) => result.provenance !== "fresh" || result.reliabilityIncidentId ||
@@ -496,6 +524,7 @@ async function parsedReceipt(receiptPath, plan, {
   allowLegacyPromotionPrerequisites = false,
   allowLegacyAcceptanceSessionPrerequisites = false,
   allowLegacyTerminalClosure = false,
+  allowLegacyRunIntent = false,
 } = {}) {
   if (!receiptPath) throw new Error("Provide the verification receipt produced by this run");
   const bytes = await readFile(receiptPath);
@@ -506,7 +535,10 @@ async function parsedReceipt(receiptPath, plan, {
     throw new Error("Verification evidence requires a version 2 task receipt");
   }
   const expectedRunIntent = expectedRunIntentForEvidenceTask(receipt.candidate?.evidenceTask);
-  requireVerificationRunIntent(receipt, expectedRunIntent);
+  requireEvidenceReceiptRunIntent(receipt, expectedRunIntent, {
+    allowLegacyResolvedArchive:allowLegacyRunIntent,
+    candidatePredatesRunIntent:allowLegacyRunIntent,
+  });
   if (!receipt.completedAt || Number.isNaN(Date.parse(receipt.completedAt))) {
     throw new Error("Verification evidence requires a completed task receipt");
   }
