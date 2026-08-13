@@ -8,6 +8,7 @@ import { canonicalVerificationChangeSet, requireGitAncestor } from "./verificati
 import { planVerification } from "./verification-packs.mjs";
 import {
   createReviewReadyRecord,
+  consumeTerminalFullObligations,
   same,
   validateReviewReadyRecord,
 } from "./settled-final-verification-review.mjs";
@@ -24,6 +25,7 @@ import { terminalVerificationDeferredConservation } from "./verification-reliabi
 
 export {
   createReviewReadyRecord,
+  consumeTerminalFullObligations,
   deliveryScorecard,
   finalEvidenceEffect,
   formatReviewReadyScopePreflight,

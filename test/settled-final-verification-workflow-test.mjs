@@ -8,6 +8,7 @@ import { promisify } from "node:util";
 import { loadVerificationPacks, planVerification } from "../scripts/verification-packs.mjs";
 
 import {
+  consumeTerminalFullObligations,
   createReviewReadyRecord,
   deliveryScorecard,
   finalEvidenceEffect,
@@ -201,6 +202,35 @@ assert.throws(() => validateReviewReadyRecord({ ...reviewRecord, finalRegression
 assert.throws(() => validateReviewReadyRecord({
   ...reviewRecord, focusedScope:{ ...reviewRecord.focusedScope, taskKeys:[] },
 }, { task:"future-slice", baseCommit, candidateCommit, candidateTree }), /incomplete/i);
+const obligationReceipt = {
+  ...receipt,
+  runId:"style-focused-run",
+  plan:{ ...receipt.plan,
+    changedPaths:["specification-builder-brand.css"],
+    terminalFullObligations:["specification-builder-brand.css"],
+  },
+};
+const obligationRecord = createReviewReadyRecord({
+  task:"style-slice", baseCommit, candidateCommit, candidateTree,
+  changeSet:{ version:1, baseCommit, commit:candidateCommit,
+    paths:["specification-builder-brand.css"] },
+  receipt:obligationReceipt, receiptPath:"tmp/verification-receipts/style.json",
+  receiptSha256:"6".repeat(64), recordedAt:"2026-08-11T10:03:00.000Z",
+});
+assert.deepEqual(obligationRecord.terminalObligations, {
+  status:"pending-master-checkpoint", paths:["specification-builder-brand.css"],
+  candidateCommit, candidateTree, receiptRunId:"style-focused-run",
+}, "review evidence durably carries unresolved stylesheet terminal obligations");
+const consumedObligations = consumeTerminalFullObligations(obligationRecord, {
+  version:2, runId:"master-checkpoint", candidate:{ commit:candidateCommit, tree:candidateTree },
+  plan:{ terminalFullObligations:["specification-builder-brand.css"] },
+  tasks:{ "browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET":{ status:"passed" } },
+});
+assert.equal(consumedObligations.terminalObligations.status, "consumed",
+  "only a matching successful master checkpoint consumes stylesheet obligations");
+assert.throws(() => consumeTerminalFullObligations(obligationRecord, {
+  ...consumedObligations, candidate:{ commit:candidateCommit, tree:"4".repeat(40) },
+}), /matching successful master checkpoint/u);
 assert.throws(() => createReviewReadyRecord({
   task:"future-slice", baseCommit, candidateCommit, candidateTree,
   changeSet:{ version:1, baseCommit, commit:candidateCommit, paths:["scripts/workflow.mjs"] },

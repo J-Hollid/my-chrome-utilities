@@ -83,6 +83,18 @@ function assertReceiptIdentity(receiptPath, receiptSha256) {
   }
 }
 
+function terminalObligationBinding(receipt, candidateCommit, candidateTree) {
+  const paths = sortedUnique(receipt.plan?.terminalFullObligations ?? []);
+  if (!paths.length) return undefined;
+  return {
+    status:"pending-master-checkpoint",
+    paths,
+    candidateCommit,
+    candidateTree,
+    receiptRunId:receipt.runId ?? null,
+  };
+}
+
 export function createReviewReadyRecord({
   task, baseCommit, candidateCommit, candidateTree, changeSet, receipt,
   receiptPath, receiptSha256, recordedAt = new Date().toISOString(),
@@ -96,13 +108,16 @@ export function createReviewReadyRecord({
   assertIsoTimestamp(receipt.completedAt, "Review receipt completion");
   assertIsoTimestamp(recordedAt, "Review evidence recording");
   assertReceiptIdentity(receiptPath, receiptSha256);
-  return {
+  const record = {
     version:1, kind:"review-ready", result:"passed", task, baseCommit,
     candidateCommit, candidateTree, changeSet, focusedScope:focusedScope(receipt, tasks),
     receipt:{ path:receiptPath, sha256:receiptSha256, runId:receipt.runId },
     startedAt:receipt.startedAt, completedAt:receipt.completedAt, recordedAt,
     finalRegressionClaim:false,
   };
+  const obligations = terminalObligationBinding(receipt, candidateCommit, candidateTree);
+  if (obligations) record.terminalObligations = obligations;
+  return record;
 }
 
 function assertRecordShape(record) {
@@ -125,6 +140,15 @@ function assertRecordContents(record) {
   if (!hasTaskKeys || !hasChangedPaths || !hasReceiptDigest) {
     throw new Error("Review-ready evidence is incomplete");
   }
+  const obligations = record.terminalObligations;
+  if (obligations !== undefined &&
+      (obligations.status !== "pending-master-checkpoint" ||
+       !Array.isArray(obligations.paths) || !obligations.paths.length ||
+       !same(obligations.paths, sortedUnique(obligations.paths)) ||
+       !matches(sha1Pattern, obligations.candidateCommit) ||
+       !matches(sha1Pattern, obligations.candidateTree))) {
+    throw new Error("Review-ready terminal obligations are invalid");
+  }
 }
 
 export function validateReviewReadyRecord(record, binding) {
@@ -136,4 +160,30 @@ export function validateReviewReadyRecord(record, binding) {
   assertIsoTimestamp(record.completedAt, "Review evidence completion");
   assertIsoTimestamp(record.recordedAt, "Review evidence recording");
   return true;
+}
+
+export function consumeTerminalFullObligations(record, checkpointReceipt, {
+  candidateCommit = record?.candidateCommit,
+  candidateTree = record?.candidateTree,
+} = {}) {
+  validateReviewReadyRecord(record, {
+    task:record?.task, baseCommit:record?.baseCommit, candidateCommit, candidateTree,
+  });
+  const obligations = record.terminalObligations;
+  if (!obligations) return record;
+  if (obligations.status !== "pending-master-checkpoint" ||
+      obligations.candidateCommit !== candidateCommit || obligations.candidateTree !== candidateTree) {
+    throw new Error("Terminal obligations are not pending for this candidate");
+  }
+  if (checkpointReceipt?.version !== 2 || checkpointReceipt.candidate?.commit !== candidateCommit ||
+      checkpointReceipt.candidate?.tree !== candidateTree ||
+      Object.values(checkpointReceipt.tasks ?? {}).some(({ status }) => status !== "passed") ||
+      !Object.keys(checkpointReceipt.tasks ?? {}).length ||
+      !same(sortedUnique(checkpointReceipt.plan?.terminalFullObligations ?? []), obligations.paths)) {
+    throw new Error("Terminal obligations require a matching successful master checkpoint");
+  }
+  return {
+    ...record,
+    terminalObligations:{ ...obligations, status:"consumed", checkpointRunId:checkpointReceipt.runId ?? null },
+  };
 }
