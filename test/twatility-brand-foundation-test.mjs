@@ -38,6 +38,8 @@ const expectedStylesheets = {
     "layered-schema.css",
     "twatility-brand.css",
     "schema-authoring-brand.css",
+    "flow-graph/flow-workspace.css",
+    "flow-graph/flow-workspace-shell.css",
     "specification-builder-brand.css",
   ],
 };
