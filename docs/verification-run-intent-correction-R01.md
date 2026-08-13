@@ -57,6 +57,24 @@ focused plan, runner semantics, and evidence inputs are unchanged. Exact focused
 evidence and package proof remain mandatory, and the handoff gate records the
 carry-forward disposition only after those proofs pass.
 
+### One-time bootstrap
+
+This correction necessarily changes shared runner semantics, so its first
+checkpoint cannot use ordinary path-only conservation. The evidence command uses
+explicit `--run-intent-bootstrap` authority. That authority is valid only when
+the approved base contains Packs 159 and 160 but lacks the run-intent
+implementation and the candidate adds it. Before launch, every applicable
+non-diagnostic incident must already have an eligible
+`terminal-verification-deferred` disposition and the exact focused plan must
+select its failure task or declared successor. Any uncovered or ineligible
+incident blocks.
+
+Before pending evidence is created, every selected deferred failure task or
+successor must have a fresh pass in the same receipt and package proof must pass.
+The incidents remain unresolved; the handoff gate records fresh deferrals on the
+exact candidate. A later candidate whose base already contains the implementation
+cannot reuse bootstrap authority.
+
 ## Delivery boundary
 
 Apply this correction to the clean Flow CSS candidate before its evidence run,
@@ -81,7 +99,7 @@ two hours. These are reporting checkpoints, not intervention gates: work continu
 while scope is unchanged, failures have causal explanations, and a bounded safe
 completion path remains. Stop only for the release-pilot pause conditions.
 
-Acceptance authority is Modular verification packs 159. Proof covers run-intent
+Acceptance authority is Modular verification packs 159 and 160. Proof covers run-intent
 resolution, immutable receipt persistence, diagnostic isolation, review-evidence
 failure recording, repair-focused and terminal preservation, evidence rejection,
 pre-correction compatibility classification, and conserved deferred-incident

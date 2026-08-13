@@ -2290,3 +2290,15 @@ Feature: Modular verification packs
       | explicit terminal-checkpoint authority         | fails       | terminal               | one durable terminal failure on the exact release candidate       | no final-ready eligibility                   | a changed release candidate requires one fresh terminal checkpoint                 |
       | explicit review-evidence authority             | passes      | review-evidence        | no new incident                                                    | review-ready eligibility for the exact scope | recording rejects a missing, mismatched, or retrospectively upgraded run intent    |
       | explicit terminal-checkpoint authority         | passes      | terminal               | matching deferred incidents are resolved by the exact checkpoint  | final-ready eligibility for the exact scope  | recording rejects a missing, mismatched, or retrospectively upgraded run intent    |
+
+  # Modular verification packs 160
+  Scenario: Modular verification packs 160
+    Given an exact review-evidence candidate adds run-intent enforcement to a base that already contains its approved contract but lacks the implementation
+    And every applicable legacy diagnostic is receipt-proven or remains blocking
+    And every other applicable incident has an eligible terminal-verification-deferred disposition on an ancestor
+    When the one-time run-intent bootstrap preflight evaluates the exact focused plan
+    Then every deferred failure task or declared successor must be selected for fresh execution
+    And no unrelated unresolved incident is admitted
+    And pending evidence requires every selected deferred failure task or successor to pass freshly with package proof
+    And the incidents remain unresolved until the handoff gate re-defers them on the exact candidate
+    And a base that already contains run-intent implementation cannot reuse bootstrap authority

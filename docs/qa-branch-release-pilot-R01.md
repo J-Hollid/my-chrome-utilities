@@ -98,6 +98,18 @@ conservation proves their failure, repair, regression, plan, runner semantics,
 and evidence inputs are unchanged; the later exact evidence and package proof are
 still required before carry-forward is recorded.
 
+Because this correction changes shared runner semantics, its first checkpoint
+cannot satisfy ordinary path-only conservation against older deferred incidents.
+One explicit `--run-intent-bootstrap` review-evidence invocation is permitted only
+when the approved base contains the run-intent contract but lacks its
+implementation and the candidate adds that implementation. Preflight must prove
+that every other applicable incident is already eligible and terminal-deferred
+and that the exact focused plan selects each deferred failure task or its declared
+successor. Pending evidence then requires all of those tasks to pass freshly with
+package proof before handoff may re-defer the incidents on the exact candidate.
+Any unrelated, ineligible, uncovered, or ambiguous incident blocks. Once the base
+contains run-intent implementation, bootstrap authority is exhausted.
+
 Feature candidates must be independently understandable and revertible. Partial,
 speculative, or known-failing work stays in task worktrees and never enters
 `qa`. Persistence, concurrency, migration, security, packaging, and verification
