@@ -244,13 +244,15 @@ export async function runIntentBootstrapCoverage({
 }) {
   const admissions = new Map();
   for (const incident of incidents) {
-    if (eligibleTerminalDeferred(incident)) {
-      admissions.set(incident.id, { kind:"terminal-deferred" });
-      continue;
-    }
     if (exactCandidateEligibleRepair(incident, candidate)) {
       const proof = await reviewIncidentProof({ root, incident, evidenceTask });
-      if (proof) admissions.set(incident.id, { kind:"exact-candidate-causal-repair", ...proof });
+      if (proof) {
+        admissions.set(incident.id, { kind:"exact-candidate-causal-repair", ...proof });
+        continue;
+      }
+    }
+    if (eligibleTerminalDeferred(incident)) {
+      admissions.set(incident.id, { kind:"terminal-deferred" });
     }
   }
   const ineligible = incidents.filter((incident) => !admissions.has(incident.id));
