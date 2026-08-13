@@ -6795,7 +6795,7 @@ const exactBootstrapRepair = { ...bootstrapIncident, id:"exact-bootstrap-repair"
   terminalVerificationDeferred:undefined, failure:{ ...bootstrapIncident.failure,
     sourceReceipt:"tmp/verification-receipts/bootstrap-review.json" },
   repair:{ status:"eligible", candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
-    regression:{ status:"passed", commit:"bootstrap-candidate" },
+    regression:{ key:bootstrapTask.key, status:"passed", commit:"bootstrap-candidate" },
     focusedReceipt:{ status:"passed", commit:"bootstrap-candidate" },
     causalProtocol:{ repairResult:{ status:"passed" } } } };
 const exactRepairCoverage = await runIntentBootstrapCoverage({ incidents:[exactBootstrapRepair],
@@ -6804,6 +6804,25 @@ const exactRepairCoverage = await runIntentBootstrapCoverage({ incidents:[exactB
     sourceReceiptSha256:"a".repeat(64) }) });
 assert.equal(exactRepairCoverage[0].admission.kind, "exact-candidate-causal-repair",
   "a bootstrap review failure with an eligible exact-candidate causal repair is admitted once");
+const promotionBootstrapRepair = structuredClone(exactBootstrapRepair);
+promotionBootstrapRepair.id = "exact-promotion-bootstrap-repair";
+promotionBootstrapRepair.failure.task = verificationTaskIdentity({
+  key:"promotion:artifact-binding", stage:"promotion", executable:"internal", args:[],
+  target:"artifact-binding",
+});
+promotionBootstrapRepair.repair.regression.key = bootstrapTask.key;
+const promotionRepairCoverage = await runIntentBootstrapCoverage({
+  incidents:[promotionBootstrapRepair], plan:bootstrapPlan, packs,
+  candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+  resolveSuccession:async() => { throw new Error("promotion tasks must not invent succession"); },
+  reviewIncidentProof:async() => ({
+    sourceReceipt:promotionBootstrapRepair.failure.sourceReceipt,
+    sourceReceiptSha256:"a".repeat(64),
+  }),
+});
+assert.equal(promotionRepairCoverage[0].selectedTaskKey, bootstrapTask.key,
+  "an internal promotion failure is covered by its exact causal regression leaf");
+assert.equal(promotionRepairCoverage[0].repairRegressionKey, bootstrapTask.key);
 await assert.rejects(()=>runIntentBootstrapCoverage({ incidents:[exactBootstrapRepair],
   plan:bootstrapPlan, packs, candidate:{ commit:"later-candidate", tree:"later-tree" },
   reviewIncidentProof:async()=>({ sourceReceipt:"unused", sourceReceiptSha256:"b".repeat(64) }) }),

@@ -262,27 +262,33 @@ export async function runIntentBootstrapCoverage({
     const identity = verificationTaskIdentity(task);
     return [verificationTaskDigest(identity), identity];
   }));
+  const selectedByKey = new Map([...selected.values()].map((identity) => [identity.key, identity]));
   const canonical = planVerification(packs, { terminalFull:true }).tasks
     .map(verificationTaskIdentity);
   const coverage = [];
   for (const incident of incidents) {
+    const admission = admissions.get(incident.id);
     const failureDigest = verificationTaskDigest(incident.failure.task);
-    let selectedIdentity = selected.get(failureDigest);
+    let selectedIdentity = admission.kind === "exact-candidate-causal-repair"
+      ? selectedByKey.get(incident.repair.regression.key)
+      : selected.get(failureDigest);
     let succession;
-    if (!selectedIdentity) {
+    if (!selectedIdentity && admission.kind === "terminal-deferred") {
       succession = await resolveSuccession({ incident, currentIdentities:canonical,
         currentPacks:packs });
       selectedIdentity = selected.get(succession.destinationTaskDigest);
     }
     if (!selectedIdentity) {
-      throw new Error(`Run-intent bootstrap exact plan does not select deferred incident ${incident.id} failure task or successor`);
+      throw new Error(`Run-intent bootstrap exact plan does not select incident ${incident.id} governed task, causal regression, or successor`);
     }
     coverage.push({
       incidentId:incident.id,
-      admission:admissions.get(incident.id),
+      admission,
       failureTaskKey:incident.failure.task.key,
       selectedTaskKey:selectedIdentity.key,
       selectedTaskDigest:verificationTaskDigest(selectedIdentity),
+      ...(admission.kind === "exact-candidate-causal-repair"
+        ? { repairRegressionKey:incident.repair.regression.key } : {}),
       ...(succession ? { successionDigest:succession.conservationDigest } : {}),
     });
   }
