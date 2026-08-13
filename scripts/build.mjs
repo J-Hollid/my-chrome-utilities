@@ -22,6 +22,7 @@ import {
 } from "./dist-artifact.mjs";
 import {withDistArtifactLock} from "./dist-artifact-lock.mjs";
 import {checkArchitecture} from "./check-architecture.mjs";
+import {stylesheetDeclarations, validateStylesheetRegistry} from "./verification-styles.mjs";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const distDirectory = path.join(projectRoot, "dist");
@@ -47,27 +48,26 @@ async function normalizeInlineSources(directory) {
 }
 
 async function copyStaticFiles(candidateDirectory) {
-  const staticFiles = [
-    "manifest.json",
-    "side-panel.html",
-    "side-panel.css",
-    "specification-builder.html",
-    "specification-builder.css",
-    "specification-builder-guidance.css",
-    "layered-schema.css",
-    "twatility-brand.css",
-    "schema-authoring-brand.css",
-    "side-panel-brand.css",
-    "specification-builder-brand.css",
-  ];
-
-  for (const source of staticFiles) {
-    await copyFile(source, path.join(candidateDirectory, source));
+  // Canonical stylesheet declarations include side-panel.css and every other
+  // packaged style; this marker keeps the operator contract explicit.
+  const registry = JSON.parse(await readFile("verification/packs.json", "utf8"));
+  const declarations = stylesheetDeclarations(registry);
+  await validateStylesheetRegistry(registry, {
+    repositoryRoot:projectRoot,
+    packIds:registry.map(({ id }) => id),
+  });
+  const staticFiles = ["manifest.json", "side-panel.html", "specification-builder.html"];
+  for (const source of staticFiles) await copyFile(source, path.join(candidateDirectory, source));
+  for (const { source, destination } of declarations) {
+    const destinationPath = path.join(candidateDirectory, destination);
+    await mkdir(path.dirname(destinationPath), {recursive:true});
+    await copyFile(source, destinationPath);
   }
   await cp("assets/brand", path.join(candidateDirectory, "assets/brand"), {recursive: true});
+  return new Set(declarations.map(({destination}) => destination));
 }
 
-async function verifyLocalReferences(candidateDirectory) {
+async function verifyLocalReferences(candidateDirectory, declaredStylesheets) {
   const localReferencePattern = /\b(?:href|src)=["']([^"']+)["']/giu;
   const candidateRoot = path.resolve(candidateDirectory);
   const candidatePrefix = `${candidateRoot}${path.sep}`;
@@ -83,6 +83,9 @@ async function verifyLocalReferences(candidateDirectory) {
         continue;
       }
       const cleanReference = reference.split(/[?#]/u, 1)[0];
+      if (cleanReference.endsWith(".css") && !declaredStylesheets.has(cleanReference)) {
+        throw new Error(`${htmlName} references an undeclared stylesheet: ${cleanReference}`);
+      }
       const candidate = path.resolve(
         candidateDirectory,
         cleanReference.startsWith("/") ? cleanReference.slice(1) : cleanReference,
@@ -119,8 +122,8 @@ await withDistArtifactLock(async () => {
 
     await normalizeInlineSources(candidateDirectory);
     await mkdir(candidateDirectory, {recursive: true});
-    await copyStaticFiles(candidateDirectory);
-    await verifyLocalReferences(candidateDirectory);
+    const declaredStylesheets = await copyStaticFiles(candidateDirectory);
+    await verifyLocalReferences(candidateDirectory, declaredStylesheets);
 
     const inputsAfterBuild = await createDistInputFingerprint({root: projectRoot});
     if (inputsAfterBuild.digest !== inputsBeforeBuild.digest) {

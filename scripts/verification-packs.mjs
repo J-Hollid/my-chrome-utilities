@@ -9,6 +9,14 @@ import {
   invokeVerificationTask,
   runBoundedVerificationTasks,
 } from "./shared-artifact-parallel.mjs";
+import {
+  stylesheetDeclarations,
+  stylesheetPlanFor,
+  stylesheetDeclarationFor,
+  validateStylesheetRegistry,
+  validateStylesheetDeclarations,
+} from "./verification-styles.mjs";
+export { stylesheetDeclarationFor, stylesheetPlanFor, validateStylesheetDeclarations } from "./verification-styles.mjs";
 import ts from "typescript";
 
 const registryUrl = new URL("../verification/packs.json", import.meta.url);
@@ -864,6 +872,11 @@ export async function validateVerificationPacks(packs, { inventory } = {}) {
   validateBrowserEvidencePartitions(packs);
   await validateIsolatedVerificationHandlers(packs);
   const repositoryInventory = { ...await verificationInventory(), ...inventory };
+  await validateStylesheetRegistry(packs, {
+    repositoryRoot:repositoryRoot,
+    packIds:packs.map(({ id }) => id),
+    sourcePaths:repositoryInventory.tracked,
+  });
   await validateVerificationHelpers(packs, repositoryInventory.tracked);
   validateImpactBoundaries(packs, repositoryInventory.source,
     [...repositoryInventory.source, ...repositoryInventory.features]);
@@ -1172,6 +1185,8 @@ export function planVerification(
   let selected = terminalFull ? new Set(known) : new Set(explicit);
   const changedOwners = new Map();
   const changedBoundaries = new Map();
+  const styleSmokeTargets = [];
+  const terminalFullObligations = [];
   const registryChanged = changedPaths.includes("verification/packs.json");
   const historicalPacksCompatible = historicalRegistryHasPlanningShape(basePacks, known);
   const historicalOwnerPaths = !changeSet || !historicalPacksCompatible ? []
@@ -1204,6 +1219,25 @@ export function planVerification(
     }
     const owner = ownerOf(registry, changedPath);
     if (!owner) throw new Error(`Assign every changed path to one verification pack: ${changedPath}`);
+    const stylePlan = stylesheetPlanFor(registry, changedPath);
+    if (stylePlan) {
+      const unavailable = stylePlan.selected.filter((id) => !known.has(id));
+      if (unavailable.length) {
+        throw new Error(`Stylesheet ${changedPath} names unavailable verification consumers: ${unavailable.join(", ")}`);
+      }
+      return {
+        semantic:stylePlan.selected,
+        exactSemantic:[],
+        verificationConsumers:[],
+        boundary:null,
+        propagateDependants:false,
+        styleSmokeTargets:stylePlan.styleSmokeTargets,
+        terminalFullObligation:stylePlan.terminalFullObligation,
+      };
+    }
+    if (changedPath.endsWith(".css") && stylesheetDeclarations(registry).length) {
+      throw new Error(`Undeclared stylesheet boundary blocks verification prelaunch: ${changedPath}`);
+    }
     const boundary = impactBoundaryFor(owner, changedPath);
     const runtimeConsumers = exactRuntimeConsumers(registry, changedPath);
     const boundaryConsumers = values(boundary ?? {}, "consumers");
@@ -1238,9 +1272,14 @@ export function planVerification(
     exactSemantic:[...new Set(affected.flatMap((entry) => entry.exactSemantic ?? []))],
     verificationConsumers:[...new Set(affected.flatMap((entry) => entry.verificationConsumers))],
     boundary:affected.map(({ boundary }) => boundary).find(Boolean) ?? null,
+    propagateDependants:affected.every((entry) => entry.propagateDependants === false) ? false : undefined,
+    styleSmokeTargets:[...new Set(affected.flatMap((entry) => entry.styleSmokeTargets ?? []))],
+    terminalFullObligation:affected.some((entry) => entry.terminalFullObligation),
   });
   const applyAffected = (changedPath, affected, registries = [packs]) => {
-    const semanticClosure = expandDependantsAcross(registries, affected.semantic);
+    const semanticClosure = affected.propagateDependants === false
+      ? affected.semantic
+      : expandDependantsAcross(registries, affected.semantic);
     const complete = new Set([
       ...semanticClosure, ...(affected.exactSemantic ?? []), ...affected.verificationConsumers,
     ]);
@@ -1254,6 +1293,8 @@ export function planVerification(
     for (const id of orderedClosure) selected.add(id);
     changedOwners.set(changedPath, orderedClosure);
     if (affected.boundary) changedBoundaries.set(changedPath, affected.boundary);
+    if (affected.styleSmokeTargets?.length) styleSmokeTargets.push(...affected.styleSmokeTargets);
+    if (affected.terminalFullObligation) terminalFullObligations.push(changedPath);
   };
 
   if (forceAll) {
@@ -1435,6 +1476,8 @@ export function planVerification(
     baseCommit:changeSet?.baseCommit ?? null,
     changedOwners:Object.fromEntries([...changedOwners].sort(([left], [right]) => left.localeCompare(right))),
     changedBoundaries:Object.fromEntries([...changedBoundaries].sort(([left], [right]) => left.localeCompare(right))),
+    styleSmokeTargets:[...new Set(styleSmokeTargets)].sort(),
+    terminalFullObligations:[...new Set(terminalFullObligations)].sort(),
     conservativeHistoricalFallbackReason,
     features,
     handlers:acceptancePacks.flatMap((pack) => values(pack, "handlers")),

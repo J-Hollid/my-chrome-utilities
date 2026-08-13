@@ -5144,6 +5144,80 @@
   {
     "id": "shell",
     "representativeChangedPath": "src/workspace-tabs-ui.ts",
+    "stylesheets": [
+      {
+        "source": "side-panel.css",
+        "destination": "side-panel.css",
+        "classification": "global",
+        "owner": "shell",
+        "consumers": [],
+        "qaTargets": ["SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET"],
+        "scopeRoot": null
+      },
+      {
+        "source": "specification-builder.css",
+        "destination": "specification-builder.css",
+        "classification": "global",
+        "owner": "shell",
+        "consumers": [],
+        "qaTargets": ["STUDIO_GLOBAL_STYLE_SMOKE_TARGET"],
+        "scopeRoot": null
+      },
+      {
+        "source": "specification-builder-guidance.css",
+        "destination": "specification-builder-guidance.css",
+        "classification": "shell-bridge",
+        "owner": "shell",
+        "consumers": ["branding_polish"],
+        "qaTargets": [],
+        "scopeRoot": ".documentary-flow"
+      },
+      {
+        "source": "layered-schema.css",
+        "destination": "layered-schema.css",
+        "classification": "shell-bridge",
+        "owner": "shell",
+        "consumers": ["layered_schema"],
+        "qaTargets": [],
+        "scopeRoot": ".documentary-flow"
+      },
+      {
+        "source": "twatility-brand.css",
+        "destination": "twatility-brand.css",
+        "classification": "global",
+        "owner": "shell",
+        "consumers": [],
+        "qaTargets": ["STUDIO_GLOBAL_STYLE_SMOKE_TARGET", "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET"],
+        "scopeRoot": null
+      },
+      {
+        "source": "schema-authoring-brand.css",
+        "destination": "schema-authoring-brand.css",
+        "classification": "global",
+        "owner": "shell",
+        "consumers": [],
+        "qaTargets": ["STUDIO_GLOBAL_STYLE_SMOKE_TARGET", "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET"],
+        "scopeRoot": null
+      },
+      {
+        "source": "side-panel-brand.css",
+        "destination": "side-panel-brand.css",
+        "classification": "global",
+        "owner": "shell",
+        "consumers": [],
+        "qaTargets": ["SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET"],
+        "scopeRoot": null
+      },
+      {
+        "source": "specification-builder-brand.css",
+        "destination": "specification-builder-brand.css",
+        "classification": "global",
+        "owner": "shell",
+        "consumers": [],
+        "qaTargets": ["STUDIO_GLOBAL_STYLE_SMOKE_TARGET"],
+        "scopeRoot": null
+      }
+    ],
     "impactBoundaries": [
       {
         "id": "shell_local_presentation",

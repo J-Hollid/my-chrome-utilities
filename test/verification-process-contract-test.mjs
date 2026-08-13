@@ -102,6 +102,7 @@ import {
   executeAcceptancePlan,
   loadVerificationPacks,
   planVerification,
+  stylesheetDeclarationFor,
   staticallyResolvableModuleImports,
   validateBrowserPerformanceDeclarations,
   validateBrowserObservationBatches,
@@ -5891,7 +5892,8 @@ for (const edge of crossPackCodeEdges) {
     requiredPathImpacts.set(edge.requiredPath,
       planVerification(packs, { changedPaths:[edge.requiredPath] }).packIds);
   }
-  if (!requiredPathImpacts.get(edge.requiredPath).includes(edge.requiringOwner)) {
+  const globalStylesheetRead = stylesheetDeclarationFor(packs, edge.requiredPath)?.classification === "global";
+  if (!globalStylesheetRead && !requiredPathImpacts.get(edge.requiredPath).includes(edge.requiringOwner)) {
     codeReachabilityGaps.push(edge);
   }
 }
