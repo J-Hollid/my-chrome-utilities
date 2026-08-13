@@ -8464,6 +8464,9 @@ try {
     toolchainValidator:skipToolchainValidation,
   }), /not an ancestor/u);
   const emptyPlan = await planFor("alpha", null);
+  emptyPlan.changeSet = await canonicalVerificationChangeSet({
+    base:"HEAD", commit:"HEAD", repositoryRoot:evidenceRepository,
+  });
   const emptyReceipt = await receiptFor(emptyPlan, "empty-receipt");
   await assert.rejects(() => createPendingVerificationEvidence({
     task:"empty-range-task", plan:emptyPlan, receiptPath:emptyReceipt,
