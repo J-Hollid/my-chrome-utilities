@@ -146,6 +146,8 @@ export async function validateUnresolvedIncidentTaskSuccession({incidents,curren
   const currentDigests=new Set(currentIdentities.map(verificationTaskDigest)),mappings=[];
   for(const incident of incidents){
     if(incident.state!=="unresolved"||incident.closureAudit?.blocking===false)continue;
+    if(incident.failure?.failureClass==="execution-contract-failure"&&
+        incident.failure?.task?.stage==="promotion")continue;
     if(currentDigests.has(verificationTaskDigest(incident.failure.task)))continue;
     mappings.push({incidentId:incident.id,mapping:await resolveIncidentTaskSuccession({incident,
       currentIdentities,currentPacks,graph,loadHistoricalPacks})});

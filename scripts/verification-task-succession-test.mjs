@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   resolveIncidentTaskSuccession,
   resolveTaskSuccessionGraph,
+  validateUnresolvedIncidentTaskSuccession,
   taskSuccessionBoundaryDigest,
   verificationTaskDigest,
 } from "./verification-task-succession.mjs";
@@ -49,6 +50,11 @@ const mapped=resolveTaskSuccessionGraph({graph:batchGraph,sourceIdentity:standal
   logicalSlice:{kind:"browser-target",logicalTargetIds:["FLOW"]}});
 assert.deepEqual(mapped.execution,{identity:batch,args:["scripts/run-browser-observation.mjs","FLOW"],logicalTargetIds:["FLOW"]});
 assert.deepEqual(mapped.logicalSlice,{kind:"browser-target",logicalTargetIds:["FLOW"]});
+assert.deepEqual(await validateUnresolvedIncidentTaskSuccession({incidents:[{
+  state:"unresolved",failure:{failureClass:"execution-contract-failure",
+    task:task("promotion:artifact-binding",{stage:"promotion",executable:"internal",args:[]})},
+}],currentIdentities:[batch],currentPacks:[],graph:batchGraph}),[],
+"internal promotion execution contracts do not invent registry task succession");
 
 const splitSource=task("unit:combined"),splitOne=task("unit:split-one"),splitTwo=task("unit:split-two");
 const splitBoundary=boundary("complete-failed-boundary"),otherBoundary=boundary("unrelated-boundary");
