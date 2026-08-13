@@ -103,6 +103,7 @@ import {
   loadVerificationPacks,
   planVerification,
   stylesheetDeclarationFor,
+  stylesheetPlanFor,
   staticallyResolvableModuleImports,
   validateBrowserPerformanceDeclarations,
   validateBrowserObservationBatches,
@@ -113,6 +114,7 @@ import {
   verificationOwner,
   verificationTaskIdentity,
 } from "../scripts/verification-packs.mjs";
+import { validateStylesheetDeclarations } from "../scripts/verification-styles.mjs";
 import {
   classifyHistoricalTimeoutFixture,
   createTimeoutIncidentStore,
@@ -775,6 +777,8 @@ try {
     path.join(cliContentionRepository, "verification/task-succession.json"));
   await copyFile(path.resolve("verification/packs.json"),
     path.join(cliContentionRepository, "verification/packs.json"));
+  await copyFile(path.resolve("test/browser-packs/global-style-smoke.mjs"),
+    path.join(cliContentionRepository, "test/browser-packs/global-style-smoke.mjs"));
   const cliClosurePath = path.join(
     cliContentionRepository, "scripts/verification-reliability-closure.mjs",
   );
@@ -805,7 +809,8 @@ try {
     "scripts/verification-reliability-repair.mjs",
     "scripts/verification-reliability-closure.mjs",
     "scripts/verification-execution-prerequisites.mjs", "scripts/build.mjs",
-    "verification/packs.json"], {
+    "scripts/verification-styles.mjs", "scripts/verification-packs.mjs",
+    "test/browser-packs/global-style-smoke.mjs", "verification/packs.json"], {
     cwd:cliContentionRepository,
   });
   await exec("git", ["commit", "-qm", "cli contention fixture baseline"], { cwd:cliContentionRepository });
@@ -4542,9 +4547,14 @@ const approvedVtd017TaskKeys = new Set([
   `acceptance-parse:${vtd017Feature}`,
   `acceptance-generate:${vtd017Feature}`,
 ]);
+const approvedStyleSmokeTaskKeys = new Set([
+  "browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
+  "browser-observation:SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
+]);
 const approvedVerificationTaskKeys = new Set([
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
+  ...approvedStyleSmokeTaskKeys,
 ]);
 const currentTerminalIdentitiesWithoutApprovedAdditions = currentTerminalPlan.tasks.filter(({ key }) =>
   !postBaseAddedUnitKeys.has(key) && !approvedVerificationTaskKeys.has(key)).map(normalizedVtd006Identity);
@@ -6003,6 +6013,35 @@ assert.ok(layeredCssImpact.includes("shell") && layeredCssImpact.includes("layer
   "delivery CSS selects its owner and declared runtime consumer");
 assert.equal(layeredCssImpact.includes("command-palette"), false,
   "delivery CSS excludes packs without a declared runtime consumer path");
+const studioStylePlan = stylesheetPlanFor(packs, "specification-builder-brand.css");
+assert.deepEqual(studioStylePlan.styleSmokeTargets, ["STUDIO_GLOBAL_STYLE_SMOKE_TARGET"],
+  "global stylesheet planning exposes only its declared studio smoke target");
+assert.deepEqual(studioStylePlan.declaration.consumers, [],
+  "global stylesheet QA does not convert readers into owner/consumer packs");
+const studioStyleImpact = planVerification(packs, {
+  changedPaths:["specification-builder-brand.css"],
+});
+assert.deepEqual(studioStyleImpact.observationTasks.map(({ key }) => key), [
+  "browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
+], "global feature CSS schedules only its exact declared smoke target");
+assert.equal(studioStyleImpact.unitTasks.length, 0,
+  "global feature CSS does not select unrelated owner unit tasks");
+assert.doesNotThrow(() => validateStylesheetDeclarations([{
+  source:"feature.css", destination:"feature.css", classification:"feature-local", owner:"shell",
+  consumers:[], qaTargets:[], scopeRoot:".documentary-flow",
+}], { packIds:["shell"], sourcePaths:["feature.css"], stylesheetContents:{
+  "feature.css":".documentary-flow { color: red; @media (forced-colors: active) { .documentary-flow .node { color: CanvasText; } } }",
+} }), "nested at-rules remain within a feature-local scope root");
+assert.throws(() => validateStylesheetDeclarations([{
+  source:"global.css", destination:"global.css", classification:"global", owner:"shell",
+  consumers:[], qaTargets:[], scopeRoot:null,
+}], { packIds:["shell"], sourcePaths:["global.css"] }), /QA smoke targets/u,
+"global styles fail closed when their exact smoke targets are absent");
+assert.throws(() => validateStylesheetDeclarations([{
+  source:"global.css", destination:"global.css", classification:"global", owner:"shell",
+  consumers:["shell"], qaTargets:["STUDIO_GLOBAL_STYLE_SMOKE_TARGET"], scopeRoot:null,
+}], { packIds:["shell"], sourcePaths:["global.css"] }), /consumer/u,
+"global styles fail closed when the owner is repeated as a consumer");
 const assetImpact = planVerification(packs, { changedPaths:["assets/brand/icon.svg"] }).packIds;
 assert.deepEqual(assetImpact, planVerification(packs, { terminalFull:true }).packIds,
   "a delivery asset declared globally impactful still selects every runnable pack");

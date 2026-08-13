@@ -1620,6 +1620,9 @@ export async function runFocusedAcceptance(
       baseCommit:bindingPlan.baseCommit,
       changedOwners:bindingPlan.changedOwners,
       changedBoundaries:bindingPlan.changedBoundaries,
+      styleSmokeTargets:bindingPlan.styleSmokeTargets,
+      terminalFullObligations:bindingPlan.terminalFullObligations,
+      changedStyleTargets:bindingPlan.changedStyleTargets,
       conservativeHistoricalFallbackReason:bindingPlan.conservativeHistoricalFallbackReason,
     };
   } else plan = planVerification(packs, options);
@@ -1658,6 +1661,9 @@ export async function runFocusedAcceptance(
     changedPaths:[...plan.changedPaths].sort(),
     changedOwners:plan.changedOwners,
     changedBoundaries:plan.changedBoundaries,
+    styleSmokeTargets:[...new Set(plan.styleSmokeTargets ?? [])].sort(),
+    terminalFullObligations:[...new Set(plan.terminalFullObligations ?? [])].sort(),
+    changedStyleTargets:plan.changedStyleTargets ?? {},
     changeSetDigest:plan.changeSet ? verificationDigest(plan.changeSet) : null,
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };

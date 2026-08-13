@@ -33,6 +33,38 @@ function selectorLeavesRoot(selector, scopeRoot) {
   });
 }
 
+function cssRuleHeaders(source) {
+  const headers = [];
+  let segmentStart = 0;
+  let quote = null;
+  let comment = false;
+  let parentheses = 0;
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+    const next = source[index + 1];
+    if (comment) {
+      if (character === "*" && next === "/") { comment = false; index += 1; }
+      continue;
+    }
+    if (quote) {
+      if (character === "\\") index += 1;
+      else if (character === quote) quote = null;
+      continue;
+    }
+    if (character === "/" && next === "*") { comment = true; index += 1; continue; }
+    if (character === "\"" || character === "'") { quote = character; continue; }
+    if (character === "(") { parentheses += 1; continue; }
+    if (character === ")") { parentheses = Math.max(0, parentheses - 1); continue; }
+    if (parentheses > 0) continue;
+    if (character === ";" || character === "}") segmentStart = index + 1;
+    if (character !== "{") continue;
+    const header = source.slice(segmentStart, index).trim().split(";").at(-1).trim();
+    if (header) headers.push(header);
+    segmentStart = index + 1;
+  }
+  return headers;
+}
+
 export function validateStylesheetDeclarations(declarations, {
   packIds = [], sourcePaths = [], stylesheetContents = {},
 } = {}) {
@@ -58,7 +90,7 @@ export function validateStylesheetDeclarations(declarations, {
     }
     if (!knownPacks.has(declaration.owner)) throw new Error(`Stylesheet ${source} has an unknown owner: ${declaration.owner}`);
     if (!Array.isArray(declaration.consumers) || new Set(declaration.consumers).size !== declaration.consumers.length ||
-        declaration.consumers.some((id) => !knownPacks.has(id))) {
+        declaration.consumers.some((id) => !knownPacks.has(id) || id === declaration.owner)) {
       throw new Error(`Stylesheet ${source} has an unknown or duplicate consumer`);
     }
     if (!Array.isArray(declaration.qaTargets) || new Set(declaration.qaTargets).size !== declaration.qaTargets.length ||
@@ -70,13 +102,25 @@ export function validateStylesheetDeclarations(declarations, {
         (typeof scopeRoot !== "string" || !scopeRoot.trim())) {
       throw new Error(`Feature-local stylesheet ${source} requires a stable scope root`);
     }
+    if (declaration.classification === "shell-bridge" &&
+        (typeof scopeRoot !== "string" || !scopeRoot.trim())) {
+      throw new Error(`Scoped stylesheet ${source} requires a stable scope root`);
+    }
+    if (declaration.classification === "global" && scopeRoot !== null) {
+      throw new Error(`Global stylesheet ${source} must not declare a scope root`);
+    }
+    if (declaration.classification === "global" &&
+        (declaration.consumers.length !== 0 || declaration.qaTargets.length === 0)) {
+      throw new Error(`Global stylesheet ${source} requires QA smoke targets and no consumers`);
+    }
+    if (declaration.classification === "shell-bridge" && declaration.qaTargets.length !== 0) {
+      throw new Error(`Shell-bridge stylesheet ${source} cannot declare QA smoke targets`);
+    }
     if (declaration.classification !== "global" && declaration.qaTargets.length) {
       throw new Error(`Non-global stylesheet ${source} cannot declare QA smoke targets`);
     }
     if (declaration.classification === "feature-local" && scopeRoot && stylesheetContents[source]) {
-      const rules = stylesheetContents[source]
-        .replace(/\/\*[\s\S]*?\*\//gu, "")
-        .split("{").slice(0, -1);
+      const rules = cssRuleHeaders(stylesheetContents[source]);
       for (const selector of rules) {
         if (!selectorLeavesRoot(selector, scopeRoot)) {
           throw new Error(`Feature-local stylesheet ${source} has a selector escaping scope root ${scopeRoot}`);
@@ -110,7 +154,10 @@ export function stylesheetDeclarationFor(registry, source) {
 export function stylesheetPlanFor(registry, source) {
   const declaration = stylesheetDeclarationFor(registry, source);
   if (!declaration) return null;
-  const selected = [declaration.owner, ...declaration.consumers];
+  // Global styles are QA-only boundaries. Their readers are intentionally not
+  // verification pack consumers; only the declared smoke targets execute.
+  const selected = declaration.classification === "global"
+    ? [] : [declaration.owner, ...declaration.consumers];
   return {
     declaration,
     selected:[...new Set(selected)],

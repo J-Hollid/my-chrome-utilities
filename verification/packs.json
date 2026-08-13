@@ -5889,7 +5889,8 @@
       "test/side-panel-component-layout-runtime-test.mjs",
       "test/twatility-brand-foundation-browser-test.mjs",
       "test/twatility-side-panel-shell-browser-test.mjs",
-      "test/browser-packs/side-panel-shell.mjs"
+      "test/browser-packs/side-panel-shell.mjs",
+      "test/browser-packs/global-style-smoke.mjs"
     ],
     "browserAdapterModes": [
       {
@@ -5910,6 +5911,10 @@
       },
       {
         "path": "test/browser-packs/side-panel-shell.mjs",
+        "mode": "integration"
+      },
+      {
+        "path": "test/browser-packs/global-style-smoke.mjs",
         "mode": "integration"
       }
     ],
@@ -5970,6 +5975,20 @@
       }
     ],
     "browserObservations": [
+      {
+        "id": "STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
+        "path": "test/browser-packs/global-style-smoke.mjs",
+        "environment": {"STUDIO_GLOBAL_STYLE_SMOKE_TARGET": "1"},
+        "observationKeys": ["studioGlobalStyle"],
+        "features": ["features/side-panel-visual-system.feature"]
+      },
+      {
+        "id": "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
+        "path": "test/browser-packs/global-style-smoke.mjs",
+        "environment": {"SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET": "1"},
+        "observationKeys": ["sidePanelGlobalStyle"],
+        "features": ["features/side-panel-visual-system.feature"]
+      },
       {
         "id": "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER",
         "path": "test/browser-packs/side-panel-shell.mjs",

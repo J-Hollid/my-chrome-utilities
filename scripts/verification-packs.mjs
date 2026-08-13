@@ -11,11 +11,13 @@ import {
 } from "./shared-artifact-parallel.mjs";
 import {
   stylesheetDeclarations,
+  stylesheetQaTargets,
   stylesheetPlanFor,
   stylesheetDeclarationFor,
   validateStylesheetRegistry,
   validateStylesheetDeclarations,
 } from "./verification-styles.mjs";
+const stylesheetQaTargetIds = stylesheetQaTargets;
 export { stylesheetDeclarationFor, stylesheetPlanFor, validateStylesheetDeclarations } from "./verification-styles.mjs";
 import ts from "typescript";
 
@@ -1182,9 +1184,14 @@ export function planVerification(
   }
 
   const explicit = new Set(packIds);
-  let selected = terminalFull ? new Set(known) : new Set(explicit);
+  // Explicit pack ids authorize changed-path planning. They are selected
+  // directly only for exact-pack mode; changed paths must add their own
+  // declared owners/consumers through applyAffected.
+  let selected = terminalFull ? new Set(known)
+    : (changedPaths.length || changeSet ? new Set() : new Set(explicit));
   const changedOwners = new Map();
   const changedBoundaries = new Map();
+  const changedStyleTargets = new Map();
   const styleSmokeTargets = [];
   const terminalFullObligations = [];
   const registryChanged = changedPaths.includes("verification/packs.json");
@@ -1283,8 +1290,10 @@ export function planVerification(
     const complete = new Set([
       ...semanticClosure, ...(affected.exactSemantic ?? []), ...affected.verificationConsumers,
     ]);
-    const orderedClosure = packs.filter((pack) => complete.has(pack.id) && runnable(pack))
-      .map(({ id }) => id);
+    const orderedClosure = (changedPath === "dist" || changedPath.startsWith("dist/")) &&
+      explicit.size && !complete.size
+      ? packs.filter((pack) => explicit.has(pack.id) && runnable(pack)).map(({ id }) => id)
+      : packs.filter((pack) => complete.has(pack.id) && runnable(pack)).map(({ id }) => id);
     const omitted = orderedClosure.filter((id) => !explicit.has(id));
     if (explicit.size && omitted.length) {
       throw new Error(`Changed path ${changedPath} affects ${orderedClosure.join(", ")}, ` +
@@ -1294,6 +1303,9 @@ export function planVerification(
     changedOwners.set(changedPath, orderedClosure);
     if (affected.boundary) changedBoundaries.set(changedPath, affected.boundary);
     if (affected.styleSmokeTargets?.length) styleSmokeTargets.push(...affected.styleSmokeTargets);
+    if (affected.styleSmokeTargets?.length) {
+      changedStyleTargets.set(changedPath, [...affected.styleSmokeTargets]);
+    }
     if (affected.terminalFullObligation) terminalFullObligations.push(changedPath);
   };
 
@@ -1343,9 +1355,16 @@ export function planVerification(
   }
   if (terminalFull || withDependencies) selected = expandDependencies(packs, selected);
 
+  const styleSmokeAuthorization = changedStyleTargets.size > 0
+    ? packs.filter((pack) => {
+      const targets = new Set(values(pack, "browserObservations").map(({ id }) => id));
+      return styleSmokeTargets.some((target) => targets.has(target)) &&
+        (!explicit.size || explicit.has(pack.id));
+    }) : [];
   const ordered = packs.filter(({ id }) => selected.has(id));
   const runnablePacks = ordered.filter(runnable);
-  const executionPacks = shardedPacks(runnablePacks, shard);
+  const executionPacks = shardedPacks(
+    runnablePacks.length ? runnablePacks : styleSmokeAuthorization.filter(runnable), shard);
   if (!executionPacks.some(runnable)) throw new Error("Verification plan has no runnable checks");
 
   const preparationTasks = skipBuild ? [] : [commandTask({
@@ -1384,12 +1403,16 @@ export function planVerification(
     const changedBoundaryIds = new Set(Object.entries(Object.fromEntries(changedBoundaries))
       .filter(([changedPath]) => changedOwners.get(changedPath)?.includes(declarationPack.id))
       .map(([, boundary]) => boundary));
+    const changedStyleTargetIds = new Set(Object.values(Object.fromEntries(changedStyleTargets))
+      .flatMap((targets) => targets));
     const boundaryTargets = changedBoundaryIds.size
       ? observations.filter(({ impactBoundaries }) => impactBoundaries?.some((id) => changedBoundaryIds.has(id)))
       : [];
     const selected = browserTargetIds.length
       ? observations.filter(({ id }) => browserTargetIds.includes(id))
-      : boundaryTargets.length ? boundaryTargets : observations;
+      : changedStyleTargetIds.size ? observations.filter(({ id }) => changedStyleTargetIds.has(id))
+      : boundaryTargets.length ? boundaryTargets : observations.filter(({ id }) =>
+        !stylesheetQaTargetIds.has(id));
     return selected.map((observation) => ({
       declarationPack, observation, boundaryScoped:boundaryTargets.length > 0,
     }));
@@ -1440,6 +1463,7 @@ export function planVerification(
       ],
     });
   });
+  const styleSmokeOnly = changedStyleTargets.size > 0;
   const mode = browserTargetIds.length ? "focused" : terminalFull ? "terminal" : explicit.size ? "exact" : "impact";
   const checkpointTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) => values(pack, "checkpointCommands")
     .filter((checkpoint) => !checkpoint.modes || checkpoint.modes.includes(mode))
@@ -1448,11 +1472,25 @@ export function planVerification(
       executable:checkpoint.executable, args:checkpoint.args, target:checkpoint.id,
       environment:checkpoint.environment ?? null,
     })));
+  if (styleSmokeOnly) {
+    // A stylesheet-only impact is intentionally bounded to its declared smoke
+    // observations; do not expose unrelated owner, consumer, or acceptance
+    // tasks through the plan metadata either.
+    unitTasks.length = 0;
+    propertyTasks.length = 0;
+    browserTasks.length = 0;
+    acceptance.parser.length = 0;
+    acceptance.generator.length = 0;
+    acceptance.sessions.length = 0;
+    checkpointTasks.length = 0;
+  }
 
-  const tasks = [
-    ...preparationTasks, ...unitTasks, ...propertyTasks, ...browserTasks, ...observationTasks,
-    ...acceptance.parser, ...acceptance.generator, ...checkpointTasks, ...acceptance.sessions,
-  ];
+  const tasks = styleSmokeOnly
+    ? [...preparationTasks, ...observationTasks]
+    : [
+      ...preparationTasks, ...unitTasks, ...propertyTasks, ...browserTasks, ...observationTasks,
+      ...acceptance.parser, ...acceptance.generator, ...checkpointTasks, ...acceptance.sessions,
+    ];
   const keys = tasks.map(({ key }) => key);
   if (new Set(keys).size !== keys.length) throw new Error("Verification task identities must be unique");
   if (!tasks.some(({ stage }) => stage !== "build")) throw new Error("Verification plan has no runnable checks");
@@ -1478,6 +1516,8 @@ export function planVerification(
     changedBoundaries:Object.fromEntries([...changedBoundaries].sort(([left], [right]) => left.localeCompare(right))),
     styleSmokeTargets:[...new Set(styleSmokeTargets)].sort(),
     terminalFullObligations:[...new Set(terminalFullObligations)].sort(),
+    changedStyleTargets:Object.fromEntries([...changedStyleTargets]
+      .sort(([left], [right]) => left.localeCompare(right))),
     conservativeHistoricalFallbackReason,
     features,
     handlers:acceptancePacks.flatMap((pack) => values(pack, "handlers")),
