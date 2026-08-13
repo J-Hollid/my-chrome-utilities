@@ -1413,6 +1413,16 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       expectedPreRepairFailure:{ nonStyleObservationsPreserved:false },
       expectedRepairResult:{ nonStyleObservationsPreserved:true },
     },
+    "other:Flow logical-target isolation and semantic item hit testing": {
+      id:"flow-logical-target-isolation-semantic-hit-testing-v1",
+      input:{ styleTarget:"FLOW_STYLESHEET_EXTRACTION_TARGET",
+        controlsTarget:"FLOW_WORKSPACE_CONTROLS_TARGET",
+        semanticItemSelector:"g[data-page-frame-id]:not([data-occurrence-id]),g[data-flow-section-id]" },
+      expectedPreRepairFailure:{ styleProbeExecutedForControls:true,
+        genericGroupAncestorRejectedSemanticItem:true },
+      expectedRepairResult:{ styleProbeExecutedForControls:false,
+        semanticItemAncestorHit:true },
+    },
   }[causalCategory];
   if (manifestedRegression) {
     const fixture = { ...manifestedRegression, causalCategory,
