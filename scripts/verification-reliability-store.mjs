@@ -136,12 +136,12 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
   changedPaths, canonicalCheckpointValidator, canonicalRepairTaskIdentities }) {
   return {
     async proposeRepair(id, { causalCategory, causalExplanation, regressionKey, regressionReceiptPath,
-      focusedReceiptPath } = {}) {
+      focusedReceiptPath, allowEligibleRevalidation = false } = {}) {
       const current = await read(id);
       if (current.retry?.status === "claimed") {
         throw new Error(`Reliability incident ${id} has an incomplete diagnostic retry`);
       }
-      if (current.repair?.status === "eligible") {
+      if (current.repair?.status === "eligible" && !allowEligibleRevalidation) {
         throw new Error(`Reliability incident ${id} already has an eligible repair`);
       }
       if (current.retry && current.retry.status !== "classified") {
@@ -170,12 +170,24 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
       const semanticProposal = await validateRepairReceiptSemantics(current, proposal,
         regressionDocument, focusedDocument, canonicalRepairTaskIdentities);
       const eligible = await validateTimeoutRepairProposal(current, semanticProposal, { isAncestor });
+      if (current.repair?.status === "eligible") {
+        const conserved = current.repair.causalCategory === eligible.causalCategory &&
+          current.repair.causalExplanation === eligible.causalExplanation &&
+          current.repair.regression?.key === eligible.regression?.key &&
+          JSON.stringify(normalized(current.repair.causalProtocol)) ===
+            JSON.stringify(normalized(eligible.causalProtocol));
+        if (!conserved || !(await isAncestor(current.repair.candidate.commit, eligible.candidate.commit)) ||
+            current.repair.candidate.commit === eligible.candidate.commit) {
+          throw new Error(`Reliability incident ${id} eligible repair revalidation is not an exact conserved descendant`);
+        }
+      }
       return update(id, (incident) => {
         const at = now();
         return transition({ ...incident,
           retry:incident.retry ?? { status:"invalidated-by-repair", classification:"not-retried-repaired",
             invalidatedAt:at }, repair:eligible },
-        "repair-proposed", at, { commit:eligible.candidate.commit });
+        current.repair?.status === "eligible" ? "repair-revalidated" : "repair-proposed", at,
+        { commit:eligible.candidate.commit });
       });
     },
     claimRepairCheckpoint(id, runId) {

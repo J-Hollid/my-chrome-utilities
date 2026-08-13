@@ -138,6 +138,7 @@ import {
 import { canonicalCheckpointBinding } from "../scripts/verification-reliability-receipts.mjs";
 import {
   bindRunIntentBootstrapPlan,
+  bootstrapReviewIncidentProof,
   classifyLegacyIncidentRunIntent,
   requireVerificationRunIntent,
   runIntentBootstrapCoverage,
@@ -6687,6 +6688,8 @@ await assert.rejects(()=>runIntentBootstrapCoverage({ incidents:[exactBootstrapR
   plan:bootstrapPlan, packs, candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
   reviewIncidentProof:async()=>null }), /ineligible incident/i,
 "an eligible repair without a bootstrap review-evidence source remains blocking");
+assert.equal(typeof bootstrapReviewIncidentProof, "function",
+  "eligible repair revalidation is gated by immutable bootstrap review-receipt proof");
 await assert.rejects(() => validateRunIntentBootstrapBase({
   root:"fixture", baseCommit:"implemented-base",
   changedPaths:["scripts/verification-run-intent.mjs"],

@@ -170,7 +170,7 @@ function eligibleTerminalDeferred(incident) {
     incident?.terminalVerificationDeferred?.status === "terminal-verification-deferred";
 }
 
-async function bootstrapReviewIncidentProof({ root, incident, evidenceTask }) {
+export async function bootstrapReviewIncidentProof({ root, incident, evidenceTask }) {
   const sourcePath = safeLegacyReceiptPath(root, incident?.failure?.sourceReceipt);
   if (!sourcePath) return null;
   try {

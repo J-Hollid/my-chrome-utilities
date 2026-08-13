@@ -77,6 +77,7 @@ import {
 } from "./report-verification-throughput.mjs";
 import {
   bindRunIntentBootstrapPlan,
+  bootstrapReviewIncidentProof,
   requireVerificationRunIntent,
   runIntentBootstrapCoverage,
   validateRunIntentBootstrapBase,
@@ -1080,7 +1081,10 @@ export async function runTimeoutRepairFocused(id, {
   context.receipt.completedAt = new Date().toISOString();
   await context.write();
   const repaired = await store.proposeRepair(id, { causalCategory, causalExplanation, regressionKey,
-    regressionReceiptPath:context.receiptPath, focusedReceiptPath:context.receiptPath });
+    regressionReceiptPath:context.receiptPath, focusedReceiptPath:context.receiptPath,
+    allowEligibleRevalidation:Boolean(await bootstrapReviewIncidentProof({
+      root:repositoryRoot, incident, evidenceTask,
+    })) });
   console.error(`[verify:reliability-repair-focused] ${id} ${repaired.repair.status}`);
   return { incident:repaired, receiptPath:context.receiptPath, taskPlan, executionTaskPlan };
 }
