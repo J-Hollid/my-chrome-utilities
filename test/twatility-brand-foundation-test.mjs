@@ -188,7 +188,10 @@ const buildScript = await readFile("scripts/build.mjs", "utf8");
 assert.match(buildScript, /process\.execPath/u);
 assert.match(buildScript, /require\.resolve\("typescript\/bin\/tsc"\)/u);
 assert.doesNotMatch(buildScript, /execFileSync\(["']tsc["']/u);
-assert.match(buildScript, /specification-builder-guidance\.css/u);
+assert.match(buildScript, /stylesheetDeclarations/u,
+  "the build consumes the canonical stylesheet declarations");
+assert.match(buildScript, /verification\/packs\.json/u,
+  "the build reads the canonical verification registry");
 assert.match(buildScript, /cp\("assets\/brand"/u);
 
 console.log("TWAtility Belt brand foundation tests passed");
