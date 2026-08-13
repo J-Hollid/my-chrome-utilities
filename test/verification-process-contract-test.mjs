@@ -1441,6 +1441,14 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       expectedRepairResult:{ fixedAttemptReasonAdjacent:true,
         fixedWaitsBehaviorOnly:true },
     },
+    "other:Flow resize handle live-coordinate targeting": {
+      id:"flow-resize-handle-live-coordinate-targeting-v1",
+      input:{ gesture:"Checkout Section resize", cameraMayVary:true },
+      expectedPreRepairFailure:{ hardCodedViewportOrigin:true,
+        resizeHandleTargeted:false },
+      expectedRepairResult:{ hardCodedViewportOrigin:false,
+        resizeHandleTargeted:true },
+    },
   }[causalCategory];
   if (manifestedRegression) {
     const fixture = { ...manifestedRegression, causalCategory,
