@@ -5662,6 +5662,8 @@ const flowTargetIds = [
   "FLOW_GRAPH_EXAMPLES_TARGET",
   "FLOW_STYLESHEET_EXTRACTION_TARGET",
 ];
+const flowRuntimeTargetIds = flowTargetIds
+  .filter((id) => id !== "FLOW_STYLESHEET_EXTRACTION_TARGET");
 assert.deepEqual(new Set(flowPack.browserObservations.map(({ id }) => id)), new Set(flowTargetIds),
   "the Flow adapter exposes five exact logical targets including stylesheet evidence");
 assert.ok(flowPack.browserObservations.every(({ path:program, sessionBatch }) =>
@@ -5701,7 +5703,7 @@ const semanticFlowPlan = planVerification(packs, {
 assert.ok(semanticFlowPlan.packIds.length > 1 && semanticFlowPlan.packIds.includes("flow_graph"),
   "semantic Flow changes retain declared dependant propagation");
 assert.deepEqual(new Set(semanticFlowPlan.observationTasks
-  .find(({ packId }) => packId === "flow_graph").logicalTargetIds), new Set(flowTargetIds));
+  .find(({ packId }) => packId === "flow_graph").logicalTargetIds), new Set(flowRuntimeTargetIds));
 const unclassifiedFlowPlan = planVerification(packs, {
   changedPaths:["src/flow-graph/new-semantic-model.ts"],
 });
