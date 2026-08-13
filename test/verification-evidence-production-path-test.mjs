@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -123,6 +123,16 @@ try {
   await git(root, "config", "user.email", "fixture@example.invalid");
   await git(root, "config", "user.name", "Verification Fixture");
   await mkdir(path.join(root, "tmp", "verification-receipts"), { recursive:true });
+  // The fixture starts from the last committed tree, so copy the newly
+  // registered leaves into its baseline before creating the causal lineage.
+  await copyFile(path.join(repositoryRoot, "verification/packs.json"), path.join(root, "verification/packs.json"));
+  for (const file of ["test/package-clean-checkout-contract-test.mjs",
+    "test/verification-evidence-production-path-test.mjs"]) {
+    await copyFile(path.join(repositoryRoot, file), path.join(root, file));
+  }
+  await git(root, "add", "verification/packs.json", "test/package-clean-checkout-contract-test.mjs",
+    "test/verification-evidence-production-path-test.mjs");
+  await git(root, "commit", "-m", "fixture: register evidence regression leaves");
   await writeFile(path.join(root, "dist", ".dist-artifact.json"),
     await readFile(path.join(repositoryRoot, "dist", ".dist-artifact.json")));
   const masterBase = await git(root, "rev-parse", "HEAD");
@@ -164,6 +174,13 @@ try {
   const focusedPlan = evidencePlan(focusedRawPlan, packs);
   assert.equal(focusedPlan.packIds.length, 1, "focused fixture remains one-pack evidence");
   assert.equal(focusedPlan.terminalFullObligations.length, 1, "focused plan retains the stylesheet obligation boundary");
+  for (const key of [
+    "unit:test/package-clean-checkout-contract-test.mjs",
+    "unit:test/verification-evidence-production-path-test.mjs",
+  ]) {
+    assert.ok(focusedPlan.tasks.some((task) => task.key === key),
+      `focused receipt includes registered canonical task ${key}`);
+  }
   const focusedReceipt = receiptFor(focusedPlan, focusedCommit, focusedTree, artifact, "focused-descendant");
   const focusedReceiptPath = path.join(root, "tmp/verification-receipts/focused.json");
   await writeFile(focusedReceiptPath, JSON.stringify(focusedReceipt));

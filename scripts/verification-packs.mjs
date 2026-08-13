@@ -1472,7 +1472,9 @@ export function planVerification(
       ],
     });
   });
-  const styleSmokeOnly = changedStyleTargets.size > 0 && !terminalFull && !canonicalRunnableSelection;
+  const styleSmokeOnly = changedStyleTargets.size > 0 &&
+    changedStyleTargets.size === changedPaths.length &&
+    !terminalFull && !canonicalRunnableSelection;
   const mode = browserTargetIds.length ? "focused" : terminalFull ? "terminal" : explicit.size ? "exact" : "impact";
   const checkpointTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) => values(pack, "checkpointCommands")
     .filter((checkpoint) => !checkpoint.modes || checkpoint.modes.includes(mode))
