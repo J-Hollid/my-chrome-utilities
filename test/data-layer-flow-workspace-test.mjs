@@ -197,6 +197,7 @@ const flowGraphUi=await readFile(new URL("../src/data-layer-flow-graph-ui.ts",im
 const sidePanelSource=await readFile(new URL("../src/side-panel.ts",import.meta.url),"utf8");
 const flowGraphStepsSource=await readFile(new URL("../acceptance/src/acceptance/steps/flow_graph.clj",import.meta.url),"utf8");
 const flowBrowserEvidence=await readFile(new URL("./browser-packs/flow-graph.mjs",import.meta.url),"utf8");
+const flowCorrectiveWorkflow=await readFile(new URL("./support/flow-graph-corrective-workflow.mjs",import.meta.url),"utf8");
 const flowCorrectionEvidence=await readFile(new URL("./support/flow-r02-correction-evidence.mjs",import.meta.url),"utf8");
 assert.match(flowCss,/#workspace-pane:has\(\.documentary-flow\[data-canvas-first-r02="true"\]\)[^{]*\{[^}]*display:\s*grid[^}]*grid-template-rows:\s*auto minmax\(0, 1fr\)[^}]*overflow:\s*hidden/su,"the active Flow allocates a shared-chrome row and an explicit remaining route row");
 assert.match(flowCss,/#workspace-content\s*\{[^}]*display:\s*grid[^}]*grid-template-rows:\s*minmax\(0, 1fr\)/su,"the Flow host gives its documentary workspace a definite remaining-height grid area");
@@ -219,6 +220,8 @@ const connectionStart=flowGraphUi.indexOf("const beginPortConnection="),
 assert.ok(connectionStart>=0&&connectingLayout>connectionStart&&connectingLayout<sourcePortFocus,
   "connection layout settles on port-down before focus or target halo measurement");
 assert.match(flowGraphUi,/flowPointerSnapTarget\(\{sourceId:connection\.sourceId,compatibleSide,direct:directFlowSnapTarget\(direct\),snap:compatiblePortSnap/u,"installed pointer targeting delegates Page-body precedence to the bounded snap contract");
+assert.match(flowCorrectiveWorkflow,/pageName:page\.name/u,"legacy Flow review evidence carries the exact seeded Page name");
+assert.match(flowCorrectiveWorkflow,/reviewText\.includes\(fixture\.pageName\)/u,"legacy Flow review evidence verifies the rendered seed identity instead of a hardcoded Page label");
 assert.ok(sidePanelSource.indexOf("mountUtilityShell(extensionShell, panelRoot, window)")<sidePanelSource.indexOf("await openDurableProjectRuntime(globalThis.localStorage)"),"the utility Shell becomes ready before the unrelated durable project repository opens");
 
 if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
