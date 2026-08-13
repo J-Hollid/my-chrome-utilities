@@ -1423,6 +1423,24 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       expectedRepairResult:{ styleProbeExecutedForControls:false,
         semanticItemAncestorHit:true },
     },
+    "other:Flow diagnostic measurement leaf separation": {
+      id:"flow-diagnostic-measurement-leaf-separation-v1",
+      input:{ assertionNamespace:"flowGraph.styles",
+        diagnosticNamespace:"flowGraph.styles.measurements" },
+      expectedPreRepairFailure:{ diagnosticValuesTraversedAsAssertionLeaves:true,
+        falseDiagnosticValueRejectedPassingTarget:true },
+      expectedRepairResult:{ diagnosticValuesTraversedAsAssertionLeaves:false,
+        declaredBooleanLeavesValidated:true },
+    },
+    "other:browser fixed-attempt rationale adjacency": {
+      id:"browser-fixed-attempt-rationale-adjacency-v1",
+      input:{ entryPoint:"test/browser-packs/flow-graph.mjs",
+        loop:"bounded Flow zoom key-repeat" },
+      expectedPreRepairFailure:{ fixedAttemptReasonAdjacent:false,
+        fixedWaitsBehaviorOnly:false },
+      expectedRepairResult:{ fixedAttemptReasonAdjacent:true,
+        fixedWaitsBehaviorOnly:true },
+    },
   }[causalCategory];
   if (manifestedRegression) {
     const fixture = { ...manifestedRegression, causalCategory,
