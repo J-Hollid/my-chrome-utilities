@@ -33,7 +33,10 @@
   ([value] (true-leaf-paths ["flowGraph"] value))
   ([prefix value]
    (if (map? value)
-     (mapcat (fn [[key nested]] (true-leaf-paths (conj prefix (name key)) nested)) value)
+     (mapcat (fn [[key nested]]
+               (when-not (= :measurements key)
+                 (true-leaf-paths (conj prefix (name key)) nested)))
+             value)
      (do
        (support/assert! (true? value) "Flow target evidence contains a false leaf."
                         {:leaf (str/join "." prefix) :value value})

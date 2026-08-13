@@ -47,6 +47,25 @@
       (finally
         (reset! flow-graph/browser-observation nil)))))
 
+(deftest browser-observation-keeps-causal-measurements-outside-the-leaf-contract
+  (let [observe! (var-get (private-var 'observe-browser!))
+        checked-var (private-var 'checked-command!)
+        partitions-var (private-var 'target-partitions)]
+    (reset! flow-graph/browser-observation nil)
+    (try
+      (with-redefs-fn
+        {checked-var (fn [& _]
+                       {:exit 0
+                        :out (str "{\"flowGraph\":{\"styles\":{\"equivalence\":true,"
+                                  "\"measurements\":{\"baseCommit\":\"base\",\"equivalent\":false}}}}\n"
+                                  "{\"swarmforgeBrowserTargetResult\":{\"id\":\"STYLE\",\"status\":\"passed\"}}\n")})
+         partitions-var (fn [] {"STYLE" #{"flowGraph.styles.equivalence"}})}
+        #(is (= {:styles {:equivalence true
+                          :measurements {:baseCommit "base" :equivalent false}}}
+                (observe!))))
+      (finally
+        (reset! flow-graph/browser-observation nil)))))
+
 (def complete-evidence
   (assoc (into {} (map (fn [number] [(keyword (format "runtime%03d" number)) {:exact true}]) (range 1 28)))
          :installedBoundary true))
