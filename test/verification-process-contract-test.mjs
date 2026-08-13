@@ -493,7 +493,8 @@ try {
   const promotionRegression = prerequisiteTasks[0];
   assert.deepEqual(timeoutRepairFocusedTaskPlan(promotionContractIncident, [],
     promotionRegression.key, [promotionRegression]), [{
-    identity:verificationTaskIdentity(promotionRegression),
+    identity:Object.fromEntries(Object.entries(verificationTaskIdentity(promotionRegression))
+      .filter(([, value]) => value !== null)),
     roles:["causal-regression", "diagnosed-boundary"],
   }], "an internal promotion failure is repaired through its canonical causal regression, not invented task succession");
   const environmentContractIncident = await executionContractStore.create({
