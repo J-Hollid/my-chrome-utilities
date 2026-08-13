@@ -1390,7 +1390,9 @@ export function planVerification(
           forceVerificationExact:isolatedHandler,
         });
         const current = affectedFor(packs, entry.path);
-        applyAffected(entry.path, combinedAffected(former, current), [basePacks, packs]);
+        const affected = current.boundary === "flow_workspace_relationship_port_snap"
+          ? current : combinedAffected(former, current);
+        applyAffected(entry.path, affected, [basePacks, packs]);
       }
     }
   } else {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
 import {readFile} from "node:fs/promises";
+import {planVerification} from "../scripts/verification-packs.mjs";
 
 import {
   FLOW_MANUAL_ZOOM,
@@ -117,6 +118,16 @@ assert.equal(flowPointerSnapTarget({sourceId:"page:customer",compatibleSide:"lef
 assert.equal(flowPointerSnapTarget({sourceId:"page:customer",compatibleSide:"left",direct:{kind:"event",endpointId:"event:payment"},snap:paymentSnap}),undefined,"an Event mini-card stays directly invalid inside an overlapping halo");
 assert.equal(flowPointerSnapTarget({sourceId:"page:customer",compatibleSide:"left",direct:{kind:"port",endpointId:"page:payment",port:"right"},snap:paymentSnap}),undefined,"an incompatible Page port stays directly invalid inside an overlapping halo");
 assert.equal(flowPointerSnapTarget({sourceId:"page:customer",compatibleSide:"left",direct:{kind:"port",endpointId:"page:payment",port:"left"},snap:paymentSnap})?.endpointId,"page:payment","the exact compatible port remains acquirable");
+
+const plannerPack=(id,overrides={})=>({id,source:[`src/${id}/`],process:[],globalImpact:[],dependencies:[],sharedComponents:[],verificationInputs:[],runtimeInputs:[],unit:[`test/${id}.mjs`],property:[],features:[],handlers:[],browserAdapters:[],browserAdapterModes:[],browserObservations:[],checkpointCommands:[],...overrides});
+const formerFlowPack=plannerPack("flow_graph",{source:["src/data-layer-flow-graph-ui.ts"],impactBoundaries:[{id:"flow_graph_semantic_model",prefixes:["src/data-layer-flow-graph-ui.ts"],propagateDependants:true}]}),
+  currentFlowPack=plannerPack("flow_graph",{source:["src/data-layer-flow-graph-ui.ts"],impactBoundaries:[{id:"flow_workspace_relationship_port_snap",prefixes:["src/data-layer-flow-graph-ui.ts"],propagateDependants:false}]}),
+  consumerPack=plannerPack("flow_consumer",{dependencies:["flow_graph"]}),
+  transitionPath="src/data-layer-flow-graph-ui.ts",
+  transitionChangeSet={version:1,baseCommit:"1".repeat(40),commit:"2".repeat(40),paths:[transitionPath],entries:[{status:"M",path:transitionPath}]},
+  transitionPlan=planVerification([currentFlowPack,consumerPack],{packIds:["flow_graph"],changedPaths:[transitionPath],changeSet:transitionChangeSet,basePacks:[formerFlowPack,consumerPack]});
+assert.deepEqual(transitionPlan.packIds,["flow_graph"],"the named Flow snap boundary supersedes its broader historical UI classification without selecting dependants");
+assert.equal(transitionPlan.changedBoundaries[transitionPath],"flow_workspace_relationship_port_snap");
 
 const items=[
   {id:"page:one",position:{x:80,y:90}},
