@@ -188,7 +188,10 @@ import {
   flowReloadCausalKey,
   observeFlowReloadLifecycle,
 } from "../scripts/flow-reload-lifecycle.mjs";
-import { verifyFlowStylesheetConservation } from "../scripts/flow-stylesheet-conservation.mjs";
+import {
+  stylesheetRuleInventory,
+  verifyFlowStylesheetConservation,
+} from "../scripts/flow-stylesheet-conservation.mjs";
 import {
   checkpointAttemptInputIdentity,
   checkpointAttemptIdentity,
@@ -6562,6 +6565,40 @@ const studioBaseStylesheet = await readFile("specification-builder.css", "utf8")
 const studioBrandStylesheet = await readFile("specification-builder-brand.css", "utf8");
 const studioDocument = await readFile("specification-builder.html", "utf8");
 const flowExtractionBase = "66b91e38e6";
+const approvedFlowSnapStyleAdditions = [
+  { context:"", selector:".documentary-flow circle[data-flow-port-for].is-valid-target",
+    declarations:"fill:#d9f7df;stroke:#137333;stroke-width:5" },
+  { context:"", selector:'.documentary-flow .flow-canvas-scroll.is-connecting .flow-graph-canvas[data-semantic-detail="identity"] .flow-node',
+    declarations:"display:inline" },
+];
+const flowSnapPreviewAfter = { context:"", selector:".documentary-flow .flow-connection-preview",
+  declarations:"stroke:#f07c00;stroke-width:3;stroke-dasharray:6 4;pointer-events:none" };
+const flowSnapPreviewBefore = { ...flowSnapPreviewAfter,
+  declarations:"stroke:#f07c00;stroke-width:3;stroke-dasharray:6 4" };
+const flowStyleRuleIdentity = ({ context, selector, declarations }) =>
+  JSON.stringify([context, selector, declarations]);
+const serializeFlowStyleRule = ({ context, selector, declarations }) => {
+  let source = declarations === ";" ? `${selector};` : `${selector}{${declarations}}`;
+  for (const atRule of context.split(" > ").filter(Boolean).reverse()) source = `${atRule}{${source}}`;
+  return source;
+};
+const conservedFlowLocalInventory = stylesheetRuleInventory(flowLocalStylesheet,
+  "src/flow-graph/flow-workspace.css");
+for (const approved of approvedFlowSnapStyleAdditions) {
+  const matches = conservedFlowLocalInventory.flatMap((rule, index) =>
+    flowStyleRuleIdentity(rule) === flowStyleRuleIdentity(approved) ? [index] : []);
+  assert.equal(matches.length, 1,
+    `approved Flow snap style addition occurs exactly once: ${flowStyleRuleIdentity(approved)}`);
+  conservedFlowLocalInventory.splice(matches[0], 1);
+}
+let flowSnapPreviewReplacementCount = 0;
+const conservedFlowLocalStylesheet = conservedFlowLocalInventory.map((rule) => {
+  if (flowStyleRuleIdentity(rule) !== flowStyleRuleIdentity(flowSnapPreviewAfter)) return rule;
+  flowSnapPreviewReplacementCount += 1;
+  return flowSnapPreviewBefore;
+}).map(serializeFlowStyleRule).join("\n");
+assert.equal(flowSnapPreviewReplacementCount, 1,
+  "approved Flow snap preview safety replacement occurs exactly once");
 const flowStylesheetConservation = verifyFlowStylesheetConservation({
   baseGlobalSources:await Promise.all(["specification-builder.css", "specification-builder-brand.css"]
     .map(async(path)=>({path,source:await exec("git",["show",`${flowExtractionBase}:${path}`])}))),
@@ -6569,7 +6606,7 @@ const flowStylesheetConservation = verifyFlowStylesheetConservation({
     {path:"specification-builder.css",source:studioBaseStylesheet},
     {path:"specification-builder-brand.css",source:studioBrandStylesheet},
   ],
-  localSource:flowLocalStylesheet,
+  localSource:conservedFlowLocalStylesheet,
   bridgeSource:flowShellStylesheet,
 });
 const flowStylesheetDeclarations = [
