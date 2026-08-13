@@ -1257,7 +1257,7 @@ export function planVerification(
   const affectedFor = (registry, changedPath, {
     exactVerificationChange = true, forceVerificationExact = false,
   } = {}) => {
-    if (focusedFeaturePolicyPaths.has(changedPath)) {
+    if (focusedFeaturePolicyPaths.has(changedPath) && !canonicalRunnableSelection && !terminalFull) {
       return { semantic:[], exactSemantic:[], verificationConsumers:[], boundary:null };
     }
     if (changedPath === "dist" || changedPath.startsWith("dist/")) {

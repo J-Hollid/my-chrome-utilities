@@ -3664,6 +3664,12 @@ for (const focusedPolicyPath of [
     "the closed focused-policy set does not expand an authorized feature checkpoint");
   assert.deepEqual(focusedPolicyPlan.changedOwners[focusedPolicyPath], [],
     "the closed focused-policy path stays visible without a product-pack owner");
+  const canonicalPolicyPlan = planVerification(synthetic, {
+    packIds:["alpha", "beta", "process"], changedPaths:[focusedPolicyPath],
+  });
+  assert.deepEqual(canonicalPolicyPlan.changedOwners[focusedPolicyPath],
+    ["process"],
+  "canonical runnable-pack planning retains the policy path's ordinary ownership");
 }
 assert.deepEqual(planVerification(synthetic, {
   packIds:["alpha", "beta", "process"],

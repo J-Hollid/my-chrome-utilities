@@ -229,6 +229,13 @@ for (const focusedPolicyPath of [
     `${focusedPolicyPath} does not suppress or expand an accompanying product boundary`);
   assert.deepEqual(mixedPlan.changedOwners[focusedPolicyPath], [],
     `${focusedPolicyPath} remains visible without claiming product-pack ownership`);
+  const canonicalPlan = planVerification(packs, {
+    packIds:allPacks, changedPaths:[focusedPolicyPath],
+  });
+  assert.deepEqual(canonicalPlan.packIds.toSorted(), allPacks,
+    `${focusedPolicyPath} retains canonical runnable-pack planning outside feature review`);
+  assert.deepEqual(canonicalPlan.changedOwners[focusedPolicyPath].toSorted(), allPacks,
+    `${focusedPolicyPath} retains its terminal global-impact identity`);
 }
 const receipt = {
   version:2,
