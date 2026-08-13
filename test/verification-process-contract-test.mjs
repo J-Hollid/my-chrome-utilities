@@ -1933,9 +1933,10 @@ assert.deepEqual(bootstrapBoundPlan.packIds.toSorted(), ["flow_graph", "shell"],
   "bootstrap preserves its exact authorized execution packs");
 assert.deepEqual(bootstrapBoundPlan.changedPaths, ["scripts/run-focused-acceptance.mjs"],
   "bootstrap evidence retains the full canonical change set");
+const bootstrapPackRegistry = await loadVerificationPacks();
 const bootstrapObservationPlan = bindRunIntentBootstrapPlan(
-  planVerification(timeoutPackRegistry, { packIds:["flow_graph", "shell"],
-    includeProperties:true }), bootstrapBoundPlan, timeoutPackRegistry);
+  planVerification(bootstrapPackRegistry, { packIds:["flow_graph", "shell"],
+    includeProperties:true }), bootstrapBoundPlan, bootstrapPackRegistry);
 const bootstrapObservationKeys = bootstrapObservationPlan.tasks
   .filter(({ stage }) => stage === "browser-observation").map(({ key }) => key);
 assert(bootstrapObservationKeys.includes("browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET"),
