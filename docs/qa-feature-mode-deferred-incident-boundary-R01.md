@@ -1,6 +1,6 @@
 # QA feature-mode deferred-incident boundary R01
 
-Status: user-approved for delivery before Flow relationship port snapping resumes
+Status: QA-integrated at `66dcdfd5d6`; Flow relationship port snapping resumed
 
 Prepared: 2026-08-13
 

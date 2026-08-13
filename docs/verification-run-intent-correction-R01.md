@@ -1,6 +1,6 @@
 # Verification run-intent correction R01
 
-Status: base correction integrated; feature-mode ancestor-incident boundary approved before Flow relationship snap feedback resumes
+Status: integrated through feature-mode deferred-incident boundary `66dcdfd5d6`; Flow relationship snap feedback resumed
 
 ## Problem
 

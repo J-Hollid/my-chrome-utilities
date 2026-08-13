@@ -19,9 +19,11 @@ Each stage still integrates into `qa` only from an exact architect `qa-ready`
 handoff with bound focused evidence. The next stage starts from that exact QA
 commit and does not require another routine user approval.
 
-Slice 1 is QA-integrated at `d75132daef`. Slice 2 is active from that exact QA
-head. No all-20 checkpoint was run for Slice 1; terminal integration remains
-reserved for a later explicit master-promotion request.
+Slice 1 is QA-integrated at `d75132daef`, Slice 2 at `ef440b3018`, and the
+inter-stage run-intent and deferred-incident corrections through `66dcdfd5d6`.
+Stage 3 is now active from that exact QA head. No all-20 checkpoint was run for
+these QA stages; terminal integration remains reserved for a later explicit
+master-promotion request.
 
 ## Baseline
 
