@@ -3016,6 +3016,7 @@
           "flowGraph.styles.forcedColors",
           "flowGraph.styles.keyboardFocus",
           "flowGraph.styles.canonicalStable",
+          "flowGraph.styles.equivalence",
           "flowGraph.runtime001.narrowHiddenClosed_bounded",
           "flowGraph.runtime001.narrowHiddenClosed_routeEdges",
           "flowGraph.runtime001.narrowHiddenClosed_workspaceEdges",
