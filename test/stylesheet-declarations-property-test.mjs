@@ -15,6 +15,9 @@ const nestedRule = (root, index) =>
   `${root} { color: rgb(${index % 255}, 10, 20); @media (forced-colors: active) { ` +
   `${root} .control-${index} { color: CanvasText; } } @media (prefers-reduced-motion: reduce) { ` +
   `${root} .motion-${index} { transition: none; } } }`;
+const keyframesRule = (root, index) =>
+  `${root} { animation: feature-${index} 1s; } @keyframes feature-${index} { ` +
+  `from { opacity: 0; } 50% { opacity: .5; } to { opacity: 1; } }`;
 
 for (let sample = 0; sample < 200; sample += 1) {
   const root = roots[next(roots.length)];
@@ -26,6 +29,14 @@ for (let sample = 0; sample < 200; sample += 1) {
     packIds:["shell"], sourcePaths:[source], stylesheetContents:{ [source]:nestedRule(root, sample) },
   }), "nested responsive selectors remain inside their declared scope root");
 }
+
+assert.doesNotThrow(() => validateStylesheetDeclarations([{
+  source:"keyframes.css", destination:"keyframes.css", classification:"feature-local", owner:"shell",
+  consumers:[], qaTargets:[], scopeRoot:".documentary-flow",
+}], {
+  packIds:["shell"], sourcePaths:["keyframes.css"],
+  stylesheetContents:{ "keyframes.css":keyframesRule(".documentary-flow", 1) },
+}), "keyframe from/to/percentage blocks are not escaping selectors");
 
 assert.throws(() => validateStylesheetDeclarations([{
   source:"escape.css", destination:"escape.css", classification:"feature-local", owner:"shell",

@@ -39,6 +39,8 @@ function cssRuleHeaders(source) {
   let quote = null;
   let comment = false;
   let parentheses = 0;
+  let braceDepth = 0;
+  let keyframesBodyDepth = null;
   for (let index = 0; index < source.length; index += 1) {
     const character = source[index];
     const next = source[index + 1];
@@ -56,11 +58,21 @@ function cssRuleHeaders(source) {
     if (character === "(") { parentheses += 1; continue; }
     if (character === ")") { parentheses = Math.max(0, parentheses - 1); continue; }
     if (parentheses > 0) continue;
-    if (character === ";" || character === "}") segmentStart = index + 1;
+    if (character === "}") {
+      braceDepth = Math.max(0, braceDepth - 1);
+      if (keyframesBodyDepth !== null && braceDepth < keyframesBodyDepth) keyframesBodyDepth = null;
+      segmentStart = index + 1;
+      continue;
+    }
+    if (character === ";") segmentStart = index + 1;
     if (character !== "{") continue;
     const header = source.slice(segmentStart, index).trim().split(";").at(-1).trim();
-    if (header) headers.push(header);
+    const keyframesRule = /^@(?:-[\w]+-)?keyframes\b/iu.test(header);
+    if (keyframesRule) keyframesBodyDepth = braceDepth + 1;
+    else if (!keyframesBodyDepth && header) headers.push(header);
     segmentStart = index + 1;
+    braceDepth += 1;
+    continue;
   }
   return headers;
 }
