@@ -1417,6 +1417,7 @@ export function planVerification(
       : [];
     const selected = browserTargetIds.length
       ? observations.filter(({ id }) => browserTargetIds.includes(id))
+      : terminalFull || canonicalRunnableSelection ? observations
       : changedStyleTargetIds.size ? observations.filter(({ id }) => changedStyleTargetIds.has(id))
       : changedAdapterTargetIds.size ? observations.filter(({ id }) => changedAdapterTargetIds.has(id))
       : boundaryTargets.length ? boundaryTargets : observations.filter(({ id }) =>

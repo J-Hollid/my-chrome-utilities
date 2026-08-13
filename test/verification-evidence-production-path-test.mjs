@@ -199,6 +199,10 @@ try {
     "canonical explicit selection retains every runnable pack claim");
   assert.ok(terminalRawPlan.tasks.some(({ packId }) => packId && packId !== "shell"),
     "canonical execution includes non-Shell pack tasks");
+  const terminalObservationIds = terminalRawPlan.observationTasks.flatMap(({ logicalTargetIds }) => logicalTargetIds);
+  assert.ok(terminalObservationIds.some((id) => ![
+    "STUDIO_GLOBAL_STYLE_SMOKE_TARGET", "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
+  ].includes(id)), "canonical execution retains a non-style browser observation");
   const terminalPlan = evidencePlan(terminalRawPlan, packs);
   assert.equal(terminalPlan.packIds.length, 20, "terminal fixture uses the canonical runnable pack set");
   assert.ok(terminalPlan.tasks.some(({ key }) => key.startsWith("property:")),
