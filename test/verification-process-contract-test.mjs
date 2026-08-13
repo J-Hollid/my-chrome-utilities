@@ -7580,6 +7580,7 @@ const acceptedPostCalibrationBrowserTargets = [...new Set(packs.flatMap((pack) =
   .filter((id) => !(id in committedCalibrationReport.browserTargets)).sort();
 assert.deepEqual(acceptedPostCalibrationBrowserTargets, [
   "EVENT_LIBRARY_RENDERED_SMOKE_TARGET",
+  "FLOW_STYLESHEET_EXTRACTION_TARGET",
   "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
   "STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
 ], "only the exact approved post-calibration browser targets defer durable timing evidence");
