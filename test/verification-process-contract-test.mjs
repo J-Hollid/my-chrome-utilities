@@ -8467,6 +8467,11 @@ try {
   emptyPlan.changeSet = await canonicalVerificationChangeSet({
     base:"HEAD", commit:"HEAD", repositoryRoot:evidenceRepository,
   });
+  emptyPlan.baseCommit = emptyPlan.changeSet.baseCommit;
+  assert.equal(emptyPlan.changeSet.version, 1);
+  assert.ok(emptyPlan.baseCommit);
+  assert.equal(emptyPlan.baseCommit, emptyPlan.changeSet.baseCommit);
+  assert.deepEqual(emptyPlan.changedPaths, emptyPlan.changeSet.paths);
   const emptyReceipt = await receiptFor(emptyPlan, "empty-receipt");
   await assert.rejects(() => createPendingVerificationEvidence({
     task:"empty-range-task", plan:emptyPlan, receiptPath:emptyReceipt,
