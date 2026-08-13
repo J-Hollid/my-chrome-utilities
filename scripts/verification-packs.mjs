@@ -886,6 +886,8 @@ export async function validateVerificationPacks(packs, { inventory } = {}) {
   validateBrowserEvidencePartitions(packs);
   await validateIsolatedVerificationHandlers(packs);
   const repositoryInventory = { ...await verificationInventory(), ...inventory };
+  const exactTrackedSourcePaths = packs.flatMap((pack) => values(pack, "source"))
+    .filter((sourcePath) => repositoryInventory.tracked.includes(sourcePath));
   await validateStylesheetRegistry(packs, {
     repositoryRoot:repositoryRoot,
     packIds:packs.map(({ id }) => id),
@@ -894,7 +896,8 @@ export async function validateVerificationPacks(packs, { inventory } = {}) {
   await validateVerificationHelpers(packs, repositoryInventory.tracked);
   validateImpactBoundaries(packs, repositoryInventory.source,
     [...repositoryInventory.source, ...repositoryInventory.features]);
-  validatePrefixOwnership(packs, repositoryInventory.source, "source");
+  validatePrefixOwnership(packs,
+    [...new Set([...repositoryInventory.source, ...exactTrackedSourcePaths])], "source");
   validatePrefixOwnership(packs, repositoryInventory.process, "process");
   validateInventoryPaths(packs, repositoryInventory);
   validateTrackedOwnership(packs, repositoryInventory.tracked);

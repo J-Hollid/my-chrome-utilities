@@ -2775,7 +2775,8 @@
       "src/data-layer-flow-graph-ui.ts",
       "src/data-layer-flow-graph-structural.ts",
       "src/data-layer-flow-graph-ui-page-frame.ts",
-      "src/flow-graph"
+      "src/flow-graph",
+      "test/acceptance/flow_graph_steps_test.clj"
     ],
     "stylesheets": [
       {
@@ -2835,7 +2836,8 @@
         "id": "flow_workspace_relationship_port_snap",
         "prefixes": [
           "src/data-layer-flow-graph-ui.ts",
-          "src/flow-graph/relationship-port-snap.ts"
+          "src/flow-graph/relationship-port-snap.ts",
+          "test/acceptance/flow_graph_steps_test.clj"
         ],
         "propagateDependants": false
       },
