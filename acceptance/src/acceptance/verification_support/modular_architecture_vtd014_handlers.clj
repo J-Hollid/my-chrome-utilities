@@ -1,6 +1,7 @@
 (ns acceptance.verification-support.modular-architecture-vtd014-handlers
   (:require [acceptance.steps.support :as support]
-            [acceptance.verification-support.modular-architecture-process-evidence :as process-evidence]))
+            [acceptance.verification-support.modular-architecture-process-evidence :as process-evidence]
+            [clojure.string :as str]))
 
 (defonce ^:private evidence (atom nil))
 
@@ -785,12 +786,16 @@
    {:pattern #"^(.+) has declared destination (.+), style classification (.+), owner (.+), consumers (.+), QA targets (.+), and scope root (.+)$"
     :handler (fn [world example captures]
                (let [source (first (values example-values example captures))
-                     boundary (case source
-                                "flow-workspace.css" "valid feature-local presentation"
-                                "flow-workspace-shell.css" "valid feature-to-shell bridge"
-                                "specification-builder-brand.css" "shared global presentation foundation"
-                                "invalid-boundary.css" "invalid or undeclared boundary"
-                                source)]
+                     boundary (cond
+                                (str/ends-with? source "flow-workspace-shell.css")
+                                "valid feature-to-shell bridge"
+                                (str/ends-with? source "flow-workspace.css")
+                                "valid feature-local presentation"
+                                (str/ends-with? source "specification-builder-brand.css")
+                                "shared global presentation foundation"
+                                (str/ends-with? source "invalid-boundary.css")
+                                "invalid or undeclared boundary"
+                                :else source)]
                  (assoc (prepared world) :vtd014/style-boundary boundary)))}
    {:pattern #"^the QA plan selects (.+)$"
     :handler (fn [world example captures]
