@@ -60,6 +60,7 @@ import {
 import {
   compatibleTimeoutRepairIncidentIds,
   applyCheckpointPrerequisitePlan,
+  bindVerificationChangeScope,
   checkpointPreflight,
   closeVerificationPlanPrerequisites,
   createCheckpointIdentityGuard,
@@ -1903,6 +1904,20 @@ assert.equal(reviewReadyScopeGuardRequired(true, true), false,
   "the one-time bootstrap uses its exact deferred-task preflight instead of generic all-pack expansion");
 assert.equal(reviewReadyScopeGuardRequired(true, false), true,
   "ordinary product evidence retains the generic review-scope guard");
+const bootstrapExactPlan = { packIds:["flow_graph", "shell"],
+  selectedPackIds:["flow_graph", "shell"], includeProperties:true, tasks:[] };
+const bootstrapBoundPlan = bindVerificationChangeScope(bootstrapExactPlan, {
+  changedPaths:["scripts/run-focused-acceptance.mjs"],
+  changeSet:{ version:1, baseCommit:"base", commit:"candidate",
+    paths:["scripts/run-focused-acceptance.mjs"] },
+  baseCommit:"base", changedOwners:{ "scripts/run-focused-acceptance.mjs":timeoutRepairPackIds },
+  changedBoundaries:{}, styleSmokeTargets:[], terminalFullObligations:[],
+  changedStyleTargets:{}, adapterAuthorizationPackIds:[],
+});
+assert.deepEqual(bootstrapBoundPlan.packIds.toSorted(), ["flow_graph", "shell"],
+  "bootstrap preserves its exact authorized execution packs");
+assert.deepEqual(bootstrapBoundPlan.changedPaths, ["scripts/run-focused-acceptance.mjs"],
+  "bootstrap evidence retains the full canonical change set");
 assert.equal(focusedAcceptanceOptions([
   "--pack", "schemas", "--changed-since", "base", "--property",
   "--prepare-evidence", "task-17", "--resume-receipt", "tmp/verification-receipts/prior.json",

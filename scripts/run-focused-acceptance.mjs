@@ -202,6 +202,22 @@ export function reviewReadyScopeGuardRequired(productCandidate, runIntentBootstr
   return productCandidate && !runIntentBootstrap;
 }
 
+export function bindVerificationChangeScope(executionPlan, bindingPlan) {
+  return {
+    ...executionPlan,
+    changedPaths:bindingPlan.changedPaths,
+    changeSet:bindingPlan.changeSet,
+    baseCommit:bindingPlan.baseCommit,
+    changedOwners:bindingPlan.changedOwners,
+    changedBoundaries:bindingPlan.changedBoundaries,
+    styleSmokeTargets:bindingPlan.styleSmokeTargets,
+    terminalFullObligations:bindingPlan.terminalFullObligations,
+    changedStyleTargets:bindingPlan.changedStyleTargets,
+    adapterAuthorizationPackIds:bindingPlan.adapterAuthorizationPackIds,
+    conservativeHistoricalFallbackReason:bindingPlan.conservativeHistoricalFallbackReason,
+  };
+}
+
 export function focusedAcceptanceOptions(args) {
   const options = {
     packIds:[], changedPaths:[], terminalFull:false, includeProperties:false,
@@ -1636,7 +1652,16 @@ export async function runFocusedAcceptance(
       }
     }
   }
-  if (options.focusedTaskKeys.length && changedSince) {
+  if (options.runIntentBootstrap && changedSince) {
+    const executionPlan = planVerification(packs, {
+      ...options,
+      changedPaths:[],
+      changeSet:null,
+      basePacks:undefined,
+      historicalRegistryFallback:false,
+    });
+    plan = bindVerificationChangeScope(executionPlan, bindingPlan);
+  } else if (options.focusedTaskKeys.length && changedSince) {
     bindingPlan ??= planVerification(packs, { ...options, packIds:[] });
     const executionPlan = planVerification(packs, {
       ...options,
@@ -1645,19 +1670,7 @@ export async function runFocusedAcceptance(
       basePacks:undefined,
       historicalRegistryFallback:false,
     });
-    plan = {
-      ...executionPlan,
-      changedPaths:bindingPlan.changedPaths,
-      changeSet:bindingPlan.changeSet,
-      baseCommit:bindingPlan.baseCommit,
-      changedOwners:bindingPlan.changedOwners,
-      changedBoundaries:bindingPlan.changedBoundaries,
-      styleSmokeTargets:bindingPlan.styleSmokeTargets,
-      terminalFullObligations:bindingPlan.terminalFullObligations,
-      changedStyleTargets:bindingPlan.changedStyleTargets,
-      adapterAuthorizationPackIds:bindingPlan.adapterAuthorizationPackIds,
-      conservativeHistoricalFallbackReason:bindingPlan.conservativeHistoricalFallbackReason,
-    };
+    plan = bindVerificationChangeScope(executionPlan, bindingPlan);
   } else plan = planVerification(packs, options);
   const canonicalPlan = planVerification(packs, {
     packIds:timeoutRepairPackIds, includeProperties:plan.includeProperties,
