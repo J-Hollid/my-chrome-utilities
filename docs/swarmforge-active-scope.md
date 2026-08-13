@@ -345,13 +345,15 @@ pack or package command.
 
 ## Feature-mode deferred-incident boundary
 
-An eligible terminal-verification-deferred incident stays attached to the
-ancestor candidate and remains a master-integration obligation. A later feature
-does not audit, reverify, mutate, re-defer, or copy that incident merely because
-its changed paths overlap incident inputs. Its focused evidence and package proof
-cover only its approved scope.
+An eligible terminal-verification-deferred incident stays attached to its
+recorded candidate and remains a master-integration obligation, even when that
+candidate is an abandoned parallel descendant of an earlier QA base. A later
+feature does not audit, reverify, mutate, re-defer, or copy that incident merely
+because its failure lineage applies or its changed paths overlap incident inputs.
+It does not merge the parallel candidate to inherit the disposition. Its focused
+evidence and package proof cover only its approved scope.
 
-Reopen an ancestor incident during feature work only when ordinary focused work
+Reopen an earlier incident during feature work only when ordinary focused work
 naturally reproduces its diagnosed failure boundary, or when the approved slice
 intentionally changes its repair, regression, task-succession, runner, or
 evidence contract. Otherwise leave it unchanged for case-by-case assessment on

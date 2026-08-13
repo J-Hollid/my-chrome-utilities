@@ -16,25 +16,31 @@ that the pilot reserves for master integration.
 ## Required behavior
 
 - An eligible `terminal-verification-deferred` incident remains durable on its
-  recorded ancestor candidate and remains a master-integration obligation.
-- A later feature preflight and handoff ignore that ancestor incident when the
-  only relationship is changed-path overlap. They do not audit, reverify,
-  mutate, copy, carry forward, or re-defer it on the later candidate.
+  recorded candidate and remains a master-integration obligation. That candidate
+  may be an ancestor of current QA or an abandoned parallel descendant of an
+  earlier QA base.
+- A later feature preflight and handoff ignore that incident when the only
+  relationship is inherited failure lineage, changed-path overlap, or a shared
+  disposition recorded on an abandoned parallel candidate. They do not audit,
+  reverify, mutate, copy, carry forward, or re-defer it on the later candidate,
+  and they do not require the abandoned candidate to be merged.
 - The later feature still requires exact focused review-ready evidence and
   package proof for its own approved scope.
-- If ordinary focused development or review naturally reproduces an ancestor
+- If ordinary focused development or review naturally reproduces an earlier
   incident's diagnosed failure boundary, handle that incident case by case at
   the smallest causal boundary before the feature proceeds.
-- If the approved slice intentionally changes an ancestor incident's repair,
+- If the approved slice intentionally changes an earlier incident's repair,
   regression, task-succession, runner, or evidence semantics, classify that work
   as explicit verification-infrastructure scope. Apply the release-pilot scope
   choice before evidence if it would expand a product slice.
 - Incidents not naturally surfaced remain unchanged until master integration.
   The frozen cumulative candidate is where the architect evaluates whether each
-  diagnosis still applies and runs the one authorized terminal all-20
-  checkpoint.
+  diagnosis and any repair recorded on another lineage still apply, then runs
+  the one authorized terminal all-20 checkpoint.
 
-Path overlap is routing metadata, not proof that an incident contract changed.
+Path overlap and repository-common visibility are routing metadata, not proof
+that an incident contract changed or that a parallel candidate belongs in the
+current feature lineage.
 
 ## Implementation boundary
 
@@ -43,6 +49,13 @@ focused-policy planner classification, and process-test changes needed for the
 behavior above. Preserve terminal checkpoint resolution, current-candidate
 incident handling, immutable incident history, run-intent semantics, exact
 focused evidence, and package validation.
+
+For specification, review-ready, and QA-ready feature routes, an otherwise
+eligible deferred incident is nonblocking whether its disposition candidate is
+exact, ancestral, or parallel to the current candidate. Final-ready remains
+blocked until the terminal checkpoint. Do not weaken the separate handoff checks
+for sender, recipient, readiness, exact review evidence, specification-only
+paths, or current-candidate incidents.
 
 The existing global-impact classification would otherwise make this correction
 execute all 20 packs before it could establish the new feature-mode boundary.
@@ -75,6 +88,9 @@ final verification 013. Tests must prove that:
 
 - an eligible deferred ancestor with overlapping paths does not block a later
   feature's evidence or review-ready/QA-ready handoff and receives no mutation;
+- an eligible disposition recorded on an abandoned parallel candidate does not
+  block a new specification or feature from current QA and does not force that
+  candidate into the new lineage;
 - the later candidate must still provide its own exact evidence and package
   proof;
 - a current-candidate unresolved, unrepaired, stale, or identity-mismatched

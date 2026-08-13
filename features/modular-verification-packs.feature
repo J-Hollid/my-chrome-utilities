@@ -2176,20 +2176,22 @@ Feature: Modular verification packs
 
   # Modular verification packs 152
   Scenario Outline: Modular verification packs 152
-    Given current QA contains a terminal-verification-deferred incident on an ancestor candidate
+    Given the repository-common store contains a terminal-verification-deferred incident whose failure lineage applies to current QA
+    And its recorded deferral candidate is <deferral_relationship>
     When a later independently approved QA slice has <change_relationship>
     Then its handoff gate produces <later_slice_result>
-    And path overlap alone does not audit, reverify, mutate, or re-defer the ancestor incident on the later candidate
-    And the ancestor disposition retains the original failure, repair, regression, focused receipt, and terminal obligation unchanged for master integration
+    And neither path overlap nor a parallel deferral lineage audits, reverifies, mutates, or re-defers the incident on the later candidate
+    And the recorded disposition retains the original failure, repair, regression, focused receipt, lineage, and terminal obligation unchanged for master integration
     And the current candidate still requires its own exact approved focused evidence and package proof before QA integration
     And only a naturally reproduced diagnosed failure boundary or an intentional change to its repair contract starts case-by-case incident work in feature mode
 
     Examples:
-      | change_relationship                                                                                                           | later_slice_result                                                                                                    |
-      | only its approved specification changes                                                                                       | permit the specifier-to-coder start from current QA                                                                   |
-      | its product paths overlap an ancestor incident but ordinary focused work does not reproduce that diagnosed failure boundary | permit focused review and QA integration without changing or carrying the ancestor disposition to the later candidate |
-      | ordinary focused work reproduces the diagnosed failure boundary                                                              | stop at that failure and require the smallest causal incident repair and proof relevant to the current slice           |
-      | the approved slice intentionally changes the deferred repair, regression, task succession, runner, or evidence semantics     | treat that work as explicit verification-infrastructure scope with its own approved focused proof                      |
+      | deferral_relationship                           | change_relationship                                                                                                          | later_slice_result                                                                                         |
+      | an ancestor of current QA                       | only its approved specification changes                                                                                      | permit the specifier-to-coder start from current QA                                                        |
+      | an abandoned parallel candidate from current QA | only its approved specification changes                                                                                      | permit the specifier-to-coder start without merging the abandoned candidate                                |
+      | an ancestor or abandoned parallel candidate     | its product paths overlap the incident but ordinary focused work does not reproduce that diagnosed failure boundary         | permit focused review and QA integration without changing or copying the recorded disposition              |
+      | an ancestor or abandoned parallel candidate     | ordinary focused work reproduces the diagnosed failure boundary                                                             | stop at that failure and require the smallest causal incident repair and proof relevant to the current slice |
+      | an ancestor or abandoned parallel candidate     | the approved slice intentionally changes the deferred repair, regression, task succession, runner, or evidence semantics    | treat that work as explicit verification-infrastructure scope with its own approved focused proof           |
 
   # Modular verification packs 153
   Scenario Outline: Modular verification packs 153

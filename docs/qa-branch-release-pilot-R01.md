@@ -53,15 +53,17 @@ reviewable change.
    abandonment. Missing, failing, stale, or identity-mismatched proof remains
    blocking.
    A later independently approved slice may start from that QA descendant. Its
-   feature-mode roles do not audit, reverify, mutate, or re-defer every ancestor
-   incident. Changed-path overlap alone creates no incident proof obligation and
-   does not attach the ancestor disposition to the later candidate. The later
-   slice still needs its own exact focused evidence and package proof. Reopen one
+   feature-mode roles do not audit, reverify, mutate, or re-defer every earlier
+   incident, including one whose shared disposition was recorded on an abandoned
+   parallel candidate. Failure-lineage ancestry and changed-path overlap alone
+   create no incident proof obligation, do not attach the disposition to the
+   later candidate, and do not require the parallel candidate to be merged. The
+   later slice still needs its own exact focused evidence and package proof. Reopen one
    incident case by case only when ordinary focused work naturally reproduces
    its diagnosed failure boundary, or when the approved slice intentionally
    changes that incident's repair, regression, task-succession, runner, or
    evidence contract. Shared-infrastructure expansion remains subject to the
-   preflight scope-choice rule in step 2. Otherwise leave the ancestor incident
+   preflight scope-choice rule in step 2. Otherwise leave the recorded incident
    unchanged for the frozen master-integration assessment.
 4. The architect sends the exact candidate to the specifier with
    `readiness: qa-ready` and `verified: review-ready`. That claim must have bound
@@ -97,12 +99,14 @@ the source receipt proves that the invocation had no evidence task, repair
 authority, terminal authority, or readiness claim and the disposition retains
 the incident and immutable failure history. Missing or ambiguous authority stays
 blocking. Existing eligible terminal-verification-deferred incidents remain
-unresolved on their recorded ancestor candidates. They do not enter a later
+unresolved on their recorded candidates, including abandoned parallel
+candidates. They do not enter a later
 feature evidence preflight merely because changed paths overlap their inputs. No
 carry-forward transition is recorded for an unrelated feature candidate; its
 exact focused evidence and package proof cover its approved scope only. Master
-integration evaluates the accumulated deferred incidents against the frozen
-cumulative tree case by case before the terminal checkpoint.
+integration evaluates the accumulated deferred incidents, their diagnoses, and
+any repairs from another lineage against the frozen cumulative tree case by case
+before the terminal checkpoint.
 
 The following one-time bootstrap is completed and is not a precedent for later
 feature work. Because the original correction changed shared runner semantics,

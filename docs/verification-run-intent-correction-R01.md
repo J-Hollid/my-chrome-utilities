@@ -51,9 +51,11 @@ retroactively upgrade the receipt. A missing source receipt, ambiguous authority
 or contrary readiness metadata remains blocking.
 
 Eligible terminal-verification-deferred incidents are not diagnostic records and
-remain unresolved on their recorded ancestor candidates. A later feature does
-not audit, reverify, mutate, or re-defer them merely because its changed paths
-overlap a failure, repair, regression, focused-plan, runner, or evidence input.
+remain unresolved on their recorded candidates, including abandoned parallel
+candidates. A later feature does not audit, reverify, mutate, or re-defer them
+merely because its changed paths overlap a failure, repair, regression,
+focused-plan, runner, or evidence input, and it does not merge another candidate
+merely to inherit its disposition.
 They are outside that feature's evidence preflight, and no carry-forward
 transition is recorded. The later feature still requires exact focused evidence
 and package proof for its own approved scope.
@@ -64,8 +66,9 @@ slice intentionally changes its repair, regression, task succession, runner, or
 evidence semantics. Handle that incident at the smallest causal boundary; if
 the work expands a product slice into shared verification infrastructure, stop
 for the release-pilot scope choice before launching evidence. Incidents not
-naturally surfaced remain unchanged for case-by-case assessment on the frozen
-master-integration candidate. Path overlap alone is never an incident audit.
+naturally surfaced remain unchanged for case-by-case assessment of their
+diagnosis and recorded repair on the frozen master-integration candidate. Path
+overlap or a parallel disposition alone is never an incident audit.
 
 ### One-time bootstrap (completed; not a feature-mode precedent)
 
