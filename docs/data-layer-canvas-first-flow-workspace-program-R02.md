@@ -176,10 +176,10 @@ During pointer relationship drawing, each eligible target port has an inclusive
 24 CSS-pixel screen-space snap radius centered on the rendered port at every
 canvas zoom. Entering that halo pins the live preview to the compatible semantic
 port. Releasing anywhere in the acquired port halo creates the same relationship
-as releasing on the exact port. The port receives primary emphasis and its Page
-card receives secondary valid-target treatment with an outline or shape change
-rather than color alone. Accessible status names the Page, port, and inferred
-relationship kind.
+as releasing on the exact port. Only the acquired port receives valid-target
+emphasis, using an outline or shape change rather than color alone; its Page card
+remains unchanged and is not a snap target. Accessible status names the Page,
+port, and inferred relationship kind.
 
 The source port still determines the only compatible target port. A direct hit
 on a Page body outside its port halos, the source Page, an Event mini-card, or an
@@ -273,7 +273,7 @@ migration or restore Page Groups to Flow authoring.
 | Outline consumes space or becomes a second model | 018 | Closed Outline reserves no width and on-demand navigation uses the same stable graph |
 | Direct manipulation loses keyboard access | 005, 012, 020, 023 | Pointer and keyboard routes have labelled focus, deterministic cancellation, and focus restoration |
 | Relationship meaning drifts with routing | 009–012, 022, 023 | Semantic ports retain the three documentary kinds; Page-only topology and migrations remain stable |
-| Relationship drawing misses a port or gives ambiguous target feedback | 028, 029 | A zoom-independent port snap radius pins the preview to the compatible semantic port, emphasizes exactly one port and its Page without color-only meaning, preserves invalid direct targets, and clears without a write |
+| Relationship drawing misses a port or gives ambiguous target feedback | 028, 029 | A zoom-independent port snap radius pins the preview to the compatible semantic port, emphasizes exactly that port without color-only meaning while leaving its Page card unchanged, preserves invalid direct targets, and clears without a write |
 | Existing occurrence and Page-instance semantics regress | 006, 008, 017, 024, 026 | Reuse, migration, sparse contributions, repeated instances, and Flow-specific names retain stable identity |
 | Schema contribution return reintroduces an expanded card | Flow 013, 021, 025 and layered schema 021 | Readiness stays on cards while JSON, repairs, and restored deep detail live in contextual Details |
 
