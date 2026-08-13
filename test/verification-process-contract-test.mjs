@@ -4555,10 +4555,16 @@ const approvedStyleSmokeTaskKeys = new Set([
   "browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
   "browser-observation:SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
 ]);
+const approvedStyleVerificationTaskKeys = new Set([
+  "unit:test/package-clean-checkout-contract-test.mjs",
+  "unit:test/verification-evidence-production-path-test.mjs",
+  "property:test/stylesheet-declarations-property-test.mjs",
+]);
 const approvedVerificationTaskKeys = new Set([
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
   ...approvedStyleSmokeTaskKeys,
+  ...approvedStyleVerificationTaskKeys,
 ]);
 const currentTerminalIdentitiesWithoutApprovedAdditions = currentTerminalPlan.tasks.filter(({ key }) =>
   !postBaseAddedUnitKeys.has(key) && !approvedVerificationTaskKeys.has(key)).map(normalizedVtd006Identity);
@@ -4584,6 +4590,10 @@ for (const taskKey of approvedVtd015TaskKeys) {
 for (const taskKey of approvedVtd017TaskKeys) {
   assert.equal(currentTerminalPlan.tasks.filter(({ key }) => key === taskKey).length, 1,
     `terminal-full planning adds the approved VTD-017 task ${taskKey} exactly once`);
+}
+for (const taskKey of approvedStyleVerificationTaskKeys) {
+  assert.equal(currentTerminalPlan.tasks.filter(({ key }) => key === taskKey).length, 1,
+    `terminal-full planning adds the approved style-verification task ${taskKey} exactly once`);
 }
 assert.equal(currentTerminalPlan.tasks.filter(({ target }) =>
   target === "test/acceptance/side-panel-browser-session-contract.mjs").length, 0,
