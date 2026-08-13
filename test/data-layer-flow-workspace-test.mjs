@@ -125,9 +125,9 @@ const formerFlowPack=plannerPack("flow_graph",{source:["src/data-layer-flow-grap
   consumerPack=plannerPack("flow_consumer",{dependencies:["flow_graph"]}),
   transitionPath="src/data-layer-flow-graph-ui.ts",
   transitionChangeSet={version:1,baseCommit:"1".repeat(40),commit:"2".repeat(40),paths:[transitionPath],entries:[{status:"M",path:transitionPath}]},
-  transitionPlan=planVerification([currentFlowPack,consumerPack],{packIds:["flow_graph"],changedPaths:[transitionPath],changeSet:transitionChangeSet,basePacks:[formerFlowPack,consumerPack]});
-assert.deepEqual(transitionPlan.packIds,["flow_graph"],"the named Flow snap boundary supersedes its broader historical UI classification without selecting dependants");
-assert.equal(transitionPlan.changedBoundaries[transitionPath],"flow_workspace_relationship_port_snap");
+  transitionPlan=planVerification([currentFlowPack,consumerPack],{packIds:["flow_graph","flow_consumer"],changedPaths:[transitionPath],changeSet:transitionChangeSet,basePacks:[formerFlowPack,consumerPack]});
+assert.deepEqual(transitionPlan.packIds,["flow_graph","flow_consumer"],"a newly named narrow boundary conserves the broader historical UI consumer");
+assert.equal(transitionPlan.changedBoundaries[transitionPath],"flow_graph_semantic_model");
 
 const items=[
   {id:"page:one",position:{x:80,y:90}},
