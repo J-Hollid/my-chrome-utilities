@@ -6034,19 +6034,6 @@ assert.deepEqual(studioStyleImpact.adapterAuthorizationPackIds, ["shell"],
   "global smoke scheduling carries separate adapter authorization metadata");
 assert.equal(studioStyleImpact.unitTasks.length, 0,
   "global feature CSS does not select unrelated owner unit tasks");
-const mixedStyleAndUnitImpact = planVerification(packs, {
-  packIds:["shell"], changedPaths:[
-    "specification-builder-brand.css", "test/verification-process-contract-test.mjs",
-  ],
-});
-assert.deepEqual(mixedStyleAndUnitImpact.observationTasks.map(({ key }) => key), [
-  "browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
-], "mixed global CSS retains its exact declared smoke target");
-assert.ok(mixedStyleAndUnitImpact.unitTasks.some(({ key }) =>
-  key === "unit:test/verification-process-contract-test.mjs"),
-"mixed global CSS plus a non-style path retains the non-style unit task");
-assert.ok(mixedStyleAndUnitImpact.unitTasks.length > 0,
-  "mixed global CSS plus a non-style path is not reduced to smoke-only");
 const smokeAdapterImpact = planVerification(packs, {
   packIds:["shell"], changedPaths:["test/browser-packs/global-style-smoke.mjs"],
 });

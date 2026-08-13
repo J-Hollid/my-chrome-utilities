@@ -150,7 +150,9 @@ try {
   }
   await git(root, "add", "verification/packs.json", "test/package-clean-checkout-contract-test.mjs",
     "test/verification-evidence-production-path-test.mjs");
-  await git(root, "commit", "-m", "fixture: register evidence regression leaves");
+  if (await git(root, "status", "--porcelain")) {
+    await git(root, "commit", "-m", "fixture: register evidence regression leaves");
+  }
   await writeFile(path.join(root, "dist", ".dist-artifact.json"),
     await readFile(path.join(repositoryRoot, "dist", ".dist-artifact.json")));
   const masterBase = await git(root, "rev-parse", "HEAD");
