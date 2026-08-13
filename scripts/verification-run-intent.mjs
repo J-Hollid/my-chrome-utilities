@@ -237,6 +237,14 @@ function exactCandidateEligibleRepair(incident, candidate) {
     repair.causalProtocol?.repairResult?.status === "passed";
 }
 
+function deferredPromotionRegressionKey(incident, admission) {
+  if (admission.kind !== "terminal-deferred" ||
+      incident.failure?.failureClass !== "execution-contract-failure" ||
+      incident.failure?.task?.stage !== "promotion") return undefined;
+  const key = incident.repair?.regression?.key;
+  return typeof key === "string" && key ? key : undefined;
+}
+
 export async function runIntentBootstrapCoverage({
   incidents, plan, packs, candidate, root, evidenceTask,
   resolveSuccession = resolveIncidentTaskSuccession,
@@ -271,9 +279,12 @@ export async function runIntentBootstrapCoverage({
   for (const incident of incidents) {
     const admission = admissions.get(incident.id);
     const failureDigest = verificationTaskDigest(incident.failure.task);
+    const promotionRegressionKey = deferredPromotionRegressionKey(incident, admission);
     let selectedIdentity = admission.kind === "exact-candidate-causal-repair"
       ? selectedByKey.get(incident.repair.regression.key)
-      : selected.get(failureDigest);
+      : promotionRegressionKey
+        ? selectedByKey.get(promotionRegressionKey)
+        : selected.get(failureDigest);
     let succession;
     if (!selectedIdentity && admission.kind === "terminal-deferred") {
       succession = await resolveSuccession({ incident, currentIdentities:canonical,
@@ -289,7 +300,7 @@ export async function runIntentBootstrapCoverage({
       failureTaskKey:incident.failure.task.key,
       selectedTaskKey:selectedIdentity.key,
       selectedTaskDigest:verificationTaskDigest(selectedIdentity),
-      ...(admission.kind === "exact-candidate-causal-repair"
+      ...(admission.kind === "exact-candidate-causal-repair" || promotionRegressionKey
         ? { repairRegressionKey:incident.repair.regression.key } : {}),
       ...(succession ? { successionDigest:succession.conservationDigest } : {}),
     });

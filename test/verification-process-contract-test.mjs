@@ -6913,6 +6913,7 @@ promotionBootstrapRepair.failure.task = verificationTaskIdentity({
   key:"promotion:artifact-binding", stage:"promotion", executable:"internal", args:[],
   target:"artifact-binding",
 });
+promotionBootstrapRepair.failure.failureClass = "execution-contract-failure";
 promotionBootstrapRepair.repair.regression.key = bootstrapTask.key;
 const promotionRepairCoverage = await runIntentBootstrapCoverage({
   incidents:[promotionBootstrapRepair], plan:bootstrapPlan, packs,
@@ -6928,6 +6929,23 @@ assert.equal(promotionRepairCoverage[0].selectedTaskKey, bootstrapTask.key,
 assert.equal(promotionRepairCoverage[0].repairRegressionKey, bootstrapTask.key);
 assert.equal(promotionRepairCoverage[0].admission.kind, "exact-candidate-causal-repair",
   "a current exact repair supersedes its stale ancestor terminal deferral during bootstrap");
+const deferredPromotionRepair = structuredClone(promotionBootstrapRepair);
+deferredPromotionRepair.id = "deferred-promotion-bootstrap-repair";
+deferredPromotionRepair.repair.candidate = {
+  commit:"ancestor-candidate", tree:"ancestor-tree",
+};
+deferredPromotionRepair.repair.regression.commit = "ancestor-candidate";
+deferredPromotionRepair.repair.focusedReceipt.commit = "ancestor-candidate";
+const deferredPromotionCoverage = await runIntentBootstrapCoverage({
+  incidents:[deferredPromotionRepair], plan:bootstrapPlan, packs,
+  candidate:{ commit:"review-descendant", tree:"review-descendant-tree" },
+  resolveSuccession:async() => { throw new Error("promotion tasks must not invent succession"); },
+  reviewIncidentProof:async() => { throw new Error("deferred repairs do not require a new source proof"); },
+});
+assert.equal(deferredPromotionCoverage[0].selectedTaskKey, bootstrapTask.key,
+  "a deferred internal promotion failure remains covered by its declared causal regression");
+assert.equal(deferredPromotionCoverage[0].repairRegressionKey, bootstrapTask.key);
+assert.equal(deferredPromotionCoverage[0].admission.kind, "terminal-deferred");
 await assert.rejects(()=>runIntentBootstrapCoverage({ incidents:[exactBootstrapRepair],
   plan:bootstrapPlan, packs, candidate:{ commit:"later-candidate", tree:"later-tree" },
   reviewIncidentProof:async()=>({ sourceReceipt:"unused", sourceReceiptSha256:"b".repeat(64) }) }),
