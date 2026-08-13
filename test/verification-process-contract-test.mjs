@@ -2756,6 +2756,12 @@ console.log("repairTmp=" + process.env.TMPDIR);
     regressionReceiptPath:focusedReceiptPath, focusedReceiptPath,
   });
   assert.equal(proposal.repair.status, "eligible");
+  assert.equal((await store.blockingForEvidence({ commit:"repair-commit" }))
+    .some(({ id }) => id === first.id), false,
+  "an exact-candidate eligible repair may produce the focused evidence required to defer it");
+  assert.equal((await store.blockingForEvidence({ commit:"reclaimed-commit" }))
+    .some(({ id }) => id === first.id), true,
+  "an eligible repair on an ancestor remains blocking until terminally deferred");
   await assert.rejects(store.proposeRepair(first.id, {
     causalCategory, causalExplanation, regressionKey,
     regressionReceiptPath:focusedReceiptPath, focusedReceiptPath,

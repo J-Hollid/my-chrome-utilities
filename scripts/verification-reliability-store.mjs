@@ -570,7 +570,9 @@ export function createTimeoutIncidentStore({
     async blockingForEvidence({ commit }) {
       const blocked = [];
       for (const incident of await this.blocking({ commit })) {
-        if (!eligibleDeferredIncident(incident)) blocked.push(incident);
+        const exactCurrentRepair = incident.repair?.status === "eligible" &&
+          incident.repair.candidate?.commit === commit;
+        if (!eligibleDeferredIncident(incident) && !exactCurrentRepair) blocked.push(incident);
       }
       return blocked;
     },
