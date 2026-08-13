@@ -24,6 +24,14 @@ function declaredBoundaryDigest(boundary){
     ?boundary:taskSuccessionBoundaryDigest(boundary);
 }
 
+function declaredTaskBoundary(graph,taskDigest,logicalSlice){
+  if(logicalSlice.kind==="browser-target"&&logicalSlice.logicalTargetIds.length===1){
+    const target=logicalSlice.logicalTargetIds[0];
+    return graph.targetBoundaries?.[taskDigest]?.[target]??graph.boundaries[taskDigest];
+  }
+  return graph.boundaries[taskDigest];
+}
+
 export async function loadTaskSuccessionGraph(){
   return JSON.parse(await readFile(graphUrl,"utf8"));
 }
@@ -106,26 +114,27 @@ export async function resolveIncidentTaskSuccession({incident,currentIdentities,
     if(typeof edge?.sourceRegistryCommit!=="string"||!edge.sourceRegistryCommit)
       throw new Error("Task succession edge lacks source registry history");
     const historicalPacks=await loadHistoricalPacks(edge.sourceRegistryCommit,"verification/packs.json");
-    const historicalPlan=logicalSlice.kind==="browser-target"
+    const focusedHistoricalPlan=logicalSlice.kind==="browser-target"
       ?planVerification(historicalPacks,{packIds:[historicalPacks.find(pack=>
         (pack.browserObservations??[]).some(({id})=>id===diagnosedTarget)).id],
         browserTargetIds:[diagnosedTarget]})
       :planVerification(historicalPacks,{terminalFull:true});
-    const historicalIdentities=historicalPlan.tasks
-      .map(verificationTaskIdentity);
+    const historicalIdentities=(logicalSlice.kind==="browser-target"
+      ?[...focusedHistoricalPlan.tasks,...planVerification(historicalPacks,{terminalFull:true}).tasks]
+      :focusedHistoricalPlan.tasks).map(verificationTaskIdentity);
     if(!historicalRegistryDeclaresTask(successionGraph.identities[step.sourceTaskDigest],
       historicalPacks,historicalIdentities))
       throw new Error("Task succession source identity is absent from declared registry history");
     if(logicalSlice.kind==="browser-target"){
       const sourceBoundary=browserTargetSuccessionBoundary(historicalPacks,diagnosedTarget);
-      if(declaredBoundaryDigest(successionGraph.boundaries[step.sourceTaskDigest])!==
+      if(declaredBoundaryDigest(declaredTaskBoundary(successionGraph,step.sourceTaskDigest,logicalSlice))!==
           taskSuccessionBoundaryDigest(sourceBoundary))
         throw new Error("Task succession source registry boundary differs from its declaration");
     }
   }
   if(logicalSlice.kind==="browser-target"){
     const destinationBoundary=browserTargetSuccessionBoundary(currentPacks,diagnosedTarget);
-    if(declaredBoundaryDigest(successionGraph.boundaries[resolution.destinationTaskDigest])!==
+    if(declaredBoundaryDigest(declaredTaskBoundary(successionGraph,resolution.destinationTaskDigest,logicalSlice))!==
         taskSuccessionBoundaryDigest(destinationBoundary))
       throw new Error("Task succession current registry boundary differs from its declaration");
   }
@@ -169,7 +178,7 @@ export function resolveTaskSuccessionGraph({graph,sourceIdentity,currentIdentiti
   while(!currentByDigest.has(cursor)){
     if(visited.has(cursor))throw new Error("Task succession graph contains a cycle");
     visited.add(cursor);
-    const sourceBoundary=graph.boundaries[cursor];
+    const sourceBoundary=declaredTaskBoundary(graph,cursor,logicalSlice);
     if(!sourceBoundary)throw new Error("Task succession registry history is unavailable");
     const conservedBoundaryDigest=declaredBoundaryDigest(sourceBoundary);
     const candidates=graph.edges.filter(edge=>edge.sourceTaskDigest===cursor&&
@@ -177,7 +186,7 @@ export function resolveTaskSuccessionGraph({graph,sourceIdentity,currentIdentiti
     if(candidates.length===0)throw new Error("Undeclared task succession or incomplete conserved boundary");
     if(candidates.length!==1)throw new Error("Ambiguous task succession boundary");
     const edge=candidates[0],destinationIdentity=graph.identities[edge.destinationTaskDigest],
-      destinationBoundary=graph.boundaries[edge.destinationTaskDigest];
+      destinationBoundary=declaredTaskBoundary(graph,edge.destinationTaskDigest,logicalSlice);
     if(typeof edge.id!=="string"||!edge.id||!destinationIdentity||!destinationBoundary||
         verificationTaskDigest(destinationIdentity)!==edge.destinationTaskDigest||
         declaredBoundaryDigest(destinationBoundary)!==edge.conservedBoundaryDigest)

@@ -98,6 +98,14 @@
     "3a46c764bc8e6cad14f60ca66eda234de0498f598da979242492f87242d077cf": "cf0e046a0c21073ee354659a2f05794625d258934d8d2ffbe992dd31914e2869",
     "9699502e1e40784d715d7f55d3e04a3bc061d35f3d47c7ec57450f2d3fca3fc2": "cf0e046a0c21073ee354659a2f05794625d258934d8d2ffbe992dd31914e2869"
   },
+  "targetBoundaries": {
+    "5dc48c5c3fa79fd30b87384bbe69dc8fac7ffe07c7ea3c313cc65875d8bfaae1": {
+      "FLOW_WORKSPACE_AUTHORING_TARGET": "0399f1356ae641e2f92b2823f0ca16614e011a3897960a7c4945c6b96afd1785"
+    },
+    "52edc94f4ae10fb8912fb9cc051432fb1b47384d97e2728640b7b567110752f0": {
+      "FLOW_WORKSPACE_AUTHORING_TARGET": "0399f1356ae641e2f92b2823f0ca16614e011a3897960a7c4945c6b96afd1785"
+    }
+  },
   "edges": [
     {
       "id": "flow-workspace-controls-standalone-to-flow-graph-batch-v1",
@@ -106,6 +114,32 @@
       "destinationTaskDigest": "52edc94f4ae10fb8912fb9cc051432fb1b47384d97e2728640b7b567110752f0",
       "logicalSlice": {"kind": "browser-target", "logicalTargetIds": ["FLOW_WORKSPACE_CONTROLS_TARGET"]},
       "conservedBoundaryDigest": "6d424b42fc67d7daf681c0fc3c12b58438f7c1cea6f7429b7e1b5eec30d0d077"
+    },
+    {
+      "id": "flow-graph-batch-to-stylesheet-extraction-batch-controls-v1",
+      "sourceRegistryCommit": "80489342f210b360e5072ea4ad925b57917224da",
+      "sourceTaskDigest": "5dc48c5c3fa79fd30b87384bbe69dc8fac7ffe07c7ea3c313cc65875d8bfaae1",
+      "destinationTaskDigest": "52edc94f4ae10fb8912fb9cc051432fb1b47384d97e2728640b7b567110752f0",
+      "logicalSlice": {
+        "kind": "browser-target",
+        "logicalTargetIds": [
+          "FLOW_WORKSPACE_CONTROLS_TARGET"
+        ]
+      },
+      "conservedBoundaryDigest": "6d424b42fc67d7daf681c0fc3c12b58438f7c1cea6f7429b7e1b5eec30d0d077"
+    },
+    {
+      "id": "flow-graph-batch-to-stylesheet-extraction-batch-authoring-v1",
+      "sourceRegistryCommit": "80489342f210b360e5072ea4ad925b57917224da",
+      "sourceTaskDigest": "5dc48c5c3fa79fd30b87384bbe69dc8fac7ffe07c7ea3c313cc65875d8bfaae1",
+      "destinationTaskDigest": "52edc94f4ae10fb8912fb9cc051432fb1b47384d97e2728640b7b567110752f0",
+      "logicalSlice": {
+        "kind": "browser-target",
+        "logicalTargetIds": [
+          "FLOW_WORKSPACE_AUTHORING_TARGET"
+        ]
+      },
+      "conservedBoundaryDigest": "0399f1356ae641e2f92b2823f0ca16614e011a3897960a7c4945c6b96afd1785"
     },
     {
       "id": "flow-runtime-acceptance-to-combined-session-v1",

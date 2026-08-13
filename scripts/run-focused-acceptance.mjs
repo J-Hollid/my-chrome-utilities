@@ -218,6 +218,21 @@ export function bindVerificationChangeScope(executionPlan, bindingPlan) {
   };
 }
 
+export function includeAuthorizedTerminalBrowserObservations(plan, packs) {
+  const authorized = new Set(plan.requestedPackIds);
+  const terminalObservations = planVerification(packs, { terminalFull:true }).tasks
+    .filter(({ stage, packId }) => stage === "browser-observation" && authorized.has(packId));
+  const byKey = new Map(plan.tasks.map((task) => [task.key, task]));
+  for (const task of terminalObservations) byKey.set(task.key, task);
+  const additions = terminalObservations.filter(({ key }) =>
+    !plan.tasks.some((task) => task.key === key));
+  if (!additions.length) return plan;
+  const tasks = [...plan.tasks];
+  const lastObservation = tasks.findLastIndex(({ stage }) => stage === "browser-observation");
+  tasks.splice(lastObservation + 1, 0, ...additions.map(({ key }) => byKey.get(key)));
+  return { ...plan, tasks };
+}
+
 export function focusedAcceptanceOptions(args) {
   const options = {
     packIds:[], changedPaths:[], terminalFull:false, includeProperties:false,
@@ -1660,7 +1675,8 @@ export async function runFocusedAcceptance(
       basePacks:undefined,
       historicalRegistryFallback:false,
     });
-    plan = bindVerificationChangeScope(executionPlan, bindingPlan);
+    plan = includeAuthorizedTerminalBrowserObservations(
+      bindVerificationChangeScope(executionPlan, bindingPlan), packs);
   } else if (options.focusedTaskKeys.length && changedSince) {
     bindingPlan ??= planVerification(packs, { ...options, packIds:[] });
     const executionPlan = planVerification(packs, {

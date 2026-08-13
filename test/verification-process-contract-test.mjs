@@ -61,6 +61,7 @@ import {
   compatibleTimeoutRepairIncidentIds,
   applyCheckpointPrerequisitePlan,
   bindVerificationChangeScope,
+  includeAuthorizedTerminalBrowserObservations,
   checkpointPreflight,
   closeVerificationPlanPrerequisites,
   createCheckpointIdentityGuard,
@@ -1918,6 +1919,21 @@ assert.deepEqual(bootstrapBoundPlan.packIds.toSorted(), ["flow_graph", "shell"],
   "bootstrap preserves its exact authorized execution packs");
 assert.deepEqual(bootstrapBoundPlan.changedPaths, ["scripts/run-focused-acceptance.mjs"],
   "bootstrap evidence retains the full canonical change set");
+const bootstrapObservationPlan = includeAuthorizedTerminalBrowserObservations({
+  ...bootstrapBoundPlan,
+  tasks:planVerification(timeoutPackRegistry, { packIds:["flow_graph", "shell"],
+    includeProperties:true }).tasks,
+}, timeoutPackRegistry);
+const bootstrapObservationKeys = bootstrapObservationPlan.tasks
+  .filter(({ stage }) => stage === "browser-observation").map(({ key }) => key);
+assert(bootstrapObservationKeys.includes("browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET"),
+  "the exact bootstrap plan includes the deferred Studio QA-only observation");
+assert(bootstrapObservationKeys.includes("browser-observation:SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET"),
+  "the exact bootstrap plan includes the deferred Side Panel QA-only observation");
+assert(bootstrapObservationKeys.includes(
+  "browser-observation:FLOW_GRAPH_EXAMPLES_TARGET+FLOW_GRAPH_LEGACY_TARGET+" +
+  "FLOW_STYLESHEET_EXTRACTION_TARGET+FLOW_WORKSPACE_AUTHORING_TARGET+FLOW_WORKSPACE_CONTROLS_TARGET"),
+"the exact bootstrap plan retains the current Flow successor batch");
 assert.equal(focusedAcceptanceOptions([
   "--pack", "schemas", "--changed-since", "base", "--property",
   "--prepare-evidence", "task-17", "--resume-receipt", "tmp/verification-receipts/prior.json",
