@@ -157,12 +157,22 @@ if(process.env.SWARMFORGE_VTD007_REAL_RUNNER_PROBES==="1" ||
         pagePath:"specification-builder.html",maximumElapsedMilliseconds:10000,
         readiness:{description:"installed runner document readiness",
           expression:"({ready:document.readyState==='complete',state:document.readyState})"},
-        run:async()=>{throw new Error("forced installed runner interaction failure");},
+        run:async({ socket, evaluate })=>{
+          await evaluate(socket(), "(()=>{throw new Error('causal in-page probe failure')})()");
+          throw new Error("forced installed runner interaction failure");
+        },
       }},
     });
   }catch(error){installedFailure=error;}
   finally{console.log=originalLog;}
   assert.ok(installedFailure,"the real installed-session failure probe must fail");
+  const installedFailureDetails = [
+    installedFailure.message,
+    ...(installedFailure.errors ?? []).map((error) => error?.message ?? String(error)),
+    ...Object.values(installedFailure.targetResults ?? {}).map((result) => result?.error ?? ""),
+  ].join(" ");
+  assert.match(installedFailureDetails, /causal in-page probe failure/u,
+    "an in-page Runtime.evaluate throw must fail the logical target");
   const timingLines=installedLines.filter((line)=>line.includes('"swarmforgeBrowserTargetTiming"'));
   assert.equal(timingLines.length,1,
     "the failed installed lifecycle must emit timing exactly once");

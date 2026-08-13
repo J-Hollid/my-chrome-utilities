@@ -1217,6 +1217,7 @@ export function planVerification(
           : historicalOwnershipUnavailable ? "historical-ownership-unavailable"
             : null;
   const allRunnableIds = packs.filter(runnable).map(({ id }) => id);
+  if (terminalFull) selected = new Set(allRunnableIds);
 
   const affectedFor = (registry, changedPath, {
     exactVerificationChange = true, forceVerificationExact = false,
@@ -1405,12 +1406,16 @@ export function planVerification(
       .map(([, boundary]) => boundary));
     const changedStyleTargetIds = new Set(Object.values(Object.fromEntries(changedStyleTargets))
       .flatMap((targets) => targets));
+    const changedAdapterTargetIds = new Set(
+      observations.filter(({ path }) => changedPaths.includes(path)).map(({ id }) => id),
+    );
     const boundaryTargets = changedBoundaryIds.size
       ? observations.filter(({ impactBoundaries }) => impactBoundaries?.some((id) => changedBoundaryIds.has(id)))
       : [];
     const selected = browserTargetIds.length
       ? observations.filter(({ id }) => browserTargetIds.includes(id))
       : changedStyleTargetIds.size ? observations.filter(({ id }) => changedStyleTargetIds.has(id))
+      : changedAdapterTargetIds.size ? observations.filter(({ id }) => changedAdapterTargetIds.has(id))
       : boundaryTargets.length ? boundaryTargets : observations.filter(({ id }) =>
         !stylesheetQaTargetIds.has(id));
     return selected.map((observation) => ({
@@ -1507,8 +1512,9 @@ export function planVerification(
     mode,
     requestedPackIds:packs.filter(({ id }) => explicit.has(id)).map(({ id }) => id),
     claimPackIds:packs.filter(({ id }) => explicit.has(id)).map(({ id }) => id),
-    selectedPackIds:executionPacks.map(({ id }) => id),
-    packIds:executionPacks.map(({ id }) => id),
+    selectedPackIds:ordered.map(({ id }) => id),
+    packIds:ordered.map(({ id }) => id),
+    adapterAuthorizationPackIds:styleSmokeAuthorization.map(({ id }) => id),
     changedPaths:[...changedPaths].sort(),
     changeSet:changeSet ? structuredClone(changeSet) : null,
     baseCommit:changeSet?.baseCommit ?? null,

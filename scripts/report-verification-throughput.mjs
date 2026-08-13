@@ -13,7 +13,6 @@ import {
   timingMaturity,
   validReceipt,
 } from "./verification-timing-ledger.mjs";
-import { stylesheetQaTargets } from "./verification-styles.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const defaultReceiptDirectory = path.join(repositoryRoot, "tmp", "verification-receipts");
@@ -1055,10 +1054,7 @@ export function reportVerificationThroughput({
     observationConcurrency,
     ...(environmentClassId ? { selectedEnvironmentClass:environmentClassId } : {}),
     model,
-    // QA-only global style smoke targets are terminal obligations, not part of
-    // the general browser timing calibration inventory.
-    browserTargetIds:packs.flatMap((pack) => (pack.browserObservations ?? [])
-      .map(({ id }) => id).filter((id) => !stylesheetQaTargets.has(id))).sort(),
+    browserTargetIds:packs.flatMap((pack) => (pack.browserObservations ?? []).map(({ id }) => id)).sort(),
     comparisonScenarioBuilds:rows
       .filter(({ name }) => name.endsWith(":exact-full-pack") || name.endsWith(":representative-change"))
       .reduce((sum, row) => sum + row.builds, 0),

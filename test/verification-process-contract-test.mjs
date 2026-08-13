@@ -779,6 +779,9 @@ try {
     path.join(cliContentionRepository, "verification/packs.json"));
   await copyFile(path.resolve("test/browser-packs/global-style-smoke.mjs"),
     path.join(cliContentionRepository, "test/browser-packs/global-style-smoke.mjs"));
+  await mkdir(path.join(cliContentionRepository, "test"), { recursive:true });
+  await copyFile(path.resolve("test/stylesheet-declarations-property-test.mjs"),
+    path.join(cliContentionRepository, "test/stylesheet-declarations-property-test.mjs"));
   const cliClosurePath = path.join(
     cliContentionRepository, "scripts/verification-reliability-closure.mjs",
   );
@@ -810,7 +813,8 @@ try {
     "scripts/verification-reliability-closure.mjs",
     "scripts/verification-execution-prerequisites.mjs", "scripts/build.mjs",
     "scripts/verification-styles.mjs", "scripts/verification-packs.mjs",
-    "test/browser-packs/global-style-smoke.mjs", "verification/packs.json"], {
+    "test/browser-packs/global-style-smoke.mjs", "test/stylesheet-declarations-property-test.mjs",
+    "verification/packs.json"], {
     cwd:cliContentionRepository,
   });
   await exec("git", ["commit", "-qm", "cli contention fixture baseline"], { cwd:cliContentionRepository });
@@ -6024,8 +6028,19 @@ const studioStyleImpact = planVerification(packs, {
 assert.deepEqual(studioStyleImpact.observationTasks.map(({ key }) => key), [
   "browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
 ], "global feature CSS schedules only its exact declared smoke target");
+assert.deepEqual(studioStyleImpact.selectedPackIds, [],
+  "global feature CSS does not claim the shell pack as a selected consumer");
+assert.deepEqual(studioStyleImpact.adapterAuthorizationPackIds, ["shell"],
+  "global smoke scheduling carries separate adapter authorization metadata");
 assert.equal(studioStyleImpact.unitTasks.length, 0,
   "global feature CSS does not select unrelated owner unit tasks");
+const smokeAdapterImpact = planVerification(packs, {
+  packIds:["shell"], changedPaths:["test/browser-packs/global-style-smoke.mjs"],
+});
+assert.deepEqual(smokeAdapterImpact.observationTasks.map(({ key }) => key), [
+  "browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
+  "browser-observation:SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
+], "a changed smoke adapter selects exactly its two registered style targets");
 assert.doesNotThrow(() => validateStylesheetDeclarations([{
   source:"feature.css", destination:"feature.css", classification:"feature-local", owner:"shell",
   consumers:[], qaTargets:[], scopeRoot:".documentary-flow",
@@ -7106,13 +7121,17 @@ const completeCalibration = refreshVerificationPerformanceBudgets(
   { packs, tolerance:1.2, minimumIndependentSamples:5,
     flowExamplesCharacterization:committedFlowCharacterization },
 );
-const acceptedBrowserTargetCount = new Set(vtd008BasePacks.flatMap((pack) =>
+const acceptedBrowserTargetCount = new Set(packs.flatMap((pack) =>
   (pack.browserObservations ?? []).map(({ id }) => id))).size;
 assert.equal(Object.keys(completeCalibration.performanceBudgets.exactPackSeconds).length, 20);
 assert.equal(Object.keys(completeCalibration.performanceBudgets.changedPathSeconds).length, 20);
 assert.equal(Object.keys(completeCalibration.performanceBudgets.changedPathFanOut).length, 20);
 assert.equal(Object.keys(completeCalibration.performanceBudgets.browserTargetP90Milliseconds).length,
   acceptedBrowserTargetCount);
+for (const smokeTarget of ["STUDIO_GLOBAL_STYLE_SMOKE_TARGET", "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET"]) {
+  assert.equal(completeCalibration.performanceBudgets.browserTargetP90Milliseconds[smokeTarget].provisional,
+    true, `${smokeTarget} receives a provisional timing budget`);
+}
 assert.deepEqual(completeCalibration.performanceBudgets.browserTargetP90Milliseconds
   .FLOW_GRAPH_EXAMPLES_TARGET, {
   limit:4596, baseline:3830, percentile:"p90", tolerance:1.2, provisional:false,

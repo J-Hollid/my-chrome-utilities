@@ -1623,6 +1623,7 @@ export async function runFocusedAcceptance(
       styleSmokeTargets:bindingPlan.styleSmokeTargets,
       terminalFullObligations:bindingPlan.terminalFullObligations,
       changedStyleTargets:bindingPlan.changedStyleTargets,
+      adapterAuthorizationPackIds:bindingPlan.adapterAuthorizationPackIds,
       conservativeHistoricalFallbackReason:bindingPlan.conservativeHistoricalFallbackReason,
     };
   } else plan = planVerification(packs, options);
@@ -1664,6 +1665,7 @@ export async function runFocusedAcceptance(
     styleSmokeTargets:[...new Set(plan.styleSmokeTargets ?? [])].sort(),
     terminalFullObligations:[...new Set(plan.terminalFullObligations ?? [])].sort(),
     changedStyleTargets:plan.changedStyleTargets ?? {},
+    adapterAuthorizationPackIds:[...new Set(plan.adapterAuthorizationPackIds ?? [])].sort(),
     changeSetDigest:plan.changeSet ? verificationDigest(plan.changeSet) : null,
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };

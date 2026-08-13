@@ -112,6 +112,10 @@ export async function verifyReviewReadyEvidence(commit, base, task, {
   return record;
 }
 
+// Final handoff path: validate the runner-owned canonical receipt and then
+// consume any review-ready terminal obligation against that real evidence.
+// The review base remains on the origin record; masterBaseCommit is explicit
+// because the frozen release base may differ from it.
 export async function verifyQaReleaseCandidate(commit, base, {
   repositoryRoot = repository,
 } = {}) {

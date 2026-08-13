@@ -35,9 +35,14 @@ import {
   boundedClosureEvidenceTask,
   terminalClosureExecution,
 } from "./verification-reliability-closure.mjs";
+import {
+  consumeTerminalFullObligations,
+  validateReviewReadyRecord,
+} from "./settled-final-verification-review.mjs";
 
 const repository = fileURLToPath(new URL("../", import.meta.url));
 const notesRef = "refs/notes/swarmforge-verification";
+const reviewReadyNotesRef = "refs/notes/swarmforge-review-ready";
 const gitOutputMaxBuffer = 16 * 1024 * 1024;
 const shaPattern = /^[a-f0-9]{64}$/u;
 const incidentIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
@@ -70,6 +75,98 @@ function gitInput(repositoryRoot, args, input) {
     child.stdin.on("error", () => {});
     child.stdin.end(input);
   });
+}
+
+async function reviewReadyNote(repositoryRoot, commit) {
+  try {
+    return JSON.parse(await git(repositoryRoot, "notes", `--ref=${reviewReadyNotesRef}`, "show", commit));
+  } catch (error) {
+    if (/no note found|cannot read note data|bad object/iu.test(error.message)) return undefined;
+    throw error;
+  }
+}
+
+function canonicalTerminalObligations(obligations = []) {
+  return [...obligations].map((item) => ({
+    originCommit:item.originCommit,
+    originTree:item.originTree,
+    consumedByCommit:item.consumedByCommit,
+    consumedByTree:item.consumedByTree,
+    paths:sortedUnique(item.paths),
+  })).sort((left, right) =>
+    `${left.originCommit}:${left.originTree}:${left.paths.join(",")}`.localeCompare(
+      `${right.originCommit}:${right.originTree}:${right.paths.join(",")}`));
+}
+
+function canonicalTerminalPlanEligible(plan, candidatePacks) {
+  const expected = planVerification(candidatePacks, {
+    terminalFull:true, includeProperties:true,
+  }).selectedPackIds;
+  return plan?.mode === "exact" && plan.includeProperties === true &&
+    same(sortedUnique(plan.selectedPackIds), sortedUnique(expected)) &&
+    same(sortedUnique(plan.packIds), sortedUnique(expected)) &&
+    plan.tasks?.some(({ key = "" }) => key.startsWith("property:"));
+}
+export { canonicalTerminalPlanEligible };
+
+async function discoverPendingReviewObligations({ baseCommit, candidateCommit, candidateTree,
+  finalPaths, finalTerminalPaths, repositoryRoot, canonicalEvidenceRecord }) {
+  const commits = (await git(repositoryRoot, "rev-list", `${baseCommit}..${candidateCommit}`)).split("\n").filter(Boolean);
+  const pending = [];
+  for (const originCommit of commits) {
+    const note = await reviewReadyNote(repositoryRoot, originCommit);
+    for (const record of note?.records ?? []) {
+      if (record?.terminalObligations?.status !== "pending-master-checkpoint") continue;
+      const noteTree = await git(repositoryRoot, "rev-parse", `${originCommit}^{tree}`);
+      if (record.candidateCommit !== originCommit || record.candidateTree !== noteTree ||
+          record.terminalObligations.candidateCommit !== originCommit ||
+          record.terminalObligations.candidateTree !== noteTree) {
+        throw new Error("Review-ready terminal obligation is not bound to its note commit and tree");
+      }
+      validateReviewReadyRecord(record, {
+        task:record.task, baseCommit:record.baseCommit,
+        candidateCommit:record.candidateCommit, candidateTree:record.candidateTree,
+      });
+      const originChangeSet = await canonicalVerificationChangeSet({
+        base:record.baseCommit, commit:originCommit, repositoryRoot,
+      });
+      if (!same(originChangeSet, record.changeSet)) {
+        throw new Error("Review-ready terminal obligation change set no longer matches its origin range");
+      }
+      await requireGitAncestor(record.candidateCommit, candidateCommit, { repositoryRoot });
+      const paths = sortedUnique(record.terminalObligations.paths);
+      if (!paths.every((changedPath) => finalPaths.includes(changedPath))) {
+        throw new Error("Terminal obligation path is outside the final master-base change set");
+      }
+      if (!paths.every((changedPath) => finalTerminalPaths.includes(changedPath))) {
+        throw new Error("Final checkpoint does not carry every pending terminal obligation");
+      }
+      if (canonicalEvidenceRecord) {
+        const checkpointReceipt = {
+          version:2,
+          runId:canonicalEvidenceRecord.receipt.runId ?? canonicalEvidenceRecord.receipt.sha256,
+          candidate:{ commit:candidateCommit, tree:candidateTree },
+          plan:{ terminalFullObligations:finalTerminalPaths },
+          tasks:Object.fromEntries(canonicalEvidenceRecord.receipt.tasks.map((task) => [task.key, task])),
+        };
+        consumeTerminalFullObligations(record, checkpointReceipt, {
+          canonicalCheckpoint:canonicalEvidenceRecord,
+          canonicalPackIds:canonicalEvidenceRecord.packIds,
+          masterBaseCommit:baseCommit,
+          ancestryProof:{ isAncestor:true, originCommit, originTree:noteTree,
+            descendantCommit:candidateCommit, descendantTree:candidateTree, changedPaths:finalPaths },
+        });
+      }
+      pending.push({ originCommit, originTree:noteTree,
+        consumedByCommit:candidateCommit, consumedByTree:candidateTree, paths });
+    }
+  }
+  const canonical = canonicalTerminalObligations(pending);
+  if (canonical.length && !canonical.every(({ paths }) =>
+      paths.every((changedPath) => finalPaths.includes(changedPath) && finalTerminalPaths.includes(changedPath)))) {
+    throw new Error("Final checkpoint does not carry every pending terminal obligation");
+  }
+  return canonical;
 }
 
 function normalized(value) {
@@ -197,6 +294,7 @@ function planDocument(plan) {
     styleSmokeTargets:sortedUnique(plan.styleSmokeTargets ?? []),
     terminalFullObligations:sortedUnique(plan.terminalFullObligations ?? []),
     changedStyleTargets:plan.changedStyleTargets ?? {},
+    adapterAuthorizationPackIds:sortedUnique(plan.adapterAuthorizationPackIds ?? []),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason ?? null,
     features:[...(plan.features ?? [])].sort(),
     handlers:[...(plan.handlers ?? [])].sort(),
@@ -296,6 +394,52 @@ export async function validateCanonicalVerificationCheckpoint({
     throw new Error("Canonical checkpoint requires a complete fresh task set without reuse or timeout");
   }
   return { plan, changeSet, receipt, ...parsed };
+}
+
+// The terminal handoff consumes this real checkpoint shape.  It deliberately
+// builds on the same raw-receipt/Git-note validator used by evidence
+// preparation and recording; callers cannot substitute a proof-shaped object.
+export async function validateCanonicalMasterCheckpointEvidence(options = {}) {
+  const checkpoint = await validateCanonicalVerificationCheckpoint(options);
+  const candidatePacks = await verificationPacksAtCommit(options.commit, {
+    repositoryRoot:options.repositoryRoot ?? repository,
+  });
+  const expectedPackIds = planVerification(candidatePacks, {
+    terminalFull:true,
+    includeProperties:true,
+  }).selectedPackIds;
+  if (checkpoint.plan.mode !== "exact" || checkpoint.plan.includeProperties !== true ||
+      !same(sortedUnique(options.packIds ?? []), sortedUnique(expectedPackIds)) ||
+      !same(sortedUnique(checkpoint.plan.packIds), sortedUnique(expectedPackIds)) ||
+      !checkpoint.plan.tasks.some(({ key }) => key.startsWith("property:"))) {
+    throw new Error("Canonical master evidence requires the exact runnable all-20 plan with properties");
+  }
+  return checkpoint;
+}
+
+export function validateCanonicalMasterEvidenceRecord(record, {
+  candidateCommit = record?.commit,
+  candidateTree = record?.tree,
+  masterBaseCommit = record?.baseCommit,
+  canonicalPackIds = [],
+} = {}) {
+  const allPacks = sortedUnique(canonicalPackIds);
+  const plan = record?.plan;
+  const artifact = record?.identities?.artifact;
+  const receiptTasks = record?.receipt?.tasks ?? [];
+  if (record?.version !== 2 || record.status !== "passed" || record.commit !== candidateCommit ||
+      record.tree !== candidateTree || record.baseCommit !== masterBaseCommit ||
+      plan?.mode !== "exact" || plan.includeProperties !== true || allPacks.length !== 20 ||
+      !same(sortedUnique(record.packIds), allPacks) || !same(sortedUnique(plan.packIds), allPacks) ||
+      !same(sortedUnique(plan.selectedPackIds), allPacks) ||
+      !plan.tasks.some(({ key = "" }) => key.startsWith("property:")) ||
+      !artifact || artifact.schemaVersion !== 1 ||
+      ![artifact.buildIdentity, artifact.inputDigest, artifact.outputDigest].every((value) => shaPattern.test(value ?? "")) ||
+      !Array.isArray(receiptTasks) || !receiptTasks.length ||
+      receiptTasks.some(({ status }) => status !== "passed")) {
+    throw new Error("Canonical master evidence record is not an exact fresh all-20 proof");
+  }
+  return record;
 }
 
 export function legacyAcceptanceSessionPrerequisiteCompatibility({
@@ -407,6 +551,7 @@ async function parsedReceipt(receiptPath, plan, {
     styleSmokeTargets:sortedUnique(plan.styleSmokeTargets ?? []),
     terminalFullObligations:sortedUnique(plan.terminalFullObligations ?? []),
     changedStyleTargets:plan.changedStyleTargets ?? {},
+    adapterAuthorizationPackIds:sortedUnique(plan.adapterAuthorizationPackIds ?? []),
     changeSetDigest:verificationDigest(plan.changeSet),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
     ...(receipt.candidate?.evidenceTask === boundedClosureEvidenceTask &&
@@ -653,7 +798,7 @@ async function writeExclusiveAtomic(target, contents) {
 }
 
 function evidenceId(record) {
-  return verificationDigest({
+  const identity = {
     task:record.task, commit:record.commit, tree:record.tree, baseCommit:record.baseCommit,
     packIds:record.packIds, planDigest:record.planDigest, identities:record.identities,
     receiptSha256:record.receipt.sha256, checkpointAttempt:record.checkpointAttempt,
@@ -662,7 +807,11 @@ function evidenceId(record) {
       : (record.timeoutResolutions ?? []).length
         ? { timeoutResolutions:record.timeoutResolutions }
         : {}),
-  });
+  };
+  if (record.consumedTerminalObligations !== undefined) {
+    identity.consumedTerminalObligations = canonicalTerminalObligations(record.consumedTerminalObligations);
+  }
+  return verificationDigest(identity);
 }
 
 function validateRecordDocument(record, { allowLegacyExecutionLoad = false } = {}) {
@@ -699,6 +848,16 @@ function validateRecordDocument(record, { allowLegacyExecutionLoad = false } = {
       (!shaPattern.test(record.checkpointAttempt.id ?? "") ||
        !shaPattern.test(record.checkpointAttempt.identityDigest ?? ""))) {
     throw new Error("Verification evidence has an invalid checkpoint attempt identity");
+  }
+  if (record.consumedTerminalObligations !== undefined &&
+      !same(record.consumedTerminalObligations,
+        canonicalTerminalObligations(record.consumedTerminalObligations)) ||
+      record.consumedTerminalObligations?.some(({ originCommit, originTree, consumedByCommit,
+        consumedByTree, paths }) =>
+        !/^[a-f0-9]{40,64}$/u.test(originCommit ?? "") || !/^[a-f0-9]{40,64}$/u.test(originTree ?? "") ||
+        !/^[a-f0-9]{40,64}$/u.test(consumedByCommit ?? "") || !/^[a-f0-9]{40,64}$/u.test(consumedByTree ?? "") ||
+        !Array.isArray(paths) || !paths.length || paths.some((value) => typeof value !== "string"))) {
+    throw new Error("Verification evidence has invalid terminal obligation consumption identities");
   }
   if (record.identities.artifact.schemaVersion !== 1) {
     throw new Error("Verification evidence has an unsupported artifact identity schema");
@@ -754,6 +913,15 @@ export async function createPendingVerificationEvidence({
   });
   const reliabilityResolutions = await createTimeoutIncidentStore({ root:repositoryRoot })
     .resolutions({ commit });
+  const candidatePacks = await verificationPacksAtCommit(commit, { repositoryRoot });
+  const terminalEligible = canonicalTerminalPlanEligible(planRecord, candidatePacks);
+  const consumedTerminalObligations = terminalEligible
+    ? await discoverPendingReviewObligations({
+      baseCommit, candidateCommit:commit, candidateTree:tree,
+      finalPaths:actualChangeSet.paths,
+      finalTerminalPaths:planRecord.terminalFullObligations ?? [], repositoryRoot,
+    })
+    : undefined;
   const record = {
     version:2,
     status:"pending",
@@ -769,6 +937,7 @@ export async function createPendingVerificationEvidence({
     identities:{ ...sourceIdentity, artifact },
     ...(checkpointAttempt ? { checkpointAttempt } : {}),
     receipt:{ sourcePath:receiptSourcePath, sha256:verificationDigest(bytes), environment, tasks:results },
+    ...(terminalEligible ? { consumedTerminalObligations } : {}),
     reliabilityResolutions:reliabilityResolutions.sort((left, right) =>
       left.incidentId.localeCompare(right.incidentId)),
     preparedAt:new Date().toISOString(),
@@ -947,7 +1116,22 @@ export async function recordPendingVerificationEvidence(
         repositoryRoot,
       });
 
-      const passed = validateRecordDocument({
+      const candidatePacks = await verificationPacksAtCommit(commit, { repositoryRoot });
+      const terminalEligible = canonicalTerminalPlanEligible(pending.plan, candidatePacks);
+      const consumedTerminalObligations = terminalEligible
+        ? await discoverPendingReviewObligations({
+          baseCommit:pending.baseCommit, candidateCommit:commit, candidateTree:tree,
+          finalPaths:currentChangeSet.paths,
+          finalTerminalPaths:pending.plan.terminalFullObligations ?? [], repositoryRoot,
+        }) : [];
+      if (!terminalEligible && pending.consumedTerminalObligations !== undefined) {
+        throw new Error("Focused evidence cannot carry terminal obligation consumption");
+      }
+      if (!same(consumedTerminalObligations, pending.consumedTerminalObligations ?? [])) {
+        throw new Error("Pending evidence terminal obligation consumption changed before recording");
+      }
+
+      let passed = validateRecordDocument({
         ...pending,
         status:"passed",
         recordedAt:new Date().toISOString(),
@@ -1093,6 +1277,32 @@ export async function verifyVerificationEvidence(
   if (!records) {
     throw new Error(`Verification evidence for ${canonical} does not exactly cover base ${canonicalBase}, task ${task}, and packs ${requestedPacks.join(",")}`);
   }
+  const candidatePacks = await verificationPacksAtCommit(canonical, { repositoryRoot });
+  const terminalEligible = records.some(({ plan }) => canonicalTerminalPlanEligible(plan, candidatePacks));
+  const canonicalRunnablePacks = planVerification(candidatePacks, {
+    terminalFull:true, includeProperties:true,
+  }).selectedPackIds;
+  const requestedIsCanonical = same(sortedUnique(requestedPacks), sortedUnique(canonicalRunnablePacks));
+  if (requestedIsCanonical && !terminalEligible) {
+    throw new Error("Canonical all-20 verification evidence requires one terminal-eligible plan record");
+  }
+  const hasConsumption = records.some((record) => record.consumedTerminalObligations !== undefined);
+  if (!terminalEligible && hasConsumption) throw new Error("Focused evidence cannot carry terminal obligation consumption");
+  let consumedTerminalObligations = [];
+  if (terminalEligible) {
+    const finalPaths = sortedUnique(records.flatMap(({ changeSet }) => changeSet?.paths ?? []));
+    const finalTerminalPaths = sortedUnique(records.flatMap(({ plan }) => plan?.terminalFullObligations ?? []));
+    const canonicalEvidenceRecord = records.find(({ plan }) => canonicalTerminalPlanEligible(plan, candidatePacks));
+    consumedTerminalObligations = await discoverPendingReviewObligations({
+      baseCommit:canonicalBase, candidateCommit:canonical, candidateTree:tree,
+      finalPaths, finalTerminalPaths, repositoryRoot, canonicalEvidenceRecord,
+    });
+    const recordedTerminalObligations = canonicalTerminalObligations(
+      records.flatMap(({ consumedTerminalObligations:items = [] }) => items));
+    if (!same(consumedTerminalObligations, recordedTerminalObligations)) {
+      throw new Error("Durable verification evidence terminal obligation consumption does not match review notes");
+    }
+  }
   const attemptIds = [...new Set(records.flatMap((record) =>
     record.checkpointAttempt ? [record.checkpointAttempt.id] : []))];
   if (attemptIds.length) {
@@ -1109,6 +1319,7 @@ export async function verifyVerificationEvidence(
     packs:requestedPacks,
     planDigests:records.map(({ planDigest }) => planDigest),
     records,
+    consumedTerminalObligations,
   };
 }
 

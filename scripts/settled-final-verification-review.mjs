@@ -162,28 +162,74 @@ export function validateReviewReadyRecord(record, binding) {
   return true;
 }
 
+function assertCanonicalMasterCheckpoint(proof, {
+  candidateCommit, candidateTree, baseCommit, canonicalPackIds,
+} = {}) {
+  const allPacks = sortedUnique(canonicalPackIds);
+  const plan = proof?.plan;
+  const receipt = proof?.receipt;
+  const hasProperties = plan?.includeProperties === true &&
+    (plan.tasks ?? []).some(({ key = "" }) => key.startsWith("property:"));
+  const hasAllPacks = allPacks.length === 20 && same(sortedUnique(plan?.packIds), allPacks) &&
+    same(sortedUnique(plan?.selectedPackIds), allPacks);
+  const evidenceCandidateCommit = proof?.commit ?? proof?.receipt?.candidate?.commit;
+  const evidenceCandidateTree = proof?.tree ?? proof?.receipt?.candidate?.tree;
+  const evidenceBaseCommit = proof?.baseCommit ?? proof?.receipt?.candidate?.baseCommit;
+  const artifact = proof?.identities?.artifact ?? proof?.receipt?.artifact;
+  if (!plan || plan.mode !== "exact" || !hasAllPacks || !hasProperties ||
+      evidenceCandidateCommit !== candidateCommit || evidenceCandidateTree !== candidateTree ||
+      evidenceBaseCommit !== baseCommit || !artifact?.buildIdentity ||
+      !artifact?.inputDigest || !artifact?.outputDigest) {
+    throw new Error("Terminal obligations require canonical all-20 properties/package/evidence proof");
+  }
+  return proof;
+}
+
 export function consumeTerminalFullObligations(record, checkpointReceipt, {
-  candidateCommit = record?.candidateCommit,
-  candidateTree = record?.candidateTree,
+  canonicalCheckpoint,
+  canonicalPackIds = [],
+  ancestryProof,
+  masterBaseCommit,
 } = {}) {
   validateReviewReadyRecord(record, {
-    task:record?.task, baseCommit:record?.baseCommit, candidateCommit, candidateTree,
+    task:record?.task, baseCommit:record?.baseCommit,
+    candidateCommit:record?.candidateCommit, candidateTree:record?.candidateTree,
   });
   const obligations = record.terminalObligations;
   if (!obligations) return record;
-  if (obligations.status !== "pending-master-checkpoint" ||
-      obligations.candidateCommit !== candidateCommit || obligations.candidateTree !== candidateTree) {
+  const candidateCommit = checkpointReceipt?.candidate?.commit;
+  const candidateTree = checkpointReceipt?.candidate?.tree;
+  if (obligations.status !== "pending-master-checkpoint" || !candidateCommit || !candidateTree ||
+      obligations.candidateCommit !== record.candidateCommit || obligations.candidateTree !== record.candidateTree) {
     throw new Error("Terminal obligations are not pending for this candidate");
   }
-  if (checkpointReceipt?.version !== 2 || checkpointReceipt.candidate?.commit !== candidateCommit ||
-      checkpointReceipt.candidate?.tree !== candidateTree ||
+  const sameOrigin = candidateCommit === obligations.candidateCommit && candidateTree === obligations.candidateTree;
+  if (!sameOrigin) {
+    if (ancestryProof?.originCommit !== obligations.candidateCommit ||
+        ancestryProof?.originTree !== obligations.candidateTree ||
+        ancestryProof?.descendantCommit !== candidateCommit || ancestryProof?.descendantTree !== candidateTree ||
+        ancestryProof?.isAncestor !== true ||
+        !obligations.paths.every((changedPath) => ancestryProof.changedPaths?.includes(changedPath))) {
+      throw new Error("Terminal obligations require a conserved descendant of the origin candidate");
+    }
+  }
+  if (checkpointReceipt?.version !== 2 ||
       Object.values(checkpointReceipt.tasks ?? {}).some(({ status }) => status !== "passed") ||
       !Object.keys(checkpointReceipt.tasks ?? {}).length ||
-      !same(sortedUnique(checkpointReceipt.plan?.terminalFullObligations ?? []), obligations.paths)) {
+      !obligations.paths.every((path) =>
+        sortedUnique(checkpointReceipt.plan?.terminalFullObligations ?? []).includes(path))) {
     throw new Error("Terminal obligations require a matching successful master checkpoint");
   }
+  const proof = canonicalCheckpoint;
+  if (!proof) throw new Error("Terminal obligations require validated canonical master evidence");
+  assertCanonicalMasterCheckpoint(proof, {
+    candidateCommit, candidateTree, baseCommit:masterBaseCommit ?? record.baseCommit, canonicalPackIds,
+  });
   return {
     ...record,
-    terminalObligations:{ ...obligations, status:"consumed", checkpointRunId:checkpointReceipt.runId ?? null },
+    terminalObligations:{ ...obligations, status:"consumed", originCommit:obligations.candidateCommit,
+      originTree:obligations.candidateTree, consumedByCommit:candidateCommit,
+      consumedByTree:candidateTree, masterBaseCommit:masterBaseCommit ?? record.baseCommit,
+      checkpointRunId:checkpointReceipt.runId ?? null },
   };
 }

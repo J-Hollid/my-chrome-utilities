@@ -5833,7 +5833,8 @@
       }
     ],
     "property": [
-      "test/workspace-tabs-property-test.mjs"
+      "test/workspace-tabs-property-test.mjs",
+      "test/stylesheet-declarations-property-test.mjs"
     ],
     "features": [
       "features/data-layer-secondary-view-separation.feature",

@@ -24,6 +24,7 @@ import {
   verifyQaReleaseCandidate,
   verifyReviewReadyEvidence,
 } from "../scripts/settled-final-verification.mjs";
+import { canonicalTerminalPlanEligible, validateCanonicalMasterEvidenceRecord } from "../scripts/verification-evidence.mjs";
 
 const exec = promisify(execFile);
 
@@ -221,16 +222,24 @@ assert.deepEqual(obligationRecord.terminalObligations, {
   status:"pending-master-checkpoint", paths:["specification-builder-brand.css"],
   candidateCommit, candidateTree, receiptRunId:"style-focused-run",
 }, "review evidence durably carries unresolved stylesheet terminal obligations");
-const consumedObligations = consumeTerminalFullObligations(obligationRecord, {
-  version:2, runId:"master-checkpoint", candidate:{ commit:candidateCommit, tree:candidateTree },
-  plan:{ terminalFullObligations:["specification-builder-brand.css"] },
-  tasks:{ "browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET":{ status:"passed" } },
-});
-assert.equal(consumedObligations.terminalObligations.status, "consumed",
-  "only a matching successful master checkpoint consumes stylesheet obligations");
-assert.throws(() => consumeTerminalFullObligations(obligationRecord, {
-  ...consumedObligations, candidate:{ commit:candidateCommit, tree:"4".repeat(40) },
-}), /matching successful master checkpoint/u);
+const integratedNote = JSON.parse((await exec(
+  "git", ["notes", "--ref=refs/notes/swarmforge-verification", "show", "723ebf6e"],
+  { maxBuffer:64 * 1024 * 1024 },
+)).stdout);
+const integratedEvidence = integratedNote.records.find(({ task }) => task === "vtd017-shared-artifact-parallel");
+assert.ok(integratedEvidence, "the integrated final note supplies the production evidence shape");
+assert.equal(validateCanonicalMasterEvidenceRecord(integratedEvidence, {
+  canonicalPackIds:allPacks,
+}), integratedEvidence);
+assert.throws(() => validateCanonicalMasterEvidenceRecord({
+  status:"passed", candidate:{ commit:candidateCommit, tree:candidateTree },
+  plan:{ mode:"terminal", selectedPackIds:allPacks, includeProperties:true },
+}), /canonical master evidence record/i,
+"invented proof-shaped objects cannot satisfy terminal evidence validation");
+assert.equal(canonicalTerminalPlanEligible({ ...integratedEvidence.plan,
+  selectedPackIds:integratedEvidence.plan.selectedPackIds.slice(1),
+}, packs), false,
+"terminal eligibility is bound to the candidate registry, not a 20-pack count");
 assert.throws(() => createReviewReadyRecord({
   task:"future-slice", baseCommit, candidateCommit, candidateTree,
   changeSet:{ version:1, baseCommit, commit:candidateCommit, paths:["scripts/workflow.mjs"] },
