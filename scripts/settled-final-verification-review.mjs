@@ -1,3 +1,5 @@
+import { validateRunIntentBootstrapReceipt } from "./verification-run-intent.mjs";
+
 const sha1Pattern = /^[a-f0-9]{40}$/u;
 const sha256Pattern = /^[a-f0-9]{64}$/u;
 const taskPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/u;
@@ -253,4 +255,3 @@ export function consumeTerminalFullObligations(record, checkpointReceipt, {
       checkpointRunId:checkpointReceipt.runId ?? null },
   };
 }
-import { validateRunIntentBootstrapReceipt } from "./verification-run-intent.mjs";
