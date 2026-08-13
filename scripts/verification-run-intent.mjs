@@ -8,6 +8,7 @@ import {
   resolveIncidentTaskSuccession,
   verificationTaskDigest,
 } from "./verification-task-succession.mjs";
+import { timeoutIncidentDigest } from "./verification-reliability-values.mjs";
 
 export const verificationRunIntents = Object.freeze({
   development:"development-diagnostic",
@@ -95,6 +96,47 @@ export async function classifyLegacyIncidentRunIntent({ root, incident }) {
     proof:{ ordinaryMode, noEvidenceAuthority, noRepairAuthority, noTerminalAuthority,
       noReadinessClaim, receiptShape, interrupted:receipt.completedAt === undefined },
   };
+}
+
+export async function governedRepairAttemptAssociation({ root, incident, resolveIncident }) {
+  const sourcePath = safeLegacyReceiptPath(root, incident?.failure?.sourceReceipt);
+  if (!sourcePath || typeof resolveIncident !== "function") return null;
+  let bytes;
+  let receipt;
+  try {
+    bytes = await readFile(sourcePath);
+    receipt = JSON.parse(bytes);
+  } catch { return null; }
+  const governedIncidentId = receipt.plan?.incidentId;
+  if (receipt.runIntent !== verificationRunIntents.repair ||
+      receipt.plan?.mode !== "timeout-repair-focused" ||
+      typeof governedIncidentId !== "string" || governedIncidentId === incident.id ||
+      receipt.candidate?.commit !== incident.failure?.lineage?.commit ||
+      receipt.candidate?.tree !== incident.failure?.lineage?.tree ||
+      receipt.runId !== incident.failure?.runnerRunId ||
+      receipt.tasks?.[incident.failure?.task?.key]?.status !== "failed" ||
+      receipt.tasks?.[incident.failure?.task?.key]?.reliabilityFailureFingerprint !==
+        incident.failure?.fingerprint ||
+      verificationTaskDigest(receipt.tasks?.[incident.failure?.task?.key]?.identity) !==
+        verificationTaskDigest(incident.failure?.task) ||
+      incident.failure?.planDigest !== timeoutIncidentDigest(receipt.plan ?? {})) return null;
+  const taskDigest = verificationTaskDigest(incident.failure.task);
+  const exactPlanMembership = [receipt.plan.taskPlan, receipt.plan.executionTaskPlan]
+    .every((descriptors) => Array.isArray(descriptors) && descriptors.some(({ identity }) =>
+      verificationTaskDigest(identity) === taskDigest));
+  if (!exactPlanMembership) return null;
+  try { await resolveIncident(governedIncidentId); }
+  catch { return null; }
+  const withoutDigest = {
+    version:1, status:"governed-repair-attempt", governedIncidentId,
+    sourceReceipt:incident.failure.sourceReceipt,
+    receiptSha256:createHash("sha256").update(bytes).digest("hex"),
+    runId:receipt.runId,
+    candidate:{ commit:receipt.candidate.commit, tree:receipt.candidate.tree },
+    taskKey:incident.failure.task.key, taskDigest,
+    planDigest:incident.failure.planDigest,
+  };
+  return withoutDigest;
 }
 
 function gitValue(root, ...args) {

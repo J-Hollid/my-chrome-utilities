@@ -140,6 +140,7 @@ import {
   bindRunIntentBootstrapPlan,
   bootstrapReviewIncidentProof,
   classifyLegacyIncidentRunIntent,
+  governedRepairAttemptAssociation,
   requireVerificationRunIntent,
   runIntentBootstrapCoverage,
   validateRunIntentBootstrapBase,
@@ -2673,6 +2674,95 @@ console.log("repairTmp=" + process.env.TMPDIR);
   assert.equal(proposal.transitions.filter(({ type }) => type === "repair-proposed").length, 1);
   assert.equal(proposal.transitions.some(({ type }) => type === "repair-renewed"), false,
     "the frozen repair state machine never emits repair-renewed");
+  const governedAttemptPlan = { mode:"timeout-repair-focused", incidentId:first.id,
+    taskPlan:focusedTaskPlan, executionTaskPlan:focusedExecutionTaskPlan };
+  const governedAttemptFailure = { ...structuredClone(first.failure),
+    runnerRunId:"governed-repair-attempt-run",
+    sourceReceipt:"tmp/verification-receipts/governed-repair-attempt.json",
+    lineage:{ ...structuredClone(first.failure.lineage), commit:"repair-commit", tree:"repair-tree" },
+    planDigest:timeoutIncidentDigest(governedAttemptPlan) };
+  const governedAttemptIncident = await store.recordRepairAttemptFailure(first.id, {
+    failure:governedAttemptFailure, plan:governedAttemptPlan,
+    sourceReceipt:governedAttemptFailure.sourceReceipt,
+    runId:governedAttemptFailure.runnerRunId,
+  });
+  assert.equal(governedAttemptIncident.id, first.id,
+    "a failed repair task remains an attempt on its governed incident");
+  assert.equal(governedAttemptIncident.repairAttempts.length, 1);
+  assert.equal(governedAttemptIncident.transitions.filter(
+    ({ type }) => type === "repair-attempt-failed").length, 1,
+  "the governed incident durably records one failed repair attempt event");
+  await assert.rejects(store.recordRepairAttemptFailure(first.id, {
+    failure:governedAttemptFailure,
+    plan:{ ...governedAttemptPlan, incidentId:"another-incident" },
+    sourceReceipt:governedAttemptFailure.sourceReceipt,
+    runId:governedAttemptFailure.runnerRunId,
+  }), /exact repair plan/u,
+  "a repair failure cannot be appended to a different governed incident");
+
+  const associationDirectory = path.join(incidentFixtureRoot, "association-incidents");
+  let associationNumber = 0;
+  const associationStore = createTimeoutIncidentStore({ root:incidentFixtureRoot,
+    storeDirectory:associationDirectory, now:() => incidentNow,
+    randomId:() => `association-${++associationNumber}`,
+    isAncestor:async(ancestor, descendant) => ancestor === descendant ||
+      ancestor === "failed-commit" && descendant === "repair-commit" });
+  const associationTask = structuredClone(first.failure.task);
+  const associationGoverned = await associationStore.create({
+    runnerRunId:"governed-origin", lineage:{ commit:"failed-commit", tree:"failed-tree" },
+    task:associationTask, failureClass:"nonzero-exit", fingerprint:"a".repeat(64),
+  });
+  const associationPlan = { mode:"timeout-repair-focused", incidentId:associationGoverned.id,
+    taskPlan:[{ identity:associationTask, roles:["diagnosed-boundary"] }],
+    executionTaskPlan:[{ identity:associationTask, roles:["diagnosed-boundary"] }] };
+  const associationReceiptRelative = "tmp/verification-receipts/governed-child.json";
+  await mkdir(path.join(incidentFixtureRoot, "tmp/verification-receipts"), { recursive:true });
+  const associationReceipt = {
+    version:2, runId:"governed-child-run", runIntent:"repair-focused",
+    candidate:{ commit:"repair-commit", tree:"repair-tree" }, plan:associationPlan,
+    tasks:{ [associationTask.key]:{ identity:associationTask, status:"failed",
+      reliabilityFailureFingerprint:"b".repeat(64) } },
+  };
+  await writeFile(path.join(incidentFixtureRoot, associationReceiptRelative),
+    JSON.stringify(associationReceipt));
+  const associationChild = await associationStore.create({
+    runnerRunId:"governed-child-run", sourceReceipt:associationReceiptRelative,
+    lineage:{ commit:"repair-commit", tree:"repair-tree" }, task:associationTask,
+    failureClass:"nonzero-exit", fingerprint:"b".repeat(64),
+    planDigest:timeoutIncidentDigest(associationPlan),
+  });
+  assert.equal((await governedRepairAttemptAssociation({ root:incidentFixtureRoot,
+    incident:associationChild, resolveIncident:(id) => associationStore.read(id) }))
+    .governedIncidentId, associationGoverned.id,
+  "legacy multiplication is associated only through its receipt's resolved governed incident");
+  const associationBlocking = await associationStore.blocking({ commit:"repair-commit" });
+  assert.equal(associationBlocking.some(({ id }) => id === associationChild.id), false,
+    "an exact receipt-proven governed repair child is retained but nonblocking");
+  const associatedChild = await associationStore.read(associationChild.id);
+  assert.equal(associatedChild.governedRepairAttempt.governedIncidentId, associationGoverned.id);
+  assert.equal(associatedChild.transitions.filter(
+    ({ type }) => type === "governed-repair-attempt-associated").length, 1);
+  const rejectedAssociations = [
+    ["intent", { ...structuredClone(associationReceipt), runIntent:"review-evidence" }],
+    ["mode", { ...structuredClone(associationReceipt), plan:{ ...associationPlan, mode:"exact" } }],
+    ["unresolved-governor", { ...structuredClone(associationReceipt),
+      plan:{ ...associationPlan, incidentId:"missing-governed-incident" } }],
+    ["task-membership", { ...structuredClone(associationReceipt), plan:{ ...associationPlan,
+      executionTaskPlan:[] } }],
+  ];
+  for (const [name, receipt] of rejectedAssociations) {
+    const relative = `tmp/verification-receipts/governed-child-${name}.json`;
+    await writeFile(path.join(incidentFixtureRoot, relative), JSON.stringify(receipt));
+    const candidate = structuredClone(associationChild);
+    candidate.governedRepairAttempt = undefined;
+    candidate.transitions = [];
+    candidate.failure.sourceReceipt = relative;
+    candidate.failure.planDigest = timeoutIncidentDigest(receipt.plan);
+    candidate.failureDigest = timeoutIncidentDigest(candidate.failure);
+    assert.equal(await governedRepairAttemptAssociation({ root:incidentFixtureRoot,
+      incident:candidate, resolveIncident:(id) => associationStore.read(id) }), null,
+    `${name} ambiguity remains blocking rather than associating a child incident`);
+  }
   const deferred = await store.deferTerminalVerification(first.id, {
     candidate:{ commit:"repair-commit", tree:"repair-tree" },
     reviewReady:{ task:"qa-pilot-fanout-stop", baseCommit:"approved-base",
@@ -2965,6 +3055,12 @@ console.log("repairTmp=" + process.env.TMPDIR);
     ...revalidationBeforeProposal.transitions.slice(0, -1)];
   revalidationBeforeProposal.transitions[0].at = revalidationBeforeProposal.createdAt;
   malformedHistories.push(revalidationBeforeProposal);
+  const malformedGovernedAttempt = structuredClone(governedAttemptIncident);
+  malformedGovernedAttempt.repairAttempts[0].taskDigest = "0".repeat(64);
+  malformedHistories.push(malformedGovernedAttempt);
+  const malformedGovernedAssociation = structuredClone(associatedChild);
+  malformedGovernedAssociation.governedRepairAttempt.governedIncidentId = "forged-governor";
+  malformedHistories.push(malformedGovernedAssociation);
   const duplicateLineageTransition = structuredClone(abandoned);
   duplicateLineageTransition.lineageTransitions.push(
     structuredClone(duplicateLineageTransition.lineageTransitions.at(-1)));

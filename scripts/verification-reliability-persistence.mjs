@@ -126,7 +126,8 @@ function validateTransitionHistory(incident) {
     "repair-proposed", "repair-revalidated", "repair-checkpoint-claimed", "repair-checkpoint-reclaimed",
     "resolved", "lineage-rebased",
     "lineage-abandoned", "occurrence-appended", "closure-audited",
-    "terminal-verification-deferred", "run-intent-compatibility-classified"]);
+    "terminal-verification-deferred", "run-intent-compatibility-classified",
+    "repair-attempt-failed", "governed-repair-attempt-associated"]);
   let previousTime = Date.parse(incident.createdAt);
   let previousRank = 0;
   let terminal = false;
@@ -298,6 +299,48 @@ function validateTransitionHistory(incident) {
     }
   } else if (compatibilityTransitions.length) {
     transitionHistoryError(incident.id, "run-intent compatibility transition has no disposition");
+  }
+  const attemptTransitions = matchingTransitions(incident, "repair-attempt-failed");
+  const repairAttempts = incident.repairAttempts ?? [];
+  if (!Array.isArray(repairAttempts) || attemptTransitions.length !== repairAttempts.length ||
+      repairAttempts.some((attempt, index) => attempt.version !== 1 || attempt.status !== "failed" ||
+        typeof attempt.runId !== "string" || !attempt.runId ||
+        typeof attempt.sourceReceipt !== "string" || !attempt.sourceReceipt ||
+        typeof attempt.candidate?.commit !== "string" || !attempt.candidate.commit ||
+        typeof attempt.candidate?.tree !== "string" || !attempt.candidate.tree ||
+        typeof attempt.taskKey !== "string" || !attempt.taskKey ||
+        !shaPattern.test(attempt.taskDigest ?? "") || !shaPattern.test(attempt.failureDigest ?? "") ||
+        !shaPattern.test(attempt.planDigest ?? "") || !shaPattern.test(attempt.fingerprint ?? "") ||
+        !Number.isFinite(Date.parse(attempt.failedAt)) ||
+        attempt.digest !== timeoutIncidentDigest({ ...attempt, digest:undefined }) ||
+        attemptTransitions[index]?.attemptDigest !== attempt.digest ||
+        attemptTransitions[index]?.at !== attempt.failedAt ||
+        attemptTransitions[index]?.commit !== attempt.candidate.commit ||
+        attemptTransitions[index]?.taskDigest !== attempt.taskDigest)) {
+    transitionHistoryError(incident.id, "governed repair failure attempts are malformed");
+  }
+  const associationTransitions = matchingTransitions(incident, "governed-repair-attempt-associated");
+  if (incident.governedRepairAttempt !== undefined) {
+    const association = incident.governedRepairAttempt;
+    const latest = associationTransitions.at(-1);
+    if (association.version !== 1 || association.status !== "governed-repair-attempt" ||
+        typeof association.governedIncidentId !== "string" || !association.governedIncidentId ||
+        typeof association.sourceReceipt !== "string" || !association.sourceReceipt ||
+        !shaPattern.test(association.receiptSha256 ?? "") ||
+        typeof association.runId !== "string" || !association.runId ||
+        typeof association.candidate?.commit !== "string" || !association.candidate.commit ||
+        typeof association.candidate?.tree !== "string" || !association.candidate.tree ||
+        typeof association.taskKey !== "string" || !association.taskKey ||
+        !shaPattern.test(association.taskDigest ?? "") || !shaPattern.test(association.planDigest ?? "") ||
+        !Number.isFinite(Date.parse(association.associatedAt)) ||
+        association.digest !== timeoutIncidentDigest({ ...association, digest:undefined }) ||
+        associationTransitions.length !== 1 || latest?.at !== association.associatedAt ||
+        latest?.governedIncidentId !== association.governedIncidentId ||
+        latest?.dispositionDigest !== association.digest) {
+      transitionHistoryError(incident.id, "governed repair attempt association is malformed");
+    }
+  } else if (associationTransitions.length) {
+    transitionHistoryError(incident.id, "governed repair attempt transition has no association");
   }
 }
 

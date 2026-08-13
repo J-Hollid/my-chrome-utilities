@@ -18,11 +18,14 @@ import {
   timeoutRepairCandidate,
 } from "./verification-reliability-repair.mjs";
 import { terminalVerificationDeferredConservation } from "./verification-reliability-deferred.mjs";
-import { classifyLegacyIncidentRunIntent } from "./verification-run-intent.mjs";
+import {
+  classifyLegacyIncidentRunIntent, governedRepairAttemptAssociation,
+} from "./verification-run-intent.mjs";
 import {
   exactObject, git, normalized, repositoryRoot, retryClassifications, shaPattern,
   stableIncidentId, timeoutIncidentDigest,
 } from "./verification-reliability-values.mjs";
+import { verificationTaskDigest } from "./verification-task-succession.mjs";
 
 function createStoreAccess({ root, storeDirectory, legacyStoreDirectories }) {
   const directory = async({ create = true } = {}) => ensureSafeDirectory(
@@ -524,11 +527,61 @@ export function createTimeoutIncidentStore({
         return incident;
       });
     },
+    async recordRepairAttemptFailure(id, { failure, plan, sourceReceipt, runId } = {}) {
+      exactObject(failure, "Governed reliability repair attempt failure");
+      const taskDigest = verificationTaskDigest(failure.task);
+      const exactPlanMembership = plan?.mode === "timeout-repair-focused" && plan.incidentId === id &&
+        [plan.taskPlan, plan.executionTaskPlan].every((descriptors) =>
+          Array.isArray(descriptors) && descriptors.some(({ identity }) =>
+            verificationTaskDigest(identity) === taskDigest));
+      if (!exactPlanMembership || typeof sourceReceipt !== "string" || !sourceReceipt ||
+          typeof runId !== "string" || !runId || failure.lineage?.commit === undefined ||
+          failure.lineage?.tree === undefined) {
+        throw new Error(`Reliability incident ${id} repair attempt is not bound to its exact repair plan`);
+      }
+      return access.update(id, (incident) => {
+        if (incident.state !== "unresolved") {
+          throw new Error(`Reliability incident ${id} is resolved`);
+        }
+        const failedAt = now();
+        const withoutDigest = {
+          version:1, status:"failed", runId, sourceReceipt,
+          candidate:{ commit:failure.lineage.commit, tree:failure.lineage.tree },
+          taskKey:failure.task.key, taskDigest,
+          failureClass:failure.failureClass, fingerprint:failure.fingerprint,
+          failureDigest:timeoutIncidentDigest(failure), planDigest:failure.planDigest,
+          failedAt,
+        };
+        const attempt = { ...withoutDigest, digest:timeoutIncidentDigest(withoutDigest) };
+        if ((incident.repairAttempts ?? []).some((prior) => prior.runId === runId &&
+            prior.taskDigest === taskDigest && prior.failureDigest === attempt.failureDigest)) return incident;
+        return transition({ ...incident,
+          repairAttempts:[...(incident.repairAttempts ?? []), attempt] },
+        "repair-attempt-failed", failedAt, { attemptDigest:attempt.digest,
+          commit:failure.lineage.commit, taskDigest });
+      });
+    },
     async blocking({ commit }) {
       const applicable = [];
       for (let incident of await this.list()) {
         if (await lineageApplies({ root, isAncestor, incident, commit }) &&
             incident.state !== "resolved" && incident.closureAudit?.blocking !== false) {
+          if (!incident.governedRepairAttempt && !incident.terminalVerificationDeferred) {
+            const association = await governedRepairAttemptAssociation({ root, incident,
+              resolveIncident:(id) => access.read(id) });
+            if (association) {
+              incident = await access.update(incident.id, (current) => {
+                const associatedAt = now();
+                const withoutDigest = { ...association, associatedAt };
+                const disposition = { ...withoutDigest,
+                  digest:timeoutIncidentDigest(withoutDigest) };
+                return transition({ ...current, governedRepairAttempt:disposition },
+                  "governed-repair-attempt-associated", associatedAt,
+                  { governedIncidentId:association.governedIncidentId,
+                    dispositionDigest:disposition.digest });
+              });
+            }
+          }
           if (!incident.runIntentCompatibility && !incident.terminalVerificationDeferred) {
             const classification = await classifyLegacyIncidentRunIntent({ root, incident });
             if (classification.applicable) {
@@ -552,6 +605,10 @@ export function createTimeoutIncidentStore({
                   { dispositionDigest:disposition.digest });
               });
             }
+          }
+          if (incident.governedRepairAttempt) {
+            try { await access.read(incident.governedRepairAttempt.governedIncidentId); continue; }
+            catch { /* a missing governed incident remains blocking */ }
           }
           if (incident.runIntentCompatibility?.status !== "nonblocking-development-diagnostic") {
             applicable.push(incident);

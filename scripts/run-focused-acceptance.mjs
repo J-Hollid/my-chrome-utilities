@@ -865,7 +865,7 @@ export function createVerificationCommandRunner(context, options = {}) {
             signal:result.signal,
           },
         });
-        const incident = await store.create({
+        const incidentFailure = {
         runnerRunId:context.receipt.runId,
         sourceReceipt:path.relative(repositoryRoot, context.receiptPath),
         lineage:context.receipt.candidate ?? {},
@@ -889,7 +889,17 @@ export function createVerificationCommandRunner(context, options = {}) {
         progressDiagnostics:progress.diagnostics(),
         ...closureContract,
         ...(restriction ? { executionPrerequisite:restriction } : {}),
-        });
+        };
+        const governedRepairIncidentId = context.receipt.runIntent === verificationRunIntents.repair &&
+          context.receipt.plan?.mode === "timeout-repair-focused"
+          ? context.receipt.plan.incidentId : null;
+        const incident = governedRepairIncidentId
+          ? await store.recordRepairAttemptFailure(governedRepairIncidentId, {
+            failure:incidentFailure, plan:context.receipt.plan,
+            sourceReceipt:path.relative(repositoryRoot, context.receiptPath),
+            runId:context.receipt.runId,
+          })
+          : await store.create(incidentFailure);
         receiptTask.reliabilityIncidentId = incident.id;
         receiptTask.reliabilityFailureDigest = incident.failureDigest;
         if (runnerTimedOut) {
@@ -1075,7 +1085,8 @@ export async function runTimeoutRepairFocused(id, {
   console.error(`[verify:receipt] ${path.relative(repositoryRoot, context.receiptPath)}`);
   const regressionContext = { version:1, incidentId:id, failureDigest:incident.failureDigest,
     diagnosedBoundary:timeoutRepairDiagnosedBoundary(incident), causalCategory, causalExplanation };
-  const runner = commandRunnerFactory(context, { ...launch, strictAcceptanceReceipt:false });
+  const runner = commandRunnerFactory(context, { ...launch, strictAcceptanceReceipt:false,
+    incidentStore:store });
   await executeTimeoutRepairTaskPlan(executionTaskPlan,
     { registeredRuntimeTasks, runner, regressionContext });
   context.receipt.completedAt = new Date().toISOString();
