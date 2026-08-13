@@ -35,6 +35,11 @@ export function timeoutRepairDiagnosedBoundary(incident) {
   validateIncident(incident);
   if (incident.failure.retryScope) return structuredClone(incident.failure.retryScope);
   const { failure } = incident;
+  if (failure.failureClass === "execution-contract-failure" &&
+      failure.task?.stage === "promotion" && failure.failedBoundary?.kind === "checkpoint-identity" &&
+      typeof failure.failedBoundary.operation === "string" && failure.failedBoundary.operation) {
+    return { kind:"promotion-operation", operation:failure.failedBoundary.operation };
+  }
   if (failure.failureClass === "environment-contract-failure" &&
       failure.task?.stage !== "browser-observation" &&
       typeof failure.task?.key === "string" && failure.task.key &&
@@ -66,7 +71,10 @@ export function timeoutRepairCandidate(incident) {
 
 export function timeoutRepairFocusedTaskKeys(incident, changedPaths, regressionKey, taskSuccession) {
   validateIncident(incident);
-  const keys = new Set([taskSuccession?.destinationIdentity?.key ?? incident.failure.task.key, regressionKey]);
+  const internalExecutionContract = incident.failure.failureClass === "execution-contract-failure" &&
+    incident.failure.task.stage === "promotion";
+  const keys = new Set([internalExecutionContract ? regressionKey
+    : taskSuccession?.destinationIdentity?.key ?? incident.failure.task.key, regressionKey]);
   if (changedPaths.some((changedPath) => changedPath.startsWith("scripts/") ||
       changedPath.startsWith("test/support/") ||
       changedPath.startsWith("acceptance/src/acceptance/verification_support/"))) {
@@ -89,6 +97,8 @@ export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionK
   const canonical = new Map(canonicalIdentities.map((identity) => [identity.key, normalized(identity)]));
   const incidentTaskDigest = verificationTaskDigest(incident.failure.task);
   const successionDestinationKey = taskSuccession?.destinationIdentity?.key;
+  const internalExecutionContract = incident.failure.failureClass === "execution-contract-failure" &&
+    incident.failure.task.stage === "promotion";
   if (taskSuccession && (taskSuccession.sourceTaskDigest !== incidentTaskDigest ||
       taskSuccession.destinationTaskDigest !== verificationTaskDigest(taskSuccession.destinationIdentity) ||
       !taskSuccession.chain?.length || !taskSuccession.conservationDigest ||
@@ -103,7 +113,8 @@ export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionK
     if (!roles.has(key)) roles.set(key, new Set());
     roles.get(key).add(role);
   };
-  addRole(successionDestinationKey ?? incident.failure.task.key, "diagnosed-boundary");
+  addRole(internalExecutionContract ? regressionKey
+    : successionDestinationKey ?? incident.failure.task.key, "diagnosed-boundary");
   addRole(regressionKey, "causal-regression");
   for (const key of expectedKeys) {
     if (key.startsWith("unit:test/") && ["unit:test/verification-process-contract-test.mjs",
@@ -120,7 +131,7 @@ export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionK
       throw new Error(`Reliability repair task ${key} is not a canonical current task identity`);
     }
     const descriptor = { identity, roles:[...(roles.get(key) ?? new Set())].sort() };
-    if (key === (successionDestinationKey ?? incident.failure.task.key)) {
+    if (!internalExecutionContract && key === (successionDestinationKey ?? incident.failure.task.key)) {
       descriptor.executionArgs = [...(taskSuccession?.execution.args ?? diagnosedBoundary.executionArgs)];
       descriptor.executionLogicalTargetIds = [...(taskSuccession?.execution.logicalTargetIds ??
         diagnosedBoundary.logicalTargetIds ?? [])];
@@ -222,7 +233,9 @@ export async function validateRepairReceiptSemantics(incident, proposal, regress
   const hasIncidentIdentity = canonicalIdentities.some((identity) =>
     verificationTaskDigest(identity) === verificationTaskDigest(incident.failure.task));
   let taskSuccession;
-  if (!hasIncidentIdentity) {
+  const internalExecutionContract = incident.failure.failureClass === "execution-contract-failure" &&
+    incident.failure.task.stage === "promotion";
+  if (!hasIncidentIdentity && !internalExecutionContract) {
     const { loadVerificationPacks } = await import("./verification-packs.mjs");
     taskSuccession = await resolveIncidentTaskSuccession({ incident, currentIdentities:canonicalIdentities,
       currentPacks:await loadVerificationPacks() });

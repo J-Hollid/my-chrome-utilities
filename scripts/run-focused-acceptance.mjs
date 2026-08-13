@@ -1042,7 +1042,9 @@ export async function runTimeoutRepairFocused(id, {
   const unresolvedIncidents = await store.blocking({ commit:candidate.commit });
   await validateUnresolvedIncidentTaskSuccession({ incidents:unresolvedIncidents,
     currentIdentities:canonicalIdentities, currentPacks:packs });
-  const taskSuccession = canonicalIdentities.some((identity) =>
+  const internalExecutionContract = incident.failure.failureClass === "execution-contract-failure" &&
+    incident.failure.task.stage === "promotion";
+  const taskSuccession = internalExecutionContract || canonicalIdentities.some((identity) =>
     verificationTaskDigest(identity) === verificationTaskDigest(incident.failure.task))
     ? undefined : await resolveIncidentTaskSuccession({ incident,
       currentIdentities:canonicalIdentities, currentPacks:packs });

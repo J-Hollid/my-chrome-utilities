@@ -483,6 +483,19 @@ try {
   });
   assert.equal(executionContractIncident.failure.retryScope, undefined,
     "a tracked-file execution-contract drift cannot consume an unchanged retry");
+  const promotionIdentity = verificationTaskIdentity({ key:"promotion:artifact-binding",
+    stage:"promotion", executable:"internal", args:[], target:"artifact-binding" });
+  const promotionContractIncident = await executionContractStore.create({
+    lineage:{ commit:"a".repeat(40), tree:"b".repeat(40) }, task:promotionIdentity,
+    failureClass:"execution-contract-failure", fingerprint:"e".repeat(64),
+    failedBoundary:{ kind:"checkpoint-identity", operation:"artifact-binding" },
+  });
+  const promotionRegression = prerequisiteTasks[0];
+  assert.deepEqual(timeoutRepairFocusedTaskPlan(promotionContractIncident, [],
+    promotionRegression.key, [promotionRegression]), [{
+    identity:verificationTaskIdentity(promotionRegression),
+    roles:["causal-regression", "diagnosed-boundary"],
+  }], "an internal promotion failure is repaired through its canonical causal regression, not invented task succession");
   const environmentContractIncident = await executionContractStore.create({
     lineage:{ commit:"a".repeat(40), tree:"b".repeat(40) }, task:prerequisiteTasks[1],
     failureClass:"environment-contract-failure", fingerprint:"d".repeat(64),
