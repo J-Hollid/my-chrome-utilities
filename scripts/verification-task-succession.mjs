@@ -64,6 +64,64 @@ function gitShowJson(revision,path){
       ?reject(new Error(stderr.trim()||error.message)):resolve(JSON.parse(stdout))));
 }
 
+async function sourceReceipt(source){
+  if(typeof source!=="string"||!/^tmp\/verification-receipts\/[A-Za-z0-9._-]+\.json$/u.test(source))
+    throw new Error("Unverified planner-projection source identity");
+  return JSON.parse(await readFile(new URL(`../${source}`,import.meta.url),"utf8"));
+}
+
+function registryBindsBrowserTask(identity,packs){
+  if(identity?.stage!=="browser-observation"||identity.executable!=="node"||
+      !Array.isArray(identity.logicalTargetIds)||!identity.logicalTargetIds.length||
+      new Set(identity.logicalTargetIds).size!==identity.logicalTargetIds.length)return false;
+  const pack=packs.find(candidate=>candidate.id===identity.packId);
+  if(!pack)return false;
+  const observations=identity.logicalTargetIds.map(target=>(pack.browserObservations??[])
+    .filter(({id})=>id===target));
+  if(observations.some(matches=>matches.length!==1))return false;
+  const rows=observations.flat(),path=rows[0].path,session=rows[0].sessionBatch,
+    environment=Object.assign({},...rows.map(row=>row.environment));
+  return rows.every(row=>row.path===path&&row.sessionBatch===session)&&
+    identity.args?.[0]==="scripts/run-browser-observation.mjs"&&
+    same(identity.args.slice(1),identity.logicalTargetIds)&&
+    identity.target===identity.logicalTargetIds.join(",")&&same(identity.environment,environment)&&
+    same(identity.requiredCapabilities,["local-loopback"]);
+}
+
+async function sameTargetPlannerProjection({incident,currentIdentities,currentPacks,
+  loadHistoricalPacks,loadSourceReceipt}){
+  const targets=incident.failure.retryScope?.logicalTargetIds??[];
+  if(targets.length!==1)throw new Error("Same-target planner projection requires one diagnosed target");
+  const target=targets[0],current=currentIdentities.filter(identity=>
+    identity.stage==="browser-observation"&&identity.logicalTargetIds?.includes(target));
+  if(current.length===0)throw new Error(`Missing current target boundary for ${target}`);
+  if(current.length!==1)throw new Error(`Ambiguous current target boundary for ${target}`);
+  let receipt,historicalPacks;
+  try{[receipt,historicalPacks]=await Promise.all([loadSourceReceipt(incident.failure.sourceReceipt),
+    loadHistoricalPacks(incident.failure.lineage.commit,"verification/packs.json")]);}
+  catch{throw new Error("Unverified planner-projection source identity");}
+  const source=incident.failure.task,recorded=receipt?.tasks?.[source.key];
+  if(receipt?.candidate?.commit!==incident.failure.lineage.commit||
+      receipt?.candidate?.tree!==incident.failure.lineage.tree||recorded?.status!=="failed"||
+      !same(recorded.identity,source)||!registryBindsBrowserTask(source,historicalPacks))
+    throw new Error("Unverified planner-projection source identity");
+  const historicalBoundary=browserTargetSuccessionBoundary(historicalPacks,target),
+    currentBoundary=browserTargetSuccessionBoundary(currentPacks,target),
+    historicalDigest=taskSuccessionBoundaryDigest(historicalBoundary),
+    currentDigest=taskSuccessionBoundaryDigest(currentBoundary);
+  if(historicalDigest!==currentDigest)throw new Error(`Changed target boundary for ${target}`);
+  const sourceTaskDigest=verificationTaskDigest(source),destinationIdentity=current[0],
+    destinationTaskDigest=verificationTaskDigest(destinationIdentity),logicalSlice={kind:"browser-target",
+      logicalTargetIds:[target]},chain=[{id:`same-target-planner-projection:${sourceTaskDigest.slice(0,12)}:${
+        destinationTaskDigest.slice(0,12)}:${target}`,sourceTaskDigest,destinationTaskDigest,
+      conservedBoundaryDigest:historicalDigest,logicalSlice:structuredClone(logicalSlice)}],
+    conservationDigest=digest({version:1,sourceTaskDigest,destinationTaskDigest,chain,logicalSlice,
+      boundaryDigest:historicalDigest});
+  return{version:1,projection:"same-target-planner-projection",sourceTaskDigest,destinationTaskDigest,
+    chain,logicalSlice,conservationDigest,destinationIdentity:structuredClone(destinationIdentity),
+    execution:executionFor(destinationIdentity,logicalSlice)};
+}
+
 function acceptanceArtifacts(feature){
   const basename=feature.slice(feature.lastIndexOf("/")+1).replace(/\.feature$/u,"");
   const slug=feature.toLowerCase().replace(/[^a-z0-9]+/gu,"-").replace(/(^-+|-+$)/gu,"");
@@ -94,7 +152,7 @@ function historicalRegistryDeclaresTask(identity,packs,plannedIdentities){
 }
 
 export async function resolveIncidentTaskSuccession({incident,currentIdentities,currentPacks,
-  graph=undefined,loadHistoricalPacks=gitShowJson}){
+  graph=undefined,loadHistoricalPacks=gitShowJson,loadSourceReceipt=sourceReceipt}){
   const diagnosedTarget=incident.failure.retryScope?.logicalTargetIds?.length===1
     ?incident.failure.retryScope.logicalTargetIds[0]:incident.failure.failedBoundary?.logicalTargetId;
   const logicalSlice=diagnosedTarget
@@ -103,8 +161,13 @@ export async function resolveIncidentTaskSuccession({incident,currentIdentities,
   const sourceTaskDigest=verificationTaskDigest(incident.failure.task);
   const firstEdges=successionGraph.edges.filter(edge=>edge.sourceTaskDigest===sourceTaskDigest&&
     same(edge.logicalSlice,logicalSlice));
-  if(firstEdges.length!==1)throw new Error(firstEdges.length
-    ?"Ambiguous task succession boundary":"Undeclared task succession or missing registry history");
+  if(firstEdges.length===0){
+    if(!incident.failure.sourceReceipt||!incident.failure.lineage?.commit||!incident.failure.lineage?.tree)
+      throw new Error("Undeclared task succession or missing registry history");
+    return sameTargetPlannerProjection({incident,currentIdentities,currentPacks,
+      loadHistoricalPacks,loadSourceReceipt});
+  }
+  if(firstEdges.length!==1)throw new Error("Ambiguous task succession boundary");
   const resolution=resolveTaskSuccessionGraph({graph:successionGraph,
     sourceIdentity:incident.failure.task,currentIdentities,logicalSlice});
   for(const step of resolution.chain){

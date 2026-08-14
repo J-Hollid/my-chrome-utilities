@@ -1284,6 +1284,42 @@
    {:pattern #"^no product behavior, assertion leaf, timeout, target scope, incident record, or evidence meaning changes$"
     :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :noMeaningChanged])) "Task succession changed evidence meaning."))}])
 
+(defn- planner-projection-handlers [example-values]
+  [{:pattern #"^(?:one governed review-evidence receipt contains a canonical browser batch and an alias-filtered prerequisite batch that both fail on the same single logical target|an unresolved browser incident needs a same-target planner projection|checkpoint prerequisite closure selects browser batches with overlapping logical targets or alias-only identity differences)$"
+    :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^the prerequisite task is absent from the current canonical plan only because its sibling-target set or alias commands differ$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :plannerProjection :sourceBound])) "Planner projection source is not governed."))}
+   {:pattern #"^reliability repair planning compares that target in the failure-commit registry with its unique current canonical batch$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :plannerProjection :boundaryConserved])) "Planner projection boundary changed."))}
+   {:pattern #"^an identical target boundary produces a deterministic same-target planner projection without requiring a declared task-succession edge$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :plannerProjection :deterministic])) "Same-target projection is not deterministic."))}
+   {:pattern #"^the repair executes only the diagnosed logical target and its causal regression through the current canonical task identity$"
+    :handler (fn [world _ _] (assert! world (every? true? ((juxt :exactTarget :currentCanonical) (get-in world [:vtd014/evidence :taskSuccession :plannerProjection]))) "Projected repair execution is not exact."))}
+   {:pattern #"^both immutable incidents still require their own eligible causal repair proof before review evidence can proceed$"
+    :handler (fn [world _ _] (assert! world (every? true? ((juxt :immutableSource :separateIncidents) (get-in world [:vtd014/evidence :taskSuccession :plannerProjection]))) "Projected incidents were conflated."))}
+   {:pattern #"^no all-20 checkpoint, abandonment, incident rewrite, or unchanged diagnostic rerun is used in feature mode$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :plannerProjection :noInference])) "Planner projection widened feature authority."))}
+   {:pattern #"^repair planning observes (.+)$"
+    :handler (fn [world example captures] (assoc world :vtd014/invalid-projection (first (values example-values example captures))))}
+   {:pattern #"^repair remains blocked with (.+)$"
+    :handler (fn [world _ _] (assert! world (and (:vtd014/invalid-projection world) (true? (get-in world [:vtd014/evidence :taskSuccession :plannerProjection :invalidBlocked]))) "Invalid planner projection did not block."))}
+   {:pattern #"^no task-succession, target equivalence, or passing evidence is inferred$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :plannerProjection :noInference])) "Invalid projection inferred equivalence."))}
+   {:pattern #"^each affected target has one current canonical batch with the same registered pack, program, session, capabilities, and target boundary$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :execution :prerequisiteGate :browserNormalization :canonicalOnce])) "Browser target has no unique canonical batch."))}
+   {:pattern #"^the executable checkpoint plan is normalized before launch authorization$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :execution :prerequisiteGate :browserNormalization :canonicalOnce])) "Browser prerequisite normalization was late."))}
+   {:pattern #"^each affected target is assigned to its unique current canonical batch$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :execution :prerequisiteGate :browserNormalization :canonicalOnce])) "Browser target assignment is not unique."))}
+   {:pattern #"^every prerequisite edge is rebound to those canonical tasks before authorization$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :execution :prerequisiteGate :browserNormalization :edgesRebound])) "Browser prerequisite edge was not rebound."))}
+   {:pattern #"^every logical target, prerequisite obligation, result, timing record, and evidence leaf is conserved exactly once$"
+    :handler (fn [world _ _] (assert! world (every? true? ((juxt :targetsConserved :resultsConserved :timingsConserved :leavesConserved) (get-in world [:vtd014/evidence :execution :prerequisiteGate :browserNormalization]))) "Browser evidence was not conserved exactly once."))}
+   {:pattern #"^no noncanonical overlapping task can launch or create a duplicate reliability incident$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :execution :prerequisiteGate :browserNormalization :noncanonicalBlocked])) "A noncanonical browser task can launch."))}
+   {:pattern #"^a missing or ambiguous canonical target, changed target boundary, or incompatible execution contract blocks instead of being deduplicated$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :execution :prerequisiteGate :browserNormalization :invalidBlocked])) "Invalid browser normalization did not block."))}])
+
 (def ^:private run-intent-contract
   {"no explicit evidence, repair, or terminal flag" "development-diagnostic"
    "explicit review-evidence authority" "review-evidence"
@@ -1408,6 +1444,7 @@
                (flow-reload-lifecycle-handlers example-values)
                (flow-stylesheet-handlers example-values)
                (task-succession-handlers example-values)
+               (planner-projection-handlers example-values)
                (run-intent-handlers example-values)
                (shared-boundary-handlers example-values))))
 

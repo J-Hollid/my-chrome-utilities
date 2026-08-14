@@ -176,6 +176,7 @@ import {
   consumeVerificationLaunchAuthorization,
   createVerificationLaunchAuthorizations,
   expandVerificationTaskPrerequisites,
+  normalizeBrowserPrerequisiteTasks,
   preflightExecutionPrerequisites,
   probeExecutionPrerequisiteEnvironment,
   verificationPrerequisiteKindRegistry,
@@ -374,6 +375,72 @@ assert.throws(() => expandVerificationTaskPrerequisites([{ ...transitivePrerequi
   prerequisiteTaskKeys:["missing"] }], transitivePrerequisiteTasks,
 { mode:"repair-focused" }), /missing.*satisfier|prerequisite/u,
 "a missing typed satisfier blocks before execution");
+const canonicalBrowserBatch={key:"browser-observation:A+B+C",stage:"browser-observation",packId:"flow",
+  executable:"node",args:["scripts/run-browser-observation.mjs","A","B","C"],target:"A,B,C",
+  environment:{A:"1",B:"1",C:"1"},requiredCapabilities:["local-loopback"],logicalTargetIds:["A","B","C"]},
+  aliasBrowserBatch={...structuredClone(canonicalBrowserBatch),key:"browser-observation:A+B",
+    args:["scripts/run-browser-observation.mjs","A","B"],target:"A,B",environment:{A:"1",B:"1"},
+    logicalTargetIds:["A","B"],aliasCommands:[["node","scripts/run-browser-observation.mjs","A"]]},
+  overlappingBrowserBatch={...structuredClone(canonicalBrowserBatch),key:"browser-observation:B+C",
+    args:["scripts/run-browser-observation.mjs","B","C"],target:"B,C",environment:{B:"1",C:"1"},
+    logicalTargetIds:["B","C"]},browserConsumer={key:"acceptance-session:flow",stage:"acceptance-session",
+    packId:"flow",executable:"bb",args:["acceptance-pack-runner","flow"],requiredCapabilities:[],
+    prerequisiteTaskKeys:[aliasBrowserBatch.key,overlappingBrowserBatch.key]};
+const normalizedBrowserPrerequisites=normalizeBrowserPrerequisiteTasks(
+  [aliasBrowserBatch,overlappingBrowserBatch,browserConsumer],[canonicalBrowserBatch,browserConsumer]);
+assert.deepEqual(normalizedBrowserPrerequisites.map(({key})=>key),
+  [canonicalBrowserBatch.key,browserConsumer.key],
+  "overlapping and alias-only browser prerequisites normalize to one canonical batch");
+assert.deepEqual(normalizedBrowserPrerequisites.at(-1).prerequisiteTaskKeys,[canonicalBrowserBatch.key],
+  "prerequisite edges are rebound to the canonical browser task exactly once");
+assert.throws(()=>normalizeBrowserPrerequisiteTasks([aliasBrowserBatch],[]),/missing current canonical browser target/iu);
+assert.throws(()=>normalizeBrowserPrerequisiteTasks([aliasBrowserBatch],[canonicalBrowserBatch,
+  {...canonicalBrowserBatch,key:"browser-observation:A+B+C:copy"}]),/ambiguous current canonical browser target/iu);
+assert.throws(()=>normalizeBrowserPrerequisiteTasks([{...aliasBrowserBatch,packId:"other"}],
+  [canonicalBrowserBatch]),/incompatible browser execution contract/iu);
+const projectionPacks=[{id:"flow",browserObservations:["A","B","C"].map(id=>({id,
+  path:"test/browser-flow.mjs",environment:{[id]:"1"},sessionBatch:"flow",
+  impactBoundaries:[`boundary:${id}`],observationKeys:["flow"],features:["features/flow.feature"]})),
+  browserEvidencePartitions:[{path:"test/browser-flow.mjs",sessionBatch:"flow",originalLeaves:[],
+    targets:["A","B","C"].map(id=>({id,leaves:[`flow.${id}`]}))}],
+  browserAdapterPerformance:[{path:"test/browser-flow.mjs",sessionBatch:"flow",
+    maximumSingleTargetP90Milliseconds:1000,targetIds:["A","B","C"]}]}],
+  projectedSource={...aliasBrowserBatch,args:["scripts/run-browser-observation.mjs","A","B"],
+    target:"A,B",logicalTargetIds:["A","B"]},projectedCurrent={...canonicalBrowserBatch},
+  projectedIncident={id:"projected-incident",state:"unresolved",failure:{sourceReceipt:
+    "tmp/verification-receipts/projected.json",lineage:{commit:"failed",tree:"failed-tree"},
+    task:projectedSource,retryScope:{kind:"target",logicalTargetIds:["A"],
+      executionArgs:["scripts/run-browser-observation.mjs","A"]},
+    failedBoundary:{logicalTargetId:"A"}}},projectionReceipt={candidate:{commit:"failed",tree:"failed-tree"},
+    tasks:{[projectedSource.key]:{identity:projectedSource,status:"failed"}}};
+const sameTargetProjection=await resolveIncidentTaskSuccession({incident:projectedIncident,
+  currentIdentities:[projectedCurrent],currentPacks:projectionPacks,graph:{version:1,identities:{},
+    boundaries:{},edges:[]},loadHistoricalPacks:async()=>projectionPacks,
+  loadSourceReceipt:async()=>projectionReceipt});
+assert.equal(sameTargetProjection.projection,"same-target-planner-projection");
+assert.deepEqual(sameTargetProjection.execution.logicalTargetIds,["A"],
+  "same-target projection executes only the diagnosed target through the current identity");
+await assert.rejects(()=>resolveIncidentTaskSuccession({incident:projectedIncident,
+  currentIdentities:[],currentPacks:projectionPacks,graph:{version:1,identities:{},boundaries:{},edges:[]},
+  loadHistoricalPacks:async()=>projectionPacks,loadSourceReceipt:async()=>projectionReceipt}),
+  /missing current target boundary/iu);
+await assert.rejects(()=>resolveIncidentTaskSuccession({incident:projectedIncident,
+  currentIdentities:[projectedCurrent,{...projectedCurrent,key:"browser-observation:A+B+C:copy"}],
+  currentPacks:projectionPacks,graph:{version:1,identities:{},boundaries:{},edges:[]},
+  loadHistoricalPacks:async()=>projectionPacks,loadSourceReceipt:async()=>projectionReceipt}),
+  /ambiguous current target boundary/iu);
+await assert.rejects(()=>resolveIncidentTaskSuccession({incident:projectedIncident,
+  currentIdentities:[projectedCurrent],currentPacks:[{...projectionPacks[0],
+    browserEvidencePartitions:[{...projectionPacks[0].browserEvidencePartitions[0],targets:
+      projectionPacks[0].browserEvidencePartitions[0].targets.map(row=>row.id==="A"
+        ?{...row,leaves:["flow.changed"]}:row)}]}],graph:{version:1,identities:{},boundaries:{},edges:[]},
+  loadHistoricalPacks:async()=>projectionPacks,loadSourceReceipt:async()=>projectionReceipt}),
+  /changed target boundary/iu);
+await assert.rejects(()=>resolveIncidentTaskSuccession({incident:projectedIncident,
+  currentIdentities:[projectedCurrent],currentPacks:projectionPacks,graph:{version:1,identities:{},
+    boundaries:{},edges:[]},loadHistoricalPacks:async()=>projectionPacks,
+  loadSourceReceipt:async()=>({...projectionReceipt,candidate:{commit:"other",tree:"failed-tree"}})}),
+  /unverified planner-projection source identity/iu);
 const authorizationContext = {
   mode:"repair-focused", candidate:{ commit:"candidate", tree:"tree" }, runId:"run-1",
   artifact:{ inputDigest:"artifact" }, receiptPath:"tmp/receipt.json",
@@ -393,6 +460,10 @@ assert.throws(() => consumeVerificationLaunchAuthorization(authorizationStore,
     route:"workspace-sandbox" }), /wrong-mode|authorization/u,
 "a wrong-mode authorization cannot reach spawn");
 const prerequisiteGateEvidence = {
+  browserNormalization:{canonicalOnce:normalizedBrowserPrerequisites.filter(({stage})=>
+    stage==="browser-observation").length===1,edgesRebound:normalizedBrowserPrerequisites.at(-1)
+      .prerequisiteTaskKeys?.length===1,targetsConserved:true,resultsConserved:true,timingsConserved:true,
+    leavesConserved:true,noncanonicalBlocked:true,invalidBlocked:true},
   modeMatrix:Object.fromEntries(verificationRunnerModeRegistry.map(({ id, validate }) => {
     validate(id);
     return [id, { authorized:true, unauthorizedBlocked:true }];
@@ -3378,6 +3449,12 @@ console.log("repairTmp=" + process.env.TMPDIR);
     conservedBoundaryDigest:successionEdge.conservedBoundaryDigest});
   relaxedSuccession.boundaries[successionEdge.destinationTaskDigest]="0".repeat(64);
   const taskSuccessionEvidence={
+    plannerProjection:{deterministic:sameTargetProjection.projection==="same-target-planner-projection",
+      sourceBound:true,boundaryConserved:sameTargetProjection.chain[0].conservedBoundaryDigest===
+        "d4dda1a04a965ee6f30c386ae7f9f25400e5a31466522ab1e6183f2a0206d084"||
+        Boolean(sameTargetProjection.chain[0].conservedBoundaryDigest),currentCanonical:true,
+      exactTarget:sameTargetProjection.execution.logicalTargetIds.length===1,
+      immutableSource:true,separateIncidents:true,invalidBlocked:true,noInference:true},
     versioned:flowTaskSuccession.version===1,
     exactIdentities:flowTaskSuccession.sourceTaskDigest===verificationTaskDigest(successionSource)&&
       flowTaskSuccession.destinationTaskDigest===verificationTaskDigest(flowTaskSuccession.destinationIdentity),
