@@ -32,6 +32,17 @@ export function flowPanStartAllowed(start: FlowPanStart): boolean {
   return start.blank && (start.button === 0 || start.button === 1);
 }
 
+export interface FlowWheelZoomInput {
+  deltaY: number;
+  canvasTarget: boolean;
+  browserPinchModifier?: boolean;
+}
+
+export function flowWheelZoomFactor(input: FlowWheelZoomInput): number | undefined {
+  if (!input.canvasTarget || input.deltaY === 0) return undefined;
+  return input.deltaY < 0 ? 1.1 : .9;
+}
+
 export function flowPanClickSuppression(schedule: (callback: () => void) => void = (callback) => { setTimeout(callback, 0); }) {
   let pending = false;
   let generation = 0;
@@ -259,10 +270,15 @@ export function installFlowCamera(options: CameraOptions): FlowCameraUi {
   viewport.addEventListener("click", suppressCompletedDragActivation, true);
   viewport.addEventListener("auxclick", suppressCompletedDragActivation, true);
   viewport.addEventListener("wheel", (event) => {
-    if (!event.ctrlKey && !event.metaKey) return;
+    const factor = flowWheelZoomFactor({
+      deltaY: event.deltaY,
+      canvasTarget: event.target instanceof Node && canvas.contains(event.target),
+      browserPinchModifier: event.ctrlKey || event.metaKey,
+    });
+    if (factor === undefined) return;
     event.preventDefault();
     const rect = viewport.getBoundingClientRect();
-    apply(zoomFlowCamera(options.camera(), event.deltaY < 0 ? 1.1 : .9, { x: event.clientX - rect.left, y: event.clientY - rect.top }));
+    apply(zoomFlowCamera(options.camera(), factor, { x: event.clientX - rect.left, y: event.clientY - rect.top }));
   }, { passive: false });
 
   return {

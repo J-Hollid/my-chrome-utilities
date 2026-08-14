@@ -24,7 +24,7 @@ import {
 } from "../dist/flow-graph/workspace.js";
 import {flowBoundsContains,flowPointerDelta} from "../dist/flow-graph/page-placement.js";
 import {flowOutlineProjection} from "../dist/flow-graph/workspace-outline-model.js";
-import {flowPanClickSuppression,flowPanStartAllowed,flowPanToPinch} from "../dist/flow-graph/workspace-camera-ui.js";
+import {flowPanClickSuppression,flowPanStartAllowed,flowPanToPinch,flowWheelZoomFactor} from "../dist/flow-graph/workspace-camera-ui.js";
 import {
   FLOW_SECTION_ACTION_LABELS,
   flowSectionMenuRequest,
@@ -86,6 +86,12 @@ assert.equal(flowPanStartAllowed({blank:true,spaceHeld:false,button:1,pointerTyp
 assert.equal(flowPanStartAllowed({blank:true,spaceHeld:false,button:0,pointerType:"touch",authoringActive:false}),true,"one-contact touch pans the canvas");
 assert.equal(flowPanStartAllowed({blank:false,spaceHeld:false,button:0,pointerType:"mouse",authoringActive:false}),false,"an ordinary primary drag on an item remains available to graph authoring");
 assert.equal(flowPanStartAllowed({blank:true,spaceHeld:false,button:0,pointerType:"mouse",authoringActive:true}),false,"an active authoring tool owns blank-canvas gestures");
+assert.equal(flowWheelZoomFactor({deltaY:-120,canvasTarget:true}),1.1,"an unmodified wheel-up signal over canvas content zooms in");
+assert.equal(flowWheelZoomFactor({deltaY:120,canvasTarget:true}),.9,"an unmodified wheel-down signal over canvas content zooms out");
+assert.equal(flowWheelZoomFactor({deltaY:-80,canvasTarget:true,browserPinchModifier:true}),1.1,"a browser-delivered laptop pinch follows wheel direction without a separate path");
+assert.equal(flowWheelZoomFactor({deltaY:80,canvasTarget:true,browserPinchModifier:true}),.9,"a browser-delivered laptop pinch can zoom out");
+assert.equal(flowWheelZoomFactor({deltaY:0,canvasTarget:true}),undefined,"zero vertical delta retains native scrolling");
+assert.equal(flowWheelZoomFactor({deltaY:-120,canvasTarget:false}),undefined,"wheel input outside the canvas retains native scrolling");
 const scheduled=[];
 const clickSuppression=flowPanClickSuppression((callback)=>scheduled.push(callback));
 clickSuppression.moved();
