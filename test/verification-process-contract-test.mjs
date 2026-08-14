@@ -5215,12 +5215,16 @@ const approvedStyleVerificationTaskKeys = new Set([
 const approvedFlowStyleExtractionTaskKeys = new Set([
   "unit:test/flow-stylesheet-extraction-test.mjs",
 ]);
+const approvedFlowConceptVisualTaskKeys = new Set([
+  "unit:test/data-layer-flow-concept-visual-test.mjs",
+]);
 const approvedVerificationTaskKeys = new Set([
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
   ...approvedStyleSmokeTaskKeys,
   ...approvedStyleVerificationTaskKeys,
   ...approvedFlowStyleExtractionTaskKeys,
+  ...approvedFlowConceptVisualTaskKeys,
 ]);
 const currentTerminalIdentitiesWithoutApprovedAdditions = currentTerminalPlan.tasks.filter(({ key }) =>
   !postBaseAddedUnitKeys.has(key) && !approvedVerificationTaskKeys.has(key)).map(normalizedVtd006Identity);
@@ -5254,6 +5258,10 @@ for (const taskKey of approvedStyleVerificationTaskKeys) {
 for (const taskKey of approvedFlowStyleExtractionTaskKeys) {
   assert.equal(currentTerminalPlan.tasks.filter(({ key }) => key === taskKey).length, 1,
     `terminal-full planning adds the approved Flow style-extraction task ${taskKey} exactly once`);
+}
+for (const taskKey of approvedFlowConceptVisualTaskKeys) {
+  assert.equal(currentTerminalPlan.tasks.filter(({ key }) => key === taskKey).length, 1,
+    `terminal-full planning adds the approved Flow concept visual task ${taskKey} exactly once`);
 }
 assert.equal(currentTerminalPlan.observationTasks.filter(({ logicalTargetIds }) =>
   logicalTargetIds?.includes("FLOW_STYLESHEET_EXTRACTION_TARGET")).length, 1,
