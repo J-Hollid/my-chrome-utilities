@@ -10236,6 +10236,29 @@ function isolatedCheckpointToolchainRegression(context) {
     preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
     repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
 }
+async function flowPagePlacementWorkflowRegression(context) {
+  const expectedPreRepairFailure={liveCameraCaptured:false,pointerRowsAnchored:false,
+    canonicalBrowserBatch:false},expectedRepairResult={liveCameraCaptured:true,
+    pointerRowsAnchored:true,canonicalBrowserBatch:true},fixture={
+    id:"flow-page-placement-workflow-v1",causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{target:"FLOW_WORKSPACE_AUTHORING_TARGET",zooms:[.5,1,2]},
+    expectedPreRepairFailure,expectedRepairResult};
+  const [{flowPointerDelta},flowUi]=await Promise.all([
+    import("../dist/flow-graph/workspace.js"),
+    readFile(new URL("../src/data-layer-flow-graph-ui.ts",import.meta.url),"utf8")]);
+  const rows=[{zoom:.5,distance:-130,expected:-260},{zoom:1,distance:120,expected:120},
+    {zoom:2,distance:296,expected:148}],repairResult={
+    liveCameraCaptured:flowUi.includes('JSON.parse(canvas.dataset.viewport??"{}")'),
+    pointerRowsAnchored:rows.every(row=>flowPointerDelta({x:0,y:0},{x:0,y:row.distance},row.zoom).y===row.expected),
+    canonicalBrowserBatch:normalizedBrowserPrerequisites.filter(({stage})=>
+      stage==="browser-observation").length===1&&sameTargetProjection.execution.logicalTargetIds.length===1};
+  assert.deepEqual(repairResult,expectedRepairResult);
+  const fixtureDigest=verificationDigest(fixture);
+  return{version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
@@ -10260,6 +10283,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         ? approvedVerificationIdentityRegression(regressionContext)
         : regressionContext.causalCategory === "other:repair-focused prerequisite closure"
           ? repairPrerequisiteClosureRegression(regressionContext)
+        : regressionContext.causalCategory === "other:Flow Page placement workflow"
+          ? await flowPagePlacementWorkflowRegression(regressionContext)
           : artifactLockTimeoutRepairRegression(regressionContext),
   }));
 }
