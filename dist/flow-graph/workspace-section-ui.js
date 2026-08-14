@@ -4,7 +4,6 @@ import { sectionBoundsAfterKeyboardInput, sectionPointerDelta, } from "./workspa
 import { FLOW_SECTION_ACTION_LABELS, flowSectionMenuRequest, } from "./workspace-section-menu.js";
 import { trackFlowSectionPointerGesture } from "./workspace-section-pointer.js";
 export { FLOW_SECTION_ACTION_LABELS, flowSectionMenuRequest, } from "./workspace-section-menu.js";
-export { trackFlowSectionPointerGesture } from "./workspace-section-pointer.js";
 const command = (root, detail) => {
     root.dispatchEvent(new CustomEvent("flow-section-command", { bubbles: true, detail }));
 };
@@ -93,7 +92,6 @@ export function installFlowSections(options) {
         handle.setAttribute("aria-label", `Resize Section ${label}. Use Arrow keys to resize.`);
         section.append(handle);
         let drag;
-        let stopTracking;
         const move = (event) => {
             if (!drag || drag.pointerId !== event.pointerId)
                 return;
@@ -115,7 +113,6 @@ export function installFlowSections(options) {
                 return;
             const current = drag;
             drag = undefined;
-            stopTracking = undefined;
             const pointerDelta = sectionPointerDelta(current.client, { x: event.clientX, y: event.clientY }, options.camera().zoom);
             const dx = Math.round(pointerDelta.x);
             const dy = Math.round(pointerDelta.y);
@@ -137,7 +134,7 @@ export function installFlowSections(options) {
                 bounds: sectionBounds(section),
                 resize: Boolean(event.target.closest("[data-section-resize-for]")),
             };
-            stopTracking = trackFlowSectionPointerGesture({
+            trackFlowSectionPointerGesture({
                 pointerId: event.pointerId,
                 captureTarget: section,
                 eventSource: window,
@@ -145,7 +142,6 @@ export function installFlowSections(options) {
                 finish,
                 cancel: () => {
                     drag = undefined;
-                    stopTracking = undefined;
                 },
             });
         });

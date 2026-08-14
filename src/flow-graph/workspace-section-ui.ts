@@ -22,7 +22,6 @@ export {
   flowSectionMenuRequest,
   type FlowSectionMenuRequest,
 } from "./workspace-section-menu.js";
-export { trackFlowSectionPointerGesture } from "./workspace-section-pointer.js";
 
 export type FlowSectionCommand =
   | { kind: "select"; sectionId: string }
@@ -146,7 +145,6 @@ export function installFlowSections(options: SectionUiOptions): FlowSectionUi {
     handle.setAttribute("aria-label", `Resize Section ${label}. Use Arrow keys to resize.`);
     section.append(handle);
     let drag: { pointerId: number; client: FlowPoint; bounds: ReturnType<typeof sectionBounds>; resize: boolean } | undefined;
-    let stopTracking: (() => void) | undefined;
     const move = (event: PointerEvent): void => {
       if (!drag || drag.pointerId !== event.pointerId) return;
       const delta = sectionPointerDelta(
@@ -168,7 +166,6 @@ export function installFlowSections(options: SectionUiOptions): FlowSectionUi {
       if (!drag || drag.pointerId !== event.pointerId) return;
       const current = drag;
       drag = undefined;
-      stopTracking = undefined;
       const pointerDelta = sectionPointerDelta(
         current.client,
         { x: event.clientX, y: event.clientY },
@@ -191,7 +188,7 @@ export function installFlowSections(options: SectionUiOptions): FlowSectionUi {
         bounds: sectionBounds(section),
         resize: Boolean((event.target as Element).closest("[data-section-resize-for]")),
       };
-      stopTracking = trackFlowSectionPointerGesture({
+      trackFlowSectionPointerGesture({
         pointerId: event.pointerId,
         captureTarget: section,
         eventSource: window,
@@ -199,7 +196,6 @@ export function installFlowSections(options: SectionUiOptions): FlowSectionUi {
         finish,
         cancel: () => {
           drag = undefined;
-          stopTracking = undefined;
         },
       });
     });
