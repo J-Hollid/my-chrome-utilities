@@ -1,19 +1,6 @@
-export const FLOW_SECTION_ACTION_LABELS = [
-    "Rename",
-    "Move",
-    "Resize",
-    "Wrap selection",
-    "Remove Section",
-    "Remove with contents",
-];
+import { FLOW_ITEM_MENU_SPECS, flowItemMenuRequest, } from "./workspace-item-menu.js";
+export const FLOW_SECTION_ACTION_LABELS = FLOW_ITEM_MENU_SPECS.section.commands;
 export function flowSectionMenuRequest(event) {
-    if (event.type === "contextmenu") {
-        return { clientPosition: { x: event.clientX ?? 0, y: event.clientY ?? 0 } };
-    }
-    if (event.type !== "keydown")
-        return undefined;
-    if (event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey))
-        return {};
-    return undefined;
+    return flowItemMenuRequest(event);
 }
 //# sourceMappingURL=workspace-section-menu.js.map

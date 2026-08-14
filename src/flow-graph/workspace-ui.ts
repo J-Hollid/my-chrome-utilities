@@ -6,6 +6,18 @@ import { prepareFlowOutline } from "./workspace-outline-ui.js";
 import { installFlowSections, type FlowSectionMenuRequest } from "./workspace-section-ui.js";
 import { createFlowTidyPanel } from "./workspace-tidy-ui.js";
 import { flowWorkspaceView, rememberFlowInvoker, restoreFlowInvoker, saveFlowWorkspaceView } from "./workspace-view-state.js";
+import {
+  prepareFlowActionsButton,
+  prepareFlowItemMenu,
+  type FlowItemMenuKind,
+  type FlowItemMenuRequest,
+} from "./workspace-item-menu.js";
+
+export interface FlowItemMenuOpenRequest {
+  kind: FlowItemMenuKind;
+  id: string;
+  request: FlowItemMenuRequest;
+}
 
 interface EmptyConnectionDrop {
   sourceId: string;
@@ -43,14 +55,14 @@ function elements(root: HTMLElement): WorkspaceElements | undefined {
   };
 }
 
-export function upgradeFlowWorkspace(root: HTMLElement): void {
+export function upgradeFlowWorkspace(root: HTMLElement, pendingMenu?: FlowItemMenuOpenRequest): void {
   const found = elements(root);
   if (!found || found.workspace.dataset.canvasFirstR02 === "true") return;
   const { workspace, legacyToolbar, viewport, canvas, outline, rawSections, duplicateFrames, actions, relationship } = found;
   workspace.dataset.canvasFirstR02 = "true";
   const flowId = workspace.dataset.flowSectionWorkspace ?? "flow";
   const projectId = rawSections?.dataset.flowProjectId ?? workspace.dataset.flowProjectId ?? "project";
-  let view = flowWorkspaceView(projectId, flowId), emptyDrop: EmptyConnectionDrop | undefined, addPosition: FlowPoint | undefined;
+  let view = flowWorkspaceView(projectId, flowId), emptyDrop: EmptyConnectionDrop | undefined, addPosition: FlowPoint | undefined, itemActionsButton: HTMLButtonElement | undefined;
   const toolbar = document.createElement("nav"), surface = document.createElement("section"), surfaceHeading = document.createElement("h4"), surfaceBody = document.createElement("div");
   const pageCatalog = legacyToolbar.querySelector<HTMLElement>('[aria-label="Pages catalog"]'), eventCatalog = legacyToolbar.querySelector<HTMLElement>('[aria-label="Events catalog"]');
   const detailsSource = duplicateFrames?.querySelector<HTMLElement>('[aria-pressed="true"]') ?? duplicateFrames?.querySelector<HTMLElement>(".is-selected") ?? undefined;
@@ -121,24 +133,46 @@ export function upgradeFlowWorkspace(root: HTMLElement): void {
     surfaceBody.replaceChildren(...(kind ? contents(kind) : []));
     surfaceHeading.textContent = kind ? `${kind[0]!.toUpperCase()}${kind.slice(1)}` : "Flow tools";
     toolbar.querySelectorAll<HTMLButtonElement>("[data-flow-surface]").forEach((button) => button.setAttribute("aria-expanded", String(button.dataset.flowSurface === kind)));
+    itemActionsButton?.setAttribute("aria-expanded", "false");
     if (kind) placeSurface(client);
     else restoreFlowInvoker(projectId, flowId);
   }
   function showSectionMenu(section: SVGGraphicsElement, request: FlowSectionMenuRequest): void {
-    rememberFlowInvoker(projectId, flowId, section as unknown as HTMLElement);
+    const panel = sectionUi.actions(section), id = section.dataset.flowSectionId ?? "section";
+    prepareFlowItemMenu(panel, "section", id);
+    showItemMenu(section as unknown as HTMLElement, panel, request, `${section.querySelector("text")?.textContent?.trim() || "Section"} actions`);
+  }
+  function showItemMenu(invoker: HTMLElement, menu: HTMLElement, request: FlowItemMenuRequest, heading: string): void {
+    rememberFlowInvoker(projectId, flowId, invoker);
     saveView({ ...view, surface: undefined });
     surface.hidden = false;
     restoreDetailsNodes();
-    surfaceBody.replaceChildren(sectionUi.actions(section));
-    surfaceHeading.textContent = `${section.querySelector("text")?.textContent?.trim() || "Section"} actions`;
+    menu.hidden = false;
+    surfaceBody.replaceChildren(menu);
+    surfaceHeading.textContent = heading;
     toolbar.querySelectorAll<HTMLButtonElement>("[data-flow-surface]").forEach((button) => button.setAttribute("aria-expanded", "false"));
+    itemActionsButton?.setAttribute("aria-expanded", "true");
     placeSurface(request.clientPosition);
-    surfaceBody.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
+    menu.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus({ preventScroll: true });
   }
   surface.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape") return;
+    if (event.key === "Escape") { event.preventDefault(); closeSurface(); return; }
+    const menuItems = Array.from(surfaceBody.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
+    if (!menuItems.length || !["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
     event.preventDefault();
-    closeSurface();
+    const current = Math.max(0, menuItems.indexOf(document.activeElement as HTMLButtonElement));
+    const next = event.key === "Home" ? 0 : event.key === "End" ? menuItems.length - 1 : (current + (event.key === "ArrowDown" ? 1 : -1) + menuItems.length) % menuItems.length;
+    menuItems[next]?.focus({ preventScroll: true });
+  });
+  workspace.addEventListener("flow-open-item-editor", (event) => {
+    const detail = (event as CustomEvent<{ title?: string; content?: Node; firstControl?: HTMLElement }>).detail;
+    if (!detail?.content) return;
+    itemActionsButton?.setAttribute("aria-expanded", "false");
+    surfaceBody.replaceChildren(detail.content);
+    surfaceHeading.textContent = detail.title ?? "Flow item details";
+    surface.hidden = false;
+    placeSurface();
+    queueMicrotask(() => detail.firstControl?.focus({ preventScroll: true }));
   });
   const surfaceButton = (label: string, kind: FlowWorkspaceSurface): HTMLButtonElement => {
     const result = flowControl(label, () => showSurface(view.surface === kind ? undefined : kind, result));
@@ -180,28 +214,47 @@ export function upgradeFlowWorkspace(root: HTMLElement): void {
 
   decorateCompactFlowCards(canvas, duplicateFrames, outline);
   if (actions?.getAttribute("aria-label")?.includes("Page instance")) {
-    actions.classList.add("flow-contextual-toolbar");
     const rename = flowControl("Rename in Flow", () => { showSurface("details", rename); detailsSource?.querySelector<HTMLInputElement>('[aria-label^="Name in this Flow"]')?.focus(); });
     const addEvent = flowControl("Add Event", () => showSurface("add", addEvent));
     const duplicate = flowControl("Duplicate", () => detailsSource?.querySelector<HTMLButtonElement>('button[data-flow-duplicate-frame],button:nth-last-child(2)')?.click());
-    const openDetails = flowControl("Details", () => showSurface("details", openDetails));
+    const openDetails = flowControl("Details", () => { showSurface("details", openDetails); surfaceBody.querySelector<HTMLElement>("input,select,textarea,button")?.focus({ preventScroll: true }); });
+    for (const control of [rename, addEvent, duplicate, openDetails]) control.dataset.flowItemCommand = control.textContent ?? "";
     actions.prepend(rename, addEvent, duplicate, openDetails);
   }
   if (actions?.getAttribute("aria-label")?.includes("Event occurrence")) {
-    actions.classList.add("flow-contextual-toolbar");
-    const openDetails = flowControl("Details", () => showSurface("details", openDetails));
+    const openDetails = flowControl("Details", () => { showSurface("details", openDetails); surfaceBody.querySelector<HTMLElement>("input,select,textarea,button")?.focus({ preventScroll: true }); });
+    openDetails.dataset.flowItemCommand = "Details";
     actions.prepend(openDetails);
   }
   if (relationship && actions) {
-    actions.classList.add("flow-contextual-toolbar");
     actions.setAttribute("aria-label", "Selected relationship actions");
     const label = relationship.querySelector<HTMLInputElement>('[aria-label="Optional relationship label"]');
-    const edit = flowControl("Edit documentation", () => label?.focus());
-    actions.append(edit, relationship);
-    queueMicrotask(() => label?.focus({ preventScroll: true }));
+    const edit = flowControl("Edit documentation", () => actions.dispatchEvent(new CustomEvent("flow-open-item-editor", { bubbles: true, detail: { title: "Relationship details", content: relationship, firstControl: label } })));
+    const remove = relationship.querySelector<HTMLButtonElement>('button[aria-label^="Delete relationship"]');
+    const deleteAction = flowControl("Delete relationship", () => remove?.click());
+    if (remove?.getAttribute("aria-label")) deleteAction.setAttribute("aria-label", remove.getAttribute("aria-label")!);
+    edit.dataset.flowItemCommand = "Edit documentation";
+    deleteAction.dataset.flowItemCommand = "Delete relationship";
+    actions.append(edit, deleteAction);
+    if (relationship.dataset.flowRelationshipAutofocus !== "true") relationship.remove();
   }
   const selectedSection = Array.from(canvas.querySelectorAll<SVGGraphicsElement>("g[data-flow-section-id].is-selected")).find((candidate) => candidate.querySelector(":scope > [data-section-dropzone]"));
   const sectionActions = selectedSection ? sectionUi.actions(selectedSection) : undefined;
+  const itemMenu = actions ?? sectionActions;
+  const itemKind = itemMenu?.dataset.flowItemKind as FlowItemMenuKind | undefined, itemId = itemMenu?.dataset.flowItemId;
+  let itemToolbar: HTMLElement | undefined;
+  if (itemMenu && itemKind && itemId) {
+    const commands = prepareFlowItemMenu(itemMenu, itemKind, itemId);
+    if (commands.length) {
+      itemMenu.hidden = true;
+      itemToolbar = document.createElement("section");
+      itemToolbar.className = "flow-contextual-toolbar";
+      itemToolbar.setAttribute("aria-label", `Selected ${itemKind} actions`);
+      itemActionsButton = flowControl("Actions", () => showItemMenu(itemActionsButton!, itemMenu, {}, `${itemKind} actions`));
+      prepareFlowActionsButton(itemActionsButton, itemMenu.id);
+      itemToolbar.append(itemActionsButton);
+    }
+  }
 
   workspace.addEventListener("flow-empty-connection-drop", (event) => {
     const detail = (event as CustomEvent<EmptyConnectionDrop & { sourceElement?: HTMLElement }>).detail;
@@ -258,7 +311,7 @@ export function upgradeFlowWorkspace(root: HTMLElement): void {
   projections?.classList.add("flow-canvas-viewport");
   viewport.style.position = "relative";
   if (status) { status.classList.add("flow-workspace-status"); viewport.append(status); }
-  viewport.append(surface, cameraUi.minimap, ...(actions ? [actions] : []), ...(sectionActions ? [sectionActions] : []));
+  viewport.append(surface, cameraUi.minimap, ...(itemToolbar ? [itemToolbar] : []));
   canvas.style.removeProperty("width"); canvas.style.removeProperty("height");
   viewport.tabIndex = 0; viewport.setAttribute("aria-label", "Flow canvas viewport");
   viewport.setAttribute("aria-keyshortcuts", "ArrowLeft ArrowRight ArrowUp ArrowDown");
@@ -267,5 +320,10 @@ export function upgradeFlowWorkspace(root: HTMLElement): void {
   if (view.cameraInitialized) cameraUi.apply(view.camera);
   else cameraUi.fitFlow();
   if (view.surface) showSurface(view.surface);
+  if (pendingMenu && itemMenu && pendingMenu.kind === itemKind && pendingMenu.id === itemId) {
+    const attribute = itemKind === "page" ? "data-page-frame-id" : itemKind === "event" ? "data-occurrence-id" : itemKind === "relationship" ? "data-relationship-id" : "data-flow-section-id";
+    const invoker = canvas.querySelector<HTMLElement>(`[${attribute}="${CSS.escape(itemId!)}"]`);
+    if (invoker) showItemMenu(invoker, itemMenu, pendingMenu.request, `${itemKind} actions`);
+  }
   document.body.classList.toggle("flow-focus-canvas", view.focusCanvas);
 }

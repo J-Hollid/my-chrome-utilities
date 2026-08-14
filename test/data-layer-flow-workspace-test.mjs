@@ -32,6 +32,12 @@ import {
 import {trackFlowSectionPointerGesture} from "../dist/flow-graph/workspace-section-pointer.js";
 import {sectionBoundsAfterKeyboardInput,sectionPointerDelta} from "../dist/flow-graph/workspace-section-geometry.js";
 import {flowSelectionContains,primaryFlowSelection,selectionAfterActivation,selectionAfterRemoval} from "../dist/flow-graph/workspace-selection.js";
+import {
+  FLOW_ITEM_MENU_SPECS,
+  flowItemActivationRequest,
+  flowItemMenuIdentity,
+  flowItemMenuRequest,
+} from "../dist/flow-graph/workspace-item-menu.js";
 import {FLOW_PORT_SNAP_RADIUS,flowPointerSnapTarget,flowPortSnapTarget} from "../dist/flow-graph/relationship-port-snap.js";
 import {createDurablePersistenceReadiness} from "../dist/durable-project/persistence-readiness.js";
 
@@ -199,6 +205,21 @@ assert.deepEqual(flowSectionMenuRequest({type:"keydown",key:"ContextMenu",shiftK
 assert.deepEqual(flowSectionMenuRequest({type:"keydown",key:"F10",shiftKey:true}),{},"Shift+F10 opens the focused Section menu");
 assert.equal(flowSectionMenuRequest({type:"keydown",key:"F10",shiftKey:false}),undefined,"plain F10 does not open the Section menu");
 assert.equal(flowSectionMenuRequest({type:"keydown",key:"Enter",shiftKey:false}),undefined,"ordinary Section activation remains distinct from its context menu");
+
+assert.deepEqual(FLOW_ITEM_MENU_SPECS,{
+  section:{commands:["Rename","Move","Resize","Wrap selection","Remove Section","Remove with contents"],editorCommands:["Rename"],destructiveCommand:"Remove with contents"},
+  page:{commands:["Rename in Flow","Add Event","Move","Connect","Duplicate","Details","Open schema contribution","Remove"],editorCommands:["Rename in Flow","Details"],destructiveCommand:"Remove"},
+  event:{commands:["Move","Change Page","Duplicate","Details","Open schema contribution","Remove"],editorCommands:["Change Page","Details"],destructiveCommand:"Remove"},
+  relationship:{commands:["Edit documentation","Delete relationship"],editorCommands:["Edit documentation"],destructiveCommand:"Delete relationship"},
+},"every Flow item shares one exact command hierarchy with its destructive command last");
+assert.deepEqual(flowItemMenuRequest({type:"contextmenu",clientX:420,clientY:240}),{clientPosition:{x:420,y:240}},"secondary click carries its menu placement point");
+assert.deepEqual(flowItemMenuRequest({type:"keydown",key:"ContextMenu"}),{},"the Context Menu key invokes the shared item menu");
+assert.deepEqual(flowItemMenuRequest({type:"keydown",key:"F10",shiftKey:true}),{},"Shift+F10 invokes the shared item menu");
+assert.equal(flowItemMenuRequest({type:"focus"}),undefined,"focus alone never invokes a Flow item menu");
+assert.equal(flowItemActivationRequest({type:"keydown",key:"Enter"}),"select");
+assert.equal(flowItemActivationRequest({type:"keydown",key:" "}),"select");
+assert.equal(flowItemActivationRequest({type:"focus"}),undefined,"focus alone never selects a Flow item");
+assert.equal(flowItemMenuIdentity("relationship","relationship:cart-payment"),"flow-relationship-relationship-cart-payment-actions-menu");
 
 const sectionPointerSource=new EventTarget(),capturedSectionPointers=new Set(),sectionPointerObservations=[];
 const sectionPointerCapture={

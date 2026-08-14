@@ -6,6 +6,7 @@ import { prepareFlowOutline } from "./workspace-outline-ui.js";
 import { installFlowSections } from "./workspace-section-ui.js";
 import { createFlowTidyPanel } from "./workspace-tidy-ui.js";
 import { flowWorkspaceView, rememberFlowInvoker, restoreFlowInvoker, saveFlowWorkspaceView } from "./workspace-view-state.js";
+import { prepareFlowActionsButton, prepareFlowItemMenu, } from "./workspace-item-menu.js";
 function elements(root) {
     const workspace = root.querySelector(".documentary-flow");
     const legacyToolbar = workspace?.querySelector('[aria-label="Flow component catalogs"]');
@@ -22,7 +23,7 @@ function elements(root) {
         relationship: workspace.querySelector('[aria-label="Inline relationship popover"]') ?? undefined,
     };
 }
-export function upgradeFlowWorkspace(root) {
+export function upgradeFlowWorkspace(root, pendingMenu) {
     const found = elements(root);
     if (!found || found.workspace.dataset.canvasFirstR02 === "true")
         return;
@@ -30,7 +31,7 @@ export function upgradeFlowWorkspace(root) {
     workspace.dataset.canvasFirstR02 = "true";
     const flowId = workspace.dataset.flowSectionWorkspace ?? "flow";
     const projectId = rawSections?.dataset.flowProjectId ?? workspace.dataset.flowProjectId ?? "project";
-    let view = flowWorkspaceView(projectId, flowId), emptyDrop, addPosition;
+    let view = flowWorkspaceView(projectId, flowId), emptyDrop, addPosition, itemActionsButton;
     const toolbar = document.createElement("nav"), surface = document.createElement("section"), surfaceHeading = document.createElement("h4"), surfaceBody = document.createElement("div");
     const pageCatalog = legacyToolbar.querySelector('[aria-label="Pages catalog"]'), eventCatalog = legacyToolbar.querySelector('[aria-label="Events catalog"]');
     const detailsSource = duplicateFrames?.querySelector('[aria-pressed="true"]') ?? duplicateFrames?.querySelector(".is-selected") ?? undefined;
@@ -107,27 +108,54 @@ export function upgradeFlowWorkspace(root) {
         surfaceBody.replaceChildren(...(kind ? contents(kind) : []));
         surfaceHeading.textContent = kind ? `${kind[0].toUpperCase()}${kind.slice(1)}` : "Flow tools";
         toolbar.querySelectorAll("[data-flow-surface]").forEach((button) => button.setAttribute("aria-expanded", String(button.dataset.flowSurface === kind)));
+        itemActionsButton?.setAttribute("aria-expanded", "false");
         if (kind)
             placeSurface(client);
         else
             restoreFlowInvoker(projectId, flowId);
     }
     function showSectionMenu(section, request) {
-        rememberFlowInvoker(projectId, flowId, section);
+        const panel = sectionUi.actions(section), id = section.dataset.flowSectionId ?? "section";
+        prepareFlowItemMenu(panel, "section", id);
+        showItemMenu(section, panel, request, `${section.querySelector("text")?.textContent?.trim() || "Section"} actions`);
+    }
+    function showItemMenu(invoker, menu, request, heading) {
+        rememberFlowInvoker(projectId, flowId, invoker);
         saveView({ ...view, surface: undefined });
         surface.hidden = false;
         restoreDetailsNodes();
-        surfaceBody.replaceChildren(sectionUi.actions(section));
-        surfaceHeading.textContent = `${section.querySelector("text")?.textContent?.trim() || "Section"} actions`;
+        menu.hidden = false;
+        surfaceBody.replaceChildren(menu);
+        surfaceHeading.textContent = heading;
         toolbar.querySelectorAll("[data-flow-surface]").forEach((button) => button.setAttribute("aria-expanded", "false"));
+        itemActionsButton?.setAttribute("aria-expanded", "true");
         placeSurface(request.clientPosition);
-        surfaceBody.querySelector("button")?.focus({ preventScroll: true });
+        menu.querySelector('[role="menuitem"]')?.focus({ preventScroll: true });
     }
     surface.addEventListener("keydown", (event) => {
-        if (event.key !== "Escape")
+        if (event.key === "Escape") {
+            event.preventDefault();
+            closeSurface();
+            return;
+        }
+        const menuItems = Array.from(surfaceBody.querySelectorAll('[role="menuitem"]'));
+        if (!menuItems.length || !["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key))
             return;
         event.preventDefault();
-        closeSurface();
+        const current = Math.max(0, menuItems.indexOf(document.activeElement));
+        const next = event.key === "Home" ? 0 : event.key === "End" ? menuItems.length - 1 : (current + (event.key === "ArrowDown" ? 1 : -1) + menuItems.length) % menuItems.length;
+        menuItems[next]?.focus({ preventScroll: true });
+    });
+    workspace.addEventListener("flow-open-item-editor", (event) => {
+        const detail = event.detail;
+        if (!detail?.content)
+            return;
+        itemActionsButton?.setAttribute("aria-expanded", "false");
+        surfaceBody.replaceChildren(detail.content);
+        surfaceHeading.textContent = detail.title ?? "Flow item details";
+        surface.hidden = false;
+        placeSurface();
+        queueMicrotask(() => detail.firstControl?.focus({ preventScroll: true }));
     });
     const surfaceButton = (label, kind) => {
         const result = flowControl(label, () => showSurface(view.surface === kind ? undefined : kind, result));
@@ -170,28 +198,50 @@ export function upgradeFlowWorkspace(root) {
     toolbar.append(skip, navigationToggle, add, focusCanvas, ...cameraUi.controls, outlineButton, details, tidy, minimapToggle);
     decorateCompactFlowCards(canvas, duplicateFrames, outline);
     if (actions?.getAttribute("aria-label")?.includes("Page instance")) {
-        actions.classList.add("flow-contextual-toolbar");
         const rename = flowControl("Rename in Flow", () => { showSurface("details", rename); detailsSource?.querySelector('[aria-label^="Name in this Flow"]')?.focus(); });
         const addEvent = flowControl("Add Event", () => showSurface("add", addEvent));
         const duplicate = flowControl("Duplicate", () => detailsSource?.querySelector('button[data-flow-duplicate-frame],button:nth-last-child(2)')?.click());
-        const openDetails = flowControl("Details", () => showSurface("details", openDetails));
+        const openDetails = flowControl("Details", () => { showSurface("details", openDetails); surfaceBody.querySelector("input,select,textarea,button")?.focus({ preventScroll: true }); });
+        for (const control of [rename, addEvent, duplicate, openDetails])
+            control.dataset.flowItemCommand = control.textContent ?? "";
         actions.prepend(rename, addEvent, duplicate, openDetails);
     }
     if (actions?.getAttribute("aria-label")?.includes("Event occurrence")) {
-        actions.classList.add("flow-contextual-toolbar");
-        const openDetails = flowControl("Details", () => showSurface("details", openDetails));
+        const openDetails = flowControl("Details", () => { showSurface("details", openDetails); surfaceBody.querySelector("input,select,textarea,button")?.focus({ preventScroll: true }); });
+        openDetails.dataset.flowItemCommand = "Details";
         actions.prepend(openDetails);
     }
     if (relationship && actions) {
-        actions.classList.add("flow-contextual-toolbar");
         actions.setAttribute("aria-label", "Selected relationship actions");
         const label = relationship.querySelector('[aria-label="Optional relationship label"]');
-        const edit = flowControl("Edit documentation", () => label?.focus());
-        actions.append(edit, relationship);
-        queueMicrotask(() => label?.focus({ preventScroll: true }));
+        const edit = flowControl("Edit documentation", () => actions.dispatchEvent(new CustomEvent("flow-open-item-editor", { bubbles: true, detail: { title: "Relationship details", content: relationship, firstControl: label } })));
+        const remove = relationship.querySelector('button[aria-label^="Delete relationship"]');
+        const deleteAction = flowControl("Delete relationship", () => remove?.click());
+        if (remove?.getAttribute("aria-label"))
+            deleteAction.setAttribute("aria-label", remove.getAttribute("aria-label"));
+        edit.dataset.flowItemCommand = "Edit documentation";
+        deleteAction.dataset.flowItemCommand = "Delete relationship";
+        actions.append(edit, deleteAction);
+        if (relationship.dataset.flowRelationshipAutofocus !== "true")
+            relationship.remove();
     }
     const selectedSection = Array.from(canvas.querySelectorAll("g[data-flow-section-id].is-selected")).find((candidate) => candidate.querySelector(":scope > [data-section-dropzone]"));
     const sectionActions = selectedSection ? sectionUi.actions(selectedSection) : undefined;
+    const itemMenu = actions ?? sectionActions;
+    const itemKind = itemMenu?.dataset.flowItemKind, itemId = itemMenu?.dataset.flowItemId;
+    let itemToolbar;
+    if (itemMenu && itemKind && itemId) {
+        const commands = prepareFlowItemMenu(itemMenu, itemKind, itemId);
+        if (commands.length) {
+            itemMenu.hidden = true;
+            itemToolbar = document.createElement("section");
+            itemToolbar.className = "flow-contextual-toolbar";
+            itemToolbar.setAttribute("aria-label", `Selected ${itemKind} actions`);
+            itemActionsButton = flowControl("Actions", () => showItemMenu(itemActionsButton, itemMenu, {}, `${itemKind} actions`));
+            prepareFlowActionsButton(itemActionsButton, itemMenu.id);
+            itemToolbar.append(itemActionsButton);
+        }
+    }
     workspace.addEventListener("flow-empty-connection-drop", (event) => {
         const detail = event.detail;
         if (!detail)
@@ -255,7 +305,7 @@ export function upgradeFlowWorkspace(root) {
         status.classList.add("flow-workspace-status");
         viewport.append(status);
     }
-    viewport.append(surface, cameraUi.minimap, ...(actions ? [actions] : []), ...(sectionActions ? [sectionActions] : []));
+    viewport.append(surface, cameraUi.minimap, ...(itemToolbar ? [itemToolbar] : []));
     canvas.style.removeProperty("width");
     canvas.style.removeProperty("height");
     viewport.tabIndex = 0;
@@ -269,6 +319,12 @@ export function upgradeFlowWorkspace(root) {
         cameraUi.fitFlow();
     if (view.surface)
         showSurface(view.surface);
+    if (pendingMenu && itemMenu && pendingMenu.kind === itemKind && pendingMenu.id === itemId) {
+        const attribute = itemKind === "page" ? "data-page-frame-id" : itemKind === "event" ? "data-occurrence-id" : itemKind === "relationship" ? "data-relationship-id" : "data-flow-section-id";
+        const invoker = canvas.querySelector(`[${attribute}="${CSS.escape(itemId)}"]`);
+        if (invoker)
+            showItemMenu(invoker, itemMenu, pendingMenu.request, `${itemKind} actions`);
+    }
     document.body.classList.toggle("flow-focus-canvas", view.focusCanvas);
 }
 //# sourceMappingURL=workspace-ui.js.map

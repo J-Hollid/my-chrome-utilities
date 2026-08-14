@@ -614,7 +614,10 @@ try {
     const pagePlacementFailureDetail = shardFailures.some(({path}) => path.startsWith("runtime031."))
         ? JSON.stringify({runtime031:runtime.runtime031?.measurements},null,2)
         : "";
-    const failureDetail=styleFailureDetail||snapFailureDetail||pagePlacementFailureDetail;
+    const contextualActionFailureDetail = shardFailures.some(({path}) => path.startsWith("runtime032."))
+        ? JSON.stringify({runtime032:runtime.runtime032?.measurements},null,2)
+        : "";
+    const failureDetail=styleFailureDetail||snapFailureDetail||pagePlacementFailureDetail||contextualActionFailureDetail;
     assert.deepEqual(shardFailures, [], `Flow browser ${browserShard} evidence contains a false value${failureDetail ? `\n${failureDetail}` : ""}`);
     const controlRuntimeKeys = new Set(["runtime001", "runtime016", "runtime018", "runtime020", "runtime027"]);
     flowGraph = targetId === "FLOW_STYLESHEET_EXTRACTION_TARGET"

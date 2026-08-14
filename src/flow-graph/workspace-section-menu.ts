@@ -1,17 +1,12 @@
-import type { FlowPoint } from "./workspace.js";
+import {
+  FLOW_ITEM_MENU_SPECS,
+  flowItemMenuRequest,
+  type FlowItemMenuRequest,
+} from "./workspace-item-menu.js";
 
-export interface FlowSectionMenuRequest {
-  clientPosition?: FlowPoint;
-}
+export type FlowSectionMenuRequest = FlowItemMenuRequest;
 
-export const FLOW_SECTION_ACTION_LABELS = [
-  "Rename",
-  "Move",
-  "Resize",
-  "Wrap selection",
-  "Remove Section",
-  "Remove with contents",
-] as const;
+export const FLOW_SECTION_ACTION_LABELS = FLOW_ITEM_MENU_SPECS.section.commands;
 
 export function flowSectionMenuRequest(event: {
   type: string;
@@ -20,10 +15,5 @@ export function flowSectionMenuRequest(event: {
   clientX?: number;
   clientY?: number;
 }): FlowSectionMenuRequest | undefined {
-  if (event.type === "contextmenu") {
-    return { clientPosition: { x: event.clientX ?? 0, y: event.clientY ?? 0 } };
-  }
-  if (event.type !== "keydown") return undefined;
-  if (event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey)) return {};
-  return undefined;
+  return flowItemMenuRequest(event);
 }

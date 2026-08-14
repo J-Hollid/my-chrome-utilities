@@ -224,8 +224,7 @@ export function installFlowSections(options) {
             input.value = label;
             input.setAttribute("aria-label", `Rename Section ${label}`);
             editor.append(input, flowControl("Save Section name", () => command(root, { kind: "rename", sectionId: id, name: input.value })));
-            panel.replaceChildren(editor);
-            input.focus();
+            panel.dispatchEvent(new CustomEvent("flow-open-item-editor", { bubbles: true, detail: { title: `Rename Section ${label}`, content: editor, firstControl: input } }));
         });
         const move = flowControl("Move", () => section.focus({ preventScroll: true }));
         const resize = flowControl("Resize", () => section.querySelector("[data-section-resize-for]")?.focus({ preventScroll: true }));
@@ -252,8 +251,10 @@ export function installFlowSections(options) {
                 } }));
         });
         panel.setAttribute("aria-label", `Selected Section ${label} actions`);
+        panel.dataset.flowItemKind = "section";
+        panel.dataset.flowItemId = id;
         const controls = [rename, move, resize, wrap, remove, removeContents];
-        controls.forEach((control, index) => { control.dataset.flowSectionAction = FLOW_SECTION_ACTION_LABELS[index]; });
+        controls.forEach((control, index) => { control.dataset.flowSectionAction = FLOW_SECTION_ACTION_LABELS[index]; control.dataset.flowItemCommand = FLOW_SECTION_ACTION_LABELS[index]; });
         panel.append(...controls);
         return panel;
     };
