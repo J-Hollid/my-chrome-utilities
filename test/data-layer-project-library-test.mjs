@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {createHash} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
 import {subscribeProjectLibraryChanges} from "../dist/data-layer-project-library-ui.js";
@@ -196,6 +197,34 @@ for(const [serialized,repair] of [
   assert.match(invalid.blockers[0].message,repair);
   assert.throws(()=>commitProjectImport(library,invalid,clock),/blocked/i);
   assert.deepEqual(library,beforeExport);
+}
+
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
+    normalized=(value)=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"
+      ?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right))
+        .map(([key,nested])=>[key,normalized(nested)])):value,
+    digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
+    handlerPath="acceptance/src/acceptance/steps/project_management.clj",
+    handlerSource=await readFile(new URL(`../${handlerPath}`,import.meta.url),"utf8"),
+    expectedPreRepairFailure={modelStepRegistered:false,runtimeStepRegistered:false,
+      portability008Expected:false},
+    expectedRepairResult={modelStepRegistered:true,runtimeStepRegistered:true,
+      portability008Expected:true},
+    fixture={id:"project-concept-visual-portability-acceptance-v1",
+      causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{handler:handlerPath,scenario:"Portability 008"},expectedPreRepairFailure,
+      expectedRepairResult},
+    repairResult={modelStepRegistered:handlerSource.includes(
+      "Retail website has one Flow Page attachment and one Event-occurrence attachment that share a project concept-visual asset"),
+    runtimeStepRegistered:handlerSource.includes(
+      "production Retail website has one Flow Page attachment and one Event-occurrence attachment referencing the same project concept-visual asset"),
+    portability008Expected:handlerSource.includes("(range 1 9)")},fixtureDigest=digest(fixture);
+  assert.deepEqual(repairResult,expectedRepairResult);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}}}));
 }
 
 console.log("data-layer project library unit tests passed");
