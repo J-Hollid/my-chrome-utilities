@@ -227,11 +227,14 @@ export can claim that Draft. One versioned project bundle includes:
 - canonical contributors and inheritance references;
 - Pages, Page Groups, Events, Flows, occurrences, applicability, and assignments;
 - documentation configuration; and
+- deduplicated project-owned concept-visual assets with every Flow-local Page and
+  Event attachment, description, caption, and source reference; and
 - complete adopted-schema definitions with external source lineage.
 
 It excludes unadopted global schemas, browser permissions, Live observations,
-cached compilation, transient interface state, and Undo/Redo history. Export does
-not issue a project mutation or change active context.
+cached compilation, transient interface state including Flow visual-display and
+viewer state, and Undo/Redo history. Export does not issue a project mutation or
+change active context.
 
 ## Project import
 
@@ -252,6 +255,12 @@ occurrence, assignment contributor target, and Flow reference. External Saved Sc
 continues to identify its original source revision. Existing projects remain byte-
 identical. The imported project is inactive until the operator explicitly opens it.
 Replace, append, and merge into an existing project are not part of this release.
+
+Project-owned concept-visual asset identities are remapped with the other owned
+records. Every imported Flow-local Page and Event attachment must resolve to its
+remapped asset while retaining its contextual description, caption, source
+reference, and decodable image. A shared image remains one asset in the imported
+project rather than being copied for each attachment.
 
 ## Existing singleton migration
 
@@ -328,6 +337,7 @@ pair. `Portability NNN` refers to
 | P20 | Collection lifecycle controls fail at narrow widths or keyboard operation | Context 015–016 | Deterministic focus, labelled controls, one-scroll layout, and an eight-collection installed workflow | Responsive Studio UI, accessibility tree, production repository, and reload subscriptions | Overflow measurements, accessible names, focus destinations, created IDs, restored rows, and absent Inspector form | C, E | All eight collections complete Add, Open, and Remove discovery through visible production controls |
 | P21 | Page and Event creation can blur context-setting and interaction semantics | Context 017 | Page creation requires a context-event name while Event creation produces an interaction Event | Page and Event creation routes, canonical repository, and collection projections | Cart pageview in Pages, Button click button_click in Events, absent role and binding fields | C, E | A Page is the context-setting event itself and no Page event is materialized as a nested Events-tab occurrence |
 | P22 | Removing a Flow can leave independently stored topology that blocks Page removal and links to a missing entity | Context 018; Durable repository 013 | Treat each Flow graph as owned child state, delete it atomically with its Flow, and repair existing orphan graph records recoverably | Flow lifecycle command, dependency index, project navigation, durable Flow-graph store, upgrade repair, and Undo | Removal review, Flow and graph identities, absent ghost dependency and Open action, safe route fallback, backup checksum, repair receipt, record hashes, and identity-preserving Undo | C, E | No graph outlives its owning Flow, no missing Flow is navigable, and existing orphan topology is removed without risking unrelated or published state |
+| P23 | Flow concept visuals can be duplicated, orphaned, or lost during project transport | Portability 008; Flow 034–037 | Export each project asset once, retain contextual Flow attachments, exclude view state, and remap asset references on import | Project serializer, import validator and remapper, Flow attachment model, and asset registry | One decodable asset copy, two attachment references, exact metadata, excluded transient state, remapped asset identity, and unchanged source projects | D, E | Shared visual bytes and every Flow-local reference round-trip independently without transient canvas state or cross-project identity leakage |
 
 ## Assumptions and deferred decisions
 
@@ -354,4 +364,6 @@ collection overviews with the Inspector closed, prove the generic Inspector form
 absent, and demonstrate safe and dependency-blocked removal through production
 commands. Page creation must persist a context-setting observed event identity
 without a nested occurrence, while Event creation must persist an interaction
-identity without a role or Page binding.
+identity without a role or Page binding. Portable Flow concept visuals must retain
+one shared decodable asset, remapped attachment references, and contextual metadata
+without exporting canvas view state.

@@ -529,8 +529,8 @@ Feature: Data layer directional Flow specification graph
     And their complete contextual command sets are
       | item kind    | commands                                                                                           | editor commands         | destructive command |
       | Section      | Rename, Move, Resize, Wrap selection, Remove Section, Remove with contents                         | Rename                  | Remove with contents |
-      | Page         | Rename in Flow, Add Event, Move, Connect, Duplicate, Details, Open schema contribution, Remove     | Rename in Flow, Details | Remove               |
-      | Event        | Move, Change Page, Duplicate, Details, Open schema contribution, Remove                            | Change Page, Details    | Remove               |
+      | Page         | Rename in Flow, Add Event, Move, Connect, Duplicate, Details, Add visual, Open schema contribution, Remove     | Rename in Flow, Details, Add visual | Remove               |
+      | Event        | Move, Change Page, Duplicate, Details, Add visual, Open schema contribution, Remove                            | Change Page, Details, Add visual    | Remove               |
       | Relationship | Edit documentation, Delete relationship                                                           | Edit documentation      | Delete relationship  |
     When keyboard focus visits each canvas item without activating it
     Then no action menu, editor, selection change, or focus transfer occurs
@@ -538,7 +538,7 @@ Feature: Data layer directional Flow specification graph
     Then only that item becomes selected and a nonmodal contextual toolbar exposes its labelled Actions menu button without moving focus from the item
     When the operator opens each item's actions through secondary click, Shift+F10, the Context Menu key, or its Actions menu button
     Then every entry point exposes the same ordered command set declared for that item
-    And the menu contains commands rather than embedded editor fields, places its destructive command last, and remains inside the visible canvas viewport
+    And the menu contains commands rather than embedded editor fields, places its item-destructive command last, and remains inside the visible canvas viewport
     And opening or dismissing the menu creates no Draft, revision, canonical state, or Undo change
     When the operator dismisses an open menu with Escape
     Then focus returns to the invoking canvas item or Actions menu button while selection remains unchanged
@@ -565,3 +565,88 @@ Feature: Data layer directional Flow specification graph
       | the main workspace | a browser-delivered laptop trackpad pinch   | 80             | decreases | 25    |
       | Focus Canvas       | an unmodified mouse-wheel event             | 120            | decreases | 25    |
       | Focus Canvas       | a browser-delivered laptop trackpad pinch   | -80            | increases | 200   |
+
+  # Data layer directional Flow specification graph 034
+  Scenario Outline: Data layer directional Flow specification graph 034
+    Given <target> has no concept visual and is the only selected Flow item
+    When an image is pasted while the canvas rather than a visual editor owns focus
+    Then no visual attachment, Draft, revision, or Undo change occurs
+    When the operator opens <target>'s Actions menu and chooses Add visual
+    Then the menu closes and a separate contextual Visual editor opens with focus on its paste and drop target
+    And Paste image, Choose image file, a preview, Description, Caption, Source reference, Save, and Cancel are keyboard operable
+    When the operator <input_route> a readable <image_type> image
+    Then the editor shows the complete normalized image that will be stored without cropping or exposing its encoded bytes
+    And staging the image changes no project or history state
+    When the operator attempts to save a blank Description
+    Then Save remains unavailable and the editor identifies Description as required
+    When the operator enters <description>, <caption>, and <source_reference> and saves
+    Then <target> owns exactly one primary concept-visual attachment with that contextual metadata
+    And the project stores one stable normalized raster asset with media type, intrinsic dimensions, byte length, and content digest
+    And the reusable Page and Event definitions, graph topology, item position, and current visual-display mode remain unchanged
+    And the saved item offers View visual, Edit visual, Replace visual, and Remove visual while one Undo removes the attachment
+
+    Examples:
+      | target                            | input_route                          | image_type | description                    | caption                 | source_reference       |
+      | Cart Page instance                | pastes from the clipboard            | PNG        | Cart after address completion  | Checkout review         | a Figma design URL     |
+      | add_payment_info Event occurrence | chooses through the file picker      | JPEG       | Payment form after submission  | no caption              | a live-site URL        |
+      | Cart Page instance                | drops on the editor target           | WebP       | Mobile Cart concept            | Responsive concept      | no source reference    |
+
+  # Data layer directional Flow specification graph 035
+  Scenario: Data layer directional Flow specification graph 035
+    Given Cart Page instance and add_payment_info Event occurrence each have a concept visual
+    And Checkout journey and Returns journey have independent remembered visual-display modes
+    When Checkout journey opens for the first time
+    Then Badges is its selected visual-display mode
+    And each attached item shows a labelled visual indicator without changing Page, Event, Section, or relationship geometry
+    When the operator changes Checkout to Thumbnails
+    Then each attached item shows a fixed 16-to-10 preview containing its complete image without cropping or distortion
+    And presentation bounds and relationship anchors include the preview without moving stored item coordinates or invoking Tidy
+    When the operator zooms Checkout to its distant semantic-detail level
+    Then thumbnail pixels collapse to labelled badges while the selected mode remains Thumbnails
+    When the operator changes Checkout to Hidden
+    Then no canvas badge or thumbnail remains while each item's View visual action stays available
+    And Returns retains its own mode while reopening Checkout restores Hidden
+    And every mode change leaves project bytes, Draft, revision, documentation freshness, and Undo history unchanged
+    When the operator activates View visual for Cart
+    Then a named modal viewer opens with Cart's complete image, Description, optional Caption, fit, actual size, zoom, reset, and pan controls
+    And focus moves inside the viewer while background Flow controls are inert
+    When the operator closes the viewer with Escape
+    Then focus returns to the exact View visual invoker without changing selection or project state
+
+  # Data layer directional Flow specification graph 036
+  Scenario Outline: Data layer directional Flow specification graph 036
+    Given Cart Page instance has a saved valid concept visual
+    And the Visual editor is staging a replacement without changing the saved attachment
+    When image validation receives <invalid_image>
+    Then the editor reports <diagnostic>
+    And the saved visual, its asset identity, attachment metadata, preview, and context-menu actions remain unchanged
+    And no orphan asset, Draft, revision, documentation-staleness, or Undo change is created
+
+    Examples:
+      | invalid_image                                                     | diagnostic                                      |
+      | an SVG file                                                       | Choose a PNG, JPEG, or WebP image                |
+      | an animated GIF file                                              | Choose a PNG, JPEG, or WebP image                |
+      | a file that cannot be read or decoded                             | The visual could not be read                     |
+      | a file declared as PNG whose signature is not PNG                 | Choose a valid PNG image                         |
+      | a source image larger than 5 MiB                                  | The visual is too large                          |
+      | a decodable image wider than 4096 pixels                          | The visual dimensions exceed 4096 pixels         |
+      | a decodable image within 4096 pixels per side but above 16 megapixels | The visual exceeds 16 megapixels               |
+      | an image that would take project visual assets above 25 MiB       | This project has reached its 25 MiB visual limit |
+
+  # Data layer directional Flow specification graph 037
+  Scenario: Data layer directional Flow specification graph 037
+    Given Cart Page instance and add_payment_info Event occurrence attach the same normalized image with different descriptions
+    Then the project stores one raster asset and two independent contextual attachments referencing it
+    When the operator duplicates Cart
+    Then the duplicate has a distinct Page-instance and attachment identity referencing the same asset with copied contextual metadata
+    When the operator edits only the duplicate's Description
+    Then Cart and add_payment_info retain their descriptions and no image bytes are duplicated
+    When the Flow is saved and reopened
+    Then every attachment, asset reference, description, caption, source reference, and decodable image remains exact
+    When the operator removes the duplicate and add_payment_info visuals
+    Then the shared asset remains stored for Cart and both removals are undoable
+    When the operator removes Cart's last reference
+    Then the unreferenced asset bytes are removed in that same transaction
+    When the operator undoes the last removal
+    Then the same asset and attachment identities, bytes, metadata, and Cart viewer are restored
+    And canonical Page and Event definitions, Flow topology, positions, and visual-display mode remain unchanged throughout

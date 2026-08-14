@@ -87,3 +87,16 @@ Feature: Data layer project portability and upgrade
     And the latest Draft content and remapped stable references remain exact
     And imported active records and later ordinary exports contain no discarded edit revision or change entry
     And the source project and every pre-existing project remain unchanged
+
+  # Data layer project portability and upgrade 008
+  Scenario: Data layer project portability and upgrade 008
+    Given Retail website has one Flow Page attachment and one Event-occurrence attachment that share a project concept-visual asset
+    And the attachments have independent descriptions, captions, and source references while their Flow remembers Thumbnails mode
+    When the operator exports Retail website from the Projects tab
+    Then the bundle contains the normalized raster asset bytes and metadata once with both resolvable attachment references
+    And it contains the attachment descriptions, captions, and source references without visual-display mode, viewer state, selection, or camera state
+    When the bundle is imported as a new project
+    Then the imported asset receives a new project-owned identity and both attachments reference that remapped identity
+    And both imported viewers decode the same complete image with their respective contextual metadata
+    And the source project and every pre-existing project remain unchanged
+    And active context remains unchanged

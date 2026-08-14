@@ -162,10 +162,11 @@ exclusive topology command.
 
 The selected object determines available actions:
 
-- Page: Rename in Flow, Add Event, Connect, Duplicate, Details, Open schema
-  contribution, and Remove.
-- Event: Move, Change Page, Duplicate, Details, Open schema contribution, and
-  Remove.
+- Page: Rename in Flow, Add Event, Move, Connect, Duplicate, Details, Add visual or
+  the saved visual's View/Edit/Replace/Remove commands, Open schema contribution,
+  and Remove.
+- Event: Move, Change Page, Duplicate, Details, Add visual or the saved visual's
+  View/Edit/Replace/Remove commands, Open schema contribution, and Remove.
 - Relationship: Edit documentation and Delete.
 - Section: Rename, Move, Resize, Wrap selection, Remove Section, and Remove with
   contents.
@@ -282,6 +283,7 @@ migration or restore Page Groups to Flow authoring.
 | Relationship drawing misses a port or gives ambiguous target feedback | 028, 029 | A zoom-independent port snap radius pins the preview to the compatible semantic port, emphasizes exactly that port without color-only meaning while leaving its Page card unchanged, preserves invalid direct targets, and clears without a write |
 | Existing occurrence and Page-instance semantics regress | 006, 008, 017, 024, 026 | Reuse, migration, sparse contributions, repeated instances, and Flow-specific names retain stable identity |
 | Schema contribution return reintroduces an expanded card | Flow 013, 021, 025 and layered schema 021 | Readiness stays on cards while JSON, repairs, and restored deep detail live in contextual Details |
+| Concept visuals overload the canvas, leak into canonical definitions, or lose portable references | Flow 034–037 and Portability 008 | Flow-local Page and Event attachments share validated project assets, retain contextual descriptions, use per-Flow display modes, open in an accessible viewer, and round-trip without transient view state |
 
 ## Scope and deferrals
 
@@ -290,12 +292,27 @@ camera, minimap, semantic zoom, compact cards, contextual toolbars, Details,
 Outline, Tidy, pointer and keyboard authoring, responsive containment, and the
 state boundary between presentation and canonical project data.
 
+It also covers one primary concept visual per Flow Page instance or Event
+occurrence. The project owns deduplicated normalized raster assets; the Flow item
+owns its asset reference, required description, optional caption, and optional
+source reference. `Hidden`, `Badges`, and `Thumbnails` are independent per-Flow
+view state. They never change canonical Page or Event definitions, graph
+coordinates, topology, documentation freshness, or Undo history. Attachment,
+replacement, removal, duplication, unreferenced-asset cleanup, and their Undo
+behavior remain project commands.
+
 It does not choose a canvas rendering library, add nested Sections, splice a Page
 into an existing relationship, reconnect a relationship endpoint before metadata
 retention semantics are approved, create canonical Page or Event definitions from
 the canvas, infer journey meaning from coordinates, execute a Flow, replace the
 canonical schema editor, change Property Set composition, or redesign downstream
 Documentation and Live surfaces.
+
+Concept-visual documentation generation, OCR, AI interpretation, redaction,
+multiple-image galleries, crop or annotation tools, Figma synchronization,
+remote-URL fetching, and built-in browser-tab capture are deferred. The operator
+captures or exports an image externally and then pastes, chooses, or drops it in
+the contextual Visual editor.
 
 ## Verification boundary
 
@@ -635,4 +652,86 @@ unmodified wheel and browser-delivered laptop pinch change scale in the expected
 direction while preserving the pointer anchor, and whether contextual surfaces
 retain native scrolling. Include any variance cause, remaining work, confidence,
 and forecast; continue bounded work under the QA pilot unless product scope,
+safety, or authority changes.
+
+## Flow Page and Event concept-visual slice
+
+Directional Flow scenarios 034–037, their runtime partners, and project
+Portability scenario 008 define one primary concept visual for each Flow-local
+Page instance or Event occurrence. `Add visual` opens a separate contextual
+editor; image paste is deliberately scoped to that editor rather than intercepted
+globally by the canvas. Paste, file choice, and file drop stage a normalized
+preview before Save. Description is required; caption and source reference are
+optional. Save, replace, remove, duplication, cleanup, and Undo are attachment
+commands and do not mutate reusable Page or Event definitions.
+
+The project asset registry stores each normalized image once by stable identity
+and content digest. Attachments retain independent contextual metadata, so one
+image may describe different Page or Event states. PNG, JPEG, and WebP are
+accepted. SVG and animated GIF are excluded. The initial limits are 5 MiB per
+source image, 4096 pixels on either side, 16 megapixels, and 25 MiB of stored
+project visual assets. File type, signature, decoding, dimensions, and limits are
+validated before Save; a rejected replacement preserves the saved attachment and
+creates no orphan asset or history entry.
+
+The per-Flow visual-display modes are `Hidden`, `Badges`, and `Thumbnails`, with
+`Badges` as the first-open default. Badges preserve compact graph geometry.
+Thumbnails use a fixed 16-to-10 viewport containing the complete image; their
+presentation bounds and Page relationship anchors follow the preview without
+rewriting stored coordinates or invoking Tidy. Distant semantic zoom substitutes
+badges for pixels. Clicking a badge or thumbnail, or using `View visual` while
+Hidden, opens a modal fit/actual-size viewer with zoom, reset, pan, deterministic
+focus containment, Escape close, and focus return.
+
+Project export stores one asset copy and every Flow-local reference plus its
+description, caption, and source reference. Import-as-new remaps the project-owned
+asset identity and both attachment references. Camera, selection, viewer state,
+and visual-display mode remain excluded from portable project data. This slice
+does not generate documentation from images.
+
+**Development focus:** begin with a focused semantic asset-and-attachment test,
+the Flow workspace unit coverage in `test/data-layer-flow-workspace-test.mjs`,
+and installed scenarios 034–037 in
+`test/support/flow-workspace-r02-runtime.mjs`. Reuse the existing documentation
+logo's file-signature, decode, and aspect-fit lessons through a generic raster
+boundary rather than coupling Flow storage to the branding theme or its smaller
+logo limit. Add project-portability coverage only after the direct attachment and
+viewer loop is green.
+
+**QA impact:** ordinary inspection forecasts the bounded `flow_graph`,
+`project_management`, `flow_export`, `live_flow_testing`, and
+`property_set_flow_sections` consumer set, with dependency closure and package
+proof. Exact changed-path planning remains authoritative for the settled
+candidate. The expected review-ready form is:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_graph \
+  --pack project_management \
+  --pack flow_export \
+  --pack live_flow_testing \
+  --pack property_set_flow_sections \
+  --property \
+  --changed-since <approved-specification-commit> \
+  --prepare-evidence flow-concept-visuals
+node scripts/package.mjs
+```
+
+**RepoWise Trial 4 baseline:** before coder work, ordinary inspection identified
+the Flow graph model and workspace renderers, the documentation-logo validation
+pattern, Flow workspace unit and installed-runtime companions, project
+portability pair, downstream Flow consumers, and the verification registry. The
+specifier did not run a speculative RepoWise scan. Once the coder has one coherent
+committed candidate with direct checks green, and before review evidence, the
+coder runs the approved telemetry-disabled actual-diff checkpoint with its
+two-minute ceiling and reports any relevant untouched file, false positive,
+scope change, generated artifact, time cost, and improved/neutral/impeded
+judgment. RepoWise unavailability cannot block implementation or handoff.
+
+The implementation-and-review elapsed effort ceiling is 180 minutes from coder
+receipt to an architect `qa-ready` candidate. At 90 minutes, report whether both a
+Page and Event can save and reopen a pasted or chosen image, whether badges and
+the accessible viewer work, whether one shared asset remains deduplicated, the
+cause of any variance, remaining validation and portability work, confidence,
+and forecast. Continue bounded work under the QA pilot unless product scope,
 safety, or authority changes.

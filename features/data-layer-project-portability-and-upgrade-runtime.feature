@@ -87,3 +87,17 @@ Feature: Data layer project portability and upgrade runtime
     And current Draft hashes and every remapped stable reference match the staged result
     And active imported records and their ordinary re-export contain no edit revision or canonical changes array
     And hashes for the source and every pre-existing project remain unchanged
+
+  # Data layer project portability and upgrade runtime 008
+  Scenario: Data layer project portability and upgrade runtime 008
+    Given production Retail website has one Flow Page attachment and one Event-occurrence attachment referencing the same project concept-visual asset
+    And serialized attachments contain independent descriptions, captions, and source references while installed Flow view state is Thumbnails
+    When actual Projects controls export Retail website
+    Then parsed bundle data contains one normalized raster record with decodable bytes and two resolvable attachment references
+    And parsed attachment metadata is exact while recursive inspection finds no visual-display mode, viewer state, selection, or camera state
+    When actual controls choose that file through Import project
+    And actual controls confirm Import as new project
+    Then repository inspection finds one new project-owned asset ID and both imported attachments reference that remapped ID
+    And both installed viewers decode pixel-equivalent complete images with their respective contextual metadata
+    And hashes for the source and every pre-existing project remain unchanged
+    And the active-project identity remains unchanged

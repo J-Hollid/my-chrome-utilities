@@ -525,8 +525,8 @@ Feature: Data layer directional Flow specification graph runtime
     And production declares these contextual commands
       | item kind    | commands                                                                                           | editor commands         | destructive command |
       | Section      | Rename, Move, Resize, Wrap selection, Remove Section, Remove with contents                         | Rename                  | Remove with contents |
-      | Page         | Rename in Flow, Add Event, Move, Connect, Duplicate, Details, Open schema contribution, Remove     | Rename in Flow, Details | Remove               |
-      | Event        | Move, Change Page, Duplicate, Details, Open schema contribution, Remove                            | Change Page, Details    | Remove               |
+      | Page         | Rename in Flow, Add Event, Move, Connect, Duplicate, Details, Add visual, Open schema contribution, Remove     | Rename in Flow, Details, Add visual | Remove               |
+      | Event        | Move, Change Page, Duplicate, Details, Add visual, Open schema contribution, Remove                            | Change Page, Details, Add visual    | Remove               |
       | Relationship | Edit documentation, Delete relationship                                                           | Edit documentation      | Delete relationship  |
     When actual keyboard input moves focus across every item without activation
     Then the installed Flow opens no menu or editor, preserves selection, and leaves focus on the visited item
@@ -563,3 +563,87 @@ Feature: Data layer directional Flow specification graph runtime
       | the main workspace | cancelable WheelEvent with the browser pinch modifier | 80             | decreases | 25    |
       | Focus Canvas       | unmodified cancelable WheelEvent                      | 120            | decreases | 25    |
       | Focus Canvas       | cancelable WheelEvent with the browser pinch modifier | -80            | increases | 200   |
+
+  # Data layer directional Flow specification graph runtime 034
+  Scenario Outline: Data layer directional Flow specification graph runtime 034
+    Given production <target> has no concept visual and is the sole selected Flow item
+    When an actual image paste targets the canvas outside a Visual editor
+    Then serialized attachments, Saved Draft bytes, Flow revision, and Undo depth remain unchanged
+    When actual controls open <target>'s Actions menu and activate Add visual
+    Then the installed menu closes and a separate contextual Visual editor owns focus on its paste and drop target
+    And installed Paste image, Choose image file, preview, Description, Caption, Source reference, Save, and Cancel controls are keyboard operable
+    When actual input <input_route> a readable <image_type> image
+    Then the installed preview contains the complete decoded normalized image without crop, distortion, or visible data URL
+    And project serialization equals its pre-staging value
+    When actual controls attempt Save with whitespace Description
+    Then Save is disabled and installed validation associates the required diagnostic with Description
+    When actual controls enter <description>, <caption>, and <source_reference> and save
+    Then serialized <target> contains exactly one primary attachment with those contextual fields and one asset reference
+    And the production project asset registry contains one stable normalized raster ID, media type, dimensions, byte length, digest, and decodable bytes
+    And canonical Page and Event hashes, graph topology, coordinates, and visual-display mode equal their pre-save values
+    And installed actions become View visual, Edit visual, Replace visual, and Remove visual while one actual Undo removes the attachment
+
+    Examples:
+      | target                            | input_route                     | image_type | description                    | caption            | source_reference    |
+      | Cart Page instance                | sends ClipboardEvent image data | PNG        | Cart after address completion  | Checkout review    | a Figma design URL  |
+      | add_payment_info Event occurrence | selects with the file input     | JPEG       | Payment form after submission  | no caption         | a live-site URL     |
+      | Cart Page instance                | sends a file drop               | WebP       | Mobile Cart concept            | Responsive concept | no source reference |
+
+  # Data layer directional Flow specification graph runtime 035
+  Scenario: Data layer directional Flow specification graph runtime 035
+    Given production Cart Page instance and add_payment_info Event occurrence each have a concept visual
+    And Checkout journey and Returns journey have separate visual-display view state
+    When the installed Checkout workspace opens without prior visual-display state
+    Then Badges is selected and both attached items render labelled indicators with unchanged measured graph geometry
+    When actual controls select Thumbnails
+    Then each item renders a 16-to-10 image viewport whose pixel content is contained without crop or aspect-ratio distortion
+    And measured presentation bounds and Page relationship anchors include the previews while serialized coordinates remain equal and no Tidy command runs
+    When actual camera controls enter the distant semantic-detail level
+    Then thumbnail image elements are absent, labelled badges remain, and serialized Checkout mode remains Thumbnails
+    When actual controls select Hidden
+    Then installed canvas queries find no visual badge or thumbnail while both item menus retain View visual
+    And production Returns view state is unchanged while reopening Checkout restores Hidden
+    And project bytes, Saved Draft, Flow revision, documentation freshness, and Undo depth equal their pre-mode values
+    When actual controls activate View visual for Cart
+    Then one named modal dialog contains the complete decoded image, Description, optional Caption, fit, actual-size, zoom, reset, pan, and visible close controls
+    And focus is inside the dialog, Tab remains within it, and background Flow controls are inert
+    When actual keyboard input sends Escape
+    Then the dialog is absent and focus returns to the exact invoking control with unchanged selection and project bytes
+
+  # Data layer directional Flow specification graph runtime 036
+  Scenario Outline: Data layer directional Flow specification graph runtime 036
+    Given production Cart Page instance has one saved valid concept visual
+    And the installed Visual editor stages replacement input without a repository write
+    When production validation receives <invalid_image>
+    Then the installed editor renders <diagnostic>
+    And serialized visual asset identity, attachment metadata, decoded preview, and installed item actions equal their saved values
+    And repository inspection finds no orphan asset, new Draft command, revision, documentation-staleness change, or Undo entry
+
+    Examples:
+      | invalid_image                                                     | diagnostic                                      |
+      | an SVG file                                                       | Choose a PNG, JPEG, or WebP image                |
+      | an animated GIF file                                              | Choose a PNG, JPEG, or WebP image                |
+      | a file that rejects reading or pixel decoding                     | The visual could not be read                     |
+      | PNG-declared bytes with a non-PNG signature                       | Choose a valid PNG image                         |
+      | a source image larger than 5 MiB                                  | The visual is too large                          |
+      | a decoded image wider than 4096 pixels                            | The visual dimensions exceed 4096 pixels         |
+      | a decoded image within 4096 pixels per side but above 16 megapixels | The visual exceeds 16 megapixels               |
+      | an image that would take stored visual assets above 25 MiB        | This project has reached its 25 MiB visual limit |
+
+  # Data layer directional Flow specification graph runtime 037
+  Scenario: Data layer directional Flow specification graph runtime 037
+    Given production Cart Page instance and add_payment_info Event occurrence attach byte-identical normalized images with different descriptions
+    Then serialized project data contains one raster asset ID, one image-byte copy, and two distinct attachment records referencing it
+    When actual controls duplicate Cart
+    Then production stores a distinct Page-instance and attachment ID with the same asset reference and copied contextual metadata
+    When actual controls edit only the duplicate's Description
+    Then serialized Cart and add_payment_info descriptions remain equal to their prior values and the asset registry still contains one byte copy
+    When the production Draft settles and the installed Flow reloads
+    Then every attachment reference and contextual field remains exact and each installed viewer decodes the saved image
+    When actual controls remove the duplicate and add_payment_info visuals
+    Then the asset remains referenced by Cart and each removal creates one restorable Undo entry
+    When actual controls remove Cart's last visual reference
+    Then serialized project data contains neither that attachment nor its unreferenced asset bytes
+    When actual Undo restores the last removal
+    Then the same asset and attachment IDs, bytes, metadata, and installed Cart viewer are restored
+    And canonical definitions, graph topology, coordinates, and visual-display view state remain unchanged throughout
