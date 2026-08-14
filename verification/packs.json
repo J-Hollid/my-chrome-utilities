@@ -2814,6 +2814,8 @@
         "id": "flow_workspace_section_authoring",
         "prefixes": [
           "src/flow-graph/workspace-section-geometry.ts",
+          "src/flow-graph/workspace-section-menu.ts",
+          "src/flow-graph/workspace-section-pointer.ts",
           "src/flow-graph/workspace-section-ui.ts",
           "src/flow-graph/workspace-tidy-ui.ts"
         ],
