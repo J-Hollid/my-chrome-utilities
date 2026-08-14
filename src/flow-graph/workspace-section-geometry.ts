@@ -1,8 +1,19 @@
-import type { FlowBounds } from "./workspace.js";
+import type { FlowBounds, FlowPoint } from "./workspace.js";
 
 const KEYBOARD_SECTION_STEP = 20;
 const MINIMUM_SECTION_WIDTH = 240;
 const MINIMUM_SECTION_HEIGHT = 140;
+
+export function sectionPointerDelta(
+  start: FlowPoint,
+  current: FlowPoint,
+  zoom: number,
+): FlowPoint {
+  return {
+    x: (current.x - start.x) / zoom,
+    y: (current.y - start.y) / zoom,
+  };
+}
 
 export function sectionBoundsAfterKeyboardInput(
   bounds: FlowBounds,

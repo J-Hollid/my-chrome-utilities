@@ -27,9 +27,9 @@ import {flowPanClickSuppression,flowPanStartAllowed,flowPanToPinch} from "../dis
 import {
   FLOW_SECTION_ACTION_LABELS,
   flowSectionMenuRequest,
-  trackFlowSectionPointerGesture,
 } from "../dist/flow-graph/workspace-section-ui.js";
-import {sectionBoundsAfterKeyboardInput} from "../dist/flow-graph/workspace-section-geometry.js";
+import {trackFlowSectionPointerGesture} from "../dist/flow-graph/workspace-section-pointer.js";
+import {sectionBoundsAfterKeyboardInput,sectionPointerDelta} from "../dist/flow-graph/workspace-section-geometry.js";
 import {flowSelectionContains,primaryFlowSelection,selectionAfterActivation,selectionAfterRemoval} from "../dist/flow-graph/workspace-selection.js";
 import {FLOW_PORT_SNAP_RADIUS,flowPointerSnapTarget,flowPortSnapTarget} from "../dist/flow-graph/relationship-port-snap.js";
 import {createDurablePersistenceReadiness} from "../dist/durable-project/persistence-readiness.js";
@@ -185,6 +185,8 @@ const sectionBounds={x:100,y:80,width:320,height:220};
 assert.deepEqual(sectionBoundsAfterKeyboardInput(sectionBounds,"ArrowRight",false),{x:120,y:80,width:320,height:220});
 assert.deepEqual(sectionBoundsAfterKeyboardInput(sectionBounds,"ArrowRight",true),{x:100,y:80,width:340,height:220},"Arrow keys on the resize handle resize instead of moving the Section");
 assert.deepEqual(sectionBoundsAfterKeyboardInput({x:0,y:0,width:240,height:140},"ArrowLeft",true),{x:0,y:0,width:240,height:140},"keyboard resize respects the minimum Section size");
+assert.deepEqual(sectionPointerDelta({x:40,y:80},{x:200,y:180},1),{x:160,y:100},"Section pointer distance maps directly at 100 percent zoom");
+assert.deepEqual(sectionPointerDelta({x:40,y:80},{x:220,y:360},2),{x:90,y:140},"Section pointer distance scales to graph coordinates at 200 percent zoom");
 assert.deepEqual(FLOW_SECTION_ACTION_LABELS,["Rename","Move","Resize","Wrap selection","Remove Section","Remove with contents"],"the Section context menu exposes the complete existing action set");
 assert.deepEqual(flowSectionMenuRequest({type:"contextmenu",clientX:420,clientY:240}),{clientPosition:{x:420,y:240}},"a secondary pointer action places the Section menu at its invocation point");
 assert.deepEqual(flowSectionMenuRequest({type:"keydown",key:"ContextMenu",shiftKey:false}),{},"the dedicated keyboard context-menu command opens the focused Section menu");

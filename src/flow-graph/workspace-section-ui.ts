@@ -6,7 +6,23 @@ import {
   type FlowPoint,
 } from "./workspace.js";
 import { FLOW_PAGE_FRAME_SELECTOR, flowControl, renderedElementBounds } from "./workspace-dom.js";
-import { sectionBoundsAfterKeyboardInput } from "./workspace-section-geometry.js";
+import {
+  sectionBoundsAfterKeyboardInput,
+  sectionPointerDelta,
+} from "./workspace-section-geometry.js";
+import {
+  FLOW_SECTION_ACTION_LABELS,
+  flowSectionMenuRequest,
+  type FlowSectionMenuRequest,
+} from "./workspace-section-menu.js";
+import { trackFlowSectionPointerGesture } from "./workspace-section-pointer.js";
+
+export {
+  FLOW_SECTION_ACTION_LABELS,
+  flowSectionMenuRequest,
+  type FlowSectionMenuRequest,
+} from "./workspace-section-menu.js";
+export { trackFlowSectionPointerGesture } from "./workspace-section-pointer.js";
 
 export type FlowSectionCommand =
   | { kind: "select"; sectionId: string }
@@ -34,86 +50,6 @@ interface SectionUiOptions {
   camera: () => FlowCamera;
   closeSurface: () => void;
   openMenu: (section: SVGGraphicsElement, request: FlowSectionMenuRequest) => void;
-}
-
-export interface FlowSectionMenuRequest {
-  clientPosition?: FlowPoint;
-}
-
-export const FLOW_SECTION_ACTION_LABELS = [
-  "Rename",
-  "Move",
-  "Resize",
-  "Wrap selection",
-  "Remove Section",
-  "Remove with contents",
-] as const;
-
-export function flowSectionMenuRequest(event: {
-  type: string;
-  key?: string;
-  shiftKey?: boolean;
-  clientX?: number;
-  clientY?: number;
-}): FlowSectionMenuRequest | undefined {
-  if (event.type === "contextmenu") {
-    return { clientPosition: { x: event.clientX ?? 0, y: event.clientY ?? 0 } };
-  }
-  if (event.type !== "keydown") return undefined;
-  if (event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey)) return {};
-  return undefined;
-}
-
-interface FlowSectionPointerCaptureTarget {
-  setPointerCapture(pointerId: number): void;
-  hasPointerCapture(pointerId: number): boolean;
-  releasePointerCapture(pointerId: number): void;
-}
-
-interface FlowSectionPointerEventSource {
-  addEventListener(type: string, listener: EventListener): void;
-  removeEventListener(type: string, listener: EventListener): void;
-}
-
-export function trackFlowSectionPointerGesture(options: {
-  pointerId: number;
-  captureTarget: FlowSectionPointerCaptureTarget;
-  eventSource: FlowSectionPointerEventSource;
-  move(event: PointerEvent): void;
-  finish(event: PointerEvent): void;
-  cancel(event: PointerEvent): void;
-}): () => void {
-  const ownsPointer = (event: PointerEvent): boolean => event.pointerId === options.pointerId;
-  const move = ((event: PointerEvent): void => {
-    if (ownsPointer(event)) options.move(event);
-  }) as EventListener;
-  const cleanup = (): void => {
-    options.eventSource.removeEventListener("pointermove", move);
-    options.eventSource.removeEventListener("pointerup", finish);
-    options.eventSource.removeEventListener("pointercancel", cancel);
-    if (options.captureTarget.hasPointerCapture(options.pointerId)) {
-      options.captureTarget.releasePointerCapture(options.pointerId);
-    }
-  };
-  const finish = ((event: PointerEvent): void => {
-    if (!ownsPointer(event)) return;
-    cleanup();
-    options.finish(event);
-  }) as EventListener;
-  const cancel = ((event: PointerEvent): void => {
-    if (!ownsPointer(event)) return;
-    cleanup();
-    options.cancel(event);
-  }) as EventListener;
-  options.eventSource.addEventListener("pointermove", move);
-  options.eventSource.addEventListener("pointerup", finish);
-  options.eventSource.addEventListener("pointercancel", cancel);
-  try {
-    options.captureTarget.setPointerCapture(options.pointerId);
-  } catch {
-    // Synthetic test pointers have no active device pointer to capture.
-  }
-  return cleanup;
 }
 
 export interface FlowSectionUi {
@@ -213,16 +149,19 @@ export function installFlowSections(options: SectionUiOptions): FlowSectionUi {
     let stopTracking: (() => void) | undefined;
     const move = (event: PointerEvent): void => {
       if (!drag || drag.pointerId !== event.pointerId) return;
-      const dx = (event.clientX - drag.client.x) / options.camera().zoom;
-      const dy = (event.clientY - drag.client.y) / options.camera().zoom;
+      const delta = sectionPointerDelta(
+        drag.client,
+        { x: event.clientX, y: event.clientY },
+        options.camera().zoom,
+      );
       const rect = section.querySelector<SVGRectElement>("rect:not(.flow-section-resize-handle)");
       if (!rect) return;
       if (drag.resize) {
-        rect.setAttribute("width", String(Math.max(240, drag.bounds.width + dx)));
-        rect.setAttribute("height", String(Math.max(140, drag.bounds.height + dy)));
+        rect.setAttribute("width", String(Math.max(240, drag.bounds.width + delta.x)));
+        rect.setAttribute("height", String(Math.max(140, drag.bounds.height + delta.y)));
       } else {
-        rect.setAttribute("x", String(drag.bounds.x + dx));
-        rect.setAttribute("y", String(drag.bounds.y + dy));
+        rect.setAttribute("x", String(drag.bounds.x + delta.x));
+        rect.setAttribute("y", String(drag.bounds.y + delta.y));
       }
     };
     const finish = (event: PointerEvent): void => {
@@ -230,8 +169,13 @@ export function installFlowSections(options: SectionUiOptions): FlowSectionUi {
       const current = drag;
       drag = undefined;
       stopTracking = undefined;
-      const dx = Math.round((event.clientX - current.client.x) / options.camera().zoom);
-      const dy = Math.round((event.clientY - current.client.y) / options.camera().zoom);
+      const pointerDelta = sectionPointerDelta(
+        current.client,
+        { x: event.clientX, y: event.clientY },
+        options.camera().zoom,
+      );
+      const dx = Math.round(pointerDelta.x);
+      const dy = Math.round(pointerDelta.y);
       if (!dx && !dy) {
         command(root, { kind: "select", sectionId: id });
         return;

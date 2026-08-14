@@ -1,61 +1,10 @@
 import { boundsAroundItems, clientPointToFlowPoint, sectionBoundsFromDrag, } from "./workspace.js";
 import { FLOW_PAGE_FRAME_SELECTOR, flowControl, renderedElementBounds } from "./workspace-dom.js";
-import { sectionBoundsAfterKeyboardInput } from "./workspace-section-geometry.js";
-export const FLOW_SECTION_ACTION_LABELS = [
-    "Rename",
-    "Move",
-    "Resize",
-    "Wrap selection",
-    "Remove Section",
-    "Remove with contents",
-];
-export function flowSectionMenuRequest(event) {
-    if (event.type === "contextmenu") {
-        return { clientPosition: { x: event.clientX ?? 0, y: event.clientY ?? 0 } };
-    }
-    if (event.type !== "keydown")
-        return undefined;
-    if (event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey))
-        return {};
-    return undefined;
-}
-export function trackFlowSectionPointerGesture(options) {
-    const ownsPointer = (event) => event.pointerId === options.pointerId;
-    const move = ((event) => {
-        if (ownsPointer(event))
-            options.move(event);
-    });
-    const cleanup = () => {
-        options.eventSource.removeEventListener("pointermove", move);
-        options.eventSource.removeEventListener("pointerup", finish);
-        options.eventSource.removeEventListener("pointercancel", cancel);
-        if (options.captureTarget.hasPointerCapture(options.pointerId)) {
-            options.captureTarget.releasePointerCapture(options.pointerId);
-        }
-    };
-    const finish = ((event) => {
-        if (!ownsPointer(event))
-            return;
-        cleanup();
-        options.finish(event);
-    });
-    const cancel = ((event) => {
-        if (!ownsPointer(event))
-            return;
-        cleanup();
-        options.cancel(event);
-    });
-    options.eventSource.addEventListener("pointermove", move);
-    options.eventSource.addEventListener("pointerup", finish);
-    options.eventSource.addEventListener("pointercancel", cancel);
-    try {
-        options.captureTarget.setPointerCapture(options.pointerId);
-    }
-    catch {
-        // Synthetic test pointers have no active device pointer to capture.
-    }
-    return cleanup;
-}
+import { sectionBoundsAfterKeyboardInput, sectionPointerDelta, } from "./workspace-section-geometry.js";
+import { FLOW_SECTION_ACTION_LABELS, flowSectionMenuRequest, } from "./workspace-section-menu.js";
+import { trackFlowSectionPointerGesture } from "./workspace-section-pointer.js";
+export { FLOW_SECTION_ACTION_LABELS, flowSectionMenuRequest, } from "./workspace-section-menu.js";
+export { trackFlowSectionPointerGesture } from "./workspace-section-pointer.js";
 const command = (root, detail) => {
     root.dispatchEvent(new CustomEvent("flow-section-command", { bubbles: true, detail }));
 };
@@ -148,18 +97,17 @@ export function installFlowSections(options) {
         const move = (event) => {
             if (!drag || drag.pointerId !== event.pointerId)
                 return;
-            const dx = (event.clientX - drag.client.x) / options.camera().zoom;
-            const dy = (event.clientY - drag.client.y) / options.camera().zoom;
+            const delta = sectionPointerDelta(drag.client, { x: event.clientX, y: event.clientY }, options.camera().zoom);
             const rect = section.querySelector("rect:not(.flow-section-resize-handle)");
             if (!rect)
                 return;
             if (drag.resize) {
-                rect.setAttribute("width", String(Math.max(240, drag.bounds.width + dx)));
-                rect.setAttribute("height", String(Math.max(140, drag.bounds.height + dy)));
+                rect.setAttribute("width", String(Math.max(240, drag.bounds.width + delta.x)));
+                rect.setAttribute("height", String(Math.max(140, drag.bounds.height + delta.y)));
             }
             else {
-                rect.setAttribute("x", String(drag.bounds.x + dx));
-                rect.setAttribute("y", String(drag.bounds.y + dy));
+                rect.setAttribute("x", String(drag.bounds.x + delta.x));
+                rect.setAttribute("y", String(drag.bounds.y + delta.y));
             }
         };
         const finish = (event) => {
@@ -168,8 +116,9 @@ export function installFlowSections(options) {
             const current = drag;
             drag = undefined;
             stopTracking = undefined;
-            const dx = Math.round((event.clientX - current.client.x) / options.camera().zoom);
-            const dy = Math.round((event.clientY - current.client.y) / options.camera().zoom);
+            const pointerDelta = sectionPointerDelta(current.client, { x: event.clientX, y: event.clientY }, options.camera().zoom);
+            const dx = Math.round(pointerDelta.x);
+            const dy = Math.round(pointerDelta.y);
             if (!dx && !dy) {
                 command(root, { kind: "select", sectionId: id });
                 return;

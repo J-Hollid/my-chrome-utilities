@@ -6,6 +6,7 @@ import {boundsAroundItems,cameraFromMinimapPoint,fitFlowBounds,flowWorkspaceKey,
 import {FLOW_PORT_SNAP_RADIUS,flowPortSnapTarget} from "../dist/flow-graph/relationship-port-snap.js";
 import {flowOutlineProjection} from "../dist/flow-graph/workspace-outline-model.js";
 import {selectionAfterActivation} from "../dist/flow-graph/workspace-selection.js";
+import {sectionPointerDelta} from "../dist/flow-graph/workspace-section-geometry.js";
 import {boundedDiagnostic,observeBrowserReadiness} from "./support/browser-observation-control.mjs";
 import {createFlowExamplesPhaseTimer,flowExamplesPhaseNames} from "./support/flow-examples-timing.mjs";
 import {decodeDevtoolsTextFrame,encodeDevtoolsTextFrame} from "./support/flow-workspace-r02-runtime.mjs";
@@ -39,6 +40,7 @@ for(let sample=0;sample<512;sample+=1){
   assert.ok(zoomed.zoom>=.25&&zoomed.zoom<=2);assert.ok(Math.abs(worldBefore.x-worldAfter.x)<.08&&Math.abs(worldBefore.y-worldAfter.y)<.08,"zoom conserves the anchor world point");
   const delta={x:random()*400-200,y:random()*400-200},panned=panFlowCamera(camera,delta);assert.equal(panned.zoom,camera.zoom);assert.ok(Math.abs(panned.x-(camera.x-delta.x/camera.zoom))<.01);assert.ok(Math.abs(panned.y-(camera.y-delta.y/camera.zoom))<.01);
   const start={x:random()*1000,y:random()*800},end={x:random()*1000,y:random()*800},bounds=sectionBoundsFromDrag(start,end,20);assert.ok(bounds.width>=20&&bounds.height>=20);assert.ok(bounds.x<=start.x+.01&&bounds.x<=end.x+.01&&bounds.y<=start.y+.01&&bounds.y<=end.y+.01);
+  const pointerStart={x:random()*2000-1000,y:random()*1600-800},cssDelta={x:random()*800-400,y:random()*800-400},pointerEnd={x:pointerStart.x+cssDelta.x,y:pointerStart.y+cssDelta.y},graphDelta=sectionPointerDelta(pointerStart,pointerEnd,camera.zoom);assert.ok(Math.abs(graphDelta.x*camera.zoom-cssDelta.x)<1e-9&&Math.abs(graphDelta.y*camera.zoom-cssDelta.y)<1e-9,"Section pointer deltas conserve generated screen distance at every camera zoom");
   const drop=relationshipDropTarget(sides[Math.floor(random()*4)],{x:random()*1000,y:random()*800});if(drop)assert.ok([["right","left","expected_next"],["top","bottom","alternative"],["bottom","top","merge"]].some(([,target,kind])=>drop.targetPort===target&&drop.kind===kind));
   const project=`project:${Math.floor(random()*32)}`,flow=`flow:${Math.floor(random()*8)}`;assert.notEqual(flowWorkspaceKey(project,flow),flowWorkspaceKey(`${project}:other`,flow));
   const world={x:random()*400,y:random()*300,width:500+random()*2000,height:400+random()*1600},viewport={width:200+random()*800,height:180+random()*620},point={x:random(),y:random()},minimap=cameraFromMinimapPoint(world,viewport,point,.25+random());assert.ok(Number.isFinite(minimap.x)&&Number.isFinite(minimap.y)&&Number.isFinite(minimap.zoom));

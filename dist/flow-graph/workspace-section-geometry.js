@@ -1,6 +1,12 @@
 const KEYBOARD_SECTION_STEP = 20;
 const MINIMUM_SECTION_WIDTH = 240;
 const MINIMUM_SECTION_HEIGHT = 140;
+export function sectionPointerDelta(start, current, zoom) {
+    return {
+        x: (current.x - start.x) / zoom,
+        y: (current.y - start.y) / zoom,
+    };
+}
 export function sectionBoundsAfterKeyboardInput(bounds, key, resize) {
     const delta = {
         ArrowLeft: { x: -KEYBOARD_SECTION_STEP, y: 0 },
