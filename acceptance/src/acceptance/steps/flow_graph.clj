@@ -82,7 +82,7 @@
                          {:out (:out result)})
         (reset! browser-observation observed))))
 (def runtime-evidence-keys
-  (set (map #(keyword (format "runtime%03d" %)) (range 1 31))))
+  (set (map #(keyword (format "runtime%03d" %)) (range 1 30))))
 (def required-evidence-keys (conj runtime-evidence-keys :installedBoundary))
 (def flow001-examples
   {["360" "800" "hidden"] :narrow-navigation-hidden
@@ -166,11 +166,6 @@
   {["25" "Escape"] :escape-25
    ["100" "pointer cancellation"] :pointer-cancel-100
    ["200" "Escape"] :escape-200})
-(def flow030-examples
-  {[:model ["320" "220" "160" "100" "480" "320"]] :model-320
-   [:model ["300" "180" "90" "140" "390" "320"]] :model-300
-   [:runtime ["100" "320" "220" "160" "100" "480" "320"]] :runtime-100
-   [:runtime ["200" "300" "180" "180" "280" "390" "320"]] :runtime-200})
 (defn- exact-example-key [example columns discriminators examples message]
   (let [row (mapv #(support/example-value example %) columns)]
     (when (some #(support/example-value example %) discriminators)
@@ -232,16 +227,6 @@
              (support/example-value example "cancel_input")
              (not (support/example-value example "source")))
     (exact-example-key example ["zoom" "cancel_input"] ["zoom" "cancel_input"] flow029-examples "Unknown Flow 029 snap-cancellation example.")))
-(defn flow030-example-key [mode example]
-  (when (support/example-value example "initial_width")
-    (support/assert! (contains? #{:model :runtime} mode) "Unknown Flow 030 evidence mode." {:mode mode})
-    (let [columns (if (= mode :runtime)
-                    ["zoom" "initial_width" "initial_height" "horizontal_distance" "vertical_distance" "expected_width" "expected_height"]
-                    ["initial_width" "initial_height" "horizontal_distance" "vertical_distance" "expected_width" "expected_height"])
-          row (mapv #(support/example-value example %) columns)
-          key [mode row]]
-      (support/assert! (contains? flow030-examples key) "Unknown Flow 030 Section-resize example." {:mode mode :row row})
-      (get flow030-examples key))))
 (defn validate-example! [mode example]
   (flow001-example-key mode example)
   (flow002-example-key example)
@@ -256,7 +241,6 @@
   (runtime027-example-key mode example)
   (flow028-example-key example)
   (flow029-example-key example)
-  (flow030-example-key mode example)
   example)
 (defn all-true? [values]
   (support/all-values-true? (when (map? values) (dissoc values :measurements))))

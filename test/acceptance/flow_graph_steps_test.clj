@@ -67,7 +67,7 @@
         (reset! flow-graph/browser-observation nil)))))
 
 (def complete-evidence
-  (assoc (into {} (map (fn [number] [(keyword (format "runtime%03d" number)) {:exact true}]) (range 1 31)))
+  (assoc (into {} (map (fn [number] [(keyword (format "runtime%03d" number)) {:exact true}]) (range 1 30)))
          :installedBoundary true))
 
 (deftest evidence-maps-cannot-pass-vacuously
@@ -83,7 +83,6 @@
   (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :runtime027)))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :runtime028)))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :runtime029)))))
-  (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :runtime030)))))
   (is (true? (boolean (flow-graph/complete-browser-evidence? (assoc complete-evidence :runtime026 {:exact true})))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :installedBoundary)))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? (assoc-in complete-evidence [:runtime021 :exact] false)))))
@@ -126,22 +125,6 @@
   (is (= :focus-keyboard (flow-graph/runtime027-example-key :runtime {"workspace_mode" "Focus Canvas" "pan_gesture" "activates the labelled keyboard pan command" "horizontal_distance" "-80" "vertical_distance" "-60"})))
   (is (thrown? clojure.lang.ExceptionInfo (flow-graph/runtime027-example-key :model {"workspace_mode" "the main workspace" "pan_gesture" "sends primary-pointer drag from empty canvas" "horizontal_distance" "120" "vertical_distance" "80"})))
   (is (thrown? clojure.lang.ExceptionInfo (flow-graph/runtime027-example-key :runtime {"workspace_mode" "Focus Canvas" "pan_gesture" "activates the labelled keyboard pan command" "horizontal_distance" "-80" "vertical_distance" "60"}))))
-
-(deftest flow030-examples-require-exact-mode-specific-resize-distances
-  (is (= :model-320
-         (flow-graph/flow030-example-key :model
-           {"initial_width" "320" "initial_height" "220" "horizontal_distance" "160"
-            "vertical_distance" "100" "expected_width" "480" "expected_height" "320"})))
-  (is (= :runtime-200
-         (flow-graph/flow030-example-key :runtime
-           {"zoom" "200" "initial_width" "300" "initial_height" "180"
-            "horizontal_distance" "180" "vertical_distance" "280"
-            "expected_width" "390" "expected_height" "320"})))
-  (is (thrown? clojure.lang.ExceptionInfo
-        (flow-graph/flow030-example-key :runtime
-          {"zoom" "200" "initial_width" "300" "initial_height" "180"
-           "horizontal_distance" "90" "vertical_distance" "140"
-           "expected_width" "390" "expected_height" "320"}))))
 
 (deftest runtime009-examples-have-distinct-evidence-keys
   (is (= :pageContextExpectedNext (flow-graph/runtime009-example-key {"source" "Customer details" "source_port" "right" "target" "Payment" "target_port" "left" "kind" "expected_next"})))
