@@ -522,3 +522,25 @@ Feature: Data layer directional Flow specification graph
       | 50   | 300                | -130                      | 40                  |
       | 100  | 40                 | 120                       | 160                 |
       | 200  | 160                | 296                       | 308                 |
+
+  # Data layer directional Flow specification graph 032
+  Scenario: Data layer directional Flow specification graph 032
+    Given Sales Section, Cart Page, add_payment_info Event, and Cart-to-Payment relationship are focusable canvas items
+    And their complete contextual command sets are
+      | item kind    | commands                                                                                           | editor commands         | destructive command |
+      | Section      | Rename, Move, Resize, Wrap selection, Remove Section, Remove with contents                         | Rename                  | Remove with contents |
+      | Page         | Rename in Flow, Add Event, Move, Connect, Duplicate, Details, Open schema contribution, Remove     | Rename in Flow, Details | Remove               |
+      | Event        | Move, Change Page, Duplicate, Details, Open schema contribution, Remove                            | Change Page, Details    | Remove               |
+      | Relationship | Edit documentation, Delete relationship                                                           | Edit documentation      | Delete relationship  |
+    When keyboard focus visits each canvas item without activating it
+    Then no action menu, editor, selection change, or focus transfer occurs
+    When the operator selects each item in turn by primary click or Enter or Space
+    Then only that item becomes selected and a nonmodal contextual toolbar exposes its labelled Actions menu button without moving focus from the item
+    When the operator opens each item's actions through secondary click, Shift+F10, the Context Menu key, or its Actions menu button
+    Then every entry point exposes the same ordered command set declared for that item
+    And the menu contains commands rather than embedded editor fields, places its destructive command last, and remains inside the visible canvas viewport
+    And opening or dismissing the menu creates no Draft, revision, canonical state, or Undo change
+    When the operator dismisses an open menu with Escape
+    Then focus returns to the invoking canvas item or Actions menu button while selection remains unchanged
+    When the operator reopens the menu and activates each declared editor command
+    Then the menu closes and a separate contextual editor opens for that item with focus on its first control

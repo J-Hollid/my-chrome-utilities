@@ -511,3 +511,70 @@ node scripts/run-focused-acceptance.mjs \
 
 This bounded five-pack plan is the approved throughput correction, not a new
 product slice or authority to widen shared verification semantics further.
+
+## Flow contextual action consistency slice
+
+Directional Flow scenario 032 and its runtime partner define one interaction
+hierarchy for Sections, Pages, Events, and relationships. Focus only navigates;
+primary click, Enter, or Space selects; and commands open only after an explicit
+menu invocation. Each selected item exposes a labelled Actions menu button, and
+secondary click, Shift+F10, the Context Menu key, and that button all open the
+same complete command set. A menu never opens merely because an item receives
+focus, and relationship selection no longer opens its editor or transfers focus
+automatically.
+
+The command surface is a menu, not an editor. It contains the item's existing
+commands, puts the destructive command last, and sends editor commands such as
+Rename, Details, or Edit documentation to a separate contextual surface. Escape
+returns focus to the invoking item or Actions button. Opening, moving through,
+or dismissing a menu cannot write a Draft, revision, canonical value, or Undo
+entry. This slice does not alter command meaning, selection persistence, graph
+topology, schema meaning, Page containment, relationship ports, or drag
+gestures, and it does not require a long-press gesture that could conflict with
+canvas dragging.
+
+**Development focus:** consolidate the item-menu invocation, placement, ARIA,
+and focus lifecycle behind a small Flow workspace boundary used by
+`src/flow-graph/workspace-ui.ts`, `src/flow-graph/workspace-section-ui.ts`, and
+`src/data-layer-flow-graph-ui.ts`. Keep item-specific command construction with
+its existing owner. Direct characterization belongs in
+`test/data-layer-flow-workspace-test.mjs`; installed pointer, keyboard, command
+parity, viewport containment, focus restoration, and state-invariance proof
+belongs in `test/support/flow-workspace-r02-runtime.mjs`, with scenario-032
+evidence wired through the Flow browser pack, reporter, and registry.
+
+**QA impact:** canonical planning for the three likely production paths selects
+the bounded `flow_graph`, `flow_export`, `live_flow_testing`, and
+`property_set_flow_sections` consumer set: 51 focused tasks with properties,
+followed by package proof. The review-ready checkpoint is:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_graph \
+  --pack flow_export \
+  --pack live_flow_testing \
+  --pack property_set_flow_sections \
+  --property \
+  --changed-since <approved-specification-commit> \
+  --prepare-evidence flow-context-action-consistency
+node scripts/package.mjs
+```
+
+**Scouting considerations:** RepoWise Trial 3's PR-mode risk query reinforced
+the direct Flow workspace unit, installed runtime, and browser-pack companions,
+and its hotspot signals support extracting the shared menu lifecycle rather than
+growing either broad installer. Ordinary inspection had already found those
+files, so scouting changed neither development focus nor QA impact. The query
+also reported downstream semantic consumers that this presentation-only slice
+does not change, declared test gaps despite naming the direct tests as historical
+co-change partners, and returned the old indexed commit after a successful
+conditional refresh. The refresh again created untracked VS Code integration
+files; they were removed. These are advisory-tool defects, not feature blockers.
+
+The implementation-and-review elapsed effort ceiling is 120 minutes from coder
+receipt to an architect `qa-ready` candidate. At 60 minutes, report whether
+installed Section, Page, Event, and relationship items remain inert on focus and
+whether one pointer and one keyboard route open the same command set with correct
+focus restoration. Include any variance cause, remaining work, confidence, and
+forecast; continue bounded work under the QA pilot unless product scope, safety,
+or authority changes.

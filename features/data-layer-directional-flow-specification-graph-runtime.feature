@@ -518,3 +518,26 @@ Feature: Data layer directional Flow specification graph runtime
       | 50   | 300                | -130                      | 40                  |
       | 100  | 40                 | 120                       | 160                 |
       | 200  | 160                | 296                       | 308                 |
+
+  # Data layer directional Flow specification graph runtime 032
+  Scenario: Data layer directional Flow specification graph runtime 032
+    Given installed Sales Section, Cart Page, add_payment_info Event, and Cart-to-Payment relationship are focusable canvas items
+    And production declares these contextual commands
+      | item kind    | commands                                                                                           | editor commands         | destructive command |
+      | Section      | Rename, Move, Resize, Wrap selection, Remove Section, Remove with contents                         | Rename                  | Remove with contents |
+      | Page         | Rename in Flow, Add Event, Move, Connect, Duplicate, Details, Open schema contribution, Remove     | Rename in Flow, Details | Remove               |
+      | Event        | Move, Change Page, Duplicate, Details, Open schema contribution, Remove                            | Change Page, Details    | Remove               |
+      | Relationship | Edit documentation, Delete relationship                                                           | Edit documentation      | Delete relationship  |
+    When actual keyboard input moves focus across every item without activation
+    Then the installed Flow opens no menu or editor, preserves selection, and leaves focus on the visited item
+    When actual primary-pointer and Enter or Space input select each item in turn
+    Then exactly that item renders selected and its contextual toolbar exposes an Actions button without transferring focus
+    When actual input opens each command surface by secondary pointer action, Shift+F10, the Context Menu key, or the Actions button
+    Then each route exposes one role menu whose ordered menuitems equal the declared commands for that item
+    And the Actions button reports aria-haspopup menu, its current aria-expanded state, and the controlled menu
+    And the menu is fully contained by the measured canvas viewport with its destructive command last and no embedded editor fields
+    And Saved Draft bytes, Flow revision, canonical project bytes, and Undo depth equal their pre-menu values after open and dismissal
+    When actual Escape input dismisses each menu
+    Then focus returns to the canvas item or Actions button that invoked it and serialized selection remains unchanged
+    When actual controls reopen each menu and activate each declared editor command
+    Then the menu closes, the separate installed editor opens, and its first control owns focus

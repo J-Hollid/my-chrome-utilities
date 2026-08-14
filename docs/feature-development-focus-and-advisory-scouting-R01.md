@@ -134,6 +134,30 @@ the revised command discovers a relevant file or check before ordinary
 inspection, reduces false positives, or changes either declared verification
 scope.
 
+### Trial 3 — Flow contextual action consistency
+
+The third trial used PR-mode target and changed-file risk for
+`src/data-layer-flow-graph-ui.ts`, `src/flow-graph/workspace-ui.ts`, and
+`src/flow-graph/workspace-section-ui.ts`, followed by caller, callee, metric, and
+health context for the workspace owner. It surfaced the direct Flow browser
+pack, workspace unit, and installed runtime companions and reinforced a small
+shared menu-lifecycle boundary because all three production files are active
+hotspots. Ordinary source and registry inspection had already found those
+companions and the exact four-pack, 51-task QA forecast, so scouting changed
+neither development focus nor QA impact.
+
+The PR directive also listed unrelated downstream semantic consumers, reported
+no runnable tests while separately identifying the direct tests as co-change
+partners, and continued to claim that the index was at `980c8b81` after the
+conditional update processed through `39660e0a`. The update again created
+untracked `.vscode` integration files, which were removed. Status, update, risk,
+context, and cleanup cost roughly 35 seconds. After three Flow-heavy trials the
+signal is useful but not yet varied enough for a final keep-or-stop decision:
+continue for one ordinary non-Flow feature, skip no required conditional status
+check, and stop the routine pilot if that fourth trial again changes neither
+development focus nor QA scope. RepoWise remains optional advisory input in the
+meantime; direct inspection and canonical planning remain authoritative.
+
 ## Evaluation
 
 Use existing handoff, Git, receipt, and evidence timestamps. For each applicable
