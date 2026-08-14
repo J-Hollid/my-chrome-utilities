@@ -9,6 +9,9 @@ import { setTimeout as pause } from "node:timers/promises";
 import {
   exactObject, git, normalized, shaPattern, stableIncidentId, timeoutIncidentDigest,
 } from "./verification-reliability-values.mjs";
+import {
+  terminalProjectionCoverageShapeValid, terminalProjectionCoverageValid,
+} from "./verification-reliability-deferred.mjs";
 
 export async function defaultRepositoryRuntimeDirectory(root) {
   const common = await git(root, "rev-parse", "--git-common-dir");
@@ -76,6 +79,7 @@ function deferredDispositionCoreValid(disposition) {
     shaPattern.test(String(disposition?.digest)),
     disposition?.digest === timeoutIncidentDigest({ ...disposition, digest:undefined }),
     bootstrapValid,
+    terminalProjectionCoverageShapeValid(disposition?.projectionCoverage),
   ].every(Boolean);
 }
 
@@ -115,7 +119,9 @@ function deferredProofValid(incident, deferred, latest) {
     root?.carryForward === undefined,
     (root?.reviewReady?.focusedTaskKeys?.includes(incident.failure.task.key) ||
       root?.runIntentBootstrap?.coverage?.some(({ incidentId, selectedTaskKey }) =>
-        incidentId === incident.id && root.reviewReady.focusedTaskKeys.includes(selectedTaskKey))),
+        incidentId === incident.id && root.reviewReady.focusedTaskKeys.includes(selectedTaskKey)) ||
+      terminalProjectionCoverageValid(incident,root?.projectionCoverage,
+        root?.reviewReady?.focusedTaskKeys)),
     chain.every((disposition) => disposition.repairDigest === deferred.repairDigest),
     latest?.dispositionDigest === deferred.digest, latest?.at === deferred.recordedAt,
     Boolean(latest?.carried) === Boolean(deferred.carryForward)].every(Boolean);

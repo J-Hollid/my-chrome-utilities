@@ -20,6 +20,7 @@ import {
 import {
   classifyLegacyIncidentRunIntent, governedRepairAttemptAssociation,
 } from "./verification-run-intent.mjs";
+import { terminalProjectionCoverageValid } from "./verification-reliability-deferred.mjs";
 import {
   exactObject, git, normalized, repositoryRoot, retryClassifications, shaPattern,
   stableIncidentId, timeoutIncidentDigest,
@@ -570,9 +571,10 @@ export function createTimeoutIncidentStore({
     async blockingForEvidence({ commit }) {
       const blocked = [];
       for (const incident of await this.blocking({ commit })) {
-        const exactCurrentRepair = incident.repair?.status === "eligible" &&
-          incident.repair.candidate?.commit === commit;
-        if (!eligibleDeferredIncident(incident) && !exactCurrentRepair) blocked.push(incident);
+        const repairCandidate=timeoutRepairCandidate(incident),eligibleRepairDescendant=
+          incident.repair?.status==="eligible"&&repairCandidate?.commit&&
+          await commitDescendsFrom({root,isAncestor,ancestor:repairCandidate.commit,commit});
+        if (!eligibleDeferredIncident(incident) && !eligibleRepairDescendant) blocked.push(incident);
       }
       return blocked;
     },
@@ -604,7 +606,9 @@ export function createTimeoutIncidentStore({
             !Array.isArray(proof.reviewReady?.focusedTaskKeys) ||
             !(proof.reviewReady.focusedTaskKeys.includes(incident.failure.task.key) ||
               proof.runIntentBootstrap?.coverage?.some(({ incidentId, selectedTaskKey }) =>
-                incidentId === id && proof.reviewReady.focusedTaskKeys.includes(selectedTaskKey))) ||
+                incidentId === id && proof.reviewReady.focusedTaskKeys.includes(selectedTaskKey)) ||
+              terminalProjectionCoverageValid(incident,proof.projectionCoverage,
+                proof.reviewReady.focusedTaskKeys)) ||
             !shaPattern.test(proof.package?.digest ?? "")) {
           throw new Error(`Reliability incident ${id} terminal deferral proof is stale or incomplete`);
         }
@@ -615,6 +619,8 @@ export function createTimeoutIncidentStore({
           reviewReady:structuredClone(proof.reviewReady),
           ...(proof.runIntentBootstrap
             ? { runIntentBootstrap:structuredClone(proof.runIntentBootstrap) } : {}),
+          ...(proof.projectionCoverage
+            ? { projectionCoverage:structuredClone(proof.projectionCoverage) } : {}),
           package:structuredClone(proof.package),
         };
         const currentProof = incident.terminalVerificationDeferred && {
@@ -624,6 +630,8 @@ export function createTimeoutIncidentStore({
           reviewReady:incident.terminalVerificationDeferred.reviewReady,
           ...(incident.terminalVerificationDeferred.runIntentBootstrap
             ? { runIntentBootstrap:incident.terminalVerificationDeferred.runIntentBootstrap } : {}),
+          ...(incident.terminalVerificationDeferred.projectionCoverage
+            ? { projectionCoverage:incident.terminalVerificationDeferred.projectionCoverage } : {}),
           package:incident.terminalVerificationDeferred.package,
         };
         if (currentProof && timeoutIncidentDigest(currentProof) ===

@@ -45,7 +45,7 @@ import {
 import {
   classifyExecutionRestriction, consumeVerificationLaunchAuthorization,
   createVerificationLaunchAuthorizations, defaultTaskExecutionPrerequisites,
-  expandVerificationTaskPrerequisites, normalizeBrowserPrerequisiteTasks,
+  expandVerificationTaskPrerequisites,
   preflightExecutionPrerequisites, probeExecutionPrerequisiteEnvironment,
 } from "./verification-execution-prerequisites.mjs";
 import {
@@ -1343,9 +1343,8 @@ export function selectFocusedVerificationTasks(plan, requestedKeys, canonicalPla
 }
 
 export function closeVerificationPlanPrerequisites(plan, canonicalPlan = plan) {
-  const expandedTasks = expandVerificationTaskPrerequisites(plan.tasks, canonicalPlan.tasks,
+  const closedTasks = expandVerificationTaskPrerequisites(plan.tasks, canonicalPlan.tasks,
     { mode:plan.mode });
-  const closedTasks = normalizeBrowserPrerequisiteTasks(expandedTasks,canonicalPlan.tasks);
   const taskGroups = new Map();
   for (const source of [canonicalPlan, plan]) {
     for (const group of focusedTaskGroups) {

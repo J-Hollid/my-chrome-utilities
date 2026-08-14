@@ -159,6 +159,10 @@ import {
 import {
   defaultStoreDirectory, validateIncident,
 } from "../scripts/verification-reliability-persistence.mjs";
+import {
+  terminalProjectionCoverage,
+  terminalProjectionCoverageValid,
+} from "../scripts/verification-reliability-deferred.mjs";
 import { recordEligibleIncidentDeferral } from "../scripts/verification-reliability-runtime.mjs";
 import {
   boundedClosureContractRevision,
@@ -377,7 +381,8 @@ assert.throws(() => expandVerificationTaskPrerequisites([{ ...transitivePrerequi
 "a missing typed satisfier blocks before execution");
 const canonicalBrowserBatch={key:"browser-observation:A+B+C",stage:"browser-observation",packId:"flow",
   executable:"node",args:["scripts/run-browser-observation.mjs","A","B","C"],target:"A,B,C",
-  environment:{A:"1",B:"1",C:"1"},requiredCapabilities:["local-loopback"],logicalTargetIds:["A","B","C"]},
+  environment:{A:"1",B:"1",C:"1"},requiredCapabilities:["local-loopback"],
+  prerequisiteTaskKeys:[],logicalTargetIds:["A","B","C"]},
   aliasBrowserBatch={...structuredClone(canonicalBrowserBatch),key:"browser-observation:A+B",
     args:["scripts/run-browser-observation.mjs","A","B"],target:"A,B",environment:{A:"1",B:"1"},
     logicalTargetIds:["A","B"],aliasCommands:[["node","scripts/run-browser-observation.mjs","A"]]},
@@ -393,6 +398,11 @@ assert.deepEqual(normalizedBrowserPrerequisites.map(({key})=>key),
   "overlapping and alias-only browser prerequisites normalize to one canonical batch");
 assert.deepEqual(normalizedBrowserPrerequisites.at(-1).prerequisiteTaskKeys,[canonicalBrowserBatch.key],
   "prerequisite edges are rebound to the canonical browser task exactly once");
+assert.deepEqual(expandVerificationTaskPrerequisites(
+  [aliasBrowserBatch,overlappingBrowserBatch,browserConsumer],
+  [canonicalBrowserBatch,browserConsumer],{mode:"ordinary-focused"}).map(({key})=>key),
+  [canonicalBrowserBatch.key,browserConsumer.key],
+  "the prerequisite-expansion boundary returns the normalized canonical browser closure");
 assert.throws(()=>normalizeBrowserPrerequisiteTasks([aliasBrowserBatch],[]),/missing current canonical browser target/iu);
 assert.throws(()=>normalizeBrowserPrerequisiteTasks([aliasBrowserBatch],[canonicalBrowserBatch,
   {...canonicalBrowserBatch,key:"browser-observation:A+B+C:copy"}]),/ambiguous current canonical browser target/iu);
@@ -420,6 +430,30 @@ const sameTargetProjection=await resolveIncidentTaskSuccession({incident:project
 assert.equal(sameTargetProjection.projection,"same-target-planner-projection");
 assert.deepEqual(sameTargetProjection.execution.logicalTargetIds,["A"],
   "same-target projection executes only the diagnosed target through the current identity");
+const projectedEligibleIncident={...projectedIncident,repair:{focusedTaskPlan:[{
+  identity:projectedCurrent,roles:["diagnosed-boundary"],taskSuccession:{
+    version:sameTargetProjection.version,sourceTaskDigest:sameTargetProjection.sourceTaskDigest,
+    destinationTaskDigest:sameTargetProjection.destinationTaskDigest,
+    chain:structuredClone(sameTargetProjection.chain),
+    logicalSlice:structuredClone(sameTargetProjection.logicalSlice),
+    conservationDigest:sameTargetProjection.conservationDigest,
+  }}]}};
+const projectedReviewTasks={[projectedCurrent.key]:{identity:projectedCurrent,status:"passed",
+  provenance:"fresh"}},projectedCoverage=terminalProjectionCoverage(
+    projectedEligibleIncident,projectedReviewTasks);
+assert.equal(projectedCoverage.destinationTaskKey,projectedCurrent.key,
+  "terminal deferral carries the validated current destination task key");
+assert.equal(terminalProjectionCoverageValid(projectedEligibleIncident,projectedCoverage,
+  [projectedCurrent.key]),true,
+"projection deferral binds the immutable source digest and fresh review destination");
+assert.equal(terminalProjectionCoverage(projectedEligibleIncident,{[projectedCurrent.key]:{
+  ...projectedReviewTasks[projectedCurrent.key],provenance:"restored"}}),undefined,
+"non-fresh destination evidence cannot satisfy projected terminal deferral");
+assert.equal(terminalProjectionCoverage({...projectedEligibleIncident,repair:{focusedTaskPlan:[
+  {...projectedEligibleIncident.repair.focusedTaskPlan[0],taskSuccession:{
+    ...projectedEligibleIncident.repair.focusedTaskPlan[0].taskSuccession,
+    sourceTaskDigest:"0".repeat(64)}}]}},projectedReviewTasks),undefined,
+"a projection whose source digest does not bind the immutable failure remains blocked");
 await assert.rejects(()=>resolveIncidentTaskSuccession({incident:projectedIncident,
   currentIdentities:[],currentPacks:projectionPacks,graph:{version:1,identities:{},boundaries:{},edges:[]},
   loadHistoricalPacks:async()=>projectionPacks,loadSourceReceipt:async()=>projectionReceipt}),
@@ -2831,8 +2865,11 @@ console.log("repairTmp=" + process.env.TMPDIR);
     .some(({ id }) => id === first.id), false,
   "an exact-candidate eligible repair may produce the focused evidence required to defer it");
   assert.equal((await store.blockingForEvidence({ commit:"reclaimed-commit" }))
-    .some(({ id }) => id === first.id), true,
-  "an eligible repair on an ancestor remains blocking until terminally deferred");
+    .some(({ id }) => id === first.id), false,
+  "an eligible ancestor repair may enter a fresh descendant review checkpoint before deferral");
+  assert.equal((await store.blockingForHandoff({ commit:"reclaimed-commit",
+    readiness:"review-ready" })).some(({ id }) => id === first.id), true,
+  "the descendant remains handoff-blocked until fresh review and package proof defer the repair");
   await assert.rejects(store.proposeRepair(first.id, {
     causalCategory, causalExplanation, regressionKey,
     regressionReceiptPath:focusedReceiptPath, focusedReceiptPath,

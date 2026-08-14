@@ -5,6 +5,7 @@ import path from "node:path";
 import {
   assertNoBlockingTimeoutIncidents, createTimeoutIncidentStore,
 } from "./verification-reliability-store.mjs";
+import { terminalProjectionCoverage } from "./verification-reliability-deferred.mjs";
 import { git, repositoryRoot } from "./verification-reliability-values.mjs";
 
 export { createTimeoutIncidentStore };
@@ -30,7 +31,18 @@ async function canonicalPackageProof(review) {
     digest:createHash("sha256").update(bytes).digest("hex") };
 }
 
-function terminalDeferralProof(review, packageProof) {
+async function boundReviewReceipt(review) {
+  if(!/^tmp\/verification-receipts\/[A-Za-z0-9._-]+\.json$/u.test(review.receipt.path))
+    throw new Error("Terminal verification deferral requires a canonical review receipt path");
+  const receiptPath=path.resolve(repositoryRoot,review.receipt.path),bytes=await readFile(receiptPath);
+  if (createHash("sha256").update(bytes).digest("hex")!==review.receipt.sha256) {
+    throw new Error("Terminal verification deferral review receipt digest changed");
+  }
+  return JSON.parse(bytes);
+}
+
+function terminalDeferralProof(review, packageProof, incident, receipt) {
+  const projectionCoverage=terminalProjectionCoverage(incident,receipt.tasks);
   return {
     candidate:{ commit:review.candidateCommit, tree:review.candidateTree },
     reviewReady:{ task:review.task, baseCommit:review.baseCommit,
@@ -39,6 +51,7 @@ function terminalDeferralProof(review, packageProof) {
       focusedTaskKeys:[...review.focusedScope.taskKeys] },
     ...(review.runIntentBootstrap
       ? { runIntentBootstrap:structuredClone(review.runIntentBootstrap) } : {}),
+    ...(projectionCoverage ? { projectionCoverage } : {}),
     package:packageProof,
   };
 }
@@ -56,8 +69,11 @@ async function recordEligibleHandoffDeferrals(store, incidents, {
   if (!reviewHandoffRequested(readiness, verified)) return;
   const { verifyReviewReadyEvidence } = await import("./settled-final-verification.mjs");
   const review = await verifyReviewReadyEvidence(commit, base, task);
-  const proof = terminalDeferralProof(review, await canonicalPackageProof(review));
+  const [packageProof,receipt]=await Promise.all([
+    canonicalPackageProof(review),boundReviewReceipt(review),
+  ]);
   for (const incident of incidents) {
+    const proof = terminalDeferralProof(review, packageProof, incident, receipt);
     await recordEligibleIncidentDeferral(store, incident, review, proof);
   }
 }

@@ -141,7 +141,7 @@ export function expandVerificationTaskPrerequisites(requestedTasks, canonicalTas
   if (ordered.length !== selected.size) {
     throw new Error("Verification prerequisite closure has an ambiguous canonical satisfier");
   }
-  return ordered;
+  return normalizeBrowserPrerequisiteTasks(ordered, canonicalTasks);
 }
 
 const browserTargets = (task) => task.stage === "browser-observation" &&
