@@ -442,3 +442,72 @@ Cart position before release and after render at 50, 100, and 200 percent zoom,
 including complete-card containment at the top and bottom examples, remaining
 work, confidence, and forecast. Continue bounded work by default; pause only
 under the pilot's scope, repeated-failure, safety, or authority conditions.
+
+### Same-target reliability projection correction
+
+The first governed review-evidence attempt exposed one product failure twice in
+the same receipt. Both records belong to candidate `bea1ba70`, its exact tree,
+`FLOW_WORKSPACE_AUTHORING_TARGET`, and the same offscreen Page-placement
+assertion. Incident `509d8d6b` uses the canonical five-target Flow batch;
+incident `ae7b70d3` uses an alias-filtered four-target prerequisite batch that
+the checkpoint planner added beside it. The latter is not a second product
+failure and is not an abandoned lineage. Its task identity differs because the
+planner removed the full-program alias and the unrelated stylesheet-extraction
+sibling while retaining the same diagnosed target.
+
+Future checkpoints must prevent the duplication before execution. When
+prerequisite closure produces browser batches with overlapping logical targets
+or alias-only identity differences, prelaunch normalization resolves each
+affected target to exactly one current canonical batch with the same registered
+pack, program, session, capabilities, and target boundary. It rebinds every
+prerequisite edge to those canonical tasks before authorization, so each target,
+result, timing record, and evidence leaf executes exactly once. Missing or
+ambiguous canonical targets, changed boundaries, and incompatible execution
+inputs block rather than being silently deduplicated. This applies to subset,
+superset, partial-overlap, and repartitioned batch shapes without treating their
+unrelated sibling targets as causal evidence.
+
+Reliability repair planning must also handle the two existing records without
+waiting for another user disposition or inventing registry history. When an
+incident diagnoses one browser target, its source task is bound by the governed
+source receipt and failure-commit registry, exactly one current canonical
+browser task contains the target, and the historical and current target-boundary
+digests are identical, the planner records a deterministic same-target
+projection to the current task. The immutable source identity remains in the
+incident. The projection supplies only the execution identity for the diagnosed
+target and does not declare that different target boundaries are equivalent.
+
+Missing, ambiguous, unbound, or changed target boundaries still block. Do not
+delete, rewrite, merge, abandon, or silently resolve either incident; do not
+weaken causal regression or review-evidence requirements. Each incident receives
+its own repair-focused protocol proof on the corrected descendant, after which
+one fresh review-evidence checkpoint and package proof may defer both unresolved
+obligations to master integration under the existing feature-mode contract. No
+all-20 checkpoint is authorized in feature mode.
+
+**Development focus:** keep the correction within checkpoint prerequisite
+normalization, `scripts/verification-task-succession.mjs`, and their exact
+process tests. Reuse the existing task-plan, launch-authorization, and
+repair-receipt validators; do not change incident fingerprints, store
+persistence, terminal resolution, or product behavior. The historical and
+current `FLOW_WORKSPACE_AUTHORING_TARGET` boundaries for this case both digest to
+`d4dda1a04a965ee6f30c386ae7f9f25400e5a31466522ab1e6183f2a0206d084`.
+
+**QA impact:** the correction adds the `shell` owner of task-succession policy to
+the already required four Flow packs. After both incident-focused proofs, the
+single review-evidence checkpoint is:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_graph \
+  --pack flow_export \
+  --pack live_flow_testing \
+  --pack property_set_flow_sections \
+  --pack shell \
+  --property \
+  --changed-since <approved-correction-commit> \
+  --prepare-evidence flow-page-placement-geometry
+```
+
+This bounded five-pack plan is the approved throughput correction, not a new
+product slice or authority to widen shared verification semantics further.

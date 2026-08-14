@@ -2306,3 +2306,38 @@ Feature: Modular verification packs
     And pending evidence requires every selected failure task or successor to pass freshly with package proof
     And the incidents remain unresolved until the handoff gate re-defers them on the exact candidate
     And a base that already contains run-intent implementation cannot reuse bootstrap authority
+
+  # Modular verification packs 161
+  Scenario: Modular verification packs 161
+    Given one governed review-evidence receipt contains a canonical browser batch and an alias-filtered prerequisite batch that both fail on the same single logical target
+    And the prerequisite task is absent from the current canonical plan only because its sibling-target set or alias commands differ
+    When reliability repair planning compares that target in the failure-commit registry with its unique current canonical batch
+    Then an identical target boundary produces a deterministic same-target planner projection without requiring a declared task-succession edge
+    And the repair executes only the diagnosed logical target and its causal regression through the current canonical task identity
+    And both immutable incidents still require their own eligible causal repair proof before review evidence can proceed
+    And no all-20 checkpoint, abandonment, incident rewrite, or unchanged diagnostic rerun is used in feature mode
+
+  # Modular verification packs 162
+  Scenario Outline: Modular verification packs 162
+    Given an unresolved browser incident needs a same-target planner projection
+    When repair planning observes <invalid_projection>
+    Then repair remains blocked with <diagnostic>
+    And no task-succession, target equivalence, or passing evidence is inferred
+
+    Examples:
+      | invalid_projection                                                | diagnostic                                      |
+      | no current canonical batch contains the diagnosed target          | a missing current target boundary               |
+      | more than one current canonical batch contains the target         | an ambiguous current target boundary            |
+      | the historical and current target boundary digests differ         | a changed target boundary                       |
+      | the source task is not bound by its governed receipt and registry | an unverified planner-projection source identity |
+
+  # Modular verification packs 163
+  Scenario: Modular verification packs 163
+    Given checkpoint prerequisite closure selects browser batches with overlapping logical targets or alias-only identity differences
+    And each affected target has one current canonical batch with the same registered pack, program, session, capabilities, and target boundary
+    When the executable checkpoint plan is normalized before launch authorization
+    Then each affected target is assigned to its unique current canonical batch
+    And every prerequisite edge is rebound to those canonical tasks before authorization
+    And every logical target, prerequisite obligation, result, timing record, and evidence leaf is conserved exactly once
+    And no noncanonical overlapping task can launch or create a duplicate reliability incident
+    And a missing or ambiguous canonical target, changed target boundary, or incompatible execution contract blocks instead of being deduplicated
