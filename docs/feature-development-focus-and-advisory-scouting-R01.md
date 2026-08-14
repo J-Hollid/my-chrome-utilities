@@ -63,15 +63,19 @@ exceed the implementation and maintenance cost.
 For the next three to five varied ordinary QA features, the specifier uses
 RepoWise after likely source files are identified and before the implementation
 handoff is finalized. Tool or local-index unavailability is reported but does
-not block the feature. Scouting is advisory and telemetry stays disabled:
+not block the feature. Scouting is advisory and telemetry stays disabled. Run
+the index update only when status shows that the index is behind current `HEAD`;
+an already-current index needs no refresh:
 
 ```sh
 DO_NOT_TRACK=1 tmp/repowise-venv/bin/repowise status . \
   --no-workspace --format json
+# Only when the preceding status is behind current HEAD:
 DO_NOT_TRACK=1 tmp/repowise-venv/bin/repowise update . \
   --index-only --no-workspace --no-agents
 DO_NOT_TRACK=1 tmp/repowise-venv/bin/repowise risk \
-  --target <likely-path> --format json --full
+  --target <likely-path> --changed-file <likely-path> \
+  --format json --full
 DO_NOT_TRACK=1 tmp/repowise-venv/bin/repowise context <likely-path> \
   --include callers \
   --include callees --include metrics --include health --path . \
@@ -99,6 +103,32 @@ integration files, the focused Flow unit and browser checks,
 It also produced hotspot and historical co-change signals that warranted
 inspection but did not independently authorize wider QA. Later pilot entries
 compare their useful and false-positive results with that baseline.
+
+### Trial 1 — Flow Section pointer continuity
+
+The first post-activation feature settled on QA at `79e4aeb053`. Plain
+target-risk and context scouting confirmed
+`src/flow-graph/workspace-section-ui.ts`, its workspace caller, the direct unit
+test, and installed Flow runtime support, but ordinary inspection had already
+found the relevant development focus and QA impact. Scouting therefore changed
+neither list. The read-only queries took about four seconds; the unnecessary
+index update also created untracked VS Code integration files that were removed.
+
+The plain target-risk result incorrectly reported a test gap and included
+irrelevant historical co-change suggestions. A post-settlement comparison showed
+that adding `--changed-file` would have produced the more useful PR-mode blast
+radius: it elevated the direct unit and runtime companions and the property test
+that the implementation later changed. It still did not identify the Flow
+evidence reporter or the exact `verification/packs.json` registration work.
+RepoWise exposes that registry only as an unsymbolized JSON file, so direct
+registry inspection and the canonical changed-path planner remain mandatory.
+
+Trial 2 therefore uses the conditional update and PR-mode risk command above.
+Per-test coverage ingestion remains optional only when a suitable report already
+exists; this pilot does not create a coverage-generation program. Record whether
+the revised command discovers a relevant file or check before ordinary
+inspection, reduces false positives, or changes either declared verification
+scope.
 
 ## Evaluation
 
