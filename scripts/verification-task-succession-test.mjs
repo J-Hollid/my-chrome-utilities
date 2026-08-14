@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {mkdir,rm,writeFile} from "node:fs/promises";
 
 import {
   resolveIncidentTaskSuccession,
@@ -88,6 +89,36 @@ await assert.rejects(()=>validateUnresolvedIncidentTaskSuccession({incidents:[{
     retryScope:{kind:"target",logicalTargetIds:["FLOW"]}},
 }],currentIdentities:[expandedBatch],currentPacks:[],graph:batchGraph}),/registry history|succession/iu,
 "a noneligible repair cannot use deferred focused reassessment");
+
+const projectionPack=(leaves)=>({id:"flow_graph",browserObservations:[{
+  id:"FLOW",path:"test/browser.mjs",sessionBatch:"flow",environment:{FLOW:"1"},
+  impactBoundaries:["flow"],observationKeys:["flow"],features:["features/flow.feature"],
+}],browserEvidencePartitions:[{path:"test/browser.mjs",sessionBatch:"flow",
+  targets:[{id:"FLOW",leaves}]}],browserAdapterPerformance:[{
+  path:"test/browser.mjs",sessionBatch:"flow",targetIds:["FLOW"],
+  maximumSingleTargetP90Milliseconds:35000,
+}]});
+const projectionReceipt=`tmp/verification-receipts/task-succession-${process.pid}.json`;
+await mkdir(new URL("../tmp/verification-receipts/",import.meta.url),{recursive:true});
+await writeFile(new URL(`../${projectionReceipt}`,import.meta.url),JSON.stringify({
+  candidate:{commit:"historical-commit",tree:"historical-tree"},
+  tasks:{[standalone.key]:{identity:standalone,status:"failed"}},
+}));
+try{
+  const projectionIncident={state:"unresolved",repair:{status:"eligible"},
+    terminalVerificationDeferred:{status:"terminal-verification-deferred"},failure:{
+      task:standalone,sourceReceipt:projectionReceipt,
+      lineage:{commit:"historical-commit",tree:"historical-tree"},
+      retryScope:{kind:"target",logicalTargetIds:["FLOW"]},
+    }};
+  assert.deepEqual(await validateUnresolvedIncidentTaskSuccession({incidents:[projectionIncident],
+    currentIdentities:[batch],currentPacks:[projectionPack(["flow.ready","flow.expanded"])],
+    graph:{version:1,identities:{},boundaries:{},edges:[]},
+    loadHistoricalPacks:async()=>[projectionPack(["flow.ready"])]}),[],
+  "an eligible deferred target remains pending when verified planner projection finds an expanded boundary");
+}finally{
+  await rm(new URL(`../${projectionReceipt}`,import.meta.url),{force:true});
+}
 
 const splitSource=task("unit:combined"),splitOne=task("unit:split-one"),splitTwo=task("unit:split-two");
 const splitBoundary=boundary("complete-failed-boundary"),otherBoundary=boundary("unrelated-boundary");

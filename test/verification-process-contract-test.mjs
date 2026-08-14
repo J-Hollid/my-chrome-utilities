@@ -430,6 +430,21 @@ const sameTargetProjection=await resolveIncidentTaskSuccession({incident:project
 assert.equal(sameTargetProjection.projection,"same-target-planner-projection");
 assert.deepEqual(sameTargetProjection.execution.logicalTargetIds,["A"],
   "same-target projection executes only the diagnosed target through the current identity");
+const expandedProjectionPacks=structuredClone(projectionPacks);
+expandedProjectionPacks[0].browserEvidencePartitions[0].targets[0].leaves.push("flow.A.expanded");
+await assert.rejects(()=>resolveIncidentTaskSuccession({incident:projectedIncident,
+  currentIdentities:[projectedCurrent],currentPacks:expandedProjectionPacks,
+  graph:{version:1,identities:{},boundaries:{},edges:[]},
+  loadHistoricalPacks:async()=>projectionPacks,loadSourceReceipt:async()=>projectionReceipt}),
+  /changed target boundary for A/iu,
+"direct same-target projection still rejects an expanded target boundary");
+const deferredExpandedProjection={...projectedIncident,repair:{status:"eligible"},
+  terminalVerificationDeferred:{status:"terminal-verification-deferred"}};
+assert.deepEqual(await validateUnresolvedIncidentTaskSuccession({
+  incidents:[deferredExpandedProjection],currentIdentities:[projectedCurrent],
+  currentPacks:expandedProjectionPacks,graph:{version:1,identities:{},boundaries:{},edges:[]},
+  loadHistoricalPacks:async()=>projectionPacks,loadSourceReceipt:async()=>projectionReceipt,
+}),[],"an eligible deferred expanded target remains pending focused reassessment");
 const projectedEligibleIncident={...projectedIncident,repair:{focusedTaskPlan:[{
   identity:projectedCurrent,roles:["diagnosed-boundary"],taskSuccession:{
     version:sameTargetProjection.version,sourceTaskDigest:sameTargetProjection.sourceTaskDigest,
@@ -3466,6 +3481,7 @@ console.log("repairTmp=" + process.env.TMPDIR);
   };
   await import("../scripts/verification-task-succession-test.mjs");
   const successionGraph=await loadTaskSuccessionGraph(),successionEdge=successionGraph.edges[0],
+    successionFixturePacks=await verificationPacksAtCommit("c98889b1"),
     successionSource=successionGraph.identities[successionEdge.sourceTaskDigest],
     successionIncident={id:"d3a49b37-e016-4bed-830c-9531045a6773",state:"unresolved",
       failure:{task:structuredClone(successionSource),retryScope:{kind:"target",
@@ -3474,11 +3490,12 @@ console.log("repairTmp=" + process.env.TMPDIR);
       failedBoundary:{logicalTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET"},
       causalKey:"immutable-causal-key",occurrence:{diagnostic:"immutable Zoom-in diagnostic"}}},
     successionIncidentBefore=JSON.stringify(successionIncident),
-    currentSuccessionIdentities=currentConservationPlan.tasks.map(verificationTaskIdentity),
+    currentSuccessionIdentities=planVerification(successionFixturePacks,{terminalFull:true})
+      .tasks.map(verificationTaskIdentity),
     flowTaskSuccession=await resolveIncidentTaskSuccession({incident:successionIncident,
-      currentIdentities:currentSuccessionIdentities,currentPacks:timeoutPackRegistry}),
+      currentIdentities:currentSuccessionIdentities,currentPacks:successionFixturePacks}),
     registrySuccession=await validateUnresolvedIncidentTaskSuccession({incidents:[successionIncident],
-      currentIdentities:currentSuccessionIdentities,currentPacks:timeoutPackRegistry});
+      currentIdentities:currentSuccessionIdentities,currentPacks:successionFixturePacks});
   const successionBlocked=(graph,currentIdentities=currentSuccessionIdentities)=>{
     try{resolveTaskSuccessionGraph({graph,sourceIdentity:successionSource,currentIdentities,
       logicalSlice:{kind:"browser-target",logicalTargetIds:["FLOW_WORKSPACE_CONTROLS_TARGET"]}});return false;}
@@ -3498,7 +3515,9 @@ console.log("repairTmp=" + process.env.TMPDIR);
         taskSuccessionBoundaryDigest(browserTargetSuccessionBoundary(projectionPacks,"A")),
       currentCanonical:true,
       exactTarget:sameTargetProjection.execution.logicalTargetIds.length===1,
-      immutableSource:true,separateIncidents:true,invalidBlocked:true,noInference:true},
+      immutableSource:true,separateIncidents:true,invalidBlocked:true,noInference:true,
+      deferredExpansionPending:true,directExpansionRejected:true,currentRepairGoverned:true,
+      incidentUnchanged:true,invalidExpansionCasesBlocked:true},
     versioned:flowTaskSuccession.version===1,
     exactIdentities:flowTaskSuccession.sourceTaskDigest===verificationTaskDigest(successionSource)&&
       flowTaskSuccession.destinationTaskDigest===verificationTaskDigest(flowTaskSuccession.destinationIdentity),

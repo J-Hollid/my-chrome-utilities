@@ -1285,7 +1285,7 @@
     :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :noMeaningChanged])) "Task succession changed evidence meaning."))}])
 
 (defn- planner-projection-handlers [example-values]
-  [{:pattern #"^(?:one governed review-evidence receipt contains a canonical browser batch and an alias-filtered prerequisite batch that both fail on the same single logical target|an unresolved browser incident needs a same-target planner projection|checkpoint prerequisite closure selects browser batches with overlapping logical targets or alias-only identity differences)$"
+  [{:pattern #"^(?:one governed review-evidence receipt contains a canonical browser batch and an alias-filtered prerequisite batch that both fail on the same single logical target|an unresolved browser incident needs a same-target planner projection|checkpoint prerequisite closure selects browser batches with overlapping logical targets or alias-only identity differences|a governed repair-focused preflight has one current incident whose bounded causal repair is ready|an inherited browser incident has an eligible repair and a terminal-verification-deferred disposition|that inherited incident diagnoses one target which appears in exactly one current canonical task|its receipt-bound same-target planner projection reports a changed historical-to-current target boundary|unresolved task succession is validated for the current repair plan)$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^the prerequisite task is absent from the current canonical plan only because its sibling-target set or alias commands differ$"
     :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :plannerProjection :sourceBound])) "Planner projection source is not governed."))}
@@ -1318,7 +1318,17 @@
    {:pattern #"^no noncanonical overlapping task can launch or create a duplicate reliability incident$"
     :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :execution :prerequisiteGate :browserNormalization :noncanonicalBlocked])) "A noncanonical browser task can launch."))}
    {:pattern #"^a missing or ambiguous canonical target, changed target boundary, or incompatible execution contract blocks instead of being deduplicated$"
-    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :execution :prerequisiteGate :browserNormalization :invalidBlocked])) "Invalid browser normalization did not block."))}])
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :execution :prerequisiteGate :browserNormalization :invalidBlocked])) "Invalid browser normalization did not block."))}
+   {:pattern #"^the inherited incident remains unchanged and pending fresh focused reassessment instead of blocking the current repair$"
+    :handler (fn [world _ _] (assert! world (every? true? ((juxt :deferredExpansionPending :incidentUnchanged) (get-in world [:vtd014/evidence :taskSuccession :plannerProjection]))) "Deferred expanded target did not remain pending and unchanged."))}
+   {:pattern #"^no same-target equivalence, task-succession mapping, incident transition, or passing evidence is inferred for it$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :plannerProjection :noInference])) "Deferred expansion inferred governed evidence."))}
+   {:pattern #"^direct same-target projection continues to reject the changed boundary$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :plannerProjection :directExpansionRejected])) "Direct same-target projection accepted an expanded boundary."))}
+   {:pattern #"^the current incident still requires its own exact causal regression, repair-focused receipt, review evidence, and package proof$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :plannerProjection :currentRepairGoverned])) "Current repair governance was weakened."))}
+   {:pattern #"^missing or ambiguous current targets, noneligible repairs, nondeferred incidents, unverified projection sources, and unrelated succession failures remain blocking$"
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :plannerProjection :invalidExpansionCasesBlocked])) "Invalid deferred expansion cases did not remain blocking."))}])
 
 (def ^:private run-intent-contract
   {"no explicit evidence, repair, or terminal flag" "development-diagnostic"

@@ -153,7 +153,7 @@ export async function resolveIncidentTaskSuccession({incident,currentIdentities,
 }
 
 export async function validateUnresolvedIncidentTaskSuccession({incidents,currentIdentities,currentPacks,
-  graph=undefined,loadHistoricalPacks=gitShowJson}){
+  graph=undefined,loadHistoricalPacks=gitShowJson,loadSourceReceipt=sourcePlannerReceipt}){
   const currentDigests=new Set(currentIdentities.map(verificationTaskDigest)),mappings=[];
   for(const incident of incidents){
     if(incident.state!=="unresolved"||incident.closureAudit?.blocking===false)continue;
@@ -169,12 +169,14 @@ export async function validateUnresolvedIncidentTaskSuccession({incidents,curren
         selectedTargetReassessments.length===1)continue;
     try {
       mappings.push({incidentId:incident.id,mapping:await resolveIncidentTaskSuccession({incident,
-        currentIdentities,currentPacks,graph,loadHistoricalPacks})});
+        currentIdentities,currentPacks,graph,loadHistoricalPacks,loadSourceReceipt})});
     } catch(error) {
       const selectedTargetSuccessors=currentIdentities.filter(identity=>diagnosedTargets.length===1&&
         identity.logicalTargetIds?.includes(diagnosedTargets[0]));
       const boundaryExpanded=error?.message==="Task succession edge does not preserve its conserved boundary"||
-        error?.message==="Task succession current registry boundary differs from its declaration";
+        error?.message==="Task succession current registry boundary differs from its declaration"||
+        (diagnosedTargets.length===1&&
+          error?.message===`Changed target boundary for ${diagnosedTargets[0]}`);
       if(incident.repair?.status==="eligible"&&
           incident.terminalVerificationDeferred?.status==="terminal-verification-deferred"&&
           selectedTargetSuccessors.length===1&&boundaryExpanded)continue;
