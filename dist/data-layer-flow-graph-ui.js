@@ -1,11 +1,10 @@
-import { addEventOccurrenceToPage, addGraphOccurrence, deriveFlowOccurrenceExample, deriveFlowPageFrameExample, documentaryFlowGraph, duplicateFlowPageFrame, effectiveFlowPageFrameName, flowOccurrenceExampleEditorRows, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectOccurrencePageChange, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveGraphOccurrence, projectFlowGraph, reassignFlowOccurrencePage, reviewLegacyFlowContextMigration, removeFlowPageFrame, renameFlowPageFrame, resetFlowPageFrameName, removeFlowRelationship, removeGraphOccurrence, saveGraphRelationship, setFlowOccurrenceExample, } from "./data-layer-flow-graph.js";
+import { addEventOccurrenceToPage, deriveFlowOccurrenceExample, deriveFlowPageFrameExample, documentaryFlowGraph, duplicateGraphOccurrence, duplicateFlowPageFrame, effectiveFlowPageFrameName, flowOccurrenceExampleEditorRows, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectOccurrencePageChange, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveGraphOccurrence, projectFlowGraph, reassignFlowOccurrencePage, reviewLegacyFlowContextMigration, removeFlowPageFrame, renameFlowPageFrame, resetFlowPageFrameName, removeFlowRelationship, removeGraphOccurrence, saveGraphRelationship, setFlowOccurrenceExample, } from "./data-layer-flow-graph.js";
 import { appendFlowPageFrameCardControls } from "./data-layer-flow-graph-ui-page-frame.js";
 import { addFlowPageFrameAndRelationship, addFlowPageFrameAtPosition, addFlowPageFrameToSection, connectFlowPageFrames, createFlowSection, createFlowSectionAroundFrames, inspectSectionRemovalWithContents, moveFlowPageFramePresentation, moveFlowSection, movePageFrameToSection, removeFlowSection, removeFlowSectionWithContents, renameAndResizeFlowSection, tidyFlowPageFrames } from "./utilities/data-layer/property-set-flow-section.js";
 import { button, elementByData, entityName, flowEdgeGeometry, flowPortPoint, nodeHeight, nodeWidth, ownsPointerDrag, q, restorePointerCancellationFocus, svg } from "./flow-graph/ui-primitives.js";
 import { flowPointerSnapTarget, flowPortSnapTarget } from "./flow-graph/relationship-port-snap.js";
 import { flowBoundsContains, flowPointerDelta } from "./flow-graph/page-placement.js";
-import { attachFlowConceptVisual, flowConceptVisual, removeFlowConceptVisual } from "./flow-graph/concept-visuals.js";
-import { createFlowConceptVisualEditor, openFlowConceptVisualViewer } from "./flow-graph/concept-visual-ui.js";
+import { createFlowConceptVisualActions, flowConceptVisualHeightExtension, renderFlowConceptVisual } from "./flow-graph/concept-visual-workspace.js";
 import { flowItemActivationRequest, flowItemMenuRequest } from "./flow-graph/workspace-item-menu.js";
 import { upgradeFlowWorkspace } from "./flow-graph/workspace-ui.js";
 import { flowSelectionContains, primaryFlowSelection, selectionAfterActivation, selectionAfterRemoval, selectionFromStoredView, storedViewWithSelection } from "./flow-graph/workspace-selection.js";
@@ -413,13 +412,7 @@ export function installFlowGraphBuilder(options) {
         if (!state || !flow || !graph)
             return;
         const itemAction = (label, action) => { const control = button(label, action); control.dataset.flowItemCommand = label; return control; };
-        const visualActions = (actions, target, label) => {
-            const saved = flowConceptVisual(state.project, flow.id, target), close = () => actions.dispatchEvent(new CustomEvent("flow-close-item-editor", { bubbles: true })), openEditor = () => { const editor = createFlowConceptVisualEditor({ project: () => current().state.project, ...(saved ? { existing: { attachment: saved.attachment, raster: saved.asset } } : {}), save: (value) => { persist(attachFlowConceptVisual(current().state, flow.id, target, { ...value }, options.id), `Saved concept visual for ${label}; Undo available.`); close(); }, cancel: close }); actions.dispatchEvent(new CustomEvent("flow-open-item-editor", { bubbles: true, detail: { title: `${saved ? "Edit" : "Add"} visual for ${label}`, content: editor.root, firstControl: editor.firstControl } })); }, view = () => { const currentVisual = flowConceptVisual(current().state.project, flow.id, target); if (currentVisual)
-                openFlowConceptVisualViewer({ attachment: currentVisual.attachment, raster: currentVisual.asset }, document.activeElement); };
-            if (!saved)
-                return [itemAction("Add visual", openEditor)];
-            return [itemAction("View visual", view), itemAction("Edit visual", openEditor), itemAction("Replace visual", openEditor), itemAction("Remove visual", () => persist(removeFlowConceptVisual(current().state, flow.id, target), `Removed concept visual from ${label}; Undo available.`))];
-        };
+        const visualActions = (actions, target, label) => createFlowConceptVisualActions({ host: actions, project: () => current().state.project, state: () => current().state, flowId: flow.id, target, label, id: options.id, action: itemAction, persist });
         if (selected?.kind === "page-frame") {
             const frame = graph.pageFrames.find(({ id }) => id === selected.id);
             if (!frame)
@@ -462,7 +455,7 @@ export function installFlowGraphBuilder(options) {
         pageChoice.addEventListener("change", () => { const review = inspectOccurrencePageChange(state.project, flow.id, occurrence.id, pageChoice.value); impact.textContent = review.message; confirmPage.disabled = review.rejected; });
         editor.append(pageChoice, impact, confirmPage);
         const openEditor = () => actions.dispatchEvent(new CustomEvent("flow-open-item-editor", { bubbles: true, detail: { title: `Change Page for ${occurrence.name}`, content: editor, firstControl: pageChoice } }));
-        const duplicate = () => { const next = addGraphOccurrence(current().state, flow.id, { name: `${occurrence.name} copy`, ...(occurrence.pageFrameId ? { pageFrameId: String(occurrence.pageFrameId) } : {}), ...(occurrence.pageGroupId ? { pageGroupId: String(occurrence.pageGroupId) } : {}), ...(occurrence.freePageFrameId ? { freePageFrameId: String(occurrence.freePageFrameId) } : {}), pageId: String(occurrence.pageId), eventId: node.eventId, ...(node.trigger ? { trigger: node.trigger } : {}), obligation: String(occurrence.obligation ?? "Required"), minimum: Number(occurrence.minimum ?? 1), maximum: Number(occurrence.maximum ?? 1), y: Number(occurrence.position?.y ?? 70) + 24 }, options.id); persist(next); }, duplicateButton = itemAction("Duplicate", duplicate);
+        const duplicate = () => persist(duplicateGraphOccurrence(current().state, flow.id, occurrence.id, options.id)), duplicateButton = itemAction("Duplicate", duplicate);
         duplicateButton.disabled = Boolean(migration.items.length || migration.blockers.length);
         if (duplicateButton.disabled)
             duplicateButton.title = "Confirm the Page-context migration before changing this graph.";
@@ -514,20 +507,10 @@ export function installFlowGraphBuilder(options) {
         if (thumbnailVisuals)
             for (const endpoint of projection.graph.connectionEndpoints) {
                 const target = { kind: endpoint.kind === "page-frame" ? "page-frame" : "occurrence", id: endpoint.id };
-                if (flowConceptVisual(state.project, flow.id, target))
-                    endpoint.height += 104;
+                endpoint.height += flowConceptVisualHeightExtension(state.project, flow.id, target, visualMode, Number(transientView.viewport?.zoom ?? 1));
             }
         const section = document.createElement("section"), heading = document.createElement("h3"), boundary = document.createElement("p"), toolbar = document.createElement("section"), laneControls = document.createElement("section"), status = document.createElement("p"), frames = document.createElement("section"), views = document.createElement("div"), canvasScroll = document.createElement("div"), canvas = svg("svg"), outline = document.createElement("ol"), popover = document.createElement("section"), actions = document.createElement("section");
-        const decorateVisual = (group, target, width, height) => { const visual = flowConceptVisual(state.project, flow.id, target); if (!visual || visualMode === "Hidden")
-            return; if (!thumbnailVisuals) {
-            const badge = svg("text");
-            badge.dataset.flowVisualBadge = target.id;
-            badge.setAttribute("x", "10");
-            badge.setAttribute("y", "44");
-            badge.textContent = "▧ Visual";
-            group.append(badge);
-            return;
-        } const foreign = svg("foreignObject"), image = document.createElement("img"); foreign.dataset.flowVisualThumbnail = target.id; foreign.setAttribute("x", "8"); foreign.setAttribute("y", String(height - 96)); foreign.setAttribute("width", String(width - 16)); foreign.setAttribute("height", "88"); image.src = visual.asset.bytes; image.alt = visual.attachment.description; Object.assign(image.style, { width: "100%", height: "100%", objectFit: "contain" }); foreign.append(image); group.append(foreign); };
+        const decorateVisual = (group, target, width, height) => renderFlowConceptVisual({ group, project: state.project, flowId: flow.id, target, mode: visualMode, thumbnailPixels: thumbnailVisuals, width, height });
         const namedRight = Math.max(940, ...projection.laneBands.map(({ x, width }) => x + width), ...projection.graph.connectionEndpoints.map((endpoint) => endpoint.layout.x + endpoint.width + 60)), viewWidth = Math.max(960, namedRight + 100), viewHeight = Math.max(780, ...projection.laneBands.map(({ y, height }) => y + height + 80), ...projection.graph.connectionEndpoints.map((endpoint) => endpoint.layout.y + endpoint.height + 100));
         let startConnectionPointerTracking = (_pointerId) => { };
         const canvasSelection = (target) => { if (!(target instanceof Element))

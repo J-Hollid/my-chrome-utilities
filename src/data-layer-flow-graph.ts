@@ -6,7 +6,7 @@ export {flowOutline,flowRelationshipText,inspectFlowGraph,projectFlowGraph} from
 export {deriveFlowOccurrenceExample,deriveFlowPageFrameExample,setFlowOccurrenceExample,flowOccurrenceExampleEditorRows} from "./flow-graph/examples.js";
 export type {FlowExampleIssue,FlowOccurrenceExample,FlowOccurrenceExampleEditorRow} from "./flow-graph/examples.js";
 export {migrateLegacyFlowContextBindings,migrateLegacyFlowRelationshipKinds,removeFlowRelationship,reviewLegacyFlowContextMigration,saveGraphRelationship} from "./flow-graph/examples.js";
-export {addEventOccurrenceToPage,addGraphOccurrence,addInteractionOccurrenceToPage,moveGraphOccurrence,removeGraphOccurrence,reorderGraphOccurrence,updateGraphOccurrence} from "./flow-graph/occurrences.js";
+export {addEventOccurrenceToPage,addGraphOccurrence,addInteractionOccurrenceToPage,duplicateGraphOccurrence,moveGraphOccurrence,removeGraphOccurrence,reorderGraphOccurrence,updateGraphOccurrence} from "./flow-graph/occurrences.js";
 export {applyFlowPageGroupLaneSelection,addFlowPageFrame,duplicateFlowPageFrame,inspectPageFrameDrop,moveFlowPageFrame,removeFlowPageFrame,renameFlowPageFrame,resetFlowPageFrameName,reorderFlowPageGroupLane,saveFlowViewState,setFlowPageGroupLanes} from "./flow-graph/page-frames.js";
 
 export type FlowRole="context-setting"|"interaction";

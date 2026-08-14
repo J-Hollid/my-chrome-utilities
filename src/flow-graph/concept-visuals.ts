@@ -1,5 +1,6 @@
-import {graphIndex,saveStoredGraph,storedGraph,type DocumentaryPageFrameRecord} from "../data-layer-flow-graph.js";
+import {saveStoredGraph,storedGraph,type DocumentaryPageFrameRecord} from "../data-layer-flow-graph.js";
 import {transactProject,type IdFactory,type ProjectEntity,type ProjectState,type SpecificationProject} from "../data-layer-specification-project.js";
+import {pruneUnreferencedFlowConceptVisualAssets} from "./concept-visual-references.js";
 
 export const FLOW_CONCEPT_VISUAL_LIMITS={sourceBytes:5*1024*1024,dimension:4096,pixels:16_000_000,projectBytes:25*1024*1024} as const;
 export type FlowConceptVisualMediaType="image/png"|"image/jpeg"|"image/webp";
@@ -29,9 +30,7 @@ const withAttachment=(project:SpecificationProject,flowId:string,target:FlowConc
   const graph=storedGraph(project,flowId),update=<T extends {id:string}>(item:T):T=>item.id===target.id?({...item,...(next?{conceptVisual:next}:{}),...(!next&&"conceptVisual" in item?{conceptVisual:undefined}:{})} as T):item;
   const changed=target.kind==="page-frame"?{...graph,pageFrames:graph.pageFrames.map(update)}:{...graph,occurrences:graph.occurrences.map(update)};
   if(!(target.kind==="page-frame"?graph.pageFrames:graph.occurrences).some(({id})=>id===target.id))throw new Error(`Unknown Flow visual target ${target.id}.`);
-  const saved=saveStoredGraph(project,flowId,changed);
-  if(!next){const stored=graphIndex(saved),allReferences=new Set(Object.values(stored).flatMap((candidate)=>[...candidate.pageFrames,...candidate.occurrences].flatMap((item)=>{const visual=(item as VisualRecord).conceptVisual;return visual?.assetId?[visual.assetId]:[];})));return{...saved,conceptVisualAssets:assets(saved).filter(({id})=>allReferences.has(id))};}
-  return saved;
+  return pruneUnreferencedFlowConceptVisualAssets(saveStoredGraph(project,flowId,changed));
 };
 
 export function attachFlowConceptVisual(state:ProjectState,flowId:string,target:FlowConceptVisualTarget,input:{raster:FlowConceptVisualRaster;description:string;caption?:string;sourceReference?:string},id:IdFactory):ProjectState{

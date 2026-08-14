@@ -3,7 +3,7 @@ export { addFreePageFrame, addUngroupedPageFrame, inspectFreePageEdgeMove, inspe
 export { flowOutline, flowRelationshipText, inspectFlowGraph, projectFlowGraph } from "./flow-graph/projection.js";
 export { deriveFlowOccurrenceExample, deriveFlowPageFrameExample, setFlowOccurrenceExample, flowOccurrenceExampleEditorRows } from "./flow-graph/examples.js";
 export { migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, removeFlowRelationship, reviewLegacyFlowContextMigration, saveGraphRelationship } from "./flow-graph/examples.js";
-export { addEventOccurrenceToPage, addGraphOccurrence, addInteractionOccurrenceToPage, moveGraphOccurrence, removeGraphOccurrence, reorderGraphOccurrence, updateGraphOccurrence } from "./flow-graph/occurrences.js";
+export { addEventOccurrenceToPage, addGraphOccurrence, addInteractionOccurrenceToPage, duplicateGraphOccurrence, moveGraphOccurrence, removeGraphOccurrence, reorderGraphOccurrence, updateGraphOccurrence } from "./flow-graph/occurrences.js";
 export { applyFlowPageGroupLaneSelection, addFlowPageFrame, duplicateFlowPageFrame, inspectPageFrameDrop, moveFlowPageFrame, removeFlowPageFrame, renameFlowPageFrame, resetFlowPageFrameName, reorderFlowPageGroupLane, saveFlowViewState, setFlowPageGroupLanes } from "./flow-graph/page-frames.js";
 export const FLOW_GRAPH_GEOMETRY = { eventWidth: 170, eventHeight: 94, eventMinX: 12, eventMinY: 40, pageFrameMinWidth: 190, pageFrameMinHeight: 108, pageFrameChildRightPadding: 20, pageFrameChildBottomPadding: 16 };
 export const clone = (value) => structuredClone(value);

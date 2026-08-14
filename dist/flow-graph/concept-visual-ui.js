@@ -24,9 +24,10 @@ export async function readFlowConceptVisualFile(file, project) {
     return raster;
 }
 const labelled = (text, control) => { const label = document.createElement("label"); label.append(text, control); return label; };
+export const flowConceptVisualEditorDiagnostic = (description, fileDiagnostic) => fileDiagnostic || (!description.trim() ? "Description is required" : "");
 export function createFlowConceptVisualEditor(options) {
     const root = document.createElement("section"), target = document.createElement("div"), choose = document.createElement("button"), file = document.createElement("input"), preview = document.createElement("img"), description = document.createElement("textarea"), caption = document.createElement("input"), source = document.createElement("input"), diagnostic = document.createElement("p"), save = document.createElement("button"), cancel = document.createElement("button");
-    let raster = options.existing?.raster;
+    let raster = options.existing?.raster, fileDiagnostic = "";
     root.dataset.flowVisualEditor = "true";
     root.setAttribute("aria-label", "Concept Visual editor");
     target.tabIndex = 0;
@@ -57,15 +58,15 @@ export function createFlowConceptVisualEditor(options) {
         caption.value = options.existing.attachment.caption ?? "";
         source.value = options.existing.attachment.sourceReference ?? "";
     }
-    const refresh = () => { save.disabled = !raster || !description.value.trim(); diagnostic.textContent = description.value.trim() ? "" : "Description is required"; };
+    const refresh = () => { save.disabled = !raster || !description.value.trim() || Boolean(fileDiagnostic); diagnostic.textContent = flowConceptVisualEditorDiagnostic(description.value, fileDiagnostic); };
     const stage = async (candidate) => { if (!candidate)
-        return; diagnostic.textContent = ""; try {
+        return; fileDiagnostic = ""; try {
         raster = await readFlowConceptVisualFile(candidate, options.project());
         preview.src = raster.bytes;
         preview.style.display = "block";
     }
     catch (error) {
-        diagnostic.textContent = error instanceof Error ? error.message : String(error);
+        fileDiagnostic = error instanceof Error ? error.message : String(error);
     } refresh(); };
     choose.addEventListener("click", () => file.click());
     file.addEventListener("change", () => void stage(file.files?.[0]));
@@ -80,7 +81,7 @@ export function createFlowConceptVisualEditor(options) {
     refresh();
     return { root, firstControl: target };
 }
-export function openFlowConceptVisualViewer(value, invoker) {
+export function openFlowConceptVisualViewer(value, invoker, fallbackInvoker) {
     const dialog = document.createElement("dialog"), heading = document.createElement("h3"), image = document.createElement("img"), description = document.createElement("p"), metadata = document.createElement("dl"), controls = document.createElement("section"), close = document.createElement("button");
     let zoom = 1;
     dialog.setAttribute("aria-label", "Concept Visual viewer");
@@ -93,7 +94,7 @@ export function openFlowConceptVisualViewer(value, invoker) {
         return; const dt = document.createElement("dt"), dd = document.createElement("dd"); dt.textContent = term; dd.textContent = text; metadata.append(dt, dd); };
     addMeta("Caption", value.attachment.caption);
     addMeta("Source reference", value.attachment.sourceReference);
-    const control = (label, action) => { const button = document.createElement("button"); button.type = "button"; button.textContent = label; button.addEventListener("click", action); return button; }, apply = () => image.style.transform = `scale(${zoom})`, finish = () => { dialog.close(); dialog.remove(); invoker.focus({ preventScroll: true }); };
+    const control = (label, action) => { const button = document.createElement("button"); button.type = "button"; button.textContent = label; button.addEventListener("click", action); return button; }, apply = () => image.style.transform = `scale(${zoom})`, finish = () => { dialog.close(); dialog.remove(); (invoker.isConnected ? invoker : fallbackInvoker)?.focus({ preventScroll: true }); };
     controls.setAttribute("aria-label", "Visual fit, actual size, zoom, reset, and pan controls");
     controls.append(control("Fit", () => { zoom = 1; image.style.maxWidth = "100%"; apply(); }), control("Actual size", () => { zoom = 1; image.style.maxWidth = "none"; apply(); }), control("Zoom in", () => { zoom = Math.min(4, zoom + .25); apply(); }), control("Zoom out", () => { zoom = Math.max(.25, zoom - .25); apply(); }), control("Reset", () => { zoom = 1; image.style.maxWidth = "100%"; apply(); }), control("Pan left", () => image.scrollBy({ left: -80 })), control("Pan right", () => image.scrollBy({ left: 80 })));
     close.type = "button";

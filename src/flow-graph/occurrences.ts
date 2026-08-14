@@ -2,10 +2,23 @@ import {clone,normalizedOccurrence,relationshipTouches,saveStoredGraph,storedGra
 import {transactProject} from "../utilities/data-layer/schemas.js";
 import type {FlowLayout,FlowOccurrenceInput,FlowObligation} from "../data-layer-flow-graph.js";
 import type {ProjectEntity,ProjectState,IdFactory} from "../utilities/data-layer/schemas.js";
+import {pruneUnreferencedFlowConceptVisualAssets} from "./concept-visual-references.js";
+
+type VisualOccurrence=ProjectEntity&{conceptVisual?:{id:string;assetId:string;description:string;caption?:string;sourceReference?:string}};
 
 export function addGraphOccurrence(state:ProjectState,flowId:string,input:FlowOccurrenceInput,id:IdFactory):ProjectState{
   const valid=validOccurrence(state,flowId,input);
   return transactProject(state,`Add ${valid.name} Flow occurrence`,(project)=>{const graph=storedGraph(project,flowId),occurrence={id:id("flow-occurrence"),...normalizedOccurrence(valid)} as ProjectEntity;return saveStoredGraph(project,flowId,{...graph,occurrences:[...graph.occurrences,occurrence]});});
+}
+export function duplicateGraphOccurrence(state:ProjectState,flowId:string,occurrenceId:string,id:IdFactory):ProjectState{
+  const source=storedGraph(state.project,flowId).occurrences.find(({id})=>id===occurrenceId) as VisualOccurrence|undefined;
+  if(!source)return state;
+  return transactProject(state,`Duplicate Flow occurrence ${occurrenceId}`,(project)=>{
+    const graph=storedGraph(project,flowId),latest=(graph.occurrences.find(({id})=>id===occurrenceId)??source) as VisualOccurrence,copy=clone(latest) as VisualOccurrence,position=copy.position as {x?:number;y?:number}|undefined;
+    copy.id=id("flow-occurrence");copy.name=`${latest.name} copy`;copy.position={...(position?.x===undefined?{}:{x:position.x}),y:Number(position?.y??70)+24};
+    if(copy.conceptVisual)copy.conceptVisual={...copy.conceptVisual,id:id("concept-visual-attachment")};
+    return saveStoredGraph(project,flowId,{...graph,occurrences:[...graph.occurrences,copy]});
+  });
 }
 export function updateGraphOccurrence(state:ProjectState,flowId:string,occurrenceId:string,input:FlowOccurrenceInput):ProjectState{
   if(!storedGraph(state.project,flowId).occurrences.some(({id})=>id===occurrenceId))throw new Error("Unknown documentary Flow occurrence.");
@@ -25,7 +38,7 @@ export function reorderGraphOccurrence(state:ProjectState,flowId:string,from:num
 }
 export function removeGraphOccurrence(state:ProjectState,flowId:string,occurrenceId:string):ProjectState{
   if(!state.project.collections.flows.some(({id})=>id===flowId)||!storedGraph(state.project,flowId).occurrences.some(({id})=>id===occurrenceId))return state;
-  return transactProject(state,`Remove Flow occurrence ${occurrenceId}`,(project)=>{const graph=storedGraph(project,flowId),removed=new Set([occurrenceId]);return saveStoredGraph(project,flowId,{...graph,occurrences:graph.occurrences.filter(({id})=>id!==occurrenceId),relationships:graph.relationships.filter((relationship)=>!relationshipTouches(relationship,removed))});});
+  return transactProject(state,`Remove Flow occurrence ${occurrenceId}`,(project)=>{const graph=storedGraph(project,flowId),removed=new Set([occurrenceId]);return pruneUnreferencedFlowConceptVisualAssets(saveStoredGraph(project,flowId,{...graph,occurrences:graph.occurrences.filter(({id})=>id!==occurrenceId),relationships:graph.relationships.filter((relationship)=>!relationshipTouches(relationship,removed))}));});
 }
 export function addEventOccurrenceToPage(state:ProjectState,flowId:string,input:{name:string;pageFrameId:string;pageGroupId?:string;pageId:string;eventId:string;role?:"context-setting"|"interaction";trigger?:string;obligation:FlowObligation;minimum:number;maximum:number;x?:number;y:number},id:IdFactory):ProjectState{return addGraphOccurrence(state,flowId,input,id);}
 export function addInteractionOccurrenceToPage(state:ProjectState,flowId:string,input:{name:string;pageFrameId?:string;pageGroupId?:string;freePageFrameId?:string;pageId:string;eventId:string;obligation:FlowObligation;minimum:number;maximum:number;x?:number;y:number},id:IdFactory):ProjectState{return addGraphOccurrence(state,flowId,input,id);}

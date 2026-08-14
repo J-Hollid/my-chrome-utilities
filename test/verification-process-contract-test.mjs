@@ -5188,12 +5188,13 @@ const expectedVtd014TerminalIdentity = (task) => {
 const terminalIdentities = (plan) => plan.tasks.map(normalizedVtd006Identity);
 const expectedTerminalIdentities = (plan) => plan.tasks.map(expectedVtd014TerminalIdentity);
 const acceptedTerminalIdentities = baseTerminalPlan.tasks.map(expectedVtd014TerminalIdentity);
-const postBaseAddedUnitKeys = new Set([
-  "unit:test/command-palette-installed-controller-test.mjs",
-  "unit:test/hotkey-installed-controller-test.mjs",
-  "unit:test/flow-reload-lifecycle-test.mjs",
-  "unit:test/workspace-tabs-installed-controller-test.mjs",
-]);
+const registeredTaskKeys = (registry) => new Set(registry.flatMap((pack) => [
+  ...(pack.unit??[]).map((target) => `unit:${target}`),
+  ...(pack.property??[]).map((target) => `property:${target}`),
+]));
+const acceptedRegisteredTaskKeys = registeredTaskKeys(vtd008BasePacks);
+const postBaseAddedRegisteredTaskKeys = new Set([...registeredTaskKeys(packs)]
+  .filter((key) => !acceptedRegisteredTaskKeys.has(key)));
 const approvedVtd015TaskKeys = new Set([
   "unit:test/settled-final-verification-workflow-test.mjs",
   `acceptance-parse:${vtd015Feature}`,
@@ -5223,7 +5224,7 @@ const approvedVerificationTaskKeys = new Set([
   ...approvedFlowStyleExtractionTaskKeys,
 ]);
 const currentTerminalIdentitiesWithoutApprovedAdditions = currentTerminalPlan.tasks.filter(({ key }) =>
-  !postBaseAddedUnitKeys.has(key) && !approvedVerificationTaskKeys.has(key)).map(normalizedVtd006Identity);
+  !postBaseAddedRegisteredTaskKeys.has(key) && !approvedVerificationTaskKeys.has(key)).map(normalizedVtd006Identity);
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions,
   acceptedTerminalIdentities,
   "terminal-full planning conserves the accepted base identities around approved added units");
@@ -5239,6 +5240,9 @@ assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
 assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
   key === "unit:test/workspace-tabs-installed-controller-test.mjs").length, 1,
 "terminal-full planning adds the installed workspace-tabs controller regression exactly once");
+assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
+  key === "unit:test/data-layer-flow-concept-visual-test.mjs").length, 1,
+"terminal-full planning adds the registry-approved Flow concept visual regression exactly once");
 for (const taskKey of approvedVtd015TaskKeys) {
   assert.equal(currentTerminalPlan.tasks.filter(({ key }) => key === taskKey).length, 1,
     `terminal-full planning adds the approved VTD-015 task ${taskKey} exactly once`);

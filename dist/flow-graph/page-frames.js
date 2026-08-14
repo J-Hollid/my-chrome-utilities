@@ -2,6 +2,7 @@ import { orderedPageGroupIds, requiresPageGroupMembershipMigration } from "../ut
 import { transactProject } from "../utilities/data-layer/schemas.js";
 import { duplicatePageFrameRecord } from "../data-layer-flow-graph-structural.js";
 import { flowPageGroupLaneIds, relationshipTouches, saveStoredGraph, storedGraph } from "../data-layer-flow-graph.js";
+import { pruneUnreferencedFlowConceptVisualAssets } from "./concept-visual-references.js";
 export function inspectPageFrameDrop(project, flowId, pageId, targetPageGroupId) {
     const page = project.collections.pages.find(({ id }) => id === pageId), group = project.collections.propertySets.find(({ id }) => id === targetPageGroupId), selected = flowPageGroupLaneIds(project, flowId).includes(targetPageGroupId), memberships = orderedPageGroupIds(project, pageId), member = Boolean(group && memberships.includes(group.id)), migrationRequired = Boolean(page && requiresPageGroupMembershipMigration(project, pageId)), rejected = !page || !group || !selected || !member || migrationRequired, names = memberships.map((id) => project.collections.propertySets.find((candidate) => candidate.id === id)?.name ?? id);
     return { rejected, message: rejected ? `${page?.name ?? pageId} belongs to ${names.join(", ") || "no selected Property Set"}, not ${group?.name ?? targetPageGroupId}.` : `${page.name} can be placed in ${group.name}.`, guidance: `?kind=pages&entity=${encodeURIComponent(pageId)}&field=pageGroupIds` };
@@ -44,7 +45,7 @@ export function removeFlowPageFrame(state, flowId, pageFrameId) {
     if (!frame)
         return state;
     const removedIds = new Set([pageFrameId, ...graph.occurrences.filter((occurrence) => occurrence.pageFrameId === pageFrameId).map(({ id }) => id)]);
-    return transactProject(state, "Remove Flow Page frame", (project) => { const current = storedGraph(project, flowId); return saveStoredGraph(project, flowId, { ...current, pageFrames: current.pageFrames.filter(({ id }) => id !== pageFrameId), occurrences: current.occurrences.filter((occurrence) => occurrence.pageFrameId !== pageFrameId), relationships: current.relationships.filter((relationship) => !relationshipTouches(relationship, removedIds)) }); });
+    return transactProject(state, "Remove Flow Page frame", (project) => { const current = storedGraph(project, flowId); return pruneUnreferencedFlowConceptVisualAssets(saveStoredGraph(project, flowId, { ...current, pageFrames: current.pageFrames.filter(({ id }) => id !== pageFrameId), occurrences: current.occurrences.filter((occurrence) => occurrence.pageFrameId !== pageFrameId), relationships: current.relationships.filter((relationship) => !relationshipTouches(relationship, removedIds)) })); });
 }
 export function moveFlowPageFrame(state, flowId, pageFrameId, input) {
     const graph = storedGraph(state.project, flowId), frame = graph.pageFrames.find(({ id }) => id === pageFrameId);

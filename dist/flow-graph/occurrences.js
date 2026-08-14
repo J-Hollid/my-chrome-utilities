@@ -1,8 +1,23 @@
-import { normalizedOccurrence, relationshipTouches, saveStoredGraph, storedGraph, validOccurrence } from "../data-layer-flow-graph.js";
+import { clone, normalizedOccurrence, relationshipTouches, saveStoredGraph, storedGraph, validOccurrence } from "../data-layer-flow-graph.js";
 import { transactProject } from "../utilities/data-layer/schemas.js";
+import { pruneUnreferencedFlowConceptVisualAssets } from "./concept-visual-references.js";
 export function addGraphOccurrence(state, flowId, input, id) {
     const valid = validOccurrence(state, flowId, input);
     return transactProject(state, `Add ${valid.name} Flow occurrence`, (project) => { const graph = storedGraph(project, flowId), occurrence = { id: id("flow-occurrence"), ...normalizedOccurrence(valid) }; return saveStoredGraph(project, flowId, { ...graph, occurrences: [...graph.occurrences, occurrence] }); });
+}
+export function duplicateGraphOccurrence(state, flowId, occurrenceId, id) {
+    const source = storedGraph(state.project, flowId).occurrences.find(({ id }) => id === occurrenceId);
+    if (!source)
+        return state;
+    return transactProject(state, `Duplicate Flow occurrence ${occurrenceId}`, (project) => {
+        const graph = storedGraph(project, flowId), latest = (graph.occurrences.find(({ id }) => id === occurrenceId) ?? source), copy = clone(latest), position = copy.position;
+        copy.id = id("flow-occurrence");
+        copy.name = `${latest.name} copy`;
+        copy.position = { ...(position?.x === undefined ? {} : { x: position.x }), y: Number(position?.y ?? 70) + 24 };
+        if (copy.conceptVisual)
+            copy.conceptVisual = { ...copy.conceptVisual, id: id("concept-visual-attachment") };
+        return saveStoredGraph(project, flowId, { ...graph, occurrences: [...graph.occurrences, copy] });
+    });
 }
 export function updateGraphOccurrence(state, flowId, occurrenceId, input) {
     if (!storedGraph(state.project, flowId).occurrences.some(({ id }) => id === occurrenceId))
@@ -39,7 +54,7 @@ export function reorderGraphOccurrence(state, flowId, from, to) {
 export function removeGraphOccurrence(state, flowId, occurrenceId) {
     if (!state.project.collections.flows.some(({ id }) => id === flowId) || !storedGraph(state.project, flowId).occurrences.some(({ id }) => id === occurrenceId))
         return state;
-    return transactProject(state, `Remove Flow occurrence ${occurrenceId}`, (project) => { const graph = storedGraph(project, flowId), removed = new Set([occurrenceId]); return saveStoredGraph(project, flowId, { ...graph, occurrences: graph.occurrences.filter(({ id }) => id !== occurrenceId), relationships: graph.relationships.filter((relationship) => !relationshipTouches(relationship, removed)) }); });
+    return transactProject(state, `Remove Flow occurrence ${occurrenceId}`, (project) => { const graph = storedGraph(project, flowId), removed = new Set([occurrenceId]); return pruneUnreferencedFlowConceptVisualAssets(saveStoredGraph(project, flowId, { ...graph, occurrences: graph.occurrences.filter(({ id }) => id !== occurrenceId), relationships: graph.relationships.filter((relationship) => !relationshipTouches(relationship, removed)) })); });
 }
 export function addEventOccurrenceToPage(state, flowId, input, id) { return addGraphOccurrence(state, flowId, input, id); }
 export function addInteractionOccurrenceToPage(state, flowId, input, id) { return addGraphOccurrence(state, flowId, input, id); }

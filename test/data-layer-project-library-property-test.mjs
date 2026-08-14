@@ -29,7 +29,9 @@ for(let example=0;example<120;example+=1){
   state.project.collections.pages.push({id:pageId,name:"Page",propertySetApplications:[{propertySetId:groupId}]});
   state.project.collections.events.push({id:eventId,name:"Event"});
   state.project.collections.flows.push({id:flowId,name:"Flow"});
-  state.project.documentationFlowGraphs={[flowId]:{pageFrames:[{id:frameId,name:"Frame",pageId}],occurrences:[{id:occurrenceId,name:"Occurrence",pageFrameId:frameId,pageId,eventId}],relationships:[]}};
+  const assetId=`asset:${suffix}`,pageAttachmentId=`attachment:page:${suffix}`,eventAttachmentId=`attachment:event:${suffix}`;
+  state.project.conceptVisualAssets=[{id:assetId,mediaType:"image/png",width:16,height:10,byteLength:12,bytes:"data:image/png;base64,AAAA",digest:`sha256:${suffix}`}];
+  state.project.documentationFlowGraphs={[flowId]:{pageFrames:[{id:frameId,name:"Frame",pageId,conceptVisual:{id:pageAttachmentId,assetId,description:`Page ${suffix}`,caption:"Page caption"}}],occurrences:[{id:occurrenceId,name:"Occurrence",pageFrameId:frameId,pageId,eventId,conceptVisual:{id:eventAttachmentId,assetId,description:`Event ${suffix}`,sourceReference:"https://example.test/event"}}],relationships:[]}};
   const timestamp=`2026-07-20T12:${String(example%60).padStart(2,"0")}:00.000Z`,library=projectLibrary([{state,revision:example,createdAt:timestamp,lastModifiedAt:timestamp}],projectId);
 
   assert.deepEqual(restoreProjectLibrary(serializeProjectLibrary(library)),library,"library serialization must round-trip exactly");
@@ -40,6 +42,12 @@ for(let example=0;example<120;example+=1){
   assert.equal(staged.state.project.collections.pages[0].propertySetApplications[0].propertySetId,`${prefix}${groupId}`);
   assert.equal(staged.state.project.documentationFlowGraphs[`${prefix}${flowId}`].pageFrames[0].pageId,`${prefix}${pageId}`);
   assert.equal(staged.state.project.documentationFlowGraphs[`${prefix}${flowId}`].occurrences[0].eventId,`${prefix}${eventId}`);
+  assert.equal(staged.state.project.conceptVisualAssets.length,1,"generated imports retain one copy of shared visual bytes");
+  assert.equal(staged.state.project.conceptVisualAssets[0].id,`${prefix}${assetId}`);
+  assert.equal(staged.state.project.documentationFlowGraphs[`${prefix}${flowId}`].pageFrames[0].conceptVisual.assetId,`${prefix}${assetId}`);
+  assert.equal(staged.state.project.documentationFlowGraphs[`${prefix}${flowId}`].occurrences[0].conceptVisual.assetId,`${prefix}${assetId}`);
+  assert.notEqual(staged.state.project.documentationFlowGraphs[`${prefix}${flowId}`].pageFrames[0].conceptVisual.id,staged.state.project.documentationFlowGraphs[`${prefix}${flowId}`].occurrences[0].conceptVisual.id,"generated import remaps independent attachment identities");
+  assert.equal(staged.state.project.documentationFlowGraphs[`${prefix}${flowId}`].pageFrames[0].conceptVisual.description,`Page ${suffix}`);
   assert.deepEqual(staged.state.project.collections.profiles[0].sourceLineage,{schemaId:`external:${suffix}`,revision:example+1},"external lineage must not be remapped");
 
   const imported=commitProjectImport(library,staged,()=>timestamp);

@@ -118,6 +118,9 @@ export function installFlowCamera(options: CameraOptions): FlowCameraUi {
     canvas.setAttribute("viewBox", `${camera.x} ${camera.y} ${size.width / camera.zoom} ${size.height / camera.zoom}`);
     canvas.dataset.viewport = JSON.stringify(camera);
     canvas.dataset.semanticDetail = flowDetailLevel(camera.zoom);
+    const thumbnailPixels=camera.zoom>=.5;
+    canvas.querySelectorAll<SVGElement>("[data-flow-visual-thumbnail]").forEach((item)=>item.style.display=thumbnailPixels?"":"none");
+    canvas.querySelectorAll<SVGElement>("[data-flow-visual-fallback]").forEach((item)=>item.style.display=thumbnailPixels?"none":"");
     zoomValue.textContent = `${Math.round(camera.zoom * 100)}%`;
     updateMinimap(camera);
   };

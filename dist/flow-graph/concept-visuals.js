@@ -1,5 +1,6 @@
-import { graphIndex, saveStoredGraph, storedGraph } from "../data-layer-flow-graph.js";
+import { saveStoredGraph, storedGraph } from "../data-layer-flow-graph.js";
 import { transactProject } from "../data-layer-specification-project.js";
+import { pruneUnreferencedFlowConceptVisualAssets } from "./concept-visual-references.js";
 export const FLOW_CONCEPT_VISUAL_LIMITS = { sourceBytes: 5 * 1024 * 1024, dimension: 4096, pixels: 16_000_000, projectBytes: 25 * 1024 * 1024 };
 export function validateFlowConceptVisualSource(input) {
     if (!["image/png", "image/jpeg", "image/webp"].includes(input.mediaType))
@@ -25,12 +26,7 @@ const withAttachment = (project, flowId, target, next) => {
     const changed = target.kind === "page-frame" ? { ...graph, pageFrames: graph.pageFrames.map(update) } : { ...graph, occurrences: graph.occurrences.map(update) };
     if (!(target.kind === "page-frame" ? graph.pageFrames : graph.occurrences).some(({ id }) => id === target.id))
         throw new Error(`Unknown Flow visual target ${target.id}.`);
-    const saved = saveStoredGraph(project, flowId, changed);
-    if (!next) {
-        const stored = graphIndex(saved), allReferences = new Set(Object.values(stored).flatMap((candidate) => [...candidate.pageFrames, ...candidate.occurrences].flatMap((item) => { const visual = item.conceptVisual; return visual?.assetId ? [visual.assetId] : []; })));
-        return { ...saved, conceptVisualAssets: assets(saved).filter(({ id }) => allReferences.has(id)) };
-    }
-    return saved;
+    return pruneUnreferencedFlowConceptVisualAssets(saveStoredGraph(project, flowId, changed));
 };
 export function attachFlowConceptVisual(state, flowId, target, input, id) {
     const description = input.description.trim();

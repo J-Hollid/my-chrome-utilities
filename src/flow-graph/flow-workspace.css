@@ -35,6 +35,8 @@
 
 .documentary-flow .flow-graph-canvas foreignObject { display: none; }
 
+.documentary-flow .flow-graph-canvas [data-flow-visual-thumbnail] { display: block; }
+
 .documentary-flow .flow-lane {fill:#eef4fa;stroke:#c9d6e3;stroke-dasharray:5 4}
 
 .documentary-flow .flow-lane-label {fill:#40566c;font-size:14px;font-weight:700}
