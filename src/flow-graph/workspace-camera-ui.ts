@@ -9,6 +9,7 @@ import {
   type FlowPoint,
 } from "./workspace.js";
 import { FLOW_PAGE_FRAME_SELECTOR, flowCanvasBounds, flowControl, renderedElementBounds, selectedCanvasItems } from "./workspace-dom.js";
+import { flowWheelZoomFactor } from "./workspace-wheel-zoom.js";
 
 interface CameraOptions {
   canvas: SVGSVGElement;
@@ -30,17 +31,6 @@ export function flowPanStartAllowed(start: FlowPanStart): boolean {
   if (start.pointerType === "touch") return start.blank;
   if (start.spaceHeld) return start.button === 0;
   return start.blank && (start.button === 0 || start.button === 1);
-}
-
-export interface FlowWheelZoomInput {
-  deltaY: number;
-  canvasTarget: boolean;
-  browserPinchModifier?: boolean;
-}
-
-export function flowWheelZoomFactor(input: FlowWheelZoomInput): number | undefined {
-  if (!input.canvasTarget || input.deltaY === 0) return undefined;
-  return input.deltaY < 0 ? 1.1 : .9;
 }
 
 export function flowPanClickSuppression(schedule: (callback: () => void) => void = (callback) => { setTimeout(callback, 0); }) {

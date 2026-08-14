@@ -1,5 +1,6 @@
 import { cameraFromMinimapPoint, boundsAroundItems, fitFlowBounds, flowDetailLevel, panFlowCamera, zoomFlowCamera, } from "./workspace.js";
 import { FLOW_PAGE_FRAME_SELECTOR, flowCanvasBounds, flowControl, renderedElementBounds, selectedCanvasItems } from "./workspace-dom.js";
+import { flowWheelZoomFactor } from "./workspace-wheel-zoom.js";
 export function flowPanStartAllowed(start) {
     if (start.authoringActive)
         return false;
@@ -8,11 +9,6 @@ export function flowPanStartAllowed(start) {
     if (start.spaceHeld)
         return start.button === 0;
     return start.blank && (start.button === 0 || start.button === 1);
-}
-export function flowWheelZoomFactor(input) {
-    if (!input.canvasTarget || input.deltaY === 0)
-        return undefined;
-    return input.deltaY < 0 ? 1.1 : .9;
 }
 export function flowPanClickSuppression(schedule = (callback) => { setTimeout(callback, 0); }) {
     let pending = false;

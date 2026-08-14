@@ -2806,6 +2806,7 @@
         "id": "flow_workspace_camera_controls",
         "prefixes": [
           "src/flow-graph/workspace-camera-ui.ts",
+          "src/flow-graph/workspace-wheel-zoom.ts",
           "src/flow-graph/workspace-view-state.ts"
         ],
         "propagateDependants": false

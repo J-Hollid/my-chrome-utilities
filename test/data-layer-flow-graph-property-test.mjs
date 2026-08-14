@@ -7,6 +7,7 @@ import {FLOW_PORT_SNAP_RADIUS,flowPortSnapTarget} from "../dist/flow-graph/relat
 import {flowOutlineProjection} from "../dist/flow-graph/workspace-outline-model.js";
 import {selectionAfterActivation} from "../dist/flow-graph/workspace-selection.js";
 import {sectionPointerDelta} from "../dist/flow-graph/workspace-section-geometry.js";
+import {flowWheelZoomFactor} from "../dist/flow-graph/workspace-wheel-zoom.js";
 import {boundedDiagnostic,observeBrowserReadiness} from "./support/browser-observation-control.mjs";
 import {createFlowExamplesPhaseTimer,flowExamplesPhaseNames} from "./support/flow-examples-timing.mjs";
 import {decodeDevtoolsTextFrame,encodeDevtoolsTextFrame} from "./support/flow-workspace-r02-runtime.mjs";
@@ -38,6 +39,7 @@ for(let sample=0;sample<512;sample+=1){
 for(let sample=0;sample<512;sample+=1){
   const camera={x:random()*2000-1000,y:random()*2000-1000,zoom:.25+random()*1.75},anchor={x:random()*900,y:random()*700},factor=.2+random()*4,zoomed=zoomFlowCamera(camera,factor,anchor),worldBefore={x:camera.x+anchor.x/camera.zoom,y:camera.y+anchor.y/camera.zoom},worldAfter={x:zoomed.x+anchor.x/zoomed.zoom,y:zoomed.y+anchor.y/zoomed.zoom};
   assert.ok(zoomed.zoom>=.25&&zoomed.zoom<=2);assert.ok(Math.abs(worldBefore.x-worldAfter.x)<.08&&Math.abs(worldBefore.y-worldAfter.y)<.08,"zoom conserves the anchor world point");
+  const wheelDelta=(random()>.5?1:-1)*(Number.EPSILON+random()*10000),wheelFactor=flowWheelZoomFactor({deltaY:wheelDelta,canvasTarget:true,browserPinchModifier:random()>.5});assert.equal(wheelFactor,wheelDelta<0?1.1:.9,"every nonzero vertical wheel delta keeps its direction independently of the browser pinch modifier");assert.equal(flowWheelZoomFactor({deltaY:wheelDelta,canvasTarget:false}),undefined,"targets outside the canvas always retain native scrolling");
   const delta={x:random()*400-200,y:random()*400-200},panned=panFlowCamera(camera,delta);assert.equal(panned.zoom,camera.zoom);assert.ok(Math.abs(panned.x-(camera.x-delta.x/camera.zoom))<.01);assert.ok(Math.abs(panned.y-(camera.y-delta.y/camera.zoom))<.01);
   const start={x:random()*1000,y:random()*800},end={x:random()*1000,y:random()*800},bounds=sectionBoundsFromDrag(start,end,20);assert.ok(bounds.width>=20&&bounds.height>=20);assert.ok(bounds.x<=start.x+.01&&bounds.x<=end.x+.01&&bounds.y<=start.y+.01&&bounds.y<=end.y+.01);
   const pointerStart={x:random()*2000-1000,y:random()*1600-800},cssDelta={x:random()*800-400,y:random()*800-400},pointerEnd={x:pointerStart.x+cssDelta.x,y:pointerStart.y+cssDelta.y},graphDelta=sectionPointerDelta(pointerStart,pointerEnd,camera.zoom);assert.ok(Math.abs(graphDelta.x*camera.zoom-cssDelta.x)<1e-9&&Math.abs(graphDelta.y*camera.zoom-cssDelta.y)<1e-9,"Section pointer deltas conserve generated screen distance at every camera zoom");

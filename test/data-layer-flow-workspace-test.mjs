@@ -24,7 +24,8 @@ import {
 } from "../dist/flow-graph/workspace.js";
 import {flowBoundsContains,flowPointerDelta} from "../dist/flow-graph/page-placement.js";
 import {flowOutlineProjection} from "../dist/flow-graph/workspace-outline-model.js";
-import {flowPanClickSuppression,flowPanStartAllowed,flowPanToPinch,flowWheelZoomFactor} from "../dist/flow-graph/workspace-camera-ui.js";
+import {flowPanClickSuppression,flowPanStartAllowed,flowPanToPinch} from "../dist/flow-graph/workspace-camera-ui.js";
+import {flowWheelZoomFactor} from "../dist/flow-graph/workspace-wheel-zoom.js";
 import {
   FLOW_SECTION_ACTION_LABELS,
   flowSectionMenuRequest,
