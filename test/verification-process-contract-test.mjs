@@ -440,11 +440,23 @@ await assert.rejects(()=>resolveIncidentTaskSuccession({incident:projectedIncide
 "direct same-target projection still rejects an expanded target boundary");
 const deferredExpandedProjection={...projectedIncident,repair:{status:"eligible"},
   terminalVerificationDeferred:{status:"terminal-verification-deferred"}};
+let deferredProjectionReceiptLoaded=false,deferredProjectionHistoryLoaded=false;
 assert.deepEqual(await validateUnresolvedIncidentTaskSuccession({
   incidents:[deferredExpandedProjection],currentIdentities:[projectedCurrent],
   currentPacks:expandedProjectionPacks,graph:{version:1,identities:{},boundaries:{},edges:[]},
-  loadHistoricalPacks:async()=>projectionPacks,loadSourceReceipt:async()=>projectionReceipt,
+  loadHistoricalPacks:async()=>{deferredProjectionHistoryLoaded=true;return projectionPacks;},
+  loadSourceReceipt:async()=>{deferredProjectionReceiptLoaded=true;return projectionReceipt;},
 }),[],"an eligible deferred expanded target remains pending focused reassessment");
+assert.equal(deferredProjectionReceiptLoaded&&deferredProjectionHistoryLoaded,true,
+  "deferred expanded projection verifies the governed receipt and historical registry first");
+const missingSourceDeferredProjection=structuredClone(deferredExpandedProjection);
+delete missingSourceDeferredProjection.failure.sourceReceipt;
+await assert.rejects(()=>validateUnresolvedIncidentTaskSuccession({
+  incidents:[missingSourceDeferredProjection],currentIdentities:[projectedCurrent],
+  currentPacks:expandedProjectionPacks,graph:{version:1,identities:{},boundaries:{},edges:[]},
+  loadHistoricalPacks:async()=>projectionPacks,loadSourceReceipt:async()=>projectionReceipt,
+}),/missing registry history|unverified planner-projection source identity/iu,
+"an unverified deferred projection source remains blocking");
 const projectedEligibleIncident={...projectedIncident,repair:{focusedTaskPlan:[{
   identity:projectedCurrent,roles:["diagnosed-boundary"],taskSuccession:{
     version:sameTargetProjection.version,sourceTaskDigest:sameTargetProjection.sourceTaskDigest,

@@ -57,13 +57,16 @@ assert.deepEqual(await validateUnresolvedIncidentTaskSuccession({incidents:[{
 }],currentIdentities:[batch],currentPacks:[],graph:batchGraph}),[],
 "internal promotion execution contracts do not invent registry task succession");
 const expandedBatch={...batch,environment:{...batch.environment,FLOW_EVIDENCE_REVISION:"2"}};
-assert.deepEqual(await validateUnresolvedIncidentTaskSuccession({incidents:[{
+await assert.rejects(()=>validateUnresolvedIncidentTaskSuccession({incidents:[{
   state:"unresolved",repair:{status:"eligible"},
   terminalVerificationDeferred:{status:"terminal-verification-deferred"},
   failure:{failureClass:"nonzero-exit",task:batch,
     retryScope:{kind:"target",logicalTargetIds:["FLOW"]}},
-}],currentIdentities:[expandedBatch],currentPacks:[],graph:batchGraph}),[],
-"an eligible deferred target with the same selected task key remains pending for focused reassessment when its evidence boundary expands");
+}],currentIdentities:[expandedBatch],currentPacks:[],graph:batchGraph,
+loadHistoricalPacks:async()=>{throw new Error("missing historical source");},
+loadSourceReceipt:async()=>{throw new Error("missing source receipt");}}),
+/missing registry history|unverified planner-projection source identity/iu,
+"a same-key deferred target without a governed source receipt remains blocking");
 const strengthenedBatchGraph=structuredClone(batchGraph);
 strengthenedBatchGraph.boundaries[verificationTaskDigest(batch)]={...flowBoundary,
   assertionLeaves:[...flowBoundary.assertionLeaves,"flow.expanded"]};
@@ -98,6 +101,15 @@ const projectionPack=(leaves)=>({id:"flow_graph",browserObservations:[{
   path:"test/browser.mjs",sessionBatch:"flow",targetIds:["FLOW"],
   maximumSingleTargetP90Milliseconds:35000,
 }]});
+const batchProjectionPack=(flowLeaves)=>({id:"flow_graph",browserObservations:[
+  {id:"OTHER",path:"test/browser.mjs",sessionBatch:"flow",environment:{OTHER:"1"},
+    impactBoundaries:["other"],observationKeys:["other"],features:["features/flow.feature"]},
+  {id:"FLOW",path:"test/browser.mjs",sessionBatch:"flow",environment:{FLOW:"1"},
+    impactBoundaries:["flow"],observationKeys:["flow"],features:["features/flow.feature"]},
+],browserEvidencePartitions:[{path:"test/browser.mjs",sessionBatch:"flow",targets:[
+  {id:"OTHER",leaves:["other.ready"]},{id:"FLOW",leaves:flowLeaves},
+]}],browserAdapterPerformance:[{path:"test/browser.mjs",sessionBatch:"flow",
+  targetIds:["OTHER","FLOW"],maximumSingleTargetP90Milliseconds:35000}]});
 const projectionReceipt=`tmp/verification-receipts/task-succession-${process.pid}.json`;
 await mkdir(new URL("../tmp/verification-receipts/",import.meta.url),{recursive:true});
 await writeFile(new URL(`../${projectionReceipt}`,import.meta.url),JSON.stringify({
@@ -105,6 +117,24 @@ await writeFile(new URL(`../${projectionReceipt}`,import.meta.url),JSON.stringif
   tasks:{[standalone.key]:{identity:standalone,status:"failed"}},
 }));
 try{
+  let sameKeyReceiptLoaded=false,sameKeyHistoryLoaded=false;
+  const sameKeyIncident={state:"unresolved",repair:{status:"eligible"},
+    terminalVerificationDeferred:{status:"terminal-verification-deferred"},failure:{
+      failureClass:"nonzero-exit",task:batch,sourceReceipt:projectionReceipt,
+      lineage:{commit:"historical-commit",tree:"historical-tree"},
+      retryScope:{kind:"target",logicalTargetIds:["FLOW"]},
+    }};
+  assert.deepEqual(await validateUnresolvedIncidentTaskSuccession({incidents:[sameKeyIncident],
+    currentIdentities:[expandedBatch],currentPacks:[batchProjectionPack(["flow.ready","flow.expanded"])],
+    graph:batchGraph,
+    loadHistoricalPacks:async()=>{sameKeyHistoryLoaded=true;return[batchProjectionPack(["flow.ready"])];},
+    loadSourceReceipt:async()=>{sameKeyReceiptLoaded=true;return{
+      candidate:{commit:"historical-commit",tree:"historical-tree"},
+      tasks:{[batch.key]:{identity:batch,status:"failed"}},
+    };}}),[],
+  "a receipt-bound same-key deferred target remains pending only for an expanded verified boundary");
+  assert.equal(sameKeyReceiptLoaded&&sameKeyHistoryLoaded,true,
+    "same-key deferred projection verifies its governed receipt and historical registry");
   const projectionIncident={state:"unresolved",repair:{status:"eligible"},
     terminalVerificationDeferred:{status:"terminal-verification-deferred"},failure:{
       task:standalone,sourceReceipt:projectionReceipt,
