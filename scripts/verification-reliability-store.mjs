@@ -596,6 +596,8 @@ export function createTimeoutIncidentStore({
         if (incident.state !== "unresolved" || incident.repair?.status !== "eligible") {
           throw new Error(`Reliability incident ${id} has no eligible repair to defer`);
         }
+        const projectionCovered=terminalProjectionCoverageValid(incident,proof.projectionCoverage,
+          proof.reviewReady?.focusedTaskKeys);
         if (proof.candidate?.commit !== candidate.commit || proof.candidate?.tree !== candidate.tree ||
             !await commitDescendsFrom({ root, isAncestor,
               ancestor:timeoutRepairCandidate(incident)?.commit, commit:candidate.commit }) ||
@@ -607,16 +609,19 @@ export function createTimeoutIncidentStore({
             !(proof.reviewReady.focusedTaskKeys.includes(incident.failure.task.key) ||
               proof.runIntentBootstrap?.coverage?.some(({ incidentId, selectedTaskKey }) =>
                 incidentId === id && proof.reviewReady.focusedTaskKeys.includes(selectedTaskKey)) ||
-              terminalProjectionCoverageValid(incident,proof.projectionCoverage,
-                proof.reviewReady.focusedTaskKeys)) ||
+              projectionCovered) ||
             !shaPattern.test(proof.package?.digest ?? "")) {
           throw new Error(`Reliability incident ${id} terminal deferral proof is stale or incomplete`);
         }
+        const reviewReady=structuredClone(proof.reviewReady);
+        if(projectionCovered)reviewReady.focusedTaskKeys=[...new Set([
+          ...reviewReady.focusedTaskKeys,incident.failure.task.key,
+        ])].sort();
         const proofDisposition = {
           status:"terminal-verification-deferred",
           candidate:structuredClone(proof.candidate),
           repairDigest:timeoutIncidentDigest(incident.repair),
-          reviewReady:structuredClone(proof.reviewReady),
+          reviewReady,
           ...(proof.runIntentBootstrap
             ? { runIntentBootstrap:structuredClone(proof.runIntentBootstrap) } : {}),
           ...(proof.projectionCoverage
