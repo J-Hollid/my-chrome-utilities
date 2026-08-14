@@ -1,7 +1,7 @@
 # Feature development focus and advisory scouting R01
 
-Status: approved documentation convention; active for the next ordinary QA
-feature after Flow relationship port snapping
+Status: approved documentation convention; coder-timed RepoWise Trial 4 active
+for the next ordinary QA feature after Flow contextual action consistency
 
 Prepared: 2026-08-14
 
@@ -64,12 +64,14 @@ exceed the implementation and maintenance cost.
 
 ## Advisory RepoWise scouting pilot
 
-For the next three to five varied ordinary QA features, the specifier uses
-RepoWise after likely source files are identified and before the implementation
-handoff is finalized. Tool or local-index unavailability is reported but does
-not block the feature. Scouting is advisory and telemetry stays disabled. Run
-the index update only when status shows that the index is behind current `HEAD`;
-an already-current index needs no refresh:
+The first three trials used RepoWise through the specifier after likely source
+files were identified and before the implementation handoff was finalized. The
+user approved moving Trial 4 to the coder because an actual candidate diff may
+provide stronger changed-file signal than speculative pre-implementation paths.
+Tool or local-index unavailability is reported but does not block the feature.
+Scouting is advisory and telemetry stays disabled. Run the index update only
+when status shows that the index is behind current `HEAD`; an already-current
+index needs no refresh:
 
 ```sh
 DO_NOT_TRACK=1 tmp/repowise-venv/bin/repowise status . \
@@ -153,10 +155,61 @@ conditional update processed through `39660e0a`. The update again created
 untracked `.vscode` integration files, which were removed. Status, update, risk,
 context, and cleanup cost roughly 35 seconds. After three Flow-heavy trials the
 signal is useful but not yet varied enough for a final keep-or-stop decision:
-continue for one ordinary non-Flow feature, skip no required conditional status
-check, and stop the routine pilot if that fourth trial again changes neither
-development focus nor QA scope. RepoWise remains optional advisory input in the
-meantime; direct inspection and canonical planning remain authoritative.
+continue with the coder-timed Trial 4 below and stop the routine pilot if that
+trial again changes neither implementation focus nor QA scope. RepoWise remains
+optional advisory input in the meantime; direct inspection and canonical
+planning remain authoritative.
+
+### Trial 4 — coder-timed actual-diff scouting
+
+Trial 4 applies to the next user-approved ordinary QA feature after Flow
+contextual action consistency. The specifier performs ordinary inspection,
+records the provisional development focus and QA impact before handoff, and
+does not run a second speculative RepoWise scan. If the selected feature is
+another Flow feature, run the trial as directed but report that the fourth
+sample still does not establish usefulness outside the already indexed Flow
+area.
+
+After the coder has a coherent committed candidate whose direct checks are
+green, and before any `--prepare-evidence` run, the coder performs one RepoWise
+checkpoint. Status and a conditional index update use the telemetry-disabled
+commands above. Risk uses one representative actual production path as
+`--target` and repeats `--changed-file` for every actual changed production
+path. Context is limited to the most central changed production path and
+includes callers, callees, metrics, and health. A second checkpoint is allowed
+only when the first result causes a material implementation change that adds a
+new production boundary. The checkpoint has a two-minute wall-time ceiling; at
+the ceiling the coder stops further RepoWise work and records the partial result.
+RepoWise unavailability, an update failure, or stale metadata never blocks
+coding, evidence, or handoff.
+
+Before the checkpoint, preserve the candidate's clean-status observation. After
+the checkpoint, inspect status and remove only tool-generated workspace files
+that were absent before it; never overwrite or delete an existing user file.
+RepoWise findings are leads for direct inspection. They cannot add packs by
+themselves, override the canonical changed-path plan, create an all-20 run, or
+require a repair without a concrete product or verification consequence.
+
+The coder sends one non-blocking file-based note to the specifier when the
+checkpoint finishes, then continues the ordinary coder-to-refactorer Git
+handoff without waiting for acknowledgement. The note records:
+
+- the actual changed production paths and representative target;
+- a relevant untouched file or check discovered before ordinary candidate
+  review, or `none`;
+- material false positives, stale-index behavior, and generated workspace
+  artifacts;
+- whether the result changed implementation, development focus, or QA impact;
+- RepoWise wall time, cleanup time, and any resulting implementation or
+  verification rerun time; and
+- the coder's concise judgment: improved, neutral, or impeded development.
+
+At QA integration the specifier includes those results in the delivery
+scorecard, compares them with the pre-coder baseline and canonical final plan,
+and recommends one of: retain an optional coder checkpoint, retain RepoWise only
+for unfamiliar or hotspot investigation, or stop routine RepoWise use. Missing
+feedback is a measurement defect to report, not authority to block an otherwise
+exact `qa-ready` candidate.
 
 ## Evaluation
 
@@ -165,6 +218,12 @@ feature report the estimate, time to first handoff, repair/review time, final
 focused-evidence time, selected packs, full-gate count, and the specific cause of
 material variance. The objective is expectation-versus-actual visibility and a
 pause for analysis, not an automatic intervention gate.
+
+For Trial 4, also report the pre-coder development-focus and QA-impact baseline,
+the actual candidate paths, RepoWise discoveries and false positives, changes
+caused by the checkpoint, its wall and cleanup time, any avoided or added rerun,
+and the coder's improved/neutral/impeded judgment. Separate a useful new finding
+from confirmation of a file or check already identified by ordinary work.
 
 Reassess this convention after three ordinary feature cycles. Prefer retaining
 the cheap generalized convention when it shortens iteration without missing

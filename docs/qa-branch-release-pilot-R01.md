@@ -95,6 +95,10 @@ exclusive to explicit master integration.
 The same document authorizes a telemetry-disabled, advisory RepoWise scouting
 pilot over three to five varied features. Scouting may improve the two lists but
 cannot block work, widen evidence on its own, or override the canonical registry.
+Its user-approved Trial 4 applies to the next ordinary QA feature: the specifier
+records the pre-coder baseline, the coder scouts the first coherent committed
+candidate before review evidence, and the QA integration scorecard reports
+whether that checkpoint improved, was neutral to, or impeded development.
 
 ### Verification run intent
 
