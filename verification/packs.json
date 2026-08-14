@@ -2826,6 +2826,7 @@
         "id": "flow_workspace_surface_composition",
         "prefixes": [
           "src/flow-graph/ui-primitives.ts",
+          "src/flow-graph/concept-visual-ui.ts",
           "src/flow-graph/workspace-card-ui.ts",
           "src/flow-graph/workspace-dom.ts",
           "src/flow-graph/workspace-item-menu.ts",
@@ -2850,6 +2851,7 @@
           "src/data-layer-flow-graph-structural.ts",
           "src/data-layer-flow-graph-ui-page-frame.ts",
           "src/flow-graph/containment.ts",
+          "src/flow-graph/concept-visuals.ts",
           "src/flow-graph/example-values.ts",
           "src/flow-graph/examples.ts",
           "src/flow-graph/migrations.ts",
@@ -2873,6 +2875,7 @@
     "unit": [
       "test/flow-stylesheet-extraction-test.mjs",
       "test/data-layer-flow-graph-test.mjs",
+      "test/data-layer-flow-concept-visual-test.mjs",
       "test/data-layer-flow-workspace-test.mjs",
       "test/data-layer-flow-relationship-deletion-test.mjs",
       "test/data-layer-flow-page-instance-test.mjs",
