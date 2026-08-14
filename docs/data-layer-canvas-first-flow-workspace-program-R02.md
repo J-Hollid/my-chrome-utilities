@@ -91,6 +91,11 @@ may draw a Section, create one around a selection, rename it inline, move it, an
 resize it anywhere in two dimensions. Sections may sit beside, above, or below one
 another. Nested Sections are deferred.
 
+Once a pointer resize starts on a Section handle, that gesture remains active while
+the pointer moves outside the Section. Each outside move updates the visible bounds,
+and releasing outside commits the displayed final bounds without requiring the
+pointer to return to the Section.
+
 Moving a Section moves its contained Pages by the same offset. Resizing changes
 only bounds and never silently captures or releases a Page. Any Page may be placed
 inside any Section or outside all Sections regardless of Property composition.
@@ -272,6 +277,7 @@ migration or restore Page Groups to Flow authoring.
 | Layout assistance rewrites semantics | 019 | Tidy is previewed, explicit, presentation-only, and undoable |
 | Outline consumes space or becomes a second model | 018 | Closed Outline reserves no width and on-demand navigation uses the same stable graph |
 | Direct manipulation loses keyboard access | 005, 012, 020, 023 | Pointer and keyboard routes have labelled focus, deterministic cancellation, and focus restoration |
+| Fast Section resizing loses the active pointer outside its original bounds | 030 | The live resize follows an immediate outside move and release persists exactly those bounds without pointer re-entry |
 | Relationship meaning drifts with routing | 009–012, 022, 023 | Semantic ports retain the three documentary kinds; Page-only topology and migrations remain stable |
 | Relationship drawing misses a port or gives ambiguous target feedback | 028, 029 | A zoom-independent port snap radius pins the preview to the compatible semantic port, emphasizes exactly that port without color-only meaning while leaving its Page card unchanged, preserves invalid direct targets, and clears without a write |
 | Existing occurrence and Page-instance semantics regress | 006, 008, 017, 024, 026 | Reuse, migration, sparse contributions, repeated instances, and Flow-specific names retain stable identity |
@@ -342,3 +348,39 @@ evidence has acquired and visibly identified compatible port targets at 25, 100,
 and 200 percent zoom, plus the cause of any variance. Crossing either reporting
 point is not an intervention gate; continue safe, bounded work unless scope or
 safety requires new authority.
+
+## Flow Section pointer-continuity correction slice
+
+The pointer-continuity correction is accepted by directional Flow scenario 030
+and its runtime partner. It changes only an already-started Section resize
+gesture: moving or releasing outside the Section must remain part of that same
+gesture. Section geometry constraints, keyboard resizing, containment, schema
+meaning, relationship topology, and documentation order remain governed by the
+existing contracts.
+
+**Development focus:** `test/data-layer-flow-workspace-test.mjs` for the Section
+pointer-gesture lifecycle, followed by the installed scenario-030 path in
+`test/support/flow-workspace-r02-runtime.mjs`.
+
+**QA impact:** the bounded `flow_graph` pack and package proof. The exact
+checkpoint is:
+
+```sh
+node scripts/run-focused-acceptance.mjs --pack flow_graph
+node scripts/package.mjs
+```
+
+**Scouting considerations:** advisory RepoWise inspection confirmed
+`src/flow-graph/workspace-section-ui.ts` as the direct interaction surface and
+identified `src/flow-graph/workspace-ui.ts`,
+`test/data-layer-flow-workspace-test.mjs`, and
+`test/support/flow-workspace-r02-runtime.mjs` as likely companions. The canonical
+registry independently keeps the settled QA impact inside the
+`flow_workspace_section_authoring` boundary and the `flow_graph` pack.
+
+The implementation-and-review elapsed effort ceiling is 60 minutes from coder
+receipt to an architect `qa-ready` candidate. At 30 minutes, report whether a
+single installed pointer move and release outside the Section updates and saves
+the expected bounds, the cause of any variance, remaining work, confidence, and
+forecast. Continue bounded work by default; pause only under the pilot's scope,
+repeated-failure, safety, or authority conditions.

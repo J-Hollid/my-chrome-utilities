@@ -490,3 +490,17 @@ Feature: Data layer directional Flow specification graph
       | 25   | Escape               |
       | 100  | pointer cancellation |
       | 200  | Escape               |
+
+  # Data layer directional Flow specification graph 030
+  Scenario Outline: Data layer directional Flow specification graph 030
+    Given Checkout Section is <initial_width> by <initial_height> graph pixels with its corner resize handle visible
+    When the operator presses that handle and the next pointer move jumps <horizontal_distance> graph pixels right and <vertical_distance> graph pixels down beyond the Section without an intermediate move inside it
+    Then the visible Section bounds continue to follow the pointer outside the Section at <expected_width> by <expected_height> graph pixels
+    When the operator releases the pointer at that outside position
+    Then Checkout persists the same bounds in one undoable Flow command without requiring the pointer to return
+    And Page containment and Page positions remain unchanged
+
+    Examples:
+      | initial_width | initial_height | horizontal_distance | vertical_distance | expected_width | expected_height |
+      | 320           | 220            | 160                 | 100               | 480            | 320             |
+      | 300           | 180            | 90                  | 140               | 390            | 320             |

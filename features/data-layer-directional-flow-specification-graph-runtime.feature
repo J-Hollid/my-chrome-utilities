@@ -483,3 +483,20 @@ Feature: Data layer directional Flow specification graph runtime
       | 25   | Escape               |
       | 100  | pointer cancellation |
       | 200  | Escape               |
+
+  # Data layer directional Flow specification graph runtime 030
+  Scenario Outline: Data layer directional Flow specification graph runtime 030
+    Given the installed canvas is at <zoom> percent zoom
+    And Checkout Section bounds are <initial_width> by <initial_height> graph pixels
+    When pointerdown occurs on Checkout's lower-right resize handle
+    And the next production pointermove jumps <horizontal_distance> CSS pixels right and <vertical_distance> CSS pixels down with the pointer outside Checkout
+    Then the measured Section bounds update outside Checkout to <expected_width> by <expected_height> graph pixels before the pointer returns
+    When pointerup occurs at that same outside position
+    Then serialized Checkout bounds equal <expected_width> by <expected_height> graph pixels without another pointermove
+    And one actual Undo restores <initial_width> by <initial_height> graph pixels
+    And serialized Page-frame containment and Page positions remain byte-identical
+
+    Examples:
+      | zoom | initial_width | initial_height | horizontal_distance | vertical_distance | expected_width | expected_height |
+      | 100  | 320           | 220            | 160                 | 100               | 480            | 320             |
+      | 200  | 300           | 180            | 180                 | 280               | 390            | 320             |
