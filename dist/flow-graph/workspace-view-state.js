@@ -43,6 +43,7 @@ export function saveFlowWorkspaceView(projectId, flowId, view) {
             surface: view.surface,
             focusCanvas: view.focusCanvas,
             navigationVisible: view.navigationVisible,
+            visualDisplayMode: view.visualDisplayMode,
         }));
     }
     catch {

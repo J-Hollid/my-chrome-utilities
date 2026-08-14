@@ -157,6 +157,7 @@ export function upgradeFlowWorkspace(root, pendingMenu) {
         placeSurface();
         queueMicrotask(() => detail.firstControl?.focus({ preventScroll: true }));
     });
+    workspace.addEventListener("flow-close-item-editor", closeSurface);
     const surfaceButton = (label, kind) => {
         const result = flowControl(label, () => showSurface(view.surface === kind ? undefined : kind, result));
         result.dataset.flowSurface = kind;
@@ -195,7 +196,13 @@ export function upgradeFlowWorkspace(root, pendingMenu) {
         minimapToggle.setAttribute("aria-pressed", String(view.minimap));
     });
     minimapToggle.setAttribute("aria-pressed", String(view.minimap));
-    toolbar.append(skip, navigationToggle, add, focusCanvas, ...cameraUi.controls, outlineButton, details, tidy, minimapToggle);
+    const visualMode = document.createElement("select");
+    visualMode.setAttribute("aria-label", "Visual display mode");
+    for (const mode of ["Hidden", "Badges", "Thumbnails"])
+        visualMode.append(new Option(mode, mode));
+    visualMode.value = view.visualDisplayMode;
+    visualMode.addEventListener("change", () => { saveView({ ...view, visualDisplayMode: visualMode.value }); workspace.dispatchEvent(new CustomEvent("flow-visual-display-mode", { bubbles: true, detail: { mode: view.visualDisplayMode } })); });
+    toolbar.append(skip, navigationToggle, add, focusCanvas, ...cameraUi.controls, outlineButton, details, tidy, minimapToggle, visualMode);
     decorateCompactFlowCards(canvas, duplicateFrames, outline);
     if (actions?.getAttribute("aria-label")?.includes("Page instance")) {
         const rename = flowControl("Rename in Flow", () => { showSurface("details", rename); detailsSource?.querySelector('[aria-label^="Name in this Flow"]')?.focus(); });

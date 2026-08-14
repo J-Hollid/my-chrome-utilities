@@ -17,7 +17,8 @@ export function duplicateFlowPageFrame(state, flowId, pageFrameId, id) {
     const graph = storedGraph(state.project, flowId), source = graph.pageFrames.find(({ id: candidateId }) => candidateId === pageFrameId);
     if (!source)
         return state;
-    return transactProject(state, `Duplicate Flow Page frame ${pageFrameId}`, (project) => { const current = storedGraph(project, flowId), latest = current.pageFrames.find(({ id: candidateId }) => candidateId === pageFrameId) ?? source, copy = duplicatePageFrameRecord(latest, id("flow-page-frame")); return saveStoredGraph(project, flowId, { ...current, pageFrames: [...current.pageFrames, copy] }); });
+    return transactProject(state, `Duplicate Flow Page frame ${pageFrameId}`, (project) => { const current = storedGraph(project, flowId), latest = current.pageFrames.find(({ id: candidateId }) => candidateId === pageFrameId) ?? source, copy = duplicatePageFrameRecord(latest, id("flow-page-frame")), visual = copy.conceptVisual; if (visual)
+        visual.id = id("concept-visual-attachment"); return saveStoredGraph(project, flowId, { ...current, pageFrames: [...current.pageFrames, copy] }); });
 }
 export function renameFlowPageFrame(state, flowId, pageFrameId, nameInFlow) {
     const graph = storedGraph(state.project, flowId), frame = graph.pageFrames.find(({ id }) => id === pageFrameId), name = nameInFlow.trim();

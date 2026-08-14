@@ -378,8 +378,8 @@ export function flowWorkspaceR02Runtime(seeded, { stopAfterRuntime,
   const contextualRelationshipId=(await snapshot()).relationships[0]?.id;
   const contextualItems=[
     {kind:'section',id:drawn.id,commands:['Rename','Move','Resize','Wrap selection','Remove Section','Remove with contents'],editors:['Rename'],selector:()=>sectionGroup(drawn.id)},
-    {kind:'page',id:cartFrameId,commands:['Rename in Flow','Add Event','Move','Connect','Duplicate','Details','Open schema contribution','Remove'],editors:['Rename in Flow','Details'],selector:()=>q('g[data-page-frame-id="'+CSS.escape(cartFrameId)+'"]:not([data-occurrence-id])',canvas)},
-    {kind:'event',id:pointerOccurrence.id,commands:['Move','Change Page','Duplicate','Details','Open schema contribution','Remove'],editors:['Change Page','Details'],selector:()=>q('[data-occurrence-id="'+CSS.escape(pointerOccurrence.id)+'"]',canvas)},
+    {kind:'page',id:cartFrameId,commands:['Rename in Flow','Add Event','Add visual','Move','Connect','Duplicate','Details','Open schema contribution','Remove'],editors:['Rename in Flow','Add visual','Details'],selector:()=>q('g[data-page-frame-id="'+CSS.escape(cartFrameId)+'"]:not([data-occurrence-id])',canvas)},
+    {kind:'event',id:pointerOccurrence.id,commands:['Move','Change Page','Add visual','Duplicate','Details','Open schema contribution','Remove'],editors:['Change Page','Add visual','Details'],selector:()=>q('[data-occurrence-id="'+CSS.escape(pointerOccurrence.id)+'"]',canvas)},
     {kind:'relationship',id:contextualRelationshipId,commands:['Edit documentation','Delete relationship'],editors:['Edit documentation'],selector:()=>q('[data-relationship-id="'+CSS.escape(contextualRelationshipId)+'"]',canvas)},
   ];
   const contextualResults=[];

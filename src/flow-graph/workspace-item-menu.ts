@@ -13,13 +13,13 @@ export const FLOW_ITEM_MENU_SPECS = Object.freeze({
     destructiveCommand: "Remove with contents",
   }),
   page: Object.freeze({
-    commands: Object.freeze(["Rename in Flow", "Add Event", "Move", "Connect", "Duplicate", "Details", "Open schema contribution", "Remove"]),
-    editorCommands: Object.freeze(["Rename in Flow", "Details"]),
+    commands: Object.freeze(["Rename in Flow", "Add Event", "Add visual", "View visual", "Edit visual", "Replace visual", "Remove visual", "Move", "Connect", "Duplicate", "Details", "Open schema contribution", "Remove"]),
+    editorCommands: Object.freeze(["Rename in Flow", "Add visual", "Edit visual", "Replace visual", "Details"]),
     destructiveCommand: "Remove",
   }),
   event: Object.freeze({
-    commands: Object.freeze(["Move", "Change Page", "Duplicate", "Details", "Open schema contribution", "Remove"]),
-    editorCommands: Object.freeze(["Change Page", "Details"]),
+    commands: Object.freeze(["Move", "Change Page", "Add visual", "View visual", "Edit visual", "Replace visual", "Remove visual", "Duplicate", "Details", "Open schema contribution", "Remove"]),
+    editorCommands: Object.freeze(["Change Page", "Add visual", "Edit visual", "Replace visual", "Details"]),
     destructiveCommand: "Remove",
   }),
   relationship: Object.freeze({

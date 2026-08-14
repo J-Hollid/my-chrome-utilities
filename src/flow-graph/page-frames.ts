@@ -14,7 +14,7 @@ export function addFlowPageFrame(state:ProjectState,flowId:string,input:{pageId:
 }
 export function duplicateFlowPageFrame(state:ProjectState,flowId:string,pageFrameId:string,id:IdFactory):ProjectState{
   const graph=storedGraph(state.project,flowId),source=graph.pageFrames.find(({id:candidateId})=>candidateId===pageFrameId);if(!source)return state;
-  return transactProject(state,`Duplicate Flow Page frame ${pageFrameId}`,(project)=>{const current=storedGraph(project,flowId),latest=current.pageFrames.find(({id:candidateId})=>candidateId===pageFrameId)??source,copy=duplicatePageFrameRecord(latest,id("flow-page-frame"));return saveStoredGraph(project,flowId,{...current,pageFrames:[...current.pageFrames,copy]});});
+  return transactProject(state,`Duplicate Flow Page frame ${pageFrameId}`,(project)=>{const current=storedGraph(project,flowId),latest=current.pageFrames.find(({id:candidateId})=>candidateId===pageFrameId)??source,copy=duplicatePageFrameRecord(latest,id("flow-page-frame")),visual=(copy as DocumentaryPageFrameRecord&{conceptVisual?:{id:string}}).conceptVisual;if(visual)visual.id=id("concept-visual-attachment");return saveStoredGraph(project,flowId,{...current,pageFrames:[...current.pageFrames,copy]});});
 }
 export function renameFlowPageFrame(state:ProjectState,flowId:string,pageFrameId:string,nameInFlow:string):ProjectState{
   const graph=storedGraph(state.project,flowId),frame=graph.pageFrames.find(({id})=>id===pageFrameId),name=nameInFlow.trim();if(!frame)throw new Error(`Unknown Flow Page frame ${pageFrameId}`);if(!name)throw new Error("Name in this Flow cannot be blank; use the Page name action instead.");if(frame.nameInFlow===name)return state;
