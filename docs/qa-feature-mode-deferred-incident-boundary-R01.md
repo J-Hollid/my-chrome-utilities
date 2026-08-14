@@ -128,3 +128,59 @@ After this correction reaches `qa`, reconstruct Flow relationship port snapping
 from that exact QA head. Reuse the mixed candidate only as a patch reference and
 keep the reconstructed feature candidate limited to its approved Flow product,
 focused test, generated bundle, and evidence paths.
+
+## Same-target boundary expansion repair-preflight correction
+
+An inherited incident that already has an eligible repair and a
+`terminal-verification-deferred` disposition must not prevent an unrelated
+current incident's governed repair merely because the inherited incident's one
+diagnosed target now has an expanded canonical task boundary. Treat that case
+as pending a fresh focused reassessment of the inherited incident rather than
+as proof of same-target equivalence or task succession.
+
+This exception applies only while unresolved task succession is validating a
+repair-focused plan and all of these conditions are established:
+
+- the inherited incident has both an eligible repair and a
+  `terminal-verification-deferred` disposition;
+- its governed receipt diagnoses exactly one target;
+- exactly one current canonical task contains that target; and
+- its otherwise verified same-target planner projection fails specifically
+  because the historical and current target boundary digests differ.
+
+The inherited incident and its history remain unchanged and unresolved. Direct
+same-target projection must continue to reject the changed boundary, and the
+validator must not infer equivalence, a succession edge, passing evidence, or a
+repair transition. Missing or ambiguous current targets, noneligible repairs,
+nondeferred incidents, unverified source receipts, unrelated succession errors,
+and current-candidate incidents remain blocking. The current repair continues
+to require its own exact causal regression, repair-focused receipt, review
+evidence, and package proof.
+
+Implement only the smallest classification and regression-test changes in
+`scripts/verification-task-succession.mjs`, its direct test, the shell process
+contract, and this process specification. Do not change
+`scripts/verification-same-target-planner-projection.mjs`,
+`scripts/run-focused-acceptance.mjs`, `verification/packs.json`, product files,
+or incident records. No all-20 checkpoint is authorized.
+
+Use the direct succession test during development:
+
+```sh
+node scripts/verification-task-succession-test.mjs
+```
+
+After the candidate is settled, produce one shell-only review-ready receipt:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack shell \
+  --property \
+  --changed-since <approved-specification-commit> \
+  --prepare-evidence deferred-same-target-preflight
+```
+
+That evidence invocation includes package proof. Any plan expansion beyond the
+shell pack is a blocking scope defect. The elapsed implementation expectation
+is one hour, with an analysis update after thirty minutes. These are reporting
+expectations, not intervention gates. No Gherkin mutation is authorized.

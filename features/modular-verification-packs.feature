@@ -2341,3 +2341,17 @@ Feature: Modular verification packs
     And every logical target, prerequisite obligation, result, timing record, and evidence leaf is conserved exactly once
     And no noncanonical overlapping task can launch or create a duplicate reliability incident
     And a missing or ambiguous canonical target, changed target boundary, or incompatible execution contract blocks instead of being deduplicated
+
+  # Modular verification packs 164
+  Scenario: Modular verification packs 164
+    Given a governed repair-focused preflight has one current incident whose bounded causal repair is ready
+    And an inherited browser incident has an eligible repair and a terminal-verification-deferred disposition
+    And that inherited incident diagnoses one target which appears in exactly one current canonical task
+    And its receipt-bound same-target planner projection reports a changed historical-to-current target boundary
+    When unresolved task succession is validated for the current repair plan
+    Then the inherited incident remains unchanged and pending fresh focused reassessment instead of blocking the current repair
+    And no same-target equivalence, task-succession mapping, incident transition, or passing evidence is inferred for it
+    And direct same-target projection continues to reject the changed boundary
+    And the current incident still requires its own exact causal regression, repair-focused receipt, review evidence, and package proof
+    And missing or ambiguous current targets, noneligible repairs, nondeferred incidents, unverified projection sources, and unrelated succession failures remain blocking
+    And no all-20 checkpoint is authorized
