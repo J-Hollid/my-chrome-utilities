@@ -504,3 +504,21 @@ Feature: Data layer directional Flow specification graph
       | initial_width | initial_height | horizontal_distance | vertical_distance | expected_width | expected_height |
       | 320           | 220            | 160                 | 100               | 480            | 320             |
       | 300           | 180            | 90                  | 140               | 390            | 320             |
+
+  # Data layer directional Flow specification graph 031
+  Scenario Outline: Data layer directional Flow specification graph 031
+    Given Checkout Section is 500 by 440 graph pixels and contains distinct Cart and Summary Page instances
+    And Cart is a 190 by 108 graph-pixel card placed 60 graph pixels from Checkout's left edge and <initial_top_offset> graph pixels from its top edge
+    And the canvas is at <zoom> percent zoom
+    When the operator drags Cart <vertical_pointer_distance> CSS pixels vertically from a fixed point on the card and releases within Checkout
+    Then Cart follows the pointer to 60 graph pixels from Checkout's left edge and <expected_top_offset> graph pixels from its top edge without snapping after release
+    And Cart's complete card remains inside Checkout at the chosen top, middle, or bottom position
+    And Cart retains its Checkout membership at the persisted canvas position
+    And one Undo restores Cart's initial position
+    And Summary's position, every Section bound, relationship topology, and canonical Page and Event definitions remain unchanged
+
+    Examples:
+      | zoom | initial_top_offset | vertical_pointer_distance | expected_top_offset |
+      | 50   | 300                | -130                      | 40                  |
+      | 100  | 40                 | 120                       | 160                 |
+      | 200  | 160                | 296                       | 308                 |

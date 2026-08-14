@@ -384,3 +384,51 @@ single installed pointer move and release outside the Section updates and saves
 the expected bounds, the cause of any variance, remaining work, confidence, and
 forecast. Continue bounded work by default; pause only under the pilot's scope,
 repeated-failure, safety, or authority conditions.
+
+## Flow Page placement geometry correction slice
+
+The Page placement correction is accepted by directional Flow scenario 031 and
+its runtime partner. A Page drag converts screen-space pointer travel to graph
+space at the active camera zoom, so the Page remains under the same pointer
+anchor before release and at the corresponding stored position after render.
+This makes the usable Section interior below its visible label reachable and
+prevents zoom-dependent snapping toward the prior position or past the lower
+boundary. Section membership remains explicit: this correction does not infer
+membership from Property composition, silently move sibling Pages, resize a
+Section, or change relationship or schema meaning.
+
+**Development focus:** the Page-frame pointer gesture in
+`src/data-layer-flow-graph-ui.ts`, the existing camera-coordinate primitives in
+`src/flow-graph/workspace.ts`, and focused geometry coverage in
+`test/data-layer-flow-workspace-test.mjs`. Prefer a small tested graph-delta
+primitive over adding another coordinate policy inside the already broad graph
+builder. Installed proof belongs in
+`test/support/flow-workspace-r02-runtime.mjs`, with scenario-031 evidence wired
+through the Flow reporter and registry.
+
+**QA impact:** the bounded `flow_graph` pack and package proof. The exact
+checkpoint is:
+
+```sh
+node scripts/run-focused-acceptance.mjs --pack flow_graph
+node scripts/package.mjs
+```
+
+**Scouting considerations:** revised RepoWise Trial 2 used the required
+`--target` plus `--changed-file` risk query after a conditional index update. It
+correctly surfaced `test/browser-packs/flow-graph.mjs` and, unlike Trial 1,
+`verification/packs.json`; direct registry inspection still determines the
+actual observation keys and changed-path scope. It did not surface the direct
+Page-drag unit file or `test/support/flow-workspace-r02-runtime.mjs`, and its
+coverage-less test-gap signal remained false. Its low-health signal for
+`installFlowGraphBuilder` reinforced the small-helper development focus but did
+not widen QA. The refresh reported the current commit range yet status and query
+metadata continued to identify the prior indexed commit, so that inconsistency
+is recorded as advisory-tool friction rather than a feature blocker.
+
+The implementation-and-review elapsed effort ceiling is 60 minutes from coder
+receipt to an architect `qa-ready` candidate. At 30 minutes, report measured
+Cart position before release and after render at 50, 100, and 200 percent zoom,
+including complete-card containment at the top and bottom examples, remaining
+work, confidence, and forecast. Continue bounded work by default; pause only
+under the pilot's scope, repeated-failure, safety, or authority conditions.

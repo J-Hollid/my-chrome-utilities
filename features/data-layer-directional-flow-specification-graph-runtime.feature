@@ -500,3 +500,21 @@ Feature: Data layer directional Flow specification graph runtime
       | zoom | initial_width | initial_height | horizontal_distance | vertical_distance | expected_width | expected_height |
       | 100  | 320           | 220            | 160                 | 100               | 480            | 320             |
       | 200  | 300           | 180            | 180                 | 280               | 390            | 320             |
+
+  # Data layer directional Flow specification graph runtime 031
+  Scenario Outline: Data layer directional Flow specification graph runtime 031
+    Given the installed canvas is at <zoom> percent zoom
+    And production Checkout Section is 500 by 440 graph pixels with distinct Cart and Summary Page frames
+    And measured Cart bounds are 190 by 108 graph pixels at offsets 60 and <initial_top_offset> inside Checkout
+    When actual pointer input drags Cart <vertical_pointer_distance> CSS pixels vertically from a fixed card point and releases within Checkout
+    Then before pointerup the measured Cart top offset is <expected_top_offset> graph pixels within rounding tolerance
+    And after the production render Cart remains at offsets 60 and <expected_top_offset> without a release snap
+    And Cart's complete measured bounds are inside Checkout and its serialized Section ID is unchanged
+    And one actual Undo restores Cart's initial coordinates
+    And serialized Summary coordinates, Section bounds, relationships, and canonical Page and Event definitions remain byte-identical
+
+    Examples:
+      | zoom | initial_top_offset | vertical_pointer_distance | expected_top_offset |
+      | 50   | 300                | -130                      | 40                  |
+      | 100  | 40                 | 120                       | 160                 |
+      | 200  | 160                | 296                       | 308                 |
