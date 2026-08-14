@@ -544,3 +544,24 @@ Feature: Data layer directional Flow specification graph
     Then focus returns to the invoking canvas item or Actions menu button while selection remains unchanged
     When the operator reopens the menu and activates each declared editor command
     Then the menu closes and a separate contextual editor opens for that item with focus on its first control
+
+  # Data layer directional Flow specification graph 033
+  Scenario Outline: Data layer directional Flow specification graph 033
+    Given Checkout journey is at 100 percent zoom in <workspace_mode>
+    And Cart is selected and the pointer is over a measured point on its visible canvas card
+    When the operator sends <zoom_input> with vertical delta <vertical_delta>
+    Then the viewport scale <direction> while the same Cart graph point remains beneath the pointer
+    And the visible zoom percentage changes in the same direction without moving the outer document
+    And focus, selection, canonical graph coordinates, Draft, revision, and Undo remain unchanged
+    When the operator repeats that zoom input beyond its matching manual limit
+    Then the camera stops at <limit> percent
+    When wheel input occurs over a Flow contextual menu or editor, outside the canvas, or with no vertical delta
+    Then the camera remains unchanged and that input retains native scrolling
+    And touch pinch and visible camera controls retain their existing behavior
+
+    Examples:
+      | workspace_mode     | zoom_input                                  | vertical_delta | direction | limit |
+      | the main workspace | an unmodified mouse-wheel event             | -120           | increases | 200   |
+      | the main workspace | a browser-delivered laptop trackpad pinch   | 80             | decreases | 25    |
+      | Focus Canvas       | an unmodified mouse-wheel event             | 120            | decreases | 25    |
+      | Focus Canvas       | a browser-delivered laptop trackpad pinch   | -80            | increases | 200   |

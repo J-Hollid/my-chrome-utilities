@@ -541,3 +541,25 @@ Feature: Data layer directional Flow specification graph runtime
     Then focus returns to the canvas item or Actions button that invoked it and serialized selection remains unchanged
     When actual controls reopen each menu and activate each declared editor command
     Then the menu closes, the separate installed editor opens, and its first control owns focus
+
+  # Data layer directional Flow specification graph runtime 033
+  Scenario Outline: Data layer directional Flow specification graph runtime 033
+    Given Checkout journey is open in <workspace_mode> with production camera scale equal to one
+    And Cart is selected with actual focus and a measured graph point beneath the pointer
+    When an actual <zoom_input> dispatches vertical delta <vertical_delta> at that client point
+    Then the production camera scale <direction> and the graph point beneath that client point remains equal within rendering tolerance
+    And the installed zoom output changes in the same direction, the event is default-prevented, and outer document scroll offsets remain equal
+    And installed focus, serialized graph-item coordinates, and canonical project bytes remain unchanged
+    And production selection, Saved Draft bytes, Flow revision, and Undo depth remain unchanged
+    When actual input repeats the same signal beyond its matching manual limit
+    Then repeated installed input cannot move the camera or zoom output beyond <limit> percent
+    When actual wheel events target an open Flow contextual surface, an element outside the canvas, or use zero vertical delta
+    Then those events do not change the installed camera or consume native scrolling
+    And actual touch pinch and visible camera controls continue to change the camera as previously specified
+
+    Examples:
+      | workspace_mode     | zoom_input                                            | vertical_delta | direction | limit |
+      | the main workspace | unmodified cancelable WheelEvent                      | -120           | increases | 200   |
+      | the main workspace | cancelable WheelEvent with the browser pinch modifier | 80             | decreases | 25    |
+      | Focus Canvas       | unmodified cancelable WheelEvent                      | 120            | decreases | 25    |
+      | Focus Canvas       | cancelable WheelEvent with the browser pinch modifier | -80            | increases | 200   |

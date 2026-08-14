@@ -578,3 +578,61 @@ whether one pointer and one keyboard route open the same command set with correc
 focus restoration. Include any variance cause, remaining work, confidence, and
 forecast; continue bounded work under the QA pilot unless product scope, safety,
 or authority changes.
+
+## Flow wheel and laptop-pinch zoom slice
+
+Directional Flow scenario 033 and its runtime partner make the camera respond to
+vertical mouse-wheel input over visible canvas content in both the main workspace
+and Focus Canvas. Wheel-up zooms in and wheel-down zooms out, with the graph point
+beneath the pointer remaining anchored. Browser-delivered laptop trackpad pinch
+signals follow the same pointer-anchored path. Each accepted signal updates the
+visible percentage, consumes the event so that the outer document does not move,
+and respects the existing 25-to-200-percent manual limits.
+
+The camera does not intercept wheel input over a Flow contextual menu or editor,
+outside the canvas, or when the event has no vertical delta. Those inputs retain
+native scrolling. Touch pinch and visible camera controls remain available. The
+camera gesture cannot move focus or selection and remains project-scoped UI
+state: graph-item coordinates, Draft, revision, canonical project state, and
+Undo history do not change.
+
+**Development focus:** keep the production change in
+`src/flow-graph/workspace-camera-ui.ts`, with direct input-policy and camera
+characterization in `test/data-layer-flow-workspace-test.mjs`. Prove installed
+mouse-wheel and browser pinch-modifier direction, pointer anchoring, event
+consumption, excluded targets, limits, both workspace modes, and state invariance
+through the existing `FLOW_WORKSPACE_CONTROLS_TARGET` boundary in
+`test/support/flow-workspace-r02-runtime.mjs`. Wire scenario-033 evidence through
+the existing Flow browser pack, reporter, and registry rather than creating a new
+pack or target.
+
+**QA impact:** canonical planning for the production camera path selects only
+the bounded `flow_graph` pack: 18 focused tasks with properties, followed by
+package proof. The review-ready checkpoint is:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_graph \
+  --property \
+  --changed-since <approved-specification-commit> \
+  --prepare-evidence flow-wheel-and-trackpad-pinch-zoom
+node scripts/package.mjs
+```
+
+**RepoWise Trial 4 baseline:** ordinary inspection identified the production
+camera owner, its direct unit companion, the installed controls target, and the
+existing Flow evidence wiring before coder work. Per the approved trial change,
+the specifier did not run RepoWise. After the coder has identified and touched
+the implementation files, they must run one advisory RepoWise checkpoint after
+the first coherent committed green candidate and before preparing evidence, then
+report whether its change-aware findings altered implementation, tests, review
+focus, or QA impact; the architect records the result. This is another Flow
+sample, so even a useful result cannot establish value across non-Flow features.
+
+The implementation-and-review elapsed effort ceiling is 60 minutes from coder
+receipt to an architect `qa-ready` candidate. At 30 minutes, report whether both
+unmodified wheel and browser-delivered laptop pinch change scale in the expected
+direction while preserving the pointer anchor, and whether contextual surfaces
+retain native scrolling. Include any variance cause, remaining work, confidence,
+and forecast; continue bounded work under the QA pilot unless product scope,
+safety, or authority changes.
