@@ -406,11 +406,17 @@ builder. Installed proof belongs in
 `test/support/flow-workspace-r02-runtime.mjs`, with scenario-031 evidence wired
 through the Flow reporter and registry.
 
-**QA impact:** the bounded `flow_graph` pack and package proof. The exact
-checkpoint is:
+**QA impact:** the canonical changed-path plan for the shared Page-frame gesture
+and camera primitive selects the bounded `flow_graph`, `flow_export`,
+`live_flow_testing`, and `property_set_flow_sections` consumer set, followed by
+package proof. The exact checkpoint is:
 
 ```sh
-node scripts/run-focused-acceptance.mjs --pack flow_graph
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_graph \
+  --pack flow_export \
+  --pack live_flow_testing \
+  --pack property_set_flow_sections
 node scripts/package.mjs
 ```
 
@@ -422,9 +428,13 @@ actual observation keys and changed-path scope. It did not surface the direct
 Page-drag unit file or `test/support/flow-workspace-r02-runtime.mjs`, and its
 coverage-less test-gap signal remained false. Its low-health signal for
 `installFlowGraphBuilder` reinforced the small-helper development focus but did
-not widen QA. The refresh reported the current commit range yet status and query
-metadata continued to identify the prior indexed commit, so that inconsistency
-is recorded as advisory-tool friction rather than a feature blocker.
+not independently authorize QA. The settled changed-path preflight then selected
+the exact four-pack consumer set above; this forecast miss confirms that likely
+production paths should be planned canonically before handoff even when scouting
+has already named downstream consumers. The refresh reported the current commit
+range yet status and query metadata continued to identify the prior indexed
+commit, so that inconsistency is recorded as advisory-tool friction rather than
+a feature blocker.
 
 The implementation-and-review elapsed effort ceiling is 60 minutes from coder
 receipt to an architect `qa-ready` candidate. At 30 minutes, report measured

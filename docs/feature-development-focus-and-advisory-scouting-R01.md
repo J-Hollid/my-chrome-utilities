@@ -40,10 +40,14 @@ variance report and process analysis while bounded work continues.
 
 The QA-impact list is an informed forecast, not permission to hide planner-owned
 coverage. If exact changed paths select a wider but still bounded consumer set,
-the evidence follows that set. If shared verification work unexpectedly selects
-all 20 packs, the existing feature-mode scope rule applies: restore a
-product-only candidate or seek separate authority for infrastructure work. No
-feature role runs the all-20 checkpoint merely to gain confidence.
+the evidence follows that set without waiting for another user decision. An
+underdeclared evidence invocation may stop before launching tasks, but that is a
+cheap correction signal: rerun once with every pack named by the canonical plan
+and record the forecast variance. It is not an implementation blocker or
+authority conflict. If shared verification work unexpectedly selects all 20
+packs, the existing feature-mode scope rule applies: restore a product-only
+candidate or seek separate authority for infrastructure work. No feature role
+runs the all-20 checkpoint merely to gain confidence.
 
 ## Coverage ratchet
 

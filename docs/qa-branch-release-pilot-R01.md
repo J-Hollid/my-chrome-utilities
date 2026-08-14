@@ -33,8 +33,12 @@ reviewable change.
    ceiling. These are reporting expectations rather than automatic intervention
    gates. At halfway and at the ceiling, report progress, the cause of any
    variance, remaining work, confidence, and current forecast. Continue by
-   default while scope is unchanged and the completion path is bounded and safe.
-   Pause for a user decision when scope expands, requirements need
+   default while product and requirement scope are unchanged and the completion
+   path is bounded and safe. A bounded difference between the forecast QA-impact
+   list and the canonical changed-path plan is not a scope expansion requiring a
+   user decision: use the complete planned pack set, record the variance, and
+   continue. Pause for a user decision when product or requirement scope expands,
+   requirements need
    reinterpretation, failures repeat without a causal explanation, no credible
    completion path remains, or another safety boundary requires authority.
    Before any review-ready task launches, exact changed-path preflight compares
