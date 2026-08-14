@@ -5192,7 +5192,6 @@ const postBaseAddedUnitKeys = new Set([
   "unit:test/command-palette-installed-controller-test.mjs",
   "unit:test/hotkey-installed-controller-test.mjs",
   "unit:test/flow-reload-lifecycle-test.mjs",
-  "unit:test/data-layer-flow-concept-visual-test.mjs",
   "unit:test/workspace-tabs-installed-controller-test.mjs",
 ]);
 const approvedVtd015TaskKeys = new Set([
@@ -5237,9 +5236,6 @@ assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
 assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
   key === "unit:test/flow-reload-lifecycle-test.mjs").length, 1,
 "terminal-full planning adds the Flow reload lifecycle regression exactly once");
-assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
-  key === "unit:test/data-layer-flow-concept-visual-test.mjs").length, 1,
-"terminal-full planning adds the Flow concept-visual regression exactly once");
 assert.equal(currentTerminalPlan.tasks.filter(({ key }) =>
   key === "unit:test/workspace-tabs-installed-controller-test.mjs").length, 1,
 "terminal-full planning adds the installed workspace-tabs controller regression exactly once");
@@ -10315,34 +10311,6 @@ function isolatedCheckpointToolchainRegression(context) {
     preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
     repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
 }
-function projectConceptVisualAcceptanceRegression(context) {
-  const expectedPreRepairFailure = {
-    modelStepRegistered:false, runtimeStepRegistered:false, portability008Expected:false,
-  };
-  const expectedRepairResult = {
-    modelStepRegistered:true, runtimeStepRegistered:true, portability008Expected:true,
-  };
-  const fixture = {
-    id:"project-concept-visual-portability-acceptance-v1",
-    causalCategory:context.causalCategory,
-    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
-    input:{ handler:projectHandlerPath, scenario:"Portability 008" },
-    expectedPreRepairFailure,
-    expectedRepairResult,
-  };
-  const repairResult = {
-    modelStepRegistered:projectHandlerSource.includes(
-      "Retail website has one Flow Page attachment and one Event-occurrence attachment that share a project concept-visual asset"),
-    runtimeStepRegistered:projectHandlerSource.includes(
-      "production Retail website has one Flow Page attachment and one Event-occurrence attachment referencing the same project concept-visual asset"),
-    portability008Expected:projectHandlerSource.includes("(range 1 9)"),
-  };
-  assert.deepEqual(repairResult, expectedRepairResult);
-  const fixtureDigest = verificationDigest(fixture);
-  return { version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
-    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
-    repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
-}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
@@ -10350,8 +10318,6 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     swarmforgeTimeoutRepairRegression:
       regressionContext.causalCategory === "other:isolated checkpoint fixture toolchain"
         ? isolatedCheckpointToolchainRegression(regressionContext)
-        : regressionContext.causalCategory === "other:project concept visual acceptance support"
-        ? projectConceptVisualAcceptanceRegression(regressionContext)
         : regressionContext.causalCategory === "other:handoff sender routing"
         ? await handoffSenderRoutingRegression(regressionContext)
         : regressionContext.causalCategory === "other:terminal deferral transition schema"
