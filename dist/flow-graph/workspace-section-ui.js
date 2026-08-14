@@ -19,6 +19,43 @@ export function flowSectionMenuRequest(event) {
         return {};
     return undefined;
 }
+export function trackFlowSectionPointerGesture(options) {
+    const ownsPointer = (event) => event.pointerId === options.pointerId;
+    const move = ((event) => {
+        if (ownsPointer(event))
+            options.move(event);
+    });
+    const cleanup = () => {
+        options.eventSource.removeEventListener("pointermove", move);
+        options.eventSource.removeEventListener("pointerup", finish);
+        options.eventSource.removeEventListener("pointercancel", cancel);
+        if (options.captureTarget.hasPointerCapture(options.pointerId)) {
+            options.captureTarget.releasePointerCapture(options.pointerId);
+        }
+    };
+    const finish = ((event) => {
+        if (!ownsPointer(event))
+            return;
+        cleanup();
+        options.finish(event);
+    });
+    const cancel = ((event) => {
+        if (!ownsPointer(event))
+            return;
+        cleanup();
+        options.cancel(event);
+    });
+    options.eventSource.addEventListener("pointermove", move);
+    options.eventSource.addEventListener("pointerup", finish);
+    options.eventSource.addEventListener("pointercancel", cancel);
+    try {
+        options.captureTarget.setPointerCapture(options.pointerId);
+    }
+    catch {
+        // Synthetic test pointers have no active device pointer to capture.
+    }
+    return cleanup;
+}
 const command = (root, detail) => {
     root.dispatchEvent(new CustomEvent("flow-section-command", { bubbles: true, detail }));
 };
@@ -107,17 +144,8 @@ export function installFlowSections(options) {
         handle.setAttribute("aria-label", `Resize Section ${label}. Use Arrow keys to resize.`);
         section.append(handle);
         let drag;
-        section.addEventListener("pointerdown", (event) => {
-            if (event.target.closest("[data-page-frame-id],[data-occurrence-id]"))
-                return;
-            drag = {
-                pointerId: event.pointerId,
-                client: { x: event.clientX, y: event.clientY },
-                bounds: sectionBounds(section),
-                resize: Boolean(event.target.closest("[data-section-resize-for]")),
-            };
-        });
-        section.addEventListener("pointermove", (event) => {
+        let stopTracking;
+        const move = (event) => {
             if (!drag || drag.pointerId !== event.pointerId)
                 return;
             const dx = (event.clientX - drag.client.x) / options.camera().zoom;
@@ -133,12 +161,13 @@ export function installFlowSections(options) {
                 rect.setAttribute("x", String(drag.bounds.x + dx));
                 rect.setAttribute("y", String(drag.bounds.y + dy));
             }
-        });
+        };
         const finish = (event) => {
             if (!drag || drag.pointerId !== event.pointerId)
                 return;
             const current = drag;
             drag = undefined;
+            stopTracking = undefined;
             const dx = Math.round((event.clientX - current.client.x) / options.camera().zoom);
             const dy = Math.round((event.clientY - current.client.y) / options.camera().zoom);
             if (!dx && !dy) {
@@ -150,8 +179,27 @@ export function installFlowSections(options) {
             else
                 command(root, { kind: "move", sectionId: id, position: { x: current.bounds.x + dx, y: current.bounds.y + dy } });
         };
-        section.addEventListener("pointerup", finish);
-        section.addEventListener("pointercancel", () => { drag = undefined; });
+        section.addEventListener("pointerdown", (event) => {
+            if (drag || event.target.closest("[data-page-frame-id],[data-occurrence-id]"))
+                return;
+            drag = {
+                pointerId: event.pointerId,
+                client: { x: event.clientX, y: event.clientY },
+                bounds: sectionBounds(section),
+                resize: Boolean(event.target.closest("[data-section-resize-for]")),
+            };
+            stopTracking = trackFlowSectionPointerGesture({
+                pointerId: event.pointerId,
+                captureTarget: section,
+                eventSource: window,
+                move,
+                finish,
+                cancel: () => {
+                    drag = undefined;
+                    stopTracking = undefined;
+                },
+            });
+        });
         section.addEventListener("click", (event) => {
             if (event.target.closest("[data-page-frame-id],[data-occurrence-id]"))
                 return;

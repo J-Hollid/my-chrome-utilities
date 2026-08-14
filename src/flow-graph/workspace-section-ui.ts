@@ -64,6 +64,58 @@ export function flowSectionMenuRequest(event: {
   return undefined;
 }
 
+interface FlowSectionPointerCaptureTarget {
+  setPointerCapture(pointerId: number): void;
+  hasPointerCapture(pointerId: number): boolean;
+  releasePointerCapture(pointerId: number): void;
+}
+
+interface FlowSectionPointerEventSource {
+  addEventListener(type: string, listener: EventListener): void;
+  removeEventListener(type: string, listener: EventListener): void;
+}
+
+export function trackFlowSectionPointerGesture(options: {
+  pointerId: number;
+  captureTarget: FlowSectionPointerCaptureTarget;
+  eventSource: FlowSectionPointerEventSource;
+  move(event: PointerEvent): void;
+  finish(event: PointerEvent): void;
+  cancel(event: PointerEvent): void;
+}): () => void {
+  const ownsPointer = (event: PointerEvent): boolean => event.pointerId === options.pointerId;
+  const move = ((event: PointerEvent): void => {
+    if (ownsPointer(event)) options.move(event);
+  }) as EventListener;
+  const cleanup = (): void => {
+    options.eventSource.removeEventListener("pointermove", move);
+    options.eventSource.removeEventListener("pointerup", finish);
+    options.eventSource.removeEventListener("pointercancel", cancel);
+    if (options.captureTarget.hasPointerCapture(options.pointerId)) {
+      options.captureTarget.releasePointerCapture(options.pointerId);
+    }
+  };
+  const finish = ((event: PointerEvent): void => {
+    if (!ownsPointer(event)) return;
+    cleanup();
+    options.finish(event);
+  }) as EventListener;
+  const cancel = ((event: PointerEvent): void => {
+    if (!ownsPointer(event)) return;
+    cleanup();
+    options.cancel(event);
+  }) as EventListener;
+  options.eventSource.addEventListener("pointermove", move);
+  options.eventSource.addEventListener("pointerup", finish);
+  options.eventSource.addEventListener("pointercancel", cancel);
+  try {
+    options.captureTarget.setPointerCapture(options.pointerId);
+  } catch {
+    // Synthetic test pointers have no active device pointer to capture.
+  }
+  return cleanup;
+}
+
 export interface FlowSectionUi {
   addPanel(): HTMLElement;
   actions(section: SVGGraphicsElement): HTMLElement;
@@ -158,16 +210,8 @@ export function installFlowSections(options: SectionUiOptions): FlowSectionUi {
     handle.setAttribute("aria-label", `Resize Section ${label}. Use Arrow keys to resize.`);
     section.append(handle);
     let drag: { pointerId: number; client: FlowPoint; bounds: ReturnType<typeof sectionBounds>; resize: boolean } | undefined;
-    section.addEventListener("pointerdown", (event) => {
-      if ((event.target as Element).closest("[data-page-frame-id],[data-occurrence-id]")) return;
-      drag = {
-        pointerId: event.pointerId,
-        client: { x: event.clientX, y: event.clientY },
-        bounds: sectionBounds(section),
-        resize: Boolean((event.target as Element).closest("[data-section-resize-for]")),
-      };
-    });
-    section.addEventListener("pointermove", (event) => {
+    let stopTracking: (() => void) | undefined;
+    const move = (event: PointerEvent): void => {
       if (!drag || drag.pointerId !== event.pointerId) return;
       const dx = (event.clientX - drag.client.x) / options.camera().zoom;
       const dy = (event.clientY - drag.client.y) / options.camera().zoom;
@@ -180,11 +224,12 @@ export function installFlowSections(options: SectionUiOptions): FlowSectionUi {
         rect.setAttribute("x", String(drag.bounds.x + dx));
         rect.setAttribute("y", String(drag.bounds.y + dy));
       }
-    });
+    };
     const finish = (event: PointerEvent): void => {
       if (!drag || drag.pointerId !== event.pointerId) return;
       const current = drag;
       drag = undefined;
+      stopTracking = undefined;
       const dx = Math.round((event.clientX - current.client.x) / options.camera().zoom);
       const dy = Math.round((event.clientY - current.client.y) / options.camera().zoom);
       if (!dx && !dy) {
@@ -194,8 +239,26 @@ export function installFlowSections(options: SectionUiOptions): FlowSectionUi {
       if (current.resize) command(root, { kind: "resize", sectionId: id, bounds: { ...current.bounds, width: current.bounds.width + dx, height: current.bounds.height + dy } });
       else command(root, { kind: "move", sectionId: id, position: { x: current.bounds.x + dx, y: current.bounds.y + dy } });
     };
-    section.addEventListener("pointerup", finish);
-    section.addEventListener("pointercancel", () => { drag = undefined; });
+    section.addEventListener("pointerdown", (event) => {
+      if (drag || (event.target as Element).closest("[data-page-frame-id],[data-occurrence-id]")) return;
+      drag = {
+        pointerId: event.pointerId,
+        client: { x: event.clientX, y: event.clientY },
+        bounds: sectionBounds(section),
+        resize: Boolean((event.target as Element).closest("[data-section-resize-for]")),
+      };
+      stopTracking = trackFlowSectionPointerGesture({
+        pointerId: event.pointerId,
+        captureTarget: section,
+        eventSource: window,
+        move,
+        finish,
+        cancel: () => {
+          drag = undefined;
+          stopTracking = undefined;
+        },
+      });
+    });
     section.addEventListener("click", (event) => {
       if ((event.target as Element).closest("[data-page-frame-id],[data-occurrence-id]")) return;
       command(root, { kind: "select", sectionId: id });

@@ -24,7 +24,11 @@ import {
 } from "../dist/flow-graph/workspace.js";
 import {flowOutlineProjection} from "../dist/flow-graph/workspace-outline-model.js";
 import {flowPanClickSuppression,flowPanStartAllowed,flowPanToPinch} from "../dist/flow-graph/workspace-camera-ui.js";
-import {FLOW_SECTION_ACTION_LABELS,flowSectionMenuRequest} from "../dist/flow-graph/workspace-section-ui.js";
+import {
+  FLOW_SECTION_ACTION_LABELS,
+  flowSectionMenuRequest,
+  trackFlowSectionPointerGesture,
+} from "../dist/flow-graph/workspace-section-ui.js";
 import {sectionBoundsAfterKeyboardInput} from "../dist/flow-graph/workspace-section-geometry.js";
 import {flowSelectionContains,primaryFlowSelection,selectionAfterActivation,selectionAfterRemoval} from "../dist/flow-graph/workspace-selection.js";
 import {FLOW_PORT_SNAP_RADIUS,flowPointerSnapTarget,flowPortSnapTarget} from "../dist/flow-graph/relationship-port-snap.js";
@@ -187,6 +191,36 @@ assert.deepEqual(flowSectionMenuRequest({type:"keydown",key:"ContextMenu",shiftK
 assert.deepEqual(flowSectionMenuRequest({type:"keydown",key:"F10",shiftKey:true}),{},"Shift+F10 opens the focused Section menu");
 assert.equal(flowSectionMenuRequest({type:"keydown",key:"F10",shiftKey:false}),undefined,"plain F10 does not open the Section menu");
 assert.equal(flowSectionMenuRequest({type:"keydown",key:"Enter",shiftKey:false}),undefined,"ordinary Section activation remains distinct from its context menu");
+
+const sectionPointerSource=new EventTarget(),capturedSectionPointers=new Set(),sectionPointerObservations=[];
+const sectionPointerCapture={
+  setPointerCapture(pointerId){capturedSectionPointers.add(pointerId);},
+  hasPointerCapture(pointerId){return capturedSectionPointers.has(pointerId);},
+  releasePointerCapture(pointerId){
+    sectionPointerObservations.push(["release",pointerId]);
+    capturedSectionPointers.delete(pointerId);
+  },
+};
+const sectionPointerEvent=(type,pointerId,clientX,clientY)=>{
+  const event=new Event(type);
+  Object.assign(event,{pointerId,clientX,clientY});
+  return event;
+};
+trackFlowSectionPointerGesture({
+  pointerId:53,
+  captureTarget:sectionPointerCapture,
+  eventSource:sectionPointerSource,
+  move:(event)=>sectionPointerObservations.push(["move",event.clientX,event.clientY]),
+  finish:(event)=>sectionPointerObservations.push(["finish",event.clientX,event.clientY]),
+  cancel:()=>sectionPointerObservations.push(["cancel"]),
+});
+assert.deepEqual([...capturedSectionPointers],[53],"an installed Section gesture captures its active pointer");
+sectionPointerSource.dispatchEvent(sectionPointerEvent("pointermove",99,800,700));
+sectionPointerSource.dispatchEvent(sectionPointerEvent("pointermove",53,640,420));
+sectionPointerSource.dispatchEvent(sectionPointerEvent("pointerup",53,640,420));
+sectionPointerSource.dispatchEvent(sectionPointerEvent("pointermove",53,900,900));
+assert.deepEqual(sectionPointerObservations,[["move",640,420],["release",53],["finish",640,420]],
+  "a Section gesture follows its pointer on the outer source, commits there, and stops after release");
 
 const flowCss=[
   await readFile(new URL("../src/flow-graph/flow-workspace.css",import.meta.url),"utf8"),
