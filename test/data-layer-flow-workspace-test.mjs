@@ -60,7 +60,7 @@ await settledReadiness.saved();
 assert.deepEqual(settledStatuses,["saving","settled"],"the reload boundary becomes settled only after the durable queue and projection finish");
 
 const initial=initialFlowWorkspaceView();
-assert.deepEqual(initial,{camera:{x:0,y:0,zoom:1},cameraInitialized:false,surface:undefined,minimap:false,focusCanvas:false,navigationVisible:true});
+assert.deepEqual(initial,{camera:{x:0,y:0,zoom:1},cameraInitialized:false,surface:undefined,minimap:false,focusCanvas:false,navigationVisible:true,visualDisplayMode:"Badges"});
 assert.deepEqual(openFlowSurface(initial,"add"),{...initial,surface:"add"});
 assert.deepEqual(openFlowSurface(openFlowSurface(initial,"outline"),"details"),{...initial,surface:"details"},"only one bounded transient surface is open");
 assert.equal(closeFlowSurface(openFlowSurface(initial,"details")).surface,undefined);
@@ -215,8 +215,8 @@ assert.equal(flowSectionMenuRequest({type:"keydown",key:"Enter",shiftKey:false})
 
 assert.deepEqual(FLOW_ITEM_MENU_SPECS,{
   section:{commands:["Rename","Move","Resize","Wrap selection","Remove Section","Remove with contents"],editorCommands:["Rename"],destructiveCommand:"Remove with contents"},
-  page:{commands:["Rename in Flow","Add Event","Move","Connect","Duplicate","Details","Open schema contribution","Remove"],editorCommands:["Rename in Flow","Details"],destructiveCommand:"Remove"},
-  event:{commands:["Move","Change Page","Duplicate","Details","Open schema contribution","Remove"],editorCommands:["Change Page","Details"],destructiveCommand:"Remove"},
+  page:{commands:["Rename in Flow","Add Event","Add visual","View visual","Edit visual","Replace visual","Remove visual","Move","Connect","Duplicate","Details","Open schema contribution","Remove"],editorCommands:["Rename in Flow","Add visual","Edit visual","Replace visual","Details"],destructiveCommand:"Remove"},
+  event:{commands:["Move","Change Page","Add visual","View visual","Edit visual","Replace visual","Remove visual","Duplicate","Details","Open schema contribution","Remove"],editorCommands:["Change Page","Add visual","Edit visual","Replace visual","Details"],destructiveCommand:"Remove"},
   relationship:{commands:["Edit documentation","Delete relationship"],editorCommands:["Edit documentation"],destructiveCommand:"Delete relationship"},
 },"every Flow item shares one exact command hierarchy with its destructive command last");
 assert.deepEqual(flowItemMenuRequest({type:"contextmenu",clientX:420,clientY:240}),{clientPosition:{x:420,y:240}},"secondary click carries its menu placement point");
@@ -278,7 +278,7 @@ assert.match(flowCss,/#project-workspace:has\(\.documentary-flow\[data-canvas-fi
 assert.match(flowCss,/\.documentary-flow\[data-canvas-first-r02="true"\][^{]*\{[^}]*position:\s*absolute[^}]*inset:\s*0[^}]*display:\s*flex[^}]*flex-direction:\s*column[^}]*block-size:\s*100%/su,"the ordinary Flow fills its explicit remaining route instead of escaping beneath shared chrome");
 assert.match(flowCss,/body\.flow-focus-canvas \.documentary-flow\[data-canvas-first-r02="true"\][^{]*\{[^}]*position:\s*fixed[^}]*inset:\s*0[^}]*block-size:\s*100dvh/su,"Focus Canvas covers the complete browser viewport");
 assert.match(flowCss,/body\.flow-focus-canvas \.documentary-flow\[data-canvas-first-r02="true"\] \.flow-workspace-toolbar\s*\{[^}]*box-sizing:\s*border-box[^}]*max-inline-size:\s*calc\(100dvw - 1rem\)[^}]*flex-wrap:\s*wrap[^}]*overflow-x:\s*visible/su,"the 360px Focus Canvas toolbar wraps every control inside its viewport overlay without horizontal discovery");
-assert.match(flowWorkspaceUi,/toolbar\.append\(skip, navigationToggle, add, focusCanvas, \.\.\.cameraUi\.controls, outlineButton, details, tidy, minimapToggle\)/u,"Add and the Focus Canvas entry precede secondary tools while camera controls stay immediately available");
+assert.match(flowWorkspaceUi,/toolbar\.append\(skip, navigationToggle, add, focusCanvas, \.\.\.cameraUi\.controls, outlineButton, details, tidy, minimapToggle, visualMode\)/u,"Add and the Focus Canvas entry precede secondary tools while camera controls stay immediately available");
 assert.doesNotMatch(flowCss,/^\.twatility-studio \.flow-canvas-viewport\s*\{[^}]*(?:max-block-size|aspect-ratio|block-size:\s*min\()/msu,"the ordinary canvas viewport has no fixed, maximum, or aspect-ratio height cap");
 assert.doesNotMatch(flowCss,/\.documentary-flow\[data-canvas-first-r02="true"\][^{]*\.flow-canvas-viewport\s*\{[^}]*block-size:\s*(?:clamp|min|max)\(/su,"later branding rules cannot restore a capped Flow canvas track");
 assert.match(flowGraphUi,/function emphasizeCompatiblePort\([^)]*\).*classList\.add\("is-valid-target"\)/su,"an acquired root-level relationship port exposes semantic state to Flow-local presentation");

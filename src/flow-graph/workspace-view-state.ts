@@ -54,6 +54,7 @@ export function saveFlowWorkspaceView(projectId: string, flowId: string, view: F
       surface: view.surface,
       focusCanvas: view.focusCanvas,
       navigationVisible: view.navigationVisible,
+      visualDisplayMode: view.visualDisplayMode,
     }));
   } catch {
     // Session UI state is best-effort and never enters project bytes.
