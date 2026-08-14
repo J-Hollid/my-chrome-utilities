@@ -152,8 +152,8 @@ import {
   verificationRunIntents,
 } from "../scripts/verification-run-intent.mjs";
 import {
-  loadTaskSuccessionGraph, resolveIncidentTaskSuccession, resolveTaskSuccessionGraph,
-  validateUnresolvedIncidentTaskSuccession,
+  browserTargetSuccessionBoundary, loadTaskSuccessionGraph, resolveIncidentTaskSuccession,
+  resolveTaskSuccessionGraph, taskSuccessionBoundaryDigest, validateUnresolvedIncidentTaskSuccession,
   verificationTaskDigest,
 } from "../scripts/verification-task-succession.mjs";
 import {
@@ -914,6 +914,8 @@ try {
     cliContentionRepository, "scripts/verification-task-succession.mjs",
   );
   await copyFile(path.resolve("scripts/verification-task-succession.mjs"), cliSuccessionPath);
+  await copyFile(path.resolve("scripts/verification-same-target-planner-projection.mjs"),
+    path.join(cliContentionRepository, "scripts/verification-same-target-planner-projection.mjs"));
   await copyFile(path.resolve("verification/task-succession.json"),
     path.join(cliContentionRepository, "verification/task-succession.json"));
   await copyFile(path.resolve("verification/packs.json"),
@@ -938,6 +940,8 @@ try {
     cliContentionRepository, "scripts/verification-execution-prerequisites.mjs",
   );
   await copyFile(path.resolve("scripts/verification-execution-prerequisites.mjs"), cliPrerequisitePath);
+  await copyFile(path.resolve("scripts/verification-browser-prerequisite-normalization.mjs"),
+    path.join(cliContentionRepository, "scripts/verification-browser-prerequisite-normalization.mjs"));
   const buildOwnerFile = path.join(cliContentionRepository, "tmp", "cli-contention-build-owner");
   await writeFile(path.join(cliContentionRepository, "scripts/build.mjs"), [
     'import { writeFile } from "node:fs/promises";',
@@ -953,13 +957,16 @@ try {
     "the isolated checkpoint fixture attaches the resolved locked npm prerequisites");
   await symlink(path.resolve("tmp/tools"), path.join(cliContentionRepository, "tmp/tools"), "dir");
   await writeFile(path.join(cliContentionRepository, ".git/info/exclude"),
-    "node_modules\n.swarmforge\nscripts/verification-task-succession.mjs\nverification/task-succession.json\n");
+    "node_modules\n.swarmforge\nverification/task-succession.json\n");
   await exec("git", ["add", "scripts/run-focused-acceptance.mjs",
     "scripts/settled-final-verification-policy.mjs",
     "scripts/dist-artifact-lock.mjs",
     "scripts/verification-reliability-repair.mjs",
     "scripts/verification-reliability-closure.mjs",
-    "scripts/verification-execution-prerequisites.mjs", "scripts/build.mjs",
+    "scripts/verification-execution-prerequisites.mjs",
+    "scripts/verification-browser-prerequisite-normalization.mjs", "scripts/build.mjs",
+    "scripts/verification-same-target-planner-projection.mjs",
+    "scripts/verification-task-succession.mjs",
     "scripts/verification-styles.mjs", "scripts/verification-packs.mjs",
     "test/browser-packs/global-style-smoke.mjs", "test/stylesheet-declarations-property-test.mjs",
     "test/flow-stylesheet-extraction-test.mjs", "src/flow-graph/flow-workspace.css",
@@ -3488,8 +3495,8 @@ console.log("repairTmp=" + process.env.TMPDIR);
   const taskSuccessionEvidence={
     plannerProjection:{deterministic:sameTargetProjection.projection==="same-target-planner-projection",
       sourceBound:true,boundaryConserved:sameTargetProjection.chain[0].conservedBoundaryDigest===
-        "d4dda1a04a965ee6f30c386ae7f9f25400e5a31466522ab1e6183f2a0206d084"||
-        Boolean(sameTargetProjection.chain[0].conservedBoundaryDigest),currentCanonical:true,
+        taskSuccessionBoundaryDigest(browserTargetSuccessionBoundary(projectionPacks,"A")),
+      currentCanonical:true,
       exactTarget:sameTargetProjection.execution.logicalTargetIds.length===1,
       immutableSource:true,separateIncidents:true,invalidBlocked:true,noInference:true},
     versioned:flowTaskSuccession.version===1,

@@ -2857,6 +2857,7 @@
           "src/flow-graph/occurrences.ts",
           "src/flow-graph/page-example-derive.ts",
           "src/flow-graph/page-frames.ts",
+          "src/flow-graph/page-placement.ts",
           "src/flow-graph/page-instance-structure.ts",
           "src/flow-graph/projection-inspection.ts",
           "src/flow-graph/projection.ts",

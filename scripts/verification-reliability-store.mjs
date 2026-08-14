@@ -21,6 +21,7 @@ import {
   classifyLegacyIncidentRunIntent, governedRepairAttemptAssociation,
 } from "./verification-run-intent.mjs";
 import { terminalProjectionCoverageValid } from "./verification-reliability-deferred.mjs";
+import {eligibleRepairCoversEvidenceCandidate} from "./verification-reliability-evidence-policy.mjs";
 import {
   exactObject, git, normalized, repositoryRoot, retryClassifications, shaPattern,
   stableIncidentId, timeoutIncidentDigest,
@@ -571,9 +572,9 @@ export function createTimeoutIncidentStore({
     async blockingForEvidence({ commit }) {
       const blocked = [];
       for (const incident of await this.blocking({ commit })) {
-        const repairCandidate=timeoutRepairCandidate(incident),eligibleRepairDescendant=
-          incident.repair?.status==="eligible"&&repairCandidate?.commit&&
-          await commitDescendsFrom({root,isAncestor,ancestor:repairCandidate.commit,commit});
+        const eligibleRepairDescendant = await eligibleRepairCoversEvidenceCandidate({
+          incident, commit, root, isAncestor, commitDescendsFrom,
+        });
         if (!eligibleDeferredIncident(incident) && !eligibleRepairDescendant) blocked.push(incident);
       }
       return blocked;

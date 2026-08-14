@@ -10,9 +10,7 @@ import {
   clientPointToFlowPoint,
   closeFlowSurface,
   fitFlowBounds,
-  flowBoundsContains,
   flowDetailLevel,
-  flowPointerDelta,
   flowWorkspaceKey,
   initialFlowWorkspaceView,
   panFlowCamera,
@@ -24,6 +22,7 @@ import {
   transformedFlowBounds,
   zoomFlowCamera,
 } from "../dist/flow-graph/workspace.js";
+import {flowBoundsContains,flowPointerDelta} from "../dist/flow-graph/page-placement.js";
 import {flowOutlineProjection} from "../dist/flow-graph/workspace-outline-model.js";
 import {flowPanClickSuppression,flowPanStartAllowed,flowPanToPinch} from "../dist/flow-graph/workspace-camera-ui.js";
 import {

@@ -3,7 +3,7 @@ import { appendFlowPageFrameCardControls } from "./data-layer-flow-graph-ui-page
 import { addFlowPageFrameAndRelationship, addFlowPageFrameAtPosition, addFlowPageFrameToSection, connectFlowPageFrames, createFlowSection, createFlowSectionAroundFrames, inspectSectionRemovalWithContents, moveFlowPageFramePresentation, moveFlowSection, movePageFrameToSection, removeFlowSection, removeFlowSectionWithContents, renameAndResizeFlowSection, tidyFlowPageFrames } from "./utilities/data-layer/property-set-flow-section.js";
 import { button, elementByData, entityName, flowEdgeGeometry, flowPortPoint, nodeHeight, nodeWidth, ownsPointerDrag, q, restorePointerCancellationFocus, svg } from "./flow-graph/ui-primitives.js";
 import { flowPointerSnapTarget, flowPortSnapTarget } from "./flow-graph/relationship-port-snap.js";
-import { flowBoundsContains, flowPointerDelta } from "./flow-graph/workspace.js";
+import { flowBoundsContains, flowPointerDelta } from "./flow-graph/page-placement.js";
 import { upgradeFlowWorkspace } from "./flow-graph/workspace-ui.js";
 import { flowSelectionContains, primaryFlowSelection, selectionAfterActivation, selectionAfterRemoval, selectionFromStoredView, storedViewWithSelection } from "./flow-graph/workspace-selection.js";
 export function contextSettingPageLabel(pageName) { return `${pageName} · Context-setting Page`; }

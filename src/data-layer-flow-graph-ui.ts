@@ -32,7 +32,8 @@ import {appendFlowPageFrameCardControls} from "./data-layer-flow-graph-ui-page-f
 import {addFlowPageFrameAndRelationship,addFlowPageFrameAtPosition,addFlowPageFrameToSection,connectFlowPageFrames,createFlowSection,createFlowSectionAroundFrames,inspectSectionRemovalWithContents,moveFlowPageFramePresentation,moveFlowSection,movePageFrameToSection,removeFlowSection,removeFlowSectionWithContents,renameAndResizeFlowSection,tidyFlowPageFrames,type FlowSectionBounds,type FlowSectionRemovalReview} from "./utilities/data-layer/property-set-flow-section.js";
 import {button,elementByData,entityName,flowEdgeGeometry,flowPortPoint,nodeHeight,nodeWidth,ownsPointerDrag,q,restorePointerCancellationFocus,svg} from "./flow-graph/ui-primitives.js";
 import {flowPointerSnapTarget,flowPortSnapTarget,type FlowPointerDirectTarget} from "./flow-graph/relationship-port-snap.js";
-import {flowBoundsContains,flowPointerDelta,type FlowCamera} from "./flow-graph/workspace.js";
+import {flowBoundsContains,flowPointerDelta} from "./flow-graph/page-placement.js";
+import {type FlowCamera} from "./flow-graph/workspace.js";
 import {upgradeFlowWorkspace} from "./flow-graph/workspace-ui.js";
 import {flowSelectionContains,primaryFlowSelection,selectionAfterActivation,selectionAfterRemoval,selectionFromStoredView,storedViewWithSelection,type FlowSelection,type StoredFlowSelectionView} from "./flow-graph/workspace-selection.js";
 import type {FlowSectionCommand,FlowSectionRemovalImpact} from "./flow-graph/workspace-section-ui.js";
