@@ -19,9 +19,9 @@ The settled-candidate verification workflow is integrated at
 
 | Program | Current state | Next authority |
 |---|---|---|
-| QA-branch release pilot | Approved for immediate activation on 2026-08-12 | `docs/qa-branch-release-pilot-R01.md` controls feature integration into `qa` and explicit cumulative promotion to `master`. |
+| QA-branch release pilot | Active; development-focus/QA-impact documentation ratchet and advisory RepoWise pilot begin with the next ordinary feature after Flow snap | `docs/qa-branch-release-pilot-R01.md` controls feature integration into `qa`; `docs/feature-development-focus-and-advisory-scouting-R01.md` controls the lightweight scoping convention. |
 | QA-pilot verification latency correction | Closed after Slice 2 at `e32f9f7c10` by user decision on 2026-08-13 | No coder handoff. Measure the next three ordinary QA product cycles; Slices 3 and 4 remain evidence-triggered backlog items. |
-| QA style verification and Flow modularity | Approved overnight batch in progress; stage-aware style planning is QA-integrated at `d75132daef`, Flow CSS extraction at `ef440b3018`, and Stage 3 snap feedback is active from corrected QA `66dcdfd5d6` | Reconstruct only the approved Flow relationship port-snap product and focused-test delta; do not merge the abandoned mixed lineage or run all 20. |
+| QA style verification and Flow modularity | Complete on QA; stage-aware style planning is integrated at `d75132daef`, Flow CSS extraction at `ef440b3018`, corrections through `66dcdfd5d6`, and port snap at `89fee7df48` | Preserve the settled scorecard; do not reopen the abandoned mixed lineage or run all 20 before an explicit master-integration request. |
 | Verification run-intent and deferred-incident corrections | QA-integrated through `66dcdfd5d6` | Ordinary diagnostics remain local and eligible earlier or parallel deferrals remain master obligations without blocking unrelated feature work. Reopen one only if focused work naturally reproduces it or the slice intentionally changes its contract. |
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
@@ -197,6 +197,7 @@ Read only the program documents relevant to the selected task.
 | Generated branding | `docs/twatility-branding-merge-handover-R02.md` and `assets/brand/ARTWORK.md` |
 | Verification throughput backlog | `docs/verification-throughput-technical-debt-backlog-R01.md` |
 | QA-branch release pilot | `docs/qa-branch-release-pilot-R01.md` |
+| Feature development focus and advisory scouting | `docs/feature-development-focus-and-advisory-scouting-R01.md` |
 | QA-pilot verification latency correction | `docs/qa-pilot-verification-latency-correction-R01.md` |
 | QA style verification and Flow modularity | `docs/qa-style-verification-and-flow-modularity-program-R01.md` |
 | Verification run-intent correction | `docs/verification-run-intent-correction-R01.md` |

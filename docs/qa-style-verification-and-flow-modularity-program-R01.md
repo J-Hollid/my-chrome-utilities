@@ -21,8 +21,8 @@ commit and does not require another routine user approval.
 
 Slice 1 is QA-integrated at `d75132daef`, Slice 2 at `ef440b3018`, and the
 inter-stage run-intent and deferred-incident corrections through `66dcdfd5d6`.
-Stage 3 is now active from that exact QA head. No all-20 checkpoint was run for
-these QA stages; terminal integration remains reserved for a later explicit
+Stage 3 is QA-integrated at `89fee7df48`. No all-20 checkpoint was run for these
+QA stages; terminal integration remains reserved for a later explicit
 master-promotion request.
 
 ## Baseline
@@ -250,3 +250,40 @@ time. The settled batch report distinguishes time spent establishing the reusabl
 style boundary from the snap feature's own implementation time. It reports the
 full-gate count as zero during QA and leaves master integration to a later
 explicit user request.
+
+### Stage 3 settled result
+
+The corrected Stage 3 execution began with the fresh coder handoff at
+2026-08-13 22:02:56 UTC and reached architect `qa-ready` at 2026-08-14 00:05:28
+UTC: 2 hours 2 minutes 32 seconds against the 60-minute expectation. QA
+fast-forward completed at 00:07:21 UTC, making the handoff-to-QA interval 2 hours
+4 minutes 24 seconds. This corrected window is reported separately from the
+earlier abandoned mixed lineage that consumed roughly eight hours and did not
+produce an integrable snap candidate.
+
+The first coder handoff arrived in 50 minutes 1 second. Refactor review rejected
+that candidate 6 minutes 52 seconds later because it narrowed ownership to
+bypass the normal selected impact. The repair took 15 minutes 25 seconds.
+Refactor review of the repaired candidate took 21 minutes 14 seconds, and final
+architecture/pointer-lifecycle review took 29 minutes. The exact final focused
+evidence ran for 6 minutes 29 seconds and selected the five actual affected packs:
+`flow_graph`, `flow_export`, `live_flow_testing`,
+`property_set_flow_sections`, and `shell`, with package proof.
+
+There were zero all-20 attempts and zero invalidated all-20 passes. One focused
+candidate was rejected, repaired, and replaced. Final installed evidence covers
+actual pointer input at 25, 100, and 200 percent zoom; port-only non-color target
+emphasis; valid-side snap and transfer; cancel behavior; and persistence. The
+final candidate is `89fee7df48`, tree
+`fff980e50bf0262c2a288a0d4cc65776f67122a8`, with receipt
+`070840da-7bae-4d7f-8450-16fadf23d23d`.
+
+The feature improved markedly over the earlier eight-hour attempt, but it did
+not meet the one-hour expectation. The overrun was not caused by a broad gate:
+it was one invalid ownership shortcut and its repair, followed by two review
+stages that completed missing lifecycle coverage. The course adjustment is to
+use the generic development-focus/QA-impact documentation convention and the
+short advisory scouting pilot in
+`docs/feature-development-focus-and-advisory-scouting-R01.md`, then measure three
+ordinary features. Do not activate another verification-infrastructure slice on
+the evidence of this single Flow sample.

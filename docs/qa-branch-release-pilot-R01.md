@@ -77,6 +77,21 @@ once in evidence-producing mode. Its receipt records review-ready evidence for
 that exact tree; an ordinary preliminary run of the same plan on the same tree is
 not required. A later change requires one new evidence-producing run.
 
+### Development-focus and QA-impact convention
+
+For ordinary features beginning after Flow relationship port snapping, use the
+documentation-only convention in
+`docs/feature-development-focus-and-advisory-scouting-R01.md`. The implementation
+handoff distinguishes a minimal **development focus** for red/green iteration
+from a bounded **QA impact** for the settled candidate. This is a knowledge
+ratchet, not a new verification mechanism or intervention gate. Existing exact
+changed-path planning remains authoritative, and the all-20 checkpoint remains
+exclusive to explicit master integration.
+
+The same document authorizes a telemetry-disabled, advisory RepoWise scouting
+pilot over three to five varied features. Scouting may improve the two lists but
+cannot block work, widen evidence on its own, or override the canonical registry.
+
 ### Verification run intent
 
 An ordinary focused invocation is `development-diagnostic` unless it carries
