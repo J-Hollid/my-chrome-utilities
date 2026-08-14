@@ -272,11 +272,14 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       :value,
     digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
     shellReadiness=context.diagnosedBoundary?.taskKey==="browser:test/browser-packs/shell.mjs",
+    pagePlacementWorkflow=context.causalCategory==="other:Flow Page placement workflow",
     flow019Allowlist=context.causalCategory==="other:mode-aware Flow 019 example allowlist",
     legacySeededReview=context.causalCategory==="other:seeded Flow legacy review identity",
     readiness=!shellReadiness&&context.causalCategory==="readiness or settling",
     zoomContainment=context.incidentId==="d3a49b37-e016-4bed-830c-9531045a6773",
-    expectedPreRepairFailure=legacySeededReview
+    expectedPreRepairFailure=pagePlacementWorkflow
+      ?{liveCameraCaptured:false,pointerRowsAnchored:false}
+      :legacySeededReview
       ?{seedNameCarried:false,renderedSeedNameVerified:false,hardcodedLabel:true}
       :flow019Allowlist
       ?{modelSelectionAccepted:true,runtimeSelectionAccepted:false,modeSeparated:false}
@@ -287,7 +290,9 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       :zoomContainment
         ?{zoomInContained:false,toolbarWrapped:false,cameraControlsImmediatelyAvailable:false}
         :{entryControlContained:false,focusToolbarWrapped:false,requiredControlsPrecedeSecondary:false},
-    expectedRepairResult=legacySeededReview
+    expectedRepairResult=pagePlacementWorkflow
+      ?{liveCameraCaptured:true,pointerRowsAnchored:true}
+      :legacySeededReview
       ?{seedNameCarried:true,renderedSeedNameVerified:true,hardcodedLabel:false}
       :flow019Allowlist
       ?{modelSelectionAccepted:true,runtimeSelectionAccepted:true,modeSeparated:true}
@@ -298,10 +303,12 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       :zoomContainment
         ?{zoomInContained:true,toolbarWrapped:true,cameraControlsImmediatelyAvailable:true}
         :{entryControlContained:true,focusToolbarWrapped:true,requiredControlsPrecedeSecondary:true},
-    fixture={id:legacySeededReview?"seeded-flow-legacy-review-identity-v1":flow019Allowlist?"mode-aware-flow019-example-allowlist-v1":shellReadiness?"shell-readiness-before-repository-v1":readiness?"flow-pan-painted-instance-readiness-v1":zoomContainment
+    fixture={id:pagePlacementWorkflow?"flow-page-placement-workflow-v1":legacySeededReview?"seeded-flow-legacy-review-identity-v1":flow019Allowlist?"mode-aware-flow019-example-allowlist-v1":shellReadiness?"shell-readiness-before-repository-v1":readiness?"flow-pan-painted-instance-readiness-v1":zoomContainment
       ?"zoom-in-360-control-containment-v1":"focus-canvas-360-control-containment-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-      input:legacySeededReview
+      input:pagePlacementWorkflow
+        ?{target:"FLOW_WORKSPACE_AUTHORING_TARGET",zooms:[.5,1,2]}
+        :legacySeededReview
         ?{preRepair:{seededPageName:"dynamic",reviewLookup:"Confirmation"}}
         :flow019Allowlist
         ?{modelRow:{scope:"the selection",arrangement:"horizontally"},runtimeRow:{scope:"selection",arrangement:"horizontally"}}
@@ -313,7 +320,12 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
           ?{viewport:{width:360,height:800},preRepair:{zoomIn:{x:480.859375,width:61.015625},toolbar:{left:0,right:360},scrollLeft:0}}
           :{viewport:{width:360,height:800},preRepair:{focusControl:{x:424.4375,width:88.765625},toolbar:{left:0,right:360},horizontalDiscoveryRequired:true}},
       expectedPreRepairFailure,expectedRepairResult},
-    repairResult=legacySeededReview?{
+    repairResult=pagePlacementWorkflow?{
+      liveCameraCaptured:flowGraphUi.includes('JSON.parse(canvas.dataset.viewport??"{}")'),
+      pointerRowsAnchored:[{zoom:.5,distance:-130,expected:-260},{zoom:1,distance:120,expected:120},
+        {zoom:2,distance:296,expected:148}].every(row=>
+          flowPointerDelta({x:0,y:0},{x:0,y:row.distance},row.zoom).y===row.expected),
+    }:legacySeededReview?{
       seedNameCarried:/pageName:page\.name/u.test(flowCorrectiveWorkflow),
       renderedSeedNameVerified:/reviewText\.includes\(fixture\.pageName\)/u.test(flowCorrectiveWorkflow),
       hardcodedLabel:/reviewText\.includes\('Confirmation'\)/u.test(flowCorrectiveWorkflow),
