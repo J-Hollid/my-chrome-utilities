@@ -40,7 +40,7 @@ export function renderFlowConceptVisual(options) {
     image.alt = visual.attachment.description;
     Object.assign(image.style, { width: "100%", height: "100%", aspectRatio: "16 / 10", objectFit: "contain" });
     foreign.append(image);
-    foreign.style.display = "";
+    foreign.style.setProperty("display", "block", "important");
     options.group.append(foreign, badge);
 }
 //# sourceMappingURL=concept-visual-workspace.js.map

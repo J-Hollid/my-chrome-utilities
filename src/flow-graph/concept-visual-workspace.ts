@@ -34,5 +34,5 @@ export function renderFlowConceptVisual(options:{group:SVGGElement;project:Speci
   if(options.mode!=="Thumbnails"){options.group.append(badge);return;}
   badge.dataset.flowVisualFallback="true";badge.style.display="none";
   const foreign=svg("foreignObject"),image=document.createElement("img");foreign.dataset.flowVisualThumbnail=options.target.id;foreign.setAttribute("x","8");foreign.setAttribute("y",String(options.height-96));foreign.setAttribute("width",String(options.width-16));foreign.setAttribute("height","88");image.src=visual.asset.bytes;image.alt=visual.attachment.description;Object.assign(image.style,{width:"100%",height:"100%",aspectRatio:"16 / 10",objectFit:"contain"});foreign.append(image);
-  foreign.style.display="";options.group.append(foreign,badge);
+  foreign.style.setProperty("display","block","important");options.group.append(foreign,badge);
 }
