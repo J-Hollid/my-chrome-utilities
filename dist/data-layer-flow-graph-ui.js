@@ -3,6 +3,7 @@ import { appendFlowPageFrameCardControls } from "./data-layer-flow-graph-ui-page
 import { addFlowPageFrameAndRelationship, addFlowPageFrameAtPosition, addFlowPageFrameToSection, connectFlowPageFrames, createFlowSection, createFlowSectionAroundFrames, inspectSectionRemovalWithContents, moveFlowPageFramePresentation, moveFlowSection, movePageFrameToSection, removeFlowSection, removeFlowSectionWithContents, renameAndResizeFlowSection, tidyFlowPageFrames } from "./utilities/data-layer/property-set-flow-section.js";
 import { button, elementByData, entityName, flowEdgeGeometry, flowPortPoint, nodeHeight, nodeWidth, ownsPointerDrag, q, restorePointerCancellationFocus, svg } from "./flow-graph/ui-primitives.js";
 import { flowPointerSnapTarget, flowPortSnapTarget } from "./flow-graph/relationship-port-snap.js";
+import { flowPointerDelta } from "./flow-graph/workspace.js";
 import { upgradeFlowWorkspace } from "./flow-graph/workspace-ui.js";
 import { flowSelectionContains, primaryFlowSelection, selectionAfterActivation, selectionAfterRemoval, selectionFromStoredView, storedViewWithSelection } from "./flow-graph/workspace-selection.js";
 export function contextSettingPageLabel(pageName) { return `${pageName} · Context-setting Page`; }
@@ -567,9 +568,9 @@ export function installFlowGraphBuilder(options) {
                 return; const entity = current().state?.project.collections.events.find(({ id }) => id === payload.id); if (entity)
                 insertEvent(entity, frame.id); });
             let start, suppressPointerClick = false;
-            const releaseClickSuppression = () => setTimeout(() => { suppressPointerClick = false; }, 1000), move = (event) => { if (!ownsPointerDrag(start?.pointerId, event.pointerId))
-                return; group.setAttribute("transform", `translate(${x + event.clientX - start.clientX} ${y + event.clientY - start.clientY})`); }, finish = (up) => { if (!ownsPointerDrag(start?.pointerId, up.pointerId))
-                return; window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", finish); window.removeEventListener("pointercancel", cancel); const initial = start, nextX = x + up.clientX - initial.clientX, nextY = y + up.clientY - initial.clientY, target = Array.from(canvas.querySelectorAll("[data-section-dropzone]")).find((region) => { const bounds = region.getBoundingClientRect(); return up.clientX >= bounds.left && up.clientX <= bounds.right && up.clientY >= bounds.top && up.clientY <= bounds.bottom; })?.dataset.sectionDropzone, pointerId = initial.pointerId; if (group.hasPointerCapture(pointerId))
+            const releaseClickSuppression = () => setTimeout(() => { suppressPointerClick = false; }, 1000), dragDelta = (event) => flowPointerDelta({ x: start.clientX, y: start.clientY }, { x: event.clientX, y: event.clientY }, start.zoom), move = (event) => { if (!ownsPointerDrag(start?.pointerId, event.pointerId))
+                return; const delta = dragDelta(event); group.setAttribute("transform", `translate(${x + delta.x} ${y + delta.y})`); }, finish = (up) => { if (!ownsPointerDrag(start?.pointerId, up.pointerId))
+                return; window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", finish); window.removeEventListener("pointercancel", cancel); const initial = start, delta = dragDelta(up), nextX = x + delta.x, nextY = y + delta.y, target = Array.from(canvas.querySelectorAll("[data-section-dropzone]")).find((region) => { const bounds = region.getBoundingClientRect(); return up.clientX >= bounds.left && up.clientX <= bounds.right && up.clientY >= bounds.top && up.clientY <= bounds.bottom; })?.dataset.sectionDropzone, pointerId = initial.pointerId; if (group.hasPointerCapture(pointerId))
                 group.releasePointerCapture(pointerId); start = undefined; if (suppressPointerClick)
                 releaseClickSuppression(); moveTo(target, nextX, nextY); }, cancel = (event) => { if (!ownsPointerDrag(start?.pointerId, event.pointerId))
                 return; window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", finish); window.removeEventListener("pointercancel", cancel); if (group.hasPointerCapture(start.pointerId))
@@ -579,7 +580,7 @@ export function installFlowGraphBuilder(options) {
                 return; if (start) {
                 suppressPointerClick = true;
                 return;
-            } start = { pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY }; window.addEventListener("pointermove", move); window.addEventListener("pointerup", finish); window.addEventListener("pointercancel", cancel); try {
+            } start = { pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, zoom: transientView.viewport?.zoom ?? 1 }; window.addEventListener("pointermove", move); window.addEventListener("pointerup", finish); window.addEventListener("pointercancel", cancel); try {
                 group.setPointerCapture(event.pointerId);
             }
             catch { /* Synthetic tests have no active device pointer to capture. */ } });

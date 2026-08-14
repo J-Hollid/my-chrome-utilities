@@ -23,6 +23,10 @@ export function zoomFlowCamera(camera:FlowCamera,factor:number,anchor:FlowPoint)
 
 export function panFlowCamera(camera:FlowCamera,screenDelta:FlowPoint):FlowCamera{return{x:rounded(camera.x-screenDelta.x/camera.zoom),y:rounded(camera.y-screenDelta.y/camera.zoom),zoom:camera.zoom};}
 
+export function flowPointerDelta(start:FlowPoint,current:FlowPoint,zoom:number):FlowPoint{
+  return{x:(current.x-start.x)/zoom,y:(current.y-start.y)/zoom};
+}
+
 export function clientPointToFlowPoint(rect:{left:number;top:number;width:number;height:number},camera:FlowCamera,client:FlowPoint):FlowPoint{
   return{x:rounded(camera.x+(client.x-rect.left)/camera.zoom),y:rounded(camera.y+(client.y-rect.top)/camera.zoom)};
 }

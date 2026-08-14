@@ -10,6 +10,9 @@ export function zoomFlowCamera(camera, factor, anchor) {
     return { x: rounded(world.x - anchor.x / zoom), y: rounded(world.y - anchor.y / zoom), zoom };
 }
 export function panFlowCamera(camera, screenDelta) { return { x: rounded(camera.x - screenDelta.x / camera.zoom), y: rounded(camera.y - screenDelta.y / camera.zoom), zoom: camera.zoom }; }
+export function flowPointerDelta(start, current, zoom) {
+    return { x: (current.x - start.x) / zoom, y: (current.y - start.y) / zoom };
+}
 export function clientPointToFlowPoint(rect, camera, client) {
     return { x: rounded(camera.x + (client.x - rect.left) / camera.zoom), y: rounded(camera.y + (client.y - rect.top) / camera.zoom) };
 }

@@ -11,6 +11,7 @@ import {
   closeFlowSurface,
   fitFlowBounds,
   flowDetailLevel,
+  flowPointerDelta,
   flowWorkspaceKey,
   initialFlowWorkspaceView,
   panFlowCamera,
@@ -95,6 +96,9 @@ assert.equal(flowPanToPinch(17,clickSuppression,(pointerId)=>releasedPointers.pu
 assert.deepEqual(releasedPointers,[17],"transitioning a one-contact drag to a pinch releases its pointer lifecycle");
 assert.equal(clickSuppression.consume(),false,"transitioning a moved one-contact drag to a pinch cancels pending click suppression");
 assert.deepEqual(clientPointToFlowPoint({left:20,top:10,width:400,height:200},{x:100,y:50,zoom:2},{x:220,y:110}),{x:200,y:100});
+assert.deepEqual(flowPointerDelta({x:120,y:330},{x:120,y:200},.5),{x:0,y:-260},"a Page drag at 50 percent converts CSS travel to graph travel");
+assert.deepEqual(flowPointerDelta({x:120,y:80},{x:120,y:200},1),{x:0,y:120},"a Page drag at 100 percent preserves CSS travel");
+assert.deepEqual(flowPointerDelta({x:120,y:80},{x:120,y:376},2),{x:0,y:148},"a Page drag at 200 percent converts CSS travel to graph travel");
 assert.deepEqual(cameraFromMinimapPoint({x:0,y:0,width:2000,height:1000},{width:500,height:250},{x:.75,y:.25},.5),{x:1000,y:0,zoom:.5},"minimap navigation centers the chosen normalized world point");
 
 assert.deepEqual(sectionBoundsFromDrag({x:420,y:300},{x:120,y:80},40),{x:120,y:80,width:300,height:220},"Section drawing works in every pointer direction");

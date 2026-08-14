@@ -13,7 +13,7 @@ const complete=()=>Object.fromEntries([
 ]);
 
 assert.deepEqual(FLOW_RUNTIME_EXECUTION_PLAN,FLOW_RUNTIME_KEYS);
-assert.equal(FLOW_RUNTIME_KEYS.at(-1),"runtime030","the reporter must audit the latest Section resize runtime independently");
+assert.equal(FLOW_RUNTIME_KEYS.at(-1),"runtime031","the reporter must audit the latest Page placement runtime independently");
 const controlsWorkflow=flowGraphCorrectiveWorkflow({projectId:"project",flowId:"flow"},
   {stopAfterRuntime:20});
 assert.match(controlsWorkflow,/evidence\.runtime020=/u,
@@ -24,9 +24,9 @@ assert.ok(controlsWorkflow.indexOf("return evidence;")<controlsWorkflow.indexOf(
 assert.deepEqual(flowEvidenceFailures(complete()),[]);
 
 const falseNewest=complete();
-falseNewest.runtime030={observed:false};
+falseNewest.runtime031={observed:false};
 assert.deepEqual(flowEvidenceFailures(falseNewest),[
-  {path:"runtime030.observed",value:false,expected:true},
+  {path:"runtime031.observed",value:false,expected:true},
 ]);
 
 const measured=complete();
