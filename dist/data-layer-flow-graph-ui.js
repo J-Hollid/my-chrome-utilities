@@ -580,7 +580,7 @@ export function installFlowGraphBuilder(options) {
                 return; if (start) {
                 suppressPointerClick = true;
                 return;
-            } start = { pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, zoom: transientView.viewport?.zoom ?? 1 }; window.addEventListener("pointermove", move); window.addEventListener("pointerup", finish); window.addEventListener("pointercancel", cancel); try {
+            } const activeCamera = JSON.parse(canvas.dataset.viewport ?? "{}"); start = { pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, zoom: activeCamera.zoom ?? 1 }; window.addEventListener("pointermove", move); window.addEventListener("pointerup", finish); window.addEventListener("pointercancel", cancel); try {
                 group.setPointerCapture(event.pointerId);
             }
             catch { /* Synthetic tests have no active device pointer to capture. */ } });
