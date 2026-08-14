@@ -10,6 +10,7 @@ import {
   clientPointToFlowPoint,
   closeFlowSurface,
   fitFlowBounds,
+  flowBoundsContains,
   flowDetailLevel,
   flowPointerDelta,
   flowWorkspaceKey,
@@ -99,6 +100,8 @@ assert.deepEqual(clientPointToFlowPoint({left:20,top:10,width:400,height:200},{x
 assert.deepEqual(flowPointerDelta({x:120,y:330},{x:120,y:200},.5),{x:0,y:-260},"a Page drag at 50 percent converts CSS travel to graph travel");
 assert.deepEqual(flowPointerDelta({x:120,y:80},{x:120,y:200},1),{x:0,y:120},"a Page drag at 100 percent preserves CSS travel");
 assert.deepEqual(flowPointerDelta({x:120,y:80},{x:120,y:376},2),{x:0,y:148},"a Page drag at 200 percent converts CSS travel to graph travel");
+assert.equal(flowBoundsContains({x:100,y:100,width:500,height:440},{x:160,y:408,width:190,height:108}),true,"a completely contained Page retains explicit Section membership at the lower boundary");
+assert.equal(flowBoundsContains({x:100,y:100,width:500,height:440},{x:160,y:433,width:190,height:108}),false,"a Page crossing the Section boundary does not retain membership");
 assert.deepEqual(cameraFromMinimapPoint({x:0,y:0,width:2000,height:1000},{width:500,height:250},{x:.75,y:.25},.5),{x:1000,y:0,zoom:.5},"minimap navigation centers the chosen normalized world point");
 
 assert.deepEqual(sectionBoundsFromDrag({x:420,y:300},{x:120,y:80},40),{x:120,y:80,width:300,height:220},"Section drawing works in every pointer direction");

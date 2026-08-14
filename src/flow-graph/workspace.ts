@@ -27,6 +27,10 @@ export function flowPointerDelta(start:FlowPoint,current:FlowPoint,zoom:number):
   return{x:(current.x-start.x)/zoom,y:(current.y-start.y)/zoom};
 }
 
+export function flowBoundsContains(outer:FlowBounds,inner:FlowBounds):boolean{
+  return inner.x>=outer.x&&inner.y>=outer.y&&inner.x+inner.width<=outer.x+outer.width&&inner.y+inner.height<=outer.y+outer.height;
+}
+
 export function clientPointToFlowPoint(rect:{left:number;top:number;width:number;height:number},camera:FlowCamera,client:FlowPoint):FlowPoint{
   return{x:rounded(camera.x+(client.x-rect.left)/camera.zoom),y:rounded(camera.y+(client.y-rect.top)/camera.zoom)};
 }
