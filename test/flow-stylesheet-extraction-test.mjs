@@ -25,10 +25,6 @@ const bridgeCss=await readFile(new URL("../src/flow-graph/flow-workspace-shell.c
 const extractionBase="66b91e38e6";
 const baseGlobalSources=await Promise.all(["specification-builder.css","specification-builder-brand.css"]
   .map(async(path)=>({path,source:await gitShow(extractionBase,path)})));
-const candidateGlobalSources=[
-  {path:"specification-builder.css",source:baseCss},
-  {path:"specification-builder-brand.css",source:brandCss},
-];
 const approvedStyleSliceAdditions=[
   {
     context:"",
@@ -54,6 +50,14 @@ const serializeRule=({context,selector,declarations})=>{
   return source;
 };
 const serializeInventory=(inventory)=>inventory.map(serializeRule).join("\n");
+const isApprovedViewerRule=({selector})=>selector.startsWith(".twatility-studio .flow-concept-visual-viewer")||selector===".twatility-studio dialog.flow-concept-visual-viewer";
+const brandInventory=stylesheetRuleInventory(brandCss,"specification-builder-brand.css"),approvedViewerStyleAdditions=brandInventory.filter(isApprovedViewerRule);
+assert.equal(approvedViewerStyleAdditions.length,17,"the approved concept-visual viewer style inventory remains explicit");
+assert.ok(approvedViewerStyleAdditions.every(({selector})=>selector.startsWith(".twatility-studio ")),"every approved viewer rule remains scoped to Specification Studio");
+const candidateGlobalSources=[
+  {path:"specification-builder.css",source:baseCss},
+  {path:"specification-builder-brand.css",source:brandCss},
+];
 const withoutApprovedStyleSliceAdditions=(source)=>{
   const remaining=stylesheetRuleInventory(source,"src/flow-graph/flow-workspace.css");
   for(const approved of approvedStyleSliceAdditions){
@@ -88,8 +92,10 @@ const conservation=verifyFlowStylesheetConservation({
   baseGlobalSources,candidateGlobalSources,
   localSource:conservedLocalCss,
   bridgeSource:bridgeCss,
+  approvedCandidateGlobalRules:approvedViewerStyleAdditions,
 });
 assert.equal(conservation.conservedExactlyOnce,true);
+assert.equal(conservation.addedGlobalRuleCount,17,"the viewer additions are accounted separately from conserved global rules");
 assert.equal(approvedStyleSliceAdditions.length,2,"the approved Stage 3 style inventory remains explicit");
 assert.equal(stylesheetRuleInventory(localCss,"src/flow-graph/flow-workspace.css").filter((rule)=>ruleIdentity(rule)===ruleIdentity(relationshipPortSnapRuleAfter)).length,1,"the relationship-port snap safety replacement remains explicit exactly once");
 assert.equal(conservation.baseRuleCount,
@@ -98,10 +104,12 @@ assert.equal(conservation.baseRuleCount,
 assert.throws(()=>verifyFlowStylesheetConservation({
   baseGlobalSources,candidateGlobalSources,
   localSource:conservedLocalCss.replace("stroke-width:2", "stroke-width:9"),bridgeSource:bridgeCss,
+  approvedCandidateGlobalRules:approvedViewerStyleAdditions,
 }),/no approved-base match/u,"a changed moved declaration cannot satisfy conservation");
 assert.throws(()=>verifyFlowStylesheetConservation({
   baseGlobalSources,candidateGlobalSources,
   localSource:withoutStructuredRule(conservedLocalCss,{context:"",selector:".documentary-flow .flow-node",declarations:"cursor:grab"}),bridgeSource:bridgeCss,
+  approvedCandidateGlobalRules:approvedViewerStyleAdditions,
 }),/approved-base rules were lost/u,"an unaccounted moved selector cannot satisfy conservation");
 const changedCompatiblePortRule={...approvedStyleSliceAdditions[0],declarations:"fill:#d9f7df;stroke:#137333;stroke-width:6"};
 assert.throws(()=>withoutApprovedStyleSliceAdditions(replaceStructuredRule(localCss,approvedStyleSliceAdditions[0],changedCompatiblePortRule)),/must occur exactly once/u,"an unapproved compatible-port declaration fails conservation");

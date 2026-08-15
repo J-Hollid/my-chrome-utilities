@@ -168,11 +168,16 @@ export function verifyFlowStylesheetConservation({
   candidateGlobalSources,
   localSource,
   bridgeSource,
+  approvedCandidateGlobalRules = [],
 }) {
   const base = baseGlobalSources.flatMap(({ source, path }) => stylesheetRuleInventory(source, path));
   const remainingBase = [...base];
   const candidateGlobals = candidateGlobalSources.flatMap(({ source, path }) => stylesheetRuleInventory(source, path));
-  for (const rule of candidateGlobals) {
+  const conservedCandidateGlobals = [...candidateGlobals];
+  for (const rule of approvedCandidateGlobalRules) {
+    removeUniqueMatch(conservedCandidateGlobals, rule, sameRule, "approved candidate global rule");
+  }
+  for (const rule of conservedCandidateGlobals) {
     removeUniqueMatch(remainingBase, rule, sameRule, "candidate global rule");
   }
   const local = stylesheetRuleInventory(localSource, "src/flow-graph/flow-workspace.css");
@@ -188,7 +193,8 @@ export function verifyFlowStylesheetConservation({
   }
   return {
     baseRuleCount:base.length,
-    retainedGlobalRuleCount:candidateGlobals.length,
+    retainedGlobalRuleCount:conservedCandidateGlobals.length,
+    addedGlobalRuleCount:approvedCandidateGlobalRules.length,
     localRuleCount:local.length,
     bridgeRuleCount:bridge.length,
     movedRuleCount:local.length + bridge.length,

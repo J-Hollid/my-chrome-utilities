@@ -6827,6 +6827,12 @@ const conservedFlowLocalStylesheet = conservedFlowLocalInventory.map((rule) => {
 }).map(serializeFlowStyleRule).join("\n");
 assert.equal(flowSnapPreviewReplacementCount, 1,
   "approved Flow snap preview safety replacement occurs exactly once");
+const approvedFlowViewerGlobalRules = stylesheetRuleInventory(studioBrandStylesheet,
+  "specification-builder-brand.css").filter(({ selector }) =>
+  selector === ".twatility-studio dialog.flow-concept-visual-viewer" ||
+  selector.startsWith(".twatility-studio .flow-concept-visual-viewer"));
+assert.equal(approvedFlowViewerGlobalRules.length, 17,
+  "approved Flow concept-visual viewer global rules occur exactly once");
 const flowStylesheetConservation = verifyFlowStylesheetConservation({
   baseGlobalSources:await Promise.all(["specification-builder.css", "specification-builder-brand.css"]
     .map(async(path)=>({path,source:await exec("git",["show",`${flowExtractionBase}:${path}`])}))),
@@ -6836,6 +6842,7 @@ const flowStylesheetConservation = verifyFlowStylesheetConservation({
   ],
   localSource:conservedFlowLocalStylesheet,
   bridgeSource:flowShellStylesheet,
+  approvedCandidateGlobalRules:approvedFlowViewerGlobalRules,
 });
 const flowStylesheetDeclarations = [
   stylesheetDeclarationFor(packs, "src/flow-graph/flow-workspace.css"),

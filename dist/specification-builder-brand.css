@@ -902,6 +902,103 @@ body.twatility-studio {
   scrollbar-color: var(--twa-mustard-dark) transparent;
 }
 
+.twatility-studio dialog.flow-concept-visual-viewer {
+  box-sizing: border-box;
+  inline-size: min(70rem, calc(100dvw - 1rem));
+  block-size: min(52rem, calc(100dvh - 1rem));
+  max-inline-size: calc(100dvw - 1rem);
+  max-block-size: calc(100dvh - 1rem);
+  overflow: hidden;
+  padding: 0.65rem;
+}
+
+.twatility-studio .flow-concept-visual-viewer[open] {
+  display: grid;
+  grid-template-rows: auto auto minmax(8rem, 1fr) auto auto auto;
+  gap: 0.45rem;
+}
+
+.twatility-studio .flow-concept-visual-viewer > header,
+.twatility-studio .flow-concept-visual-viewer > section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  min-inline-size: 0;
+}
+
+.twatility-studio .flow-concept-visual-viewer > header {
+  justify-content: space-between;
+}
+
+.twatility-studio .flow-concept-visual-viewer :is(h3, p, dl) {
+  margin: 0;
+}
+
+.twatility-studio .flow-concept-visual-viewer [data-flow-visual-viewport="true"] {
+  position: relative;
+  min-inline-size: 0;
+  min-block-size: 0;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: none;
+  cursor: grab;
+  background: #101820;
+  outline-offset: 0.15rem;
+}
+
+.twatility-studio .flow-concept-visual-viewer [data-flow-visual-viewport="true"][data-dragging="true"] {
+  cursor: grabbing;
+}
+
+.twatility-studio .flow-concept-visual-viewer [data-flow-visual-viewport="true"] img {
+  position: absolute;
+  display: block;
+  max-inline-size: none;
+  max-block-size: none;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+
+.twatility-studio .flow-concept-visual-viewer dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.2rem 0.5rem;
+  max-block-size: 5rem;
+  overflow: auto;
+}
+
+.twatility-studio .flow-concept-visual-viewer dd {
+  min-inline-size: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.twatility-studio .flow-concept-visual-viewer output {
+  min-inline-size: 3.5rem;
+  text-align: center;
+  font-weight: 800;
+}
+
+.twatility-studio .flow-concept-visual-viewer .flow-concept-visual-status {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+@media (max-width: 420px) {
+  .twatility-studio dialog.flow-concept-visual-viewer {
+    padding: 0.4rem;
+  }
+
+  .twatility-studio .flow-concept-visual-viewer button {
+    padding-inline: 0.42rem;
+  }
+}
+
 @media (max-width: 1100px) {
   .twatility-studio .project-bar {
     grid-template-columns: minmax(0, 1fr);

@@ -514,6 +514,26 @@ try {
         await reloadFlowPage("authoring:start");
         await ensureFlowWorkspace("Flow toolbar mounted for authoring");
         Object.assign(runtime, await evaluate(flowGraphCorrectiveWorkflow(seeded, { targetId, browserShard })));
+        const viewerMeasurements=[];
+        for(const [width,height] of [[360,800],[1440,900]]){
+            await socket.call("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});
+            await observeBrowserReadiness({targetId,phase:"readiness",predicateDescription:`Concept Visual viewer viewport rendered at ${width} by ${height}`,timeoutMs:2000,pollIntervalMs:25,maximumSnapshotCharacters:200,observe:async()=>evaluate("({width:innerWidth,height:innerHeight})"),ready:(viewport)=>viewport.width===width&&viewport.height===height,snapshot:(viewport)=>viewport});
+            viewerMeasurements.push(await evaluate("globalThis.flowConceptVisualViewerProbe.measure()"));
+        }
+        const viewerInteractions=await evaluate("globalThis.flowConceptVisualViewerProbe.interact()");
+        runtime.runtime038={
+            contained:viewerMeasurements.every(({contained})=>contained),
+            fixedControls:viewerMeasurements.every(({fixedControls})=>fixedControls),
+            scrollbarFree:viewerMeasurements.every(({scrollbarFree})=>scrollbarFree),
+            fitComplete:viewerMeasurements.every(({fitComplete})=>fitComplete),
+            actualScale:viewerMeasurements.every(({actualScale})=>actualScale),
+            metadata:viewerMeasurements.every(({metadata})=>metadata),
+            focusReturned:viewerMeasurements.every(({focusReturned})=>focusReturned),
+            stateInvariant:viewerMeasurements.every(({stateInvariant})=>stateInvariant),
+            measurements:viewerMeasurements.map(({measurement})=>measurement),
+        };
+        viewerInteractions.runtime041.scrollbarFree=viewerMeasurements.every(({scrollbarFree})=>scrollbarFree);
+        Object.assign(runtime,viewerInteractions);
         const callSnapProbe = (expression) => evaluate(`globalThis.flowRelationshipSnapProbe.${expression}`);
         const mouse = async (type, point) => socket.call("Input.dispatchMouseEvent", {
             type, x:point.clientX, y:point.clientY,

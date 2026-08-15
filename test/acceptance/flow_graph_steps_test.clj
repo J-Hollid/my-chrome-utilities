@@ -67,7 +67,7 @@
         (reset! flow-graph/browser-observation nil)))))
 
 (def complete-evidence
-  (assoc (into {} (map (fn [number] [(keyword (format "runtime%03d" number)) {:exact true}]) (range 1 38)))
+  (assoc (into {} (map (fn [number] [(keyword (format "runtime%03d" number)) {:exact true}]) (range 1 43)))
          :installedBoundary true))
 
 (deftest evidence-maps-cannot-pass-vacuously

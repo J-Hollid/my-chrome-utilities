@@ -31,6 +31,12 @@ import {
   flowConceptVisualThumbnailViewport,
 } from "../dist/flow-graph/concept-visual-workspace.js";
 import {
+  FLOW_CONCEPT_VISUAL_MAX_VIEWER_SCALE,
+  flowConceptVisualFitScale,
+  flowConceptVisualPan,
+  flowConceptVisualZoomAt,
+} from "../dist/flow-graph/concept-visual-ui.js";
+import {
   FLOW_SECTION_ACTION_LABELS,
   flowSectionMenuRequest,
 } from "../dist/flow-graph/workspace-section-ui.js";
@@ -82,6 +88,26 @@ for(const itemWidth of [214,170]){
   assert.equal(viewport.width/viewport.height,16/10,"Page and Event previews use the same fixed 16:10 viewport");
   assert.equal(viewport.x*2+viewport.width,itemWidth,"the fixed-ratio viewport remains centered in its Flow item");
 }
+
+assert.equal(FLOW_CONCEPT_VISUAL_MAX_VIEWER_SCALE,4,"the viewer stops at 400 percent actual scale");
+assert.equal(flowConceptVisualFitScale({width:4096,height:1600},{width:320,height:560}),.078125,"Fit contains a wide image without enlarging it");
+assert.equal(flowConceptVisualFitScale({width:160,height:100},{width:800,height:520}),1,"Fit never enlarges an image above actual size");
+const viewerFixture={raster:{width:1600,height:1200},viewport:{width:800,height:600}};
+assert.deepEqual(
+  flowConceptVisualZoomAt({...viewerFixture,state:{scale:.5,x:0,y:0}},1,{x:600,y:450}),
+  {scale:1,x:-200,y:-150},
+  "zoom preserves the image point beneath an off-center pointer",
+);
+assert.deepEqual(
+  flowConceptVisualPan({...viewerFixture,state:{scale:1,x:0,y:0}},{x:1000,y:-1000}),
+  {scale:1,x:400,y:-300},
+  "two-axis viewer pan clamps at image bounds without exposing empty canvas",
+);
+assert.deepEqual(
+  flowConceptVisualPan({raster:{width:400,height:1200},viewport:{width:800,height:600},state:{scale:1,x:100,y:0}},{x:80,y:80}),
+  {scale:1,x:0,y:80},
+  "a non-overflowing axis stays centered while the other axis pans",
+);
 
 assert.deepEqual(fitFlowBounds({x:100,y:50,width:2400,height:1200},{width:600,height:300},24),{x:76,y:26,zoom:.24},"Fit Flow may use a scale below the manual minimum");
 const extremeFit=fitFlowBounds({x:0,y:0,width:100000,height:100000},{width:360,height:800},24);

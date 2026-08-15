@@ -1,4 +1,14 @@
 import { FLOW_CONCEPT_VISUAL_LIMITS, flowConceptVisualAssets, validateFlowConceptVisualSource } from "./concept-visuals.js";
+export const FLOW_CONCEPT_VISUAL_MAX_VIEWER_SCALE = 4;
+export const flowConceptVisualFitScale = (raster, viewport) => Math.min(1, viewport.width / raster.width, viewport.height / raster.height);
+const viewerPanLimit = ({ raster, viewport }, scale) => ({ x: Math.max(0, (raster.width * scale - viewport.width) / 2), y: Math.max(0, (raster.height * scale - viewport.height) / 2) });
+const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
+const clampedViewerState = ({ raster, viewport }, state) => { const limit = viewerPanLimit({ raster, viewport }, state.scale); return { scale: state.scale, x: clamp(state.x, -limit.x, limit.x), y: clamp(state.y, -limit.y, limit.y) }; };
+export const flowConceptVisualPan = (geometry, delta) => clampedViewerState(geometry, { ...geometry.state, x: geometry.state.x + delta.x, y: geometry.state.y + delta.y });
+export const flowConceptVisualZoomAt = (geometry, requestedScale, anchor) => {
+    const { raster, viewport, state } = geometry, scale = clamp(requestedScale, flowConceptVisualFitScale(raster, viewport), FLOW_CONCEPT_VISUAL_MAX_VIEWER_SCALE), oldLeft = (viewport.width - raster.width * state.scale) / 2 + state.x, oldTop = (viewport.height - raster.height * state.scale) / 2 + state.y, imageX = (anchor.x - oldLeft) / state.scale, imageY = (anchor.y - oldTop) / state.scale, newLeft = anchor.x - imageX * scale, newTop = anchor.y - imageY * scale;
+    return clampedViewerState(geometry, { scale, x: newLeft - (viewport.width - raster.width * scale) / 2, y: newTop - (viewport.height - raster.height * scale) / 2 });
+};
 const acceptedTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
 const signatureValid = (type, bytes) => type === "image/png" ? bytes.length >= 8 && [137, 80, 78, 71, 13, 10, 26, 10].every((value, index) => bytes[index] === value) : type === "image/jpeg" ? bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255 : type === "image/webp" ? new TextDecoder().decode(bytes.slice(0, 4)) === "RIFF" && new TextDecoder().decode(bytes.slice(8, 12)) === "WEBP" : false;
 const dataUrl = (file) => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onerror = () => reject(new Error("The visual could not be read")); reader.onload = () => resolve(String(reader.result)); reader.readAsDataURL(file); });
@@ -82,33 +92,46 @@ export function createFlowConceptVisualEditor(options) {
     return { root, firstControl: target };
 }
 export function openFlowConceptVisualViewer(value, invoker, fallbackInvoker) {
-    const dialog = document.createElement("dialog"), heading = document.createElement("h3"), viewport = document.createElement("div"), image = document.createElement("img"), description = document.createElement("p"), metadata = document.createElement("dl"), controls = document.createElement("section"), status = document.createElement("p"), close = document.createElement("button");
-    let zoom = 1, mode = "fit";
+    const dialog = document.createElement("dialog"), header = document.createElement("header"), heading = document.createElement("h3"), viewport = document.createElement("div"), image = document.createElement("img"), description = document.createElement("p"), metadata = document.createElement("dl"), controls = document.createElement("section"), panControls = document.createElement("section"), status = document.createElement("output"), announcer = document.createElement("p"), close = document.createElement("button");
+    let state = { scale: 1, x: 0, y: 0 };
+    dialog.className = "flow-concept-visual-viewer";
     dialog.setAttribute("aria-label", "Concept Visual viewer");
     heading.textContent = value.attachment.caption ?? "Concept visual";
+    close.type = "button";
+    close.textContent = "Close";
+    header.append(heading, close);
     viewport.dataset.flowVisualViewport = "true";
-    viewport.setAttribute("aria-label", "Concept Visual viewport");
-    Object.assign(viewport.style, { width: "min(80vw, 800px)", height: "min(60vh, 520px)", overflow: "auto", overscrollBehavior: "contain" });
+    viewport.setAttribute("aria-label", "Concept Visual image canvas");
+    viewport.tabIndex = 0;
     image.src = value.raster.bytes;
     image.alt = value.attachment.description;
-    Object.assign(image.style, { display: "block", maxWidth: "none", maxHeight: "none", objectFit: "contain" });
     viewport.append(image);
+    description.className = "flow-concept-visual-description";
     description.textContent = value.attachment.description;
     const addMeta = (term, text) => { if (!text)
         return; const dt = document.createElement("dt"), dd = document.createElement("dd"); dt.textContent = term; dd.textContent = text; metadata.append(dt, dd); };
     addMeta("Caption", value.attachment.caption);
     addMeta("Source reference", value.attachment.sourceReference);
-    const control = (label, action) => { const button = document.createElement("button"); button.type = "button"; button.textContent = label; button.addEventListener("click", action); return button; }, fitScale = () => Math.min(1, viewport.clientWidth / value.raster.width, viewport.clientHeight / value.raster.height), panMaximum = () => Math.max(0, viewport.scrollWidth - viewport.clientWidth), updatePan = () => { viewport.dataset.panX = String(viewport.scrollLeft); panLeft.disabled = viewport.scrollLeft <= 0; panRight.disabled = viewport.scrollLeft >= panMaximum(); status.textContent = `${mode === "fit" ? "Fit" : "Actual size"} at ${Math.round(zoom * 100)}%, pan ${Math.round(viewport.scrollLeft)} of ${panMaximum()}.`; }, apply = (resetPan = false) => { const scale = (mode === "fit" ? fitScale() : 1) * zoom; image.style.width = `${value.raster.width * scale}px`; image.style.height = `${value.raster.height * scale}px`; viewport.dataset.viewMode = mode; viewport.dataset.zoom = String(zoom); if (resetPan)
-        viewport.scrollTo({ left: 0, top: 0 });
-    else
-        viewport.scrollLeft = Math.min(viewport.scrollLeft, panMaximum()); updatePan(); }, pan = (delta) => { viewport.scrollLeft = Math.max(0, Math.min(panMaximum(), viewport.scrollLeft + delta)); updatePan(); }, fit = control("Fit", () => { mode = "fit"; zoom = 1; apply(true); }), actual = control("Actual size", () => { mode = "actual"; zoom = 1; apply(true); }), zoomIn = control("Zoom in", () => { zoom = Math.min(4, zoom + .25); apply(); }), zoomOut = control("Zoom out", () => { zoom = Math.max(.25, zoom - .25); apply(); }), reset = control("Reset", () => { mode = "fit"; zoom = 1; apply(true); }), panLeft = control("Pan left", () => pan(-80)), panRight = control("Pan right", () => pan(80));
-    status.setAttribute("role", "status");
-    viewport.addEventListener("scroll", updatePan);
-    controls.setAttribute("aria-label", "Visual fit, actual size, zoom, reset, and pan controls");
-    controls.append(fit, actual, zoomIn, zoomOut, reset, panLeft, panRight);
-    close.type = "button";
-    close.textContent = "Close";
-    dialog.append(heading, viewport, description, metadata, controls, status, close);
+    const geometry = () => ({ raster: value.raster, viewport: { width: viewport.clientWidth, height: viewport.clientHeight } }), control = (label, action) => { const button = document.createElement("button"); button.type = "button"; button.textContent = label; button.addEventListener("click", action); return button; };
+    let fit, actual, zoomIn, zoomOut, panUp, panDown, panLeft, panRight;
+    const apply = () => { const { viewport: box } = geometry(), limits = viewerPanLimit(geometry(), state.scale); state = clampedViewerState(geometry(), state); image.style.width = `${value.raster.width * state.scale}px`; image.style.height = `${value.raster.height * state.scale}px`; image.style.left = `${(box.width - value.raster.width * state.scale) / 2 + state.x}px`; image.style.top = `${(box.height - value.raster.height * state.scale) / 2 + state.y}px`; const fitValue = flowConceptVisualFitScale(value.raster, box); viewport.dataset.viewMode = Math.abs(state.scale - fitValue) < .0001 ? "fit" : Math.abs(state.scale - 1) < .0001 ? "actual" : "zoom"; viewport.dataset.zoom = String(state.scale); viewport.dataset.panX = String(state.x); viewport.dataset.panY = String(state.y); status.value = `${Math.round(state.scale * 100)}%`; announcer.textContent = `Visual at ${status.value}; horizontal pan ${Math.round(state.x)}, vertical pan ${Math.round(state.y)}.`; fit.disabled = Math.abs(state.scale - fitValue) < .0001 && state.x === 0 && state.y === 0; actual.disabled = Math.abs(state.scale - 1) < .0001 && state.x === 0 && state.y === 0; zoomOut.disabled = state.scale <= fitValue + .0001; zoomIn.disabled = state.scale >= FLOW_CONCEPT_VISUAL_MAX_VIEWER_SCALE - .0001; panLeft.disabled = limits.x === 0 || state.x >= limits.x; panRight.disabled = limits.x === 0 || state.x <= -limits.x; panUp.disabled = limits.y === 0 || state.y >= limits.y; panDown.disabled = limits.y === 0 || state.y <= -limits.y; };
+    const center = () => ({ x: viewport.clientWidth / 2, y: viewport.clientHeight / 2 }), zoomTo = (scale, anchor = center()) => { state = flowConceptVisualZoomAt({ ...geometry(), state }, scale, anchor); apply(); }, pan = (x, y) => { state = flowConceptVisualPan({ ...geometry(), state }, { x, y }); apply(); };
+    fit = control("Fit", () => { state = { scale: flowConceptVisualFitScale(value.raster, geometry().viewport), x: 0, y: 0 }; apply(); });
+    actual = control("100 percent", () => { state = { scale: 1, x: 0, y: 0 }; apply(); });
+    zoomOut = control("Zoom out", () => zoomTo(state.scale / 1.25));
+    zoomIn = control("Zoom in", () => zoomTo(state.scale * 1.25));
+    panUp = control("Pan up", () => pan(0, 80));
+    panDown = control("Pan down", () => pan(0, -80));
+    panLeft = control("Pan left", () => pan(80, 0));
+    panRight = control("Pan right", () => pan(-80, 0));
+    status.setAttribute("aria-label", "Current scale");
+    announcer.setAttribute("role", "status");
+    announcer.className = "flow-concept-visual-status";
+    controls.setAttribute("aria-label", "Visual size and zoom controls");
+    controls.append(fit, actual, zoomOut, status, zoomIn);
+    panControls.setAttribute("aria-label", "Visual pan controls");
+    panControls.append(panUp, panDown, panLeft, panRight);
+    dialog.append(header, controls, viewport, description, metadata, panControls, announcer);
     document.body.append(dialog);
     const background = Array.from(document.body.children).filter((element) => element !== dialog && element instanceof HTMLElement).map(element => ({ element, inert: element.inert }));
     for (const { element } of background)
@@ -118,28 +141,98 @@ export function openFlowConceptVisualViewer(value, invoker, fallbackInvoker) {
         event.stopImmediatePropagation();
     } };
     document.addEventListener("click", suppressBackgroundActivation, true);
-    let finished = false;
+    let finished = false, resizeObserver;
     const finish = () => { if (finished)
-        return; finished = true; document.removeEventListener("click", suppressBackgroundActivation, true); for (const { element, inert } of background)
+        return; finished = true; resizeObserver?.disconnect(); document.removeEventListener("click", suppressBackgroundActivation, true); for (const { element, inert } of background)
         element.inert = inert; dialog.close(); dialog.remove(); (invoker.isConnected ? invoker : fallbackInvoker)?.focus({ preventScroll: true }); };
     close.addEventListener("click", finish);
     dialog.addEventListener("cancel", event => { event.preventDefault(); finish(); });
+    let backdropPointer;
+    dialog.addEventListener("pointerdown", event => { backdropPointer = event.target === dialog ? event.pointerId : undefined; });
+    dialog.addEventListener("pointerup", event => { if (event.target === dialog && event.pointerId === backdropPointer)
+        finish(); backdropPointer = undefined; });
     dialog.addEventListener("keydown", event => { if (event.key === "Escape") {
         event.preventDefault();
         finish();
         return;
-    } if (event.key !== "Tab")
-        return; const focusable = Array.from(dialog.querySelectorAll("button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])")); if (!focusable.length)
-        return; const first = focusable[0], last = focusable.at(-1); if (event.shiftKey && document.activeElement === first) {
+    } const key = event.key; if (key === "+" || key === "=") {
         event.preventDefault();
-        last.focus();
+        zoomTo(state.scale * 1.25);
     }
-    else if (!event.shiftKey && document.activeElement === last) {
+    else if (key === "-") {
         event.preventDefault();
-        first.focus();
+        zoomTo(state.scale / 1.25);
+    }
+    else if (key === "0") {
+        event.preventDefault();
+        fit.click();
+    }
+    else if (key === "1") {
+        event.preventDefault();
+        actual.click();
+    }
+    else if (key.startsWith("Arrow")) {
+        event.preventDefault();
+        ({ ArrowLeft: panLeft, ArrowRight: panRight, ArrowUp: panUp, ArrowDown: panDown }[key]?.click());
+    }
+    else if (key === "Tab") {
+        const focusable = Array.from(dialog.querySelectorAll("button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"));
+        if (!focusable.length)
+            return;
+        const first = focusable[0], last = focusable.at(-1);
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        }
+        else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
     } });
+    viewport.addEventListener("wheel", event => { event.preventDefault(); if (event.ctrlKey || event.metaKey) {
+        const box = viewport.getBoundingClientRect();
+        zoomTo(state.scale * (event.deltaY < 0 ? 1.1 : .9), { x: event.clientX - box.left, y: event.clientY - box.top });
+    }
+    else
+        pan(-event.deltaX, -event.deltaY); }, { passive: false });
+    const pointers = new Map();
+    let dragPointer, pinch;
+    viewport.addEventListener("pointerdown", event => { if (event.button !== 0)
+        return; try {
+        viewport.setPointerCapture?.(event.pointerId);
+    }
+    catch { /* Synthetic accessibility/browser probes may not create native pointer activation. */ } pointers.set(event.pointerId, { x: event.clientX, y: event.clientY }); if (pointers.size === 1) {
+        dragPointer = event.pointerId;
+        viewport.dataset.dragging = "true";
+    }
+    else if (pointers.size === 2) {
+        const [left, right] = [...pointers.values()], midpoint = { x: (left.x + right.x) / 2, y: (left.y + right.y) / 2 };
+        pinch = { distance: Math.hypot(left.x - right.x, left.y - right.y), midpoint };
+        dragPointer = undefined;
+    } });
+    viewport.addEventListener("pointermove", event => { const previous = pointers.get(event.pointerId); if (!previous)
+        return; pointers.set(event.pointerId, { x: event.clientX, y: event.clientY }); if (pinch && pointers.size >= 2) {
+        const [left, right] = [...pointers.values()], midpoint = { x: (left.x + right.x) / 2, y: (left.y + right.y) / 2 }, distance = Math.hypot(left.x - right.x, left.y - right.y), box = viewport.getBoundingClientRect();
+        state = flowConceptVisualZoomAt({ ...geometry(), state }, state.scale * distance / Math.max(1, pinch.distance), { x: pinch.midpoint.x - box.left, y: pinch.midpoint.y - box.top });
+        state = flowConceptVisualPan({ ...geometry(), state }, { x: midpoint.x - pinch.midpoint.x, y: midpoint.y - pinch.midpoint.y });
+        pinch = { distance, midpoint };
+        apply();
+    }
+    else if (dragPointer === event.pointerId)
+        pan(event.clientX - previous.x, event.clientY - previous.y); });
+    const endPointer = (event) => { pointers.delete(event.pointerId); if (dragPointer === event.pointerId)
+        dragPointer = undefined; if (pointers.size < 2)
+        pinch = undefined; if (pointers.size === 1)
+        dragPointer = [...pointers.keys()][0]; if (pointers.size === 0)
+        delete viewport.dataset.dragging; };
+    viewport.addEventListener("pointerup", endPointer);
+    viewport.addEventListener("pointercancel", endPointer);
+    resizeObserver = new ResizeObserver(() => { const fitValue = flowConceptVisualFitScale(value.raster, geometry().viewport); if (viewport.dataset.viewMode === "fit")
+        state = { scale: fitValue, x: 0, y: 0 }; apply(); });
+    resizeObserver.observe(viewport);
     dialog.showModal();
-    apply(true);
+    state = { scale: flowConceptVisualFitScale(value.raster, geometry().viewport), x: 0, y: 0 };
+    apply();
     close.focus();
 }
 //# sourceMappingURL=concept-visual-ui.js.map
