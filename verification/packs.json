@@ -7,6 +7,7 @@
       "src/data-layer-page-authoring.ts",
       "src/data-layer-assignment-routing.ts",
       "src/data-layer-assignment-routing-ui.ts",
+      "src/data-layer-flow-visual-asset-portability.ts",
       "src/data-layer-project-library.ts",
       "src/data-layer-project-library-ui.ts",
       "src/data-layer-project-library-presentation-ui.ts"
@@ -46,6 +47,14 @@
         "sourceClass": "browser presentation"
       },
       {
+        "id": "project_flow_visual_asset_portability",
+        "prefixes": [
+          "src/data-layer-flow-visual-asset-portability.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "persistence migration"
+      },
+      {
         "id": "project_library_persistence",
         "prefixes": [
           "src/data-layer-project-library.ts"
@@ -75,6 +84,7 @@
       "test/data-layer-page-authoring-test.mjs",
       "test/data-layer-assignment-routing-test.mjs",
       "test/data-layer-project-library-transport-test.mjs",
+      "test/data-layer-flow-visual-asset-portability-test.mjs",
       "test/data-layer-project-library-test.mjs"
     ],
     "property": [
