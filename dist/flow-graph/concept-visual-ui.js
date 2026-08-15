@@ -101,17 +101,43 @@ export function openFlowConceptVisualViewer(value, invoker, fallbackInvoker) {
     const control = (label, action) => { const button = document.createElement("button"); button.type = "button"; button.textContent = label; button.addEventListener("click", action); return button; }, fitScale = () => Math.min(1, viewport.clientWidth / value.raster.width, viewport.clientHeight / value.raster.height), panMaximum = () => Math.max(0, viewport.scrollWidth - viewport.clientWidth), updatePan = () => { viewport.dataset.panX = String(viewport.scrollLeft); panLeft.disabled = viewport.scrollLeft <= 0; panRight.disabled = viewport.scrollLeft >= panMaximum(); status.textContent = `${mode === "fit" ? "Fit" : "Actual size"} at ${Math.round(zoom * 100)}%, pan ${Math.round(viewport.scrollLeft)} of ${panMaximum()}.`; }, apply = (resetPan = false) => { const scale = (mode === "fit" ? fitScale() : 1) * zoom; image.style.width = `${value.raster.width * scale}px`; image.style.height = `${value.raster.height * scale}px`; viewport.dataset.viewMode = mode; viewport.dataset.zoom = String(zoom); if (resetPan)
         viewport.scrollTo({ left: 0, top: 0 });
     else
-        viewport.scrollLeft = Math.min(viewport.scrollLeft, panMaximum()); updatePan(); }, pan = (delta) => { viewport.scrollLeft = Math.max(0, Math.min(panMaximum(), viewport.scrollLeft + delta)); updatePan(); }, finish = () => { dialog.close(); dialog.remove(); (invoker.isConnected ? invoker : fallbackInvoker)?.focus({ preventScroll: true }); }, fit = control("Fit", () => { mode = "fit"; zoom = 1; apply(true); }), actual = control("Actual size", () => { mode = "actual"; zoom = 1; apply(true); }), zoomIn = control("Zoom in", () => { zoom = Math.min(4, zoom + .25); apply(); }), zoomOut = control("Zoom out", () => { zoom = Math.max(.25, zoom - .25); apply(); }), reset = control("Reset", () => { mode = "fit"; zoom = 1; apply(true); }), panLeft = control("Pan left", () => pan(-80)), panRight = control("Pan right", () => pan(80));
+        viewport.scrollLeft = Math.min(viewport.scrollLeft, panMaximum()); updatePan(); }, pan = (delta) => { viewport.scrollLeft = Math.max(0, Math.min(panMaximum(), viewport.scrollLeft + delta)); updatePan(); }, fit = control("Fit", () => { mode = "fit"; zoom = 1; apply(true); }), actual = control("Actual size", () => { mode = "actual"; zoom = 1; apply(true); }), zoomIn = control("Zoom in", () => { zoom = Math.min(4, zoom + .25); apply(); }), zoomOut = control("Zoom out", () => { zoom = Math.max(.25, zoom - .25); apply(); }), reset = control("Reset", () => { mode = "fit"; zoom = 1; apply(true); }), panLeft = control("Pan left", () => pan(-80)), panRight = control("Pan right", () => pan(80));
     status.setAttribute("role", "status");
     viewport.addEventListener("scroll", updatePan);
     controls.setAttribute("aria-label", "Visual fit, actual size, zoom, reset, and pan controls");
     controls.append(fit, actual, zoomIn, zoomOut, reset, panLeft, panRight);
     close.type = "button";
     close.textContent = "Close";
-    close.addEventListener("click", finish);
-    dialog.addEventListener("cancel", event => { event.preventDefault(); finish(); });
     dialog.append(heading, viewport, description, metadata, controls, status, close);
     document.body.append(dialog);
+    const background = Array.from(document.body.children).filter((element) => element !== dialog && element instanceof HTMLElement).map(element => ({ element, inert: element.inert }));
+    for (const { element } of background)
+        element.inert = true;
+    const suppressBackgroundActivation = (event) => { if (event.target instanceof Node && !dialog.contains(event.target)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+    } };
+    document.addEventListener("click", suppressBackgroundActivation, true);
+    let finished = false;
+    const finish = () => { if (finished)
+        return; finished = true; document.removeEventListener("click", suppressBackgroundActivation, true); for (const { element, inert } of background)
+        element.inert = inert; dialog.close(); dialog.remove(); (invoker.isConnected ? invoker : fallbackInvoker)?.focus({ preventScroll: true }); };
+    close.addEventListener("click", finish);
+    dialog.addEventListener("cancel", event => { event.preventDefault(); finish(); });
+    dialog.addEventListener("keydown", event => { if (event.key === "Escape") {
+        event.preventDefault();
+        finish();
+        return;
+    } if (event.key !== "Tab")
+        return; const focusable = Array.from(dialog.querySelectorAll("button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])")); if (!focusable.length)
+        return; const first = focusable[0], last = focusable.at(-1); if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+    }
+    else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+    } });
     dialog.showModal();
     apply(true);
     close.focus();

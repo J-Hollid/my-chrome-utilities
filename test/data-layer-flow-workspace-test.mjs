@@ -27,6 +27,10 @@ import {flowOutlineProjection} from "../dist/flow-graph/workspace-outline-model.
 import {flowPanClickSuppression,flowPanStartAllowed,flowPanToPinch} from "../dist/flow-graph/workspace-camera-ui.js";
 import {flowWheelZoomFactor} from "../dist/flow-graph/workspace-wheel-zoom.js";
 import {
+  FLOW_CONCEPT_VISUAL_ASPECT_RATIO,
+  flowConceptVisualThumbnailViewport,
+} from "../dist/flow-graph/concept-visual-workspace.js";
+import {
   FLOW_SECTION_ACTION_LABELS,
   flowSectionMenuRequest,
 } from "../dist/flow-graph/workspace-section-ui.js";
@@ -71,6 +75,13 @@ assert.equal(zoomFlowCamera({x:0,y:0,zoom:1},8,{x:0,y:0}).zoom,2,"manual zoom is
 assert.equal(zoomFlowCamera({x:0,y:0,zoom:1},.01,{x:0,y:0}).zoom,.25,"manual zoom is capped at 25 percent");
 assert.equal(flowDetailLevel(.49),"identity");
 assert.equal(flowDetailLevel(.5),"events");
+
+assert.equal(FLOW_CONCEPT_VISUAL_ASPECT_RATIO,16/10);
+for(const itemWidth of [214,170]){
+  const viewport=flowConceptVisualThumbnailViewport(itemWidth);
+  assert.equal(viewport.width/viewport.height,16/10,"Page and Event previews use the same fixed 16:10 viewport");
+  assert.equal(viewport.x*2+viewport.width,itemWidth,"the fixed-ratio viewport remains centered in its Flow item");
+}
 
 assert.deepEqual(fitFlowBounds({x:100,y:50,width:2400,height:1200},{width:600,height:300},24),{x:76,y:26,zoom:.24},"Fit Flow may use a scale below the manual minimum");
 const extremeFit=fitFlowBounds({x:0,y:0,width:100000,height:100000},{width:360,height:800},24);
