@@ -283,3 +283,48 @@ Feature: Modular Chrome utility architecture
     And verification accounting derives the expected inventory from the canonical registry plus exactly that approved unit addition
     And no workspace id, order, storage key, namespace, visible state, focus result, navigation command, browser entry point, manifest capability, layout, or accessibility result changes
     And one-time delivery runs the 20 runnable packs in canonical order with properties before node scripts/package.mjs
+
+  # Modular Chrome utility architecture 024
+  Scenario: Modular Chrome utility architecture 024
+    Given the installed durable Project Library host exposes a typed project transport capability and compatibility callbacks are also supplied
+    When the Projects interface requests export or import
+    Then it obtains transport only from the capability on its already injected host
+    And the installed capability is invoked while the compatibility callbacks remain unused
+    And no global registry, service locator, module-load side effect, function property, opaque token, DOM lookup, or concrete repository import supplies transport
+    And src/side-panel.ts remains byte-identical
+
+  # Modular Chrome utility architecture 025
+  Scenario Outline: Modular Chrome utility architecture 025
+    Given one installed Project Library transport operation reaches phase <phase>
+    When the operator produces outcome <outcome>
+    Then the Projects interface owns <interface_responsibility>
+    And the transport port owns <transport_responsibility>
+    And durable operation cardinality is <cardinality>
+
+    Examples:
+      | phase             | outcome                 | interface_responsibility                              | transport_responsibility                              | cardinality                              |
+      | export request    | destination accepted    | status, destination, progress, and download lifecycle | estimate and bounded cancellable writing               | one preparation and at most one write    |
+      | import selection  | review opened           | file choice, review fields, target name, and focus     | source validation, staging, integrity, and migrations  | one inspection and no commit             |
+      | import review     | confirmation accepted   | disabled repeat action, progress, and result           | atomic commit of the exact staged operation            | one inspection and at most one commit    |
+      | operation review  | cancelled or rejected   | cancellation result and exact focus return             | staged-resource release without durable mutation       | no write or commit                       |
+      | transport attempt | validation or I/O failure | one actionable error without legacy retry            | failure propagation and staged-resource release        | no fallback or repeated operation        |
+
+  # Modular Chrome utility architecture 026
+  Scenario: Modular Chrome utility architecture 026
+    Given the standalone isolation slice uses the existing version 2 repository transport
+    When installed project export, import review, confirmation, cancellation, and failure are exercised
+    Then the JSON filename, media type, review, import-as-new remapping, inactive imported project, status, and focus behavior remain unchanged
+    And mounting or inspecting transport writes no project and changes no Draft, Published revision, Undo history, active identity, storage namespace, or browser permission
+    And a host without the typed capability may use the compatibility callbacks
+    But a host with the typed capability never invokes those callbacks after success or failure
+    And version 3 ZIP and visual-asset behavior remain outside this slice
+
+  # Modular Chrome utility architecture 027
+  Scenario: Modular Chrome utility architecture 027
+    Given the project transport contract, durable adapter, and Projects interface are changed without src/side-panel.ts
+    When the isolation boundary is evaluated against canonical verification ownership
+    Then the contract belongs to a project-scoped module and the interface imports no concrete durable backend or shell composition state
+    And the durable adapter imports no Projects DOM or browser download behavior
+    And the selected scope is the bounded project-management, durable-project, declared consumer, and shell closure rather than all 20 packs
+    And one focused unit leaf proves injection, installed-port preference, compatibility fallback, cardinality, cancellation, failure, and resource release
+    And package proof follows the exact property-enabled focused plan

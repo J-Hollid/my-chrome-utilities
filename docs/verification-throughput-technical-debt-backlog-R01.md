@@ -839,6 +839,28 @@ The slice completed the coder, refactorer, and architect chain and integrated at
 `ad002047a321d58976c0d8cd5c56dde46a1389d0`. It activates no later VTD-008
 controller.
 
+Approved fourth slice (user approval 2026-08-16): isolate the
+installed Project Library transport port needed by the stopped Flow visual-asset
+portability candidate. Exact planning proved that candidate's sole all-pack
+expansion is its required `src/side-panel.ts` archive-callback change: the full
+candidate selects 20 packs and 849 tasks, while removing that root path and its
+generated outputs selects the bounded ten-pack closure and 228 tasks.
+
+The draft in `docs/project-library-transport-port-isolation-R01.md` carries a
+typed transport capability on the durable Project Library host already injected
+into `mountProjectLibraryUi`. It keeps current version 2 JSON behavior while
+moving export preparation/writing and import inspection/commit behind the port.
+The UI retains file, review, progress, download, error, cancellation, and focus
+ownership. No global registry, hidden token, repository import from the UI, or
+composition-root edit is permitted.
+
+This is an enabling structural prediction, not a completed slice or claimed time
+saving. The expected payoff is accepted only if the later portability candidate
+removes its `src/side-panel.ts` diff, remains in the bounded project/durable
+closure, and reaches installed version 3 review-ready evidence. This approval
+activates only `project-library-transport-port-isolation`; the portability
+candidate and every other VTD-008 slice remain stopped meanwhile.
+
 ### VTD-009 — Tighten shell and verification-helper ownership
 
 Priority: P1

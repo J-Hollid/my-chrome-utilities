@@ -15,6 +15,22 @@ This is one persistence, migration, security, and packaging slice under the
 QA-branch release pilot. It does not authorize master promotion or the all-20
 gate.
 
+## Delivery prerequisite
+
+Implementation candidate `652ca79415` is stopped before review evidence because
+its required installed archive callbacks edit the globally impactful
+`src/side-panel.ts` composition root. Exact planning selects all 20 packs and 849
+tasks; the same candidate without that root change selects the bounded ten-pack
+closure and 228 tasks.
+
+The user approved the standalone Project Library transport port on 2026-08-16.
+`docs/project-library-transport-port-isolation-R01.md` defines that prerequisite.
+After it is QA-integrated, the portability candidate must resume from the new QA
+base, consume the port, restore `src/side-panel.ts` to the approved base, and
+obtain new exact focused evidence. Its settled benchmark may be reused only when
+the bound content fingerprint is unchanged; otherwise run it once on the
+corrected candidate as already authorized for this feature.
+
 ## Settled behavior
 
 The original validated PNG, JPEG, or WebP bytes are canonical. Import does not

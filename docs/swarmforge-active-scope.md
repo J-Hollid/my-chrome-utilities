@@ -25,7 +25,7 @@ The settled-candidate verification workflow is integrated at
 | Verification run-intent and deferred-incident corrections | QA-integrated through `66dcdfd5d6` | Ordinary diagnostics remain local and eligible earlier or parallel deferrals remain master obligations without blocking unrelated feature work. Reopen one only if focused work naturally reproduces it or the slice intentionally changes its contract. |
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
-| VTD-008 side-panel composition-root decomposition | Active incremental program, paused after three completed slices | The installed Hotkeys, Command Palette, and workspace-tabs slices are complete. No later controller slice is active. |
+| VTD-008 side-panel composition-root decomposition | Active incremental program; Project Library transport-port isolation was approved by the user on 2026-08-16 | Implement only `docs/project-library-transport-port-isolation-R01.md`; the stopped portability candidate may resume only after this prerequisite is QA-integrated. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Deferred and inactive | The existing two-worker order is within about six seconds of balanced after lock wait is removed; scheduling needed for a possible third worker is bounded inside VTD-017. |
 | VTD-012 registry and planner modularization | Deferred and inactive | Reconsider after broad final-gate and receipt-persistence costs are reduced. |
@@ -36,11 +36,13 @@ The settled-candidate verification workflow is integrated at
 VTD-008 remains active as a program. Completion of the installed Hotkeys, Command
 Palette, and workspace-tabs controllers completes three slices only, not VTD-008.
 The completed workspace-tabs slice covers only the existing controller lifecycle
-in `src/workspace-tabs-ui.ts`. It does not extract the broader utility registry or
-shell DOM adapter, change workspace-navigation semantics, or activate
-observation-target, live-session, or another Data Layer controller.
+in `src/workspace-tabs-ui.ts`. The approved Project Library transport-port slice is
+a prerequisite for the stopped Flow visual-asset portability candidate; it does
+not activate a broader utility registry, shell DOM adapter, observation-target,
+live-session, or another Data Layer controller extraction.
 
-No VTD implementation slice is active. The user stopped autonomous VTD-018 repair
+VTD-008 implementation authority is limited to the approved Project Library
+transport-port isolation prerequisite. The user stopped autonomous VTD-018 repair
 after its repeated final failure and approved a QA-branch release pilot. At the
 start of the next request, the specifier distinguishes feature integration into
 `qa` from an explicit cumulative promotion to `master`. Do not inherit VTD-018
@@ -179,6 +181,7 @@ Read only the program documents relevant to the selected task.
 
 | Area | Current program authority |
 |---|---|
+| Project Library transport-port isolation | `docs/project-library-transport-port-isolation-R01.md` |
 | Canonical authoring and layered schema | `docs/data-layer-canonical-schema-authoring-correction-program-R01.md` |
 | Canvas-first Flow workspace | `docs/data-layer-canvas-first-flow-workspace-program-R02.md` |
 | Earlier Flow rationale not superseded by R02 | `docs/data-layer-canvas-first-flow-authoring-correction-program-R01.md` |
