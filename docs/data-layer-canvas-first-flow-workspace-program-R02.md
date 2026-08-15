@@ -680,8 +680,8 @@ Thumbnails use a fixed 16-to-10 viewport containing the complete image; their
 presentation bounds and Page relationship anchors follow the preview without
 rewriting stored coordinates or invoking Tidy. Distant semantic zoom substitutes
 badges for pixels. Clicking a badge or thumbnail, or using `View visual` while
-Hidden, opens a modal fit/actual-size viewer with zoom, reset, pan, deterministic
-focus containment, Escape close, and focus return.
+Hidden, opens a modal Fit and 100-percent viewer with current-scale, zoom, pan,
+deterministic focus containment, Escape close, and focus return.
 
 Project export stores one asset copy and every Flow-local reference plus its
 description, caption, and source reference. Import-as-new remaps the project-owned
@@ -757,5 +757,88 @@ receipt to an architect `qa-ready` candidate. At 90 minutes, report whether both
 Page and Event can save and reopen a pasted or chosen image, whether badges and
 the accessible viewer work, whether one shared asset remains deduplicated, the
 cause of any variance, remaining validation and portability work, confidence,
+and forecast. Continue bounded work under the QA pilot unless product scope,
+safety, or authority changes.
+
+## Flow concept-visual viewer refinement slice
+
+Directional Flow scenarios 038–042 and their runtime partners refine only the
+installed concept-visual viewer. They preserve the attachment, asset,
+portability, visual-display, and cleanup behavior of scenarios 034–037. Viewer
+state remains transient and cannot change the Flow camera, selection, project
+bytes, Draft, revision, or Undo history.
+
+The modal uses fixed viewer chrome around a scrollbar-free image canvas. Its
+visible heading and Close control remain above a toolbar containing Fit, 100
+percent, Zoom out, the actual displayed scale, and Zoom in. The canvas consumes
+the remaining bounded space at wide and 360-pixel viewports. Description,
+Caption, and Source reference remain available without entering the transformed
+image surface or displacing the fixed controls. Fit centers and contains the
+complete image without enlarging it beyond intrinsic size; 100 percent maps one
+image pixel to one CSS pixel.
+
+Buttons and `+`, `-`, `0`, and `1` provide explicit zoom routes. Modified wheel
+and pinch input zoom around the pointer or gesture midpoint rather than the
+image's top-left corner. The actual scale stays between Fit and 400 percent.
+Mouse drag and one-finger drag move the image directly; two-axis trackpad,
+arrow-key, and four labelled directional-button routes pan the viewport. Pan is
+bounded on both axes, keeps each non-overflowing axis centered, exposes no empty
+canvas, and presents no dialog or canvas scrollbars. The directional buttons are
+the single-click alternative to dragging required by the product's accessible
+input boundary.
+
+Close, Escape, and a press-and-release wholly on the dim backdrop close the
+viewer and return focus to the exact invoker. A pointer gesture that begins
+inside the viewer and ends on the backdrop does not close it. The named modal,
+contained Tab order, visible close control, inert background, and focus return
+continue to follow the WAI-ARIA modal-dialog pattern. The backdrop behavior
+follows the HTML dialog light-dismiss endpoint rule rather than treating any
+pointer release outside the image as a dismissal.
+
+This contract applies the convergent interaction patterns documented by the
+WAI-ARIA modal-dialog pattern, WCAG 2.2 pointer and dragging guidance, the HTML
+dialog light-dismiss model, and the established fixed-control, anchored zoom,
+bounded pan, and keyboard routes exposed by PhotoSwipe and OpenSeadragon. It does
+not add a gallery, image editing, rotation, download, full-screen mode,
+navigation between attachments, persistent viewer state, or another viewer
+dependency.
+
+**Development focus:** begin in
+`src/flow-graph/concept-visual-ui.ts`, its direct viewer characterization in
+`test/data-layer-flow-workspace-test.mjs`, and installed scenarios 038–042 in
+`test/support/flow-workspace-r02-runtime.mjs`. Prove fixed control containment at
+360 by 800 and 1440 by 900, actual-scale reporting, pointer-anchored zoom,
+two-axis bounded pan, scrollbar absence, every close route, focus return, and
+the project-state boundary before expanding to the settled QA plan. Keep viewer
+styling narrowly scoped; a required Studio stylesheet change remains part of
+this approved slice rather than an unrelated branding redesign.
+
+**QA impact:** ordinary inspection forecasts the bounded `flow_graph` and
+`shell` packs because the Flow component owns the behavior while the current
+global Studio dialog overflow is a shell-owned stylesheet boundary. Exact
+changed-path planning remains authoritative and may remove `shell` if the final
+candidate changes no shell-owned path, but it may not omit a selected owner to
+preserve the forecast. The expected review-ready form is:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_graph \
+  --pack shell \
+  --property \
+  --changed-since <approved-specification-commit> \
+  --prepare-evidence flow-concept-visual-viewer-refinement
+node scripts/package.mjs
+```
+
+The canonical task name is `flow-concept-visual-viewer-refinement`. This feature
+mode slice does not authorize the all-20 gate. Routine RepoWise scouting remains
+stopped; no RepoWise checkpoint belongs in this handoff.
+
+The implementation-and-review elapsed effort ceiling is 120 minutes from coder
+receipt to an architect `qa-ready` candidate. At 60 minutes, report whether the
+fixed controls and scrollbar-free Fit view work at both declared viewports,
+whether pointer-anchored zoom and both-axis pan are green through at least one
+direct and one alternative route, whether backdrop dismissal preserves exact
+focus return and state, the cause of any variance, remaining work, confidence,
 and forecast. Continue bounded work under the QA pilot unless product scope,
 safety, or authority changes.

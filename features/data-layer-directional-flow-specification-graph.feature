@@ -608,7 +608,7 @@ Feature: Data layer directional Flow specification graph
     And Returns retains its own mode while reopening Checkout restores Hidden
     And every mode change leaves project bytes, Draft, revision, documentation freshness, and Undo history unchanged
     When the operator activates View visual for Cart
-    Then a named modal viewer opens with Cart's complete image, Description, optional Caption, fit, actual size, zoom, reset, and pan controls
+    Then a named modal viewer opens with Cart's complete image, Description, optional Caption, fixed Fit, 100 percent, current-scale, zoom, pan, and visible Close controls
     And focus moves inside the viewer while background Flow controls are inert
     When the operator closes the viewer with Escape
     Then focus returns to the exact View visual invoker without changing selection or project state
@@ -650,3 +650,82 @@ Feature: Data layer directional Flow specification graph
     When the operator undoes the last removal
     Then the same asset and attachment identities, bytes, metadata, and Cart viewer are restored
     And canonical Page and Event definitions, Flow topology, positions, and visual-display mode remain unchanged throughout
+
+  # Data layer directional Flow specification graph 038
+  Scenario Outline: Data layer directional Flow specification graph 038
+    Given Cart Page instance has a <image_dimensions> concept visual with Description, Caption, and Source reference
+    And the viewport is <width> by <height>
+    When the operator activates View visual for Cart
+    Then the named modal viewer is contained by the visible viewport without scrolling the outer document
+    And its visible heading, Close button, Fit, 100 percent, Zoom out, current scale, and Zoom in controls remain outside the image pan surface
+    And those controls remain fully visible without scrolling the dialog, image canvas, or toolbar
+    And a scrollbar-free image canvas consumes the viewer space not used by its fixed controls and bounded metadata
+    And Fit initially centers Cart's complete image without cropping, distortion, or enlargement above actual size
+    And the current scale reports the image's actual displayed percentage rather than a multiplier relative to Fit
+    And Description, Caption, and Source reference remain available without moving the fixed controls or entering the image pan surface
+
+    Examples:
+      | width | height | image_dimensions   |
+      | 360   | 800    | 4096 by 1600 pixels |
+      | 1440  | 900    | 1600 by 4096 pixels |
+
+  # Data layer directional Flow specification graph 039
+  Scenario Outline: Data layer directional Flow specification graph 039
+    Given Cart's concept-visual viewer is open in Fit with its image centered
+    When the operator uses <zoom_route> to zoom in
+    Then the actual displayed scale increases toward but never beyond 400 percent
+    When the operator uses the same <zoom_route> family to zoom out
+    Then the actual displayed scale decreases toward but never below Fit
+    And both scale changes keep the image point under <zoom_anchor> at that anchor
+    And unavailable zoom directions are disabled at their bounds
+    And Flow camera, selection, project bytes, Draft, revision, and Undo history remain unchanged
+
+    Examples:
+      | zoom_route                     | zoom_anchor             |
+      | toolbar controls               | the image-canvas center |
+      | keyboard shortcuts             | the image-canvas center |
+      | a modified wheel over Cart     | the pointer over Cart   |
+      | a pinch gesture around Cart    | the gesture midpoint    |
+
+  # Data layer directional Flow specification graph 040
+  Scenario Outline: Data layer directional Flow specification graph 040
+    Given Cart's concept-visual viewer is open away from Fit and 100 percent
+    When the operator requests 100 percent through <actual_size_route>
+    Then one image pixel occupies one CSS pixel and the image is centered
+    When the operator requests Fit through <fit_route>
+    Then the complete image is centered and contained again
+    And Flow camera, selection, project bytes, Draft, revision, and Undo history remain unchanged
+
+    Examples:
+      | actual_size_route          | fit_route     |
+      | the visible toolbar control | its Fit control |
+      | the 1 keyboard shortcut     | the 0 shortcut  |
+
+  # Data layer directional Flow specification graph 041
+  Scenario: Data layer directional Flow specification graph 041
+    Given Cart's concept-visual viewer is zoomed until its image exceeds the canvas on both axes
+    When the operator mouse-drags or one-finger-drags the image
+    Then the image follows that pointer on both axes with a grab interaction
+    When the operator uses two-axis trackpad scrolling or the labelled arrow-key commands
+    Then the viewport pans across the image in the requested horizontal and vertical directions
+    And labelled Pan up, Pan down, Pan left, and Pan right controls provide single-click alternatives to every drag direction
+    And each pan route stops at the image bounds without exposing empty space or losing the image
+    And a non-overflowing image axis remains centered while its pan controls are unavailable
+    And no horizontal or vertical scrollbar appears in the dialog or image canvas
+    And Flow camera, selection, project bytes, Draft, revision, and Undo history remain unchanged
+
+  # Data layer directional Flow specification graph 042
+  Scenario Outline: Data layer directional Flow specification graph 042
+    Given Cart's concept-visual viewer was opened from its exact View visual invoker
+    When a pointer starts inside the viewer and ends on its backdrop
+    Then the viewer remains open because that gesture was not a backdrop click
+    When the operator closes the viewer through <close_route>
+    Then the viewer closes and the background Flow workspace becomes operable
+    And focus returns to the exact View visual invoker
+    And Flow camera, selection, project bytes, Draft, revision, and Undo history remain unchanged
+
+    Examples:
+      | close_route                                      |
+      | activates the visible Close button               |
+      | presses Escape                                   |
+      | presses and releases wholly on the dim backdrop  |

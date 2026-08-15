@@ -605,7 +605,7 @@ Feature: Data layer directional Flow specification graph runtime
     And production Returns view state is unchanged while reopening Checkout restores Hidden
     And project bytes, Saved Draft, Flow revision, documentation freshness, and Undo depth equal their pre-mode values
     When actual controls activate View visual for Cart
-    Then one named modal dialog contains the complete decoded image, Description, optional Caption, fit, actual-size, zoom, reset, pan, and visible close controls
+    Then one named modal dialog contains the complete decoded image, Description, optional Caption, fixed Fit, 100 percent, current-scale, zoom, pan, and visible Close controls
     And focus is inside the dialog, Tab remains within it, and background Flow controls are inert
     When actual keyboard input sends Escape
     Then the dialog is absent and focus returns to the exact invoking control with unchanged selection and project bytes
@@ -647,3 +647,82 @@ Feature: Data layer directional Flow specification graph runtime
     When actual Undo restores the last removal
     Then the same asset and attachment IDs, bytes, metadata, and installed Cart viewer are restored
     And canonical definitions, graph topology, coordinates, and visual-display view state remain unchanged throughout
+
+  # Data layer directional Flow specification graph runtime 038
+  Scenario Outline: Data layer directional Flow specification graph runtime 038
+    Given production Cart Page instance has a <image_dimensions> concept visual with Description, Caption, and Source reference
+    And the browser viewport is <width> by <height>
+    When actual controls activate View visual for Cart
+    Then the open named modal bounding rectangle is contained by the visible browser viewport and document scroll position is unchanged
+    And measured heading, Close, Fit, 100 percent, Zoom out, current-scale, and Zoom in control rectangles remain outside the transformed image surface
+    And every required control rectangle remains visible without dialog, canvas, or toolbar scrolling
+    And the installed image canvas occupies the remaining viewer rectangle with no horizontal or vertical scrollbar gutter
+    And measured Fit geometry centers and contains every decoded image pixel without crop, aspect distortion, or enlargement above intrinsic size
+    And the rendered current scale equals the ratio between displayed and intrinsic image dimensions
+    And rendered Description, Caption, and Source reference remain reachable without moving the fixed controls into the image surface
+
+    Examples:
+      | width | height | image_dimensions   |
+      | 360   | 800    | 4096 by 1600 pixels |
+      | 1440  | 900    | 1600 by 4096 pixels |
+
+  # Data layer directional Flow specification graph runtime 039
+  Scenario Outline: Data layer directional Flow specification graph runtime 039
+    Given the installed Cart concept-visual viewer is open in measured Fit geometry with its image centered
+    When actual input uses <zoom_route> to zoom in
+    Then rendered scale increases without exceeding 400 percent
+    When actual input uses the same <zoom_route> family to zoom out
+    Then rendered scale decreases without going below the measured Fit scale
+    And both measured scale changes retain the canvas coordinates of the decoded image point beneath <zoom_anchor>
+    And installed zoom controls expose disabled state at the measured bounds
+    And serialized Flow camera, selection, project bytes, Saved Draft, revision, and Undo depth remain unchanged
+
+    Examples:
+      | zoom_route                           | zoom_anchor             |
+      | installed toolbar controls           | the image-canvas center |
+      | installed keyboard shortcuts         | the image-canvas center |
+      | a modified WheelEvent over Cart      | the pointer over Cart   |
+      | a production pinch gesture over Cart | the gesture midpoint    |
+
+  # Data layer directional Flow specification graph runtime 040
+  Scenario Outline: Data layer directional Flow specification graph runtime 040
+    Given the installed Cart viewer is open away from measured Fit and 100 percent
+    When actual input requests 100 percent through <actual_size_route>
+    Then measured image pixels and CSS pixels have a one-to-one ratio and the image is centered
+    When actual input requests Fit through <fit_route>
+    Then measured geometry centers and contains the complete image again
+    And serialized Flow camera, selection, project bytes, Saved Draft, revision, and Undo depth remain unchanged
+
+    Examples:
+      | actual_size_route               | fit_route         |
+      | the installed toolbar control   | its Fit control   |
+      | the 1 keyboard shortcut         | the 0 shortcut    |
+
+  # Data layer directional Flow specification graph runtime 041
+  Scenario: Data layer directional Flow specification graph runtime 041
+    Given the installed Cart viewer is zoomed until measured image bounds exceed its canvas on both axes
+    When actual mouse and single-touch pointers drag the image
+    Then measured image translation follows each captured pointer on both axes and the cursor communicates grab state
+    When actual two-axis trackpad and labelled arrow-key input target the image canvas
+    Then measured viewport translation follows each requested horizontal and vertical direction
+    And installed Pan up, Pan down, Pan left, and Pan right controls provide single-click equivalents for every drag direction
+    And every input route clamps translation to the image bounds without exposing empty canvas or losing the image
+    And each non-overflowing axis remains centered and disables its corresponding pan controls
+    And computed dialog and image-canvas overflow produces no horizontal or vertical scrollbar gutter
+    And serialized Flow camera, selection, project bytes, Saved Draft, revision, and Undo depth remain unchanged
+
+  # Data layer directional Flow specification graph runtime 042
+  Scenario Outline: Data layer directional Flow specification graph runtime 042
+    Given the installed Cart viewer was opened from its exact View visual control
+    When an actual pointer begins inside the viewer and ends on its backdrop
+    Then the dialog remains open because the pointer endpoints do not form one backdrop click
+    When actual input closes the viewer through <close_route>
+    Then the dialog is absent and measured background Flow controls are operable
+    And document focus equals the exact View visual control
+    And serialized Flow camera, selection, project bytes, Saved Draft, revision, and Undo depth remain unchanged
+
+    Examples:
+      | close_route                                             |
+      | clicks the visible Close button                         |
+      | sends Escape                                            |
+      | presses and releases wholly on the dim dialog backdrop  |
