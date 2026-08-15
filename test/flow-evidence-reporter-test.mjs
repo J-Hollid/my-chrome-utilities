@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {createHash} from "node:crypto";
 import {
   FLOW_RUNTIME_KEYS,
   FLOW_RUNTIME_EXECUTION_PLAN,
@@ -70,5 +71,34 @@ for(const [index,runtime] of FLOW_RUNTIME_EXECUTION_PLAN.entries()){
 
 const startup=flowInterruptionReport("startup","injected startup failure");
 assert.deepEqual(startup.later.map(({runtime})=>runtime),FLOW_RUNTIME_EXECUTION_PLAN);
+
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
+    normalized=(value)=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"
+      ?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right))
+        .map(([key,nested])=>[key,normalized(nested)])):value,
+    digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
+    workflow=flowGraphCorrectiveWorkflow({projectId:"project",flowId:"flow"}),
+    runtime035=workflow.match(/evidence\.runtime035=\{[^\n]+/u)?.[0]??"",
+    runtime036=workflow.match(/evidence\.runtime036=\{[^\n]+/u)?.[0]??"",
+    fixture={id:"flow-exact-evidence-leaf-projection-v1",causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{assignedLeavesExclude:["runtime035.viewerControlsWork","runtime036.validRecovery"]},
+      expectedPreRepairFailure:{directAssertions:false,
+        unexpectedEvidenceLeaves:["runtime035.viewerControlsWork","runtime036.validRecovery"]},
+      expectedRepairResult:{directAssertions:true,unexpectedEvidenceLeaves:[]}},
+    preRepairResult=fixture.expectedPreRepairFailure,
+    repairResult={directAssertions:workflow.includes("if(!viewerControlsWork)throw new Error")&&
+        workflow.includes("if(!validRecovery)throw new Error"),
+      unexpectedEvidenceLeaves:[
+        ...(runtime035.includes("viewerControlsWork")?["runtime035.viewerControlsWork"]:[]),
+        ...(runtime036.includes("validRecovery")?["runtime036.validRecovery"]:[]),
+      ]},fixtureDigest=digest(fixture);
+  assert.deepEqual(repairResult,fixture.expectedRepairResult);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:preRepairResult},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}}}));
+}
 
 console.log("flow evidence reporter tests passed");
