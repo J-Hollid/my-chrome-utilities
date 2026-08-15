@@ -13,9 +13,9 @@ export interface StagedProjectBundleImport {sourceName:string;targetName:string;
 export interface ProjectLibraryTransportSink{write(chunk:Uint8Array):Promise<void>}
 export interface ProjectLibraryTransportProgress{phase:string;completed:number;total:number;message:string}
 export interface ProjectLibraryPreparedExport{formatVersion:number;mediaType:string;extension:string;estimatedBytes:number;write(sink:ProjectLibraryTransportSink,options?:{signal?:AbortSignal;onProgress?:(progress:ProjectLibraryTransportProgress)=>void}):Promise<void>;release():void;}
-export interface ProjectLibraryImportSource{name:string;size:number;text():Promise<string>}
+export interface ProjectLibraryImportSource{name:string;size:number;text():Promise<string>;arrayBuffer?():Promise<ArrayBuffer>}
 export interface ProjectLibraryInspectedImport{formatVersion:number;sourceName:string;targetName:string;projectId:string;entityCounts:Record<string,number>;referenceIntegrity:"valid"|"blocked";migrations:string[];blockers:{section:string;message:string}[];commit(input:{name:string;signal?:AbortSignal;onProgress?:(progress:ProjectLibraryTransportProgress)=>void}):Promise<void>;release():void;}
-export interface ProjectLibraryTransport{prepareExport(projectId:string):Promise<ProjectLibraryPreparedExport>;inspectImport(source:ProjectLibraryImportSource):Promise<ProjectLibraryInspectedImport>}
+export interface ProjectLibraryTransport{prepareExport(projectId:string):Promise<ProjectLibraryPreparedExport>;inspectImport(source:ProjectLibraryImportSource,options?:{signal?:AbortSignal;onProgress?:(progress:ProjectLibraryTransportProgress)=>void}):Promise<ProjectLibraryInspectedImport>}
 export interface ProjectLibraryTransportHost{projectLibraryTransport?:ProjectLibraryTransport}
 
 export function preferredProjectLibraryTransport(host:ProjectLibraryTransportHost,fallback:ProjectLibraryTransport):ProjectLibraryTransport{return host.projectLibraryTransport??fallback;}

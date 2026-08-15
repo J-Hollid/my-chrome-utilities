@@ -171,7 +171,7 @@ export function mountProjectLibraryUi(options) {
         await staged.commit({ name: nextName, onProgress: progress => { summary.textContent = progress.message; } });
         await options.settled?.();
         staged.release();
-        summary.textContent = `Imported ${nextName} as inactive project ${staged.projectId}. Its Published domain snapshot was remapped into a new local immutable revision. Open it explicitly to activate.`;
+        summary.textContent = staged.formatVersion >= 3 ? `Imported ${nextName} atomically as inactive project ${staged.projectId}, including its validated digest-addressed visual originals. Open it explicitly to activate.` : `Imported ${nextName} as inactive project ${staged.projectId}. Its Published domain snapshot was remapped into a new local immutable revision. Open it explicitly to activate.`;
         options.onChange?.();
     }
     catch (error) {
@@ -206,7 +206,7 @@ export function mountProjectLibraryUi(options) {
     importControl.addEventListener("click", () => file.click());
     file.addEventListener("change", async () => { const selected = file.files?.[0]; if (selected)
         try {
-            importReview(await transport.inspectImport(selected), importControl);
+            importReview(await transport.inspectImport(selected, { onProgress: progress => { status.textContent = progress.message; } }), importControl);
         }
         catch (error) {
             const dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), commit = button("Import as new project", "Import invalid project", () => { }), close = button("Close import review", "Close import review", () => closeDialog(dialog));

@@ -5082,8 +5082,8 @@ for (const changedPath of ["src/data-layer-assignment-routing-ui.ts",
   "src/data-layer-project-library-presentation-ui.ts"]) {
   const plan = planVerification(packs, { changedPaths:[changedPath], includeProperties:true });
   assert.deepEqual(plan.packIds, ["project_management"], `${changedPath} remains owner-only`);
-  assert.equal(plan.unitTasks.length, 5);
-  assert.equal(plan.propertyTasks.length, 4);
+  assert.equal(plan.unitTasks.length, 6);
+  assert.equal(plan.propertyTasks.length, 5);
   assert.equal(plan.sessionTasks.length, 1);
   assert.equal(plan.parserTasks.length, 6);
   assert.equal(plan.browserTasks.length + plan.observationTasks.length, 4);
@@ -10347,9 +10347,9 @@ function isolatedCheckpointToolchainRegression(context) {
     repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
 }
 function projectPortabilityRegistryRegression(context) {
-  const expectedPreRepairFailure = {boundaryRegistered:false, unitTaskCount:4,
+  const expectedPreRepairFailure = {boundaryRegistered:false, unitTaskCount:5,
     evidenceProfileConserved:false};
-  const expectedRepairResult = {boundaryRegistered:true, unitTaskCount:5,
+  const expectedRepairResult = {boundaryRegistered:true, unitTaskCount:6,
     evidenceProfileConserved:true};
   const observed = {boundaryRegistered:projectManagementPack.impactBoundaries.some(
     ({id}) => id === "project_flow_visual_asset_portability"),
@@ -10368,12 +10368,12 @@ function projectPortabilityRegistryRegression(context) {
     repairResult:{status:"passed",fixtureDigest,observed}};
 }
 function projectOwnerEvidenceContractRegression(context) {
-  const expectedPreRepairFailure = {ownerProfileUnitCount:4, conservationStepUnitCount:4};
-  const expectedRepairResult = {ownerProfileUnitCount:5, conservationStepUnitCount:5};
+  const expectedPreRepairFailure = {ownerProfileUnitCount:5, conservationStepUnitCount:5};
+  const expectedRepairResult = {ownerProfileUnitCount:6, conservationStepUnitCount:6};
   const observed = {
-    ownerProfileUnitCount:projectArchitectureHandlerSource.includes("[5 4 6 1 4]") ? 5 : 4,
+    ownerProfileUnitCount:projectArchitectureHandlerSource.includes("[6 5 6 1 4]") ? 6 : 5,
     conservationStepUnitCount:modularVerificationPacksFeatureSource.includes(
-      "all five unit files, four property files, six features") ? 5 : 4,
+      "all six unit files, five property files, six features") ? 6 : 5,
   };
   assert.deepEqual(observed, expectedRepairResult);
   const fixture = {id:"project-owner-evidence-contract-v1",
