@@ -5073,7 +5073,7 @@ for (const changedPath of ["src/data-layer-assignment-routing-ui.ts",
   "src/data-layer-project-library-presentation-ui.ts"]) {
   const plan = planVerification(packs, { changedPaths:[changedPath], includeProperties:true });
   assert.deepEqual(plan.packIds, ["project_management"], `${changedPath} remains owner-only`);
-  assert.equal(plan.unitTasks.length, 4);
+  assert.equal(plan.unitTasks.length, 5);
   assert.equal(plan.propertyTasks.length, 4);
   assert.equal(plan.sessionTasks.length, 1);
   assert.equal(plan.parserTasks.length, 6);
@@ -5132,7 +5132,10 @@ const conservedEvidenceProfile = (pack) => Object.fromEntries(exactEvidenceKeys.
 ]));
 const baseProjectManagementPack = vtd004BasePacks.find(({ id }) => id === "project_management");
 const projectEvidenceProfile = conservedEvidenceProfile(projectManagementPack);
-assert.deepEqual(projectEvidenceProfile, conservedEvidenceProfile(baseProjectManagementPack),
+assert.deepEqual(projectEvidenceProfile, {...conservedEvidenceProfile(baseProjectManagementPack),
+  unit:[...conservedEvidenceProfile(baseProjectManagementPack).unit.slice(0, 3),
+    "test/data-layer-project-library-transport-test.mjs",
+    ...conservedEvidenceProfile(baseProjectManagementPack).unit.slice(3)]},
 "all exact project-management evidence identities are conserved from the accepted base");
 const exactProjectPlan = planVerification(packs, {packIds:["project_management"], includeProperties:true});
 for (const [key, taskKey] of [["unit", "unitTasks"], ["property", "propertyTasks"],

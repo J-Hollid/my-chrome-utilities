@@ -74,6 +74,7 @@
       "test/data-layer-project-entity-lifecycle-test.mjs",
       "test/data-layer-page-authoring-test.mjs",
       "test/data-layer-assignment-routing-test.mjs",
+      "test/data-layer-project-library-transport-test.mjs",
       "test/data-layer-project-library-test.mjs"
     ],
     "property": [
@@ -212,6 +213,7 @@
         "id": "durable_runtime_controller",
         "prefixes": [
           "src/data-layer-durable-project-runtime.ts",
+          "src/durable-project/project-library-transport-v2.ts",
           "src/durable-project/persistence-readiness.ts",
           "src/durable-project/runtime-core.ts",
           "src/durable-project/runtime-helpers.ts"

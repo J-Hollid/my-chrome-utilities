@@ -60,6 +60,7 @@
                  (support/assert! (= (case (:id pack)
                                        "durable_project_repository" [5 3 2 1 2]
                                        "event-library" [9 1 8 3 1]
+                                       "project_management" [5 4 6 1 4]
                                        [4 4 6 1 4])
                                      (conj (mapv #(count (% pack))
                                                  [:unit :property :features :handlers])

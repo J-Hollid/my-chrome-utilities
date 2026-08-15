@@ -1,6 +1,7 @@
 import { canonicalSchemaFromJsonSchema, journalFreeCanonicalData } from "./data-layer-canonical-schema.js";
 import { createSpecificationProject, transactProject } from "./data-layer-specification-project.js";
 export const PROJECT_LIBRARY_STORAGE_KEY = "my-chrome-utilities.specification-project-library.v1";
+export function preferredProjectLibraryTransport(host, fallback) { return host.projectLibraryTransport ?? fallback; }
 const clone = (value) => structuredClone(value);
 const projectRecord = (state, revision, createdAt, lastModifiedAt, navigation) => ({ state: clone(state), revision, createdAt, lastModifiedAt, ...(navigation ? { navigation: clone(navigation) } : {}) });
 const entities = (project) => Object.values(project.collections).flat();
