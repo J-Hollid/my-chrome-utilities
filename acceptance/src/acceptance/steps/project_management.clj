@@ -36,6 +36,8 @@
    "Retail website has a newer Saved Draft above production baseline 13 and its schema manifest"
    "an older project bundle contains Project revision 3 and a schema at edit revision 2847 with 2847 change entries"
    "Retail website has one Flow Page attachment and one Event-occurrence attachment that share a project concept-visual asset"
+   "a supported version 2 JSON bundle embeds one base64 concept-visual body referenced by its Saved Draft and Published project"
+   "Retail website has several concept visuals shared across its Saved Draft and current Published project"
    "Retail website is active and <overview> contains <entity>"
    "Retail website is active and <overview> contains no entities"
    "the Pages overview contains Cart and unreferenced Landing"
@@ -72,6 +74,8 @@
    "production Retail website has Project revision 13, its schema manifest, and a newer Saved Draft"
    "an older bundle contains Project revision 3 and one canonical schema with edit revision 2847 and 2847 change entries"
    "production Retail website has one Flow Page attachment and one Event-occurrence attachment referencing the same project concept-visual asset"
+   "a supported version 2 JSON bundle embeds one base64 concept-visual body referenced by its Saved Draft and Published project"
+   "production Retail website has three concept visuals shared across its Saved Draft and current Published project"
    "production project-retail is active and the installed Inspector is closed"
    "production project-retail is active and <overview> has zero records"
    "production Pages contain Cart and unreferenced Landing"
@@ -93,6 +97,7 @@
 (defn- verify-model! []
   (when-not @model-verified?
     (doseq [test-file ["test/data-layer-project-library-test.mjs"
+                       "test/data-layer-flow-visual-asset-portability-test.mjs"
                        "test/data-layer-project-entity-lifecycle-test.mjs"
                        "test/data-layer-assignment-routing-test.mjs"]]
       (checked! "node" test-file))
@@ -109,7 +114,7 @@
 (def runtime-paths
   (set (concat [:installedBoundary]
                (map #(keyword (str "context" (format "%03d" %))) (concat (range 1 21) (range 22 28)))
-               (map #(keyword (str "portability" (format "%03d" %))) (range 1 9)))))
+               (map #(keyword (str "portability" (format "%03d" %))) (range 1 11)))))
 (defn complete-browser-evidence? [evidence]
   (boolean (and (map? evidence)
                 (= runtime-paths (set (keys evidence)))

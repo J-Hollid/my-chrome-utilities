@@ -1,9 +1,10 @@
 import { upgradePageGroupsToPropertySets, verifyPropertySetFlowSectionUpgrade } from "./data-layer-property-set-flow-section.js";
 import { repairCanonicalBooleanAllowedValues } from "./data-layer-canonical-schema-facets.js";
+import { createFlowVisualArchive, importFlowVisualArchive, migrateVersion2VisualAssets } from "./data-layer-flow-visual-asset-portability.js";
 export const DURABLE_PROJECT_DATABASE = "my-chrome-utilities.project-repository";
-export const DURABLE_PROJECT_DATABASE_VERSION = 6;
+export const DURABLE_PROJECT_DATABASE_VERSION = 7;
 export const LEGACY_PROJECT_KEYS = { library: "my-chrome-utilities.specification-project-library.v1", active: "my-chrome-utilities.specification-project.v1", navigation: "my-chrome-utilities.specification-project-navigation.v1", schemas: "my-chrome-utilities.schema-library.v1" };
-export const DURABLE_PROJECT_STORES = ["projectMetadata", "projectRoots", "projectEntityMetadata", "projectEntities", "savedSchemas", "flowGraphs", "fixtures", "releases", "projectRevisions", "productionManifests", "schemaRevisions", "changeFeed", "settings", "migrationReceipts", "migrationBackups"];
+export const DURABLE_PROJECT_STORES = ["projectMetadata", "projectRoots", "projectEntityMetadata", "projectEntities", "savedSchemas", "flowGraphs", "fixtures", "releases", "projectRevisions", "productionManifests", "schemaRevisions", "changeFeed", "settings", "migrationReceipts", "migrationBackups", "visualAssetMetadata", "visualAssetBodies", "visualAssetThumbnails"];
 export function durableProjectRouteForWorkspace(collectionKind, entityId) { const dependencies = { pages: ["profiles", "propertySets", "applicabilitySets", "assignments"], propertySets: ["profiles", "pages", "applicabilitySets", "assignments"], events: ["profiles", "applicabilitySets", "assignments", "flows"], flows: ["profiles", "pages", "propertySets", "events", "applicabilitySets", "assignments"], profiles: ["applicabilitySets", "assignments"], assignments: ["profiles", "pages", "propertySets", "events", "flows", "applicabilitySets"], fixtures: ["profiles", "pages", "propertySets", "events", "flows"] }, schemaWorkspace = ["profiles", "pages", "propertySets", "events"].includes(collectionKind); return { collectionKind, ...(entityId ? { entityId } : {}), collectionKinds: dependencies[collectionKind] ?? [], includeFlowGraphs: schemaWorkspace || collectionKind === "flows" || collectionKind === "assignments", includeFixtures: collectionKind === "fixtures" }; }
 const clone = (value) => structuredClone(value);
 const upgradeSeparatedProjectState = (state) => { let sequence = 0; if (state.draft)
@@ -121,9 +122,12 @@ function repairCanonicalBooleanValuesInProject(project) {
     return { project: next ?? project, repairCount };
 }
 async function checksum(value) { const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)); return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join(""); }
+async function blobDigest(value) { const digest = await crypto.subtle.digest("SHA-256", await value.arrayBuffer()); return `sha256:${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`; }
 function changed(base, next, path = []) {
     if (same(base, next))
         return [];
+    if (record(base) && record(next) && base.body instanceof Blob && next.body instanceof Blob)
+        return [{ path, before: clone(base), after: clone(next) }];
     if (record(base) && record(next)) {
         const keys = new Set([...Object.keys(base), ...Object.keys(next)]);
         return [...keys].flatMap((key) => changed(base[key], next[key], [...path, key]));
@@ -148,7 +152,7 @@ function putPath(value, path, replacement) {
     return root;
 }
 function projectParts(state) {
-    const project = clone(state.project), { collections, documentationFlowGraphs, releases = [], ...rootProject } = project, parts = new Map(), projectId = project.id, add = (store, key, value) => parts.set(`${store}/${key}`, { identity: { store, key }, value: clone(value) });
+    const project = clone(state.project), { collections, documentationFlowGraphs, releases = [], conceptVisualAssets = [], ...rootProject } = project, parts = new Map(), projectId = project.id, add = (store, key, value) => parts.set(`${store}/${key}`, { identity: { store, key }, value: clone(value) });
     add("projectRoots", projectId, { project: rootProject, collectionKinds: Object.keys(collections), hasDocumentationFlowGraphs: documentationFlowGraphs !== undefined });
     for (const [kind, entries] of Object.entries(collections)) {
         for (const [index, entity] of entries.entries()) {
@@ -161,6 +165,17 @@ function projectParts(state) {
         add("flowGraphs", `${projectId}:${flowId}`, { projectId, flowId, graph });
     for (const release of releases)
         add("releases", `${projectId}:${release.id}`, { projectId, release });
+    for (const { bytes: encoded, ...metadata } of conceptVisualAssets) {
+        const identity = `${projectId}:${metadata.id}`;
+        add("visualAssetMetadata", identity, metadata);
+        if (encoded) {
+            const match = /^data:([^;]+);base64,(.+)$/.exec(encoded);
+            if (!match || match[1] !== metadata.mediaType)
+                throw new DOMException(`Visual ${metadata.id} has unreadable embedded bytes.`, "DataError");
+            const raw = atob(match[2]), body = Uint8Array.from(raw, character => character.charCodeAt(0));
+            add("visualAssetBodies", identity, { digest: metadata.digest, body: new Blob([body.buffer], { type: metadata.mediaType }) });
+        }
+    }
     return parts;
 }
 function patchesBetween(base, next) {
@@ -211,7 +226,7 @@ class IndexedDbBackend {
     clearTrace() { this.reads = []; this.writes = []; }
 }
 const allStores = [...DURABLE_PROJECT_STORES];
-const replaceableProjectStores = ["projectEntityMetadata", "projectEntities", "flowGraphs", "fixtures", "releases"];
+const replaceableProjectStores = ["projectEntityMetadata", "projectEntities", "flowGraphs", "fixtures", "releases", "visualAssetMetadata"];
 async function replaceProjectParts(transaction, projectId, parts) {
     const expected = new Set([...parts.values()].map(({ identity }) => `${identity.store}/${identity.key}`)), prefix = projectPrefix(projectId);
     for (const store of replaceableProjectStores)
@@ -279,6 +294,32 @@ export class DurableProjectRepository {
     subscribeProjectMetadata(listener) { this.metadataListeners.add(listener); return () => this.metadataListeners.delete(listener); }
     subscribeActiveContext(listener) { this.activeListeners.add(listener); return () => this.activeListeners.delete(listener); }
     subscribeSavedSchemas(listener) { this.schemaListeners.add(listener); return () => this.schemaListeners.delete(listener); }
+    async listConceptVisualAssetMetadata(projectId) { return this.backend.transaction(["visualAssetMetadata"], "readonly", async (transaction) => (await transaction.getPrefix("visualAssetMetadata", `${projectId}:`)).map(({ value }) => clone(value)).sort((left, right) => left.id.localeCompare(right.id))); }
+    async loadConceptVisualAssetBody(projectId, assetId) { return this.backend.transaction(["visualAssetBodies"], "readonly", async (transaction) => { const record = await transaction.get("visualAssetBodies", `${projectId}:${assetId}`); if (!record?.body)
+        throw new DOMException(`Original visual body ${assetId} is unavailable.`, "NotFoundError"); return record.body.slice(0, record.body.size, record.body.type); }); }
+    async replaceConceptVisualAssets(projectId, assets) {
+        const ids = new Set();
+        for (const { metadata, body } of assets) {
+            if (ids.has(metadata.id))
+                throw new DOMException(`Duplicate visual asset identity ${metadata.id}.`, "DataError");
+            ids.add(metadata.id);
+            if (body.size !== metadata.byteLength || await blobDigest(body) !== metadata.digest)
+                throw new DOMException(`Visual ${metadata.id} body does not match its metadata.`, "DataError");
+        }
+        this.fail("Save concept visual assets");
+        await this.backend.transaction(["visualAssetMetadata", "visualAssetBodies", "visualAssetThumbnails"], "readwrite", async (transaction) => { const prefix = `${projectId}:`, existing = await transaction.getPrefix("visualAssetMetadata", prefix), wanted = new Set(assets.map(({ metadata }) => `${prefix}${metadata.id}`)); for (const { key } of existing)
+            if (!wanted.has(key)) {
+                await transaction.delete("visualAssetMetadata", key);
+                await transaction.delete("visualAssetBodies", key);
+                await transaction.delete("visualAssetThumbnails", key);
+            } for (const { metadata, body } of assets) {
+            const identity = `${prefix}${metadata.id}`, prior = await transaction.get("visualAssetMetadata", identity);
+            if (!same(prior, metadata))
+                await transaction.put("visualAssetMetadata", identity, clone(metadata));
+            if (prior?.digest !== metadata.digest || !await transaction.get("visualAssetBodies", identity))
+                await transaction.put("visualAssetBodies", identity, { digest: metadata.digest, body: body.slice(0, body.size, body.type) });
+        } });
+    }
     fail(label) { if (!this.failure)
         return; const names = { "quota exceeded": "QuotaExceededError", "transaction aborted": "AbortError", "repository unavailable": "InvalidStateError", "corrupt record": "DataError", "verification failure": "OperationError" }, error = new DOMException(`${label} was not committed: ${this.failure}. The last Saved Draft is unchanged.`, names[this.failure]); throw error; }
     notify(notification) { for (const listener of this.listeners)
@@ -364,7 +405,7 @@ export class DurableProjectRepository {
     async deleteProject(input) { this.fail(input.label); await this.backend.transaction(allStores, "readwrite", async (transaction) => { const active = await transaction.get("settings", "activeProjectId"), metadata = await transaction.get("projectMetadata", input.projectId); if (!metadata)
         throw new Error(`Unknown durable project ${input.projectId}.`); if (active === input.projectId)
         throw new Error("Switch to another project before deleting the active project."); if (metadata.draftToken !== input.baseToken)
-        throw new DOMException(`${input.label} requires current Draft token ${metadata.draftToken}.`, "AbortError"); for (const store of [...replaceableProjectStores, "projectRevisions", "productionManifests", "schemaRevisions"])
+        throw new DOMException(`${input.label} requires current Draft token ${metadata.draftToken}.`, "AbortError"); for (const store of [...replaceableProjectStores, "projectRevisions", "productionManifests", "schemaRevisions", "visualAssetMetadata", "visualAssetBodies", "visualAssetThumbnails"])
         for (const { key } of await transaction.getPrefix(store, projectPrefix(input.projectId)))
             await transaction.delete(store, key); await transaction.delete("changeFeed", input.projectId); await transaction.delete("projectRoots", input.projectId); await transaction.delete("projectMetadata", input.projectId); }); }
     async persistCanonicalRepairs(repairs) { if (!repairs.length)
@@ -373,11 +414,11 @@ export class DurableProjectRepository {
             return false; for (const repair of repairs)
         await transaction.put(repair.store, repair.key, repair.after); return true; }); }
     async loadProject(projectId) {
-        const result = await this.backend.transaction(["projectMetadata", "projectRoots", "projectEntities", "flowGraphs", "fixtures", "releases"], "readonly", async (transaction) => {
+        const result = await this.backend.transaction(["projectMetadata", "projectRoots", "projectEntities", "flowGraphs", "fixtures", "releases", "visualAssetMetadata"], "readonly", async (transaction) => {
             const metadata = await transaction.get("projectMetadata", projectId), root = await transaction.get("projectRoots", projectId);
             if (!metadata || !root)
                 throw new Error(`Durable project ${projectId} is unavailable.`);
-            const prefix = projectPrefix(projectId), storedEntityRecords = await transaction.getPrefix("projectEntities", prefix), fixtureRecords = await transaction.getPrefix("fixtures", prefix), graphs = await transaction.getPrefix("flowGraphs", prefix), releases = await transaction.getPrefix("releases", prefix), collections = Object.fromEntries(root.collectionKinds.map(kind => [kind, []])), repairs = [];
+            const prefix = projectPrefix(projectId), storedEntityRecords = await transaction.getPrefix("projectEntities", prefix), fixtureRecords = await transaction.getPrefix("fixtures", prefix), graphs = await transaction.getPrefix("flowGraphs", prefix), releases = await transaction.getPrefix("releases", prefix), visualAssets = await transaction.getPrefix("visualAssetMetadata", prefix), collections = Object.fromEntries(root.collectionKinds.map(kind => [kind, []])), repairs = [];
             let canonicalRepairCount = 0;
             const entityRecords = [];
             for (const record of storedEntityRecords) {
@@ -389,14 +430,14 @@ export class DurableProjectRepository {
             }
             for (const { value } of [...entityRecords, ...fixtureRecords].sort(byDurableIndex))
                 (collections[value.kind] ??= []).push(clone(value.entity));
-            const project = { ...clone(root.project), collections, ...(root.hasDocumentationFlowGraphs ? { documentationFlowGraphs: Object.fromEntries(graphs.map(({ value }) => [value.flowId, clone(value.graph)])) } : {}), releases: releases.map(({ value }) => clone(value.release)) }, state = { project, ...(metadata.draft ? { draft: clone(metadata.draft) } : {}), history: { undo: [], redo: [] } };
+            const project = { ...clone(root.project), collections, ...(root.hasDocumentationFlowGraphs ? { documentationFlowGraphs: Object.fromEntries(graphs.map(({ value }) => [value.flowId, clone(value.graph)])) } : {}), ...(visualAssets.length ? { conceptVisualAssets: visualAssets.map(({ value }) => clone(value)) } : {}), releases: releases.map(({ value }) => clone(value.release)) }, state = { project, ...(metadata.draft ? { draft: clone(metadata.draft) } : {}), history: { undo: [], redo: [] } };
             return { loaded: { state, draftToken: metadata.draftToken, draftSequence: metadata.draftSequence ?? 0, publishedRevision: metadata.publishedRevision, lastSavedAt: metadata.lastSavedAt, canonicalRepairCount, ...(metadata.navigation ? { navigation: clone(metadata.navigation) } : {}) }, repairs };
         });
         return await this.persistCanonicalRepairs(result.repairs) ? result.loaded : this.loadProject(projectId);
     }
     async loadProjectRoute(projectId, route) { return this.loadVisibleProjectRoute(projectId, route); }
     async loadVisibleProjectRoute(projectId, route) {
-        const result = await this.backend.transaction(["projectMetadata", "projectRoots", "projectEntityMetadata", "projectEntities", "flowGraphs", "fixtures", "releases"], "readonly", async (transaction) => {
+        const result = await this.backend.transaction(["projectMetadata", "projectRoots", "projectEntityMetadata", "projectEntities", "flowGraphs", "fixtures", "releases", "visualAssetMetadata"], "readonly", async (transaction) => {
             const metadata = await transaction.get("projectMetadata", projectId), root = await transaction.get("projectRoots", projectId);
             if (!metadata || !root)
                 throw new Error(`Durable project ${projectId} is unavailable.`);
@@ -428,14 +469,14 @@ export class DurableProjectRepository {
                 else
                     target.push(clone(value.entity));
             }
-            const releases = route.includeReleases ? await transaction.getPrefix("releases", projectPrefix(projectId)) : [], project = { ...clone(root.project), collections, ...(root.hasDocumentationFlowGraphs && route.includeFlowGraphs ? { documentationFlowGraphs: Object.fromEntries(graphs.map(({ value }) => [value.flowId, clone(value.graph)])) } : {}), releases: releases.map(({ value }) => clone(value.release)) };
+            const releases = route.includeReleases ? await transaction.getPrefix("releases", projectPrefix(projectId)) : [], visualAssets = await transaction.getPrefix("visualAssetMetadata", projectPrefix(projectId)), project = { ...clone(root.project), collections, ...(root.hasDocumentationFlowGraphs && route.includeFlowGraphs ? { documentationFlowGraphs: Object.fromEntries(graphs.map(({ value }) => [value.flowId, clone(value.graph)])) } : {}), ...(visualAssets.length ? { conceptVisualAssets: visualAssets.map(({ value }) => clone(value)) } : {}), releases: releases.map(({ value }) => clone(value.release)) };
             return { loaded: { state: { project, ...(metadata.draft ? { draft: clone(metadata.draft) } : {}), history: { undo: [], redo: [] } }, draftToken: metadata.draftToken, draftSequence: metadata.draftSequence ?? 0, publishedRevision: metadata.publishedRevision, lastSavedAt: metadata.lastSavedAt, canonicalRepairCount, ...(metadata.navigation ? { navigation: clone(metadata.navigation) } : {}) }, repairs };
         });
         return await this.persistCanonicalRepairs(result.repairs) ? result.loaded : this.loadVisibleProjectRoute(projectId, route);
     }
     async saveDraft(command) {
         this.fail(command.label);
-        const stores = ["projectMetadata", "projectRoots", "projectEntityMetadata", "projectEntities", "flowGraphs", "fixtures", "releases", "changeFeed"], result = await this.backend.transaction(stores, "readwrite", async (transaction) => {
+        const stores = ["projectMetadata", "projectRoots", "projectEntityMetadata", "projectEntities", "flowGraphs", "fixtures", "releases", "visualAssetMetadata", "visualAssetBodies", "changeFeed"], result = await this.backend.transaction(stores, "readwrite", async (transaction) => {
             const metadata = await transaction.get("projectMetadata", command.projectId);
             if (!metadata)
                 throw new Error(`Durable project ${command.projectId} is unavailable.`);
@@ -805,6 +846,22 @@ export class DurableProjectRepository {
     async abandonLegacyMigration(owner) { await this.backend.transaction(["settings"], "readwrite", async (transaction) => { const lock = await transaction.get("settings", "legacyMigrationLock"); if (lock?.owner === owner)
         await transaction.delete("settings", "legacyMigrationLock"); }); }
     async exportProject(projectId) { const loaded = await this.loadProject(projectId), publishedProject = loaded.publishedRevision ? (await this.loadPublishedRevision(projectId, loaded.publishedRevision)).state.project : undefined, manifest = await this.currentProductionManifest(projectId), schemaSnapshots = manifest ? await Promise.all(manifest.schemas.map(entry => this.loadProductionSchema({ projectId, projectRevision: manifest.projectRevision, schemaId: entry.schemaId, schemaRevision: entry.schemaRevision, fingerprint: entry.fingerprint }))) : [], currentRelease = loaded.state.project.releases.find(({ revision }) => revision === loaded.publishedRevision), draftProject = { ...clone(loaded.state.project), releases: currentRelease ? [clone(currentRelease)] : [], ...(currentRelease ? { currentRelease: currentRelease.id } : {}) }, productionProjectSnapshot = publishedProject ? { ...clone(publishedProject), releases: currentRelease ? [clone(currentRelease)] : [], ...(currentRelease ? { currentRelease: currentRelease.id } : {}) } : undefined; return { format: "my-chrome-utilities.durable-project-bundle", version: 2, sourceProjectId: projectId, sourceName: loaded.state.project.name, publishedRevision: loaded.publishedRevision, baseProjectRevision: loaded.publishedRevision, ...(productionProjectSnapshot ? { publishedProject: productionProjectSnapshot } : {}), ...(manifest ? { productionManifest: clone(manifest), schemaSnapshots: clone(schemaSnapshots) } : {}), project: draftProject, draft: clone(loaded.state.draft) }; }
+    async exportProjectArchive(projectId) { const loaded = await this.loadProject(projectId), publishedProject = loaded.publishedRevision ? (await this.loadPublishedRevision(projectId, loaded.publishedRevision)).state.project : undefined, metadata = await this.listConceptVisualAssetMetadata(projectId); let project = loaded.state.project, published = publishedProject, assets = await Promise.all(metadata.map(async (value) => ({ metadata: value, body: await this.loadConceptVisualAssetBody(projectId, value.id) }))); if (!assets.length && Array.isArray(project.conceptVisualAssets) && project.conceptVisualAssets.some(asset => record(asset) && typeof asset.bytes === "string")) {
+        const migrated = await migrateVersion2VisualAssets({ format: "my-chrome-utilities.durable-project-bundle", version: 2, project, ...(published ? { publishedProject: published } : {}) }, { projectId, id: oldId => oldId });
+        project = migrated.project;
+        published = migrated.publishedProject;
+        assets = migrated.assets;
+    } return createFlowVisualArchive({ project, ...(published ? { publishedProject: published } : {}), assets }); }
+    async importProjectArchive(archive, input) { const staged = await importFlowVisualArchive(archive), sourceId = staged.project.id, publishedRevision = Math.max(0, ...staged.project.releases.map(({ revision }) => revision)), bundle = { format: "my-chrome-utilities.durable-project-bundle", version: 2, sourceProjectId: sourceId, sourceName: staged.project.name, publishedRevision, baseProjectRevision: publishedRevision, project: staged.project, ...(staged.publishedProject ? { publishedProject: staged.publishedProject } : {}) }, assets = staged.assets.map(({ metadata, body }) => ({ metadata: { ...metadata, id: `${input.projectId}:${metadata.id}` }, body })); const imported = await this.importProject(bundle, input); try {
+        await this.replaceConceptVisualAssets(input.projectId, assets);
+        return imported;
+    }
+    catch (error) {
+        const metadata = (await this.listProjectMetadata()).find(({ projectId }) => projectId === input.projectId);
+        if (metadata)
+            await this.deleteProject({ projectId: input.projectId, baseToken: metadata.draftToken, label: "Roll back incomplete project archive import" });
+        throw error;
+    } }
     async exportRecoveryBundle(projectId) { const project = await this.exportProject(projectId), metadata = (await this.listProjectMetadata()).find(entry => entry.projectId === projectId), migrationBackup = await this.migrationBackup(); return { format: "my-chrome-utilities.durable-recovery-bundle", version: 1, createdAt: this.options.now(), project, metadata: metadata ? clone(metadata) : undefined, migrationBackup }; }
     async exportRepositoryRecoveryBundle() { const metadata = await this.listProjectMetadata(), projects = await Promise.all(metadata.map(({ projectId }) => this.exportProject(projectId))), savedSchemas = await this.savedSchemaRecords(), internal = await this.backend.transaction(["projectRevisions", "productionManifests", "schemaRevisions", "settings", "migrationReceipts", "migrationBackups"], "readonly", async (transaction) => ({ projectRevisions: await transaction.getAll("projectRevisions"), productionManifests: await transaction.getAll("productionManifests"), schemaRevisions: await transaction.getAll("schemaRevisions"), settings: await transaction.getAll("settings"), migrationReceipts: await transaction.getAll("migrationReceipts"), migrationBackups: await transaction.getAll("migrationBackups") })); return { format: "my-chrome-utilities.durable-repository-recovery-bundle", version: 2, createdAt: this.options.now(), metadata: clone(metadata), projects: clone(projects), savedSchemas: clone(savedSchemas), ...clone(internal) }; }
     async importProject(bundle, input) {
