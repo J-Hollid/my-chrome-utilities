@@ -1,4 +1,7 @@
-import { runBrowserTargetSession } from "../support/browser-target-session.mjs";
+import {
+  globalStyleContainmentEvidence,
+  runBrowserTargetSession,
+} from "../support/browser-target-session.mjs";
 
 const surfaces = {
   studio: {
@@ -30,7 +33,7 @@ const surface = (surfaceName, observationKey) => {
       description:`initialized ${surfaceName} style surface`,
     },
     run:async({ socket, evaluate }) => {
-      const probeSource = function(expected, expectedClass, regions, forced, stackedNarrow) {
+      const probeSource = function(expected, expectedClass, regions, forced, stackedNarrow, containmentEvidence) {
         const sheets = [...document.styleSheets].map((sheet) =>
           sheet.href ? new URL(sheet.href).pathname.split("/").pop() : "(inline)");
         const body = document.body, root = document.documentElement;
@@ -50,13 +53,14 @@ const surface = (surfaceName, observationKey) => {
           .sort((left, right) => left.rect.top - right.rect.top)
           .every((left, index, ordered) => index === 0 ||
             ordered[index - 1].rect.bottom <= left.rect.top + 2);
-        const fullViewportContained = regionValues.every(({ rect }) => rect && rect.left >= -2 &&
+        const viewportContained = regionValues.every(({ rect }) => rect && rect.left >= -2 &&
           rect.top >= -2 && rect.right <= innerWidth + 2 && rect.bottom <= innerHeight + 2);
         // Studio's narrow layout is intentionally a vertically stacked document. Its
         // regions may extend below the 900px viewport, so narrow containment is
         // horizontal containment plus ordered, non-overlapping vertical regions.
-        const narrowStacked = stackedNarrow && innerWidth <= 600;
-        const contained = narrowStacked ? horizontalContained && verticalOrdered : fullViewportContained;
+        const {contained,fullViewportContained} = containmentEvidence({
+          stackedNarrow,width:innerWidth,horizontalContained,verticalOrdered,viewportContained,
+        });
         const nonOverlapping = regionValues.every((left, index) => regionValues.slice(index + 1).every((right) => {
           const a = left.rect, b = right.rect;
           if (!a || !b) return true;
@@ -98,7 +102,7 @@ const surface = (surfaceName, observationKey) => {
         });
         await socket().call("Input.dispatchKeyEvent", { type:"keyDown", key:"Tab", code:"Tab", windowsVirtualKeyCode:9 });
         await socket().call("Input.dispatchKeyEvent", { type:"keyUp", key:"Tab", code:"Tab", windowsVirtualKeyCode:9 });
-        const result = await evaluate(socket(), `return (${probeSource.toString()})(${JSON.stringify(definition.sheets)},${JSON.stringify(definition.expectedClass)},${JSON.stringify(definition.regions)},${JSON.stringify(forcedColors)},${JSON.stringify(surfaceName === "studio")})`);
+        const result = await evaluate(socket(), `return (${probeSource.toString()})(${JSON.stringify(definition.sheets)},${JSON.stringify(definition.expectedClass)},${JSON.stringify(definition.regions)},${JSON.stringify(forcedColors)},${JSON.stringify(surfaceName === "studio")},(${globalStyleContainmentEvidence.toString()}))`);
         if (result === undefined) throw new Error("Global style smoke probe returned no observation");
         return result;
       };

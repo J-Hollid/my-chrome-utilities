@@ -2,6 +2,35 @@ import assert from "node:assert/strict";
 import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
+import {globalStyleContainmentEvidence} from "./support/browser-target-session.mjs";
+
+assert.deepEqual(globalStyleContainmentEvidence({
+  stackedNarrow:true,
+  width:360,
+  horizontalContained:true,
+  verticalOrdered:true,
+  viewportContained:false,
+}),{contained:true,fullViewportContained:true},
+"a deliberately stacked narrow Studio document satisfies its horizontal and ordering containment policy");
+
+assert.deepEqual(globalStyleContainmentEvidence({
+  stackedNarrow:false,
+  width:1280,
+  horizontalContained:true,
+  verticalOrdered:false,
+  viewportContained:true,
+}),{contained:true,fullViewportContained:true},
+"a bounded desktop shell retains literal full-viewport containment");
+
+assert.deepEqual(globalStyleContainmentEvidence({
+  stackedNarrow:true,
+  width:360,
+  horizontalContained:false,
+  verticalOrdered:true,
+  viewportContained:false,
+}),{contained:false,fullViewportContained:false},
+"a narrow stacked document still fails when it escapes horizontally");
+
 const staticFiles = [
   "manifest.json",
   "side-panel.html",

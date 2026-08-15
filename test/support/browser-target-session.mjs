@@ -5,6 +5,20 @@ function parseJsonEnvironment(environment, name, fallback) {
   catch (error) { throw new Error(`${name} must contain JSON: ${error.message}`); }
 }
 
+export function globalStyleContainmentEvidence({
+  stackedNarrow,
+  width,
+  horizontalContained,
+  verticalOrdered,
+  viewportContained,
+}) {
+  const narrowStacked = stackedNarrow && width <= 600;
+  const contained = narrowStacked
+    ? horizontalContained && verticalOrdered
+    : viewportContained;
+  return {contained,fullViewportContained:contained};
+}
+
 export function selectedBrowserTargetConfigurations(environment, knownTargetIds) {
   const known = new Set(knownTargetIds);
   const ids = parseJsonEnvironment(environment, "SWARMFORGE_BROWSER_TARGET_IDS", []);
