@@ -2,7 +2,7 @@ import {saveStoredGraph,storedGraph,type DocumentaryPageFrameRecord} from "../da
 import {transactProject,type IdFactory,type ProjectEntity,type ProjectState,type SpecificationProject} from "../data-layer-specification-project.js";
 import {pruneUnreferencedFlowConceptVisualAssets} from "./concept-visual-references.js";
 
-export const FLOW_CONCEPT_VISUAL_LIMITS={sourceBytes:5*1024*1024,dimension:4096,pixels:16_000_000,projectBytes:25*1024*1024} as const;
+export const FLOW_CONCEPT_VISUAL_LIMITS={sourceBytes:5*1024*1024,dimension:4096,pixels:16_000_000} as const;
 export type FlowConceptVisualMediaType="image/png"|"image/jpeg"|"image/webp";
 export interface FlowConceptVisualRaster {mediaType:FlowConceptVisualMediaType;width:number;height:number;byteLength:number;bytes:string;digest:string}
 export interface FlowConceptVisualAsset extends FlowConceptVisualRaster {id:string}
@@ -11,12 +11,12 @@ export type FlowConceptVisualTarget={kind:"page-frame"|"occurrence";id:string};
 type VisualProject=SpecificationProject&{conceptVisualAssets?:FlowConceptVisualAsset[]};
 type VisualRecord=(DocumentaryPageFrameRecord|ProjectEntity)&{conceptVisual?:FlowConceptVisualAttachment};
 
-export function validateFlowConceptVisualSource(input:FlowConceptVisualRaster&{sourceByteLength:number;projectStoredBytes?:number}):{valid:true}|{valid:false;diagnostic:string}{
+export function validateFlowConceptVisualSource(input:FlowConceptVisualRaster&{sourceByteLength:number;availableStorageBytes?:number}):{valid:true}|{valid:false;diagnostic:string}{
   if(!(["image/png","image/jpeg","image/webp"] as string[]).includes(input.mediaType))return{valid:false,diagnostic:"Choose a PNG, JPEG, or WebP image"};
   if(input.sourceByteLength>FLOW_CONCEPT_VISUAL_LIMITS.sourceBytes)return{valid:false,diagnostic:"The visual is too large"};
   if(input.width>FLOW_CONCEPT_VISUAL_LIMITS.dimension||input.height>FLOW_CONCEPT_VISUAL_LIMITS.dimension)return{valid:false,diagnostic:"The visual dimensions exceed 4096 pixels"};
   if(input.width*input.height>FLOW_CONCEPT_VISUAL_LIMITS.pixels)return{valid:false,diagnostic:"The visual exceeds 16 megapixels"};
-  if((input.projectStoredBytes??0)+input.byteLength>FLOW_CONCEPT_VISUAL_LIMITS.projectBytes)return{valid:false,diagnostic:"This project has reached its 25 MiB visual limit"};
+  if(input.availableStorageBytes!==undefined&&input.byteLength>input.availableStorageBytes)return{valid:false,diagnostic:"Available durable storage is too small for this visual; no project data was changed"};
   return{valid:true};
 }
 

@@ -54,19 +54,38 @@ export function mountProjectLibraryUi(options) {
         void Promise.resolve(options.settled?.()).then(() => options.openStudio(`specification-builder.html?project=${encodeURIComponent(projectId)}&route=${encodeURIComponent(route)}`), error => { status.textContent = `Specification Studio was not opened because the pending durable save failed. ${error instanceof Error ? error.message : String(error)}`; });
         return;
     } void prepare(projectId).then(() => { persist(activateProject(library, projectId, now), true); return options.settled?.(); }).then(() => options.openStudio(`specification-builder.html?project=${encodeURIComponent(projectId)}&route=${encodeURIComponent(route)}`), error => { status.textContent = `Project switch was not committed. ${error instanceof Error ? error.message : String(error)}`; }); };
-    const download = async (projectId) => { const record = library.projects[projectId]; status.textContent = `Preparing durable export for ${record.state.project.name}…`; let prepared; try {
+    const download = async (projectId) => { const record = library.projects[projectId], baseName = record.state.project.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase(); status.textContent = `Preparing durable export for ${record.state.project.name}…`; let prepared; try {
         prepared = await transport.prepareExport(projectId);
-        const chunks = [];
-        await prepared.write({ write: async (chunk) => { chunks.push(Uint8Array.from(chunk).buffer); } }, { onProgress: progress => { status.textContent = progress.message; } });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(new Blob(chunks, { type: prepared.mediaType }));
-        link.download = `${record.state.project.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-project.${prepared.extension}`;
-        link.click();
-        URL.revokeObjectURL(link.href);
-        status.textContent = `Exported ${record.state.project.name} with its Draft, domain Published snapshot, releases, fixtures, and no window Undo/Redo.`;
+        const archive = prepared.formatVersion >= 3, picker = archive ? globalThis.showSaveFilePicker : undefined;
+        if (archive)
+            status.textContent = `Estimated export size ${prepared.estimatedBytes} bytes. Choose a destination or use the bounded browser download fallback.`;
+        if (picker) {
+            const handle = await picker({ suggestedName: `${baseName}-project.${prepared.extension}`, types: [{ description: "Project archive", accept: { [prepared.mediaType]: [`.${prepared.extension}`] } }] }), writable = await handle.createWritable();
+            try {
+                await prepared.write({ write: chunk => writable.write(chunk) }, { onProgress: progress => { status.textContent = progress.message; } });
+                await writable.close();
+            }
+            catch (error) {
+                await writable.abort?.();
+                throw error;
+            }
+        }
+        else {
+            const fallbackLimit = 256 * 1024 * 1024;
+            if (archive && prepared.estimatedBytes > fallbackLimit)
+                throw new DOMException(`The estimated ${prepared.estimatedBytes}-byte archive exceeds the ${fallbackLimit}-byte browser-download fallback. Choose a browser with writable-file support.`, "QuotaExceededError");
+            const chunks = [];
+            await prepared.write({ write: async (chunk) => { chunks.push(Uint8Array.from(chunk).buffer); } }, { onProgress: progress => { status.textContent = progress.message; } });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(new Blob(chunks, { type: prepared.mediaType }));
+            link.download = `${baseName}-project.${prepared.extension}`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+        status.textContent = archive ? `Exported ${record.state.project.name} with its Draft, Published snapshot, digest-addressed originals, and no thumbnail cache or window Undo/Redo.` : `Exported ${record.state.project.name} with its Draft, domain Published snapshot, releases, fixtures, and no window Undo/Redo.`;
     }
     catch (error) {
-        status.textContent = `Project export failed. ${error instanceof Error ? error.message : String(error)}`;
+        status.textContent = `Project export failed or was cancelled. ${error instanceof Error ? error.message : String(error)}`;
     }
     finally {
         prepared?.release();
@@ -192,7 +211,7 @@ export function mountProjectLibraryUi(options) {
         catch (error) {
             const dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), commit = button("Import as new project", "Import invalid project", () => { }), close = button("Close import review", "Close import review", () => closeDialog(dialog));
             heading.textContent = "Review project import";
-            summary.textContent = `Import was not committed. ${error instanceof Error ? error.message : String(error)} Choose a readable, supported durable project bundle and review it again.`;
+            summary.textContent = `Import was not committed. ${error instanceof Error ? error.message : String(error)} Choose a readable version 2 JSON bundle or version 3 ZIP archive and review it again.`;
             commit.disabled = true;
             dialog.append(heading, summary, commit, close);
             document.body.append(dialog);

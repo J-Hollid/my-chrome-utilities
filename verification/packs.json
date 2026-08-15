@@ -8,6 +8,8 @@
       "src/data-layer-assignment-routing.ts",
       "src/data-layer-assignment-routing-ui.ts",
       "src/flow-visual-asset-portability.ts",
+      "src/flow-visual-asset-validation.ts",
+      "src/flow-visual-zip.ts",
       "src/data-layer-project-library.ts",
       "src/data-layer-project-library-ui.ts",
       "src/data-layer-project-library-presentation-ui.ts"
@@ -49,7 +51,9 @@
       {
         "id": "project_flow_visual_asset_portability",
         "prefixes": [
-          "src/flow-visual-asset-portability.ts"
+          "src/flow-visual-asset-portability.ts",
+          "src/flow-visual-asset-validation.ts",
+          "src/flow-visual-zip.ts"
         ],
         "propagateDependants": true,
         "sourceClass": "persistence migration"
@@ -91,6 +95,7 @@
       "test/data-layer-project-entity-lifecycle-property-test.mjs",
       "test/data-layer-page-authoring-property-test.mjs",
       "test/data-layer-assignment-routing-property-test.mjs",
+      "test/data-layer-flow-visual-asset-portability-property-test.mjs",
       "test/data-layer-project-library-property-test.mjs"
     ],
     "features": [

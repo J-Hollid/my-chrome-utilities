@@ -1,7 +1,7 @@
 import { saveStoredGraph, storedGraph } from "../data-layer-flow-graph.js";
 import { transactProject } from "../data-layer-specification-project.js";
 import { pruneUnreferencedFlowConceptVisualAssets } from "./concept-visual-references.js";
-export const FLOW_CONCEPT_VISUAL_LIMITS = { sourceBytes: 5 * 1024 * 1024, dimension: 4096, pixels: 16_000_000, projectBytes: 25 * 1024 * 1024 };
+export const FLOW_CONCEPT_VISUAL_LIMITS = { sourceBytes: 5 * 1024 * 1024, dimension: 4096, pixels: 16_000_000 };
 export function validateFlowConceptVisualSource(input) {
     if (!["image/png", "image/jpeg", "image/webp"].includes(input.mediaType))
         return { valid: false, diagnostic: "Choose a PNG, JPEG, or WebP image" };
@@ -11,8 +11,8 @@ export function validateFlowConceptVisualSource(input) {
         return { valid: false, diagnostic: "The visual dimensions exceed 4096 pixels" };
     if (input.width * input.height > FLOW_CONCEPT_VISUAL_LIMITS.pixels)
         return { valid: false, diagnostic: "The visual exceeds 16 megapixels" };
-    if ((input.projectStoredBytes ?? 0) + input.byteLength > FLOW_CONCEPT_VISUAL_LIMITS.projectBytes)
-        return { valid: false, diagnostic: "This project has reached its 25 MiB visual limit" };
+    if (input.availableStorageBytes !== undefined && input.byteLength > input.availableStorageBytes)
+        return { valid: false, diagnostic: "Available durable storage is too small for this visual; no project data was changed" };
     return { valid: true };
 }
 export const flowConceptVisualAssets = (project) => project.conceptVisualAssets ?? [];

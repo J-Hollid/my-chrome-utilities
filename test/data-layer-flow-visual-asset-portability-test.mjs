@@ -7,7 +7,7 @@ import {
 } from "../dist/flow-visual-asset-portability.js";
 import {createMemoryDurableProjectRepository,createPageProjectHistory,durableDraftCommand} from "../dist/data-layer-durable-project-repository.js";
 
-const png=Uint8Array.from([137,80,78,71,13,10,26,10,0,0,0,0]);
+const png=Uint8Array.from(Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=","base64"));
 const digest=`sha256:${Buffer.from(await crypto.subtle.digest("SHA-256",png)).toString("hex")}`;
 const metadata={id:"asset:cart",mediaType:"image/png",width:1,height:1,byteLength:png.byteLength,digest};
 const project={id:"project:retail",name:"Retail",collections:{},documentationFlowGraphs:{"flow:checkout":{pageFrames:[{id:"frame:cart",conceptVisual:{id:"attachment:cart",assetId:metadata.id,description:"Cart"}}],occurrences:[],relationships:[]}},conceptVisualAssets:[metadata],releases:[]};
@@ -34,6 +34,10 @@ assert.equal((await durable.loadConceptVisualAssetBody(project.id,metadata.id)).
 durable.clearTrace();
 await durable.replaceConceptVisualAssets(project.id,[{metadata,body:new Blob([png],{type:metadata.mediaType})}]);
 assert.equal(durable.trace().writes.some(({store})=>store==="visualAssetBodies"),false,"durable unchanged saves do not put Blob bodies");
+const retained=createMemoryDurableProjectRepository(),release={id:"release:visual",name:"Visual release",revision:1,createdAt:"2026-08-15T00:00:00.000Z",snapshot:project.collections},publishedProject={...structuredClone(project),releases:[],currentRelease:"release:visual"},releasedProject={...structuredClone(project),releases:[release],currentRelease:release.id};publishedProject.releases=[release];
+await retained.putProjectMetadataOnly({project:releasedProject,history:{undo:[],redo:[]}},{publishedRevision:1,publishedProject,visualAssets:[{metadata,body:new Blob([png],{type:metadata.mediaType})}]});
+await retained.replaceConceptVisualAssets(project.id,[]);
+assert.equal((await retained.loadConceptVisualAssetBody(project.id,metadata.id)).size,png.length,"removing a Draft reference retains a body required by a Published revision");
 const visualHistory=createPageProjectHistory(),visualBefore=await durable.loadProject(project.id),nextAsset={...metadata,id:"asset:payment",bytes:`data:image/png;base64,${Buffer.from(png).toString("base64")}`},visualAfter={...visualBefore.state,project:{...visualBefore.state.project,conceptVisualAssets:[...visualBefore.state.project.conceptVisualAssets,nextAsset]}};
 const visualCommand=durableDraftCommand(visualBefore,visualAfter,{commandId:"visual:add",label:"Add visual"});
 visualHistory.push(visualCommand);await durable.saveDraft(visualCommand);
@@ -65,5 +69,30 @@ const migrated=await migrateVersion2VisualAssets(legacy,{projectId:"project:lega
 assert.equal(migrated.assets.length,1);
 assert.equal(JSON.stringify(migrated.project).includes("base64"),false);
 assert.equal(migrated.migrations.includes("Embedded concept visuals moved to separate original Blob bodies"),true);
+
+const duplicateMetadata={...metadata,id:"asset:cart-copy"},deduplicatedProject=structuredClone(project);
+deduplicatedProject.conceptVisualAssets=[metadata,duplicateMetadata];
+deduplicatedProject.documentationFlowGraphs["flow:checkout"].occurrences=[{id:"occurrence:cart",conceptVisual:{id:"attachment:cart-copy",assetId:duplicateMetadata.id,description:"Same original"}}];
+const deduplicatedArchive=await createFlowVisualArchive({project:deduplicatedProject,assets:[{metadata,body:new Blob([png],{type:metadata.mediaType})},{metadata:duplicateMetadata,body:new Blob([png],{type:metadata.mediaType})}]});
+const entryName=`assets/${digest.slice(7)}.png`,archiveText=new TextDecoder().decode(deduplicatedArchive),entryOccurrences=archiveText.split(entryName).length-1;
+assert.equal(entryOccurrences,4,"two manifest declarations share one local ZIP entry and one central-directory entry");
+const deduplicatedImport=await importFlowVisualArchive(deduplicatedArchive,{projectId:"project:deduplicated",id:old=>`deduplicated:${old}`});
+assert.equal(deduplicatedImport.assets.length,2,"distinct asset identities may share one validated original body");
+assert.equal(deduplicatedImport.project.documentationFlowGraphs["deduplicated:flow:checkout"].occurrences[0].conceptVisual.assetId,"deduplicated:asset:cart-copy");
+
+await assert.rejects(()=>createFlowVisualArchive({project,assets:[{metadata:{...metadata,width:2},body:new Blob([png],{type:metadata.mediaType})}]}),/dimensions/i);
+const disguised=new Blob([Uint8Array.from(png,(_,index)=>index===0?0:png[index])],{type:"image/png"});
+await assert.rejects(()=>store.replaceProjectAssets(project.id,[{metadata,body:disguised}]),/valid PNG/i);
+const cancelled=new AbortController();cancelled.abort();
+await assert.rejects(()=>importFlowVisualArchive(archive,{signal:cancelled.signal}),error=>error?.name==="AbortError");
+
+const atomic=createMemoryDurableProjectRepository();atomic.injectFailure("quota exceeded");
+await assert.rejects(()=>atomic.importProjectArchive(archive,{projectId:"project:atomic",name:"Atomic"}),error=>error?.name==="QuotaExceededError");
+assert.deepEqual(await atomic.listProjectMetadata(),[],"a failed import leaves neither project metadata nor visual assets");
+
+const legacyDurable=createMemoryDurableProjectRepository();
+const {publishedProject:ignoredPublished,...legacyDraftOnly}=legacy;
+await legacyDurable.importProject(legacyDraftOnly,{projectId:"project:legacy-durable",name:"Legacy durable"});
+assert.equal((await legacyDurable.loadConceptVisualAssetBody("project:legacy-durable","project:legacy-durable:asset:cart")).size,png.length,"the installed v2 JSON path validates and migrates embedded originals");
 
 console.log("flow visual asset portability unit tests passed");

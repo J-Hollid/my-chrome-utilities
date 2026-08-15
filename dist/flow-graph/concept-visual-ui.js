@@ -18,20 +18,27 @@ catch {
 } };
 const requireValidSignature = (type, buffer) => { if (!signatureValid(type, new Uint8Array(buffer)))
     throw new Error(`Choose a valid ${mediaNames[type]} image`); };
-const requireValidRaster = (raster, file, project) => { const stored = flowConceptVisualAssets(project).reduce((sum, asset) => sum + asset.byteLength, 0), existing = flowConceptVisualAssets(project).find((asset) => asset.digest === raster.digest), validation = validateFlowConceptVisualSource({ ...raster, sourceByteLength: file.size, projectStoredBytes: existing ? stored - existing.byteLength : stored }); if (!validation.valid)
+const availableStorageBytes = async () => { try {
+    const estimate = await navigator.storage?.estimate();
+    return estimate?.quota === undefined ? undefined : Math.max(0, estimate.quota - (estimate.usage ?? 0));
+}
+catch {
+    return undefined;
+} };
+const requireValidRaster = async (raster, file) => { const available = await availableStorageBytes(), validation = validateFlowConceptVisualSource({ ...raster, sourceByteLength: file.size, ...(available === undefined ? {} : { availableStorageBytes: available }) }); if (!validation.valid)
     throw new Error(validation.diagnostic); };
 export async function readFlowConceptVisualFile(file, project) {
     validateFileEnvelope(file);
     const buffer = await readFileBuffer(file);
     requireValidSignature(file.type, buffer);
     const decoded = await dimensions(file), bytes = await dataUrl(file), digest = hex(await crypto.subtle.digest("SHA-256", buffer)), raster = { mediaType: file.type, ...decoded, byteLength: file.size, bytes, digest };
-    requireValidRaster(raster, file, project);
+    await requireValidRaster(raster, file);
     return raster;
 }
 const labelled = (text, control) => { const label = document.createElement("label"); label.append(text, control); return label; };
 export const flowConceptVisualEditorDiagnostic = (description, fileDiagnostic) => fileDiagnostic || (!description.trim() ? "Description is required" : "");
 export function createFlowConceptVisualEditor(options) {
-    const root = document.createElement("section"), target = document.createElement("div"), choose = document.createElement("button"), file = document.createElement("input"), preview = document.createElement("img"), description = document.createElement("textarea"), caption = document.createElement("input"), source = document.createElement("input"), diagnostic = document.createElement("p"), save = document.createElement("button"), cancel = document.createElement("button");
+    const root = document.createElement("section"), target = document.createElement("div"), choose = document.createElement("button"), file = document.createElement("input"), preview = document.createElement("img"), description = document.createElement("textarea"), caption = document.createElement("input"), source = document.createElement("input"), storage = document.createElement("p"), diagnostic = document.createElement("p"), save = document.createElement("button"), cancel = document.createElement("button");
     let raster = options.existing?.raster, fileDiagnostic = "";
     root.dataset.flowVisualEditor = "true";
     root.setAttribute("aria-label", "Concept Visual editor");
@@ -50,6 +57,7 @@ export function createFlowConceptVisualEditor(options) {
     description.setAttribute("aria-label", "Description (required)");
     caption.setAttribute("aria-label", "Caption (optional)");
     source.setAttribute("aria-label", "Source reference (optional)");
+    storage.dataset.flowVisualStorage = "true";
     diagnostic.setAttribute("role", "alert");
     diagnostic.id = `flow-visual-diagnostic-${Math.random().toString(36).slice(2)}`;
     description.setAttribute("aria-describedby", diagnostic.id);
@@ -63,7 +71,7 @@ export function createFlowConceptVisualEditor(options) {
         caption.value = options.existing.attachment.caption ?? "";
         source.value = options.existing.attachment.sourceReference ?? "";
     }
-    const refresh = () => { save.disabled = !raster || !description.value.trim() || Boolean(fileDiagnostic); diagnostic.textContent = flowConceptVisualEditorDiagnostic(description.value, fileDiagnostic); };
+    const refresh = () => { const assets = flowConceptVisualAssets(options.project()), originalBytes = assets.reduce((sum, asset) => sum + asset.byteLength, 0); storage.textContent = `Project visuals: ${assets.length} assets · ${originalBytes} original bytes · 0 thumbnail cache bytes · estimated export ${originalBytes + JSON.stringify(options.project()).length} bytes.`; save.disabled = !raster || !description.value.trim() || Boolean(fileDiagnostic); diagnostic.textContent = flowConceptVisualEditorDiagnostic(description.value, fileDiagnostic); };
     const stage = async (candidate) => { if (!candidate)
         return; fileDiagnostic = ""; try {
         raster = await readFlowConceptVisualFile(candidate, options.project());
@@ -82,7 +90,7 @@ export function createFlowConceptVisualEditor(options) {
     save.addEventListener("click", () => { if (raster && description.value.trim())
         options.save({ raster, description: description.value, ...(caption.value ? { caption: caption.value } : {}), ...(source.value ? { sourceReference: source.value } : {}) }); });
     cancel.addEventListener("click", options.cancel);
-    root.append(target, choose, file, preview, labelled("Description", description), labelled("Caption", caption), labelled("Source reference", source), diagnostic, save, cancel);
+    root.append(target, choose, file, preview, storage, labelled("Description", description), labelled("Caption", caption), labelled("Source reference", source), diagnostic, save, cancel);
     refresh();
     return { root, firstControl: target };
 }

@@ -1,6 +1,7 @@
 import { upgradePageGroupsToPropertySets, verifyPropertySetFlowSectionUpgrade } from "./data-layer-property-set-flow-section.js";
 import { repairCanonicalBooleanAllowedValues } from "./data-layer-canonical-schema-facets.js";
-import { createFlowVisualArchive, importFlowVisualArchive, migrateVersion2VisualAssets } from "./flow-visual-asset-portability.js";
+import { createFlowVisualArchive, estimateFlowVisualArchiveSize, importFlowVisualArchive, migrateVersion2VisualAssets, writeFlowVisualArchive } from "./flow-visual-asset-portability.js";
+import { validateFlowVisualBody } from "./flow-visual-asset-validation.js";
 export const DURABLE_PROJECT_DATABASE = "my-chrome-utilities.project-repository";
 export const DURABLE_PROJECT_DATABASE_VERSION = 7;
 export const LEGACY_PROJECT_KEYS = { library: "my-chrome-utilities.specification-project-library.v1", active: "my-chrome-utilities.specification-project.v1", navigation: "my-chrome-utilities.specification-project-navigation.v1", schemas: "my-chrome-utilities.schema-library.v1" };
@@ -122,7 +123,6 @@ function repairCanonicalBooleanValuesInProject(project) {
     return { project: next ?? project, repairCount };
 }
 async function checksum(value) { const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)); return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join(""); }
-async function blobDigest(value) { const digest = await crypto.subtle.digest("SHA-256", await value.arrayBuffer()); return `sha256:${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`; }
 function changed(base, next, path = []) {
     if (same(base, next))
         return [];
@@ -173,7 +173,7 @@ function projectParts(state) {
             if (!match || match[1] !== metadata.mediaType)
                 throw new DOMException(`Visual ${metadata.id} has unreadable embedded bytes.`, "DataError");
             const raw = atob(match[2]), body = Uint8Array.from(raw, character => character.charCodeAt(0));
-            add("visualAssetBodies", identity, { digest: metadata.digest, body: new Blob([body.buffer], { type: metadata.mediaType }) });
+            add("visualAssetBodies", `${projectId}:${metadata.digest}`, { digest: metadata.digest, body: new Blob([body.buffer], { type: metadata.mediaType }) });
         }
     }
     return parts;
@@ -295,7 +295,7 @@ export class DurableProjectRepository {
     subscribeActiveContext(listener) { this.activeListeners.add(listener); return () => this.activeListeners.delete(listener); }
     subscribeSavedSchemas(listener) { this.schemaListeners.add(listener); return () => this.schemaListeners.delete(listener); }
     async listConceptVisualAssetMetadata(projectId) { return this.backend.transaction(["visualAssetMetadata"], "readonly", async (transaction) => (await transaction.getPrefix("visualAssetMetadata", `${projectId}:`)).map(({ value }) => clone(value)).sort((left, right) => left.id.localeCompare(right.id))); }
-    async loadConceptVisualAssetBody(projectId, assetId) { return this.backend.transaction(["visualAssetBodies"], "readonly", async (transaction) => { const record = await transaction.get("visualAssetBodies", `${projectId}:${assetId}`); if (!record?.body)
+    async loadConceptVisualAssetBody(projectId, assetId) { return this.backend.transaction(["visualAssetMetadata", "visualAssetBodies"], "readonly", async (transaction) => { const metadata = await transaction.get("visualAssetMetadata", `${projectId}:${assetId}`), record = metadata && await transaction.get("visualAssetBodies", `${projectId}:${metadata.digest}`); if (!record?.body)
         throw new DOMException(`Original visual body ${assetId} is unavailable.`, "NotFoundError"); return record.body.slice(0, record.body.size, record.body.type); }); }
     async replaceConceptVisualAssets(projectId, assets) {
         const ids = new Set();
@@ -303,22 +303,27 @@ export class DurableProjectRepository {
             if (ids.has(metadata.id))
                 throw new DOMException(`Duplicate visual asset identity ${metadata.id}.`, "DataError");
             ids.add(metadata.id);
-            if (body.size !== metadata.byteLength || await blobDigest(body) !== metadata.digest)
-                throw new DOMException(`Visual ${metadata.id} body does not match its metadata.`, "DataError");
+            await validateFlowVisualBody(metadata, body);
         }
         this.fail("Save concept visual assets");
-        await this.backend.transaction(["visualAssetMetadata", "visualAssetBodies", "visualAssetThumbnails"], "readwrite", async (transaction) => { const prefix = `${projectId}:`, existing = await transaction.getPrefix("visualAssetMetadata", prefix), wanted = new Set(assets.map(({ metadata }) => `${prefix}${metadata.id}`)); for (const { key } of existing)
-            if (!wanted.has(key)) {
-                await transaction.delete("visualAssetMetadata", key);
-                await transaction.delete("visualAssetBodies", key);
-                await transaction.delete("visualAssetThumbnails", key);
-            } for (const { metadata, body } of assets) {
-            const identity = `${prefix}${metadata.id}`, prior = await transaction.get("visualAssetMetadata", identity);
-            if (!same(prior, metadata))
-                await transaction.put("visualAssetMetadata", identity, clone(metadata));
-            if (prior?.digest !== metadata.digest || !await transaction.get("visualAssetBodies", identity))
-                await transaction.put("visualAssetBodies", identity, { digest: metadata.digest, body: body.slice(0, body.size, body.type) });
-        } });
+        await this.backend.transaction(["visualAssetMetadata", "visualAssetBodies", "visualAssetThumbnails", "projectRevisions"], "readwrite", async (transaction) => {
+            const prefix = `${projectId}:`, existing = await transaction.getPrefix("visualAssetMetadata", prefix), revisions = await transaction.getPrefix("projectRevisions", prefix), retained = revisions.flatMap(({ value }) => value.state.project.conceptVisualAssets ?? []), wantedAssets = new Set([...assets.map(({ metadata }) => metadata.id), ...retained.map(({ id }) => id)].map(id => `${prefix}${id}`)), wantedBodies = new Set([...assets.map(({ metadata }) => metadata.digest), ...retained.map(({ digest }) => digest)].map(digest => `${prefix}${digest}`));
+            for (const { key } of existing)
+                if (!wantedAssets.has(key)) {
+                    await transaction.delete("visualAssetMetadata", key);
+                    await transaction.delete("visualAssetThumbnails", key);
+                }
+            for (const { metadata, body } of assets) {
+                const identity = `${prefix}${metadata.id}`, bodyIdentity = `${prefix}${metadata.digest}`, prior = await transaction.get("visualAssetMetadata", identity);
+                if (!same(prior, metadata))
+                    await transaction.put("visualAssetMetadata", identity, clone(metadata));
+                if (!await transaction.get("visualAssetBodies", bodyIdentity))
+                    await transaction.put("visualAssetBodies", bodyIdentity, { digest: metadata.digest, body: body.slice(0, body.size, body.type) });
+            }
+            for (const { key } of await transaction.getPrefix("visualAssetBodies", prefix))
+                if (!wantedBodies.has(key))
+                    await transaction.delete("visualAssetBodies", key);
+        });
     }
     fail(label) { if (!this.failure)
         return; const names = { "quota exceeded": "QuotaExceededError", "transaction aborted": "AbortError", "repository unavailable": "InvalidStateError", "corrupt record": "DataError", "verification failure": "OperationError" }, error = new DOMException(`${label} was not committed: ${this.failure}. The last Saved Draft is unchanged.`, names[this.failure]); throw error; }
@@ -340,6 +345,8 @@ export class DurableProjectRepository {
         const legacyState = state, requiresSeparation = Object.hasOwn(state.project.collections, "pageGroups");
         state = upgradeSeparatedState(state);
         const projectId = state.project.id, draftToken = input.draftToken ?? this.options.token(), lastSavedAt = this.options.now(), parts = projectParts(state), publishedRevision = input.publishedRevision ?? 0, declaredRelease = state.project.releases.find(release => release.revision === publishedRevision), publishedProject = input.publishedProject ?? (declaredRelease ? { ...clone(state.project), collections: clone(declaredRelease.snapshot), releases: state.project.releases.filter(candidate => candidate.revision <= publishedRevision), currentRelease: declaredRelease.id } : undefined);
+        for (const asset of input.visualAssets ?? [])
+            await validateFlowVisualBody(asset.metadata, asset.body);
         if (publishedRevision > 0 && (!declaredRelease || !publishedProject))
             throw new DOMException(`Project ${projectId} cannot claim Published revision ${publishedRevision} without a matching release snapshot.`, "DataError");
         if (publishedProject && (publishedProject.id !== projectId || publishedProject.currentRelease !== declaredRelease?.id || !same(publishedProject.collections, declaredRelease?.snapshot)))
@@ -352,6 +359,12 @@ export class DurableProjectRepository {
                 throw new DOMException(`Published revision ${publishedRevision} for ${projectId} already exists and is immutable.`, "ConstraintError");
             const draftSequence = input.draftSequence ?? 0;
             await replaceProjectParts(transaction, projectId, parts);
+            for (const asset of input.visualAssets ?? []) {
+                await transaction.put("visualAssetMetadata", `${projectId}:${asset.metadata.id}`, clone(asset.metadata));
+                const identity = `${projectId}:${asset.metadata.digest}`;
+                if (!await transaction.get("visualAssetBodies", identity))
+                    await transaction.put("visualAssetBodies", identity, { digest: asset.metadata.digest, body: asset.body.slice(0, asset.body.size, asset.body.type) });
+            }
             const value = { projectId, name: state.project.name, site: state.project.site, owner: String(state.project.owner ?? ""), draftToken, draftSequence, publishedRevision, lastSavedAt, fieldVersions: Object.fromEntries([...parts.keys()].map(key => [key, draftSequence])), active: Boolean(input.active), ...(state.draft ? { draft: clone(state.draft) } : {}), ...(input.navigation ? { navigation: clone(input.navigation) } : {}) };
             await transaction.put("projectMetadata", projectId, value);
             if (input.active)
@@ -846,27 +859,27 @@ export class DurableProjectRepository {
     async abandonLegacyMigration(owner) { await this.backend.transaction(["settings"], "readwrite", async (transaction) => { const lock = await transaction.get("settings", "legacyMigrationLock"); if (lock?.owner === owner)
         await transaction.delete("settings", "legacyMigrationLock"); }); }
     async exportProject(projectId) { const loaded = await this.loadProject(projectId), publishedProject = loaded.publishedRevision ? (await this.loadPublishedRevision(projectId, loaded.publishedRevision)).state.project : undefined, manifest = await this.currentProductionManifest(projectId), schemaSnapshots = manifest ? await Promise.all(manifest.schemas.map(entry => this.loadProductionSchema({ projectId, projectRevision: manifest.projectRevision, schemaId: entry.schemaId, schemaRevision: entry.schemaRevision, fingerprint: entry.fingerprint }))) : [], currentRelease = loaded.state.project.releases.find(({ revision }) => revision === loaded.publishedRevision), draftProject = { ...clone(loaded.state.project), releases: currentRelease ? [clone(currentRelease)] : [], ...(currentRelease ? { currentRelease: currentRelease.id } : {}) }, productionProjectSnapshot = publishedProject ? { ...clone(publishedProject), releases: currentRelease ? [clone(currentRelease)] : [], ...(currentRelease ? { currentRelease: currentRelease.id } : {}) } : undefined; return { format: "my-chrome-utilities.durable-project-bundle", version: 2, sourceProjectId: projectId, sourceName: loaded.state.project.name, publishedRevision: loaded.publishedRevision, baseProjectRevision: loaded.publishedRevision, ...(productionProjectSnapshot ? { publishedProject: productionProjectSnapshot } : {}), ...(manifest ? { productionManifest: clone(manifest), schemaSnapshots: clone(schemaSnapshots) } : {}), project: draftProject, draft: clone(loaded.state.draft) }; }
-    async exportProjectArchive(projectId) { const loaded = await this.loadProject(projectId), publishedProject = loaded.publishedRevision ? (await this.loadPublishedRevision(projectId, loaded.publishedRevision)).state.project : undefined, metadata = await this.listConceptVisualAssetMetadata(projectId); let project = loaded.state.project, published = publishedProject, assets = await Promise.all(metadata.map(async (value) => ({ metadata: value, body: await this.loadConceptVisualAssetBody(projectId, value.id) }))); if (!assets.length && Array.isArray(project.conceptVisualAssets) && project.conceptVisualAssets.some(asset => record(asset) && typeof asset.bytes === "string")) {
+    async projectArchiveInput(projectId) { const loaded = await this.loadProject(projectId), publishedProject = loaded.publishedRevision ? (await this.loadPublishedRevision(projectId, loaded.publishedRevision)).state.project : undefined, metadata = await this.listConceptVisualAssetMetadata(projectId); let project = loaded.state.project, published = publishedProject; const assets = []; for (const value of metadata)
+        assets.push({ metadata: value, body: await this.loadConceptVisualAssetBody(projectId, value.id) }); if (!assets.length && Array.isArray(project.conceptVisualAssets) && project.conceptVisualAssets.some(asset => record(asset) && typeof asset.bytes === "string")) {
         const migrated = await migrateVersion2VisualAssets({ format: "my-chrome-utilities.durable-project-bundle", version: 2, project, ...(published ? { publishedProject: published } : {}) }, { projectId, id: oldId => oldId });
         project = migrated.project;
         published = migrated.publishedProject;
-        assets = migrated.assets;
-    } return createFlowVisualArchive({ project, ...(published ? { publishedProject: published } : {}), assets }); }
-    async importProjectArchive(archive, input) { const staged = await importFlowVisualArchive(archive), sourceId = staged.project.id, publishedRevision = Math.max(0, ...staged.project.releases.map(({ revision }) => revision)), bundle = { format: "my-chrome-utilities.durable-project-bundle", version: 2, sourceProjectId: sourceId, sourceName: staged.project.name, publishedRevision, baseProjectRevision: publishedRevision, project: staged.project, ...(staged.publishedProject ? { publishedProject: staged.publishedProject } : {}) }, assets = staged.assets.map(({ metadata, body }) => ({ metadata: { ...metadata, id: `${input.projectId}:${metadata.id}` }, body })); const imported = await this.importProject(bundle, input); try {
-        await this.replaceConceptVisualAssets(input.projectId, assets);
-        return imported;
-    }
-    catch (error) {
-        const metadata = (await this.listProjectMetadata()).find(({ projectId }) => projectId === input.projectId);
-        if (metadata)
-            await this.deleteProject({ projectId: input.projectId, baseToken: metadata.draftToken, label: "Roll back incomplete project archive import" });
-        throw error;
-    } }
+        assets.push(...migrated.assets);
+    } return { project, ...(published ? { publishedProject: published } : {}), assets }; }
+    async exportProjectArchive(projectId) { return createFlowVisualArchive(await this.projectArchiveInput(projectId)); }
+    async estimateProjectArchiveSize(projectId) { return estimateFlowVisualArchiveSize(await this.projectArchiveInput(projectId)); }
+    async writeProjectArchive(projectId, sink, options = {}) { return writeFlowVisualArchive(await this.projectArchiveInput(projectId), sink, options); }
+    async importProjectArchive(archive, input) { const staged = await importFlowVisualArchive(archive, { ...(input.signal ? { signal: input.signal } : {}), ...(input.onProgress ? { onProgress: input.onProgress } : {}) }), sourceId = staged.project.id, publishedRevision = Math.max(0, ...staged.project.releases.map(({ revision }) => revision)), bundle = { format: "my-chrome-utilities.durable-project-bundle", version: 2, sourceProjectId: sourceId, sourceName: staged.project.name, publishedRevision, baseProjectRevision: publishedRevision, project: staged.project, ...(staged.publishedProject ? { publishedProject: staged.publishedProject } : {}) }; return this.importProject(bundle, input, staged.assets); }
     async exportRecoveryBundle(projectId) { const project = await this.exportProject(projectId), metadata = (await this.listProjectMetadata()).find(entry => entry.projectId === projectId), migrationBackup = await this.migrationBackup(); return { format: "my-chrome-utilities.durable-recovery-bundle", version: 1, createdAt: this.options.now(), project, metadata: metadata ? clone(metadata) : undefined, migrationBackup }; }
     async exportRepositoryRecoveryBundle() { const metadata = await this.listProjectMetadata(), projects = await Promise.all(metadata.map(({ projectId }) => this.exportProject(projectId))), savedSchemas = await this.savedSchemaRecords(), internal = await this.backend.transaction(["projectRevisions", "productionManifests", "schemaRevisions", "settings", "migrationReceipts", "migrationBackups"], "readonly", async (transaction) => ({ projectRevisions: await transaction.getAll("projectRevisions"), productionManifests: await transaction.getAll("productionManifests"), schemaRevisions: await transaction.getAll("schemaRevisions"), settings: await transaction.getAll("settings"), migrationReceipts: await transaction.getAll("migrationReceipts"), migrationBackups: await transaction.getAll("migrationBackups") })); return { format: "my-chrome-utilities.durable-repository-recovery-bundle", version: 2, createdAt: this.options.now(), metadata: clone(metadata), projects: clone(projects), savedSchemas: clone(savedSchemas), ...clone(internal) }; }
-    async importProject(bundle, input) {
+    async importProject(bundle, input, visualAssets = []) {
         if (bundle.format !== "my-chrome-utilities.durable-project-bundle" || !record(bundle.project))
             throw new Error("Choose a durable project bundle.");
+        const embedded = Array.isArray(bundle.project.conceptVisualAssets) && bundle.project.conceptVisualAssets.some(asset => record(asset) && typeof asset.bytes === "string");
+        if (!visualAssets.length && Number(bundle.version) === 2 && embedded) {
+            const legacyProject = bundle.project, migrated = await migrateVersion2VisualAssets({ format: String(bundle.format), version: 2, project: legacyProject, ...(record(bundle.publishedProject) ? { publishedProject: bundle.publishedProject } : {}) }, { projectId: legacyProject.id, id: oldId => oldId });
+            return this.importProject({ ...bundle, project: migrated.project, ...(migrated.publishedProject ? { publishedProject: migrated.publishedProject } : {}) }, input, migrated.assets);
+        }
         const compacted = compactLegacyEditHistory(bundle.project), sourceDraft = record(bundle.draft) ? compactLegacyEditHistory(bundle.draft).value : undefined, sourceState = upgradeSeparatedState({ project: compacted.value, ...(sourceDraft ? { draft: sourceDraft } : {}), history: { undo: [], redo: [] } }), source = sourceState.project, mapping = projectIdentityMapping(source, input.projectId), mappedProject = remapProjectReferences(source, mapping);
         mappedProject.name = input.name;
         const repairedProject = repairCanonicalBooleanValuesInProject(mappedProject), project = repairedProject.project, publishedRevision = Number(bundle.publishedRevision ?? bundle.baseProjectRevision ?? 0), rawSourcePublishedProject = record(bundle.publishedProject) ? bundle.publishedProject : undefined, sourcePublishedProject = rawSourcePublishedProject ? upgradeSeparatedState({ project: compactLegacyEditHistory(rawSourcePublishedProject).value, ...(sourceDraft ? { draft: sourceDraft } : {}), history: { undo: [], redo: [] } }).project : undefined;
@@ -899,7 +912,9 @@ export class DurableProjectRepository {
             const projectFingerprint = await checksum(JSON.stringify({ project: productionProject(publishedProject), schemas: entries.map(({ schemaId, fingerprint }) => ({ schemaId, fingerprint })).sort((left, right) => left.schemaId.localeCompare(right.schemaId)) }));
             production = { manifest: { ...clone(sourceManifest), projectId: input.projectId, projectRevision: publishedRevision, projectFingerprint, publishedAt: at, schemas: entries }, snapshots };
         }
-        await this.putProjectMetadataOnly({ project, ...(sourceDraft ? { draft: remapProjectReferences(sourceDraft, mapping) } : {}), history: { undo: [], redo: [] } }, { publishedRevision, ...(publishedProject ? { publishedProject } : {}), ...(production ? { production } : {}), active: false });
+        const mappedVisualAssets = visualAssets.map(({ metadata, body }) => ({ metadata: { ...metadata, id: mapping.get(metadata.id) ?? `${input.projectId}:${metadata.id}` }, body }));
+        this.fail("Import project");
+        await this.putProjectMetadataOnly({ project, ...(sourceDraft ? { draft: remapProjectReferences(sourceDraft, mapping) } : {}), history: { undo: [], redo: [] } }, { publishedRevision, ...(publishedProject ? { publishedProject } : {}), ...(production ? { production } : {}), ...(mappedVisualAssets.length ? { visualAssets: mappedVisualAssets } : {}), active: false });
         return { projectId: input.projectId, active: false, canonicalRepairCount: repairedProject.repairCount + (repairedPublishedProject?.repairCount ?? 0) };
     }
 }

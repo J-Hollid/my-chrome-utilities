@@ -952,6 +952,8 @@ try {
   await mkdir(path.join(cliContentionRepository, "test"), { recursive:true });
   await copyFile(path.resolve("test/stylesheet-declarations-property-test.mjs"),
     path.join(cliContentionRepository, "test/stylesheet-declarations-property-test.mjs"));
+  await copyFile(path.resolve("test/data-layer-flow-visual-asset-portability-property-test.mjs"),
+    path.join(cliContentionRepository, "test/data-layer-flow-visual-asset-portability-property-test.mjs"));
   await copyFile(path.resolve("test/flow-stylesheet-extraction-test.mjs"),
     path.join(cliContentionRepository, "test/flow-stylesheet-extraction-test.mjs"));
   await mkdir(path.join(cliContentionRepository, "src/flow-graph"), { recursive:true });
@@ -996,6 +998,7 @@ try {
     "scripts/verification-task-succession.mjs",
     "scripts/verification-styles.mjs", "scripts/verification-packs.mjs",
     "test/browser-packs/global-style-smoke.mjs", "test/stylesheet-declarations-property-test.mjs",
+    "test/data-layer-flow-visual-asset-portability-property-test.mjs",
     "test/flow-stylesheet-extraction-test.mjs", "src/flow-graph/flow-workspace.css",
     "src/flow-graph/flow-workspace-shell.css",
     "verification/packs.json"], {
@@ -5142,7 +5145,10 @@ assert.deepEqual(projectEvidenceProfile, {...conservedEvidenceProfile(baseProjec
   unit:[...conservedEvidenceProfile(baseProjectManagementPack).unit.slice(0, 3),
     "test/data-layer-project-library-transport-test.mjs",
     "test/data-layer-flow-visual-asset-portability-test.mjs",
-    ...conservedEvidenceProfile(baseProjectManagementPack).unit.slice(3)]},
+    ...conservedEvidenceProfile(baseProjectManagementPack).unit.slice(3)],
+  property:[...conservedEvidenceProfile(baseProjectManagementPack).property.slice(0, 3),
+    "test/data-layer-flow-visual-asset-portability-property-test.mjs",
+    ...conservedEvidenceProfile(baseProjectManagementPack).property.slice(3)]},
 "all exact project-management evidence identities are conserved from the accepted base");
 const exactProjectPlan = planVerification(packs, {packIds:["project_management"], includeProperties:true});
 for (const [key, taskKey] of [["unit", "unitTasks"], ["property", "propertyTasks"],
