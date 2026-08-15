@@ -443,7 +443,8 @@ try {
             seeded, { stopAfterRuntime: 20, targetId, browserShard })));
         if(measureViewerCoverage){
             viewerModuleCoverage=await measuredModuleCoverage(socket,"flow-graph/concept-visual-ui.js");
-            console.log(JSON.stringify({viewerModuleCoverage}));
+            assert.ok(viewerModuleCoverage.lines>.8&&viewerModuleCoverage.functions>.8,
+                `Installed concept visual UI coverage fell below 80%: ${JSON.stringify(viewerModuleCoverage)}`);
             await socket.call("Profiler.stopPreciseCoverage");
             await socket.call("Profiler.disable");
         }
@@ -455,7 +456,6 @@ try {
         for (const [key, value] of Object.entries(reloadEvidence))
             runtime[key] = { ...runtime[key], ...value };
         if(viewerModuleCoverage){
-            runtime.runtime035.viewerCoverage=viewerModuleCoverage.lines>.8&&viewerModuleCoverage.functions>.8;
             runtime.runtime035.measurements={...runtime.runtime035.measurements,viewerModuleCoverage};
         }
         }
