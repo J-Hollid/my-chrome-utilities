@@ -1,7 +1,7 @@
 # Feature development focus and advisory scouting R01
 
-Status: approved documentation convention; coder-timed RepoWise Trial 4 active
-for the next ordinary QA feature after Flow contextual action consistency
+Status: approved documentation convention; routine RepoWise scouting stopped
+after Trial 4; optional targeted investigation remains available
 
 Prepared: 2026-08-14
 
@@ -210,6 +210,30 @@ and recommends one of: retain an optional coder checkpoint, retain RepoWise only
 for unfamiliar or hotspot investigation, or stop routine RepoWise use. Missing
 feedback is a measurement defect to report, not authority to block an otherwise
 exact `qa-ready` candidate.
+
+#### Trial 4 outcome and current decision
+
+Flow concept visuals completed Trial 4 on 2026-08-15. Its first actual-diff
+checkpoint cost about 29 seconds, repeated files and consumers already found by
+ordinary inspection, made unsupported test-gap claims, continued to report the
+stale indexed commit `39660e0a68`, and changed no implementation, development
+focus, or QA impact. Its judgment was neutral.
+
+A later checkpoint ran after refactor-driven repairs added another production
+boundary. Because the first RepoWise result caused no implementation change,
+that rerun was outside the allowed second-checkpoint condition above. Its index
+refresh consumed about 110 seconds, remained stale, reached neither risk nor
+context analysis, created no Git-visible artifact, and changed no implementation
+or verification decision. Its judgment was impeded.
+
+The user accepted the scorecard recommendation to stop routine RepoWise
+checkpoints for now. Do not add RepoWise to ordinary feature handoffs or make its
+availability, index refresh, or output a delivery condition. It remains
+available only for an intentionally selected unfamiliar-code or known-hotspot
+investigation when the existing index is already current. Direct inspection and
+the canonical changed-path planner remain authoritative. Reconsider routine use
+only after a separate decision backed by materially better signal or lower
+operational cost.
 
 ## Evaluation
 

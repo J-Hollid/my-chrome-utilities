@@ -92,13 +92,13 @@ ratchet, not a new verification mechanism or intervention gate. Existing exact
 changed-path planning remains authoritative, and the all-20 checkpoint remains
 exclusive to explicit master integration.
 
-The same document authorizes a telemetry-disabled, advisory RepoWise scouting
-pilot over three to five varied features. Scouting may improve the two lists but
-cannot block work, widen evidence on its own, or override the canonical registry.
-Its user-approved Trial 4 applies to the next ordinary QA feature: the specifier
-records the pre-coder baseline, the coder scouts the first coherent committed
-candidate before review evidence, and the QA integration scorecard reports
-whether that checkpoint improved, was neutral to, or impeded development.
+The same document records the completed telemetry-disabled RepoWise scouting
+pilot. Trial 4 changed neither development focus nor QA impact and its stale-index
+refresh impeded the workflow, so routine checkpoints are stopped for now. Do not
+add RepoWise to ordinary feature handoffs or make it a delivery condition. It may
+still be selected explicitly for unfamiliar-code or known-hotspot investigation
+when its existing index is already current; it cannot block work, widen evidence
+on its own, or override the canonical registry.
 
 ### Verification run intent
 
