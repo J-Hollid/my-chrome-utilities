@@ -15,7 +15,7 @@ This is one persistence, migration, security, and packaging slice under the
 QA-branch release pilot. It does not authorize master promotion or the all-20
 gate.
 
-## Delivery prerequisite
+## Combined delivery sequencing
 
 Implementation candidate `652ca79415` is stopped before review evidence because
 its required installed archive callbacks edit the globally impactful
@@ -23,13 +23,23 @@ its required installed archive callbacks edit the globally impactful
 tasks; the same candidate without that root change selects the bounded ten-pack
 closure and 228 tasks.
 
-The user approved the standalone Project Library transport port on 2026-08-16.
-`docs/project-library-transport-port-isolation-R01.md` defines that prerequisite.
-After it is QA-integrated, the portability candidate must resume from the new QA
-base, consume the port, restore `src/side-panel.ts` to the approved base, and
-obtain new exact focused evidence. Its settled benchmark may be reused only when
-the bound content fingerprint is unchanged; otherwise run it once on the
-corrected candidate as already authorized for this feature.
+The user approved the Project Library transport port on 2026-08-16.
+`docs/project-library-transport-port-isolation-R01.md` defines that prerequisite,
+and candidate `eb3ada75` proves it can remain bounded without changing
+`src/side-panel.ts` or the global architecture ledger. Its selected Project
+Management pack also owns the already-active version 3 portability scenarios, so
+the port cannot produce truthful standalone review-ready evidence while those
+behaviors are deliberately absent.
+
+The user approved combined sequencing on 2026-08-16. Preserve `eb3ada75` as an
+internal checkpoint, reconstruct it on the approved combined specification base,
+then resume the portability implementation on top. The one review-ready candidate
+must satisfy both specifications, keep `src/side-panel.ts` byte-identical to the
+base, execute every task and active scenario in the exact bounded changed-path
+plan, and provide package proof. No scenario is skipped, tagged out, stubbed, or
+unregistered. Run the settled 300-image benchmark once because the combined task
+explicitly develops its measured boundary; rerun it only after a later change to
+the recorded boundary fingerprint.
 
 ## Settled behavior
 
@@ -174,10 +184,13 @@ version 3 archive round-trip and rejection tests. Add the small-fixture acceptan
 partners for Portability 008–010 and Flow 034–037. After a coherent candidate is
 green, run the explicit 300-image benchmark as task-local performance proof.
 
-**QA impact:** the initial bounded forecast is `project_management`,
-`durable_project_repository`, `flow_graph`, and `shell`. The exact changed-path
-planner remains authoritative and may add existing declared consumers of a
-changed semantic Flow path; it does not add the scale benchmark to unrelated
+**QA impact:** combined transport and portability planning is expected to select
+the bounded ten-pack closure: `project_management`,
+`durable_project_repository`, `project_event_transport`, `flow_graph`,
+`flow_export`, `live_flow_testing`, `layered_schema`,
+`property_set_flow_sections`, `guided_test_cases`, and `shell`. The exact
+changed-path planner remains authoritative and may make a bounded adjustment for
+the settled reconstruction; it does not add the scale benchmark to unrelated
 packs or authorize an all-20 feature-mode run. Package proof remains required.
 
 The canonical task name is `flow-visual-asset-portability`. Routine RepoWise

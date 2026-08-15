@@ -1,6 +1,6 @@
 # Project Library transport-port isolation R01
 
-Status: approved for implementation handoff
+Status: approved internal checkpoint in the combined portability delivery
 
 Prepared: 2026-08-15
 
@@ -13,7 +13,8 @@ Flow visual-asset portability candidate. The boundary must let project export an
 import evolve from version 2 JSON to the approved version 3 archive without
 editing the global `src/side-panel.ts` composition root.
 
-This is a standalone VTD-008 enabling slice in QA feature-integration mode. It
+This is the internal VTD-008 enabling checkpoint for the approved Flow
+visual-asset portability delivery in QA feature-integration mode. By itself it
 does not implement the version 3 archive, change stored project bytes, authorize
 the 300-image benchmark, promote QA to master, or authorize an all-20 run.
 
@@ -33,9 +34,14 @@ therefore the sole all-pack expansion. Its current change is required to pass ne
 archive callbacks into the installed Projects UI, so neither omitting its owned
 packs nor deleting the installed behavior is acceptable.
 
-The candidate remains stopped and preserved. It may resume only from a QA base
-that contains this isolation slice, and its corrected descendant must remove the
-`src/side-panel.ts` change before review-evidence preflight.
+The original candidate remains stopped and preserved. Transport candidate
+`eb3ada75` proved the bounded port without a composition-root or architecture-
+ledger change, but cannot truthfully record standalone review-ready evidence:
+its selected Project Management pack also executes the already-active version 3
+portability scenarios. The user therefore approved combined sequencing on
+2026-08-16. Preserve `eb3ada75` as an internal checkpoint, resume the portability
+implementation on top, and produce one corrected descendant whose
+`src/side-panel.ts` change is absent before review-evidence preflight.
 
 ## Settled boundary
 
@@ -110,7 +116,9 @@ One focused unit leaf proves direct capability injection, installed-port
 preference, compatibility fallback, exact operation cardinality, cancellation,
 failure without fallback, staged-resource release, and absence of composition-root
 or global-registry access. Existing Project Library unit, property, acceptance,
-and installed browser evidence remains registered and unchanged.
+and installed browser evidence remains registered and unchanged. No active
+portability scenario is tagged out, unregistered, stubbed, or omitted to make the
+internal checkpoint appear independently review-ready.
 
 **Development focus:** start with the transport contract, a version 2 in-memory
 adapter, and direct UI/runtime tests. Prove one export preparation/write and one
@@ -128,7 +136,13 @@ expected settled plan is approximately 227 tasks followed by package proof. The
 exact changed-path planner remains authoritative. Any `src/side-panel.ts` change
 or expansion to all 20 packs stops this slice before task launch.
 
-The expected review-ready form is:
+The transport-only command remains useful as a diagnostic, but it cannot create
+review-ready evidence until the portability behavior satisfies every active
+scenario in the selected Project Management pack. The combined candidate uses
+the exact bounded plan and evidence task defined by
+`docs/flow-concept-visual-asset-storage-portability-R01.md`.
+
+The former standalone expected review-ready form was:
 
 ```sh
 node scripts/run-focused-acceptance.mjs \
@@ -148,34 +162,38 @@ node scripts/run-focused-acceptance.mjs \
 node scripts/package.mjs
 ```
 
-The canonical task name is `project-library-transport-port-isolation`. Routine
-RepoWise scouting remains stopped. The 300-image benchmark does not run for this
-foundation because this slice preserves version 2 bytes and does not alter the
-asset-store or archive boundary. When the portability candidate is rebased, its
-benchmark is rerun once only if the settled boundary fingerprint differs.
+The internal checkpoint name is `project-library-transport-port-isolation`; the
+combined review-evidence task is `flow-visual-asset-portability`. Routine
+RepoWise scouting remains stopped. The 300-image benchmark does not run for the
+transport checkpoint alone. It runs once on the settled combined candidate
+because that candidate explicitly develops the asset-store and archive boundary,
+then reruns only after a change to its measured fingerprint.
 
 ## Effort, payoff, and stop condition
 
-The implementation-and-review ceiling is 150 minutes from coder receipt to an
-architect `qa-ready` candidate. At 75 minutes, report whether the installed port
-is preferred without changing `src/side-panel.ts`, whether current version 2
-round-trip and cancel/failure behavior remain green, the exact planned packs,
-variance cause, remaining work, confidence, and forecast.
+The transport checkpoint reached a bounded candidate before standalone evidence
+exposed the active-scenario sequencing conflict. Forward work now uses the
+360-minute combined ceiling and 180-minute checkpoint in the portability
+specification. That report includes whether the installed port remains preferred
+without changing `src/side-panel.ts`, current version 2 round-trip and
+cancel/failure status, exact planned packs, variance cause, remaining work,
+confidence, and forecast.
 
 The expected payoff is immediate: the preserved portability candidate can be
 corrected from the 849-task all-pack route to the bounded project/durable closure,
 while later Project Library transport changes avoid the global composition root.
 This is a structural prediction, not a claimed delivery-time saving. Its payoff
-is accepted only if the rebased portability candidate has no `src/side-panel.ts`
-diff, exact planning remains bounded, and installed version 3 export/import reaches
-review-ready evidence.
+is accepted only if the combined portability candidate has no
+`src/side-panel.ts` diff, exact planning remains bounded, and installed version 3
+export/import reaches review-ready evidence.
 
-Stop and return for user direction if the capability cannot be injected through
-the existing host without a composition-root change, if current version 2 behavior
-or durable bytes must change, if a global registry or hidden side channel becomes
-necessary, if exact planning reaches all 20 packs, or if no credible bounded path
-remains. Do not weaken ownership, omit a selected pack, or call an all-20 feature
-run focused.
+Stop and return for user direction if the capability cannot remain injected
+through the existing host without a composition-root change, if a global registry
+or hidden side channel becomes necessary, if exact combined planning reaches all
+20 packs, or if no credible bounded path remains. The combined portability work
+may deliberately migrate version 2 bytes only as specified by its approved
+contract. Do not weaken ownership, omit a selected pack or scenario, or call an
+all-20 feature run focused.
 
 ## Deferred work
 
