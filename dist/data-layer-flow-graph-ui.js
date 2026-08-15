@@ -56,6 +56,9 @@ export function installFlowGraphBuilder(options) {
     let statusRepairHref = "";
     let activeCatalogPayload;
     let pendingItemMenu;
+    const visualBytes = new Map(), hydrateVisual = async (assetId) => { if (visualBytes.has(assetId))
+        return; const projectId = current().state?.project.id; if (!projectId || !options.loadVisualBody)
+        return; visualBytes.set(assetId, await options.loadVisualBody(projectId, assetId)); render(); };
     const viewKey = (projectId, flowId) => `my-chrome-utilities.flow-view.v1:${projectId}:${flowId}`;
     const readView = (projectId, flowId) => { try {
         return JSON.parse(sessionStorage.getItem(viewKey(projectId, flowId)) ?? "{}");
@@ -412,7 +415,7 @@ export function installFlowGraphBuilder(options) {
         if (!state || !flow || !graph)
             return;
         const itemAction = (label, action) => { const control = button(label, action); control.dataset.flowItemCommand = label; return control; };
-        const visualActions = (actions, target, label) => createFlowConceptVisualActions({ host: actions, project: () => current().state.project, state: () => current().state, flowId: flow.id, target, label, id: options.id, action: itemAction, persist });
+        const visualActions = (actions, target, label) => createFlowConceptVisualActions({ host: actions, project: () => current().state.project, state: () => current().state, flowId: flow.id, target, label, id: options.id, action: itemAction, persist, assetBytes: (assetId) => visualBytes.get(assetId), hydrate: hydrateVisual });
         if (selected?.kind === "page-frame") {
             const frame = graph.pageFrames.find(({ id }) => id === selected.id);
             if (!frame)
@@ -510,7 +513,7 @@ export function installFlowGraphBuilder(options) {
                 endpoint.height += flowConceptVisualHeightExtension(state.project, flow.id, target, visualMode, Number(transientView.viewport?.zoom ?? 1));
             }
         const section = document.createElement("section"), heading = document.createElement("h3"), boundary = document.createElement("p"), toolbar = document.createElement("section"), laneControls = document.createElement("section"), status = document.createElement("p"), frames = document.createElement("section"), views = document.createElement("div"), canvasScroll = document.createElement("div"), canvas = svg("svg"), outline = document.createElement("ol"), popover = document.createElement("section"), actions = document.createElement("section");
-        const decorateVisual = (group, target, width, height) => renderFlowConceptVisual({ group, project: state.project, flowId: flow.id, target, mode: visualMode, thumbnailPixels: thumbnailVisuals, width, height });
+        const decorateVisual = (group, target, width, height) => renderFlowConceptVisual({ group, project: state.project, flowId: flow.id, target, mode: visualMode, thumbnailPixels: thumbnailVisuals, width, height, assetBytes: (assetId) => visualBytes.get(assetId), hydrate: hydrateVisual });
         const namedRight = Math.max(940, ...projection.laneBands.map(({ x, width }) => x + width), ...projection.graph.connectionEndpoints.map((endpoint) => endpoint.layout.x + endpoint.width + 60)), viewWidth = Math.max(960, namedRight + 100), viewHeight = Math.max(780, ...projection.laneBands.map(({ y, height }) => y + height + 80), ...projection.graph.connectionEndpoints.map((endpoint) => endpoint.layout.y + endpoint.height + 100));
         let startConnectionPointerTracking = (_pointerId) => { };
         const canvasSelection = (target) => { if (!(target instanceof Element))

@@ -12,13 +12,15 @@ interface VisualActionOptions{
   id:IdFactory;
   action:(label:string,invoke:()=>void)=>HTMLButtonElement;
   persist:(state:ProjectState,message:string)=>void;
+  assetBytes?:(assetId:string)=>string|undefined;
+  hydrate?:(assetId:string)=>Promise<void>;
 }
 
 export function createFlowConceptVisualActions(options:VisualActionOptions):HTMLButtonElement[]{
-  const saved=flowConceptVisual(options.project(),options.flowId,options.target),close=()=>options.host.dispatchEvent(new CustomEvent("flow-close-item-editor",{bubbles:true})),openEditor=()=>{
-    const editor=createFlowConceptVisualEditor({project:options.project,...(saved?{existing:{attachment:saved.attachment,raster:saved.asset}}:{}),save:(value)=>{const next=attachFlowConceptVisual(options.state(),options.flowId,options.target,value,options.id);close();options.persist(next,`Saved concept visual for ${options.label}; Undo available.`);},cancel:close});
-    options.host.dispatchEvent(new CustomEvent("flow-open-item-editor",{bubbles:true,detail:{title:`${saved?"Edit":"Add"} visual for ${options.label}`,content:editor.root,firstControl:editor.firstControl}}));
-  },view=()=>{const invoker=document.activeElement,selector=options.target.kind==="page-frame"?`g[data-page-frame-id="${CSS.escape(options.target.id)}"]:not([data-occurrence-id])`:`[data-occurrence-id="${CSS.escape(options.target.id)}"]`,fallback=document.querySelector<SVGElement>(selector);if(invoker instanceof HTMLElement)openFlowConceptVisualForTarget({project:options.project(),flowId:options.flowId,target:options.target,invoker,...(fallback?{fallbackInvoker:fallback}:{})});};
+  const saved=flowConceptVisual(options.project(),options.flowId,options.target),resolved=()=>{const current=flowConceptVisual(options.project(),options.flowId,options.target);if(!current)return undefined;const bytes=current.asset.bytes??options.assetBytes?.(current.asset.id);return bytes?{attachment:current.attachment,asset:{...current.asset,bytes}}:undefined;},hydrate=async()=>{if(saved&&!resolved())await options.hydrate?.(saved.asset.id);return resolved();},liveHost=()=>options.host.isConnected?options.host:document.querySelector<HTMLElement>(`[data-flow-item-id="${CSS.escape(options.target.id)}"]`)??options.host,close=()=>liveHost().dispatchEvent(new CustomEvent("flow-close-item-editor",{bubbles:true})),openEditor=async()=>{
+    const current=saved?await hydrate():undefined;if(saved&&!current)return;const editor=createFlowConceptVisualEditor({project:options.project,...(current?{existing:{attachment:current.attachment,raster:current.asset}}:{}),save:(value)=>{const next=attachFlowConceptVisual(options.state(),options.flowId,options.target,value,options.id);close();options.persist(next,`Saved concept visual for ${options.label}; Undo available.`);},cancel:close});
+    liveHost().dispatchEvent(new CustomEvent("flow-open-item-editor",{bubbles:true,detail:{title:`${saved?"Edit":"Add"} visual for ${options.label}`,content:editor.root,firstControl:editor.firstControl}}));
+  },view=async()=>{const invoker=document.activeElement;if(!await hydrate())return;const selector=options.target.kind==="page-frame"?`g[data-page-frame-id="${CSS.escape(options.target.id)}"]:not([data-occurrence-id])`:`[data-occurrence-id="${CSS.escape(options.target.id)}"]`,fallback=document.querySelector<SVGElement>(selector);if(invoker instanceof HTMLElement)openFlowConceptVisualForTarget({project:options.project(),flowId:options.flowId,target:options.target,invoker,...(fallback?{fallbackInvoker:fallback}:{}),...(options.assetBytes?{assetBytes:options.assetBytes}:{})});};
   if(!saved)return[options.action("Add visual",openEditor)];
   return[options.action("View visual",view),options.action("Edit visual",openEditor),options.action("Replace visual",openEditor),options.action("Remove visual",()=>options.persist(removeFlowConceptVisual(options.state(),options.flowId,options.target),`Removed concept visual from ${options.label}; Undo available.`))];
 }
@@ -35,9 +37,9 @@ export function flowConceptVisualThumbnailViewport(itemWidth:number):{x:number;w
 }
 
 type FlowConceptVisualInvoker=HTMLElement|SVGElement;
-export function openFlowConceptVisualForTarget(options:{project:SpecificationProject;flowId:string;target:FlowConceptVisualTarget;invoker:FlowConceptVisualInvoker;fallbackInvoker?:FlowConceptVisualInvoker}):boolean{
+export function openFlowConceptVisualForTarget(options:{project:SpecificationProject;flowId:string;target:FlowConceptVisualTarget;invoker:FlowConceptVisualInvoker;fallbackInvoker?:FlowConceptVisualInvoker;assetBytes?:(assetId:string)=>string|undefined}):boolean{
   const visual=flowConceptVisual(options.project,options.flowId,options.target);if(!visual)return false;
-  openFlowConceptVisualViewer({attachment:visual.attachment,raster:visual.asset},options.invoker,options.fallbackInvoker);return true;
+  const bytes=visual.asset.bytes??options.assetBytes?.(visual.asset.id);if(!bytes)return false;openFlowConceptVisualViewer({attachment:visual.attachment,raster:{...visual.asset,bytes}},options.invoker,options.fallbackInvoker);return true;
 }
 
 const activateVisualIndicator=(indicator:SVGElement,activate:()=>void):void=>{
@@ -48,11 +50,12 @@ const activateVisualIndicator=(indicator:SVGElement,activate:()=>void):void=>{
 };
 
 const svg=<K extends keyof SVGElementTagNameMap>(name:K):SVGElementTagNameMap[K]=>document.createElementNS("http://www.w3.org/2000/svg",name);
-export function renderFlowConceptVisual(options:{group:SVGGElement;project:SpecificationProject;flowId:string;target:FlowConceptVisualTarget;mode:FlowVisualDisplayMode;thumbnailPixels:boolean;width:number;height:number}):void{
+export function renderFlowConceptVisual(options:{group:SVGGElement;project:SpecificationProject;flowId:string;target:FlowConceptVisualTarget;mode:FlowVisualDisplayMode;thumbnailPixels:boolean;width:number;height:number;assetBytes?:(assetId:string)=>string|undefined;hydrate?:(assetId:string)=>Promise<void>}):void{
   const visual=flowConceptVisual(options.project,options.flowId,options.target);if(!visual||options.mode==="Hidden")return;
-  const open=(invoker:SVGElement)=>openFlowConceptVisualForTarget({project:options.project,flowId:options.flowId,target:options.target,invoker,fallbackInvoker:options.group}),badge=svg("text");badge.dataset.flowVisualBadge=options.target.id;badge.setAttribute("x","10");badge.setAttribute("y","44");badge.textContent="▧ Visual";badge.setAttribute("aria-label",`View visual: ${visual.attachment.description}`);activateVisualIndicator(badge,()=>open(badge));
+  const bytes=visual.asset.bytes??options.assetBytes?.(visual.asset.id),open=async(invoker:SVGElement)=>{if(!bytes)await options.hydrate?.(visual.asset.id);openFlowConceptVisualForTarget({project:options.project,flowId:options.flowId,target:options.target,invoker,fallbackInvoker:options.group,...(options.assetBytes?{assetBytes:options.assetBytes}:{})});},badge=svg("text");badge.dataset.flowVisualBadge=options.target.id;badge.setAttribute("x","10");badge.setAttribute("y","44");badge.textContent="▧ Visual";badge.setAttribute("aria-label",`View visual: ${visual.attachment.description}`);activateVisualIndicator(badge,()=>void open(badge));
   if(options.mode!=="Thumbnails"){options.group.append(badge);return;}
+  if(!bytes){void options.hydrate?.(visual.asset.id);options.group.append(badge);return;}
   badge.dataset.flowVisualFallback="true";badge.style.display="none";
-  const foreign=svg("foreignObject"),image=document.createElement("img"),viewport=flowConceptVisualThumbnailViewport(options.width);foreign.dataset.flowVisualThumbnail=options.target.id;foreign.setAttribute("aria-label",`View visual: ${visual.attachment.description}`);foreign.setAttribute("x",String(viewport.x));foreign.setAttribute("y",String(options.height-96));foreign.setAttribute("width",String(viewport.width));foreign.setAttribute("height",String(viewport.height));image.src=visual.asset.bytes;image.alt=visual.attachment.description;Object.assign(image.style,{width:"100%",height:"100%",objectFit:"contain"});foreign.append(image);activateVisualIndicator(foreign,()=>open(foreign));
+  const foreign=svg("foreignObject"),image=document.createElement("img"),viewport=flowConceptVisualThumbnailViewport(options.width);foreign.dataset.flowVisualThumbnail=options.target.id;foreign.setAttribute("aria-label",`View visual: ${visual.attachment.description}`);foreign.setAttribute("x",String(viewport.x));foreign.setAttribute("y",String(options.height-96));foreign.setAttribute("width",String(viewport.width));foreign.setAttribute("height",String(viewport.height));image.src=bytes;image.alt=visual.attachment.description;Object.assign(image.style,{width:"100%",height:"100%",objectFit:"contain"});foreign.append(image);activateVisualIndicator(foreign,()=>void open(foreign));
   foreign.style.setProperty("display","block","important");options.group.append(foreign,badge);
 }

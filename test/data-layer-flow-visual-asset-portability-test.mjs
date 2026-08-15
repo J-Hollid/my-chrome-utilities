@@ -5,7 +5,7 @@ import {
   importFlowVisualArchive,
   migrateVersion2VisualAssets,
 } from "../dist/flow-visual-asset-portability.js";
-import {createMemoryDurableProjectRepository} from "../dist/data-layer-durable-project-repository.js";
+import {createMemoryDurableProjectRepository,createPageProjectHistory,durableDraftCommand} from "../dist/data-layer-durable-project-repository.js";
 
 const png=Uint8Array.from([137,80,78,71,13,10,26,10,0,0,0,0]);
 const digest=`sha256:${Buffer.from(await crypto.subtle.digest("SHA-256",png)).toString("hex")}`;
@@ -34,6 +34,13 @@ assert.equal((await durable.loadConceptVisualAssetBody(project.id,metadata.id)).
 durable.clearTrace();
 await durable.replaceConceptVisualAssets(project.id,[{metadata,body:new Blob([png],{type:metadata.mediaType})}]);
 assert.equal(durable.trace().writes.some(({store})=>store==="visualAssetBodies"),false,"durable unchanged saves do not put Blob bodies");
+const visualHistory=createPageProjectHistory(),visualBefore=await durable.loadProject(project.id),nextAsset={...metadata,id:"asset:payment",bytes:`data:image/png;base64,${Buffer.from(png).toString("base64")}`},visualAfter={...visualBefore.state,project:{...visualBefore.state.project,conceptVisualAssets:[...visualBefore.state.project.conceptVisualAssets,nextAsset]}};
+const visualCommand=durableDraftCommand(visualBefore,visualAfter,{commandId:"visual:add",label:"Add visual"});
+visualHistory.push(visualCommand);await durable.saveDraft(visualCommand);
+const visualUndo=visualHistory.undo(await durable.loadProject(project.id));assert.ok(visualUndo,"metadata-only loads can undo a visual body write");await durable.saveDraft(visualUndo);
+const visualRedo=visualHistory.redo(await durable.loadProject(project.id));assert.ok(visualRedo,"metadata-only loads can redo a visual body write");await durable.saveDraft(visualRedo);
+assert.equal((await durable.loadConceptVisualAssetBody(project.id,nextAsset.id)).size,png.length,"redo restores the separate visual body");
+await durable.replaceConceptVisualAssets(project.id,[{metadata,body:new Blob([png],{type:metadata.mediaType})}]);
 const durableArchive=await durable.exportProjectArchive(project.id);
 await durable.importProjectArchive(durableArchive,{projectId:"project:durable-copy",name:"Retail copy"});
 assert.deepEqual((await durable.listConceptVisualAssetMetadata("project:durable-copy")).map(({id})=>id),["project:durable-copy:asset:cart"]);
