@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {createHash} from "node:crypto";
 import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
@@ -30,6 +31,32 @@ assert.deepEqual(globalStyleContainmentEvidence({
   viewportContained:false,
 }),{contained:false,fullViewportContained:false},
 "a narrow stacked document still fails when it escapes horizontally");
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const normalized=(value)=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"
+    ?Object.fromEntries(Object.entries(value).filter(([,nested])=>nested!==undefined)
+      .sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)]))
+    :value;
+  const digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex");
+  const input={stackedNarrow:true,width:360,horizontalContained:true,
+    verticalOrdered:true,viewportContained:false};
+  const fixture={id:"studio-stacked-narrow-containment-policy-v1",
+    causalCategory:"viewport/visibility/hit testing",
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input,
+    expectedPreRepairFailure:{contained:true,fullViewportContained:false},
+    expectedRepairResult:{contained:true,fullViewportContained:true}};
+  const preRepairResult={contained:input.horizontalContained&&input.verticalOrdered,
+    fullViewportContained:input.viewportContained};
+  const repairResult=globalStyleContainmentEvidence(input);
+  const fixtureDigest=digest(fixture);
+  assert.deepEqual(preRepairResult,fixture.expectedPreRepairFailure);
+  assert.deepEqual(repairResult,fixture.expectedRepairResult);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:preRepairResult},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}}}));
+}
 
 const staticFiles = [
   "manifest.json",
