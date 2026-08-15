@@ -536,7 +536,7 @@ Feature: Modular verification packs
   Scenario: Modular verification packs 044
     Given every project-management boundary maps to the complete owner evidence profile
     When exact project_management verification and terminal-full planning are compared before and after VTD-004
-    Then all four unit files, four property files, six features, one handler, and four installed browser adapters execute once in the exact owner plan
+    Then all five unit files, four property files, six features, one handler, and four installed browser adapters execute once in the exact owner plan
     And terminal-full planning executes every conserved assertion leaf and package check exactly once
     And browser batching, task order, worker limits, terminal shards, product behavior, durable bytes, migrations, Undo, and accessibility are unchanged
 

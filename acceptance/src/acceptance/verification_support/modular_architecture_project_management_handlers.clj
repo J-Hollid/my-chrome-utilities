@@ -60,7 +60,7 @@
                  (support/assert! (= (case (:id pack)
                                        "durable_project_repository" [5 3 2 1 2]
                                        "event-library" [9 1 8 3 1]
-                                       "project_management" [5 4 6 1 4]
+                                       "project_management" [6 4 6 1 4]
                                        [4 4 6 1 4])
                                      (conj (mapv #(count (% pack))
                                                  [:unit :property :features :handlers])
@@ -127,7 +127,7 @@
                (support/assert! (:vtd004/conserved? world)
                                 "Exact and terminal plan comparison did not complete." {})
                world)}
-   {:pattern #"^all four unit files, four property files, six features, one handler, and four installed browser adapters execute once in the exact owner plan$"
+   {:pattern #"^all five unit files, four property files, six features, one handler, and four installed browser adapters execute once in the exact owner plan$"
     :handler (fn [world _ _]
                (support/assert! (:vtd004/conserved? world)
                                 "Exact project evidence was not conserved." {})

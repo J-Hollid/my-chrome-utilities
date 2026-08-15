@@ -5000,6 +5000,11 @@ assert.deepEqual(projectManagementPack.isolatedVerificationHandlers,
   "the project-management APS handler is explicitly isolated");
 const projectHandlerPath = projectManagementPack.isolatedVerificationHandlers[0];
 const projectHandlerSource = await readFile(new URL(`../${projectHandlerPath}`, import.meta.url), "utf8");
+const projectArchitectureHandlerSource = await readFile(new URL(
+  "../acceptance/src/acceptance/verification_support/modular_architecture_project_management_handlers.clj",
+  import.meta.url), "utf8");
+const modularVerificationPacksFeatureSource = await readFile(new URL(
+  "../features/modular-verification-packs.feature", import.meta.url), "utf8");
 const projectServedFeatures = [...projectHandlerSource.matchAll(
   /"(features\/[A-Za-z0-9_./-]+\.feature)"/gu,
 )].map((match) => match[1]);
@@ -10356,6 +10361,25 @@ function projectPortabilityRegistryRegression(context) {
     preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
     repairResult:{status:"passed",fixtureDigest,observed}};
 }
+function projectOwnerEvidenceContractRegression(context) {
+  const expectedPreRepairFailure = {ownerProfileUnitCount:4, conservationStepUnitCount:4};
+  const expectedRepairResult = {ownerProfileUnitCount:5, conservationStepUnitCount:5};
+  const observed = {
+    ownerProfileUnitCount:projectArchitectureHandlerSource.includes("[5 4 6 1 4]") ? 5 : 4,
+    conservationStepUnitCount:modularVerificationPacksFeatureSource.includes(
+      "all five unit files, four property files, six features") ? 5 : 4,
+  };
+  assert.deepEqual(observed, expectedRepairResult);
+  const fixture = {id:"project-owner-evidence-contract-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{packId:"project_management",unitTaskCount:projectManagementPack.unit.length},
+    expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest=verificationDigest(fixture);
+  return{version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed}};
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
@@ -10380,6 +10404,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         ? approvedVerificationIdentityRegression(regressionContext)
         : regressionContext.causalCategory === "other:verification-registry-contract"
           ? projectPortabilityRegistryRegression(regressionContext)
+        : regressionContext.causalCategory === "other:project-owner-evidence-contract"
+          ? projectOwnerEvidenceContractRegression(regressionContext)
         : regressionContext.causalCategory === "other:repair-focused prerequisite closure"
           ? repairPrerequisiteClosureRegression(regressionContext)
           : artifactLockTimeoutRepairRegression(regressionContext),
