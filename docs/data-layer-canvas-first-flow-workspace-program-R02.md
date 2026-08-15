@@ -703,9 +703,19 @@ viewer loop is green.
 `property_set_flow_sections` consumer set. The settled candidate also repairs
 the non-vacuous Flow and project-management acceptance contracts and their
 registry-derived terminal-task accounting in shell-owned test paths. Exact
-changed-path planning therefore authorizes `shell` as the sixth and only added
-review pack. This preserves those contracts as evidence rather than weakening,
-reverting, or silently omitting them. The expected review-ready form is:
+changed-path planning therefore includes `shell`.
+
+The bounded cleanup repair additionally ensures that removing a whole Flow
+prunes visual assets referenced only by its owned graph, retains an asset still
+referenced by another Flow, and lets the same Undo restore the graph,
+attachments, and asset records. That behavior belongs in the canonical project
+entity lifecycle already exercised by the approved Flow-removal contract. Its
+declared dependant propagation adds `durable_project_repository`,
+`guided_test_cases`, `layered_schema`, and `project_event_transport`. Those four
+packs are authorized as the only additional consumer closure; the exact review
+set is ten packs. This preserves the lifecycle and acceptance contracts as
+evidence rather than weakening, relocating, reverting, or silently omitting
+them. The expected review-ready form is:
 
 ```sh
 node scripts/run-focused-acceptance.mjs \
@@ -715,6 +725,10 @@ node scripts/run-focused-acceptance.mjs \
   --pack live_flow_testing \
   --pack property_set_flow_sections \
   --pack shell \
+  --pack durable_project_repository \
+  --pack guided_test_cases \
+  --pack layered_schema \
+  --pack project_event_transport \
   --property \
   --changed-since <approved-specification-commit> \
   --prepare-evidence flow-concept-visuals
@@ -724,7 +738,7 @@ node scripts/package.mjs
 The receipt and every later handoff must use the canonical task name
 `flow-concept-visuals`; evidence recorded under another Flow task is stale and
 ineligible. Dependency closure and package proof remain required. Any expansion
-beyond these six packs is a blocking scope change and does not authorize an
+beyond these ten packs is a blocking scope change and does not authorize an
 all-20 checkpoint.
 
 **RepoWise Trial 4 baseline:** before coder work, ordinary inspection identified
