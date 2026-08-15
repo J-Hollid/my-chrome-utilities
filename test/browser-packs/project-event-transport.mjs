@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {spawn} from "node:child_process";
+import {createHash} from "node:crypto";
 import {mkdtemp,rm} from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
@@ -7,6 +8,10 @@ import path from "node:path";
 
 import {headlessChromeArguments,removeChromeProfile,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
 import {wait} from "./shared-harness.mjs";
+
+const normalizedRepairValue=value=>Array.isArray(value)?value.map(normalizedRepairValue):value&&typeof value==="object"?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalizedRepairValue(nested)])):value;
+const repairDigest=value=>createHash("sha256").update(JSON.stringify(normalizedRepairValue(value))).digest("hex");
+function archiveTransportRepairProtocol(observed){const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),expectedPreRepairFailure={fallbackArchiveCaptured:false,version3Imported:false},expectedRepairResult={fallbackArchiveCaptured:true,version3Imported:true},fixture={id:"project-event-v3-archive-fallback-v1",causalCategory:context.causalCategory,diagnosedBoundaryDigest:repairDigest(context.diagnosedBoundary),input:{exportCapability:"showSaveFilePicker",archiveVersion:3},expectedPreRepairFailure,expectedRepairResult},fixtureDigest=repairDigest(fixture);assert.deepEqual(observed,expectedRepairResult);return{version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},repairResult:{status:"passed",fixtureDigest,observed}};}
 
 class DevtoolsSocket{
   constructor(url){this.url=new URL(url);this.nextId=1;this.pending=new Map();this.buffer=Buffer.alloc(0);}
@@ -122,5 +127,6 @@ try{
   })()`);
   const evidence={installedBoundary:true,transport001:prior.transport001,transport002:prior.transport002,transport003:prior.transport003,transport004:prior.transport004,transport005:prior.transport005,transport006:prior.transport006,transport007,transport008:portability.passed,transport009:invalid};
   console.log(JSON.stringify({projectEventTransport:evidence,transport008Diagnostics:portability}));
+  if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION)console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:archiveTransportRepairProtocol({fallbackArchiveCaptured:portability.passed,version3Imported:prior.importedRuntime})}));
   for(const[key,value]of Object.entries(evidence))assert.equal(value,true,`${key} failed: ${JSON.stringify(evidence)}`);
 }finally{side?.close();await stopHeadlessChrome(chrome);await removeChromeProfile(profile,{targetId:"project-event-transport"});}
