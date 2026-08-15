@@ -698,11 +698,14 @@ boundary rather than coupling Flow storage to the branding theme or its smaller
 logo limit. Add project-portability coverage only after the direct attachment and
 viewer loop is green.
 
-**QA impact:** ordinary inspection forecasts the bounded `flow_graph`,
+**QA impact:** ordinary inspection initially forecast the bounded `flow_graph`,
 `project_management`, `flow_export`, `live_flow_testing`, and
-`property_set_flow_sections` consumer set, with dependency closure and package
-proof. Exact changed-path planning remains authoritative for the settled
-candidate. The expected review-ready form is:
+`property_set_flow_sections` consumer set. The settled candidate also repairs
+the non-vacuous Flow and project-management acceptance contracts and their
+registry-derived terminal-task accounting in shell-owned test paths. Exact
+changed-path planning therefore authorizes `shell` as the sixth and only added
+review pack. This preserves those contracts as evidence rather than weakening,
+reverting, or silently omitting them. The expected review-ready form is:
 
 ```sh
 node scripts/run-focused-acceptance.mjs \
@@ -711,11 +714,18 @@ node scripts/run-focused-acceptance.mjs \
   --pack flow_export \
   --pack live_flow_testing \
   --pack property_set_flow_sections \
+  --pack shell \
   --property \
   --changed-since <approved-specification-commit> \
   --prepare-evidence flow-concept-visuals
 node scripts/package.mjs
 ```
+
+The receipt and every later handoff must use the canonical task name
+`flow-concept-visuals`; evidence recorded under another Flow task is stale and
+ineligible. Dependency closure and package proof remain required. Any expansion
+beyond these six packs is a blocking scope change and does not authorize an
+all-20 checkpoint.
 
 **RepoWise Trial 4 baseline:** before coder work, ordinary inspection identified
 the Flow graph model and workspace renderers, the documentation-logo validation
