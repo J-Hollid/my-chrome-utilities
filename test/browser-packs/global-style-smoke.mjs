@@ -1,7 +1,20 @@
-import {
-  globalStyleContainmentEvidence,
-  runBrowserTargetSession,
-} from "../support/browser-target-session.mjs";
+import {pathToFileURL} from "node:url";
+
+import {runBrowserTargetSession} from "../support/browser-target-session.mjs";
+
+export function globalStyleContainmentEvidence({
+  stackedNarrow,
+  width,
+  horizontalContained,
+  verticalOrdered,
+  viewportContained,
+}) {
+  const narrowStacked = stackedNarrow && width <= 600;
+  const contained = narrowStacked
+    ? horizontalContained && verticalOrdered
+    : viewportContained;
+  return {contained,fullViewportContained:contained};
+}
 
 const surfaces = {
   studio: {
@@ -156,4 +169,6 @@ const definitions = {
   SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET:surface("sidePanel", "sidePanelGlobalStyle"),
 };
 
-await runBrowserTargetSession({definitions});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await runBrowserTargetSession({definitions});
+}

@@ -3,7 +3,7 @@ import {createHash} from "node:crypto";
 import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
-import {globalStyleContainmentEvidence} from "./support/browser-target-session.mjs";
+import {globalStyleContainmentEvidence} from "./browser-packs/global-style-smoke.mjs";
 
 assert.deepEqual(globalStyleContainmentEvidence({
   stackedNarrow:true,
