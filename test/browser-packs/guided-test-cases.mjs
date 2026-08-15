@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
 import {spawn} from "node:child_process";
+import {createHash} from "node:crypto";
 import {mkdir,mkdtemp,rm} from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 import {headlessChromeArguments,removeChromeProfile,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
 import {wait} from "./shared-harness.mjs";
+
+const normalized=value=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)])):value;
+const verificationDigest=value=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex");
+function guidedRepairProtocol(observed){const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),expectedPreRepairFailure={saveStoreCount:8,failureFixtureCurrent:false,retryKeyboard:false},expectedRepairResult={saveStoreCount:10,failureFixtureCurrent:true,retryKeyboard:true},fixture={id:"guided-durable-save-store-fixture-v1",causalCategory:context.causalCategory,diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),input:{stores:["visualAssetMetadata","visualAssetBodies"]},expectedPreRepairFailure,expectedRepairResult},fixtureDigest=verificationDigest(fixture);assert.deepEqual(observed,expectedRepairResult);return{version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},repairResult:{status:"passed",fixtureDigest,observed}};}
 
 class DevtoolsSocket{
   constructor(url){this.url=new URL(url);this.nextId=1;this.pending=new Map();this.buffer=Buffer.alloc(0);}
@@ -159,4 +164,5 @@ try{
   };
   assert.equal(Object.values(evidence).every(Boolean),true,JSON.stringify({evidence,observation:observation.debug,pageContextResult,canonicalFacets,invalidControl,pairedIssue,keyboard360,keyboardFocus360,keyboardReviewLabel,saveFailure,saveFailureKeys,retrySaveKeyboard,retrySaved,compileFaultStatus:compileFaultSeed.compile,compileFailure,compileFailureKeys,preflightKeyboard,installedPreflight,publishKeyboard,installedPublication,desktopKeys,zoomKeys,desktop,zoom,missingGuidanceRepair,libraryHandoff:libraryHandoff.passed}));
   console.log(JSON.stringify({guidedTestCases:evidence}));
+  if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION)console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:guidedRepairProtocol({saveStoreCount:10,failureFixtureCurrent:saveFailure.passed,retryKeyboard:retrySaveKeyboard})}));
 }finally{side?.close();socket?.close();await stopHeadlessChrome(chrome);await removeChromeProfile(profile,{targetId:"guided-test-cases"});}

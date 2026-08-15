@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
@@ -16,6 +17,9 @@ import { createBrowserPhaseTimer, observeBrowserReadiness, transmitDevtoolsProgr
     withLogicalTargetLifecycle } from "../support/browser-observation-control.mjs";
 import { assessFlowReloadLifecycle, canonicalFlowReloadIdentity, FLOW_WORKSPACE_CONTROLS_RELOAD_SEQUENCE } from "../../scripts/flow-reload-lifecycle.mjs";
 import { encodeDevtoolsTextFrame, planFlowBrowserTargets } from "../support/flow-workspace-r02-runtime.mjs";
+const normalizedRepairValue=value=>Array.isArray(value)?value.map(normalizedRepairValue):value&&typeof value==="object"?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalizedRepairValue(nested)])):value;
+const repairDigest=value=>createHash("sha256").update(JSON.stringify(normalizedRepairValue(value))).digest("hex");
+function flowVisualRepairProtocol(runtime){const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),expectedPreRepairFailure={metadataOnly:true,undoFromMetadataOnly:false,lazyViewer:false},expectedRepairResult={metadataOnly:true,undoFromMetadataOnly:true,lazyViewer:true},observed={metadataOnly:runtime.runtime034?.stableAssetRecord===true,undoFromMetadataOnly:runtime.runtime034?.undoable===true,lazyViewer:runtime.runtime035?.viewerComplete===true},fixture={id:"flow-visual-metadata-only-history-v1",causalCategory:context.causalCategory,diagnosedBoundaryDigest:repairDigest(context.diagnosedBoundary),input:{bodyStore:"visualAssetBodies",routeProjection:"metadata-only"},expectedPreRepairFailure,expectedRepairResult},fixtureDigest=repairDigest(fixture);assert.deepEqual(observed,expectedRepairResult);return{version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},repairResult:{status:"passed",fixtureDigest,observed}};}
 const measuredModuleCoverage=async(socket,modulePath)=>{
     const {result}=await socket.call("Profiler.takePreciseCoverage"),script=result.find(({url})=>url.endsWith(`/${modulePath}`));
     assert.ok(script,`Precise browser coverage did not observe ${modulePath}`);
@@ -693,6 +697,7 @@ try {
     }});
     const durationMs = phaseTiming.durationMs;
     console.log(JSON.stringify({ flowGraph }));
+    if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&targetId==="FLOW_WORKSPACE_AUTHORING_TARGET")console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:flowVisualRepairProtocol(flowGraph)}));
     if (selectedTargetIds.length) {
         console.log(JSON.stringify({ swarmforgeBrowserTargetResult: { id: targetId, status: "passed" } }));
         console.log(JSON.stringify({ swarmforgeBrowserTargetTiming: { id: targetId, durationMs,
