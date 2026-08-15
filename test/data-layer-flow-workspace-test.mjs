@@ -36,6 +36,7 @@ import {
   flowConceptVisualPan,
   flowConceptVisualZoomAt,
 } from "../dist/flow-graph/concept-visual-ui.js";
+import {clampedFlowConceptVisualViewerState} from "../dist/flow-graph/concept-visual-viewer-state.js";
 import {
   FLOW_SECTION_ACTION_LABELS,
   flowSectionMenuRequest,
@@ -99,6 +100,16 @@ assert.deepEqual(
   "zoom preserves the image point beneath an off-center pointer",
 );
 assert.deepEqual(
+  flowConceptVisualZoomAt({...viewerFixture,state:{scale:1,x:0,y:0}},.1,{x:400,y:300}),
+  {scale:.5,x:0,y:0},
+  "zooming out stops at Fit and recenters the image",
+);
+assert.deepEqual(
+  flowConceptVisualZoomAt({...viewerFixture,state:{scale:1,x:0,y:0}},10,{x:400,y:300}),
+  {scale:4,x:0,y:0},
+  "zooming in stops at 400 percent actual scale",
+);
+assert.deepEqual(
   flowConceptVisualPan({...viewerFixture,state:{scale:1,x:0,y:0}},{x:1000,y:-1000}),
   {scale:1,x:400,y:-300},
   "two-axis viewer pan clamps at image bounds without exposing empty canvas",
@@ -107,6 +118,14 @@ assert.deepEqual(
   flowConceptVisualPan({raster:{width:400,height:1200},viewport:{width:800,height:600},state:{scale:1,x:100,y:0}},{x:80,y:80}),
   {scale:1,x:0,y:80},
   "a non-overflowing axis stays centered while the other axis pans",
+);
+assert.deepEqual(
+  clampedFlowConceptVisualViewerState(
+    {raster:{width:1600,height:1200},viewport:{width:1200,height:900}},
+    {scale:.5,x:200,y:-200},
+  ),
+  {scale:.75,x:0,y:0},
+  "a resized viewer raises stale zoom to the new Fit minimum and recenters non-overflowing axes",
 );
 
 assert.deepEqual(fitFlowBounds({x:100,y:50,width:2400,height:1200},{width:600,height:300},24),{x:76,y:26,zoom:.24},"Fit Flow may use a scale below the manual minimum");
