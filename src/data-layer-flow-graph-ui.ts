@@ -28,7 +28,7 @@ import {
   type DocumentaryPageFrameRecord,
   type FlowPortSide,
 } from "./data-layer-flow-graph.js";
-import {type IdFactory,type ProjectEntity,type ProjectState} from "./utilities/data-layer/schemas.js";
+import {openIndexedDbProjectRepository,type IdFactory,type ProjectEntity,type ProjectState} from "./utilities/data-layer/schemas.js";
 import {appendFlowPageFrameCardControls} from "./data-layer-flow-graph-ui-page-frame.js";
 import {addFlowPageFrameAndRelationship,addFlowPageFrameAtPosition,addFlowPageFrameToSection,connectFlowPageFrames,createFlowSection,createFlowSectionAroundFrames,inspectSectionRemovalWithContents,moveFlowPageFramePresentation,moveFlowSection,movePageFrameToSection,removeFlowSection,removeFlowSectionWithContents,renameAndResizeFlowSection,tidyFlowPageFrames,type FlowSectionBounds,type FlowSectionRemovalReview} from "./utilities/data-layer/property-set-flow-section.js";
 import {button,elementByData,entityName,flowEdgeGeometry,flowPortPoint,nodeHeight,nodeWidth,ownsPointerDrag,q,restorePointerCancellationFocus,svg} from "./flow-graph/ui-primitives.js";
@@ -46,7 +46,7 @@ export interface FlowGraphBuilderContext {state?:ProjectState;flowId?:string;rev
 
 export function contextSettingPageLabel(pageName:string):string{return `${pageName} · Context-setting Page`;}
 export interface FlowGraphBuilderIntegration {render():void;renderSelectors():void}
-interface IntegrationOptions {context:()=>FlowGraphBuilderContext;persist:(state:ProjectState)=>void;id:IdFactory;openOccurrenceSchema?:(occurrenceId:string,path?:string,originFocus?:HTMLElement)=>boolean;loadVisualBody?:(projectId:string,assetId:string)=>Promise<string>}
+interface IntegrationOptions {context:()=>FlowGraphBuilderContext;persist:(state:ProjectState)=>void;id:IdFactory;openOccurrenceSchema?:(occurrenceId:string,path?:string,originFocus?:HTMLElement)=>boolean}
 
 
 function renderOccurrenceExampleControls(host:HTMLElement,state:ProjectState,flowId:string,occurrenceId:string,persist:(next:ProjectState)=>void,id:IdFactory):void{
@@ -80,7 +80,7 @@ export function installFlowGraphBuilder(options:IntegrationOptions):FlowGraphBui
   let statusRepairHref="";
   let activeCatalogPayload:{kind:string;id:string}|undefined;
   let pendingItemMenu:FlowItemMenuOpenRequest|undefined;
-  const visualBytes=new Map<string,string>(),hydrateVisual=async(assetId:string)=>{if(visualBytes.has(assetId))return;const projectId=current().state?.project.id;if(!projectId||!options.loadVisualBody)return;visualBytes.set(assetId,await options.loadVisualBody(projectId,assetId));render();};
+  const visualBytes=new Map<string,string>(),hydrateVisual=async(assetId:string)=>{if(visualBytes.has(assetId))return;const projectId=current().state?.project.id;if(!projectId)return;const body=await(await openIndexedDbProjectRepository()).loadConceptVisualAssetBody(projectId,assetId),bytes=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(reader.error);reader.readAsDataURL(body);});visualBytes.set(assetId,bytes);render();};
   const viewKey=(projectId:string,flowId:string)=>`my-chrome-utilities.flow-view.v1:${projectId}:${flowId}`;
   const readView=(projectId:string,flowId:string):SessionFlowView=>{try{return JSON.parse(sessionStorage.getItem(viewKey(projectId,flowId))??"{}");}catch{return{};}};
   const writeView=(projectId:string,flowId:string,view:SessionFlowView):void=>sessionStorage.setItem(viewKey(projectId,flowId),JSON.stringify(view));

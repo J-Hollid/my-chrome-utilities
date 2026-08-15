@@ -1,4 +1,5 @@
 import { addEventOccurrenceToPage, deriveFlowOccurrenceExample, deriveFlowPageFrameExample, documentaryFlowGraph, duplicateGraphOccurrence, duplicateFlowPageFrame, effectiveFlowPageFrameName, flowOccurrenceExampleEditorRows, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectOccurrencePageChange, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveGraphOccurrence, projectFlowGraph, reassignFlowOccurrencePage, reviewLegacyFlowContextMigration, removeFlowPageFrame, renameFlowPageFrame, resetFlowPageFrameName, removeFlowRelationship, removeGraphOccurrence, saveGraphRelationship, setFlowOccurrenceExample, } from "./data-layer-flow-graph.js";
+import { openIndexedDbProjectRepository } from "./utilities/data-layer/schemas.js";
 import { appendFlowPageFrameCardControls } from "./data-layer-flow-graph-ui-page-frame.js";
 import { addFlowPageFrameAndRelationship, addFlowPageFrameAtPosition, addFlowPageFrameToSection, connectFlowPageFrames, createFlowSection, createFlowSectionAroundFrames, inspectSectionRemovalWithContents, moveFlowPageFramePresentation, moveFlowSection, movePageFrameToSection, removeFlowSection, removeFlowSectionWithContents, renameAndResizeFlowSection, tidyFlowPageFrames } from "./utilities/data-layer/property-set-flow-section.js";
 import { button, elementByData, entityName, flowEdgeGeometry, flowPortPoint, nodeHeight, nodeWidth, ownsPointerDrag, q, restorePointerCancellationFocus, svg } from "./flow-graph/ui-primitives.js";
@@ -57,8 +58,8 @@ export function installFlowGraphBuilder(options) {
     let activeCatalogPayload;
     let pendingItemMenu;
     const visualBytes = new Map(), hydrateVisual = async (assetId) => { if (visualBytes.has(assetId))
-        return; const projectId = current().state?.project.id; if (!projectId || !options.loadVisualBody)
-        return; visualBytes.set(assetId, await options.loadVisualBody(projectId, assetId)); render(); };
+        return; const projectId = current().state?.project.id; if (!projectId)
+        return; const body = await (await openIndexedDbProjectRepository()).loadConceptVisualAssetBody(projectId, assetId), bytes = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(reader.error); reader.readAsDataURL(body); }); visualBytes.set(assetId, bytes); render(); };
     const viewKey = (projectId, flowId) => `my-chrome-utilities.flow-view.v1:${projectId}:${flowId}`;
     const readView = (projectId, flowId) => { try {
         return JSON.parse(sessionStorage.getItem(viewKey(projectId, flowId)) ?? "{}");
