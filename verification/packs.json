@@ -2827,6 +2827,9 @@
         "prefixes": [
           "src/flow-graph/ui-primitives.ts",
           "src/flow-graph/concept-visual-ui.ts",
+          "src/flow-graph/concept-visual-viewer-input.ts",
+          "src/flow-graph/concept-visual-viewer-state.ts",
+          "src/flow-graph/concept-visual-viewer-ui.ts",
           "src/flow-graph/concept-visual-workspace.ts",
           "src/flow-graph/workspace-card-ui.ts",
           "src/flow-graph/workspace-dom.ts",

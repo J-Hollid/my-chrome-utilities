@@ -9,6 +9,7 @@ import {selectionAfterActivation} from "../dist/flow-graph/workspace-selection.j
 import {sectionPointerDelta} from "../dist/flow-graph/workspace-section-geometry.js";
 import {flowWheelZoomFactor} from "../dist/flow-graph/workspace-wheel-zoom.js";
 import {attachFlowConceptVisual,flowConceptVisualAssets,removeFlowConceptVisual} from "../dist/flow-graph/concept-visuals.js";
+import {FLOW_CONCEPT_VISUAL_MAX_VIEWER_SCALE,flowConceptVisualFitScale,flowConceptVisualPan,flowConceptVisualZoomAt} from "../dist/flow-graph/concept-visual-viewer-state.js";
 import {boundedDiagnostic,observeBrowserReadiness} from "./support/browser-observation-control.mjs";
 import {createFlowExamplesPhaseTimer,flowExamplesPhaseNames} from "./support/flow-examples-timing.mjs";
 import {decodeDevtoolsTextFrame,encodeDevtoolsTextFrame} from "./support/flow-workspace-r02-runtime.mjs";
@@ -36,6 +37,15 @@ for(let sample=0;sample<512;sample+=1){
   const tied=[1,7,4].map((presentationOrder,index)=>({endpointId:`tie:${presentationOrder}`,port:"left",center:{x:center.x+8,y:center.y},presentationOrder,index}));
   assert.equal(flowPortSnapTarget(point,tied)?.endpointId,"tie:7","frontmost presentation order breaks a generated distance tie");
   assert.equal(flowPortSnapTarget(point,[...tied].reverse())?.endpointId,"tie:7","tie resolution is independent of candidate iteration order");
+}
+for(let sample=0;sample<512;sample+=1){
+  const raster={width:1+random()*8191,height:1+random()*8191},viewport={width:160+random()*1280,height:120+random()*900},fit=flowConceptVisualFitScale(raster,viewport),scale=fit+random()*(FLOW_CONCEPT_VISUAL_MAX_VIEWER_SCALE-fit),state={scale,x:0,y:0},requestedScale=scale+random()*(FLOW_CONCEPT_VISUAL_MAX_VIEWER_SCALE-scale),beforeLeft=(viewport.width-raster.width*scale)/2,beforeTop=(viewport.height-raster.height*scale)/2,beforeRight=beforeLeft+raster.width*scale,beforeBottom=beforeTop+raster.height*scale,anchor={x:Math.max(0,beforeLeft)+random()*(Math.min(viewport.width,beforeRight)-Math.max(0,beforeLeft)),y:Math.max(0,beforeTop)+random()*(Math.min(viewport.height,beforeBottom)-Math.max(0,beforeTop))},beforePoint={x:(anchor.x-beforeLeft)/scale,y:(anchor.y-beforeTop)/scale},zoomed=flowConceptVisualZoomAt({raster,viewport,state},requestedScale,anchor),afterLeft=(viewport.width-raster.width*zoomed.scale)/2+zoomed.x,afterTop=(viewport.height-raster.height*zoomed.scale)/2+zoomed.y,afterPoint={x:(anchor.x-afterLeft)/zoomed.scale,y:(anchor.y-afterTop)/zoomed.scale};
+  assert.ok(Number.isFinite(fit)&&fit>0&&fit<=1,"generated Fit scales remain finite, positive, and never enlarge the raster");
+  assert.ok(zoomed.scale>=fit&&zoomed.scale<=FLOW_CONCEPT_VISUAL_MAX_VIEWER_SCALE,"generated viewer zoom remains within Fit and 400 percent");
+  if(raster.width*scale>=viewport.width&&raster.height*scale>=viewport.height)assert.ok(Math.abs(beforePoint.x-afterPoint.x)<1e-8&&Math.abs(beforePoint.y-afterPoint.y)<1e-8,"zooming inward preserves the generated image point beneath its anchor whenever both axes can retain it");
+  const panned=flowConceptVisualPan({raster,viewport,state:zoomed},{x:(random()-.5)*100000,y:(random()-.5)*100000}),idempotent=flowConceptVisualPan({raster,viewport,state:panned},{x:0,y:0}),limit={x:Math.max(0,(raster.width*panned.scale-viewport.width)/2),y:Math.max(0,(raster.height*panned.scale-viewport.height)/2)};
+  assert.ok(Math.abs(panned.x)<=limit.x+1e-9&&Math.abs(panned.y)<=limit.y+1e-9,"generated two-axis pan never exposes space beyond the image bounds");
+  assert.equal(idempotent.scale,panned.scale);assert.ok(Math.abs(idempotent.x-panned.x)<1e-12&&Math.abs(idempotent.y-panned.y)<1e-12,"a bounded viewer state is stable under zero-distance pan");
 }
 for(let sample=0;sample<512;sample+=1){
   const camera={x:random()*2000-1000,y:random()*2000-1000,zoom:.25+random()*1.75},anchor={x:random()*900,y:random()*700},factor=.2+random()*4,zoomed=zoomFlowCamera(camera,factor,anchor),worldBefore={x:camera.x+anchor.x/camera.zoom,y:camera.y+anchor.y/camera.zoom},worldAfter={x:zoomed.x+anchor.x/zoomed.zoom,y:zoomed.y+anchor.y/zoomed.zoom};
