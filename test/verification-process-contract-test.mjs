@@ -4990,6 +4990,7 @@ assert.deepEqual(projectManagementPack.impactBoundaries.map(({ id, sourceClass, 
   ["project_page_authoring_controller", "application controller", true],
   ["project_assignment_routing_semantic", "core or semantic", true],
   ["project_assignment_routing_presentation", "browser presentation", false],
+  ["project_flow_visual_asset_portability", "persistence migration", true],
   ["project_library_persistence", "persistence migration", true],
   ["project_library_controller", "application controller", true],
   ["project_library_presentation", "browser presentation", false],
@@ -5135,6 +5136,7 @@ const projectEvidenceProfile = conservedEvidenceProfile(projectManagementPack);
 assert.deepEqual(projectEvidenceProfile, {...conservedEvidenceProfile(baseProjectManagementPack),
   unit:[...conservedEvidenceProfile(baseProjectManagementPack).unit.slice(0, 3),
     "test/data-layer-project-library-transport-test.mjs",
+    "test/data-layer-flow-visual-asset-portability-test.mjs",
     ...conservedEvidenceProfile(baseProjectManagementPack).unit.slice(3)]},
 "all exact project-management evidence identities are conserved from the accepted base");
 const exactProjectPlan = planVerification(packs, {packIds:["project_management"], includeProperties:true});
