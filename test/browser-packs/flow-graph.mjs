@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -16,6 +16,14 @@ import { createBrowserPhaseTimer, observeBrowserReadiness, transmitDevtoolsProgr
     withLogicalTargetLifecycle } from "../support/browser-observation-control.mjs";
 import { assessFlowReloadLifecycle, canonicalFlowReloadIdentity, FLOW_WORKSPACE_CONTROLS_RELOAD_SEQUENCE } from "../../scripts/flow-reload-lifecycle.mjs";
 import { encodeDevtoolsTextFrame, planFlowBrowserTargets } from "../support/flow-workspace-r02-runtime.mjs";
+const measuredModuleCoverage=async(socket,modulePath)=>{
+    const {result}=await socket.call("Profiler.takePreciseCoverage"),script=result.find(({url})=>url.endsWith(`/${modulePath}`));
+    assert.ok(script,`Precise browser coverage did not observe ${modulePath}`);
+    const source=await readFile(path.resolve("dist",modulePath),"utf8"),ranges=script.functions.flatMap(({ranges})=>ranges),lineOffsets=[];
+    for(let start=0;start<source.length;){const end=source.indexOf("\n",start),finish=end<0?source.length:end,line=source.slice(start,finish),first=line.search(/\S/u);if(first>=0)lineOffsets.push(start+first);if(end<0)break;start=end+1;}
+    const executed=position=>ranges.filter(({startOffset,endOffset})=>startOffset<=position&&position<endOffset).sort((left,right)=>(left.endOffset-left.startOffset)-(right.endOffset-right.startOffset))[0]?.count>0,coveredLines=lineOffsets.filter(executed).length,coveredFunctions=script.functions.filter(({ranges:[entry]})=>entry?.count>0).length;
+    return{lines:coveredLines/lineOffsets.length,functions:coveredFunctions/script.functions.length,coveredLines,totalLines:lineOffsets.length,coveredFunctions,totalFunctions:script.functions.length};
+};
 class DevtoolsSocket {
     constructor(url, targetId, { callLimitMilliseconds, forcedHangMethod } = {}) { this.url = new URL(url); this.targetId = targetId; this.callLimitMilliseconds = callLimitMilliseconds ?? (() => 120000); this.forcedHangMethod = forcedHangMethod; this.nextId = 1; this.pending = new Map(); this.handlers = new Map(); this.buffer = Buffer.alloc(0); }
     async connect() { await new Promise((resolve, reject) => { this.socket = net.createConnection({ host: this.url.hostname, port: Number(this.url.port) }); this.socket.once("error", reject); this.socket.once("connect", () => { const key = Buffer.from(String(Math.random())).toString("base64"); this.socket.write([`GET ${this.url.pathname}${this.url.search} HTTP/1.1`, `Host: ${this.url.host}`, "Upgrade: websocket", "Connection: Upgrade", `Sec-WebSocket-Key: ${key}`, "Sec-WebSocket-Version: 13", "\r\n"].join("\r\n")); }); let handshake = ""; const receive = (chunk) => { handshake += chunk.toString("binary"); const end = handshake.indexOf("\r\n\r\n"); if (end < 0)
@@ -426,8 +434,19 @@ try {
             await evaluate("(()=>{const row=[...document.querySelectorAll('.entity-row button')].find(item=>item.textContent==='Checkout journey');row.click();return true;})()");
         }
         await waitForBrowser("readiness", "Flow toolbar mounted after pan restoration", "[aria-label=\"Flow toolbar\"]");
+        let viewerModuleCoverage;const measureViewerCoverage=targetId==="FLOW_WORKSPACE_AUTHORING_TARGET";
+        if(measureViewerCoverage){
+            await socket.call("Profiler.enable");
+            await socket.call("Profiler.startPreciseCoverage",{callCount:true,detailed:true});
+        }
         Object.assign(runtime, await evaluate(flowGraphCorrectiveWorkflow(
             seeded, { stopAfterRuntime: 20, targetId, browserShard })));
+        if(measureViewerCoverage){
+            viewerModuleCoverage=await measuredModuleCoverage(socket,"flow-graph/concept-visual-ui.js");
+            console.log(JSON.stringify({viewerModuleCoverage}));
+            await socket.call("Profiler.stopPreciseCoverage");
+            await socket.call("Profiler.disable");
+        }
         runtime.runtime001 = geometryEvidence;
         runtime.runtime027 = panEvidence;
         await reloadFlowPage("core-workflow:evidence");
@@ -435,6 +454,10 @@ try {
         const reloadEvidence = await evaluate(flowGraphReloadEvidence(seeded));
         for (const [key, value] of Object.entries(reloadEvidence))
             runtime[key] = { ...runtime[key], ...value };
+        if(viewerModuleCoverage){
+            runtime.runtime035.viewerCoverage=viewerModuleCoverage.lines>.8&&viewerModuleCoverage.functions>.8;
+            runtime.runtime035.measurements={...runtime.runtime035.measurements,viewerModuleCoverage};
+        }
         }
     }
     if (browserShard === "legacy") {

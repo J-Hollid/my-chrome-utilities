@@ -23,17 +23,17 @@ for(let example=0;example<120;example+=1){
   if(kind==="assignments")initial.project.collections.profiles.push({id:`profile:${suffix}`,name:"Target profile",requirements:[]});
   const untouched=Object.fromEntries(kinds.filter((candidate)=>candidate!==kind).map((candidate)=>[candidate,JSON.stringify(initial.project.collections[candidate])]));
   const createdEntityState=createProjectCollectionEntity(initial,kind,name,id,kind==="assignments"?{targetKind:"Shared Profile",targetId:`profile:${suffix}`}:{}),entity=createdEntityState.project.collections[kind][0];
-  const ownedGraph={
-    pageFrames:[{id:`frame:${suffix}`,pageId:`page:${suffix}`,position:{x:example,y:Math.floor(random()*500)}}],
+  const sharedVisual=Math.floor(example/kinds.length)%2===0,ownedAsset={id:`asset:owned:${suffix}`,byteLength:example+1},retainedAsset=sharedVisual?ownedAsset:{id:`asset:retained:${suffix}`,byteLength:example+2},retainedFlow={id:`flow:retained:${suffix}`,name:`Retained ${suffix}`,steps:[]},ownedGraph={
+    pageFrames:[{id:`frame:${suffix}`,pageId:`page:${suffix}`,position:{x:example,y:Math.floor(random()*500)},conceptVisual:{id:`visual:owned:${suffix}`,assetId:ownedAsset.id,description:"Owned visual"}}],
     occurrences:[{id:`occurrence:${suffix}`,pageFrameId:`frame:${suffix}`,eventId:`event:${suffix}`}],
     relationships:[],
-  };
+  },retainedGraph={pageFrames:[{id:`frame:retained:${suffix}`,pageId:`page:${suffix}`,conceptVisual:{id:`visual:retained:${suffix}`,assetId:retainedAsset.id,description:"Retained visual"}}],occurrences:[],relationships:[]};
   const created=kind==="flows"
-    ? {...createdEntityState,project:{...createdEntityState.project,documentationFlowGraphs:{[entity.id]:ownedGraph}}}
+    ? {...createdEntityState,project:{...createdEntityState.project,collections:{...createdEntityState.project.collections,flows:[entity,retainedFlow]},documentationFlowGraphs:{[entity.id]:ownedGraph,[retainedFlow.id]:retainedGraph},conceptVisualAssets:sharedVisual?[ownedAsset]:[ownedAsset,retainedAsset]}}
     : createdEntityState;
 
   assert.equal(entity.name,`Entity ${suffix}`,"creation trims the human name");
-  assert.equal(created.project.collections[kind].length,1);
+  assert.equal(created.project.collections[kind].length,kind==="flows"?2:1);
   assert.equal(created.history.undo.length,initial.history.undo.length+1,"creation is one undoable transaction");
   for(const [candidate,bytes] of Object.entries(untouched))assert.equal(JSON.stringify(created.project.collections[candidate]),bytes,`creation preserves ${candidate}`);
   if(kind==="flows")assert.deepEqual(entity.steps,[],"top-level Flow creation never invents executable steps");
@@ -50,11 +50,17 @@ for(let example=0;example<120;example+=1){
   const review=inspectProjectEntityRemoval(created,kind,entity.id);
   assert.equal(review.blocked,false);
   const removed=removeProjectCollectionEntity(created,kind,entity.id);
-  assert.equal(removed.project.collections[kind].length,0);
-  if(kind==="flows")assert.equal(removed.project.documentationFlowGraphs[entity.id],undefined,"Flow removal conserves ownership by removing its graph");
+  assert.equal(removed.project.collections[kind].length,kind==="flows"?1:0);
+  if(kind==="flows"){
+    assert.equal(removed.project.documentationFlowGraphs[entity.id],undefined,"Flow removal conserves ownership by removing its graph");
+    assert.deepEqual(removed.project.conceptVisualAssets.map(({id:assetId})=>assetId),[retainedAsset.id],"Flow removal retains exactly assets referenced by remaining graphs");
+  }
   const restored=undoProjectTransaction(removed);
   assert.deepEqual(restored.project.collections[kind][0],entity,"Undo restores the complete stable entity");
-  if(kind==="flows")assert.deepEqual(restored.project.documentationFlowGraphs[entity.id],ownedGraph,"Undo restores the exact generated owned graph");
+  if(kind==="flows"){
+    assert.deepEqual(restored.project.documentationFlowGraphs[entity.id],ownedGraph,"Undo restores the exact generated owned graph");
+    assert.deepEqual(restored.project.conceptVisualAssets,created.project.conceptVisualAssets,"Undo restores the exact generated visual asset registry");
+  }
   assert.throws(()=>createProjectCollectionEntity(created,kind,`entity ${suffix}`,id),/unique/,"names are unique without case sensitivity");
 }
 
