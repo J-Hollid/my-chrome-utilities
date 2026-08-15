@@ -267,7 +267,6 @@ try {
     })()`,
   );
   assert.equal(seeded, true, "three durable projects must seed");
-  await waitForProjects(side);
   await side.call("Page.reload", { ignoreCache: true });
   await waitForProjects(side);
   await evaluate(
