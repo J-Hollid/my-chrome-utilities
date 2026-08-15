@@ -10335,6 +10335,27 @@ function isolatedCheckpointToolchainRegression(context) {
     preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
     repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
 }
+function projectPortabilityRegistryRegression(context) {
+  const expectedPreRepairFailure = {boundaryRegistered:false, unitTaskCount:4,
+    evidenceProfileConserved:false};
+  const expectedRepairResult = {boundaryRegistered:true, unitTaskCount:5,
+    evidenceProfileConserved:true};
+  const observed = {boundaryRegistered:projectManagementPack.impactBoundaries.some(
+    ({id}) => id === "project_flow_visual_asset_portability"),
+  unitTaskCount:projectManagementPack.unit.length,
+  evidenceProfileConserved:projectEvidenceProfile.unit.includes(
+    "test/data-layer-flow-visual-asset-portability-test.mjs")};
+  assert.deepEqual(observed, expectedRepairResult);
+  const fixture = {id:"project-portability-registry-contract-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{packId:"project_management",source:"src/flow-visual-asset-portability.ts"},
+    expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest=verificationDigest(fixture);
+  return{version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed}};
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
@@ -10357,6 +10378,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         ? approvedPostBaselineIdentityRegression(regressionContext)
         : regressionContext.causalCategory === "other:approved verification identity conservation"
         ? approvedVerificationIdentityRegression(regressionContext)
+        : regressionContext.causalCategory === "other:verification-registry-contract"
+          ? projectPortabilityRegistryRegression(regressionContext)
         : regressionContext.causalCategory === "other:repair-focused prerequisite closure"
           ? repairPrerequisiteClosureRegression(regressionContext)
           : artifactLockTimeoutRepairRegression(regressionContext),
