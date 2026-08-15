@@ -3393,6 +3393,13 @@ console.log("repairTmp=" + process.env.TMPDIR);
     { packIds:allPackIds, includeProperties:true });
   const acceptedBaseConservationPlan = planVerification(acceptedBasePacks,
     { packIds:allPackIds, includeProperties:true });
+  const registeredTaskKeys = (registry) => new Set(registry.flatMap((pack) => [
+    ...(pack.unit??[]).map((target) => `unit:${target}`),
+    ...(pack.property??[]).map((target) => `property:${target}`),
+  ]));
+  const acceptedRegisteredTaskKeys = registeredTaskKeys(acceptedBasePacks);
+  const postBaseAddedRegisteredTaskKeys = new Set([...registeredTaskKeys(timeoutPackRegistry)]
+    .filter((key) => !acceptedRegisteredTaskKeys.has(key)));
   const approvedStyleSmokeTargetIds = new Set([
     "STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
     "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
@@ -3670,10 +3677,8 @@ console.log("repairTmp=" + process.env.TMPDIR);
       productChangedFiles:postTerminalChangedFiles.filter((file) => file.startsWith("src/")),
       featureChangedFiles:postTerminalChangedFiles
         .filter((file) => file.startsWith("features/")),
-      currentTaskDigest:verificationDigest(currentConservationPlan.tasks.filter(({key})=>![
-        "unit:test/command-palette-installed-controller-test.mjs",
-        "unit:test/flow-reload-lifecycle-test.mjs",
-        "unit:test/workspace-tabs-installed-controller-test.mjs",
+      currentTaskDigest:verificationDigest(currentConservationPlan.tasks.filter(({key})=>
+        !postBaseAddedRegisteredTaskKeys.has(key) && ![
         "unit:test/settled-final-verification-workflow-test.mjs",
         "unit:test/package-clean-checkout-contract-test.mjs",
         "unit:test/verification-evidence-production-path-test.mjs",
@@ -3696,6 +3701,9 @@ console.log("repairTmp=" + process.env.TMPDIR);
       allPackCount:timeoutRepairPackIds.length,
       packageTask:timeoutRepairPackageTaskIdentity.args.join(" ") },
   };
+  assert.equal(vtd014Evidence.conservation.currentTaskDigest,
+    vtd014Evidence.conservation.acceptedBaseTaskDigest,
+    "VTD-014 conservation excludes registry-approved post-baseline tasks");
 } finally {
   await rm(incidentFixtureRoot, { recursive:true, force:true });
 }
