@@ -575,13 +575,13 @@ Feature: Data layer directional Flow specification graph
     Then the menu closes and a separate contextual Visual editor opens with focus on its paste and drop target
     And Paste image, Choose image file, a preview, Description, Caption, Source reference, Save, and Cancel are keyboard operable
     When the operator <input_route> a readable <image_type> image
-    Then the editor shows the complete normalized image that will be stored without cropping or exposing its encoded bytes
+    Then the editor shows the complete validated original image that will be stored without cropping or exposing its encoded bytes
     And staging the image changes no project or history state
     When the operator attempts to save a blank Description
     Then Save remains unavailable and the editor identifies Description as required
     When the operator enters <description>, <caption>, and <source_reference> and saves
     Then <target> owns exactly one primary concept-visual attachment with that contextual metadata
-    And the project stores one stable normalized raster asset with media type, intrinsic dimensions, byte length, and content digest
+    And the project stores one stable original raster asset with media type, intrinsic dimensions, byte length, and content digest
     And the reusable Page and Event definitions, graph topology, item position, and current visual-display mode remain unchanged
     And the saved item offers View visual, Edit visual, Replace visual, and Remove visual while one Undo removes the attachment
 
@@ -631,11 +631,11 @@ Feature: Data layer directional Flow specification graph
       | a source image larger than 5 MiB                                  | The visual is too large                          |
       | a decodable image wider than 4096 pixels                          | The visual dimensions exceed 4096 pixels         |
       | a decodable image within 4096 pixels per side but above 16 megapixels | The visual exceeds 16 megapixels               |
-      | an image that would take project visual assets above 25 MiB       | This project has reached its 25 MiB visual limit |
+      | an image whose save exceeds available durable storage             | This project does not have enough durable storage for this visual |
 
   # Data layer directional Flow specification graph 037
   Scenario: Data layer directional Flow specification graph 037
-    Given Cart Page instance and add_payment_info Event occurrence attach the same normalized image with different descriptions
+    Given one project asset has two Flow-local attachment references with different descriptions
     Then the project stores one raster asset and two independent contextual attachments referencing it
     When the operator duplicates Cart
     Then the duplicate has a distinct Page-instance and attachment identity referencing the same asset with copied contextual metadata

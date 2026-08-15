@@ -35,13 +35,17 @@ Feature: Data layer project portability and upgrade
     When file validation receives <problem>
     Then import review identifies <repair> at the exact bundle section
     And the import commit action cannot be invoked
-    And no project record, active-context change, or partial entity write occurs
+    And no project record, asset-body record, active-context change, or partial entity write occurs
 
     Examples:
       | problem                              | repair                                      |
       | malformed JSON                       | choose a readable project bundle             |
       | unsupported future format version    | use a supported version or migrate externally |
       | missing Page referenced by a Flow    | restore the missing Page and export again    |
+      | a manifest reference whose asset is missing | restore the missing asset and export again   |
+      | asset bytes that do not match their digest | restore the original asset and export again  |
+      | an asset entry with an unsafe relative path | choose an archive containing only safe asset paths |
+      | archive entries above the aggregate unpacked limit | choose a project archive within the import limit |
 
   # Data layer project portability and upgrade 004
   Scenario: Data layer project portability and upgrade 004
@@ -91,12 +95,40 @@ Feature: Data layer project portability and upgrade
   # Data layer project portability and upgrade 008
   Scenario: Data layer project portability and upgrade 008
     Given Retail website has one Flow Page attachment and one Event-occurrence attachment that share a project concept-visual asset
-    And the attachments have independent descriptions, captions, and source references while their Flow remembers Thumbnails mode
+    And its Saved Draft and current Published project reference that asset while the attachments retain independent descriptions, captions, and source references
     When the operator exports Retail website from the Projects tab
-    Then the bundle contains the normalized raster asset bytes and metadata once with both resolvable attachment references
-    And it contains the attachment descriptions, captions, and source references without visual-display mode, viewer state, selection, or camera state
-    When the bundle is imported as a new project
-    Then the imported asset receives a new project-owned identity and both attachments reference that remapped identity
-    And both imported viewers decode the same complete image with their respective contextual metadata
+    Then one versioned self-contained project archive contains a manifest plus separate Saved Draft and current Published project records
+    And the archive contains the original raster body once at its digest-addressed asset entry with media type, intrinsic dimensions, byte length, and SHA-256 digest
+    And every Draft, Published, Page, and Event attachment reference resolves to that entry with exact contextual metadata
+    And the archive contains no base64 image data URL, browser storage key, Blob URL, generated thumbnail, visual-display mode, viewer state, selection, or camera state
+    When the archive is reviewed and imported as a new project
+    Then the imported asset receives a new project-owned identity while its original body digest remains exact
+    And every imported Draft and Published reference points to that remapped identity
+    And both imported viewers decode the same complete image with their respective descriptions, captions, and source references
     And the source project and every pre-existing project remain unchanged
     And active context remains unchanged
+
+  # Data layer project portability and upgrade 009
+  Scenario: Data layer project portability and upgrade 009
+    Given a supported version 2 JSON bundle embeds one base64 concept-visual body referenced by its Saved Draft and Published project
+    When the operator reviews that bundle through Import project
+    Then import review identifies conversion from embedded visual bytes to the current project archive and durable asset format
+    And no project is created before confirmation
+    When Import as new project is confirmed
+    Then one inactive project stores the exact original raster body once with remapped Draft and Published references
+    And attachment descriptions, captions, source references, intrinsic dimensions, media type, byte length, and digest remain exact
+    When the imported project is exported normally
+    Then it produces the current archive format without a base64 image data URL or legacy embedded asset record
+    And the source project and every pre-existing project remain unchanged
+
+  # Data layer project portability and upgrade 010
+  Scenario: Data layer project portability and upgrade 010
+    Given Retail website has several concept visuals shared across its Saved Draft and current Published project
+    When the operator opens its project and a Flow in Badges mode
+    Then project metadata, Flow items, badges, and item actions become available without preparing complete image pixels
+    When the operator changes the Flow to Thumbnails
+    Then only visible attachments prepare bounded thumbnails while off-screen attachments remain unprepared
+    When the operator opens one visible attachment
+    Then its viewer prepares the complete original image while other complete images remain unprepared
+    When the operator edits project metadata and publishes a new revision
+    Then every visual and attachment remains exact without duplicating an unchanged original image body

@@ -573,13 +573,13 @@ Feature: Data layer directional Flow specification graph runtime
     Then the installed menu closes and a separate contextual Visual editor owns focus on its paste and drop target
     And installed Paste image, Choose image file, preview, Description, Caption, Source reference, Save, and Cancel controls are keyboard operable
     When actual input <input_route> a readable <image_type> image
-    Then the installed preview contains the complete decoded normalized image without crop, distortion, or visible data URL
+    Then the installed preview contains the complete decoded validated original image without crop, distortion, or visible data URL
     And project serialization equals its pre-staging value
     When actual controls attempt Save with whitespace Description
     Then Save is disabled and installed validation associates the required diagnostic with Description
     When actual controls enter <description>, <caption>, and <source_reference> and save
     Then serialized <target> contains exactly one primary attachment with those contextual fields and one asset reference
-    And the production project asset registry contains one stable normalized raster ID, media type, dimensions, byte length, digest, and decodable bytes
+    And the production project asset registry contains one stable original raster ID, media type, dimensions, byte length, digest, and decodable bytes
     And canonical Page and Event hashes, graph topology, coordinates, and visual-display mode equal their pre-save values
     And installed actions become View visual, Edit visual, Replace visual, and Remove visual while one actual Undo removes the attachment
 
@@ -628,11 +628,11 @@ Feature: Data layer directional Flow specification graph runtime
       | a source image larger than 5 MiB                                  | The visual is too large                          |
       | a decoded image wider than 4096 pixels                            | The visual dimensions exceed 4096 pixels         |
       | a decoded image within 4096 pixels per side but above 16 megapixels | The visual exceeds 16 megapixels               |
-      | an image that would take stored visual assets above 25 MiB        | This project has reached its 25 MiB visual limit |
+      | an image whose save exceeds available durable storage             | This project does not have enough durable storage for this visual |
 
   # Data layer directional Flow specification graph runtime 037
   Scenario: Data layer directional Flow specification graph runtime 037
-    Given production Cart Page instance and add_payment_info Event occurrence attach byte-identical normalized images with different descriptions
+    Given one production asset record has two Flow-local attachment references with different descriptions
     Then serialized project data contains one raster asset ID, one image-byte copy, and two distinct attachment records referencing it
     When actual controls duplicate Cart
     Then production stores a distinct Page-instance and attachment ID with the same asset reference and copied contextual metadata

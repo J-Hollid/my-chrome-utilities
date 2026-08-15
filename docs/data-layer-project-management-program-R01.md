@@ -227,8 +227,9 @@ export can claim that Draft. One versioned project bundle includes:
 - canonical contributors and inheritance references;
 - Pages, Page Groups, Events, Flows, occurrences, applicability, and assignments;
 - documentation configuration; and
-- deduplicated project-owned concept-visual assets with every Flow-local Page and
-  Event attachment, description, caption, and source reference; and
+- digest-addressed original project-owned concept-visual assets with every
+  Flow-local Page and Event attachment, description, caption, and source
+  reference; and
 - complete adopted-schema definitions with external source lineage.
 
 It excludes unadopted global schemas, browser permissions, Live observations,
@@ -259,8 +260,10 @@ Replace, append, and merge into an existing project are not part of this release
 Project-owned concept-visual asset identities are remapped with the other owned
 records. Every imported Flow-local Page and Event attachment must resolve to its
 remapped asset while retaining its contextual description, caption, source
-reference, and decodable image. A shared image remains one asset in the imported
-project rather than being copied for each attachment.
+reference, and decodable original image. A shared image remains one asset in the
+imported project rather than being copied for each attachment. The version 3
+archive and scalable durable representation are specified by
+`docs/flow-concept-visual-asset-storage-portability-R01.md`.
 
 ## Existing singleton migration
 
@@ -338,12 +341,14 @@ pair. `Portability NNN` refers to
 | P21 | Page and Event creation can blur context-setting and interaction semantics | Context 017 | Page creation requires a context-event name while Event creation produces an interaction Event | Page and Event creation routes, canonical repository, and collection projections | Cart pageview in Pages, Button click button_click in Events, absent role and binding fields | C, E | A Page is the context-setting event itself and no Page event is materialized as a nested Events-tab occurrence |
 | P22 | Removing a Flow can leave independently stored topology that blocks Page removal and links to a missing entity | Context 018; Durable repository 013 | Treat each Flow graph as owned child state, delete it atomically with its Flow, and repair existing orphan graph records recoverably | Flow lifecycle command, dependency index, project navigation, durable Flow-graph store, upgrade repair, and Undo | Removal review, Flow and graph identities, absent ghost dependency and Open action, safe route fallback, backup checksum, repair receipt, record hashes, and identity-preserving Undo | C, E | No graph outlives its owning Flow, no missing Flow is navigable, and existing orphan topology is removed without risking unrelated or published state |
 | P23 | Flow concept visuals can be duplicated, orphaned, or lost during project transport | Portability 008; Flow 034–037 | Export each project asset once, retain contextual Flow attachments, exclude view state, and remap asset references on import | Project serializer, import validator and remapper, Flow attachment model, and asset registry | One decodable asset copy, two attachment references, exact metadata, excluded transient state, remapped asset identity, and unchanged source projects | D, E | Shared visual bytes and every Flow-local reference round-trip independently without transient canvas state or cross-project identity leakage |
+| P24 | Embedded image strings make project loading, saving, publishing, and transport scale with every image body | Portability 008–010 | Keep original bodies separate from lightweight project references, hydrate visible imagery on demand, share bodies across Draft and Published state, migrate version 2, and transport each digest once in a versioned archive | Durable visual-asset records, route hydration, thumbnail cache, project archive writer and reader, migration, and import validator | Body read/write traces, digest and reference conservation, archive entries, atomic rejection, legacy migration, and task-scoped 300-image benchmark | D, E | Ordinary project work performs no unrelated body work and one self-contained archive round-trips every required original exactly once |
 
 ## Assumptions and deferred decisions
 
 - Project names are unique human labels within the local library; stable IDs remain
   authoritative for storage and references.
-- The current supported versioned JSON project bundle is the first-release transport.
+- Version 2 JSON remains a supported import source; normal export uses the
+  version 3 project archive defined by the visual-asset portability specification.
 - Project archive, delete, simultaneous windows pinned to different projects,
   replace import, and cross-project merge require later approved specifications.
 - Fixture and Assignment collection creation, opening, and guarded removal are
@@ -365,5 +370,6 @@ absent, and demonstrate safe and dependency-blocked removal through production
 commands. Page creation must persist a context-setting observed event identity
 without a nested occurrence, while Event creation must persist an interaction
 identity without a role or Page binding. Portable Flow concept visuals must retain
-one shared decodable asset, remapped attachment references, and contextual metadata
-without exporting canvas view state.
+one shared decodable original asset, remapped Draft and Published attachment
+references, and contextual metadata without exporting canvas view state, embedded
+base64 bodies, browser storage identities, or thumbnail caches.

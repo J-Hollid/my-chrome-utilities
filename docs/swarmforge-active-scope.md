@@ -186,6 +186,7 @@ Read only the program documents relevant to the selected task.
 | Project Documentation workspace | `docs/data-layer-project-documentation-workspace-program-R01.md` |
 | Operator-guided Live Flow testing | `docs/data-layer-live-flow-guided-testing-program-R01.md` |
 | Project library, context, and portability | `docs/data-layer-project-management-program-R01.md` |
+| Flow concept-visual asset storage and portability | `docs/flow-concept-visual-asset-storage-portability-R01.md` |
 | Project event transport | `docs/data-layer-project-event-transport-settings-program-R01.md` |
 | Project assurance severity | `docs/data-layer-project-assurance-severity-program-R01.md` |
 | Side-panel schema relationship tree | `docs/data-layer-side-panel-schema-relationship-tree-program-R01.md` |

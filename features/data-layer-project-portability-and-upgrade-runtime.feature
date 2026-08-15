@@ -35,13 +35,17 @@ Feature: Data layer project portability and upgrade runtime
     When actual file controls select a bundle with <problem>
     Then the installed review renders <repair> at the exact bundle section
     And the Import as new project control is disabled
-    And the repository snapshot equals its pre-import snapshot with the same counts and selection
+    And the repository snapshot equals its pre-import snapshot with the same project, asset-body, entity, and active-context counts and selection
 
     Examples:
       | problem                              | repair                                      |
       | malformed JSON                       | choose a readable project bundle             |
       | unsupported future format version    | use a supported version or migrate externally |
       | missing Page referenced by a Flow    | restore the missing Page and export again    |
+      | a manifest reference whose asset is missing | restore the missing asset and export again   |
+      | asset bytes that do not match their digest | restore the original asset and export again  |
+      | an asset entry with an unsafe relative path | choose an archive containing only safe asset paths |
+      | archive entries above the aggregate unpacked limit | choose a project archive within the import limit |
 
   # Data layer project portability and upgrade runtime 004
   Scenario: Data layer project portability and upgrade runtime 004
@@ -91,13 +95,44 @@ Feature: Data layer project portability and upgrade runtime
   # Data layer project portability and upgrade runtime 008
   Scenario: Data layer project portability and upgrade runtime 008
     Given production Retail website has one Flow Page attachment and one Event-occurrence attachment referencing the same project concept-visual asset
-    And serialized attachments contain independent descriptions, captions, and source references while installed Flow view state is Thumbnails
+    And its production Saved Draft and current Published project reference that asset while serialized attachments retain independent descriptions, captions, and source references
     When actual Projects controls export Retail website
-    Then parsed bundle data contains one normalized raster record with decodable bytes and two resolvable attachment references
-    And parsed attachment metadata is exact while recursive inspection finds no visual-display mode, viewer state, selection, or camera state
+    Then the downloaded ZIP-compatible project archive contains one manifest plus separate Saved Draft and current Published project JSON entries
+    And one digest-addressed asset entry contains the original raster bytes with matching media type, intrinsic dimensions, byte length, and SHA-256 digest
+    And parsed Draft, Published, Page, and Event references resolve to that entry with exact contextual metadata
+    And recursive archive inspection finds no base64 image data URL, IndexedDB key, Blob URL, thumbnail cache, visual-display mode, viewer state, selection, or camera state
     When actual controls choose that file through Import project
     And actual controls confirm Import as new project
-    Then repository inspection finds one new project-owned asset ID and both imported attachments reference that remapped ID
-    And both installed viewers decode pixel-equivalent complete images with their respective contextual metadata
+    Then repository inspection finds one remapped project-owned asset ID whose body digest matches the exported entry
+    And imported Draft and Published records plus both attachments reference that remapped ID
+    And both installed viewers decode byte-equivalent complete images with their respective descriptions, captions, and source references
     And hashes for the source and every pre-existing project remain unchanged
     And the active-project identity remains unchanged
+
+  # Data layer project portability and upgrade runtime 009
+  Scenario: Data layer project portability and upgrade runtime 009
+    Given a supported version 2 JSON bundle embeds one base64 concept-visual body referenced by its Saved Draft and Published project
+    When actual controls choose that file through Import project
+    Then the installed review names migration from embedded visual bytes to the current archive and durable asset format
+    And repository tracing records no write before confirmation
+    When actual controls confirm Import as new project
+    Then one inactive project has one Blob body with the original digest and remapped Draft and Published references
+    And serialized attachment metadata, intrinsic dimensions, media type, and byte length equal their legacy values
+    When a normal re-export is produced for Retail website copy
+    Then archive inspection finds the current format with one raw asset entry and no base64 image data URL or embedded legacy asset record
+    And hashes for the source and every pre-existing project remain unchanged
+
+  # Data layer project portability and upgrade runtime 010
+  Scenario: Data layer project portability and upgrade runtime 010
+    Given production Retail website has three concept visuals shared across its Saved Draft and current Published project
+    And repository inspection finds separate metadata records and Blob body records with no image bytes in the project root, graph, Draft, or Published records
+    When production route loading opens its project and a Flow in Badges mode
+    Then the route settles from project and asset metadata alone
+    And installed project metadata, Flow items, badges, and contextual actions are operable
+    When actual controls change the Flow to Thumbnails
+    Then body and thumbnail tracing is bounded to visible attachments while off-screen images remain unread and undecoded
+    When actual controls open one visible attachment
+    Then exactly that original body is read and its complete image is decoded in the viewer
+    When actual controls edit project metadata and publish a new revision
+    Then stored Blob body counts and hashes remain unchanged with no Blob put
+    And Draft and Published references share the existing body records with unchanged counts and digests

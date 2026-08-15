@@ -293,7 +293,7 @@ Outline, Tidy, pointer and keyboard authoring, responsive containment, and the
 state boundary between presentation and canonical project data.
 
 It also covers one primary concept visual per Flow Page instance or Event
-occurrence. The project owns deduplicated normalized raster assets; the Flow item
+occurrence. The project owns deduplicated original raster assets; the Flow item
 owns its asset reference, required description, optional caption, and optional
 source reference. `Hidden`, `Badges`, and `Thumbnails` are independent per-Flow
 view state. They never change canonical Page or Event definitions, graph
@@ -660,19 +660,21 @@ Directional Flow scenarios 034–037, their runtime partners, and project
 Portability scenario 008 define one primary concept visual for each Flow-local
 Page instance or Event occurrence. `Add visual` opens a separate contextual
 editor; image paste is deliberately scoped to that editor rather than intercepted
-globally by the canvas. Paste, file choice, and file drop stage a normalized
+globally by the canvas. Paste, file choice, and file drop stage a validated original
 preview before Save. Description is required; caption and source reference are
 optional. Save, replace, remove, duplication, cleanup, and Undo are attachment
 commands and do not mutate reusable Page or Event definitions.
 
-The project asset registry stores each normalized image once by stable identity
+The project asset registry stores each original image once by stable identity
 and content digest. Attachments retain independent contextual metadata, so one
 image may describe different Page or Event states. PNG, JPEG, and WebP are
-accepted. SVG and animated GIF are excluded. The initial limits are 5 MiB per
-source image, 4096 pixels on either side, 16 megapixels, and 25 MiB of stored
-project visual assets. File type, signature, decoding, dimensions, and limits are
-validated before Save; a rejected replacement preserves the saved attachment and
-creates no orphan asset or history entry.
+accepted. SVG and animated GIF are excluded. The limits are 5 MiB per source
+image, 4096 pixels on either side, and 16 megapixels. Available durable storage is
+preflighted instead of applying the former fixed 25 MiB project aggregate. File
+type, signature, decoding, dimensions, and limits are validated before Save; a
+rejected replacement preserves the saved attachment and creates no orphan asset
+or history entry. The scalable body-store and archive boundary are defined by
+`docs/flow-concept-visual-asset-storage-portability-R01.md`.
 
 The per-Flow visual-display modes are `Hidden`, `Badges`, and `Thumbnails`, with
 `Badges` as the first-open default. Badges preserve compact graph geometry.
