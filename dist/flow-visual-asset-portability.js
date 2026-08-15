@@ -197,4 +197,4 @@ function remap(value, mapping, external = false, parent = "") { if (typeof value
     return value.map(entry => remap(entry, mapping, external, parent)); if (!value || typeof value !== "object")
     return value; return Object.fromEntries(Object.entries(value).map(([name, entry]) => { const outside = external || name === "sourceLineage" || name === "externalLineage", mappedName = !outside && parent === "documentationFlowGraphs" ? (mapping.get(name) ?? name) : name; return [mappedName, remap(entry, mapping, outside, name)]; })); }
 function assetReferences(project) { return Object.values(project.documentationFlowGraphs ?? {}).flatMap(graph => [...(graph.pageFrames ?? []), ...(graph.occurrences ?? [])].flatMap(item => item.conceptVisual?.assetId ? [item.conceptVisual.assetId] : [])); }
-//# sourceMappingURL=data-layer-flow-visual-asset-portability.js.map
+//# sourceMappingURL=flow-visual-asset-portability.js.map

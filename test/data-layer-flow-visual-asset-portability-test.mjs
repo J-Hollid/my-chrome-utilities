@@ -4,7 +4,7 @@ import {
   createMemoryFlowVisualAssetStore,
   importFlowVisualArchive,
   migrateVersion2VisualAssets,
-} from "../dist/data-layer-flow-visual-asset-portability.js";
+} from "../dist/flow-visual-asset-portability.js";
 import {createMemoryDurableProjectRepository} from "../dist/data-layer-durable-project-repository.js";
 
 const png=Uint8Array.from([137,80,78,71,13,10,26,10,0,0,0,0]);

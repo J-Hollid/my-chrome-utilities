@@ -7,7 +7,7 @@
       "src/data-layer-page-authoring.ts",
       "src/data-layer-assignment-routing.ts",
       "src/data-layer-assignment-routing-ui.ts",
-      "src/data-layer-flow-visual-asset-portability.ts",
+      "src/flow-visual-asset-portability.ts",
       "src/data-layer-project-library.ts",
       "src/data-layer-project-library-ui.ts",
       "src/data-layer-project-library-presentation-ui.ts"
@@ -49,7 +49,7 @@
       {
         "id": "project_flow_visual_asset_portability",
         "prefixes": [
-          "src/data-layer-flow-visual-asset-portability.ts"
+          "src/flow-visual-asset-portability.ts"
         ],
         "propagateDependants": true,
         "sourceClass": "persistence migration"

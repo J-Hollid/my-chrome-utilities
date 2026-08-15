@@ -1145,13 +1145,6 @@
       "src/data-layer-specification-project.ts"
     ]
   },
-  "src/data-layer-flow-visual-asset-portability.ts": {
-    "module": "schemas",
-    "layer": "application",
-    "contracts": [
-      "src/data-layer-specification-project.ts"
-    ]
-  },
   "src/data-layer-project-library-ui.ts": {
     "module": "schemas",
     "layer": "browser",

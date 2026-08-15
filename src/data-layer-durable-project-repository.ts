@@ -3,7 +3,7 @@ import type {ProjectNavigation} from "./data-layer-project-library.js";
 import {upgradePageGroupsToPropertySets,verifyPropertySetFlowSectionUpgrade} from "./data-layer-property-set-flow-section.js";
 import {repairCanonicalBooleanAllowedValues} from "./data-layer-canonical-schema-facets.js";
 import type {CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
-import {createFlowVisualArchive,importFlowVisualArchive,migrateVersion2VisualAssets,type FlowVisualAssetMetadata,type FlowVisualStoredAsset} from "./data-layer-flow-visual-asset-portability.js";
+import {createFlowVisualArchive,importFlowVisualArchive,migrateVersion2VisualAssets,type FlowVisualAssetMetadata,type FlowVisualStoredAsset} from "./flow-visual-asset-portability.js";
 import type {DurableProductionManifest,DurableProductionSchemaEntry,DurableProductionSchemaEvidence,DurableProductionSchemaInput,DurableProductionSchemaSnapshot,DurablePublishResult} from "./data-layer-production-model.js";
 export type {DurableProductionManifest,DurableProductionSchemaEntry,DurableProductionSchemaEvidence,DurableProductionSchemaInput,DurableProductionSchemaSnapshot,DurablePublishResult} from "./data-layer-production-model.js";
 

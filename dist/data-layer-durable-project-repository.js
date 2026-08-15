@@ -1,6 +1,6 @@
 import { upgradePageGroupsToPropertySets, verifyPropertySetFlowSectionUpgrade } from "./data-layer-property-set-flow-section.js";
 import { repairCanonicalBooleanAllowedValues } from "./data-layer-canonical-schema-facets.js";
-import { createFlowVisualArchive, importFlowVisualArchive, migrateVersion2VisualAssets } from "./data-layer-flow-visual-asset-portability.js";
+import { createFlowVisualArchive, importFlowVisualArchive, migrateVersion2VisualAssets } from "./flow-visual-asset-portability.js";
 export const DURABLE_PROJECT_DATABASE = "my-chrome-utilities.project-repository";
 export const DURABLE_PROJECT_DATABASE_VERSION = 7;
 export const LEGACY_PROJECT_KEYS = { library: "my-chrome-utilities.specification-project-library.v1", active: "my-chrome-utilities.specification-project.v1", navigation: "my-chrome-utilities.specification-project-navigation.v1", schemas: "my-chrome-utilities.schema-library.v1" };
