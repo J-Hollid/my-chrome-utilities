@@ -5,7 +5,7 @@ import {writeStoredZip,type FlowVisualZipEntry,type FlowVisualZipSink} from "./f
 import type {FlowVisualArchiveAsset,FlowVisualArchiveProgress} from "./flow-visual-asset-portability.js";
 
 const encoder=new TextEncoder();
-const sameAssetContract=(left:FlowVisualArchiveAsset,right:FlowVisualArchiveAsset)=>left.metadata.digest===right.metadata.digest&&left.metadata.mediaType===right.metadata.mediaType&&left.metadata.byteLength===right.metadata.byteLength;
+const sameAssetContract=(left:FlowVisualArchiveAsset,right:FlowVisualArchiveAsset)=>left.metadata.digest===right.metadata.digest&&left.metadata.mediaType===right.metadata.mediaType&&left.metadata.byteLength===right.metadata.byteLength&&left.metadata.width===right.metadata.width&&left.metadata.height===right.metadata.height;
 const registerArchiveAsset=(asset:FlowVisualArchiveAsset,uniqueBodies:Map<string,FlowVisualArchiveAsset>,assets:ManifestAsset[])=>{validateFlowVisualMetadata(asset.metadata);const entry=`assets/${asset.metadata.digest.slice(7)}.${extension(asset.metadata.mediaType)}`,prior=uniqueBodies.get(entry);if(prior&&!sameAssetContract(prior,asset))throw new DOMException(`Digest-addressed entry ${entry} has inconsistent metadata.`,"DataError");uniqueBodies.set(entry,prior??asset);assets.push({...asset.metadata,entry});};
 async function prepareArchive(input:{project:SpecificationProject;publishedProject?:SpecificationProject;assets:readonly FlowVisualArchiveAsset[]}){
   const ordered=[...input.assets].sort((a,b)=>a.metadata.id.localeCompare(b.metadata.id)),assets:ManifestAsset[]=[],uniqueBodies=new Map<string,FlowVisualArchiveAsset>();

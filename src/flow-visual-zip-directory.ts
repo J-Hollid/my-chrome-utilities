@@ -13,11 +13,11 @@ export async function readFlowVisualZipDirectory(source:Blob,entries:Map<string,
 
 const assertCentralHeader=(header:Uint8Array)=>{if(header.length!==46||view32(header,0)!==0x02014b50)throw new DOMException("The project archive central directory is malformed.","DataError");};
 const centralRecordLength=(header:Uint8Array,offset:number,end:number)=>{const nameLength=view16(header,28),length=46+nameLength+view16(header,30)+view16(header,32);if(!nameLength||offset+length>end)throw new DOMException("The project archive central directory is incomplete.","DataError");return{nameLength,length};};
-const assertKnownDirectoryEntry=(entries:Map<string,Blob>,name:string)=>{if(!entries.has(name))throw new DOMException(`The project archive directory declares unknown entry ${name}.`,"DataError");};
-const assertCompleteDirectory=(offset:number,end:number,count:number,expected:number)=>{if(offset!==end||count!==expected)throw new DOMException("The project archive central directory entry count is inconsistent.","DataError");};
+const assertKnownDirectoryEntry=(entries:Map<string,Blob>,seen:Set<string>,name:string)=>{if(!entries.has(name))throw new DOMException(`The project archive directory declares unknown entry ${name}.`,"DataError");if(seen.has(name))throw new DOMException(`The project archive directory declares duplicate entry ${name}.`,"DataError");seen.add(name);};
+const assertCompleteDirectory=(offset:number,end:number,count:number,expected:number,seen:Set<string>)=>{if(offset!==end||count!==expected||seen.size!==expected)throw new DOMException("The project archive central directory entry count is inconsistent.","DataError");};
 
 export async function validateFlowVisualZipDirectory(source:Blob,entries:Map<string,Blob>,directory:FlowVisualZipDirectory):Promise<void>{
-  let offset=directory.offset,count=0,end=directory.offset+directory.size;
-  while(offset<end){const header=await readBytes(source,offset,46);assertCentralHeader(header);const record=centralRecordLength(header,offset,end),name=decoder.decode(await readBytes(source,offset+46,record.nameLength));assertKnownDirectoryEntry(entries,name);count+=1;offset+=record.length;}
-  assertCompleteDirectory(offset,end,count,entries.size);
+  let offset=directory.offset,count=0,end=directory.offset+directory.size;const seen=new Set<string>();
+  while(offset<end){const header=await readBytes(source,offset,46);assertCentralHeader(header);const record=centralRecordLength(header,offset,end),name=decoder.decode(await readBytes(source,offset+46,record.nameLength));assertKnownDirectoryEntry(entries,seen,name);count+=1;offset+=record.length;}
+  assertCompleteDirectory(offset,end,count,entries.size,seen);
 }

@@ -68,6 +68,9 @@ assert.equal(imported.publishedProject.documentationFlowGraphs["copy:flow:checko
 
 const tampered=archive.slice();tampered[tampered.indexOf(137)]=136;
 await assert.rejects(()=>importFlowVisualArchive(tampered,{projectId:"project:bad",id:(old)=>`bad:${old}`}),/digest|CRC/i);
+const duplicateDirectory=archive.slice(),directoryView=new DataView(duplicateDirectory.buffer,duplicateDirectory.byteOffset,duplicateDirectory.byteLength),directoryDecoder=new TextDecoder();
+for(let offset=0;offset+46<=duplicateDirectory.length;offset+=1)if(directoryView.getUint32(offset,true)===0x02014b50){const nameLength=directoryView.getUint16(offset+28,true),name=directoryDecoder.decode(duplicateDirectory.subarray(offset+46,offset+46+nameLength));if(name==="published.json"){directoryView.setUint16(offset+28,"manifest.json".length,true);directoryView.setUint16(offset+30,1,true);duplicateDirectory.set(new TextEncoder().encode("manifest.json"),offset+46);break;}}
+await assert.rejects(()=>importFlowVisualArchive(duplicateDirectory),/duplicate entry manifest\.json/i,"the central directory cannot duplicate one local entry while omitting another");
 
 const legacyAsset={...metadata,bytes:`data:image/png;base64,${Buffer.from(png).toString("base64")}`},legacy={format:"my-chrome-utilities.durable-project-bundle",version:2,project:{...project,conceptVisualAssets:[legacyAsset]},publishedProject:{...project,conceptVisualAssets:[legacyAsset]}};
 const migrated=await migrateVersion2VisualAssets(legacy,{projectId:"project:legacy-copy",id:(old)=>`legacy:${old}`});
@@ -84,6 +87,7 @@ assert.equal(entryOccurrences,4,"two manifest declarations share one local ZIP e
 const deduplicatedImport=await importFlowVisualArchive(deduplicatedArchive,{projectId:"project:deduplicated",id:old=>`deduplicated:${old}`});
 assert.equal(deduplicatedImport.assets.length,2,"distinct asset identities may share one validated original body");
 assert.equal(deduplicatedImport.project.documentationFlowGraphs["deduplicated:flow:checkout"].occurrences[0].conceptVisual.assetId,"deduplicated:asset:cart-copy");
+await assert.rejects(()=>createFlowVisualArchive({project:deduplicatedProject,assets:[{metadata,body:new Blob([png],{type:metadata.mediaType})},{metadata:{...duplicateMetadata,width:2},body:new Blob([png],{type:metadata.mediaType})}]}),/inconsistent metadata/i,"shared digest entries reject conflicting dimensions before producing a self-invalid archive");
 
 await assert.rejects(()=>createFlowVisualArchive({project,assets:[{metadata:{...metadata,width:2},body:new Blob([png],{type:metadata.mediaType})}]}),/dimensions/i);
 const disguised=new Blob([Uint8Array.from(png,(_,index)=>index===0?0:png[index])],{type:"image/png"});

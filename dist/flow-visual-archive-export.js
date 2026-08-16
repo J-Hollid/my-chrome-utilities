@@ -2,7 +2,7 @@ import { flowVisualArchiveExtension as extension, flowVisualJsonBlob as jsonBlob
 import { validateFlowVisualBody, validateFlowVisualMetadata } from "./flow-visual-asset-validation.js";
 import { writeStoredZip } from "./flow-visual-zip.js";
 const encoder = new TextEncoder();
-const sameAssetContract = (left, right) => left.metadata.digest === right.metadata.digest && left.metadata.mediaType === right.metadata.mediaType && left.metadata.byteLength === right.metadata.byteLength;
+const sameAssetContract = (left, right) => left.metadata.digest === right.metadata.digest && left.metadata.mediaType === right.metadata.mediaType && left.metadata.byteLength === right.metadata.byteLength && left.metadata.width === right.metadata.width && left.metadata.height === right.metadata.height;
 const registerArchiveAsset = (asset, uniqueBodies, assets) => { validateFlowVisualMetadata(asset.metadata); const entry = `assets/${asset.metadata.digest.slice(7)}.${extension(asset.metadata.mediaType)}`, prior = uniqueBodies.get(entry); if (prior && !sameAssetContract(prior, asset))
     throw new DOMException(`Digest-addressed entry ${entry} has inconsistent metadata.`, "DataError"); uniqueBodies.set(entry, prior ?? asset); assets.push({ ...asset.metadata, entry }); };
 async function prepareArchive(input) {

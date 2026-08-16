@@ -16,20 +16,22 @@ const assertCentralHeader = (header) => { if (header.length !== 46 || view32(hea
     throw new DOMException("The project archive central directory is malformed.", "DataError"); };
 const centralRecordLength = (header, offset, end) => { const nameLength = view16(header, 28), length = 46 + nameLength + view16(header, 30) + view16(header, 32); if (!nameLength || offset + length > end)
     throw new DOMException("The project archive central directory is incomplete.", "DataError"); return { nameLength, length }; };
-const assertKnownDirectoryEntry = (entries, name) => { if (!entries.has(name))
-    throw new DOMException(`The project archive directory declares unknown entry ${name}.`, "DataError"); };
-const assertCompleteDirectory = (offset, end, count, expected) => { if (offset !== end || count !== expected)
+const assertKnownDirectoryEntry = (entries, seen, name) => { if (!entries.has(name))
+    throw new DOMException(`The project archive directory declares unknown entry ${name}.`, "DataError"); if (seen.has(name))
+    throw new DOMException(`The project archive directory declares duplicate entry ${name}.`, "DataError"); seen.add(name); };
+const assertCompleteDirectory = (offset, end, count, expected, seen) => { if (offset !== end || count !== expected || seen.size !== expected)
     throw new DOMException("The project archive central directory entry count is inconsistent.", "DataError"); };
 export async function validateFlowVisualZipDirectory(source, entries, directory) {
     let offset = directory.offset, count = 0, end = directory.offset + directory.size;
+    const seen = new Set();
     while (offset < end) {
         const header = await readBytes(source, offset, 46);
         assertCentralHeader(header);
         const record = centralRecordLength(header, offset, end), name = decoder.decode(await readBytes(source, offset + 46, record.nameLength));
-        assertKnownDirectoryEntry(entries, name);
+        assertKnownDirectoryEntry(entries, seen, name);
         count += 1;
         offset += record.length;
     }
-    assertCompleteDirectory(offset, end, count, entries.size);
+    assertCompleteDirectory(offset, end, count, entries.size, seen);
 }
 //# sourceMappingURL=flow-visual-zip-directory.js.map
