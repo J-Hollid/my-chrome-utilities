@@ -9,7 +9,7 @@
                project-management/handlers))))
 
 (def complete-evidence
-  (into {:installedBoundary true}
+  (into {:installedBoundary true :installedPortability true}
         (concat
          (map (fn [index] [(keyword (format "context%03d" index)) true])
               (concat (range 1 21) (range 22 28)))

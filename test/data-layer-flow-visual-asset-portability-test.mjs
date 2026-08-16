@@ -101,14 +101,18 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(context.version,1);
   assert.equal(context.causalCategory,"other:acceptance evidence registry conservation");
-  const [projectHandlerSource,packs]=await Promise.all([
+  const [projectHandlerSource,projectHandlerTestSource,packs]=await Promise.all([
     readFile(new URL("../acceptance/src/acceptance/steps/project_management.clj",import.meta.url),"utf8"),
+    readFile(new URL("./acceptance/project_management_steps_test.clj",import.meta.url),"utf8"),
     readFile(new URL("../verification/packs.json",import.meta.url),"utf8").then(JSON.parse),
   ]),flowPack=packs.find(({id})=>id==="flow_graph"),flowRegistry=JSON.stringify(flowPack.browserEvidencePartitions);
-  const expectedPreRepairFailure={projectInstalledPortabilityRegistered:false,flowStorageDiagnosticsRegistered:false};
-  const expectedRepairResult={projectInstalledPortabilityRegistered:true,flowStorageDiagnosticsRegistered:true};
+  const expectedPreRepairFailure={projectInstalledPortabilityRegistered:false,
+    projectCompleteEvidenceConserved:false,flowStorageDiagnosticsRegistered:false};
+  const expectedRepairResult={projectInstalledPortabilityRegistered:true,
+    projectCompleteEvidenceConserved:true,flowStorageDiagnosticsRegistered:true};
   const observed={
     projectInstalledPortabilityRegistered:projectHandlerSource.includes(":installedPortability"),
+    projectCompleteEvidenceConserved:projectHandlerTestSource.includes(":installedPortability true"),
     flowStorageDiagnosticsRegistered:["flowGraph.runtime036.aggregateLimitRemoved","flowGraph.runtime036.storageAwareDiagnostic"].every((leaf)=>flowRegistry.includes(leaf)),
   };
   assert.deepEqual(observed,expectedRepairResult);
