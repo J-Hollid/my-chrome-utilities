@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
 import {
   createFlowVisualArchive,
   createMemoryFlowVisualAssetStore,
@@ -6,6 +7,7 @@ import {
   migrateVersion2VisualAssets,
 } from "../dist/flow-visual-asset-portability.js";
 import {createMemoryDurableProjectRepository,createPageProjectHistory,durableDraftCommand} from "../dist/data-layer-durable-project-repository.js";
+import {verificationDigest} from "../scripts/verification-evidence.mjs";
 
 const png=Uint8Array.from(Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=","base64"));
 const digest=`sha256:${Buffer.from(await crypto.subtle.digest("SHA-256",png)).toString("hex")}`;
@@ -94,5 +96,30 @@ const legacyDurable=createMemoryDurableProjectRepository();
 const {publishedProject:ignoredPublished,...legacyDraftOnly}=legacy;
 await legacyDurable.importProject(legacyDraftOnly,{projectId:"project:legacy-durable",name:"Legacy durable"});
 assert.equal((await legacyDurable.loadConceptVisualAssetBody("project:legacy-durable","project:legacy-durable:asset:cart")).size,png.length,"the installed v2 JSON path validates and migrates embedded originals");
+
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  assert.equal(context.version,1);
+  assert.equal(context.causalCategory,"other:acceptance evidence registry conservation");
+  const [projectHandlerSource,packs]=await Promise.all([
+    readFile(new URL("../acceptance/src/acceptance/steps/project_management.clj",import.meta.url),"utf8"),
+    readFile(new URL("../verification/packs.json",import.meta.url),"utf8").then(JSON.parse),
+  ]),flowPack=packs.find(({id})=>id==="flow_graph"),flowRegistry=JSON.stringify(flowPack.browserEvidencePartitions);
+  const expectedPreRepairFailure={projectInstalledPortabilityRegistered:false,flowStorageDiagnosticsRegistered:false};
+  const expectedRepairResult={projectInstalledPortabilityRegistered:true,flowStorageDiagnosticsRegistered:true};
+  const observed={
+    projectInstalledPortabilityRegistered:projectHandlerSource.includes(":installedPortability"),
+    flowStorageDiagnosticsRegistered:["flowGraph.runtime036.aggregateLimitRemoved","flowGraph.runtime036.storageAwareDiagnostic"].every((leaf)=>flowRegistry.includes(leaf)),
+  };
+  assert.deepEqual(observed,expectedRepairResult);
+  const fixture={id:"acceptance-evidence-registry-conservation-v1",causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{packs:["project_management","flow_graph"],boundary:"affirmative runtime evidence"},
+    expectedPreRepairFailure,expectedRepairResult},fixtureDigest=verificationDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,incidentId:context.incidentId,
+    failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed}}}));
+}
 
 console.log("flow visual asset portability unit tests passed");
