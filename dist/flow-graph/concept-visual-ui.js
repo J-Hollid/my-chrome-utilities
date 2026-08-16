@@ -39,7 +39,7 @@ const labelled = (text, control) => { const label = document.createElement("labe
 export const flowConceptVisualEditorDiagnostic = (description, fileDiagnostic) => fileDiagnostic || (!description.trim() ? "Description is required" : "");
 export function createFlowConceptVisualEditor(options) {
     const root = document.createElement("section"), target = document.createElement("div"), choose = document.createElement("button"), file = document.createElement("input"), preview = document.createElement("img"), description = document.createElement("textarea"), caption = document.createElement("input"), source = document.createElement("input"), storage = document.createElement("p"), diagnostic = document.createElement("p"), save = document.createElement("button"), cancel = document.createElement("button");
-    let raster = options.existing?.raster, fileDiagnostic = "";
+    let raster = options.existing?.raster, fileDiagnostic = "", thumbnailBytes = 0;
     root.dataset.flowVisualEditor = "true";
     root.setAttribute("aria-label", "Concept Visual editor");
     target.tabIndex = 0;
@@ -71,7 +71,17 @@ export function createFlowConceptVisualEditor(options) {
         caption.value = options.existing.attachment.caption ?? "";
         source.value = options.existing.attachment.sourceReference ?? "";
     }
-    const refresh = () => { const assets = flowConceptVisualAssets(options.project()), originalBytes = assets.reduce((sum, asset) => sum + asset.byteLength, 0), thumbnailBytes = options.thumbnailCacheBytes?.() ?? 0; storage.textContent = `Project visuals: ${assets.length} assets · ${originalBytes} original bytes · ${thumbnailBytes} thumbnail cache bytes · estimated export ${originalBytes + JSON.stringify(options.project()).length} bytes.`; save.disabled = !raster || !description.value.trim() || Boolean(fileDiagnostic); diagnostic.textContent = flowConceptVisualEditorDiagnostic(description.value, fileDiagnostic); };
+    const refresh = () => { const assets = flowConceptVisualAssets(options.project()), originalBytes = assets.reduce((sum, asset) => sum + asset.byteLength, 0); storage.textContent = `Project visuals: ${assets.length} assets · ${originalBytes} original bytes · ${thumbnailBytes} thumbnail cache bytes · estimated export ${originalBytes + JSON.stringify(options.project()).length} bytes.`; save.disabled = !raster || !description.value.trim() || Boolean(fileDiagnostic); diagnostic.textContent = flowConceptVisualEditorDiagnostic(description.value, fileDiagnostic); };
+    const refreshThumbnailBytes = () => { try {
+        const reported = options.thumbnailCacheBytes?.() ?? 0;
+        if (typeof reported === "number") {
+            thumbnailBytes = reported;
+            refresh();
+            return;
+        }
+        void reported.then(value => { thumbnailBytes = value; refresh(); }, () => { });
+    }
+    catch { /* Storage reporting must not block visual editing. */ } };
     const stage = async (candidate) => { if (!candidate)
         return; fileDiagnostic = ""; try {
         raster = await readFlowConceptVisualFile(candidate, options.project());
@@ -92,6 +102,7 @@ export function createFlowConceptVisualEditor(options) {
     cancel.addEventListener("click", options.cancel);
     root.append(target, choose, file, preview, storage, labelled("Description", description), labelled("Caption", caption), labelled("Source reference", source), diagnostic, save, cancel);
     refresh();
+    refreshThumbnailBytes();
     return { root, firstControl: target };
 }
 //# sourceMappingURL=concept-visual-ui.js.map

@@ -58,7 +58,7 @@ export function installFlowGraphBuilder(options) {
     let activeCatalogPayload;
     let pendingItemMenu;
     let thumbnailDisplayWorkspace = "", thumbnailDisplayActive = false;
-    const blobUrl = (body) => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(reader.error); reader.readAsDataURL(body); }), visualBytes = new Map(), thumbnailBytes = new Map(), thumbnailSizes = new Map(), thumbnailHydrations = new Map();
+    const blobUrl = (body) => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(reader.error); reader.readAsDataURL(body); }), visualBytes = new Map(), thumbnailBytes = new Map(), thumbnailHydrations = new Map();
     let thumbnailObserver;
     const hydrateVisual = async (assetId) => { if (visualBytes.has(assetId))
         return; const projectId = current().state?.project.id; if (!projectId)
@@ -77,7 +77,7 @@ export function installFlowGraphBuilder(options) {
         const original = await options.repository.loadConceptVisualAssetBody(projectId, assetId);
         thumbnail = await createFlowVisualThumbnail(original);
         await options.repository.storeConceptVisualAssetThumbnail(projectId, assetId, thumbnail);
-    } thumbnailSizes.set(assetId, thumbnail.size); const bytes = await blobUrl(thumbnail); thumbnailBytes.set(assetId, bytes); installThumbnail(assetId, bytes); })(); thumbnailHydrations.set(assetId, work); try {
+    } const bytes = await blobUrl(thumbnail); thumbnailBytes.set(assetId, bytes); installThumbnail(assetId, bytes); })(); thumbnailHydrations.set(assetId, work); try {
         await work;
     }
     finally {
@@ -439,7 +439,7 @@ export function installFlowGraphBuilder(options) {
         if (!state || !flow || !graph)
             return;
         const itemAction = (label, action) => { const control = button(label, action); control.dataset.flowItemCommand = label; return control; };
-        const visualActions = (actions, target, label) => createFlowConceptVisualActions({ host: actions, project: () => current().state.project, state: () => current().state, flowId: flow.id, target, label, id: options.id, action: itemAction, persist, assetBytes: (assetId) => visualBytes.get(assetId), hydrate: hydrateVisual, thumbnailCacheBytes: () => [...thumbnailSizes.values()].reduce((sum, value) => sum + value, 0) });
+        const visualActions = (actions, target, label) => createFlowConceptVisualActions({ host: actions, project: () => current().state.project, state: () => current().state, flowId: flow.id, target, label, id: options.id, action: itemAction, persist, assetBytes: (assetId) => visualBytes.get(assetId), hydrate: hydrateVisual, thumbnailCacheBytes: () => options.repository.conceptVisualThumbnailCacheBytes(current().state.project.id) });
         if (selected?.kind === "page-frame") {
             const frame = graph.pageFrames.find(({ id }) => id === selected.id);
             if (!frame)

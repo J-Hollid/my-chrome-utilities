@@ -14,7 +14,7 @@ interface VisualActionOptions{
   persist:(state:ProjectState,message:string)=>void;
   assetBytes?:(assetId:string)=>string|undefined;
   hydrate?:(assetId:string)=>Promise<void>;
-  thumbnailCacheBytes?:()=>number;
+  thumbnailCacheBytes?:()=>number|Promise<number>;
 }
 
 export function createFlowConceptVisualActions(options:VisualActionOptions):HTMLButtonElement[]{
