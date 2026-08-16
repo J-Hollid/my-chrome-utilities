@@ -7,7 +7,8 @@ import { consumeDocumentationIncompleteConfirmation, documentationExportPresenta
 import { createDocumentationSectionConfigurationRenderer } from "./project-documentation/workspace-build-ui.js";
 import { renderDocumentationConceptConfiguration, renderDocumentationContent } from "./project-documentation/workspace-content-ui.js";
 import { renderDocumentationTheme } from "./project-documentation/workspace-theme-ui.js";
-export { consumeDocumentationIncompleteConfirmation, documentationExportPresentation };
+import { documentationPreviewSelection, documentationTabAfterKey, } from "./project-documentation/workspace-navigation.js";
+export { consumeDocumentationIncompleteConfirmation, documentationExportPresentation, documentationPreviewSelection, documentationTabAfterKey, };
 const defaultPorts = () => ({
     writePlain: async (value) => navigator.clipboard.writeText(value),
     writeRich: async (html, plain) => {
@@ -20,21 +21,6 @@ const defaultPorts = () => ({
     download: (name, bytes, type) => { const url = URL.createObjectURL(new Blob([Uint8Array.from(bytes).buffer], { type })), link = document.createElement("a"); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url); },
 });
 const defaultTheme = (id, name = "Project theme") => createProjectDocumentationTheme({ id, name, clientName: "", logo: "", colors: { heading: "#222222", accent: "#336699", stripe: "#f4f4f4" }, typography: { family: "Arial", headingSize: 16, bodySize: 11 }, density: "comfortable", borders: true, striping: true, highlightedHeadings: true, columnWidths: { Property: 28, Description: 48 }, headerText: "", footerText: "" });
-export function documentationTabAfterKey(current, key) {
-    const tabs = ["build", "preview", "export"], index = tabs.indexOf(current);
-    if (key === "Home")
-        return tabs[0];
-    if (key === "End")
-        return tabs.at(-1);
-    if (key === "ArrowRight")
-        return tabs[(index + 1) % tabs.length];
-    if (key === "ArrowLeft")
-        return tabs[(index - 1 + tabs.length) % tabs.length];
-    return current;
-}
-export function documentationPreviewSelection(sectionId) {
-    return sectionId === "entire" ? { scope: "complete" } : { scope: "current", currentSectionId: sectionId };
-}
 export function installProjectDocumentationWorkspaceUi(options) {
     const ports = options.ports ?? defaultPorts();
     let selectedSetId = "", selectedSectionId = "", selectedExportIds = new Set(), snapshot, feedback = "", confirmedIncomplete = false, exportScope = "current", primaryTab = "build", previewSectionId = "", addContentOpen = false, themeOpen = false, mobileBuildSurface = "outline", documentSettingsOpen = false, pendingExportAction;

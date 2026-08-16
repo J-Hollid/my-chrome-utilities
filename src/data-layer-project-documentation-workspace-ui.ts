@@ -37,8 +37,19 @@ import {
 import {createDocumentationSectionConfigurationRenderer} from "./project-documentation/workspace-build-ui.js";
 import {renderDocumentationConceptConfiguration,renderDocumentationContent} from "./project-documentation/workspace-content-ui.js";
 import {renderDocumentationTheme} from "./project-documentation/workspace-theme-ui.js";
+import {
+  documentationPreviewSelection,
+  documentationTabAfterKey,
+  type DocumentationPrimaryTab,
+} from "./project-documentation/workspace-navigation.js";
 
-export {consumeDocumentationIncompleteConfirmation,documentationExportPresentation};
+export {
+  consumeDocumentationIncompleteConfirmation,
+  documentationExportPresentation,
+  documentationPreviewSelection,
+  documentationTabAfterKey,
+};
+export type {DocumentationPrimaryTab};
 
 interface Options {
   state:()=>ProjectState|undefined;
@@ -56,21 +67,6 @@ const defaultPorts=():ProjectDocumentationPorts=>({
   download:(name,bytes,type)=>{const url=URL.createObjectURL(new Blob([Uint8Array.from(bytes).buffer],{type})),link=document.createElement("a");link.href=url;link.download=name;link.click();URL.revokeObjectURL(url);},
 });
 const defaultTheme=(id:string,name="Project theme"):ProjectDocumentationTheme=>createProjectDocumentationTheme({id,name,clientName:"",logo:"",colors:{heading:"#222222",accent:"#336699",stripe:"#f4f4f4"},typography:{family:"Arial",headingSize:16,bodySize:11},density:"comfortable",borders:true,striping:true,highlightedHeadings:true,columnWidths:{Property:28,Description:48},headerText:"",footerText:""});
-
-export type DocumentationPrimaryTab="build"|"preview"|"export";
-
-export function documentationTabAfterKey(current:DocumentationPrimaryTab,key:string):DocumentationPrimaryTab {
-  const tabs:DocumentationPrimaryTab[]=["build","preview","export"],index=tabs.indexOf(current);
-  if(key==="Home")return tabs[0]!;
-  if(key==="End")return tabs.at(-1)!;
-  if(key==="ArrowRight")return tabs[(index+1)%tabs.length]!;
-  if(key==="ArrowLeft")return tabs[(index-1+tabs.length)%tabs.length]!;
-  return current;
-}
-
-export function documentationPreviewSelection(sectionId:string):ProjectDocumentationSelection {
-  return sectionId==="entire"?{scope:"complete"}:{scope:"current",currentSectionId:sectionId};
-}
 
 export function installProjectDocumentationWorkspaceUi(options:Options):{render(host:HTMLElement):void}{
   const ports=options.ports??defaultPorts();

@@ -4193,6 +4193,7 @@
       "src/project-documentation/workspace-build-ui.ts",
       "src/project-documentation/workspace-content-ui.ts",
       "src/project-documentation/workspace-export-ui.ts",
+      "src/project-documentation/workspace-navigation.ts",
       "src/project-documentation/workspace-theme-ui.ts",
       "src/project-documentation/workspace-ui-elements.ts",
       "src/data-layer-project-documentation-workspace-ui.ts"
