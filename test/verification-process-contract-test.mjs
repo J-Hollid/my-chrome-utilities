@@ -5006,6 +5006,8 @@ const projectHandlerSource = await readFile(new URL(`../${projectHandlerPath}`, 
 const projectArchitectureHandlerSource = await readFile(new URL(
   "../acceptance/src/acceptance/verification_support/modular_architecture_project_management_handlers.clj",
   import.meta.url), "utf8");
+const projectManagementStepsTestSource = await readFile(new URL(
+  "./acceptance/project_management_steps_test.clj", import.meta.url), "utf8");
 const modularVerificationPacksFeatureSource = await readFile(new URL(
   "../features/modular-verification-packs.feature", import.meta.url), "utf8");
 const projectServedFeatures = [...projectHandlerSource.matchAll(
@@ -10367,6 +10369,22 @@ function projectPortabilityRegistryRegression(context) {
     preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
     repairResult:{status:"passed",fixtureDigest,observed}};
 }
+function projectCompleteEvidenceConservationRegression(context) {
+  const expectedPreRepairFailure={installedPortabilityInCompleteEvidence:false};
+  const expectedRepairResult={installedPortabilityInCompleteEvidence:true};
+  const observed={installedPortabilityInCompleteEvidence:
+    projectManagementStepsTestSource.includes(":installedPortability true")};
+  assert.deepEqual(observed,expectedRepairResult);
+  const fixture={id:"project-complete-evidence-conservation-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{packId:"project_management",fixture:"complete-evidence"},
+    expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest=verificationDigest(fixture);
+  return{version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed}};
+}
 function projectOwnerEvidenceContractRegression(context) {
   const expectedPreRepairFailure = {ownerProfileUnitCount:5, conservationStepUnitCount:5};
   const expectedRepairResult = {ownerProfileUnitCount:6, conservationStepUnitCount:6};
@@ -10410,6 +10428,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         ? approvedVerificationIdentityRegression(regressionContext)
         : regressionContext.causalCategory === "other:verification-registry-contract"
           ? projectPortabilityRegistryRegression(regressionContext)
+        : regressionContext.causalCategory === "other:project complete evidence conservation"
+          ? projectCompleteEvidenceConservationRegression(regressionContext)
         : regressionContext.causalCategory === "other:project-owner-evidence-contract"
           ? projectOwnerEvidenceContractRegression(regressionContext)
         : regressionContext.causalCategory === "other:repair-focused prerequisite closure"
