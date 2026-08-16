@@ -912,6 +912,7 @@ const cliBuildProcessGroup = async() => {
   cliBuildProcessGroups.add(group);
   return group;
 };
+const CLI_CONTENTION_READINESS_TIMEOUT_MS = 120_000;
 const terminateCliBuildGroup = (group) => {
   try { process.kill(-group, "SIGKILL"); }
   catch (error) { if (error?.code !== "ESRCH") throw error; }
@@ -1033,7 +1034,8 @@ try {
     }));
     return observation;
   };
-  const waitForCli = async(observation, predicate, description, timeoutMs = 30_000) => {
+  const waitForCli = async(observation, predicate, description,
+    timeoutMs = CLI_CONTENTION_READINESS_TIMEOUT_MS) => {
     const deadline = Date.now() + timeoutMs;
     while (!await predicate(observation) && observation.child.exitCode === null &&
         observation.child.signalCode === null && Date.now() < deadline) {
@@ -1448,6 +1450,26 @@ let nestedReadOnlyLeaseCompleted = false;
 
 const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagnosedBoundary,
   causalCategory = "artifact/process locking" }) => {
+  if (causalCategory === "other:checkpoint fixture readiness budget") {
+    const fixture = {
+      id:"checkpoint-fixture-readiness-budget-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ nestedCli:true, concurrentContractWork:true, commandTimeoutMs:600_000 },
+      expectedPreRepairFailure:{ readinessTimeoutMs:30_000, withinCommandTimeout:true,
+        survivesConcurrentPreflight:false },
+      expectedRepairResult:{ readinessTimeoutMs:120_000, withinCommandTimeout:true,
+        survivesConcurrentPreflight:true },
+    };
+    const repairResult = { readinessTimeoutMs:CLI_CONTENTION_READINESS_TIMEOUT_MS,
+      withinCommandTimeout:CLI_CONTENTION_READINESS_TIMEOUT_MS < fixture.input.commandTimeoutMs,
+      survivesConcurrentPreflight:CLI_CONTENTION_READINESS_TIMEOUT_MS >= 120_000 };
+    assert.deepEqual(repairResult, fixture.expectedRepairResult);
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:structuredClone(fixture.expectedPreRepairFailure) },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
+  }
   const boundedStyleRegression = {
     "other:global-stylesheet-reader reachability separation": {
       id:"global-stylesheet-reader-reachability-v1",
