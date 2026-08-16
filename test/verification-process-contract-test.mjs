@@ -10367,6 +10367,34 @@ function projectPortabilityRegistryRegression(context) {
     preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
     repairResult:{status:"passed",fixtureDigest,observed}};
 }
+function acceptanceEvidenceRegistryConservationRegression(context) {
+  const expectedPreRepairFailure = {
+    projectInstalledPortabilityRegistered:false,
+    flowStorageDiagnosticsRegistered:false,
+  };
+  const expectedRepairResult = {
+    projectInstalledPortabilityRegistered:true,
+    flowStorageDiagnosticsRegistered:true,
+  };
+  const flowRegistry = JSON.stringify(flowPack.browserEvidencePartitions);
+  const observed = {
+    projectInstalledPortabilityRegistered:projectHandlerSource.includes(":installedPortability"),
+    flowStorageDiagnosticsRegistered:[
+      "flowGraph.runtime036.aggregateLimitRemoved",
+      "flowGraph.runtime036.storageAwareDiagnostic",
+    ].every((leaf) => flowRegistry.includes(leaf)),
+  };
+  assert.deepEqual(observed, expectedRepairResult);
+  const fixture = {id:"acceptance-evidence-registry-conservation-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{packs:["project_management","flow_graph"],boundary:"affirmative runtime evidence"},
+    expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest=verificationDigest(fixture);
+  return{version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed}};
+}
 function projectOwnerEvidenceContractRegression(context) {
   const expectedPreRepairFailure = {ownerProfileUnitCount:5, conservationStepUnitCount:5};
   const expectedRepairResult = {ownerProfileUnitCount:6, conservationStepUnitCount:6};
@@ -10410,6 +10438,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         ? approvedVerificationIdentityRegression(regressionContext)
         : regressionContext.causalCategory === "other:verification-registry-contract"
           ? projectPortabilityRegistryRegression(regressionContext)
+        : regressionContext.causalCategory === "other:acceptance evidence registry conservation"
+          ? acceptanceEvidenceRegistryConservationRegression(regressionContext)
         : regressionContext.causalCategory === "other:project-owner-evidence-contract"
           ? projectOwnerEvidenceContractRegression(regressionContext)
         : regressionContext.causalCategory === "other:repair-focused prerequisite closure"

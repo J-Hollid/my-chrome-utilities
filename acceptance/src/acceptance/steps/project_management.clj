@@ -112,7 +112,7 @@
                             (:projectEntityLifecycle (json/parse-string lifecycle-line true)))]
         (reset! browser-observation observed))))
 (def runtime-paths
-  (set (concat [:installedBoundary]
+  (set (concat [:installedBoundary :installedPortability]
                (map #(keyword (str "context" (format "%03d" %))) (concat (range 1 21) (range 22 28)))
                (map #(keyword (str "portability" (format "%03d" %))) (range 1 11)))))
 (defn complete-browser-evidence? [evidence]
