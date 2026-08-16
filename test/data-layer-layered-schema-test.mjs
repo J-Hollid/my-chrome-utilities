@@ -17,6 +17,18 @@ import {composedSchemaWorkspace} from "../dist/data-layer-composed-schema-worksp
 import {flowDocumentationSnapshotFromState} from "../dist/data-layer-flow-table-documentation-export-ui.js";
 import {applySchemaTablePropertyEditorAllocation,schemaTablePropertyEditorAllocation} from "../dist/data-layer-schema-table.js";
 import {initialLayeredInstalledExpression,layeredCreatedEntityReadinessState,layeredEntityCreationResubmissionState,reliableLayeredEntityCreationProgram} from "./support/layered-schema-workflows.mjs";
+import {openFlowSchemaRouteLifecycle,reconcileFlowSchemaRouteLifecycle} from "../dist/layered-schema/flow-route-lifecycle.js";
+
+const pageRouteLifecycle=openFlowSchemaRouteLifecycle("flow:checkout","frame:cart","Flow Page-instance");
+assert.deepEqual(reconcileFlowSchemaRouteLifecycle(pageRouteLifecycle,"flow:checkout"),pageRouteLifecycle,
+  "the originating Flow continues to own its Page-instance schema editor");
+assert.deepEqual(reconcileFlowSchemaRouteLifecycle(pageRouteLifecycle,"flow:returns"),{},
+  "another Flow discards the complete transient Page-instance route context");
+const eventRouteLifecycle=openFlowSchemaRouteLifecycle("flow:checkout","occurrence:payment","Event-occurrence");
+for(const destinationFlowId of [undefined,"flow:returns"]){
+  assert.deepEqual(reconcileFlowSchemaRouteLifecycle(eventRouteLifecycle,destinationFlowId),{},
+    "ordinary project navigation discards contributor, scope, focus, and Flow-return ownership");
+}
 
 const createdEntityCases=[
   {dialogConnected:false,durableEntityId:"property-set:checkout",workspaceEntityId:"property-set:checkout"},

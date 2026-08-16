@@ -673,12 +673,12 @@ try {
     const visualFailureDetail = shardFailures.some(({path}) => /^runtime03[4-7]\./.test(path))
         ? JSON.stringify({runtime034:runtime.runtime034?.measurements,runtime035:runtime.runtime035?.measurements,runtime037:runtime.runtime037?.measurements},null,2)
         : "";
-    const pointerOwnershipFailureDetail = shardFailures.some(({path}) => /^runtime04[3-5]\./.test(path))
-        ? JSON.stringify({runtime043:runtime.runtime043?.measurements,runtime044:runtime.runtime044?.measurements,runtime045:runtime.runtime045?.measurements},null,2)
+    const pointerOwnershipFailureDetail = shardFailures.some(({path}) => /^runtime04[3-6]\./.test(path))
+        ? JSON.stringify({runtime043:runtime.runtime043?.measurements,runtime044:runtime.runtime044?.measurements,runtime045:runtime.runtime045?.measurements,runtime046:runtime.runtime046?.measurements},null,2)
         : "";
     const failureDetail=styleFailureDetail||snapFailureDetail||pagePlacementFailureDetail||contextualActionFailureDetail||wheelZoomFailureDetail||visualFailureDetail||pointerOwnershipFailureDetail;
     assert.deepEqual(shardFailures, [], `Flow browser ${browserShard} evidence contains a false value${failureDetail ? `\n${failureDetail}` : ""}`);
-    const controlRuntimeKeys = new Set(["runtime001", "runtime016", "runtime018", "runtime020", "runtime027", "runtime033", "runtime043", "runtime044", "runtime045"]);
+    const controlRuntimeKeys = new Set(["runtime001", "runtime016", "runtime018", "runtime020", "runtime027", "runtime033", "runtime043", "runtime044", "runtime045", "runtime046"]);
     flowGraph = targetId === "FLOW_STYLESHEET_EXTRACTION_TARGET"
         ? {styles:runtime.styles}
         : targetId === "FLOW_WORKSPACE_CONTROLS_TARGET"

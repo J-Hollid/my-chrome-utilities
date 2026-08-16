@@ -82,7 +82,7 @@
                          {:out (:out result)})
         (reset! browser-observation observed))))
 (def runtime-evidence-keys
-  (set (map #(keyword (format "runtime%03d" %)) (range 1 46))))
+  (set (map #(keyword (format "runtime%03d" %)) (range 1 47))))
 (def required-evidence-keys (conj runtime-evidence-keys :installedBoundary))
 (def flow001-examples
   {["360" "800" "hidden"] :narrow-navigation-hidden

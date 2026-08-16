@@ -6,6 +6,7 @@ import { mountComposedSchemaWorkspace } from "./data-layer-composed-schema-works
 import { composedSchemaWorkspace, includeFlowComposedSchemaParentAdditions, resetComposedSchemaLocalChanges, resetComposedSchemaLocalFacet, resetComposedSchemaLocalProperty, resetComposedSchemaLocalRule, resetFlowComposedSchemaLocalChanges, resetFlowComposedSchemaLocalFacet, resetFlowComposedSchemaLocalProperty, resetFlowComposedSchemaLocalRule, saveComposedSchemaLocalFacetsAndStructures, saveFlowComposedSchemaLocalFacets, saveFlowContributorSchemaPolicy, schemaContributorUsesEffectiveWorkspace } from "./data-layer-composed-schema-workspace.js";
 import { flowPageFrameContributor, layeredContributorPath, layeredContributorsForPath, projectCanonicalConcepts, saveFlowPageInstanceLocalFacetsAndStructures } from "./data-layer-layered-schema-project.js";
 import { resolveSidePanelSchemaContributor } from "./data-layer-side-panel-schema-editor.js";
+import { openFlowSchemaRouteLifecycle, reconcileFlowSchemaRouteLifecycle } from "./layered-schema/flow-route-lifecycle.js";
 export { layeredContributionDetails, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
 export const canonicalLayerConceptSuggestions = (load) => () => { const state = load(); return state ? projectCanonicalConcepts(state) : []; };
 const q = (selector) => { const value = document.querySelector(selector); if (!value)
@@ -95,7 +96,7 @@ export const layeredEventRole = (entity) => entity.role === "context-setting" ? 
 export const effectivePropertySummary = (property) => [property.type ? `type ${property.type}` : undefined, property.allowedValues ? `allowed ${JSON.stringify(property.allowedValues)}` : undefined, property.presence ? `presence ${property.presence}` : undefined, property.expectedValue !== undefined ? `expected ${JSON.stringify(property.expectedValue)}` : undefined, property.patterns?.length ? `patterns ${JSON.stringify(property.patterns)}` : undefined, property.minimum !== undefined || property.maximum !== undefined ? `range ${String(property.minimum ?? "−∞")}..${String(property.maximum ?? "∞")}` : undefined, property.minItems !== undefined || property.maxItems !== undefined ? `cardinality ${String(property.minItems ?? 0)}..${String(property.maxItems ?? "∞")}` : undefined, property.rules?.length ? `rules ${property.rules.length}` : undefined, property.reusableRules?.length ? `reusable ${property.reusableRules.length}` : undefined].filter(Boolean).join(" · ");
 export function installLayeredSchemaUi(options) {
     const inspector = q("#project-inspector"), workspace = q("#workspace-content"), editorHost = q("#layered-schema-editor-host"), summary = document.createElement("section"), editor = document.createElement("section");
-    let graphSelection, graphSelectionScope, returnFocus, flowReturn;
+    let graphSelection, graphSelectionScope, returnFocus, flowReturn, routeLifecycle = {};
     summary.setAttribute("aria-label", "Schema constraints summary");
     editor.setAttribute("aria-label", "Shared schema constraints editor");
     editor.hidden = true;
@@ -112,7 +113,7 @@ export function installLayeredSchemaUi(options) {
         graphSelection = { ...graphSelection, canonicalSchema: canonical }; options.persist(writeCanonical(state, entity, scope, canonical)); };
     const captureFlowReturn = (kind, idValue, originFocus) => { const pane = document.querySelector("#workspace-pane"), graph = document.querySelector('[aria-label="Interactive directional Flow canvas"]'); if (!pane)
         return; const exampleSelector = kind === "page-frame" ? `[data-page-example-for="${CSS.escape(idValue)}"]` : kind === "occurrence" ? `[data-event-example-for="${CSS.escape(idValue)}"]` : undefined, example = exampleSelector ? document.querySelector(exampleSelector) : undefined, inline = originFocus?.closest('[aria-label="Selected Page instance inline actions"]'), originSelector = originFocus ? (inline ? '[aria-label="Selected Page instance inline actions"] [data-flow-schema-contribution="true"]' : kind === "page-frame" ? `[data-page-frame-id="${CSS.escape(idValue)}"] [data-flow-schema-contribution="true"]` : undefined) : undefined; flowReturn = { scrollLeft: pane.scrollLeft, scrollTop: pane.scrollTop, viewBox: graph?.getAttribute("viewBox") ?? "", ...(example ? { expandedExample: { selector: exampleSelector, open: example.open } } : {}), ...(originSelector ? { originSelector } : {}) }; };
-    const restoreFlowReturn = () => { const saved = flowReturn; if (!saved)
+    const restoreFlowReturn = () => { const saved = flowReturn, savedFocus = returnFocus; if (!saved)
         return; const apply = () => { const pane = document.querySelector("#workspace-pane"), graph = document.querySelector('[aria-label="Interactive directional Flow canvas"]'); if (pane) {
         pane.scrollLeft = saved.scrollLeft;
         pane.scrollTop = saved.scrollTop;
@@ -121,7 +122,14 @@ export function installLayeredSchemaUi(options) {
         if (example)
             example.open = saved.expandedExample.open;
     } if (graph && saved.viewBox && graph.getAttribute("viewBox") !== saved.viewBox)
-        graph.setAttribute("viewBox", saved.viewBox); const focus = saved.originSelector ? document.querySelector(saved.originSelector) : undefined; const target = focus ?? (returnFocus?.isConnected ? returnFocus : undefined); target?.focus({ preventScroll: true }); }; apply(); queueMicrotask(apply); setTimeout(apply, 0); setTimeout(apply, 50); };
+        graph.setAttribute("viewBox", saved.viewBox); const focus = saved.originSelector ? document.querySelector(saved.originSelector) : undefined; const target = focus ?? (savedFocus?.isConnected ? savedFocus : undefined); target?.focus({ preventScroll: true }); }; apply(); queueMicrotask(apply); setTimeout(apply, 0); setTimeout(apply, 50); };
+    const clearFlowRouteState = () => { graphSelection = undefined; graphSelectionScope = undefined; returnFocus = undefined; flowReturn = undefined; routeLifecycle = {}; };
+    const closeFlowEditor = (restore) => { editor.hidden = true; editorHost.hidden = true; workspace.hidden = false; if (restore)
+        restoreFlowReturn(); clearFlowRouteState(); };
+    const reconcileRoute = () => { const next = reconcileFlowSchemaRouteLifecycle(routeLifecycle, options.context().flowRouteId); if (routeLifecycle.originFlowId && !next.originFlowId) {
+        closeFlowEditor(false);
+        editor.replaceChildren();
+    } routeLifecycle = next; };
     const mountFlowComposedSchemaWorkspace = (host, state, entity, flowId, scope) => {
         const model = composedSchemaWorkspace(state, entity, scope, undefined, flowId), persistFlow = (next) => { const graphs = next.project.documentationFlowGraphs, graph = graphs[flowId], stored = graph?.pageFrames?.find(({ id }) => id === entity.id) ?? graph?.occurrences?.find(({ id }) => id === entity.id); graphSelection = stored ?? flowPageFrameContributor(next, flowId, entity.id); options.persist(next); queueMicrotask(renderEditor); };
         mountComposedSchemaWorkspace({ host, model, effectiveText: (row) => effectivePropertySummary(row.effective), conceptSuggestions: () => projectCanonicalConcepts(current().state), schemaContributorId: entity.id, schemaContributorScope: scope, rowPathDataset: "flowInstanceEffectivePath", includeConditionEvaluation: false, includeConflictSummary: false, onlyDefinedFields: entity.onlyDefinedFields === true, onOnlyDefinedFields: (value) => { const live = current(); if (live.state)
@@ -133,7 +141,7 @@ export function installLayeredSchemaUi(options) {
                 persistFlow(resetFlowComposedSchemaLocalChanges(live.state, flowId, entity.id)); }, onIncludeParentAdditions: (selections) => { const live = current(); if (live.state)
                 persistFlow(includeFlowComposedSchemaParentAdditions(live.state, flowId, entity.id, selections)); }, onStructure: () => { } });
     };
-    const renderFlowComposedSchemaWorkspace = (state, entity, flowId, scope) => { const identity = document.createElement("p"), back = document.createElement("button"); identity.textContent = `Contributor: ${entity.name} · ${scope}`; editor.append(identity); mountFlowComposedSchemaWorkspace(editor, state, entity, flowId, scope); back.type = "button"; back.textContent = "Return to Flow"; back.addEventListener("click", () => { editor.hidden = true; editorHost.hidden = true; workspace.hidden = false; restoreFlowReturn(); }); editor.append(back); return true; };
+    const renderFlowComposedSchemaWorkspace = (state, entity, flowId, scope) => { const identity = document.createElement("p"), back = document.createElement("button"); identity.textContent = `Contributor: ${entity.name} · ${scope}`; editor.append(identity); mountFlowComposedSchemaWorkspace(editor, state, entity, flowId, scope); back.type = "button"; back.textContent = "Return to Flow"; back.addEventListener("click", () => closeFlowEditor(true)); editor.append(back); return true; };
     const renderCollectionComposedSchemaWorkspace = (state, entity, scope) => { const kind = scope === "Page" ? "pages" : scope === "Property Set" ? "propertySets" : "events", identity = document.createElement("p"), back = document.createElement("button"), persistComposed = (next) => { graphSelection = next.project.collections[kind].find(({ id }) => id === entity.id); options.persist(next); queueMicrotask(renderEditor); }; identity.textContent = `Contributor: ${entity.name} · ${scope}`; editor.append(identity); mountComposedSchemaWorkspace({ host: editor, model: composedSchemaWorkspace(state, entity, scope), effectiveText: (row) => effectivePropertySummary(row.effective), conceptSuggestions: () => projectCanonicalConcepts(current().state), schemaContributorId: entity.id, schemaContributorScope: scope, onlyDefinedFields: entity.onlyDefinedFields === true, onSave: (row, facets, structures = []) => { const live = current(); if (live.state)
             persistComposed(saveComposedSchemaLocalFacetsAndStructures(live.state, kind, entity.id, row.path, facets, structures, id)); }, onReset: (row) => { const live = current(); if (live.state)
             persistComposed(resetComposedSchemaLocalProperty(live.state, kind, entity.id, row.path)); }, onResetLocalFacet: (path, facet) => { const live = current(); if (live.state)
@@ -250,21 +258,22 @@ export function installLayeredSchemaUi(options) {
     }
     else
         return; if (!graphSelection)
-        return; const stableSelectorId = occurrenceId ?? pageFrameId ?? pageGroupId; captureFlowReturn(pageFrameId ? "page-frame" : occurrenceId ? "occurrence" : "page-group", stableSelectorId, document.activeElement instanceof HTMLElement ? document.activeElement : undefined); renderSummary(); };
+        return; if (graphSelectionScope === "Flow Page-instance" || graphSelectionScope === "Event-occurrence")
+        routeLifecycle = openFlowSchemaRouteLifecycle(flowId, graphSelection.id, graphSelectionScope); const stableSelectorId = occurrenceId ?? pageFrameId ?? pageGroupId; captureFlowReturn(pageFrameId ? "page-frame" : occurrenceId ? "occurrence" : "page-group", stableSelectorId, document.activeElement instanceof HTMLElement ? document.activeElement : undefined); renderSummary(); };
     document.addEventListener("click", (event) => { const target = event.target.closest(graphContributorSelector); if (target)
         selectGraphContributor(target); });
     document.addEventListener("keydown", (event) => { if (event.key !== "Enter" && event.key !== " ")
         return; const target = event.target.closest(graphContributorSelector); if (target)
         selectGraphContributor(target); });
     const openGraphOccurrenceSchema = (contributorId, path, originFocus) => { const { state, kind, entityId: flowId } = options.context(), graphs = state?.project.documentationFlowGraphs, occurrence = flowId ? graphs?.[flowId]?.occurrences?.find(({ id }) => id === contributorId) : undefined, frame = flowId ? flowPageFrameContributor(state, flowId, contributorId) : undefined, contributor = occurrence ?? frame; if (!state || kind !== "flows" || !flowId || !contributor)
-        return false; graphSelection = contributor; graphSelectionScope = frame ? "Flow Page-instance" : "Event-occurrence"; returnFocus = originFocus ?? (document.activeElement instanceof HTMLElement ? document.activeElement : undefined); const stableSelectorId = contributorId; captureFlowReturn(frame ? "page-frame" : "occurrence", stableSelectorId, returnFocus); editor.hidden = false; renderEditor(); editorHost.hidden = false; workspace.hidden = true; editor.querySelector("h2")?.focus(); if (path)
+        return false; graphSelection = contributor; graphSelectionScope = frame ? "Flow Page-instance" : "Event-occurrence"; routeLifecycle = openFlowSchemaRouteLifecycle(flowId, contributor.id, graphSelectionScope); returnFocus = originFocus ?? (document.activeElement instanceof HTMLElement ? document.activeElement : undefined); const stableSelectorId = contributorId; captureFlowReturn(frame ? "page-frame" : "occurrence", stableSelectorId, returnFocus); editor.hidden = false; renderEditor(); editorHost.hidden = false; workspace.hidden = true; editor.querySelector("h2")?.focus(); if (path)
         setTimeout(() => { const candidates = Array.from(editor.querySelectorAll("[data-property-id],[data-flow-instance-effective-path]")), candidate = candidates.find((row) => row.dataset.propertyId === path || row.dataset.flowInstanceEffectivePath === path); if (!candidate)
             return; candidate.click(); setTimeout(() => { const replacement = Array.from(editor.querySelectorAll("[data-property-id],[data-flow-instance-effective-path]")).find((row) => row.dataset.propertyId === path || row.dataset.flowInstanceEffectivePath === path), focus = replacement?.querySelector("button,input,select,textarea,[tabindex]") ?? replacement; if (focus && !focus.matches("button,input,select,textarea,[tabindex]"))
             focus.tabIndex = -1; focus?.focus({ preventScroll: true }); }, 0); }, 0); return true; };
-    return { render() { if (editor.hidden) {
+    return { render() { reconcileRoute(); if (editor.hidden) {
             graphSelection = undefined;
             graphSelectionScope = undefined;
         } renderSummary(); if (!editor.hidden)
-            renderEditor(); }, openGraphOccurrenceSchema };
+            renderEditor(); }, reconcileRoute, openGraphOccurrenceSchema };
 }
 //# sourceMappingURL=data-layer-layered-schema-ui.js.map

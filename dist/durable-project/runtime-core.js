@@ -30,7 +30,8 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         await refreshSchemas();
     const notify = (type, detail) => { if (typeof globalThis.dispatchEvent === "function" && typeof CustomEvent !== "undefined")
         globalThis.dispatchEvent(new CustomEvent(type, { detail })); };
-    const enqueue = (label, operation) => { notify("durable-project-saving", { label }); const pending = tail.then(operation); latest = pending; tail = pending.catch(() => { }); void pending.then(() => { projectionChanged(); notify("durable-project-saved", { label }); }, error => notify("durable-project-save-failed", { label, error })); return pending; };
+    const enqueue = (label, operation, announceSaving = true) => { if (announceSaving)
+        notify("durable-project-saving", { label }); const pending = tail.then(operation); latest = pending; tail = pending.catch(() => { }); void pending.then(() => { projectionChanged(); notify("durable-project-saved", { label }); }, error => notify("durable-project-save-failed", { label, error })); return pending; };
     const expandPartial = async (projectId, pending, route = partialRoutes.get(projectId)) => {
         const installed = loaded.get(projectId), latest = route ? await repository.loadProject(projectId) : installed ?? await repository.loadProject(projectId), base = route && installed ? { ...latest, draftToken: installed.draftToken, draftSequence: installed.draftSequence } : latest, next = cleanState(pending);
         if (!route)
@@ -117,7 +118,7 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
             const suppliedRaw = restoreProjectLibrary(value);
             if (!suppliedRaw)
                 return;
-            const labels = new Map(Object.entries(suppliedRaw.projects).map(([projectId, entry]) => [projectId, historyLabel(entry.state) ?? "Save project library command"])), routes = new Map(Object.keys(suppliedRaw.projects).map((projectId) => [projectId, structuredClone(partialRoutes.get(projectId))])), supplied = cleanLibrary(suppliedRaw), prior = currentLibrary, next = { ...supplied, projects: { ...prior.projects, ...supplied.projects } }, canonicalCompanions = new Set(Object.entries(supplied.projects).filter(([projectId, entry]) => { const pending = pendingCanonicalRevisions.get(projectId); return pending !== undefined && entry.revision <= pending; }).map(([projectId]) => projectId));
+            const labels = new Map(Object.entries(suppliedRaw.projects).map(([projectId, entry]) => [projectId, historyLabel(entry.state) ?? "Save project library command"])), routes = new Map(Object.keys(suppliedRaw.projects).map((projectId) => [projectId, structuredClone(partialRoutes.get(projectId))])), supplied = cleanLibrary(suppliedRaw), prior = currentLibrary, next = { ...supplied, projects: { ...prior.projects, ...supplied.projects } }, canonicalCompanions = new Set(Object.entries(supplied.projects).filter(([projectId, entry]) => { const pending = pendingCanonicalRevisions.get(projectId); return pending !== undefined && entry.revision <= pending; }).map(([projectId]) => projectId)), withoutNavigation = ({ navigation: _navigation, ...entry }) => entry, navigationOnly = prior.activeProjectId === next.activeProjectId && Object.keys(prior.projects).length === Object.keys(next.projects).length && Object.entries(next.projects).every(([projectId, entry]) => { const priorEntry = prior.projects[projectId]; return Boolean(priorEntry && same(withoutNavigation(priorEntry), withoutNavigation(entry))); });
             if (same(prior, next))
                 return;
             if (prior.activeProjectId !== next.activeProjectId)
@@ -150,7 +151,7 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
                 const notification = await repository.clearActiveProject(), install = activeInstalls.get(notification.token);
                 if (install)
                     await install;
-            } });
+            } }, !navigationOnly);
         }
         else if (key === CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY) {
             const envelope = restoreCanonicalProjectEnvelope(value), raw = restoreCanonicalProjectState(value), prior = memory.get(key);
