@@ -11,7 +11,6 @@ import {
   selectProjectDocumentationTables,
   themeFingerprint,
   type ProjectDocumentationDiagnostic,
-  type ProjectDocumentationSelection,
   type ProjectDocumentationSnapshot,
 } from "./data-layer-project-documentation-workspace.js";
 import type {ProjectState} from "./data-layer-specification-project.js";
@@ -28,6 +27,7 @@ import {
 import {
   consumeDocumentationIncompleteConfirmation,
   documentationExportPresentation,
+  documentationExportSelection,
   renderDocumentationExport,
   type DocumentationExportAction,
   type DocumentationExportScope,
@@ -47,6 +47,7 @@ import {
 export {
   consumeDocumentationIncompleteConfirmation,
   documentationExportPresentation,
+  documentationExportSelection,
   documentationPreviewSelection,
   documentationTabAfterKey,
 };
@@ -79,7 +80,7 @@ export function installProjectDocumentationWorkspaceUi(options:Options):{render(
   const sources=(state:ProjectState)=>projectDocumentationSources(state,new Date().toISOString(),options.revision());
   const compile=()=>{const state=options.state(),{set,theme}=active();return state&&set&&theme?compileProjectDocumentation({state,set,theme,revision:options.revision(),generatedAt:new Date().toISOString()}):undefined;};
   const stale=()=>snapshot?projectDocumentationSnapshotStale(snapshot,compile()?.sourceRevisions??{}):{stale:false,changedSources:[]};
-  const selection=():ProjectDocumentationSelection=>{const {set}=active(),fallback=set?.sections[0]?.id??"";return exportScope==="current"?{scope:"current",currentSectionId:selectedSectionId||fallback}:exportScope==="selected"?{scope:"selected",selectedSectionIds:[...selectedExportIds]}:{scope:"complete"};};
+  const selection=()=>{const {set}=active();return documentationExportSelection({scope:exportScope,currentSectionId:selectedSectionId,selectedSectionIds:[...selectedExportIds],fallbackSectionId:set?.sections[0]?.id});};
 
   const renderSectionConfiguration=createDocumentationSectionConfigurationRenderer(mutateSection);
 

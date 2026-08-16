@@ -27,8 +27,10 @@ import {
 } from "../dist/data-layer-project-documentation-compiler.js";
 import {
   documentationExportPresentation,
+  documentationExportSelection,
   documentationTabAfterKey,
 } from "../dist/data-layer-project-documentation-workspace-ui.js";
+import {appendProjectDocumentationSet} from "../dist/project-documentation/workspace-set-creation.js";
 const permutations=(values)=>values.length<2?[values]:values.flatMap((value,index)=>permutations(values.filter((_,candidate)=>candidate!==index)).map((rest)=>[value,...rest]));
 
 const documentationTabs=["build","preview","export"];
@@ -45,6 +47,21 @@ for(let sample=0;sample<180;sample+=1){
   assert.deepEqual(presentation.sectionIds,expected,"export filtering preserves requested/configured order");
   assert.equal(presentation.checklistVisible,scope==="selected","only selected scope exposes the checklist");
   assert.match(presentation.summary,new RegExp(`^${expected.length} section${expected.length===1?"":"s"} — `),"the scope summary reports its filtered count");
+  const selection=documentationExportSelection({scope,currentSectionId,selectedSectionIds,fallbackSectionId:sections[0].id});
+  assert.deepEqual(selection,scope==="complete"?{scope:"complete"}:scope==="selected"?{scope:"selected",selectedSectionIds}:{scope:"current",currentSectionId},"export selection preserves the requested scope and identities");
+}
+for(let sample=0;sample<180;sample+=1){
+  const existingSet=createProjectDocumentationSet({id:`documentation-set:existing:${sample}`,name:`Existing ${sample}`,themeId:`documentation-theme:existing:${sample}`,sections:[{id:`existing:${sample}:overview`,kind:"overview",name:"Overview",selected:true},{id:`existing:${sample}:matrix`,kind:"matrix",name:"Data capture matrix",selected:true,configuration:{contextIds:[]}}]}),existingTheme=createProjectDocumentationTheme({id:`documentation-theme:existing:${sample}`,name:`Existing theme ${sample}`}),records={sets:[existingSet],themes:[existingTheme]},before=JSON.stringify(records),setName=sample%3===0?"   ":` Partner ${sample} `,themeName=sample%4===0?"   ":` Theme ${sample} `,created=appendProjectDocumentationSet(records,{setId:`documentation-set:new:${sample}`,themeId:`documentation-theme:new:${sample}`,setName,themeName});
+  assert.equal(JSON.stringify(records),before,"Documentation Set creation never mutates its input records");
+  assert.deepEqual(created.records.sets.slice(0,-1),records.sets,"Documentation Set creation conserves every existing Set");
+  assert.deepEqual(created.records.themes.slice(0,-1),records.themes,"Documentation Set creation conserves every existing theme");
+  assert.equal(created.records.sets.length,records.sets.length+1,"Documentation Set creation appends exactly one Set");
+  assert.equal(created.records.themes.length,records.themes.length+1,"Documentation Set creation appends exactly one theme");
+  assert.deepEqual(created.records.sets.at(-1),created.set,"the appended Set is the returned Set");
+  assert.deepEqual(created.records.themes.at(-1),created.theme,"the appended theme is the returned theme");
+  assert.equal(created.set.name,setName.trim()||"Client specification","Set names trim with the stable empty-name default");
+  assert.equal(created.theme.name,themeName.trim()||"Project theme","theme names trim with the stable empty-name default");
+  assert.deepEqual(created.set.sections.map(({kind,name,selected})=>({kind,name,selected})),[{kind:"overview",name:"Overview",selected:true},{kind:"matrix",name:"Data capture matrix",selected:true}],"every new Set has one selected Overview and matrix");
 }
 const unzipStored=(bytes)=>{const files=new Map(),view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let offset=0;while(offset+30<=bytes.length&&view.getUint32(offset,true)===0x04034b50){const size=view.getUint32(offset+18,true),nameLength=view.getUint16(offset+26,true),extraLength=view.getUint16(offset+28,true),name=new TextDecoder().decode(bytes.slice(offset+30,offset+30+nameLength)),start=offset+30+nameLength+extraLength;files.set(name,new TextDecoder().decode(bytes.slice(start,start+size)));offset=start+size;}return files;};
 const workbookSheetNames=(files)=>[...files.get("xl/workbook.xml").matchAll(/<sheet name="([^"]+)"/gu)].map((match)=>match[1]);

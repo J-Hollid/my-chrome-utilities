@@ -4,6 +4,13 @@ import { documentationButton as button, documentationHeading as heading, documen
 export function consumeDocumentationIncompleteConfirmation(confirmed) {
     return { confirmedForAction: confirmed, confirmedAfterAction: false };
 }
+export function documentationExportSelection(input) {
+    return input.scope === "current"
+        ? { scope: "current", currentSectionId: input.currentSectionId || input.fallbackSectionId || "" }
+        : input.scope === "selected"
+            ? { scope: "selected", selectedSectionIds: [...input.selectedSectionIds] }
+            : { scope: "complete" };
+}
 export function documentationExportPresentation(input) {
     const available = new Map(input.sections.map((section) => [section.id, section.name])), sectionIds = input.scope === "complete"
         ? input.sections.map(({ id }) => id)

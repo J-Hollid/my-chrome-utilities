@@ -3,14 +3,14 @@ import { createProjectDocumentationSet, } from "./data-layer-project-documentati
 import { projectDocumentationSnapshotStale, selectProjectDocumentationTables, themeFingerprint, } from "./data-layer-project-documentation-workspace.js";
 import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
 import { documentationButton as button, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled, documentationLogoArea as logoArea, documentationMoveVisible as moveVisible, renderDocumentationTable as renderTable, } from "./project-documentation/workspace-ui-elements.js";
-import { consumeDocumentationIncompleteConfirmation, documentationExportPresentation, renderDocumentationExport, } from "./project-documentation/workspace-export-ui.js";
+import { consumeDocumentationIncompleteConfirmation, documentationExportPresentation, documentationExportSelection, renderDocumentationExport, } from "./project-documentation/workspace-export-ui.js";
 import { createDocumentationSectionConfigurationRenderer } from "./project-documentation/workspace-build-ui.js";
 import { renderDocumentationConceptConfiguration, renderDocumentationContent } from "./project-documentation/workspace-content-ui.js";
 import { renderDocumentationTheme } from "./project-documentation/workspace-theme-ui.js";
 import { appendProjectDocumentationSet } from "./project-documentation/workspace-set-creation.js";
 import { renderDocumentationSetCreationUi } from "./project-documentation/workspace-set-creation-ui.js";
 import { documentationPreviewSelection, documentationTabAfterKey, } from "./project-documentation/workspace-navigation.js";
-export { consumeDocumentationIncompleteConfirmation, documentationExportPresentation, documentationPreviewSelection, documentationTabAfterKey, };
+export { consumeDocumentationIncompleteConfirmation, documentationExportPresentation, documentationExportSelection, documentationPreviewSelection, documentationTabAfterKey, };
 const defaultPorts = () => ({
     writePlain: async (value) => navigator.clipboard.writeText(value),
     writeRich: async (html, plain) => {
@@ -34,7 +34,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
     const sources = (state) => projectDocumentationSources(state, new Date().toISOString(), options.revision());
     const compile = () => { const state = options.state(), { set, theme } = active(); return state && set && theme ? compileProjectDocumentation({ state, set, theme, revision: options.revision(), generatedAt: new Date().toISOString() }) : undefined; };
     const stale = () => snapshot ? projectDocumentationSnapshotStale(snapshot, compile()?.sourceRevisions ?? {}) : { stale: false, changedSources: [] };
-    const selection = () => { const { set } = active(), fallback = set?.sections[0]?.id ?? ""; return exportScope === "current" ? { scope: "current", currentSectionId: selectedSectionId || fallback } : exportScope === "selected" ? { scope: "selected", selectedSectionIds: [...selectedExportIds] } : { scope: "complete" }; };
+    const selection = () => { const { set } = active(); return documentationExportSelection({ scope: exportScope, currentSectionId: selectedSectionId, selectedSectionIds: [...selectedExportIds], fallbackSectionId: set?.sections[0]?.id }); };
     const renderSectionConfiguration = createDocumentationSectionConfigurationRenderer(mutateSection);
     function render(host) {
         const state = options.state(), { records, set, theme } = active();

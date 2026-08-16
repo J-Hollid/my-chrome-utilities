@@ -11,6 +11,19 @@ export function consumeDocumentationIncompleteConfirmation(confirmed:boolean):{c
   return{confirmedForAction:confirmed,confirmedAfterAction:false};
 }
 
+export function documentationExportSelection(input:{
+  scope:DocumentationExportScope;
+  currentSectionId:string;
+  selectedSectionIds:readonly string[];
+  fallbackSectionId:string|undefined;
+}):ProjectDocumentationSelection {
+  return input.scope==="current"
+    ? {scope:"current",currentSectionId:input.currentSectionId||input.fallbackSectionId||""}
+    : input.scope==="selected"
+      ? {scope:"selected",selectedSectionIds:[...input.selectedSectionIds]}
+      : {scope:"complete"};
+}
+
 export function documentationExportPresentation(input:{
   scope:DocumentationExportScope;
   currentSectionId?:string;
