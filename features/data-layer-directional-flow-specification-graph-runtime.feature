@@ -727,3 +727,55 @@ Feature: Data layer directional Flow specification graph runtime
       | clicks the visible Close button                         |
       | sends Escape                                            |
       | presses and releases wholly on the dim dialog backdrop  |
+
+  # Data layer directional Flow specification graph runtime 043
+  Scenario Outline: Data layer directional Flow specification graph runtime 043
+    Given the installed <target> is selected and owns document focus at a recorded transform
+    When native browser input sends primary mouse press, at most 3 CSS pixels of motion, and release on <target>
+    Then the installed <target> remains selected and focused without transient drag translation or a move command
+    And its rendered transform and serialized position equal their recorded values
+    When native browser input sends secondary mouse press, context-menu request, and secondary mouse release on <target>
+    Then one installed <target> role menu remains open after release with its first menuitem focused
+    And measured item geometry shows no transient drag translation or committed movement
+    And the installed save status never renders Saving while Saved Draft bytes, Flow revision, canonical project bytes, and Undo depth remain unchanged
+    When actual keyboard input sends Escape
+    Then the menu is absent and document focus equals the exact <target> invoker
+
+    Examples:
+      | target                                      |
+      | Cart Page instance                          |
+      | add_payment_info Event contained by Cart    |
+      | purchase Event outside every Page instance  |
+
+  # Data layer directional Flow specification graph runtime 044
+  Scenario Outline: Data layer directional Flow specification graph runtime 044
+    Given installed <target> Details is open with measured surface scroll and item geometry recorded
+    And each committing control contains a new valid staged value
+    When native browser input presses and releases the primary pointer on <control>
+    Then exactly <effect> is observed
+    And the Details surface remains open at the recorded scroll position without parent-item translation or a move command
+    And document focus equals <focus_target>
+    And production records <command_count> project commands while serialized Flow topology and item position remain unchanged
+    And the installed save status renders Saving exactly <command_count> times
+
+    Examples:
+      | target                                   | control                         | effect                                      | focus_target             | command_count |
+      | Cart Page instance                       | Name in this Flow input         | caret focus in that input                    | that input               | 0             |
+      | Cart Page instance                       | Derived JSON example disclosure | expanded JSON, provenance, and issue content | that disclosure          | 0             |
+      | Cart Page instance                       | Save Name in this Flow          | one saved entered Flow-local name            | its rendered replacement | 1             |
+      | add_payment_info Event contained by Cart | Example value input             | caret focus in that input                    | that input               | 0             |
+      | add_payment_info Event contained by Cart | Save example                    | one saved entered example value              | its rendered replacement | 1             |
+
+  # Data layer directional Flow specification graph runtime 045
+  Scenario Outline: Data layer directional Flow specification graph runtime 045
+    Given installed <target> Details is open from its exact invoker with measured item geometry recorded
+    When native browser input presses and releases the primary pointer on <control>
+    Then exactly one installed <destination> opens with document focus on <focus_target>
+    And measured item geometry and serialized position remain unchanged without a move command
+    And the installed save status never renders Saving while Saved Draft bytes, Flow revision, canonical project bytes, and Undo depth remain unchanged
+
+    Examples:
+      | target                                   | control                      | destination                                        | focus_target                    |
+      | Cart Page instance                       | Open schema contribution     | Page-frame schema contribution editor               | its first editor control        |
+      | incomplete Cart Page instance            | Open Page-frame contribution | missing-property schema contribution editor         | the missing property's control |
+      | add_payment_info Event contained by Cart | Edit examples                | missing-property occurrence example editor          | the missing example control     |

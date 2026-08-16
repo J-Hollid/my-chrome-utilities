@@ -729,3 +729,55 @@ Feature: Data layer directional Flow specification graph
       | activates the visible Close button               |
       | presses Escape                                   |
       | presses and releases wholly on the dim backdrop  |
+
+  # Data layer directional Flow specification graph 043
+  Scenario Outline: Data layer directional Flow specification graph 043
+    Given <target> is selected and focused at a recorded canvas position
+    When the operator presses the primary mouse button on <target>, moves no farther than 3 CSS pixels, and releases
+    Then <target> remains selected and focused without starting or committing a drag
+    And its canvas position and presentation remain unchanged
+    When the operator performs one secondary-pointer press, context-menu request, and release on <target>
+    Then exactly <target>'s contextual menu remains open after release with its first command focused
+    And no drag feedback, pointer-owned item movement, or canvas-position change occurs
+    And the save status never enters Saving while Draft, revision, canonical project state, and Undo remain unchanged
+    When the operator dismisses an open menu with Escape
+    Then focus returns to the exact <target> invoker
+
+    Examples:
+      | target                                      |
+      | Cart Page instance                          |
+      | add_payment_info Event contained by Cart    |
+      | purchase Event outside every Page instance  |
+
+  # Data layer directional Flow specification graph 044
+  Scenario Outline: Data layer directional Flow specification graph 044
+    Given <target> Details is open with its surface scroll position and canvas position recorded
+    And any committing control has a new valid staged value
+    When the operator presses and releases the primary pointer on <control>
+    Then only <effect> occurs
+    And Details remains open at the same scroll position without starting or committing a parent item drag
+    And focus remains on <focus_target>
+    And the interaction creates <command_count> project commands without changing Flow topology or item position
+    And the save status enters Saving exactly <command_count> times
+
+    Examples:
+      | target                                   | control                         | effect                                        | focus_target             | command_count |
+      | Cart Page instance                       | Name in this Flow input         | the input receives caret focus                | that input               | 0             |
+      | Cart Page instance                       | Derived JSON example disclosure | the JSON, provenance, and issues are revealed | that disclosure          | 0             |
+      | Cart Page instance                       | Save Name in this Flow          | the entered Flow-local name is saved once     | its rendered replacement | 1             |
+      | add_payment_info Event contained by Cart | Example value input             | the input receives caret focus                | that input               | 0             |
+      | add_payment_info Event contained by Cart | Save example                    | the entered example value is saved once       | its rendered replacement | 1             |
+
+  # Data layer directional Flow specification graph 045
+  Scenario Outline: Data layer directional Flow specification graph 045
+    Given <target> Details is open from its exact invoker at a recorded canvas position
+    When the operator presses and releases the primary pointer on <control>
+    Then <destination> opens exactly once with focus on <focus_target>
+    And no parent item drag, move command, or canvas-position change occurs
+    And the save status never enters Saving while Draft, revision, canonical project state, and Undo remain unchanged
+
+    Examples:
+      | target                                   | control                      | destination                                        | focus_target                    |
+      | Cart Page instance                       | Open schema contribution     | its Page-frame schema contribution editor          | its first editor control        |
+      | incomplete Cart Page instance            | Open Page-frame contribution | its missing property's schema contribution editor | the missing property's control |
+      | add_payment_info Event contained by Cart | Edit examples                | its missing property's occurrence example editor  | the missing example control     |

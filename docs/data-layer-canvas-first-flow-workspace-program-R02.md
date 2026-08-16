@@ -844,3 +844,70 @@ direct and one alternative route, whether backdrop dismissal preserves exact
 focus return and state, the cause of any variance, remaining work, confidence,
 and forecast. Continue bounded work under the QA pilot unless product scope,
 safety, or authority changes.
+
+## Flow click and drag-ownership correction slice
+
+Directional Flow scenarios 043–045 and their runtime partners correct the
+pointer-event ownership shared by draggable Page instances, free and
+Page-contained Event occurrences, their contextual menus, and controls projected
+into Details. The correction preserves the command hierarchy, Page and Event
+dragging, selection, camera, derived examples, and contextual-surface model
+defined by the earlier scenarios.
+
+An item drag is a deliberate primary-pointer gesture. A primary mouse press and
+release whose total screen-space travel stays within 3 CSS pixels remains an
+activation and cannot translate an item, invoke a move command, enter Saving, or
+create project history. Secondary-pointer input never starts an item drag. Its
+complete native press, context-menu, and release sequence leaves one contextual
+menu open with deterministic focus and no canonical write. Existing keyboard
+menu invocation and deliberate primary-pointer dragging remain unchanged.
+
+Interactive controls inside Details own their complete pointer sequence. Inputs,
+buttons, links, and disclosures cannot donate their press or release to the
+draggable Page or Event projection that supplied the detail content. A
+noncommitting interaction changes only focus or disclosure state. A committing
+control performs its named command exactly once, then retains focus on its
+logical rendered replacement. In either case Details remains open at its current
+scroll position, and no unrelated position, topology, Draft, revision, or Undo
+change occurs. This slice does not redesign Details, rename readiness states,
+change JSON derivation, or alter any command's domain meaning.
+
+**Development focus:** begin with the shared pointer-start and drag-completion
+policy in `src/data-layer-flow-graph-ui.ts` and the Details projection lifecycle
+in `src/flow-graph/workspace-ui.ts`. Direct characterization belongs in
+`test/data-layer-flow-workspace-test.mjs`. Installed proof belongs in
+`test/support/flow-workspace-r02-runtime.mjs` and must use browser-delivered
+mouse input for the full press/menu/release order rather than calling
+`HTMLElement.click()` or dispatching an isolated `contextmenu` event. Reuse the
+existing `FLOW_WORKSPACE_CONTROLS_TARGET`, Flow browser reporter, and registry;
+do not create another pack or browser target.
+
+**QA impact:** ordinary inspection forecasts the bounded `flow_graph`,
+`flow_export`, `live_flow_testing`, and `property_set_flow_sections` consumer set
+because the shared Flow renderer and contextual workspace are used by those
+installed projections. Exact changed-path planning remains authoritative. The
+expected review-ready checkpoint is:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_graph \
+  --pack flow_export \
+  --pack live_flow_testing \
+  --pack property_set_flow_sections \
+  --property \
+  --changed-since <approved-specification-commit> \
+  --prepare-evidence flow-pointer-click-ownership
+node scripts/package.mjs
+```
+
+The canonical task name is `flow-pointer-click-ownership`. This feature-mode
+slice does not authorize the all-20 gate. Routine RepoWise scouting remains
+stopped and is not part of the handoff.
+
+The implementation-and-review elapsed effort ceiling is 120 minutes from coder
+receipt to an architect `qa-ready` candidate. At 60 minutes, report whether
+browser-delivered primary clicks avoid move saves, secondary click leaves the
+nested-Event menu open after release, and Page and Event Details controls retain
+their action and focus. Include any variance cause, remaining work, confidence,
+and forecast; continue bounded work under the QA pilot unless product scope,
+safety, or authority changes.
