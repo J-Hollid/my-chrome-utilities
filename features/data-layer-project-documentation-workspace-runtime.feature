@@ -426,3 +426,20 @@ Feature: Data layer project documentation workspace runtime
       | profile        | property_total | selected_concept | concept_total | concept_included | other_profile  |
       | Sitewide       | 312            | Commerce         | 53            | 47               | Opened Article |
       | Opened Article | 428            | Identity         | 71            | 64               | Sitewide       |
+
+  # Data layer project documentation workspace runtime 034
+  Scenario: Data layer project documentation workspace runtime 034
+    Given production Documentation contains durable Client specification and Acme records
+    When actual navigation opens the installed Documentation workspace
+    Then the persistent context header exposes New Documentation Set beside the Set selector on Build, Preview, and Export
+    And at 1280 pixels and 360 pixels that action remains visible without horizontal page overflow
+    When actual controls open New Documentation Set
+    Then DOM inspection finds one bounded setup with Set name, Theme name, Create, and Cancel controls
+    And Client specification remains selected and repository bytes remain unchanged
+    When actual controls cancel setup
+    Then focus returns to New Documentation Set and repository bytes remain unchanged
+    When actual controls reopen setup, enter Partner handoff and Partner theme, and confirm creation
+    Then repository bytes contain a second Set and theme with distinct stable identifiers
+    And the installed Set selector activates Partner handoff and offers both Set names
+    And Partner handoff contains selected Overview and exactly one Data capture matrix
+    And the original Client specification and Acme bytes and publication bytes remain unchanged

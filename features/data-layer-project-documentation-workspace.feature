@@ -439,3 +439,17 @@ Feature: Data layer project documentation workspace
       | profile        | property_total | selected_concept | concept_total | concept_included | other_profile  |
       | Sitewide       | 312            | Commerce         | 53            | 47               | Opened Article |
       | Opened Article | 428            | Identity         | 71            | 64               | Sitewide       |
+
+  # Data layer project documentation workspace 035
+  Scenario: Data layer project documentation workspace 035
+    Given Documentation contains the existing Client specification and its Acme theme
+    When the operator opens Documentation
+    Then the persistent context header offers New Documentation Set beside the Documentation Set selector
+    And the action remains available from Build, Preview, and Export without horizontal page scrolling
+    When the operator opens New Documentation Set
+    Then a bounded setup asks for the new Set name and theme name while Client specification remains selected
+    And opening or cancelling setup changes no Documentation Set, theme, source, or publication data
+    When the operator names Partner handoff and Partner theme and confirms creation
+    Then Partner handoff becomes the selected Documentation Set with Overview and one Data capture matrix
+    And the Documentation Set selector offers Client specification and Partner handoff
+    And Client specification and Acme remain unchanged
