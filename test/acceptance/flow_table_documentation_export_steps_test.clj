@@ -106,7 +106,10 @@
                        (map (fn [index]
                               [(keyword (str "export" (format "%03d" index))) true])
                             (range 1 21)))
-        evidence (assoc evidence :export030 true)]
+        evidence (into evidence
+                       (map (fn [index]
+                              [(keyword (str "export" (format "%03d" index))) true])
+                            (range 30 35)))]
     (is (nil? (#'flow-export/assert-runtime! evidence)))))
 
 ;; clj-mutate-manifest-begin

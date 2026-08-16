@@ -6873,16 +6873,24 @@ const approvedFlowViewerGlobalRules = stylesheetRuleInventory(studioBrandStylesh
   selector.startsWith(".twatility-studio .flow-concept-visual-viewer"));
 assert.equal(approvedFlowViewerGlobalRules.length, 17,
   "approved Flow concept-visual viewer global rules occur exactly once");
+const flowBaseGlobalSources = await Promise.all(["specification-builder.css", "specification-builder-brand.css"]
+  .map(async(path)=>({path,source:await exec("git",["show",`${flowExtractionBase}:${path}`])})));
+const flowBaseGlobalRuleIdentities = new Set(flowBaseGlobalSources.flatMap(({ path, source }) =>
+  stylesheetRuleInventory(source, path)).map(flowStyleRuleIdentity));
+const approvedDocumentationGlobalRules = stylesheetRuleInventory(studioBaseStylesheet,
+  "specification-builder.css").filter((rule) => rule.selector.startsWith(".documentation-") &&
+    !flowBaseGlobalRuleIdentities.has(flowStyleRuleIdentity(rule)));
+assert.equal(approvedDocumentationGlobalRules.length, 63,
+  "approved Documentation workspace global rules occur exactly once");
 const flowStylesheetConservation = verifyFlowStylesheetConservation({
-  baseGlobalSources:await Promise.all(["specification-builder.css", "specification-builder-brand.css"]
-    .map(async(path)=>({path,source:await exec("git",["show",`${flowExtractionBase}:${path}`])}))),
+  baseGlobalSources:flowBaseGlobalSources,
   candidateGlobalSources:[
     {path:"specification-builder.css",source:studioBaseStylesheet},
     {path:"specification-builder-brand.css",source:studioBrandStylesheet},
   ],
   localSource:conservedFlowLocalStylesheet,
   bridgeSource:flowShellStylesheet,
-  approvedCandidateGlobalRules:approvedFlowViewerGlobalRules,
+  approvedCandidateGlobalRules:[...approvedFlowViewerGlobalRules, ...approvedDocumentationGlobalRules],
 });
 const flowStylesheetDeclarations = [
   stylesheetDeclarationFor(packs, "src/flow-graph/flow-workspace.css"),
@@ -7072,7 +7080,7 @@ for (const [packId, logicalObservations, program] of [
 }
 const layeredSourceInventory = (await verificationInventory()).source
   .filter((sourcePath) => verificationOwner(packs, sourcePath) === "layered_schema");
-assert.equal(layeredSourceInventory.length,85);
+assert.equal(layeredSourceInventory.length,86);
 for (const sourcePath of layeredSourceInventory) {
   assert.ok(planVerification(packs, { changedPaths:[sourcePath] }).changedBoundaries[sourcePath],
     `${sourcePath} has one declared layered-schema impact boundary`);
