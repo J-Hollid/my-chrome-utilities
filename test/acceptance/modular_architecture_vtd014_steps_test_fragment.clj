@@ -130,6 +130,41 @@
                         (invoke-handler vtd014-handlers world
                                         "readiness produces report ready" ["report ready"]))))))))
 
+(deftest vtd014-priority-relations-reject-every-mutated-example-field
+  (let [feature (gherkin/parse-file "features/modular-verification-packs.feature")
+        scenario-names #{"Modular verification packs 131"
+                         "Modular verification packs 152"
+                         "Modular verification packs 153"
+                         "Modular verification packs 154"
+                         "Modular verification packs 155"
+                         "Modular verification packs 159"
+                         "Modular verification packs 162"}
+        executions (filter #(contains? scenario-names (get-in % [:scenario :name]))
+                           (runtime/expand-executions feature))
+        handlers modular/priority-handlers
+        evidence {:runIntent {:deferred {:ordinaryConservation true :unresolved true}}
+                  :styles {"invalid or undeclared boundary" {:validationBlocked true}}
+                  :flowStyles {:declaredBoundaries true}
+                  :taskSuccession {:plannerProjection {:invalidBlocked true}}}
+        invoke-first (fn [execution example]
+                       (let [text (get-in execution [:scenario :steps 0 :text])
+                             match (some (fn [{:keys [pattern] :as handler}]
+                                           (when-let [captures (re-matches pattern text)]
+                                             [handler (vec (rest captures))]))
+                                         handlers)]
+                         (is (some? match) text)
+                         ((get-in match [0 :handler]) {} example (second match))))]
+    (is (= 7 (count handlers)))
+    (is (= 34 (count executions)))
+    (with-redefs-fn {#'vtd014/production-evidence! (constantly evidence)}
+      #(doseq [execution executions]
+         (is (map? (invoke-first execution (:example execution))) (:name execution))
+         (doseq [[key value] (:example execution)]
+           (is (thrown? Exception
+                        (invoke-first execution
+                                      (assoc (:example execution) key (str value "!"))))
+               (str (:name execution) " rejects " key)))))))
+
 ;; clj-mutate-manifest-begin
 ;; {:version 1, :tested-at "2026-08-11T11:12:34.681128884+02:00", :module-hash "-2127462131", :forms [{:id "form/0/in-ns", :kind "in-ns", :line 1, :end-line 1, :hash "-1677165460"} {:id "form/1/deftest", :kind "deftest", :line 3, :end-line 12, :hash "1821403176"} {:id "form/2/deftest", :kind "deftest", :line 14, :end-line 25, :hash "-363311847"} {:id "form/3/deftest", :kind "deftest", :line 27, :end-line 45, :hash "272130773"} {:id "form/4/deftest", :kind "deftest", :line 47, :end-line 52, :hash "-740854160"} {:id "defn-/invoke-handler", :kind "defn-", :line 54, :end-line 59, :hash "-1395760312"} {:id "form/6/deftest", :kind "deftest", :line 61, :end-line 103, :hash "-1316076482"}]}
 ;; clj-mutate-manifest-end
