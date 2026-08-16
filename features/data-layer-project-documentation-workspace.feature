@@ -12,10 +12,13 @@ Feature: Data layer project documentation workspace
 
   # Data layer project documentation workspace 001
   Scenario: Data layer project documentation workspace 001
+    Given Client specification uses project-local theme Acme
     When the operator opens the project-level Documentation tab
-    Then the main workspace offers Documentation Sets, Content, Configure, Theme, Preview, and Export
+    Then one persistent workspace header identifies Client specification, Acme, and whether its preview is current
+    And Build, Preview, and Export are the only primary workspace tabs
+    And exactly one primary tab panel is visible at a time
     And no Flow page contains its own documentation configuration workspace
-    And opening Documentation changes no Flow, schema, assignment, or publication data
+    And opening or switching primary tabs changes no Documentation Set, Flow, schema, assignment, or publication data
 
   # Data layer project documentation workspace 002
   Scenario: Data layer project documentation workspace 002
@@ -29,11 +32,14 @@ Feature: Data layer project documentation workspace
 
   # Data layer project documentation workspace 003
   Scenario: Data layer project documentation workspace 003
-    When the operator configures Client specification content
-    Then searchable selectors independently offer Flows, capture-matrix schema contexts, and Site Profiles
-    And selected content appears in one reorderable outline with human names and section types
-    And selecting an outline entry shows only controls relevant to that Flow, matrix, Profile, Overview, or Theme
-    And unselected configuration groups are collapsed rather than rendered as one long form
+    Given Client specification contains Overview, Checkout journey, the Data capture matrix, and Sitewide in that order
+    When the operator opens Build
+    Then one persistent document outline shows those selected sections in configured order
+    And Add content opens searchable Flow, Site Profile, and project-section choices without mounting every available choice in the workspace
+    When the operator selects an outline entry
+    Then only controls relevant to that Flow, matrix, Profile, or Overview are shown beside the outline
+    And matrix configuration offers its searchable schema-context hierarchy only when the Data capture matrix is selected
+    And Document settings explains that concept configuration affects Site Profile tables and the Data capture matrix but not Flow value maps
 
   # Data layer project documentation workspace 004
   Scenario: Data layer project documentation workspace 004
@@ -82,21 +88,38 @@ Feature: Data layer project documentation workspace
     And no diagnostics, provenance, source-identity, revision-hash, or repair sheet or column is exported
 
   # Data layer project documentation workspace 009
-  Scenario: Data layer project documentation workspace 009
-    When the operator exports the current section, selected sections, or complete Documentation Set
-    Then Excel downloads contain only the requested sheets
+  Scenario Outline: Data layer project documentation workspace 009
+    Given Checkout journey is current, Checkout journey and Sitewide are selected for export, and Client specification contains six sections
+    When the operator chooses <scope> export scope
+    Then the section checklist is <checklist_state>
+    And the export summary is <summary>
+    And Copy rich documentation and Download Excel workbook each request exactly that summarized content
+    And Excel downloads contain only the requested sheets
     And rich copy contains the requested tables in configured section order
     And rich copy supplies semantic HTML plus a plain-text fallback suitable for Confluence or Jira
     And no plain spreadsheet, HTML-file, or PDF action is offered
 
+    Examples:
+      | scope                      | checklist_state | summary                                                |
+      | Current section            | hidden          | 1 section — Checkout journey                           |
+      | Choose sections            | shown           | 2 sections — Checkout journey, Sitewide                |
+      | Complete Documentation Set | hidden          | 6 sections — the complete configured Documentation Set |
+
   # Data layer project documentation workspace 010
   Scenario: Data layer project documentation workspace 010
     Given project-local theme Acme configures client name, logo, colors, typography, table density, borders, striping, highlighted headings, column widths, and header and footer text
-    When the operator previews a sample and applies Acme to Client specification
-    Then Flow, matrix, Profile, Overview, Excel, and rich-copy tables use the same supported visual decisions
-    And theme controls are grouped into Brand, Typography, Table, and Header and footer
+    And Checkout journey is the selected documentation section
+    When the operator edits Acme from the persistent workspace header
+    Then a contextual theme panel groups controls into Brand, Typography, Table, and Header and footer
+    And its live sample uses Checkout journey rather than an unrelated generic table
     And advanced groups remain collapsed until selected
+    And Theme is not a primary workspace tab
     And the theme is structured data rather than executable CSS or workbook code
+    When the operator saves Acme
+    Then Acme remains applied to Client specification
+    And the existing immutable preview is marked out of date
+    When the operator refreshes the preview
+    Then Flow, matrix, Profile, Overview, Excel, and rich-copy tables use the same supported visual decisions
 
   # Data layer project documentation workspace 011
   Scenario: Data layer project documentation workspace 011
@@ -106,14 +129,22 @@ Feature: Data layer project documentation workspace
     And each project owns and may edit its copy independently
 
   # Data layer project documentation workspace 012
-  Scenario: Data layer project documentation workspace 012
-    Given selected content is stale, incomplete, or blocked
-    When the operator opens export preflight
-    Then compact tool-only diagnostics identify affected sections and direct repairs
-    And export requires explicit confirmation
-    When the operator confirms exporting incomplete documentation
-    Then Excel and rich output show Draft — incomplete in their document heading
+  Scenario Outline: Data layer project documentation workspace 012
+    Given the current immutable preview has three unresolved documentation issues
+    When the operator opens Export
+    Then one contextual warning explains that continuing creates output headed Draft — incomplete
+    And it explains that diagnostics and repair details remain private
+    And it links to each affected section
+    When the operator requests <export_action>
+    Then no output is produced until the operator confirms Export draft anyway
+    When the operator confirms Export draft anyway
+    Then <output> is produced from the same immutable preview with the Draft — incomplete heading
     And no diagnostic detail, provenance, internal identity, revision hash, or repair action appears in the shared output
+
+    Examples:
+      | export_action           | output                 |
+      | Copy rich documentation | rich clipboard content |
+      | Download Excel workbook | an Excel workbook       |
 
   # Data layer project documentation workspace 013
   Scenario: Data layer project documentation workspace 013
@@ -351,3 +382,36 @@ Feature: Data layer project documentation workspace
     Examples:
       | source_page           | first_name       | second_name | third_name | fourth_name  |
       | Generic checkout page | Customer details | Payment     | Summary    | Confirmation |
+
+  # Data layer project documentation workspace 031
+  Scenario: Data layer project documentation workspace 031
+    Given Checkout journey is the selected documentation section
+    And Client specification has a current immutable preview containing six sections
+    When the operator opens Preview
+    Then Checkout journey alone is shown by default
+    And a section navigator offers each configured section plus Entire document
+    And the refresh action and current preview status remain visible while preview content scrolls
+    When the operator selects Entire document
+    Then all six sections appear in configured order inside the bounded preview surface
+    And their complete length is not appended to the workspace page
+
+  # Data layer project documentation workspace 032
+  Scenario Outline: Data layer project documentation workspace 032
+    Given the operator opens Documentation at <viewport_width>
+    When the operator navigates the workspace
+    Then Build, Preview, and Export remain on one tab line
+    And <workspace_layout>
+    And the workspace introduces no horizontal page scrolling
+
+    Examples:
+      | viewport_width | workspace_layout                                                |
+      | 1280 pixels    | the Build outline and selected configuration are shown together |
+      | 360 pixels     | the Build outline and selected configuration open one at a time |
+
+  # Data layer project documentation workspace 033
+  Scenario: Data layer project documentation workspace 033
+    Given Build is the selected primary workspace tab
+    When keyboard focus enters the primary tab list and the operator presses Right Arrow
+    Then focus moves to Preview and its panel is activated
+    And Build is exposed as unselected while Preview is exposed as selected
+    And the next Tab key moves into Preview content rather than hidden Build content

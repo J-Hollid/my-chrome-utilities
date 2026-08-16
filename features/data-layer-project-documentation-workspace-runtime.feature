@@ -11,10 +11,13 @@ Feature: Data layer project documentation workspace runtime
 
   # Data layer project documentation workspace runtime 001
   Scenario: Data layer project documentation workspace runtime 001
+    Given production Client specification uses project-local theme Acme
     When actual navigation opens the installed project-level Documentation tab
-    Then the main workspace renders Documentation Sets, Content, Configure, Theme, Preview, and Export
+    Then one persistent installed header renders Client specification, Acme, and the preview freshness state
+    And DOM inspection finds only Build, Preview, and Export in the primary tab list
+    And exactly one primary tab panel is visible
     And DOM inspection finds no Flow-owned documentation configuration workspace
-    And production Flow, schema, assignment, and publication bytes remain unchanged
+    And tab changes preserve serialized Documentation Set, Flow, schema, assignment, and publication bytes
 
   # Data layer project documentation workspace runtime 002
   Scenario: Data layer project documentation workspace runtime 002
@@ -28,11 +31,14 @@ Feature: Data layer project documentation workspace runtime
 
   # Data layer project documentation workspace runtime 003
   Scenario: Data layer project documentation workspace runtime 003
-    When actual controls configure Client specification content
-    Then installed searchable selectors independently render Flows, capture-matrix schema contexts, and Site Profiles
-    And one reorderable outline renders selected human names and section types
-    And selecting each outline entry mounts only its relevant configuration controls
-    And DOM inspection finds no eagerly mounted configuration form for every section
+    Given production Client specification contains Overview, Checkout journey, the Data capture matrix, and Sitewide in that order
+    When actual controls open Build
+    Then one installed document outline renders those selected sections in configured order
+    And activating Add content renders searchable Flow, Site Profile, and project-section choices outside the ordinary workspace tree
+    When actual controls select an outline entry
+    Then DOM inspection finds only its relevant Flow, matrix, Profile, or Overview configuration beside the outline
+    And the searchable schema-context hierarchy is mounted only for a selected Data capture matrix
+    And installed Document settings text names Site Profile tables and the Data capture matrix as concept consumers while excluding Flow value maps
 
   # Data layer project documentation workspace runtime 004
   Scenario: Data layer project documentation workspace runtime 004
@@ -81,21 +87,38 @@ Feature: Data layer project documentation workspace runtime
     And parsed sheets and columns contain no diagnostics, provenance, source identity, revision hash, or repair content
 
   # Data layer project documentation workspace runtime 009
-  Scenario: Data layer project documentation workspace runtime 009
-    When actual export controls request current, selected, and complete scopes
-    Then downloaded workbooks contain exactly their requested sheets
+  Scenario Outline: Data layer project documentation workspace runtime 009
+    Given Checkout journey is current, Checkout journey and Sitewide are selected for export, and production Client specification contains six sections
+    When actual controls choose <scope> export scope
+    Then installed section checklist visibility is <checklist_state>
+    And the installed export summary is <summary>
+    And rich-copy and Excel actions each receive exactly the summarized section identities
+    And downloaded workbooks contain exactly their requested sheets
     And rich clipboard HTML contains exactly the requested tables in configured order
     And the clipboard also receives a semantically equivalent plain-text fallback
     And the installed Export region contains no plain spreadsheet, HTML-file, or PDF action
 
+    Examples:
+      | scope                      | checklist_state | summary                                                |
+      | Current section            | hidden          | 1 section — Checkout journey                           |
+      | Choose sections            | shown           | 2 sections — Checkout journey, Sitewide                |
+      | Complete Documentation Set | hidden          | 6 sections — the complete configured Documentation Set |
+
   # Data layer project documentation workspace runtime 010
   Scenario: Data layer project documentation workspace runtime 010
     Given production Acme configures client name, logo, colors, typography, density, borders, striping, highlighted headings, widths, header, and footer
-    When actual controls render the Acme sample and apply that theme
+    And Checkout journey is the installed selected documentation section
+    When actual controls edit Acme from the persistent workspace header
+    Then one contextual panel renders Brand, Typography, Table, and Header and footer groups with advanced groups initially collapsed
+    And the live sample contains Checkout journey output
+    And DOM inspection finds no Theme primary tab
+    And serialized theme data contains no executable CSS or workbook code
+    When actual controls save Acme
+    Then repository bytes retain Acme as Client specification's theme
+    And the installed immutable-preview status becomes out of date
+    When actual controls refresh the preview
     Then installed Flow, matrix, Profile, and Overview previews share the supported visual fingerprint
     And parsed Excel styles and rich clipboard styles match that fingerprint
-    And controls are grouped into Brand, Typography, Table, and Header and footer with advanced groups initially collapsed
-    And serialized theme data contains no executable CSS or workbook code
 
   # Data layer project documentation workspace runtime 011
   Scenario: Data layer project documentation workspace runtime 011
@@ -105,14 +128,22 @@ Feature: Data layer project documentation workspace runtime
     And repository inspection finds independent theme identities and project ownership
 
   # Data layer project documentation workspace runtime 012
-  Scenario: Data layer project documentation workspace runtime 012
-    Given production selected content is stale, incomplete, or blocked
-    When actual controls open export preflight
-    Then compact installed diagnostics identify affected sections and operable repair links
-    And export controls require explicit confirmation
-    When actual controls confirm incomplete export
-    Then parsed Excel and rich output headings contain Draft — incomplete
+  Scenario Outline: Data layer project documentation workspace runtime 012
+    Given the production immutable preview has three unresolved documentation issues
+    When actual controls open Export
+    Then one installed contextual warning names the Draft — incomplete output consequence
+    And it states that diagnostic and repair details remain private
+    And installed repair links target each affected section
+    When actual controls request <export_action>
+    Then no clipboard write or download occurs before Export draft anyway is confirmed
+    When actual controls confirm Export draft anyway
+    Then <output_evidence> contains the Draft — incomplete heading from the same snapshot hash
     And output inspection finds no diagnostic detail, provenance, internal identity, revision hash, or repair action
+
+    Examples:
+      | export_action           | output_evidence               |
+      | Copy rich documentation | clipboard HTML and plain text |
+      | Download Excel workbook | parsed workbook headings      |
 
   # Data layer project documentation workspace runtime 013
   Scenario: Data layer project documentation workspace runtime 013
@@ -337,3 +368,36 @@ Feature: Data layer project documentation workspace runtime
       | PNG           | Choose a valid PNG image   |
       | JPEG          | Choose a valid JPEG image  |
       | GIF           | Choose a valid GIF image   |
+
+  # Data layer project documentation workspace runtime 030
+  Scenario: Data layer project documentation workspace runtime 030
+    Given Checkout journey is the installed selected documentation section
+    And production Client specification has a current immutable preview containing six sections
+    When actual controls open Preview
+    Then DOM parsing finds only Checkout journey output by default
+    And the installed section navigator offers every configured section plus Entire document
+    And computed positioning keeps the refresh action and preview status visible while preview content scrolls
+    When actual controls select Entire document
+    Then DOM parsing finds all six sections in configured order inside the bounded preview surface
+    And the outer workspace height does not grow by the complete preview content height
+
+  # Data layer project documentation workspace runtime 031
+  Scenario Outline: Data layer project documentation workspace runtime 031
+    Given actual navigation opens Documentation at <viewport_width>
+    When installed workspace controls render
+    Then the Build, Preview, and Export tabs occupy one line
+    And <workspace_layout>
+    And computed document width equals the viewport width without horizontal overflow
+
+    Examples:
+      | viewport_width | workspace_layout                                                           |
+      | 1280 pixels    | Build outline and selected configuration are simultaneously visible       |
+      | 360 pixels     | Build outline and selected configuration are exposed as separate surfaces |
+
+  # Data layer project documentation workspace runtime 032
+  Scenario: Data layer project documentation workspace runtime 032
+    Given Build is the installed selected primary workspace tab
+    When focus enters the primary tab list and actual keyboard input presses Right Arrow
+    Then focus moves to Preview and the Preview panel becomes visible
+    And accessibility inspection finds Build aria-selected false and Preview aria-selected true
+    And the next Tab input enters Preview content without visiting hidden Build controls

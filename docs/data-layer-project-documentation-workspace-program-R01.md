@@ -28,17 +28,48 @@ Site Profiles are never matrix columns.
 
 ## Workspace interaction
 
-The top-level Documentation tab contains:
+The top-level Documentation tab has one persistent context header followed by
+three primary workspace tabs: `Build`, `Preview`, and `Export`. The header keeps
+the selected Documentation Set, its applied project-local theme, and immutable
+preview freshness visible while the operator changes modes. Exactly one primary
+tab panel is visible at a time.
 
-1. `Set` for named configurations and section order;
-2. `Content` for searchable Flow, matrix-context, and Profile selection;
-3. `Configure` for only the selected section;
-4. `Theme` for project-local structured branding and a live sample;
-5. `Preview` for the selected immutable snapshot;
-6. `Export` for current, selected, or complete scope.
+`Build` is a master-detail workspace. Its persistent document outline contains
+only selected sections in configured order. `Add content` opens searchable Flow,
+Site Profile, and project-section choices outside the ordinary workspace tree;
+it does not leave every available choice mounted. Selecting an outline entry
+shows only the configuration for that Flow, matrix, Profile, or Overview beside
+the outline. The matrix's searchable schema-context hierarchy is mounted only
+while the matrix is selected. Set-wide concept configuration lives under
+`Document settings` and explains that it affects Site Profile tables and the Data
+capture matrix but not Flow value maps.
 
-Configuration is progressive. Unselected sections and advanced theme groups are
-not eagerly mounted into one long form.
+The applied theme is edited from the persistent header rather than a primary
+workspace tab. A contextual theme panel contains Brand, Typography, Table, and
+Header and footer groups. Its live sample uses the selected documentation
+section. Saving a theme keeps its Set association and marks the existing
+immutable preview stale.
+
+`Preview` shows the selected section by default. Its navigator offers each
+configured section and an explicit `Entire document` choice. The refresh action
+and freshness status remain visible while the bounded preview surface scrolls;
+even Entire document does not append its complete rendered height to the outer
+workspace page.
+
+`Export` begins with readiness and exact output scope. Current section, Choose
+sections, and Complete Documentation Set are mutually exclusive choices. The
+section checklist appears only for Choose sections, and the summary names the
+resulting section count and content before either rich copy or Excel is requested.
+An incomplete current snapshot shows a contextual warning with affected-section
+repair links, the `Draft — incomplete` consequence, and the fact that diagnostic
+details remain private. No output is produced until the operator explicitly
+confirms `Export draft anyway` for the requested action.
+
+At 1280 pixels, the Build outline and selected configuration are visible
+together. At 360 pixels, they open one at a time. Build, Preview, and Export stay
+on one tab line at both widths without horizontal page overflow. The tab list
+exposes selected state and supports arrow-key movement into the adjacent panel;
+ordinary Tab navigation never visits controls in a hidden panel.
 
 ## Concept grouping configuration
 
@@ -168,6 +199,26 @@ exported diagnostics and provenance, HTML-file export, and the current eagerly
 mounted configuration form. It retains effective-schema derivation, Flow value-map
 semantics, matrix presence states, stale snapshot protection, output sanitization,
 and rich clipboard compatibility from the earlier Flow table export contracts.
+The workspace UX correction additionally supersedes six stacked top-level
+regions, the permanent complete-set preview, the always-visible export-section
+checklist, and the unexplained permanent incomplete-export checkbox. It changes
+no Documentation Set, Theme, compiler, snapshot, workbook, or clipboard data
+model.
+
+The implementation development focus is the installed Documentation path in
+`test/browser-packs/flow-table-documentation-export.mjs`, with a small focused
+unit target added only if tab, preview-scope, or export-confirmation state is
+factored into a directly testable module. The forecast QA impact is the canonical
+`flow_export` pack plus the package command; exact changed-path planning remains
+authoritative and no all-20 checkpoint runs in feature-integration mode.
+
+The elapsed engineering effort ceiling is eight hours. By the four-hour
+checkpoint, the persistent header, three accessible primary tabs, and Build
+master-detail layout are expected to work at 1280 and 360 pixels through the
+installed browser path, with remaining Preview and Export work itemized. At the
+checkpoint and ceiling, report elapsed time, completed behavior, variance cause,
+remaining work, confidence, and forecast; continue by default while scope remains
+this bounded workspace correction and the completion path stays credible.
 
 The focused verification boundary is the existing `flow_export` checkpoint
 and its package command. Installed evidence must navigate through the project-level
