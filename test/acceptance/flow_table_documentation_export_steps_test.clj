@@ -74,6 +74,20 @@
                  "third_name" "Summary"
                  "fourth_name" "Confirmation"}]
     (is (= example (flow-export/validate-example! :model example))))
+  (doseq [example [{"profile" "Sitewide"
+                    "property_total" "312"
+                    "selected_concept" "Commerce"
+                    "concept_total" "53"
+                    "concept_included" "47"
+                    "other_profile" "Opened Article"}
+                   {"profile" "Opened Article"
+                    "property_total" "428"
+                    "selected_concept" "Identity"
+                    "concept_total" "71"
+                    "concept_included" "64"
+                    "other_profile" "Sitewide"}]]
+    (is (= example (flow-export/validate-example! :model example)))
+    (is (= example (flow-export/validate-example! :runtime example))))
   (is (thrown-with-msg?
        clojure.lang.ExceptionInfo
        #"invalid result"
@@ -88,27 +102,28 @@
        (flow-export/validate-example!
         :model
         {"headings" "off"
-         "heading_result" "rendered once before each non-empty concept"}))))
+         "heading_result" "rendered once before each non-empty concept"})))
+  (is (thrown-with-msg?
+       clojure.lang.ExceptionInfo
+       #"invalid result"
+       (flow-export/validate-example!
+        :runtime
+        {"profile" "Sitewide"
+         "property_total" "428"
+         "selected_concept" "Commerce"
+         "concept_total" "53"
+         "concept_included" "47"
+         "other_profile" "Opened Article"}))))
 
 (deftest flow-export-runtime-evidence-includes-documentation-concept-corrections
   (let [evidence (into {:installedBoundary true
                         :headingLifecycleStart true
-                        :orderingControls true
-                        :export021 true
-                        :export022 true
-                        :export023 true
-                        :export024 true
-                        :export025 true
-                        :export026 true
-                        :export027 true
-                        :export028 true
-                        :export029 true}
+                        :orderingControls true}
                        (map (fn [index]
                               [(keyword (str "export" (format "%03d" index))) true])
-                            (range 1 21)))
-        evidence (assoc evidence :export030 true)]
+                            (range 1 34)))]
     (is (nil? (#'flow-export/assert-runtime! evidence)))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-29T12:26:37.797581159+02:00", :module-hash "-283212130", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1511126195"} {:id "defn-/applicable-handler?", :kind "defn-", :line 5, :end-line 10, :hash "-1188712919"} {:id "form/2/deftest", :kind "deftest", :line 12, :end-line 18, :hash "497408386"} {:id "form/3/deftest", :kind "deftest", :line 20, :end-line 58, :hash "1346968272"} {:id "form/4/deftest", :kind "deftest", :line 60, :end-line 71, :hash "-251589860"}]}
+;; {:version 1, :tested-at "2026-08-16T15:33:02.513989459+02:00", :module-hash "-135065029", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1511126195"} {:id "defn-/applicable-handler?", :kind "defn-", :line 5, :end-line 10, :hash "-1188712919"} {:id "form/2/deftest", :kind "deftest", :line 12, :end-line 18, :hash "497408386"} {:id "form/3/deftest", :kind "deftest", :line 20, :end-line 116, :hash "-1870975739"} {:id "form/4/deftest", :kind "deftest", :line 118, :end-line 125, :hash "986971331"}]}
 ;; clj-mutate-manifest-end

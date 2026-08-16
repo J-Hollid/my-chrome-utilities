@@ -87,7 +87,10 @@
     :rows #{["1280 pixels" "the Build outline and selected configuration are shown together"]
             ["360 pixels" "the Build outline and selected configuration open one at a time"]
             ["1280 pixels" "Build outline and selected configuration are simultaneously visible"]
-            ["360 pixels" "Build outline and selected configuration are exposed as separate surfaces"]}}])
+            ["360 pixels" "Build outline and selected configuration are exposed as separate surfaces"]}}
+   {:keys ["profile" "property_total" "selected_concept" "concept_total" "concept_included" "other_profile"]
+    :rows #{["Sitewide" "312" "Commerce" "53" "47" "Opened Article"]
+            ["Opened Article" "428" "Identity" "71" "64" "Sitewide"]}}])
 
 (defn validate-example! [_mode example]
   (support/validate-example-relations!
@@ -113,5 +116,5 @@
    observe-browser! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-16T13:09:20.34401898+02:00", :module-hash "-626279547", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "44459659"} {:id "def/feature-files", :kind "def", :line 4, :end-line 8, :hash "-335733992"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 13, :hash "210832218"} {:id "form/3/defonce", :kind "defonce", :line 14, :end-line 14, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 15, :end-line 15, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 17, :end-line 21, :hash "-729194422"} {:id "defn-/observe-browser!", :kind "defn-", :line 23, :end-line 29, :hash "1774642844"} {:id "def/flow-export-example-relations", :kind "def", :line 31, :end-line 90, :hash "-813279527"} {:id "defn/validate-example!", :kind "defn", :line 92, :end-line 95, :hash "1985321309"} {:id "def/runtime-paths", :kind "def", :line 97, :end-line 101, :hash "-1070367996"} {:id "defn-/assert-runtime!", :kind "defn-", :line 103, :end-line 107, :hash "234435999"} {:id "def/handlers", :kind "def", :line 109, :end-line 113, :hash "-915256383"}]}
+;; {:version 1, :tested-at "2026-08-16T15:32:56.588446456+02:00", :module-hash "1973823628", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "44459659"} {:id "def/feature-files", :kind "def", :line 4, :end-line 8, :hash "-335733992"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 13, :hash "210832218"} {:id "form/3/defonce", :kind "defonce", :line 14, :end-line 14, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 15, :end-line 15, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 17, :end-line 21, :hash "-729194422"} {:id "defn-/observe-browser!", :kind "defn-", :line 23, :end-line 29, :hash "1774642844"} {:id "def/flow-export-example-relations", :kind "def", :line 31, :end-line 93, :hash "24754807"} {:id "defn/validate-example!", :kind "defn", :line 95, :end-line 98, :hash "1985321309"} {:id "def/runtime-paths", :kind "def", :line 100, :end-line 104, :hash "-556497926"} {:id "defn-/assert-runtime!", :kind "defn-", :line 106, :end-line 110, :hash "234435999"} {:id "def/handlers", :kind "def", :line 112, :end-line 116, :hash "-915256383"}]}
 ;; clj-mutate-manifest-end
