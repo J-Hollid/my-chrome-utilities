@@ -56,6 +56,8 @@ export async function readStoredZip(source, limits = { entries: 10_000, unpacked
     const entries = new Map();
     let offset = 0, total = 0;
     while (offset + 4 <= source.size) {
+        if (options.signal?.aborted)
+            throw new DOMException("Project archive work was cancelled.", "AbortError");
         const signature = await readBytes(source, offset, 4);
         if (view32(signature, 0) !== 0x04034b50)
             break;
@@ -66,6 +68,8 @@ export async function readStoredZip(source, limits = { entries: 10_000, unpacked
             throw new DOMException("The archive uses unsupported data descriptors.", "NotSupportedError");
         if (method !== 0)
             throw new DOMException("The archive uses an unsupported entry method.", "NotSupportedError");
+        if (!nameLength || nameLength > 4096 || extraLength > 4096)
+            throw new DOMException("The archive contains an excessive entry header.", "DataError");
         const name = decoder.decode(await readBytes(source, offset + 30, nameLength));
         if (!safeFlowVisualArchivePath(name) || entries.has(name))
             throw new DOMException(`The archive contains an unsafe or duplicate path: ${name}.`, "DataError");
@@ -86,6 +90,27 @@ export async function readStoredZip(source, limits = { entries: 10_000, unpacked
     }
     if (!entries.size)
         throw new DOMException("Choose a readable version 3 project archive.", "DataError");
+    if (source.size < 22)
+        throw new DOMException("The project archive is incomplete.", "DataError");
+    const end = await readBytes(source, source.size - 22, 22), centralSize = view32(end, 12), centralOffset = view32(end, 16);
+    if (view32(end, 0) !== 0x06054b50 || view16(end, 8) !== entries.size || view16(end, 10) !== entries.size || view16(end, 20) !== 0 || centralOffset !== offset || centralOffset + centralSize !== source.size - 22)
+        throw new DOMException("The project archive directory is incomplete or inconsistent.", "DataError");
+    let directoryOffset = centralOffset, directoryEntries = 0;
+    while (directoryOffset < centralOffset + centralSize) {
+        const header = await readBytes(source, directoryOffset, 46);
+        if (header.length !== 46 || view32(header, 0) !== 0x02014b50)
+            throw new DOMException("The project archive central directory is malformed.", "DataError");
+        const nameLength = view16(header, 28), extraLength = view16(header, 30), commentLength = view16(header, 32), length = 46 + nameLength + extraLength + commentLength;
+        if (!nameLength || directoryOffset + length > centralOffset + centralSize)
+            throw new DOMException("The project archive central directory is incomplete.", "DataError");
+        const name = decoder.decode(await readBytes(source, directoryOffset + 46, nameLength));
+        if (!entries.has(name))
+            throw new DOMException(`The project archive directory declares unknown entry ${name}.`, "DataError");
+        directoryEntries += 1;
+        directoryOffset += length;
+    }
+    if (directoryOffset !== centralOffset + centralSize || directoryEntries !== entries.size)
+        throw new DOMException("The project archive central directory entry count is inconsistent.", "DataError");
     return entries;
 }
 //# sourceMappingURL=flow-visual-zip.js.map

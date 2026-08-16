@@ -51,26 +51,29 @@ const extension = (type) => type === "image/png" ? "png" : type === "image/jpeg"
 const withoutEmbeddedBodies = (project) => { const value = clone(project); if (value.conceptVisualAssets)
     value.conceptVisualAssets = value.conceptVisualAssets.map(({ bytes, ...metadata }) => metadata); return value; };
 const jsonBlob = (value) => new Blob([JSON.stringify(value)], { type: "application/json" });
-async function prepareArchive(input, options = {}) {
+async function prepareArchive(input) {
     const ordered = [...input.assets].sort((a, b) => a.metadata.id.localeCompare(b.metadata.id)), assets = [], uniqueBodies = new Map();
-    for (const [index, asset] of ordered.entries()) {
-        if (options.signal?.aborted)
-            throw new DOMException("Project archive work was cancelled.", "AbortError");
-        await validateFlowVisualBody(asset.metadata, asset.body);
+    for (const asset of ordered) {
+        validateFlowVisualMetadata(asset.metadata);
         const entry = `assets/${asset.metadata.digest.slice(7)}.${extension(asset.metadata.mediaType)}`, prior = uniqueBodies.get(entry);
         if (prior && (prior.metadata.digest !== asset.metadata.digest || prior.metadata.mediaType !== asset.metadata.mediaType || prior.metadata.byteLength !== asset.metadata.byteLength))
             throw new DOMException(`Digest-addressed entry ${entry} has inconsistent metadata.`, "DataError");
         uniqueBodies.set(entry, prior ?? asset);
         assets.push({ ...asset.metadata, entry });
-        options.onProgress?.({ phase: "validate", entry, completed: index + 1, total: ordered.length });
     }
     const project = withoutEmbeddedBodies(input.project), publishedProject = input.publishedProject ? withoutEmbeddedBodies(input.publishedProject) : undefined, manifest = { format: "my-chrome-utilities.project-archive", version: 3, requiredFeatures: ["digest-addressed-visual-assets"], draftEntry: "draft.json", ...(publishedProject ? { publishedEntry: "published.json" } : {}), assets };
     return { manifest, project, publishedProject, uniqueBodies };
 }
 export async function writeFlowVisualArchive(input, sink, options = {}) {
-    const prepared = await prepareArchive(input, options), entries = async function* () { yield { name: "manifest.json", body: jsonBlob(prepared.manifest) }; yield { name: "draft.json", body: jsonBlob(prepared.project) }; if (prepared.publishedProject)
-        yield { name: "published.json", body: jsonBlob(prepared.publishedProject) }; for (const [name, asset] of prepared.uniqueBodies)
-        yield { name, body: asset.body }; }();
+    const prepared = await prepareArchive(input), entries = async function* () { yield { name: "manifest.json", body: jsonBlob(prepared.manifest) }; yield { name: "draft.json", body: jsonBlob(prepared.project) }; if (prepared.publishedProject)
+        yield { name: "published.json", body: jsonBlob(prepared.publishedProject) }; let validated = 0; for (const [name, asset] of prepared.uniqueBodies) {
+        if (options.signal?.aborted)
+            throw new DOMException("Project archive work was cancelled.", "AbortError");
+        const body = typeof asset.body === "function" ? await asset.body() : asset.body;
+        await validateFlowVisualBody(asset.metadata, body);
+        options.onProgress?.({ phase: "validate", entry: name, completed: ++validated, total: prepared.uniqueBodies.size });
+        yield { name, body };
+    } }();
     let completed = 0, total = prepared.uniqueBodies.size + 2 + (prepared.publishedProject ? 1 : 0);
     return writeStoredZip(entries, sink, { ...(options.signal ? { signal: options.signal } : {}), onEntry: (entry) => options.onProgress?.({ phase: "write", entry, completed: ++completed, total }) });
 }
@@ -86,7 +89,7 @@ export async function createFlowVisualArchive(input) {
     return result;
 }
 export async function estimateFlowVisualArchiveSize(input) {
-    const prepared = await prepareArchive(input), entries = [{ name: "manifest.json", size: jsonBlob(prepared.manifest).size }, { name: "draft.json", size: jsonBlob(prepared.project).size }, ...(prepared.publishedProject ? [{ name: "published.json", size: jsonBlob(prepared.publishedProject).size }] : []), ...[...prepared.uniqueBodies].map(([name, asset]) => ({ name, size: asset.body.size }))];
+    const prepared = await prepareArchive(input), entries = [{ name: "manifest.json", size: jsonBlob(prepared.manifest).size }, { name: "draft.json", size: jsonBlob(prepared.project).size }, ...(prepared.publishedProject ? [{ name: "published.json", size: jsonBlob(prepared.publishedProject).size }] : []), ...[...prepared.uniqueBodies].map(([name, asset]) => ({ name, size: asset.metadata.byteLength }))];
     return entries.reduce((total, { name, size }) => total + size + 76 + 2 * encoder.encode(name).length, 22);
 }
 const parseJson = async (entries, name) => { const value = entries.get(name); if (!value)
@@ -96,12 +99,17 @@ const parseJson = async (entries, name) => { const value = entries.get(name); if
 catch {
     throw new DOMException(`Archive entry ${name} is not readable JSON.`, "DataError");
 } };
+function assertArchiveManifest(value) { if (!value || typeof value !== "object" || value.format !== "my-chrome-utilities.project-archive" || value.version !== 3)
+    throw new DOMException("Use a supported project archive version.", "NotSupportedError"); if (!Array.isArray(value.requiredFeatures) || (value.requiredFeatures).some(feature => feature !== "digest-addressed-visual-assets"))
+    throw new DOMException("The project archive requires unsupported features.", "NotSupportedError"); if (value.draftEntry !== "draft.json" || (value.publishedEntry !== undefined && value.publishedEntry !== "published.json") || !Array.isArray(value.assets) || value.assets.length > 10_000)
+    throw new DOMException("The project archive manifest has an unsupported structure.", "DataError"); for (const asset of value.assets) {
+    validateFlowVisualMetadata(asset);
+    if (asset.entry !== `assets/${asset.digest.slice(7)}.${extension(asset.mediaType)}`)
+        throw new DOMException(`Visual ${asset.id} does not use its digest-addressed archive entry.`, "DataError");
+} }
 export async function importFlowVisualArchive(source, input = {}) {
     const blob = source instanceof Blob ? source : new Blob([Uint8Array.from(source)]), entries = await readStoredZip(blob, undefined, { ...(input.signal ? { signal: input.signal } : {}), onEntry: (entry, index) => input.onProgress?.({ phase: "read", entry, completed: index, total: 0 }) }), manifest = await parseJson(entries, "manifest.json");
-    if (manifest.format !== "my-chrome-utilities.project-archive" || manifest.version !== 3)
-        throw new DOMException("Use a supported project archive version.", "NotSupportedError");
-    if ((manifest.requiredFeatures ?? []).some(feature => feature !== "digest-addressed-visual-assets"))
-        throw new DOMException("The project archive requires unsupported features.", "NotSupportedError");
+    assertArchiveManifest(manifest);
     if (new Set(manifest.assets.map(({ id }) => id)).size !== manifest.assets.length)
         throw new DOMException("The archive manifest contains duplicate visual asset identities.", "DataError");
     const entryContracts = new Map();

@@ -297,6 +297,17 @@ export class DurableProjectRepository {
     async listConceptVisualAssetMetadata(projectId) { return this.backend.transaction(["visualAssetMetadata"], "readonly", async (transaction) => (await transaction.getPrefix("visualAssetMetadata", `${projectId}:`)).map(({ value }) => clone(value)).sort((left, right) => left.id.localeCompare(right.id))); }
     async loadConceptVisualAssetBody(projectId, assetId) { return this.backend.transaction(["visualAssetMetadata", "visualAssetBodies"], "readonly", async (transaction) => { const metadata = await transaction.get("visualAssetMetadata", `${projectId}:${assetId}`), record = metadata && await transaction.get("visualAssetBodies", `${projectId}:${metadata.digest}`); if (!record?.body)
         throw new DOMException(`Original visual body ${assetId} is unavailable.`, "NotFoundError"); return record.body.slice(0, record.body.size, record.body.type); }); }
+    async loadConceptVisualAssetThumbnail(projectId, assetId) { return this.backend.transaction(["visualAssetMetadata", "visualAssetThumbnails"], "readonly", async (transaction) => { const metadata = await transaction.get("visualAssetMetadata", `${projectId}:${assetId}`), record = metadata && await transaction.get("visualAssetThumbnails", `${projectId}:${assetId}`); if (!record || record.digest !== metadata?.digest)
+        return undefined; return record.body.slice(0, record.body.size, record.body.type); }); }
+    async storeConceptVisualAssetThumbnail(projectId, assetId, body) { if (body.size > 256 * 1024)
+        throw new DOMException("The visual thumbnail exceeds its cache bound.", "QuotaExceededError"); await this.backend.transaction(["visualAssetMetadata", "visualAssetThumbnails"], "readwrite", async (transaction) => { const prefix = `${projectId}:`, metadata = await transaction.get("visualAssetMetadata", `${prefix}${assetId}`); if (!metadata)
+        throw new DOMException(`Visual asset ${assetId} is unavailable.`, "NotFoundError"); await transaction.put("visualAssetThumbnails", `${prefix}${assetId}`, { digest: metadata.digest, body: body.slice(0, body.size, body.type) }); const cached = await transaction.getPrefix("visualAssetThumbnails", prefix); let bytes = cached.reduce((sum, { value }) => sum + value.body.size, 0), count = cached.length; for (const { key, value } of cached)
+        if (count > 64 || bytes > 16 * 1024 * 1024) {
+            await transaction.delete("visualAssetThumbnails", key);
+            bytes -= value.body.size;
+            count -= 1;
+        } }); }
+    async conceptVisualThumbnailCacheBytes(projectId) { return this.backend.transaction(["visualAssetThumbnails"], "readonly", async (transaction) => (await transaction.getPrefix("visualAssetThumbnails", `${projectId}:`)).reduce((sum, { value }) => sum + value.body.size, 0)); }
     async replaceConceptVisualAssets(projectId, assets) {
         const ids = new Set();
         for (const { metadata, body } of assets) {
@@ -315,6 +326,8 @@ export class DurableProjectRepository {
                 }
             for (const { metadata, body } of assets) {
                 const identity = `${prefix}${metadata.id}`, bodyIdentity = `${prefix}${metadata.digest}`, prior = await transaction.get("visualAssetMetadata", identity);
+                if (prior && prior.digest !== metadata.digest)
+                    await transaction.delete("visualAssetThumbnails", identity);
                 if (!same(prior, metadata))
                     await transaction.put("visualAssetMetadata", identity, clone(metadata));
                 if (!await transaction.get("visualAssetBodies", bodyIdentity))
@@ -859,8 +872,7 @@ export class DurableProjectRepository {
     async abandonLegacyMigration(owner) { await this.backend.transaction(["settings"], "readwrite", async (transaction) => { const lock = await transaction.get("settings", "legacyMigrationLock"); if (lock?.owner === owner)
         await transaction.delete("settings", "legacyMigrationLock"); }); }
     async exportProject(projectId) { const loaded = await this.loadProject(projectId), publishedProject = loaded.publishedRevision ? (await this.loadPublishedRevision(projectId, loaded.publishedRevision)).state.project : undefined, manifest = await this.currentProductionManifest(projectId), schemaSnapshots = manifest ? await Promise.all(manifest.schemas.map(entry => this.loadProductionSchema({ projectId, projectRevision: manifest.projectRevision, schemaId: entry.schemaId, schemaRevision: entry.schemaRevision, fingerprint: entry.fingerprint }))) : [], currentRelease = loaded.state.project.releases.find(({ revision }) => revision === loaded.publishedRevision), draftProject = { ...clone(loaded.state.project), releases: currentRelease ? [clone(currentRelease)] : [], ...(currentRelease ? { currentRelease: currentRelease.id } : {}) }, productionProjectSnapshot = publishedProject ? { ...clone(publishedProject), releases: currentRelease ? [clone(currentRelease)] : [], ...(currentRelease ? { currentRelease: currentRelease.id } : {}) } : undefined; return { format: "my-chrome-utilities.durable-project-bundle", version: 2, sourceProjectId: projectId, sourceName: loaded.state.project.name, publishedRevision: loaded.publishedRevision, baseProjectRevision: loaded.publishedRevision, ...(productionProjectSnapshot ? { publishedProject: productionProjectSnapshot } : {}), ...(manifest ? { productionManifest: clone(manifest), schemaSnapshots: clone(schemaSnapshots) } : {}), project: draftProject, draft: clone(loaded.state.draft) }; }
-    async projectArchiveInput(projectId) { const loaded = await this.loadProject(projectId), publishedProject = loaded.publishedRevision ? (await this.loadPublishedRevision(projectId, loaded.publishedRevision)).state.project : undefined, metadata = await this.listConceptVisualAssetMetadata(projectId); let project = loaded.state.project, published = publishedProject; const assets = []; for (const value of metadata)
-        assets.push({ metadata: value, body: await this.loadConceptVisualAssetBody(projectId, value.id) }); if (!assets.length && Array.isArray(project.conceptVisualAssets) && project.conceptVisualAssets.some(asset => record(asset) && typeof asset.bytes === "string")) {
+    async projectArchiveInput(projectId) { const loaded = await this.loadProject(projectId), publishedProject = loaded.publishedRevision ? (await this.loadPublishedRevision(projectId, loaded.publishedRevision)).state.project : undefined, metadata = await this.listConceptVisualAssetMetadata(projectId); let project = loaded.state.project, published = publishedProject; const assets = metadata.map(value => ({ metadata: value, body: () => this.loadConceptVisualAssetBody(projectId, value.id) })); if (!assets.length && Array.isArray(project.conceptVisualAssets) && project.conceptVisualAssets.some(asset => record(asset) && typeof asset.bytes === "string")) {
         const migrated = await migrateVersion2VisualAssets({ format: "my-chrome-utilities.durable-project-bundle", version: 2, project, ...(published ? { publishedProject: published } : {}) }, { projectId, id: oldId => oldId });
         project = migrated.project;
         published = migrated.publishedProject;

@@ -46,7 +46,13 @@ export function mountProjectLibraryUi(options) {
     const persist = (next, projection = false) => { library = next; options.storage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); if (projection)
         projectProjection(); status.textContent = "Saving durable Draft…"; void options.settled?.().then(() => { status.textContent = "Saved to durable project storage."; }, error => { status.textContent = `Save failed; last Saved Draft is unchanged. ${error instanceof Error ? error.message : String(error)}`; }); options.onChange?.(); render(); };
     library = { ...structuredClone(library), projects: Object.fromEntries(Object.entries(library.projects).map(([projectId, entry]) => [projectId, { ...structuredClone(entry), state: { ...structuredClone(entry.state), history: { undo: [], redo: [] } } }])) };
-    const transport = preferredProjectLibraryTransport(options.storage, compatibilityTransport(options, () => library, id, now)), blocked = () => Boolean(options.blocked?.()), open = (projectId, route = "overview") => { if (blocked()) {
+    const transport = preferredProjectLibraryTransport(options.storage, compatibilityTransport(options, () => library, id, now)), operationCancel = button("Cancel project transfer", "Cancel project import or export", () => operationController?.abort());
+    let operationController;
+    operationCancel.hidden = true;
+    status.insertAdjacentElement("afterend", operationCancel);
+    const beginTransfer = () => { operationController?.abort(); operationController = new AbortController(); operationCancel.hidden = false; operationCancel.disabled = false; return operationController; }, endTransfer = (controller) => { if (operationController !== controller)
+        return; operationController = undefined; operationCancel.hidden = true; };
+    const blocked = () => Boolean(options.blocked?.()), open = (projectId, route = "overview") => { if (blocked()) {
         status.textContent = "A failed Draft save blocks project switching until Retry succeeds or the unsaved Draft is exported and explicitly rejected.";
         return;
     } if (projectId === library.activeProjectId) {
@@ -54,7 +60,7 @@ export function mountProjectLibraryUi(options) {
         void Promise.resolve(options.settled?.()).then(() => options.openStudio(`specification-builder.html?project=${encodeURIComponent(projectId)}&route=${encodeURIComponent(route)}`), error => { status.textContent = `Specification Studio was not opened because the pending durable save failed. ${error instanceof Error ? error.message : String(error)}`; });
         return;
     } void prepare(projectId).then(() => { persist(activateProject(library, projectId, now), true); return options.settled?.(); }).then(() => options.openStudio(`specification-builder.html?project=${encodeURIComponent(projectId)}&route=${encodeURIComponent(route)}`), error => { status.textContent = `Project switch was not committed. ${error instanceof Error ? error.message : String(error)}`; }); };
-    const download = async (projectId) => { const record = library.projects[projectId], baseName = record.state.project.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase(); status.textContent = `Preparing durable export for ${record.state.project.name}…`; let prepared; try {
+    const download = async (projectId) => { const controller = beginTransfer(), record = library.projects[projectId], baseName = record.state.project.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase(); status.textContent = `Preparing durable export for ${record.state.project.name}…`; let prepared; try {
         prepared = await transport.prepareExport(projectId);
         const archive = prepared.formatVersion >= 3, picker = archive ? globalThis.showSaveFilePicker : undefined;
         if (archive)
@@ -62,7 +68,7 @@ export function mountProjectLibraryUi(options) {
         if (picker) {
             const handle = await picker({ suggestedName: `${baseName}-project.${prepared.extension}`, types: [{ description: "Project archive", accept: { [prepared.mediaType]: [`.${prepared.extension}`] } }] }), writable = await handle.createWritable();
             try {
-                await prepared.write({ write: chunk => writable.write(chunk) }, { onProgress: progress => { status.textContent = progress.message; } });
+                await prepared.write({ write: chunk => writable.write(chunk) }, { signal: controller.signal, onProgress: progress => { status.textContent = progress.message; } });
                 await writable.close();
             }
             catch (error) {
@@ -75,7 +81,7 @@ export function mountProjectLibraryUi(options) {
             if (archive && prepared.estimatedBytes > fallbackLimit)
                 throw new DOMException(`The estimated ${prepared.estimatedBytes}-byte archive exceeds the ${fallbackLimit}-byte browser-download fallback. Choose a browser with writable-file support.`, "QuotaExceededError");
             const chunks = [];
-            await prepared.write({ write: async (chunk) => { chunks.push(Uint8Array.from(chunk).buffer); } }, { onProgress: progress => { status.textContent = progress.message; } });
+            await prepared.write({ write: async (chunk) => { chunks.push(Uint8Array.from(chunk).buffer); } }, { signal: controller.signal, onProgress: progress => { status.textContent = progress.message; } });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(new Blob(chunks, { type: prepared.mediaType }));
             link.download = `${baseName}-project.${prepared.extension}`;
@@ -89,6 +95,7 @@ export function mountProjectLibraryUi(options) {
     }
     finally {
         prepared?.release();
+        endTransfer(controller);
     } };
     const closeDialog = (dialog) => { dialog.close(); dialog.remove(); };
     const edit = (projectId, returnFocus) => { const record = library.projects[projectId], dialog = document.createElement("dialog"), heading = document.createElement("h4"), form = document.createElement("form"), fields = metadataFields(form, projectMetadata(library, projectId)), restoreFocus = () => { const scope = projectId === library.activeProjectId ? activeCard : list.querySelector(`[data-project-id="${CSS.escape(projectId)}"]`), current = Array.from(scope?.querySelectorAll("button") ?? []).find(({ textContent }) => textContent === "Edit details"); (current ?? returnFocus).focus(); }, save = button("Save project details", `Save details for ${record.state.project.name}`, () => { try {
@@ -160,15 +167,17 @@ export function mountProjectLibraryUi(options) {
         confirm.disabled = true;
     } }), openStudio = button("Open in Specification Studio", "Open new project in Specification Studio", () => { if (library.activeProjectId)
         open(library.activeProjectId); }), cancel = button("Close", "Close create project", () => closeDialog(dialog)); heading.textContent = "Create project"; confirm.disabled = true; form.addEventListener("submit", (event) => event.preventDefault()); form.append(prepare, review, confirm, openStudio, cancel); dialog.append(heading, form); document.body.append(dialog); dialog.addEventListener("close", () => returnFocus.focus(), { once: true }); dialog.showModal(); fields.name.focus(); };
-    const importReview = (staged, returnFocus = importControl) => { const dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), name = document.createElement("input"), commit = button("Import as new project", "Import as new project", () => { void (async () => { try {
+    const importReview = (staged, returnFocus = importControl) => { const dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), name = document.createElement("input"); let commitController; const commit = button("Import as new project", "Import as new project", () => { void (async () => { try {
         const nextName = name.value.trim();
         if (!nextName)
             throw new Error("Enter a unique target project name.");
         if (Object.values(library.projects).some(({ state }) => state.project.name.toLowerCase() === nextName.toLowerCase()))
             throw new Error("Target project name must be unique.");
+        commitController = new AbortController();
         commit.disabled = true;
+        cancelCommit.hidden = false;
         summary.textContent = `Importing ${nextName} into durable storage…`;
-        await staged.commit({ name: nextName, onProgress: progress => { summary.textContent = progress.message; } });
+        await staged.commit({ name: nextName, signal: commitController.signal, onProgress: progress => { summary.textContent = progress.message; } });
         await options.settled?.();
         staged.release();
         summary.textContent = staged.formatVersion >= 3 ? `Imported ${nextName} atomically as inactive project ${staged.projectId}, including its validated digest-addressed visual originals. Open it explicitly to activate.` : `Imported ${nextName} as inactive project ${staged.projectId}. Its Published domain snapshot was remapped into a new local immutable revision. Open it explicitly to activate.`;
@@ -178,7 +187,11 @@ export function mountProjectLibraryUi(options) {
         commit.disabled = true;
         staged.release();
         summary.textContent = `Import was not committed. ${error instanceof Error ? error.message : String(error)}`;
-    } })(); }), cancel = button("Close import review", "Close import review", () => closeDialog(dialog)); heading.textContent = "Review project import"; name.value = staged.targetName; name.setAttribute("aria-label", "Unique target project name"); summary.textContent = staged.blockers.length ? staged.blockers.map(({ section, message }) => `${section}: ${message}`).join(" · ") : `Format version ${staged.formatVersion} · source ${staged.sourceName} · Saved Draft · entity counts ${JSON.stringify(staged.entityCounts)} · reference integrity ${staged.referenceIntegrity} · migrations ${staged.migrations.join(", ") || "none"} · unique target name ${staged.targetName} · Import as new project.`; commit.disabled = Boolean(staged.blockers.length); dialog.append(heading, summary, name, commit, cancel); document.body.append(dialog); dialog.addEventListener("close", () => { staged.release(); returnFocus.focus(); }, { once: true }); dialog.showModal(); heading.tabIndex = -1; heading.focus(); };
+    }
+    finally {
+        cancelCommit.hidden = true;
+        commitController = undefined;
+    } })(); }), cancelCommit = button("Cancel import", "Cancel project import", () => commitController?.abort()), cancel = button("Close import review", "Close import review", () => closeDialog(dialog)); cancelCommit.hidden = true; heading.textContent = "Review project import"; name.value = staged.targetName; name.setAttribute("aria-label", "Unique target project name"); summary.textContent = staged.blockers.length ? staged.blockers.map(({ section, message }) => `${section}: ${message}`).join(" · ") : `Format version ${staged.formatVersion} · source ${staged.sourceName} · Saved Draft · entity counts ${JSON.stringify(staged.entityCounts)} · reference integrity ${staged.referenceIntegrity} · migrations ${staged.migrations.join(", ") || "none"} · unique target name ${staged.targetName} · Import as new project.`; commit.disabled = Boolean(staged.blockers.length); dialog.append(heading, summary, name, commit, cancelCommit, cancel); document.body.append(dialog); dialog.addEventListener("close", () => { commitController?.abort(); staged.release(); returnFocus.focus(); }, { once: true }); dialog.showModal(); heading.tabIndex = -1; heading.focus(); };
     function render() {
         const record = active(), term = search.value.trim().toLowerCase(), blockedNow = blocked();
         create.disabled = blockedNow;
@@ -204,9 +217,9 @@ export function mountProjectLibraryUi(options) {
     sort?.addEventListener("change", render);
     create.addEventListener("click", () => creation(create));
     importControl.addEventListener("click", () => file.click());
-    file.addEventListener("change", async () => { const selected = file.files?.[0]; if (selected)
+    file.addEventListener("change", async () => { const selected = file.files?.[0], controller = selected ? beginTransfer() : undefined; if (selected && controller)
         try {
-            importReview(await transport.inspectImport(selected, { onProgress: progress => { status.textContent = progress.message; } }), importControl);
+            importReview(await transport.inspectImport(selected, { signal: controller.signal, onProgress: progress => { status.textContent = progress.message; } }), importControl);
         }
         catch (error) {
             const dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), commit = button("Import as new project", "Import invalid project", () => { }), close = button("Close import review", "Close import review", () => closeDialog(dialog));
@@ -219,6 +232,10 @@ export function mountProjectLibraryUi(options) {
             dialog.showModal();
             heading.tabIndex = -1;
             heading.focus();
+        }
+        finally {
+            if (controller)
+                endTransfer(controller);
         } file.value = ""; });
     options.subscribe((next) => { library = { ...structuredClone(next), projects: Object.fromEntries(Object.entries(next.projects).map(([projectId, entry]) => [projectId, { ...structuredClone(entry), state: { ...structuredClone(entry.state), history: { undo: [], redo: [] } } }])) }; render(); options.onChange?.(); });
     render();

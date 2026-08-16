@@ -7,7 +7,7 @@ export function createFlowConceptVisualActions(options) {
         const current = saved ? await hydrate() : undefined;
         if (saved && !current)
             return;
-        const editor = createFlowConceptVisualEditor({ project: options.project, ...(current ? { existing: { attachment: current.attachment, raster: current.asset } } : {}), save: (value) => { const next = attachFlowConceptVisual(options.state(), options.flowId, options.target, value, options.id); close(); options.persist(next, `Saved concept visual for ${options.label}; Undo available.`); }, cancel: close });
+        const editor = createFlowConceptVisualEditor({ project: options.project, ...(options.thumbnailCacheBytes ? { thumbnailCacheBytes: options.thumbnailCacheBytes } : {}), ...(current ? { existing: { attachment: current.attachment, raster: current.asset } } : {}), save: (value) => { const next = attachFlowConceptVisual(options.state(), options.flowId, options.target, value, options.id); close(); options.persist(next, `Saved concept visual for ${options.label}; Undo available.`); }, cancel: close });
         liveHost().dispatchEvent(new CustomEvent("flow-open-item-editor", { bubbles: true, detail: { title: `${saved ? "Edit" : "Add"} visual for ${options.label}`, content: editor.root, firstControl: editor.firstControl } }));
     }, view = async () => { const invoker = document.activeElement; if (!await hydrate())
         return; const selector = options.target.kind === "page-frame" ? `g[data-page-frame-id="${CSS.escape(options.target.id)}"]:not([data-occurrence-id])` : `[data-occurrence-id="${CSS.escape(options.target.id)}"]`, fallback = document.querySelector(selector); if (invoker instanceof HTMLElement)
@@ -56,29 +56,33 @@ export function renderFlowConceptVisual(options) {
     badge.textContent = "▧ Visual";
     badge.setAttribute("aria-label", `View visual: ${visual.attachment.description}`);
     activateVisualIndicator(badge, () => void open(badge));
-    if (options.mode !== "Thumbnails") {
+    if (options.mode !== "Thumbnails" || !options.thumbnailPixels) {
         options.group.append(badge);
         return;
     }
-    if (!bytes) {
-        void options.hydrate?.(visual.asset.id);
-        options.group.append(badge);
-        return;
-    }
-    badge.dataset.flowVisualFallback = "true";
-    badge.style.display = "none";
-    const foreign = svg("foreignObject"), image = document.createElement("img"), viewport = flowConceptVisualThumbnailViewport(options.width);
+    const thumbnail = options.thumbnailBytes?.(visual.asset.id), foreign = svg("foreignObject"), viewport = flowConceptVisualThumbnailViewport(options.width);
     foreign.dataset.flowVisualThumbnail = options.target.id;
+    foreign.dataset.flowVisualAssetId = visual.asset.id;
     foreign.setAttribute("aria-label", `View visual: ${visual.attachment.description}`);
     foreign.setAttribute("x", String(viewport.x));
     foreign.setAttribute("y", String(options.height - 96));
     foreign.setAttribute("width", String(viewport.width));
     foreign.setAttribute("height", String(viewport.height));
-    image.src = bytes;
-    image.alt = visual.attachment.description;
-    Object.assign(image.style, { width: "100%", height: "100%", objectFit: "contain" });
-    foreign.append(image);
     activateVisualIndicator(foreign, () => void open(foreign));
+    if (thumbnail) {
+        const image = document.createElement("img");
+        image.src = thumbnail;
+        image.alt = visual.attachment.description;
+        Object.assign(image.style, { width: "100%", height: "100%", objectFit: "contain" });
+        foreign.append(image);
+        badge.dataset.flowVisualFallback = "true";
+        badge.style.display = "none";
+    }
+    else {
+        foreign.dataset.flowVisualPending = "true";
+        foreign.append(document.createTextNode("Preparing preview…"));
+        badge.dataset.flowVisualFallback = "true";
+    }
     foreign.style.setProperty("display", "block", "important");
     options.group.append(foreign, badge);
 }

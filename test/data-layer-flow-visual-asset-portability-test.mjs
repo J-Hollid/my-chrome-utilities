@@ -6,6 +6,7 @@ import {
   importFlowVisualArchive,
   migrateVersion2VisualAssets,
 } from "../dist/flow-visual-asset-portability.js";
+import {flowVisualDigest,validateFlowVisualBody} from "../dist/flow-visual-asset-validation.js";
 import {createMemoryDurableProjectRepository,createPageProjectHistory,durableDraftCommand} from "../dist/data-layer-durable-project-repository.js";
 import {verificationDigest} from "../scripts/verification-evidence.mjs";
 
@@ -33,9 +34,11 @@ durable.clearTrace();
 assert.deepEqual(await durable.listConceptVisualAssetMetadata(project.id),[metadata]);
 assert.equal(durable.trace().reads.some(({store})=>store==="visualAssetBodies"),false,"IndexedDB metadata lookup does not touch body records");
 assert.equal((await durable.loadConceptVisualAssetBody(project.id,metadata.id)).size,png.length);
+const cachedThumbnail=new Blob([png.slice(0,32)],{type:"image/webp"});await durable.storeConceptVisualAssetThumbnail(project.id,metadata.id,cachedThumbnail);assert.equal((await durable.loadConceptVisualAssetThumbnail(project.id,metadata.id)).size,cachedThumbnail.size);assert.equal(await durable.conceptVisualThumbnailCacheBytes(project.id),cachedThumbnail.size,"the disposable derivative cache reports real bytes");
 durable.clearTrace();
 await durable.replaceConceptVisualAssets(project.id,[{metadata,body:new Blob([png],{type:metadata.mediaType})}]);
 assert.equal(durable.trace().writes.some(({store})=>store==="visualAssetBodies"),false,"durable unchanged saves do not put Blob bodies");
+durable.clearTrace();const lazyArchive=await durable.prepareProjectArchive(project.id);assert.equal(durable.trace().reads.some(({store})=>store==="visualAssetBodies"),false,"archive preparation and size estimation retain metadata but no original bodies");await lazyArchive.write({write:async()=>{}});assert.equal(durable.trace().reads.filter(({store})=>store==="visualAssetBodies").length,1,"archive writing hydrates one original at a time");
 const retained=createMemoryDurableProjectRepository(),release={id:"release:visual",name:"Visual release",revision:1,createdAt:"2026-08-15T00:00:00.000Z",snapshot:project.collections},publishedProject={...structuredClone(project),releases:[],currentRelease:"release:visual"},releasedProject={...structuredClone(project),releases:[release],currentRelease:release.id};publishedProject.releases=[release];
 await retained.putProjectMetadataOnly({project:releasedProject,history:{undo:[],redo:[]}},{publishedRevision:1,publishedProject,visualAssets:[{metadata,body:new Blob([png],{type:metadata.mediaType})}]});
 await retained.replaceConceptVisualAssets(project.id,[]);
@@ -85,6 +88,9 @@ assert.equal(deduplicatedImport.project.documentationFlowGraphs["deduplicated:fl
 await assert.rejects(()=>createFlowVisualArchive({project,assets:[{metadata:{...metadata,width:2},body:new Blob([png],{type:metadata.mediaType})}]}),/dimensions/i);
 const disguised=new Blob([Uint8Array.from(png,(_,index)=>index===0?0:png[index])],{type:"image/png"});
 await assert.rejects(()=>store.replaceProjectAssets(project.id,[{metadata,body:disguised}]),/valid PNG/i);
+const truncatedPng=png.slice(0,24),truncatedDigest=await flowVisualDigest(truncatedPng);await assert.rejects(()=>validateFlowVisualBody({...metadata,byteLength:truncatedPng.length,digest:truncatedDigest},new Blob([truncatedPng],{type:"image/png"})),/complete/i,"a signature and IHDR without complete image data is rejected");
+class BoundedDigestBlob extends Blob{arrayBuffer(){throw new Error("digest must not materialize the complete Blob");}}
+assert.equal(await flowVisualDigest(new BoundedDigestBlob([png])),digest,"digest hashing reads bounded Blob slices");
 const cancelled=new AbortController();cancelled.abort();
 await assert.rejects(()=>importFlowVisualArchive(archive,{signal:cancelled.signal}),error=>error?.name==="AbortError");
 

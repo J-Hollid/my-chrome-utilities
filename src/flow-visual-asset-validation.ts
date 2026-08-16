@@ -1,12 +1,12 @@
+import {FlowVisualSha256} from "./flow-visual-sha256.js";
+
 export type FlowVisualMediaType="image/png"|"image/jpeg"|"image/webp";
 export interface FlowVisualAssetMetadata {id:string;mediaType:FlowVisualMediaType;width:number;height:number;byteLength:number;digest:string;}
 
 export const FLOW_VISUAL_LIMITS={sourceBytes:5*1024*1024,dimension:4096,pixels:16_000_000} as const;
 
-const hex=(value:ArrayBuffer)=>Array.from(new Uint8Array(value),byte=>byte.toString(16).padStart(2,"0")).join("");
 export const flowVisualDigest=async(value:Blob|Uint8Array):Promise<string>=>{
-  const bytes=value instanceof Blob?await value.arrayBuffer():Uint8Array.from(value).buffer;
-  return`sha256:${hex(await crypto.subtle.digest("SHA-256",bytes))}`;
+  const digest=new FlowVisualSha256();if(value instanceof Blob){for(let offset=0;offset<value.size;offset+=64*1024)digest.update(new Uint8Array(await value.slice(offset,offset+64*1024).arrayBuffer()));}else digest.update(value);return`sha256:${digest.hex()}`;
 };
 
 export function validateFlowVisualMetadata(value:FlowVisualAssetMetadata):void{
@@ -40,6 +40,12 @@ function webpDimensions(bytes:Uint8Array){
   if(kind==="VP8L"&&bytes.length>=25&&bytes[20]===0x2f){const bits=u32le(bytes,21);return{width:(bits&0x3fff)+1,height:((bits>>>14)&0x3fff)+1};}
   return undefined;
 }
+async function structurallyComplete(body:Blob,mediaType:FlowVisualMediaType):Promise<boolean>{if(mediaType==="image/jpeg"){const suffix=new Uint8Array(await body.slice(-2).arrayBuffer());return suffix[0]===0xff&&suffix[1]===0xd9;}if(mediaType==="image/webp"){const header=new Uint8Array(await body.slice(0,12).arrayBuffer());return header.length===12&&u32le(header,4)+8===body.size;}let offset=8,sawImage=false;while(offset+12<=body.size){const header=new Uint8Array(await body.slice(offset,offset+8).arrayBuffer()),length=u32be(header,0),kind=ascii(header,4,4),end=offset+12+length;if(end>body.size)return false;if(kind==="IDAT")sawImage=true;if(kind==="IEND")return sawImage&&length===0&&end===body.size;offset=end;}return false;}
+
+async function requireCompleteDecode(body:Blob,mediaType:FlowVisualMediaType):Promise<void>{
+  if(typeof createImageBitmap==="function"){let bitmap:ImageBitmap|undefined;try{bitmap=await createImageBitmap(body);if(!bitmap.width||!bitmap.height)throw new Error("empty decode");return;}catch{throw new DOMException(`Visual body is not a completely decodable ${mediaType.replace("image/","").toUpperCase()} image.`,"DataError");}finally{bitmap?.close();}}
+  if(!await structurallyComplete(body,mediaType))throw new DOMException(`Visual body is not a complete ${mediaType.replace("image/","").toUpperCase()} image.`,"DataError");
+}
 
 export async function inspectFlowVisualBody(body:Blob,mediaType:FlowVisualMediaType):Promise<{width:number;height:number}>{
   const prefix=new Uint8Array(await body.slice(0,Math.min(body.size,128*1024)).arrayBuffer());
@@ -53,5 +59,6 @@ export async function validateFlowVisualBody(metadata:FlowVisualAssetMetadata,bo
   if(body.size!==metadata.byteLength)throw new DOMException(`Visual ${metadata.id} byte length does not match its metadata.`,"DataError");
   const dimensions=await inspectFlowVisualBody(body,metadata.mediaType);
   if(dimensions.width!==metadata.width||dimensions.height!==metadata.height)throw new DOMException(`Visual ${metadata.id} decoded dimensions do not match its metadata.`,"DataError");
+  await requireCompleteDecode(body,metadata.mediaType);
   if(await flowVisualDigest(body)!==metadata.digest)throw new DOMException(`Visual ${metadata.id} digest does not match its original body.`,"DataError");
 }

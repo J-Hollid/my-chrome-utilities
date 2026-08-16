@@ -71,7 +71,7 @@ export function createFlowConceptVisualEditor(options) {
         caption.value = options.existing.attachment.caption ?? "";
         source.value = options.existing.attachment.sourceReference ?? "";
     }
-    const refresh = () => { const assets = flowConceptVisualAssets(options.project()), originalBytes = assets.reduce((sum, asset) => sum + asset.byteLength, 0); storage.textContent = `Project visuals: ${assets.length} assets · ${originalBytes} original bytes · 0 thumbnail cache bytes · estimated export ${originalBytes + JSON.stringify(options.project()).length} bytes.`; save.disabled = !raster || !description.value.trim() || Boolean(fileDiagnostic); diagnostic.textContent = flowConceptVisualEditorDiagnostic(description.value, fileDiagnostic); };
+    const refresh = () => { const assets = flowConceptVisualAssets(options.project()), originalBytes = assets.reduce((sum, asset) => sum + asset.byteLength, 0), thumbnailBytes = options.thumbnailCacheBytes?.() ?? 0; storage.textContent = `Project visuals: ${assets.length} assets · ${originalBytes} original bytes · ${thumbnailBytes} thumbnail cache bytes · estimated export ${originalBytes + JSON.stringify(options.project()).length} bytes.`; save.disabled = !raster || !description.value.trim() || Boolean(fileDiagnostic); diagnostic.textContent = flowConceptVisualEditorDiagnostic(description.value, fileDiagnostic); };
     const stage = async (candidate) => { if (!candidate)
         return; fileDiagnostic = ""; try {
         raster = await readFlowConceptVisualFile(candidate, options.project());

@@ -45,12 +45,14 @@ export function createVersion3ProjectLibraryTransport(options) {
                 throw new Error("Prepared project export already started."); started = true; assertSignal(input.signal); await prepared.write(sink, { ...(input.signal ? { signal: input.signal } : {}), onProgress: value => input.onProgress?.(progress(value)) }); assertSignal(input.signal); }, release() { released = true; } }; },
         async inspectImport(source, input = {}) {
             assertSignal(input.signal);
-            const bytes = source.arrayBuffer ? new Uint8Array(await source.arrayBuffer()) : new TextEncoder().encode(await source.text());
+            const blob = source instanceof Blob ? source : source.slice?.(0, source.size), prefix = blob ? new Uint8Array(await blob.slice(0, 4).arrayBuffer()) : undefined;
             assertSignal(input.signal);
-            const archive = bytes[0] === 80 && bytes[1] === 75;
+            const archive = prefix?.[0] === 80 && prefix[1] === 75;
             let project, publishedProject, assets, bundle, sourceName = "Unknown", targetName = "", projectId = options.id("project"), migrations = [], counts = {}, blockers = [];
             if (archive) {
-                const staged = await importFlowVisualArchive(bytes, { projectId, id: options.id, ...(input.signal ? { signal: input.signal } : {}), onProgress: value => input.onProgress?.(progress(value)) });
+                if (!blob)
+                    throw new DOMException("Choose a stream-readable version 3 project archive.", "DataError");
+                const staged = await importFlowVisualArchive(blob, { projectId, id: options.id, ...(input.signal ? { signal: input.signal } : {}), onProgress: value => input.onProgress?.(progress(value)) });
                 project = staged.project;
                 publishedProject = staged.publishedProject;
                 assets = staged.assets;
@@ -60,7 +62,8 @@ export function createVersion3ProjectLibraryTransport(options) {
                 counts = entityCounts(project);
             }
             else {
-                const serialized = new TextDecoder().decode(bytes);
+                const serialized = await source.text();
+                assertSignal(input.signal);
                 bundle = JSON.parse(serialized);
                 const rawProject = bundle.project, embedded = rawProject && Array.isArray(rawProject.conceptVisualAssets) && rawProject.conceptVisualAssets.some(value => Boolean(value && typeof value === "object" && typeof value.bytes === "string"));
                 if (embedded && rawProject) {

@@ -9,6 +9,7 @@
       "src/data-layer-assignment-routing-ui.ts",
       "src/flow-visual-asset-portability.ts",
       "src/flow-visual-asset-validation.ts",
+      "src/flow-visual-sha256.ts",
       "src/flow-visual-zip.ts",
       "src/data-layer-project-library.ts",
       "src/data-layer-project-library-ui.ts",
@@ -53,6 +54,7 @@
         "prefixes": [
           "src/flow-visual-asset-portability.ts",
           "src/flow-visual-asset-validation.ts",
+          "src/flow-visual-sha256.ts",
           "src/flow-visual-zip.ts"
         ],
         "propagateDependants": true,
@@ -2792,6 +2794,7 @@
       "src/data-layer-flow-graph-ui.ts",
       "src/data-layer-flow-graph-structural.ts",
       "src/data-layer-flow-graph-ui-page-frame.ts",
+      "src/flow-visual-thumbnail.ts",
       "src/flow-graph"
     ],
     "stylesheets": [
@@ -2848,6 +2851,7 @@
           "src/flow-graph/concept-visual-viewer-state.ts",
           "src/flow-graph/concept-visual-viewer-ui.ts",
           "src/flow-graph/concept-visual-workspace.ts",
+          "src/flow-visual-thumbnail.ts",
           "src/flow-graph/workspace-card-ui.ts",
           "src/flow-graph/workspace-dom.ts",
           "src/flow-graph/workspace-item-menu.ts",
