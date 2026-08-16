@@ -1,8 +1,10 @@
 import { flowDocumentationPropertyPaths } from "../data-layer-flow-table-documentation-export.js";
-import { projectDocumentationProfileColumns, projectDocumentationProfilePaths } from "../data-layer-project-documentation-compiler.js";
+import { projectDocumentationProfileColumns, projectDocumentationProfileConceptProperties } from "../data-layer-project-documentation-compiler.js";
 import { declareStudioChoice } from "../data-layer-studio-choice-controls.js";
 import { documentationButton as button, documentationCheckedOrder as checkedOrder, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled, documentationMove as move, documentationSetChecked as setChecked, } from "./workspace-ui-elements.js";
+import { createDocumentationProfileConceptRenderer } from "./workspace-profile-concepts-ui.js";
 export function createDocumentationSectionConfigurationRenderer(mutateSection) {
+    const renderProfileConcepts = createDocumentationProfileConceptRenderer(mutateSection);
     const renderOrderedChoices = (host, input) => {
         const selected = new Set(input.selected), list = document.createElement("ol");
         list.setAttribute("aria-label", `${input.name} order`);
@@ -107,10 +109,8 @@ export function createDocumentationSectionConfigurationRenderer(mutateSection) {
             host.append("Site Profile unavailable.");
             return;
         }
-        const allPaths = projectDocumentationProfilePaths(profile), paths = checkedOrder(allPaths, section.configuration?.paths), columns = checkedOrder(projectDocumentationProfileColumns(), section.configuration?.columns);
-        const rows = document.createElement("fieldset");
-        rows.append(Object.assign(document.createElement("legend"), { textContent: "Profile property rows and ordering" }));
-        renderOrderedChoices(rows, { all: allPaths.map((path) => ({ id: path, label: path })), selected: paths, name: `${section.name} property rows`, choiceKey: "documentation.property-row", onChange: (next) => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, paths: next } }), `Configure ${section.name} rows`) });
+        const columns = checkedOrder(projectDocumentationProfileColumns(), section.configuration?.columns), rows = document.createElement("section");
+        renderProfileConcepts(rows, set, section, projectDocumentationProfileConceptProperties(profile));
         const columnHost = document.createElement("fieldset");
         columnHost.append(Object.assign(document.createElement("legend"), { textContent: "Profile columns and ordering" }));
         renderOrderedChoices(columnHost, { all: projectDocumentationProfileColumns().map((column) => ({ id: column, label: column })), selected: columns, name: `${section.name} columns`, choiceKey: "documentation.profile-column", onChange: (next) => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, columns: next } }), `Configure ${section.name} columns`) });

@@ -98,7 +98,7 @@
   (set (concat [:installedBoundary
                 :headingLifecycleStart
                 :orderingControls]
-               (map #(keyword (str "export" (format "%03d" %))) (range 1 33)))))
+               (map #(keyword (str "export" (format "%03d" %))) (range 1 34)))))
 
 (defn- assert-runtime! [evidence]
   (support/assert! (and (= runtime-paths (set (keys evidence)))

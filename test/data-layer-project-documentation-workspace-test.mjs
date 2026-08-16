@@ -26,9 +26,34 @@ import {
   documentationPreviewSelection,
   documentationTabAfterKey,
 } from "../dist/data-layer-project-documentation-workspace-ui.js";
+import {profileConceptPresentation,updateProfileConceptPaths} from "../dist/project-documentation/workspace-profile-concepts.js";
 
 assert.deepEqual(consumeDocumentationIncompleteConfirmation(true),{confirmedForAction:true,confirmedAfterAction:false});
 assert.deepEqual(consumeDocumentationIncompleteConfirmation(false),{confirmedForAction:false,confirmedAfterAction:false});
+
+const conceptProperties=[
+  {path:"/commerce/cart_id",concept:"Commerce"},
+  {path:"/commerce/order_id",concept:"Commerce"},
+  {path:"/identity/user_id",concept:"Identity"},
+  {path:"/technical/debug",concept:"Technical"},
+  {path:"/visitor_id"},
+];
+const conceptPresentationInput={concepts:[{name:"Identity",included:true},{name:"Commerce",included:true},{name:"Technical",included:false},{name:"Ungrouped",included:true}],properties:conceptProperties,selectedPaths:["/commerce/cart_id","/identity/user_id","/technical/debug","/visitor_id"]};
+assert.deepEqual(profileConceptPresentation({...conceptPresentationInput,activeConcept:undefined,query:"",filter:"all"}),{
+  concepts:[
+    {name:"Identity",setIncluded:true,total:1,included:1,matching:1},
+    {name:"Commerce",setIncluded:true,total:2,included:1,matching:2},
+    {name:"Technical",setIncluded:false,total:1,included:1,matching:1},
+    {name:"Ungrouped",setIncluded:true,total:1,included:1,matching:1},
+  ],
+  properties:[],
+});
+assert.deepEqual(profileConceptPresentation({...conceptPresentationInput,activeConcept:"Commerce",query:"order",filter:"excluded"}).properties,[{path:"/commerce/order_id",included:false,override:true}]);
+assert.deepEqual(profileConceptPresentation({...conceptPresentationInput,activeConcept:"Technical",query:"technical",filter:"overrides"}).properties,[{path:"/technical/debug",included:true,override:true}]);
+const conceptPaths=conceptProperties.map(({path})=>path);
+assert.deepEqual(updateProfileConceptPaths(conceptPaths,conceptPresentationInput.selectedPaths,["/commerce/cart_id","/commerce/order_id"],"include-all",true),["/commerce/cart_id","/commerce/order_id","/identity/user_id","/technical/debug","/visitor_id"]);
+assert.deepEqual(updateProfileConceptPaths(conceptPaths,conceptPresentationInput.selectedPaths,["/commerce/cart_id","/commerce/order_id"],"exclude-all",true),["/identity/user_id","/technical/debug","/visitor_id"]);
+assert.deepEqual(updateProfileConceptPaths(conceptPaths,conceptPresentationInput.selectedPaths,["/technical/debug"],"reset",false),["/commerce/cart_id","/identity/user_id","/visitor_id"]);
 
 assert.equal(documentationTabAfterKey("build","ArrowRight"),"preview");
 assert.equal(documentationTabAfterKey("build","ArrowLeft"),"export");
