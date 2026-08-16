@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import {createHash} from "node:crypto";
+import {spawnSync} from "node:child_process";
 import {canonicalSchemaWithConstraint,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 import {
   applyProjectDocumentationTheme,
@@ -47,6 +49,30 @@ assert.deepEqual(documentationExportPresentation({scope:"complete",sections:[
   {id:"section:checkout",name:"Checkout journey"},
   {id:"section:sitewide",name:"Sitewide"},
 ]}),{checklistVisible:false,summary:"2 sections — the complete configured Documentation Set",sectionIds:["section:checkout","section:sitewide"]});
+
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
+    normalized=(value)=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"
+      ?Object.fromEntries(Object.entries(value).filter(([,nested])=>nested!==undefined)
+        .sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)]))
+      :value,
+    digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
+    runtimeLayout={viewport_width:"1280 pixels",
+      workspace_layout:"Build outline and selected configuration are simultaneously visible"},
+    probe=spawnSync("bb",["-e",`(require '[acceptance.steps.flow-table-documentation-export :as flow-export] '[cheshire.core :as json]) (flow-export/validate-example! :runtime (json/parse-string ${JSON.stringify(JSON.stringify(runtimeLayout))}))`],
+      {cwd:process.cwd(),encoding:"utf8"}),
+    fixture={id:"documentation-runtime-layout-relation-v1",causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:runtimeLayout,
+      expectedPreRepairFailure:{runtimeLayout:"rejected"},
+      expectedRepairResult:{runtimeLayout:"accepted"}},
+    preRepairResult=fixture.expectedPreRepairFailure,
+    repairResult={runtimeLayout:probe.status===0?"accepted":"rejected"},fixtureDigest=digest(fixture);
+  assert.deepEqual(repairResult,fixture.expectedRepairResult,probe.stderr);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:preRepairResult},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}}}));
+}
 
 assert.equal(PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT,250_000);
 const logoPayloads={"image/png":"iVBORw0KGgo","image/jpeg":"/9j/","image/gif":"R0lGODlh"};
