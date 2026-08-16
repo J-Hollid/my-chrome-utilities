@@ -115,7 +115,7 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
   const expectedRepairResult={projectInstalledPortabilityRegistered:true,flowStorageDiagnosticsRegistered:true};
   const observed={
     projectInstalledPortabilityRegistered:projectHandlerSource.includes(":installedPortability"),
-    flowStorageDiagnosticsRegistered:["flowGraph.runtime036.aggregateLimitRemoved","flowGraph.runtime036.storageAwareDiagnostic"].every((leaf)=>flowRegistry.includes(leaf)),
+    flowStorageDiagnosticsRegistered:["flowGraph.runtime035.boundedHydration","flowGraph.runtime036.aggregateLimitRemoved","flowGraph.runtime036.storageAwareDiagnostic"].every((leaf)=>flowRegistry.includes(leaf)),
   };
   assert.deepEqual(observed,expectedRepairResult);
   const fixture={id:"acceptance-evidence-registry-conservation-v1",causalCategory:context.causalCategory,
