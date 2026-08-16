@@ -2912,6 +2912,7 @@
           "src/flow-graph/concept-visuals.ts",
           "src/flow-graph/concept-visual-references.ts",
           "src/flow-graph/example-values.ts",
+          "src/flow-graph/example-details-ui.ts",
           "src/flow-graph/examples.ts",
           "src/flow-graph/migrations.ts",
           "src/flow-graph/occurrence-example-derive.ts",

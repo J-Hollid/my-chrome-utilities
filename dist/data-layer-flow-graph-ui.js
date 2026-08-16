@@ -1,4 +1,4 @@
-import { addEventOccurrenceToPage, deriveFlowOccurrenceExample, deriveFlowPageFrameExample, documentaryFlowGraph, duplicateGraphOccurrence, duplicateFlowPageFrame, effectiveFlowPageFrameName, flowOccurrenceExampleEditorRows, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectOccurrencePageChange, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveGraphOccurrence, projectFlowGraph, reassignFlowOccurrencePage, reviewLegacyFlowContextMigration, removeFlowPageFrame, renameFlowPageFrame, resetFlowPageFrameName, removeFlowRelationship, removeGraphOccurrence, saveGraphRelationship, setFlowOccurrenceExample, } from "./data-layer-flow-graph.js";
+import { addEventOccurrenceToPage, documentaryFlowGraph, duplicateGraphOccurrence, duplicateFlowPageFrame, effectiveFlowPageFrameName, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectOccurrencePageChange, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveGraphOccurrence, projectFlowGraph, reassignFlowOccurrencePage, reviewLegacyFlowContextMigration, removeFlowPageFrame, renameFlowPageFrame, resetFlowPageFrameName, removeFlowRelationship, removeGraphOccurrence, saveGraphRelationship, } from "./data-layer-flow-graph.js";
 import { appendFlowPageFrameCardControls } from "./data-layer-flow-graph-ui-page-frame.js";
 import { addFlowPageFrameAndRelationship, addFlowPageFrameAtPosition, addFlowPageFrameToSection, connectFlowPageFrames, createFlowSection, createFlowSectionAroundFrames, inspectSectionRemovalWithContents, moveFlowPageFramePresentation, moveFlowSection, movePageFrameToSection, removeFlowSection, removeFlowSectionWithContents, renameAndResizeFlowSection, tidyFlowPageFrames } from "./utilities/data-layer/property-set-flow-section.js";
 import { button, elementByData, entityName, flowEdgeGeometry, flowPortPoint, nodeHeight, nodeWidth, ownsPointerDrag, q, restorePointerCancellationFocus, svg } from "./flow-graph/ui-primitives.js";
@@ -10,22 +10,8 @@ import { advanceFlowItemPointerGesture, completeFlowItemPointerGesture, startFlo
 import { upgradeFlowWorkspace } from "./flow-graph/workspace-ui.js";
 import { createFlowVisualThumbnail } from "./flow-visual-thumbnail.js";
 import { flowSelectionContains, primaryFlowSelection, selectionAfterActivation, selectionAfterRemoval, selectionFromStoredView, storedViewWithSelection } from "./flow-graph/workspace-selection.js";
+import { createFlowExampleDetailsRenderer } from "./flow-graph/example-details-ui.js";
 export function contextSettingPageLabel(pageName) { return `${pageName} · Context-setting Page`; }
-function renderOccurrenceExampleControls(host, state, flowId, occurrenceId, persist, id) {
-    host.setAttribute("aria-label", "Occurrence example controls");
-    for (const row of flowOccurrenceExampleEditorRows(state.project, flowId, occurrenceId).filter(({ type }) => type !== "object" && type !== "array")) {
-        const item = document.createElement("label"), value = document.createElement("input"), save = document.createElement("button");
-        item.dataset.exampleEditorPath = row.path;
-        item.append(`${row.path} · ${row.type ?? "unknown"} `);
-        value.setAttribute("aria-label", `Example value for ${row.path}`);
-        value.value = row.value === undefined ? "" : String(row.value);
-        save.type = "button";
-        save.textContent = "Save example";
-        save.addEventListener("click", () => persist(setFlowOccurrenceExample(state, flowId, occurrenceId, row.path, value.value, id)));
-        item.append(value, save);
-        host.append(item);
-    }
-}
 export { ownsPointerDrag, restorePointerCancellationFocus, flowEdgeGeometry };
 export function flowViewAfterRelationshipDeletion(view, relationshipId) { const selection = selectionFromStoredView(view); if (!selection.some(({ kind, id }) => kind === "relationship" && id === relationshipId))
     return view; if (!view.selectedItems) {
@@ -168,6 +154,7 @@ export function installFlowGraphBuilder(options) {
     const selectedFrameForPage = (pageId) => current().graph?.pageFrames.find((frame) => frame.pageId === pageId);
     const saveSelection = (value, extend = false) => { selectedItems = value ? selectionAfterActivation(selectedItems, value, extend) : []; selected = primaryFlowSelection(selectedItems); const { state, flow } = current(); if (state && flow)
         writeView(state.project.id, flow.id, storedViewWithSelection(readView(state.project.id, flow.id), selectedItems)); render(); };
+    const exampleDetails = createFlowExampleDetailsRenderer({ currentState: () => current().state, persist, id: options.id, ...(options.openOccurrenceSchema ? { openOccurrenceSchema: options.openOccurrenceSchema } : {}), selectPageFrame: (id) => saveSelection({ kind: "page-frame", id }) });
     const selectCanvasItem = (value) => { selectionFocusIntent = value; saveSelection(value); };
     const requestItemMenu = (kind, id, event) => { const request = flowItemMenuRequest(event); if (!request)
         return false; event.preventDefault(); pendingItemMenu = { kind, id, request }; const selection = kind === "page" ? { kind: "page-frame", id } : kind === "event" ? { kind: "occurrence", id } : { kind: "relationship", id }; saveSelection(selection); return true; };
@@ -212,65 +199,6 @@ export function installFlowGraphBuilder(options) {
         render();
         return;
     } const trigger = typeof event.trigger === "string" && event.trigger.trim() ? event.trigger.trim() : undefined, count = graph.occurrences.filter((occurrence) => occurrence.pageFrameId === frame.id).length; persist(addEventOccurrenceToPage(state, flow.id, { name: event.name, pageFrameId: frame.id, pageId: frame.pageId, eventId: event.id, ...(trigger ? { trigger } : {}), obligation: "Required", minimum: 1, maximum: 1, x: 24 + count * 210, y: 70 }, options.id)); }
-    function occurrenceExampleDetails(state, flowId, occurrenceId, label) {
-        const example = deriveFlowOccurrenceExample(state.project, flowId, occurrenceId), details = document.createElement("details"), summary = document.createElement("summary"), pre = document.createElement("pre"), provenance = document.createElement("ul"), issues = document.createElement("ul"), exampleControls = document.createElement("section");
-        renderOccurrenceExampleControls(exampleControls, state, flowId, occurrenceId, persist, options.id);
-        details.dataset.eventExampleFor = occurrenceId;
-        details.dataset.exampleStatus = example.status;
-        summary.textContent = `${label} · ${example.status} · Derived JSON example`;
-        pre.dataset.readonlyExample = occurrenceId;
-        pre.textContent = example.formattedJson;
-        for (const [path, source] of Object.entries(example.provenance)) {
-            const item = document.createElement("li");
-            item.dataset.examplePath = path;
-            item.dataset.exampleSource = source;
-            item.textContent = `${path} · ${source}`;
-            provenance.append(item);
-        }
-        for (const issue of example.issues) {
-            const item = document.createElement("li"), repair = document.createElement("a"), value = document.createElement("input"), save = button("Save example", () => persist(setFlowOccurrenceExample(current().state, flowId, occurrenceId, issue.path, value.value, options.id)));
-            item.dataset.exampleIssuePath = issue.path;
-            item.dataset.exampleIssueCode = issue.code;
-            repair.href = issue.editHref;
-            repair.textContent = "Edit examples";
-            repair.addEventListener("click", (event) => { if (options.openOccurrenceSchema?.(occurrenceId, issue.path)) {
-                event.preventDefault();
-            } });
-            value.setAttribute("aria-label", `Example value for ${issue.path}`);
-            item.append(`${issue.path} · ${issue.message} `, repair, " ", value, save);
-            issues.append(item);
-        }
-        details.append(summary, pre, provenance, exampleControls, issues);
-        return details;
-    }
-    function pageExampleDetails(state, flowId, frameId, label) {
-        const example = deriveFlowPageFrameExample(state.project, flowId, frameId), details = document.createElement("details"), summary = document.createElement("summary"), pre = document.createElement("pre"), provenance = document.createElement("ul"), issues = document.createElement("ul");
-        details.dataset.pageExampleFor = frameId;
-        details.dataset.exampleStatus = example.status;
-        summary.textContent = `${label} page event · ${example.status} · Derived JSON example`;
-        pre.dataset.readonlyPageExample = frameId;
-        pre.textContent = example.formattedJson;
-        for (const [path, source] of Object.entries(example.provenance)) {
-            const item = document.createElement("li");
-            item.dataset.examplePath = path;
-            item.dataset.exampleSource = source;
-            item.textContent = `${path} · ${source}`;
-            provenance.append(item);
-        }
-        for (const issue of example.issues) {
-            const item = document.createElement("li"), repair = document.createElement("a");
-            item.dataset.exampleIssuePath = issue.path;
-            item.dataset.exampleIssueCode = issue.code;
-            repair.href = issue.editHref;
-            repair.textContent = "Open Page-frame contribution";
-            repair.addEventListener("click", (event) => { const originFocus = document.activeElement instanceof HTMLElement ? document.activeElement : undefined; const opened = options.openOccurrenceSchema?.(frameId, issue.path, originFocus); saveSelection({ kind: "page-frame", id: frameId }); if (opened)
-                event.preventDefault(); });
-            item.append(`${issue.path} · ${issue.message} `, repair);
-            issues.append(item);
-        }
-        details.append(summary, pre, provenance, issues);
-        return details;
-    }
     function renderSectionControls(host) {
         const { state, flow, graph } = current();
         if (!state || !flow || !graph)
@@ -363,7 +291,7 @@ export function installFlowGraphBuilder(options) {
                 statusMessage = "A Page frame cannot contain another Page.";
                 render();
             } });
-            appendFlowPageFrameCardControls({ card, title, state, flow, graph, frame, entityName, pageExampleDetails, saveSelection: (value) => saveSelection(value), ...(options.openOccurrenceSchema ? { openOccurrenceSchema: options.openOccurrenceSchema } : {}), persist: (next) => persist(next), duplicatePageFrame: (next, flowId, frameId) => duplicateFlowPageFrame(next, flowId, frameId, options.id), removePageFrame: (next, flowId, frameId) => removeFlowPageFrame(next, flowId, frameId), renamePageFrame: renameFlowPageFrame, resetPageFrameName: resetFlowPageFrameName });
+            appendFlowPageFrameCardControls({ card, title, state, flow, graph, frame, entityName, pageExampleDetails: exampleDetails.page, saveSelection: (value) => saveSelection(value), ...(options.openOccurrenceSchema ? { openOccurrenceSchema: options.openOccurrenceSchema } : {}), persist: (next) => persist(next), duplicatePageFrame: (next, flowId, frameId) => duplicateFlowPageFrame(next, flowId, frameId, options.id), removePageFrame: (next, flowId, frameId) => removeFlowPageFrame(next, flowId, frameId), renamePageFrame: renameFlowPageFrame, resetPageFrameName: resetFlowPageFrameName });
             host.append(card);
         }
     }
@@ -799,7 +727,7 @@ export function installFlowGraphBuilder(options) {
                 event.stopPropagation();
                 return;
             } saveSelection({ kind: "occurrence", id: nodeData.id }, event.ctrlKey || event.metaKey || event.shiftKey); });
-            const canvasExample = occurrenceExampleDetails(state, flow.id, nodeData.id, nodeData.name), exampleHost = svg("foreignObject"), resizeCanvasExample = () => { const expandedHeight = canvasExample.open ? Math.max(260, Math.ceil(canvasExample.scrollHeight) + 8) : 30; exampleHost.setAttribute("height", String(expandedHeight)); box.setAttribute("height", String(canvasExample.open ? renderedNodeHeight + expandedHeight - 30 : renderedNodeHeight)); resizeCanvasHeight(); };
+            const canvasExample = exampleDetails.occurrence(state, flow.id, nodeData.id, nodeData.name), exampleHost = svg("foreignObject"), resizeCanvasExample = () => { const expandedHeight = canvasExample.open ? Math.max(260, Math.ceil(canvasExample.scrollHeight) + 8) : 30; exampleHost.setAttribute("height", String(expandedHeight)); box.setAttribute("height", String(canvasExample.open ? renderedNodeHeight + expandedHeight - 30 : renderedNodeHeight)); resizeCanvasHeight(); };
             exampleHost.dataset.eventExampleNode = nodeData.id;
             exampleHost.setAttribute("x", "4");
             exampleHost.setAttribute("y", "62");
@@ -816,7 +744,7 @@ export function installFlowGraphBuilder(options) {
             group.append(box, title, detail, exampleHost);
             decorateVisual(group, { kind: "occurrence", id: nodeData.id }, nodeWidth, renderedNodeHeight);
             canvas.append(group);
-            const row = document.createElement("li"), control = button(`${nodeData.name} · Interaction Event${nodeData.trigger ? ` · ${nodeData.trigger}` : ""}`, () => saveSelection({ kind: "occurrence", id: nodeData.id })), outlineExample = occurrenceExampleDetails(state, flow.id, nodeData.id, nodeData.name);
+            const row = document.createElement("li"), control = button(`${nodeData.name} · Interaction Event${nodeData.trigger ? ` · ${nodeData.trigger}` : ""}`, () => saveSelection({ kind: "occurrence", id: nodeData.id })), outlineExample = exampleDetails.occurrence(state, flow.id, nodeData.id, nodeData.name);
             row.dataset.occurrenceId = nodeData.id;
             if (nodeData.pageFrameId)
                 row.dataset.containingPageFrameId = nodeData.pageFrameId;

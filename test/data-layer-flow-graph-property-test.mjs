@@ -8,6 +8,7 @@ import {flowOutlineProjection} from "../dist/flow-graph/workspace-outline-model.
 import {selectionAfterActivation} from "../dist/flow-graph/workspace-selection.js";
 import {sectionPointerDelta} from "../dist/flow-graph/workspace-section-geometry.js";
 import {flowWheelZoomFactor} from "../dist/flow-graph/workspace-wheel-zoom.js";
+import {FLOW_ITEM_DRAG_THRESHOLD,advanceFlowItemPointerGesture,completeFlowItemPointerGesture,startFlowItemPointerGesture} from "../dist/flow-graph/workspace-item-pointer.js";
 import {attachFlowConceptVisual,flowConceptVisualAssets,removeFlowConceptVisual} from "../dist/flow-graph/concept-visuals.js";
 import {FLOW_CONCEPT_VISUAL_MAX_VIEWER_SCALE,flowConceptVisualFitScale,flowConceptVisualPan,flowConceptVisualZoomAt} from "../dist/flow-graph/concept-visual-viewer-state.js";
 import {boundedDiagnostic,observeBrowserReadiness} from "./support/browser-observation-control.mjs";
@@ -37,6 +38,21 @@ for(let sample=0;sample<512;sample+=1){
   const tied=[1,7,4].map((presentationOrder,index)=>({endpointId:`tie:${presentationOrder}`,port:"left",center:{x:center.x+8,y:center.y},presentationOrder,index}));
   assert.equal(flowPortSnapTarget(point,tied)?.endpointId,"tie:7","frontmost presentation order breaks a generated distance tie");
   assert.equal(flowPortSnapTarget(point,[...tied].reverse())?.endpointId,"tie:7","tie resolution is independent of candidate iteration order");
+}
+for(let sample=0;sample<512;sample+=1){
+  const boundary=sample%3===1,pointerId=1+(randomInteger()%1000),origin=boundary?{x:(randomInteger()%2000)-1000,y:(randomInteger()%1600)-800}:{x:random()*2000-1000,y:random()*1600-800},angle=boundary?0:random()*Math.PI*2,distance=sample%3===0?random()*FLOW_ITEM_DRAG_THRESHOLD:boundary?FLOW_ITEM_DRAG_THRESHOLD:FLOW_ITEM_DRAG_THRESHOLD+Number.EPSILON*16+random()*3,point={x:origin.x+Math.cos(angle)*distance,y:origin.y+Math.sin(angle)*distance},gesture=startFlowItemPointerGesture({pointerId,button:0,clientX:origin.x,clientY:origin.y});
+  assert.ok(gesture,"every generated primary, non-interactive pointer starts one gesture");
+  const advanced=advanceFlowItemPointerGesture(gesture,{pointerId,clientX:point.x,clientY:point.y});
+  assert.equal(advanced.dragging,distance>FLOW_ITEM_DRAG_THRESHOLD,"generated movement activates drag only beyond the inclusive three-pixel click tolerance");
+  const completed=completeFlowItemPointerGesture(gesture,{pointerId,clientX:point.x,clientY:point.y});
+  if(distance<=FLOW_ITEM_DRAG_THRESHOLD)assert.deepEqual(completed,{kind:"activate"},"movement at or below the threshold conserves activation ownership");
+  else{assert.equal(completed.kind,"drag");assert.ok(Math.abs(completed.delta.x-(point.x-origin.x))<1e-9&&Math.abs(completed.delta.y-(point.y-origin.y))<1e-9,"a committed drag conserves its complete generated pointer delta");}
+  const mismatched=pointerId+1001,before=JSON.stringify(advanced);
+  assert.equal(advanceFlowItemPointerGesture(advanced,{pointerId:mismatched,clientX:point.x+100,clientY:point.y+100}),advanced,"a mismatched pointer cannot advance the owned gesture");
+  assert.equal(JSON.stringify(advanced),before,"mismatched pointer input cannot mutate gesture state");
+  assert.equal(completeFlowItemPointerGesture(advanced,{pointerId:mismatched,clientX:point.x+100,clientY:point.y+100}),undefined,"a mismatched pointer cannot complete the owned gesture");
+  assert.equal(startFlowItemPointerGesture({pointerId,button:1+(randomInteger()%4),clientX:origin.x,clientY:origin.y}),undefined,"every generated secondary button is rejected");
+  assert.equal(startFlowItemPointerGesture({pointerId,button:0,clientX:origin.x,clientY:origin.y,interactive:true}),undefined,"every generated interactive target retains pointer ownership");
 }
 for(let sample=0;sample<512;sample+=1){
   const raster={width:1+random()*8191,height:1+random()*8191},viewport={width:160+random()*1280,height:120+random()*900},fit=flowConceptVisualFitScale(raster,viewport),scale=fit+random()*(FLOW_CONCEPT_VISUAL_MAX_VIEWER_SCALE-fit),state={scale,x:0,y:0},requestedScale=scale+random()*(FLOW_CONCEPT_VISUAL_MAX_VIEWER_SCALE-scale),beforeLeft=(viewport.width-raster.width*scale)/2,beforeTop=(viewport.height-raster.height*scale)/2,beforeRight=beforeLeft+raster.width*scale,beforeBottom=beforeTop+raster.height*scale,anchor={x:Math.max(0,beforeLeft)+random()*(Math.min(viewport.width,beforeRight)-Math.max(0,beforeLeft)),y:Math.max(0,beforeTop)+random()*(Math.min(viewport.height,beforeBottom)-Math.max(0,beforeTop))},beforePoint={x:(anchor.x-beforeLeft)/scale,y:(anchor.y-beforeTop)/scale},zoomed=flowConceptVisualZoomAt({raster,viewport,state},requestedScale,anchor),afterLeft=(viewport.width-raster.width*zoomed.scale)/2+zoomed.x,afterTop=(viewport.height-raster.height*zoomed.scale)/2+zoomed.y,afterPoint={x:(anchor.x-afterLeft)/zoomed.scale,y:(anchor.y-afterTop)/zoomed.scale};

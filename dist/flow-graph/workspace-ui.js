@@ -15,11 +15,13 @@ function rememberFlowDetailsCommit(workspaceKey, surface, target) {
     const control = target.closest("button,a");
     if (!control || (control.tagName === "BUTTON" && !control.textContent?.trim().startsWith("Save")))
         return;
+    const disclosure = control.closest("details"), eventExample = disclosure?.dataset.eventExampleFor, pageExample = disclosure?.dataset.pageExampleFor;
     const restoration = {
         scrollTop: surface.scrollTop,
         tagName: control.tagName,
         ...(control.getAttribute("aria-label") ? { ariaLabel: control.getAttribute("aria-label") } : {}),
         ...(control.textContent?.trim() ? { text: control.textContent.trim() } : {}),
+        ...(eventExample ? { disclosureSelector: `[data-event-example-for="${CSS.escape(eventExample)}"]` } : pageExample ? { disclosureSelector: `[data-page-example-for="${CSS.escape(pageExample)}"]` } : {}),
     };
     flowDetailsRestorations.set(workspaceKey, restoration);
     sessionStorage.setItem(flowDetailsRestorationStorageKey(workspaceKey), JSON.stringify(restoration));
@@ -34,6 +36,11 @@ function restoreFlowDetailsCommit(workspaceKey, surface) {
         if (!surface.isConnected)
             return;
         surface.scrollTop = restoration.scrollTop;
+        if (restoration.disclosureSelector) {
+            const disclosure = surface.querySelector(restoration.disclosureSelector);
+            if (disclosure)
+                disclosure.open = true;
+        }
         const controls = Array.from(surface.querySelectorAll(restoration.tagName.toLowerCase()));
         const focusTarget = controls.find((control) => restoration.ariaLabel
             ? control.getAttribute("aria-label") === restoration.ariaLabel
@@ -44,12 +51,13 @@ function restoreFlowDetailsCommit(workspaceKey, surface) {
     setTimeout(apply, 0);
     setTimeout(apply, 50);
     setTimeout(apply, 150);
+    setTimeout(apply, 300);
     setTimeout(() => {
         if (flowDetailsRestorations.get(workspaceKey) !== restoration)
             return;
         flowDetailsRestorations.delete(workspaceKey);
         sessionStorage.removeItem(flowDetailsRestorationStorageKey(workspaceKey));
-    }, 300);
+    }, 500);
 }
 function elements(root) {
     const workspace = root.querySelector(".documentary-flow");
