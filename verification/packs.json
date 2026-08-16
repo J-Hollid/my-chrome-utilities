@@ -3492,6 +3492,12 @@
           "flowGraph.runtime045.focusDestination",
           "flowGraph.runtime045.noParentMove",
           "flowGraph.runtime045.noSavingOrWrite",
+          "flowGraph.runtime046.routeOwnedEditor",
+          "flowGraph.runtime046.destinationOperable",
+          "flowGraph.runtime046.staleContextDiscarded",
+          "flowGraph.runtime046.navigationStateInvariant",
+          "flowGraph.runtime046.stableReopen",
+          "flowGraph.runtime046.returnToFlowRetained",
           "flowGraph.installedBoundary",
           "flowGraph.runtime017.humanReview",
           "flowGraph.runtime017.primaryContextAbsorbed",
@@ -3805,7 +3811,13 @@
               "flowGraph.runtime045.openedExactlyOnce",
               "flowGraph.runtime045.focusDestination",
               "flowGraph.runtime045.noParentMove",
-              "flowGraph.runtime045.noSavingOrWrite"
+              "flowGraph.runtime045.noSavingOrWrite",
+              "flowGraph.runtime046.routeOwnedEditor",
+              "flowGraph.runtime046.destinationOperable",
+              "flowGraph.runtime046.staleContextDiscarded",
+              "flowGraph.runtime046.navigationStateInvariant",
+              "flowGraph.runtime046.stableReopen",
+              "flowGraph.runtime046.returnToFlowRetained"
             ]
           },
           {
