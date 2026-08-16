@@ -16,7 +16,7 @@ import { createBrowserPhaseTimer, observeBrowserReadiness, transmitDevtoolsProgr
     waitForChromeDebuggingPort, withDevtoolsProtocolDeadline,
     withLogicalTargetLifecycle } from "../support/browser-observation-control.mjs";
 import { assessFlowReloadLifecycle, canonicalFlowReloadIdentity, FLOW_WORKSPACE_CONTROLS_RELOAD_SEQUENCE } from "../../scripts/flow-reload-lifecycle.mjs";
-import { encodeDevtoolsTextFrame, planFlowBrowserTargets } from "../support/flow-workspace-r02-runtime.mjs";
+import { encodeDevtoolsTextFrame, observeFlowPointerClickOwnership, planFlowBrowserTargets } from "../support/flow-workspace-r02-runtime.mjs";
 const normalizedRepairValue=value=>Array.isArray(value)?value.map(normalizedRepairValue):value&&typeof value==="object"?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalizedRepairValue(nested)])):value;
 const repairDigest=value=>createHash("sha256").update(JSON.stringify(normalizedRepairValue(value))).digest("hex");
 function flowVisualRepairProtocol(runtime){const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),expectedPreRepairFailure={visibleThumbnailHydrated:false,installedBoundaryObserved:false},expectedRepairResult={visibleThumbnailHydrated:true,installedBoundaryObserved:true},observed={visibleThumbnailHydrated:Number(runtime.runtime035?.measurements?.near?.count??0)>=2,installedBoundaryObserved:runtime.runtime035?.boundedHydration===true},fixture={id:"flow-visual-background-visibility-hydration-v1",causalCategory:context.causalCategory,diagnosedBoundaryDigest:repairDigest(context.diagnosedBoundary),input:{visibilityTrigger:"thumbnail mode transition",backgroundObservation:true,offscreenAsset:true},expectedPreRepairFailure,expectedRepairResult},fixtureDigest=repairDigest(fixture);assert.deepEqual(observed,expectedRepairResult);return{version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},repairResult:{status:"passed",fixtureDigest,observed}};}
@@ -445,6 +445,8 @@ try {
         }
         Object.assign(runtime, await evaluate(flowGraphCorrectiveWorkflow(
             seeded, { stopAfterRuntime: 20, targetId, browserShard })));
+        if (targetId === "FLOW_WORKSPACE_CONTROLS_TARGET")
+            Object.assign(runtime, await observeFlowPointerClickOwnership(seeded, { evaluate, socket }));
         if(measureViewerCoverage){
             viewerModuleCoverage=await measuredModuleCoverage(socket,"flow-graph/concept-visual-ui.js");
             assert.ok(viewerModuleCoverage.lines>.8&&viewerModuleCoverage.functions>.8,
@@ -538,6 +540,7 @@ try {
         };
         viewerInteractions.runtime041.scrollbarFree=viewerMeasurements.every(({scrollbarFree})=>scrollbarFree);
         Object.assign(runtime,viewerInteractions);
+        Object.assign(runtime, await observeFlowPointerClickOwnership(seeded, { evaluate, socket }));
         const callSnapProbe = (expression) => evaluate(`globalThis.flowRelationshipSnapProbe.${expression}`);
         const mouse = async (type, point) => socket.call("Input.dispatchMouseEvent", {
             type, x:point.clientX, y:point.clientY,
@@ -670,9 +673,12 @@ try {
     const visualFailureDetail = shardFailures.some(({path}) => /^runtime03[4-7]\./.test(path))
         ? JSON.stringify({runtime034:runtime.runtime034?.measurements,runtime035:runtime.runtime035?.measurements,runtime037:runtime.runtime037?.measurements},null,2)
         : "";
-    const failureDetail=styleFailureDetail||snapFailureDetail||pagePlacementFailureDetail||contextualActionFailureDetail||wheelZoomFailureDetail||visualFailureDetail;
+    const pointerOwnershipFailureDetail = shardFailures.some(({path}) => /^runtime04[3-5]\./.test(path))
+        ? JSON.stringify({runtime043:runtime.runtime043?.measurements,runtime044:runtime.runtime044?.measurements,runtime045:runtime.runtime045?.measurements},null,2)
+        : "";
+    const failureDetail=styleFailureDetail||snapFailureDetail||pagePlacementFailureDetail||contextualActionFailureDetail||wheelZoomFailureDetail||visualFailureDetail||pointerOwnershipFailureDetail;
     assert.deepEqual(shardFailures, [], `Flow browser ${browserShard} evidence contains a false value${failureDetail ? `\n${failureDetail}` : ""}`);
-    const controlRuntimeKeys = new Set(["runtime001", "runtime016", "runtime018", "runtime020", "runtime027", "runtime033"]);
+    const controlRuntimeKeys = new Set(["runtime001", "runtime016", "runtime018", "runtime020", "runtime027", "runtime033", "runtime043", "runtime044", "runtime045"]);
     flowGraph = targetId === "FLOW_STYLESHEET_EXTRACTION_TARGET"
         ? {styles:runtime.styles}
         : targetId === "FLOW_WORKSPACE_CONTROLS_TARGET"

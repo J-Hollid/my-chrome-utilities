@@ -7,6 +7,50 @@ import { installFlowSections } from "./workspace-section-ui.js";
 import { createFlowTidyPanel } from "./workspace-tidy-ui.js";
 import { flowWorkspaceView, rememberFlowInvoker, restoreFlowInvoker, saveFlowWorkspaceView } from "./workspace-view-state.js";
 import { prepareFlowActionsButton, prepareFlowItemMenu, } from "./workspace-item-menu.js";
+const flowDetailsRestorations = new Map();
+const flowDetailsRestorationStorageKey = (workspaceKey) => `my-chrome-utilities.flow-details-restoration.v1:${workspaceKey}`;
+function rememberFlowDetailsCommit(workspaceKey, surface, target) {
+    if (!(target instanceof Element))
+        return;
+    const control = target.closest("button,a");
+    if (!control || (control.tagName === "BUTTON" && !control.textContent?.trim().startsWith("Save")))
+        return;
+    const restoration = {
+        scrollTop: surface.scrollTop,
+        tagName: control.tagName,
+        ...(control.getAttribute("aria-label") ? { ariaLabel: control.getAttribute("aria-label") } : {}),
+        ...(control.textContent?.trim() ? { text: control.textContent.trim() } : {}),
+    };
+    flowDetailsRestorations.set(workspaceKey, restoration);
+    sessionStorage.setItem(flowDetailsRestorationStorageKey(workspaceKey), JSON.stringify(restoration));
+}
+function restoreFlowDetailsCommit(workspaceKey, surface) {
+    const stored = sessionStorage.getItem(flowDetailsRestorationStorageKey(workspaceKey));
+    const restoration = flowDetailsRestorations.get(workspaceKey) ?? (stored ? JSON.parse(stored) : undefined);
+    if (!restoration)
+        return;
+    flowDetailsRestorations.set(workspaceKey, restoration);
+    const apply = () => {
+        if (!surface.isConnected)
+            return;
+        surface.scrollTop = restoration.scrollTop;
+        const controls = Array.from(surface.querySelectorAll(restoration.tagName.toLowerCase()));
+        const focusTarget = controls.find((control) => restoration.ariaLabel
+            ? control.getAttribute("aria-label") === restoration.ariaLabel
+            : control.textContent?.trim() === restoration.text);
+        focusTarget?.focus({ preventScroll: true });
+    };
+    apply();
+    setTimeout(apply, 0);
+    setTimeout(apply, 50);
+    setTimeout(apply, 150);
+    setTimeout(() => {
+        if (flowDetailsRestorations.get(workspaceKey) !== restoration)
+            return;
+        flowDetailsRestorations.delete(workspaceKey);
+        sessionStorage.removeItem(flowDetailsRestorationStorageKey(workspaceKey));
+    }, 300);
+}
 function elements(root) {
     const workspace = root.querySelector(".documentary-flow");
     const legacyToolbar = workspace?.querySelector('[aria-label="Flow component catalogs"]');
@@ -75,6 +119,9 @@ export function upgradeFlowWorkspace(root, pendingMenu) {
     Object.assign(surface.style, { position: "absolute", boxSizing: "border-box", overflow: "auto" });
     surfaceHeading.textContent = "Flow tools";
     surface.append(surfaceHeading, close, surfaceBody);
+    const workspaceKey = `${projectId}\u0000${flowId}`;
+    surface.addEventListener("pointerdown", (event) => rememberFlowDetailsCommit(workspaceKey, surface, event.target), true);
+    surface.addEventListener("mousedown", (event) => rememberFlowDetailsCommit(workspaceKey, surface, event.target), true);
     const restoreDetailsNodes = () => {
         for (const [node, parent] of detailsParents)
             if (node.parentNode === surfaceBody)
@@ -280,8 +327,19 @@ export function upgradeFlowWorkspace(root, pendingMenu) {
     });
     workspace.addEventListener("click", (event) => {
         const target = event.target.closest("button"), label = target?.textContent?.trim();
+        rememberFlowDetailsCommit(workspaceKey, surface, target);
         if (label === "Open schema contribution") {
             saveView(openFlowSurface(view, "details"));
+            setTimeout(() => {
+                const editor = Array.from(document.querySelectorAll('[aria-label="Shared schema constraints editor"]'))
+                    .find((candidate) => !candidate.hidden);
+                if (!editor)
+                    return;
+                const destination = editor.querySelector("h2,h3,h4,button,input,select,textarea") ?? editor;
+                if (!destination.matches("button,input,select,textarea,[tabindex]"))
+                    destination.tabIndex = -1;
+                destination.focus({ preventScroll: true });
+            }, 0);
             return;
         }
         if (view.surface !== "add" || !label?.startsWith("Add ") || target?.dataset.componentKind !== "page")
@@ -324,8 +382,11 @@ export function upgradeFlowWorkspace(root, pendingMenu) {
         cameraUi.apply(view.camera);
     else
         cameraUi.fitFlow();
-    if (view.surface)
+    if (view.surface) {
         showSurface(view.surface);
+        if (view.surface === "details")
+            queueMicrotask(() => restoreFlowDetailsCommit(workspaceKey, surface));
+    }
     if (pendingMenu && itemMenu && pendingMenu.kind === itemKind && pendingMenu.id === itemId) {
         const attribute = itemKind === "page" ? "data-page-frame-id" : itemKind === "event" ? "data-occurrence-id" : itemKind === "relationship" ? "data-relationship-id" : "data-flow-section-id";
         const invoker = canvas.querySelector(`[${attribute}="${CSS.escape(itemId)}"]`);

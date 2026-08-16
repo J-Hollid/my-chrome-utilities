@@ -6,6 +6,7 @@ import { flowPointerSnapTarget, flowPortSnapTarget } from "./flow-graph/relation
 import { flowBoundsContains, flowPointerDelta } from "./flow-graph/page-placement.js";
 import { createFlowConceptVisualActions, flowConceptVisualHeightExtension, renderFlowConceptVisual } from "./flow-graph/concept-visual-workspace.js";
 import { flowItemActivationRequest, flowItemMenuRequest } from "./flow-graph/workspace-item-menu.js";
+import { advanceFlowItemPointerGesture, completeFlowItemPointerGesture, startFlowItemPointerGesture } from "./flow-graph/workspace-item-pointer.js";
 import { upgradeFlowWorkspace } from "./flow-graph/workspace-ui.js";
 import { createFlowVisualThumbnail } from "./flow-visual-thumbnail.js";
 import { flowSelectionContains, primaryFlowSelection, selectionAfterActivation, selectionAfterRemoval, selectionFromStoredView, storedViewWithSelection } from "./flow-graph/workspace-selection.js";
@@ -347,9 +348,11 @@ export function installFlowGraphBuilder(options) {
             card.addEventListener("keydown", (event) => { if (!event.key.startsWith("Arrow"))
                 return; event.preventDefault(); move(event.key === "ArrowLeft" ? -20 : event.key === "ArrowRight" ? 20 : 0, event.key === "ArrowUp" ? -20 : event.key === "ArrowDown" ? 20 : 0); });
             let drag;
-            card.addEventListener("pointerdown", (event) => { drag = { pointerId: event.pointerId, x: event.clientX, y: event.clientY }; });
-            card.addEventListener("pointerup", (event) => { if (!drag || drag.pointerId !== event.pointerId)
-                return; const origin = drag; drag = undefined; move(event.clientX - origin.x, event.clientY - origin.y); });
+            card.addEventListener("pointerdown", (event) => { drag = startFlowItemPointerGesture({ pointerId: event.pointerId, button: event.button, clientX: event.clientX, clientY: event.clientY, interactive: Boolean(event.target.closest("input,button,a,summary,details,select,textarea,[role=button]")) }); });
+            card.addEventListener("pointermove", (event) => { drag = advanceFlowItemPointerGesture(drag, event); });
+            card.addEventListener("pointerup", (event) => { const completed = completeFlowItemPointerGesture(drag, event); drag = undefined; if (completed?.kind === "drag")
+                move(completed.delta.x, completed.delta.y); });
+            card.addEventListener("pointercancel", () => { drag = undefined; });
             card.addEventListener("dragover", (event) => event.preventDefault());
             card.addEventListener("drop", (event) => { event.preventDefault(); const payload = dropPayload(event); if (payload?.kind === "event") {
                 const entity = current().state?.project.collections.events.find(({ id }) => id === payload.id);
@@ -644,10 +647,14 @@ export function installFlowGraphBuilder(options) {
                 return; const entity = current().state?.project.collections.events.find(({ id }) => id === payload.id); if (entity)
                 insertEvent(entity, frame.id); });
             let start, suppressPointerClick = false;
-            const releaseClickSuppression = () => setTimeout(() => { suppressPointerClick = false; }, 1000), dragDelta = (event) => flowPointerDelta({ x: start.clientX, y: start.clientY }, { x: event.clientX, y: event.clientY }, start.zoom), move = (event) => { if (!ownsPointerDrag(start?.pointerId, event.pointerId))
-                return; const delta = dragDelta(event); group.setAttribute("transform", `translate(${x + delta.x} ${y + delta.y})`); }, finish = (up) => { if (!ownsPointerDrag(start?.pointerId, up.pointerId))
-                return; window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", finish); window.removeEventListener("pointercancel", cancel); const initial = start, delta = dragDelta(up), nextX = x + delta.x, nextY = y + delta.y, pointerTarget = Array.from(canvas.querySelectorAll("[data-section-dropzone]")).find((region) => { const bounds = region.getBoundingClientRect(); return up.clientX >= bounds.left && up.clientX <= bounds.right && up.clientY >= bounds.top && up.clientY <= bounds.bottom; })?.dataset.sectionDropzone, containedTarget = projection.laneBands.find((band) => flowBoundsContains(band, { x: nextX, y: nextY, width: endpoint.width, height: endpoint.height }))?.id, target = pointerTarget ?? containedTarget, pointerId = initial.pointerId; if (group.hasPointerCapture(pointerId))
-                group.releasePointerCapture(pointerId); start = undefined; if (suppressPointerClick)
+            const releaseClickSuppression = () => setTimeout(() => { suppressPointerClick = false; }, 1000), dragDelta = (event) => flowPointerDelta(start.origin, { x: event.clientX, y: event.clientY }, start.zoom), move = (event) => { if (!ownsPointerDrag(start?.pointerId, event.pointerId))
+                return; start = { ...advanceFlowItemPointerGesture(start, event), zoom: start.zoom }; if (!start.dragging)
+                return; const delta = dragDelta(event); suppressPointerClick = true; group.setAttribute("transform", `translate(${x + delta.x} ${y + delta.y})`); }, finish = (up) => { if (!ownsPointerDrag(start?.pointerId, up.pointerId))
+                return; window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", finish); window.removeEventListener("pointercancel", cancel); const initial = start, completed = completeFlowItemPointerGesture(initial, up), pointerId = initial.pointerId; if (group.hasPointerCapture(pointerId))
+                group.releasePointerCapture(pointerId); start = undefined; if (completed?.kind !== "drag") {
+                group.setAttribute("transform", `translate(${x} ${y})`);
+                return;
+            } const delta = flowPointerDelta(initial.origin, { x: up.clientX, y: up.clientY }, initial.zoom), nextX = x + delta.x, nextY = y + delta.y, pointerTarget = Array.from(canvas.querySelectorAll("[data-section-dropzone]")).find((region) => { const bounds = region.getBoundingClientRect(); return up.clientX >= bounds.left && up.clientX <= bounds.right && up.clientY >= bounds.top && up.clientY <= bounds.bottom; })?.dataset.sectionDropzone, containedTarget = projection.laneBands.find((band) => flowBoundsContains(band, { x: nextX, y: nextY, width: endpoint.width, height: endpoint.height }))?.id, target = pointerTarget ?? containedTarget; if (suppressPointerClick)
                 releaseClickSuppression(); moveTo(target, nextX, nextY); }, cancel = (event) => { if (!ownsPointerDrag(start?.pointerId, event.pointerId))
                 return; window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", finish); window.removeEventListener("pointercancel", cancel); if (group.hasPointerCapture(start.pointerId))
                 group.releasePointerCapture(start.pointerId); start = undefined; group.setAttribute("transform", `translate(${x} ${y})`); if (suppressPointerClick)
@@ -656,7 +663,8 @@ export function installFlowGraphBuilder(options) {
                 return; if (start) {
                 suppressPointerClick = true;
                 return;
-            } const activeCamera = JSON.parse(canvas.dataset.viewport ?? "{}"); start = { pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, zoom: activeCamera.zoom ?? 1 }; window.addEventListener("pointermove", move); window.addEventListener("pointerup", finish); window.addEventListener("pointercancel", cancel); try {
+            } const activeCamera = JSON.parse(canvas.dataset.viewport ?? "{}"), gesture = startFlowItemPointerGesture(event); if (!gesture)
+                return; start = { ...gesture, zoom: activeCamera.zoom ?? 1 }; window.addEventListener("pointermove", move); window.addEventListener("pointerup", finish); window.addEventListener("pointercancel", cancel); try {
                 group.setPointerCapture(event.pointerId);
             }
             catch { /* Synthetic tests have no active device pointer to capture. */ } });
@@ -758,18 +766,23 @@ export function installFlowGraphBuilder(options) {
                 rejectContainedMove();
                 return;
             } persist(moveGraphOccurrence(current().state, flow.id, nodeData.id, { x, y })); focusNode(); };
-            let dragStart;
+            let dragStart, suppressOccurrenceClick = false;
             const ownsDrag = (event) => ownsPointerDrag(dragStart?.pointerId, event.pointerId), stopDragTracking = (pointerId) => { window.removeEventListener("pointermove", moveDraggedNode); window.removeEventListener("pointerup", finishDraggedNode); window.removeEventListener("pointercancel", cancelDraggedNode); if (group.hasPointerCapture(pointerId))
                 group.releasePointerCapture(pointerId); dragStart = undefined; }, moveDraggedNode = (event) => { if (!ownsDrag(event))
-                return; group.setAttribute("transform", `translate(${dragStart.x + event.clientX - dragStart.clientX} ${dragStart.y + event.clientY - dragStart.clientY})`); }, cancelDraggedNode = (event) => { if (!ownsDrag(event))
+                return; dragStart = { ...advanceFlowItemPointerGesture(dragStart, event), x: dragStart.x, y: dragStart.y }; if (!dragStart.dragging)
+                return; suppressOccurrenceClick = true; group.setAttribute("transform", `translate(${dragStart.x + event.clientX - dragStart.origin.x} ${dragStart.y + event.clientY - dragStart.origin.y})`); }, cancelDraggedNode = (event) => { if (!ownsDrag(event))
                 return; const pointerId = dragStart.pointerId; stopDragTracking(pointerId); group.setAttribute("transform", `translate(${layout.x} ${layout.y})`); }, finishDraggedNode = (event) => { if (!ownsDrag(event))
-                return; const initial = dragStart, x = Math.round(initial.x + event.clientX - initial.clientX), y = Math.round(initial.y + event.clientY - initial.clientY); stopDragTracking(initial.pointerId); if (nodeData.pageFrameId) {
+                return; const initial = dragStart, completed = completeFlowItemPointerGesture(initial, event), x = Math.round(initial.x + event.clientX - initial.origin.x), y = Math.round(initial.y + event.clientY - initial.origin.y); stopDragTracking(initial.pointerId); if (completed?.kind !== "drag") {
+                group.setAttribute("transform", `translate(${layout.x} ${layout.y})`);
+                return;
+            } setTimeout(() => { suppressOccurrenceClick = false; }, 1000); if (nodeData.pageFrameId) {
                 const relativeX = x - Number(containingPageFrame?.layout.x ?? 0), relativeY = y - Number(containingPageFrame?.layout.y ?? 0);
                 moveContained(relativeX, relativeY);
                 return;
             } persist(moveGraphOccurrence(current().state, flow.id, nodeData.id, { lane: layout.lane, x, y: Math.max(55, y) })); focusNode(); };
             group.addEventListener("pointerdown", (event) => { if (event.target.closest("foreignObject") || dragStart)
-                return; dragStart = { x: layout.x, y: layout.y, clientX: event.clientX, clientY: event.clientY, pointerId: event.pointerId }; window.addEventListener("pointermove", moveDraggedNode); window.addEventListener("pointerup", finishDraggedNode); window.addEventListener("pointercancel", cancelDraggedNode); try {
+                return; const gesture = startFlowItemPointerGesture(event); if (!gesture)
+                return; dragStart = { ...gesture, x: layout.x, y: layout.y }; window.addEventListener("pointermove", moveDraggedNode); window.addEventListener("pointerup", finishDraggedNode); window.addEventListener("pointercancel", cancelDraggedNode); try {
                 group.setPointerCapture(event.pointerId);
             }
             catch { /* Synthetic regression events have no active device pointer to capture. */ } });
@@ -781,6 +794,9 @@ export function installFlowGraphBuilder(options) {
             group.addEventListener("click", (event) => { if (event.target.closest("foreignObject"))
                 return; if (suppressNodeClick) {
                 suppressNodeClick = false;
+                return;
+            } if (suppressOccurrenceClick) {
+                event.stopPropagation();
                 return;
             } saveSelection({ kind: "occurrence", id: nodeData.id }, event.ctrlKey || event.metaKey || event.shiftKey); });
             const canvasExample = occurrenceExampleDetails(state, flow.id, nodeData.id, nodeData.name), exampleHost = svg("foreignObject"), resizeCanvasExample = () => { const expandedHeight = canvasExample.open ? Math.max(260, Math.ceil(canvasExample.scrollHeight) + 8) : 30; exampleHost.setAttribute("height", String(expandedHeight)); box.setAttribute("height", String(canvasExample.open ? renderedNodeHeight + expandedHeight - 30 : renderedNodeHeight)); resizeCanvasHeight(); };
@@ -1003,7 +1019,9 @@ export function installFlowGraphBuilder(options) {
             renderGraph(flow);
             document.querySelectorAll("[data-page-frame-id]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(flowSelectionContains(selectedItems, { kind: "page-frame", id: candidate.dataset.pageFrameId }))));
             if (state) {
-                const focusId = sessionStorage.getItem(`my-chrome-utilities.flow-focus.v1:${state.project.id}:${flow.id}`);
+                const focusKey = `my-chrome-utilities.flow-focus.v1:${state.project.id}:${flow.id}`, focusId = sessionStorage.getItem(focusKey);
+                if (focusId)
+                    sessionStorage.removeItem(focusKey);
                 if (focusId)
                     queueMicrotask(() => (document.querySelector(`[aria-label="Interactive directional Flow canvas"] [data-page-frame-id="${CSS.escape(focusId)}"]`) ?? document.querySelector(`article[data-page-frame-id="${CSS.escape(focusId)}"]`))?.focus({ preventScroll: true }));
             }

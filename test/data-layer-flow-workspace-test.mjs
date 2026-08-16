@@ -23,6 +23,12 @@ import {
   zoomFlowCamera,
 } from "../dist/flow-graph/workspace.js";
 import {flowBoundsContains,flowPointerDelta} from "../dist/flow-graph/page-placement.js";
+import {
+  FLOW_ITEM_DRAG_THRESHOLD,
+  advanceFlowItemPointerGesture,
+  completeFlowItemPointerGesture,
+  startFlowItemPointerGesture,
+} from "../dist/flow-graph/workspace-item-pointer.js";
 import {flowOutlineProjection} from "../dist/flow-graph/workspace-outline-model.js";
 import {flowPanClickSuppression,flowPanStartAllowed,flowPanToPinch} from "../dist/flow-graph/workspace-camera-ui.js";
 import {flowWheelZoomFactor} from "../dist/flow-graph/workspace-wheel-zoom.js";
@@ -168,6 +174,18 @@ assert.deepEqual(clientPointToFlowPoint({left:20,top:10,width:400,height:200},{x
 assert.deepEqual(flowPointerDelta({x:120,y:330},{x:120,y:200},.5),{x:0,y:-260},"a Page drag at 50 percent converts CSS travel to graph travel");
 assert.deepEqual(flowPointerDelta({x:120,y:80},{x:120,y:200},1),{x:0,y:120},"a Page drag at 100 percent preserves CSS travel");
 assert.deepEqual(flowPointerDelta({x:120,y:80},{x:120,y:376},2),{x:0,y:148},"a Page drag at 200 percent converts CSS travel to graph travel");
+assert.equal(FLOW_ITEM_DRAG_THRESHOLD,3,"item activation tolerates three CSS pixels of native pointer travel");
+assert.equal(startFlowItemPointerGesture({pointerId:7,button:2,clientX:40,clientY:50}),undefined,"secondary input never starts an item drag");
+assert.equal(startFlowItemPointerGesture({pointerId:7,button:0,clientX:40,clientY:50,interactive:true}),undefined,"a Details control owns its pointer sequence");
+const clickGesture=startFlowItemPointerGesture({pointerId:7,button:0,clientX:40,clientY:50});
+assert.ok(clickGesture);
+const clickMotion=advanceFlowItemPointerGesture(clickGesture,{pointerId:7,clientX:42,clientY:50});
+assert.equal(clickMotion.dragging,false,"sub-threshold motion never produces transient item translation");
+assert.deepEqual(completeFlowItemPointerGesture(clickMotion,{pointerId:7,clientX:43,clientY:50}),{kind:"activate"},"three total CSS pixels remain an activation");
+const dragGesture=startFlowItemPointerGesture({pointerId:9,button:0,clientX:100,clientY:120});
+const dragMotion=advanceFlowItemPointerGesture(dragGesture,{pointerId:9,clientX:104,clientY:120});
+assert.equal(dragMotion.dragging,true,"travel beyond three CSS pixels starts a deliberate drag");
+assert.deepEqual(completeFlowItemPointerGesture(dragMotion,{pointerId:9,clientX:110,clientY:125}),{kind:"drag",delta:{x:10,y:5}},"a deliberate drag commits its full screen-space delta once");
 assert.equal(flowBoundsContains({x:100,y:100,width:500,height:440},{x:160,y:408,width:190,height:108}),true,"a completely contained Page retains explicit Section membership at the lower boundary");
 assert.equal(flowBoundsContains({x:100,y:100,width:500,height:440},{x:160,y:433,width:190,height:108}),false,"a Page crossing the Section boundary does not retain membership");
 assert.deepEqual(cameraFromMinimapPoint({x:0,y:0,width:2000,height:1000},{width:500,height:250},{x:.75,y:.25},.5),{x:1000,y:0,zoom:.5},"minimap navigation centers the chosen normalized world point");
