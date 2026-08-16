@@ -72,7 +72,17 @@
    {:keys ["instance_count" "source_page" "first_name" "second_name" "third_name" "fourth_name"]
     :rows #{["4" "Generic checkout page" "Customer details" "Payment" "Summary" "Confirmation"]}}
    {:keys ["source_page" "first_name" "second_name" "third_name" "fourth_name"]
-    :rows #{["Generic checkout page" "Customer details" "Payment" "Summary" "Confirmation"]}}])
+    :rows #{["Generic checkout page" "Customer details" "Payment" "Summary" "Confirmation"]}}
+   {:keys ["scope" "checklist_state" "summary"]
+    :rows #{["Current section" "hidden" "1 section — Checkout journey"]
+            ["Choose sections" "shown" "2 sections — Checkout journey, Sitewide"]
+            ["Complete Documentation Set" "hidden" "6 sections — the complete configured Documentation Set"]}}
+   {:keys ["export_action" "output"]
+    :rows #{["Copy rich documentation" "rich clipboard content"]
+            ["Download Excel workbook" "an Excel workbook"]}}
+   {:keys ["viewport_width" "workspace_layout"]
+    :rows #{["1280 pixels" "the Build outline and selected configuration are shown together"]
+            ["360 pixels" "the Build outline and selected configuration open one at a time"]}}])
 
 (defn validate-example! [_mode example]
   (support/validate-example-relations!
@@ -98,5 +108,5 @@
    observe-browser! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-04T10:52:21.358263089+02:00", :module-hash "1394112264", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "44459659"} {:id "def/feature-files", :kind "def", :line 4, :end-line nil, :hash "-335733992"} {:id "def/entry-modes", :kind "def", :line 9, :end-line nil, :hash "210832218"} {:id "form/3/defonce", :kind "defonce", :line 14, :end-line nil, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 15, :end-line nil, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 17, :end-line nil, :hash "-729194422"} {:id "defn-/observe-browser!", :kind "defn-", :line 23, :end-line nil, :hash "1774642844"} {:id "def/flow-export-example-relations", :kind "def", :line 31, :end-line nil, :hash "1720611054"} {:id "defn/validate-example!", :kind "defn", :line 77, :end-line nil, :hash "1985321309"} {:id "def/runtime-paths", :kind "def", :line 82, :end-line nil, :hash "1042883056"} {:id "defn-/assert-runtime!", :kind "defn-", :line 88, :end-line nil, :hash "234435999"} {:id "def/handlers", :kind "def", :line 94, :end-line nil, :hash "-915256383"}]}
+;; {:version 1, :tested-at "2026-08-16T13:01:49.563337251+02:00", :module-hash "1782301124", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "44459659"} {:id "def/feature-files", :kind "def", :line 4, :end-line 8, :hash "-335733992"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 13, :hash "210832218"} {:id "form/3/defonce", :kind "defonce", :line 14, :end-line 14, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 15, :end-line 15, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 17, :end-line 21, :hash "-729194422"} {:id "defn-/observe-browser!", :kind "defn-", :line 23, :end-line 29, :hash "1774642844"} {:id "def/flow-export-example-relations", :kind "def", :line 31, :end-line 85, :hash "1384022069"} {:id "defn/validate-example!", :kind "defn", :line 87, :end-line 90, :hash "1985321309"} {:id "def/runtime-paths", :kind "def", :line 92, :end-line 96, :hash "-1070367996"} {:id "defn-/assert-runtime!", :kind "defn-", :line 98, :end-line 102, :hash "234435999"} {:id "def/handlers", :kind "def", :line 104, :end-line 108, :hash "-915256383"}]}
 ;; clj-mutate-manifest-end

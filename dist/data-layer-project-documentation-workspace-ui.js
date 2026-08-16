@@ -165,7 +165,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
         for (const panel of [buildPanel, preview, exportRegion])
             panel.setAttribute("role", "tabpanel");
         buildPanel.hidden = primaryTab !== "build";
-        themeRegion.hidden = primaryTab !== "build";
+        themeRegion.hidden = !themeOpen;
         preview.hidden = primaryTab !== "preview";
         exportRegion.hidden = primaryTab !== "export";
         for (const tab of ["build", "preview", "export"]) {
@@ -195,7 +195,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
             buildPanel.append(content);
         if (documentSettingsOpen)
             buildPanel.append(conceptRegion);
-        root.append(contextHeader, tabList, themeRegion, buildPanel, preview, exportRegion);
+        root.append(contextHeader, tabList, buildPanel, preview, exportRegion, themeRegion);
         host.append(root);
     }
     return { render };
