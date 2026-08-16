@@ -3,11 +3,22 @@ import {compileLayeredSchema,resolveConditionalLayeredSchema,resolveLayeredTarge
 import {flowPageFrameContributor,layeredContributorPath,layeredContributorsForPath} from "../dist/data-layer-layered-schema-project.js";
 import {documentPageGroupStructure,evaluatePageGroupFixture,pageGroupStructuralSchema,resetDepartedPageApplicabilityPreview} from "../dist/data-layer-page-group-structural-authoring.js";
 import {compileSpecificationProject,createCanonicalProjectEnvelope,evaluateSpecificationObservation} from "../dist/data-layer-specification-engine.js";
+import {openFlowSchemaRouteLifecycle,reconcileFlowSchemaRouteLifecycle} from "../dist/layered-schema/flow-route-lifecycle.js";
 
 let seed=0x51a7e;
 const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/0x100000000;};
 const pickSubset=(values)=>values.filter(()=>random()>=0.5);
 let nestedRequiredConserved=true,eventTargetsIsolated=true,definedFieldsPolicyConserved=true;
+
+for(let iteration=0;iteration<200;iteration+=1){
+  const originFlowId=`flow:lifecycle:${iteration}:${Math.floor(random()*1_000_000)}`,contributorId=`contributor:${iteration}:${Math.floor(random()*1_000_000)}`,contributorScope=random()>=0.5?"Flow Page-instance":"Event-occurrence",lifecycle=openFlowSchemaRouteLifecycle(originFlowId,contributorId,contributorScope),snapshot=structuredClone(lifecycle);
+  assert.deepEqual(lifecycle,{originFlowId,contributorId,contributorScope,returnFocusOwned:true,flowReturnOwned:true},"opening an arbitrary Flow schema route conserves its complete stable identity and transient ownership");
+  assert.equal(reconcileFlowSchemaRouteLifecycle(lifecycle,originFlowId),lifecycle,"rerendering the originating Flow preserves the exact lifecycle object");
+  const departed=reconcileFlowSchemaRouteLifecycle(lifecycle,random()>=0.5?undefined:`flow:other:${iteration}`);
+  assert.deepEqual(departed,{},"every ordinary departure discards all Flow-owned schema route state");
+  assert.deepEqual(reconcileFlowSchemaRouteLifecycle(departed,originFlowId),{},"discarded route state cannot revive when the originating Flow is revisited");
+  assert.deepEqual(lifecycle,snapshot,"route reconciliation never mutates the caller's lifecycle state");
+}
 
 for(let iteration=0;iteration<200;iteration+=1){
   const universe=Array.from({length:2+Math.floor(random()*7)},(_,index)=>`value-${iteration}-${index}`),selected=pickSubset(universe),narrowed=selected.length?selected:[universe[0]];
