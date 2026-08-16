@@ -18,6 +18,31 @@ import {
 } from "../dist/data-layer-project-documentation-workspace.js";
 import {compileProjectDocumentation,projectDocumentationSources} from "../dist/data-layer-project-documentation-compiler.js";
 import {createSpecificationProject,exportSpecificationProject,importSpecificationProject,transactProject} from "../dist/data-layer-specification-project.js";
+import {
+  documentationExportPresentation,
+  documentationPreviewSelection,
+  documentationTabAfterKey,
+} from "../dist/data-layer-project-documentation-workspace-ui.js";
+
+assert.equal(documentationTabAfterKey("build","ArrowRight"),"preview");
+assert.equal(documentationTabAfterKey("build","ArrowLeft"),"export");
+assert.equal(documentationTabAfterKey("preview","End"),"export");
+assert.equal(documentationTabAfterKey("export","Home"),"build");
+assert.equal(documentationTabAfterKey("preview","Tab"),"preview");
+assert.deepEqual(documentationPreviewSelection("section:checkout"),{scope:"current",currentSectionId:"section:checkout"});
+assert.deepEqual(documentationPreviewSelection("entire"),{scope:"complete"});
+assert.deepEqual(documentationExportPresentation({scope:"current",currentSectionId:"section:checkout",sections:[
+  {id:"section:checkout",name:"Checkout journey"},
+  {id:"section:sitewide",name:"Sitewide"},
+]}),{checklistVisible:false,summary:"1 section — Checkout journey",sectionIds:["section:checkout"]});
+assert.deepEqual(documentationExportPresentation({scope:"selected",selectedSectionIds:["section:checkout","section:sitewide"],sections:[
+  {id:"section:checkout",name:"Checkout journey"},
+  {id:"section:sitewide",name:"Sitewide"},
+]}),{checklistVisible:true,summary:"2 sections — Checkout journey, Sitewide",sectionIds:["section:checkout","section:sitewide"]});
+assert.deepEqual(documentationExportPresentation({scope:"complete",sections:[
+  {id:"section:checkout",name:"Checkout journey"},
+  {id:"section:sitewide",name:"Sitewide"},
+]}),{checklistVisible:false,summary:"2 sections — the complete configured Documentation Set",sectionIds:["section:checkout","section:sitewide"]});
 
 assert.equal(PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT,250_000);
 const logoPayloads={"image/png":"iVBORw0KGgo","image/jpeg":"/9j/","image/gif":"R0lGODlh"};

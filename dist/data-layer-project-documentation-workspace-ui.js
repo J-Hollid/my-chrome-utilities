@@ -27,6 +27,32 @@ const moveVisible = (items, item, direction, visible) => { const projected = ite
 const checkedOrder = (all, configured) => configured ? [...configured] : [...all];
 const setChecked = (current, id, checked) => checked ? [...current.filter((candidate) => candidate !== id), id] : current.filter((candidate) => candidate !== id);
 const controlInput = (name, value, type = "text") => { const input = document.createElement("input"); input.name = name; input.type = type; input.value = value; return input; };
+export function documentationTabAfterKey(current, key) {
+    const tabs = ["build", "preview", "export"], index = tabs.indexOf(current);
+    if (key === "Home")
+        return tabs[0];
+    if (key === "End")
+        return tabs.at(-1);
+    if (key === "ArrowRight")
+        return tabs[(index + 1) % tabs.length];
+    if (key === "ArrowLeft")
+        return tabs[(index - 1 + tabs.length) % tabs.length];
+    return current;
+}
+export function documentationPreviewSelection(sectionId) {
+    return sectionId === "entire" ? { scope: "complete" } : { scope: "current", currentSectionId: sectionId };
+}
+export function documentationExportPresentation(input) {
+    const available = new Map(input.sections.map((section) => [section.id, section.name])), sectionIds = input.scope === "complete"
+        ? input.sections.map(({ id }) => id)
+        : input.scope === "selected"
+            ? (input.selectedSectionIds ?? []).filter((id) => available.has(id))
+            : input.currentSectionId && available.has(input.currentSectionId) ? [input.currentSectionId] : [];
+    const count = sectionIds.length, summary = input.scope === "complete"
+        ? `${count} section${count === 1 ? "" : "s"} — the complete configured Documentation Set`
+        : `${count} section${count === 1 ? "" : "s"} — ${sectionIds.map((id) => available.get(id)).join(", ") || "none selected"}`;
+    return { checklistVisible: input.scope === "selected", summary, sectionIds };
+}
 const fileDataUrl = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.addEventListener("load", () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Unreadable logo")));
@@ -130,7 +156,7 @@ function renderTable(value, theme) {
 }
 export function installProjectDocumentationWorkspaceUi(options) {
     const ports = options.ports ?? defaultPorts();
-    let selectedSetId = "", selectedSectionId = "", selectedExportIds = new Set(), snapshot, feedback = "", confirmedIncomplete = false, exportScope = "current";
+    let selectedSetId = "", selectedSectionId = "", selectedExportIds = new Set(), snapshot, feedback = "", confirmedIncomplete = false, exportScope = "current", primaryTab = "build", previewSectionId = "", addContentOpen = false, themeOpen = false, mobileBuildSurface = "outline", documentSettingsOpen = false, pendingExportAction;
     const documentation = () => options.state()?.project.documentation ?? { sets: [], themes: [] };
     const active = () => { const records = documentation(), set = records.sets.find(({ id }) => id === selectedSetId) ?? records.sets[0], theme = set ? records.themes.find(({ id }) => id === set.themeId) : undefined; return { records, set, theme }; };
     const persist = (records, label) => options.save(records, label);
@@ -254,8 +280,8 @@ export function installProjectDocumentationWorkspaceUi(options) {
         renderOrderedChoices(columnHost, { all: projectDocumentationProfileColumns().map((column) => ({ id: column, label: column })), selected: columns, name: `${section.name} columns`, choiceKey: "documentation.profile-column", onChange: (next) => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, columns: next } }), `Configure ${section.name} columns`) });
         host.append(rows, columnHost);
     }
-    function renderTheme(host, set, theme) {
-        host.append(heading(2, "Theme"));
+    function renderTheme(host, set, theme, sampleTable) {
+        host.append(heading(2, `Edit theme · ${theme.name}`));
         const name = controlInput("themeName", theme.name), copyOutput = document.createElement("output"), paste = document.createElement("textarea");
         name.setAttribute("aria-label", "Project-local theme name");
         paste.setAttribute("aria-label", "Structured theme values");
@@ -303,8 +329,8 @@ export function installProjectDocumentationWorkspaceUi(options) {
         footer.setAttribute("aria-label", "Theme footer text");
         groups["Header and footer"].append(labelled("Header text", header), labelled("Footer text", footer));
         const read = () => createProjectDocumentationTheme({ id: theme.id, name: name.value, clientName: client.value, logo: logoValue, colors: { heading: headingColor.value, accent: accent.value, stripe: stripe.value }, typography: { family: family.value, headingSize: Number(headingSize.value), bodySize: Number(bodySize.value) }, density: density.value === "compact" ? "compact" : "comfortable", borders: borders.checked, striping: striping.checked, highlightedHeadings: highlighted.checked, columnWidths: Object.fromEntries(widths.value.split(/\r?\n/u).flatMap((line) => { const [column, raw] = line.split("="); return column && Number(raw) > 0 ? [[column.trim(), Number(raw)]] : []; })), headerText: header.value, footerText: footer.value });
-        const sampleHost = document.createElement("section"), drawSample = (sampleTheme) => { sampleHost.replaceChildren(); sampleHost.dataset.themeSample = "true"; if (sampleTheme.logo)
-            sampleHost.append(logoArea(sampleTheme)); sampleHost.append(Object.assign(document.createElement("p"), { textContent: [sampleTheme.clientName, sampleTheme.headerText].filter(Boolean).join(" · ") }), renderTable({ id: "theme-sample", title: "Theme sample", headings: ["Property", "Description"], rows: [["page_name", "Page name"], ["event_name", "Observed event"]] }, sampleTheme), Object.assign(document.createElement("p"), { textContent: sampleTheme.footerText })); };
+        const sampleHost = document.createElement("section"), drawSample = (sampleTheme) => { sampleHost.replaceChildren(); sampleHost.dataset.themeSample = "true"; const table = sampleTable ?? { id: "theme-sample", title: "Selected section sample", headings: ["Property", "Description"], rows: [["page_name", "Page name"], ["event_name", "Observed event"]] }; if (sampleTheme.logo)
+            sampleHost.append(logoArea(sampleTheme)); sampleHost.append(Object.assign(document.createElement("p"), { textContent: [sampleTheme.clientName, sampleTheme.headerText].filter(Boolean).join(" · ") }), heading(3, table.title), renderTable(table, sampleTheme), Object.assign(document.createElement("p"), { textContent: sampleTheme.footerText })); };
         const drawLogoState = () => { logoName.textContent = logoFileName; removeLogo.hidden = !logoValue; drawSample(read()); };
         removeLogo.addEventListener("click", () => { logoValue = ""; logoFileName = ""; logoPicker.value = ""; logoDiagnostic.textContent = ""; drawLogoState(); });
         logoPicker.addEventListener("change", () => { const file = logoPicker.files?.[0]; if (!file)
@@ -333,7 +359,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
     function renderConceptConfiguration(set, state) {
         const region = document.createElement("section"), list = document.createElement("ol"), concepts = reconcileProjectDocumentationConcepts(set, projectCanonicalConcepts(state)), headings = document.createElement("input");
         region.setAttribute("aria-label", "Documentation concept configuration");
-        region.append(heading(2, "Concept grouping"));
+        region.append(heading(2, "Document settings"), Object.assign(document.createElement("p"), { textContent: "Concept configuration affects Site Profile tables and the Data capture matrix. It does not affect Flow value maps." }));
         list.setAttribute("aria-label", "Ordered documentation concepts");
         for (const [index, concept] of concepts.entries()) {
             const item = document.createElement("li"), include = document.createElement("input"), earlier = button("Move concept earlier", () => { if (index < 1)
@@ -377,19 +403,32 @@ export function installProjectDocumentationWorkspaceUi(options) {
         const selectedSections = set.sections.filter(({ selected }) => selected);
         if (!selectedSectionId || !selectedSections.some(({ id }) => id === selectedSectionId))
             selectedSectionId = selectedSections[0]?.id ?? "";
-        const available = sources(state), setRegion = document.createElement("section"), content = document.createElement("section"), configure = document.createElement("section"), themeRegion = document.createElement("section"), preview = document.createElement("section"), exportRegion = document.createElement("section");
-        for (const [region, title] of [[setRegion, "Set"], [content, "Content"], [configure, "Configure"], [preview, "Preview"], [exportRegion, "Export"]])
-            region.append(heading(2, title));
+        if (!previewSectionId)
+            previewSectionId = selectedSectionId;
+        const available = sources(state), contextHeader = document.createElement("header"), tabList = document.createElement("div"), buildPanel = document.createElement("section"), setRegion = document.createElement("section"), content = document.createElement("section"), configure = document.createElement("section"), themeRegion = document.createElement("aside"), preview = document.createElement("section"), exportRegion = document.createElement("section");
+        contextHeader.className = "documentation-context-header";
+        tabList.className = "documentation-primary-tabs";
+        tabList.setAttribute("role", "tablist");
+        tabList.setAttribute("aria-label", "Documentation workspace modes");
+        buildPanel.className = "documentation-build-panel";
+        setRegion.className = "documentation-outline";
+        configure.className = "documentation-configuration";
+        content.className = "documentation-add-content";
+        themeRegion.className = "documentation-theme-panel";
+        preview.className = "documentation-preview-panel";
+        exportRegion.className = "documentation-export-panel";
+        preview.append(heading(2, "Preview"));
+        exportRegion.append(heading(2, "Export"));
         const setChoice = document.createElement("select");
         setChoice.setAttribute("aria-label", "Documentation Set");
         for (const candidate of records.sets)
             setChoice.append(new Option(candidate.name, candidate.id));
         setChoice.value = set.id;
-        setChoice.addEventListener("change", () => { selectedSetId = setChoice.value; snapshot = undefined; render(host); });
+        setChoice.addEventListener("change", () => { selectedSetId = setChoice.value; snapshot = undefined; previewSectionId = ""; render(host); });
         const outline = document.createElement("ol");
         outline.setAttribute("aria-label", "Documentation section outline");
         for (const section of selectedSections) {
-            const item = document.createElement("li"), select = button(`${section.name} · ${section.kind}`, () => { selectedSectionId = section.id; render(host); }), earlier = button("Move earlier", () => saveSet(createProjectDocumentationSet({ ...set, sections: moveVisible(set.sections, section, -1, ({ selected }) => selected) }), `Reorder ${section.name}`)), later = button("Move later", () => saveSet(createProjectDocumentationSet({ ...set, sections: moveVisible(set.sections, section, 1, ({ selected }) => selected) }), `Reorder ${section.name}`));
+            const item = document.createElement("li"), select = button(`${section.name} · ${section.kind}`, () => { selectedSectionId = section.id; previewSectionId = section.id; mobileBuildSurface = "configuration"; render(host); }), earlier = button("Move earlier", () => saveSet(createProjectDocumentationSet({ ...set, sections: moveVisible(set.sections, section, -1, ({ selected }) => selected) }), `Reorder ${section.name}`)), later = button("Move later", () => saveSet(createProjectDocumentationSet({ ...set, sections: moveVisible(set.sections, section, 1, ({ selected }) => selected) }), `Reorder ${section.name}`));
             select.setAttribute("aria-current", String(section.id === selectedSectionId));
             earlier.disabled = selectedSections.indexOf(section) === 0;
             later.disabled = selectedSections.indexOf(section) === selectedSections.length - 1;
@@ -397,7 +436,17 @@ export function installProjectDocumentationWorkspaceUi(options) {
             item.append(select, earlier, later);
             outline.append(item);
         }
-        setRegion.append(setChoice, outline);
+        const editTheme = button(`Edit theme · ${theme.name}`, () => { themeOpen = !themeOpen; render(host); });
+        editTheme.setAttribute("aria-expanded", String(themeOpen));
+        editTheme.setAttribute("aria-controls", "documentation-theme-panel");
+        const freshness = document.createElement("output"), snapshotState = !snapshot ? "Preview not built" : stale().stale ? "Preview out of date" : "Preview current";
+        freshness.textContent = snapshotState;
+        freshness.setAttribute("aria-label", "Preview freshness");
+        contextHeader.append(labelled("Documentation Set", setChoice), editTheme, freshness);
+        const addContent = button("Add content", () => { addContentOpen = !addContentOpen; render(host); }), documentSettings = button("Document settings", () => { documentSettingsOpen = !documentSettingsOpen; render(host); });
+        addContent.setAttribute("aria-expanded", String(addContentOpen));
+        documentSettings.setAttribute("aria-expanded", String(documentSettingsOpen));
+        setRegion.append(heading(2, "Document outline"), outline, addContent, documentSettings);
         const flowSearch = controlInput("flowSearch", "", "search"), profileSearch = controlInput("profileSearch", "", "search");
         flowSearch.setAttribute("aria-label", "Search Flows");
         profileSearch.setAttribute("aria-label", "Search Site Profiles");
@@ -436,14 +485,29 @@ export function installProjectDocumentationWorkspaceUi(options) {
             renderProfileConfiguration(configure, set, selectedSection, available);
         else
             configure.append(heading(3, "Configure Overview"), Object.assign(document.createElement("p"), { textContent: "Overview derives the project name, purpose, and website." }));
-        renderTheme(themeRegion, set, theme);
-        const refresh = button("Refresh preview", () => { snapshot = compile(); feedback = snapshot ? `Preview refreshed · immutable snapshot ${snapshot.snapshotHash}` : "Preview unavailable"; render(host); });
-        preview.append(refresh);
+        themeRegion.id = "documentation-theme-panel";
+        if (themeOpen) {
+            const currentTable = compile()?.tables.find(({ id }) => id === selectedSectionId);
+            renderTheme(themeRegion, set, theme, currentTable);
+        }
+        const refresh = button("Refresh preview", () => { snapshot = compile(); feedback = snapshot ? `Preview refreshed · immutable snapshot ${snapshot.snapshotHash}` : "Preview unavailable"; render(host); }), previewNavigator = document.createElement("select"), previewStatus = document.createElement("output"), previewToolbar = document.createElement("div"), previewSurface = document.createElement("div");
+        previewNavigator.setAttribute("aria-label", "Documentation preview section");
+        for (const section of selectedSections)
+            previewNavigator.append(new Option(section.name, section.id));
+        previewNavigator.append(new Option("Entire document", "entire"));
+        previewNavigator.value = previewSectionId;
+        previewNavigator.addEventListener("change", () => { previewSectionId = previewNavigator.value; render(host); });
+        previewStatus.setAttribute("aria-label", "Preview status");
+        previewStatus.textContent = !snapshot ? "Preview not built" : stale().stale ? "Preview out of date" : "Preview current";
+        previewToolbar.className = "documentation-preview-toolbar";
+        previewToolbar.append(labelled("Show", previewNavigator), refresh, previewStatus);
+        previewSurface.className = "documentation-preview-surface";
+        preview.append(previewToolbar, previewSurface);
         if (snapshot) {
             const live = stale();
             if (live.stale)
-                preview.append(Object.assign(document.createElement("p"), { textContent: `Preview stale — changed sources: ${live.changedSources.join(", ")}.`, role: "alert" }));
-            for (const table of selectProjectDocumentationTables(snapshot, { scope: "complete" })) {
+                previewToolbar.append(Object.assign(document.createElement("p"), { textContent: `Changed sources: ${live.changedSources.join(", ")}.`, role: "alert" }));
+            for (const table of selectProjectDocumentationTables(snapshot, documentationPreviewSelection(previewSectionId))) {
                 const sectionHost = document.createElement("section"), sectionTitle = heading(3, table.title), identity = [theme.clientName, theme.headerText].filter(Boolean).join(" · ");
                 sectionHost.dataset.previewSection = table.id;
                 sectionHost.dataset.themeFingerprint = themeFingerprint(theme);
@@ -461,73 +525,85 @@ export function installProjectDocumentationWorkspaceUi(options) {
                     sectionHost.append(Object.assign(document.createElement("p"), { textContent: table.legend }));
                 if (theme.footerText)
                     sectionHost.append(Object.assign(document.createElement("footer"), { textContent: theme.footerText }));
-                preview.append(sectionHost);
-            }
-            if (snapshot.diagnostics.length) {
-                const diagnostics = document.createElement("ul");
-                diagnostics.setAttribute("aria-label", "Documentation export preflight");
-                for (const issue of snapshot.diagnostics) {
-                    const item = document.createElement("li");
-                    item.append(`${issue.message} · `);
-                    if (issue.repairTarget) {
-                        const link = document.createElement("a"), query = new URLSearchParams({ kind: issue.repairTarget.kind, entity: issue.repairTarget.id, ...(issue.repairTarget.path ? { field: issue.repairTarget.path } : {}) });
-                        link.href = `?${query}`;
-                        link.textContent = issue.repair;
-                        link.addEventListener("click", (event) => { event.preventDefault(); options.openRepair?.(issue.repairTarget); });
-                        item.append(link);
-                    }
-                    else
-                        item.append(issue.repair);
-                    diagnostics.append(item);
-                }
-                preview.append(diagnostics);
+                previewSurface.append(sectionHost);
             }
         }
         const scope = document.createElement("select");
         scope.setAttribute("aria-label", "Documentation export scope");
-        scope.append(new Option("Current section", "current"), new Option("Selected sections", "selected"), new Option("Complete Documentation Set", "complete"));
+        scope.append(new Option("Current section", "current"), new Option("Choose sections", "selected"), new Option("Complete Documentation Set", "complete"));
         scope.value = exportScope;
-        scope.addEventListener("change", () => { exportScope = scope.value; });
-        for (const section of selectedSections) {
-            const check = document.createElement("input");
-            check.type = "checkbox";
-            check.checked = selectedExportIds.has(section.id);
-            check.addEventListener("change", () => check.checked ? selectedExportIds.add(section.id) : selectedExportIds.delete(section.id));
-            exportRegion.append(labelled(`Export ${section.name}`, check));
+        scope.addEventListener("change", () => { exportScope = scope.value; pendingExportAction = undefined; confirmedIncomplete = false; render(host); });
+        const presentation = documentationExportPresentation({ scope: exportScope, currentSectionId: selectedSectionId, selectedSectionIds: [...selectedExportIds], sections: selectedSections }), summary = document.createElement("p");
+        summary.dataset.exportSummary = "true";
+        summary.textContent = presentation.summary;
+        exportRegion.append(labelled("Output scope", scope), summary);
+        if (presentation.checklistVisible) {
+            const checklist = document.createElement("fieldset");
+            checklist.setAttribute("aria-label", "Choose documentation sections");
+            checklist.append(Object.assign(document.createElement("legend"), { textContent: "Sections" }));
+            for (const section of selectedSections) {
+                const check = document.createElement("input");
+                check.type = "checkbox";
+                check.checked = selectedExportIds.has(section.id);
+                check.addEventListener("change", () => { check.checked ? selectedExportIds.add(section.id) : selectedExportIds.delete(section.id); render(host); });
+                declareStudioChoice(check, "documentation.export-section");
+                checklist.append(labelled(`Export ${section.name}`, check));
+            }
+            exportRegion.append(checklist);
         }
-        const confirm = document.createElement("input");
-        confirm.type = "checkbox";
-        confirm.checked = confirmedIncomplete;
-        const liveStale = stale().stale, blocked = !snapshot || liveStale || (snapshot.incomplete && !confirmedIncomplete), copy = button("Copy rich documentation", () => { if (!snapshot)
-            return; const live = stale(); if (live.stale) {
-            feedback = "Refresh the stale preview before export.";
-            render(host);
-            return;
-        } try {
-            const value = renderProjectDocumentationClipboard(snapshot, { ...selection(), confirmIncomplete: confirmedIncomplete });
-            void ports.writeRich(value.html, value.plain).then(() => { feedback = "Rich documentation copied with plain-text fallback."; render(host); });
+        if (snapshot?.incomplete) {
+            const warning = document.createElement("section"), diagnostics = document.createElement("ul");
+            warning.className = "documentation-export-warning";
+            warning.setAttribute("role", "alert");
+            warning.append(heading(3, "Draft — incomplete"), Object.assign(document.createElement("p"), { textContent: "Continuing creates Draft — incomplete output. Diagnostic and repair details remain private." }));
+            diagnostics.setAttribute("aria-label", "Affected documentation sections");
+            for (const issue of snapshot.diagnostics) {
+                const item = document.createElement("li");
+                if (issue.repairTarget) {
+                    const link = document.createElement("a"), query = new URLSearchParams({ kind: issue.repairTarget.kind, entity: issue.repairTarget.id, ...(issue.repairTarget.path ? { field: issue.repairTarget.path } : {}) });
+                    link.href = `?${query}`;
+                    link.textContent = issue.repair;
+                    link.addEventListener("click", (event) => { event.preventDefault(); options.openRepair?.(issue.repairTarget); });
+                    item.append(link);
+                }
+                else
+                    item.textContent = issue.repair;
+                diagnostics.append(item);
+            }
+            warning.append(diagnostics);
+            exportRegion.append(warning);
+        }
+        const liveStale = stale().stale, execute = (action) => { if (!snapshot)
+            return; try {
+            if (action === "copy") {
+                const value = renderProjectDocumentationClipboard(snapshot, { ...selection(), confirmIncomplete: confirmedIncomplete });
+                void ports.writeRich(value.html, value.plain).then(() => { feedback = "Rich documentation copied with plain-text fallback."; pendingExportAction = undefined; render(host); });
+            }
+            else {
+                const bytes = writeProjectDocumentationWorkbook(snapshot, { ...selection(), confirmIncomplete: confirmedIncomplete });
+                ports.download(`${set.name.toLowerCase().replace(/[^a-z0-9]+/gu, "-")}.xlsx`, bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+                feedback = "Excel workbook downloaded.";
+                pendingExportAction = undefined;
+                render(host);
+            }
         }
         catch (error) {
             feedback = error instanceof Error ? error.message : String(error);
             render(host);
-        } }), download = button("Download Excel workbook", () => { if (!snapshot)
-            return; const live = stale(); if (live.stale) {
-            feedback = "Refresh the stale preview before export.";
+        } }, request = (action) => { if (!snapshot || liveStale)
+            return; if (snapshot.incomplete && !confirmedIncomplete) {
+            pendingExportAction = action;
+            feedback = "Confirm Export draft anyway to produce this output.";
             render(host);
             return;
-        } try {
-            const bytes = writeProjectDocumentationWorkbook(snapshot, { ...selection(), confirmIncomplete: confirmedIncomplete });
-            ports.download(`${set.name.toLowerCase().replace(/[^a-z0-9]+/gu, "-")}.xlsx`, bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-            feedback = "Excel workbook downloaded.";
-            render(host);
+        } execute(action); }, copy = button("Copy rich documentation", () => request("copy")), download = button("Download Excel workbook", () => request("download"));
+        copy.disabled = download.disabled = !snapshot || liveStale;
+        exportRegion.append(copy, download);
+        if (pendingExportAction) {
+            const confirm = button("Export draft anyway", () => { confirmedIncomplete = true; const action = pendingExportAction; pendingExportAction = undefined; execute(action); });
+            exportRegion.append(confirm);
         }
-        catch (error) {
-            feedback = error instanceof Error ? error.message : String(error);
-            render(host);
-        } });
-        confirm.addEventListener("change", () => { confirmedIncomplete = confirm.checked; copy.disabled = download.disabled = !snapshot || liveStale || (snapshot.incomplete && !confirmedIncomplete); });
-        copy.disabled = download.disabled = blocked;
-        exportRegion.append(scope, labelled("Confirm incomplete export", confirm), copy, download, Object.assign(document.createElement("output"), { textContent: feedback }));
+        exportRegion.append(Object.assign(document.createElement("output"), { textContent: feedback }));
         const conceptRegion = renderConceptConfiguration(set, state);
         conceptRegion.querySelectorAll('ol input[type="checkbox"]').forEach((input) => declareStudioChoice(input, "documentation.concept-membership"));
         const conceptHeadingHint = document.createElement("small");
@@ -535,13 +611,45 @@ export function installProjectDocumentationWorkspaceUi(options) {
         conceptHeadingHint.textContent = "Shown between included concept groups after Refresh preview.";
         conceptRegion.querySelectorAll(':scope > label input[type="checkbox"]').forEach((input) => { declareStudioChoice(input, "documentation.concept-subheadings"); input.setAttribute("aria-describedby", conceptHeadingHint.id); });
         conceptRegion.append(conceptHeadingHint);
+        exportRegion.querySelector("ul")?.setAttribute("aria-label", "Documentation export preflight");
         content.querySelectorAll('input[type="checkbox"]').forEach((input) => declareStudioChoice(input, "documentation.section-membership"));
         themeRegion.querySelectorAll('input[type="checkbox"]').forEach((input) => declareStudioChoice(input, "documentation.theme-option"));
-        const exportChoices = Array.from(exportRegion.querySelectorAll('input[type="checkbox"]'));
-        exportChoices.slice(0, -1).forEach((input) => declareStudioChoice(input, "documentation.export-section"));
-        if (exportChoices.length)
-            declareStudioChoice(exportChoices.at(-1), "documentation.confirm-incomplete");
-        root.append(setRegion, conceptRegion, content, configure, themeRegion, preview, exportRegion);
+        buildPanel.id = "documentation-panel-build";
+        preview.id = "documentation-panel-preview";
+        exportRegion.id = "documentation-panel-export";
+        for (const panel of [buildPanel, preview, exportRegion])
+            panel.setAttribute("role", "tabpanel");
+        buildPanel.hidden = primaryTab !== "build";
+        preview.hidden = primaryTab !== "preview";
+        exportRegion.hidden = primaryTab !== "export";
+        for (const tab of ["build", "preview", "export"]) {
+            const control = button(tab[0].toUpperCase() + tab.slice(1), () => { primaryTab = tab; render(host); });
+            control.id = `documentation-tab-${tab}`;
+            control.dataset.documentationTab = tab;
+            control.setAttribute("role", "tab");
+            control.setAttribute("aria-controls", `documentation-panel-${tab}`);
+            control.setAttribute("aria-selected", String(primaryTab === tab));
+            control.tabIndex = primaryTab === tab ? 0 : -1;
+            control.addEventListener("keydown", (event) => { const next = documentationTabAfterKey(tab, event.key); if (next === tab)
+                return; event.preventDefault(); primaryTab = next; render(host); queueMicrotask(() => host.querySelector(`[data-documentation-tab="${next}"]`)?.focus()); });
+            tabList.append(control);
+        }
+        const mobileOutline = button("Show document outline", () => { mobileBuildSurface = "outline"; render(host); }), mobileConfiguration = button("Show selected configuration", () => { mobileBuildSurface = "configuration"; render(host); }), mobileControls = document.createElement("div");
+        mobileControls.className = "documentation-mobile-build-switcher";
+        mobileOutline.setAttribute("aria-pressed", String(mobileBuildSurface === "outline"));
+        mobileConfiguration.setAttribute("aria-pressed", String(mobileBuildSurface === "configuration"));
+        mobileControls.append(mobileOutline, mobileConfiguration);
+        setRegion.dataset.mobileSurface = mobileBuildSurface === "outline" ? "active" : "inactive";
+        configure.dataset.mobileSurface = mobileBuildSurface === "configuration" ? "active" : "inactive";
+        const buildGrid = document.createElement("div");
+        buildGrid.className = "documentation-build-grid";
+        buildGrid.append(setRegion, configure);
+        buildPanel.append(heading(2, "Build"), mobileControls, buildGrid);
+        if (addContentOpen)
+            buildPanel.append(content);
+        if (documentSettingsOpen)
+            buildPanel.append(conceptRegion);
+        root.append(contextHeader, tabList, themeRegion, buildPanel, preview, exportRegion);
         host.append(root);
     }
     return { render };
