@@ -1,5 +1,5 @@
 import { compileProjectDocumentation, projectDocumentationSources } from "./data-layer-project-documentation-compiler.js";
-import { createProjectDocumentationSet, createProjectDocumentationTheme, } from "./data-layer-project-documentation-records.js";
+import { createProjectDocumentationSet, } from "./data-layer-project-documentation-records.js";
 import { projectDocumentationSnapshotStale, selectProjectDocumentationTables, themeFingerprint, } from "./data-layer-project-documentation-workspace.js";
 import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
 import { documentationButton as button, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled, documentationLogoArea as logoArea, documentationMoveVisible as moveVisible, renderDocumentationTable as renderTable, } from "./project-documentation/workspace-ui-elements.js";
@@ -7,6 +7,8 @@ import { consumeDocumentationIncompleteConfirmation, documentationExportPresenta
 import { createDocumentationSectionConfigurationRenderer } from "./project-documentation/workspace-build-ui.js";
 import { renderDocumentationConceptConfiguration, renderDocumentationContent } from "./project-documentation/workspace-content-ui.js";
 import { renderDocumentationTheme } from "./project-documentation/workspace-theme-ui.js";
+import { appendProjectDocumentationSet } from "./project-documentation/workspace-set-creation.js";
+import { renderDocumentationSetCreationUi } from "./project-documentation/workspace-set-creation-ui.js";
 import { documentationPreviewSelection, documentationTabAfterKey, } from "./project-documentation/workspace-navigation.js";
 export { consumeDocumentationIncompleteConfirmation, documentationExportPresentation, documentationPreviewSelection, documentationTabAfterKey, };
 const defaultPorts = () => ({
@@ -20,10 +22,9 @@ const defaultPorts = () => ({
     },
     download: (name, bytes, type) => { const url = URL.createObjectURL(new Blob([Uint8Array.from(bytes).buffer], { type })), link = document.createElement("a"); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url); },
 });
-const defaultTheme = (id, name = "Project theme") => createProjectDocumentationTheme({ id, name, clientName: "", logo: "", colors: { heading: "#222222", accent: "#336699", stripe: "#f4f4f4" }, typography: { family: "Arial", headingSize: 16, bodySize: 11 }, density: "comfortable", borders: true, striping: true, highlightedHeadings: true, columnWidths: { Property: 28, Description: 48 }, headerText: "", footerText: "" });
 export function installProjectDocumentationWorkspaceUi(options) {
     const ports = options.ports ?? defaultPorts();
-    let selectedSetId = "", selectedSectionId = "", selectedExportIds = new Set(), snapshot, feedback = "", confirmedIncomplete = false, exportScope = "current", primaryTab = "build", previewSectionId = "", addContentOpen = false, themeOpen = false, mobileBuildSurface = "outline", documentSettingsOpen = false, pendingExportAction;
+    let selectedSetId = "", selectedSectionId = "", selectedExportIds = new Set(), snapshot, feedback = "", confirmedIncomplete = false, exportScope = "current", primaryTab = "build", previewSectionId = "", addContentOpen = false, themeOpen = false, setCreationOpen = false, mobileBuildSurface = "outline", documentSettingsOpen = false, pendingExportAction;
     const documentation = () => options.state()?.project.documentation ?? { sets: [], themes: [] };
     const active = () => { const records = documentation(), set = records.sets.find(({ id }) => id === selectedSetId) ?? records.sets[0], theme = set ? records.themes.find(({ id }) => id === set.themeId) : undefined; return { records, set, theme }; };
     const persist = (records, label) => options.save(records, label);
@@ -46,8 +47,9 @@ export function installProjectDocumentationWorkspaceUi(options) {
             host.append(root);
             return;
         }
+        const createSet = (setName, themeName) => { const created = appendProjectDocumentationSet(records, { setId: `documentation-set:${crypto.randomUUID()}`, themeId: `documentation-theme:${crypto.randomUUID()}`, setName, themeName }); selectedSetId = created.set.id; selectedSectionId = created.set.sections[0].id; previewSectionId = selectedSectionId; snapshot = undefined; setCreationOpen = false; persist(created.records, "Create Documentation Set"); };
         if (!set || !theme) {
-            const name = controlInput("setName", ""), themeName = controlInput("newThemeName", ""), create = button("Create Documentation Set", () => { const themeId = `documentation-theme:${crypto.randomUUID()}`, setId = `documentation-set:${crypto.randomUUID()}`, nextTheme = defaultTheme(themeId, themeName.value.trim() || "Project theme"), nextSet = createProjectDocumentationSet({ id: setId, name: name.value.trim() || "Client specification", themeId, sections: [{ id: `${setId}:overview`, kind: "overview", name: "Overview", selected: true }, { id: `${setId}:matrix`, kind: "matrix", name: "Data capture matrix", selected: true, configuration: { contextIds: [] } }] }); selectedSetId = setId; selectedSectionId = nextSet.sections[0].id; persist({ sets: [...records.sets, nextSet], themes: [...records.themes, nextTheme] }, "Create Documentation Set"); });
+            const name = controlInput("setName", ""), themeName = controlInput("newThemeName", ""), create = button("Create Documentation Set", () => createSet(name.value, themeName.value));
             name.setAttribute("aria-label", "Documentation Set name");
             themeName.setAttribute("aria-label", "Theme name");
             root.append(labelled("Set name", name), labelled("Theme name", themeName), create);
@@ -74,12 +76,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
         exportRegion.className = "documentation-export-panel";
         preview.append(heading(2, "Preview"));
         exportRegion.append(heading(2, "Export"));
-        const setChoice = document.createElement("select");
-        setChoice.setAttribute("aria-label", "Documentation Set");
-        for (const candidate of records.sets)
-            setChoice.append(new Option(candidate.name, candidate.id));
-        setChoice.value = set.id;
-        setChoice.addEventListener("change", () => { selectedSetId = setChoice.value; snapshot = undefined; previewSectionId = ""; render(host); });
+        const creationUi = renderDocumentationSetCreationUi({ sets: records.sets, selectedSetId: set.id, open: setCreationOpen, select: (id) => { selectedSetId = id; snapshot = undefined; previewSectionId = ""; setCreationOpen = false; render(host); }, show: () => { setCreationOpen = true; render(host); }, cancel: () => { setCreationOpen = false; render(host); queueMicrotask(() => host.querySelector('[data-new-documentation-set="true"]')?.focus()); }, create: createSet });
         const outline = document.createElement("ol");
         outline.setAttribute("aria-label", "Documentation section outline");
         for (const section of selectedSections) {
@@ -97,7 +94,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
         const freshness = document.createElement("output"), snapshotState = !snapshot ? "Preview not built" : stale().stale ? "Preview out of date" : "Preview current";
         freshness.textContent = snapshotState;
         freshness.setAttribute("aria-label", "Preview freshness");
-        contextHeader.append(labelled("Documentation Set", setChoice), editTheme, freshness);
+        contextHeader.append(creationUi.context, editTheme, freshness);
         const addContent = button("Add content", () => { addContentOpen = !addContentOpen; render(host); }), documentSettings = button("Document settings", () => { documentSettingsOpen = !documentSettingsOpen; render(host); });
         addContent.setAttribute("aria-expanded", String(addContentOpen));
         documentSettings.setAttribute("aria-expanded", String(documentSettingsOpen));
@@ -195,7 +192,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
             buildPanel.append(content);
         if (documentSettingsOpen)
             buildPanel.append(conceptRegion);
-        root.append(contextHeader, tabList, buildPanel, preview, exportRegion, themeRegion);
+        root.append(contextHeader, ...(creationUi.setup ? [creationUi.setup] : []), tabList, buildPanel, preview, exportRegion, themeRegion);
         host.append(root);
     }
     return { render };

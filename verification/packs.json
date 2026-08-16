@@ -4197,6 +4197,8 @@
       "src/project-documentation/profile-concept-properties.ts",
       "src/project-documentation/workspace-profile-concepts.ts",
       "src/project-documentation/workspace-profile-concepts-ui.ts",
+      "src/project-documentation/workspace-set-creation.ts",
+      "src/project-documentation/workspace-set-creation-ui.ts",
       "src/project-documentation/workspace-theme-ui.ts",
       "src/project-documentation/workspace-ui-elements.ts",
       "src/data-layer-project-documentation-workspace-ui.ts"

@@ -28,6 +28,7 @@ import {
 } from "../dist/data-layer-project-documentation-workspace-ui.js";
 import {profileConceptPresentation,updateProfileConceptPaths} from "../dist/project-documentation/workspace-profile-concepts.js";
 import {projectDocumentationProfileConceptProperties} from "../dist/project-documentation/profile-concept-properties.js";
+import {appendProjectDocumentationSet} from "../dist/project-documentation/workspace-set-creation.js";
 
 assert.deepEqual(consumeDocumentationIncompleteConfirmation(true),{confirmedForAction:true,confirmedAfterAction:false});
 assert.deepEqual(consumeDocumentationIncompleteConfirmation(false),{confirmedForAction:false,confirmedAfterAction:false});
@@ -59,6 +60,14 @@ let extractedProfileSchema=createCanonicalSchema({id:"schema:profile-concept-ext
 for(const constraint of[{path:"/identity/id",type:"string",concept:"Identity"},{path:"/visitor_id",type:"string"}])extractedProfileSchema=canonicalSchemaWithConstraint(extractedProfileSchema,constraint,(kind)=>`${kind}:profile-concept-extraction:${++extractionIdentity}`);
 assert.deepEqual(projectDocumentationProfileConceptProperties({id:"profile:extracted",name:"Extracted",requirements:[],canonicalSchema:extractedProfileSchema}),[{path:"/identity",concept:undefined},{path:"/identity/id",concept:"Identity"},{path:"/visitor_id",concept:undefined}]);
 assert.deepEqual(projectDocumentationProfileConceptProperties({id:"profile:legacy",name:"Legacy",requirements:[{path:"/legacy",type:"string"}]}),[{path:"/legacy"}]);
+const existingDocumentation={sets:[createProjectDocumentationSet({id:"documentation-set:client",name:"Client specification",themeId:"documentation-theme:acme",sections:[{id:"client:overview",kind:"overview",name:"Overview",selected:true},{id:"client:matrix",kind:"matrix",name:"Data capture matrix",selected:true}]} )],themes:[createProjectDocumentationTheme({id:"documentation-theme:acme",name:"Acme"})]},existingDocumentationBytes=JSON.stringify(existingDocumentation),createdDocumentation=appendProjectDocumentationSet(existingDocumentation,{setId:"documentation-set:partner",themeId:"documentation-theme:partner",setName:" Partner handoff ",themeName:" Partner theme "});
+assert.equal(JSON.stringify(existingDocumentation),existingDocumentationBytes,"opening and preparing another Documentation Set cannot mutate existing records");
+assert.deepEqual(createdDocumentation.records.sets.slice(0,-1),existingDocumentation.sets,"creation conserves every existing Documentation Set byte");
+assert.deepEqual(createdDocumentation.records.themes.slice(0,-1),existingDocumentation.themes,"creation conserves every existing theme byte");
+assert.deepEqual({id:createdDocumentation.set.id,name:createdDocumentation.set.name,themeId:createdDocumentation.set.themeId}, {id:"documentation-set:partner",name:"Partner handoff",themeId:"documentation-theme:partner"});
+assert.deepEqual(createdDocumentation.set.sections.map(({kind,name,selected})=>({kind,name,selected})),[{kind:"overview",name:"Overview",selected:true},{kind:"matrix",name:"Data capture matrix",selected:true}]);
+assert.deepEqual(createdDocumentation.set.sections[1].configuration,{contextIds:[]});
+assert.deepEqual({id:createdDocumentation.theme.id,name:createdDocumentation.theme.name},{id:"documentation-theme:partner",name:"Partner theme"});
 
 assert.equal(documentationTabAfterKey("build","ArrowRight"),"preview");
 assert.equal(documentationTabAfterKey("build","ArrowLeft"),"export");
