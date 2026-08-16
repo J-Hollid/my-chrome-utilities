@@ -76,10 +76,10 @@
                (let [expected (expected-targets (first (values example-values example captures)))]
                  (assert-vtd005! world (= expected (:targets (path-plan world (:vtd005/path world))))
                                  "Layered editor boundary selects the wrong target evidence." {:expected expected})))}
-   {:pattern #"^every one of the 32 current editor files and 85 Layered Schema files matches exactly one boundary$"
+   {:pattern #"^every one of the 32 current editor files and 86 Layered Schema files matches exactly one boundary$"
     :handler (fn [world _ _]
                (let [c (get-in world [:vtd005/evidence :conservation])]
-                 (assert-vtd005! world (= [32 85] [(:editorFiles c) (:layeredFiles c)])
+                 (assert-vtd005! world (= [32 86] [(:editorFiles c) (:layeredFiles c)])
                                  "Layered editor ownership partition is not exact." {:conservation c})))}])
 
 (defn- multi-change-handlers [example-values verify-throughput!]
