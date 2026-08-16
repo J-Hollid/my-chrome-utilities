@@ -1,5 +1,5 @@
 import {flowDocumentationPropertyPaths,type FlowDocumentationMetadata} from "../data-layer-flow-table-documentation-export.js";
-import {projectDocumentationProfileColumns,projectDocumentationProfileConceptProperties,type ProjectDocumentationMatrixContext,type ProjectDocumentationSources} from "../data-layer-project-documentation-compiler.js";
+import {projectDocumentationProfileColumns,type ProjectDocumentationMatrixContext,type ProjectDocumentationSources} from "../data-layer-project-documentation-compiler.js";
 import type {ProjectDocumentationProfileColumn,ProjectDocumentationSection,ProjectDocumentationSet} from "../data-layer-project-documentation-records.js";
 import {declareStudioChoice,type StudioChoiceKey} from "../data-layer-studio-choice-controls.js";
 import {
@@ -12,6 +12,7 @@ import {
   documentationSetChecked as setChecked,
 } from "./workspace-ui-elements.js";
 import {createDocumentationProfileConceptRenderer} from "./workspace-profile-concepts-ui.js";
+import {projectDocumentationProfileConceptProperties} from "./profile-concept-properties.js";
 
 type MutateSection=(set:ProjectDocumentationSet,sectionId:string,update:(section:ProjectDocumentationSection)=>ProjectDocumentationSection,label:string)=>void;
 

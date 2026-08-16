@@ -27,6 +27,7 @@ import {
   documentationTabAfterKey,
 } from "../dist/data-layer-project-documentation-workspace-ui.js";
 import {profileConceptPresentation,updateProfileConceptPaths} from "../dist/project-documentation/workspace-profile-concepts.js";
+import {projectDocumentationProfileConceptProperties} from "../dist/project-documentation/profile-concept-properties.js";
 
 assert.deepEqual(consumeDocumentationIncompleteConfirmation(true),{confirmedForAction:true,confirmedAfterAction:false});
 assert.deepEqual(consumeDocumentationIncompleteConfirmation(false),{confirmedForAction:false,confirmedAfterAction:false});
@@ -54,6 +55,10 @@ const conceptPaths=conceptProperties.map(({path})=>path);
 assert.deepEqual(updateProfileConceptPaths(conceptPaths,conceptPresentationInput.selectedPaths,["/commerce/cart_id","/commerce/order_id"],"include-all",true),["/commerce/cart_id","/commerce/order_id","/identity/user_id","/technical/debug","/visitor_id"]);
 assert.deepEqual(updateProfileConceptPaths(conceptPaths,conceptPresentationInput.selectedPaths,["/commerce/cart_id","/commerce/order_id"],"exclude-all",true),["/identity/user_id","/technical/debug","/visitor_id"]);
 assert.deepEqual(updateProfileConceptPaths(conceptPaths,conceptPresentationInput.selectedPaths,["/technical/debug"],"reset",false),["/commerce/cart_id","/identity/user_id","/visitor_id"]);
+let extractedProfileSchema=createCanonicalSchema({id:"schema:profile-concept-extraction",contributorId:"profile:profile-concept-extraction",contributorName:"Profile concept extraction"}),extractionIdentity=0;
+for(const constraint of[{path:"/identity/id",type:"string",concept:"Identity"},{path:"/visitor_id",type:"string"}])extractedProfileSchema=canonicalSchemaWithConstraint(extractedProfileSchema,constraint,(kind)=>`${kind}:profile-concept-extraction:${++extractionIdentity}`);
+assert.deepEqual(projectDocumentationProfileConceptProperties({id:"profile:extracted",name:"Extracted",requirements:[],canonicalSchema:extractedProfileSchema}),[{path:"/identity",concept:undefined},{path:"/identity/id",concept:"Identity"},{path:"/visitor_id",concept:undefined}]);
+assert.deepEqual(projectDocumentationProfileConceptProperties({id:"profile:legacy",name:"Legacy",requirements:[{path:"/legacy",type:"string"}]}),[{path:"/legacy"}]);
 
 assert.equal(documentationTabAfterKey("build","ArrowRight"),"preview");
 assert.equal(documentationTabAfterKey("build","ArrowLeft"),"export");

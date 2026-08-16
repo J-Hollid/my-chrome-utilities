@@ -1,8 +1,9 @@
 import { flowDocumentationPropertyPaths } from "../data-layer-flow-table-documentation-export.js";
-import { projectDocumentationProfileColumns, projectDocumentationProfileConceptProperties } from "../data-layer-project-documentation-compiler.js";
+import { projectDocumentationProfileColumns } from "../data-layer-project-documentation-compiler.js";
 import { declareStudioChoice } from "../data-layer-studio-choice-controls.js";
 import { documentationButton as button, documentationCheckedOrder as checkedOrder, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled, documentationMove as move, documentationSetChecked as setChecked, } from "./workspace-ui-elements.js";
 import { createDocumentationProfileConceptRenderer } from "./workspace-profile-concepts-ui.js";
+import { projectDocumentationProfileConceptProperties } from "./profile-concept-properties.js";
 export function createDocumentationSectionConfigurationRenderer(mutateSection) {
     const renderProfileConcepts = createDocumentationProfileConceptRenderer(mutateSection);
     const renderOrderedChoices = (host, input) => {

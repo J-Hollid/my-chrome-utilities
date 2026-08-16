@@ -89,6 +89,5 @@ export function compileProjectDocumentation(input) {
     return compileProjectDocumentationSnapshot({ projectId: state.project.id, projectName: state.project.name, set, theme, sourceRevisions: revisions, generatedAt, tables, diagnostics });
 }
 export function projectDocumentationProfileColumns() { return defaultProfileColumns; }
-export function projectDocumentationProfileConceptProperties(profile) { const requirements = profile.canonicalSchema ? canonicalRequirements(profile.canonicalSchema) : profile.requirements, concepts = profile.canonicalSchema ? new Map(canonicalConstraints(profile.canonicalSchema).map(({ path, concept }) => [path, concept])) : new Map(); return requirements.map(({ path }) => ({ path, concept: concepts.get(path) })); }
-export function projectDocumentationProfilePaths(profile) { return projectDocumentationProfileConceptProperties(profile).map(({ path }) => path); }
+export { projectDocumentationProfilePaths } from "./project-documentation/profile-concept-properties.js";
 //# sourceMappingURL=data-layer-project-documentation-compiler.js.map

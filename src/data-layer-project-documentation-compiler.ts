@@ -83,5 +83,4 @@ export function compileProjectDocumentation(input:CompileProjectDocumentationInp
 }
 
 export function projectDocumentationProfileColumns():readonly ProjectDocumentationProfileColumn[]{return defaultProfileColumns;}
-export function projectDocumentationProfileConceptProperties(profile:Profile):readonly {path:string;concept?:string|undefined}[]{const requirements=profile.canonicalSchema?canonicalRequirements(profile.canonicalSchema):profile.requirements,concepts=profile.canonicalSchema?new Map(canonicalConstraints(profile.canonicalSchema).map(({path,concept})=>[path,concept])):new Map<string,string|undefined>();return requirements.map(({path})=>({path,concept:concepts.get(path)}));}
-export function projectDocumentationProfilePaths(profile:Profile):readonly string[]{return projectDocumentationProfileConceptProperties(profile).map(({path})=>path);}
+export {projectDocumentationProfilePaths} from "./project-documentation/profile-concept-properties.js";
