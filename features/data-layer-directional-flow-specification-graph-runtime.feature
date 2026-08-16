@@ -580,6 +580,7 @@ Feature: Data layer directional Flow specification graph runtime
     When actual controls enter <description>, <caption>, and <source_reference> and save
     Then serialized <target> contains exactly one primary attachment with those contextual fields and one asset reference
     And the production project asset registry contains one stable original raster ID, media type, dimensions, byte length, digest, and decodable bytes
+    And after Flow route reload the installed Visual editor reports the durable project thumbnail-cache byte total
     And canonical Page and Event hashes, graph topology, coordinates, and visual-display mode equal their pre-save values
     And installed actions become View visual, Edit visual, Replace visual, and Remove visual while one actual Undo removes the attachment
 
