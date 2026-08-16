@@ -1,6 +1,6 @@
 # Project Library transport-port isolation R01
 
-Status: approved internal checkpoint in the combined portability delivery
+Status: QA-integrated as part of combined candidate `1b192105a8`
 
 Prepared: 2026-08-15
 

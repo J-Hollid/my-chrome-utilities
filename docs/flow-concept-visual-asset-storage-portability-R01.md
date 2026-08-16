@@ -1,6 +1,6 @@
 # Flow concept-visual asset storage and portability R01
 
-Status: approved for implementation handoff
+Status: QA-integrated as combined candidate `1b192105a8`
 
 Prepared: 2026-08-15
 

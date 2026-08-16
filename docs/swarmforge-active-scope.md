@@ -28,8 +28,8 @@ The settled-candidate verification workflow is integrated at
 | Verification run-intent and deferred-incident corrections | QA-integrated through `66dcdfd5d6` | Ordinary diagnostics remain local and eligible earlier or parallel deferrals remain master obligations without blocking unrelated feature work. Reopen one only if focused work naturally reproduces it or the slice intentionally changes its contract. |
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
-| VTD-008 side-panel composition-root decomposition | Active incremental program; combined Project Library transport isolation and Flow visual-asset portability sequencing was approved by the user on 2026-08-16 | Preserve transport candidate `eb3ada75` as an internal checkpoint, then implement `docs/project-library-transport-port-isolation-R01.md` and `docs/flow-concept-visual-asset-storage-portability-R01.md` as one bounded QA delivery. |
-| Documentation template library | Approved by the user on 2026-08-17; specification committed for a queued implementation | Do not send task `documentation-templates` to the coder until the combined Project Library transport-port and Flow visual-asset portability delivery, including the reusable project asset-body and v3 archive boundary, is integrated into `qa`; then use `docs/data-layer-documentation-template-program-R01.md`. |
+| VTD-008 side-panel composition-root decomposition | Active incremental program; the combined Project Library transport isolation and Flow visual-asset portability delivery is QA-integrated at `1b192105a8` | Preserve that settled transport, content-addressed visual-body, and version-3 archive behavior. No additional VTD-008 controller slice is active. |
+| Documentation template library | Active by user approval on 2026-08-17 | Implement task `documentation-templates` from current `qa` under `docs/data-layer-documentation-template-program-R01.md`; extend the integrated content-addressed body and version-3 archive boundary to Excel template bodies as part of the same candidate, then implement the Template Library, Excel renderer, and rich-page editor. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Deferred and inactive | The existing two-worker order is within about six seconds of balanced after lock wait is removed; scheduling needed for a possible third worker is bounded inside VTD-017. |
 | VTD-012 registry and planner modularization | Deferred and inactive | Reconsider after broad final-gate and receipt-persistence costs are reduced. |
@@ -40,19 +40,19 @@ The settled-candidate verification workflow is integrated at
 VTD-008 remains active as a program. Completion of the installed Hotkeys, Command
 Palette, and workspace-tabs controllers completes three slices only, not VTD-008.
 The completed workspace-tabs slice covers only the existing controller lifecycle
-in `src/workspace-tabs-ui.ts`. The approved Project Library transport-port work is
-an internal prerequisite for the stopped Flow visual-asset portability candidate.
-Because its selected Project Management pack also owns the already-active
-portability scenarios, it is not independently integrated or evidenced: the
-portability implementation resumes on top and both settle as one bounded QA
-candidate. This does not activate a broader utility registry, shell DOM adapter,
-observation-target, live-session, or another Data Layer controller extraction.
+in `src/workspace-tabs-ui.ts`. The combined Project Library transport-port and
+Flow visual-asset portability delivery is integrated at `1b192105a8`. It supplies
+the current typed transport, project-scoped content-addressed visual bodies, and
+version-3 archive baseline. This does not activate a broader utility registry,
+shell DOM adapter, observation-target, live-session, or another Data Layer
+controller extraction.
 
-Within VTD-008, implementation authority is limited to the approved combined
-Project Library transport-port and Flow visual-asset portability delivery. The
-separately approved Project Documentation workspace UX correction is an ordinary
-QA feature and does not activate another VTD-008 controller slice or an older
-Project Documentation recovery lineage. The user
+Within VTD-008, no additional controller implementation is active. The separately
+approved Project Documentation workspace UX correction and Documentation
+template library are ordinary QA features. The template task may generalize the
+settled project-body and archive internals for Excel bodies without activating
+another VTD-008 controller slice or an older Project Documentation recovery
+lineage. The user
 stopped autonomous VTD-018 repair after its repeated final failure and approved a
 QA-branch release pilot. At the start of the next request, the specifier
 distinguishes feature integration into `qa` from an explicit cumulative promotion

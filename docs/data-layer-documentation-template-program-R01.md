@@ -1,7 +1,7 @@
 # Data layer documentation template program R01
 
-Status: approved by the user on 2026-08-17; implementation handoff is queued
-behind QA integration of the project asset-body and v3 archive prerequisite
+Status: approved by the user on 2026-08-17 for implementation handoff from the
+current QA asset-body and version-3 archive baseline
 
 Prepared: 2026-08-17
 
@@ -232,12 +232,20 @@ only the selected body.
 
 ## Delivery and verification boundary
 
-This is one bounded user-visible Documentation feature built after the approved
-project asset-body and version-3 archive boundary is available. It consumes that
-boundary and must not create a second Base64, root-record, or non-portable binary
-store. If that prerequisite is not integrated, implementation does not start from
-an abandoned candidate and instead waits for a current QA base containing the
-settled boundary.
+This is one bounded user-visible Documentation feature on the current QA
+baseline, which already contains reviewed candidate `1b192105a8` and its
+project-scoped content-addressed visual bodies and version-3 project archive.
+The implementation extends that settled durability and archive boundary so an
+Excel template body is another validated project-owned asset class. The
+extension is part of task `documentation-templates`; it is not a prerequisite
+handoff or a separate delivery.
+
+The implementation must preserve existing visual-asset behavior while sharing
+the content-addressed body, lazy-read, atomic import, deletion-safety, and
+archive-entry mechanics that are independent of media type. It must not create a
+second Base64, root-record, or non-portable binary store, and it must not force
+Excel workbooks through image dimensions, image signatures, or image media-type
+validation.
 
 **Development focus:** begin with the versioned safe template context and the
 Excel marker parser/validator/renderer using small in-memory workbooks. Add the
