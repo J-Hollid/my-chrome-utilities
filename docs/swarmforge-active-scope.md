@@ -29,6 +29,7 @@ The settled-candidate verification workflow is integrated at
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program; combined Project Library transport isolation and Flow visual-asset portability sequencing was approved by the user on 2026-08-16 | Preserve transport candidate `eb3ada75` as an internal checkpoint, then implement `docs/project-library-transport-port-isolation-R01.md` and `docs/flow-concept-visual-asset-storage-portability-R01.md` as one bounded QA delivery. |
+| Documentation template library | Approved by the user on 2026-08-17; specification committed for a queued implementation | Do not send task `documentation-templates` to the coder until the combined Project Library transport-port and Flow visual-asset portability delivery, including the reusable project asset-body and v3 archive boundary, is integrated into `qa`; then use `docs/data-layer-documentation-template-program-R01.md`. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Deferred and inactive | The existing two-worker order is within about six seconds of balanced after lock wait is removed; scheduling needed for a possible third worker is bounded inside VTD-017. |
 | VTD-012 registry and planner modularization | Deferred and inactive | Reconsider after broad final-gate and receipt-persistence costs are reduced. |
@@ -147,6 +148,15 @@ behavior definition.
 - `features/data-layer-property-set-and-flow-section-separation.feature`
 - `features/data-layer-property-set-and-flow-section-separation-runtime.feature`
 
+### Documentation templates
+
+- `features/data-layer-documentation-template-library.feature`
+- `features/data-layer-documentation-template-library-runtime.feature`
+- `features/data-layer-excel-documentation-templates.feature`
+- `features/data-layer-excel-documentation-templates-runtime.feature`
+- `features/data-layer-rich-page-documentation-templates.feature`
+- `features/data-layer-rich-page-documentation-templates-runtime.feature`
+
 ### Canonical and layered schema
 
 - `features/data-layer-canonical-shared-profile-schema-authoring.feature`
@@ -196,6 +206,7 @@ Read only the program documents relevant to the selected task.
 | Earlier Flow rationale not superseded by R02 | `docs/data-layer-canvas-first-flow-authoring-correction-program-R01.md` |
 | Selected-Flow table documentation | `docs/data-layer-flow-table-documentation-export-program-R01.md` |
 | Project Documentation workspace | `docs/data-layer-project-documentation-workspace-program-R01.md` |
+| Documentation templates | `docs/data-layer-documentation-template-program-R01.md` |
 | Operator-guided Live Flow testing | `docs/data-layer-live-flow-guided-testing-program-R01.md` |
 | Project library, context, and portability | `docs/data-layer-project-management-program-R01.md` |
 | Flow concept-visual asset storage and portability | `docs/flow-concept-visual-asset-storage-portability-R01.md` |
@@ -300,6 +311,11 @@ accidentally reactivated.
   Preview, rich copy, plain-text fallback, and Excel use one immutable refreshed
   snapshot, including concept filtering, ordering, headings, Site Profile
   sections, matrix rows, and validated logo data.
+- Built-in rendering remains the default. A project may assign one Excel
+  prototype worksheet or one rich-page block template per existing documentation
+  kind. Templates change presentation only, create no Page documentation kind,
+  and consume project asset bodies through the reusable asset-body and v3 archive
+  boundary after that prerequisite reaches `qa`.
 - Studio checkboxes represent membership, inclusion, acknowledgement,
   confirmation, and staged choices. Switches are reserved for standalone binary
   settings whose effect applies immediately; `Only defined fields` is the
@@ -406,6 +422,7 @@ historical rename/delete handling.
 |---|---|
 | Canvas-first Flow workspace | `--pack flow_graph --pack layered_schema` |
 | Project Documentation | `--pack flow_export` |
+| Documentation templates | `--pack flow_export --pack project_management --pack durable_project_repository` |
 | Guided Live Flow testing | `--pack live_flow_testing` |
 | Canonical and layered schema | `--pack layered_schema` |
 | Project management and portability | `--pack project_management` |
