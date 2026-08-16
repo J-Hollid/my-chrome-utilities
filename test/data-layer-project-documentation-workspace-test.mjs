@@ -19,10 +19,14 @@ import {
 import {compileProjectDocumentation,projectDocumentationSources} from "../dist/data-layer-project-documentation-compiler.js";
 import {createSpecificationProject,exportSpecificationProject,importSpecificationProject,transactProject} from "../dist/data-layer-specification-project.js";
 import {
+  consumeDocumentationIncompleteConfirmation,
   documentationExportPresentation,
   documentationPreviewSelection,
   documentationTabAfterKey,
 } from "../dist/data-layer-project-documentation-workspace-ui.js";
+
+assert.deepEqual(consumeDocumentationIncompleteConfirmation(true),{confirmedForAction:true,confirmedAfterAction:false});
+assert.deepEqual(consumeDocumentationIncompleteConfirmation(false),{confirmedForAction:false,confirmedAfterAction:false});
 
 assert.equal(documentationTabAfterKey("build","ArrowRight"),"preview");
 assert.equal(documentationTabAfterKey("build","ArrowLeft"),"export");

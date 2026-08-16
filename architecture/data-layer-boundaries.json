@@ -156,6 +156,54 @@
       "src/data-layer-specification-project.ts"
     ]
   },
+  "src/data-layer-project-documentation-workspace-ui-elements.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-flow-table-documentation-export.ts",
+      "src/data-layer-project-documentation-records.ts",
+      "src/data-layer-project-documentation-workspace.ts"
+    ]
+  },
+  "src/data-layer-project-documentation-workspace-export-ui.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-project-documentation-workspace-ui-elements.ts",
+      "src/data-layer-project-documentation-workspace.ts"
+    ]
+  },
+  "src/data-layer-project-documentation-workspace-build-ui.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-flow-table-documentation-export.ts",
+      "src/data-layer-project-documentation-compiler.ts",
+      "src/data-layer-project-documentation-records.ts",
+      "src/data-layer-project-documentation-workspace-ui-elements.ts"
+    ]
+  },
+  "src/data-layer-project-documentation-workspace-content-ui.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-layered-schema-project.ts",
+      "src/data-layer-project-documentation-compiler.ts",
+      "src/data-layer-project-documentation-records.ts",
+      "src/data-layer-project-documentation-workspace-ui-elements.ts",
+      "src/data-layer-specification-project.ts"
+    ]
+  },
+  "src/data-layer-project-documentation-workspace-theme-ui.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-project-documentation-records.ts",
+      "src/data-layer-project-documentation-workspace-export-ui.ts",
+      "src/data-layer-project-documentation-workspace-ui-elements.ts",
+      "src/data-layer-project-documentation-workspace.ts"
+    ]
+  },
   "src/data-layer-flow-table-documentation-export-ui.ts": {
     "module": "schemas",
     "layer": "browser",

@@ -25,7 +25,27 @@ import {
   groupProjectDocumentationConceptRows,
   reconcileProjectDocumentationConcepts,
 } from "../dist/data-layer-project-documentation-compiler.js";
+import {
+  documentationExportPresentation,
+  documentationTabAfterKey,
+} from "../dist/data-layer-project-documentation-workspace-ui.js";
 const permutations=(values)=>values.length<2?[values]:values.flatMap((value,index)=>permutations(values.filter((_,candidate)=>candidate!==index)).map((rest)=>[value,...rest]));
+
+const documentationTabs=["build","preview","export"];
+for(const tab of documentationTabs){
+  const right=documentationTabAfterKey(tab,"ArrowRight"),left=documentationTabAfterKey(tab,"ArrowLeft");
+  assert.equal(documentationTabAfterKey(right,"ArrowLeft"),tab,"right then left is inverse navigation");
+  assert.equal(documentationTabAfterKey(left,"ArrowRight"),tab,"left then right is inverse navigation");
+  assert.equal(documentationTabAfterKey(documentationTabAfterKey(documentationTabAfterKey(tab,"ArrowRight"),"ArrowRight"),"ArrowRight"),tab,"three right moves cycle through every tab");
+}
+let presentationSeed=0x45a3bc21;
+const presentationRandom=()=>{presentationSeed=(Math.imul(presentationSeed,1664525)+1013904223)>>>0;return presentationSeed;};
+for(let sample=0;sample<180;sample+=1){
+  const sections=Array.from({length:1+presentationRandom()%12},(_,index)=>({id:`section:${sample}:${index}`,name:`Section ${sample}.${index}`})),selectedSectionIds=Array.from({length:presentationRandom()%20},()=>presentationRandom()%4===0?`missing:${presentationRandom()}`:sections[presentationRandom()%sections.length].id),scope=["current","selected","complete"][presentationRandom()%3],currentSectionId=presentationRandom()%4===0?"missing":sections[presentationRandom()%sections.length].id,presentation=documentationExportPresentation({scope,currentSectionId,selectedSectionIds,sections}),available=new Set(sections.map(({id})=>id)),expected=scope==="complete"?sections.map(({id})=>id):scope==="selected"?selectedSectionIds.filter((id)=>available.has(id)):[currentSectionId].filter((id)=>available.has(id));
+  assert.deepEqual(presentation.sectionIds,expected,"export filtering preserves requested/configured order");
+  assert.equal(presentation.checklistVisible,scope==="selected","only selected scope exposes the checklist");
+  assert.match(presentation.summary,new RegExp(`^${expected.length} section${expected.length===1?"":"s"} — `),"the scope summary reports its filtered count");
+}
 const unzipStored=(bytes)=>{const files=new Map(),view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let offset=0;while(offset+30<=bytes.length&&view.getUint32(offset,true)===0x04034b50){const size=view.getUint32(offset+18,true),nameLength=view.getUint16(offset+26,true),extraLength=view.getUint16(offset+28,true),name=new TextDecoder().decode(bytes.slice(offset+30,offset+30+nameLength)),start=offset+30+nameLength+extraLength;files.set(name,new TextDecoder().decode(bytes.slice(start,start+size)));offset=start+size;}return files;};
 const workbookSheetNames=(files)=>[...files.get("xl/workbook.xml").matchAll(/<sheet name="([^"]+)"/gu)].map((match)=>match[1]);
 const assertWorkbookPackage=(bytes,expectedSheets)=>{const files=unzipStored(bytes);assert.match(files.get("_rels/.rels"),/Type="http:\/\/schemas\.openxmlformats\.org\/officeDocument\/2006\/relationships\/officeDocument"/);assert.deepEqual(workbookSheetNames(files),expectedSheets);};
