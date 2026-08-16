@@ -1,5 +1,4 @@
 import { addEventOccurrenceToPage, deriveFlowOccurrenceExample, deriveFlowPageFrameExample, documentaryFlowGraph, duplicateGraphOccurrence, duplicateFlowPageFrame, effectiveFlowPageFrameName, flowOccurrenceExampleEditorRows, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectOccurrencePageChange, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveGraphOccurrence, projectFlowGraph, reassignFlowOccurrencePage, reviewLegacyFlowContextMigration, removeFlowPageFrame, renameFlowPageFrame, resetFlowPageFrameName, removeFlowRelationship, removeGraphOccurrence, saveGraphRelationship, setFlowOccurrenceExample, } from "./data-layer-flow-graph.js";
-import { openIndexedDbProjectRepository } from "./utilities/data-layer/schemas.js";
 import { appendFlowPageFrameCardControls } from "./data-layer-flow-graph-ui-page-frame.js";
 import { addFlowPageFrameAndRelationship, addFlowPageFrameAtPosition, addFlowPageFrameToSection, connectFlowPageFrames, createFlowSection, createFlowSectionAroundFrames, inspectSectionRemovalWithContents, moveFlowPageFramePresentation, moveFlowSection, movePageFrameToSection, removeFlowSection, removeFlowSectionWithContents, renameAndResizeFlowSection, tidyFlowPageFrames } from "./utilities/data-layer/property-set-flow-section.js";
 import { button, elementByData, entityName, flowEdgeGeometry, flowPortPoint, nodeHeight, nodeWidth, ownsPointerDrag, q, restorePointerCancellationFocus, svg } from "./flow-graph/ui-primitives.js";
@@ -58,19 +57,27 @@ export function installFlowGraphBuilder(options) {
     let statusRepairHref = "";
     let activeCatalogPayload;
     let pendingItemMenu;
+    let thumbnailDisplayWorkspace = "", thumbnailDisplayActive = false;
     const blobUrl = (body) => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(reader.error); reader.readAsDataURL(body); }), visualBytes = new Map(), thumbnailBytes = new Map(), thumbnailSizes = new Map(), thumbnailHydrations = new Map();
     let thumbnailObserver;
     const hydrateVisual = async (assetId) => { if (visualBytes.has(assetId))
         return; const projectId = current().state?.project.id; if (!projectId)
-        return; const body = await (await openIndexedDbProjectRepository()).loadConceptVisualAssetBody(projectId, assetId); visualBytes.set(assetId, await blobUrl(body)); render(); };
-    const hydrateThumbnail = async (assetId) => { if (thumbnailBytes.has(assetId))
-        return; const pending = thumbnailHydrations.get(assetId); if (pending)
+        return; const body = await options.repository.loadConceptVisualAssetBody(projectId, assetId); visualBytes.set(assetId, await blobUrl(body)); };
+    const installThumbnail = (assetId, bytes) => document.querySelectorAll(`[data-flow-visual-pending][data-flow-visual-asset-id="${CSS.escape(assetId)}"]`).forEach(item => { const image = document.createElement("img"), targetId = item.dataset.flowVisualThumbnail; image.src = bytes; image.alt = (item.getAttribute("aria-label") ?? "").replace(/^View visual: /, ""); Object.assign(image.style, { width: "100%", height: "100%", objectFit: "contain" }); item.replaceChildren(image); delete item.dataset.flowVisualPending; if (targetId) {
+        const badge = item.parentElement?.querySelector(`[data-flow-visual-badge="${CSS.escape(targetId)}"]`);
+        if (badge)
+            badge.style.display = "none";
+    } });
+    const hydrateThumbnail = async (assetId) => { const cached = thumbnailBytes.get(assetId); if (cached) {
+        installThumbnail(assetId, cached);
+        return;
+    } const pending = thumbnailHydrations.get(assetId); if (pending)
         return pending; const work = (async () => { const projectId = current().state?.project.id; if (!projectId)
-        return; const repository = await openIndexedDbProjectRepository(); let thumbnail = await repository.loadConceptVisualAssetThumbnail(projectId, assetId); if (!thumbnail) {
-        const original = await repository.loadConceptVisualAssetBody(projectId, assetId);
+        return; let thumbnail = await options.repository.loadConceptVisualAssetThumbnail(projectId, assetId); if (!thumbnail) {
+        const original = await options.repository.loadConceptVisualAssetBody(projectId, assetId);
         thumbnail = await createFlowVisualThumbnail(original);
-        await repository.storeConceptVisualAssetThumbnail(projectId, assetId, thumbnail);
-    } thumbnailSizes.set(assetId, thumbnail.size); thumbnailBytes.set(assetId, await blobUrl(thumbnail)); render(); })(); thumbnailHydrations.set(assetId, work); try {
+        await options.repository.storeConceptVisualAssetThumbnail(projectId, assetId, thumbnail);
+    } thumbnailSizes.set(assetId, thumbnail.size); const bytes = await blobUrl(thumbnail); thumbnailBytes.set(assetId, bytes); installThumbnail(assetId, bytes); })(); thumbnailHydrations.set(assetId, work); try {
         await work;
     }
     finally {
@@ -523,7 +530,9 @@ export function installFlowGraphBuilder(options) {
         }
         selectedItems = selectedItems.filter(selectionExists);
         selected = primaryFlowSelection(selectedItems);
-        const projection = projectFlowGraph(state.project, flow.id), visualMode = (transientView.visualDisplayMode ?? "Badges"), thumbnailVisuals = visualMode === "Thumbnails" && Number(transientView.viewport?.zoom ?? 1) >= .5;
+        const projection = projectFlowGraph(state.project, flow.id), visualMode = (transientView.visualDisplayMode ?? "Badges"), thumbnailVisuals = visualMode === "Thumbnails" && Number(transientView.viewport?.zoom ?? 1) >= .5, enteredThumbnailVisuals = thumbnailDisplayWorkspace === workspaceKey && !thumbnailDisplayActive && thumbnailVisuals;
+        thumbnailDisplayWorkspace = workspaceKey;
+        thumbnailDisplayActive = thumbnailVisuals;
         if (thumbnailVisuals)
             for (const endpoint of projection.graph.connectionEndpoints) {
                 const target = { kind: endpoint.kind === "page-frame" ? "page-frame" : "occurrence", id: endpoint.id };
@@ -930,20 +939,19 @@ export function installFlowGraphBuilder(options) {
         thumbnailObserver?.disconnect();
         thumbnailObserver = undefined;
         if (thumbnailVisuals) {
-            const pending = canvas.querySelectorAll("[data-flow-visual-pending][data-flow-visual-asset-id]");
+            const pending = canvas.querySelectorAll("[data-flow-visual-pending][data-flow-visual-asset-id]"), hydrateVisible = (item) => { const root = canvasScroll.getBoundingClientRect(), box = item.getBoundingClientRect(); if (root.width <= 0 || root.height <= 0 || box.width <= 0 || box.height <= 0 || box.right <= root.left || box.left >= root.right || box.bottom <= root.top || box.top >= root.bottom)
+                return false; thumbnailObserver?.unobserve(item); const assetId = item.dataset.flowVisualAssetId; if (assetId)
+                void hydrateThumbnail(assetId); return true; };
             if (typeof IntersectionObserver === "function") {
                 thumbnailObserver = new IntersectionObserver(entries => { for (const entry of entries)
-                    if (entry.isIntersecting) {
-                        thumbnailObserver?.unobserve(entry.target);
-                        const assetId = entry.target.dataset.flowVisualAssetId;
-                        if (assetId)
-                            void hydrateThumbnail(assetId);
-                    } }, { root: canvasScroll });
+                    if (entry.isIntersecting)
+                        hydrateVisible(entry.target); }, { root: canvasScroll });
                 pending.forEach(item => thumbnailObserver.observe(item));
+                if (enteredThumbnailVisuals)
+                    queueMicrotask(() => pending.forEach(hydrateVisible));
             }
             else
-                pending.forEach(item => { const assetId = item.dataset.flowVisualAssetId; if (assetId)
-                    void hydrateThumbnail(assetId); });
+                pending.forEach(hydrateVisible);
         }
         document.querySelectorAll("[data-occurrence-id],[data-relationship-id],[data-page-frame-id]").forEach((element) => { const item = element.dataset.occurrenceId ? { kind: "occurrence", id: element.dataset.occurrenceId } : element.dataset.relationshipId ? { kind: "relationship", id: element.dataset.relationshipId } : { kind: "page-frame", id: element.dataset.pageFrameId }; element.classList.toggle("is-selected", flowSelectionContains(selectedItems, item)); });
         if (relationshipDeletionFocusTimer !== undefined) {
