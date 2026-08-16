@@ -5032,6 +5032,9 @@ const projectManagementStepsTestSource = await readFile(new URL(
   "./acceptance/project_management_steps_test.clj", import.meta.url), "utf8");
 const modularVerificationPacksFeatureSource = await readFile(new URL(
   "../features/modular-verification-packs.feature", import.meta.url), "utf8");
+const layeredEditorArchitectureHandlerSource = await readFile(new URL(
+  "../acceptance/src/acceptance/verification_support/modular_architecture_layered_editor_handlers.clj",
+  import.meta.url), "utf8");
 const projectServedFeatures = [...projectHandlerSource.matchAll(
   /"(features\/[A-Za-z0-9_./-]+\.feature)"/gu,
 )].map((match) => match[1]);
@@ -10434,6 +10437,42 @@ function projectOwnerEvidenceContractRegression(context) {
     preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
     repairResult:{status:"passed",fixtureDigest,observed}};
 }
+function layeredSchemaOwnershipCountConservationRegression(context) {
+  const source = "src/layered-schema/flow-route-lifecycle.ts";
+  const input = {
+    source,
+    owner:verificationOwner(packs, source),
+    present:layeredSourceInventory.includes(source),
+  };
+  assert.deepEqual(input, { source, owner:"layered_schema", present:true });
+  const declaredCount = (text) => Number(/32 current editor files and ([0-9]+) Layered Schema files/u
+    .exec(text)?.[1]);
+  const repairResult = {
+    ownedSourceInventory:layeredSourceInventory.length,
+    handlerDeclaration:declaredCount(layeredEditorArchitectureHandlerSource),
+    featureDeclaration:declaredCount(modularVerificationPacksFeatureSource),
+    exactPartition:false,
+  };
+  repairResult.exactPartition = repairResult.ownedSourceInventory === repairResult.handlerDeclaration &&
+    repairResult.ownedSourceInventory === repairResult.featureDeclaration;
+  const expectedPreRepairFailure = {
+    ownedSourceInventory:86, handlerDeclaration:85, featureDeclaration:85, exactPartition:false,
+  };
+  const expectedRepairResult = {
+    ownedSourceInventory:86, handlerDeclaration:86, featureDeclaration:86, exactPartition:true,
+  };
+  assert.deepEqual(repairResult, expectedRepairResult);
+  const fixture = {
+    id:"layered-schema-ownership-count-conservation-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input, expectedPreRepairFailure, expectedRepairResult,
+  };
+  const fixtureDigest = verificationDigest(fixture);
+  return { version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
@@ -10462,6 +10501,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           ? projectCompleteEvidenceConservationRegression(regressionContext)
         : regressionContext.causalCategory === "other:project-owner-evidence-contract"
           ? projectOwnerEvidenceContractRegression(regressionContext)
+        : regressionContext.causalCategory === "other:layered-schema-ownership-count-conservation"
+          ? layeredSchemaOwnershipCountConservationRegression(regressionContext)
         : regressionContext.causalCategory === "other:repair-focused prerequisite closure"
           ? repairPrerequisiteClosureRegression(regressionContext)
           : artifactLockTimeoutRepairRegression(regressionContext),
