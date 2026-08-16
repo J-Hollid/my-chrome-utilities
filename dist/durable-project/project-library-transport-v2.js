@@ -38,64 +38,53 @@ const uniqueTargetName = (library, sourceName) => { let candidate = sourceName, 
 const entityCounts = (project) => Object.fromEntries(Object.entries(project.collections).map(([kind, entries]) => [kind, entries.length]));
 const progress = (value) => ({ phase: value.phase, completed: value.completed, total: value.total, message: `${value.phase} ${value.entry ?? "project"} ${value.completed}/${value.total}` });
 const importBundle = (project, publishedProject, sourceName) => { const publishedRevision = Math.max(0, ...project.releases.map(({ revision }) => revision)); return { format: "my-chrome-utilities.durable-project-bundle", version: 2, sourceProjectId: project.id, sourceName, publishedRevision, baseProjectRevision: publishedRevision, project, ...(publishedProject ? { publishedProject } : {}) }; };
+const embeddedVisuals = (project) => { const assets = project?.conceptVisualAssets; return Array.isArray(assets) && assets.some(value => Boolean(value && typeof value === "object" && typeof value.bytes === "string")); };
+const publishedFromBundle = (bundle) => bundle.publishedProject && typeof bundle.publishedProject === "object" ? bundle.publishedProject : undefined;
+async function stageArchiveImport(options, blob, input) {
+    const staged = await importFlowVisualArchive(blob, { projectId: options.id("project"), id: options.id, ...(input.signal ? { signal: input.signal } : {}), onProgress: value => input.onProgress?.(progress(value)) }), sourceName = staged.project.name;
+    return { archive: true, project: staged.project, ...(staged.publishedProject ? { publishedProject: staged.publishedProject } : {}), assets: staged.assets, sourceName, targetName: uniqueTargetName(options.library(), sourceName), projectId: staged.project.id, migrations: staged.migrations, counts: entityCounts(staged.project), blockers: [] };
+}
+async function stageJsonImport(options, source, input) {
+    const serialized = await source.text();
+    assertSignal(input.signal);
+    const bundle = JSON.parse(serialized), rawProject = bundle.project, projectId = options.id("project");
+    if (embeddedVisuals(rawProject) && rawProject)
+        return stageEmbeddedJsonImport(options, bundle, rawProject, projectId);
+    return stagePlainJsonImport(options, serialized, bundle, rawProject, projectId);
+}
+const stageEmbeddedJsonImport = async (options, bundle, rawProject, projectId) => { const published = publishedFromBundle(bundle), staged = await migrateVersion2VisualAssets({ format: String(bundle.format), version: Number(bundle.version), project: rawProject, ...(published ? { publishedProject: published } : {}) }, { projectId, id: options.id }), sourceName = String(bundle.sourceName ?? rawProject.name); return { archive: false, project: staged.project, ...(staged.publishedProject ? { publishedProject: staged.publishedProject } : {}), assets: staged.assets, bundle, sourceName, targetName: uniqueTargetName(options.library(), sourceName), projectId: staged.project.id, migrations: staged.migrations, counts: entityCounts(staged.project), blockers: [] }; };
+const stagePlainJsonImport = (options, serialized, bundle, rawProject, projectId) => { const staged = stageProjectImport(serialized, options.library(), { id: oldId => oldId === rawProject?.id ? projectId : options.id(oldId), ...(options.now ? { now: options.now } : {}) }); return { archive: false, bundle, sourceName: staged.sourceName, targetName: staged.targetName, projectId: staged.projectId, migrations: staged.migrations, counts: staged.entityCounts, blockers: staged.blockers }; };
+async function stageVersion3Import(options, source, input) {
+    assertSignal(input.signal);
+    const blob = source instanceof Blob ? source : source.slice?.(0, source.size), prefix = blob ? new Uint8Array(await blob.slice(0, 4).arrayBuffer()) : undefined;
+    assertSignal(input.signal);
+    const archive = prefix?.[0] === 80 && prefix[1] === 75;
+    if (archive) {
+        if (!blob)
+            throw new DOMException("Choose a stream-readable version 3 project archive.", "DataError");
+        return stageArchiveImport(options, blob, input);
+    }
+    return stageJsonImport(options, source, input);
+}
+function inspectedVersion3Import(options, stage) {
+    let started = false, released = false, { project, publishedProject, assets, bundle } = stage;
+    return { formatVersion: stage.archive ? 3 : Number(bundle?.version ?? 2), sourceName: stage.sourceName, targetName: stage.targetName, projectId: stage.projectId, entityCounts: stage.counts, referenceIntegrity: stage.blockers.length ? "blocked" : "valid", migrations: stage.migrations, blockers: stage.blockers, async commit(commitInput) { if (released)
+            throw new Error("Inspected project import was released."); if (started)
+            throw new Error("Inspected project import already started."); started = true; assertSignal(commitInput.signal); if (stage.blockers.length)
+            throw new Error("Project import is blocked."); commitInput.onProgress?.({ phase: "commit", completed: 0, total: 1, message: "Importing project into durable storage…" }); if (project)
+            await options.repository.importProject(importBundle(project, publishedProject, stage.sourceName), { projectId: stage.projectId, name: commitInput.name }, assets);
+        else if (bundle)
+            await options.repository.importProject(bundle, { projectId: stage.projectId, name: commitInput.name });
+        else
+            throw new Error("Inspected project import was released."); commitInput.onProgress?.({ phase: "commit", completed: 1, total: 1, message: "Project import committed." }); }, release() { released = true; project = undefined; publishedProject = undefined; assets = undefined; bundle = undefined; } };
+}
 export function createVersion3ProjectLibraryTransport(options) {
     return {
         async prepareExport(projectId) { const prepared = await options.repository.prepareProjectArchive(projectId); let started = false, released = false; return { formatVersion: 3, mediaType: "application/zip", extension: "zip", estimatedBytes: prepared.estimatedBytes, async write(sink, input = {}) { if (released)
                 throw new Error("Prepared project export was released."); if (started)
                 throw new Error("Prepared project export already started."); started = true; assertSignal(input.signal); await prepared.write(sink, { ...(input.signal ? { signal: input.signal } : {}), onProgress: value => input.onProgress?.(progress(value)) }); assertSignal(input.signal); }, release() { released = true; } }; },
         async inspectImport(source, input = {}) {
-            assertSignal(input.signal);
-            const blob = source instanceof Blob ? source : source.slice?.(0, source.size), prefix = blob ? new Uint8Array(await blob.slice(0, 4).arrayBuffer()) : undefined;
-            assertSignal(input.signal);
-            const archive = prefix?.[0] === 80 && prefix[1] === 75;
-            let project, publishedProject, assets, bundle, sourceName = "Unknown", targetName = "", projectId = options.id("project"), migrations = [], counts = {}, blockers = [];
-            if (archive) {
-                if (!blob)
-                    throw new DOMException("Choose a stream-readable version 3 project archive.", "DataError");
-                const staged = await importFlowVisualArchive(blob, { projectId, id: options.id, ...(input.signal ? { signal: input.signal } : {}), onProgress: value => input.onProgress?.(progress(value)) });
-                project = staged.project;
-                publishedProject = staged.publishedProject;
-                assets = staged.assets;
-                migrations = staged.migrations;
-                sourceName = project.name;
-                targetName = uniqueTargetName(options.library(), sourceName);
-                counts = entityCounts(project);
-            }
-            else {
-                const serialized = await source.text();
-                assertSignal(input.signal);
-                bundle = JSON.parse(serialized);
-                const rawProject = bundle.project, embedded = rawProject && Array.isArray(rawProject.conceptVisualAssets) && rawProject.conceptVisualAssets.some(value => Boolean(value && typeof value === "object" && typeof value.bytes === "string"));
-                if (embedded && rawProject) {
-                    const staged = await migrateVersion2VisualAssets({ format: String(bundle.format), version: Number(bundle.version), project: rawProject, ...(bundle.publishedProject && typeof bundle.publishedProject === "object" ? { publishedProject: bundle.publishedProject } : {}) }, { projectId, id: options.id });
-                    project = staged.project;
-                    publishedProject = staged.publishedProject;
-                    assets = staged.assets;
-                    migrations = staged.migrations;
-                    sourceName = String(bundle.sourceName ?? rawProject.name);
-                    targetName = uniqueTargetName(options.library(), sourceName);
-                    counts = entityCounts(project);
-                }
-                else {
-                    const staged = stageProjectImport(serialized, options.library(), { id: oldId => oldId === rawProject?.id ? projectId : options.id(oldId), ...(options.now ? { now: options.now } : {}) });
-                    sourceName = staged.sourceName;
-                    targetName = staged.targetName;
-                    projectId = staged.projectId;
-                    counts = staged.entityCounts;
-                    migrations = staged.migrations;
-                    blockers = staged.blockers;
-                }
-            }
-            let started = false, released = false;
-            return { formatVersion: archive ? 3 : Number(bundle?.version ?? 2), sourceName, targetName, projectId, entityCounts: counts, referenceIntegrity: blockers.length ? "blocked" : "valid", migrations, blockers, async commit(commitInput) { if (released)
-                    throw new Error("Inspected project import was released."); if (started)
-                    throw new Error("Inspected project import already started."); started = true; assertSignal(commitInput.signal); if (blockers.length)
-                    throw new Error("Project import is blocked."); commitInput.onProgress?.({ phase: "commit", completed: 0, total: 1, message: "Importing project into durable storage…" }); if (project)
-                    await options.repository.importProject(importBundle(project, publishedProject, sourceName), { projectId, name: commitInput.name }, assets);
-                else if (bundle)
-                    await options.repository.importProject(bundle, { projectId, name: commitInput.name });
-                else
-                    throw new Error("Inspected project import was released."); commitInput.onProgress?.({ phase: "commit", completed: 1, total: 1, message: "Project import committed." }); }, release() { released = true; project = undefined; publishedProject = undefined; assets = undefined; bundle = undefined; } };
+            return inspectedVersion3Import(options, await stageVersion3Import(options, source, input));
         },
     };
 }
