@@ -779,3 +779,26 @@ Feature: Data layer directional Flow specification graph runtime
       | Cart Page instance                       | Open schema contribution     | Page-frame schema contribution editor               | its first editor control        |
       | incomplete Cart Page instance            | Open Page-frame contribution | missing-property schema contribution editor         | the missing property's control |
       | add_payment_info Event contained by Cart | Edit examples                | missing-property occurrence example editor          | the missing example control     |
+
+  # Data layer directional Flow specification graph runtime 046
+  Scenario Outline: Data layer directional Flow specification graph runtime 046
+    Given the installed <target> schema contribution editor is open from production Checkout journey
+    And production Flow identity, contributor identity, canonical project bytes, Saved Draft revision, and Undo depth are recorded
+    When native browser input activates <destination> without activating Return to Flow
+    Then the installed schema contribution editor and host are hidden before the destination settles
+    And exactly one visible operable <destination> workspace renders with document focus inside its route
+    And no stale Page-instance or Event-occurrence contributor ID or scope is projected into that workspace
+    And rendered text contains no Initialize the canonical contribution before editing message
+    And the installed save status never renders Saving while canonical project bytes, Saved Draft revision, and Undo depth equal their recorded values
+    When actual controls reopen production Checkout journey without reloading the extension page
+    Then the installed Flow workspace is operable with the recorded Flow and contributor identities unchanged
+    When actual controls reopen the same <target> schema contribution
+    Then one composed-schema workspace renders for the same stable contributor ID and its Return to Flow control restores the Flow workspace
+
+    Examples:
+      | target                                    | destination                    |
+      | Cart Page instance                        | Applicability collection       |
+      | add_payment_info Event contained by Cart  | Shared Profiles collection     |
+      | Cart Page instance                        | Project overview               |
+      | add_payment_info Event contained by Cart  | Documentation                  |
+      | Cart Page instance                        | another Flow                   |

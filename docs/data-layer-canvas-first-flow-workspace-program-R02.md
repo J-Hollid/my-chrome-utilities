@@ -911,3 +911,77 @@ nested-Event menu open after release, and Page and Event Details controls retain
 their action and focus. Include any variance cause, remaining work, confidence,
 and forecast; continue bounded work under the QA pilot unless product scope,
 safety, or authority changes.
+
+## Flow instance schema route-lifecycle correction slice
+
+Directional Flow scenario 046 and its runtime partner make the Page-instance and
+Event-occurrence schema editor explicitly owned by the Flow route that opened
+it. This corrects the stale transient state observed when an operator uses
+ordinary project navigation instead of the editor's Return to Flow control.
+
+Opening an instance contribution records its originating Flow and stable
+contributor identity. If project navigation no longer addresses that same Flow,
+the editor closes before the destination settles and discards its transient
+graph selection, contributor scope, return focus, and Flow-return restoration
+state. The destination route then owns the main workspace and focus. This rule
+applies to top-level collections including Applicability and Shared Profiles,
+Project overview, Documentation, another Flow, project search, and entity
+creation or removal routes.
+
+Return to Flow remains a distinct intentional action. While the operator stays
+inside the originating Flow editor, it continues to restore the recorded canvas
+viewport, selection, contextual Details disclosure, scroll, and exact invoker
+focus. An ordinary departure does not apply that restoration to an unrelated
+destination. Navigating back to the original Flow without reloading must allow
+the same Page-instance or Event-occurrence contribution to open again under its
+stable identity.
+
+The existing Initialize the canonical contribution before editing message
+remains valid for a directly addressed canonical contributor that genuinely has
+no initialized contribution. It must not be used as a fallback for a stale Flow
+selection after route departure. Route cleanup performs no canonical
+initialization, project command, save, revision change, or Undo entry. This
+slice does not redesign project navigation, change composed-schema authoring,
+or alter canonical contribution semantics.
+
+**Development focus:** begin with the transient `graphSelection`,
+`graphSelectionScope`, `returnFocus`, and `flowReturn` lifecycle in
+`src/data-layer-layered-schema-ui.ts` and its ordering relative to
+`renderWorkspace()` in `src/specification-builder.ts`. Prefer one explicit
+route-reconciliation boundary that runs for every project route, including the
+profile-workspace branch that currently skips the layered editor's ordinary
+render call. Do not repair this by changing or hiding the initialization
+message. Direct lifecycle characterization belongs in the layered-schema UI
+tests; installed proof belongs beside Flow runtime 045 in
+`test/support/flow-workspace-r02-runtime.mjs` and must activate real project-tree
+controls, reopen the original Flow without page reload, and verify both Page and
+Event contributors.
+
+**QA impact:** ordinary inspection forecasts the bounded `flow_graph` and
+`layered_schema` packs because the defect crosses the Flow contributor editor
+and layered-schema route lifecycle. Exact changed-path planning remains
+authoritative and may add an owning navigation pack if the implementation must
+change a separately owned route boundary. The expected review-ready checkpoint
+is:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_graph \
+  --pack layered_schema \
+  --property \
+  --changed-since <approved-specification-commit> \
+  --prepare-evidence flow-instance-schema-route-lifecycle
+node scripts/package.mjs
+```
+
+The canonical task name is `flow-instance-schema-route-lifecycle`. This
+feature-mode slice does not authorize the all-20 gate. Routine RepoWise scouting
+remains stopped and is not part of the handoff.
+
+The implementation-and-review elapsed effort ceiling is 120 minutes from coder
+receipt to an architect `qa-ready` candidate. At 60 minutes, report whether
+Applicability and Shared Profiles render directly after Page and Event editor
+departure, whether returning and reopening works without reload, whether the
+initialization fallback remains correctly scoped, the cause of any variance,
+remaining work, confidence, and forecast. Continue bounded work under the QA
+pilot unless product scope, safety, or authority changes.

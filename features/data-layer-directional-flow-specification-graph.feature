@@ -781,3 +781,25 @@ Feature: Data layer directional Flow specification graph
       | Cart Page instance                       | Open schema contribution     | its Page-frame schema contribution editor          | its first editor control        |
       | incomplete Cart Page instance            | Open Page-frame contribution | its missing property's schema contribution editor | the missing property's control |
       | add_payment_info Event contained by Cart | Edit examples                | its missing property's occurrence example editor  | the missing example control     |
+
+  # Data layer directional Flow specification graph 046
+  Scenario Outline: Data layer directional Flow specification graph 046
+    Given <target> schema contribution editor is open from Checkout journey
+    And the current Flow, contributor identity, canonical project state, Draft revision, and Undo depth are recorded
+    When the operator leaves the Flow editor by activating <destination> without using Return to Flow
+    Then the schema contribution editor closes and <destination> becomes the visible operable workspace with focus in its route
+    And no stale Page-instance or Event-occurrence contributor context is rendered in the destination
+    And the message Initialize the canonical contribution before editing is absent
+    And navigation creates no project command and preserves the recorded canonical project state, Draft revision, and Undo depth
+    When the operator navigates back to Checkout journey without refreshing the browser
+    Then the Flow workspace is operable and the recorded Flow and contributor identities remain unchanged
+    When the operator opens the same <target> schema contribution again
+    Then its composed-schema workspace opens once for the same contributor and Return to Flow remains operable
+
+    Examples:
+      | target                                    | destination                    |
+      | Cart Page instance                        | Applicability collection       |
+      | add_payment_info Event contained by Cart  | Shared Profiles collection     |
+      | Cart Page instance                        | Project overview               |
+      | add_payment_info Event contained by Cart  | Documentation                  |
+      | Cart Page instance                        | another Flow                   |
