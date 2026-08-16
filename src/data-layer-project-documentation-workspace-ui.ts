@@ -25,7 +25,7 @@ import {
   documentationLogoArea as logoArea,
   documentationMoveVisible as moveVisible,
   renderDocumentationTable as renderTable,
-} from "./data-layer-project-documentation-workspace-ui-elements.js";
+} from "./project-documentation/workspace-ui-elements.js";
 import {
   consumeDocumentationIncompleteConfirmation,
   documentationExportPresentation,
@@ -33,10 +33,10 @@ import {
   type DocumentationExportAction,
   type DocumentationExportScope,
   type ProjectDocumentationPorts,
-} from "./data-layer-project-documentation-workspace-export-ui.js";
-import {createDocumentationSectionConfigurationRenderer} from "./data-layer-project-documentation-workspace-build-ui.js";
-import {renderDocumentationConceptConfiguration,renderDocumentationContent} from "./data-layer-project-documentation-workspace-content-ui.js";
-import {renderDocumentationTheme} from "./data-layer-project-documentation-workspace-theme-ui.js";
+} from "./project-documentation/workspace-export-ui.js";
+import {createDocumentationSectionConfigurationRenderer} from "./project-documentation/workspace-build-ui.js";
+import {renderDocumentationConceptConfiguration,renderDocumentationContent} from "./project-documentation/workspace-content-ui.js";
+import {renderDocumentationTheme} from "./project-documentation/workspace-theme-ui.js";
 
 export {consumeDocumentationIncompleteConfirmation,documentationExportPresentation};
 

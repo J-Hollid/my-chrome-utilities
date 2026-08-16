@@ -1,13 +1,13 @@
-import {conceptSectionHeading} from "./data-layer-flow-table-documentation-export.js";
+import {conceptSectionHeading} from "../data-layer-flow-table-documentation-export.js";
 import {
   PROJECT_DOCUMENTATION_LOGO_MAX_HEIGHT,
   PROJECT_DOCUMENTATION_LOGO_MAX_WIDTH,
   type ProjectDocumentationTheme,
-} from "./data-layer-project-documentation-records.js";
+} from "../data-layer-project-documentation-records.js";
 import {
   themeFingerprint,
   type ProjectDocumentationTable,
-} from "./data-layer-project-documentation-workspace.js";
+} from "../data-layer-project-documentation-workspace.js";
 
 export const documentationButton=(text:string,action:()=>void):HTMLButtonElement=>{
   const value=document.createElement("button");

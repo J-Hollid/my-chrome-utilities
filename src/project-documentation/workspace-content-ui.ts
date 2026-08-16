@@ -1,8 +1,8 @@
-import {reconcileProjectDocumentationConcepts,type ProjectDocumentationSources} from "./data-layer-project-documentation-compiler.js";
-import {projectCanonicalConcepts} from "./data-layer-layered-schema-project.js";
-import {createProjectDocumentationSet,type ProjectDocumentationSet} from "./data-layer-project-documentation-records.js";
-import type {ProjectState} from "./data-layer-specification-project.js";
-import {documentationButton as button,documentationControlInput as controlInput,documentationHeading as heading,documentationLabelled as labelled} from "./data-layer-project-documentation-workspace-ui-elements.js";
+import {reconcileProjectDocumentationConcepts,type ProjectDocumentationSources} from "../data-layer-project-documentation-compiler.js";
+import {projectCanonicalConcepts} from "../data-layer-layered-schema-project.js";
+import {createProjectDocumentationSet,type ProjectDocumentationSet} from "../data-layer-project-documentation-records.js";
+import type {ProjectState} from "../data-layer-specification-project.js";
+import {documentationButton as button,documentationControlInput as controlInput,documentationHeading as heading,documentationLabelled as labelled} from "./workspace-ui-elements.js";
 
 type SaveSet=(set:ProjectDocumentationSet,label:string)=>void;
 

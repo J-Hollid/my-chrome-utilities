@@ -1,7 +1,7 @@
-import {flowDocumentationPropertyPaths,type FlowDocumentationMetadata} from "./data-layer-flow-table-documentation-export.js";
-import {projectDocumentationProfileColumns,projectDocumentationProfilePaths,type ProjectDocumentationMatrixContext,type ProjectDocumentationSources} from "./data-layer-project-documentation-compiler.js";
-import type {ProjectDocumentationProfileColumn,ProjectDocumentationSection,ProjectDocumentationSet} from "./data-layer-project-documentation-records.js";
-import {declareStudioChoice,type StudioChoiceKey} from "./data-layer-studio-choice-controls.js";
+import {flowDocumentationPropertyPaths,type FlowDocumentationMetadata} from "../data-layer-flow-table-documentation-export.js";
+import {projectDocumentationProfileColumns,projectDocumentationProfilePaths,type ProjectDocumentationMatrixContext,type ProjectDocumentationSources} from "../data-layer-project-documentation-compiler.js";
+import type {ProjectDocumentationProfileColumn,ProjectDocumentationSection,ProjectDocumentationSet} from "../data-layer-project-documentation-records.js";
+import {declareStudioChoice,type StudioChoiceKey} from "../data-layer-studio-choice-controls.js";
 import {
   documentationButton as button,
   documentationCheckedOrder as checkedOrder,
@@ -10,7 +10,7 @@ import {
   documentationLabelled as labelled,
   documentationMove as move,
   documentationSetChecked as setChecked,
-} from "./data-layer-project-documentation-workspace-ui-elements.js";
+} from "./workspace-ui-elements.js";
 
 type MutateSection=(set:ProjectDocumentationSet,sectionId:string,update:(section:ProjectDocumentationSection)=>ProjectDocumentationSection,label:string)=>void;
 

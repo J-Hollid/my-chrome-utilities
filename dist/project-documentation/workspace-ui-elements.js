@@ -1,6 +1,6 @@
-import { conceptSectionHeading } from "./data-layer-flow-table-documentation-export.js";
-import { PROJECT_DOCUMENTATION_LOGO_MAX_HEIGHT, PROJECT_DOCUMENTATION_LOGO_MAX_WIDTH, } from "./data-layer-project-documentation-records.js";
-import { themeFingerprint, } from "./data-layer-project-documentation-workspace.js";
+import { conceptSectionHeading } from "../data-layer-flow-table-documentation-export.js";
+import { PROJECT_DOCUMENTATION_LOGO_MAX_HEIGHT, PROJECT_DOCUMENTATION_LOGO_MAX_WIDTH, } from "../data-layer-project-documentation-records.js";
+import { themeFingerprint, } from "../data-layer-project-documentation-workspace.js";
 export const documentationButton = (text, action) => {
     const value = document.createElement("button");
     value.type = "button";
@@ -127,4 +127,4 @@ export function renderDocumentationTable(value, theme) {
     applyThemeToTable(table, theme);
     return table;
 }
-//# sourceMappingURL=data-layer-project-documentation-workspace-ui-elements.js.map
+//# sourceMappingURL=workspace-ui-elements.js.map

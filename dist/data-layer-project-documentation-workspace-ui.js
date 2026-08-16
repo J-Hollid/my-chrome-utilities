@@ -2,11 +2,11 @@ import { compileProjectDocumentation, projectDocumentationSources } from "./data
 import { createProjectDocumentationSet, createProjectDocumentationTheme, } from "./data-layer-project-documentation-records.js";
 import { projectDocumentationSnapshotStale, selectProjectDocumentationTables, themeFingerprint, } from "./data-layer-project-documentation-workspace.js";
 import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
-import { documentationButton as button, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled, documentationLogoArea as logoArea, documentationMoveVisible as moveVisible, renderDocumentationTable as renderTable, } from "./data-layer-project-documentation-workspace-ui-elements.js";
-import { consumeDocumentationIncompleteConfirmation, documentationExportPresentation, renderDocumentationExport, } from "./data-layer-project-documentation-workspace-export-ui.js";
-import { createDocumentationSectionConfigurationRenderer } from "./data-layer-project-documentation-workspace-build-ui.js";
-import { renderDocumentationConceptConfiguration, renderDocumentationContent } from "./data-layer-project-documentation-workspace-content-ui.js";
-import { renderDocumentationTheme } from "./data-layer-project-documentation-workspace-theme-ui.js";
+import { documentationButton as button, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled, documentationLogoArea as logoArea, documentationMoveVisible as moveVisible, renderDocumentationTable as renderTable, } from "./project-documentation/workspace-ui-elements.js";
+import { consumeDocumentationIncompleteConfirmation, documentationExportPresentation, renderDocumentationExport, } from "./project-documentation/workspace-export-ui.js";
+import { createDocumentationSectionConfigurationRenderer } from "./project-documentation/workspace-build-ui.js";
+import { renderDocumentationConceptConfiguration, renderDocumentationContent } from "./project-documentation/workspace-content-ui.js";
+import { renderDocumentationTheme } from "./project-documentation/workspace-theme-ui.js";
 export { consumeDocumentationIncompleteConfirmation, documentationExportPresentation };
 const defaultPorts = () => ({
     writePlain: async (value) => navigator.clipboard.writeText(value),

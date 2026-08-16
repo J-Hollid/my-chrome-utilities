@@ -1,5 +1,5 @@
-import { createProjectDocumentationSet, createProjectDocumentationTheme, parseProjectDocumentationTheme, readProjectDocumentationLogoFile, serializeProjectDocumentationTheme } from "./data-layer-project-documentation-records.js";
-import { documentationButton as button, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled, documentationLogoArea as logoArea, renderDocumentationTable as renderTable } from "./data-layer-project-documentation-workspace-ui-elements.js";
+import { createProjectDocumentationSet, createProjectDocumentationTheme, parseProjectDocumentationTheme, readProjectDocumentationLogoFile, serializeProjectDocumentationTheme } from "../data-layer-project-documentation-records.js";
+import { documentationButton as button, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled, documentationLogoArea as logoArea, renderDocumentationTable as renderTable } from "./workspace-ui-elements.js";
 const fileDataUrl = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.addEventListener("load", () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Unreadable logo")));
@@ -90,4 +90,4 @@ export function renderDocumentationTheme(input) {
     host.prepend(name);
     host.append(save, preview, copy, paste, pasteButton, copyOutput, sampleHost);
 }
-//# sourceMappingURL=data-layer-project-documentation-workspace-theme-ui.js.map
+//# sourceMappingURL=workspace-theme-ui.js.map

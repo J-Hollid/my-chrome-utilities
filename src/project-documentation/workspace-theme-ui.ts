@@ -1,7 +1,7 @@
-import {createProjectDocumentationSet,createProjectDocumentationTheme,parseProjectDocumentationTheme,readProjectDocumentationLogoFile,serializeProjectDocumentationTheme,type ProjectDocumentationDraft,type ProjectDocumentationLogoFile,type ProjectDocumentationSet,type ProjectDocumentationTheme} from "./data-layer-project-documentation-records.js";
-import type {ProjectDocumentationTable} from "./data-layer-project-documentation-workspace.js";
-import type {ProjectDocumentationPorts} from "./data-layer-project-documentation-workspace-export-ui.js";
-import {documentationButton as button,documentationControlInput as controlInput,documentationHeading as heading,documentationLabelled as labelled,documentationLogoArea as logoArea,renderDocumentationTable as renderTable} from "./data-layer-project-documentation-workspace-ui-elements.js";
+import {createProjectDocumentationSet,createProjectDocumentationTheme,parseProjectDocumentationTheme,readProjectDocumentationLogoFile,serializeProjectDocumentationTheme,type ProjectDocumentationDraft,type ProjectDocumentationLogoFile,type ProjectDocumentationSet,type ProjectDocumentationTheme} from "../data-layer-project-documentation-records.js";
+import type {ProjectDocumentationTable} from "../data-layer-project-documentation-workspace.js";
+import type {ProjectDocumentationPorts} from "./workspace-export-ui.js";
+import {documentationButton as button,documentationControlInput as controlInput,documentationHeading as heading,documentationLabelled as labelled,documentationLogoArea as logoArea,renderDocumentationTable as renderTable} from "./workspace-ui-elements.js";
 
 const fileDataUrl=(file:ProjectDocumentationLogoFile):Promise<string>=>new Promise((resolve,reject)=>{
   const reader=new FileReader();

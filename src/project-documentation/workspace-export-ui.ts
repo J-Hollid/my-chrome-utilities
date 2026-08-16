@@ -1,7 +1,7 @@
-import {declareStudioChoice} from "./data-layer-studio-choice-controls.js";
-import type {ProjectDocumentationDiagnostic,ProjectDocumentationSelection,ProjectDocumentationSnapshot} from "./data-layer-project-documentation-workspace.js";
-import {renderProjectDocumentationClipboard,writeProjectDocumentationWorkbook} from "./data-layer-project-documentation-workspace.js";
-import {documentationButton as button,documentationHeading as heading,documentationLabelled as labelled} from "./data-layer-project-documentation-workspace-ui-elements.js";
+import {declareStudioChoice} from "../data-layer-studio-choice-controls.js";
+import type {ProjectDocumentationDiagnostic,ProjectDocumentationSelection,ProjectDocumentationSnapshot} from "../data-layer-project-documentation-workspace.js";
+import {renderProjectDocumentationClipboard,writeProjectDocumentationWorkbook} from "../data-layer-project-documentation-workspace.js";
+import {documentationButton as button,documentationHeading as heading,documentationLabelled as labelled} from "./workspace-ui-elements.js";
 
 export type DocumentationExportScope="current"|"selected"|"complete";
 export type DocumentationExportAction="copy"|"download";

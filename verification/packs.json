@@ -4190,11 +4190,11 @@
       "src/data-layer-project-documentation-compiler.ts",
       "src/data-layer-project-documentation-records.ts",
       "src/data-layer-project-documentation-workspace.ts",
-      "src/data-layer-project-documentation-workspace-build-ui.ts",
-      "src/data-layer-project-documentation-workspace-content-ui.ts",
-      "src/data-layer-project-documentation-workspace-export-ui.ts",
-      "src/data-layer-project-documentation-workspace-theme-ui.ts",
-      "src/data-layer-project-documentation-workspace-ui-elements.ts",
+      "src/project-documentation/workspace-build-ui.ts",
+      "src/project-documentation/workspace-content-ui.ts",
+      "src/project-documentation/workspace-export-ui.ts",
+      "src/project-documentation/workspace-theme-ui.ts",
+      "src/project-documentation/workspace-ui-elements.ts",
       "src/data-layer-project-documentation-workspace-ui.ts"
     ],
     "dependencies": [

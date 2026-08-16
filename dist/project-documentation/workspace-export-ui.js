@@ -1,6 +1,6 @@
-import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
-import { renderProjectDocumentationClipboard, writeProjectDocumentationWorkbook } from "./data-layer-project-documentation-workspace.js";
-import { documentationButton as button, documentationHeading as heading, documentationLabelled as labelled } from "./data-layer-project-documentation-workspace-ui-elements.js";
+import { declareStudioChoice } from "../data-layer-studio-choice-controls.js";
+import { renderProjectDocumentationClipboard, writeProjectDocumentationWorkbook } from "../data-layer-project-documentation-workspace.js";
+import { documentationButton as button, documentationHeading as heading, documentationLabelled as labelled } from "./workspace-ui-elements.js";
 export function consumeDocumentationIncompleteConfirmation(confirmed) {
     return { confirmedForAction: confirmed, confirmedAfterAction: false };
 }
@@ -103,4 +103,4 @@ export function renderDocumentationExport(input) {
     }
     input.host.append(Object.assign(document.createElement("output"), { textContent: input.feedback }));
 }
-//# sourceMappingURL=data-layer-project-documentation-workspace-export-ui.js.map
+//# sourceMappingURL=workspace-export-ui.js.map

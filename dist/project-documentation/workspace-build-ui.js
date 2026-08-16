@@ -1,7 +1,7 @@
-import { flowDocumentationPropertyPaths } from "./data-layer-flow-table-documentation-export.js";
-import { projectDocumentationProfileColumns, projectDocumentationProfilePaths } from "./data-layer-project-documentation-compiler.js";
-import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
-import { documentationButton as button, documentationCheckedOrder as checkedOrder, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled, documentationMove as move, documentationSetChecked as setChecked, } from "./data-layer-project-documentation-workspace-ui-elements.js";
+import { flowDocumentationPropertyPaths } from "../data-layer-flow-table-documentation-export.js";
+import { projectDocumentationProfileColumns, projectDocumentationProfilePaths } from "../data-layer-project-documentation-compiler.js";
+import { declareStudioChoice } from "../data-layer-studio-choice-controls.js";
+import { documentationButton as button, documentationCheckedOrder as checkedOrder, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled, documentationMove as move, documentationSetChecked as setChecked, } from "./workspace-ui-elements.js";
 export function createDocumentationSectionConfigurationRenderer(mutateSection) {
     const renderOrderedChoices = (host, input) => {
         const selected = new Set(input.selected), list = document.createElement("ol");
@@ -128,4 +128,4 @@ export function createDocumentationSectionConfigurationRenderer(mutateSection) {
             host.append(heading(3, "Configure Overview"), Object.assign(document.createElement("p"), { textContent: "Overview derives the project name, purpose, and website." }));
     };
 }
-//# sourceMappingURL=data-layer-project-documentation-workspace-build-ui.js.map
+//# sourceMappingURL=workspace-build-ui.js.map

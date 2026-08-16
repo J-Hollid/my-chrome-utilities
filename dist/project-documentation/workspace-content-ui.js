@@ -1,7 +1,7 @@
-import { reconcileProjectDocumentationConcepts } from "./data-layer-project-documentation-compiler.js";
-import { projectCanonicalConcepts } from "./data-layer-layered-schema-project.js";
-import { createProjectDocumentationSet } from "./data-layer-project-documentation-records.js";
-import { documentationButton as button, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled } from "./data-layer-project-documentation-workspace-ui-elements.js";
+import { reconcileProjectDocumentationConcepts } from "../data-layer-project-documentation-compiler.js";
+import { projectCanonicalConcepts } from "../data-layer-layered-schema-project.js";
+import { createProjectDocumentationSet } from "../data-layer-project-documentation-records.js";
+import { documentationButton as button, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled } from "./workspace-ui-elements.js";
 export function renderDocumentationContent(host, set, available, saveSet) {
     const flowSearch = controlInput("flowSearch", "", "search"), profileSearch = controlInput("profileSearch", "", "search");
     flowSearch.setAttribute("aria-label", "Search Flows");
@@ -61,4 +61,4 @@ export function renderDocumentationConceptConfiguration(set, state, saveSet) {
     region.append(list, labelled("Include concept subheadings", headings));
     return region;
 }
-//# sourceMappingURL=data-layer-project-documentation-workspace-content-ui.js.map
+//# sourceMappingURL=workspace-content-ui.js.map
