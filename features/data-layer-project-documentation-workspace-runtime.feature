@@ -71,7 +71,8 @@ Feature: Data layer project documentation workspace runtime
   # Data layer project documentation workspace runtime 007
   Scenario: Data layer project documentation workspace runtime 007
     When actual controls select Sitewide and Opened Article
-    Then each installed Profile section has independent property ordering
+    Then each installed Profile section has independent property filtering
+    And parsed rows follow durable Documentation Set concept order and stable path order within each concept
     And headings are Property, Description, Required, Allowed values, Example, and Comments
     And rendered rows equal each Profile's effective documented schema
     And serialized matrix configuration contains no Site Profile reference
@@ -401,3 +402,27 @@ Feature: Data layer project documentation workspace runtime
     Then focus moves to Preview and the Preview panel becomes visible
     And accessibility inspection finds Build aria-selected false and Preview aria-selected true
     And the next Tab input enters Preview content without visiting hidden Build controls
+
+  # Data layer project documentation workspace runtime 033
+  Scenario Outline: Data layer project documentation workspace runtime 033
+    Given production <profile> has <property_total> effective properties across Identity, Commerce, Marketing, Technical, and Ungrouped
+    And durable Set concept order is Identity, Commerce, Marketing, Technical, and Ungrouped with Technical excluded
+    And serialized <profile> selection contains <concept_included> of <concept_total> <selected_concept> property paths
+    When actual controls select <profile> in Build
+    Then DOM inspection finds five concept-first Profile-row entries in durable Set order and no mounted property choices
+    And each concept entry exposes its Profile included count and Set-wide exclusion state
+    And DOM inspection finds no per-property ordering control
+    When actual controls activate the <selected_concept> concept entry
+    Then a bounded detail surface mounts <concept_total> path-ordered property choices with <concept_included> checked
+    And activating concept-level Include all, Exclude all, or Reset changes only <profile> section paths
+    And Set concept bytes, <other_profile> section paths, and publication bytes remain unchanged
+    When actual controls search by property path and activate Included, Excluded, or Overrides filters
+    Then installed concept results expose source-derived matching-property counts
+    And only matching properties for the active concept remain visible
+    And repository bytes remain unchanged by search and filtering
+    And at 1280 pixels concept navigation and detail are simultaneously visible while at 360 pixels they open one at a time without horizontal overflow
+
+    Examples:
+      | profile        | property_total | selected_concept | concept_total | concept_included | other_profile  |
+      | Sitewide       | 312            | Commerce         | 53            | 47               | Opened Article |
+      | Opened Article | 428            | Identity         | 71            | 64               | Sitewide       |

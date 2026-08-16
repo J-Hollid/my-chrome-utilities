@@ -44,6 +44,18 @@ while the matrix is selected. Set-wide concept configuration lives under
 `Document settings` and explains that it affects Site Profile tables and the Data
 capture matrix but not Flow value maps.
 
+When the selected section is a Site Profile, its row control is concept-first
+rather than one flat list of effective property paths. A concept navigator shows
+the Documentation Set order, Set-wide inclusion state, and the current Profile's
+included-property count. Selecting a concept is navigation only and opens a
+bounded property-detail surface for Profile-local exceptions. Only that active
+concept's property choices are mounted. Search matches concept names and property
+paths, while All, Included, Excluded, and Overrides filters change visibility
+only. Concept-level Include all, Exclude all, and Reset actions update only the
+selected Profile. Set-wide concept inclusion and order remain under `Document
+settings` and continue to govern every selected Profile and the matrix. Individual
+properties retain stable path order and have no reorder controls.
+
 The applied theme is edited from the persistent header rather than a primary
 workspace tab. A contextual theme panel contains Brand, Typography, Table, and
 Header and footer groups. Its live sample uses the selected documentation
@@ -96,6 +108,16 @@ each non-empty concept as a full-width divider and that concept's rows. Concept
 dividers never repeat the standard column headings. This order and filtering are
 identical in preview, Excel, semantic rich clipboard HTML, and the plain-text
 fallback.
+
+Profile-local property filtering is subordinate to that Set-wide policy. A
+Profile may include a subset of a globally included concept without changing any
+other Profile or the matrix. A globally excluded concept remains visibly
+identified in the Profile navigator but cannot contribute rows. `Ungrouped` is a
+normal explicit concept at the primary level rather than an undifferentiated tail
+of property controls. At 1280 pixels the concept navigator and selected-concept
+detail are shown together; at 360 pixels they open one at a time. Search results
+retain concept context and matching counts, and the detail surface scrolls without
+extending the outer workspace by hundreds of property rows.
 
 ## Concept correction
 
@@ -205,6 +227,11 @@ checklist, and the unexplained permanent incomplete-export checkbox. It changes
 no Documentation Set, Theme, compiler, snapshot, workbook, or clipboard data
 model.
 
+The approved concept-first follow-up also supersedes the flat Profile property
+list and its per-property reorder buttons. It reuses Set concept order and
+inclusion plus each Profile section's existing selected paths; it introduces no
+new persistence or output model.
+
 The implementation development focus is the installed Documentation path in
 `test/browser-packs/flow-table-documentation-export.mjs`, with a small focused
 unit target added only if tab, preview-scope, or export-confirmation state is
@@ -219,6 +246,19 @@ installed browser path, with remaining Preview and Export work itemized. At the
 checkpoint and ceiling, report elapsed time, completed behavior, variance cause,
 remaining work, confidence, and forecast; continue by default while scope remains
 this bounded workspace correction and the completion path stays credible.
+
+For the concept-first follow-up, the development focus is the installed Site
+Profile configuration path in
+`test/browser-packs/flow-table-documentation-export.mjs`, with a small unit target
+only for extracted concept-presentation or filter state. The forecast QA impact
+remains the canonical `flow_export` pack plus the package command; exact
+changed-path planning is authoritative and no all-20 checkpoint runs in feature
+mode. The elapsed engineering effort ceiling is four hours. By the two-hour
+checkpoint, a production fixture with at least 300 properties must render only
+concept entries at rest, open one concept's Profile-local property detail, and
+exercise search plus one concept-level bulk action at 1280 and 360 pixels. Report
+elapsed time, variance, remaining behavior, confidence, and forecast; continue by
+default while this correction remains bounded and causally understood.
 
 The focused verification boundary is the existing `flow_export` checkpoint
 and its package command. Installed evidence must navigate through the project-level

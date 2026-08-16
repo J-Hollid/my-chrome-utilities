@@ -72,7 +72,8 @@ Feature: Data layer project documentation workspace
   # Data layer project documentation workspace 007
   Scenario: Data layer project documentation workspace 007
     When Sitewide and Opened Article Site Profiles are selected
-    Then each Profile has one independently ordered property-table section
+    Then each Profile has one independently filtered property-table section
+    And its rows follow the Documentation Set concept order and stable path order within each concept
     And its default columns are Property, Description, Required, Allowed values, Example, and Comments
     And every row derives from that Profile's effective documented schema
     And Site Profiles create no capture-matrix columns
@@ -415,3 +416,26 @@ Feature: Data layer project documentation workspace
     Then focus moves to Preview and its panel is activated
     And Build is exposed as unselected while Preview is exposed as selected
     And the next Tab key moves into Preview content rather than hidden Build content
+
+  # Data layer project documentation workspace 034
+  Scenario Outline: Data layer project documentation workspace 034
+    Given <profile> contains <property_total> effective properties across Identity, Commerce, Marketing, Technical, and Ungrouped
+    And the Documentation Set orders those concepts as Identity, Commerce, Marketing, Technical, and Ungrouped while excluding Technical
+    And <profile> includes <concept_included> of its <concept_total> <selected_concept> properties
+    When the operator selects <profile> in Build
+    Then Profile rows first presents those five concepts in Documentation Set order with Profile included counts and Set-wide exclusion states
+    And no property choice or per-property ordering control is mounted until a concept is selected
+    And concept order remains a Set-wide Document settings control that applies to every selected Profile and the Data capture matrix
+    When the operator opens the <selected_concept> property detail
+    Then its bounded detail shows <concept_total> properties in stable path order with <concept_included> included
+    And Include all, Exclude all, and Reset actions affect only <profile>'s <selected_concept> properties
+    And opening <selected_concept> does not change inclusion, concept order, or <other_profile>
+    When the operator searches for a property path and filters Included, Excluded, or Overrides
+    Then matching concepts remain primary and expose their matching-property counts
+    And only matching properties of the selected concept are shown
+    And search and filters change no saved inclusion or ordering
+
+    Examples:
+      | profile        | property_total | selected_concept | concept_total | concept_included | other_profile  |
+      | Sitewide       | 312            | Commerce         | 53            | 47               | Opened Article |
+      | Opened Article | 428            | Identity         | 71            | 64               | Sitewide       |
