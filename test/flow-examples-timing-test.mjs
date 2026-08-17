@@ -516,9 +516,12 @@ const drawRuntimeProgram=flowWorkspaceR02Runtime({projectId:"project",flowId:"fl
 assert.match(drawRuntimeProgram,
   /pointer\(target,'pointermove'.*pointer\(target,'pointerup'/u,
   "the installed relationship helper dispatches acquisition and release at the measured port, avoiding canvas-edge auto-pan");
-assert.ok(drawRuntimeProgram.indexOf("pointer(source,'pointerdown'")<
-  drawRuntimeProgram.indexOf("const targetRect=target.getBoundingClientRect()"),
-"the helper measures its target after source focus may scroll the canvas");
+const paintedPortReadiness=drawRuntimeProgram.indexOf("'visible painted connection ports'");
+const sourcePointerDown=drawRuntimeProgram.indexOf("pointer(source,'pointerdown'");
+const targetPointerMove=drawRuntimeProgram.indexOf("pointer(target,'pointermove'");
+assert.ok(paintedPortReadiness>=0&&paintedPortReadiness<sourcePointerDown&&
+  sourcePointerDown<targetPointerMove,
+"the helper waits for live painted in-viewport ports before dispatching the connection gesture");
 const wrappedPersistence=drawRuntimeProgram.indexOf("'wrapped Section'");
 const wrappedGeneration=drawRuntimeProgram.indexOf("'wrapped Section current rendered generation'");
 const drawActivation=drawRuntimeProgram.indexOf("click('Draw Section',surface())");
@@ -599,6 +602,7 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     sectionPostMenuTargetRepair=context.causalCategory==="other:current rendered Section target after menu close",
     plannerShardWiring=context.causalCategory==="other:Flow planner shard wiring",
     propertyRegistryBoundary=context.causalCategory==="other:Flow property registry boundary",
+    paintedPortContractRepair=context.causalCategory==="other:stale readiness regression contract",
     fixture=targetSelectionRepair?{id:"flow-structured-target-selection-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{requestedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",
@@ -665,6 +669,13 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
           terminalDiagnostic:"Event example seed conflict"},
         expectedRepairResult:{freshRevisionAttempts:4,rebuildsMutation:true,
           terminalDiagnostic:"Event example seed conflict after 4 fresh revisions"}}
+      :paintedPortContractRepair?{id:"flow-painted-port-readiness-contract-v1",
+        causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+        input:{gestureDispatch:"synthetic pointer events",viewportPreparation:["Focus Canvas","Fit Flow"]},
+        expectedPreRepairFailure:{requiresNativeFocusScrollOrdering:true,
+          validatesPaintedViewportReadiness:false},
+        expectedRepairResult:{requiresNativeFocusScrollOrdering:false,
+          validatesPaintedViewportReadiness:true}}
       :{id:"flow-readiness-logical-budget-v1",
         causalCategory:"readiness or settling",diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
         input:{target:"FLOW_GRAPH_LEGACY_TARGET",logicalBudgetMilliseconds:120000,
@@ -715,6 +726,10 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         ?{freshRevisionAttempts:4,
           rebuildsMutation:/for\(let attempt=0;attempt<4;attempt\+=1\)\{const base=await repository\.loadProject/u.test(eventExampleSeedProgram),
           terminalDiagnostic:eventExampleSeedProgram.includes("Event example seed conflict after 4 fresh revisions")?"Event example seed conflict after 4 fresh revisions":"missing"}
+      :paintedPortContractRepair
+        ?{requiresNativeFocusScrollOrdering:false,
+          validatesPaintedViewportReadiness:paintedPortReadiness>=0&&
+            paintedPortReadiness<sourcePointerDown&&sourcePointerDown<targetPointerMove}
       :{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
         usesLogicalRemainingBudget:/Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u
           .test(flowGraphAdapterSource)},
