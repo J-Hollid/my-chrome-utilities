@@ -27,11 +27,11 @@ The settled-candidate verification workflow is integrated at
 | Flow click and drag-ownership correction | QA-integrated at `2b2cf06b45` on 2026-08-16 | Preserve directional Flow scenarios 043–045 and their runtime partners; cumulative promotion to `master` remains a separate release decision. |
 | Flow instance schema route-lifecycle correction | Active by user approval on 2026-08-16 | Implement directional Flow scenario 046 and its runtime partner under `docs/data-layer-canvas-first-flow-workspace-program-R02.md` as task `flow-instance-schema-route-lifecycle`; use the bounded `flow_graph` and `layered_schema` pack forecast and do not run the all-20 gate. |
 | Project Documentation workspace UX correction | Active follow-up approved by the user on 2026-08-16 | Preserve the QA-integrated Build, Preview, and Export workspace while replacing the flat Site Profile property list with the concept-first Profile filtering and ordering control under `docs/data-layer-project-documentation-workspace-program-R01.md` and its product/runtime feature pair; use the focused `flow_export` boundary. This does not resume an older rejected Project Documentation implementation lineage. |
-| Verification run-intent and deferred-incident corrections | Monotonic acceptance-session preflight integrated at `03e4157b83`; live registry/planner order correction active under the same approved contract | Implement Shell-only task `deferred-acceptance-session-order`, preserving strict planner order and artifact identity while comparing registry completeness as an exact set. |
+| Verification run-intent and deferred-incident corrections | QA-integrated through live registry/planner order correction `cad10c898c` | Preserve exact-set registry completeness, strict receipt/planner identity and artifact pairing, and immutable deferred incidents; no further enabling correction is active. |
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program; the combined Project Library transport isolation and Flow visual-asset portability delivery is QA-integrated at `1b192105a8` | Preserve that settled transport, content-addressed visual-body, and version-3 archive behavior. No additional VTD-008 controller slice is active. |
-| Documentation template library | Paused after clean candidate `f2f598d4` confirmed the bounded 10-pack/247-task plan and exposed registry/planner ordering in inherited preflight; all product candidates remain patch references | QA-integrate `deferred-acceptance-session-order`, then automatically reissue `documentation-templates` from its exact QA descendant using `f2f598d4` only as a patch reference. |
+| Documentation template library | Ready to resume after QA-integrated order correction `cad10c898c`; all earlier product candidates remain patch references | Reissue stable task `documentation-templates` from the exact correction scorecard descendant, using `f2f598d4` only as a patch reference and requiring fresh governed 10-pack/247-task evidence. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Deferred and inactive | The existing two-worker order is within about six seconds of balanced after lock wait is removed; scheduling needed for a possible third worker is bounded inside VTD-017. |
 | VTD-012 registry and planner modularization | Deferred and inactive | Reconsider after broad final-gate and receipt-persistence costs are reduced. |
@@ -72,11 +72,12 @@ session history predates the six newly activated template contracts. Correction
 `03e4157b83` recognizes only verified monotonic expansion during repair
 preflight, but its deterministic fixture missed the valid difference between
 declaration-ordered pack features and runtime-first planner identity. Candidate
-`f2f598d4` confirms that live mismatch without changing product scope. Task
-`deferred-acceptance-session-order` corrects the QA preflight from clean QA;
-`f2f598d4`, `00f3e45d`, `e8e5fd48`, and `7f9c8a1121` remain patch references
-only. Stable product task `documentation-templates` resumes automatically from
-the correction's exact QA descendant. No all-20 feature checkpoint is
+`f2f598d4` confirms that live mismatch without changing product scope. Order
+correction `cad10c898c` is now QA-integrated and preserves strict planner
+identity while treating registry completeness as an exact set. `f2f598d4`,
+`00f3e45d`, `e8e5fd48`, and `7f9c8a1121` remain patch references only. Stable
+product task `documentation-templates` resumes automatically from the
+correction scorecard's exact QA descendant. No all-20 feature checkpoint is
 authorized.
 
 ## Feature-development throughput authority

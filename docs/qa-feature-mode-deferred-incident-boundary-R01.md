@@ -1,6 +1,6 @@
 # QA feature-mode deferred-incident boundary R01
 
-Status: QA-integrated at `66dcdfd5d6`; Flow relationship port snapping resumed
+Status: QA-integrated through acceptance-session order correction `cad10c898c`
 
 Prepared: 2026-08-13
 
@@ -341,3 +341,44 @@ The correction expectation is forty-five minutes, with a status update after
 twenty minutes. After architect `qa-ready` integration, record the scorecard and
 automatically reissue `documentation-templates` from that exact QA descendant,
 using `f2f598d4` only as a patch reference.
+
+### Settled live registry/planner order correction
+
+Specification `e0b6baf0bd` was handed to the coder at 14:52:21Z on
+2026-08-17. The unchanged candidate `cad10c898c` reached the refactorer at
+15:04:21Z, the architect at 15:11:22Z, and QA at 15:18:25Z. The role intervals
+were about 12 minutes for coding and focused evidence, 7 minutes 1 second for
+refactoring review, 5 minutes 10 seconds for architecture review and evidence
+refresh, and 1 minute 53 seconds for QA admission. The handoff-to-integration
+interval was about 26 minutes 3 seconds, inside the forty-five-minute
+expectation and before the twenty-minute reporting point would have required an
+in-progress update from any one role.
+
+The candidate changed only `scripts/verification-task-succession.mjs`, its
+direct test, and the Shell process-contract test. The initial fresh Shell-only
+review checkpoint ran from 14:58:44Z to 15:03:27Z: 4 minutes 42 seconds for all
+72 tasks, including properties, acceptance-session execution, checkpoint
+validation, and package proof. Architect exact-tree refresh used conserved
+checkpoint evidence from 15:15:47Z to 15:15:55Z and again bound 72 passing
+tasks. There were no verification failures, candidate repair commits, or
+invalidated receipts. No full or all-20 run occurred, so final-gate time,
+successful full runs, and invalidated full runs are all zero for this
+feature-mode correction. One coder handoff draft with an impermissible body and
+one refactorer draft with full-length commit identifiers were rejected by the
+handoff validator and immediately corrected; neither changed code or evidence.
+
+The production-planner regression proves exact, unique registry membership
+independently of declaration order while preserving byte-structured receipt
+identity, exact generated/IR artifact pairing, and historical planner order as
+an unchanged subsequence. Missing, extra, duplicated, removed, replaced, or
+reordered planner features remain blocking. Inherited incident
+`d723a7c4-1116-4887-b60a-21aded1ab5d8` and product incident
+`0f9c4990-a10a-47ef-878b-fcceff3a690f` remain immutable and unresolved; their
+terminal proof obligations are preserved.
+
+Recommendation: continue with stable product task `documentation-templates`
+from the exact QA scorecard descendant of `cad10c898c`, using `f2f598d4` only
+as a patch reference. Require its governed incident repair, fresh exact
+10-pack/247-task product receipt, and package proof. This correction supplies no
+passing Documentation-template claim and does not authorize an all-20 feature
+run or another enabling QA slice.

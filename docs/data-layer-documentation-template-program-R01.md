@@ -297,9 +297,9 @@ that the accepted preflight compared declaration-ordered pack features with the
 runtime-first canonical planner identity. User-approved correction task
 `deferred-acceptance-session-order` makes only registry completeness
 order-insensitive; source receipt identity, planner order, artifact pairing, and
-historical subsequence remain strict. After its QA integration, resume this
-product automatically from the exact correction scorecard descendant and use
-`f2f598d4` only as a patch reference.
+historical subsequence remain strict. The correction is QA-integrated at
+`cad10c898c`. Resume this product automatically from the exact correction
+scorecard descendant and use `f2f598d4` only as a patch reference.
 
 **Ownership-readiness launch:** the resumed intent preflight names the integrated
 shared surfaces `src/project-asset-body-contribution.ts`,
