@@ -1,9 +1,9 @@
 # QA verification granularity ratchet R01
 
-Status: the initial ratchet and first-use mapping repair are QA-integrated at
-`066ea284de` and `8d3cf5012c`; a standing-authorized second assessment is active
-from QA `1f68d463d7` for two durable-runtime staging paths found after the
-Documentation-template production repair
+Status: the initial ratchet, first-use mapping repair, and durable-runtime
+staging repair are QA-integrated at `066ea284de`, `8d3cf5012c`, and
+`06222ff00f`; the Documentation-template product resumes automatically from the
+staging-repair scorecard descendant
 
 Prepared: 2026-08-17
 
@@ -456,3 +456,48 @@ fallback per path, atomic failure/retry status, exact preparation packs and
 tasks, conservation status, failures, remaining work, confidence, and forecast.
 Continue while the approved behavior is unchanged and a bounded safe completion
 path remains.
+
+### Settled durable-runtime staging repair result
+
+Specification `397cdd27de` was handed to the coder at 18:34:55Z on 2026-08-17
+and received four seconds later. Final candidate `06222ff00f` reached the
+refactorer at 20:02:50Z, the architect at 20:06:33Z, and the specifier at
+20:11:50Z; QA fast-forward followed at about 20:13Z. Handoff-to-QA time was about
+1 hour 39 minutes, inside the four-hour ceiling and before the two-hour status
+checkpoint.
+
+The preparation extracts `src/durable-project/project-asset-body-staging.ts` as
+the reusable seam. It records `integrated-seam` dispositions for both
+`src/data-layer-durable-project-runtime.ts` and
+`src/durable-project/runtime-core.ts`. A seam-only change selects exactly
+`durable_project_repository`, its `flow_export` Documentation consumer, and the
+existing `shell` consumer. The preparation's own current/base evidence remained
+conservative at eight packs and 217 tasks because it changed the broad runtime
+and repository paths; it did not use its new slice to narrow the same range.
+
+Independent review found two substantive atomicity defects. Initial candidate
+`ebf5fe6033` allowed an already queued unrelated Draft to claim a body staged
+later and did not bind selective conflict resolution to the originating
+operation. Candidate `7faf9fea61` added operation identity and queue ownership,
+but could still retain nonconflicting metadata while discarding its body during
+a mixed selective merge. Final candidate `06222ff00f` makes a body-bearing Draft
+operation all-or-nothing when conflict selection would drop any of its patches.
+It also proves retry, reapply, reviewed rejection, queued ordering, project
+isolation, generation safety, transaction rollback after body writes begin, and
+the two retained/rejected merge outcomes.
+
+Three complete eight-pack checkpoints passed all 217 tasks with properties and
+package proof in about 11 minutes 55 seconds, 11 minutes 51 seconds, and 11
+minutes 52 seconds. The first two passing trees were superseded by the review
+repairs above. Architect exact-tree refresh reused the final conserved artifacts
+in about seven seconds. There was no failed verification run and no all-20
+attempt. Exact-pack task closures, existing terminal-full obligations,
+quarantine behavior, generic save and route behavior, visual bodies, Undo/Redo,
+schema saves, and archive compatibility remain conserved.
+
+Recommendation: automatically reissue stable task `documentation-templates`
+from this scorecard's exact QA commit and reconstruct stopped candidate
+`d139725a1a` as task-owned patches only. The product must use the integrated
+staging capability and leave both broad runtime files unchanged. Its fresh exact
+preflight is authoritative; the earlier 10-pack result is a conservation target,
+not a numeric waiver.

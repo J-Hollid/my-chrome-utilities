@@ -331,6 +331,22 @@ Undo/Redo, conflict behavior, and archive portability remain unchanged. A fresh
 exact preflight is mandatory before product evidence; the earlier 10-pack plan
 is a conservation target, not a numeric exemption.
 
+Preparation candidate `06222ff00f` is QA-integrated. It binds each staged body
+generation to one project Draft operation before queue execution, retains exact
+bytes through failure and retry, commits bytes and patches in one repository
+transaction, and rejects the whole body-bearing operation when selective merge
+would separate any of its metadata patches. Its reusable seam has the exact
+`durable_project_repository` to `flow_export` to `shell` consumer chain; both
+broad runtime paths have reviewed integrated-seam dispositions and remain
+conservatively owned for unrelated changes.
+
+Reissue stable product task `documentation-templates` automatically from the
+exact scorecard descendant of `06222ff00f`, using `d139725a1a` only as a patch
+reference. Reconstruct all accepted Template Library, Excel, rich-page,
+assignment, preview, export, portability, and installed-browser behavior, but
+reuse the integrated runtime staging API rather than changing either broad
+runtime file. Run a fresh exact readiness preflight before evidence.
+
 **Ownership-readiness launch:** the resumed intent preflight names the integrated
 shared surfaces `src/project-asset-body-contribution.ts`,
 `src/project-documentation/workspace-contribution.ts`, and

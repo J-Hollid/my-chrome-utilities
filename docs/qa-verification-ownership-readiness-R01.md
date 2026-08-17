@@ -1,9 +1,8 @@
 # QA verification ownership readiness R01
 
 Status: approved by the user on 2026-08-17 and QA-integrated at `b8194b517e`;
-standing activation continues. The first Documentation-template mapping repair
-is QA-integrated at `8d3cf5012c`; a second automatic assessment is active from
-QA `1f68d463d7` for two newly observed durable-runtime staging paths
+standing activation continues. Documentation-template mapping repairs are
+QA-integrated through durable-runtime staging seam `06222ff00f`
 
 Prepared: 2026-08-17
 
@@ -317,3 +316,11 @@ each path. The product commit remains a patch reference and is automatically
 reconstructed from the resulting QA head. This causal disposition, rather than
 the catalogue's numeric size, is what prevents recurrence without weakening
 verification.
+
+The second assessment settled at `06222ff00f`. Both broad paths now have
+reviewed integrated-seam dispositions to
+`src/durable-project/project-asset-body-staging.ts`; a resumed product therefore
+does not loop on the same cause. Future seam-only work selects the durable owner,
+the exact Documentation consumer, and Shell, while arbitrary broad-runtime
+changes retain their conservative parent closure. The preparation itself passed
+its unchanged eight-pack/217-task current/base plan and did not self-narrow.
