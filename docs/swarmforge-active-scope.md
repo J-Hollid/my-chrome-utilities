@@ -27,11 +27,11 @@ The settled-candidate verification workflow is integrated at
 | Flow click and drag-ownership correction | QA-integrated at `2b2cf06b45` on 2026-08-16 | Preserve directional Flow scenarios 043–045 and their runtime partners; cumulative promotion to `master` remains a separate release decision. |
 | Flow instance schema route-lifecycle correction | Active by user approval on 2026-08-16 | Implement directional Flow scenario 046 and its runtime partner under `docs/data-layer-canvas-first-flow-workspace-program-R02.md` as task `flow-instance-schema-route-lifecycle`; use the bounded `flow_graph` and `layered_schema` pack forecast and do not run the all-20 gate. |
 | Project Documentation workspace UX correction | Active follow-up approved by the user on 2026-08-16 | Preserve the QA-integrated Build, Preview, and Export workspace while replacing the flat Site Profile property list with the concept-first Profile filtering and ordering control under `docs/data-layer-project-documentation-workspace-program-R01.md` and its product/runtime feature pair; use the focused `flow_export` boundary. This does not resume an older rejected Project Documentation implementation lineage. |
-| Verification run-intent and deferred-incident corrections | QA-integrated through `66dcdfd5d6` | Ordinary diagnostics remain local and eligible earlier or parallel deferrals remain master obligations without blocking unrelated feature work. Reopen one only if focused work naturally reproduces it or the slice intentionally changes its contract. |
+| Verification run-intent and deferred-incident corrections | QA-integrated through `66dcdfd5d6`; monotonic acceptance-session repair-preflight correction approved on 2026-08-17 | Implement `deferred-acceptance-session-preflight` as a Shell-only, fail-closed extension for eligible deferred task-scoped incidents, then resume Documentation templates automatically. |
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program; the combined Project Library transport isolation and Flow visual-asset portability delivery is QA-integrated at `1b192105a8` | Preserve that settled transport, content-addressed visual-body, and version-3 archive behavior. No additional VTD-008 controller slice is active. |
-| Documentation template library | Approved product ready to resume after mapping repair `8d3cf5012c`; stopped candidates `e8e5fd48` and `7f9c8a1121` remain patch references only | Reissue stable task `documentation-templates` from the scorecard commit after `8d3cf5012c`, reconstruct through the integrated seams or reviewed parent fallbacks, and require fresh exact preflight before evidence. |
+| Documentation template library | Paused after clean candidate `00f3e45d` reached a bounded 10-pack/247-task plan and exposed inherited acceptance-session repair preflight; earlier candidates remain patch references | QA-integrate `deferred-acceptance-session-preflight`, then automatically reissue stable task `documentation-templates` from that exact QA descendant using `00f3e45d` only as a patch reference. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Deferred and inactive | The existing two-worker order is within about six seconds of balanced after lock wait is removed; scheduling needed for a possible third worker is bounded inside VTD-017. |
 | VTD-012 registry and planner modularization | Deferred and inactive | Reconsider after broad final-gate and receipt-persistence costs are reduced. |
@@ -65,11 +65,14 @@ The ordered Documentation-template batch is active outside VTD-008. Its
 behavior-preserving ownership readiness and campsite ratchet are QA-integrated
 through `066ea284de`; first-use mapping repair `8d3cf5012c` adds causal automatic
 assessment, five durable seam-or-fallback dispositions, and a reusable
-Documentation asset-body contribution. Stopped candidates `e8e5fd48` and
-`7f9c8a1121` remain patch references only. Stable product task
-`documentation-templates` resumes from the scorecard commit immediately after
-`8d3cf5012c`; fresh exact preflight, not the disproved 12-task forecast, controls
-its evidence. No all-20 feature checkpoint is authorized.
+Documentation asset-body contribution. Reissued candidate `00f3e45d` confirms a
+bounded 10-pack/247-task exact plan, but its attributable Shell incident cannot
+yet launch governed repair because inherited deferred `flow_export` acceptance
+session history predates the six newly activated template contracts. Candidate
+`00f3e45d`, `e8e5fd48`, and `7f9c8a1121` remain patch references only. Task
+`deferred-acceptance-session-preflight` repairs that QA-owned preflight from clean
+QA; stable product task `documentation-templates` resumes automatically from its
+exact QA descendant. No all-20 feature checkpoint is authorized.
 
 ## Feature-development throughput authority
 

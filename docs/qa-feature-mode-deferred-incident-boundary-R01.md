@@ -184,3 +184,83 @@ That evidence invocation includes package proof. Any plan expansion beyond the
 shell pack is a blocking scope defect. The elapsed implementation expectation
 is one hour, with an analysis update after thirty minutes. These are reporting
 expectations, not intervention gates. No Gherkin mutation is authorized.
+
+## Monotonic acceptance-session expansion repair-preflight correction
+
+User-approved task `deferred-acceptance-session-preflight` corrects the remaining
+task-scoped counterpart without broadening the same-target exception. An
+inherited incident with an eligible repair and a
+`terminal-verification-deferred` disposition must not prevent an unrelated
+current incident's governed repair merely because new feature contracts were
+added to the same canonical acceptance session. Treat the inherited incident as
+pending its existing terminal assessment when, and only when, all of these
+conditions are proved:
+
+- its diagnosed boundary and retry scope are the complete task, not a browser
+  target;
+- its immutable source receipt and historical pack registry bind the exact
+  former task identity;
+- exactly one current task has the same stable key, stage, pack, executable,
+  environment, required capabilities, and acceptance-pack runner identity;
+- both identities are acceptance sessions for the same pack; and
+- every historical feature and its generated/IR artifact pair remains present
+  exactly once in the current session, with the current difference consisting
+  only of additional complete feature/artifact pairs.
+
+This is a repair-preflight classification, not inferred task succession. It
+returns no succession mapping, passing evidence, repair transition, deferral,
+or incident mutation. Direct task-succession resolution remains fail-closed and
+still requires an explicit conserved graph edge. The current incident still
+requires its own causal regression, repair-focused receipt, fresh review
+evidence, and package proof.
+
+Reject missing or unverifiable source history; removal, replacement, or
+duplication of a historical feature or artifact; changed task key, stage, pack,
+runner, executable, environment, or capability; non-acceptance tasks;
+ambiguous current identities; noneligible or nondeferred incidents; and any
+current-candidate incident. These cases remain blocking rather than being
+treated as monotonic expansion.
+
+The deterministic regression uses inherited incident
+`d723a7c4-1116-4887-b60a-21aded1ab5d8`: its four-feature `flow_export`
+acceptance session remains intact while the six Documentation-template
+contracts are added. It must permit governed repair of current incident
+`0f9c4990-a10a-47ef-878b-fcceff3a690f`, while fixtures for each rejection above
+remain blocked. Do not read either live incident as mutable test setup or write
+an incident transition; reproduce their immutable shapes in deterministic test
+fixtures.
+
+Implement only the smallest classification and regression changes in
+`scripts/verification-task-succession.mjs`, its direct test, and the Shell
+process contract. Do not change
+`scripts/verification-same-target-planner-projection.mjs`,
+`scripts/run-focused-acceptance.mjs`, `verification/packs.json`, product code,
+or incident records. No all-20 checkpoint is authorized.
+
+Use these direct development checks:
+
+```sh
+node scripts/verification-task-succession-test.mjs
+node test/verification-process-contract-test.mjs
+```
+
+After the candidate is settled, produce one Shell-only review-ready receipt:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack shell \
+  --property \
+  --changed-since <approved-specification-commit> \
+  --prepare-evidence deferred-acceptance-session-preflight
+```
+
+The evidence invocation includes package proof. Any expansion beyond the Shell
+pack is a blocking scope defect. The elapsed implementation expectation is one
+hour, with a checkpoint after thirty minutes. Continue while the rule remains
+fail-closed and a bounded completion path exists; stop for user direction if it
+would weaken incident evidence or require product, runner, pack, or incident
+state changes.
+
+After architect `qa-ready` integration, record the correction scorecard and
+automatically reissue stable product task `documentation-templates` from that
+exact QA descendant. Candidate `00f3e45d` remains a patch reference only.

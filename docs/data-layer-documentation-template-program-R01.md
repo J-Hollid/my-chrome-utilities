@@ -276,6 +276,22 @@ disposition may authorize a wider exact result when no truthful split exists; it
 cannot be mistaken for the disproved 12-task forecast or require another product
 approval.
 
+Reissued candidate `00f3e45d` confirms that repair: exact readiness is
+`bounded-ready` at 10 packs and 247 canonical tasks. Its first review checkpoint
+failed only the inherited mapping-repair assertion that still expected the six
+template contracts to remain planned; the candidate repairs that assertion and
+passes the direct process and product checks. Governed repair of resulting
+incident `0f9c4990-a10a-47ef-878b-fcceff3a690f` is paused because eligible
+deferred task-scoped incident `d723a7c4-1116-4887-b60a-21aded1ab5d8` refers to
+the same `flow_export` acceptance session before those six contracts were added.
+
+User-approved task `deferred-acceptance-session-preflight` supplies the narrow,
+fail-closed monotonic acceptance-session rule in
+`docs/qa-feature-mode-deferred-incident-boundary-R01.md`. It changes no template
+behavior or incident state. After that correction reaches QA, reconstruct and
+resume `documentation-templates` automatically from its exact QA descendant,
+using `00f3e45d` only as a patch reference.
+
 **Ownership-readiness launch:** the resumed intent preflight names the integrated
 shared surfaces `src/project-asset-body-contribution.ts`,
 `src/project-documentation/workspace-contribution.ts`, and
