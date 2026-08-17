@@ -137,7 +137,7 @@ async function evaluate(socket, expression) {
   return result.result.value;
 }
 
-async function extensionId(port) {
+async function extensionTarget(port) {
   for (let attempt = 0; attempt < 160; attempt += 1) {
     const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then(
       (response) => response.json(),
@@ -148,7 +148,7 @@ async function extensionId(port) {
         url.startsWith("chrome-extension://") &&
         new URL(url).pathname === "/background.js",
     );
-    if (worker) return new URL(worker.url).hostname;
+    if (worker) return worker;
     await wait(25);
   }
   throw new Error("Unpacked extension did not load");
@@ -213,6 +213,7 @@ const evidenceDirectory = path.resolve(
 );
 await mkdir(evidenceDirectory, { recursive: true });
 let side;
+let fixture;
 try {
   const port = await new Promise((resolve, reject) => {
     let output = "";
@@ -230,12 +231,13 @@ try {
     });
     chrome.once("error", reject);
   });
-  const id = await extensionId(port);
+  const worker = await extensionTarget(port);
+  const id = new URL(worker.url).hostname;
   const base = `chrome-extension://${id}/`;
-  side = await pageSocket(port, `${base}side-panel.html`);
+  fixture = await pageSocket(port, `${base}specification-builder.html`);
 
   const seeded = await evaluate(
-    side,
+    fixture,
     `(async()=>{
       const {createSpecificationProject}=await import("./data-layer-specification-project.js");
       const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js");
@@ -267,7 +269,9 @@ try {
     })()`,
   );
   assert.equal(seeded, true, "three durable projects must seed");
-  await side.call("Page.reload", { ignoreCache: true });
+  fixture.close();
+  fixture = undefined;
+  side = await pageSocket(port, `${base}side-panel.html`);
   await waitForProjects(side);
   await evaluate(
     side,
@@ -472,6 +476,7 @@ try {
     )}\n`,
   );
 } finally {
+  fixture?.close();
   side?.close();
   await stopHeadlessChrome(chrome, 1500);
   await removeChromeProfile(profile, { targetId:"twatility-projects" });
