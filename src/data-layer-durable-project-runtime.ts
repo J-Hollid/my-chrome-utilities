@@ -4,6 +4,7 @@ import {createSpecificationProject,type ProjectState} from "./data-layer-specifi
 import {PROJECT_LIBRARY_STORAGE_KEY,restoreProjectLibrary,serializeProjectLibrary,type ProjectLibrary,type ProjectLibraryRecord,type ProjectLibraryTransportHost} from "./data-layer-project-library.js";
 import {CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY,restoreCanonicalProjectEnvelope,restoreCanonicalProjectState,serializeCanonicalProjectState} from "./data-layer-specification-repository.js";
 import {createPageProjectHistory,durableConflictSemanticField,durableDraftCommand,durablePatchField,durableProjectRouteForWorkspace,DurablePageHistoryConflict,LEGACY_PROJECT_KEYS,migrateLegacyProjectStorage,openIndexedDbProjectRepository,type DurableDraftCommand,type DurableDraftConflict,type DurableLoadedProject,type DurableProjectRepository,type DurableProjectRoute,type DurableSavedSchemaBatchResult} from "./data-layer-durable-project-repository.js";
+import type {ProjectAssetBodyIdentity} from "./project-asset-body-contribution.js";
 export interface LegacyStorage extends ProjectLibraryTransportHost{getItem(key:string):string|null;setItem(key:string,value:string):void;removeItem(key:string):void;}
 export interface DurableRuntimeFailedSave{projectId:string;projectName:string;state:ProjectState;command:DurableDraftCommand;error:unknown;conflict?:DurableDraftConflict;}
 export interface DurableSchemaBatch{schemas:Record<string,unknown>[];upserts:{schema:Record<string,unknown>;baseToken?:string}[];deletes:{schemaId:string;baseToken:string}[];label:string;names:string[];}
@@ -18,6 +19,8 @@ export interface DurableProjectRuntime{
   refreshProject(projectId:string):Promise<void>;
   settled(scope?:"all"|"project"|"schema"):Promise<void>;
   settledProjectCommand(projectId:string,label:string):Promise<void>;
+  stageProjectAssetBody(identity:ProjectAssetBodyIdentity,body:Blob):void;
+  discardStagedProjectAssetBody(identity:ProjectAssetBodyIdentity):void;
   subscribe(listener:(projection:DurableProjectProjection)=>void):()=>void;
   failedSave():DurableRuntimeFailedSave|undefined;
   failedSchemaSave():DurableRuntimeFailedSchemaSave|undefined;

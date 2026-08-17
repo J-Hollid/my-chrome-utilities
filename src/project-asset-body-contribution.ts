@@ -11,6 +11,12 @@ export interface ProjectAssetBodyIdentity {
   digest:string;
 }
 
+export interface ProjectAssetBodyCommandItem {
+  identity:ProjectAssetBodyIdentity;
+  body:Blob;
+  stagingToken:string;
+}
+
 export interface ProjectAssetBodyStore {
   storeProjectAssetBody(identity:ProjectAssetBodyIdentity, body:Blob):Promise<void>;
   loadProjectAssetBody(identity:ProjectAssetBodyIdentity):Promise<Blob>;

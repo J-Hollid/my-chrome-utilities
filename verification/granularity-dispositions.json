@@ -42,6 +42,26 @@
       ],
       "reviewAuthority": "qa-integration",
       "reason": "The installed Documentation contribution owns future Documentation composition while the global application controller remains unchanged by the resumed product."
+    },
+    {
+      "task": "documentation-templates",
+      "path": "src/data-layer-durable-project-runtime.ts",
+      "decision": "integrated-seam",
+      "replacementPaths": [
+        "src/durable-project/project-asset-body-staging.ts"
+      ],
+      "reviewAuthority": "qa-integration",
+      "reason": "The public runtime exposes the generic staging capability while project scoping, byte copying, generation identity, and pending-body lifecycle live in the independently tested durable staging seam."
+    },
+    {
+      "task": "documentation-templates",
+      "path": "src/durable-project/runtime-core.ts",
+      "decision": "integrated-seam",
+      "replacementPaths": [
+        "src/durable-project/project-asset-body-staging.ts"
+      ],
+      "reviewAuthority": "qa-integration",
+      "reason": "The runtime controller delegates body selection and lifecycle to the generic staging seam and retains only command orchestration needed for atomic durable saves and recovery."
     }
   ]
 }

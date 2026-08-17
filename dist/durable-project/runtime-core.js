@@ -3,9 +3,10 @@ import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnv
 import { createPageProjectHistory, durableConflictSemanticField, durableDraftCommand, durablePatchField, durableProjectRouteForWorkspace, DurablePageHistoryConflict, LEGACY_PROJECT_KEYS, migrateLegacyProjectStorage } from "../data-layer-durable-project-repository.js";
 import { cleanLibrary, cleanState, historyLabel, placeholder, record, routeWithRetainedHydration, same } from "./runtime-helpers.js";
 import { createVersion3ProjectLibraryTransport } from "./project-library-transport-v2.js";
+import { createProjectAssetBodyStaging } from "./project-asset-body-staging.js";
 export async function createDurableProjectRuntime(repository, legacy, startup = {}) {
     const migration = await migrateLegacyProjectStorage(repository, legacy);
-    const metadata = await repository.listProjectMetadata(), activeProjectId = await repository.activeProjectId(), loaded = new Map(), partialRoutes = new Map(), routeGenerations = new Map(), memory = new Map(), listeners = new Set(), schemaTokens = new Map(), projectInstalls = new Map(), locallySavingProjects = new Set(), feedInstalls = new Set(), observedProjectSequences = new Map(metadata.map(({ projectId, draftSequence }) => [projectId, draftSequence])), observedActiveTokens = new Set(), activeInstalls = new Map(), observedSchemaChanges = new Set(), pageHistories = new Map(), pendingCanonicalRevisions = new Map(), projects = Object.fromEntries(metadata.map((entry) => [entry.projectId, placeholder(entry)])), library = { format: "my-chrome-utilities.project-library", version: 1, ...(activeProjectId ? { activeProjectId } : {}), projects, singletonMigrated: true };
+    const metadata = await repository.listProjectMetadata(), activeProjectId = await repository.activeProjectId(), loaded = new Map(), partialRoutes = new Map(), routeGenerations = new Map(), memory = new Map(), listeners = new Set(), schemaTokens = new Map(), projectInstalls = new Map(), locallySavingProjects = new Set(), feedInstalls = new Set(), observedProjectSequences = new Map(metadata.map(({ projectId, draftSequence }) => [projectId, draftSequence])), observedActiveTokens = new Set(), activeInstalls = new Map(), observedSchemaChanges = new Set(), pageHistories = new Map(), pendingCanonicalRevisions = new Map(), assetBodyStaging = createProjectAssetBodyStaging(), projects = Object.fromEntries(metadata.map((entry) => [entry.projectId, placeholder(entry)])), library = { format: "my-chrome-utilities.project-library", version: 1, ...(activeProjectId ? { activeProjectId } : {}), projects, singletonMigrated: true };
     let currentLibrary = library, tail = Promise.resolve(), latest = tail, failed, failedSchema, deferredActiveContext, projectionChanged = (_force = false) => { }, lastProjectionSignature = "";
     const pageHistory = (projectId) => { let value = pageHistories.get(projectId); if (!value) {
         value = createPageProjectHistory();
@@ -76,15 +77,16 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         projectionChanged();
         throw error;
     } };
-    const persistState = async (projectId, pending, label = "Project edit", retrying = false, recordHistory = true, commandRoute = partialRoutes.get(projectId)) => { if (failed && !retrying)
-        throw failed.error; const expanded = await expandPartial(projectId, pending, commandRoute), base = expanded.base, next = expanded.next; if (same(base.state.project, next.project) && same(base.state.draft, next.draft))
-        return; const command = durableDraftCommand(base, next, { commandId: `projection:${crypto.randomUUID()}`, label }); locallySavingProjects.add(projectId); try {
+    const persistState = async (projectId, pending, label = "Project edit", retrying = false, recordHistory = true, commandRoute = partialRoutes.get(projectId), retryBodies) => { if (failed && !retrying)
+        throw failed.error; const expanded = await expandPartial(projectId, pending, commandRoute), base = expanded.base, next = expanded.next, attachment = assetBodyStaging.attach(projectId, retryBodies); if (same(base.state.project, next.project) && same(base.state.draft, next.draft))
+        return; const command = { ...durableDraftCommand(base, next, { commandId: `projection:${crypto.randomUUID()}`, label }), ...(attachment.bodies.length ? { assetBodies: attachment.bodies } : {}) }; locallySavingProjects.add(projectId); try {
         const result = await repository.saveDraft(command);
         if (result.status === "conflict") {
             const error = new DOMException(`${result.label} conflicts at ${result.conflictingFields.join(", ")}.`, "AbortError");
             failed = { projectId, projectName: next.project.name, state: structuredClone(next), command, error, conflict: structuredClone(result) };
             throw error;
         }
+        attachment.commit();
         failed = undefined;
         if (recordHistory)
             pageHistory(projectId).push(command);
@@ -250,7 +252,7 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         throw new Error("Migration source choice did not commit."); };
     const retryFailedSave = async () => { const pending = failed; if (!pending)
         throw new Error("There is no failed durable Draft to retry."); if (pending.conflict)
-        throw new Error("Resolve the visible conflicting fields before retrying this Draft."); loaded.delete(pending.projectId); enqueue(`Retry ${pending.command.label}`, () => persistState(pending.projectId, pending.state, pending.command.label, true)); await latest; await installCurrent(pending.projectId, partialRoutes.get(pending.projectId)); projectionChanged(true); const deferred = deferredActiveContext; deferredActiveContext = undefined; if (deferred)
+        throw new Error("Resolve the visible conflicting fields before retrying this Draft."); loaded.delete(pending.projectId); enqueue(`Retry ${pending.command.label}`, () => persistState(pending.projectId, pending.state, pending.command.label, true, true, partialRoutes.get(pending.projectId), pending.command.assetBodies)); await latest; await installCurrent(pending.projectId, partialRoutes.get(pending.projectId)); projectionChanged(true); const deferred = deferredActiveContext; deferredActiveContext = undefined; if (deferred)
         await installActive(deferred); };
     const retryFailedSchemaSave = async () => { const pending = failedSchema; if (!pending)
         throw new Error("There is no failed Saved Schema Library batch to retry."); if (pending.conflict)
@@ -259,7 +261,8 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         throw new Error("A failed Saved Schema Library batch can only be rejected."); if (!failedSchema)
         throw new Error("There is no failed Saved Schema Library batch to resolve."); failedSchema = undefined; await refreshSchemas(); projectionChanged(true); };
     const resolveFailedSave = async (strategy, pendingFields = []) => { const pending = failed; if (!pending)
-        throw new Error("There is no failed durable Draft to resolve."); if (strategy === "reject") {
+        throw new Error("There is no failed durable Draft to resolve."); const attachment = assetBodyStaging.attach(pending.projectId, pending.command.assetBodies); if (strategy === "reject") {
+        attachment.discard();
         failed = undefined;
         await installCurrent(pending.projectId, partialRoutes.get(pending.projectId));
         projectionChanged();
@@ -269,7 +272,7 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         throw new Error("A newer value blocks this window Undo or Redo; reject it instead of overwriting the newer Saved Draft."); const current = await repository.loadProject(pending.projectId), selectedSemanticFields = new Set(pendingFields.map(durableConflictSemanticField)), patches = pending.command.patches.filter((patch) => { const field = durablePatchField(patch); return !pending.conflict.conflictingFields.includes(field) || strategy === "reapply" || selectedSemanticFields.has(durableConflictSemanticField(field)); }), command = { ...structuredClone(pending.command), baseToken: current.draftToken, baseSequence: current.draftSequence, patches, pendingState: cleanState(current.state), commandId: `resolve:${pending.command.commandId}` }, result = await repository.saveDraft(command); if (result.status === "conflict") {
         failed = { ...pending, conflict: result, error: new DOMException(`${result.label} still conflicts at ${result.conflictingFields.join(", ")}.`, "AbortError") };
         throw failed.error;
-    } failed = undefined; pageHistory(pending.projectId).push(command); await installCurrent(pending.projectId, partialRoutes.get(pending.projectId)); projectionChanged(); };
+    } attachment.commit(); failed = undefined; pageHistory(pending.projectId).push(command); await installCurrent(pending.projectId, partialRoutes.get(pending.projectId)); projectionChanged(); };
     const exportUnsavedDraft = () => { if (!failed)
         throw new Error("There is no failed durable Draft to export."); return JSON.stringify({ format: "my-chrome-utilities.unsaved-durable-project", version: 1, projectId: failed.projectId, command: { id: failed.command.commandId, label: failed.command.label, baseToken: failed.command.baseToken }, project: failed.state.project, draft: failed.state.draft }); };
     const exportUnsavedSchemas = () => { if (!failedSchema)
@@ -312,6 +315,6 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
     const settledProjectCommand = async (projectId, label) => { await settled("project"); const acknowledgement = pageHistory(projectId).snapshot().undo.find((entry) => entry.label === label); if (!acknowledgement)
         throw new Error(`${label} was not acknowledged in durable page history.`); };
     storage.projectLibraryTransport = createVersion3ProjectLibraryTransport({ repository, library: () => currentLibrary, id: oldId => `import:${crypto.randomUUID()}:${oldId.split(":")[0]}` });
-    return { repository, storage, ensureProject, prepareProjectRoute, ensureProjectRoute, refreshProject, settled, settledProjectCommand, subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); }, failedSave: () => failed ? structuredClone(failed) : undefined, failedSchemaSave: () => failedSchema ? structuredClone(failedSchema) : undefined, retryFailedSave, retryFailedSchemaSave, resolveFailedSchemaSave, resolveFailedSave, exportUnsavedDraft, exportUnsavedSchemas, historyInspection: projectId => structuredClone(pageHistory(projectId).snapshot()), canUndo: projectId => pageHistory(projectId).snapshot().undo.length > 0, canRedo: projectId => pageHistory(projectId).snapshot().redo.length > 0, undo: projectId => applyHistory(projectId, "undo"), redo: projectId => applyHistory(projectId, "redo"), resolveMigration, migration };
+    return { repository, storage, ensureProject, prepareProjectRoute, ensureProjectRoute, refreshProject, settled, settledProjectCommand, stageProjectAssetBody: (identity, body) => assetBodyStaging.stage(identity, body), discardStagedProjectAssetBody: identity => assetBodyStaging.discard(identity), subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); }, failedSave: () => failed ? structuredClone(failed) : undefined, failedSchemaSave: () => failedSchema ? structuredClone(failedSchema) : undefined, retryFailedSave, retryFailedSchemaSave, resolveFailedSchemaSave, resolveFailedSave, exportUnsavedDraft, exportUnsavedSchemas, historyInspection: projectId => structuredClone(pageHistory(projectId).snapshot()), canUndo: projectId => pageHistory(projectId).snapshot().undo.length > 0, canRedo: projectId => pageHistory(projectId).snapshot().redo.length > 0, undo: projectId => applyHistory(projectId, "undo"), redo: projectId => applyHistory(projectId, "redo"), resolveMigration, migration };
 }
 //# sourceMappingURL=runtime-core.js.map

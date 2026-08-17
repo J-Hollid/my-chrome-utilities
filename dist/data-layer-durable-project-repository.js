@@ -506,6 +506,8 @@ export class DurableProjectRepository {
     }
     async saveDraft(command) {
         this.fail(command.label);
+        const assetBodies = (command.assetBodies ?? []).map(item => { if (item.identity.projectId !== command.projectId)
+            throw new DOMException("A Draft asset body cannot cross its Project boundary.", "DataError"); return { ...item, key: projectAssetBodyStorageKey(item.identity), body: item.body.slice(0, item.body.size, item.body.type) }; });
         const stores = ["projectMetadata", "projectRoots", "projectEntityMetadata", "projectEntities", "flowGraphs", "fixtures", "releases", "visualAssetMetadata", "visualAssetBodies", "changeFeed"], result = await this.backend.transaction(stores, "readwrite", async (transaction) => {
             const metadata = await transaction.get("projectMetadata", command.projectId);
             if (!metadata)
@@ -528,6 +530,10 @@ export class DurableProjectRepository {
                 else
                     await transaction.put(patch.store, patch.key, next);
                 changed.set(`${patch.store}/${patch.key}`, { store: patch.store, key: patch.key });
+            }
+            for (const item of assetBodies) {
+                await transaction.put("visualAssetBodies", item.key, { digest: item.identity.digest, body: item.body });
+                changed.set(`visualAssetBodies/${item.key}`, { store: "visualAssetBodies", key: item.key });
             }
             const root = await transaction.get("projectRoots", command.projectId);
             if (!root)

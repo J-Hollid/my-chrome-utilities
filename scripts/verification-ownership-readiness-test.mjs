@@ -211,17 +211,28 @@ const stoppedCandidatePaths=[
   "src/flow-visual-asset-portability.ts",
   "src/specification-builder.ts",
 ];
+const durableStagingPaths=[
+  "src/data-layer-durable-project-runtime.ts",
+  "src/durable-project/runtime-core.ts",
+];
 const documentationIntent={version:1,baseCommit:"a".repeat(40),task:"documentation-templates",approvedPackIds:["shell","flow_export","project_management","durable_project_repository"],likelyPaths:stoppedCandidatePaths,proposedPrefixes:[]};
 const replayed=await intentOwnershipReadiness({intent:documentationIntent,packs:plannedRegistry});
 assert.equal(replayed.plannedPackIds.length,13,"the real stopped-candidate paths reproduce the known 13-pack variance");
 assert.equal(replayed.classification,"granularity-assessment-required","unreviewed credible variance routes assessment without --within-pack");
 assert.deepEqual(replayed.unresolvedExpansionCauses,stoppedCandidatePaths.slice().sort());
 const dispositions=await loadGranularityDispositions();
-assert.equal(dispositions.dispositions.filter(({task})=>task==="documentation-templates").length,5,"every causal path has one durable disposition");
-const resumed=await intentOwnershipReadiness({intent:documentationIntent,packs:plannedRegistry,granularityDispositions:dispositions});
+assert.equal(dispositions.dispositions.filter(({task})=>task==="documentation-templates").length,7,"every first-use and durable-staging causal path has one durable disposition");
+const secondAssessmentIntent={...documentationIntent,likelyPaths:[...stoppedCandidatePaths,...durableStagingPaths]};
+const beforeSecondDisposition=await intentOwnershipReadiness({intent:secondAssessmentIntent,packs:plannedRegistry,granularityDispositions:{version:1,dispositions:dispositions.dispositions.filter(({path})=>!durableStagingPaths.includes(path))}});
+assert.equal(beforeSecondDisposition.classification,"granularity-assessment-required");
+assert.deepEqual(beforeSecondDisposition.unresolvedExpansionCauses,durableStagingPaths.slice().sort(),"the second assessment is caused only by the two newly observed broad runtime paths");
+const resumed=await intentOwnershipReadiness({intent:secondAssessmentIntent,packs:plannedRegistry,granularityDispositions:dispositions});
 assert.equal(resumed.classification,"bounded-ready","reviewed dispositions prevent the same product from looping through preparation");
 assert.equal(resumed.unresolvedExpansionCauses.length,0);
 assert.equal(resumed.expansionCauses.every(({reviewedDisposition})=>reviewedDisposition!==null),true,"bounded readiness reports rather than hides the reviewed variance");
+const stagingPlan=planVerification(plannedRegistry,{changedPaths:["src/durable-project/project-asset-body-staging.ts"],includeProperties:true});
+assert.deepEqual(stagingPlan.packIds,["durable_project_repository","flow_export","shell"],"the reusable staging seam reaches only its durable owner and exact Documentation/Shell consumers");
+assert.equal(stagingPlan.verificationSliceConservation.durable_project_repository.conserved,true);
 assert.throws(()=>validateGranularityDispositions({version:1,dispositions:[{task:"documentation-templates",path:"src/specification-builder.ts",decision:"integrated-seam",replacementPaths:[],reviewAuthority:"qa-integration",reason:"missing seam"}]}),/exact reviewed seam or parent fallback/u);
 const firstUsePlans=["src/project-asset-body-contribution.ts","src/project-documentation/workspace-contribution.ts","build-delivered-dependencies.json"]
   .map(path=>planVerification(plannedRegistry,{changedPaths:[path],includeProperties:true}));
@@ -248,7 +259,7 @@ console.log(JSON.stringify({verificationOwnershipReadinessAcceptance:{
     slices:{stableIdentity:true,exactSources:true,directTasks:true,prerequisites:true,consumers:true,observable:true,conserved:firstUsePlans.every(plan=>Object.values(plan.verificationSliceConservation).every(({conserved})=>conserved)),exactAndTerminalUnchanged:true},
     mapping:{focused:true,parentFallback:true,historicalUnion:true,invalidFallback:true,ownershipUnavailableStops:true},
     prefixes:{declarationOnly:true,proposalValidated:true,currentConflictRejected:true,exactCommittedPaths:true,noSideEffects:true},
-    routing:{automaticNote:true,pausedNotCompleted:true,reissuedFromQa:true,ordinaryChannel:true,knownCandidateReplay:replayed.plannedPackIds.length===13,durableDispositions:dispositions.dispositions.length===5},
+    routing:{automaticNote:true,pausedNotCompleted:true,reissuedFromQa:true,ordinaryChannel:true,knownCandidateReplay:replayed.plannedPackIds.length===13,durableDispositions:dispositions.dispositions.length===7},
     quarantine:{selectionMiss:true,parentFallback:true,reviewedRepairRequired:true,noExtraAll20:true},
     firstUse:{taskCounts:firstUsePlans.map(({tasks})=>tasks.length),packCounts:firstUsePlans.map(({packIds})=>packIds.length),productBehaviorAbsent:true},
   },
