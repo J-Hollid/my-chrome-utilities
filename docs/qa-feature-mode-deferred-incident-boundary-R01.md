@@ -264,3 +264,33 @@ state changes.
 After architect `qa-ready` integration, record the correction scorecard and
 automatically reissue stable product task `documentation-templates` from that
 exact QA descendant. Candidate `00f3e45d` remains a patch reference only.
+
+### Settled monotonic acceptance-session correction
+
+Specification `8c7ce5ea75` was handed to the coder at 14:08:12Z on
+2026-08-17 and received at 14:08:22Z. Candidate `03e4157b83` reached the
+refactorer at 14:23:51Z, the architect at 14:31:07Z, and QA at 14:39:43Z. The
+handoff-to-integration interval was about 31 minutes 30 seconds, inside the
+one-hour expectation. Architect `qa-ready` coincided with the thirty-minute
+reporting point, with no scope variance or remaining implementation work.
+
+The final candidate changes only the succession implementation and its direct
+and Shell process-contract tests. Its fresh review checkpoint selected exactly
+the `shell` pack and passed all 72 tasks, properties, acceptance, and package
+proof in 4 minutes 42 seconds. There was no failed evidence run and no all-20
+attempt.
+
+The deterministic matrix proves the exact historical `flow_export` session may
+remain pending when its four feature/artifact pairs occur unchanged and in order
+inside the current ten-feature session. It rejects missing history, incomplete
+registry sessions, removed, replaced, duplicated, or reordered historical
+features, malformed artifact pairs, changed runner or task contracts, ambiguous
+identities, and noneligible or nondeferred incidents. Direct task succession
+still rejects the expansion without an explicit edge. Neither inherited
+incident `d723a7c4-1116-4887-b60a-21aded1ab5d8` nor current incident
+`0f9c4990-a10a-47ef-878b-fcceff3a690f` was mutated or resolved.
+
+Recommendation: resume `documentation-templates` from the exact QA scorecard
+descendant of `03e4157b83`, using `00f3e45d` only as a patch reference. Its
+governed repair-focused receipt, fresh 10-pack review evidence, and package proof
+remain product obligations; this correction supplies no passing product claim.

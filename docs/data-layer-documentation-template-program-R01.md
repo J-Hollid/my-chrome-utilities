@@ -287,10 +287,10 @@ the same `flow_export` acceptance session before those six contracts were added.
 
 User-approved task `deferred-acceptance-session-preflight` supplies the narrow,
 fail-closed monotonic acceptance-session rule in
-`docs/qa-feature-mode-deferred-incident-boundary-R01.md`. It changes no template
-behavior or incident state. After that correction reaches QA, reconstruct and
-resume `documentation-templates` automatically from its exact QA descendant,
-using `00f3e45d` only as a patch reference.
+`docs/qa-feature-mode-deferred-incident-boundary-R01.md`, now QA-integrated at
+`03e4157b83`. It changes no template behavior or incident state. Reconstruct and
+resume `documentation-templates` automatically from the exact scorecard
+descendant of that commit, using `00f3e45d` only as a patch reference.
 
 **Ownership-readiness launch:** the resumed intent preflight names the integrated
 shared surfaces `src/project-asset-body-contribution.ts`,
