@@ -1641,9 +1641,11 @@ q("#export-project").addEventListener("click", () => { if (!state)
 } void (async () => { await durableProjectRuntime.settled("project"); const bytes = await durableProjectRuntime.repository.exportProjectArchive(current.project.id); downloadBytes(`${stem}-project.zip`, bytes, "application/zip"); })().catch(error => { q("#project-state").textContent = error instanceof Error ? error.message : String(error); }); });
 q("#export-standard-schema").addEventListener("click", () => { if (!state)
     return; void developerProductionSchemaExport(durableProjectRuntime.repository, state.project.id).then(production => { download("specification.schema.json", JSON.stringify({ $schema: "https://json-schema.org/draft/2020-12/schema", oneOf: production.schemas.map(({ effectiveSchema }) => effectiveSchema) })); download("specification.manifest.json", JSON.stringify({ format: "my-chrome-utilities.production-schema-manifest", version: 1, projectId: production.projectId, projectRevision: production.projectRevision, schemas: production.schemas.map(({ evidence }) => evidence) })); }, error => { q("#project-state").textContent = error instanceof Error ? error.message : String(error); }); });
-q("#import-project").addEventListener("click", () => q("#import-project-file").click());
+const importProjectFile = q("#import-project-file");
+importProjectFile.accept = ".json,.zip,application/json,application/zip";
+q("#import-project").addEventListener("click", () => importProjectFile.click());
 const importDialog = q("#import-review");
-q("#import-project-file").addEventListener("change", async (event) => { const file = event.currentTarget.files?.[0]; if (!file || !state)
+importProjectFile.addEventListener("change", async (event) => { const file = event.currentTarget.files?.[0]; if (!file || !state)
     return; try {
     if (file.type === "application/zip" || file.name.toLowerCase().endsWith(".zip")) {
         stagedImport = undefined;
