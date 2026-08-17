@@ -3,6 +3,23 @@ const collections = { overview: ["overview.fields"], flow: ["flow.pages", "table
 const childBindings = { "overview.fields": ["field.label", "field.value"], "flow.pages": ["page.stepLabel", "page.pageName", "page.sourcePageName", "page.eventName", "page.heading", "page.rows", "page.events"], "page.events": ["event.eventName", "event.heading", "event.rows"], "page.rows": ["row.property", "row.concept", "row.cells"], "event.rows": ["row.property", "row.concept", "row.cells"], "table.rows": ["row.concept", "row.cells"], "flow.rows": ["row.property", "row.cells"], "matrix.rows": ["row.property", "row.concept", "row.cells"], "profile.rows": ["row.property", "row.concept", "row.cells"], "matrix.concepts": ["concept.name", "concept.rows"], "profile.concepts": ["concept.name", "concept.rows"], "concept.rows": ["row.property", "row.concept", "row.cells"], "row.cells": ["cell.columnKey", "cell.heading", "cell.value"] };
 const childCollections = { "flow.pages": ["page.events", "page.rows"], "page.events": ["event.rows"], "page.rows": ["row.cells"], "event.rows": ["row.cells"], "table.rows": ["row.cells"], "flow.rows": ["row.cells"], "matrix.rows": ["row.cells"], "profile.rows": ["row.cells"], "matrix.concepts": ["concept.rows"], "profile.concepts": ["concept.rows"], "concept.rows": ["row.cells"] };
 const itemRoot = (collection) => collection.endsWith(".pages") ? "page" : collection.endsWith(".events") ? "event" : collection.endsWith(".cells") ? "cell" : collection.endsWith(".concepts") ? "concept" : collection.endsWith(".fields") ? "field" : "row";
+export function richTemplateHelpBindingsFor(kind) {
+    const help = new Set(templateBindingsFor(kind)), pending = [...collections[kind]], visited = new Set();
+    while (pending.length) {
+        const collection = pending.shift();
+        if (visited.has(collection))
+            continue;
+        visited.add(collection);
+        help.add(collection);
+        for (const binding of childBindings[collection] ?? [])
+            help.add(binding);
+        for (const nested of childCollections[collection] ?? []) {
+            help.add(nested);
+            pending.push(nested);
+        }
+    }
+    return [...help];
+}
 export function richTemplateBlockScopes(kind, blocks) { const result = {}; const visit = (items, bindings, available) => { for (const block of items) {
     const nestedBindings = block.type === "repeat" ? [...bindings, ...(childBindings[block.items] ?? [])] : bindings, nestedCollections = block.type === "repeat" ? childCollections[block.items] ?? [] : available;
     result[block.id] = { bindings: [...bindings], collections: [...available], childBindings: [...nestedBindings], childCollections: [...nestedCollections] };
@@ -101,6 +118,6 @@ export function renderRichDocumentationTemplate(template, context) {
         return { html, plain };
     };
     const output = render(template.blocks, context);
-    return { html: `<section data-documentation-template="${htmlEscape(template.id)}">${output.html}</section>`, plain: output.plain.join("\n") };
+    return { html: `<section data-documentation-template="rich">${output.html}</section>`, plain: output.plain.join("\n") };
 }
 //# sourceMappingURL=rich-template.js.map

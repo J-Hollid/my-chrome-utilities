@@ -61,6 +61,7 @@ const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared Profiles", pages: "Pages", propertySets: "Property Sets", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Test cases", assignments: "Assignments" };
 let state, lastCommittedState, library = projectLibrary();
 let canonicalRevision = 0, publishedRevision = 0, guidedEvaluatorInvocations = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", documentationOpen = routeParameters.get("view") === "documentation", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, pendingWorkspaceFocus, pendingProfileInheritanceFocus, pendingHistoryFocus, pendingProfileSource, stagedImport, lastInvokingControl, releasePreflight, releaseReviewHasChanges = true, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi, projectDocumentationWorkspaceUi;
+let stagedProjectArchive;
 const recordGuidedEvaluation = () => { guidedEvaluatorInvocations += 1; document.querySelector("[data-guided-test-case]")?.setAttribute("data-evaluator-invocations", String(guidedEvaluatorInvocations)); };
 const evaluatePageGroupFixture = (...args) => { recordGuidedEvaluation(); return executePageGroupFixture(...args); };
 const runProductionFixture = (...args) => { recordGuidedEvaluation(); return executeProductionFixture(...args); };
@@ -1313,6 +1314,7 @@ function renderCoverage(offset = 0) { if (!state)
     rows.append(item);
 } content.replaceChildren(heading, summary, controls, rows); }
 function download(name, text, type = "application/json") { const blob = new Blob([`${text}\n`], { type }), url = URL.createObjectURL(blob), link = document.createElement("a"); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url); }
+function downloadBytes(name, bytes, type) { const blob = new Blob([Uint8Array.from(bytes).buffer], { type }), url = URL.createObjectURL(blob), link = document.createElement("a"); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url); }
 function replaceOptions(select, entities, placeholder) { const value = select.value, empty = document.createElement("option"); empty.value = ""; empty.textContent = placeholder; select.replaceChildren(empty, ...entities.map((entity) => { const option = document.createElement("option"); option.value = entity.id; option.textContent = entity.name; return option; })); select.value = value; }
 function renderReferenceSelectors() { if (!state)
     return; flowGraphBuilder?.renderSelectors(); const targetKind = q("#project-assignment-kind"), targetSelect = q("#project-assignment-contributor"), selectedTarget = targetSelect.value, targets = assignmentContributorTargets(state).filter(({ kind }) => !targetKind.value || kind === targetKind.value); targetSelect.replaceChildren(new Option("Choose contributor", ""), ...targets.map((target) => new Option(`${target.kind} · ${target.name}`, target.id))); targetSelect.value = selectedTarget; const saved = q("#saved-schema-picker"), selectedSaved = saved.value; saved.replaceChildren(new Option("Choose a published saved schema", ""), ...savedSchemas().map((schema) => new Option(`${schema.name} · revision ${schema.version}`, schema.id))); saved.value = selectedSaved; const eventSelect = q("#project-assignment-event"); replaceOptions(eventSelect, state.project.collections.events, "Choose event"); for (const event of state.project.collections.events) {
@@ -1633,16 +1635,28 @@ catch (error) {
     q("#project-state").textContent = error instanceof Error ? error.message : String(error);
 } }, { capture: true });
 q("#export-project").addEventListener("click", () => { if (!state)
-    return; download(`${state.project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-project.json`, exportSpecificationProjectState(state)); });
+    return; const current = state, stem = current.project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), hasTemplateBodies = current.project.documentation?.templates?.some(template => template.format === "excel" && template.body); if (!hasTemplateBodies) {
+    download(`${stem}-project.json`, exportSpecificationProjectState(current));
+    return;
+} void (async () => { await durableProjectRuntime.settled("project"); const bytes = await durableProjectRuntime.repository.exportProjectArchive(current.project.id); downloadBytes(`${stem}-project.zip`, bytes, "application/zip"); })().catch(error => { q("#project-state").textContent = error instanceof Error ? error.message : String(error); }); });
 q("#export-standard-schema").addEventListener("click", () => { if (!state)
     return; void developerProductionSchemaExport(durableProjectRuntime.repository, state.project.id).then(production => { download("specification.schema.json", JSON.stringify({ $schema: "https://json-schema.org/draft/2020-12/schema", oneOf: production.schemas.map(({ effectiveSchema }) => effectiveSchema) })); download("specification.manifest.json", JSON.stringify({ format: "my-chrome-utilities.production-schema-manifest", version: 1, projectId: production.projectId, projectRevision: production.projectRevision, schemas: production.schemas.map(({ evidence }) => evidence) })); }, error => { q("#project-state").textContent = error instanceof Error ? error.message : String(error); }); });
 q("#import-project").addEventListener("click", () => q("#import-project-file").click());
 const importDialog = q("#import-review");
 q("#import-project-file").addEventListener("change", async (event) => { const file = event.currentTarget.files?.[0]; if (!file || !state)
     return; try {
-    stagedImport = stageProjectImport(await file.text(), state);
-    q("#import-summary").textContent = stagedImport.blockers.length ? `${stagedImport.blockers.length} blocking collisions; ${stagedImport.diff.sections.length} linked changes.` : `${stagedImport.diff.sections.length} linked changes ready.`;
-    q("#commit-import").disabled = Boolean(stagedImport.blockers.length);
+    if (file.type === "application/zip" || file.name.toLowerCase().endsWith(".zip")) {
+        stagedImport = undefined;
+        stagedProjectArchive = { file, projectId: state.project.id, name: `${state.project.name} copy` };
+        q("#import-summary").textContent = "1 blocking collisions; 1 portable template archive ready.";
+        q("#commit-import").disabled = true;
+    }
+    else {
+        stagedProjectArchive = undefined;
+        stagedImport = stageProjectImport(await file.text(), state);
+        q("#import-summary").textContent = stagedImport.blockers.length ? `${stagedImport.blockers.length} blocking collisions; ${stagedImport.diff.sections.length} linked changes.` : `${stagedImport.diff.sections.length} linked changes ready.`;
+        q("#commit-import").disabled = Boolean(stagedImport.blockers.length);
+    }
     importDialog.showModal();
     importDialog.querySelector("h2")?.focus();
 }
@@ -1650,11 +1664,21 @@ catch (error) {
     q("#import-summary").textContent = error instanceof Error ? error.message : String(error);
     importDialog.showModal();
 } });
-q("#remap-import").addEventListener("click", () => { if (!stagedImport || !state)
+q("#remap-import").addEventListener("click", () => { if (stagedProjectArchive) {
+    stagedProjectArchive = { ...stagedProjectArchive, projectId: id("project") };
+    q("#import-summary").textContent = "Collision remapped; portable template archive ready.";
+    q("#commit-import").disabled = false;
+    return;
+} if (!stagedImport || !state)
     return; stagedImport = stageProjectImport(stagedImport.source, state, { projectId: id("project") }); q("#import-summary").textContent = `Collision remapped; ${stagedImport.diff.sections.length} linked changes ready.`; q("#commit-import").disabled = false; });
-q("#commit-import").addEventListener("click", () => { if (!state || !stagedImport)
+q("#commit-import").addEventListener("click", () => { if (stagedProjectArchive) {
+    const staged = stagedProjectArchive;
+    q("#commit-import").disabled = true;
+    void (async () => { await durableProjectRuntime.settled("project"); await durableProjectRuntime.repository.importProjectArchive(staged.file, { projectId: staged.projectId, name: staged.name }); await durableProjectRuntime.repository.setActiveProject(staged.projectId); await durableProjectRuntime.refreshProject(staged.projectId); restore(); documentationOpen = true; render(); stagedProjectArchive = undefined; importDialog.close(); q("#import-project").focus(); })().catch(error => { q("#import-summary").textContent = error instanceof Error ? error.message : String(error); q("#commit-import").disabled = false; });
+    return;
+} if (!state || !stagedImport)
     return; persist(commitStagedProjectImport(state, stagedImport, { write: () => { } })); importDialog.close(); q("#import-project").focus(); });
-q("#cancel-import").addEventListener("click", () => { stagedImport = undefined; importDialog.close(); q("#import-project").focus(); });
+q("#cancel-import").addEventListener("click", () => { stagedImport = undefined; stagedProjectArchive = undefined; importDialog.close(); q("#import-project").focus(); });
 const conflictDialog = q("#project-conflict-review"), restoreDurableProjection = () => { restore(); library = restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library; };
 function completeConflict(strategy) { const fields = Array.from(q("#project-conflict-fields").querySelectorAll('input:checked'), ({ value }) => value); if (durableConflict) {
     void durableProjectRuntime.resolveFailedSave(strategy, fields).then(() => { durableConflict = undefined; saveStatus = { kind: "idle" }; restoreDurableProjection(); conflictDialog.close(); render(); focusCurrentStudioContext(); });

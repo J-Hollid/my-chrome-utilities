@@ -13,7 +13,8 @@ const installDocumentationTemplateAssets=():void=>{
 .documentation-template-library-grid{display:grid;grid-template-columns:minmax(18rem,1fr) minmax(18rem,1fr);gap:1rem;align-items:start}
 .documentation-template-library [aria-label="Template list"]{display:grid;gap:.75rem}
 .documentation-template-library [aria-label="Template list"]>section{padding:.65rem;border:1px solid var(--border);border-radius:.4rem}
-@media(max-width:700px){.documentation-context-header{grid-template-columns:minmax(0,1fr)}.documentation-template-library-grid{grid-template-columns:minmax(0,1fr)}.documentation-template-library-grid>[data-mobile-surface="inactive"]{display:none}.documentation-template-panel{padding:.55rem;max-width:100%}}
+.rich-template-editor{display:grid;grid-template-columns:minmax(12rem,1fr) minmax(14rem,1fr);gap:.75rem;align-items:start}.rich-template-editor>section{min-width:0;padding:.65rem;border:1px solid var(--border);border-radius:.4rem}.rich-template-editor ol{display:grid;gap:.35rem;padding-inline-start:1rem}.rich-template-editor [data-rich-block-selected="true"]{background:var(--accent);color:#fff}
+@media(max-width:700px){.documentation-context-header{grid-template-columns:minmax(0,1fr)}.documentation-template-library-grid,.rich-template-editor{grid-template-columns:minmax(0,1fr)}.documentation-template-library-grid>[data-mobile-surface="inactive"],.rich-template-editor>[data-mobile-surface="inactive"]{display:none}.documentation-template-panel{padding:.55rem;max-width:100%}}
 `;document.head.append(style);
   }
   if(!document.getElementById(EXCEL_SCRIPT_ID)){

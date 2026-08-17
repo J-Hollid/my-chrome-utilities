@@ -8,6 +8,8 @@ import {
 } from "../dist/flow-visual-asset-portability.js";
 import {flowVisualDigest,validateFlowVisualBody} from "../dist/flow-visual-asset-validation.js";
 import {createMemoryDurableProjectRepository,createPageProjectHistory,durableDraftCommand} from "../dist/data-layer-durable-project-repository.js";
+import {addProjectEntity,createSpecificationProject} from "../dist/data-layer-specification-project.js";
+import {flowDocumentationSnapshotFromState} from "../dist/data-layer-flow-documentation-snapshot.js";
 import {verificationDigest} from "../scripts/verification-evidence.mjs";
 
 const png=Uint8Array.from(Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=","base64"));
@@ -60,6 +62,18 @@ await durable.replaceConceptVisualAssets(project.id,[{metadata,body:new Blob([pn
 const durableArchive=await durable.exportProjectArchive(project.id);
 await durable.importProjectArchive(durableArchive,{projectId:"project:durable-copy",name:"Retail copy"});
 assert.deepEqual((await durable.listConceptVisualAssetMetadata("project:durable-copy")).map(({id})=>id),["project:durable-copy:asset:cart"]);
+const durableCopy=(await durable.loadProject("project:durable-copy")).state.project;
+assert.equal(durableCopy.documentationFlowGraphs["project:durable-copy:flow:checkout"].pageFrames[0].id,"project:durable-copy:frame:cart","durable archive import keeps the Flow graph addressable through its remapped owner and frame identities");
+
+let portableSequence=0,portableState=createSpecificationProject({name:"Portable Flow",description:"Portable documentation",site:"portable.example",id:kind=>`${kind}:portable:${++portableSequence}`});
+const addPortable=(kind,value)=>{portableState=addProjectEntity(portableState,kind,value,kind=>`${kind}:portable:${++portableSequence}`);return portableState.project.collections[kind].at(-1);},portablePage=addPortable("pages",{name:"Cart",eventName:"pageview"}),portableEvent=addPortable("events",{name:"Purchase",eventName:"purchase"}),portableFlow=addPortable("flows",{name:"Checkout journey"}),portableFrame={id:`frame:portable:${++portableSequence}`,nameInFlow:"Basket review",pageId:portablePage.id,position:{x:40,y:40}};
+const portableOccurrence={id:`occurrence:portable:${++portableSequence}`,name:"Purchase",pageFrameId:portableFrame.id,pageId:portablePage.id,eventId:portableEvent.id,position:{x:20,y:70}},portableFrameContext=`context:frame:${portableFrame.id}`,portableOccurrenceContext=`context:${portableOccurrence.id}`;
+portableState={...portableState,project:{...portableState.project,documentationFlowGraphs:{[portableFlow.id]:{pageFrames:[portableFrame],occurrences:[portableOccurrence],relationships:[]}},documentation:{sets:[{id:"set:portable",name:"Portable",themeId:"theme:portable",sections:[{id:"section:portable-flow",kind:"flow",name:"Checkout journey",targetId:portableFlow.id,selected:true,configuration:{contextIds:[portableFrameContext,portableOccurrenceContext],labels:{[portableFrameContext]:"1",[portableOccurrenceContext]:"1a"}}}]}],themes:[]}}};
+const portableRepository=createMemoryDurableProjectRepository();await portableRepository.putProject(portableState);const portableArchive=await portableRepository.exportProjectArchive(portableState.project.id),portableProjectId="project:portable-copy";await portableRepository.importProjectArchive(portableArchive,{projectId:portableProjectId,name:"Portable Flow copy"});const portableLoaded=await portableRepository.loadProject(portableProjectId),portableImportedFlow=portableLoaded.state.project.collections.flows[0],portableSnapshot=flowDocumentationSnapshotFromState(portableLoaded.state,portableImportedFlow.id);
+assert.equal(portableSnapshot.contexts[0].pageName,"Basket review","a durable archive remap preserves the Flow graph used by generated documentation");
+const importedPortableSection=portableLoaded.state.project.documentation.sets[0].sections[0],importedFrame=portableLoaded.state.project.documentationFlowGraphs[portableImportedFlow.id].pageFrames[0],importedOccurrence=portableLoaded.state.project.documentationFlowGraphs[portableImportedFlow.id].occurrences[0];
+assert.deepEqual(importedPortableSection.configuration.contextIds,[`context:frame:${importedFrame.id}`,`context:${importedOccurrence.id}`],"saved documentation context selections follow remapped Flow context identities");
+assert.deepEqual(Object.keys(importedPortableSection.configuration.labels),[`context:frame:${importedFrame.id}`,`context:${importedOccurrence.id}`],"saved documentation labels follow remapped Flow context identities");
 
 const archive=await createFlowVisualArchive({project,publishedProject:structuredClone(project),assets:[{metadata,body:new Blob([png],{type:metadata.mediaType})}]});
 assert.deepEqual(Array.from(archive.slice(0,4)),[80,75,3,4],"normal export is ZIP-compatible");
@@ -73,7 +87,7 @@ assert.equal(imported.project.id,"project:copy");
 assert.equal(imported.project.documentationFlowGraphs["copy:flow:checkout"].pageFrames[0].conceptVisual.assetId,"copy:asset:cart");
 assert.equal(imported.publishedProject.documentationFlowGraphs["copy:flow:checkout"].pageFrames[0].conceptVisual.assetId,"copy:asset:cart");
 
-const workbookBody=new Blob([Uint8Array.from([80,75,3,4,1,2,3,4])],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),workbookDigest=`sha256:${Buffer.from(await crypto.subtle.digest("SHA-256",await workbookBody.arrayBuffer())).toString("hex")}`,templateProject={...structuredClone(project),documentation:{sets:[],themes:[],templates:[{id:"template:flow",name:"Flow workbook",format:"excel",kind:"flow",contractVersion:1,digest:workbookDigest,validation:{valid:true,findings:[]},body:{assetId:"template-body:flow",digest:workbookDigest,byteLength:workbookBody.size}}]}};
+const workbookBody=new Blob([Uint8Array.from([80,75,3,4,1,2,3,4])],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),workbookDigest=`sha256:${Buffer.from(await crypto.subtle.digest("SHA-256",await workbookBody.arrayBuffer())).toString("hex")}`,templateProject={...structuredClone(project),documentation:{sets:[{id:"set:templates",name:"Templates",themeId:"theme:templates",sections:[],templateAssignments:{"excel:flow":"template:flow"}}],themes:[],templates:[{id:"template:flow",name:"Flow workbook",format:"excel",kind:"flow",contractVersion:1,digest:workbookDigest,validation:{valid:true,findings:[]},body:{assetId:"template-body:flow",digest:workbookDigest,byteLength:workbookBody.size}}]}};
 const templateArchive=await createFlowVisualArchive({project:templateProject,assets:[{metadata,body:new Blob([png],{type:metadata.mediaType})}],templateBodies:[{digest:workbookDigest,byteLength:workbookBody.size,body:workbookBody}]});
 const importedTemplate=await importFlowVisualArchive(templateArchive,{projectId:"project:template-copy",id:old=>`template:${old}`});
 assert.equal(importedTemplate.templateBodies.length,1,"one digest-addressed Excel body is imported exactly once");
@@ -81,6 +95,9 @@ assert.equal(importedTemplate.templateBodies[0].digest,workbookDigest);
 const durableTemplates=createMemoryDurableProjectRepository();await durableTemplates.importProjectArchive(templateArchive,{projectId:"project:template-durable",name:"Template durable"});
 const importedBody=await durableTemplates.loadProjectAssetBody({projectId:"project:template-durable",namespace:"documentation-template",digest:workbookDigest});
 assert.deepEqual(new Uint8Array(await importedBody.arrayBuffer()),new Uint8Array(await workbookBody.arrayBuffer()));
+const durableTemplateProject=(await durableTemplates.loadProject("project:template-durable")).state.project,remappedTemplate=durableTemplateProject.documentation.templates[0];
+assert.notEqual(remappedTemplate.id,"template:flow");
+assert.equal(durableTemplateProject.documentation.sets[0].templateAssignments["excel:flow"],remappedTemplate.id,"template assignments follow remapped template identities");
 
 const tampered=archive.slice();tampered[tampered.indexOf(137)]=136;
 await assert.rejects(()=>importFlowVisualArchive(tampered,{projectId:"project:bad",id:(old)=>`bad:${old}`}),/digest|CRC/i);

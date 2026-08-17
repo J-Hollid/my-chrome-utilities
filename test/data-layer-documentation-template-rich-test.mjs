@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   builtInRichTemplate,
+  richTemplateHelpBindingsFor,
   renderRichDocumentationTemplate,
   validateRichDocumentationTemplate,
 } from "../dist/documentation-templates/rich-template.js";
@@ -12,6 +13,15 @@ for(const kind of ["overview","flow","matrix","profile"]){
   assert.equal(template.kind,kind);
   assert.equal(validateRichDocumentationTemplate(template).valid,true);
 }
+
+assert.deepEqual(richTemplateHelpBindingsFor("overview").filter(binding=>binding.startsWith("field.")),["field.label","field.value"]);
+assert.deepEqual(
+  ["page.pageName","event.eventName","row.property","cell.value"].map(binding=>richTemplateHelpBindingsFor("flow").includes(binding)),
+  [true,true,true,true],
+  "Flow help includes every reachable nested-scope binding",
+);
+assert.equal(richTemplateHelpBindingsFor("profile").includes("concept.name"),true);
+assert.equal(richTemplateHelpBindingsFor("profile").includes("page.pageName"),false);
 
 const template={id:"template:flow",name:"Acme flow page",format:"rich",kind:"flow",contractVersion:1,digest:"rich:first",blocks:[
   {id:"heading",type:"heading",level:1,content:[{text:"Journey "},{binding:"section.name"}]},
@@ -28,6 +38,8 @@ const context={section:{name:"Checkout",kind:"flow"},flow:{pages:[
 const rendered=renderRichDocumentationTemplate(template,context);
 assert.match(rendered.html,/&lt;Cart&gt;/u);
 assert.doesNotMatch(rendered.html,/<script>/u);
+assert.doesNotMatch(rendered.html,/template:flow/u,"generated HTML does not expose project-owned template identity");
+assert.match(rendered.html,/data-documentation-template="rich"/u);
 assert.equal(rendered.plain,"Journey Checkout\n<Cart>\n<script>bad()</script>\nPayment");
 
 const grouped={...template,kind:"profile",blocks:[
@@ -55,4 +67,3 @@ assert.equal(assignedOutput.plain,"Journey Checkout\n<Cart>\n<script>bad()</scri
 assert.throws(()=>renderProjectDocumentationRichWithTemplates({...snapshot,templates:[]},{scope:"current",currentSectionId:"flow"}),/unavailable or invalid/u);
 
 console.log("documentation rich template unit test passed");
-

@@ -369,6 +369,11 @@ assert.match(compiledProject.tables[1].headings.join("|"),/Basket review/);
 assert.equal(new Set(compiledProject.tables[1].rows.flatMap((row)=>row.slice(1))).size>=3,true);
 assert.deepEqual(compiledProject.tables[2].headings,["Property","Required","Description"]);
 assert.deepEqual(compiledProject.tables[2].rows.map(([path])=>path),["/locale","/site_id"]);
+for(const table of compiledProject.tables.slice(1)){
+  const firstPublicRow=table.templateData.rows[0];
+  assert.equal(firstPublicRow.property,table.rows[0][0],`${table.title} exposes its property binding`);
+  assert.deepEqual(firstPublicRow.cells.map(({value})=>value),table.rows[0].slice(1),`${table.title} cell bindings exclude the property column`);
+}
 assert.equal(compiledProject.tables[1].headings.some((value)=>value.includes("Compiler Sitewide")),false);
 assert.match(renderProjectDocumentationClipboard(compiledProject,{scope:"complete"}).plain,/Basket review/);
 assert.match(new TextDecoder().decode(writeProjectDocumentationWorkbook(compiledProject,{scope:"complete"})),/Basket review/);

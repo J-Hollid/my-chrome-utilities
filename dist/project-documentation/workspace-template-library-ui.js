@@ -1,7 +1,7 @@
 import { assignDocumentationTemplate, createDocumentationTemplate, documentationTemplateAssignment, removeDocumentationTemplate, replaceDocumentationTemplate } from "../documentation-templates/template-library.js";
 import { writeDocumentationTemplateStarter } from "../documentation-templates/excel-renderer.js";
-import { builtInRichTemplate, richTemplateBlockScopes, validateRichDocumentationTemplate } from "../documentation-templates/rich-template.js";
-import { templateBindingsFor, templateDigest } from "../documentation-templates/template-contract.js";
+import { builtInRichTemplate, richTemplateBlockScopes, richTemplateHelpBindingsFor, validateRichDocumentationTemplate } from "../documentation-templates/rich-template.js";
+import { templateDigest } from "../documentation-templates/template-contract.js";
 import { DOCUMENTATION_TEMPLATE_XLSX_TYPE } from "../documentation-templates/template-body.js";
 import { validateExcelTemplateWorkbook } from "../documentation-templates/excel-workbook.js";
 import { documentationButton as button, documentationHeading as heading, documentationLabelled as labelled } from "./workspace-ui-elements.js";
@@ -33,52 +33,72 @@ catch (error) {
     throw error;
 } }
 function richEditor(detail, selected, templates, options) {
-    const blocks = richBlocks(selected) ?? [], scopes = richTemplateBlockScopes(selected.kind, blocks);
-    const commit = (nextBlocks, label = "Edit") => { const candidate = { ...selected, blocks: nextBlocks }, validation = validateRichDocumentationTemplate(candidate); if (!validation.valid)
-        throw new Error(validation.findings.map(({ blockId, message }) => `${blockId}: ${message}`).join("\n")); const next = { ...selected, richBlocks: recordBlocks(nextBlocks), digest: templateDigest("rich", nextBlocks), validation }; options.persist({ ...options.records, templates: templates.map(item => item.id === selected.id ? next : item) }, `${label} Rich page template ${selected.name}`); options.rerender(); };
-    const outline = document.createElement("ol");
+    const blocks = richBlocks(selected) ?? [], scopes = richTemplateBlockScopes(selected.kind, blocks), flat = [];
+    const collect = (items) => items.forEach(block => { flat.push(block); if (block.type === "repeat")
+        collect(block.children); });
+    collect(blocks);
+    const selectedBlock = flat.find(block => block.id === options.selectedRichBlockId) ?? flat[0], selectedIndex = selectedBlock ? flat.indexOf(selectedBlock) : -1;
+    const focusAfterRender = (selector) => queueMicrotask(() => detail.ownerDocument.querySelector(selector)?.focus());
+    const choose = (id, showDetail = true) => { options.selectRichBlock(id); options.setRichEditorMobileDetail(showDetail); options.rerender(); focusAfterRender(showDetail ? '[aria-label="Selected rich template block detail"]' : '[data-rich-block-selected="true"]'); };
+    const commit = (nextBlocks, label = "Edit", nextSelection = selectedBlock?.id) => { const candidate = { ...selected, blocks: nextBlocks }, validation = validateRichDocumentationTemplate(candidate); if (!validation.valid)
+        throw new Error(validation.findings.map(({ blockId, message }) => `${blockId}: ${message}`).join("\n")); const next = { ...selected, richBlocks: recordBlocks(nextBlocks), digest: templateDigest("rich", nextBlocks), validation }; if (nextSelection)
+        options.selectRichBlock(nextSelection); options.persist({ ...options.records, templates: templates.map(item => item.id === selected.id ? next : item) }, `${label} Rich page template ${selected.name}`); options.rerender(); };
+    const editor = document.createElement("div"), outlineSurface = document.createElement("section"), detailSurface = document.createElement("section"), outline = document.createElement("ol");
+    editor.className = "rich-template-editor";
+    outlineSurface.setAttribute("aria-label", "Rich template outline surface");
+    detailSurface.setAttribute("aria-label", "Selected rich template block detail");
+    outlineSurface.dataset.mobileSurface = options.richEditorMobileDetail ? "inactive" : "active";
+    detailSurface.dataset.mobileSurface = options.richEditorMobileDetail ? "active" : "inactive";
     outline.setAttribute("aria-label", "Rich template outline");
-    const renderItems = (parent, items) => items.forEach((block, index) => {
-        const item = document.createElement("li"), title = document.createElement("strong"), actions = document.createElement("div"), scope = scopes[block.id];
-        title.textContent = block.type;
-        const move = (offset) => commit(editSiblings(blocks, block.id, (siblings, current) => { const next = [...siblings], target = current + offset; if (target < 0 || target >= next.length)
-            return next; [next[current], next[target]] = [next[target], next[current]]; return next; }), "Move");
-        const earlier = button("Move earlier", () => move(-1)), later = button("Move later", () => move(1)), copy = button("Copy block", () => commit(editSiblings(blocks, block.id, (siblings, current) => [...siblings.slice(0, current + 1), cloneWithIds(siblings[current]), ...siblings.slice(current + 1)]), "Copy")), remove = button("Remove block", () => commit(editSiblings(blocks, block.id, (siblings, current) => siblings.filter((_, candidate) => candidate !== current)), "Remove"));
+    const ids = flat.map(block => block.id), renderItems = (parent, items) => items.forEach(block => { const item = document.createElement("li"), select = button(block.type, () => choose(block.id)); select.dataset.richBlockId = block.id; select.dataset.richBlockSelected = String(block.id === selectedBlock?.id); select.setAttribute("aria-current", String(block.id === selectedBlock?.id)); select.addEventListener("keydown", event => { const current = ids.indexOf(block.id), target = event.key === "ArrowDown" ? Math.min(ids.length - 1, current + 1) : event.key === "ArrowUp" ? Math.max(0, current - 1) : event.key === "Home" ? 0 : event.key === "End" ? ids.length - 1 : -1; if (target < 0)
+        return; event.preventDefault(); choose(ids[target], false); }); item.append(select); if (block.type === "repeat") {
+        const children = document.createElement("ol");
+        children.setAttribute("aria-label", `${block.items} child blocks`);
+        renderItems(children, block.children);
+        item.append(children);
+    } parent.append(item); });
+    renderItems(outline, blocks);
+    outlineSurface.append(heading(4, "Template outline"), outline);
+    for (const type of ["heading", "paragraph", "divider", "theme-logo", "repeat", "data-table", "concept-group"])
+        outlineSurface.append(button(`Add ${type}`, () => { const added = newBlock(type, selected.kind, rootCollections(selected.kind)); options.setRichEditorMobileDetail(true); commit([...blocks, added], "Add", added.id); }));
+    detailSurface.tabIndex = -1;
+    detailSurface.append(heading(4, selectedBlock ? `${selectedBlock.type} block` : "Select a block"));
+    if (selectedBlock) {
+        const scope = scopes[selectedBlock.id], siblings = (() => { let found = blocks; const visit = (items) => { if (items.some(block => block.id === selectedBlock.id)) {
+            found = items;
+            return true;
+        } return items.some(block => block.type === "repeat" && visit(block.children)); }; visit(blocks); return found; })(), index = siblings.findIndex(block => block.id === selectedBlock.id), move = (offset) => commit(editSiblings(blocks, selectedBlock.id, (items, current) => { const next = [...items], target = current + offset; if (target < 0 || target >= next.length)
+            return next; [next[current], next[target]] = [next[target], next[current]]; return next; }), "Move"), earlier = button("Move earlier", () => move(-1)), later = button("Move later", () => move(1)), copied = cloneWithIds(selectedBlock), copy = button("Copy block", () => commit(editSiblings(blocks, selectedBlock.id, (items, current) => [...items.slice(0, current + 1), copied, ...items.slice(current + 1)]), "Copy", copied.id)), fallback = flat[selectedIndex + 1]?.id ?? flat[selectedIndex - 1]?.id ?? "", remove = button("Remove block", () => commit(editSiblings(blocks, selectedBlock.id, (items, current) => items.filter((_, candidate) => candidate !== current)), "Remove", fallback));
         earlier.disabled = index === 0;
-        later.disabled = index === items.length - 1;
-        actions.append(earlier, later, copy, remove);
-        item.append(title, actions);
-        if (block.type === "heading" || block.type === "paragraph") {
+        later.disabled = index === siblings.length - 1;
+        detailSurface.append(earlier, later, copy, remove);
+        if (selectedBlock.type === "heading" || selectedBlock.type === "paragraph") {
             const text = document.createElement("input"), binding = document.createElement("select");
-            text.setAttribute("aria-label", `${block.type} text`);
-            text.value = block.content.filter((inline) => "text" in inline).map(({ text: value }) => value).join("");
-            text.addEventListener("change", () => commit(replaceBlock(blocks, block.id, current => ({ ...current, content: [{ text: text.value }] })), "Edit"));
-            binding.setAttribute("aria-label", `${block.type} binding`);
+            text.setAttribute("aria-label", `${selectedBlock.type} text`);
+            text.value = selectedBlock.content.filter((inline) => "text" in inline).map(({ text: value }) => value).join("");
+            text.addEventListener("change", () => commit(replaceBlock(blocks, selectedBlock.id, current => ({ ...current, content: [{ text: text.value }] })), "Edit"));
+            binding.setAttribute("aria-label", `${selectedBlock.type} binding`);
             binding.append(...(scope?.bindings ?? []).map(value => new Option(value, value)));
-            item.append(labelled("Text", text), labelled("Binding", binding), button("Add binding", () => commit(replaceBlock(blocks, block.id, current => ({ ...current, content: [...current.content, { binding: binding.value }] })), "Bind")));
+            detailSurface.append(labelled("Text", text), labelled("Binding", binding), button("Add binding", () => commit(replaceBlock(blocks, selectedBlock.id, current => ({ ...current, content: [...current.content, { binding: binding.value }] })), "Bind")));
         }
-        if (block.type === "repeat") {
-            const collection = document.createElement("select"), variable = document.createElement("input"), children = document.createElement("ol");
+        if (selectedBlock.type === "repeat") {
+            const collection = document.createElement("select"), variable = document.createElement("input");
             collection.setAttribute("aria-label", "Repeat collection");
             collection.append(...(scope?.collections ?? []).map(value => new Option(value, value)));
-            collection.value = block.items;
-            collection.addEventListener("change", () => commit(replaceBlock(blocks, block.id, current => ({ ...current, items: collection.value, variable: collectionVariable(collection.value), children: [] })), "Change collection"));
+            collection.value = selectedBlock.items;
+            collection.addEventListener("change", () => commit(replaceBlock(blocks, selectedBlock.id, current => ({ ...current, items: collection.value, variable: collectionVariable(collection.value), children: [] })), "Change collection"));
             variable.setAttribute("aria-label", "Repeat item name");
-            variable.value = block.variable;
-            variable.addEventListener("change", () => commit(replaceBlock(blocks, block.id, current => ({ ...current, variable: variable.value.trim() || "item" })), "Rename repeat item"));
-            children.setAttribute("aria-label", `${block.items} child blocks`);
-            renderItems(children, block.children);
-            const addChild = (type) => commit(replaceBlock(blocks, block.id, current => ({ ...current, children: [...current.children, newBlock(type, selected.kind, scope?.childCollections)] })), "Add child");
-            item.append(labelled("Collection", collection), labelled("Item name", variable), children, button("Add child heading", () => addChild("heading")), button("Add child paragraph", () => addChild("paragraph")), button("Add child data table", () => addChild("data-table")));
+            variable.value = selectedBlock.variable;
+            variable.addEventListener("change", () => commit(replaceBlock(blocks, selectedBlock.id, current => ({ ...current, variable: variable.value.trim() || "item" })), "Rename repeat item"));
+            const addChild = (type) => { const added = newBlock(type, selected.kind, scope?.childCollections); commit(replaceBlock(blocks, selectedBlock.id, current => ({ ...current, children: [...current.children, added] })), "Add child", added.id); };
+            detailSurface.append(labelled("Collection", collection), labelled("Item name", variable), button("Add child heading", () => addChild("heading")), button("Add child paragraph", () => addChild("paragraph")), button("Add child data table", () => addChild("data-table")));
             if (scope?.childCollections.length)
-                item.append(button("Add nested repeat", () => addChild("repeat")));
+                detailSurface.append(button("Add nested repeat", () => addChild("repeat")));
         }
-        parent.append(item);
-    });
-    renderItems(outline, blocks);
-    detail.append(outline);
-    for (const type of ["heading", "paragraph", "divider", "theme-logo", "repeat", "data-table", "concept-group"])
-        detail.append(button(`Add ${type}`, () => commit([...blocks, newBlock(type, selected.kind, rootCollections(selected.kind))], "Add")));
+    }
+    detailSurface.append(button("Back to template outline", () => { options.setRichEditorMobileDetail(false); options.rerender(); focusAfterRender('[data-rich-block-selected="true"]'); }));
+    editor.append(outlineSurface, detailSurface);
+    detail.append(editor);
 }
 export function renderDocumentationTemplateLibrary(host, options) {
     host.replaceChildren();
@@ -106,7 +126,7 @@ export function renderDocumentationTemplateLibrary(host, options) {
             }
             const bindings = document.createElement("details"), bindingList = document.createElement("ul");
             bindings.append(Object.assign(document.createElement("summary"), { textContent: "Template bindings" }));
-            bindingList.append(...templateBindingsFor(kind).map(value => Object.assign(document.createElement("li"), { textContent: value })));
+            bindingList.append(...richTemplateHelpBindingsFor(kind).map(value => Object.assign(document.createElement("li"), { textContent: value })));
             bindings.append(bindingList);
             group.append(bindings);
             if (format === "excel") {

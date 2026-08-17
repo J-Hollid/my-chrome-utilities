@@ -124,12 +124,29 @@
                 :orderingControls]
                [:documentationTemplates
                 :documentationTemplateStarters
+                :documentationTemplateStarterParity
+                :documentationTemplateStarterOverview
+                :documentationTemplateStarterFlow
+                :documentationTemplateStarterMatrix
+                :documentationTemplateStarterProfile
                 :documentationTemplateExcel
                 :documentationTemplateSample
                 :documentationTemplateStale
                 :documentationTemplateValidation
+                :documentationTemplateValidationBoundaries
+                :documentationTemplateValidationScopedBinding
+                :documentationTemplateValidationCrossing
+                :documentationTemplateValidationUnsafePackage
+                :documentationTemplateValidationSizeLimit
+                :documentationTemplateValidationEncrypted
+                :documentationTemplateValidationMalformed
                 :documentationTemplateRichEditor
-                :documentationTemplateReload]
+                :documentationTemplateRichRuntime
+                :documentationTemplateRichPreviewClipboard
+                :documentationTemplateRichSanitization
+                :documentationTemplateRichHistory
+                :documentationTemplateReload
+                :documentationTemplatePortableReload]
                (map #(keyword (str "export" (format "%03d" %))) (range 1 35)))))
 
 (defn- assert-runtime! [evidence]
