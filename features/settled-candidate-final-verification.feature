@@ -202,13 +202,18 @@ Feature: Settled candidate final verification
       | requirements-expanded | implementation waits for current user approval of the changed product or safety requirement          |
 
   # Settled candidate final verification 018
-  Scenario: Settled candidate final verification 018
-    Given an approved feature has a coarse ownership boundary
-    When its standing-authorized preparation stage completes focused review
+  Scenario Outline: Settled candidate final verification 018
+    Given an approved feature's canonical preflight has <planning_result>
+    When its <preparation_stage> completes focused review
     Then the preparation is independently committed and integrated into QA from an architect QA-ready handoff
     And the product candidate has not implemented externally visible feature behavior
     And the already-approved product task restarts from that exact QA head without another product approval
-    And the product evidence range cannot contain the ownership change that narrows its own plan
+    And the product evidence range cannot contain the <preparation_change> that narrows its own plan
+
+    Examples:
+      | planning_result                | preparation_stage                                  | preparation_change        |
+      | a coarse ownership boundary    | standing-authorized ownership preparation          | ownership change          |
+      | a coarse-within-pack boundary  | standing-authorized verification-slice preparation | verification-slice change |
 
   # Settled candidate final verification 019
   Scenario: Settled candidate final verification 019
@@ -227,3 +232,47 @@ Feature: Settled candidate final verification
     And master integration applies the existing canonical final-verification procedure to the frozen candidate
     And matching passing terminal evidence changes the obligation state to consumed
     And unsuccessful terminal evidence or a behavior-bearing candidate change retains the active obligation
+
+  # Settled candidate final verification 021
+  Scenario Outline: Settled candidate final verification 021
+    Given an approved feature's canonical preflight has <planning_result>
+    When the feature workflow chooses whether to continue
+    Then it performs <next_action>
+    And no bounded forecast variance becomes a product-scope blocker
+    And no feature-mode all-20 run is authorized
+
+    Examples:
+      | planning_result                                                     | next_action                                                                                          |
+      | a bounded pack or task plan wider than the forecast                 | record the variance and continue with the canonical plan                                             |
+      | a proved coarse-within-pack boundary                                | QA-integrate one standing-authorized verification-slice preparation and resume the approved product  |
+      | a possible within-pack refinement without a proved safe slice       | continue with the conservative parent-pack closure and defer refinement                              |
+      | an all-pack coarse-boundary with exact owners and consumers         | QA-integrate the standing-authorized ownership preparation and resume the approved product            |
+      | genuinely global, unavailable parent ownership, or changed requirements | wait for current user direction                                                                   |
+
+  # Settled candidate final verification 022
+  Scenario: Settled candidate final verification 022
+    Given actual feature work proves a selected pack has a stable materially overbroad internal boundary
+    When the standing verification-slice preparation validates that boundary
+    Then the former parent-pack task closure equals its slices and conservative remainder
+    And focused selection includes every applicable direct task, prerequisite, and consumer
+    And exact-pack and terminal selection retain every former task exactly once
+    And the preparation adds no product behavior, top-level pack, omitted assertion, or optional evidence
+
+  # Settled candidate final verification 023
+  Scenario: Settled candidate final verification 023
+    Given accumulated QA work used one or more focused verification slices
+    When the architect performs the one user-requested master-integration checkpoint
+    Then the scorecard compares terminal-only failures with the focused slices selected for the accumulated work
+    And a causal selection miss quarantines its slice to the parent-pack closure until a reviewed mapping repair reaches QA
+    And a passing checkpoint records calibration without authorizing undeclared future narrowing
+    And the same terminal checkpoint remains the only complete run required for the sealed candidate
+
+  # Settled candidate final verification 024
+  Scenario: Settled candidate final verification 024
+    Given a coder's intent or exact preflight returns coarse-within-pack for an approved product task
+    When the automatic preparation route is activated
+    Then the coder sends the specifier one authorized file-based note with the product task, QA base, causal paths, task families, proposed slice, and any stopped patch reference
+    And the paused product handoff closes without a completed implementation claim
+    And the specifier sends the derived verification-slice task from current QA without waiting for another user decision
+    And architect QA-ready integration of that preparation causes the original stable product task to be reissued from the exact new QA head
+    And every role uses the ordinary file-based handoff channel rather than reporting forecast variance as a user blocker

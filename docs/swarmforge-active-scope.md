@@ -21,6 +21,7 @@ The settled-candidate verification workflow is integrated at
 |---|---|---|
 | QA-branch release pilot | Active; routine RepoWise scouting stopped after Trial 4 by user decision on 2026-08-15, with optional current-index investigation retained for unfamiliar code or known hotspots | `docs/qa-branch-release-pilot-R01.md` controls feature integration into `qa`; `docs/feature-development-focus-and-advisory-scouting-R01.md` controls the lightweight scoping convention and completed Trial 4 decision. |
 | QA verification ownership readiness | QA-integrated at `b8194b517e` on 2026-08-17 under the standing user approval | Preserve the integrated intent and exact preflights, stage-aware shared boundaries, terminal obligations, and first-use seams. Use them for each later QA feature. |
+| QA verification granularity ratchet | Approved on 2026-08-17 after focused-testing research; implementation and Documentation-template first use are active | Implement `docs/qa-verification-granularity-ratchet-R01.md` as task `verification-granularity-ratchet`, QA-integrate its behavior-preserving slices, then resume the already-approved `documentation-templates` task automatically from that exact QA head. |
 | QA-pilot verification latency correction | Closed after Slice 2 at `e32f9f7c10` by user decision on 2026-08-13 | No coder handoff. Measure the next three ordinary QA product cycles; Slices 3 and 4 remain evidence-triggered backlog items. |
 | QA style verification and Flow modularity | Complete on QA; stage-aware style planning is integrated at `d75132daef`, Flow CSS extraction at `ef440b3018`, corrections through `66dcdfd5d6`, and port snap at `89fee7df48` | Preserve the settled scorecard; do not reopen the abandoned mixed lineage or run all 20 before an explicit master-integration request. |
 | Flow click and drag-ownership correction | QA-integrated at `2b2cf06b45` on 2026-08-16 | Preserve directional Flow scenarios 043–045 and their runtime partners; cumulative promotion to `master` remains a separate release decision. |
@@ -30,7 +31,7 @@ The settled-candidate verification workflow is integrated at
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program; the combined Project Library transport isolation and Flow visual-asset portability delivery is QA-integrated at `1b192105a8` | Preserve that settled transport, content-addressed visual-body, and version-3 archive behavior. No additional VTD-008 controller slice is active. |
-| Documentation template library | Active product reconstruction after ownership readiness reached QA at `b8194b517e`; candidate `7f9c8a1121` remains stopped before review evidence | Route task `documentation-templates` from the exact current QA head under `docs/data-layer-documentation-template-program-R01.md`; use `7f9c8a1121` only as a patch reference and do not merge its lineage wholesale. |
+| Documentation template library | Product reconstruction is paused before review evidence while the approved verification-granularity first use is established; candidate `7f9c8a1121` remains stopped | QA-integrate task `verification-granularity-ratchet`, then route `documentation-templates` automatically from that exact QA head under `docs/data-layer-documentation-template-program-R01.md`; use the stopped candidate only as a patch reference. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Deferred and inactive | The existing two-worker order is within about six seconds of balanced after lock wait is removed; scheduling needed for a possible third worker is bounded inside VTD-017. |
 | VTD-012 registry and planner modularization | Deferred and inactive | Reconsider after broad final-gate and receipt-persistence costs are reduced. |
@@ -62,9 +63,11 @@ item, or start master integration without the corresponding user instruction.
 
 The ordered Documentation-template batch is active outside VTD-008. Its
 behavior-preserving `verification-ownership-readiness` stage is QA-integrated at
-`b8194b517e`. The current coder authority is a fresh reconstruction of
-`documentation-templates` from that exact QA descendant under the standing
-approval. No all-20 feature checkpoint is authorized in the product stage.
+`b8194b517e`. Research and the settled 129-task bootstrap then established the
+approved within-pack campsite ratchet. The current coder authority is
+`verification-granularity-ratchet`; after its architect QA-ready integration,
+`documentation-templates` resumes automatically from the resulting exact QA
+head. No all-20 feature checkpoint is authorized in either stage.
 
 ## Feature-development throughput authority
 
@@ -229,6 +232,7 @@ Read only the program documents relevant to the selected task.
 | Verification throughput backlog | `docs/verification-throughput-technical-debt-backlog-R01.md` |
 | QA-branch release pilot | `docs/qa-branch-release-pilot-R01.md` |
 | QA verification ownership readiness | `docs/qa-verification-ownership-readiness-R01.md` |
+| QA verification granularity ratchet | `docs/qa-verification-granularity-ratchet-R01.md` |
 | Feature development focus and advisory scouting | `docs/feature-development-focus-and-advisory-scouting-R01.md` |
 | QA-pilot verification latency correction | `docs/qa-pilot-verification-latency-correction-R01.md` |
 | QA style verification and Flow modularity | `docs/qa-style-verification-and-flow-modularity-program-R01.md` |
@@ -419,6 +423,11 @@ its meaningful invariant.
   exact verification boundary. This policy does not activate another VTD item or
   controller slice.
 
+This brittle-check maintenance rule is distinct from the approved within-pack
+campsite ratchet in `docs/qa-verification-granularity-ratchet-R01.md`. The latter
+may introduce a subordinate task-selection slice only after actual work proves a
+stable observable boundary and must preserve the parent pack's complete closure.
+
 ## Task-scoped verification
 
 Use only the exact task pack selected below plus the package command. Do not infer
@@ -443,6 +452,7 @@ historical rename/delete handling.
 | VTD-015 workflow bootstrap | all 20 canonical pack selectors; shared handoff and evidence behavior affects every pack |
 | QA release-pilot workflow changes | `--pack shell --focused-task unit:test/settled-final-verification-workflow-test.mjs --focused-task unit:test/verification-process-contract-test.mjs` |
 | Verification ownership readiness bootstrap | `--pack shell --pack flow_export --pack project_management --pack durable_project_repository`; include the two focused workflow/process-contract unit targets and package proof; one bounded additional exact owner may be recorded as forecast variance, but all 20 is forbidden |
+| Verification granularity ratchet | `--pack shell --pack flow_export --pack project_management --pack durable_project_repository`; include direct slice-planner, conservation, workflow, and process-contract unit targets with properties and package proof; one bounded exact consumer may be recorded as variance, but all 20 is forbidden |
 | Flow verification proof hardening | `--pack flow_graph` |
 | Flow browser-program partitioning | `--pack flow_graph --focused-task unit:test/verification-process-contract-test.mjs` |
 | Flow relationship snap feedback | `--pack flow_graph` |

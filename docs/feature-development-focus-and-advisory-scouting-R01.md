@@ -55,6 +55,15 @@ ownership-readiness classification decides whether the feature is bounded,
 needs a standing-authorized preparation stage, or requires user direction. No
 feature role runs the all-20 checkpoint merely to gain confidence.
 
+The same rule applies to task scope inside selected packs. A wider exact task
+plan than forecast is recorded and proceeds; it is not a new product scope or a
+reason to request another verification specification. When actual work proves a
+stable materially narrower task boundary, follow
+`docs/qa-verification-granularity-ratchet-R01.md`. That standing campsite ratchet
+adds a subordinate slice through an independent QA-integrated preparation stage.
+If a safe slice is not yet provable, use the conservative parent-pack closure and
+defer refinement instead of blocking the feature.
+
 ## Coverage ratchet
 
 When a feature reaches an area whose direct checks or presumed consumers are not
@@ -69,6 +78,11 @@ ratchet. The user approved the bounded executable correction in
 `docs/qa-verification-ownership-readiness-R01.md` on 2026-08-17. That program is
 limited to canonical ownership readiness; it does not reactivate routine
 RepoWise scouting or authorize unrelated verification optimization.
+
+The later user-approved granularity ratchet makes this coverage ratchet
+executable within packs. It refines only a boundary encountered by actual work,
+keeps the 20 top-level packs stable, and preserves each exact-pack and terminal
+task closure.
 
 ## Advisory RepoWise scouting pilot
 

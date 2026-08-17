@@ -18,6 +18,12 @@ This program refines the QA-branch release pilot. It does not authorize a
 feature-mode all-20 run, let a feature narrow its own evidence, omit an owned
 consumer, change product requirements, or promote `qa` to `master`.
 
+Within a selected pack, task granularity follows
+`docs/qa-verification-granularity-ratchet-R01.md`. A bounded pack forecast remains
+advisory: a wider canonical pack or task plan proceeds automatically unless a
+proved `coarse-within-pack` boundary routes the standing-authorized refinement
+stage. Pack size or forecast variance alone never blocks product work.
+
 ## Observed recurrence
 
 Three completed planning incidents establish that documentation-only forecasting
@@ -68,6 +74,9 @@ packs, task count, critical-path estimate, paths, owner and boundary decisions,
 and a concise reason:
 
 - `bounded-ready`: current ownership selects fewer than all runnable packs;
+- `coarse-within-pack`: current ownership selects fewer than all runnable packs,
+  but a selected pack contains materially unrelated task families and has a
+  credible exact subordinate slice;
 - `coarse-boundary`: one or more existing shared paths have a credible exact QA
   owner and consumer boundary, but current ownership expands them to all packs;
 - `genuinely-global`: the changed behavior or executable contract can affect
@@ -78,9 +87,12 @@ and a concise reason:
   behavior, persistence meaning, security policy, migration semantics, or
   another requirement.
 
-`bounded-ready` proceeds to ordinary implementation. `coarse-boundary` starts
-the preparation stage below. The other three results stop for current user
-direction; they cannot be relabelled as preparation merely to avoid all 20.
+`bounded-ready` proceeds to ordinary implementation. `coarse-within-pack` starts
+the granularity-ratchet preparation, and `coarse-boundary` starts the ownership
+preparation below. A bounded plan with no proved subordinate slice proceeds with
+the conservative parent-pack closure and records deferred refinement. The other
+three results stop for current user direction; they cannot be relabelled as
+preparation merely to avoid all 20.
 
 ## Standing ownership-preparation authority
 

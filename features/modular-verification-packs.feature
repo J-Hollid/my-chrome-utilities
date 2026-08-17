@@ -2433,3 +2433,67 @@ Feature: Modular verification packs
     And Built-in Documentation retains its current workspace, previews, rich copy, plain fallback, and Excel downloads
     And the installed Studio retains current navigation, responsive containment, and package completeness
     And no Template Library, custom Excel rendering, rich template editor, template record, or template assignment exists before the product stage
+
+  # Modular verification packs 172
+  Scenario Outline: Modular verification packs 172
+    Given a feature forecast and its canonical bounded plan have <plan_relation>
+    When within-pack readiness is assessed
+    Then the readiness result is <readiness_result>
+    And the workflow action is <workflow_action>
+    And pack size, task count, or forecast variance alone never requires another product approval
+
+    Examples:
+      | plan_relation                                                                                                  | readiness_result   | workflow_action                                                                                  |
+      | a wider pack or task scope whose selected tasks are causally related                                           | bounded-ready      | record forecast variance and continue with the canonical plan                                    |
+      | an unrelated complete task family, a stable observable subordinate boundary, and a reduced task count or critical path | coarse-within-pack | route one standing-authorized verification-slice preparation before resuming the approved product |
+      | unrelated task families without a proved stable observable subordinate boundary                               | bounded-ready      | record deferred refinement and continue with the conservative parent-pack closure                 |
+      | a large parent pack whose complete task closure is genuinely required by the changed behavior                 | bounded-ready      | continue with the complete parent-pack closure                                                    |
+
+  # Modular verification packs 173
+  Scenario: Modular verification packs 173
+    Given one existing verification pack has a proved reusable task boundary
+    When a subordinate verification slice is declared
+    Then it has one stable identity, exact source paths, direct registered tasks, prerequisites, consumers, and an observable boundary
+    And the union of its slices and conservative remainder equals the former exact-pack task closure
+    And focused planning may select only the applicable slice, prerequisites, and consumers
+    And exact-pack and terminal planning still select every former task exactly once
+    And no top-level pack, assertion leaf, dependency, property, package proof, or terminal obligation is removed or made optional
+
+  # Modular verification packs 174
+  Scenario Outline: Modular verification packs 174
+    Given within-pack planning receives <mapping_state>
+    When it selects tasks for one canonically owned pack
+    Then the task scope is <task_scope>
+    And no unavailable or ambiguous slice narrows verification
+
+    Examples:
+      | mapping_state                                                        | task_scope                                                        |
+      | a valid current path and subordinate slice                           | the slice tasks, prerequisites, and declared consumers            |
+      | a new or unclassified path with a known parent-pack owner            | the conservative parent-pack closure                              |
+      | a compatible base-to-current slice rename or ownership change        | the union of old and new slice tasks, prerequisites, and consumers |
+      | a missing, duplicate, conflicting, or unobservable slice declaration | the conservative parent-pack closure with a bounded diagnostic     |
+      | unavailable or incompatible parent-pack ownership                    | no task launch and the existing ownership-unavailable result       |
+
+  # Modular verification packs 175
+  Scenario Outline: Modular verification packs 175
+    Given ownership intent includes <proposed_prefix_state>
+    When intent preflight validates the proposed subordinate ownership
+    Then the intent result is <intent_result>
+    And exact candidate preflight later evaluates only committed paths through canonical current and historical ownership
+    And intent preflight executes no task or repository write
+
+    Examples:
+      | proposed_prefix_state                                                        | intent_result                                                               |
+      | a syntactically valid absent prefix with a known proposed owner and consumers | validate the proposal without treating it as a current changed path         |
+      | an invalid prefix or unknown proposed parent owner                            | reject the proposal with a bounded diagnostic                               |
+      | an existing path whose current ownership conflicts with the proposal          | retain current ownership and report the conflict before product coding      |
+
+  # Modular verification packs 176
+  Scenario: Modular verification packs 176
+    Given a focused QA candidate used an active subordinate verification slice
+    And the user-requested terminal checkpoint finds a causal failure outside that applicable slice
+    When the selection miss is recorded
+    Then the failed release candidate follows the existing focused repair and fresh all-20 checkpoint rule
+    And the implicated slice becomes ineligible for narrowing until an independently reviewed mapping repair reaches QA
+    And later feature work uses the conservative parent-pack closure during that quarantine
+    And no separate all-20 calibration run, automatic assertion deletion, or undeclared narrowing is authorized

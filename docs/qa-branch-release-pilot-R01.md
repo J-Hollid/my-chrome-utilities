@@ -1,7 +1,7 @@
 # QA-branch release pilot R01
 
-Status: approved by the user for immediate activation; ownership-readiness
-refinement approved on 2026-08-17
+Status: approved by the user for immediate activation; ownership-readiness and
+within-pack granularity refinements approved on 2026-08-17
 
 Prepared: 2026-08-12
 
@@ -53,7 +53,12 @@ reviewable change.
    unavailable ownership, or changed product or safety requirements still stop
    for current user direction. The planner never omits owned packs to preserve
    the smaller scope, and a product candidate cannot narrow its own current/base
-   ownership in the same evidence range.
+   ownership in the same evidence range. Within a bounded pack plan,
+   `docs/qa-verification-granularity-ratchet-R01.md` distinguishes ordinary
+   forecast variance from a proved `coarse-within-pack` boundary. Forecast
+   variance proceeds automatically. A proved boundary routes its standing
+   preparation stage; an unproved refinement opportunity uses the conservative
+   parent-pack plan and does not block the product.
 3. Coder and refactorer run focused checks and record review-ready evidence. The
    architect completes architecture and quality review and runs focused checks
    for any changes or repairs. No role runs the all-20 gate in this mode.
@@ -111,6 +116,8 @@ The ownership-readiness program is the required non-advisory pre-coding check fo
 likely shared integration paths. It is distinct from stopped RepoWise scouting:
 it evaluates the canonical verification registry, executes no product task, and
 can route a standing-authorized preparation stage under its approved safeguards.
+The granularity ratchet applies the same lifecycle inside a selected pack while
+preserving complete exact-pack and terminal execution.
 
 ### Verification run intent
 

@@ -1,8 +1,9 @@
 # Data layer documentation template program R01
 
 Status: approved by the user on 2026-08-17; ownership readiness is QA-integrated
-at `b8194b517e`, the product reconstruction is active from that QA descendant,
-and candidate `7f9c8a1121` remains a patch reference only
+at `b8194b517e`, the product reconstruction is paused before review evidence for
+the approved verification-granularity first use, and candidate `7f9c8a1121`
+remains a patch reference only
 
 Prepared: 2026-08-17
 
@@ -255,6 +256,15 @@ archive, workspace-entry, and build paths. It is not review-ready. Preserve
 at `b8194b517e`; reconstruct this feature from that exact QA descendant and use
 the settled asset-body, Documentation-contribution, and build-dependency seams.
 The standing ordered-batch approval requires no second product approval.
+
+The bounded owner plan remains materially coarse within the selected packs.
+Under `docs/qa-verification-granularity-ratchet-R01.md`, task
+`verification-granularity-ratchet` now establishes the reusable subordinate
+slice contract and its Documentation-template first-use slices without product
+behavior. After that preparation reaches QA, reconstruct and resume this product
+from the exact new QA head automatically. A wider forecast by itself is not a
+blocker, and inability to prove an optional narrower slice falls back to the
+conservative parent-pack plan rather than requiring another product approval.
 
 **Ownership-readiness launch:** the intent preflight names the integrated shared
 surfaces `src/project-asset-body-contribution.ts`,
