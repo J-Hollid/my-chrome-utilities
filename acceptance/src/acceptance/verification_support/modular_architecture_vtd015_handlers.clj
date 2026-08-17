@@ -329,8 +329,8 @@
                                   "Ownership readiness authorized an all-20 feature run."))}
    {:pattern #"^an approved feature has a coarse ownership boundary$"
     :handler (fn [world _ _] (ownership-prepared world))}
-   {:pattern #"^its standing-authorized preparation stage completes focused review$"
-    :handler (fn [world _ _] world)}
+   {:pattern #"^its (<preparation_stage>|standing-authorized ownership preparation|standing-authorized verification-slice preparation|standing-authorized preparation stage) completes focused review$"
+    :handler (fn [world _ _] (granularity-assert! world))}
    {:pattern #"^the preparation is independently committed and integrated into QA from an architect QA-ready handoff$"
     :handler (fn [world _ _]
                (let [preparation (get-in world [:vtd015/ownership-evidence :preparation])]
@@ -344,7 +344,7 @@
     :handler (fn [world _ _]
                (ownership-assert! world (true? (get-in world [:vtd015/ownership-evidence :preparation :restartFromExactQaHead]))
                                   "The product task did not restart from the prepared QA head."))}
-   {:pattern #"^the product evidence range cannot contain the ownership change that narrows its own plan$"
+   {:pattern #"^the product evidence range cannot contain the (<preparation_change>|ownership change|verification-slice change) that narrows its own plan$"
     :handler (fn [world _ _]
                (ownership-assert! world (true? (get-in world [:vtd015/ownership-evidence :preparation :evidenceRangeSeparated]))
                                   "Product evidence included its ownership-preparation change."))}
@@ -410,11 +410,8 @@
     :handler (fn [world _ _] (granularity-assert! world))}
    {:pattern #"^(?:a coder's intent or exact preflight returns coarse-within-pack for an approved product task|the automatic preparation route is activated|the coder sends the specifier one authorized file-based note with the product task, QA base, causal paths, task families, proposed slice, and any stopped patch reference|the paused product handoff closes without a completed implementation claim|the specifier sends the derived verification-slice task from current QA without waiting for another user decision|architect QA-ready integration of that preparation causes the original stable product task to be reissued from the exact new QA head|every role uses the ordinary file-based handoff channel rather than reporting forecast variance as a user blocker)$"
     :handler (fn [world _ _] (granularity-assert! world))}
-   {:pattern #"^its standing-authorized verification-slice preparation completes focused review$"
-    :handler (fn [world _ _] (granularity-assert! world))}
-   {:pattern #"^the product evidence range cannot contain the verification-slice change that narrows its own plan$"
-    :handler (fn [world _ _] (granularity-assert! world))}])
+   ])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-17T10:15:18.416104793+02:00", :module-hash "-1688471804", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1551051199"} {:id "form/1/defonce", :kind "defonce", :line 5, :end-line 5, :hash "701185655"} {:id "form/2/defonce", :kind "defonce", :line 6, :end-line 6, :hash "-1357907350"} {:id "defn-/production-evidence!", :kind "defn-", :line 8, :end-line 15, :hash "-288875895"} {:id "defn-/prepared", :kind "defn-", :line 17, :end-line 18, :hash "693136156"} {:id "defn-/ownership-prepared", :kind "defn-", :line 20, :end-line 29, :hash "63625446"} {:id "defn-/ownership-assert!", :kind "defn-", :line 31, :end-line 33, :hash "-1481341608"} {:id "defn-/assert!", :kind "defn-", :line 35, :end-line 37, :hash "-1474981311"} {:id "defn-/values", :kind "defn-", :line 39, :end-line 41, :hash "-170718585"} {:id "defn-/value-at", :kind "defn-", :line 43, :end-line 44, :hash "1199202542"} {:id "defn/handlers", :kind "defn", :line 46, :end-line 387, :hash "-173378486"}]}
+;; {:version 1, :tested-at "2026-08-17T12:47:41.722150128+02:00", :module-hash "-74068167", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1551051199"} {:id "form/1/defonce", :kind "defonce", :line 5, :end-line 5, :hash "701185655"} {:id "form/2/defonce", :kind "defonce", :line 6, :end-line 6, :hash "-1357907350"} {:id "defn-/production-evidence!", :kind "defn-", :line 8, :end-line 15, :hash "-288875895"} {:id "defn-/prepared", :kind "defn-", :line 17, :end-line 18, :hash "693136156"} {:id "defn-/ownership-prepared", :kind "defn-", :line 20, :end-line 29, :hash "63625446"} {:id "defn-/ownership-assert!", :kind "defn-", :line 31, :end-line 33, :hash "-1481341608"} {:id "defn-/granularity-assert!", :kind "defn-", :line 35, :end-line 42, :hash "1069318827"} {:id "defn-/assert!", :kind "defn-", :line 44, :end-line 46, :hash "-1474981311"} {:id "defn-/values", :kind "defn-", :line 48, :end-line 50, :hash "-170718585"} {:id "defn-/value-at", :kind "defn-", :line 52, :end-line 53, :hash "1199202542"} {:id "defn/handlers", :kind "defn", :line 55, :end-line 413, :hash "-203791403"}]}
 ;; clj-mutate-manifest-end
