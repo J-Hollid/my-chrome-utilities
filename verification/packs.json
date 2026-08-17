@@ -229,14 +229,8 @@
         "id": "project_asset_body_staging",
         "sourcePaths": ["src/durable-project/project-asset-body-staging.ts"],
         "sourcePrefixes": [],
-        "tasks": [
-          "unit:test/data-layer-project-asset-body-staging-test.mjs",
-          "unit:test/data-layer-project-asset-body-runtime-test.mjs"
-        ],
-        "prerequisites": [
-          "property:test/data-layer-project-asset-body-staging-property-test.mjs",
-          "property:test/data-layer-durable-project-runtime-property-test.mjs"
-        ],
+        "tasks": ["unit:test/data-layer-durable-project-runtime-test.mjs"],
+        "prerequisites": ["property:test/data-layer-durable-project-runtime-property-test.mjs"],
         "consumers": [{"packId": "flow_export", "sliceId": "documentation_template_workspace"}],
         "observableBoundary": "Project-scoped staged asset-body lifecycle and atomic durable Draft command attachment"
       },
@@ -257,8 +251,6 @@
     "unit": [
       "test/data-layer-durable-project-repository-test.mjs",
       "test/data-layer-durable-project-runtime-test.mjs",
-      "test/data-layer-project-asset-body-staging-test.mjs",
-      "test/data-layer-project-asset-body-runtime-test.mjs",
       "test/data-layer-durable-project-runtime-canonical-companion-test.mjs",
       "test/data-layer-compact-canonical-history-test.mjs",
       "test/data-layer-saved-schema-feed-test.mjs"
@@ -266,7 +258,6 @@
     "property": [
       "test/data-layer-durable-project-repository-property-test.mjs",
       "test/data-layer-durable-project-runtime-property-test.mjs",
-      "test/data-layer-project-asset-body-staging-property-test.mjs",
       "test/data-layer-selective-production-revisions-property-test.mjs"
     ],
     "features": [
