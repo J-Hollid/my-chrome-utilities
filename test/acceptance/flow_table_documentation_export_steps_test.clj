@@ -96,12 +96,29 @@
                         :orderingControls true
                         :documentationTemplates true
                         :documentationTemplateStarters true
+                        :documentationTemplateStarterParity true
+                        :documentationTemplateStarterOverview true
+                        :documentationTemplateStarterFlow true
+                        :documentationTemplateStarterMatrix true
+                        :documentationTemplateStarterProfile true
                         :documentationTemplateExcel true
                         :documentationTemplateSample true
                         :documentationTemplateStale true
                         :documentationTemplateValidation true
+                        :documentationTemplateValidationBoundaries true
+                        :documentationTemplateValidationScopedBinding true
+                        :documentationTemplateValidationCrossing true
+                        :documentationTemplateValidationUnsafePackage true
+                        :documentationTemplateValidationSizeLimit true
+                        :documentationTemplateValidationEncrypted true
+                        :documentationTemplateValidationMalformed true
                         :documentationTemplateRichEditor true
+                        :documentationTemplateRichRuntime true
+                        :documentationTemplateRichPreviewClipboard true
+                        :documentationTemplateRichSanitization true
+                        :documentationTemplateRichHistory true
                         :documentationTemplateReload true
+                        :documentationTemplatePortableReload true
                         :export021 true
                         :export022 true
                         :export023 true
