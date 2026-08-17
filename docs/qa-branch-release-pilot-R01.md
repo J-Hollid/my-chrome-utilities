@@ -1,6 +1,7 @@
 # QA-branch release pilot R01
 
-Status: approved by the user for immediate activation
+Status: approved by the user for immediate activation; ownership-readiness
+refinement approved on 2026-08-17
 
 Prepared: 2026-08-12
 
@@ -41,12 +42,18 @@ reviewable change.
    requirements need
    reinterpretation, failures repeat without a causal explanation, no credible
    completion path remains, or another safety boundary requires authority.
-   Before any review-ready task launches, exact changed-path preflight compares
-   the planned scope with that approved scope. If an incidental shared
-   verification-infrastructure repair expands a product slice to all 20 packs,
-   task launch stops for a user choice: restore the product-only candidate, or
-   stop it and approve the repair as a standalone infrastructure slice. The
-   planner never omits owned packs to preserve the smaller scope.
+   Ownership readiness follows
+   `docs/qa-verification-ownership-readiness-R01.md`. Before product coding, a
+   read-only intent plan evaluates likely shared integration surfaces. After the
+   first coherent commit and before a complete planned diagnostic or evidence
+   run, exact plan-only preflight compares the canonical changed paths with the
+   approved scope. A `coarse-boundary` all-pack result automatically starts the
+   standing-authorized ownership-preparation stage and resumes the already-approved
+   product only after that stage is QA-integrated. Genuinely global behavior,
+   unavailable ownership, or changed product or safety requirements still stop
+   for current user direction. The planner never omits owned packs to preserve
+   the smaller scope, and a product candidate cannot narrow its own current/base
+   ownership in the same evidence range.
 3. Coder and refactorer run focused checks and record review-ready evidence. The
    architect completes architecture and quality review and runs focused checks
    for any changes or repairs. No role runs the all-20 gate in this mode.
@@ -99,6 +106,11 @@ add RepoWise to ordinary feature handoffs or make it a delivery condition. It ma
 still be selected explicitly for unfamiliar-code or known-hotspot investigation
 when its existing index is already current; it cannot block work, widen evidence
 on its own, or override the canonical registry.
+
+The ownership-readiness program is the required non-advisory pre-coding check for
+likely shared integration paths. It is distinct from stopped RepoWise scouting:
+it evaluates the canonical verification registry, executes no product task, and
+can route a standing-authorized preparation stage under its approved safeguards.
 
 ### Verification run intent
 

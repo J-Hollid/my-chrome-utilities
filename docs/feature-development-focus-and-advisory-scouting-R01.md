@@ -1,7 +1,7 @@
 # Feature development focus and advisory scouting R01
 
-Status: approved documentation convention; routine RepoWise scouting stopped
-after Trial 4; optional targeted investigation remains available
+Status: approved convention refined by QA verification ownership readiness;
+routine RepoWise scouting stopped after Trial 4
 
 Prepared: 2026-08-14
 
@@ -13,9 +13,10 @@ behavior under construction, expands once to its bounded presumed impact for QA
 sign-off, and leaves the complete 20-pack checkpoint to explicit master
 integration.
 
-This convention is documentation, not an executable gate. It adds no runner,
-registry, receipt type, telemetry subsystem, mandatory pause, or new handoff
-state. Existing changed-path planning, evidence binding, package proof, incident
+Development focus and QA impact remain documentation. The later user-approved
+ownership-readiness program adds a canonical read-only intent and exact plan-only
+gate for shared integration surfaces; it does not make RepoWise or another
+advisory tool controlling. Existing evidence binding, package proof, incident
 handling, and master-integration authority remain controlling.
 
 ## Two declared verification scopes
@@ -32,6 +33,11 @@ Each new implementation handoff records two short lists:
   evidence after the candidate has settled, subject to the repository's exact
   changed-path planner.
 
+The specification also records likely existing shared integration paths and
+likely new ownership prefixes. They are evaluated under
+`docs/qa-verification-ownership-readiness-R01.md` before product coding; they are
+not a third test list and cannot override canonical ownership.
+
 The development focus expands during implementation only when a direct check
 fails causally, a changed dependency or public surface adds an observable
 consumer, or review finds a concrete missing boundary. Elapsed time alone does
@@ -44,10 +50,10 @@ the evidence follows that set without waiting for another user decision. An
 underdeclared evidence invocation may stop before launching tasks, but that is a
 cheap correction signal: rerun once with every pack named by the canonical plan
 and record the forecast variance. It is not an implementation blocker or
-authority conflict. If shared verification work unexpectedly selects all 20
-packs, the existing feature-mode scope rule applies: restore a product-only
-candidate or seek separate authority for infrastructure work. No feature role
-runs the all-20 checkpoint merely to gain confidence.
+authority conflict. If exact planning selects all 20 packs,
+ownership-readiness classification decides whether the feature is bounded,
+needs a standing-authorized preparation stage, or requires user direction. No
+feature role runs the all-20 checkpoint merely to gain confidence.
 
 ## Coverage ratchet
 
@@ -56,11 +62,13 @@ documented well enough to choose these lists, the specifier records the mapping
 as part of that feature's specification. This ratchets knowledge up when the
 area is touched; it does not require repository-wide classification in advance.
 
-The first implementation is deliberately only this reusable documentation
-shape. Do not add verification graph machinery, selection heuristics, wrappers,
-or enforcement unless several ordinary features demonstrate a repeated error
-that the documentation cannot prevent and the measured saving is likely to
-exceed the implementation and maintenance cost.
+The original implementation deliberately stopped at this reusable documentation
+shape. Later Project Library, visual-portability, and Documentation-template
+fan-out incidents demonstrated the repeated late ownership error required by its
+ratchet. The user approved the bounded executable correction in
+`docs/qa-verification-ownership-readiness-R01.md` on 2026-08-17. That program is
+limited to canonical ownership readiness; it does not reactivate routine
+RepoWise scouting or authorize unrelated verification optimization.
 
 ## Advisory RepoWise scouting pilot
 

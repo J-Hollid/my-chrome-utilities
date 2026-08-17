@@ -2355,3 +2355,81 @@ Feature: Modular verification packs
     And the current incident still requires its own exact causal regression, repair-focused receipt, review evidence, and package proof
     And missing or ambiguous current targets, noneligible repairs, nondeferred incidents, unverified projection sources, and unrelated succession failures remain blocking
     And no all-20 checkpoint is authorized
+
+  # Modular verification packs 165
+  Scenario: Modular verification packs 165
+    Given a canonical ownership intent names one QA base, stable task, approved packs, likely existing paths, and proposed new prefixes
+    When intent preflight evaluates the current verification registry
+    Then it returns canonical owners, boundaries, consumers, planned packs, task estimate, and expansion-causing paths
+    And malformed identities, unavailable paths, ambiguous ownership, or unknown packs produce bounded diagnostics
+    And intent preflight executes no build, test, browser target, receipt, incident transition, evidence record, package, or repository write
+
+  # Modular verification packs 166
+  Scenario Outline: Modular verification packs 166
+    Given an ownership intent or exact candidate has <planning_condition>
+    When readiness classification is calculated
+    Then the ownership-readiness class is <classification>
+    And the diagnostic retains every expansion-causing path and current ownership reason
+
+    Examples:
+      | planning_condition                                                                 | classification        |
+      | a complete current plan smaller than all runnable packs                            | bounded-ready         |
+      | an all-pack plan caused only by shared paths with provable exact QA consumers      | coarse-boundary       |
+      | an all-pack plan whose executable behavior can affect every runnable pack          | genuinely-global      |
+      | missing, malformed, ambiguous, or incompatible current or historical ownership     | ownership-unavailable |
+      | a bounded seam would change approved behavior, persistence, migration, or security | requirements-expanded |
+
+  # Modular verification packs 167
+  Scenario Outline: Modular verification packs 167
+    Given a shared QA boundary declaration has <declaration_state>
+    When the registry and feature-mode planner validate it
+    Then the feature-mode planner returns <planning_result>
+    And terminal master planning remains all 20 runnable packs with properties and package proof
+
+    Examples:
+      | declaration_state                                                               | planning_result                                                                     |
+      | one owner, exact paths, exact consumers, structural class, and observable smoke | feature mode selects the declared owner and consumers and records any named obligation |
+      | a duplicate, conflict, missing owner, missing consumer, or unobservable smoke    | planning blocks before task launch                                                  |
+      | an undeclared shared path                                                        | existing conservative ownership remains authoritative                              |
+
+  # Modular verification packs 168
+  Scenario Outline: Modular verification packs 168
+    Given a canonical change set contains <ownership_change>
+    When exact feature-mode planning compares compatible current and historical registries
+    Then the conserved pack selection is <conserved_scope>
+    And the candidate cannot use a same-range declaration to erase historical ownership
+
+    Examples:
+      | ownership_change                                      | conserved_scope                                                   |
+      | an existing path gains a narrower shared boundary     | the union of former owners and current owners and consumers       |
+      | a declared path is renamed or deleted                 | the union of readable old and new owners and consumers            |
+      | a new path has a valid current declaration            | its current owner and consumers                                   |
+      | historical ownership is unavailable or incompatible  | no task launch and an ownership-unavailable result                |
+
+  # Modular verification packs 169
+  Scenario: Modular verification packs 169
+    Given a standing-authorized ownership preparation changes no approved product behavior
+    When it establishes an exact shared boundary
+    Then its candidate contains only behavior-preserving seams, ownership declarations, process contracts, and their direct proof
+    And it preserves every former consumer, assertion leaf, active scenario, package input, and terminal obligation
+    And its focused evidence selects its owner, declared consumers, required Shell process checks, and package proof
+    And an all-pack plan, unproved consumer, weakened check, or changed requirement blocks the preparation
+
+  # Modular verification packs 170
+  Scenario: Modular verification packs 170
+    Given the QA base contains the approved ownership-readiness contract but not its implementation
+    And the candidate adds only plan-only readiness, classification, shared-boundary validation, terminal obligations, workflow instructions, and approved first-use seams
+    When one-time ownership-readiness bootstrap evidence is requested
+    Then only the approved Shell process boundary and bounded first-use owners and consumers execute with properties and package proof
+    And the receipt records review evidence and terminal-full obligations without claiming final proof
+    And bootstrap authority is unavailable once ownership-readiness implementation is in the base
+    And the bootstrap task inventory remains smaller than the canonical runnable inventory
+
+  # Modular verification packs 171
+  Scenario: Modular verification packs 171
+    Given Documentation templates need project asset-body persistence and archive participation, a Documentation workspace contribution, and a build-delivered workbook dependency
+    When the first ownership-preparation stage establishes those shared seams
+    Then current Flow visual assets retain exact bytes, lazy loading, validation, deletion safety, and portable round trips
+    And Built-in Documentation retains its current workspace, previews, rich copy, plain fallback, and Excel downloads
+    And the installed Studio retains current navigation, responsive containment, and package completeness
+    And no Template Library, custom Excel rendering, rich template editor, template record, or template assignment exists before the product stage

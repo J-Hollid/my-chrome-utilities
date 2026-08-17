@@ -178,3 +178,52 @@ Feature: Settled candidate final verification
     And a passing final receipt consumes every matching style obligation and supplies final-ready evidence
     And a failure or behavior-bearing candidate change leaves the obligations active and requires the existing focused repair plus one fresh terminal checkpoint
     And no additional all-20 run is required for styling merely because the same passing receipt covered other accumulated QA work
+
+  # Settled candidate final verification 016
+  Scenario: Settled candidate final verification 016
+    Given a user-approved QA feature names its development focus, QA impact, and likely shared integration surfaces
+    When ownership readiness is evaluated before product coding
+    Then a read-only intent plan reports current owners, consumers, planned packs, task estimate, and expansion-causing paths
+    And no build, test, receipt, incident, evidence claim, Git change, or handoff is produced
+
+  # Settled candidate final verification 017
+  Scenario Outline: Settled candidate final verification 017
+    Given ownership readiness classifies an approved feature as <classification>
+    When the feature workflow selects its next stage
+    Then the workflow routes to <next_stage>
+    And no feature-mode all-20 run is authorized
+
+    Examples:
+      | classification        | next_stage                                                                                          |
+      | bounded-ready         | product implementation starts from the approved QA base                                             |
+      | coarse-boundary       | a standing-authorized ownership preparation stage starts without another routine user approval      |
+      | genuinely-global      | implementation waits for current user or release direction                                          |
+      | ownership-unavailable | implementation waits for ownership repair direction without inferring a narrower boundary           |
+      | requirements-expanded | implementation waits for current user approval of the changed product or safety requirement          |
+
+  # Settled candidate final verification 018
+  Scenario: Settled candidate final verification 018
+    Given an approved feature has a coarse ownership boundary
+    When its standing-authorized preparation stage completes focused review
+    Then the preparation is independently committed and integrated into QA from an architect QA-ready handoff
+    And the product candidate has not implemented externally visible feature behavior
+    And the already-approved product task restarts from that exact QA head without another product approval
+    And the product evidence range cannot contain the ownership change that narrows its own plan
+
+  # Settled candidate final verification 019
+  Scenario: Settled candidate final verification 019
+    Given a coder has the first coherent committed candidate for an approved QA feature
+    When exact candidate ownership is checked before a complete planned diagnostic or evidence run
+    Then plan-only preflight uses the canonical Git change set and current and historical ownership
+    And it executes no task and creates no receipt, incident, package, or evidence eligibility
+    And an authorized settled candidate runs one property-enabled review-evidence plan after its final commit
+    And an ordinary or dirty-tree diagnostic receipt cannot be recorded as review-ready evidence
+
+  # Settled candidate final verification 020
+  Scenario: Settled candidate final verification 020
+    Given focused QA evidence used a declared shared boundary with a terminal-full obligation
+    When later QA features proceed or the user requests master integration
+    Then unrelated QA features neither resolve nor repeat the obligation
+    And master integration applies the existing canonical final-verification procedure to the frozen candidate
+    And matching passing terminal evidence changes the obligation state to consumed
+    And unsuccessful terminal evidence or a behavior-bearing candidate change retains the active obligation
