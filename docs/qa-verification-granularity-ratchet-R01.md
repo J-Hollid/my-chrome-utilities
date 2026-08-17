@@ -1,8 +1,8 @@
 # QA verification granularity ratchet R01
 
-Status: approved by the user on 2026-08-17 for immediate standing activation;
-implementation and the Documentation-template first use are ordered before the
-already-approved product resumes
+Status: QA-integrated at `066ea284de` on 2026-08-17 under the standing user
+approval; the Documentation-template first use is `bounded-ready` and the
+already-approved product resumes automatically from this QA descendant
 
 Prepared: 2026-08-17
 
@@ -156,9 +156,8 @@ new undeclared narrowing. No separate all-20 calibration run is added.
 
 ## Ordered Documentation-template first use
 
-The active Documentation-template feature is the first observed use. Its current
-product reconstruction pauses before review evidence while task
-`verification-granularity-ratchet` establishes:
+The active Documentation-template feature is the first observed use. Task
+`verification-granularity-ratchet` established:
 
 - the general subordinate-slice contract and conservative fallback;
 - direct Documentation-template task slices inside `flow_export`,
@@ -167,12 +166,11 @@ product reconstruction pauses before review evidence while task
 - the Shell process-contract observations needed for automatic routing; and
 - exact-pack and terminal conservation.
 
-The preparation implements no Template Library, template record, workbook
+The preparation implemented no Template Library, template record, workbook
 renderer, upload, rich editor, assignment, preview, export, or new product
-behavior. Candidate `7f9c8a1121` remains a patch reference only. After the
-preparation is architect `qa-ready` and integrated, `documentation-templates`
-resumes automatically from that exact QA head under its existing product
-approval.
+behavior. Candidate `7f9c8a1121` remains a patch reference only.
+`documentation-templates` resumes automatically from the exact QA descendant
+that records this scorecard, under its existing product approval.
 
 ## Verification and effort boundary
 
@@ -204,3 +202,45 @@ terminal obligations; and all-20 attempts. The first-use target is zero
 feature-mode all-20 runs, unchanged exact-pack task closures, and an exact
 Documentation-template product plan that can proceed without another
 verification-ownership specification round-trip.
+
+### Settled implementation and first-use result
+
+The approved specification commit `7b7ce01281` was handed to the coder at
+2026-08-17 09:53:39Z. The repaired architect candidate `066ea284de` was handed
+back at 11:31:53Z and fast-forwarded into QA by 11:34:40Z: about 1 hour 41
+minutes from handoff to integration, inside the eight-hour ceiling and before
+the four-hour checkpoint.
+
+Four exact focused review runs passed with properties and package proof: coder,
+refactorer, initial architect, and repaired architect evidence each selected the
+same four packs and 129 tasks and took about 7 minutes 39 seconds to 7 minutes
+44 seconds. Their measured verification time was about 30 minutes 49 seconds in
+total. The initial architect pass was correctly invalidated when independent
+specifier review found three operational contract gaps: the CLI could not emit
+`coarse-within-pack`, a proposed prefix incorrectly required an already-
+registered slice, and terminal selection-miss quarantine was not durable. The
+repair made all three executable and repeated the complete focused evidence.
+There were no failed evidence runs and no all-20 attempt.
+
+The exact parent-pack closures and terminal obligations remain unchanged. The
+integrated declarations add subordinate Documentation-template slices in
+`flow_export`, `project_management`, and `durable_project_repository`, plus the
+declared `shell` consumer. Unknown or incompatible paths fall back to the full
+parent closure. Terminal selection misses are stored in the durable Git-notes
+quarantine and keep later work on that parent fallback until a separately
+reviewed mapping repair reaches QA.
+
+The first real `documentation-templates` intent from `066ea284de` is
+`bounded-ready`. It plans 12 tasks with a 12-second critical-path estimate
+across the three forecast product packs and the declared `shell` consumer,
+instead of the 129-task bootstrap checkpoints. Its two proposed prefixes resolve
+to `flow_export`'s `documentation_template_workspace` slice and the `shell`
+`documentation_workspace_consumer`; its three established shared paths remain
+terminal full obligations. There are no active quarantines. This is a focused
+planning reduction, not yet an elapsed product-verification claim.
+
+Recommendation: keep the ratchet active as a campsite rule and proceed with the
+already-approved Documentation-template feature. Record actual product evidence
+against this 12-task forecast; use conservative parent fallback on a mapping
+miss, and defer any further subdivision until ordinary feature evidence proves
+one is salient.
