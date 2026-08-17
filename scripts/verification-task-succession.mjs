@@ -126,7 +126,10 @@ function stableAcceptanceSessionContract(source,current){
 
 function registryBindsCompleteAcceptanceSession(identity,features,packs){
   const owners=packs.filter(pack=>pack.id===identity.packId);
-  return owners.length===1&&same(owners[0].features,features)&&
+  const registered=owners[0]?.features??[];
+  return owners.length===1&&registered.length===features.length&&
+    new Set(registered).size===registered.length&&
+    registered.every(feature=>features.includes(feature))&&
     historicalRegistryDeclaresTask(identity,packs,[]);
 }
 

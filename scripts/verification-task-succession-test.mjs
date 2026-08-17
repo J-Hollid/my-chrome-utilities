@@ -8,6 +8,7 @@ import {
   taskSuccessionBoundaryDigest,
   verificationTaskDigest,
 } from "./verification-task-succession.mjs";
+import {planVerification,verificationTaskIdentity} from "./verification-packs.mjs";
 
 const task=(key,extra={})=>({
   key,stage:"unit",packId:"shell",executable:"node",args:[`${key}.mjs`],target:`${key}.mjs`,
@@ -204,31 +205,38 @@ const acceptanceMapped=await resolveIncidentTaskSuccession({incident:{failure:{t
 assert.equal(acceptanceMapped.destinationIdentity.target,`${runtimeFeature},${modelFeature}`,
   "a receipt-selected acceptance subset can succeed to the registry-declared combined session");
 
-const historicalFlowExportFeatures=[
-  "features/data-layer-flow-table-documentation-export-runtime.feature",
+const historicalFlowExportRegistryFeatures=[
   "features/data-layer-flow-table-documentation-export.feature",
-  "features/data-layer-project-documentation-workspace-runtime.feature",
+  "features/data-layer-flow-table-documentation-export-runtime.feature",
   "features/data-layer-project-documentation-workspace.feature",
+  "features/data-layer-project-documentation-workspace-runtime.feature",
 ];
-const documentationTemplateFeatures=[
-  "features/data-layer-documentation-template-library-runtime.feature",
+const documentationTemplateRegistryFeatures=[
   "features/data-layer-documentation-template-library.feature",
-  "features/data-layer-excel-documentation-templates-runtime.feature",
+  "features/data-layer-documentation-template-library-runtime.feature",
   "features/data-layer-excel-documentation-templates.feature",
-  "features/data-layer-rich-page-documentation-templates-runtime.feature",
+  "features/data-layer-excel-documentation-templates-runtime.feature",
   "features/data-layer-rich-page-documentation-templates.feature",
+  "features/data-layer-rich-page-documentation-templates-runtime.feature",
 ];
 const flowExportAcceptance=(features)=>({...acceptanceTask(features),key:"acceptance-session:flow_export",
   packId:"flow_export",args:["acceptance-pack-runner","flow_export",
     ...acceptanceTask(features).args.slice(2)]});
-const historicalFlowExport=flowExportAcceptance(historicalFlowExportFeatures);
-const expandedFlowExport=flowExportAcceptance([
-  ...historicalFlowExportFeatures,...documentationTemplateFeatures,
-]);
-const historicalFlowExportPacks=[{id:"flow_export",features:historicalFlowExportFeatures}];
-const expandedFlowExportPacks=[{id:"flow_export",features:[
-  ...historicalFlowExportFeatures,...documentationTemplateFeatures,
-]}];
+const flowExportPack=(features)=>({id:"flow_export",features,
+  verificationInputs:["test/data-layer-flow-table-documentation-export-test.mjs"]});
+const plannedFlowExportAcceptance=(packs)=>verificationTaskIdentity(planVerification(packs,
+  {packIds:["flow_export"]}).tasks.find(({key})=>key==="acceptance-session:flow_export"));
+const historicalFlowExportPacks=[flowExportPack(historicalFlowExportRegistryFeatures)];
+const expandedFlowExportPacks=[flowExportPack([
+  ...historicalFlowExportRegistryFeatures,...documentationTemplateRegistryFeatures,
+])];
+const historicalFlowExport=plannedFlowExportAcceptance(historicalFlowExportPacks);
+const expandedFlowExport=plannedFlowExportAcceptance(expandedFlowExportPacks);
+const historicalFlowExportFeatures=historicalFlowExport.target.split(",");
+const documentationTemplateFeatures=expandedFlowExport.target.split(",")
+  .filter(feature=>!historicalFlowExportFeatures.includes(feature));
+assert.notDeepEqual(historicalFlowExportRegistryFeatures,historicalFlowExportFeatures,
+  "the live registry declaration order differs from the canonical planner order");
 const flowExportReceipt={candidate:{commit:"historical-flow-export",tree:"historical-tree"},tasks:{
   [historicalFlowExport.key]:{identity:historicalFlowExport,status:"failed"},
 }};
@@ -260,6 +268,10 @@ await assert.rejects(()=>resolveIncidentTaskSuccession({incident:deferredFlowExp
 const rejectedExpansionCases=[
   ["missing source history",{...deferredFlowExportIncident,failure:{...deferredFlowExportIncident.failure,
     sourceReceipt:undefined}},[expandedFlowExport],expandedFlowExportPacks],
+  ["missing registry feature",deferredFlowExportIncident,[expandedFlowExport],[flowExportPack(
+    expandedFlowExportPacks[0].features.slice(1))]],
+  ["duplicate registry feature",deferredFlowExportIncident,[expandedFlowExport],[flowExportPack([
+    ...expandedFlowExportPacks[0].features,expandedFlowExportPacks[0].features[0]])]],
   ["removed historical feature",deferredFlowExportIncident,
     [flowExportAcceptance([...historicalFlowExportFeatures.slice(1),...documentationTemplateFeatures])],
     expandedFlowExportPacks],
@@ -324,5 +336,12 @@ await assert.rejects(()=>validateExpandedFlowExport(deferredFlowExportIncident,[
   [{id:"flow_export",features:[...historicalFlowExportFeatures,...documentationTemplateFeatures,
     "features/unplanned.feature"]}]),/diagnosed target/iu,
 "a current task that omits a registered feature is not a monotonic complete-session expansion");
+const reorderedCompleteFlowExport=flowExportAcceptance([
+  historicalFlowExportFeatures[1],historicalFlowExportFeatures[0],
+  ...historicalFlowExportFeatures.slice(2),...documentationTemplateFeatures,
+]);
+await assert.rejects(()=>validateExpandedFlowExport(deferredFlowExportIncident,
+  [reorderedCompleteFlowExport],expandedFlowExportPacks),/diagnosed target/iu,
+"a complete unordered registry set cannot excuse a reordered planner feature sequence");
 
 console.log("verification task succession tests passed");

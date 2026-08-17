@@ -458,26 +458,22 @@ await assert.rejects(()=>validateUnresolvedIncidentTaskSuccession({
   loadHistoricalPacks:async()=>projectionPacks,loadSourceReceipt:async()=>projectionReceipt,
 }),/missing registry history|unverified planner-projection source identity/iu,
 "an unverified deferred projection source remains blocking");
-const processAcceptanceArtifacts=(feature)=>{
-  const basename=feature.slice(feature.lastIndexOf("/")+1).replace(/\.feature$/u,"");
-  const slug=feature.toLowerCase().replace(/[^a-z0-9]+/gu,"-").replace(/(^-+|-+$)/gu,"");
-  return[`build/acceptance/generated/${slug}_acceptance_test.clj`,`build/acceptance/ir/${basename}.json`];
-};
-const processAcceptanceSession=(features)=>({key:"acceptance-session:flow_export",
-  stage:"acceptance-session",packId:"flow_export",executable:"bb",
-  args:["acceptance-pack-runner","flow_export",...features.flatMap(processAcceptanceArtifacts)],
-  target:features.join(","),environment:null,requiredCapabilities:[]});
-const historicalAcceptanceFeatures=["features/flow-export-runtime.feature","features/flow-export.feature",
-  "features/documentation-workspace-runtime.feature","features/documentation-workspace.feature"];
-const addedAcceptanceFeatures=["features/template-library-runtime.feature","features/template-library.feature",
-  "features/excel-templates-runtime.feature","features/excel-templates.feature",
-  "features/rich-templates-runtime.feature","features/rich-templates.feature"];
-const historicalAcceptanceSession=processAcceptanceSession(historicalAcceptanceFeatures);
-const expandedAcceptanceSession=processAcceptanceSession([
-  ...historicalAcceptanceFeatures,...addedAcceptanceFeatures]);
-const historicalAcceptancePacks=[{id:"flow_export",features:historicalAcceptanceFeatures}];
-const expandedAcceptancePacks=[{id:"flow_export",features:[
-  ...historicalAcceptanceFeatures,...addedAcceptanceFeatures]}];
+const historicalAcceptanceRegistryFeatures=["features/flow-export.feature","features/flow-export-runtime.feature",
+  "features/documentation-workspace.feature","features/documentation-workspace-runtime.feature"];
+const addedAcceptanceRegistryFeatures=["features/template-library.feature","features/template-library-runtime.feature",
+  "features/excel-templates.feature","features/excel-templates-runtime.feature",
+  "features/rich-templates.feature","features/rich-templates-runtime.feature"];
+const processAcceptancePack=(features)=>({id:"flow_export",features,
+  verificationInputs:["test/flow-export-test.mjs"]});
+const plannedProcessAcceptanceSession=(packs)=>verificationTaskIdentity(planVerification(packs,
+  {packIds:["flow_export"]}).tasks.find(({key})=>key==="acceptance-session:flow_export"));
+const historicalAcceptancePacks=[processAcceptancePack(historicalAcceptanceRegistryFeatures)];
+const expandedAcceptancePacks=[processAcceptancePack([
+  ...historicalAcceptanceRegistryFeatures,...addedAcceptanceRegistryFeatures])];
+const historicalAcceptanceSession=plannedProcessAcceptanceSession(historicalAcceptancePacks);
+const expandedAcceptanceSession=plannedProcessAcceptanceSession(expandedAcceptancePacks);
+assert.notDeepEqual(historicalAcceptanceRegistryFeatures,historicalAcceptanceSession.target.split(","),
+  "the process fixture reproduces declaration order differing from canonical planner order");
 const deferredAcceptanceIncident={id:"d723a7c4-1116-4887-b60a-21aded1ab5d8",state:"unresolved",
   repair:{status:"eligible",diagnosedBoundary:{kind:"task",taskKey:historicalAcceptanceSession.key,
     executionArgs:historicalAcceptanceSession.args}},
