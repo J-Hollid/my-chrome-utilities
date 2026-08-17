@@ -45,6 +45,17 @@
         "terminalFullObligation": true
       }
     ],
+    "verificationSlices": [
+      {
+        "id": "documentation_template_asset_body",
+        "sourcePaths": ["src/project-asset-body-contribution.ts"],
+        "sourcePrefixes": [],
+        "tasks": ["unit:test/data-layer-flow-visual-asset-portability-test.mjs"],
+        "prerequisites": ["property:test/data-layer-flow-visual-asset-portability-property-test.mjs"],
+        "consumers": [{"packId": "durable_project_repository", "sliceId": "documentation_template_archive"}],
+        "observableBoundary": "Project asset-body persistence and portable archive contribution"
+      }
+    ],
     "impactBoundaries": [
       {
         "id": "project_entity_lifecycle_semantic",
@@ -200,6 +211,21 @@
     ],
     "dependencies": [
       "project_management"
+    ],
+    "verificationSlices": [
+      {
+        "id": "documentation_template_archive",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "unit:test/data-layer-durable-project-repository-test.mjs",
+          "browser-observation:DURABLE_REPOSITORY_REVISION_TARGET+DURABLE_REPOSITORY_STORAGE_TARGET"
+        ],
+        "prerequisites": ["property:test/data-layer-durable-project-repository-property-test.mjs"],
+        "consumers": [],
+        "observableBoundary": "Durable asset-body storage and archive round trip"
+      }
     ],
     "unit": [
       "test/data-layer-durable-project-repository-test.mjs",
@@ -4279,6 +4305,20 @@
         "terminalFullObligation": true
       }
     ],
+    "verificationSlices": [
+      {
+        "id": "documentation_template_workspace",
+        "sourcePaths": ["src/project-documentation/workspace-contribution.ts"],
+        "sourcePrefixes": [
+          "src/documentation-templates/",
+          "src/project-documentation/workspace-template-"
+        ],
+        "tasks": ["unit:test/data-layer-project-documentation-workspace-test.mjs"],
+        "prerequisites": ["property:test/data-layer-project-documentation-profile-concepts-property-test.mjs"],
+        "consumers": [{"packId": "shell", "sliceId": "documentation_workspace_consumer"}],
+        "observableBoundary": "Documentation workspace contribution and template composition"
+      }
+    ],
     "unit": [
       "test/data-layer-flow-table-documentation-export-test.mjs",
       "test/data-layer-project-documentation-workspace-test.mjs"
@@ -5623,6 +5663,31 @@
         "qaTargets": ["STUDIO_GLOBAL_STYLE_SMOKE_TARGET"],
         "propagateDependants": false,
         "terminalFullObligation": true
+      }
+    ],
+    "verificationSlices": [
+      {
+        "id": "documentation_template_delivery",
+        "sourcePaths": ["build-delivered-dependencies.json", "scripts/build-delivered-dependencies.mjs"],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/package-clean-checkout-contract-test.mjs",
+          "checkpoint:shell:dist-artifact-integrity",
+          "checkpoint:shell:portable-package"
+        ],
+        "prerequisites": [],
+        "consumers": [{"packId": "flow_export", "sliceId": "documentation_template_workspace"}],
+        "observableBoundary": "Build-delivered dependency inventory and portable package contents"
+      },
+      {
+        "id": "documentation_workspace_consumer",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": ["browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET"],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed Studio composition smoke observation"
       }
     ],
     "stylesheets": [

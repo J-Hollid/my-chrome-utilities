@@ -9,6 +9,8 @@ import {canonicalRunIntentBootstrapPlan} from "./verification-run-intent.mjs";
 
 const nextStages = {
   "bounded-ready":"product implementation starts from the approved QA base",
+  "coarse-within-pack":
+    "a standing-authorized verification-slice preparation starts without another routine user approval",
   "coarse-boundary":
     "a standing-authorized ownership preparation stage starts without another routine user approval",
   "genuinely-global":"implementation waits for current user or release direction",
@@ -24,8 +26,48 @@ const isRepositoryPath = (value) =>
   value.length > 0 &&
   !value.startsWith("/") &&
   !value.startsWith("../") &&
+  !value.startsWith("./") &&
   !value.includes("\\") &&
-  !value.includes("\0");
+  !value.includes("\0") &&
+  !value.includes("//") &&
+  !value.split("/").some((segment) => segment === "." || segment === "..");
+
+const sliceMatchesPrefix = (slice, prefix) =>
+  (slice.sourcePrefixes ?? []).includes(prefix) || (slice.sourcePaths ?? []).includes(prefix);
+
+function normalizeProposedPrefix(value, packs) {
+  const proposal = typeof value === "string" ? {prefix:value} : value;
+  if (!proposal || Array.isArray(proposal) || !isRepositoryPath(proposal.prefix)) {
+    throw new Error("Ownership intent names an invalid proposed prefix");
+  }
+  const matches = packs.flatMap((pack) => (pack.verificationSlices ?? [])
+    .filter((slice) => sliceMatchesPrefix(slice, proposal.prefix))
+    .map((slice) => ({pack, slice})));
+  const parentPackId = proposal.parentPackId ?? matches[0]?.pack.id;
+  const sliceId = proposal.sliceId ?? matches[0]?.slice.id;
+  const declared = matches.find(({pack, slice}) => pack.id === parentPackId && slice.id === sliceId);
+  if (!declared || matches.length !== 1 || !new Set(packs.map(({id}) => id)).has(parentPackId)) {
+    throw new Error(`Ownership intent proposed prefix requires one known parent owner and slice: ${proposal.prefix}`);
+  }
+  const consumers = proposal.consumers ?? declared.slice.consumers ?? [];
+  if (JSON.stringify(consumers) !== JSON.stringify(declared.slice.consumers ?? [])) {
+    throw new Error(`Ownership intent proposed prefix conflicts with declared consumers: ${proposal.prefix}`);
+  }
+  if (consumers.some((consumer) => {
+    const consumerPack = packs.find(({id}) => id === consumer?.packId);
+    return !consumerPack || consumer.sliceId !== undefined &&
+      !(consumerPack.verificationSlices ?? []).some(({id}) => id === consumer.sliceId);
+  })) throw new Error(`Ownership intent proposed prefix names an unknown consumer: ${proposal.prefix}`);
+  const currentOwner = (() => {
+    const owners = packs.filter((pack) => (pack.source ?? []).some((prefix) =>
+      proposal.prefix === prefix || proposal.prefix.startsWith(`${prefix}/`)));
+    return owners.length === 1 ? owners[0].id : null;
+  })();
+  if (currentOwner && currentOwner !== parentPackId) {
+    throw new Error(`Ownership intent proposed prefix conflicts with current owner: ${proposal.prefix}`);
+  }
+  return {prefix:proposal.prefix,parentPackId,sliceId,consumers:structuredClone(consumers)};
+}
 
 export function validateOwnershipIntent(intent, packs) {
   if (!intent || intent.version !== 1) {
@@ -52,15 +94,18 @@ export function validateOwnershipIntent(intent, packs) {
   ) {
     throw new Error("Ownership intent names an unknown pack");
   }
-  if ([...intent.likelyPaths, ...intent.proposedPrefixes].some((value) =>
-    !isRepositoryPath(value))) {
+  if (intent.likelyPaths.some((value) => !isRepositoryPath(value))) {
     throw new Error("Ownership intent names an unavailable or malformed path");
+  }
+  const proposedPrefixes = intent.proposedPrefixes.map((value) => normalizeProposedPrefix(value, packs));
+  if (new Set(proposedPrefixes.map(({prefix}) => prefix)).size !== proposedPrefixes.length) {
+    throw new Error("Ownership intent requires unique proposedPrefixes");
   }
   return {
     ...intent,
     approvedPackIds:canonical(intent.approvedPackIds),
     likelyPaths:canonical(intent.likelyPaths),
-    proposedPrefixes:canonical(intent.proposedPrefixes),
+    proposedPrefixes:proposedPrefixes.sort((left, right) => left.prefix.localeCompare(right.prefix)),
   };
 }
 
@@ -77,7 +122,10 @@ export function classifyOwnershipReadiness(input) {
   else if (input.ownershipUnavailable) classification = "ownership-unavailable";
   else if (input.genuinelyGlobal) classification = "genuinely-global";
   else if (!allRunnablePacksSelected(input.plannedPackIds, input.allPackIds)) {
-    classification = "bounded-ready";
+    const withinPack = input.withinPack ?? {};
+    classification = withinPack.unrelatedCompleteTaskFamily &&
+      withinPack.stableObservableBoundary && withinPack.reducesTaskScope &&
+      withinPack.meaningPreserved ? "coarse-within-pack" : "bounded-ready";
   } else {
     const causes = input.expansionCauses ?? [];
     classification = causes.length > 0 && causes.every(({ credibleBoundary }) => credibleBoundary)
@@ -89,6 +137,7 @@ export function classifyOwnershipReadiness(input) {
   }
   const reasons = {
     "bounded-ready":"Canonical ownership remains smaller than all runnable packs.",
+    "coarse-within-pack":"A stable observable slice removes unrelated complete task work without changing verification meaning.",
     "coarse-boundary":"All-pack expansion is limited to shared paths with credible exact QA boundaries.",
     "genuinely-global":"The executable behavior has canonical application-wide impact.",
     "ownership-unavailable":"Canonical current or historical ownership is unavailable.",
@@ -132,6 +181,7 @@ function readinessResult(intent, plan, packs, extra = {}) {
     taskCount:tasks.length,
     criticalPathEstimateMs:plan.criticalPathEstimateMs ?? tasks.length * 1000,
     paths:canonical(plan.changedPaths ?? []),
+    proposedPrefixes:structuredClone(intent.proposedPrefixes),
     changedOwners:plan.changedOwners ?? {},
     changedBoundaries:plan.changedBoundaries ?? {},
     expansionCauses,
@@ -146,7 +196,7 @@ export async function intentOwnershipReadiness({
   ...extra
 }) {
   const validIntent = validateOwnershipIntent(intent, packs);
-  const paths = canonical([...validIntent.likelyPaths, ...validIntent.proposedPrefixes]);
+  const paths = canonical(validIntent.likelyPaths);
   const planned = await plan(paths);
   return readinessResult(validIntent, planned, packs, extra);
 }

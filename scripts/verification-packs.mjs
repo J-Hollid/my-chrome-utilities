@@ -911,6 +911,9 @@ function ownersAtPriority(packs, path) {
     packs.filter((pack)=>values(pack,"sharedBoundaries").some(({prefixes})=>prefixes.some((prefix)=>prefixMatches(prefix,path)))),
     packs.filter((pack) => exactOwnedPathKeys.some((key) => values(pack, key).includes(path)) || values(pack,"plannedFeatures").includes(path) ||
       values(pack, "checkpointCommands").some(({ executable, args }) => executable === "node" && args?.[0] === path)),
+    packs.filter((pack) => values(pack, "verificationSlices").some((slice) =>
+      values(slice, "sourcePaths").includes(path) ||
+      values(slice, "sourcePrefixes").some((prefix) => prefixMatches(prefix, path)))),
     packs.filter((pack) => values(pack, "source").some((prefix) => prefixMatches(prefix, path))),
     packs.filter((pack) => values(pack, "process").some((prefix) => processPrefixMatches(prefix, path))),
   ];
@@ -924,6 +927,91 @@ function ownerOf(packs, path) {
     throw new Error(`Ambiguous verification ownership for ${path}: ${ids.join(", ")}`);
   }
   return owners[0];
+}
+
+const stableSliceId = (value) => typeof value === "string" && /^[a-z0-9][a-z0-9_-]*$/u.test(value);
+const uniqueStrings = (items) => Array.isArray(items) &&
+  new Set(items).size === items.length && items.every((item) => typeof item === "string" && item.length > 0);
+
+function declaredPackTaskKeys(pack) {
+  const observationGroups = new Map();
+  const observedAdapterPaths = new Set(values(pack, "browserObservations").map(({path:program}) => program));
+  const compatibilityAdapters = new Set(values(pack, "browserAdapterModes")
+    .filter(({mode}) => mode === "compatibility").map(({path:program}) => program));
+  for (const observation of values(pack, "browserObservations")) {
+    const batch = browserObservationSessionBatch(pack, observation);
+    const identity = batch ? `${observation.path}\0${batch}` : observation.id;
+    const ids = observationGroups.get(identity) ?? [];
+    ids.push(observation.id);
+    observationGroups.set(identity, ids);
+  }
+  return new Set([
+    ...values(pack, "unit").map((path) => `unit:${path}`),
+    ...values(pack, "property").map((path) => `property:${path}`),
+    ...values(pack, "browserAdapters")
+      .filter((path) => !observedAdapterPaths.has(path) && !compatibilityAdapters.has(path))
+      .map((path) => `browser:${path}`),
+    ...[...observationGroups.values()].map((ids) => `browser-observation:${ids.sort().join("+")}`),
+    ...values(pack, "features").flatMap((feature) => [
+      `acceptance-parse:${feature}`, `acceptance-generate:${feature}`,
+    ]),
+    ...(values(pack, "features").length ? [`acceptance-session:${pack.id}`] : []),
+    ...values(pack, "checkpointCommands").map(({id}) => `checkpoint:${pack.id}:${id}`),
+  ]);
+}
+
+function verificationSliceDeclaration(registry, pack, slice) {
+  const diagnostics = [];
+  if (!slice || Array.isArray(slice) || !stableSliceId(slice.id)) diagnostics.push("unstable identity");
+  if (!uniqueStrings(slice?.sourcePaths ?? []) || !uniqueStrings(slice?.sourcePrefixes ?? []) ||
+      !(slice?.sourcePaths?.length || slice?.sourcePrefixes?.length || slice?.consumerOnly === true)) {
+    diagnostics.push("missing or duplicate source mapping");
+  }
+  if (!uniqueStrings(slice?.tasks ?? []) || slice?.tasks?.length === 0 ||
+      !uniqueStrings(slice?.prerequisites ?? [])) diagnostics.push("missing or duplicate task mapping");
+  else {
+    const registered = declaredPackTaskKeys(pack);
+    if ([...slice.tasks, ...slice.prerequisites].some((key) => !registered.has(key))) {
+      diagnostics.push("unregistered task mapping");
+    }
+  }
+  if (typeof slice?.observableBoundary !== "string" || !slice.observableBoundary.trim()) {
+    diagnostics.push("unobservable boundary");
+  }
+  if (!Array.isArray(slice?.consumers)) diagnostics.push("missing consumers");
+  else for (const consumer of slice.consumers) {
+    const consumerPack = registry.find(({id}) => id === consumer?.packId);
+    if (!consumerPack || consumer.sliceId !== undefined &&
+        !(consumerPack.verificationSlices ?? []).some(({id}) => id === consumer.sliceId)) {
+      diagnostics.push("unknown consumer");
+    }
+  }
+  return diagnostics;
+}
+
+export function verificationSliceMapping(registry, pack, changedPath) {
+  const matches = (pack.verificationSlices ?? []).filter((slice) =>
+    (slice.sourcePaths ?? []).includes(changedPath) ||
+    (slice.sourcePrefixes ?? []).some((prefix) => prefixMatches(prefix, changedPath)));
+  if (matches.length !== 1) return {
+    kind:"parent-fallback",
+    diagnostic:matches.length ? `conflicting verification slices for ${changedPath}`
+      : `no verification slice for ${changedPath}`,
+  };
+  const diagnostics = verificationSliceDeclaration(registry, pack, matches[0]);
+  return diagnostics.length ? {
+    kind:"parent-fallback",diagnostic:`invalid verification slice ${pack.id}:${matches[0].id}: ${diagnostics.join(", ")}`,
+  } : {kind:"slice",slice:matches[0]};
+}
+
+export function verificationSliceSelectionMiss({sliceId, causalFailureOutsideSlice, reviewedMappingRepair = false}) {
+  if (!stableSliceId(sliceId)) throw new Error("Selection miss requires a stable verification slice id");
+  return {
+    sliceId,
+    quarantined:Boolean(causalFailureOutsideSlice && !reviewedMappingRepair),
+    fallback:causalFailureOutsideSlice && !reviewedMappingRepair ? "parent-pack" : "slice-eligible",
+    terminalAction:causalFailureOutsideSlice ? "focused-repair-then-fresh-all-20" : "no-selection-miss",
+  };
 }
 
 function globalImpact(packs, path) {
@@ -1118,7 +1206,7 @@ function historicalRegistryHasPlanningShape(packs, known) {
     "browserObservations", "checkpointCommands", "dependencies", "sharedComponents",
     "verificationInputs", "runtimeInputs", "verificationHelpers", "isolatedVerificationHandlers", "browserAdapterModes",
     "browserAdapterPerformance", "browserObservationBatches", "browserEvidencePartitions",
-    "impactBoundaries", "executionPrerequisites", "stylesheets", "sharedBoundaries",
+    "impactBoundaries", "executionPrerequisites", "stylesheets", "sharedBoundaries", "verificationSlices",
   ];
   const boundaryIds = Array.isArray(packs)
     ? packs.flatMap((pack) => Array.isArray(pack?.impactBoundaries)
@@ -1163,6 +1251,7 @@ export function planVerification(
     packIds = [], changedPaths = [], terminalFull = false, includeProperties = false,
     withDependencies = false, skipBuild = false, shard, changeSet = null,
     basePacks = undefined, historicalRegistryFallback = false, browserTargetIds = [],
+    quarantinedSliceIds = [],
   } = {},
 ) {
   const known = new Set(packs.map(({ id }) => id));
@@ -1172,6 +1261,10 @@ export function planVerification(
   if (new Set(browserTargetIds).size !== browserTargetIds.length) {
     throw new Error("Select every focused browser target once");
   }
+  if (!uniqueStrings(quarantinedSliceIds) || quarantinedSliceIds.some((id) => !stableSliceId(id))) {
+    throw new Error("Select every quarantined verification slice once by stable identity");
+  }
+  const quarantinedSlices = new Set(quarantinedSliceIds);
   for (const id of packIds) {
     const pack = packs.find((candidate) => candidate.id === id);
     if (!pack) throw new Error(`Unknown verification pack: ${id}`);
@@ -1222,6 +1315,10 @@ export function planVerification(
   const styleSmokeTargets = [];
   const sharedBoundaryTargets = [];
   const terminalFullObligations = [];
+  const selectedVerificationSlices = new Map();
+  const selectedVerificationSliceTaskKeys = new Map();
+  const verificationSliceDiagnostics = [];
+  const parentPackSliceFallbacks = new Set();
   const registryChanged = changedPaths.includes("verification/packs.json");
   const historicalPacksCompatible = historicalRegistryHasPlanningShape(basePacks, known);
   const historicalOwnerPaths = !changeSet || !historicalPacksCompatible ? []
@@ -1261,6 +1358,61 @@ export function planVerification(
   const hasFocusedFeatureBoundary = changedPaths.some(
     (changedPath) => !focusedFeaturePolicyPaths.has(changedPath));
   if (terminalFull || canonicalRunnableSelection) selected = new Set(allRunnableIds);
+
+  const activateSlice = (registry, packId, sliceId, visiting = new Set()) => {
+    const identity = `${packId}:${sliceId}`;
+    if (visiting.has(identity)) return;
+    const pack = registry.find(({id}) => id === packId);
+    const slice = pack?.verificationSlices?.find(({id}) => id === sliceId);
+    const diagnostics = pack && slice ? verificationSliceDeclaration(registry, pack, slice) : ["missing declaration"];
+    if (diagnostics.length) {
+      parentPackSliceFallbacks.add(packId);
+      verificationSliceDiagnostics.push(`Verification slice ${identity} fell back to its parent: ${diagnostics.join(", ")}`);
+      return;
+    }
+    if (quarantinedSlices.has(sliceId)) {
+      parentPackSliceFallbacks.add(packId);
+      selected.add(packId);
+      verificationSliceDiagnostics.push(`Verification slice ${identity} is quarantined; using parent-pack closure`);
+      return;
+    }
+    const ids = selectedVerificationSlices.get(packId) ?? new Set();
+    ids.add(sliceId);
+    selectedVerificationSlices.set(packId, ids);
+    const taskKeys = selectedVerificationSliceTaskKeys.get(packId) ?? new Set();
+    for (const key of [...slice.tasks, ...slice.prerequisites]) taskKeys.add(key);
+    selectedVerificationSliceTaskKeys.set(packId, taskKeys);
+    selected.add(packId);
+    const nextVisiting = new Set([...visiting, identity]);
+    for (const consumer of slice.consumers) {
+      if (consumer.sliceId) activateSlice(registry, consumer.packId, consumer.sliceId, nextVisiting);
+      else { parentPackSliceFallbacks.add(consumer.packId); selected.add(consumer.packId); }
+    }
+  };
+
+  const recordSliceMapping = (changedPath, registries) => {
+    if (terminalFull || canonicalRunnableSelection) return;
+    if (registryChanged) {
+      for (const registry of registries) {
+        const pack = ownerOf(registry, changedPath);
+        if (pack && verificationSliceMapping(registry, pack, changedPath).kind === "slice") {
+          parentPackSliceFallbacks.add(pack.id);
+          verificationSliceDiagnostics.push("Verification slices cannot narrow the same registry-change evidence range");
+        }
+      }
+      return;
+    }
+    for (const registry of registries) {
+      const pack = ownerOf(registry, changedPath);
+      if (!pack) continue;
+      const mapping = verificationSliceMapping(registry, pack, changedPath);
+      if (mapping.kind === "slice") activateSlice(registry, pack.id, mapping.slice.id);
+      else {
+        parentPackSliceFallbacks.add(pack.id);
+        if ((pack.verificationSlices ?? []).length) verificationSliceDiagnostics.push(mapping.diagnostic);
+      }
+    }
+  };
 
   const affectedFor = (registry, changedPath, {
     exactVerificationChange = true, forceVerificationExact = false,
@@ -1336,6 +1488,7 @@ export function planVerification(
     terminalFullObligation:affected.some((entry) => entry.terminalFullObligation),
   });
   const applyAffected = (changedPath, affected, registries = [packs]) => {
+    recordSliceMapping(changedPath, registries);
     const semanticClosure = affected.propagateDependants === false
       ? affected.semantic
       : expandDependantsAcross(registries, affected.semantic);
@@ -1406,6 +1559,12 @@ export function planVerification(
   } else {
     for (const changedPath of changedPaths) applyAffected(changedPath, affectedFor(packs, changedPath));
   }
+  if (explicit.size) {
+    const omittedSliceConsumers = [...selected].filter((id) => !explicit.has(id));
+    if (omittedSliceConsumers.length) {
+      throw new Error(`Verification slices affect packs outside the explicit pack set: ${omittedSliceConsumers.join(", ")}`);
+    }
+  }
   if (terminalFull || withDependencies) selected = expandDependencies(packs, selected);
 
   const styleSmokeAuthorization = changedStyleTargets.size > 0
@@ -1426,13 +1585,14 @@ export function planVerification(
   const preparationTasks = skipBuild ? [] : [commandTask({
     key:"build:dist", stage:"build", executable:"npm", args:["run", "build"],
   })];
-  const unitTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) => values(pack, "unit").map((path) => commandTask({
+  let unitTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) => values(pack, "unit").map((path) => commandTask({
     key:`unit:${path}`, stage:"unit", packId:pack.id, executable:"node", args:[path], target:path,
     requiredCapabilities:declaredTaskExecutionPrerequisites(pack, path, "unit"),
     temporaryPathClass:declaredTaskTemporaryPathClass(pack, path, "unit"),
   })));
-  const propertyTasks = !browserTargetIds.length && (terminalFull || includeProperties)
-    ? executionPacks.flatMap((pack) => values(pack, "property").map((path) => commandTask({
+  let propertyTasks = !browserTargetIds.length
+    ? executionPacks.flatMap((pack) => (terminalFull || includeProperties || selectedVerificationSlices.has(pack.id)
+      ? values(pack, "property") : []).map((path) => commandTask({
       key:`property:${path}`, stage:"property", packId:pack.id, executable:"node", args:[path], target:path,
       requiredCapabilities:declaredTaskExecutionPrerequisites(pack, path, "property"),
       temporaryPathClass:declaredTaskTemporaryPathClass(pack, path, "property"),
@@ -1443,7 +1603,7 @@ export function planVerification(
   const compatibilityAdapters = new Set(packs.flatMap((pack) =>
     values(pack, "browserAdapterModes")
       .filter(({ mode }) => mode === "compatibility").map(({ path }) => path)));
-  const browserTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) =>
+  let browserTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) =>
     values(pack, "browserAdapters")
       .filter((path) => !observedAdapterPaths.has(path) && !compatibilityAdapters.has(path))
       .map((path) => commandTask({
@@ -1477,7 +1637,14 @@ export function planVerification(
       : [];
     const styleTargets = observations.filter(({ id }) => changedStyleTargetIds.has(id));
     const sharedTargets=observations.filter(({id})=>changedSharedTargetIds.has(id));
-    const ordinaryTargets = styleSmokeOnly || !selected.has(declarationPack.id) ? []
+    const sliceNarrowed = selectedVerificationSlices.has(declarationPack.id) &&
+      !parentPackSliceFallbacks.has(declarationPack.id);
+    const sliceTargets = sliceNarrowed ? observations.filter(({id}) =>
+      [...selectedVerificationSliceTaskKeys.get(declarationPack.id) ?? []]
+        .some((key) => key.startsWith("browser-observation:") &&
+          key.slice("browser-observation:".length).split("+").includes(id))) : [];
+    const ordinaryTargets = sliceNarrowed ? sliceTargets
+      : styleSmokeOnly || !selected.has(declarationPack.id) ? []
       : changedAdapterTargetIds.size ? observations.filter(({ id }) => changedAdapterTargetIds.has(id))
       : boundaryTargets.length ? boundaryTargets : observations.filter(({ id }) =>
         !stylesheetQaTargetIds.has(id));
@@ -1515,7 +1682,7 @@ export function planVerification(
     group.push(item);
     observationGroups.set(groupKey, group);
   }
-  const observationTasks = [...observationGroups.values()].map((group) => {
+  let observationTasks = [...observationGroups.values()].map((group) => {
     const ids = group.map(({ observation }) => observation.id).sort();
     const environment = Object.assign({}, ...group.map(({ observation }) => observation.environment));
     const declarationPack = group[0].declarationPack;
@@ -1537,13 +1704,31 @@ export function planVerification(
     });
   });
   const mode = browserTargetIds.length ? "focused" : terminalFull ? "terminal" : explicit.size ? "exact" : "impact";
-  const checkpointTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) => values(pack, "checkpointCommands")
+  let checkpointTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) => values(pack, "checkpointCommands")
     .filter((checkpoint) => !checkpoint.modes || checkpoint.modes.includes(mode))
     .map((checkpoint) => commandTask({
       key:`checkpoint:${pack.id}:${checkpoint.id}`, stage:"checkpoint", packId:pack.id,
       executable:checkpoint.executable, args:checkpoint.args, target:checkpoint.id,
       environment:checkpoint.environment ?? null,
     })));
+  const taskAllowedBySlice = (task) => {
+    if (terminalFull || canonicalRunnableSelection) return true;
+    let packId = task.packId;
+    if (!packId && typeof task.target === "string") {
+      packId = packs.find((pack) => values(pack, "features").includes(task.target))?.id;
+    }
+    if (!packId || parentPackSliceFallbacks.has(packId) || !selectedVerificationSlices.has(packId)) return true;
+    return selectedVerificationSliceTaskKeys.get(packId)?.has(task.key) ?? false;
+  };
+  unitTasks = unitTasks.filter(taskAllowedBySlice);
+  propertyTasks = propertyTasks.filter(taskAllowedBySlice);
+  browserTasks = browserTasks.filter(taskAllowedBySlice);
+  observationTasks = observationTasks.filter(taskAllowedBySlice);
+  checkpointTasks = checkpointTasks.filter(taskAllowedBySlice);
+  acceptance.parser = acceptance.parser.filter(taskAllowedBySlice);
+  acceptance.generator = acceptance.generator.filter(taskAllowedBySlice);
+  acceptance.sessions = acceptance.sessions.filter(taskAllowedBySlice);
+
   if (styleSmokeOnly) {
     // A stylesheet-only impact is intentionally bounded to its declared smoke
     // observations; do not expose unrelated owner, consumer, or acceptance
@@ -1574,6 +1759,16 @@ export function planVerification(
     browserObservation:uniquePackIds(observationTasks), acceptance:uniquePackIds(acceptance.sessions),
     checkpoint:uniquePackIds(checkpointTasks),
   };
+  const verificationSliceConservation = Object.fromEntries(packs
+    .filter((pack) => values(pack, "verificationSlices").length)
+    .map((pack) => {
+      const complete = [...declaredPackTaskKeys(pack)].sort();
+      const sliced = [...new Set(values(pack, "verificationSlices")
+        .flatMap((slice) => [...values(slice, "tasks"), ...values(slice, "prerequisites")]))].sort();
+      const remainder = complete.filter((key) => !sliced.includes(key));
+      return [pack.id, {completeTaskKeys:complete,sliceTaskKeys:sliced,remainderTaskKeys:remainder,
+        conserved:[...new Set([...sliced, ...remainder])].sort().join("\0") === complete.join("\0")}];
+    }));
   return {
     version:2,
     mode,
@@ -1593,6 +1788,10 @@ export function planVerification(
     changedStyleTargets:Object.fromEntries([...changedStyleTargets]
       .sort(([left], [right]) => left.localeCompare(right))),
     conservativeHistoricalFallbackReason,
+    selectedVerificationSlices:Object.fromEntries([...selectedVerificationSlices]
+      .map(([id, ids]) => [id, [...ids].sort()]).sort(([left], [right]) => left.localeCompare(right))),
+    verificationSliceDiagnostics:[...new Set(verificationSliceDiagnostics)].sort(),
+    verificationSliceConservation,
     features,
     handlers:acceptancePacks.flatMap((pack) => values(pack, "handlers")),
     shard:shard ?? null,

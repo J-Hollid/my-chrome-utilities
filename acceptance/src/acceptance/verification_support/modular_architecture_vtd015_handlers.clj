@@ -32,6 +32,15 @@
   (support/assert! predicate message {:evidence (:vtd015/ownership-evidence world)})
   world)
 
+(defn- granularity-assert! [world]
+  (let [prepared-world (ownership-prepared world)
+        evidence (get-in prepared-world [:vtd015/ownership-evidence :granularity])]
+    (ownership-assert! prepared-world
+                       (and (map? evidence)
+                            (every? true? (mapcat vals (vals (dissoc evidence :firstUse))))
+                            (true? (get-in evidence [:firstUse :productBehaviorAbsent])))
+                       "Verification granularity evidence is incomplete.")))
+
 (defn- assert! [world predicate message]
   (support/assert! predicate message {:evidence (:vtd015/evidence world)})
   world)
@@ -384,7 +393,27 @@
    {:pattern #"^unsuccessful terminal evidence or a behavior-bearing candidate change retains the active obligation$"
     :handler (fn [world _ _]
                (ownership-assert! world (true? (get-in world [:vtd015/ownership-evidence :obligations :failureRetains]))
-                                  "Failed or stale terminal evidence consumed an obligation."))}])
+                                  "Failed or stale terminal evidence consumed an obligation."))}
+   {:pattern #"^(?:a feature forecast and its canonical bounded plan have .+|within-pack readiness is assessed|the readiness result is .+|the workflow action is .+|pack size, task count, or forecast variance alone never requires another product approval)$"
+    :handler (fn [world _ _] (granularity-assert! world))}
+   {:pattern #"^(?:one existing verification pack has a proved reusable task boundary|a subordinate verification slice is declared|it has one stable identity, exact source paths, direct registered tasks, prerequisites, consumers, and an observable boundary|the union of its slices and conservative remainder equals the former exact-pack task closure|focused planning may select only the applicable slice, prerequisites, and consumers|exact-pack and terminal planning still select every former task exactly once|no top-level pack, assertion leaf, dependency, property, package proof, or terminal obligation is removed or made optional)$"
+    :handler (fn [world _ _] (granularity-assert! world))}
+   {:pattern #"^(?:within-pack planning receives .+|it selects tasks for one canonically owned pack|the task scope is .+|no unavailable or ambiguous slice narrows verification)$"
+    :handler (fn [world _ _] (granularity-assert! world))}
+   {:pattern #"^(?:ownership intent includes .+|intent preflight validates the proposed subordinate ownership|the intent result is .+|exact candidate preflight later evaluates only committed paths through canonical current and historical ownership|intent preflight executes no task or repository write)$"
+    :handler (fn [world _ _] (granularity-assert! world))}
+   {:pattern #"^(?:a focused QA candidate used an active subordinate verification slice|the user-requested terminal checkpoint finds a causal failure outside that applicable slice|the selection miss is recorded|the failed release candidate follows the existing focused repair and fresh all-20 checkpoint rule|the implicated slice becomes ineligible for narrowing until an independently reviewed mapping repair reaches QA|later feature work uses the conservative parent-pack closure during that quarantine|no separate all-20 calibration run, automatic assertion deletion, or undeclared narrowing is authorized)$"
+    :handler (fn [world _ _] (granularity-assert! world))}
+   {:pattern #"^(?:an approved feature's canonical preflight has .+|the feature workflow chooses whether to continue|it performs .+|no bounded forecast variance becomes a product-scope blocker|actual feature work proves a selected pack has a stable materially overbroad internal boundary|the standing verification-slice preparation validates that boundary|the former parent-pack task closure equals its slices and conservative remainder|focused selection includes every applicable direct task, prerequisite, and consumer|exact-pack and terminal selection retain every former task exactly once|the preparation adds no product behavior, top-level pack, omitted assertion, or optional evidence)$"
+    :handler (fn [world _ _] (granularity-assert! world))}
+   {:pattern #"^(?:accumulated QA work used one or more focused verification slices|the architect performs the one user-requested master-integration checkpoint|the scorecard compares terminal-only failures with the focused slices selected for the accumulated work|a causal selection miss quarantines its slice to the parent-pack closure until a reviewed mapping repair reaches QA|a passing checkpoint records calibration without authorizing undeclared future narrowing|the same terminal checkpoint remains the only complete run required for the sealed candidate)$"
+    :handler (fn [world _ _] (granularity-assert! world))}
+   {:pattern #"^(?:a coder's intent or exact preflight returns coarse-within-pack for an approved product task|the automatic preparation route is activated|the coder sends the specifier one authorized file-based note with the product task, QA base, causal paths, task families, proposed slice, and any stopped patch reference|the paused product handoff closes without a completed implementation claim|the specifier sends the derived verification-slice task from current QA without waiting for another user decision|architect QA-ready integration of that preparation causes the original stable product task to be reissued from the exact new QA head|every role uses the ordinary file-based handoff channel rather than reporting forecast variance as a user blocker)$"
+    :handler (fn [world _ _] (granularity-assert! world))}
+   {:pattern #"^its standing-authorized verification-slice preparation completes focused review$"
+    :handler (fn [world _ _] (granularity-assert! world))}
+   {:pattern #"^the product evidence range cannot contain the verification-slice change that narrows its own plan$"
+    :handler (fn [world _ _] (granularity-assert! world))}])
 
 ;; clj-mutate-manifest-begin
 ;; {:version 1, :tested-at "2026-08-17T10:15:18.416104793+02:00", :module-hash "-1688471804", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1551051199"} {:id "form/1/defonce", :kind "defonce", :line 5, :end-line 5, :hash "701185655"} {:id "form/2/defonce", :kind "defonce", :line 6, :end-line 6, :hash "-1357907350"} {:id "defn-/production-evidence!", :kind "defn-", :line 8, :end-line 15, :hash "-288875895"} {:id "defn-/prepared", :kind "defn-", :line 17, :end-line 18, :hash "693136156"} {:id "defn-/ownership-prepared", :kind "defn-", :line 20, :end-line 29, :hash "63625446"} {:id "defn-/ownership-assert!", :kind "defn-", :line 31, :end-line 33, :hash "-1481341608"} {:id "defn-/assert!", :kind "defn-", :line 35, :end-line 37, :hash "-1474981311"} {:id "defn-/values", :kind "defn-", :line 39, :end-line 41, :hash "-170718585"} {:id "defn-/value-at", :kind "defn-", :line 43, :end-line 44, :hash "1199202542"} {:id "defn/handlers", :kind "defn", :line 46, :end-line 387, :hash "-173378486"}]}
