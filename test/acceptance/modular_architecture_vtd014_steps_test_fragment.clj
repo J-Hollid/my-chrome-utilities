@@ -165,6 +165,26 @@
                                       (assoc (:example execution) key (str value "!"))))
                (str (:name execution) " rejects " key)))))))
 
+(deftest ownership-readiness-steps-use-dedicated-handlers
+  (let [feature (gherkin/parse-file "features/settled-candidate-final-verification.feature")
+        executions (filter #(re-matches #"Settled candidate final verification 0(?:1[6-9]|20)/example_[0-9]+"
+                                        (:name %))
+                           (runtime/expand-executions feature))]
+    (is (= 9 (count executions)))
+    (doseq [step (mapcat :steps executions)]
+      (let [handler (first (filter #(re-matches (:pattern %) (:text step)) modular/handlers))]
+        (is (some? handler) (:text step))
+        (is (not= "^.*$" (str (:pattern handler))) (:text step)))))
+  (let [diagnostic (first (filter #(re-matches (:pattern %) "it executes TARGET-A only")
+                                  modular/handlers))
+        preflight (first (filter #(re-matches (:pattern %)
+                                             "it executes no task and creates no receipt, incident, package, or evidence eligibility")
+                                 modular/handlers))]
+    (is (= "^it executes (TARGET-A only|that case only|the setup boundary only and no target workflow|that exact task|no retry until the progress contract is repaired)$"
+           (str (:pattern diagnostic))))
+    (is (= "^it executes no task and creates no receipt, incident, package, or evidence eligibility$"
+           (str (:pattern preflight))))))
+
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-11T11:12:34.681128884+02:00", :module-hash "-2127462131", :forms [{:id "form/0/in-ns", :kind "in-ns", :line 1, :end-line 1, :hash "-1677165460"} {:id "form/1/deftest", :kind "deftest", :line 3, :end-line 12, :hash "1821403176"} {:id "form/2/deftest", :kind "deftest", :line 14, :end-line 25, :hash "-363311847"} {:id "form/3/deftest", :kind "deftest", :line 27, :end-line 45, :hash "272130773"} {:id "form/4/deftest", :kind "deftest", :line 47, :end-line 52, :hash "-740854160"} {:id "defn-/invoke-handler", :kind "defn-", :line 54, :end-line 59, :hash "-1395760312"} {:id "form/6/deftest", :kind "deftest", :line 61, :end-line 103, :hash "-1316076482"}]}
+;; {:version 1, :tested-at "2026-08-17T09:30:32.656588991+02:00", :module-hash "-1895897150", :forms [{:id "form/0/in-ns", :kind "in-ns", :line 1, :end-line 1, :hash "-1677165460"} {:id "form/1/deftest", :kind "deftest", :line 3, :end-line 12, :hash "1821403176"} {:id "form/2/deftest", :kind "deftest", :line 14, :end-line 25, :hash "-363311847"} {:id "form/3/deftest", :kind "deftest", :line 27, :end-line 45, :hash "272130773"} {:id "form/4/deftest", :kind "deftest", :line 47, :end-line 52, :hash "-740854160"} {:id "form/5/deftest", :kind "deftest", :line 54, :end-line 80, :hash "842940222"} {:id "defn-/invoke-handler", :kind "defn-", :line 82, :end-line 87, :hash "1056761188"} {:id "form/7/deftest", :kind "deftest", :line 89, :end-line 131, :hash "-1316076482"} {:id "form/8/deftest", :kind "deftest", :line 133, :end-line 166, :hash "-71976303"} {:id "form/9/deftest", :kind "deftest", :line 168, :end-line 186, :hash "-1059670415"}]}
 ;; clj-mutate-manifest-end

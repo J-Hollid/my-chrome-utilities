@@ -24,6 +24,7 @@ You are the specifier.
 ## Verification
 - Do not run Gherkin acceptance mutation.
 - Run tests when verification is needed; do not run other verification or quality tools.
+- For each new QA feature, record likely existing shared integration surfaces and proposed source prefixes beside development focus and QA impact. Require the coder's read-only intent classification before product coding; an approved `coarse-boundary` result routes an independently reviewed ownership-preparation stage without another routine user round-trip.
 
 ## Monitoring Recovery
 - When the user has explicitly asked the specifier to monitor the swarm, use the file-based handoff channel first.

@@ -20,7 +20,7 @@ import { evaluatePageGroupFixture as executePageGroupFixture, pageGroupStructura
 import { applyComposedSchemaContextualFacet, composedCanonicalSchema, composedSchemaWorkspace, includeComposedSchemaParentAdditionSelections, overrideComposedSchemaLocalRule, resetComposedSchemaLocalChanges, resetComposedSchemaLocalFacet, resetComposedSchemaLocalProperty, resetComposedSchemaLocalRule, saveComposedCanonicalDocument, saveComposedEntitySchemaPolicy, saveComposedEventCanonicalDocument, saveComposedSchemaLocalFacetsAndStructures, saveComposedSchemaPolicy } from "./data-layer-composed-schema-workspace.js";
 import { mountComposedSchemaWorkspace } from "./data-layer-composed-schema-workspace-ui.js";
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
-import { installProjectDocumentationWorkspaceUi } from "./data-layer-project-documentation-workspace-ui.js";
+import { installProjectDocumentationWorkspaceContribution } from "./project-documentation/workspace-contribution.js";
 import { applyCanonicalCommand, canonicalCommandOutcome, canonicalRequirements, evaluateCanonicalPredicate, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor as mountCanonicalSchemaEditorBase } from "./data-layer-canonical-schema-ui.js";
 import { mountProjectConditionEditor, projectConditionEditorValue } from "./data-layer-project-condition-editor.js";
@@ -1701,7 +1701,7 @@ globalThis.addEventListener("durable-project-saving", () => durablePersistenceRe
 globalThis.addEventListener("durable-project-saved", () => { void durablePersistenceReadiness.saved(); });
 globalThis.addEventListener("durable-project-save-failed", () => durablePersistenceReadiness.failed());
 const flowBuilderContext = () => ({ ...state ? { state } : {}, revision: canonicalRevision, ...(selectedKind === "flows" && selectedId ? { flowId: selectedId } : {}) });
-projectDocumentationWorkspaceUi = installProjectDocumentationWorkspaceUi({ state: () => state, revision: () => canonicalRevision, save: (documentation, label) => { if (!state)
+projectDocumentationWorkspaceUi = installProjectDocumentationWorkspaceContribution({ state: () => state, revision: () => canonicalRevision, save: (documentation, label) => { if (!state)
         return; persist(transactProject(state, label, (project) => ({ ...project, documentation: structuredClone(documentation) }))); }, openRepair: (target) => { documentationOpen = false; openProjectEntityWorkspace(target.kind, target.id); if (target.path) {
         const route = new URL(location.href);
         route.searchParams.set("kind", target.kind);

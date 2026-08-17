@@ -1,4 +1,5 @@
 import { validateFlowVisualMetadata } from "./flow-visual-asset-validation.js";
+import { projectAssetBodyArchiveEntry } from "./project-asset-body-contribution.js";
 export const flowVisualArchiveExtension = (type) => type === "image/png" ? "png" : type === "image/jpeg" ? "jpg" : "webp";
 export const withoutEmbeddedFlowVisualBodies = (project) => { const value = structuredClone(project); if (value.conceptVisualAssets)
     value.conceptVisualAssets = value.conceptVisualAssets.map(({ bytes, ...metadata }) => metadata); return value; };
@@ -15,7 +16,7 @@ const assertArchiveIdentity = (value) => { if (!value || typeof value !== "objec
 const assertArchiveFeatures = (features) => { if (!Array.isArray(features) || features.some(feature => feature !== "digest-addressed-visual-assets"))
     throw new DOMException("The project archive requires unsupported features.", "NotSupportedError"); };
 const validArchiveEntries = (value) => value.draftEntry === "draft.json" && (value.publishedEntry === undefined || value.publishedEntry === "published.json") && Array.isArray(value.assets) && value.assets.length <= 10_000;
-const assertArchiveAssetEntry = (asset) => { validateFlowVisualMetadata(asset); if (asset.entry !== `assets/${asset.digest.slice(7)}.${flowVisualArchiveExtension(asset.mediaType)}`)
+const assertArchiveAssetEntry = (asset) => { validateFlowVisualMetadata(asset); if (asset.entry !== projectAssetBodyArchiveEntry({ namespace: "flow-visual", digest: asset.digest.slice(7), extension: flowVisualArchiveExtension(asset.mediaType) }))
     throw new DOMException(`Visual ${asset.id} does not use its digest-addressed archive entry.`, "DataError"); };
 export function assertFlowVisualArchiveManifest(value) {
     assertArchiveIdentity(value);

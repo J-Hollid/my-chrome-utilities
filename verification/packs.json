@@ -27,11 +27,24 @@
       "src/flow-visual-zip-reader.ts",
       "src/flow-visual-zip-writer.ts",
       "src/flow-visual-zip.ts",
+      "src/project-asset-body-contribution.ts",
       "src/data-layer-project-library.ts",
       "src/data-layer-project-library-ui.ts",
       "src/data-layer-project-library-presentation-ui.ts"
     ],
     "dependencies": [],
+    "sharedBoundaries": [
+      {
+        "id": "project_asset_body_contribution",
+        "prefixes": ["src/project-asset-body-contribution.ts"],
+        "owner": "project_management",
+        "consumers": ["durable_project_repository"],
+        "structuralClass": "persistence",
+        "qaTargets": ["DURABLE_REPOSITORY_STORAGE_TARGET"],
+        "propagateDependants": false,
+        "terminalFullObligation": true
+      }
+    ],
     "impactBoundaries": [
       {
         "id": "project_entity_lifecycle_semantic",
@@ -4245,6 +4258,7 @@
       "src/project-documentation/workspace-set-creation-ui.ts",
       "src/project-documentation/workspace-theme-ui.ts",
       "src/project-documentation/workspace-ui-elements.ts",
+      "src/project-documentation/workspace-contribution.ts",
       "src/data-layer-project-documentation-workspace-ui.ts"
     ],
     "dependencies": [
@@ -4252,6 +4266,18 @@
     ],
     "sharedComponents": [
       "flow_graph"
+    ],
+    "sharedBoundaries": [
+      {
+        "id": "project_documentation_workspace_contribution",
+        "prefixes": ["src/project-documentation/workspace-contribution.ts"],
+        "owner": "flow_export",
+        "consumers": ["shell"],
+        "structuralClass": "composition",
+        "qaTargets": ["STUDIO_GLOBAL_STYLE_SMOKE_TARGET"],
+        "propagateDependants": false,
+        "terminalFullObligation": true
+      }
     ],
     "unit": [
       "test/data-layer-flow-table-documentation-export-test.mjs",
@@ -4266,6 +4292,14 @@
       "features/data-layer-flow-table-documentation-export-runtime.feature",
       "features/data-layer-project-documentation-workspace.feature",
       "features/data-layer-project-documentation-workspace-runtime.feature"
+    ],
+    "plannedFeatures": [
+      "features/data-layer-documentation-template-library.feature",
+      "features/data-layer-documentation-template-library-runtime.feature",
+      "features/data-layer-excel-documentation-templates.feature",
+      "features/data-layer-excel-documentation-templates-runtime.feature",
+      "features/data-layer-rich-page-documentation-templates.feature",
+      "features/data-layer-rich-page-documentation-templates-runtime.feature"
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/flow_table_documentation_export.clj"
@@ -5579,6 +5613,18 @@
   {
     "id": "shell",
     "representativeChangedPath": "src/workspace-tabs-ui.ts",
+    "sharedBoundaries": [
+      {
+        "id": "build_delivered_dependency_contribution",
+        "prefixes": ["build-delivered-dependencies.json", "scripts/build-delivered-dependencies.mjs"],
+        "owner": "shell",
+        "consumers": ["flow_export"],
+        "structuralClass": "packaging",
+        "qaTargets": ["STUDIO_GLOBAL_STYLE_SMOKE_TARGET"],
+        "propagateDependants": false,
+        "terminalFullObligation": true
+      }
+    ],
     "stylesheets": [
       {
         "source": "side-panel.css",

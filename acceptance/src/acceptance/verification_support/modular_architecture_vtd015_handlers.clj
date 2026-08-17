@@ -3,6 +3,7 @@
             [acceptance.verification-support.modular-architecture-process-evidence :as process-evidence]))
 
 (defonce ^:private evidence (atom nil))
+(defonce ^:private ownership-evidence (atom nil))
 
 (defn- production-evidence! []
   (process-evidence/load! evidence
@@ -15,6 +16,21 @@
 
 (defn- prepared [world]
   (assoc world :vtd015/evidence (production-evidence!)))
+
+(defn- ownership-prepared [world]
+  (assoc world :vtd015/ownership-evidence
+         (process-evidence/load! ownership-evidence
+           {:command ["node" "test/verification-process-contract-test.mjs"]
+            :prepared-task "unit:test/verification-process-contract-test.mjs"
+            :fallback ["node" "test/verification-process-contract-test.mjs"]
+            :prefix "{\"verificationOwnershipReadinessAcceptance\""
+            :key :verificationOwnershipReadinessAcceptance
+            :failure "Verification ownership-readiness process contract failed."
+            :missing "Verification ownership-readiness evidence is missing."})))
+
+(defn- ownership-assert! [world predicate message]
+  (support/assert! predicate message {:evidence (:vtd015/ownership-evidence world)})
+  world)
 
 (defn- assert! [world predicate message]
   (support/assert! predicate message {:evidence (:vtd015/evidence world)})
@@ -270,8 +286,106 @@
    {:pattern #"^the user decides when another master integration phase begins$"
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd015/evidence :qaPilot :scorecard :userControlsPromotion]))
-                        "Master integration can begin without the user."))}])
+                        "Master integration can begin without the user."))}
+   {:pattern #"^a user-approved QA feature names its development focus, QA impact, and likely shared integration surfaces$"
+    :handler (fn [world _ _] (ownership-prepared world))}
+   {:pattern #"^ownership readiness is evaluated before product coding$"
+    :handler (fn [world _ _]
+               (ownership-assert! world (true? (get-in world [:vtd015/ownership-evidence :intent :planOnly]))
+                                  "Intent ownership readiness was not plan-only."))}
+   {:pattern #"^a read-only intent plan reports current owners, consumers, planned packs, task estimate, and expansion-causing paths$"
+    :handler (fn [world _ _]
+               (ownership-assert! world (true? (get-in world [:vtd015/ownership-evidence :intent :fieldsReported]))
+                                  "Intent ownership readiness omitted required planning fields."))}
+   {:pattern #"^no build, test, receipt, incident, evidence claim, Git change, or handoff is produced$"
+    :handler (fn [world _ _]
+               (ownership-assert! world (true? (get-in world [:vtd015/ownership-evidence :intent :sideEffectsAbsent]))
+                                  "Intent ownership readiness produced a side effect."))}
+   {:pattern #"^ownership readiness classifies an approved feature as (.+)$"
+    :handler (fn [world example captures]
+               (assoc (ownership-prepared world) :vtd015/ownership-classification
+                      (first (values example-values example captures))))}
+   {:pattern #"^the feature workflow selects its next stage$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^the workflow routes to (.+)$"
+    :handler (fn [world example captures]
+               (let [expected (first (values example-values example captures))]
+                 (ownership-assert! world
+                                    (= expected (value-at (get-in world [:vtd015/ownership-evidence :routing :rows])
+                                                          (:vtd015/ownership-classification world)))
+                                    "Ownership readiness selected the wrong workflow stage.")))}
+   {:pattern #"^no feature-mode all-20 run is authorized$"
+    :handler (fn [world _ _]
+               (ownership-assert! world (false? (get-in world [:vtd015/ownership-evidence :routing :featureAll20Authorized]))
+                                  "Ownership readiness authorized an all-20 feature run."))}
+   {:pattern #"^an approved feature has a coarse ownership boundary$"
+    :handler (fn [world _ _] (ownership-prepared world))}
+   {:pattern #"^its standing-authorized preparation stage completes focused review$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^the preparation is independently committed and integrated into QA from an architect QA-ready handoff$"
+    :handler (fn [world _ _]
+               (let [preparation (get-in world [:vtd015/ownership-evidence :preparation])]
+                 (ownership-assert! world (and (:independentCommit preparation) (:qaReadyIntegration preparation))
+                                    "Ownership preparation was not independently integrated through QA-ready review.")))}
+   {:pattern #"^the product candidate has not implemented externally visible feature behavior$"
+    :handler (fn [world _ _]
+               (ownership-assert! world (true? (get-in world [:vtd015/ownership-evidence :preparation :behaviorAbsent]))
+                                  "Ownership preparation activated product behavior."))}
+   {:pattern #"^the already-approved product task restarts from that exact QA head without another product approval$"
+    :handler (fn [world _ _]
+               (ownership-assert! world (true? (get-in world [:vtd015/ownership-evidence :preparation :restartFromExactQaHead]))
+                                  "The product task did not restart from the prepared QA head."))}
+   {:pattern #"^the product evidence range cannot contain the ownership change that narrows its own plan$"
+    :handler (fn [world _ _]
+               (ownership-assert! world (true? (get-in world [:vtd015/ownership-evidence :preparation :evidenceRangeSeparated]))
+                                  "Product evidence included its ownership-preparation change."))}
+   {:pattern #"^a coder has the first coherent committed candidate for an approved QA feature$"
+    :handler (fn [world _ _] (ownership-prepared world))}
+   {:pattern #"^exact candidate ownership is checked before a complete planned diagnostic or evidence run$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^plan-only preflight uses the canonical Git change set and current and historical ownership$"
+    :handler (fn [world _ _]
+               (let [exact (get-in world [:vtd015/ownership-evidence :exact])]
+                 (ownership-assert! world (and (:planOnly exact) (:canonicalHistoricalUnion exact))
+                                    "Exact ownership preflight did not use the canonical historical union.")))}
+   {:pattern #"^it executes no task and creates no receipt, incident, package, or evidence eligibility$"
+    :handler (fn [world _ _]
+               (ownership-assert! world (true? (get-in world [:vtd015/ownership-evidence :exact :noSideEffects]))
+                                  "Exact ownership preflight produced a side effect."))}
+   {:pattern #"^an authorized settled candidate runs one property-enabled review-evidence plan after its final commit$"
+    :handler (fn [world _ _]
+               (let [exact (get-in world [:vtd015/ownership-evidence :exact])]
+                 (ownership-assert! world (and (:propertyReviewEvidence exact) (:afterFinalCommit exact))
+                                    "Settled ownership evidence was not one post-commit property run.")))}
+   {:pattern #"^an ordinary or dirty-tree diagnostic receipt cannot be recorded as review-ready evidence$"
+    :handler (fn [world _ _]
+               (ownership-assert! world (true? (get-in world [:vtd015/ownership-evidence :exact :invalidReceiptRejected]))
+                                  "An ineligible receipt could become review-ready."))}
+   {:pattern #"^focused QA evidence used a declared shared boundary with a terminal-full obligation$"
+    :handler (fn [world _ _]
+               (let [prepared-world (ownership-prepared world)]
+                 (ownership-assert! prepared-world
+                                    (true? (get-in prepared-world [:vtd015/ownership-evidence :obligations :declared]))
+                                    "Focused QA evidence omitted its terminal obligation.")))}
+   {:pattern #"^later QA features proceed or the user requests master integration$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^unrelated QA features neither resolve nor repeat the obligation$"
+    :handler (fn [world _ _]
+               (ownership-assert! world (true? (get-in world [:vtd015/ownership-evidence :obligations :unrelatedFeaturesPreserve]))
+                                  "An unrelated QA feature changed a terminal obligation."))}
+   {:pattern #"^master integration applies the existing canonical final-verification procedure to the frozen candidate$"
+    :handler (fn [world _ _]
+               (ownership-assert! world (true? (get-in world [:vtd015/ownership-evidence :obligations :canonicalMasterProcedure]))
+                                  "Master integration bypassed canonical final verification."))}
+   {:pattern #"^matching passing terminal evidence changes the obligation state to consumed$"
+    :handler (fn [world _ _]
+               (ownership-assert! world (true? (get-in world [:vtd015/ownership-evidence :obligations :passingConsumes]))
+                                  "Matching terminal evidence did not consume the obligation."))}
+   {:pattern #"^unsuccessful terminal evidence or a behavior-bearing candidate change retains the active obligation$"
+    :handler (fn [world _ _]
+               (ownership-assert! world (true? (get-in world [:vtd015/ownership-evidence :obligations :failureRetains]))
+                                  "Failed or stale terminal evidence consumed an obligation."))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-11T21:09:09.996079178+02:00", :module-hash "1754380372", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1551051199"} {:id "form/1/defonce", :kind "defonce", :line 5, :end-line 5, :hash "701185655"} {:id "defn-/production-evidence!", :kind "defn-", :line 7, :end-line 14, :hash "-288875895"} {:id "defn-/prepared", :kind "defn-", :line 16, :end-line 17, :hash "693136156"} {:id "defn-/assert!", :kind "defn-", :line 19, :end-line 21, :hash "-1474981311"} {:id "defn-/values", :kind "defn-", :line 23, :end-line 25, :hash "-170718585"} {:id "defn-/value-at", :kind "defn-", :line 27, :end-line 28, :hash "1199202542"} {:id "defn/handlers", :kind "defn", :line 30, :end-line 211, :hash "1137426894"}]}
+;; {:version 1, :tested-at "2026-08-17T09:40:25.416569214+02:00", :module-hash "-1688471804", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1551051199"} {:id "form/1/defonce", :kind "defonce", :line 5, :end-line 5, :hash "701185655"} {:id "form/2/defonce", :kind "defonce", :line 6, :end-line 6, :hash "-1357907350"} {:id "defn-/production-evidence!", :kind "defn-", :line 8, :end-line 15, :hash "-288875895"} {:id "defn-/prepared", :kind "defn-", :line 17, :end-line 18, :hash "693136156"} {:id "defn-/ownership-prepared", :kind "defn-", :line 20, :end-line 29, :hash "63625446"} {:id "defn-/ownership-assert!", :kind "defn-", :line 31, :end-line 33, :hash "-1481341608"} {:id "defn-/assert!", :kind "defn-", :line 35, :end-line 37, :hash "-1474981311"} {:id "defn-/values", :kind "defn-", :line 39, :end-line 41, :hash "-170718585"} {:id "defn-/value-at", :kind "defn-", :line 43, :end-line 44, :hash "1199202542"} {:id "defn/handlers", :kind "defn", :line 46, :end-line 387, :hash "-173378486"}]}
 ;; clj-mutate-manifest-end

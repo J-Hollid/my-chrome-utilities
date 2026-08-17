@@ -1068,6 +1068,7 @@ export async function createPendingVerificationEvidence({
   if (runIntentBootstrap) {
     await validateRunIntentBootstrapBase({
       root:repositoryRoot, baseCommit, changedPaths:actualChangeSet.paths,
+      evidenceTask:task,
     });
     const incidents = await createTimeoutIncidentStore({ root:repositoryRoot })
       .blocking({ commit });
@@ -1253,6 +1254,7 @@ export async function recordPendingVerificationEvidence(
         await validateRunIntentBootstrapBase({
           root:repositoryRoot, baseCommit:pending.baseCommit,
           changedPaths:pending.changeSet.paths,
+          evidenceTask:pending.task,
         });
         const [incidents, candidatePacks] = await Promise.all([
           createTimeoutIncidentStore({ root:repositoryRoot }).blocking({ commit }),

@@ -26,6 +26,8 @@ export {
   validateStylesheetOwnership,
 } from "./verification-styles.mjs";
 import ts from "typescript";
+import {sharedBoundaryPlanFor,validateSharedBoundaryDeclarations} from "./verification-shared-boundaries.mjs";
+export {sharedBoundaryPlanFor,validateSharedBoundaryDeclarations} from "./verification-shared-boundaries.mjs";
 
 const registryUrl = new URL("../verification/packs.json", import.meta.url);
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
@@ -348,7 +350,7 @@ function validateImpactBoundaries(packs, sourcePaths, representativePaths = sour
     }
     if (!boundaries.length) continue;
     for (const sourcePath of sourcePaths.filter((candidate) => ownerOf(packs, candidate)?.id === pack.id)) {
-      const matches = boundaries.filter((boundary) =>
+      const matches = [...boundaries,...values(pack,"sharedBoundaries")].filter((boundary) =>
         boundary.prefixes.some((prefix) => prefixMatches(prefix, sourcePath)));
       if (matches.length !== 1) {
         throw new Error(`Classify source path ${sourcePath} in exactly one impact boundary for pack ${pack.id}`);
@@ -741,7 +743,7 @@ function validateInventoryPaths(packs, inventory) {
     }
   }
   for (const key of ["features", "handlers"]) {
-    const assigned = new Set(packs.flatMap((pack) => values(pack, key)));
+    const assigned = new Set(packs.flatMap((pack) => key==="features"?[...values(pack,key),...values(pack,"plannedFeatures")]:values(pack,key)));
     for (const path of inventory[key]) {
       if (!assigned.has(path)) throw new Error(`Unassigned ${key} path: ${path}`);
     }
@@ -877,6 +879,7 @@ export async function validateVerificationPacks(packs, { inventory } = {}) {
     if (ids.has(pack.id)) throw new Error(`Verification pack ids must be unique: ${pack.id}`);
     ids.add(pack.id);
   }
+  validateSharedBoundaryDeclarations(packs);
   await validateRegisteredPaths(packs);
   validateDependencies(packs, ids);
   validateDeclaredTasks(packs);
@@ -905,7 +908,8 @@ export async function validateVerificationPacks(packs, { inventory } = {}) {
 
 function ownersAtPriority(packs, path) {
   const levels = [
-    packs.filter((pack) => exactOwnedPathKeys.some((key) => values(pack, key).includes(path)) ||
+    packs.filter((pack)=>values(pack,"sharedBoundaries").some(({prefixes})=>prefixes.some((prefix)=>prefixMatches(prefix,path)))),
+    packs.filter((pack) => exactOwnedPathKeys.some((key) => values(pack, key).includes(path)) || values(pack,"plannedFeatures").includes(path) ||
       values(pack, "checkpointCommands").some(({ executable, args }) => executable === "node" && args?.[0] === path)),
     packs.filter((pack) => values(pack, "source").some((prefix) => prefixMatches(prefix, path))),
     packs.filter((pack) => values(pack, "process").some((prefix) => processPrefixMatches(prefix, path))),
@@ -1110,11 +1114,11 @@ function uniquePackIds(tasks) {
 
 function historicalRegistryHasPlanningShape(packs, known) {
   const arrayKeys = [
-    ...exactOwnedPathKeys, ...prefixOwnedPathKeys, "globalImpact", "features",
+    ...exactOwnedPathKeys, ...prefixOwnedPathKeys, "globalImpact", "features", "plannedFeatures",
     "browserObservations", "checkpointCommands", "dependencies", "sharedComponents",
     "verificationInputs", "runtimeInputs", "verificationHelpers", "isolatedVerificationHandlers", "browserAdapterModes",
     "browserAdapterPerformance", "browserObservationBatches", "browserEvidencePartitions",
-    "impactBoundaries", "executionPrerequisites", "stylesheets",
+    "impactBoundaries", "executionPrerequisites", "stylesheets", "sharedBoundaries",
   ];
   const boundaryIds = Array.isArray(packs)
     ? packs.flatMap((pack) => Array.isArray(pack?.impactBoundaries)
@@ -1126,7 +1130,7 @@ function historicalRegistryHasPlanningShape(packs, known) {
     new Set(boundaryIds).size === boundaryIds.length &&
     packs.every((pack) => pack && typeof pack.id === "string" && known.has(pack.id) &&
       arrayKeys.every((key) => pack[key] === undefined || Array.isArray(pack[key])) &&
-      exactOwnedPathKeys.concat(prefixOwnedPathKeys, "globalImpact", "features", "verificationInputs", "runtimeInputs")
+      exactOwnedPathKeys.concat(prefixOwnedPathKeys, "globalImpact", "features", "plannedFeatures", "verificationInputs", "runtimeInputs")
         .every((key) => values(pack, key).every((entry) => typeof entry === "string")) &&
       ["dependencies", "sharedComponents"].every((key) =>
         values(pack, key).every((entry) => typeof entry === "string" && known.has(entry))) &&
@@ -1137,6 +1141,7 @@ function historicalRegistryHasPlanningShape(packs, known) {
         Array.isArray(entry.consumers)) &&
       values(pack, "impactBoundaries").every((boundary) =>
         validImpactBoundaryShape(boundary, pack)) &&
+      values(pack, "sharedBoundaries").every((boundary) => boundary&&typeof boundary.id==="string") &&
       values(pack, "browserObservations").every((entry) => entry && typeof entry.path === "string") &&
       values(pack, "checkpointCommands").every((entry) => entry && typeof entry.executable === "string" &&
         Array.isArray(entry.args)));
@@ -1215,6 +1220,7 @@ export function planVerification(
   const changedBoundaries = new Map();
   const changedStyleTargets = new Map();
   const styleSmokeTargets = [];
+  const sharedBoundaryTargets = [];
   const terminalFullObligations = [];
   const registryChanged = changedPaths.includes("verification/packs.json");
   const historicalPacksCompatible = historicalRegistryHasPlanningShape(basePacks, known);
@@ -1269,6 +1275,8 @@ export function planVerification(
     }
     const owner = ownerOf(registry, changedPath);
     if (!owner) throw new Error(`Assign every changed path to one verification pack: ${changedPath}`);
+    const sharedPlan=sharedBoundaryPlanFor(registry,changedPath);
+    if(sharedPlan)return{semantic:sharedPlan.selected,exactSemantic:[],verificationConsumers:[],boundary:sharedPlan.boundaryId,propagateDependants:false,sharedBoundaryTargets:sharedPlan.qaTargets,terminalFullObligation:sharedPlan.terminalFullObligation};
     const stylePlan = stylesheetPlanFor(registry, changedPath);
     if (stylePlan) {
       const unavailable = stylePlan.selected.filter((id) => !known.has(id));
@@ -1324,6 +1332,7 @@ export function planVerification(
     boundary:affected.map(({ boundary }) => boundary).find(Boolean) ?? null,
     propagateDependants:affected.every((entry) => entry.propagateDependants === false) ? false : undefined,
     styleSmokeTargets:[...new Set(affected.flatMap((entry) => entry.styleSmokeTargets ?? []))],
+    sharedBoundaryTargets:[...new Set(affected.flatMap((entry)=>entry.sharedBoundaryTargets??[]))],
     terminalFullObligation:affected.some((entry) => entry.terminalFullObligation),
   });
   const applyAffected = (changedPath, affected, registries = [packs]) => {
@@ -1346,6 +1355,7 @@ export function planVerification(
     changedOwners.set(changedPath, orderedClosure);
     if (affected.boundary) changedBoundaries.set(changedPath, affected.boundary);
     if (affected.styleSmokeTargets?.length) styleSmokeTargets.push(...affected.styleSmokeTargets);
+    if(affected.sharedBoundaryTargets?.length)sharedBoundaryTargets.push(...affected.sharedBoundaryTargets);
     if (affected.styleSmokeTargets?.length) {
       changedStyleTargets.set(changedPath, [...affected.styleSmokeTargets]);
     }
@@ -1451,6 +1461,7 @@ export function planVerification(
     !terminalFull && !canonicalRunnableSelection;
   const changedStyleTargetIds = new Set(Object.values(Object.fromEntries(changedStyleTargets))
     .flatMap((targets) => targets));
+  const changedSharedTargetIds=new Set(sharedBoundaryTargets);
   const executionIds = new Set(executionPacks.map(({ id }) => id));
   const selectedObservations = packs.flatMap((declarationPack) => {
     if (!executionIds.has(declarationPack.id)) return [];
@@ -1465,6 +1476,7 @@ export function planVerification(
       ? observations.filter(({ impactBoundaries }) => impactBoundaries?.some((id) => changedBoundaryIds.has(id)))
       : [];
     const styleTargets = observations.filter(({ id }) => changedStyleTargetIds.has(id));
+    const sharedTargets=observations.filter(({id})=>changedSharedTargetIds.has(id));
     const ordinaryTargets = styleSmokeOnly || !selected.has(declarationPack.id) ? []
       : changedAdapterTargetIds.size ? observations.filter(({ id }) => changedAdapterTargetIds.has(id))
       : boundaryTargets.length ? boundaryTargets : observations.filter(({ id }) =>
@@ -1472,7 +1484,7 @@ export function planVerification(
     const selectedTargets = browserTargetIds.length
       ? observations.filter(({ id }) => browserTargetIds.includes(id))
       : terminalFull || canonicalRunnableSelection ? observations
-      : [...new Map([...styleTargets, ...ordinaryTargets].map((item) => [item.id, item])).values()];
+      : [...new Map([...styleTargets,...sharedTargets, ...ordinaryTargets].map((item) => [item.id, item])).values()];
     return selectedTargets.map((observation) => ({
       declarationPack, observation,
       boundaryScoped:boundaryTargets.some(({ id }) => id === observation.id),
@@ -1576,6 +1588,7 @@ export function planVerification(
     changedOwners:Object.fromEntries([...changedOwners].sort(([left], [right]) => left.localeCompare(right))),
     changedBoundaries:Object.fromEntries([...changedBoundaries].sort(([left], [right]) => left.localeCompare(right))),
     styleSmokeTargets:[...new Set(styleSmokeTargets)].sort(),
+    sharedBoundaryTargets:[...new Set(sharedBoundaryTargets)].sort(),
     terminalFullObligations:[...new Set(terminalFullObligations)].sort(),
     changedStyleTargets:Object.fromEntries([...changedStyleTargets]
       .sort(([left], [right]) => left.localeCompare(right))),

@@ -23,6 +23,7 @@ import {
 import {withDistArtifactLock} from "./dist-artifact-lock.mjs";
 import {checkArchitecture} from "./check-architecture.mjs";
 import {stylesheetDeclarations, validateStylesheetRegistry} from "./verification-styles.mjs";
+import {validateBuildDeliveredDependencies} from "./build-delivered-dependencies.mjs";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const distDirectory = path.join(projectRoot, "dist");
@@ -64,6 +65,8 @@ async function copyStaticFiles(candidateDirectory) {
     await copyFile(source, destinationPath);
   }
   await cp("assets/brand", path.join(candidateDirectory, "assets/brand"), {recursive: true});
+  const dependencies=validateBuildDeliveredDependencies(JSON.parse(await readFile("build-delivered-dependencies.json","utf8")));
+  for(const {source,destination} of dependencies){const target=path.join(candidateDirectory,destination);await mkdir(path.dirname(target),{recursive:true});await copyFile(source,target);}
   return new Set(declarations.map(({destination}) => destination));
 }
 

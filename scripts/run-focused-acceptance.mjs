@@ -1736,7 +1736,7 @@ export async function runFocusedAcceptance(
     const store = createTimeoutIncidentStore();
     const [base, incidents] = await Promise.all([
       validateRunIntentBootstrapBase({
-        root:repositoryRoot, baseCommit:changedSince, changedPaths:plan.changeSet.paths,
+        root:repositoryRoot, baseCommit:changedSince, changedPaths:plan.changeSet.paths,evidenceTask,
       }),
       store.blocking({ commit:candidateCommit }),
     ]);

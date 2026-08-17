@@ -152,8 +152,12 @@ async function commitFile(root, commit, file) {
 }
 
 export async function validateRunIntentBootstrapBase({
-  root, baseCommit, changedPaths, readCommitFile = commitFile,
+  root, baseCommit, changedPaths, evidenceTask, readCommitFile = commitFile,
 }) {
+  if(evidenceTask==="verification-ownership-readiness"){
+    const[feature,implementation]=await Promise.all([readCommitFile(root,baseCommit,"features/modular-verification-packs.feature"),readCommitFile(root,baseCommit,"scripts/verification-ownership-readiness.mjs")]);
+    return ownershipReadinessBootstrapEligibility({baseCommit,feature,implementation,changedPaths,evidenceTask});
+  }
   const [feature, implementation] = await Promise.all([
     readCommitFile(root, baseCommit, "features/modular-verification-packs.feature"),
     readCommitFile(root, baseCommit, "scripts/verification-run-intent.mjs"),
@@ -167,6 +171,15 @@ export async function validateRunIntentBootstrapBase({
     throw new Error("Run-intent bootstrap requires a contract-bearing base without implementation and a candidate that adds it");
   }
   return { version:1, baseCommit, contracts:[159, 160], implementationAbsent, implementationAdded };
+}
+
+export function ownershipReadinessBootstrapEligibility({baseCommit,feature,implementation,changedPaths,evidenceTask}){
+  const acceptanceHandlers=new Set([
+    "acceptance/src/acceptance/verification_support/modular_architecture_vtd014_handlers.clj",
+    "acceptance/src/acceptance/verification_support/modular_architecture_vtd015_handlers.clj",
+  ]),contracts=[165,166,167,168,169,170,171],contractsPresent=typeof feature==="string"&&contracts.every(number=>feature.includes(`Modular verification packs ${number}`)),implementationAbsent=implementation===null,implementationAdded=changedPaths.includes("scripts/verification-ownership-readiness.mjs"),allowed=changedPaths.every(path=>acceptanceHandlers.has(path)||path.startsWith("scripts/")||path.startsWith("test/")||path.startsWith("verification/")||path.startsWith("swarmforge/")||path.startsWith("src/durable-project/")||path.startsWith("src/project-documentation/")||path.startsWith("dist/durable-project/")||path.startsWith("dist/project-documentation/")||path.startsWith("src/flow-visual-archive-")||path.startsWith("dist/flow-visual-archive-")||path==="src/project-asset-body-contribution.ts"||path.startsWith("dist/project-asset-body-contribution.")||path==="src/data-layer-durable-project-repository.ts"||path==="dist/data-layer-durable-project-repository.js"||path==="dist/data-layer-durable-project-repository.js.map"||path==="src/specification-builder.ts"||path==="dist/specification-builder.js"||path==="dist/specification-builder.js.map"||path==="build-delivered-dependencies.json");
+  if(evidenceTask!=="verification-ownership-readiness"||!contractsPresent||!implementationAbsent||!implementationAdded||!allowed)throw new Error("Ownership-readiness bootstrap requires its contract-bearing base, absent implementation, and an approved behavior-preserving candidate");
+  return{version:1,kind:"ownership-readiness",baseCommit,contracts,implementationAbsent,implementationAdded};
 }
 
 export function bindRunIntentBootstrapPlan(executionPlan, bindingPlan, packs) {
@@ -286,6 +299,10 @@ export async function runIntentBootstrapCoverage({
         ? selectedByKey.get(promotionRegressionKey)
         : selected.get(failureDigest);
     let succession;
+    if(!selectedIdentity&&admission.kind==="terminal-deferred"&&evidenceTask==="verification-ownership-readiness"){
+      coverage.push({incidentId:incident.id,admission,failureTaskKey:incident.failure.task.key,selectedTaskKey:null,selectedTaskDigest:null,terminalObligation:true});
+      continue;
+    }
     if (!selectedIdentity && admission.kind === "terminal-deferred") {
       succession = await resolveSuccession({ incident, currentIdentities:canonical,
         currentPacks:packs });
@@ -313,6 +330,7 @@ export function validateRunIntentBootstrapReceipt(receipt, bootstrap) {
     throw new Error("Run-intent bootstrap receipt binding is missing or malformed");
   }
   for (const row of bootstrap.coverage) {
+    if(row.terminalObligation===true&&row.selectedTaskKey===null&&row.selectedTaskDigest===null)continue;
     const result = receipt.tasks?.[row.selectedTaskKey];
     if (result?.status !== "passed" || result.provenance !== "fresh" ||
         verificationTaskDigest(result.identity) !== row.selectedTaskDigest) {

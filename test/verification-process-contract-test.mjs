@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+await import("../scripts/verification-ownership-readiness-test.mjs");
 import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { access, chmod, copyFile, mkdtemp, mkdir, readFile, readdir, realpath, rename, rm, symlink, writeFile } from "node:fs/promises";
@@ -930,6 +931,10 @@ try {
   });
   const cliRunnerPath = path.join(cliContentionRepository, "scripts/run-focused-acceptance.mjs");
   await copyFile(path.resolve("scripts/run-focused-acceptance.mjs"), cliRunnerPath);
+  await copyFile(path.resolve("scripts/verification-packs.mjs"),
+    path.join(cliContentionRepository, "scripts/verification-packs.mjs"));
+  await copyFile(path.resolve("scripts/verification-shared-boundaries.mjs"),
+    path.join(cliContentionRepository, "scripts/verification-shared-boundaries.mjs"));
   await copyFile(path.resolve("scripts/settled-final-verification-policy.mjs"),
     path.join(cliContentionRepository, "scripts/settled-final-verification-policy.mjs"));
   await copyFile(path.resolve("scripts/dist-artifact-lock.mjs"),
@@ -998,6 +1003,7 @@ try {
     "scripts/verification-same-target-planner-projection.mjs",
     "scripts/verification-task-succession.mjs",
     "scripts/verification-styles.mjs", "scripts/verification-packs.mjs",
+    "scripts/verification-shared-boundaries.mjs",
     "test/browser-packs/global-style-smoke.mjs", "test/stylesheet-declarations-property-test.mjs",
     "test/data-layer-flow-visual-asset-portability-property-test.mjs",
     "test/flow-stylesheet-extraction-test.mjs", "src/flow-graph/flow-workspace.css",

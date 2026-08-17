@@ -2,6 +2,7 @@ import { upgradePageGroupsToPropertySets, verifyPropertySetFlowSectionUpgrade } 
 import { repairCanonicalBooleanAllowedValues } from "./data-layer-canonical-schema-facets.js";
 import { createFlowVisualArchive, estimateFlowVisualArchiveSize, importFlowVisualArchive, migrateVersion2VisualAssets, writeFlowVisualArchive } from "./flow-visual-asset-portability.js";
 import { validateFlowVisualBody } from "./flow-visual-asset-validation.js";
+import { projectAssetBodyStorageKey } from "./project-asset-body-contribution.js";
 export const DURABLE_PROJECT_DATABASE = "my-chrome-utilities.project-repository";
 export const DURABLE_PROJECT_DATABASE_VERSION = 7;
 export const LEGACY_PROJECT_KEYS = { library: "my-chrome-utilities.specification-project-library.v1", active: "my-chrome-utilities.specification-project.v1", navigation: "my-chrome-utilities.specification-project-navigation.v1", schemas: "my-chrome-utilities.schema-library.v1" };
@@ -295,7 +296,7 @@ export class DurableProjectRepository {
     subscribeActiveContext(listener) { this.activeListeners.add(listener); return () => this.activeListeners.delete(listener); }
     subscribeSavedSchemas(listener) { this.schemaListeners.add(listener); return () => this.schemaListeners.delete(listener); }
     async listConceptVisualAssetMetadata(projectId) { return this.backend.transaction(["visualAssetMetadata"], "readonly", async (transaction) => (await transaction.getPrefix("visualAssetMetadata", `${projectId}:`)).map(({ value }) => clone(value)).sort((left, right) => left.id.localeCompare(right.id))); }
-    async loadConceptVisualAssetBody(projectId, assetId) { return this.backend.transaction(["visualAssetMetadata", "visualAssetBodies"], "readonly", async (transaction) => { const metadata = await transaction.get("visualAssetMetadata", `${projectId}:${assetId}`), record = metadata && await transaction.get("visualAssetBodies", `${projectId}:${metadata.digest}`); if (!record?.body)
+    async loadConceptVisualAssetBody(projectId, assetId) { return this.backend.transaction(["visualAssetMetadata", "visualAssetBodies"], "readonly", async (transaction) => { const metadata = await transaction.get("visualAssetMetadata", `${projectId}:${assetId}`), record = metadata && await transaction.get("visualAssetBodies", projectAssetBodyStorageKey({ projectId, namespace: "flow-visual", digest: metadata.digest })); if (!record?.body)
         throw new DOMException(`Original visual body ${assetId} is unavailable.`, "NotFoundError"); return record.body.slice(0, record.body.size, record.body.type); }); }
     async loadConceptVisualAssetThumbnail(projectId, assetId) { return this.backend.transaction(["visualAssetMetadata", "visualAssetThumbnails"], "readonly", async (transaction) => { const metadata = await transaction.get("visualAssetMetadata", `${projectId}:${assetId}`), record = metadata && await transaction.get("visualAssetThumbnails", `${projectId}:${assetId}`); if (!record || record.digest !== metadata?.digest)
         return undefined; return record.body.slice(0, record.body.size, record.body.type); }); }
@@ -318,14 +319,14 @@ export class DurableProjectRepository {
         }
         this.fail("Save concept visual assets");
         await this.backend.transaction(["visualAssetMetadata", "visualAssetBodies", "visualAssetThumbnails", "projectRevisions"], "readwrite", async (transaction) => {
-            const prefix = `${projectId}:`, existing = await transaction.getPrefix("visualAssetMetadata", prefix), revisions = await transaction.getPrefix("projectRevisions", prefix), retained = revisions.flatMap(({ value }) => value.state.project.conceptVisualAssets ?? []), wantedAssets = new Set([...assets.map(({ metadata }) => metadata.id), ...retained.map(({ id }) => id)].map(id => `${prefix}${id}`)), wantedBodies = new Set([...assets.map(({ metadata }) => metadata.digest), ...retained.map(({ digest }) => digest)].map(digest => `${prefix}${digest}`));
+            const prefix = `${projectId}:`, existing = await transaction.getPrefix("visualAssetMetadata", prefix), revisions = await transaction.getPrefix("projectRevisions", prefix), retained = revisions.flatMap(({ value }) => value.state.project.conceptVisualAssets ?? []), wantedAssets = new Set([...assets.map(({ metadata }) => metadata.id), ...retained.map(({ id }) => id)].map(id => `${prefix}${id}`)), wantedBodies = new Set([...assets.map(({ metadata }) => metadata.digest), ...retained.map(({ digest }) => digest)].map(digest => projectAssetBodyStorageKey({ projectId, namespace: "flow-visual", digest })));
             for (const { key } of existing)
                 if (!wantedAssets.has(key)) {
                     await transaction.delete("visualAssetMetadata", key);
                     await transaction.delete("visualAssetThumbnails", key);
                 }
             for (const { metadata, body } of assets) {
-                const identity = `${prefix}${metadata.id}`, bodyIdentity = `${prefix}${metadata.digest}`, prior = await transaction.get("visualAssetMetadata", identity);
+                const identity = `${prefix}${metadata.id}`, bodyIdentity = projectAssetBodyStorageKey({ projectId, namespace: "flow-visual", digest: metadata.digest }), prior = await transaction.get("visualAssetMetadata", identity);
                 if (prior && prior.digest !== metadata.digest)
                     await transaction.delete("visualAssetThumbnails", identity);
                 if (!same(prior, metadata))
