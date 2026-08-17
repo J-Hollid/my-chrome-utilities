@@ -77,9 +77,13 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         projectionChanged();
         throw error;
     } };
-    const persistState = async (projectId, pending, label = "Project edit", retrying = false, recordHistory = true, commandRoute = partialRoutes.get(projectId), retryBodies) => { if (failed && !retrying)
-        throw failed.error; const expanded = await expandPartial(projectId, pending, commandRoute), base = expanded.base, next = expanded.next, attachment = assetBodyStaging.attach(projectId, retryBodies); if (same(base.state.project, next.project) && same(base.state.draft, next.draft))
-        return; const command = { ...durableDraftCommand(base, next, { commandId: `projection:${crypto.randomUUID()}`, label }), ...(attachment.bodies.length ? { assetBodies: attachment.bodies } : {}) }; locallySavingProjects.add(projectId); try {
+    const queuedAssetBodyAttachments = new Map(), queueAssetBodyAttachment = (projectId) => { const attachment = assetBodyStaging.attach(projectId), queue = queuedAssetBodyAttachments.get(projectId) ?? []; queue.push(attachment); queuedAssetBodyAttachments.set(projectId, queue); }, takeAssetBodyAttachment = (projectId) => { const queue = queuedAssetBodyAttachments.get(projectId), attachment = queue?.shift(); if (queue && !queue.length)
+        queuedAssetBodyAttachments.delete(projectId); return attachment ?? assetBodyStaging.attach(projectId, []); };
+    const persistState = async (projectId, pending, label = "Project edit", retrying = false, recordHistory = true, commandRoute = partialRoutes.get(projectId), attachment = takeAssetBodyAttachment(projectId)) => { if (failed && !retrying)
+        throw failed.error; const expanded = await expandPartial(projectId, pending, commandRoute), base = expanded.base, next = expanded.next; if (same(base.state.project, next.project) && same(base.state.draft, next.draft)) {
+        attachment.discard();
+        return;
+    } const command = { ...durableDraftCommand(base, next, { commandId: `projection:${crypto.randomUUID()}`, label }), ...(attachment.bodies.length ? { assetBodyOperationId: attachment.operationId, assetBodies: attachment.bodies } : {}) }; locallySavingProjects.add(projectId); try {
         const result = await repository.saveDraft(command);
         if (result.status === "conflict") {
             const error = new DOMException(`${result.label} conflicts at ${result.conflictingFields.join(", ")}.`, "AbortError");
@@ -187,6 +191,23 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
             return;
         } if (key === LEGACY_PROJECT_KEYS.schemas)
             return; legacy.removeItem(key); } };
+    const rawStorageSetItem = storage.setItem.bind(storage);
+    storage.setItem = (key, value) => { if (key === CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY) {
+        if (storage.getItem(key) !== value) {
+            const state = restoreCanonicalProjectState(value);
+            if (state)
+                queueAssetBodyAttachment(state.project.id);
+        }
+    }
+    else if (key === PROJECT_LIBRARY_STORAGE_KEY) {
+        const prior = restoreProjectLibrary(storage.getItem(key)), next = restoreProjectLibrary(value);
+        if (prior && next)
+            for (const [projectId, entry] of Object.entries(next.projects)) {
+                const priorEntry = prior.projects[projectId], pendingCanonicalRevision = pendingCanonicalRevisions.get(projectId), canonicalCompanion = pendingCanonicalRevision !== undefined && entry.revision <= pendingCanonicalRevision;
+                if (!canonicalCompanion && priorEntry && loaded.has(projectId) && (!same(priorEntry.state.project, entry.state.project) || !same(priorEntry.state.draft, entry.state.draft)))
+                    queueAssetBodyAttachment(projectId);
+            }
+    } rawStorageSetItem(key, value); };
     const ensureProject = async (projectId) => { await latest; if (partialRoutes.has(projectId))
         await forceLoad(projectId);
     else
@@ -252,7 +273,7 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         throw new Error("Migration source choice did not commit."); };
     const retryFailedSave = async () => { const pending = failed; if (!pending)
         throw new Error("There is no failed durable Draft to retry."); if (pending.conflict)
-        throw new Error("Resolve the visible conflicting fields before retrying this Draft."); loaded.delete(pending.projectId); enqueue(`Retry ${pending.command.label}`, () => persistState(pending.projectId, pending.state, pending.command.label, true, true, partialRoutes.get(pending.projectId), pending.command.assetBodies)); await latest; await installCurrent(pending.projectId, partialRoutes.get(pending.projectId)); projectionChanged(true); const deferred = deferredActiveContext; deferredActiveContext = undefined; if (deferred)
+        throw new Error("Resolve the visible conflicting fields before retrying this Draft."); loaded.delete(pending.projectId); const attachment = assetBodyStaging.attach(pending.projectId, pending.command.assetBodies); enqueue(`Retry ${pending.command.label}`, () => persistState(pending.projectId, pending.state, pending.command.label, true, true, partialRoutes.get(pending.projectId), attachment)); await latest; await installCurrent(pending.projectId, partialRoutes.get(pending.projectId)); projectionChanged(true); const deferred = deferredActiveContext; deferredActiveContext = undefined; if (deferred)
         await installActive(deferred); };
     const retryFailedSchemaSave = async () => { const pending = failedSchema; if (!pending)
         throw new Error("There is no failed Saved Schema Library batch to retry."); if (pending.conflict)
@@ -269,10 +290,13 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         return;
     } if (!pending.conflict)
         throw new Error("There is no durable Draft conflict to merge or reapply."); if (pending.command.commandId.startsWith("blocked-history:"))
-        throw new Error("A newer value blocks this window Undo or Redo; reject it instead of overwriting the newer Saved Draft."); const current = await repository.loadProject(pending.projectId), selectedSemanticFields = new Set(pendingFields.map(durableConflictSemanticField)), patches = pending.command.patches.filter((patch) => { const field = durablePatchField(patch); return !pending.conflict.conflictingFields.includes(field) || strategy === "reapply" || selectedSemanticFields.has(durableConflictSemanticField(field)); }), command = { ...structuredClone(pending.command), baseToken: current.draftToken, baseSequence: current.draftSequence, patches, pendingState: cleanState(current.state), commandId: `resolve:${pending.command.commandId}` }, result = await repository.saveDraft(command); if (result.status === "conflict") {
+        throw new Error("A newer value blocks this window Undo or Redo; reject it instead of overwriting the newer Saved Draft."); const current = await repository.loadProject(pending.projectId), selectedSemanticFields = new Set(pendingFields.map(durableConflictSemanticField)), patches = pending.command.patches.filter((patch) => { const field = durablePatchField(patch); return !pending.conflict.conflictingFields.includes(field) || strategy === "reapply" || selectedSemanticFields.has(durableConflictSemanticField(field)); }), includeAssetBodies = strategy === "reapply" || patches.length === pending.command.patches.length, { assetBodies: _assetBodies, assetBodyOperationId: _assetBodyOperationId, ...pendingCommand } = structuredClone(pending.command), command = { ...pendingCommand, ...(includeAssetBodies && attachment.bodies.length ? { assetBodyOperationId: attachment.operationId, assetBodies: attachment.bodies } : {}), baseToken: current.draftToken, baseSequence: current.draftSequence, patches, pendingState: cleanState(current.state), commandId: `resolve:${pending.command.commandId}` }, result = await repository.saveDraft(command); if (result.status === "conflict") {
         failed = { ...pending, conflict: result, error: new DOMException(`${result.label} still conflicts at ${result.conflictingFields.join(", ")}.`, "AbortError") };
         throw failed.error;
-    } attachment.commit(); failed = undefined; pageHistory(pending.projectId).push(command); await installCurrent(pending.projectId, partialRoutes.get(pending.projectId)); projectionChanged(); };
+    } if (includeAssetBodies)
+        attachment.commit();
+    else
+        attachment.discard(); failed = undefined; pageHistory(pending.projectId).push(command); await installCurrent(pending.projectId, partialRoutes.get(pending.projectId)); projectionChanged(); };
     const exportUnsavedDraft = () => { if (!failed)
         throw new Error("There is no failed durable Draft to export."); return JSON.stringify({ format: "my-chrome-utilities.unsaved-durable-project", version: 1, projectId: failed.projectId, command: { id: failed.command.commandId, label: failed.command.label, baseToken: failed.command.baseToken }, project: failed.state.project, draft: failed.state.draft }); };
     const exportUnsavedSchemas = () => { if (!failedSchema)

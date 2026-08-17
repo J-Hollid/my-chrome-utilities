@@ -15,6 +15,7 @@ export interface ProjectAssetBodyCommandItem {
   identity:ProjectAssetBodyIdentity;
   body:Blob;
   stagingToken:string;
+  operationId:string;
 }
 
 export interface ProjectAssetBodyStore {
