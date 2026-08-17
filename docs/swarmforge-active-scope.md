@@ -21,7 +21,7 @@ The settled-candidate verification workflow is integrated at
 |---|---|---|
 | QA-branch release pilot | Active; routine RepoWise scouting stopped after Trial 4 by user decision on 2026-08-15, with optional current-index investigation retained for unfamiliar code or known hotspots | `docs/qa-branch-release-pilot-R01.md` controls feature integration into `qa`; `docs/feature-development-focus-and-advisory-scouting-R01.md` controls the lightweight scoping convention and completed Trial 4 decision. |
 | QA verification ownership readiness | QA-integrated through automatic forecast-variance repair `8d3cf5012c` | Preserve causal `granularity-assessment-required` routing, reviewed seam-or-parent-fallback dispositions, and autonomous product resumption without an all-20 feature run. |
-| QA verification granularity ratchet | Initial ratchet `066ea284de`; first-use mapping repair QA-integrated at `8d3cf5012c` after the 13-pack/601-task product variance | Reissue stable task `documentation-templates` from the scorecard commit immediately after `8d3cf5012c`; its fresh exact preflight is authoritative. |
+| QA verification granularity ratchet | Initial ratchet `066ea284de`; first-use mapping repair QA-integrated at `8d3cf5012c`; a second automatic assessment is active for two newly observed durable-runtime staging paths | Implement `verification-slice-documentation-templates` from QA `1f68d463d7`, settle both runtime paths as a reusable seam or explicit parent fallback, then automatically reissue the product from the resulting QA head. |
 | QA-pilot verification latency correction | Closed after Slice 2 at `e32f9f7c10` by user decision on 2026-08-13 | No coder handoff. Measure the next three ordinary QA product cycles; Slices 3 and 4 remain evidence-triggered backlog items. |
 | QA style verification and Flow modularity | Complete on QA; stage-aware style planning is integrated at `d75132daef`, Flow CSS extraction at `ef440b3018`, corrections through `66dcdfd5d6`, and port snap at `89fee7df48` | Preserve the settled scorecard; do not reopen the abandoned mixed lineage or run all 20 before an explicit master-integration request. |
 | Flow click and drag-ownership correction | QA-integrated at `2b2cf06b45` on 2026-08-16 | Preserve directional Flow scenarios 043–045 and their runtime partners; cumulative promotion to `master` remains a separate release decision. |
@@ -31,7 +31,7 @@ The settled-candidate verification workflow is integrated at
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program; the combined Project Library transport isolation and Flow visual-asset portability delivery is QA-integrated at `1b192105a8` | Preserve that settled transport, content-addressed visual-body, and version-3 archive behavior. No additional VTD-008 controller slice is active. |
-| Documentation template library | Ready to resume after QA-integrated order correction `cad10c898c`; all earlier product candidates remain patch references | Reissue stable task `documentation-templates` from the exact correction scorecard descendant, using `f2f598d4` only as a patch reference and requiring fresh governed 10-pack/247-task evidence. |
+| Documentation template library | Paused after independent review completed the product paths at stopped candidate `d139725a1a`; exact readiness found two undisposed durable-runtime staging paths before launching its 13-pack/617-task catalogue | Keep `d139725a1a` as a patch reference only. QA-integrate the runtime staging disposition repair, reconstruct the product from that exact QA head, and require a fresh exact preflight before evidence. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Deferred and inactive | The existing two-worker order is within about six seconds of balanced after lock wait is removed; scheduling needed for a possible third worker is bounded inside VTD-017. |
 | VTD-012 registry and planner modularization | Deferred and inactive | Reconsider after broad final-gate and receipt-persistence costs are reduced. |
@@ -76,9 +76,19 @@ declaration-ordered pack features and runtime-first planner identity. Candidate
 correction `cad10c898c` is now QA-integrated and preserves strict planner
 identity while treating registry completeness as an exact set. `f2f598d4`,
 `00f3e45d`, `e8e5fd48`, and `7f9c8a1121` remain patch references only. Stable
-product task `documentation-templates` resumes automatically from the
-correction scorecard's exact QA descendant. No all-20 feature checkpoint is
-authorized.
+product candidate `d139725a1a`, reconstructed from that scorecard descendant,
+passed its direct product and browser checks but exact readiness correctly
+stopped before a 13-pack/617-task run. Its only undisposed causal paths are
+`src/data-layer-durable-project-runtime.ts` and
+`src/durable-project/runtime-core.ts`, where the completed product repair adds
+generic project asset-body staging. The standing campsite rule therefore
+activates a second `verification-slice-documentation-templates` preparation
+from QA `1f68d463d7`. It must integrate that generic staging capability behind a
+reusable durable-runtime seam with exact `durable_project_repository` and
+`flow_export` consumers when conservation proves it, or record explicit parent
+fallback for either path. The stopped product commit remains a patch reference
+only and resumes automatically from the resulting QA head. No 13-pack product
+catalogue or all-20 feature checkpoint is authorized before that preparation.
 
 ## Feature-development throughput authority
 

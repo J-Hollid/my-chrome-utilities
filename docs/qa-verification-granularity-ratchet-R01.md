@@ -1,10 +1,9 @@
 # QA verification granularity ratchet R01
 
-Status: the initial ratchet is QA-integrated at `066ea284de`; on 2026-08-17 the
-user approved an immediate first-use mapping repair after the exact
-Documentation-template candidate disproved the 12-task intent forecast. The
-product is paused at clean patch reference `e8e5fd48` until that repair reaches
-QA, then resumes automatically
+Status: the initial ratchet and first-use mapping repair are QA-integrated at
+`066ea284de` and `8d3cf5012c`; a standing-authorized second assessment is active
+from QA `1f68d463d7` for two durable-runtime staging paths found after the
+Documentation-template production repair
 
 Prepared: 2026-08-17
 
@@ -366,3 +365,94 @@ product from the exact QA scorecard descendant of `8d3cf5012c`. Its exact
 changed-path plan is the next measurement. The four parent fallbacks authorize
 truthful broad evidence when those shared files really change; they do not cause
 another assessment loop, promise a narrow count, or authorize all 20.
+
+### Approved durable-runtime staging disposition repair
+
+Independent product review required project asset-body bytes and their matching
+Draft metadata to commit atomically. Stopped coherent product candidate
+`d139725a1a`, based on exact QA `1f68d463d7`, implements that requirement by
+adding staging directly to `src/data-layer-durable-project-runtime.ts` and
+`src/durable-project/runtime-core.ts`. Exact readiness correctly returns
+`granularity-assessment-required`: those two broad controller paths add the
+otherwise unrelated `flow_graph`, `live_flow_testing`, `layered_schema`, and
+`property_set_flow_sections` families to a 13-pack/617-task product catalogue.
+No task from that catalogue has been launched. Candidate `d139725a1a` remains a
+patch reference only.
+
+This is the intended campsite trigger, not a new product decision. Derived task
+`verification-slice-documentation-templates` starts from current QA
+`1f68d463d7` and establishes the durable prerequisite independently. It must not
+merge or cherry-pick the stopped product commit, implement a Template Library or
+renderer, or use a same-candidate slice to narrow its own preparation evidence.
+
+The repair must establish all of the following:
+
+1. **Reusable staging seam.** Prefer one independently owned project asset-body
+   staging component under the durable-project boundary. The generic runtime may
+   expose that component, but the storage keying, pending-body lifecycle, and
+   command attachment must live outside the broad runtime controller wherever a
+   truthful extraction is possible. The seam is reusable by any project-owned
+   binary body; it contains no Excel, Documentation-kind, template-assignment,
+   or workspace UI policy.
+2. **Atomic command semantics.** A staged body is copied, project- and namespace-
+   scoped, and attached only to the matching project Draft command. Matching
+   metadata and bytes commit in the repository's one read-write transaction.
+   Success clears only committed bodies. Validation failure, transaction abort,
+   quota failure, or conflict leaves the exact unsaved command and bodies
+   available for the existing retry or conflict-resolution path. Explicit
+   rejection or caller discard removes its pending bodies. No successful state
+   can contain metadata for a missing body, and no failed upload can leave a new
+   durable orphan.
+3. **Exact ownership and consumers.** A future seam change is owned by
+   `durable_project_repository` and directly observed by the durable runtime
+   unit/property contract. Its exact product consumer is `flow_export` through
+   the existing `documentation_template_workspace` slice, which continues to
+   reach the declared Shell workspace consumer. The slice declaration names the
+   exact new source path, tasks, prerequisites, observable boundary, and
+   consumers. It does not narrow arbitrary changes to either broad runtime file.
+4. **Durable path disposition.** Add one task-scoped disposition for each of
+   `src/data-layer-durable-project-runtime.ts` and
+   `src/durable-project/runtime-core.ts`. When the reusable extraction is
+   proved, each is an integrated-seam disposition whose replacement is the new
+   staging seam and the staging capability is already present on QA before the
+   product resumes. If complete extraction or exact consumer proof fails within
+   the effort boundary, record an explicit reviewed parent fallback for that
+   path instead. Either result is final for this product lineage and prevents
+   the same assessment from looping again.
+5. **Conservative preparation proof.** The preparation's own exact current/base
+   plan remains authoritative for changes to the two broad runtime files; the
+   newly declared slice cannot narrow that same evidence range. Prove unchanged
+   generic save ordering, route hydration, projection notifications, retries,
+   rejection, reapply/merge, Undo/Redo, schema saves, visual assets, archive
+   compatibility, exact-pack task closures, terminal-full obligations,
+   quarantine behavior, and package contents. The preparation may run its
+   bounded canonical plan with properties and package proof, but never the
+   all-20 gate.
+6. **Clean product resumption.** After architect `qa-ready` integration, reissue
+   stable task `documentation-templates` from that exact QA head without another
+   user decision. Reconstruct `d139725a1a` as task-owned patches only. The
+   resumed product must use the integrated staging seam and leave both broad
+   runtime files unchanged, unless their recorded decision is the explicit
+   parent fallback. It then runs a fresh exact preflight. The earlier exact
+   10-pack boundary is the conservation target, not a hard-coded pack-count
+   waiver; the measured canonical plan remains authoritative.
+
+**Development focus:** extract and directly test the generic staged-body
+lifecycle; connect it to the existing durable Draft transaction; add the exact
+slice, two durable dispositions, current/base conservation fixtures, and the
+automatic resumption regression. Begin with the runtime unit and property tests,
+the ownership-readiness test, and the verification process-contract test.
+
+**QA impact:** forecast `durable_project_repository`, `flow_export`, their
+declared `shell` consumer, and package proof. Read-only intent and exact
+candidate preflight determine the preparation's complete conservative plan; a
+bounded wider result proceeds and is recorded, while an all-20 result, missing
+ownership, weakened evidence, or changed persistence meaning stops. Do not run
+the stopped product's 13-pack/617-task catalogue as preparation evidence.
+
+The preparation implementation-and-review effort ceiling is four hours from
+coder receipt to architect `qa-ready`. At two hours report the chosen seam or
+fallback per path, atomic failure/retry status, exact preparation packs and
+tasks, conservation status, failures, remaining work, confidence, and forecast.
+Continue while the approved behavior is unchanged and a bounded safe completion
+path remains.

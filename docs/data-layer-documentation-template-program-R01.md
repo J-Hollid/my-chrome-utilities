@@ -301,6 +301,36 @@ historical subsequence remain strict. The correction is QA-integrated at
 `cad10c898c`. Resume this product automatically from the exact correction
 scorecard descendant and use `f2f598d4` only as a patch reference.
 
+Independent review of the reconstructed product then completed the missing
+production paths at stopped candidate `d139725a1a`. Its direct unit, property,
+browser, typecheck, build, and package checks pass, but exact readiness from QA
+`1f68d463d7` correctly stops before a 13-pack/617-task catalogue. The only new
+undisposed paths are `src/data-layer-durable-project-runtime.ts` and
+`src/durable-project/runtime-core.ts`, where the candidate stages project asset
+bodies so workbook bytes and matching template metadata reach one atomic Draft
+transaction.
+
+The standing granularity authority therefore activates a second preparation
+under the stable task name `verification-slice-documentation-templates`, as
+specified in `docs/qa-verification-granularity-ratchet-R01.md`. It starts from
+QA `1f68d463d7`; `d139725a1a` is a patch reference only. Prefer a generic
+project asset-body staging seam owned by `durable_project_repository` with the
+exact `flow_export` Documentation consumer. If that boundary cannot be proved,
+record explicit parent fallback for each broad path instead of waiting for the
+user or inventing a narrower claim. After architect `qa-ready` integration,
+reissue `documentation-templates` automatically from that exact QA head.
+
+The resumed product must consume the integrated atomic staging capability and
+must not copy its staging implementation back into the two broad runtime files.
+Upload or replacement succeeds only when validated bytes and their matching
+template metadata commit together. Failure retains the exact recoverable
+unsaved operation without durable orphan bytes; retry or reviewed conflict
+resolution carries the matching bodies, while explicit rejection or discard
+removes them. Existing visual bodies, generic project saves, route hydration,
+Undo/Redo, conflict behavior, and archive portability remain unchanged. A fresh
+exact preflight is mandatory before product evidence; the earlier 10-pack plan
+is a conservation target, not a numeric exemption.
+
 **Ownership-readiness launch:** the resumed intent preflight names the integrated
 shared surfaces `src/project-asset-body-contribution.ts`,
 `src/project-documentation/workspace-contribution.ts`, and

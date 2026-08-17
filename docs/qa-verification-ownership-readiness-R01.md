@@ -1,9 +1,9 @@
 # QA verification ownership readiness R01
 
 Status: approved by the user on 2026-08-17 and QA-integrated at `b8194b517e`;
-standing activation continues. The user approved an automatic forecast-variance
-repair on 2026-08-17 after the Documentation-template exact first use exposed an
-unsliced 13-pack boundary
+standing activation continues. The first Documentation-template mapping repair
+is QA-integrated at `8d3cf5012c`; a second automatic assessment is active from
+QA `1f68d463d7` for two newly observed durable-runtime staging paths
 
 Prepared: 2026-08-17
 
@@ -302,3 +302,18 @@ complete planned diagnostic run.
   handlers with the direct development check before the first
   evidence-producing run so an acceptance-support correction does not consume a
   complete focused checkpoint.
+
+### Second Documentation-template assessment
+
+Stopped coherent product candidate `d139725a1a` adds atomic project asset-body
+staging to `src/data-layer-durable-project-runtime.ts` and
+`src/durable-project/runtime-core.ts`. Those known broad paths have no applicable
+reviewed disposition, so exact readiness correctly returns
+`granularity-assessment-required` before launching the resulting 13-pack/617-task
+product catalogue. Under the standing route, task
+`verification-slice-documentation-templates` starts from QA `1f68d463d7` and
+must record an integrated reusable staging seam or explicit parent fallback for
+each path. The product commit remains a patch reference and is automatically
+reconstructed from the resulting QA head. This causal disposition, rather than
+the catalogue's numeric size, is what prevents recurrence without weakening
+verification.
