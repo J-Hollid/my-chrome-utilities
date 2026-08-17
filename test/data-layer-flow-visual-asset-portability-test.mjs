@@ -33,6 +33,8 @@ const documentationBodyIdentity={projectId:project.id,namespace:"documentation-t
 const documentationBody=new Blob(["template-body"],{type:"application/octet-stream"});
 await durable.storeProjectAssetBody(documentationBodyIdentity,documentationBody);
 assert.equal(await (await durable.loadProjectAssetBody(documentationBodyIdentity)).text(),"template-body","the reusable repository seam stores namespaced project asset bodies");
+await durable.storeDocumentationTemplateBody(project.id,"compat123",new Blob(["template-compat"]));
+assert.equal(await (await durable.loadDocumentationTemplateBody(project.id,"compat123")).text(),"template-compat","the documentation compatibility seam uses the namespaced project asset body store");
 await durable.replaceConceptVisualAssets(project.id,[{metadata,body:new Blob([png],{type:metadata.mediaType})}]);
 assert.equal(await (await durable.loadProjectAssetBody(documentationBodyIdentity)).text(),"template-body","Flow visual cleanup preserves bodies owned by another namespace");
 durable.clearTrace();
@@ -70,6 +72,15 @@ assert.deepEqual(new Uint8Array(await imported.assets[0].body.arrayBuffer()),png
 assert.equal(imported.project.id,"project:copy");
 assert.equal(imported.project.documentationFlowGraphs["copy:flow:checkout"].pageFrames[0].conceptVisual.assetId,"copy:asset:cart");
 assert.equal(imported.publishedProject.documentationFlowGraphs["copy:flow:checkout"].pageFrames[0].conceptVisual.assetId,"copy:asset:cart");
+
+const workbookBody=new Blob([Uint8Array.from([80,75,3,4,1,2,3,4])],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),workbookDigest=`sha256:${Buffer.from(await crypto.subtle.digest("SHA-256",await workbookBody.arrayBuffer())).toString("hex")}`,templateProject={...structuredClone(project),documentation:{sets:[],themes:[],templates:[{id:"template:flow",name:"Flow workbook",format:"excel",kind:"flow",contractVersion:1,digest:workbookDigest,validation:{valid:true,findings:[]},body:{assetId:"template-body:flow",digest:workbookDigest,byteLength:workbookBody.size}}]}};
+const templateArchive=await createFlowVisualArchive({project:templateProject,assets:[{metadata,body:new Blob([png],{type:metadata.mediaType})}],templateBodies:[{digest:workbookDigest,byteLength:workbookBody.size,body:workbookBody}]});
+const importedTemplate=await importFlowVisualArchive(templateArchive,{projectId:"project:template-copy",id:old=>`template:${old}`});
+assert.equal(importedTemplate.templateBodies.length,1,"one digest-addressed Excel body is imported exactly once");
+assert.equal(importedTemplate.templateBodies[0].digest,workbookDigest);
+const durableTemplates=createMemoryDurableProjectRepository();await durableTemplates.importProjectArchive(templateArchive,{projectId:"project:template-durable",name:"Template durable"});
+const importedBody=await durableTemplates.loadProjectAssetBody({projectId:"project:template-durable",namespace:"documentation-template",digest:workbookDigest});
+assert.deepEqual(new Uint8Array(await importedBody.arrayBuffer()),new Uint8Array(await workbookBody.arrayBuffer()));
 
 const tampered=archive.slice();tampered[tampered.indexOf(137)]=136;
 await assert.rejects(()=>importFlowVisualArchive(tampered,{projectId:"project:bad",id:(old)=>`bad:${old}`}),/digest|CRC/i);

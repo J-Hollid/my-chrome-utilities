@@ -9,6 +9,10 @@ import { renderDocumentationConceptConfiguration, renderDocumentationContent } f
 import { renderDocumentationTheme } from "./project-documentation/workspace-theme-ui.js";
 import { appendProjectDocumentationSet } from "./project-documentation/workspace-set-creation.js";
 import { renderDocumentationSetCreationUi } from "./project-documentation/workspace-set-creation-ui.js";
+import { renderDocumentationTemplateLibrary } from "./project-documentation/workspace-template-library-ui.js";
+import { writeProjectDocumentationWorkbookWithTemplates } from "./documentation-templates/excel-renderer.js";
+import { renderProjectDocumentationRichWithTemplates } from "./documentation-templates/rich-renderer.js";
+import { documentationTemplateAssignment } from "./documentation-templates/template-library.js";
 import { documentationPreviewSelection, documentationTabAfterKey, } from "./project-documentation/workspace-navigation.js";
 export { consumeDocumentationIncompleteConfirmation, documentationExportPresentation, documentationExportSelection, documentationPreviewSelection, documentationTabAfterKey, };
 const defaultPorts = () => ({
@@ -23,8 +27,10 @@ const defaultPorts = () => ({
     download: (name, bytes, type) => { const url = URL.createObjectURL(new Blob([Uint8Array.from(bytes).buffer], { type })), link = document.createElement("a"); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url); },
 });
 export function installProjectDocumentationWorkspaceUi(options) {
-    const ports = options.ports ?? defaultPorts();
-    let selectedSetId = "", selectedSectionId = "", selectedExportIds = new Set(), snapshot, feedback = "", confirmedIncomplete = false, exportScope = "current", primaryTab = "build", previewSectionId = "", addContentOpen = false, themeOpen = false, setCreationOpen = false, mobileBuildSurface = "outline", documentSettingsOpen = false, pendingExportAction;
+    const basePorts = options.ports ?? defaultPorts(), ports = { ...basePorts, ...(options.loadTemplateBody ? { readTemplateBody: async (digest) => { const projectId = options.state()?.project.id; if (!projectId)
+                throw new Error("Open a project before exporting a template."); const body = await options.loadTemplateBody(projectId, digest); if (!body)
+                throw new Error("The assigned Excel template body is missing from this project."); return body; } } : {}) };
+    let selectedSetId = "", selectedSectionId = "", selectedTemplateId = "", selectedExportIds = new Set(), snapshot, feedback = "", confirmedIncomplete = false, exportScope = "current", primaryTab = "build", previewSectionId = "", addContentOpen = false, themeOpen = false, templatesOpen = false, templateMobileDetail = false, setCreationOpen = false, mobileBuildSurface = "outline", documentSettingsOpen = false, pendingExportAction;
     const documentation = () => options.state()?.project.documentation ?? { sets: [], themes: [] };
     const active = () => { const records = documentation(), set = records.sets.find(({ id }) => id === selectedSetId) ?? records.sets[0], theme = set ? records.themes.find(({ id }) => id === set.themeId) : undefined; return { records, set, theme }; };
     const persist = (records, label) => options.save(records, label);
@@ -33,7 +39,8 @@ export function installProjectDocumentationWorkspaceUi(options) {
     const mutateSection = (set, sectionId, update, label) => saveSet(createProjectDocumentationSet({ ...set, sections: set.sections.map((section) => section.id === sectionId ? update(section) : section) }), label);
     const sources = (state) => projectDocumentationSources(state, new Date().toISOString(), options.revision());
     const compile = () => { const state = options.state(), { set, theme } = active(); return state && set && theme ? compileProjectDocumentation({ state, set, theme, revision: options.revision(), generatedAt: new Date().toISOString() }) : undefined; };
-    const stale = () => snapshot ? projectDocumentationSnapshotStale(snapshot, compile()?.sourceRevisions ?? {}) : { stale: false, changedSources: [] };
+    const stale = () => { if (!snapshot)
+        return { stale: false, changedSources: [] }; const current = compile(), sources = projectDocumentationSnapshotStale(snapshot, current?.sourceRevisions ?? {}), templatesChanged = Boolean(current && current.snapshotHash !== snapshot.snapshotHash && !sources.stale); return { stale: sources.stale || templatesChanged, changedSources: [...sources.changedSources, ...(templatesChanged ? ["Templates"] : [])] }; };
     const selection = () => { const { set } = active(); return documentationExportSelection({ scope: exportScope, currentSectionId: selectedSectionId, selectedSectionIds: [...selectedExportIds], fallbackSectionId: set?.sections[0]?.id }); };
     const renderSectionConfiguration = createDocumentationSectionConfigurationRenderer(mutateSection);
     function render(host) {
@@ -62,7 +69,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
             selectedSectionId = selectedSections[0]?.id ?? "";
         if (!previewSectionId)
             previewSectionId = selectedSectionId;
-        const available = sources(state), contextHeader = document.createElement("header"), tabList = document.createElement("div"), buildPanel = document.createElement("section"), setRegion = document.createElement("section"), content = document.createElement("section"), configure = document.createElement("section"), themeRegion = document.createElement("aside"), preview = document.createElement("section"), exportRegion = document.createElement("section");
+        const available = sources(state), contextHeader = document.createElement("header"), tabList = document.createElement("div"), buildPanel = document.createElement("section"), setRegion = document.createElement("section"), content = document.createElement("section"), configure = document.createElement("section"), themeRegion = document.createElement("aside"), templateRegion = document.createElement("aside"), preview = document.createElement("section"), exportRegion = document.createElement("section");
         contextHeader.className = "documentation-context-header";
         tabList.className = "documentation-primary-tabs";
         tabList.setAttribute("role", "tablist");
@@ -72,6 +79,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
         configure.className = "documentation-configuration";
         content.className = "documentation-add-content";
         themeRegion.className = "documentation-theme-panel";
+        templateRegion.className = "documentation-template-panel";
         preview.className = "documentation-preview-panel";
         exportRegion.className = "documentation-export-panel";
         preview.append(heading(2, "Preview"));
@@ -91,10 +99,13 @@ export function installProjectDocumentationWorkspaceUi(options) {
         const editTheme = button(`Edit theme · ${theme.name}`, () => { themeOpen = !themeOpen; render(host); });
         editTheme.setAttribute("aria-expanded", String(themeOpen));
         editTheme.setAttribute("aria-controls", "documentation-theme-panel");
+        const editTemplates = button("Templates", () => { templatesOpen = !templatesOpen; render(host); });
+        editTemplates.setAttribute("aria-expanded", String(templatesOpen));
+        editTemplates.setAttribute("aria-controls", "documentation-template-panel");
         const freshness = document.createElement("output"), snapshotState = !snapshot ? "Preview not built" : stale().stale ? "Preview out of date" : "Preview current";
         freshness.textContent = snapshotState;
         freshness.setAttribute("aria-label", "Preview freshness");
-        contextHeader.append(creationUi.context, editTheme, freshness);
+        contextHeader.append(creationUi.context, editTheme, editTemplates, freshness);
         const addContent = button("Add content", () => { addContentOpen = !addContentOpen; render(host); }), documentSettings = button("Document settings", () => { documentSettingsOpen = !documentSettingsOpen; render(host); });
         addContent.setAttribute("aria-expanded", String(addContentOpen));
         documentSettings.setAttribute("aria-expanded", String(documentSettingsOpen));
@@ -107,6 +118,13 @@ export function installProjectDocumentationWorkspaceUi(options) {
             const currentTable = compile()?.tables.find(({ id }) => id === selectedSectionId);
             renderDocumentationTheme({ host: themeRegion, set, theme, sampleTable: currentTable, ports, documentation, persist, saveTheme });
         }
+        templateRegion.id = "documentation-template-panel";
+        templateRegion.hidden = !templatesOpen;
+        if (templatesOpen)
+            renderDocumentationTemplateLibrary(templateRegion, { records, set, projectId: state.project.id, mobileDetail: templateMobileDetail, selectedTemplateId, persist, ...(options.storeTemplateBody ? { storeBody: options.storeTemplateBody } : {}), ...(options.discardTemplateBody ? { discardBody: options.discardTemplateBody } : {}), download: ports.download, sampleExcel: async (template) => { const current = compile(); if (!current || !options.loadTemplateBody || !template.body)
+                    throw new Error("The current immutable documentation snapshot or template body is unavailable."); const section = current.set.sections.find(item => item.selected && item.kind === template.kind); if (!section)
+                    throw new Error(`Select a ${template.kind} section before generating a sample.`); const assignedSet = { ...current.set, templateAssignments: { ...(current.set.templateAssignments ?? {}), [`excel:${template.kind}`]: template.id } }, candidate = { ...current, set: assignedSet, templates: records.templates ?? [] }; return writeProjectDocumentationWorkbookWithTemplates(candidate, { scope: "current", currentSectionId: section.id, confirmIncomplete: true }, async (bodyDigest) => { const body = await options.loadTemplateBody(state.project.id, bodyDigest); if (!body)
+                    throw new Error("The selected Excel template body is unavailable."); return body; }); }, rerender: () => render(host), setMobileDetail: value => { templateMobileDetail = value; }, selectTemplate: id => { selectedTemplateId = id; } });
         const refresh = button("Refresh preview", () => { snapshot = compile(); feedback = snapshot ? `Preview refreshed · immutable snapshot ${snapshot.snapshotHash}` : "Preview unavailable"; render(host); }), previewNavigator = document.createElement("select"), previewStatus = document.createElement("output"), previewToolbar = document.createElement("div"), previewSurface = document.createElement("div");
         previewNavigator.setAttribute("aria-label", "Documentation preview section");
         for (const section of selectedSections)
@@ -125,23 +143,36 @@ export function installProjectDocumentationWorkspaceUi(options) {
             if (live.stale)
                 previewToolbar.append(Object.assign(document.createElement("p"), { textContent: `Changed sources: ${live.changedSources.join(", ")}.`, role: "alert" }));
             for (const table of selectProjectDocumentationTables(snapshot, documentationPreviewSelection(previewSectionId))) {
-                const sectionHost = document.createElement("section"), sectionTitle = heading(3, table.title), identity = [theme.clientName, theme.headerText].filter(Boolean).join(" · ");
+                const section = snapshot.set.sections.find(item => item.id === table.id), sectionHost = document.createElement("section"), assigned = documentationTemplateAssignment(snapshot.set, "rich", section.kind);
                 sectionHost.dataset.previewSection = table.id;
                 sectionHost.dataset.themeFingerprint = themeFingerprint(theme);
-                sectionTitle.style.fontFamily = theme.typography.family;
-                sectionTitle.style.fontSize = `${theme.typography.headingSize}pt`;
-                sectionTitle.style.fontWeight = "700";
-                sectionTitle.style.color = theme.colors.heading;
-                if (theme.logo)
-                    sectionHost.append(logoArea(theme));
-                sectionHost.append(sectionTitle);
-                if (identity)
-                    sectionHost.append(Object.assign(document.createElement("p"), { textContent: identity }));
-                sectionHost.append(renderTable(table, theme));
-                if (table.legend)
-                    sectionHost.append(Object.assign(document.createElement("p"), { textContent: table.legend }));
-                if (theme.footerText)
-                    sectionHost.append(Object.assign(document.createElement("footer"), { textContent: theme.footerText }));
+                if (assigned !== "builtin") {
+                    try {
+                        const rendered = renderProjectDocumentationRichWithTemplates(snapshot, { scope: "current", currentSectionId: table.id, confirmIncomplete: true }), content = document.createElement("div");
+                        content.innerHTML = rendered.html;
+                        sectionHost.append(...Array.from(content.childNodes));
+                    }
+                    catch (error) {
+                        sectionHost.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) }));
+                    }
+                }
+                else {
+                    const sectionTitle = heading(3, table.title), identity = [theme.clientName, theme.headerText].filter(Boolean).join(" · ");
+                    sectionTitle.style.fontFamily = theme.typography.family;
+                    sectionTitle.style.fontSize = `${theme.typography.headingSize}pt`;
+                    sectionTitle.style.fontWeight = "700";
+                    sectionTitle.style.color = theme.colors.heading;
+                    if (theme.logo)
+                        sectionHost.append(logoArea(theme));
+                    sectionHost.append(sectionTitle);
+                    if (identity)
+                        sectionHost.append(Object.assign(document.createElement("p"), { textContent: identity }));
+                    sectionHost.append(renderTable(table, theme));
+                    if (table.legend)
+                        sectionHost.append(Object.assign(document.createElement("p"), { textContent: table.legend }));
+                    if (theme.footerText)
+                        sectionHost.append(Object.assign(document.createElement("footer"), { textContent: theme.footerText }));
+                }
                 previewSurface.append(sectionHost);
             }
         }
@@ -192,7 +223,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
             buildPanel.append(content);
         if (documentSettingsOpen)
             buildPanel.append(conceptRegion);
-        root.append(contextHeader, ...(creationUi.setup ? [creationUi.setup] : []), tabList, buildPanel, preview, exportRegion, themeRegion);
+        root.append(contextHeader, ...(creationUi.setup ? [creationUi.setup] : []), tabList, templateRegion, buildPanel, preview, exportRegion, themeRegion);
         host.append(root);
     }
     return { render };

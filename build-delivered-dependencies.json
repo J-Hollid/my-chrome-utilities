@@ -1,1 +1,6 @@
-[]
+[
+  {
+    "source": "node_modules/exceljs/dist/exceljs.min.js",
+    "destination": "vendor/exceljs.min.js"
+  }
+]

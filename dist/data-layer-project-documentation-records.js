@@ -86,7 +86,8 @@ export function createProjectDocumentationSet(input) {
         throw new Error("A Documentation Set needs exactly one project capture matrix.");
     const conceptKeys = new Set(), concepts = (input.concepts ?? []).flatMap(({ name, included }) => { const display = projectDocumentationSafeText(name) || "Ungrouped", key = display.toLocaleLowerCase(); if (conceptKeys.has(key))
         return []; conceptKeys.add(key); return [{ name: display, included: Boolean(included) }]; });
-    return freeze({ id: safeId(input.id, "Documentation Set"), name: projectDocumentationSafeText(input.name) || "Documentation Set", themeId: safeId(input.themeId, "Documentation theme reference"), sections, ...(concepts.length ? { concepts } : {}), ...(input.includeConceptSubheadings ? { includeConceptSubheadings: true } : {}) });
+    const templateAssignments = input.templateAssignments ? Object.fromEntries(Object.entries(input.templateAssignments).filter(([key, value]) => /^(?:excel|rich):(overview|flow|matrix|profile)$/u.test(key) && Boolean(projectDocumentationSafeText(value))).map(([key, value]) => [key, projectDocumentationSafeText(value)])) : undefined;
+    return freeze({ id: safeId(input.id, "Documentation Set"), name: projectDocumentationSafeText(input.name) || "Documentation Set", themeId: safeId(input.themeId, "Documentation theme reference"), sections, ...(concepts.length ? { concepts } : {}), ...(input.includeConceptSubheadings ? { includeConceptSubheadings: true } : {}), ...(templateAssignments && Object.keys(templateAssignments).length ? { templateAssignments } : {}) });
 }
 export function serializeProjectDocumentationTheme(theme) {
     const safe = createProjectDocumentationTheme(theme), { id: _id, ...values } = safe;

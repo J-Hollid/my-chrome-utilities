@@ -1,11 +1,13 @@
 import {declareStudioChoice} from "../data-layer-studio-choice-controls.js";
 import type {ProjectDocumentationDiagnostic,ProjectDocumentationSelection,ProjectDocumentationSnapshot} from "../data-layer-project-documentation-workspace.js";
 import {renderProjectDocumentationClipboard,writeProjectDocumentationWorkbook} from "../data-layer-project-documentation-workspace.js";
+import {writeProjectDocumentationWorkbookWithTemplates} from "../documentation-templates/excel-renderer.js";
+import {renderProjectDocumentationRichWithTemplates} from "../documentation-templates/rich-renderer.js";
 import {documentationButton as button,documentationHeading as heading,documentationLabelled as labelled} from "./workspace-ui-elements.js";
 
 export type DocumentationExportScope="current"|"selected"|"complete";
 export type DocumentationExportAction="copy"|"download";
-export interface ProjectDocumentationPorts {writePlain(value:string):Promise<void>;writeRich(html:string,plain:string):Promise<void>;download(name:string,bytes:Uint8Array,type:string):void}
+export interface ProjectDocumentationPorts {writePlain(value:string):Promise<void>;writeRich(html:string,plain:string):Promise<void>;download(name:string,bytes:Uint8Array,type:string):void;readTemplateBody?:(digest:string)=>Promise<Blob>}
 
 export function consumeDocumentationIncompleteConfirmation(confirmed:boolean):{confirmedForAction:boolean;confirmedAfterAction:false} {
   return{confirmedForAction:confirmed,confirmedAfterAction:false};
@@ -106,16 +108,19 @@ export function renderDocumentationExport(input:{
     warning.append(diagnostics);
     input.host.append(warning);
   }
-  const execute=(action:DocumentationExportAction,confirmed=input.confirmedIncomplete)=>{
+  const execute=async(action:DocumentationExportAction,confirmed=input.confirmedIncomplete)=>{
     if(!input.snapshot)return;
     const confirmation=consumeDocumentationIncompleteConfirmation(confirmed);
     input.setConfirmedIncomplete(confirmation.confirmedAfterAction);
     try{
       if(action==="copy"){
-        const value=renderProjectDocumentationClipboard(input.snapshot,{...input.selection(),confirmIncomplete:confirmation.confirmedForAction});
+        const hasCustomRich=Object.entries(input.snapshot.set.templateAssignments??{}).some(([key,value])=>key.startsWith("rich:")&&value!=="builtin"),value=hasCustomRich?renderProjectDocumentationRichWithTemplates(input.snapshot,{...input.selection(),confirmIncomplete:confirmation.confirmedForAction}):renderProjectDocumentationClipboard(input.snapshot,{...input.selection(),confirmIncomplete:confirmation.confirmedForAction});
         void input.ports.writeRich(value.html,value.plain).then(()=>{input.setFeedback("Rich documentation copied with plain-text fallback.");input.setPendingAction(undefined);input.rerender();});
       }else{
-        const bytes=writeProjectDocumentationWorkbook(input.snapshot,{...input.selection(),confirmIncomplete:confirmation.confirmedForAction});
+        const hasCustomExcel=Object.entries(input.snapshot.set.templateAssignments??{}).some(([key,value])=>key.startsWith("excel:")&&value!=="builtin");
+        const bytes=hasCustomExcel
+          ? await writeProjectDocumentationWorkbookWithTemplates(input.snapshot,{...input.selection(),confirmIncomplete:confirmation.confirmedForAction},input.ports.readTemplateBody??(()=>Promise.reject(new Error("The project template body store is unavailable."))))
+          : writeProjectDocumentationWorkbook(input.snapshot,{...input.selection(),confirmIncomplete:confirmation.confirmedForAction});
         input.ports.download(`${input.setName.toLowerCase().replace(/[^a-z0-9]+/gu,"-")}.xlsx`,bytes,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         input.setFeedback("Excel workbook downloaded.");
         input.setPendingAction(undefined);
@@ -126,12 +131,12 @@ export function renderDocumentationExport(input:{
   const request=(action:DocumentationExportAction)=>{
     if(!input.snapshot||input.stale)return;
     if(input.snapshot.incomplete&&!input.confirmedIncomplete){input.setPendingAction(action);input.setFeedback("Confirm Export draft anyway to produce this output.");input.rerender();return;}
-    execute(action);
+    void execute(action);
   },copy=button("Copy rich documentation",()=>request("copy")),download=button("Download Excel workbook",()=>request("download"));
   copy.disabled=download.disabled=!input.snapshot||input.stale;
   input.host.append(copy,download);
   if(input.pendingAction){
-    const confirm=button("Export draft anyway",()=>{input.setConfirmedIncomplete(true);const action=input.pendingAction!;input.setPendingAction(undefined);execute(action,true);});
+    const confirm=button("Export draft anyway",()=>{input.setConfirmedIncomplete(true);const action=input.pendingAction!;input.setPendingAction(undefined);void execute(action,true);});
     input.host.append(confirm);
   }
   input.host.append(Object.assign(document.createElement("output"),{textContent:input.feedback}));

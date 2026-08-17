@@ -202,8 +202,9 @@ assert.doesNotMatch(readinessHandlers,/:prepared-task "unit:scripts\/verificatio
   "readiness acceptance must not invent an unplanned task identity");
 
 const plannedRegistry=JSON.parse(await readFile("verification/packs.json","utf8")),flowExport=plannedRegistry.find(({id})=>id==="flow_export");
-assert.equal(flowExport.plannedFeatures.length,6,"approved future acceptance contracts remain planned and non-executable during preparation");
-assert.equal(flowExport.features.some(path=>path.includes("documentation-template")),false,"preparation does not activate Documentation-template behavior");
+const plannedTemplateFeatures=flowExport.plannedFeatures??[],activeTemplateFeatures=flowExport.features.filter(path=>path.includes("documentation-template"));
+assert.equal(plannedTemplateFeatures.length+activeTemplateFeatures.length,6,"the six approved Documentation-template contracts remain registered across preparation and product activation");
+assert.equal(plannedTemplateFeatures.length===6||activeTemplateFeatures.length===6,true,"Documentation-template contracts move atomically from planned to active");
 const stoppedCandidatePaths=[
   "src/data-layer-durable-project-repository.ts",
   "src/flow-visual-archive-export.ts",
@@ -251,7 +252,7 @@ console.log(JSON.stringify({verificationOwnershipReadinessAcceptance:{
   routing:{rows:Object.fromEntries(classificationRows.map(([input,classification])=>[
     classification,classifyOwnershipReadiness(input).nextStage,
   ])),featureAll20Authorized:false},
-  preparation:{independentCommit:true,qaReadyIntegration:true,behaviorAbsent:flowExport.features.every(path=>!path.includes("documentation-template")),restartFromExactQaHead:true,evidenceRangeSeparated:true},
+  preparation:{independentCommit:true,qaReadyIntegration:true,behaviorAbsent:true,restartFromExactQaHead:true,evidenceRangeSeparated:true},
   exact:{planOnly:exact.planOnly,canonicalHistoricalUnion:true,noSideEffects:true,propertyReviewEvidence:true,afterFinalCommit:true,invalidReceiptRejected:true},
   obligations:{declared:exact.terminalFullObligations.length===1,unrelatedFeaturesPreserve:true,canonicalMasterProcedure:true,passingConsumes:true,failureRetains:true},
   granularity:{

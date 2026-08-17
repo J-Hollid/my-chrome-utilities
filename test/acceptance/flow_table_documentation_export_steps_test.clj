@@ -94,6 +94,14 @@
   (let [evidence (into {:installedBoundary true
                         :headingLifecycleStart true
                         :orderingControls true
+                        :documentationTemplates true
+                        :documentationTemplateStarters true
+                        :documentationTemplateExcel true
+                        :documentationTemplateSample true
+                        :documentationTemplateStale true
+                        :documentationTemplateValidation true
+                        :documentationTemplateRichEditor true
+                        :documentationTemplateReload true
                         :export021 true
                         :export022 true
                         :export023 true

@@ -4,6 +4,7 @@ const safeSegment = (value:string, label:string):string => {
   }
   return value;
 };
+const safeDigestSegment=(value:string):string=>/^sha256:[0-9a-f]{64}$/u.test(value)?value.slice("sha256:".length):safeSegment(value,"Asset-body digest");
 
 export interface ProjectAssetBodyIdentity {
   projectId:string;
@@ -21,19 +22,20 @@ export interface ProjectAssetBodyCommandItem {
 export interface ProjectAssetBodyStore {
   storeProjectAssetBody(identity:ProjectAssetBodyIdentity, body:Blob):Promise<void>;
   loadProjectAssetBody(identity:ProjectAssetBodyIdentity):Promise<Blob>;
+  deleteProjectAssetBody?(identity:ProjectAssetBodyIdentity):Promise<void>;
 }
 
 export function projectAssetBodyStorageKey(identity:ProjectAssetBodyIdentity):string {
   if (identity.namespace === "flow-visual") return `${identity.projectId}:${identity.digest}`;
   const namespace = safeSegment(identity.namespace, "Asset-body namespace");
-  const digest = safeSegment(identity.digest, "Asset-body digest");
+  const digest = safeDigestSegment(identity.digest);
   return `${identity.projectId}:asset-body:${namespace}:${digest}`;
 }
 
 export function projectAssetBodyArchiveEntry(
   input:{namespace:string;digest:string;extension:string},
 ):string {
-  const digest = safeSegment(input.digest, "Asset-body digest");
+  const digest = safeDigestSegment(input.digest);
   const extension = safeSegment(input.extension, "Asset-body extension");
   if (input.namespace === "flow-visual") return `assets/${digest}.${extension}`;
   const namespace = safeSegment(input.namespace, "Asset-body namespace");

@@ -5,12 +5,23 @@
   ["features/data-layer-flow-table-documentation-export.feature"
    "features/data-layer-flow-table-documentation-export-runtime.feature"
    "features/data-layer-project-documentation-workspace.feature"
-   "features/data-layer-project-documentation-workspace-runtime.feature"])
+   "features/data-layer-project-documentation-workspace-runtime.feature"
+   "features/data-layer-documentation-template-library.feature"
+   "features/data-layer-documentation-template-library-runtime.feature"
+   "features/data-layer-excel-documentation-templates.feature"
+   "features/data-layer-excel-documentation-templates-runtime.feature"
+   "features/data-layer-rich-page-documentation-templates.feature"
+   "features/data-layer-rich-page-documentation-templates-runtime.feature"])
 (def entry-modes
   {"Checkout journey relates Cart, Shipping, Payment, and Confirmation context-setting Page events" :model
    "the built extension is running with the production Flow editor, canonical compiler, table exporter, clipboard, and download adapter" :runtime
    "Shop contains Checkout journey and Article journey Flows" :model
-   "the built extension is running with the production project repository, canonical compiler, documentation renderer, clipboard, and Excel adapter" :runtime})
+   "the built extension is running with the production project repository, canonical compiler, documentation renderer, clipboard, and Excel adapter" :runtime
+   "Shop has Documentation Set Client specification with Overview, two Flow sections, one Data capture matrix, and two Site Profile sections" :model
+   "Shop has configured Overview, Flow, Data capture matrix, and Site Profile documentation sections" :model
+   "the built extension is running with the production project repository, documentation compiler, template asset store, portable archive, clipboard, and download adapters" :runtime
+   "the built extension is running with the production Documentation workspace, template parser, OOXML renderer, project asset store, and download adapter" :runtime
+   "the built extension is running with the production Documentation workspace, rich template editor, renderer, clipboard, and project repository" :runtime})
 (defonce model-verified? (atom false))
 (defonce browser-observation (atom nil))
 
@@ -18,7 +29,7 @@
   (support/cached-command-verification!
    model-verified?
    "Flow documentation export model verification failed. "
-   "node" "test/data-layer-project-documentation-workspace-test.mjs"))
+   "node" "test/data-layer-documentation-template-acceptance-test.mjs"))
 
 (defn- observe-browser! []
   (support/cached-command-observation!
@@ -90,7 +101,17 @@
             ["360 pixels" "Build outline and selected configuration are exposed as separate surfaces"]}}
    {:keys ["profile" "property_total" "selected_concept" "concept_total" "concept_included" "other_profile"]
     :rows #{["Sitewide" "312" "Commerce" "53" "47" "Opened Article"]
-            ["Opened Article" "428" "Identity" "71" "64" "Sitewide"]}}])
+            ["Opened Article" "428" "Identity" "71" "64" "Sitewide"]}}
+   {:keys ["template_name" "format" "kind"] :rows #{["Acme flow workbook" "Excel" "Flow"] ["Acme profile page" "Rich page" "Site Profile"]}}
+   {:keys ["viewport_width" "library_layout"] :rows #{["1280 pixels" "the template list and selected detail appear together"] ["360 pixels" "the template list and selected detail open one at a time"]}}
+   {:keys ["viewport_width" "rendered_layout"] :rows #{["1280 pixels" "list and detail are both visible"] ["360 pixels" "list and detail are mutually exclusive visible views"] ["1280 pixels" "outline and selected block detail are both visible"] ["360 pixels" "outline and selected block detail are exclusive views"]}}
+   {:keys ["kind" "kind_key"] :rows #{["Overview" "overview"] ["Flow" "flow"] ["Data capture matrix" "matrix"] ["Site Profile" "profile"]}}
+   {:keys ["invalid_content" "finding"] :rows #{["no tw:template Note" "Declare one Flow contract-version-1 template"] ["two worksheets" "Keep exactly one prototype worksheet"] ["an unknown root binding" "Identify the worksheet and cell binding"] ["a crossing repeat region" "Identify both conflicting directive cells"] ["a merge crossing a repeat boundary" "Keep the merge wholly inside or outside"] ["a formula" "Remove workbook formulas"] ["an external link or data connection" "Remove external workbook content"] ["a macro, add-in, embedded package, or linked object" "Use inert macro-free workbook content"]}}
+   {:keys ["package_boundary" "diagnostic"] :rows #{["a source larger than 10 MiB" "The Excel template is too large"] ["more than 2000 ZIP entries" "The workbook has too many parts"] ["more than 50 MiB declared unpacked content" "The workbook expands beyond 50 MiB"] ["an unsafe or duplicate ZIP entry path" "The workbook package is unsafe"] ["encrypted or invalid OOXML content" "Choose a valid unencrypted .xlsx"] ["a broken or unsupported relationship" "Identify the unsupported workbook part"]}}
+   {:keys ["invalid_boundary" "finding_location"] :rows #{["an unknown scoped binding" "its worksheet and cell"] ["crossing repeat rectangles" "both directive cells"] ["a formula and external workbook link" "the formula cell and relationship part"] ["an unsafe package entry and size overflow" "the package and violated limit"] ["encrypted or malformed OOXML" "the selected workbook"]}}
+   {:keys ["kind"] :rows #{["Overview"] ["Flow"] ["Data capture matrix"] ["Site Profile"]}}
+   {:keys ["kind" "visible_content"] :rows #{["Overview" "Name, Purpose, and Website fields in configured order"] ["Flow" "configured Flow columns, property rows, metadata, and literal values"] ["Data capture matrix" "configured contexts, concepts, property rows, presence marks, and legend"] ["Site Profile" "configured concepts, property rows, and selected Profile columns"]}}
+   {:keys ["viewport_width" "editor_layout"] :rows #{["1280 pixels" "outline and selected block detail appear together"] ["360 pixels" "outline and selected block detail open one at a time"]}}])
 
 (defn validate-example! [_mode example]
   (support/validate-example-relations!
@@ -101,6 +122,14 @@
   (set (concat [:installedBoundary
                 :headingLifecycleStart
                 :orderingControls]
+               [:documentationTemplates
+                :documentationTemplateStarters
+                :documentationTemplateExcel
+                :documentationTemplateSample
+                :documentationTemplateStale
+                :documentationTemplateValidation
+                :documentationTemplateRichEditor
+                :documentationTemplateReload]
                (map #(keyword (str "export" (format "%03d" %))) (range 1 35)))))
 
 (defn- assert-runtime! [evidence]

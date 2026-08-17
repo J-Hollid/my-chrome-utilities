@@ -4,15 +4,16 @@ const safeSegment = (value, label) => {
     }
     return value;
 };
+const safeDigestSegment = (value) => /^sha256:[0-9a-f]{64}$/u.test(value) ? value.slice("sha256:".length) : safeSegment(value, "Asset-body digest");
 export function projectAssetBodyStorageKey(identity) {
     if (identity.namespace === "flow-visual")
         return `${identity.projectId}:${identity.digest}`;
     const namespace = safeSegment(identity.namespace, "Asset-body namespace");
-    const digest = safeSegment(identity.digest, "Asset-body digest");
+    const digest = safeDigestSegment(identity.digest);
     return `${identity.projectId}:asset-body:${namespace}:${digest}`;
 }
 export function projectAssetBodyArchiveEntry(input) {
-    const digest = safeSegment(input.digest, "Asset-body digest");
+    const digest = safeDigestSegment(input.digest);
     const extension = safeSegment(input.extension, "Asset-body extension");
     if (input.namespace === "flow-visual")
         return `assets/${digest}.${extension}`;

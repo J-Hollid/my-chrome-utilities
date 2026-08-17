@@ -23,6 +23,7 @@ export interface ProjectDocumentationSet {
   sections:readonly ProjectDocumentationSection[];
   concepts?:readonly {name:string;included:boolean}[];
   includeConceptSubheadings?:boolean;
+  templateAssignments?:Readonly<Record<string,string>>;
 }
 export interface ProjectDocumentationTheme {
   id:string;
@@ -42,6 +43,20 @@ export interface ProjectDocumentationTheme {
 export interface ProjectDocumentationDraft {
   sets:ProjectDocumentationSet[];
   themes:ProjectDocumentationTheme[];
+  templates?:ProjectDocumentationTemplate[];
+}
+
+export interface ProjectDocumentationTemplateFinding {location?:string;message:string}
+export interface ProjectDocumentationTemplate {
+  id:string;
+  name:string;
+  format:"excel"|"rich";
+  kind:ProjectDocumentationSectionKind;
+  contractVersion:1;
+  digest:string;
+  validation:{valid:boolean;findings:readonly ProjectDocumentationTemplateFinding[]};
+  body?:{assetId:string;digest:string;byteLength:number};
+  richBlocks?:readonly Record<string,unknown>[];
 }
 
 export const PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT=250_000;
@@ -128,7 +143,8 @@ export function createProjectDocumentationSet(input:ProjectDocumentationSet):Pro
   const seen=new Set<string>(),sections=input.sections.map((raw):ProjectDocumentationSection=>{const section=clone(raw),id=safeId(section.id,"Documentation section");if(seen.has(id))throw new Error(`Duplicate documentation section ${id}.`);seen.add(id);if(section.kind!=="overview"&&section.kind!=="matrix"&&!section.targetId)throw new Error(`${section.kind} section ${id} needs a stable target.`);const paths=safeList(section.configuration?.paths),contextIds=safeList(section.configuration?.contextIds),columns=safeList(section.configuration?.columns),labels=section.configuration?.labels?Object.fromEntries(Object.entries(section.configuration.labels).map(([key,value])=>[projectDocumentationSafeText(key),projectDocumentationSafeText(value)]).filter(([key])=>Boolean(key))) as Record<string,string>:undefined,configuration=section.configuration?{...(paths?{paths}:{}),...(contextIds?{contextIds}:{}),...(columns?{columns}:{}),...(labels?{labels}:{})}:undefined;return{id,kind:section.kind,name:projectDocumentationSafeText(section.name),...(section.targetId?{targetId:projectDocumentationSafeText(section.targetId)}:{}),selected:Boolean(section.selected),...(configuration?{configuration}:{})};});
   if(sections.filter(({kind})=>kind==="matrix").length!==1)throw new Error("A Documentation Set needs exactly one project capture matrix.");
   const conceptKeys=new Set<string>(),concepts=(input.concepts??[]).flatMap(({name,included})=>{const display=projectDocumentationSafeText(name)||"Ungrouped",key=display.toLocaleLowerCase();if(conceptKeys.has(key))return[];conceptKeys.add(key);return[{name:display,included:Boolean(included)}];});
-  return freeze({id:safeId(input.id,"Documentation Set"),name:projectDocumentationSafeText(input.name)||"Documentation Set",themeId:safeId(input.themeId,"Documentation theme reference"),sections,...(concepts.length?{concepts}:{}),...(input.includeConceptSubheadings?{includeConceptSubheadings:true}:{})});
+  const templateAssignments=input.templateAssignments?Object.fromEntries(Object.entries(input.templateAssignments).filter(([key,value])=>/^(?:excel|rich):(overview|flow|matrix|profile)$/u.test(key)&&Boolean(projectDocumentationSafeText(value))).map(([key,value])=>[key,projectDocumentationSafeText(value)])):undefined;
+  return freeze({id:safeId(input.id,"Documentation Set"),name:projectDocumentationSafeText(input.name)||"Documentation Set",themeId:safeId(input.themeId,"Documentation theme reference"),sections,...(concepts.length?{concepts}:{}),...(input.includeConceptSubheadings?{includeConceptSubheadings:true}:{}),...(templateAssignments&&Object.keys(templateAssignments).length?{templateAssignments}:{})});
 }
 
 export function serializeProjectDocumentationTheme(theme:ProjectDocumentationTheme):string {

@@ -994,6 +994,34 @@ try {
     path.join(cliContentionRepository, "test/stylesheet-declarations-property-test.mjs"));
   await copyFile(path.resolve("test/data-layer-flow-visual-asset-portability-property-test.mjs"),
     path.join(cliContentionRepository, "test/data-layer-flow-visual-asset-portability-property-test.mjs"));
+  for (const documentationTemplateTest of [
+    "data-layer-documentation-template-acceptance-test.mjs",
+    "data-layer-documentation-template-excel-test.mjs",
+    "data-layer-documentation-template-library-test.mjs",
+    "data-layer-documentation-template-rich-test.mjs",
+  ]) {
+    await copyFile(path.resolve("test", documentationTemplateTest),
+      path.join(cliContentionRepository, "test", documentationTemplateTest));
+  }
+  await mkdir(path.join(cliContentionRepository, "src/documentation-templates"), { recursive:true });
+  for (const documentationTemplateSource of [
+    "excel-renderer.ts",
+    "excel-template.ts",
+    "excel-workbook.ts",
+    "rich-renderer.ts",
+    "rich-template.ts",
+    "template-body.ts",
+    "template-context.ts",
+    "template-contract.ts",
+    "template-library.ts",
+  ]) {
+    await copyFile(path.resolve("src/documentation-templates", documentationTemplateSource),
+      path.join(cliContentionRepository, "src/documentation-templates", documentationTemplateSource));
+  }
+  await mkdir(path.join(cliContentionRepository, "src/project-documentation"), { recursive:true });
+  await copyFile(path.resolve("src/project-documentation/workspace-template-library-ui.ts"),
+    path.join(cliContentionRepository,
+      "src/project-documentation/workspace-template-library-ui.ts"));
   await copyFile(path.resolve("test/flow-stylesheet-extraction-test.mjs"),
     path.join(cliContentionRepository, "test/flow-stylesheet-extraction-test.mjs"));
   await mkdir(path.join(cliContentionRepository, "src/flow-graph"), { recursive:true });
@@ -1040,6 +1068,20 @@ try {
     "scripts/verification-shared-boundaries.mjs",
     "test/browser-packs/global-style-smoke.mjs", "test/stylesheet-declarations-property-test.mjs",
     "test/data-layer-flow-visual-asset-portability-property-test.mjs",
+    "test/data-layer-documentation-template-acceptance-test.mjs",
+    "test/data-layer-documentation-template-excel-test.mjs",
+    "test/data-layer-documentation-template-library-test.mjs",
+    "test/data-layer-documentation-template-rich-test.mjs",
+    "src/documentation-templates/excel-renderer.ts",
+    "src/documentation-templates/excel-template.ts",
+    "src/documentation-templates/excel-workbook.ts",
+    "src/documentation-templates/rich-renderer.ts",
+    "src/documentation-templates/rich-template.ts",
+    "src/documentation-templates/template-body.ts",
+    "src/documentation-templates/template-context.ts",
+    "src/documentation-templates/template-contract.ts",
+    "src/documentation-templates/template-library.ts",
+    "src/project-documentation/workspace-template-library-ui.ts",
     "test/flow-stylesheet-extraction-test.mjs", "src/flow-graph/flow-workspace.css",
     "src/flow-graph/flow-workspace-shell.css",
     "verification/packs.json"], {
@@ -3643,6 +3685,14 @@ console.log("repairTmp=" + process.env.TMPDIR);
     "build/acceptance/generated/features-verification-shared-artifact-parallel-execution-feature_acceptance_test.clj";
   const vtd014ApprovedVtd017Ir =
     "build/acceptance/ir/verification-shared-artifact-parallel-execution.json";
+  const vtd014DocumentationTemplateFeatures = [
+    "features/data-layer-documentation-template-library.feature",
+    "features/data-layer-documentation-template-library-runtime.feature",
+    "features/data-layer-excel-documentation-templates.feature",
+    "features/data-layer-excel-documentation-templates-runtime.feature",
+    "features/data-layer-rich-page-documentation-templates.feature",
+    "features/data-layer-rich-page-documentation-templates-runtime.feature",
+  ];
   const normalizedCurrentVtd014TaskIdentity = (task) => {
     const identity = verificationTaskIdentity(task);
     if (identity.stage === "browser-observation" &&
@@ -3664,6 +3714,22 @@ console.log("repairTmp=" + process.env.TMPDIR);
       identity.target = identity.target.split(",")
         .filter((value) => ![vtd014ApprovedVtd015Feature, vtd014ApprovedVtd017Feature]
           .includes(value)).join(",");
+    }
+    if (identity.key === "acceptance-session:flow_export") {
+      const documentationTemplateAcceptanceArtifacts = vtd014DocumentationTemplateFeatures
+        .flatMap((feature) => {
+          const basename = feature.slice(feature.lastIndexOf("/") + 1).replace(/\.feature$/u, "");
+          const slug = feature.toLowerCase().replace(/[^a-z0-9]+/gu, "-")
+            .replace(/(^-+|-+$)/gu, "");
+          return [
+            `build/acceptance/generated/${slug}_acceptance_test.clj`,
+            `build/acceptance/ir/${basename}.json`,
+          ];
+        });
+      identity.args = identity.args.filter((value) =>
+        !documentationTemplateAcceptanceArtifacts.includes(value));
+      identity.target = identity.target.split(",")
+        .filter((value) => !vtd014DocumentationTemplateFeatures.includes(value)).join(",");
     }
     return identity;
   };
@@ -3755,6 +3821,10 @@ console.log("repairTmp=" + process.env.TMPDIR);
         `acceptance-generate:${vtd014ApprovedVtd015Feature}`,
         `acceptance-parse:${vtd014ApprovedVtd017Feature}`,
         `acceptance-generate:${vtd014ApprovedVtd017Feature}`,
+        ...vtd014DocumentationTemplateFeatures.flatMap((feature) => [
+          `acceptance-parse:${feature}`,
+          `acceptance-generate:${feature}`,
+        ]),
       ].includes(key)).map(normalizedCurrentVtd014TaskIdentity)),
       acceptedBaseTaskDigest:verificationDigest(
         acceptedBaseConservationPlan.tasks.map(expectedVtd014TaskIdentity)),
@@ -5242,6 +5312,23 @@ const vtd017Feature = "features/verification-shared-artifact-parallel-execution.
 const vtd017Generated =
   "build/acceptance/generated/features-verification-shared-artifact-parallel-execution-feature_acceptance_test.clj";
 const vtd017Ir = "build/acceptance/ir/verification-shared-artifact-parallel-execution.json";
+const documentationTemplateFeatures = [
+  "features/data-layer-documentation-template-library.feature",
+  "features/data-layer-documentation-template-library-runtime.feature",
+  "features/data-layer-excel-documentation-templates.feature",
+  "features/data-layer-excel-documentation-templates-runtime.feature",
+  "features/data-layer-rich-page-documentation-templates.feature",
+  "features/data-layer-rich-page-documentation-templates-runtime.feature",
+];
+const documentationTemplateAcceptanceArtifacts = documentationTemplateFeatures.flatMap((feature) => {
+  const basename = feature.slice(feature.lastIndexOf("/") + 1).replace(/\.feature$/u, "");
+  const slug = feature.toLowerCase().replace(/[^a-z0-9]+/gu, "-")
+    .replace(/(^-+|-+$)/gu, "");
+  return [
+    `build/acceptance/generated/${slug}_acceptance_test.clj`,
+    `build/acceptance/ir/${basename}.json`,
+  ];
+});
 const normalizedVtd006Identity = (task) => {
   let encoded = JSON.stringify(verificationTaskIdentity(task));
   for (const [current, previous] of vtd006ProgramMigration) encoded = encoded.replaceAll(current, previous);
@@ -5263,6 +5350,12 @@ const normalizedVtd006Identity = (task) => {
       ![vtd015Generated, vtd015Ir, vtd017Generated, vtd017Ir].includes(value));
     identity.target = identity.target.split(",")
       .filter((value) => ![vtd015Feature, vtd017Feature].includes(value)).join(",");
+  }
+  if (identity.key === "acceptance-session:flow_export") {
+    identity.args = identity.args.filter((value) =>
+      !documentationTemplateAcceptanceArtifacts.includes(value));
+    identity.target = identity.target.split(",")
+      .filter((value) => !documentationTemplateFeatures.includes(value)).join(",");
   }
   return identity;
 };
@@ -5295,6 +5388,11 @@ const approvedVtd017TaskKeys = new Set([
   `acceptance-parse:${vtd017Feature}`,
   `acceptance-generate:${vtd017Feature}`,
 ]);
+const approvedDocumentationTemplateTaskKeys = new Set(documentationTemplateFeatures
+  .flatMap((feature) => [
+    `acceptance-parse:${feature}`,
+    `acceptance-generate:${feature}`,
+  ]));
 const approvedStyleSmokeTaskKeys = new Set([
   "browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
   "browser-observation:SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
@@ -5310,6 +5408,7 @@ const approvedFlowStyleExtractionTaskKeys = new Set([
 const approvedVerificationTaskKeys = new Set([
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
+  ...approvedDocumentationTemplateTaskKeys,
   ...approvedStyleSmokeTaskKeys,
   ...approvedStyleVerificationTaskKeys,
   ...approvedFlowStyleExtractionTaskKeys,

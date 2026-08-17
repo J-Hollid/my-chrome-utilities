@@ -4,6 +4,7 @@ import { layeredContributorPath, layeredContributorsForPath } from "./data-layer
 import { configureFlowDocumentationSnapshot, configureFlowDocumentationTable, flowDocumentationPropertyPaths } from "./data-layer-flow-table-documentation-export.js";
 import { flowDocumentationSnapshotFromState } from "./data-layer-flow-documentation-snapshot.js";
 import { compileProjectDocumentationSnapshot, themeFingerprint } from "./data-layer-project-documentation-workspace.js";
+import { snapshotTemplateDigests } from "./documentation-templates/template-library.js";
 const stableRevision = (value) => { let hash = 2166136261; for (const byte of new TextEncoder().encode(JSON.stringify(value)))
     hash = Math.imul(hash ^ byte, 16777619); return hash >>> 0; };
 const flowSourceRevision = (snapshot) => stableRevision({ graphRevision: snapshot.graphRevision, contexts: snapshot.contexts.map(({ id, effectiveRevision }) => ({ id, effectiveRevision })) });
@@ -17,6 +18,17 @@ const matrixState = (context, path) => { if (context.compiled.conflicts.some((co
     return "Conditional"; return property.presence === "required" ? "Mandatory" : "Optional"; };
 const defaultProfileColumns = ["Property", "Description", "Required", "Allowed values", "Example", "Comments"];
 const profileValue = (column, item) => column === "Property" ? item.path : column === "Description" ? item.description ?? "" : column === "Required" ? item.forbidden ? "Not expected" : item.required ? "Yes" : "No" : column === "Allowed values" ? item.allowedValues?.map(String).join(", ") ?? "" : column === "Example" ? item.examples?.map(String).join(", ") ?? "" : String(item.comments ?? "");
+const publicRows = (table) => { const concepts = new Map(table.conceptGroups?.flatMap(group => Array.from({ length: group.count }, (_, offset) => [group.start + offset, group.name])) ?? []); return table.rows.map((row, index) => ({ concept: concepts.get(index) ?? "", cells: row.map((value, column) => ({ columnKey: table.headings[column] ?? `column-${column + 1}`, heading: table.headings[column] ?? "", value })) })); };
+const tableTemplateData = (table) => ({ columns: table.headings.map(heading => ({ key: heading, heading })), rows: publicRows(table), concepts: (table.conceptGroups ?? []).map(({ name, start, count }) => ({ name, rows: publicRows(table).slice(start, start + count) })), legend: table.legend ?? "" });
+const flowTemplateData = (snapshot, table) => { const pages = []; for (const context of snapshot.contexts) {
+    if (context.kind === "page-instance") {
+        pages.push({ stepLabel: context.stepLabel, pageName: context.pageName, sourcePageName: context.sourcePageName ?? context.pageName, eventName: context.eventName, heading: `Step ${context.stepLabel} ${context.pageName}`, rows: Object.entries(context.compiled.properties).map(([property, value]) => ({ property, value: String(value.expectedValue ?? value.allowedValues?.join(" or ") ?? "") })), events: [] });
+        continue;
+    }
+    const page = pages.find(candidate => candidate.pageName === context.pageName);
+    if (page && Array.isArray(page.events))
+        page.events.push({ eventName: context.eventName, heading: context.eventName, rows: Object.entries(context.compiled.properties).map(([property, value]) => ({ property, value: String(value.expectedValue ?? value.allowedValues?.join(" or ") ?? "") })) });
+} return { name: snapshot.flowName, pages, columns: tableTemplateData(table).columns, rows: tableTemplateData(table).rows }; };
 const repairTarget = (context, path) => ({ kind: context.sourceKind, id: context.sourceId, ...(path ? { path } : {}) });
 export function reconcileProjectDocumentationConcepts(set, available) { const normalized = new Map(); for (const raw of available) {
     const name = raw.trim();
@@ -63,7 +75,8 @@ export function compileProjectDocumentation(input) {
             }
             const configured = configureFlowDocumentationSnapshot(source.snapshot, { ...(section.configuration?.contextIds ? { contextOrder: section.configuration.contextIds } : {}), ...(section.configuration?.labels ? { stepLabels: section.configuration.labels } : {}) }), paths = section.configuration?.paths ?? flowDocumentationPropertyPaths(configured), metadata = (section.configuration?.columns ?? []).filter((column) => ["description", "type", "allowedValues", "example", "comments"].includes(column));
             revisions[source.entity.id] = flowSourceRevision(configured);
-            tables.push({ ...configureFlowDocumentationTable(configured, "values", { selectedPaths: paths, metadata, pathDisplay: "canonical" }), id: section.id, title: section.name, themeFingerprint: themeFingerprint(theme) });
+            const table = { ...configureFlowDocumentationTable(configured, "values", { selectedPaths: paths, metadata, pathDisplay: "canonical" }), id: section.id, title: section.name, themeFingerprint: themeFingerprint(theme) };
+            tables.push({ ...table, templateData: flowTemplateData(configured, table) });
             diagnostics.push(...configured.diagnostics.map((item) => ({ sectionId: section.id, message: `${item.contextName}: ${item.issue}`, repair: item.repair, repairTarget: { kind: "flows", id: source.entity.id, path: item.path } })));
             continue;
         }
@@ -86,7 +99,11 @@ export function compileProjectDocumentation(input) {
         const grouped = groupProjectDocumentationConceptRows(set, paths.map((path) => ({ path, concept: selected.map(({ compiled }) => compiled.properties[path]?.concept).find((value) => Boolean(value)), cells: [path, ...selected.map((context) => matrixState(context, path))] })));
         tables.push({ id: section.id, title: section.name, headings: ["Property", ...selected.map(({ label }) => label)], rows: grouped.rows, ...(set.includeConceptSubheadings ? { conceptGroups: grouped.groups } : {}), legend: "Mandatory · Optional · Conditional · Not expected · Not defined · Blocked", themeFingerprint: themeFingerprint(theme) });
     }
-    return compileProjectDocumentationSnapshot({ projectId: state.project.id, projectName: state.project.name, set, theme, sourceRevisions: revisions, generatedAt, tables, diagnostics });
+    for (const table of tables)
+        if (!table.templateData)
+            table.templateData = tableTemplateData(table);
+    const documentation = state.project.documentation ?? { sets: [set], themes: [theme] };
+    return compileProjectDocumentationSnapshot({ projectId: state.project.id, projectName: state.project.name, projectPurpose: state.project.description, projectWebsite: state.project.site, set, theme, sourceRevisions: revisions, templateDigests: snapshotTemplateDigests(documentation, set), templates: documentation.templates ?? [], generatedAt, tables, diagnostics });
 }
 export function projectDocumentationProfileColumns() { return defaultProfileColumns; }
 export { projectDocumentationProfilePaths } from "./project-documentation/profile-concept-properties.js";

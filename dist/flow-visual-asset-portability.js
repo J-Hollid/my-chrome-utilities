@@ -2,6 +2,7 @@ import { readStoredZip } from "./flow-visual-zip.js";
 import { validateFlowVisualBody, validateFlowVisualMetadata } from "./flow-visual-asset-validation.js";
 import { assertFlowVisualArchiveManifest, parseFlowVisualArchiveJson as parseJson, withoutEmbeddedFlowVisualBodies as withoutEmbeddedBodies } from "./flow-visual-archive-format.js";
 import { flowVisualAssetReferences as assetReferences, flowVisualProjectMapping as projectMapping, remapFlowVisualProject as remap } from "./flow-visual-project-identity.js";
+import { validateDocumentationTemplateBody } from "./documentation-templates/template-body.js";
 export { createMemoryFlowVisualAssetStore } from "./flow-visual-asset-memory-store.js";
 export { createFlowVisualArchive, estimateFlowVisualArchiveSize, writeFlowVisualArchive } from "./flow-visual-archive-export.js";
 const clone = (value) => structuredClone(value);
@@ -15,7 +16,7 @@ const archiveEntryContracts = (manifest) => { const contracts = new Map(); for (
         throw new DOMException(`Archive entry ${asset.entry} has inconsistent asset declarations.`, "DataError");
     contracts.set(asset.entry, contract);
 } return contracts; };
-const assertDeclaredEntries = (entries, manifest, contracts) => { const allowed = new Set(["manifest.json", manifest.draftEntry, ...(manifest.publishedEntry ? [manifest.publishedEntry] : []), ...contracts.keys()]); for (const name of entries.keys())
+const assertDeclaredEntries = (entries, manifest, contracts) => { const allowed = new Set(["manifest.json", manifest.draftEntry, ...(manifest.publishedEntry ? [manifest.publishedEntry] : []), ...contracts.keys(), ...(manifest.templateBodies ?? []).map(({ entry }) => entry)]); for (const name of entries.keys())
     if (!allowed.has(name))
         throw new DOMException(`The archive contains undeclared entry ${name}.`, "DataError"); };
 const mappedAssetId = (declared, mapping, input) => mapping.get(declared.id) ?? input.id?.(declared.id) ?? declared.id;
@@ -33,15 +34,23 @@ const assertAssetReferences = (manifest, projects) => { const declaredIds = new 
 const readArchiveSource = async (source, input) => { const blob = source instanceof Blob ? source : new Blob([Uint8Array.from(source)]); return readStoredZip(blob, undefined, { ...(input.signal ? { signal: input.signal } : {}), onEntry: (entry, index) => input.onProgress?.({ phase: "read", entry, completed: index, total: 0 }) }); };
 const readArchiveProjects = async (entries, manifest) => { const project = await parseJson(entries, manifest.draftEntry), published = manifest.publishedEntry ? await parseJson(entries, manifest.publishedEntry) : undefined; return { project, published }; };
 const archiveMapping = (project, input) => projectMapping(project, input.projectId ?? project.id, input.id ?? (oldId => oldId));
-const importedArchive = (project, published, mapping, assets) => ({ formatVersion: 3, project: remap(project, mapping), ...(published ? { publishedProject: remap(published, mapping) } : {}), assets, migrations: [] });
+const importedArchive = (project, published, mapping, assets, templateBodies) => ({ formatVersion: 3, project: remap(project, mapping), ...(published ? { publishedProject: remap(published, mapping) } : {}), assets, templateBodies, migrations: [] });
+const readTemplateBodies = async (entries, manifest) => { const result = []; for (const metadata of manifest.templateBodies ?? []) {
+    const body = entries.get(metadata.entry);
+    if (!body)
+        throw new DOMException(`Restore the missing Excel template body ${metadata.digest}.`, "DataError");
+    const typed = body.slice(0, body.size, metadata.mediaType);
+    await validateDocumentationTemplateBody(metadata, typed);
+    result.push({ digest: metadata.digest, byteLength: metadata.byteLength, body: typed });
+} return result; };
 export async function importFlowVisualArchive(source, input = {}) {
     const entries = await readArchiveSource(source, input), manifest = await parseJson(entries, "manifest.json");
     assertFlowVisualArchiveManifest(manifest);
     assertUniqueAssetIds(manifest);
     assertDeclaredEntries(entries, manifest, archiveEntryContracts(manifest));
-    const { project: sourceProject, published } = await readArchiveProjects(entries, manifest), mapping = archiveMapping(sourceProject, input), assets = await readArchiveAssets(entries, manifest, mapping, input);
+    const { project: sourceProject, published } = await readArchiveProjects(entries, manifest), mapping = archiveMapping(sourceProject, input), assets = await readArchiveAssets(entries, manifest, mapping, input), templateBodies = await readTemplateBodies(entries, manifest);
     assertAssetReferences(manifest, [sourceProject, ...(published ? [published] : [])]);
-    return importedArchive(sourceProject, published, mapping, assets);
+    return importedArchive(sourceProject, published, mapping, assets, templateBodies);
 }
 export async function migrateVersion2VisualAssets(bundle, input) {
     if (bundle.version !== 2)
@@ -49,7 +58,7 @@ export async function migrateVersion2VisualAssets(bundle, input) {
     const source = clone(bundle.project), mapping = projectMapping(source, input.projectId, input.id), assets = [];
     for (const asset of source.conceptVisualAssets ?? [])
         assets.push(await migrateLegacyAsset(asset, mapping, input.id));
-    return { formatVersion: 3, project: remap(withoutEmbeddedBodies(source), mapping), ...(bundle.publishedProject ? { publishedProject: remap(withoutEmbeddedBodies(bundle.publishedProject), mapping) } : {}), assets, migrations: ["Embedded concept visuals moved to separate original Blob bodies"] };
+    return { formatVersion: 3, project: remap(withoutEmbeddedBodies(source), mapping), ...(bundle.publishedProject ? { publishedProject: remap(withoutEmbeddedBodies(bundle.publishedProject), mapping) } : {}), assets, templateBodies: [], migrations: ["Embedded concept visuals moved to separate original Blob bodies"] };
 }
 const migrateLegacyAsset = async (asset, mapping, id) => { if (typeof asset.bytes !== "string" || !asset.bytes.startsWith(`data:${asset.mediaType};base64,`))
     throw new DOMException(`Legacy visual ${asset.id} has unreadable embedded bytes.`, "DataError"); const raw = atob(asset.bytes.slice(asset.bytes.indexOf(",") + 1)), body = new Blob([Uint8Array.from(raw, character => character.charCodeAt(0))], { type: asset.mediaType }); await validateFlowVisualBody(asset, body); return { metadata: { id: mapping.get(asset.id) ?? id(asset.id), mediaType: asset.mediaType, width: asset.width, height: asset.height, byteLength: asset.byteLength, digest: asset.digest }, body }; };

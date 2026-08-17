@@ -1,0 +1,163 @@
+import { assignDocumentationTemplate, createDocumentationTemplate, documentationTemplateAssignment, removeDocumentationTemplate, replaceDocumentationTemplate } from "../documentation-templates/template-library.js";
+import { writeDocumentationTemplateStarter } from "../documentation-templates/excel-renderer.js";
+import { builtInRichTemplate, richTemplateBlockScopes, validateRichDocumentationTemplate } from "../documentation-templates/rich-template.js";
+import { templateBindingsFor, templateDigest } from "../documentation-templates/template-contract.js";
+import { DOCUMENTATION_TEMPLATE_XLSX_TYPE } from "../documentation-templates/template-body.js";
+import { validateExcelTemplateWorkbook } from "../documentation-templates/excel-workbook.js";
+import { documentationButton as button, documentationHeading as heading, documentationLabelled as labelled } from "./workspace-ui-elements.js";
+const formats = ["excel", "rich"], kinds = ["overview", "flow", "matrix", "profile"];
+const kindName = (kind) => kind === "profile" ? "Site Profile" : kind === "matrix" ? "Data capture matrix" : kind[0].toUpperCase() + kind.slice(1);
+const digest = async (file) => `sha256:${Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer())), byte => byte.toString(16).padStart(2, "0")).join("")}`;
+const richBlocks = (template) => template.richBlocks;
+const recordBlocks = (blocks) => blocks;
+const cloneWithIds = (block) => { const copy = structuredClone(block); return copy.type === "repeat" ? { ...copy, id: `block:${crypto.randomUUID()}`, children: copy.children.map(cloneWithIds) } : { ...copy, id: `block:${crypto.randomUUID()}` }; };
+const editSiblings = (blocks, id, edit) => { const index = blocks.findIndex(block => block.id === id); if (index >= 0)
+    return edit(blocks, index); return blocks.map(block => block.type === "repeat" ? { ...block, children: editSiblings(block.children, id, edit) } : block); };
+const replaceBlock = (blocks, id, update) => blocks.map(block => block.id === id ? update(block) : block.type === "repeat" ? { ...block, children: replaceBlock(block.children, id, update) } : block);
+const dataSource = (kind) => kind === "overview" ? "overview.fields" : kind === "flow" ? "flow.rows" : kind === "matrix" ? "matrix.rows" : "profile.rows";
+const conceptSource = (kind) => kind === "matrix" ? "matrix.concepts" : kind === "profile" ? "profile.concepts" : "table.concepts";
+const rootCollections = (kind) => kind === "overview" ? ["overview.fields"] : kind === "flow" ? ["flow.pages", "table.rows", "flow.rows"] : kind === "matrix" ? ["matrix.rows", "matrix.concepts", "table.rows"] : ["profile.rows", "profile.concepts", "table.rows"];
+const collectionVariable = (collection) => collection.endsWith(".pages") ? "page" : collection.endsWith(".events") ? "event" : collection.endsWith(".cells") ? "cell" : collection.endsWith(".concepts") ? "concept" : collection.endsWith(".fields") ? "field" : "row";
+const newBlock = (type, kind, collections = []) => { const id = `block:${crypto.randomUUID()}`; if (type === "heading")
+    return { id, type, level: 2, content: [{ text: "Heading" }] }; if (type === "paragraph")
+    return { id, type, content: [{ text: "Text" }] }; if (type === "divider" || type === "theme-logo")
+    return { id, type }; if (type === "data-table")
+    return { id, type, source: dataSource(kind) }; if (type === "concept-group")
+    return { id, type, source: conceptSource(kind) }; const items = collections[0] ?? (kind === "flow" ? "flow.pages" : "table.rows"); return { id, type, items, variable: collectionVariable(items), children: [] }; };
+async function persistBody(options, bodyDigest, file, records, label) { const alreadyStored = (options.records.templates ?? []).some(template => template.body?.digest === bodyDigest); await options.storeBody?.(options.projectId, bodyDigest, file); try {
+    await options.persist(records, label);
+}
+catch (error) {
+    if (!alreadyStored)
+        await options.discardBody?.(options.projectId, bodyDigest).catch(() => { });
+    throw error;
+} }
+function richEditor(detail, selected, templates, options) {
+    const blocks = richBlocks(selected) ?? [], scopes = richTemplateBlockScopes(selected.kind, blocks);
+    const commit = (nextBlocks, label = "Edit") => { const candidate = { ...selected, blocks: nextBlocks }, validation = validateRichDocumentationTemplate(candidate); if (!validation.valid)
+        throw new Error(validation.findings.map(({ blockId, message }) => `${blockId}: ${message}`).join("\n")); const next = { ...selected, richBlocks: recordBlocks(nextBlocks), digest: templateDigest("rich", nextBlocks), validation }; options.persist({ ...options.records, templates: templates.map(item => item.id === selected.id ? next : item) }, `${label} Rich page template ${selected.name}`); options.rerender(); };
+    const outline = document.createElement("ol");
+    outline.setAttribute("aria-label", "Rich template outline");
+    const renderItems = (parent, items) => items.forEach((block, index) => {
+        const item = document.createElement("li"), title = document.createElement("strong"), actions = document.createElement("div"), scope = scopes[block.id];
+        title.textContent = block.type;
+        const move = (offset) => commit(editSiblings(blocks, block.id, (siblings, current) => { const next = [...siblings], target = current + offset; if (target < 0 || target >= next.length)
+            return next; [next[current], next[target]] = [next[target], next[current]]; return next; }), "Move");
+        const earlier = button("Move earlier", () => move(-1)), later = button("Move later", () => move(1)), copy = button("Copy block", () => commit(editSiblings(blocks, block.id, (siblings, current) => [...siblings.slice(0, current + 1), cloneWithIds(siblings[current]), ...siblings.slice(current + 1)]), "Copy")), remove = button("Remove block", () => commit(editSiblings(blocks, block.id, (siblings, current) => siblings.filter((_, candidate) => candidate !== current)), "Remove"));
+        earlier.disabled = index === 0;
+        later.disabled = index === items.length - 1;
+        actions.append(earlier, later, copy, remove);
+        item.append(title, actions);
+        if (block.type === "heading" || block.type === "paragraph") {
+            const text = document.createElement("input"), binding = document.createElement("select");
+            text.setAttribute("aria-label", `${block.type} text`);
+            text.value = block.content.filter((inline) => "text" in inline).map(({ text: value }) => value).join("");
+            text.addEventListener("change", () => commit(replaceBlock(blocks, block.id, current => ({ ...current, content: [{ text: text.value }] })), "Edit"));
+            binding.setAttribute("aria-label", `${block.type} binding`);
+            binding.append(...(scope?.bindings ?? []).map(value => new Option(value, value)));
+            item.append(labelled("Text", text), labelled("Binding", binding), button("Add binding", () => commit(replaceBlock(blocks, block.id, current => ({ ...current, content: [...current.content, { binding: binding.value }] })), "Bind")));
+        }
+        if (block.type === "repeat") {
+            const collection = document.createElement("select"), variable = document.createElement("input"), children = document.createElement("ol");
+            collection.setAttribute("aria-label", "Repeat collection");
+            collection.append(...(scope?.collections ?? []).map(value => new Option(value, value)));
+            collection.value = block.items;
+            collection.addEventListener("change", () => commit(replaceBlock(blocks, block.id, current => ({ ...current, items: collection.value, variable: collectionVariable(collection.value), children: [] })), "Change collection"));
+            variable.setAttribute("aria-label", "Repeat item name");
+            variable.value = block.variable;
+            variable.addEventListener("change", () => commit(replaceBlock(blocks, block.id, current => ({ ...current, variable: variable.value.trim() || "item" })), "Rename repeat item"));
+            children.setAttribute("aria-label", `${block.items} child blocks`);
+            renderItems(children, block.children);
+            const addChild = (type) => commit(replaceBlock(blocks, block.id, current => ({ ...current, children: [...current.children, newBlock(type, selected.kind, scope?.childCollections)] })), "Add child");
+            item.append(labelled("Collection", collection), labelled("Item name", variable), children, button("Add child heading", () => addChild("heading")), button("Add child paragraph", () => addChild("paragraph")), button("Add child data table", () => addChild("data-table")));
+            if (scope?.childCollections.length)
+                item.append(button("Add nested repeat", () => addChild("repeat")));
+        }
+        parent.append(item);
+    });
+    renderItems(outline, blocks);
+    detail.append(outline);
+    for (const type of ["heading", "paragraph", "divider", "theme-logo", "repeat", "data-table", "concept-group"])
+        detail.append(button(`Add ${type}`, () => commit([...blocks, newBlock(type, selected.kind, rootCollections(selected.kind))], "Add")));
+}
+export function renderDocumentationTemplateLibrary(host, options) {
+    host.replaceChildren();
+    host.className = "documentation-template-library";
+    host.setAttribute("aria-label", "Documentation Template Library");
+    host.append(heading(2, "Templates"));
+    const grid = document.createElement("div"), list = document.createElement("section"), detail = document.createElement("section"), templates = options.records.templates ?? [];
+    grid.className = "documentation-template-library-grid";
+    list.dataset.mobileSurface = options.mobileDetail ? "inactive" : "active";
+    detail.dataset.mobileSurface = options.mobileDetail ? "active" : "inactive";
+    list.setAttribute("aria-label", "Template list");
+    detail.setAttribute("aria-label", "Selected template detail");
+    for (const format of formats)
+        for (const kind of kinds) {
+            const group = document.createElement("section"), assignment = document.createElement("select");
+            assignment.setAttribute("aria-label", `${kindName(kind)} ${format} template assignment`);
+            assignment.append(new Option("Built-in", "builtin"), ...templates.filter(template => template.format === format && template.kind === kind).map(template => new Option(template.name, template.id)));
+            assignment.value = documentationTemplateAssignment(options.set, format, kind);
+            assignment.addEventListener("change", () => { options.persist(assignDocumentationTemplate(options.records, options.set.id, format, kind, assignment.value), `Assign ${assignment.selectedOptions[0]?.textContent ?? "Built-in"}`); options.rerender(); });
+            group.append(heading(3, `${format === "excel" ? "Excel" : "Rich page"} · ${kindName(kind)}`), labelled("Assignment", assignment));
+            for (const template of templates.filter(template => template.format === format && template.kind === kind)) {
+                const select = button(template.name, () => { options.selectTemplate(template.id); options.setMobileDetail(true); options.rerender(); });
+                select.setAttribute("aria-pressed", String(options.selectedTemplateId === template.id));
+                group.append(select);
+            }
+            const bindings = document.createElement("details"), bindingList = document.createElement("ul");
+            bindings.append(Object.assign(document.createElement("summary"), { textContent: "Template bindings" }));
+            bindingList.append(...templateBindingsFor(kind).map(value => Object.assign(document.createElement("li"), { textContent: value })));
+            bindings.append(bindingList);
+            group.append(bindings);
+            if (format === "excel") {
+                group.append(button("Download starter template", () => void writeDocumentationTemplateStarter(kind).then(bytes => options.download?.(`${kind}-documentation-template.xlsx`, bytes, DOCUMENTATION_TEMPLATE_XLSX_TYPE))));
+                const upload = document.createElement("input");
+                upload.type = "file";
+                upload.accept = `.xlsx,${DOCUMENTATION_TEMPLATE_XLSX_TYPE}`;
+                upload.setAttribute("aria-label", `Upload Excel template for ${kindName(kind)}`);
+                upload.addEventListener("change", () => void (async () => { const file = upload.files?.[0]; if (!file)
+                    return; const validation = await validateExcelTemplateWorkbook(file, kind); if (!validation.valid)
+                    throw new Error(validation.findings.map(({ location, message }) => `${location}: ${message}`).join("\n")); const bodyDigest = await digest(file), template = createDocumentationTemplate({ id: `documentation-template:${crypto.randomUUID()}`, name: file.name.replace(/\.xlsx$/iu, ""), format: "excel", kind, body: { assetId: `documentation-template-body:${crypto.randomUUID()}`, digest: bodyDigest, byteLength: file.size }, validation }); await persistBody(options, bodyDigest, file, { ...options.records, templates: [...templates, template] }, `Upload Excel template ${template.name}`); options.selectTemplate(template.id); options.setMobileDetail(true); options.rerender(); })().catch(error => detail.replaceChildren(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) }))));
+                group.append(upload);
+            }
+            else
+                group.append(button("New rich page template", () => { const id = `documentation-template:${crypto.randomUUID()}`, rich = builtInRichTemplate(kind, id, `${kindName(kind)} page`), template = createDocumentationTemplate({ ...rich, richBlocks: recordBlocks(rich.blocks), validation: { valid: true, findings: [] } }); options.persist({ ...options.records, templates: [...templates, template] }, `Create Rich page template ${template.name}`); options.selectTemplate(template.id); options.setMobileDetail(true); options.rerender(); }));
+            list.append(group);
+        }
+    const selected = templates.find(({ id }) => id === options.selectedTemplateId);
+    detail.append(heading(3, selected?.name ?? "Template detail"));
+    if (!selected)
+        detail.append(Object.assign(document.createElement("p"), { textContent: templates.length ? `${templates.length} project templates. Select one to edit its presentation.` : "Choose an Excel upload or create a Rich page template." }));
+    else {
+        const name = document.createElement("input");
+        name.value = selected.name;
+        name.setAttribute("aria-label", "Template name");
+        detail.append(labelled("Name", name), button("Rename template", () => { options.persist({ ...options.records, templates: templates.map(template => template.id === selected.id ? { ...selected, name: name.value.trim() || selected.name } : template) }, `Rename documentation template ${selected.name}`); options.rerender(); }), button("Duplicate template", () => { const copy = { ...structuredClone(selected), id: `documentation-template:${crypto.randomUUID()}`, name: `${selected.name} copy` }; options.persist({ ...options.records, templates: [...templates, copy] }, `Duplicate documentation template ${selected.name}`); options.selectTemplate(copy.id); options.rerender(); }), button("Remove template", () => { try {
+            options.persist(removeDocumentationTemplate(options.records, selected.id), `Remove documentation template ${selected.name}`);
+            options.selectTemplate("");
+            options.setMobileDetail(false);
+            options.rerender();
+        }
+        catch (error) {
+            detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) }));
+        } }));
+        if (selected.format === "excel") {
+            if (options.sampleExcel)
+                detail.append(button("Download sample-filled workbook", () => void options.sampleExcel(selected).then(bytes => options.download?.(`${selected.name.toLowerCase().replace(/[^a-z0-9]+/gu, "-")}-sample.xlsx`, bytes, DOCUMENTATION_TEMPLATE_XLSX_TYPE)).catch(error => detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) })))));
+            const replacement = document.createElement("input");
+            replacement.type = "file";
+            replacement.accept = ".xlsx";
+            replacement.setAttribute("aria-label", "Replace Excel template body");
+            replacement.addEventListener("change", () => void (async () => { const file = replacement.files?.[0]; if (!file)
+                return; const validation = await validateExcelTemplateWorkbook(file, selected.kind); if (!validation.valid)
+                throw new Error(validation.findings.map(({ location, message }) => `${location}: ${message}`).join("\n")); const bodyDigest = await digest(file), records = replaceDocumentationTemplate(options.records, selected.id, { assetId: selected.body.assetId, digest: bodyDigest, byteLength: file.size }); await persistBody(options, bodyDigest, file, records, `Replace documentation template ${selected.name}`); options.rerender(); })().catch(error => detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) }))));
+            detail.append(replacement);
+        }
+        else
+            richEditor(detail, selected, templates, options);
+    }
+    detail.append(button("Back to template list", () => { options.setMobileDetail(false); options.rerender(); }));
+    grid.append(list, detail);
+    host.append(grid);
+}
+//# sourceMappingURL=workspace-template-library-ui.js.map

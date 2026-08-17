@@ -4306,6 +4306,16 @@
       "src/project-documentation/workspace-theme-ui.ts",
       "src/project-documentation/workspace-ui-elements.ts",
       "src/project-documentation/workspace-contribution.ts",
+      "src/project-documentation/workspace-template-library-ui.ts",
+      "src/documentation-templates/template-contract.ts",
+      "src/documentation-templates/template-context.ts",
+      "src/documentation-templates/template-library.ts",
+      "src/documentation-templates/template-body.ts",
+      "src/documentation-templates/excel-template.ts",
+      "src/documentation-templates/excel-workbook.ts",
+      "src/documentation-templates/excel-renderer.ts",
+      "src/documentation-templates/rich-template.ts",
+      "src/documentation-templates/rich-renderer.ts",
       "src/data-layer-project-documentation-workspace-ui.ts"
     ],
     "dependencies": [
@@ -4342,7 +4352,11 @@
     ],
     "unit": [
       "test/data-layer-flow-table-documentation-export-test.mjs",
-      "test/data-layer-project-documentation-workspace-test.mjs"
+      "test/data-layer-project-documentation-workspace-test.mjs",
+      "test/data-layer-documentation-template-acceptance-test.mjs",
+      "test/data-layer-documentation-template-excel-test.mjs",
+      "test/data-layer-documentation-template-library-test.mjs",
+      "test/data-layer-documentation-template-rich-test.mjs"
     ],
     "property": [
       "test/data-layer-flow-table-documentation-export-property-test.mjs",
@@ -4352,9 +4366,7 @@
       "features/data-layer-flow-table-documentation-export.feature",
       "features/data-layer-flow-table-documentation-export-runtime.feature",
       "features/data-layer-project-documentation-workspace.feature",
-      "features/data-layer-project-documentation-workspace-runtime.feature"
-    ],
-    "plannedFeatures": [
+      "features/data-layer-project-documentation-workspace-runtime.feature",
       "features/data-layer-documentation-template-library.feature",
       "features/data-layer-documentation-template-library-runtime.feature",
       "features/data-layer-excel-documentation-templates.feature",
