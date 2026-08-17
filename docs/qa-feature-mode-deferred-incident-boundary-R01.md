@@ -294,3 +294,50 @@ Recommendation: resume `documentation-templates` from the exact QA scorecard
 descendant of `03e4157b83`, using `00f3e45d` only as a patch reference. Its
 governed repair-focused receipt, fresh 10-pack review evidence, and package proof
 remain product obligations; this correction supplies no passing product claim.
+
+### Live registry/planner order correction
+
+The first resumed product candidate after `03e4157b83` exposed one incomplete
+fixture in the accepted implementation. Historical commit `bbf05432d8` declares
+each `flow_export` feature before its runtime partner in `verification/packs.json`,
+while canonical planning and the immutable governed receipt correctly order the
+runtime partner first. Candidate `f2f598d4` reproduces the same distinction for
+the ten-feature current session. `registryBindsCompleteAcceptanceSession`
+incorrectly compares the raw registry array with the canonical planner identity
+array and therefore rejects both valid representations before task launch.
+
+This is an implementation correction under the already-approved monotonic
+acceptance-session contract, not new succession authority. Task
+`deferred-acceptance-session-order` must establish all of the following:
+
+- registry completeness is order-insensitive but cardinality-sensitive: the
+  registry and identity must contain exactly the same unique feature paths;
+- the immutable source receipt must still equal the complete historical planner
+  identity byte-for-byte at the structured identity level;
+- each planner identity must still bind its own feature order to the exact
+  generated/IR artifact pairs;
+- the historical planner feature sequence must still occur unchanged and in
+  order within the current planner sequence; and
+- missing, extra, duplicated, removed, replaced, or reordered planner features
+  and every previously specified task, runner, artifact, history, eligibility,
+  deferral, and ambiguity mismatch remain blocking.
+
+The deterministic regression must build historical and expanded pack fixtures
+in declaration order and derive both task identities through the production
+`planVerification` path. It must reproduce feature-before-runtime registry order
+and runtime-before-feature planner order before proving the inherited incident
+is nonblocking. A hand-built identity with registry order is insufficient. Also
+prove that changing the planner sequence still fails even when its unordered
+feature set is complete.
+
+Limit implementation to `scripts/verification-task-succession.mjs`, its direct
+test, and the Shell process contract. Do not change the runner, same-target
+projector, pack registry, task ordering, product code, or incident records. Run
+the direct succession and process-contract checks, then produce one Shell-only
+72-task review-ready checkpoint with properties and package proof under task
+`deferred-acceptance-session-order`. No all-20 run is authorized.
+
+The correction expectation is forty-five minutes, with a status update after
+twenty minutes. After architect `qa-ready` integration, record the scorecard and
+automatically reissue `documentation-templates` from that exact QA descendant,
+using `f2f598d4` only as a patch reference.
