@@ -180,11 +180,11 @@
         preflight (first (filter #(re-matches (:pattern %)
                                              "it executes no task and creates no receipt, incident, package, or evidence eligibility")
                                  modular/handlers))]
-    (is (= "^it executes (TARGET-A only|that case only|the setup boundary only and no target workflow|that exact task|no retry until the progress contract is repaired)$"
+    (is (= "^it executes (<retry_scope>|TARGET-A only|that case only|the setup boundary only and no target workflow|that exact task|no retry until the progress contract is repaired)$"
            (str (:pattern diagnostic))))
     (is (= "^it executes no task and creates no receipt, incident, package, or evidence eligibility$"
            (str (:pattern preflight))))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-17T09:30:32.656588991+02:00", :module-hash "-1895897150", :forms [{:id "form/0/in-ns", :kind "in-ns", :line 1, :end-line 1, :hash "-1677165460"} {:id "form/1/deftest", :kind "deftest", :line 3, :end-line 12, :hash "1821403176"} {:id "form/2/deftest", :kind "deftest", :line 14, :end-line 25, :hash "-363311847"} {:id "form/3/deftest", :kind "deftest", :line 27, :end-line 45, :hash "272130773"} {:id "form/4/deftest", :kind "deftest", :line 47, :end-line 52, :hash "-740854160"} {:id "form/5/deftest", :kind "deftest", :line 54, :end-line 80, :hash "842940222"} {:id "defn-/invoke-handler", :kind "defn-", :line 82, :end-line 87, :hash "1056761188"} {:id "form/7/deftest", :kind "deftest", :line 89, :end-line 131, :hash "-1316076482"} {:id "form/8/deftest", :kind "deftest", :line 133, :end-line 166, :hash "-71976303"} {:id "form/9/deftest", :kind "deftest", :line 168, :end-line 186, :hash "-1059670415"}]}
+;; {:version 1, :tested-at "2026-08-17T10:15:24.472055613+02:00", :module-hash "1338991555", :forms [{:id "form/0/in-ns", :kind "in-ns", :line 1, :end-line 1, :hash "-1677165460"} {:id "form/1/deftest", :kind "deftest", :line 3, :end-line 12, :hash "1821403176"} {:id "form/2/deftest", :kind "deftest", :line 14, :end-line 25, :hash "-363311847"} {:id "form/3/deftest", :kind "deftest", :line 27, :end-line 45, :hash "272130773"} {:id "form/4/deftest", :kind "deftest", :line 47, :end-line 52, :hash "-740854160"} {:id "form/5/deftest", :kind "deftest", :line 54, :end-line 80, :hash "842940222"} {:id "defn-/invoke-handler", :kind "defn-", :line 82, :end-line 87, :hash "1056761188"} {:id "form/7/deftest", :kind "deftest", :line 89, :end-line 131, :hash "-1316076482"} {:id "form/8/deftest", :kind "deftest", :line 133, :end-line 166, :hash "-71976303"} {:id "form/9/deftest", :kind "deftest", :line 168, :end-line 186, :hash "1844259203"}]}
 ;; clj-mutate-manifest-end
