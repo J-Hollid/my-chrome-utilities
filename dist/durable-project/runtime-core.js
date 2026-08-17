@@ -290,13 +290,16 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         return;
     } if (!pending.conflict)
         throw new Error("There is no durable Draft conflict to merge or reapply."); if (pending.command.commandId.startsWith("blocked-history:"))
-        throw new Error("A newer value blocks this window Undo or Redo; reject it instead of overwriting the newer Saved Draft."); const current = await repository.loadProject(pending.projectId), selectedSemanticFields = new Set(pendingFields.map(durableConflictSemanticField)), patches = pending.command.patches.filter((patch) => { const field = durablePatchField(patch); return !pending.conflict.conflictingFields.includes(field) || strategy === "reapply" || selectedSemanticFields.has(durableConflictSemanticField(field)); }), includeAssetBodies = strategy === "reapply" || patches.length === pending.command.patches.length, { assetBodies: _assetBodies, assetBodyOperationId: _assetBodyOperationId, ...pendingCommand } = structuredClone(pending.command), command = { ...pendingCommand, ...(includeAssetBodies && attachment.bodies.length ? { assetBodyOperationId: attachment.operationId, assetBodies: attachment.bodies } : {}), baseToken: current.draftToken, baseSequence: current.draftSequence, patches, pendingState: cleanState(current.state), commandId: `resolve:${pending.command.commandId}` }, result = await repository.saveDraft(command); if (result.status === "conflict") {
+        throw new Error("A newer value blocks this window Undo or Redo; reject it instead of overwriting the newer Saved Draft."); const current = await repository.loadProject(pending.projectId), selectedSemanticFields = new Set(pendingFields.map(durableConflictSemanticField)), patches = pending.command.patches.filter((patch) => { const field = durablePatchField(patch); return !pending.conflict.conflictingFields.includes(field) || strategy === "reapply" || selectedSemanticFields.has(durableConflictSemanticField(field)); }), includeAssetBodies = strategy === "reapply" || patches.length === pending.command.patches.length; if (attachment.bodies.length && !includeAssetBodies) {
+        attachment.discard();
+        failed = undefined;
+        await installCurrent(pending.projectId, partialRoutes.get(pending.projectId));
+        projectionChanged();
+        return;
+    } const { assetBodies: _assetBodies, assetBodyOperationId: _assetBodyOperationId, ...pendingCommand } = structuredClone(pending.command), command = { ...pendingCommand, ...(attachment.bodies.length ? { assetBodyOperationId: attachment.operationId, assetBodies: attachment.bodies } : {}), baseToken: current.draftToken, baseSequence: current.draftSequence, patches, pendingState: cleanState(current.state), commandId: `resolve:${pending.command.commandId}` }, result = await repository.saveDraft(command); if (result.status === "conflict") {
         failed = { ...pending, conflict: result, error: new DOMException(`${result.label} still conflicts at ${result.conflictingFields.join(", ")}.`, "AbortError") };
         throw failed.error;
-    } if (includeAssetBodies)
-        attachment.commit();
-    else
-        attachment.discard(); failed = undefined; pageHistory(pending.projectId).push(command); await installCurrent(pending.projectId, partialRoutes.get(pending.projectId)); projectionChanged(); };
+    } attachment.commit(); failed = undefined; pageHistory(pending.projectId).push(command); await installCurrent(pending.projectId, partialRoutes.get(pending.projectId)); projectionChanged(); };
     const exportUnsavedDraft = () => { if (!failed)
         throw new Error("There is no failed durable Draft to export."); return JSON.stringify({ format: "my-chrome-utilities.unsaved-durable-project", version: 1, projectId: failed.projectId, command: { id: failed.command.commandId, label: failed.command.label, baseToken: failed.command.baseToken }, project: failed.state.project, draft: failed.state.draft }); };
     const exportUnsavedSchemas = () => { if (!failedSchema)
