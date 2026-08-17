@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "dispositions": [
+    {
+      "task": "documentation-templates",
+      "path": "src/data-layer-durable-project-repository.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The repository file owns several persistence and migration contracts; its complete canonical owner and consumer closure remains required for any valid change."
+    },
+    {
+      "task": "documentation-templates",
+      "path": "src/flow-visual-archive-export.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "Archive export has one cross-format compatibility contract, so a Documentation-only slice would omit valid Flow archive consumers."
+    },
+    {
+      "task": "documentation-templates",
+      "path": "src/flow-visual-archive-format.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "Archive parsing and validation are shared compatibility behavior and retain their complete parent closure."
+    },
+    {
+      "task": "documentation-templates",
+      "path": "src/flow-visual-asset-portability.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "Project portability is an atomic import/export boundary whose complete current consumers remain required."
+    },
+    {
+      "task": "documentation-templates",
+      "path": "src/specification-builder.ts",
+      "decision": "integrated-seam",
+      "replacementPaths": [
+        "src/project-documentation/workspace-contribution.ts"
+      ],
+      "reviewAuthority": "qa-integration",
+      "reason": "The installed Documentation contribution owns future Documentation composition while the global application controller remains unchanged by the resumed product."
+    }
+  ]
+}

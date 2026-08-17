@@ -34,10 +34,17 @@ const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const exactOwnedPathKeys = ["unit", "property", "features", "handlers", "browserAdapters"];
 const verificationImplementationPathKeys = ["unit", "property", "browserAdapters"];
 const focusedFeaturePolicyPaths = new Set([
+  "scripts/verification-granularity-dispositions.mjs",
+  "scripts/verification-ownership-readiness.mjs",
   "scripts/settled-final-verification-policy.mjs",
   "scripts/verification-packs.mjs",
   "scripts/verification-reliability-runtime.mjs",
   "scripts/verification-reliability-store.mjs",
+  "swarmforge/roles/architect.prompt",
+  "swarmforge/roles/coder.prompt",
+  "swarmforge/roles/refactorer.prompt",
+  "swarmforge/roles/specifier.prompt",
+  "verification/granularity-dispositions.json",
 ]);
 const testPathKeys = ["unit", "property", "browserAdapters"];
 const prefixOwnedPathKeys = ["source", "process"];

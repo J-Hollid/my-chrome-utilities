@@ -11,6 +11,11 @@ export interface ProjectAssetBodyIdentity {
   digest:string;
 }
 
+export interface ProjectAssetBodyStore {
+  storeProjectAssetBody(identity:ProjectAssetBodyIdentity, body:Blob):Promise<void>;
+  loadProjectAssetBody(identity:ProjectAssetBodyIdentity):Promise<Blob>;
+}
+
 export function projectAssetBodyStorageKey(identity:ProjectAssetBodyIdentity):string {
   if (identity.namespace === "flow-visual") return `${identity.projectId}:${identity.digest}`;
   const namespace = safeSegment(identity.namespace, "Asset-body namespace");

@@ -1701,7 +1701,7 @@ globalThis.addEventListener("durable-project-saving", () => durablePersistenceRe
 globalThis.addEventListener("durable-project-saved", () => { void durablePersistenceReadiness.saved(); });
 globalThis.addEventListener("durable-project-save-failed", () => durablePersistenceReadiness.failed());
 const flowBuilderContext = () => ({ ...state ? { state } : {}, revision: canonicalRevision, ...(selectedKind === "flows" && selectedId ? { flowId: selectedId } : {}) });
-projectDocumentationWorkspaceUi = installProjectDocumentationWorkspaceContribution({ state: () => state, revision: () => canonicalRevision, save: (documentation, label) => { if (!state)
+projectDocumentationWorkspaceUi = installProjectDocumentationWorkspaceContribution({ assetBodies: durableProjectRuntime.repository, state: () => state, revision: () => canonicalRevision, save: (documentation, label) => { if (!state)
         return; persist(transactProject(state, label, (project) => ({ ...project, documentation: structuredClone(documentation) }))); }, openRepair: (target) => { documentationOpen = false; openProjectEntityWorkspace(target.kind, target.id); if (target.path) {
         const route = new URL(location.href);
         route.searchParams.set("kind", target.kind);

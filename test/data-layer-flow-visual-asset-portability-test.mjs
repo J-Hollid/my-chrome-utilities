@@ -29,7 +29,12 @@ assert.equal(store.trace().bodyWrites,0,"an unchanged digest does not rewrite it
 
 const durable=createMemoryDurableProjectRepository();
 await durable.putProject({project,history:{undo:[],redo:[]}});
+const documentationBodyIdentity={projectId:project.id,namespace:"documentation-template",digest:"abc123"};
+const documentationBody=new Blob(["template-body"],{type:"application/octet-stream"});
+await durable.storeProjectAssetBody(documentationBodyIdentity,documentationBody);
+assert.equal(await (await durable.loadProjectAssetBody(documentationBodyIdentity)).text(),"template-body","the reusable repository seam stores namespaced project asset bodies");
 await durable.replaceConceptVisualAssets(project.id,[{metadata,body:new Blob([png],{type:metadata.mediaType})}]);
+assert.equal(await (await durable.loadProjectAssetBody(documentationBodyIdentity)).text(),"template-body","Flow visual cleanup preserves bodies owned by another namespace");
 durable.clearTrace();
 assert.deepEqual(await durable.listConceptVisualAssetMetadata(project.id),[metadata]);
 assert.equal(durable.trace().reads.some(({store})=>store==="visualAssetBodies"),false,"IndexedDB metadata lookup does not touch body records");

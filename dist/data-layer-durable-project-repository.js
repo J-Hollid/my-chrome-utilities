@@ -295,6 +295,9 @@ export class DurableProjectRepository {
     subscribeProjectMetadata(listener) { this.metadataListeners.add(listener); return () => this.metadataListeners.delete(listener); }
     subscribeActiveContext(listener) { this.activeListeners.add(listener); return () => this.activeListeners.delete(listener); }
     subscribeSavedSchemas(listener) { this.schemaListeners.add(listener); return () => this.schemaListeners.delete(listener); }
+    async storeProjectAssetBody(identity, body) { const key = projectAssetBodyStorageKey(identity); await this.backend.transaction(["visualAssetBodies"], "readwrite", async (transaction) => { await transaction.put("visualAssetBodies", key, { digest: identity.digest, body: body.slice(0, body.size, body.type) }); }); }
+    async loadProjectAssetBody(identity) { const key = projectAssetBodyStorageKey(identity), record = await this.backend.transaction(["visualAssetBodies"], "readonly", transaction => transaction.get("visualAssetBodies", key)); if (!record?.body || record.digest !== identity.digest)
+        throw new DOMException(`Project asset body ${identity.namespace}/${identity.digest} is unavailable.`, "NotFoundError"); return record.body.slice(0, record.body.size, record.body.type); }
     async listConceptVisualAssetMetadata(projectId) { return this.backend.transaction(["visualAssetMetadata"], "readonly", async (transaction) => (await transaction.getPrefix("visualAssetMetadata", `${projectId}:`)).map(({ value }) => clone(value)).sort((left, right) => left.id.localeCompare(right.id))); }
     async loadConceptVisualAssetBody(projectId, assetId) { return this.backend.transaction(["visualAssetMetadata", "visualAssetBodies"], "readonly", async (transaction) => { const metadata = await transaction.get("visualAssetMetadata", `${projectId}:${assetId}`), record = metadata && await transaction.get("visualAssetBodies", projectAssetBodyStorageKey({ projectId, namespace: "flow-visual", digest: metadata.digest })); if (!record?.body)
         throw new DOMException(`Original visual body ${assetId} is unavailable.`, "NotFoundError"); return record.body.slice(0, record.body.size, record.body.type); }); }
@@ -335,7 +338,7 @@ export class DurableProjectRepository {
                     await transaction.put("visualAssetBodies", bodyIdentity, { digest: metadata.digest, body: body.slice(0, body.size, body.type) });
             }
             for (const { key } of await transaction.getPrefix("visualAssetBodies", prefix))
-                if (!wantedBodies.has(key))
+                if (!key.startsWith(`${prefix}asset-body:`) && !wantedBodies.has(key))
                     await transaction.delete("visualAssetBodies", key);
         });
     }

@@ -16,6 +16,10 @@ import {
 import {planVerification,verificationSliceSelectionMiss} from "./verification-packs.mjs";
 import {ownershipReadinessBootstrapEligibility,validateRunIntentBootstrapReceipt} from "./verification-run-intent.mjs";
 import {validateBuildDeliveredDependencies} from "./build-delivered-dependencies.mjs";
+import {
+  loadGranularityDispositions,
+  validateGranularityDispositions,
+} from "./verification-granularity-dispositions.mjs";
 
 const packs=[
   {id:"owner",unit:["test/owner.mjs"],source:["src/owner"],browserObservations:[{id:"OWNER_SMOKE",path:"test/owner-browser.mjs"}],sharedBoundaries:[{
@@ -43,6 +47,8 @@ assert.deepEqual(boundaryPlan.terminalFullObligations,["src/owner/shared.ts"]);
 
 const classificationRows=[
   [{plannedPackIds:["owner","consumer"],allPackIds:["owner","consumer","other"]},"bounded-ready"],
+  [{plannedPackIds:["owner","consumer"],allPackIds:["owner","consumer","other"],expansionCauses:[{path:"src/owner/shared.ts",credibleBoundary:true,reviewedDisposition:null}]},"granularity-assessment-required"],
+  [{plannedPackIds:["owner","consumer"],allPackIds:["owner","consumer","other"],expansionCauses:[{path:"src/owner/shared.ts",credibleBoundary:true,reviewedDisposition:null}],granularityAssessmentActive:true},"bounded-ready"],
   [{plannedPackIds:["owner","consumer"],allPackIds:["owner","consumer","other"],withinPack:{unrelatedCompleteTaskFamily:true,stableObservableBoundary:true,reducesTaskScope:true,meaningPreserved:true}},"coarse-within-pack"],
   [{plannedPackIds:["owner","consumer","other"],allPackIds:["owner","consumer","other"],expansionCauses:[{path:"src/owner/shared.ts",credibleBoundary:true}]},"coarse-boundary"],
   [{plannedPackIds:["owner","consumer","other"],allPackIds:["owner","consumer","other"],genuinelyGlobal:true},"genuinely-global"],
@@ -198,6 +204,25 @@ assert.doesNotMatch(readinessHandlers,/:prepared-task "unit:scripts\/verificatio
 const plannedRegistry=JSON.parse(await readFile("verification/packs.json","utf8")),flowExport=plannedRegistry.find(({id})=>id==="flow_export");
 assert.equal(flowExport.plannedFeatures.length,6,"approved future acceptance contracts remain planned and non-executable during preparation");
 assert.equal(flowExport.features.some(path=>path.includes("documentation-template")),false,"preparation does not activate Documentation-template behavior");
+const stoppedCandidatePaths=[
+  "src/data-layer-durable-project-repository.ts",
+  "src/flow-visual-archive-export.ts",
+  "src/flow-visual-archive-format.ts",
+  "src/flow-visual-asset-portability.ts",
+  "src/specification-builder.ts",
+];
+const documentationIntent={version:1,baseCommit:"a".repeat(40),task:"documentation-templates",approvedPackIds:["shell","flow_export","project_management","durable_project_repository"],likelyPaths:stoppedCandidatePaths,proposedPrefixes:[]};
+const replayed=await intentOwnershipReadiness({intent:documentationIntent,packs:plannedRegistry});
+assert.equal(replayed.plannedPackIds.length,13,"the real stopped-candidate paths reproduce the known 13-pack variance");
+assert.equal(replayed.classification,"granularity-assessment-required","unreviewed credible variance routes assessment without --within-pack");
+assert.deepEqual(replayed.unresolvedExpansionCauses,stoppedCandidatePaths.slice().sort());
+const dispositions=await loadGranularityDispositions();
+assert.equal(dispositions.dispositions.filter(({task})=>task==="documentation-templates").length,5,"every causal path has one durable disposition");
+const resumed=await intentOwnershipReadiness({intent:documentationIntent,packs:plannedRegistry,granularityDispositions:dispositions});
+assert.equal(resumed.classification,"bounded-ready","reviewed dispositions prevent the same product from looping through preparation");
+assert.equal(resumed.unresolvedExpansionCauses.length,0);
+assert.equal(resumed.expansionCauses.every(({reviewedDisposition})=>reviewedDisposition!==null),true,"bounded readiness reports rather than hides the reviewed variance");
+assert.throws(()=>validateGranularityDispositions({version:1,dispositions:[{task:"documentation-templates",path:"src/specification-builder.ts",decision:"integrated-seam",replacementPaths:[],reviewAuthority:"qa-integration",reason:"missing seam"}]}),/exact reviewed seam or parent fallback/u);
 const firstUsePlans=["src/project-asset-body-contribution.ts","src/project-documentation/workspace-contribution.ts","build-delivered-dependencies.json"]
   .map(path=>planVerification(plannedRegistry,{changedPaths:[path],includeProperties:true}));
 assert.equal(firstUsePlans.every(plan=>Object.values(plan.verificationSliceConservation).every(({conserved})=>conserved)),true);
@@ -223,7 +248,7 @@ console.log(JSON.stringify({verificationOwnershipReadinessAcceptance:{
     slices:{stableIdentity:true,exactSources:true,directTasks:true,prerequisites:true,consumers:true,observable:true,conserved:firstUsePlans.every(plan=>Object.values(plan.verificationSliceConservation).every(({conserved})=>conserved)),exactAndTerminalUnchanged:true},
     mapping:{focused:true,parentFallback:true,historicalUnion:true,invalidFallback:true,ownershipUnavailableStops:true},
     prefixes:{declarationOnly:true,proposalValidated:true,currentConflictRejected:true,exactCommittedPaths:true,noSideEffects:true},
-    routing:{automaticNote:true,pausedNotCompleted:true,reissuedFromQa:true,ordinaryChannel:true},
+    routing:{automaticNote:true,pausedNotCompleted:true,reissuedFromQa:true,ordinaryChannel:true,knownCandidateReplay:replayed.plannedPackIds.length===13,durableDispositions:dispositions.dispositions.length===5},
     quarantine:{selectionMiss:true,parentFallback:true,reviewedRepairRequired:true,noExtraAll20:true},
     firstUse:{taskCounts:firstUsePlans.map(({tasks})=>tasks.length),packCounts:firstUsePlans.map(({packIds})=>packIds.length),productBehaviorAbsent:true},
   },

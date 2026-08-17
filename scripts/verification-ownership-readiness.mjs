@@ -7,13 +7,21 @@ import {
 import {
   loadVerificationPacks,
   planVerification,
+  verificationSliceMapping,
   verificationPackTaskKeys,
 } from "./verification-packs.mjs";
+import {
+  granularityDispositionFor,
+  granularityDispositionsAtCommit,
+  validateGranularityDispositions,
+} from "./verification-granularity-dispositions.mjs";
 import {canonicalRunIntentBootstrapPlan} from "./verification-run-intent.mjs";
 import {activeVerificationSliceQuarantineIds} from "./verification-slice-quarantine.mjs";
 
 const nextStages = {
   "bounded-ready":"product implementation starts from the approved QA base",
+  "granularity-assessment-required":
+    "a standing-authorized verification-slice preparation starts without another routine user approval",
   "coarse-within-pack":
     "a standing-authorized verification-slice preparation starts without another routine user approval",
   "coarse-boundary":
@@ -200,9 +208,15 @@ export function classifyOwnershipReadiness(input) {
   else if (input.genuinelyGlobal) classification = "genuinely-global";
   else if (!allRunnablePacksSelected(input.plannedPackIds, input.allPackIds)) {
     const withinPack = input.withinPack ?? {};
-    classification = withinPack.unrelatedCompleteTaskFamily &&
+    const assessedSlice = withinPack.unrelatedCompleteTaskFamily &&
       withinPack.stableObservableBoundary && withinPack.reducesTaskScope &&
-      withinPack.meaningPreserved ? "coarse-within-pack" : "bounded-ready";
+      withinPack.meaningPreserved;
+    const unresolvedCredibleBoundary = (input.expansionCauses ?? []).some((cause) =>
+      cause.credibleBoundary && !cause.sliced && !cause.reviewedDisposition);
+    classification = assessedSlice ? "coarse-within-pack"
+      : unresolvedCredibleBoundary && !input.granularityAssessmentActive
+        ? "granularity-assessment-required"
+        : "bounded-ready";
   } else {
     const causes = input.expansionCauses ?? [];
     classification = causes.length > 0 && causes.every(({ credibleBoundary }) => credibleBoundary)
@@ -214,6 +228,7 @@ export function classifyOwnershipReadiness(input) {
   }
   const reasons = {
     "bounded-ready":"Canonical ownership remains smaller than all runnable packs.",
+    "granularity-assessment-required":"An unsliced credible boundary adds unforecast packs and has no reviewed durable disposition.",
     "coarse-within-pack":"A stable observable slice removes unrelated complete task work without changing verification meaning.",
     "coarse-boundary":"All-pack expansion is limited to shared paths with credible exact QA boundaries.",
     "genuinely-global":"The executable behavior has canonical application-wide impact.",
@@ -227,20 +242,31 @@ export function classifyOwnershipReadiness(input) {
   };
 }
 
-function expansionCausesFor(intent, plan) {
+function expansionCausesFor(intent, plan, packs, dispositionRegistry) {
   const approvedPackIds = new Set(intent.approvedPackIds);
   return Object.entries(plan.changedOwners ?? {})
     .filter(([, owners]) => owners.some((id) => !approvedPackIds.has(id)))
-    .map(([path, owners]) => ({
-      path,
-      owners,
-      credibleBoundary:Boolean(plan.changedBoundaries?.[path]),
-    }));
+    .map(([path, owners]) => {
+      const sliced = packs.some((pack) => owners.includes(pack.id) &&
+        verificationSliceMapping(packs, pack, path).kind === "slice");
+      return {
+        path,
+        owners,
+        credibleBoundary:Boolean(plan.changedBoundaries?.[path]),
+        sliced,
+        reviewedDisposition:granularityDispositionFor(dispositionRegistry, intent.task, path),
+      };
+    });
 }
 
-function readinessResult(intent, plan, packs, {withinPack:rawWithinPack, ...extra} = {}) {
+function readinessResult(intent, plan, packs, {
+  withinPack:rawWithinPack,
+  granularityDispositions = {version:1, dispositions:[]},
+  ...extra
+} = {}) {
   const tasks = plan.tasks ?? [];
-  const expansionCauses = expansionCausesFor(intent, plan);
+  const dispositionRegistry = validateGranularityDispositions(granularityDispositions);
+  const expansionCauses = expansionCausesFor(intent, plan, packs, dispositionRegistry);
   const withinPack = validateWithinPackMateriality(rawWithinPack, intent, packs);
   if (withinPack && !(plan.packIds ?? []).includes(withinPack.parentPackId)) {
     throw new Error("Within-pack materiality parent pack is outside the canonical plan");
@@ -251,6 +277,7 @@ function readinessResult(intent, plan, packs, {withinPack:rawWithinPack, ...extr
       .map(({ id }) => id)),
     expansionCauses,
     withinPack,
+    granularityAssessmentActive:intent.task.startsWith("verification-slice-"),
     ...extra,
   });
   return {
@@ -270,6 +297,8 @@ function readinessResult(intent, plan, packs, {withinPack:rawWithinPack, ...extr
     changedOwners:plan.changedOwners ?? {},
     changedBoundaries:plan.changedBoundaries ?? {},
     expansionCauses,
+    unresolvedExpansionCauses:expansionCauses.filter(({credibleBoundary, sliced, reviewedDisposition}) =>
+      credibleBoundary && !sliced && !reviewedDisposition).map(({path}) => path),
     terminalFullObligations:canonical(plan.terminalFullObligations ?? []),
   };
 }
@@ -352,6 +381,7 @@ function parseOptions(args) {
 async function main() {
   const options = parseOptions(process.argv.slice(2));
   const packs = await loadVerificationPacks();
+  const granularityDispositions = await granularityDispositionsAtCommit(options.base);
   const intent = {
     version:1,
     baseCommit:options.base,
@@ -366,7 +396,7 @@ async function main() {
       options.base, {repositoryRoot:process.cwd()},
     );
     answer = await intentOwnershipReadiness({
-      intent, packs, quarantinedSliceIds, withinPack:options.withinPack,
+      intent, packs, quarantinedSliceIds, withinPack:options.withinPack, granularityDispositions,
     });
   } else if (options.mode === "exact") {
     if (!options.changedSince) {
@@ -384,6 +414,7 @@ async function main() {
     );
     answer = await exactOwnershipReadiness({
       intent, packs, changeSet, basePacks, quarantinedSliceIds, withinPack:options.withinPack,
+      granularityDispositions,
     });
   } else {
     throw new Error("Use ownership readiness mode intent or exact");
