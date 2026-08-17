@@ -58,20 +58,65 @@ assert.match(intent.reason,/smaller than all runnable packs/u);assert.equal(inte
 const exact=await exactOwnershipReadiness({intent:{version:1,baseCommit:"a".repeat(40),task:"templates",approvedPackIds:["owner","consumer"],likelyPaths:[],proposedPrefixes:[]},packs,changeSet:{version:1,baseCommit:"a".repeat(40),commit:"b".repeat(40),paths:["src/owner/shared.ts"],entries:[{status:"M",path:"src/owner/shared.ts"}]},basePacks:packs,plan:()=>({packIds:["owner","consumer"],tasks:[{key:"unit:owner"}],changedOwners:{"src/owner/shared.ts":["owner","consumer"]},terminalFullObligations:["src/owner/shared.ts"]})});
 assert.equal(exact.planOnly,true);assert.deepEqual(exact.terminalFullObligations,["src/owner/shared.ts"]);
 
-const slicedPacks=[
-  {id:"owner",source:["src/owner"],unit:["test/owner-a.mjs","test/owner-b.mjs"],property:[],browserAdapters:[],browserObservations:[],features:[],
-    verificationSlices:[{id:"future",sourcePaths:["src/owner/future.ts"],sourcePrefixes:["src/owner/future"],tasks:["unit:test/owner-a.mjs"],prerequisites:[],consumers:[{packId:"consumer",sliceId:"future-consumer"}],observableBoundary:"future contribution"}]},
-  {id:"consumer",source:["src/consumer"],unit:["test/consumer-a.mjs","test/consumer-b.mjs"],property:[],browserAdapters:[],browserObservations:[],features:[],
-    verificationSlices:[{id:"future-consumer",sourcePaths:[],sourcePrefixes:[],consumerOnly:true,tasks:["unit:test/consumer-a.mjs"],prerequisites:[],consumers:[],observableBoundary:"future consumer"}]},
+const slicedPacks = [
+  {
+    id:"owner",
+    source:["src/owner"],
+    unit:["test/owner-a.mjs", "test/owner-b.mjs"],
+    property:[],
+    browserAdapters:[],
+    browserObservations:[],
+    features:[],
+    verificationSlices:[{
+      id:"future",
+      sourcePaths:["src/owner/future.ts"],
+      sourcePrefixes:["src/owner/future"],
+      tasks:["unit:test/owner-a.mjs"],
+      prerequisites:[],
+      consumers:[{packId:"consumer", sliceId:"future-consumer"}],
+      observableBoundary:"future contribution",
+    }],
+  },
+  {
+    id:"consumer",
+    source:["src/consumer"],
+    unit:["test/consumer-a.mjs", "test/consumer-b.mjs"],
+    property:[],
+    browserAdapters:[],
+    browserObservations:[],
+    features:[],
+    verificationSlices:[{
+      id:"future-consumer",
+      sourcePaths:[],
+      sourcePrefixes:[],
+      consumerOnly:true,
+      tasks:["unit:test/consumer-a.mjs"],
+      prerequisites:[],
+      consumers:[],
+      observableBoundary:"future consumer",
+    }],
+  },
 ];
-const focusedSlice=planVerification(slicedPacks,{changedPaths:["src/owner/future.ts"]});
-assert.deepEqual(focusedSlice.tasks.filter(({stage})=>stage!=="build").map(({key})=>key),["unit:test/owner-a.mjs","unit:test/consumer-a.mjs"]);
-assert.deepEqual(focusedSlice.selectedVerificationSlices,{consumer:["future-consumer"],owner:["future"]});
+const focusedSlice = planVerification(slicedPacks, {changedPaths:["src/owner/future.ts"]});
+assert.deepEqual(
+  focusedSlice.tasks.filter(({stage}) => stage !== "build").map(({key}) => key),
+  ["unit:test/owner-a.mjs", "unit:test/consumer-a.mjs"],
+);
+assert.deepEqual(focusedSlice.selectedVerificationSlices, {
+  consumer:["future-consumer"], owner:["future"],
+});
 assert.equal(focusedSlice.verificationSliceDiagnostics.length,0);
-assert.throws(()=>planVerification(slicedPacks,{packIds:["owner"],changedPaths:["src/owner/future.ts"]}),/outside the explicit pack set/u);
-const exactParent=planVerification(slicedPacks,{packIds:["owner"]});
+assert.throws(
+  () => planVerification(slicedPacks, {
+    packIds:["owner"], changedPaths:["src/owner/future.ts"],
+  }),
+  /outside the explicit pack set/u,
+);
+const exactParent = planVerification(slicedPacks, {packIds:["owner"]});
 assert.deepEqual(exactParent.unitTasks.map(({key})=>key),["unit:test/owner-a.mjs","unit:test/owner-b.mjs"]);
-const unmappedChild=planVerification(slicedPacks,{changedPaths:["src/owner/unclassified.ts"]});
+const unmappedChild = planVerification(slicedPacks, {
+  changedPaths:["src/owner/unclassified.ts"],
+});
 assert.deepEqual(unmappedChild.unitTasks.map(({key})=>key),["unit:test/owner-a.mjs","unit:test/owner-b.mjs"]);
 assert.equal(exactParent.verificationSliceConservation.owner.conserved,true);
 assert.deepEqual([...exactParent.verificationSliceConservation.owner.sliceTaskKeys,...exactParent.verificationSliceConservation.owner.remainderTaskKeys].sort(),exactParent.verificationSliceConservation.owner.completeTaskKeys);

@@ -929,9 +929,11 @@ function ownerOf(packs, path) {
   return owners[0];
 }
 
-const stableSliceId = (value) => typeof value === "string" && /^[a-z0-9][a-z0-9_-]*$/u.test(value);
+const stableSliceId = (value) =>
+  typeof value === "string" && /^[a-z0-9][a-z0-9_-]*$/u.test(value);
 const uniqueStrings = (items) => Array.isArray(items) &&
-  new Set(items).size === items.length && items.every((item) => typeof item === "string" && item.length > 0);
+  new Set(items).size === items.length &&
+  items.every((item) => typeof item === "string" && item.length > 0);
 
 function declaredPackTaskKeys(pack) {
   const observationGroups = new Map();
@@ -962,14 +964,19 @@ function declaredPackTaskKeys(pack) {
 
 function verificationSliceDeclaration(registry, pack, slice) {
   const diagnostics = [];
-  if (!slice || Array.isArray(slice) || !stableSliceId(slice.id)) diagnostics.push("unstable identity");
-  if (!uniqueStrings(slice?.sourcePaths ?? []) || !uniqueStrings(slice?.sourcePrefixes ?? []) ||
-      !(slice?.sourcePaths?.length || slice?.sourcePrefixes?.length || slice?.consumerOnly === true)) {
+  if (!slice || Array.isArray(slice) || !stableSliceId(slice.id)) {
+    diagnostics.push("unstable identity");
+  }
+  const hasSourceMapping = slice?.sourcePaths?.length || slice?.sourcePrefixes?.length ||
+    slice?.consumerOnly === true;
+  if (!uniqueStrings(slice?.sourcePaths ?? []) ||
+      !uniqueStrings(slice?.sourcePrefixes ?? []) || !hasSourceMapping) {
     diagnostics.push("missing or duplicate source mapping");
   }
   if (!uniqueStrings(slice?.tasks ?? []) || slice?.tasks?.length === 0 ||
-      !uniqueStrings(slice?.prerequisites ?? [])) diagnostics.push("missing or duplicate task mapping");
-  else {
+      !uniqueStrings(slice?.prerequisites ?? [])) {
+    diagnostics.push("missing or duplicate task mapping");
+  } else {
     const registered = declaredPackTaskKeys(pack);
     if ([...slice.tasks, ...slice.prerequisites].some((key) => !registered.has(key))) {
       diagnostics.push("unregistered task mapping");
@@ -1362,12 +1369,16 @@ export function planVerification(
   const activateSlice = (registry, packId, sliceId, visiting = new Set()) => {
     const identity = `${packId}:${sliceId}`;
     if (visiting.has(identity)) return;
-    const pack = registry.find(({id}) => id === packId);
-    const slice = pack?.verificationSlices?.find(({id}) => id === sliceId);
-    const diagnostics = pack && slice ? verificationSliceDeclaration(registry, pack, slice) : ["missing declaration"];
+    const pack = registry.find(({ id }) => id === packId);
+    const slice = pack?.verificationSlices?.find(({ id }) => id === sliceId);
+    const diagnostics = pack && slice
+      ? verificationSliceDeclaration(registry, pack, slice)
+      : ["missing declaration"];
     if (diagnostics.length) {
       parentPackSliceFallbacks.add(packId);
-      verificationSliceDiagnostics.push(`Verification slice ${identity} fell back to its parent: ${diagnostics.join(", ")}`);
+      verificationSliceDiagnostics.push(
+        `Verification slice ${identity} fell back to its parent: ${diagnostics.join(", ")}`,
+      );
       return;
     }
     if (quarantinedSlices.has(sliceId)) {
@@ -1386,7 +1397,10 @@ export function planVerification(
     const nextVisiting = new Set([...visiting, identity]);
     for (const consumer of slice.consumers) {
       if (consumer.sliceId) activateSlice(registry, consumer.packId, consumer.sliceId, nextVisiting);
-      else { parentPackSliceFallbacks.add(consumer.packId); selected.add(consumer.packId); }
+      else {
+        parentPackSliceFallbacks.add(consumer.packId);
+        selected.add(consumer.packId);
+      }
     }
   };
 
@@ -1409,7 +1423,9 @@ export function planVerification(
       if (mapping.kind === "slice") activateSlice(registry, pack.id, mapping.slice.id);
       else {
         parentPackSliceFallbacks.add(pack.id);
-        if ((pack.verificationSlices ?? []).length) verificationSliceDiagnostics.push(mapping.diagnostic);
+        if ((pack.verificationSlices ?? []).length) {
+          verificationSliceDiagnostics.push(mapping.diagnostic);
+        }
       }
     }
   };
@@ -1766,8 +1782,14 @@ export function planVerification(
       const sliced = [...new Set(values(pack, "verificationSlices")
         .flatMap((slice) => [...values(slice, "tasks"), ...values(slice, "prerequisites")]))].sort();
       const remainder = complete.filter((key) => !sliced.includes(key));
-      return [pack.id, {completeTaskKeys:complete,sliceTaskKeys:sliced,remainderTaskKeys:remainder,
-        conserved:[...new Set([...sliced, ...remainder])].sort().join("\0") === complete.join("\0")}];
+      const conserved = [...new Set([...sliced, ...remainder])].sort().join("\0") ===
+        complete.join("\0");
+      return [pack.id, {
+        completeTaskKeys:complete,
+        sliceTaskKeys:sliced,
+        remainderTaskKeys:remainder,
+        conserved,
+      }];
     }));
   return {
     version:2,
