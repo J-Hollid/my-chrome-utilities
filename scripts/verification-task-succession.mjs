@@ -95,6 +95,74 @@ function historicalRegistryDeclaresTask(identity,packs,plannedIdentities){
   return same(expected,identity);
 }
 
+function completeTaskBoundary(boundary,identity){
+  return Boolean(identity)&&boundary?.kind==="task"&&boundary.taskKey===identity.key&&
+    same(boundary.executionArgs,identity.args)&&
+    (!Array.isArray(boundary.logicalTargetIds)||boundary.logicalTargetIds.length===0);
+}
+
+function acceptanceSessionFeatures(identity){
+  if(identity?.stage!=="acceptance-session"||identity.executable!=="bb"||
+      identity.key!==`acceptance-session:${identity.packId}`||
+      identity.args?.[0]!=="acceptance-pack-runner"||identity.args?.[1]!==identity.packId||
+      typeof identity.target!=="string")return undefined;
+  const features=identity.target.split(",").filter(Boolean);
+  if(features.length===0||new Set(features).size!==features.length||
+      identity.args.length!==2+(features.length*2))return undefined;
+  const expectedArtifacts=features.flatMap(feature=>{
+    const artifacts=acceptanceArtifacts(feature);return[artifacts.generated,artifacts.ir];
+  });
+  if(new Set(expectedArtifacts).size!==expectedArtifacts.length||
+      !same(identity.args.slice(2),expectedArtifacts))return undefined;
+  return features;
+}
+
+function stableAcceptanceSessionContract(source,current){
+  return ["key","stage","packId","executable"].every(field=>source[field]===current[field])&&
+    same(source.environment,current.environment)&&
+    same(source.requiredCapabilities,current.requiredCapabilities)&&
+    same(source.args?.slice(0,2),current.args?.slice(0,2));
+}
+
+function registryBindsCompleteAcceptanceSession(identity,features,packs){
+  const owners=packs.filter(pack=>pack.id===identity.packId);
+  return owners.length===1&&same(owners[0].features,features)&&
+    historicalRegistryDeclaresTask(identity,packs,[]);
+}
+
+async function monotonicDeferredAcceptanceSessionExpansion({incident,currentIdentities,currentPacks,
+  loadHistoricalPacks,loadSourceReceipt}){
+  const source=incident.failure?.task;
+  if(incident.repair?.status!=="eligible"||
+      incident.terminalVerificationDeferred?.status!=="terminal-verification-deferred"||
+      !completeTaskBoundary(incident.failure?.retryScope,source)||
+      !completeTaskBoundary(incident.repair?.diagnosedBoundary,source))return false;
+  const historicalFeatures=acceptanceSessionFeatures(source);
+  if(!historicalFeatures)return false;
+  const currentMatches=currentIdentities.filter(identity=>stableAcceptanceSessionContract(source,identity));
+  if(currentMatches.length!==1)return false;
+  const current=currentMatches[0],currentFeatures=acceptanceSessionFeatures(current);
+  if(!currentFeatures||currentFeatures.length<=historicalFeatures.length)return false;
+  let receipt,historicalPacks;
+  try{
+    [receipt,historicalPacks]=await Promise.all([
+      loadSourceReceipt(incident.failure.sourceReceipt),
+      loadHistoricalPacks(incident.failure.lineage?.commit,"verification/packs.json"),
+    ]);
+  }catch{return false;}
+  const recorded=receipt?.tasks?.[source.key];
+  if(receipt?.candidate?.commit!==incident.failure.lineage?.commit||
+      receipt?.candidate?.tree!==incident.failure.lineage?.tree||recorded?.status!=="failed"||
+      !same(recorded.identity,source)||
+      !registryBindsCompleteAcceptanceSession(source,historicalFeatures,historicalPacks)||
+      !registryBindsCompleteAcceptanceSession(current,currentFeatures,currentPacks))return false;
+  let historicalIndex=0;
+  for(const feature of currentFeatures){
+    if(feature===historicalFeatures[historicalIndex])historicalIndex+=1;
+  }
+  return historicalIndex===historicalFeatures.length;
+}
+
 export async function resolveIncidentTaskSuccession({incident,currentIdentities,currentPacks,
   graph=undefined,loadHistoricalPacks=gitShowJson,loadSourceReceipt=sourcePlannerReceipt}){
   const diagnosedTarget=incident.failure.retryScope?.logicalTargetIds?.length===1
@@ -165,6 +233,9 @@ export async function validateUnresolvedIncidentTaskSuccession({incidents,curren
       mappings.push({incidentId:incident.id,mapping:await resolveIncidentTaskSuccession({incident,
         currentIdentities,currentPacks,graph,loadHistoricalPacks,loadSourceReceipt})});
     } catch(error) {
+      if(error?.message==="Same-target planner projection requires one diagnosed target"&&
+          await monotonicDeferredAcceptanceSessionExpansion({incident,currentIdentities,currentPacks,
+            loadHistoricalPacks,loadSourceReceipt}))continue;
       const selectedTargetSuccessors=currentIdentities.filter(identity=>diagnosedTargets.length===1&&
         identity.logicalTargetIds?.includes(diagnosedTargets[0]));
       const boundaryExpanded=error?.message==="Task succession edge does not preserve its conserved boundary"||

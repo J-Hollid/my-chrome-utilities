@@ -204,4 +204,125 @@ const acceptanceMapped=await resolveIncidentTaskSuccession({incident:{failure:{t
 assert.equal(acceptanceMapped.destinationIdentity.target,`${runtimeFeature},${modelFeature}`,
   "a receipt-selected acceptance subset can succeed to the registry-declared combined session");
 
+const historicalFlowExportFeatures=[
+  "features/data-layer-flow-table-documentation-export-runtime.feature",
+  "features/data-layer-flow-table-documentation-export.feature",
+  "features/data-layer-project-documentation-workspace-runtime.feature",
+  "features/data-layer-project-documentation-workspace.feature",
+];
+const documentationTemplateFeatures=[
+  "features/data-layer-documentation-template-library-runtime.feature",
+  "features/data-layer-documentation-template-library.feature",
+  "features/data-layer-excel-documentation-templates-runtime.feature",
+  "features/data-layer-excel-documentation-templates.feature",
+  "features/data-layer-rich-page-documentation-templates-runtime.feature",
+  "features/data-layer-rich-page-documentation-templates.feature",
+];
+const flowExportAcceptance=(features)=>({...acceptanceTask(features),key:"acceptance-session:flow_export",
+  packId:"flow_export",args:["acceptance-pack-runner","flow_export",
+    ...acceptanceTask(features).args.slice(2)]});
+const historicalFlowExport=flowExportAcceptance(historicalFlowExportFeatures);
+const expandedFlowExport=flowExportAcceptance([
+  ...historicalFlowExportFeatures,...documentationTemplateFeatures,
+]);
+const historicalFlowExportPacks=[{id:"flow_export",features:historicalFlowExportFeatures}];
+const expandedFlowExportPacks=[{id:"flow_export",features:[
+  ...historicalFlowExportFeatures,...documentationTemplateFeatures,
+]}];
+const flowExportReceipt={candidate:{commit:"historical-flow-export",tree:"historical-tree"},tasks:{
+  [historicalFlowExport.key]:{identity:historicalFlowExport,status:"failed"},
+}};
+const deferredFlowExportIncident={id:"d723a7c4-1116-4887-b60a-21aded1ab5d8",state:"unresolved",
+  repair:{status:"eligible",diagnosedBoundary:{kind:"task",taskKey:historicalFlowExport.key,
+    executionArgs:historicalFlowExport.args}},
+  terminalVerificationDeferred:{status:"terminal-verification-deferred"},failure:{
+    failureClass:"nonzero-exit",task:historicalFlowExport,sourceReceipt:"historical-receipt.json",
+    lineage:{commit:"historical-flow-export",tree:"historical-tree"},
+    retryScope:{kind:"task",taskKey:historicalFlowExport.key,executionArgs:historicalFlowExport.args},
+  }};
+const emptySuccessionGraph={version:1,identities:{},boundaries:{},edges:[]};
+const validateExpandedFlowExport=(incident=deferredFlowExportIncident,
+  currentIdentities=[expandedFlowExport],currentPacks=expandedFlowExportPacks,overrides={})=>
+  validateUnresolvedIncidentTaskSuccession({incidents:[incident],currentIdentities,currentPacks,
+    graph:emptySuccessionGraph,loadHistoricalPacks:async()=>historicalFlowExportPacks,
+    loadSourceReceipt:async()=>flowExportReceipt,...overrides});
+const deferredFlowExportBefore=structuredClone(deferredFlowExportIncident);
+assert.deepEqual(await validateExpandedFlowExport(),[],
+  "a receipt-bound deferred acceptance session remains pending after complete feature pairs are added");
+assert.deepEqual(deferredFlowExportIncident,deferredFlowExportBefore,
+  "monotonic acceptance-session preflight does not mutate the inherited incident");
+await assert.rejects(()=>resolveIncidentTaskSuccession({incident:deferredFlowExportIncident,
+  currentIdentities:[expandedFlowExport],currentPacks:expandedFlowExportPacks,
+  graph:emptySuccessionGraph,loadHistoricalPacks:async()=>historicalFlowExportPacks,
+  loadSourceReceipt:async()=>flowExportReceipt}),/one diagnosed target/iu,
+"direct task succession does not infer a mapping from acceptance-session expansion");
+
+const rejectedExpansionCases=[
+  ["missing source history",{...deferredFlowExportIncident,failure:{...deferredFlowExportIncident.failure,
+    sourceReceipt:undefined}},[expandedFlowExport],expandedFlowExportPacks],
+  ["removed historical feature",deferredFlowExportIncident,
+    [flowExportAcceptance([...historicalFlowExportFeatures.slice(1),...documentationTemplateFeatures])],
+    expandedFlowExportPacks],
+  ["replaced historical feature",deferredFlowExportIncident,
+    [flowExportAcceptance(["features/replacement.feature",...historicalFlowExportFeatures.slice(1),
+      ...documentationTemplateFeatures])],[{id:"flow_export",features:["features/replacement.feature",
+      ...historicalFlowExportFeatures.slice(1),...documentationTemplateFeatures]}]],
+  ["duplicate historical feature",deferredFlowExportIncident,
+    [flowExportAcceptance([...historicalFlowExportFeatures,historicalFlowExportFeatures[0],
+      ...documentationTemplateFeatures])],expandedFlowExportPacks],
+  ["reordered historical features",deferredFlowExportIncident,
+    [flowExportAcceptance([historicalFlowExportFeatures[1],historicalFlowExportFeatures[0],
+      ...historicalFlowExportFeatures.slice(2),...documentationTemplateFeatures])],
+    [{id:"flow_export",features:[historicalFlowExportFeatures[1],historicalFlowExportFeatures[0],
+      ...historicalFlowExportFeatures.slice(2),...documentationTemplateFeatures]}]],
+  ["changed executable",deferredFlowExportIncident,[{...expandedFlowExport,executable:"node"}],
+    expandedFlowExportPacks],
+  ["changed key",deferredFlowExportIncident,[{...expandedFlowExport,key:"acceptance-session:renamed"}],
+    expandedFlowExportPacks],
+  ["changed stage",deferredFlowExportIncident,[{...expandedFlowExport,stage:"unit"}],
+    expandedFlowExportPacks],
+  ["changed pack",deferredFlowExportIncident,[{...expandedFlowExport,packId:"other"}],
+    expandedFlowExportPacks],
+  ["changed runner",deferredFlowExportIncident,[{...expandedFlowExport,
+    args:["other-runner",...expandedFlowExport.args.slice(1)]}],expandedFlowExportPacks],
+  ["changed environment",deferredFlowExportIncident,[{...expandedFlowExport,environment:{CI:"1"}}],
+    expandedFlowExportPacks],
+  ["changed capabilities",deferredFlowExportIncident,
+    [{...expandedFlowExport,requiredCapabilities:["local-loopback"]}],expandedFlowExportPacks],
+  ["replaced artifact",deferredFlowExportIncident,[{...expandedFlowExport,
+    args:expandedFlowExport.args.map((value,index)=>index===2?"build/acceptance/generated/replaced.clj":value)}],
+    expandedFlowExportPacks],
+  ["removed artifact",deferredFlowExportIncident,[{...expandedFlowExport,
+    args:expandedFlowExport.args.slice(0,-1)}],expandedFlowExportPacks],
+  ["duplicate artifact",deferredFlowExportIncident,[{...expandedFlowExport,
+    args:expandedFlowExport.args.map((value,index)=>index===3?expandedFlowExport.args[2]:value)}],
+    expandedFlowExportPacks],
+  ["ambiguous current identity",deferredFlowExportIncident,
+    [expandedFlowExport,{...expandedFlowExport,target:`${expandedFlowExport.target},features/extra.feature`,
+      args:[...expandedFlowExport.args,"build/acceptance/generated/features-extra-feature_acceptance_test.clj",
+        "build/acceptance/ir/extra.json"]}],expandedFlowExportPacks],
+  ["noneligible repair",{...deferredFlowExportIncident,repair:{...deferredFlowExportIncident.repair,
+    status:"proposed"}},[expandedFlowExport],expandedFlowExportPacks],
+  ["nondeferred incident",{...deferredFlowExportIncident,terminalVerificationDeferred:undefined},
+    [expandedFlowExport],expandedFlowExportPacks],
+  ["target-scoped incident",{...deferredFlowExportIncident,failure:{...deferredFlowExportIncident.failure,
+    retryScope:{kind:"target",logicalTargetIds:["FLOW"]}}},[expandedFlowExport],expandedFlowExportPacks],
+  ["mismatched diagnosed boundary",{...deferredFlowExportIncident,repair:{
+    ...deferredFlowExportIncident.repair,diagnosedBoundary:{kind:"task",taskKey:"other",
+      executionArgs:historicalFlowExport.args}}},[expandedFlowExport],expandedFlowExportPacks],
+];
+for(const [label,incident,currentIdentities,currentPacks] of rejectedExpansionCases){
+  await assert.rejects(()=>validateExpandedFlowExport(incident,currentIdentities,currentPacks),
+    /succession|projection|history|acceptance|monotonic|diagnosed target|target boundary/iu,
+    `${label} remains fail closed`);
+}
+await assert.rejects(()=>validateExpandedFlowExport(deferredFlowExportIncident,[expandedFlowExport],
+  expandedFlowExportPacks,{loadSourceReceipt:async()=>({...flowExportReceipt,
+    candidate:{...flowExportReceipt.candidate,tree:"wrong-tree"}})}),/diagnosed target/iu,
+"an unverifiable source receipt remains fail closed");
+await assert.rejects(()=>validateExpandedFlowExport(deferredFlowExportIncident,[expandedFlowExport],
+  [{id:"flow_export",features:[...historicalFlowExportFeatures,...documentationTemplateFeatures,
+    "features/unplanned.feature"]}]),/diagnosed target/iu,
+"a current task that omits a registered feature is not a monotonic complete-session expansion");
+
 console.log("verification task succession tests passed");

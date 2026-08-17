@@ -458,6 +458,44 @@ await assert.rejects(()=>validateUnresolvedIncidentTaskSuccession({
   loadHistoricalPacks:async()=>projectionPacks,loadSourceReceipt:async()=>projectionReceipt,
 }),/missing registry history|unverified planner-projection source identity/iu,
 "an unverified deferred projection source remains blocking");
+const processAcceptanceArtifacts=(feature)=>{
+  const basename=feature.slice(feature.lastIndexOf("/")+1).replace(/\.feature$/u,"");
+  const slug=feature.toLowerCase().replace(/[^a-z0-9]+/gu,"-").replace(/(^-+|-+$)/gu,"");
+  return[`build/acceptance/generated/${slug}_acceptance_test.clj`,`build/acceptance/ir/${basename}.json`];
+};
+const processAcceptanceSession=(features)=>({key:"acceptance-session:flow_export",
+  stage:"acceptance-session",packId:"flow_export",executable:"bb",
+  args:["acceptance-pack-runner","flow_export",...features.flatMap(processAcceptanceArtifacts)],
+  target:features.join(","),environment:null,requiredCapabilities:[]});
+const historicalAcceptanceFeatures=["features/flow-export-runtime.feature","features/flow-export.feature",
+  "features/documentation-workspace-runtime.feature","features/documentation-workspace.feature"];
+const addedAcceptanceFeatures=["features/template-library-runtime.feature","features/template-library.feature",
+  "features/excel-templates-runtime.feature","features/excel-templates.feature",
+  "features/rich-templates-runtime.feature","features/rich-templates.feature"];
+const historicalAcceptanceSession=processAcceptanceSession(historicalAcceptanceFeatures);
+const expandedAcceptanceSession=processAcceptanceSession([
+  ...historicalAcceptanceFeatures,...addedAcceptanceFeatures]);
+const historicalAcceptancePacks=[{id:"flow_export",features:historicalAcceptanceFeatures}];
+const expandedAcceptancePacks=[{id:"flow_export",features:[
+  ...historicalAcceptanceFeatures,...addedAcceptanceFeatures]}];
+const deferredAcceptanceIncident={id:"d723a7c4-1116-4887-b60a-21aded1ab5d8",state:"unresolved",
+  repair:{status:"eligible",diagnosedBoundary:{kind:"task",taskKey:historicalAcceptanceSession.key,
+    executionArgs:historicalAcceptanceSession.args}},
+  terminalVerificationDeferred:{status:"terminal-verification-deferred"},failure:{
+    task:historicalAcceptanceSession,sourceReceipt:"historical-acceptance.json",
+    lineage:{commit:"historical-acceptance",tree:"historical-acceptance-tree"},
+    retryScope:{kind:"task",taskKey:historicalAcceptanceSession.key,
+      executionArgs:historicalAcceptanceSession.args}}};
+const deferredAcceptanceBefore=structuredClone(deferredAcceptanceIncident);
+assert.deepEqual(await validateUnresolvedIncidentTaskSuccession({incidents:[deferredAcceptanceIncident],
+  currentIdentities:[expandedAcceptanceSession],currentPacks:expandedAcceptancePacks,
+  graph:{version:1,identities:{},boundaries:{},edges:[]},
+  loadHistoricalPacks:async()=>historicalAcceptancePacks,
+  loadSourceReceipt:async()=>({candidate:{commit:"historical-acceptance",tree:"historical-acceptance-tree"},
+    tasks:{[historicalAcceptanceSession.key]:{identity:historicalAcceptanceSession,status:"failed"}}}),
+}),[],"a verified deferred acceptance session does not block an unrelated governed repair after monotonic expansion");
+assert.deepEqual(deferredAcceptanceIncident,deferredAcceptanceBefore,
+  "acceptance-session repair preflight preserves immutable incident state");
 const projectedEligibleIncident={...projectedIncident,repair:{focusedTaskPlan:[{
   identity:projectedCurrent,roles:["diagnosed-boundary"],taskSuccession:{
     version:sameTargetProjection.version,sourceTaskDigest:sameTargetProjection.sourceTaskDigest,
