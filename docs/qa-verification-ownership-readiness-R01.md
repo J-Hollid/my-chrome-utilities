@@ -1,7 +1,8 @@
 # QA verification ownership readiness R01
 
-Status: approved by the user on 2026-08-17 for immediate standing activation
-and the ordered Documentation-template recovery batch
+Status: approved by the user on 2026-08-17 and QA-integrated at `b8194b517e`;
+standing activation continues for later QA features and the ordered
+Documentation-template product stage is active
 
 Prepared: 2026-08-17
 
@@ -234,3 +235,38 @@ diagnostic and evidence runs, failures, retries, package proof, review intervals
 QA queue time, terminal obligations, and all-20 attempts. The target is zero
 all-20 feature runs and zero ownership fan-out discoveries after the first
 complete planned diagnostic run.
+
+### Settled bootstrap stage — 2026-08-17
+
+- The approved specification was committed at 06:26:15 UTC, handed to the coder
+  at 06:26:37, received at 06:27:45, and QA-integrated at 08:37:18. Elapsed
+  handoff-to-integration time was 2 hours 10 minutes 41 seconds, below the
+  six-hour ceiling; the three-hour checkpoint was not reached.
+- Plan-only commands intentionally create no receipt. The earliest preserved
+  preflight artifacts are at 06:47:43, and the first exact evidence launch at
+  07:00:00 proves the settled four-pack boundary was known before task launch.
+  No late ownership fan-out occurred after that point.
+- Every complete plan selected exactly `shell`, `flow_export`,
+  `project_management`, and `durable_project_repository`: 129 tasks with
+  properties and package proof. No additional owner was needed. Three accepted
+  coder/refactorer/architect checkpoints ran for 7:38, 7:35, and 7:37,
+  respectively; all 129 tasks passed each time and package proof passed.
+- Two earlier coder review-evidence candidates each passed 127 tasks and failed
+  the Shell acceptance session. The first exposed retry-handler scope in
+  scenario 019; the amended candidate then exposed the declared prepared task
+  in scenario 016. Both acceptance-support defects were repaired on changed
+  candidates before the final exact pass. Their failed-candidate incidents
+  remain durable history and do not weaken the integrated evidence.
+- One terminal-mode planning attempt selected all 20 packs but launched zero
+  tasks. There were zero all-20 feature runs, zero invalidated passing runs, and
+  no product-behavior or requirement expansion.
+- Coder receipt to handoff was 1:23:36; refactorer receipt to handoff was 16:54;
+  architect receipt to QA-ready handoff was 24:05; QA-ready receipt to
+  integration was 4:31. The integrated tree records terminal-full obligations
+  for build-delivered dependencies, project asset bodies, and the Documentation
+  workspace contribution for the eventual master checkpoint.
+- Recommendation: continue with the already-approved Documentation-template
+  product stage. For later workflow slices, exercise newly added acceptance
+  handlers with the direct development check before the first
+  evidence-producing run so an acceptance-support correction does not consume a
+  complete focused checkpoint.

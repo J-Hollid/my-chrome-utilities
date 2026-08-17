@@ -1,8 +1,8 @@
 # Data layer documentation template program R01
 
-Status: approved by the user on 2026-08-17; candidate `7f9c8a1121` is stopped
-before review evidence and the product resumes automatically after QA integration
-of `docs/qa-verification-ownership-readiness-R01.md`
+Status: approved by the user on 2026-08-17; ownership readiness is QA-integrated
+at `b8194b517e`, the product reconstruction is active from that QA descendant,
+and candidate `7f9c8a1121` remains a patch reference only
 
 Prepared: 2026-08-17
 
@@ -251,9 +251,19 @@ validation.
 The first candidate proved the direct three-pack behavior and package locally,
 but its governed preflight exposed coarse ownership in shared repository,
 archive, workspace-entry, and build paths. It is not review-ready. Preserve
-`7f9c8a1121` only as a patch reference while the approved ownership-readiness
-stage integrates, then reconstruct this feature from that exact QA head. The
-standing ordered-batch approval requires no second product approval.
+`7f9c8a1121` only as a patch reference. Ownership readiness is now QA-integrated
+at `b8194b517e`; reconstruct this feature from that exact QA descendant and use
+the settled asset-body, Documentation-contribution, and build-dependency seams.
+The standing ordered-batch approval requires no second product approval.
+
+**Ownership-readiness launch:** the intent preflight names the integrated shared
+surfaces `src/project-asset-body-contribution.ts`,
+`src/project-documentation/workspace-contribution.ts`, and
+`build-delivered-dependencies.json`. The likely new production prefixes are
+`src/documentation-templates/` and
+`src/project-documentation/workspace-template-`. Generated `dist/` companions
+follow their source owners. The feature consumes these seams; it does not edit
+the ownership-readiness policy to narrow its own plan.
 
 **Development focus:** begin with the versioned safe template context and the
 Excel marker parser/validator/renderer using small in-memory workbooks. Add the

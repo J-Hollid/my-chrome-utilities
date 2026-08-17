@@ -20,7 +20,7 @@ The settled-candidate verification workflow is integrated at
 | Program | Current state | Next authority |
 |---|---|---|
 | QA-branch release pilot | Active; routine RepoWise scouting stopped after Trial 4 by user decision on 2026-08-15, with optional current-index investigation retained for unfamiliar code or known hotspots | `docs/qa-branch-release-pilot-R01.md` controls feature integration into `qa`; `docs/feature-development-focus-and-advisory-scouting-R01.md` controls the lightweight scoping convention and completed Trial 4 decision. |
-| QA verification ownership readiness | Active by standing user approval on 2026-08-17 | Implement `docs/qa-verification-ownership-readiness-R01.md` first as task `verification-ownership-readiness`; after architect QA-ready integration, resume the already-approved `documentation-templates` task automatically from that exact QA head. |
+| QA verification ownership readiness | QA-integrated at `b8194b517e` on 2026-08-17 under the standing user approval | Preserve the integrated intent and exact preflights, stage-aware shared boundaries, terminal obligations, and first-use seams. Use them for each later QA feature. |
 | QA-pilot verification latency correction | Closed after Slice 2 at `e32f9f7c10` by user decision on 2026-08-13 | No coder handoff. Measure the next three ordinary QA product cycles; Slices 3 and 4 remain evidence-triggered backlog items. |
 | QA style verification and Flow modularity | Complete on QA; stage-aware style planning is integrated at `d75132daef`, Flow CSS extraction at `ef440b3018`, corrections through `66dcdfd5d6`, and port snap at `89fee7df48` | Preserve the settled scorecard; do not reopen the abandoned mixed lineage or run all 20 before an explicit master-integration request. |
 | Flow click and drag-ownership correction | QA-integrated at `2b2cf06b45` on 2026-08-16 | Preserve directional Flow scenarios 043–045 and their runtime partners; cumulative promotion to `master` remains a separate release decision. |
@@ -30,7 +30,7 @@ The settled-candidate verification workflow is integrated at
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program; the combined Project Library transport isolation and Flow visual-asset portability delivery is QA-integrated at `1b192105a8` | Preserve that settled transport, content-addressed visual-body, and version-3 archive behavior. No additional VTD-008 controller slice is active. |
-| Documentation template library | Approved product recovery in the ordered ownership-readiness batch; candidate `7f9c8a1121` is stopped before review evidence | Preserve that candidate as a patch reference only. Complete and QA-integrate task `verification-ownership-readiness`, then automatically reconstruct task `documentation-templates` from the resulting exact QA head under `docs/data-layer-documentation-template-program-R01.md`. |
+| Documentation template library | Active product reconstruction after ownership readiness reached QA at `b8194b517e`; candidate `7f9c8a1121` remains stopped before review evidence | Route task `documentation-templates` from the exact current QA head under `docs/data-layer-documentation-template-program-R01.md`; use `7f9c8a1121` only as a patch reference and do not merge its lineage wholesale. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Deferred and inactive | The existing two-worker order is within about six seconds of balanced after lock wait is removed; scheduling needed for a possible third worker is bounded inside VTD-017. |
 | VTD-012 registry and planner modularization | Deferred and inactive | Reconsider after broad final-gate and receipt-persistence costs are reduced. |
@@ -60,11 +60,11 @@ distinguishes feature integration into `qa` from an explicit cumulative promotio
 to `master`. Do not inherit VTD-018 candidate `c7ad4698f9`, select another VTD
 item, or start master integration without the corresponding user instruction.
 
-The ordered Documentation-template batch is active outside VTD-008. Its first
-and only current coder authority is `verification-ownership-readiness`. That
-stage changes no user-visible Documentation behavior. After it reaches `qa`, the
-standing approval authorizes a fresh `documentation-templates` handoff without a
-new user decision. No all-20 feature checkpoint is authorized in either stage.
+The ordered Documentation-template batch is active outside VTD-008. Its
+behavior-preserving `verification-ownership-readiness` stage is QA-integrated at
+`b8194b517e`. The current coder authority is a fresh reconstruction of
+`documentation-templates` from that exact QA descendant under the standing
+approval. No all-20 feature checkpoint is authorized in the product stage.
 
 ## Feature-development throughput authority
 
