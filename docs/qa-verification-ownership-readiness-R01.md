@@ -1,8 +1,9 @@
 # QA verification ownership readiness R01
 
 Status: approved by the user on 2026-08-17 and QA-integrated at `b8194b517e`;
-standing activation continues for later QA features and the ordered
-Documentation-template product stage is active
+standing activation continues. The user approved an automatic forecast-variance
+repair on 2026-08-17 after the Documentation-template exact first use exposed an
+unsliced 13-pack boundary
 
 Prepared: 2026-08-17
 
@@ -20,9 +21,11 @@ consumer, change product requirements, or promote `qa` to `master`.
 
 Within a selected pack, task granularity follows
 `docs/qa-verification-granularity-ratchet-R01.md`. A bounded pack forecast remains
-advisory: a wider canonical pack or task plan proceeds automatically unless a
-proved `coarse-within-pack` boundary routes the standing-authorized refinement
-stage. Pack size or forecast variance alone never blocks product work.
+advisory: a wider canonical pack or task plan proceeds automatically when every
+additional pack is a declared owner or consumer. An unsliced credible boundary
+that adds unforecast packs routes the standing-authorized granularity assessment
+without blocking for the user. Pack size or forecast variance alone never
+weakens or narrows verification.
 
 ## Observed recurrence
 
@@ -49,7 +52,10 @@ Each new QA feature has four verification decisions:
 
 1. **Specification forecast.** The specification names the development focus,
    QA-impact packs, and likely existing shared integration surfaces. It also
-   names likely new source prefixes when they affect ownership planning.
+   names likely new source prefixes when they affect ownership planning. When a
+   stopped coherent candidate is a patch reference, the forecast includes its
+   existing changed integration paths; it does not merge the candidate or treat
+   its product behavior as preparation work.
 2. **Intent preflight.** Before product coding, a read-only ownership-readiness
    plan compares those likely paths with the current QA registry. It executes no
    build or test, writes no receipt or incident, and returns one classification.
@@ -74,6 +80,10 @@ packs, task count, critical-path estimate, paths, owner and boundary decisions,
 and a concise reason:
 
 - `bounded-ready`: current ownership selects fewer than all runnable packs;
+- `granularity-assessment-required`: current ownership selects fewer than all
+  runnable packs, but an unsliced credible changed boundary selects packs beyond
+  the intent's declared owners and consumers and has no reviewed durable
+  disposition yet;
 - `coarse-within-pack`: current ownership selects fewer than all runnable packs,
   but a selected pack contains materially unrelated task families and has a
   credible exact subordinate slice;
@@ -87,12 +97,22 @@ and a concise reason:
   behavior, persistence meaning, security policy, migration semantics, or
   another requirement.
 
-`bounded-ready` proceeds to ordinary implementation. `coarse-within-pack` starts
-the granularity-ratchet preparation, and `coarse-boundary` starts the ownership
-preparation below. A bounded plan with no proved subordinate slice proceeds with
-the conservative parent-pack closure and records deferred refinement. The other
-three results stop for current user direction; they cannot be relabelled as
-preparation merely to avoid all 20.
+`bounded-ready` proceeds to ordinary implementation.
+`granularity-assessment-required` and `coarse-within-pack` start the
+granularity-ratchet preparation, while `coarse-boundary` starts the ownership
+preparation below. The assessment never narrows the paused product. It records
+either a reviewed slice/seam or a durable conservative parent-fallback
+disposition, then the product resumes automatically. The other three results
+stop for current user direction; they cannot be relabelled as preparation merely
+to avoid all 20.
+
+The automatic assessment trigger is causal rather than numerical. It compares
+the exact planned packs with the intent's declared owners and consumers, then
+requires at least one additional pack to be reached through a credible changed
+boundary that has neither an applicable reviewed slice nor a current durable
+fallback disposition. A 13-pack count is not itself the trigger, and a declared
+consumer is not variance. Caller-authored `--within-pack` detail may prove a
+specific slice, but its absence cannot suppress the assessment result.
 
 ## Standing ownership-preparation authority
 

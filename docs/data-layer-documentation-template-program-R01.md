@@ -1,9 +1,10 @@
 # Data layer documentation template program R01
 
-Status: approved by the user on 2026-08-17; ownership readiness is QA-integrated
-at `b8194b517e`, verification granularity is QA-integrated at `066ea284de`, and
-product reconstruction resumes from the exact current QA descendant; candidate
-`7f9c8a1121` remains a patch reference only
+Status: approved by the user on 2026-08-17; product evidence is paused while the
+user-approved `verification-slice-documentation-templates` mapping repair starts
+from clean QA `1aec21fd2f`. Clean candidate `e8e5fd48` and earlier candidate
+`7f9c8a1121` are patch references only; the product resumes automatically after
+the repair reaches QA
 
 Prepared: 2026-08-17
 
@@ -258,23 +259,32 @@ the settled asset-body, Documentation-contribution, and build-dependency seams.
 The standing ordered-batch approval requires no second product approval.
 
 Under `docs/qa-verification-granularity-ratchet-R01.md`, task
-`verification-granularity-ratchet` established the reusable subordinate-slice
-contract and its Documentation-template first-use slices without product
-behavior. The exact first-use intent is `bounded-ready` at 12 tasks across the
-three forecast packs and their declared `shell` consumer. Reconstruct and resume
-this product from the exact current QA descendant automatically. A wider exact
-result by itself is not a blocker, and an inapplicable or quarantined narrower
-slice falls back to the conservative parent-pack plan rather than requiring
-another product approval.
+`verification-granularity-ratchet` established the initial subordinate-slice
+contract without product behavior. Its 12-task first-use intent did not include
+five existing integration files already present in candidate `7f9c8a1121`.
+Exact candidate `e8e5fd48` therefore selects 13 packs and 601 tasks through the
+durable repository, Flow archive/portability, and global application-controller
+boundaries. This is safe conservative fallback but not an accepted focused
+first-use result.
 
-**Ownership-readiness launch:** the intent preflight names the integrated shared
-surfaces `src/project-asset-body-contribution.ts`,
+Task `verification-slice-documentation-templates` now repairs the known-path
+replay, automatic variance routing, durable disposition, and reusable seams from
+clean QA. It does not merge either product candidate or implement product
+behavior. After that preparation reaches QA, reconstruct and resume this product
+from the exact new QA head automatically. A reviewed parent-fallback disposition
+may authorize a wider exact result when no truthful split exists; it cannot be
+mistaken for the disproved 12-task forecast or require another product approval.
+
+**Ownership-readiness launch:** the resumed intent preflight names the integrated
+shared surfaces `src/project-asset-body-contribution.ts`,
 `src/project-documentation/workspace-contribution.ts`, and
-`build-delivered-dependencies.json`. The likely new production prefixes are
+`build-delivered-dependencies.json`, plus every existing shared integration path
+retained by the repaired design. The likely new production prefixes remain
 `src/documentation-templates/` and
 `src/project-documentation/workspace-template-`. Generated `dist/` companions
-follow their source owners. The feature consumes these seams; it does not edit
-the ownership-readiness policy to narrow its own plan.
+follow their source owners. The product consumes the independently integrated
+seams or reviewed parent fallback; it does not edit verification policy to
+narrow its own evidence.
 
 **Development focus:** begin with the versioned safe template context and the
 Excel marker parser/validator/renderer using small in-memory workbooks. Add the
@@ -284,11 +294,13 @@ for marker geometry and literal-cell safety, one for rich block scope and
 sanitization, and the installed Documentation browser target.
 
 **QA impact:** forecast `flow_export`, `project_management`, and
-`durable_project_repository`, followed by package proof. Exact changed-path
-planning remains authoritative and may add a bounded owner selected by the
-settled asset-port use. If shared infrastructure unexpectedly selects all 20
-packs, task launch stops for the feature-mode scope choice. No feature role runs
-the all-20 gate.
+`durable_project_repository`, their declared `shell` consumer, and package
+proof. The fresh exact changed-path plan after mapping repair is authoritative;
+there is no fixed 12-task promise. Unforecast packs reached through an unsliced
+credible boundary route automatic assessment rather than a broad evidence run
+or user wait. A reviewed conservative fallback may proceed; an all-20 result
+still stops for feature-mode scope direction. No feature role runs the all-20
+gate.
 
 The implementation-and-review elapsed effort ceiling is twelve hours. At six
 hours, report the safe-context and Excel rendering status for all four kinds,

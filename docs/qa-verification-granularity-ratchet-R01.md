@@ -1,8 +1,10 @@
 # QA verification granularity ratchet R01
 
-Status: QA-integrated at `066ea284de` on 2026-08-17 under the standing user
-approval; the Documentation-template first use is `bounded-ready` and the
-already-approved product resumes automatically from this QA descendant
+Status: the initial ratchet is QA-integrated at `066ea284de`; on 2026-08-17 the
+user approved an immediate first-use mapping repair after the exact
+Documentation-template candidate disproved the 12-task intent forecast. The
+product is paused at clean patch reference `e8e5fd48` until that repair reaches
+QA, then resumes automatically
 
 Prepared: 2026-08-17
 
@@ -230,17 +232,103 @@ parent closure. Terminal selection misses are stored in the durable Git-notes
 quarantine and keep later work on that parent fallback until a separately
 reviewed mapping repair reaches QA.
 
-The first real `documentation-templates` intent from `066ea284de` is
+The first `documentation-templates` intent from `066ea284de` was
 `bounded-ready`. It plans 12 tasks with a 12-second critical-path estimate
 across the three forecast product packs and the declared `shell` consumer,
 instead of the 129-task bootstrap checkpoints. Its two proposed prefixes resolve
 to `flow_export`'s `documentation_template_workspace` slice and the `shell`
 `documentation_workspace_consumer`; its three established shared paths remain
 terminal full obligations. There are no active quarantines. This is a focused
-planning reduction, not yet an elapsed product-verification claim.
+planning reduction, not an elapsed product-verification claim.
 
-Recommendation: keep the ratchet active as a campsite rule and proceed with the
-already-approved Documentation-template feature. Record actual product evidence
-against this 12-task forecast; use conservative parent fallback on a mapping
-miss, and defer any further subdivision until ordinary feature evidence proves
-one is salient.
+### Exact first-use variance and point of failure
+
+The coherent product candidate based on `1aec21fd2f` disproved that intent-only
+result. After its planned-feature registration correction, exact preflight at
+`e8e5fd48` selects 13 packs and 601 tasks. The causal paths are
+`src/data-layer-durable-project-repository.ts`,
+`src/flow-visual-archive-export.ts`, `src/flow-visual-archive-format.ts`,
+`src/flow-visual-asset-portability.ts`, and `src/specification-builder.ts`.
+Every one is a credible shared boundary, but none is covered by the first-use
+slice declarations. The earlier stopped candidate `7f9c8a1121` already changed
+the same five paths, so this was a known-input mapping failure rather than an
+unpredictable implementation expansion.
+
+The first attempted broad checkpoint selected the same 13 packs and 613 tasks.
+It failed the Shell process contract because six future Documentation-template
+Gherkin files had incorrectly moved from `plannedFeatures` to executable
+features. Incident `ea2899c8-7cb5-40f0-ac93-6a8fa363c704` retains that failed
+attempt. Candidate `e8e5fd48` repairs the registration and passes its focused
+causal regression, reducing the exact plan to 601 tasks, but it has no accepted
+product evidence. No all-20 run occurred. The candidate remains a patch
+reference and must not be forwarded as completed product work.
+
+The workflow also failed to route the variance automatically. In the integrated
+implementation, `coarse-within-pack` requires caller-supplied `--within-pack`
+JSON. Without that optional proof, any plan smaller than all 20 is reported as
+`bounded-ready`, even when an unsliced credible boundary adds nine unforecast
+packs and hundreds of unrelated tasks. The coder therefore followed the
+implemented rule correctly; the specification, first-use mapping, and automatic
+assessment trigger were incomplete.
+
+### Approved first-use mapping repair
+
+Task `verification-slice-documentation-templates` starts from clean QA at
+`1aec21fd2f`. It is an independently reviewed preparation; `e8e5fd48` and
+`7f9c8a1121` are design and patch references only. It implements no Template
+Library, Excel renderer, rich editor, assignment, export, or other new product
+behavior.
+
+The repair must establish all of the following:
+
+1. **Known-candidate replay.** When a stopped coherent candidate is available,
+   specification intent includes the union of its existing changed integration
+   paths and the newly proposed prefixes. A deterministic fixture using the five
+   paths above must reproduce the 13-pack variance before any product evidence
+   can launch. An intent-only three-seam simulation cannot settle first-use
+   readiness again.
+2. **Automatic variance assessment.** Intent and exact preflight distinguish
+   declared owners and consumers from unforecast packs reached through an
+   unsliced credible boundary. Such a result returns
+   `granularity-assessment-required` and automatically routes a preparation
+   without caller-authored `--within-pack` JSON, even when fewer than all 20
+   packs are selected. It is not a user blocker and it does not narrow evidence
+   by itself. `coarse-within-pack` remains the result only after the assessment
+   proves a safe subordinate slice.
+3. **Durable disposition and loop prevention.** The assessment records either
+   an independently reviewed integrated slice/seam or a reviewed conservative
+   parent-fallback disposition for the exact causal paths. A resumed product
+   consumes that disposition and cannot loop through the same preparation or
+   silently relabel the same variance `bounded-ready`.
+4. **Safe seam repair.** Assess the repository, three archive/portability, and
+   application-controller paths from the real candidate. A whole broad source
+   file may not receive a Documentation-only slice unless its selected tasks and
+   consumers are sufficient for every valid change to that file. Otherwise
+   extract a behavior-preserving, reusable asset-body/archive or Documentation
+   composition seam on QA, or retain conservative parent fallback. In
+   particular, prefer the installed Documentation contribution seam over a new
+   product edit to the global `specification-builder.ts` controller.
+5. **Conservation.** Existing exact-pack closures, assertions, properties,
+   package proof, terminal-full obligations, quarantine behavior, and the final
+   all-20 master gate remain unchanged. The preparation uses its canonical
+   affected plan and never runs the all-20 gate.
+6. **Executable routing.** Update coder, refactorer, architect, and specifier
+   instructions plus deterministic process tests so the automatically detected
+   assessment pauses the product, preserves its commit as a patch reference,
+   reaches QA independently, and reissues the same stable product task from the
+   new exact QA head without another user decision.
+
+The repair effort ceiling is eight hours from coder receipt to architect
+`qa-ready`. At four hours report the replayed pack/task plan, causal paths,
+automatic classification, seam-versus-fallback decisions, conservation proof,
+actual preparation plan, failures, remaining work, confidence, and forecast.
+Continue while product behavior is unchanged and the repair remains bounded;
+stop for the user only if a safe seam would change persistence or product
+meaning, coverage would weaken, ownership is unavailable, or no credible
+bounded completion path remains.
+
+After QA integration, reissue `documentation-templates` automatically. Rebuild
+from that QA head and use `e8e5fd48` only as a patch reference. The resumed
+candidate must use the integrated seams or explicit parent-fallback disposition,
+must run a fresh exact preflight before evidence, and receives no fixed 12-task
+promise. Its measured exact result replaces the disproved intent forecast.
