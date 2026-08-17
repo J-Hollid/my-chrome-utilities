@@ -206,15 +206,20 @@ export function bindRunIntentBootstrapPlan(executionPlan, bindingPlan, packs) {
     changedStyleTargets:bindingPlan.changedStyleTargets,
     adapterAuthorizationPackIds:bindingPlan.adapterAuthorizationPackIds,
     conservativeHistoricalFallbackReason:bindingPlan.conservativeHistoricalFallbackReason,
+    selectedVerificationSlices:bindingPlan.selectedVerificationSlices,
+    selectedVerificationSliceTaskKeys:bindingPlan.selectedVerificationSliceTaskKeys,
+    verificationSliceDiagnostics:bindingPlan.verificationSliceDiagnostics,
+    quarantinedSliceIds:bindingPlan.quarantinedSliceIds,
   };
 }
 
 export function canonicalRunIntentBootstrapPlan(packs, {
   packIds, changeSet, basePacks, historicalRegistryFallback = false,
+  quarantinedSliceIds = [],
 }) {
   const bindingPlan = planVerification(packs, {
     packIds:[], changedPaths:changeSet.paths, changeSet, includeProperties:true,
-    basePacks, historicalRegistryFallback,
+    basePacks, historicalRegistryFallback, quarantinedSliceIds,
   });
   const executionPlan = planVerification(packs, { packIds, includeProperties:true });
   return bindRunIntentBootstrapPlan(executionPlan, bindingPlan, packs);

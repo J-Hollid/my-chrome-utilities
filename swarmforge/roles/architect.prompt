@@ -41,7 +41,7 @@ You are the architect.
 - If `ready_for_next.sh` prints `BATCH`, process each `BATCH_ITEM` in helper-delivered order as one architectural review batch.
 - If `ready_for_next.sh` prints `TASK`, process that single task.
 - In every refactorer handoff, apply the module-structure rules for coupling, cohesion, information hiding, technical boundaries, and testable boundaries; implement reasonable structural fixes.
-- For verification-slice preparation, require slice-plus-remainder conservation for every affected parent pack, exact focused prerequisite and consumer closure, proposed-prefix validation without current-path planning, conservative base/current fallback, and terminal selection-miss quarantine. Do not accept any product behavior or same-range narrowing.
+- For verification-slice preparation, require slice-plus-remainder conservation for every affected parent pack, exact focused prerequisite and consumer closure, proposed-prefix validation without current-path planning, conservative base/current fallback, and terminal selection-miss quarantine. Do not accept any product behavior or same-range narrowing. When a canonical terminal receipt proves a causal failure outside the applicable focused slice, persist the quarantine with `node scripts/verification-slice-quarantine.mjs record-selection-miss <terminal-receipt> <slice-id> <failed-task-key>` before routing the focused mapping repair.
 
 ## Terminal Functional Delivery Gate
 - Before final verification or any completion handoff, classify the task using the shared functional-delivery definition and audit its complete lineage from the approved specification.

@@ -6,7 +6,9 @@ import {
   exactOwnershipReadiness,
   intentOwnershipReadiness,
   validateOwnershipIntent,
+  validateWithinPackMateriality,
 } from "./verification-ownership-readiness.mjs";
+import {activeVerificationSliceIdsFromTransitions} from "./verification-slice-quarantine.mjs";
 import {
   sharedBoundaryPlanFor,
   validateSharedBoundaryDeclarations,
@@ -141,6 +143,23 @@ const proposed=await intentOwnershipReadiness({intent:{version:1,baseCommit:"a".
 assert.deepEqual(proposedPlanPaths,[],"absent proposed prefixes are declarations, not current changed paths");
 assert.equal(proposed.proposedPrefixes[0].sliceId,"future");
 assert.throws(()=>validateOwnershipIntent({version:1,baseCommit:"a".repeat(40),task:"templates",approvedPackIds:["owner"],likelyPaths:[],proposedPrefixes:[{prefix:"../escape",parentPackId:"owner",sliceId:"future",consumers:[]}]},slicedPacks),/proposed prefix/i);
+const proposedPacks=[...slicedPacks,{id:"other",source:["src/other"],unit:["test/other.mjs"]}];
+const absentProposalIntent=validateOwnershipIntent({version:1,baseCommit:"a".repeat(40),task:"templates",approvedPackIds:["owner","consumer"],likelyPaths:[],proposedPrefixes:[{prefix:"src/owner/proposed",parentPackId:"owner",sliceId:"proposed",consumers:[{packId:"consumer",sliceId:"proposed-consumer"}]}]},proposedPacks);
+assert.equal(absentProposalIntent.proposedPrefixes[0].sliceId,"proposed",
+  "a structured proposal is valid before its prefix and consumer slice exist in the registry");
+const materiality={parentPackId:"owner",sliceId:"proposed",directTaskKeys:["unit:test/owner-a.mjs"],prerequisiteTaskKeys:[],unrelatedTaskKeys:["unit:test/owner-b.mjs"],observableBoundary:"proposed contribution",meaningPreserved:true};
+assert.equal(validateWithinPackMateriality(materiality,absentProposalIntent,proposedPacks).reducesTaskScope,true);
+const operationalWithinPack=await intentOwnershipReadiness({
+  intent:absentProposalIntent,packs:proposedPacks,withinPack:materiality,
+  plan:()=>({packIds:["owner","consumer"],tasks:[{key:"unit:test/owner-a.mjs"}]}),
+});
+assert.equal(operationalWithinPack.classification,"coarse-within-pack",
+  "the operational readiness entry point routes validated materiality");
+assert.deepEqual(activeVerificationSliceIdsFromTransitions([
+  {kind:"selection-miss",sliceId:"future"},
+  {kind:"selection-miss",sliceId:"proposed"},
+  {kind:"mapping-repair",sliceId:"future"},
+]),["proposed"],"durable transitions retain only unrepaired quarantines");
 
 const feature=Array.from({length:7},(_,index)=>`Modular verification packs ${165+index}`).join("\n");
 assert.equal(ownershipReadinessBootstrapEligibility({baseCommit:"a".repeat(40),feature,implementation:null,evidenceTask:"verification-ownership-readiness",changedPaths:["acceptance/src/acceptance/verification_support/modular_architecture_vtd014_handlers.clj","acceptance/src/acceptance/verification_support/modular_architecture_vtd015_handlers.clj","scripts/verification-ownership-readiness.mjs","test/verification-ownership-readiness-test.mjs"]}).kind,"ownership-readiness");
@@ -165,6 +184,11 @@ assert.match(roleContracts[0],/verification-slice preparation/u);
 assert.match(roleContracts[1],/coarse-within-pack/u);
 assert.match(roleContracts[2],/slice-plus-remainder|task conservation/u);
 assert.match(roleContracts[3],/selection-miss quarantine/u);
+assert.match(roleContracts[3],/record-selection-miss/u);
+assert.match(roleContracts[0],/record-slice-repair/u);
+const readinessCli=await readFile("scripts/verification-ownership-readiness.mjs","utf8");
+assert.match(readinessCli,/--prefix-proposal/u);
+assert.match(readinessCli,/--within-pack/u);
 const readinessHandlers=await readFile("acceptance/src/acceptance/verification_support/modular_architecture_vtd015_handlers.clj","utf8");
 assert.match(readinessHandlers,/:prepared-task "unit:test\/verification-process-contract-test\.mjs"/u,
   "readiness acceptance reuses the canonical planned process task");

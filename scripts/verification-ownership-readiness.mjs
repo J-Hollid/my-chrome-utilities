@@ -4,8 +4,13 @@ import {
   canonicalVerificationChangeSet,
   verificationPacksAtCommit,
 } from "./verification-changes.mjs";
-import {loadVerificationPacks, planVerification} from "./verification-packs.mjs";
+import {
+  loadVerificationPacks,
+  planVerification,
+  verificationPackTaskKeys,
+} from "./verification-packs.mjs";
 import {canonicalRunIntentBootstrapPlan} from "./verification-run-intent.mjs";
+import {activeVerificationSliceQuarantineIds} from "./verification-slice-quarantine.mjs";
 
 const nextStages = {
   "bounded-ready":"product implementation starts from the approved QA base",
@@ -21,6 +26,11 @@ const nextStages = {
 };
 const readinessClasses = new Set(Object.keys(nextStages));
 const canonical = (values) => [...new Set(values)].sort();
+const stableSliceId = (value) => typeof value === "string" &&
+  /^[a-z0-9][a-z0-9_-]*$/u.test(value);
+const uniqueStrings = (values) => Array.isArray(values) &&
+  values.length === new Set(values).size && values.every((value) =>
+    typeof value === "string" && value.length > 0);
 const isRepositoryPath = (value) =>
   typeof value === "string" &&
   value.length > 0 &&
@@ -35,8 +45,26 @@ const isRepositoryPath = (value) =>
 const sliceMatchesPrefix = (slice, prefix) =>
   (slice.sourcePrefixes ?? []).includes(prefix) || (slice.sourcePaths ?? []).includes(prefix);
 
+function normalizeConsumers(values, packs, prefix) {
+  if (!Array.isArray(values)) {
+    throw new Error(`Ownership intent proposed prefix conflicts with declared consumers: ${prefix}`);
+  }
+  const consumers = values.map((consumer) => {
+    const consumerPack = packs.find(({id}) => id === consumer?.packId);
+    if (!consumerPack || consumer.sliceId !== undefined && !stableSliceId(consumer.sliceId)) {
+      throw new Error(`Ownership intent proposed prefix names an unknown consumer: ${prefix}`);
+    }
+    return {packId:consumerPack.id, ...(consumer.sliceId === undefined ? {} : {sliceId:consumer.sliceId})};
+  }).sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
+  if (new Set(consumers.map((consumer) => JSON.stringify(consumer))).size !== consumers.length) {
+    throw new Error(`Ownership intent proposed prefix repeats a consumer: ${prefix}`);
+  }
+  return consumers;
+}
+
 function normalizeProposedPrefix(value, packs) {
-  const proposal = typeof value === "string" ? {prefix:value} : value;
+  const structured = typeof value !== "string";
+  const proposal = structured ? value : {prefix:value};
   if (!proposal || Array.isArray(proposal) || !isRepositoryPath(proposal.prefix)) {
     throw new Error("Ownership intent names an invalid proposed prefix");
   }
@@ -46,18 +74,18 @@ function normalizeProposedPrefix(value, packs) {
   const parentPackId = proposal.parentPackId ?? matches[0]?.pack.id;
   const sliceId = proposal.sliceId ?? matches[0]?.slice.id;
   const declared = matches.find(({pack, slice}) => pack.id === parentPackId && slice.id === sliceId);
-  if (!declared || matches.length !== 1 || !new Set(packs.map(({id}) => id)).has(parentPackId)) {
+  if (!new Set(packs.map(({id}) => id)).has(parentPackId) || !stableSliceId(sliceId) ||
+      (!structured && (!declared || matches.length !== 1)) ||
+      structured && matches.length && (!declared || matches.length !== 1)) {
     throw new Error(`Ownership intent proposed prefix requires one known parent owner and slice: ${proposal.prefix}`);
   }
-  const consumers = proposal.consumers ?? declared.slice.consumers ?? [];
-  if (JSON.stringify(consumers) !== JSON.stringify(declared.slice.consumers ?? [])) {
+  const consumers = normalizeConsumers(proposal.consumers ?? declared?.slice.consumers ?? [],
+    packs, proposal.prefix);
+  if (declared && JSON.stringify(consumers) !== JSON.stringify(normalizeConsumers(
+    declared.slice.consumers ?? [], packs, proposal.prefix,
+  ))) {
     throw new Error(`Ownership intent proposed prefix conflicts with declared consumers: ${proposal.prefix}`);
   }
-  if (consumers.some((consumer) => {
-    const consumerPack = packs.find(({id}) => id === consumer?.packId);
-    return !consumerPack || consumer.sliceId !== undefined &&
-      !(consumerPack.verificationSlices ?? []).some(({id}) => id === consumer.sliceId);
-  })) throw new Error(`Ownership intent proposed prefix names an unknown consumer: ${proposal.prefix}`);
   const currentOwner = (() => {
     const owners = packs.filter((pack) => (pack.source ?? []).some((prefix) =>
       proposal.prefix === prefix || proposal.prefix.startsWith(`${prefix}/`)));
@@ -67,6 +95,55 @@ function normalizeProposedPrefix(value, packs) {
     throw new Error(`Ownership intent proposed prefix conflicts with current owner: ${proposal.prefix}`);
   }
   return {prefix:proposal.prefix,parentPackId,sliceId,consumers:structuredClone(consumers)};
+}
+
+export function validateWithinPackMateriality(value, intent, packs) {
+  if (value === undefined) return undefined;
+  if (!value || Array.isArray(value) || !stableSliceId(value.sliceId) ||
+      typeof value.parentPackId !== "string" || !uniqueStrings(value.directTaskKeys) ||
+      value.directTaskKeys.length === 0 || !uniqueStrings(value.prerequisiteTaskKeys ?? []) ||
+      !uniqueStrings(value.unrelatedTaskKeys) || value.unrelatedTaskKeys.length === 0 ||
+      typeof value.observableBoundary !== "string" || !value.observableBoundary.trim() ||
+      value.meaningPreserved !== true) {
+    throw new Error("Within-pack materiality requires a stable observable slice and exact task families");
+  }
+  const pack = packs.find(({id}) => id === value.parentPackId);
+  if (!pack || !intent.approvedPackIds.includes(pack.id)) {
+    throw new Error("Within-pack materiality requires an approved parent pack");
+  }
+  const declared = (pack.verificationSlices ?? []).find(({id}) => id === value.sliceId);
+  const proposed = intent.proposedPrefixes.find(({parentPackId, sliceId}) =>
+    parentPackId === pack.id && sliceId === value.sliceId);
+  if (!declared && !proposed) {
+    throw new Error("Within-pack materiality requires a declared or structured proposed slice");
+  }
+  if (declared && (JSON.stringify(canonical(declared.tasks ?? [])) !==
+      JSON.stringify(canonical(value.directTaskKeys)) ||
+      JSON.stringify(canonical(declared.prerequisites ?? [])) !==
+      JSON.stringify(canonical(value.prerequisiteTaskKeys ?? [])) ||
+      declared.observableBoundary !== value.observableBoundary)) {
+    throw new Error("Within-pack materiality conflicts with the current slice declaration");
+  }
+  const complete = [...verificationPackTaskKeys(pack)].sort();
+  const selected = canonical([...value.directTaskKeys, ...(value.prerequisiteTaskKeys ?? [])]);
+  const unrelated = complete.filter((key) => !selected.includes(key));
+  if (value.directTaskKeys.some((key) => (value.prerequisiteTaskKeys ?? []).includes(key)) ||
+      selected.some((key) => !complete.includes(key)) ||
+      JSON.stringify(canonical(value.unrelatedTaskKeys)) !== JSON.stringify(unrelated)) {
+    throw new Error("Within-pack materiality must conserve the parent pack task closure");
+  }
+  return {
+    parentPackId:pack.id,
+    sliceId:value.sliceId,
+    directTaskKeys:canonical(value.directTaskKeys),
+    prerequisiteTaskKeys:canonical(value.prerequisiteTaskKeys ?? []),
+    unrelatedTaskKeys:unrelated,
+    observableBoundary:value.observableBoundary,
+    unrelatedCompleteTaskFamily:true,
+    stableObservableBoundary:true,
+    reducesTaskScope:selected.length < complete.length,
+    meaningPreserved:true,
+  };
 }
 
 export function validateOwnershipIntent(intent, packs) {
@@ -161,13 +238,19 @@ function expansionCausesFor(intent, plan) {
     }));
 }
 
-function readinessResult(intent, plan, packs, extra = {}) {
+function readinessResult(intent, plan, packs, {withinPack:rawWithinPack, ...extra} = {}) {
   const tasks = plan.tasks ?? [];
   const expansionCauses = expansionCausesFor(intent, plan);
+  const withinPack = validateWithinPackMateriality(rawWithinPack, intent, packs);
+  if (withinPack && !(plan.packIds ?? []).includes(withinPack.parentPackId)) {
+    throw new Error("Within-pack materiality parent pack is outside the canonical plan");
+  }
   const classification = classifyOwnershipReadiness({
     plannedPackIds:canonical(plan.packIds ?? []),
-    allPackIds:canonical(packs.map(({ id }) => id)),
+    allPackIds:canonical(packs.filter((pack) => verificationPackTaskKeys(pack).size)
+      .map(({ id }) => id)),
     expansionCauses,
+    withinPack,
     ...extra,
   });
   return {
@@ -182,6 +265,8 @@ function readinessResult(intent, plan, packs, extra = {}) {
     criticalPathEstimateMs:plan.criticalPathEstimateMs ?? tasks.length * 1000,
     paths:canonical(plan.changedPaths ?? []),
     proposedPrefixes:structuredClone(intent.proposedPrefixes),
+    withinPack:withinPack ?? null,
+    quarantinedSliceIds:canonical(plan.quarantinedSliceIds ?? []),
     changedOwners:plan.changedOwners ?? {},
     changedBoundaries:plan.changedBoundaries ?? {},
     expansionCauses,
@@ -192,7 +277,8 @@ function readinessResult(intent, plan, packs, extra = {}) {
 export async function intentOwnershipReadiness({
   intent,
   packs,
-  plan = (paths) => planVerification(packs, {changedPaths:paths}),
+  quarantinedSliceIds = [],
+  plan = (paths) => planVerification(packs, {changedPaths:paths, quarantinedSliceIds}),
   ...extra
 }) {
   const validIntent = validateOwnershipIntent(intent, packs);
@@ -207,6 +293,7 @@ export async function exactOwnershipReadiness({
   changeSet,
   basePacks,
   plan,
+  quarantinedSliceIds = [],
   ...extra
 }) {
   const validIntent = validateOwnershipIntent(intent, packs);
@@ -224,6 +311,7 @@ export async function exactOwnershipReadiness({
       packIds:validIntent.approvedPackIds,
       changeSet,
       basePacks,
+      quarantinedSliceIds,
     });
   } else {
     planned = planVerification(packs, {
@@ -231,9 +319,15 @@ export async function exactOwnershipReadiness({
       changeSet,
       basePacks,
       includeProperties:true,
+      quarantinedSliceIds,
     });
   }
   return readinessResult(validIntent, planned, packs, extra);
+}
+
+function parseJsonOption(option, value) {
+  try { return JSON.parse(value); }
+  catch { throw new Error(`${option} requires valid JSON`); }
 }
 
 function parseOptions(args) {
@@ -247,6 +341,8 @@ function parseOptions(args) {
     else if (option === "--pack") output.packs.push(value);
     else if (option === "--path") output.paths.push(value);
     else if (option === "--prefix") output.prefixes.push(value);
+    else if (option === "--prefix-proposal") output.prefixes.push(parseJsonOption(option, value));
+    else if (option === "--within-pack") output.withinPack = parseJsonOption(option, value);
     else if (option === "--changed-since") output.changedSince = value;
     else throw new Error(`Unknown ownership-readiness option: ${option}`);
   }
@@ -266,7 +362,12 @@ async function main() {
   };
   let answer;
   if (options.mode === "intent") {
-    answer = await intentOwnershipReadiness({intent, packs});
+    const quarantinedSliceIds = await activeVerificationSliceQuarantineIds(
+      options.base, {repositoryRoot:process.cwd()},
+    );
+    answer = await intentOwnershipReadiness({
+      intent, packs, quarantinedSliceIds, withinPack:options.withinPack,
+    });
   } else if (options.mode === "exact") {
     if (!options.changedSince) {
       throw new Error("Exact ownership readiness requires --changed-since");
@@ -278,7 +379,12 @@ async function main() {
     const basePacks = await verificationPacksAtCommit(changeSet.baseCommit, {
       repositoryRoot:process.cwd(),
     });
-    answer = await exactOwnershipReadiness({intent, packs, changeSet, basePacks});
+    const quarantinedSliceIds = await activeVerificationSliceQuarantineIds(
+      changeSet.commit, {repositoryRoot:process.cwd()},
+    );
+    answer = await exactOwnershipReadiness({
+      intent, packs, changeSet, basePacks, quarantinedSliceIds, withinPack:options.withinPack,
+    });
   } else {
     throw new Error("Use ownership readiness mode intent or exact");
   }

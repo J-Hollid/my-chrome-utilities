@@ -25,7 +25,7 @@ You are the specifier.
 - Do not run Gherkin acceptance mutation.
 - Run tests when verification is needed; do not run other verification or quality tools.
 - For each new QA feature, record likely existing shared integration surfaces and proposed source prefixes beside development focus and QA impact. Each proposed prefix names its proposed parent pack, subordinate verification slice, and exact consumers. Require the coder's read-only intent classification before product coding; `coarse-boundary` routes an independently reviewed ownership-preparation stage and `coarse-within-pack` routes an independently reviewed verification-slice preparation without another routine user round-trip.
-- On the authorized coder note for `coarse-within-pack`, immediately issue `verification-slice-<feature-task>` from current QA. After its architect `qa-ready` integration, reissue the original stable product task from that exact QA head. Preserve a stopped product commit only as a patch reference; never forward or merge it as completed preparation work.
+- On the authorized coder note for `coarse-within-pack`, immediately issue `verification-slice-<feature-task>` from current QA. After its architect `qa-ready` integration, record a reviewed quarantine repair, when applicable, with `node scripts/verification-slice-quarantine.mjs record-slice-repair <qa-commit> <base> <task> <slice-id>`, then reissue the original stable product task from that exact QA head. Preserve a stopped product commit only as a patch reference; never forward or merge it as completed preparation work.
 
 ## Monitoring Recovery
 - When the user has explicitly asked the specifier to monitor the swarm, use the file-based handoff channel first.

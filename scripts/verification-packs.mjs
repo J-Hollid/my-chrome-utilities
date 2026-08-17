@@ -149,7 +149,13 @@ async function loadedCrossPackStepConsumers(packs) {
 }
 
 export async function loadVerificationPacks() {
-  return JSON.parse(await readFile(registryUrl, "utf8"));
+  const packs = JSON.parse(await readFile(registryUrl, "utf8"));
+  const { activeVerificationSliceQuarantineIds } = await import("./verification-slice-quarantine.mjs");
+  Object.defineProperty(packs, "quarantinedSliceIds", {
+    value:await activeVerificationSliceQuarantineIds("HEAD", { repositoryRoot }),
+    enumerable:false,
+  });
+  return packs;
 }
 
 async function repositoryPaths(directory, suffix = "") {
@@ -935,7 +941,7 @@ const uniqueStrings = (items) => Array.isArray(items) &&
   new Set(items).size === items.length &&
   items.every((item) => typeof item === "string" && item.length > 0);
 
-function declaredPackTaskKeys(pack) {
+export function verificationPackTaskKeys(pack) {
   const observationGroups = new Map();
   const observedAdapterPaths = new Set(values(pack, "browserObservations").map(({path:program}) => program));
   const compatibilityAdapters = new Set(values(pack, "browserAdapterModes")
@@ -962,7 +968,7 @@ function declaredPackTaskKeys(pack) {
   ]);
 }
 
-function verificationSliceDeclaration(registry, pack, slice) {
+export function verificationSliceDeclaration(registry, pack, slice) {
   const diagnostics = [];
   if (!slice || Array.isArray(slice) || !stableSliceId(slice.id)) {
     diagnostics.push("unstable identity");
@@ -977,7 +983,7 @@ function verificationSliceDeclaration(registry, pack, slice) {
       !uniqueStrings(slice?.prerequisites ?? [])) {
     diagnostics.push("missing or duplicate task mapping");
   } else {
-    const registered = declaredPackTaskKeys(pack);
+    const registered = verificationPackTaskKeys(pack);
     if ([...slice.tasks, ...slice.prerequisites].some((key) => !registered.has(key))) {
       diagnostics.push("unregistered task mapping");
     }
@@ -1258,7 +1264,7 @@ export function planVerification(
     packIds = [], changedPaths = [], terminalFull = false, includeProperties = false,
     withDependencies = false, skipBuild = false, shard, changeSet = null,
     basePacks = undefined, historicalRegistryFallback = false, browserTargetIds = [],
-    quarantinedSliceIds = [],
+    quarantinedSliceIds = packs.quarantinedSliceIds ?? [],
   } = {},
 ) {
   const known = new Set(packs.map(({ id }) => id));
@@ -1778,7 +1784,7 @@ export function planVerification(
   const verificationSliceConservation = Object.fromEntries(packs
     .filter((pack) => values(pack, "verificationSlices").length)
     .map((pack) => {
-      const complete = [...declaredPackTaskKeys(pack)].sort();
+      const complete = [...verificationPackTaskKeys(pack)].sort();
       const sliced = [...new Set(values(pack, "verificationSlices")
         .flatMap((slice) => [...values(slice, "tasks"), ...values(slice, "prerequisites")]))].sort();
       const remainder = complete.filter((key) => !sliced.includes(key));
@@ -1812,6 +1818,9 @@ export function planVerification(
     conservativeHistoricalFallbackReason,
     selectedVerificationSlices:Object.fromEntries([...selectedVerificationSlices]
       .map(([id, ids]) => [id, [...ids].sort()]).sort(([left], [right]) => left.localeCompare(right))),
+    selectedVerificationSliceTaskKeys:Object.fromEntries([...selectedVerificationSliceTaskKeys]
+      .map(([id, keys]) => [id, [...keys].sort()]).sort(([left], [right]) => left.localeCompare(right))),
+    quarantinedSliceIds:[...quarantinedSlices].sort(),
     verificationSliceDiagnostics:[...new Set(verificationSliceDiagnostics)].sort(),
     verificationSliceConservation,
     features,
