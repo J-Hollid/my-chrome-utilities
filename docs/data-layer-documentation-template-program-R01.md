@@ -267,13 +267,14 @@ durable repository, Flow archive/portability, and global application-controller
 boundaries. This is safe conservative fallback but not an accepted focused
 first-use result.
 
-Task `verification-slice-documentation-templates` now repairs the known-path
-replay, automatic variance routing, durable disposition, and reusable seams from
-clean QA. It does not merge either product candidate or implement product
-behavior. After that preparation reaches QA, reconstruct and resume this product
-from the exact new QA head automatically. A reviewed parent-fallback disposition
-may authorize a wider exact result when no truthful split exists; it cannot be
-mistaken for the disproved 12-task forecast or require another product approval.
+Task `verification-slice-documentation-templates` repaired the known-path replay,
+automatic variance routing, durable disposition, and reusable seams on QA at
+`8d3cf5012c`. It merged neither stopped product candidate and implemented no
+template product behavior. Reconstruct and resume this product automatically
+from the exact scorecard descendant of that commit. A reviewed parent-fallback
+disposition may authorize a wider exact result when no truthful split exists; it
+cannot be mistaken for the disproved 12-task forecast or require another product
+approval.
 
 **Ownership-readiness launch:** the resumed intent preflight names the integrated
 shared surfaces `src/project-asset-body-contribution.ts`,

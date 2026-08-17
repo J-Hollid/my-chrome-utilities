@@ -332,3 +332,37 @@ from that QA head and use `e8e5fd48` only as a patch reference. The resumed
 candidate must use the integrated seams or explicit parent-fallback disposition,
 must run a fresh exact preflight before evidence, and receives no fixed 12-task
 promise. Its measured exact result replaces the disproved intent forecast.
+
+### Settled first-use mapping repair result
+
+Repair authority `d8e1a31025` was handed to the coder at 12:28:20Z on
+2026-08-17 and received at 12:28:28Z. Candidate `8d3cf5012c` reached the
+refactorer at 13:21:33Z, the architect at 13:27:30Z, and QA at 13:37:23Z. The
+handoff-to-integration interval was 1 hour 9 minutes 3 seconds, inside the
+eight-hour ceiling and before the four-hour checkpoint.
+
+The deterministic known-candidate replay now maps the five existing product
+paths to 13 packs and 534 intent tasks and returns
+`granularity-assessment-required` without caller-authored materiality JSON.
+Every causal path has one durable disposition. The global
+`src/specification-builder.ts` edit is replaced for resumed Documentation work
+by the installed `src/project-documentation/workspace-contribution.ts` seam and
+the reusable project asset-body store. The durable repository and three Flow
+archive/portability paths retain reviewed conservative parent fallbacks because
+their complete compatibility consumers remain valid.
+
+The repair candidate's canonical evidence plan selected 12 packs and 583 tasks,
+including properties and package proof. Its first complete evidence attempt
+passed 581 tasks and exposed one stale Shell evidence-shape contract; no product
+or runtime check failed. After the deterministic evidence shape was corrected,
+the 69-task focused Shell session passed and the fresh complete plan passed all
+583 tasks in 14 minutes 10 seconds. Independent review proved all 20 exact-pack
+closures and the 853-task terminal closure unchanged. Two terminal-full
+obligations remain for the asset-body and Documentation contribution seams. No
+all-20 feature run occurred.
+
+Recommendation: proceed with the already-approved `documentation-templates`
+product from the exact QA scorecard descendant of `8d3cf5012c`. Its exact
+changed-path plan is the next measurement. The four parent fallbacks authorize
+truthful broad evidence when those shared files really change; they do not cause
+another assessment loop, promise a narrow count, or authorize all 20.

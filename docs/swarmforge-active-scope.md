@@ -20,8 +20,8 @@ The settled-candidate verification workflow is integrated at
 | Program | Current state | Next authority |
 |---|---|---|
 | QA-branch release pilot | Active; routine RepoWise scouting stopped after Trial 4 by user decision on 2026-08-15, with optional current-index investigation retained for unfamiliar code or known hotspots | `docs/qa-branch-release-pilot-R01.md` controls feature integration into `qa`; `docs/feature-development-focus-and-advisory-scouting-R01.md` controls the lightweight scoping convention and completed Trial 4 decision. |
-| QA verification ownership readiness | QA-integrated at `b8194b517e`; automatic forecast-variance repair approved on 2026-08-17 | Implement `granularity-assessment-required` for unforecast packs reached through unsliced credible boundaries, with durable slice-or-fallback disposition and no user wait. |
-| QA verification granularity ratchet | Initial ratchet QA-integrated at `066ea284de`; exact first use disproved the 12-task intent forecast with a 13-pack/601-task candidate plan | Implement task `verification-slice-documentation-templates` from clean QA `1aec21fd2f`, replay the known candidate paths, repair safe seams and automatic routing, then resume the product from the resulting QA head. |
+| QA verification ownership readiness | QA-integrated through automatic forecast-variance repair `8d3cf5012c` | Preserve causal `granularity-assessment-required` routing, reviewed seam-or-parent-fallback dispositions, and autonomous product resumption without an all-20 feature run. |
+| QA verification granularity ratchet | Initial ratchet `066ea284de`; first-use mapping repair QA-integrated at `8d3cf5012c` after the 13-pack/601-task product variance | Reissue stable task `documentation-templates` from the scorecard commit immediately after `8d3cf5012c`; its fresh exact preflight is authoritative. |
 | QA-pilot verification latency correction | Closed after Slice 2 at `e32f9f7c10` by user decision on 2026-08-13 | No coder handoff. Measure the next three ordinary QA product cycles; Slices 3 and 4 remain evidence-triggered backlog items. |
 | QA style verification and Flow modularity | Complete on QA; stage-aware style planning is integrated at `d75132daef`, Flow CSS extraction at `ef440b3018`, corrections through `66dcdfd5d6`, and port snap at `89fee7df48` | Preserve the settled scorecard; do not reopen the abandoned mixed lineage or run all 20 before an explicit master-integration request. |
 | Flow click and drag-ownership correction | QA-integrated at `2b2cf06b45` on 2026-08-16 | Preserve directional Flow scenarios 043–045 and their runtime partners; cumulative promotion to `master` remains a separate release decision. |
@@ -31,7 +31,7 @@ The settled-candidate verification workflow is integrated at
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program; the combined Project Library transport isolation and Flow visual-asset portability delivery is QA-integrated at `1b192105a8` | Preserve that settled transport, content-addressed visual-body, and version-3 archive behavior. No additional VTD-008 controller slice is active. |
-| Documentation template library | Paused before broad evidence; clean candidate `e8e5fd48` selects 13 packs/601 tasks and remains a patch reference alongside `7f9c8a1121` | QA-integrate `verification-slice-documentation-templates`, then automatically reissue stable task `documentation-templates` from that exact QA head and reconstruct through the repaired seams. |
+| Documentation template library | Approved product ready to resume after mapping repair `8d3cf5012c`; stopped candidates `e8e5fd48` and `7f9c8a1121` remain patch references only | Reissue stable task `documentation-templates` from the scorecard commit after `8d3cf5012c`, reconstruct through the integrated seams or reviewed parent fallbacks, and require fresh exact preflight before evidence. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Deferred and inactive | The existing two-worker order is within about six seconds of balanced after lock wait is removed; scheduling needed for a possible third worker is bounded inside VTD-017. |
 | VTD-012 registry and planner modularization | Deferred and inactive | Reconsider after broad final-gate and receipt-persistence costs are reduced. |
@@ -62,15 +62,14 @@ to `master`. Do not inherit VTD-018 candidate `c7ad4698f9`, select another VTD
 item, or start master integration without the corresponding user instruction.
 
 The ordered Documentation-template batch is active outside VTD-008. Its
-behavior-preserving `verification-ownership-readiness` stage is QA-integrated at
-`b8194b517e`. Research and the settled 129-task bootstrap then established the
-approved within-pack campsite ratchet, now QA-integrated at `066ea284de`. Its
-intent-only product preflight selected 12 tasks, but exact candidate `e8e5fd48`
-selects 13 packs and 601 tasks through five known unsliced shared paths. The
-current coder authority is the clean-QA repair
-`verification-slice-documentation-templates`; the product candidate is a patch
-reference only and resumes automatically after the repair reaches QA. No all-20
-feature checkpoint is authorized.
+behavior-preserving ownership readiness and campsite ratchet are QA-integrated
+through `066ea284de`; first-use mapping repair `8d3cf5012c` adds causal automatic
+assessment, five durable seam-or-fallback dispositions, and a reusable
+Documentation asset-body contribution. Stopped candidates `e8e5fd48` and
+`7f9c8a1121` remain patch references only. Stable product task
+`documentation-templates` resumes from the scorecard commit immediately after
+`8d3cf5012c`; fresh exact preflight, not the disproved 12-task forecast, controls
+its evidence. No all-20 feature checkpoint is authorized.
 
 ## Feature-development throughput authority
 
