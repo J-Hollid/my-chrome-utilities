@@ -3,8 +3,11 @@ import {createSpecificationProject,transactProject} from "../dist/data-layer-spe
 import {CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY,restoreCanonicalProjectState,serializeCanonicalProjectState} from "../dist/data-layer-specification-repository.js";
 import {createMemoryDurableProjectRepository} from "../dist/data-layer-durable-project-repository.js";
 import {createDurableProjectRuntime} from "../dist/data-layer-durable-project-runtime.js";
+import {createProjectAssetBodyStaging} from "../dist/durable-project/project-asset-body-staging.js";
 
-await import("./data-layer-project-asset-body-staging-property-test.mjs");
+{
+  let assetSeed=0x51a9e2d7;const assetRandom=()=>{assetSeed=(Math.imul(assetSeed,1664525)+1013904223)>>>0;return assetSeed;};for(let sample=0;sample<64;sample+=1){const staging=createProjectAssetBodyStaging(),projectId=`project-${sample}`,otherId=`other-${sample}`,expected=new Map();for(let step=0;step<24;step+=1){const digest=`body-${assetRandom()%7}`,identity={projectId,namespace:"fixture",digest},value=`${sample}:${step}:${assetRandom()}`;staging.stage(identity,new Blob([value]));expected.set(digest,value);if(assetRandom()%3===0){const attachment=staging.attach(projectId);if(assetRandom()%2===0){attachment.commit();expected.clear();}}if(assetRandom()%5===0){staging.discard(identity);expected.delete(digest);}}const attached=staging.attach(projectId),actual=new Map(await Promise.all(attached.bodies.map(async item=>[item.identity.digest,await item.body.text()])));assert.deepEqual(actual,expected,"staging conserves each latest project-scoped generation exactly once");assert.deepEqual(staging.attach(otherId).bodies,[],"randomized staging never crosses project identity");attached.commit();assert.deepEqual(staging.attach(projectId).bodies,[],"committing the selected generation clears the exact remainder");}
+}
 
 const dependencyKinds=["profiles","propertySets","events","flows","assignments"];
 const subset=(mask)=>dependencyKinds.filter((_,index)=>(mask&(1<<index))!==0);
