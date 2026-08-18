@@ -58,9 +58,11 @@ const classificationRows=[
 ];
 for(const [input,classification] of classificationRows)
   assert.equal(classifyOwnershipReadiness(input).classification,classification);
-assert.match(classifyOwnershipReadiness(classificationRows[1][0]).nextStage,/agent judgment/u);
-assert.match(classifyOwnershipReadiness(classificationRows[3][0]).nextStage,/agent judgment/u);
-assert.match(classifyOwnershipReadiness(classificationRows[4][0]).nextStage,/ownership preparation/u,
+const boundedJudgmentStage="bounded agent judgment selects a reviewed seam, preparation, observation, or parent fallback";
+assert.equal(classifyOwnershipReadiness(classificationRows[1][0]).nextStage,boundedJudgmentStage);
+assert.equal(classifyOwnershipReadiness(classificationRows[3][0]).nextStage,boundedJudgmentStage);
+assert.equal(classifyOwnershipReadiness(classificationRows[4][0]).nextStage,
+  "a standing-authorized ownership preparation stage starts without another routine user approval",
   "all-pack coarse ownership remains a mandatory preparation");
 
 const judgmentInput={version:1,outcome:"deferred-observation",

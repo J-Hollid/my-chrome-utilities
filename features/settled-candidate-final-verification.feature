@@ -196,9 +196,9 @@ Feature: Settled candidate final verification
     Examples:
       | classification        | next_stage                                                                                          |
       | bounded-ready         | product implementation starts from the approved QA base                                             |
-      | granularity-assessment-required | bounded agent judgment compares semantic scope, unrelated verification, seam coherence, and preparation cost |
-      | coarse-within-pack    | bounded agent judgment compares semantic scope, unrelated verification, seam coherence, and preparation cost |
-      | coarse-boundary       | a standing-authorized ownership preparation starts because an all-20 feature plan cannot enter QA   |
+      | granularity-assessment-required | bounded agent judgment selects a reviewed seam, preparation, observation, or parent fallback         |
+      | coarse-within-pack    | bounded agent judgment selects a reviewed seam, preparation, observation, or parent fallback         |
+      | coarse-boundary       | a standing-authorized ownership preparation stage starts without another routine user approval       |
       | genuinely-global      | implementation waits for current user or release direction                                          |
       | ownership-unavailable | implementation waits for ownership repair direction without inferring a narrower boundary           |
       | requirements-expanded | implementation waits for current user approval of the changed product or safety requirement          |
