@@ -124,8 +124,9 @@ Feature: SwarmForge outcome-bounded autonomy and unblockers
     Given one settled product candidate exposes several new coarse verification paths
     When the campsite assessment runs
     Then it assesses the union of those paths once at the same candidate boundary
-    And every path ends with a reviewed reusable seam or an evidence-backed cannot-safely-split fallback
-    And an imperfect forecast or elapsed time alone cannot skip the assessment
+    And it compares the semantic product change with unrelated verification families, measured or forecast cost, seam coherence, preparation cost, and change risk
+    And every path ends with a reviewed reusable seam, an evidence-backed cannot-safely-split fallback, or a durable non-blocking granularity observation
+    And clearly disproportionate verification weighs materially while an imperfect forecast, pack count, task count, elapsed time, or hypothetical future reuse cannot dictate the decision
 
   # SwarmForge outcome-bounded autonomy and unblockers 013
   Scenario: SwarmForge outcome-bounded autonomy and unblockers 013
@@ -157,3 +158,27 @@ Feature: SwarmForge outcome-bounded autonomy and unblockers
     Then the path receives a conservative parent fallback
     And the product resumes with truthful broad evidence
     And fallback is not selected merely because verification structure is incomplete or inconvenient
+
+  # SwarmForge outcome-bounded autonomy and unblockers 017
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 017
+    Given immediate granularity preparation was selected for a bounded product task
+    When actual preparation becomes materially more complex, risky, or time-consuming than the local behavior it enables
+    Then the unintegrated preparation may stop without weakening verification
+    And one durable granularity observation preserves the exact finding and reconsideration evidence
+    And the product resumes with its canonical conservative feature-mode plan when that plan is smaller than all runnable packs
+
+  # SwarmForge outcome-bounded autonomy and unblockers 018
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 018
+    Given a master-promotion request reaches a QA history with active granularity observations
+    When bounded autonomy evaluates the portfolio before release freeze
+    Then every observation receives one explicit selected, combined, carried, or retired disposition
+    And selected verification-only work proceeds through ordinary QA review while unrelated product work remains outside the intended release batch
+    And carried observations retain their reasons and become visible again at the next promotion review
+
+  # SwarmForge outcome-bounded autonomy and unblockers 019
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 019
+    Given all selected pre-promotion granularity work is either QA-integrated or explicitly carried
+    When master integration begins
+    Then the specifier freezes the exact resulting QA head once
+    And the architect performs one canonical all-20 checkpoint with properties and package proof
+    And no granularity observation is silently resolved by product evidence or by the terminal checkpoint alone

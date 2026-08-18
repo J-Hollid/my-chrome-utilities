@@ -2440,14 +2440,14 @@ Feature: Modular verification packs
     When within-pack readiness is assessed
     Then the readiness result is <readiness_result>
     And the workflow action is <workflow_action>
-    And pack size, task count, or forecast variance alone never requires another product approval
+    And pack size, task count, forecast variance, or hypothetical future reuse alone never decides whether refinement is worthwhile
 
     Examples:
-      | plan_relation                                                                                                  | readiness_result   | workflow_action                                                                                  |
-      | a wider pack or task scope whose selected tasks are causally related                                           | bounded-ready      | record forecast variance and continue with the canonical plan                                    |
-      | an unrelated complete task family, a stable observable subordinate boundary, and a reduced task count or critical path | coarse-within-pack | route one standing-authorized verification-slice preparation before resuming the approved product |
-      | unrelated task families without a proved stable observable subordinate boundary                               | bounded-ready      | record deferred refinement and continue with the conservative parent-pack closure                 |
-      | a large parent pack whose complete task closure is genuinely required by the changed behavior                 | bounded-ready      | continue with the complete parent-pack closure                                                    |
+      | plan_relation                                                                                                              | readiness_result   | workflow_action                                                                                                           |
+      | a wider pack or task scope whose selected tasks are causally related                                                       | bounded-ready      | record forecast variance and continue with the canonical plan                                                             |
+      | a local semantic change, unrelated complete task families, and a stable observable subordinate boundary                    | coarse-within-pack | expose the material scope mismatch for bounded agent judgment without automatically starting preparation                  |
+      | a local semantic change and unrelated task families without a proved stable observable subordinate boundary               | bounded-ready      | expose the deferred refinement opportunity and continue with the conservative parent-pack closure                         |
+      | a large parent pack whose complete task closure is genuinely required by the changed behavior                             | bounded-ready      | continue with the complete parent-pack closure                                                                             |
 
   # Modular verification packs 173
   Scenario: Modular verification packs 173
@@ -2497,3 +2497,35 @@ Feature: Modular verification packs
     And the implicated slice becomes ineligible for narrowing until an independently reviewed mapping repair reaches QA
     And later feature work uses the conservative parent-pack closure during that quarantine
     And no separate all-20 calibration run, automatic assertion deletion, or undeclared narrowing is authorized
+
+  # Modular verification packs 177
+  Scenario: Modular verification packs 177
+    Given read-only readiness reports a bounded verification plan materially disproportionate to the semantic product change
+    When the responsible agent records a deferred verification-granularity observation after applying bounded judgment
+    Then the observation is bound to the stable task, exact QA base, causal paths, semantic change scope, planned packs and tasks, unrelated task families, possible seam, decision rationale, and reconsideration evidence
+    And recording occurs outside plan-only preflight without changing the product candidate, canonical ownership, conservative verification plan, receipt, incident state, or evidence eligibility
+    And duplicate task, path, and boundary-generation observations increase measured occurrence without erasing prior decisions
+    And missing, ambiguous, stale, or non-ancestral identity cannot enter the active observation portfolio
+
+  # Modular verification packs 178
+  Scenario Outline: Modular verification packs 178
+    Given one durable verification-granularity observation has <portfolio_evidence>
+    When the pre-promotion portfolio assigns its explicit disposition
+    Then the disposition is <portfolio_disposition>
+    And the observation cannot silently disappear from the append-only history
+
+    Examples:
+      | portfolio_evidence                                                                 | portfolio_disposition                                      |
+      | a coherent high-value boundary supported by measured QA occurrences and costs      | selected for one bounded pre-freeze QA hardening batch     |
+      | several observations support the same structural boundary                          | combined under one conserved refinement identity           |
+      | current evidence still does not justify safe refinement                            | carried with a reason and reconsideration evidence         |
+      | measured scope shows no material verification mismatch                              | retired with the disproved premise and retained history     |
+
+  # Modular verification packs 179
+  Scenario: Modular verification packs 179
+    Given a user has requested master promotion and the active granularity portfolio selects verification-only hardening
+    When the selected refinements are planned
+    Then they preserve every product behavior, assertion, owner, consumer, exact-pack task, terminal obligation, and package input
+    And each refinement receives focused review evidence and architect QA-ready integration before release freeze
+    And an unsafe, expanding, or unproved refinement is not integrated and returns to an explicit carried disposition
+    And no all-20 checkpoint runs until the resulting QA head is frozen once for the ordinary master-integration gate

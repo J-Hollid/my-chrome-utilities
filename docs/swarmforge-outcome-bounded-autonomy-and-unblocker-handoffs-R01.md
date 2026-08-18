@@ -1,6 +1,8 @@
 # SwarmForge outcome-bounded autonomy and unblocker handoffs R01
 
-Status: user-approved on 2026-08-17; QA-integrated at `8f82a6a66f` on 2026-08-18
+Status: user-approved on 2026-08-17; QA-integrated at `8f82a6a66f` on
+2026-08-18; judgment-based campsite deferral and pre-promotion portfolio intake
+approved on 2026-08-18
 
 ## Outcome
 
@@ -127,10 +129,19 @@ reviewed disposition:
 
 - a reusable seam or within-pack slice proved independently; or
 - an evidence-backed conclusion that the path cannot safely split, with a
-  conservative parent fallback that retains every applicable consumer.
+  conservative parent fallback that retains every applicable consumer; or
+- a durable granularity observation when immediate preparation is materially
+  disproportionate to the approved behavior, with the same conservative parent
+  coverage retained.
 
-Fallback is the result of failed bounded proof, not a convenience selected
-because verification is broad. Elapsed time alone is not proof failure.
+The agent compares semantic product scope, unrelated selected behavior,
+measured verification cost and failure surface, seam coherence, preparation
+cost and risk, and possible shared boundaries among observations. No numeric
+threshold, roadmap, or prediction of future touches decides alone. A
+cannot-safely-split fallback remains the result of failed bounded proof, not a
+convenience selected because verification is broad. A durable observation is a
+revisitable economic and structural judgment, not proof that splitting is
+unsafe.
 
 When a prerequisite is needed, the system separates the settled candidate into
 two durable identities:
@@ -163,6 +174,19 @@ verification-only commits do not silently become product behavior, and product
 work does not have to wait for a user to route an already-authorized
 preparation.
 
+An immediate preparation may stop when its demonstrated complexity, risk, or
+time is materially broader than the local behavior it would accelerate. The
+system records the observation and resumes the unchanged product against the
+conservative plan. An all-pack feature plan cannot use this path: because all-20
+execution is forbidden in feature mode, its ownership preparation remains a
+mandatory precondition for QA.
+
+Before a requested master promotion freezes QA, the specifier reviews the whole
+durable observation portfolio. Every applicable item is selected, combined,
+carried, or retired explicitly. Selected verification hardening follows normal
+focused review into QA; unsafe or disproportionate work is carried visibly.
+Only after those dispositions settle does QA freeze for one final all-20 gate.
+
 ## Implementation boundary
 
 Implement:
@@ -177,7 +201,10 @@ Implement:
 - semantic outcome-boundary instructions shared by all roles;
 - settled-candidate split manifests, preserved remainder stacks, automatic
   preparation routing, QA-triggered rebase/reapply/resumption, delta
-  conservation, and task/path generation loop prevention; and
+  conservation, and task/path generation loop prevention;
+- append-only granularity observations, duplicate occurrence accounting,
+  explicit pre-promotion portfolio dispositions, and pre-freeze enforcement;
+  and
 - deterministic process tests and ordinary task/batch compatibility.
 
 Keep implementation in SwarmForge control scripts, prompts, manifests, and
@@ -218,7 +245,7 @@ remains; stop only at a genuine user boundary defined above.
 
 Acceptance authority is
 `features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature`. Direct
-tests must prove all sixteen scenarios, including:
+tests must prove all nineteen scenarios, including:
 
 - bounded decisions proceed while every true outcome-boundary crossing stops;
 - actual launch tasks, not catalogue or pack counts, determine scope;
@@ -232,7 +259,11 @@ tests must prove all sixteen scenarios, including:
 - QA integration automatically resumes the same task with a conserved delta;
   and
 - the same applicable task/path generation cannot open the same preparation
-  twice.
+  twice;
+- disproportionate immediate preparation records an observation and resumes the
+  conservative product plan without relying on a roadmap; and
+- master intake disposes every observation, focuses selected hardening through
+  QA, freezes once, and preserves one final all-20 checkpoint.
 
 ## Settled QA result
 

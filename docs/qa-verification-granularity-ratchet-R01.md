@@ -3,7 +3,8 @@
 Status: the initial ratchet, first-use mapping repair, and durable-runtime
 staging repair are QA-integrated at `066ea284de`, `8d3cf5012c`, and
 `06222ff00f`; the Documentation-template product resumes automatically from the
-staging-repair scorecard descendant
+staging-repair scorecard descendant; judgment-based deferral and a
+pre-promotion observation portfolio were approved on 2026-08-18
 
 Prepared: 2026-08-17
 
@@ -37,8 +38,11 @@ worthwhile, but also reports fixed overhead from excessive granularity.
 recommend fine-grained explicit dependencies for incremental work, and [Azure
 Test Impact Analysis](https://learn.microsoft.com/en-us/azure/devops/pipelines/test/test-impact-analysis?view=azure-devops)
 retains all-test fallback and periodic full validation. Therefore size alone
-never causes a split: actual changed-path evidence, a stable observable
-sub-boundary, and measurable unrelated work are all required.
+never causes a split. Semantic mismatch between the product change and selected
+behavior, a stable observable sub-boundary, measurable unrelated work, the cost
+and risk of extraction, and the evidence needed to conserve the parent boundary
+inform agent judgment together. A roadmap or a prediction that the path will be
+touched again is neither required nor decisive.
 
 ## Readiness result
 
@@ -60,11 +64,17 @@ are true:
 - establishing that slice changes no product, persistence, migration, security,
   packaging, assertion, or terminal-verification meaning.
 
-This is the complete materiality rule; there is no repository-wide pack-size or
-elapsed-time threshold. When those facts are not proved, the canonical parent-
-pack plan proceeds and the potential refinement is recorded as deferred. A large
-pack, an inaccurate forecast, or an unfamiliar path alone never blocks the
-approved feature.
+These facts expose a bounded refinement opportunity; they do not by themselves
+command immediate preparation. The agent compares the semantic size of the
+product change, unrelated selected behavior, wall time and failure surface,
+seam coherence, and the cost and risk of extraction and conservation proof. A
+local UI correction that selects complete unrelated feature families is strong
+evidence that verification is materially disproportionate. When immediate
+refinement is not worthwhile or cannot yet be proved safely, the canonical
+parent-pack plan proceeds and the finding becomes a durable observation. There
+is no repository-wide pack-size or elapsed-time threshold. A large pack, an
+inaccurate forecast, an unfamiliar path, or an unsupported forecast of future
+reuse alone never blocks the approved feature.
 
 An all-pack result continues to use the existing `coarse-boundary`,
 `genuinely-global`, `ownership-unavailable`, and `requirements-expanded`
@@ -101,11 +111,22 @@ Their absence from the current tree or registry is not itself an unavailable-
 ownership result. Exact candidate preflight later evaluates the committed paths
 canonically.
 
-## Standing refinement authority
+## Standing judgment and refinement authority
 
-The user's approval is standing authority for a
-`verification-slice-<feature-task>` preparation stage whenever readiness returns
-`coarse-within-pack`. No routine approval round-trip is required. The stage:
+The bounded classifications are diagnostic inputs, not deterministic commands.
+Agent judgment ends in exactly one of these outcomes:
+
+1. use an already reviewed seam or slice;
+2. add a small opportunistic seam with the product while the same-range evidence
+   remains conservative;
+3. start an independent `verification-slice-<feature-task>` preparation now;
+4. record a durable granularity observation and proceed with the conservative
+   parent-pack plan; or
+5. retain an evidence-backed cannot-safely-split parent fallback.
+
+The user's approval is standing authority for outcome 3 when the agent judges
+that its verification benefit is proportionate to its implementation and review
+cost. No routine approval round-trip is required. The stage:
 
 1. starts from current QA without product behavior from the paused candidate;
 2. introduces only slice declarations, planner/runner support, process contracts,
@@ -117,23 +138,43 @@ The user's approval is standing authority for a
 5. reaches QA before the already-approved product restarts from that exact head.
 
 The product candidate cannot introduce a slice and use it to narrow the same
-current/base evidence range. If preparation cannot prove a slice within its
-bounded effort ceiling, it records the finding, leaves the parent closure
-authoritative, and the product resumes conservatively. It stops for the user only
-when product or safety requirements change, pack ownership is unavailable, the
-plan is genuinely global, coverage would weaken, or no credible bounded
-completion path remains.
+current/base evidence range. If preparation becomes materially more complex,
+risky, or time-consuming than the local behavior it is intended to accelerate,
+it may stop, record the finding as a durable observation, leave the parent
+closure authoritative, and resume the product conservatively. That is a
+deferral for portfolio review, not a permanent fallback. It stops for the user
+only when product or safety requirements change, pack ownership is unavailable,
+the plan is genuinely global, coverage would weaken, or no credible bounded
+completion path remains. An all-pack `coarse-boundary` plan cannot use this
+deferral to enter QA; its existing ownership-preparation stop remains mandatory
+because feature mode forbids an all-20 evidence plan.
+
+### Durable granularity observations
+
+A deferred observation is append-only and records the stable task, exact QA
+base, causal paths, semantic product scope, selected packs and task families,
+unrelated behavior, candidate seam if known, preparation cost or risk, judgment
+rationale, and evidence that would justify reconsideration. Its identity binds
+task, base, causal paths, and boundary generation. Re-observing the same identity
+increments measured occurrence rather than creating an ambiguous duplicate;
+identity collisions are rejected.
+
+Recording is allowed only after read-only judgment and never during plan-only
+preflight. It does not change product files, verification ownership, consumers,
+pack or task selection, evidence, incidents, or readiness. The conservative
+parent remains authoritative for that feature.
 
 ### Autonomous file-based routing
 
-When intent or exact preflight returns `coarse-within-pack`, the coder does not
-report a user blocker and does not broaden the product task. The coder sends one
-explicitly authorized file-based `note` to the specifier containing the product
-task, QA base, classification, causal paths and task families, proposed slice
-boundary, and any stopped coherent product commit as a patch reference. The
-coder then closes the paused product handoff without forwarding it as completed.
+When agent judgment selects immediate independent preparation, the coder does
+not report a user blocker and does not broaden the product task. The coder sends
+one explicitly authorized file-based `note` to the specifier containing the
+product task, QA base, classification, judgment rationale, causal paths and task
+families, proposed slice boundary, and any stopped coherent product commit as a
+patch reference. The coder then closes the paused product handoff without
+forwarding it as completed.
 
-The specifier immediately sends the derived
+The specifier sends the derived
 `verification-slice-<feature-task>` specification handoff from current QA. After
 its architect `qa-ready` integration, the specifier reissues the original stable
 product task from the new exact QA head. This is agent-to-agent routing under the
@@ -144,7 +185,22 @@ executable rather than advisory.
 
 ## Terminal calibration
 
-The user-requested master checkpoint remains the final complete comparison. Its
+Before freezing a user-requested master checkpoint, the specifier reviews the
+complete durable observation portfolio. Every applicable observation receives
+one explicit disposition: selected for this promotion, combined with another
+selected refinement, carried visibly to the next promotion, or retired with
+evidence that its premise no longer applies. Selection considers measured
+occurrence, cumulative unrelated work, seam clarity, implementation and review
+cost, coverage risk, and whether several observations share one coherent
+boundary. No single count, elapsed-time threshold, roadmap, or prediction of
+future reuse dictates the result.
+
+Selected verification-only hardening proceeds through ordinary focused coder,
+refactorer, architect, and QA integration while unrelated product handoffs stay
+out of the release candidate. Work whose safe completion would endanger the
+promotion is carried rather than rushed. Once selected hardening is QA-integrated
+or explicitly carried, QA freezes exactly once. The user-requested master
+checkpoint remains the final complete comparison. Its
 scorecard compares terminal-only failures with the focused slices selected for
 the accumulated QA work. A causal failure outside an applicable focused slice is
 a selection miss: the failed release candidate follows the existing focused
@@ -511,9 +567,12 @@ resumption was only an instruction, not a durable mechanism. User approval on
 
 Assessment remains mandatory and evaluates the union of all newly encountered
 coarse paths from one settled candidate. Every path must end in a reviewed seam
-or slice, or an evidence-backed cannot-safely-split parent fallback. Imperfect
-verification structure, forecast variance, elapsed time, pack count, or
-different terminology cannot bypass or restart the assessment.
+or slice, an evidence-backed cannot-safely-split parent fallback, or a durable
+granularity observation with conservative parent coverage. The agent judges
+semantic mismatch, unrelated work, seam quality, cumulative verification cost,
+and preparation cost and risk. Imperfect verification structure, forecast
+variance, elapsed time, pack count, different terminology, or an unsupported
+prediction of future reuse cannot dictate or restart the assessment.
 
 A preparation now records and preserves the unchanged product remainder as a
 first-class stack with its split base, head/tree, ordered commits, stable task,
@@ -530,6 +589,59 @@ preparation twice. A new preparation requires a changed generation, consumer
 set, or failed premise. Full mechanics and acceptance are controlled by
 `docs/swarmforge-outcome-bounded-autonomy-and-unblocker-handoffs-R01.md` and
 `features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature`.
+
+Observation identity remains distinct from preparation disposition identity.
+Repeated observations accumulate occurrence and measured cost without
+implicitly opening preparation. Before master-promotion freeze, the observation
+portfolio is reviewed once, every item is selected, combined, carried, or
+retired explicitly, and selected hardening reaches QA through focused evidence
+before the one final all-20 checkpoint.
+
+## Active judgment-and-portfolio implementation
+
+Stable task `judgment-based-granularity-portfolio` implements the approved
+process contract from the exact QA base named by its handoff. It changes no
+browser product, persistence, migration, packaging, assertion, existing slice,
+or exact-pack closure.
+
+**Development focus:** replace deterministic preparation routing for bounded
+`granularity-assessment-required` and `coarse-within-pack` results with a
+structured agent judgment outcome; keep all-pack `coarse-boundary` preparation
+mandatory; add append-only observation recording, duplicate occurrence
+accounting, portfolio listing and explicit dispositions; prevent plan-only
+preflight from mutating that state; and make master-promotion handoff validation
+reject a freeze with undisposed observations or selected hardening that has not
+reached QA. Update coder, refactorer, architect, and specifier contracts and
+their direct process tests. Likely implementation surfaces include
+`scripts/verification-ownership-readiness-core.mjs`,
+`scripts/verification-ownership-readiness.mjs`, the stacked-campsite store and
+control modules, settled final-verification policy and workflow, SwarmForge role
+and shared prompts, and a dedicated observation module if separation is
+clearer. Reuse the existing atomic and immutable campsite persistence patterns.
+
+The judgment input and persisted rationale must make semantic product scope,
+unrelated selected families, measured cost and failure surface, seam clarity,
+preparation cost and risk, and reconsideration evidence inspectable. The
+implementation must not replace judgment with a weighted score, hard threshold,
+roadmap field, or prediction of future touches. Observation recording never
+changes the readiness plan; preparation routing occurs only for an explicit
+immediate-preparation outcome.
+
+**QA impact:** forecast the `shell` parent, especially the existing
+`swarmforge-stacked-ratchet` and `swarmforge-handoff-control` process slices,
+with the exact changed-path plan authoritative. Direct tests cover all judgment
+outcomes, mandatory all-pack routing, observation identity and occurrence,
+plan-only non-mutation, all four portfolio dispositions, selected-hardening QA
+proof, pre-freeze rejection, and one post-freeze terminal gate. Run the focused
+exact plan with properties and package proof. Feature mode must not run all 20
+packs.
+
+The implementation-and-review effort ceiling is four hours. At two hours report
+the exact plan, judgment and persistence shapes, portfolio/freeze enforcement,
+failures, remaining work, confidence, and forecast. If this process-only change
+itself exposes a bounded coarse verification path, apply the new judgment and
+retain conservative focused evidence; do not recursively open preparation just
+because the classification exists.
 
 ## Settled Flow schema-editor route disposition preparation
 

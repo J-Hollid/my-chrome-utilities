@@ -196,14 +196,16 @@ Feature: Settled candidate final verification
     Examples:
       | classification        | next_stage                                                                                          |
       | bounded-ready         | product implementation starts from the approved QA base                                             |
-      | coarse-boundary       | a standing-authorized ownership preparation stage starts without another routine user approval      |
+      | granularity-assessment-required | bounded agent judgment compares semantic scope, unrelated verification, seam coherence, and preparation cost |
+      | coarse-within-pack    | bounded agent judgment compares semantic scope, unrelated verification, seam coherence, and preparation cost |
+      | coarse-boundary       | a standing-authorized ownership preparation starts because an all-20 feature plan cannot enter QA   |
       | genuinely-global      | implementation waits for current user or release direction                                          |
       | ownership-unavailable | implementation waits for ownership repair direction without inferring a narrower boundary           |
       | requirements-expanded | implementation waits for current user approval of the changed product or safety requirement          |
 
   # Settled candidate final verification 018
   Scenario Outline: Settled candidate final verification 018
-    Given an approved feature's canonical preflight has <planning_result>
+    Given bounded agent judgment selected immediate <preparation_stage> for <planning_result>
     When its <preparation_stage> completes focused review
     Then the preparation is independently committed and integrated into QA from an architect QA-ready handoff
     And the product candidate has not implemented externally visible feature behavior
@@ -244,8 +246,9 @@ Feature: Settled candidate final verification
     Examples:
       | planning_result                                                     | next_action                                                                                          |
       | a bounded pack or task plan wider than the forecast                 | record the variance and continue with the canonical plan                                             |
-      | a proved coarse-within-pack boundary                                | QA-integrate one standing-authorized verification-slice preparation and resume the approved product  |
-      | a possible within-pack refinement without a proved safe slice       | continue with the conservative parent-pack closure and defer refinement                              |
+      | a proved coarse-within-pack boundary judged worthwhile now          | QA-integrate one standing-authorized verification-slice preparation and resume the approved product  |
+      | a materially disproportionate bounded plan whose preparation is not worthwhile now | record one durable granularity observation and continue with conservative verification |
+      | a possible within-pack refinement without a proved safe slice       | record one durable granularity observation and continue with the conservative parent-pack closure    |
       | an all-pack coarse-boundary with exact owners and consumers         | QA-integrate the standing-authorized ownership preparation and resume the approved product            |
       | genuinely global, unavailable parent ownership, or changed requirements | wait for current user direction                                                                   |
 
@@ -269,10 +272,37 @@ Feature: Settled candidate final verification
 
   # Settled candidate final verification 024
   Scenario: Settled candidate final verification 024
-    Given a coder's intent or exact preflight returns coarse-within-pack for an approved product task
+    Given a coder's bounded judgment selects immediate preparation after intent or exact preflight reports a disproportionate plan
     When the automatic preparation route is activated
     Then the coder sends the specifier one authorized file-based note with the product task, QA base, causal paths, task families, proposed slice, and any stopped patch reference
     And the paused product handoff closes without a completed implementation claim
     And the specifier sends the derived verification-slice task from current QA without waiting for another user decision
     And architect QA-ready integration of that preparation causes the original stable product task to be reissued from the exact new QA head
     And every role uses the ordinary file-based handoff channel rather than reporting forecast variance as a user blocker
+
+  # Settled candidate final verification 025
+  Scenario: Settled candidate final verification 025
+    Given a bounded feature plan is materially disproportionate to one local semantic change
+    And immediate refinement is judged more complex, risky, or time-consuming than the behavior it enables
+    When the feature proceeds with canonical conservative verification
+    Then one durable granularity observation records the exact mismatch and judgment without changing product scope
+    And the observation does not narrow the current evidence plan or authorize an all-20 feature run
+    And preparation may be reconsidered from measured later evidence without assuming a roadmap or predicted touch frequency
+
+  # Settled candidate final verification 026
+  Scenario: Settled candidate final verification 026
+    Given the user requests master promotion while QA ancestry contains active granularity observations
+    When the specifier performs the pre-promotion portfolio review
+    Then new unrelated product handoffs stop while QA remains mutable only for selected verification-only hardening
+    And every active observation is explicitly selected, combined, carried with a reason, or retired with evidence
+    And selection uses observed semantic mismatch, occurrences, verification wall time and failure surface, seam coherence, implementation and evidence cost, and change risk
+    And no roadmap, pack count, task count, elapsed time, or hypothetical future touch frequency decides by itself
+
+  # Settled candidate final verification 027
+  Scenario: Settled candidate final verification 027
+    Given the pre-promotion portfolio selected one or more bounded granularity refinements
+    When those refinements complete ordinary focused QA review
+    Then only architect QA-ready refinements advance QA before release freeze
+    And every unselected or unsuccessful observation retains an explicit portfolio disposition
+    And the specifier freezes the resulting exact QA head once and sends that release candidate directly to the architect
+    And the architect runs the ordinary single all-20 checkpoint with properties and package proof on that sealed candidate

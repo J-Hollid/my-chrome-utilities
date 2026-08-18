@@ -1,7 +1,8 @@
 # QA-branch release pilot R01
 
 Status: approved by the user for immediate activation; ownership-readiness and
-within-pack granularity refinements approved on 2026-08-17
+within-pack granularity refinements approved on 2026-08-17; judgment-based
+granularity deferral and pre-promotion portfolio intake approved on 2026-08-18
 
 Prepared: 2026-08-12
 
@@ -56,9 +57,15 @@ reviewable change.
    ownership in the same evidence range. Within a bounded pack plan,
    `docs/qa-verification-granularity-ratchet-R01.md` distinguishes ordinary
    forecast variance from a proved `coarse-within-pack` boundary. Forecast
-   variance proceeds automatically. A proved boundary routes its standing
-   preparation stage; an unproved refinement opportunity uses the conservative
-   parent-pack plan and does not block the product.
+   variance proceeds automatically. A proved bounded boundary invokes agent
+   judgment: prepare now when the verification benefit is proportionate, or
+   record a durable observation and use the conservative parent-pack plan when
+   preparation would be materially broader, riskier, or more time-consuming
+   than the approved product behavior. The judgment considers semantic mismatch,
+   unrelated selected behavior, measured verification cost, seam coherence, and
+   preparation cost and risk. It does not require a roadmap or forecast of future
+   touches. An unproved refinement opportunity also uses the conservative parent
+   plan. The all-pack `coarse-boundary` stop above remains mandatory.
 3. Coder and refactorer run focused checks and record review-ready evidence. The
    architect completes architecture and quality review and runs focused checks
    for any changes or repairs. No role runs the all-20 gate in this mode.
@@ -173,14 +180,23 @@ infrastructure changes should normally occupy a release batch alone.
 
 Use this mode only when the user explicitly requests promotion to `master`.
 
-1. The specifier reports the exact `master` base, frozen `qa` head, accumulated
-   QA-integrated tasks, and elapsed queue time. No new feature handoff enters the
-   frozen release candidate.
-2. The specifier sends the exact QA head directly to the architect with
+1. The specifier reports the exact `master` base, current `qa` head, accumulated
+   QA-integrated tasks, elapsed queue time, and complete durable granularity-
+   observation portfolio. No unrelated product handoff enters the pending
+   release candidate after portfolio intake begins.
+2. The specifier gives every applicable observation one explicit disposition:
+   selected for this promotion, combined with selected work, carried visibly to
+   the next promotion, or retired with evidence that its premise no longer
+   applies. Selected verification-only hardening receives ordinary focused
+   coder, refactorer, architect, and QA integration. Unsafe or disproportionate
+   work is carried rather than rushed. No item disappears implicitly.
+3. After selected hardening is QA-integrated or explicitly carried, the
+   specifier freezes the resulting exact QA head and sends it directly to the
+   architect with
    `readiness: release-candidate` and `verified: qa-candidate`, using current
    `master` as `base:`. The architect starts a clean release lineage at that
    candidate rather than merging it into stale task ancestry.
-3. The architect reviews the cumulative `master..qa` change set, seals one exact
+4. The architect reviews the cumulative `master..qa` change set, seals one exact
    tree, and runs one fresh canonical all-20 checkpoint with properties and the
    package check.
    The release-candidate route remains open for terminal-verification-deferred
@@ -188,10 +204,10 @@ Use this mode only when the user explicitly requests promotion to `master`.
    resolves matching deferred incidents and supplies final-ready evidence; no
    second all-20 run is required. Any unresolved incident still blocks the
    final-ready handoff and master fast-forward.
-4. A pass produces the existing `final-ready` evidence and architect-to-specifier
+5. A pass produces the existing `final-ready` evidence and architect-to-specifier
    handoff. The specifier verifies its exact base, task, commit, tree, plan, and
    package proof, then fast-forwards `qa` and `master` to that exact tested commit.
-5. A failure remains recorded. Diagnose and prove a repair with the smallest
+6. A failure remains recorded. Diagnose and prove a repair with the smallest
    relevant focused check. Prefer reverting an independently revertible offending
    QA slice when that is faster and safer. Any changed release candidate requires
    one fresh complete gate. No unchanged retry may turn a failure green.
@@ -209,6 +225,8 @@ batch reaches a suggested size. The user owns the promotion instruction.
 - A master promotion is a fast-forward to the exact final-ready commit. Do not
   squash, rebase, amend, merge another commit, or record behavior-bearing changes
   after the passing gate.
+- QA freezes only after the observation portfolio has explicit dispositions and
+  selected hardening has either reached QA with focused evidence or been carried.
 - After successful promotion, `qa` and `master` point to the same commit before
   the next feature batch begins.
 - `qa-ready` can reach only the specifier and can advance only `qa`.
@@ -231,6 +249,8 @@ For every QA-integrated task report:
 For every master promotion report:
 
 - accumulated task count and exact commits;
+- observation-portfolio identities and selected, combined, carried, or retired
+  dispositions, including focused hardening time and evidence;
 - approval of the promotion to master integration;
 - complete-gate attempts and wall time;
 - final-only failures, repairs, reverts, and reruns;
