@@ -29,6 +29,42 @@ export function stableIdentity(value) {
   return stable.test(value??"");
 }
 
+function validRoutingIdentity(value) {
+  if (!value||Array.isArray(value)) return false;
+  return stableIdentity(value.from)&&stableIdentity(value.to);
+}
+
+function normalizeRouting(value) {
+  if (!validRoutingIdentity(value)) {
+    throw new Error("Remainder manifest requires a validated return route");
+  }
+  const priority=value.priority??"00";
+  if (!/^[0-9]{2}$/u.test(priority)) throw new Error("Remainder return-route priority is invalid");
+  return {from:value.from,to:value.to,priority};
+}
+
+export function canonicalDiffContribution(value) {
+  return value.split(/\r?\n/u).filter((line)=>
+    !line.startsWith("index ")&&!line.startsWith("--- ")&&!line.startsWith("+++ ")&&
+    !line.startsWith("@@ ")&&!line.startsWith("\\ No newline")).join("\n");
+}
+
+export function contributionDigest(value) {
+  return deltaDigest(canonicalDiffContribution(value));
+}
+
+export function campsiteGenerationId(value) {
+  const candidate=value.candidate??value.remainderHead??value.remainder?.head;
+  const boundaryGeneration=value.boundaryGeneration;
+  const causalPaths=[...new Set(value.causalPaths??[])].sort();
+  const validTask=stableIdentity(value.task),validCandidate=sha40.test(candidate??"");
+  const validBoundary=stableIdentity(boundaryGeneration),pathsPresent=causalPaths.length>0;
+  if (![validTask,validCandidate,validBoundary,pathsPresent].every(Boolean)) {
+    throw new Error("Campsite generation identity is incomplete");
+  }
+  return valueDigest({task:value.task,candidate,boundaryGeneration,causalPaths});
+}
+
 export function aggregateCampsiteAssessment({task,candidate,causalPaths}) {
   if (!stableIdentity(task)||!sha40.test(candidate)) throw new Error("Campsite assessment identity is invalid");
   const paths=[...new Set(causalPaths)].sort();
@@ -47,16 +83,24 @@ export function createRemainderManifest(input) {
   if (!stableIdentity(input.task)||!stableIdentity(input.boundaryGeneration)) {
     throw new Error("Remainder task and boundary generation must be stable");
   }
+  const candidate=input.candidate??input.remainderHead;
+  requireSha(candidate,sha40,"candidate");
+  const routing=normalizeRouting(input.routing);
+  const generationId=campsiteGenerationId({...input,candidate});
   return bindDigest({version:1,task:input.task,splitBase:input.splitBase,
+    candidate,generationId,
     prerequisite:{commit:input.prerequisiteCommit},remainder:{task:input.task,head:input.remainderHead,
       tree:input.remainderTree,orderedCommits:[...input.orderedCommits],changeSetDigest:input.changeSetDigest},
     causalPaths:[...new Set(input.causalPaths)].sort(),boundaryGeneration:input.boundaryGeneration,
-    expectedPostRebaseDelta:input.expectedPostRebaseDelta,status:"preserved",routing:input.routing});
+    expectedPostRebaseDelta:input.expectedPostRebaseDelta,status:"preserved",routing});
 }
 
 export function resumeRemainder(manifest,{newQaHead,observedPostRebaseDelta,
   observedChangeSetDigest,resumedHead}) {
   validateDigest(manifest,"Remainder manifest");
+  if (manifest.generationId!==campsiteGenerationId(manifest)) {
+    throw new Error("Remainder manifest generation is modified");
+  }
   requireSha(newQaHead,sha40,"new QA head"); requireSha(resumedHead,sha40,"resumed head");
   if (observedPostRebaseDelta!==manifest.expectedPostRebaseDelta) {
     throw new Error("Resumed product delta does not match the preserved remainder");
@@ -73,13 +117,17 @@ export function dispositionIdentity(value) {
   return [value.task,value.path,value.boundary,value.generation].join("\u0000");
 }
 
-export function recordDisposition(records,value) {
+function validateDisposition(value) {
   if (!["slice","seam","integrated-seam","parent-fallback"].includes(value.result)) {
     throw new Error("Disposition result is invalid");
   }
-  if (value.result==="parent-fallback"&&(!value.failedPremise||!value.consumers?.length)) {
-    throw new Error("Parent fallback requires failed proof premise and preserved consumers");
-  }
+  const invalidFallback=value.result==="parent-fallback"&&
+    (!value.failedPremise||!value.consumers?.length);
+  if (invalidFallback) throw new Error("Parent fallback requires failed proof premise and preserved consumers");
+}
+
+export function recordDisposition(records,value) {
+  validateDisposition(value);
   if (records.some((item)=>dispositionIdentity(item)===dispositionIdentity(value))) {
     throw new Error("Task/path generation already has a disposition");
   }

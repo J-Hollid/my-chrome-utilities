@@ -10,6 +10,7 @@ import {
   recordDisposition,
   resumeRemainder,
 } from "../scripts/stacked-campsite-control.mjs";
+import { resumeOntoQa } from "../scripts/campsite-git-runtime.mjs";
 
 const exec=promisify(execFile);
 const control=path.resolve("scripts/stacked-campsite-control.mjs");
@@ -22,7 +23,12 @@ const manifest=createRemainderManifest({task:assessment.task,splitBase:"2".repea
   prerequisiteCommit:"3".repeat(40),remainderHead:"4".repeat(40),remainderTree:"5".repeat(40),
   orderedCommits:["4".repeat(40)],changeSetDigest:"6".repeat(64),
   causalPaths:assessment.causalPaths,boundaryGeneration:"shell-v1",
-  expectedPostRebaseDelta:"7".repeat(64)});
+  expectedPostRebaseDelta:"7".repeat(64),routing:{from:"qa",to:"reviewer"}});
+assert.throws(()=>createRemainderManifest({task:assessment.task,splitBase:"2".repeat(40),
+  prerequisiteCommit:"3".repeat(40),remainderHead:"4".repeat(40),remainderTree:"5".repeat(40),
+  orderedCommits:["4".repeat(40)],changeSetDigest:"6".repeat(64),
+  causalPaths:assessment.causalPaths,boundaryGeneration:"shell-v1",
+  expectedPostRebaseDelta:"7".repeat(64)}),/return route/i);
 assert.equal(resumeRemainder(manifest,{newQaHead:"8".repeat(40),
   observedPostRebaseDelta:"7".repeat(64),observedChangeSetDigest:"6".repeat(64),
   resumedHead:"9".repeat(40)}).reissuedTask,"product-task");
@@ -40,35 +46,50 @@ try {
   await git(repository,"init","-q"); await git(repository,"config","user.name","Campsite Test");
   await git(repository,"config","user.email","campsite@example.test");
   await mkdir(path.join(repository,"src"));
-  await writeFile(path.join(repository,"src/product.ts"),"export const product = 1;\n");
+  const baseProduct=["export const product = 1;",...Array.from({length:10},(_,index)=>
+    `export const unchanged${index} = ${index};`),"export const prerequisite = 1;",""] .join("\n");
+  await writeFile(path.join(repository,"src/product.ts"),baseProduct);
   await writeFile(path.join(repository,"src/outside.ts"),"export const outside = 1;\n");
   await writeFile(path.join(repository,"mapping.json"),"{}\n");
   await git(repository,"add","."); await git(repository,"commit","-qm","base");
   const base=await git(repository,"rev-parse","HEAD");
-  await writeFile(path.join(repository,"src/product.ts"),"export const product = 2;\n");
+  await writeFile(path.join(repository,"src/product.ts"),baseProduct.replace("product = 1","product = 2"));
   await writeFile(path.join(repository,"src/outside.ts"),"export const outside = 2;\n");
   await git(repository,"commit","-qam","product remainder");
   const remainder=await git(repository,"rev-parse","HEAD");
   await git(repository,"switch","-qc","preparation",base);
+  await writeFile(path.join(repository,"src/product.ts"),baseProduct.replace(
+    "prerequisite = 1","prerequisite = 2"));
   await writeFile(path.join(repository,"mapping.json"),'{"slice":"ready"}\n');
-  await git(repository,"commit","-qam","preparation");
+  await git(repository,"add","."); await git(repository,"commit","-qm","preparation");
   const preparation=await git(repository,"rev-parse","HEAD");
   await git(repository,"switch","-q","master");
   assert.equal(await git(repository,"branch","--show-current"),"master");
   const manifestPath=path.join(repository,"campsite.json");
   await exec(process.execPath,[control,"preserve","product-task",base,preparation,remainder,
-    "shell-v1",JSON.stringify(["src/product.ts"]),manifestPath],{cwd:repository});
-  await exec(process.execPath,[control,"resume",manifestPath,preparation],{cwd:repository});
+    "shell-v1",JSON.stringify(["src/product.ts"]),JSON.stringify({from:"qa",to:"reviewer"}),
+    manifestPath],{cwd:repository});
+  await assert.rejects(resumeOntoQa(repository,manifestPath,preparation,
+    {faultAt:"resume-git-moved"}),/Injected campsite crash/u);
+  assert.notEqual(await git(repository,"rev-parse","HEAD"),remainder,
+    "a durable attempt survives a crash after Git moves HEAD");
+  await assert.rejects(resumeOntoQa(repository,manifestPath,preparation,
+    {faultAt:"resumption-routed"}),/Injected campsite crash/u);
+  await resumeOntoQa(repository,manifestPath,preparation);
   const preservedManifest=JSON.parse(await readFile(manifestPath,"utf8"));
   assert.equal(preservedManifest.status,"preserved","the preserved stack identity remains immutable");
-  const resumedManifest=JSON.parse(await readFile(path.join(repository,
-    ".swarmforge/campsites/resumed/product-task.json"),"utf8"));
+  const resumedPath=path.join(repository,".swarmforge/campsites/resumed",
+    `product-task-${preservedManifest.generationId}.json`);
+  const resumedManifest=JSON.parse(await readFile(resumedPath,"utf8"));
   assert.equal(resumedManifest.status,"resumed");
   assert.equal(resumedManifest.deltaConserved,true);
-  assert.equal(await readFile(path.join(repository,"src/product.ts"),"utf8"),"export const product = 2;\n");
+  const conservedProduct=await readFile(path.join(repository,"src/product.ts"),"utf8");
+  assert.match(conservedProduct,/product = 2/u);
+  assert.match(conservedProduct,/prerequisite = 2/u,
+    "a clean same-file prerequisite change survives contribution-based resume proof");
   assert.equal(await readFile(path.join(repository,"src/outside.ts"),"utf8"),"export const outside = 2;\n");
   assert.equal(JSON.parse(await readFile(path.join(repository,"mapping.json"),"utf8")).slice,"ready");
-  assert.equal(JSON.parse(await readFile(path.join(repository,".swarmforge/campsites/resumed/product-task.json"),
+  assert.equal(JSON.parse(await readFile(resumedPath,
     "utf8")).reissuedTask,"product-task");
 
   await git(repository,"branch","-f","remainder-work",remainder);
@@ -77,7 +98,8 @@ try {
   const mismatchManifestPath=path.join(repository,".swarmforge/campsites/mismatch-campsite.json");
   await mkdir(path.dirname(mismatchManifestPath),{recursive:true});
   await exec(process.execPath,[control,"preserve","mismatch-task",base,preparation,remainder,
-    "shell-v1",JSON.stringify(["src/product.ts"]),mismatchManifestPath],{cwd:repository});
+    "shell-v1",JSON.stringify(["src/product.ts"]),JSON.stringify({from:"qa",to:"reviewer"}),
+    mismatchManifestPath],{cwd:repository});
   const mismatchManifest=JSON.parse(await readFile(mismatchManifestPath,"utf8"));
   mismatchManifest.remainder.changeSetDigest="0".repeat(64);
   await writeFile(mismatchManifestPath,`${JSON.stringify(mismatchManifest,null,2)}\n`);
@@ -121,10 +143,11 @@ try {
     {cwd:repository,env:readinessEnvironment})).stdout);
   assert.equal(secondPipeline.reused,true,"a later process reuses the reviewed task/path generation");
   assert.equal(firstPipeline.preparationHandoff,secondPipeline.preparationHandoff);
-  assert.equal((await readdir(path.join(repository,".swarmforge/handoffs/outbox"))).length,1,
-    "the same disposition cannot route the same preparation twice");
-  const automaticManifest=path.join(repository,
-    ".swarmforge/campsites/preserved/automatic-product-task.json");
+  assert.equal((await readdir(path.join(repository,".swarmforge/handoffs/outbox")))
+    .filter((name)=>path.join(repository,".swarmforge/handoffs/outbox",name)===
+      firstPipeline.preparationHandoff).length,1,
+  "the same disposition cannot route the same preparation twice");
+  const automaticManifest=firstPipeline.preserved;
   await assert.rejects(exec(process.execPath,[control,"resume",automaticManifest,base],{cwd:repository}),
     /does not contain.*prerequisite/i);
   await rm(firstPipeline.preparationHandoff);
@@ -146,9 +169,10 @@ try {
     cwd:repository,env:{...process.env,PATH:`${fakeBin}${path.delimiter}${process.env.PATH}`,TMUX_LOG:tmuxLog}});
   const reviewerNew=path.join(reviewer,".swarmforge/handoffs/inbox/new");
   const reissued=await readdir(reviewerNew);
-  assert.equal(reissued.length,1,`the daemon delivers the conserved task to routing.to: ${
+  assert.equal(reissued.length,2,`the daemon delivers every conserved task to routing.to: ${
     await readFile(path.join(repository,".swarmforge/daemon/handoffd.log"),"utf8")}`);
-  const reissuedText=await readFile(path.join(reviewerNew,reissued[0]),"utf8");
+  const reissuedText=(await Promise.all(reissued.map((name)=>readFile(path.join(reviewerNew,name),"utf8"))))
+    .find((text)=>text.includes("task: automatic-product-task"));
   assert.match(reissuedText,/task: automatic-product-task/u);
   assert.match(reissuedText,new RegExp(`base: ${preparation}`,"u"));
   const claimedOutput=(await exec(path.resolve("swarmforge/scripts/ready_for_next.sh"),[],{
@@ -156,6 +180,48 @@ try {
   assert.match(claimedOutput,/TASK_NAME: automatic-product-task/u);
   assert.equal((await readdir(path.join(reviewer,".swarmforge/handoffs/inbox/in_process"))).length,1,
     "the declared recipient claims the automatically delivered ordinary handoff");
+  const nextGeneration=JSON.parse(await readFile(pipelineConfig,"utf8"));
+  nextGeneration.assessment.candidate=await git(repository,"rev-parse","HEAD");
+  nextGeneration.manifest.splitBase=preparation;
+  nextGeneration.manifest.remainderHead=nextGeneration.assessment.candidate;
+  nextGeneration.manifest.boundaryGeneration="shell-v2";
+  nextGeneration.dispositions=nextGeneration.dispositions.map((value)=>({...value,generation:"shell-v2"}));
+  const nextGenerationConfig=path.join(repository,".swarmforge/campsites/pipeline-input-v2.json");
+  await writeFile(nextGenerationConfig,`${JSON.stringify(nextGeneration,null,2)}\n`);
+  const nextEnvironment={...readinessEnvironment,CAMPSITE_CONFIG:nextGenerationConfig};
+  const nextPipeline=JSON.parse((await exec(process.execPath,["--input-type=module","-e",readinessRunner],
+    {cwd:repository,env:nextEnvironment})).stdout);
+  assert.notEqual(nextPipeline.preserved,firstPipeline.preserved,
+    "a materially changed boundary generation receives a new durable identity");
+  assert.equal((await readdir(path.join(repository,".swarmforge/campsites/preserved")))
+    .filter((name)=>name.startsWith("automatic-product-task-")).length,2);
   await rm(reviewer,{recursive:true,force:true});
 } finally { await rm(repository,{recursive:true,force:true}); }
+
+const conflictRepository=await mkdtemp(path.join(os.tmpdir(),"stacked-campsite-conflict-"));
+try {
+  await git(conflictRepository,"init","-q");
+  await git(conflictRepository,"config","user.name","Campsite Conflict Test");
+  await git(conflictRepository,"config","user.email","campsite-conflict@example.test");
+  await writeFile(path.join(conflictRepository,"shared.txt"),"start\nend\n");
+  await git(conflictRepository,"add","."); await git(conflictRepository,"commit","-qm","base");
+  const conflictBase=await git(conflictRepository,"rev-parse","HEAD");
+  await writeFile(path.join(conflictRepository,"shared.txt"),"start\nproduct\nend\n");
+  await git(conflictRepository,"commit","-qam","product insertion");
+  const conflictRemainder=await git(conflictRepository,"rev-parse","HEAD");
+  await git(conflictRepository,"switch","-qc","preparation",conflictBase);
+  await writeFile(path.join(conflictRepository,"shared.txt"),"start\nprerequisite\nend\n");
+  await git(conflictRepository,"commit","-qam","prerequisite insertion");
+  const conflictPreparation=await git(conflictRepository,"rev-parse","HEAD");
+  await git(conflictRepository,"switch","-q","master");
+  const conflictManifest=path.join(conflictRepository,"campsite.json");
+  await exec(process.execPath,[control,"preserve","conflict-task",conflictBase,conflictPreparation,
+    conflictRemainder,"shell-v1",JSON.stringify(["shared.txt"]),
+    JSON.stringify({from:"qa",to:"reviewer"}),conflictManifest],{cwd:conflictRepository});
+  await resumeOntoQa(conflictRepository,conflictManifest,conflictPreparation);
+  const merged=await readFile(path.join(conflictRepository,"shared.txt"),"utf8");
+  assert.match(merged,/prerequisite/u);
+  assert.match(merged,/product/u,
+    "a reversible textual insertion conflict is union-reapplied and contribution-checked");
+} finally { await rm(conflictRepository,{recursive:true,force:true}); }
 console.log("Stacked campsite control contracts passed.");

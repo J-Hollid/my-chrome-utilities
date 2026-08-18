@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, open, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { validateStoredUnblocker } from "./unblocker-authority.mjs";
@@ -30,39 +30,96 @@ async function ownerIsAlive(owner) {
 }
 
 async function acquireLock(lock,token) {
+  const stage=`${lock}.${token}.tmp`;
   try {
-    await mkdir(lock);
-    try { await writeFile(path.join(lock,"owner.json"),JSON.stringify({pid:process.pid,token}),{flag:"wx"}); }
-    catch (error) { await rm(lock,{recursive:true,force:true}); throw error; }
+    await mkdir(stage);
+    await writeFile(path.join(stage,"owner.json"),JSON.stringify({pid:process.pid,token}),{flag:"wx"});
+    await rename(stage,lock);
     return true;
   } catch (error) {
-    if (error.code==="EEXIST") return false;
+    await rm(stage,{recursive:true,force:true});
+    if (["EEXIST","ENOTEMPTY"].includes(error.code)) return false;
     throw error;
   }
 }
 
-async function reclaimStaleLock(lock,afterStaleObserved) {
-  let reclaim;
+async function acquireReclaimLease(lock,token) {
+  const lease=`${lock}.reclaim`,stage=`${lease}.${token}.tmp`;
   try {
-    reclaim=await open(path.join(lock,"reclaim"),"wx");
-    const observed=await currentOwner(lock);
-    if (!observed||await ownerIsAlive(observed)) return;
-    if (afterStaleObserved) await afterStaleObserved(observed);
-    const current=await currentOwner(lock);
-    if (current?.token===observed.token) await rm(lock,{recursive:true,force:true});
+    await mkdir(stage);
+    await writeFile(path.join(stage,"owner.json"),JSON.stringify({pid:process.pid,token}),{flag:"wx"});
+    await rename(stage,lease);
+    return true;
   } catch (error) {
-    if (!["EEXIST","ENOENT"].includes(error.code)) throw error;
+    await rm(stage,{recursive:true,force:true});
+    if (!["EEXIST","ENOTEMPTY"].includes(error.code)) throw error;
+    const owner=await currentOwner(lease);
+    if (await ownerIsAlive(owner)) return false;
+    const retired=`${lease}.${randomUUID()}.retired`;
+    try { await rename(lease,retired); }
+    catch (renameError) { if (renameError.code!=="ENOENT") throw renameError; }
+    await rm(retired,{recursive:true,force:true});
+    return false;
+  }
+}
+
+async function releaseOwnedDirectory(target,token) {
+  const owner=await currentOwner(target);
+  if (owner?.token!==token) return;
+  const retired=`${target}.${token}.retired`;
+  try { await rename(target,retired); }
+  catch (error) { if (error.code!=="ENOENT") throw error; return; }
+  await rm(retired,{recursive:true,force:true});
+}
+
+async function sameDirectory(target,observed) {
+  try {
+    const current=await stat(target);
+    return current.dev===observed.dev&&current.ino===observed.ino;
+  } catch (error) {
+    if (error.code==="ENOENT") return false;
+    throw error;
+  }
+}
+
+async function staleLockObservation(lock) {
+  let identity;
+  try { identity=await stat(lock); }
+  catch (error) { if (error.code==="ENOENT") return null; throw error; }
+  const owner=await currentOwner(lock);
+  return await ownerIsAlive(owner)?null:{identity,owner};
+}
+
+async function observationStillCurrent(lock,observation) {
+  const current=await currentOwner(lock);
+  const sameOwner=(observation.owner===null&&current===null)||
+    current?.token===observation.owner?.token;
+  return sameOwner&&await sameDirectory(lock,observation.identity);
+}
+
+async function retireUnchangedLock(lock,observation,token) {
+  if (!await observationStillCurrent(lock,observation)) return;
+  const retired=`${lock}.${token}.retired`;
+  try { await rename(lock,retired); }
+  catch (error) { if (error.code!=="ENOENT") throw error; }
+  await rm(retired,{recursive:true,force:true});
+}
+
+async function reclaimStaleLock(lock,afterStaleObserved) {
+  const token=randomUUID(),lease=`${lock}.reclaim`;
+  if (!await acquireReclaimLease(lock,token)) return;
+  try {
+    const observation=await staleLockObservation(lock);
+    if (!observation) return;
+    if (afterStaleObserved) await afterStaleObserved(observation.owner);
+    await retireUnchangedLock(lock,observation,token);
   } finally {
-    if (reclaim) {
-      await reclaim.close();
-      await rm(path.join(lock,"reclaim"),{force:true});
-    }
+    await releaseOwnedDirectory(lease,token);
   }
 }
 
 async function releaseOwnedLock(lock,token) {
-  const owner=await currentOwner(lock);
-  if (owner?.token===token) await rm(lock,{recursive:true,force:true});
+  await releaseOwnedDirectory(lock,token);
 }
 
 export async function withQueueLock(queueRoot,operation,{afterStaleObserved}={}) {

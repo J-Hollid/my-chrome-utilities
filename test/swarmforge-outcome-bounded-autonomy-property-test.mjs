@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { authorityDigest, boundedExecutionScope, classifyOutcome } from
   "../swarmforge/scripts/unblocker-control.mjs";
-import { aggregateCampsiteAssessment, dispositionIdentity } from
+import { aggregateCampsiteAssessment, campsiteGenerationId, contributionDigest,
+  dispositionIdentity } from
   "../scripts/stacked-campsite-control.mjs";
 
 let state=0x5eed1234;
@@ -27,6 +28,19 @@ for(let sample=0;sample<300;sample+=1){
   assert.deepEqual(aggregateCampsiteAssessment({task:"task",candidate:"a".repeat(40),
     causalPaths:paths}).causalPaths,aggregateCampsiteAssessment({task:"task",candidate:"a".repeat(40),
     causalPaths:shuffled}).causalPaths);
+
+  const offset=1+Math.floor(random()*100),blob=Math.floor(random()*0xffff).toString(16).padStart(4,"0");
+  const contribution=`diff --git a/src/value.ts b/src/value.ts\nindex ${blob}..ffff 100644\n`+
+    `--- a/src/value.ts\n+++ b/src/value.ts\n@@ -${offset},0 +${offset+1} @@ context\n+product`;
+  const rebased=contribution.replace(`index ${blob}..ffff`,`index 0000..${blob}`)
+    .replace(`-${offset},0 +${offset+1}`,`-${offset+17},0 +${offset+18}`)
+    .replace("@@ context","@@ changed prerequisite context");
+  assert.equal(contributionDigest(contribution),contributionDigest(rebased));
+
+  const generation={task:"task",candidate:"a".repeat(40),boundaryGeneration:"shell-v1",causalPaths:paths};
+  assert.equal(campsiteGenerationId(generation),campsiteGenerationId({...generation,causalPaths:shuffled}));
+  assert.notEqual(campsiteGenerationId(generation),
+    campsiteGenerationId({...generation,boundaryGeneration:"shell-v2"}));
 }
 
 const unordered={z:1,a:{z:2,a:3},list:[{z:4,a:5}]};

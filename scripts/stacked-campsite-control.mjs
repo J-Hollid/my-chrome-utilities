@@ -6,12 +6,13 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
-import { createRemainderManifest, deltaDigest, resumeRemainder } from "./campsite-artifacts.mjs";
+import { contributionDigest, createRemainderManifest, resumeRemainder } from "./campsite-artifacts.mjs";
 import { prepareCampsite, resumeOntoQa, routeCampsiteReadiness,
   triggerQaIntegrations } from "./campsite-git-runtime.mjs";
-import { atomicWrite } from "./campsite-store.mjs";
+import { atomicWrite, persistResumption } from "./campsite-store.mjs";
 
-export { aggregateCampsiteAssessment, createRemainderManifest, deltaDigest,
+export { aggregateCampsiteAssessment, campsiteGenerationId, contributionDigest,
+  createRemainderManifest, deltaDigest,
   dispositionIdentity, recordDisposition, resumeRemainder } from "./campsite-artifacts.mjs";
 export { persistCampsitePipeline, persistDispositions } from "./campsite-store.mjs";
 export { prepareCampsite, routeCampsiteReadiness } from "./campsite-git-runtime.mjs";
@@ -22,19 +23,21 @@ async function git(root,...args) {
 }
 
 async function preserve(root,rest) {
-  const [task,splitBase,prerequisiteCommit,remainderHead,boundaryGeneration,causalJson,output]=rest;
+  const [task,splitBase,prerequisiteCommit,remainderHead,boundaryGeneration,
+    causalJson,routingJson,output]=rest;
   const causalPaths=JSON.parse(causalJson);
   const [remainderTree,commits,changeSet,delta]=await Promise.all([
     git(root,"rev-parse",`${remainderHead}^{tree}`),
     git(root,"rev-list","--reverse",`${splitBase}..${remainderHead}`),
-    git(root,"diff","--binary",splitBase,remainderHead),
-    git(root,"diff","--binary",splitBase,remainderHead,"--",...causalPaths),
+    git(root,"diff","--binary","--unified=0",splitBase,remainderHead),
+    git(root,"diff","--binary","--unified=0",splitBase,remainderHead,"--",...causalPaths),
   ]);
   const manifest=createRemainderManifest({task,splitBase:await git(root,"rev-parse",splitBase),
     prerequisiteCommit:await git(root,"rev-parse",prerequisiteCommit),
     remainderHead:await git(root,"rev-parse",remainderHead),remainderTree,
-    orderedCommits:commits.split(/\n/u).filter(Boolean),changeSetDigest:deltaDigest(changeSet),
-    causalPaths,boundaryGeneration,expectedPostRebaseDelta:deltaDigest(delta)});
+    orderedCommits:commits.split(/\n/u).filter(Boolean),changeSetDigest:contributionDigest(changeSet),
+    causalPaths,boundaryGeneration,expectedPostRebaseDelta:contributionDigest(delta),
+    routing:JSON.parse(routingJson)});
   await atomicWrite(path.resolve(output),`${JSON.stringify(manifest,null,2)}\n`,{exclusive:true});
   console.log(`PRESERVED ${manifest.task} ${manifest.remainder.head}`);
 }
@@ -43,8 +46,7 @@ async function validateResume(root,rest) {
   const manifest=JSON.parse(await readFile(path.resolve(rest[0]),"utf8"));
   const result=resumeRemainder(manifest,{newQaHead:rest[1],observedPostRebaseDelta:rest[2],
     observedChangeSetDigest:rest[3],resumedHead:rest[4]});
-  await atomicWrite(path.join(root,".swarmforge","campsites","resumed",`${result.task}.json`),
-    `${JSON.stringify(result,null,2)}\n`);
+  await persistResumption(root,result);
   console.log(`REISSUE ${result.reissuedTask} ${result.resumedHead}`);
 }
 
@@ -65,7 +67,7 @@ async function cli(args) {
     console.log(JSON.stringify({status:"ok",triggered:results.map(({task,resumedHead})=>({task,resumedHead}))}));
     return;
   }
-  throw new Error("Use: stacked-campsite-control.mjs prepare <config> | preserve <task> <split-base> <prerequisite> <remainder-head> <generation> <causal-paths-json> <manifest> | resume <manifest> <new-qa> | qa-trigger | validate-resume <manifest> <qa-head> <causal-delta> <complete-delta> <resumed-head>");
+  throw new Error("Use: stacked-campsite-control.mjs prepare <config> | preserve <task> <split-base> <prerequisite> <remainder-head> <generation> <causal-paths-json> <routing-json> <manifest> | resume <manifest> <new-qa> | qa-trigger | validate-resume <manifest> <qa-head> <causal-delta> <complete-delta> <resumed-head>");
 }
 
 if (process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])) {

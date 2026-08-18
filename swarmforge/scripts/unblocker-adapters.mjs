@@ -4,7 +4,7 @@ import { mkdir, readFile, readdir, rename, stat, writeFile } from "node:fs/promi
 import path from "node:path";
 import { promisify } from "node:util";
 
-import { unblockerContentDigest, validateAuthorityClaim, validateTransportUnblocker,
+import { authorityDigest, unblockerContentDigest, validateAuthorityClaim, validateTransportUnblocker,
   validateUnblockerDraft } from "./unblocker-authority.mjs";
 import { parseHandoff, renderHandoff } from "./unblocker-format.mjs";
 import { claimUnblocker, completeUnblocker, deliverUnblocker, queueFiles } from "./unblocker-queue.mjs";
@@ -66,7 +66,11 @@ async function trustContext(root,active,headers) {
   let authorityCommitAncestral=true,authorityCommitPresentOnBase=true;
   try { await git(root,"merge-base","--is-ancestor",headers["authority-commit"],base); }
   catch { authorityCommitAncestral=false; }
-  try { await authorityAt(root,base,headers.authority); }
+  try {
+    const baseGrant=await authorityAt(root,base,headers.authority);
+    authorityCommitPresentOnBase=baseGrant.digest===grant.digest&&
+      authorityDigest(baseGrant)===authorityDigest(grant);
+  }
   catch { authorityCommitPresentOnBase=false; }
   return {grant,authorityCommitAncestral,authorityCommitPresentOnBase};
 }
@@ -118,30 +122,30 @@ async function claim(root,activeId) {
   console.log(JSON.stringify(result,null,2));
 }
 
+async function boundReplacement(queueRoot,active,parsed) {
+  if (parsed?.headers.mode!=="replace") return {};
+  const replacements=[];
+  for (const file of await handoffFiles(path.join(queueRoot,"new"))) {
+    const candidate=parseHandoff(await readFile(file,"utf8"));
+    if (candidate.headers.id===parsed.headers["replacement-handoff"]) {
+      replacements.push({...candidate.headers,path:file});
+    }
+  }
+  if (replacements.length>1) throw new Error("Bound replacement handoff is ambiguous");
+  if (!replacements.length) return {};
+  const replacement=replacements[0];
+  const activeRelative=path.relative(path.join(queueRoot,"in_process"),active.path);
+  return {replacement,ordinaryState:{activeFile:active.path,replacementFile:replacement.path,
+    activeTarget:path.join(queueRoot,"completed",activeRelative),
+    replacementTarget:path.join(path.dirname(active.path),path.basename(replacement.path))}};
+}
+
 async function complete(root,activeId) {
   const active=await activeHandoff(root,activeId),queueRoot=path.join(root,".swarmforge","handoffs","inbox");
   const claimed=await queueFiles(queueRoot,"in_process");
   if (claimed.length>1) throw new Error("At most one claimed unblocker is allowed");
   const parsed=claimed.length ? parseHandoff(await readFile(claimed[0],"utf8")) : null;
-  let replacement,ordinaryState;
-  if (parsed?.headers.mode==="replace") {
-    const ordinaryNew=path.join(queueRoot,"new");
-    const replacements=[];
-    for (const file of await handoffFiles(ordinaryNew)) {
-      const candidate=parseHandoff(await readFile(file,"utf8"));
-      if (candidate.headers.id===parsed.headers["replacement-handoff"]) {
-        replacements.push({...candidate.headers,path:file});
-      }
-    }
-    if (replacements.length>1) throw new Error("Bound replacement handoff is ambiguous");
-    if (replacements.length===1) {
-      replacement=replacements[0];
-      const activeRelative=path.relative(path.join(queueRoot,"in_process"),active.path);
-      ordinaryState={activeFile:active.path,replacementFile:replacement.path,
-        activeTarget:path.join(queueRoot,"completed",activeRelative),
-        replacementTarget:path.join(path.dirname(active.path),path.basename(replacement.path))};
-    }
-  }
+  const {replacement,ordinaryState}=await boundReplacement(queueRoot,active,parsed);
   const result=await completeUnblocker({queueRoot,active:activeIdentity(active),replacement,ordinaryState,
     authorityValidator:(headers,body)=>authorityValidator(root,active,headers,body)});
   console.log(result.status==="resume"?`RESUME: ${active.path}`:JSON.stringify(result));

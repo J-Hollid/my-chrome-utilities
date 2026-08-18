@@ -141,7 +141,7 @@ assert.equal(resumed.status,"resume");
 assert.equal(resumed.active.id,active.id);
 const duplicate=await deliverUnblocker({queueRoot,headers:{...validHeaders,from:"specifier"},body:"bounded",
   grant,active,authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
-assert.equal(duplicate.status,"completed-duplicate");
+assert.deepEqual(duplicate,resumed,"completed duplicates replay the exact recorded completion result");
 await assert.rejects(deliverUnblocker({queueRoot,headers:{...validHeaders,from:"specifier"},body:"changed",
   grant,active,authorityCommitPresentOnBase:true,authorityCommitAncestral:true}),/collision/i);
 const staleActive={...active,id:"different-active"};
@@ -160,6 +160,19 @@ const [staleClaimFile]=await readdir(path.join(staleClaimRoot,"unblockers","fail
 assert.match(await readFile(path.join(staleClaimRoot,"unblockers","failed",staleClaimFile),"utf8"),
   /failure-reason: stale binding/u);
 await rm(staleClaimRoot,{recursive:true,force:true});
+
+const staleClaimedRoot=await mkdtemp(path.join(os.tmpdir(),"swarmforge-unblocker-stale-claimed-"));
+await deliverUnblocker({queueRoot:staleClaimedRoot,
+  headers:{...validHeaders,from:"specifier",name:"claimed-before-active-changed"},body:"bounded",grant,active,
+  authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+await claimUnblocker({queueRoot:staleClaimedRoot,active,grant,
+  authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+assert.equal((await claimUnblocker({queueRoot:staleClaimedRoot,active:{...active,id:"new-active"}})).status,
+  "none");
+const [staleClaimedFile]=await readdir(path.join(staleClaimedRoot,"unblockers","failed"));
+assert.match(await readFile(path.join(staleClaimedRoot,"unblockers","failed",staleClaimedFile),"utf8"),
+  /failure-reason: stale claimed binding/u);
+await rm(staleClaimedRoot,{recursive:true,force:true});
 
 const bindingRecoveryRoot=await mkdtemp(path.join(os.tmpdir(),"swarmforge-unblocker-binding-recovery-"));
 await deliverUnblocker({queueRoot:bindingRecoveryRoot,
@@ -189,6 +202,12 @@ assert.deepEqual((await Promise.all(contenders)).sort(),[0,1]);
 assert.equal(maximumInside,1,"stale-owner recovery never removes a successor's lock");
 assert.equal(staleObservations,1,"one guarded waiter retires the exact observed stale token");
 await rm(lockRaceRoot,{recursive:true,force:true});
+
+const ownerlessLockRoot=await mkdtemp(path.join(os.tmpdir(),"swarmforge-unblocker-ownerless-lock-"));
+await mkdir(path.join(ownerlessLockRoot,"unblockers.lock"));
+assert.equal(await withQueueLock(ownerlessLockRoot,async()=>"recovered"),"recovered",
+  "a crash before owner publication leaves a reclaimable legacy lock");
+await rm(ownerlessLockRoot,{recursive:true,force:true});
 
 const tamperRoot=await mkdtemp(path.join(os.tmpdir(),"swarmforge-unblocker-tamper-"));
 await deliverUnblocker({queueRoot:tamperRoot,headers:{...validHeaders,from:"specifier"},body:"bounded",
@@ -324,7 +343,8 @@ assert.deepEqual(assessed.causalPaths,["src/broad-a.ts","src/broad-b.ts"]);
 const manifest=createRemainderManifest({task:assessed.task,splitBase:"1".repeat(40),
   prerequisiteCommit:"2".repeat(40),remainderHead:"3".repeat(40),remainderTree:"4".repeat(40),
   orderedCommits:["3".repeat(40)],changeSetDigest:"5".repeat(64),causalPaths:assessed.causalPaths,
-  boundaryGeneration:"shell-v1",expectedPostRebaseDelta:"6".repeat(64)});
+  boundaryGeneration:"shell-v1",expectedPostRebaseDelta:"6".repeat(64),
+  routing:{from:"qa",to:"coder"}});
 assert.equal(manifest.remainder.task,"documentation-templates");
 assert.equal(manifest.remainder.orderedCommits.length,1);
 const resumedStack=resumeRemainder(manifest,{newQaHead:"7".repeat(40),
@@ -396,6 +416,28 @@ try {
   assert.match((await exec(helper,[daemonActive.id],{cwd:recipientRoot})).stdout,/"status": "claimed"/u);
   assert.match((await exec(helperComplete,[daemonActive.id],{cwd:recipientRoot})).stdout,/RESUME:/u);
   const activeFile=path.join(recipientRoot,".swarmforge/handoffs/inbox/in_process/active.handoff");
+  const modifiedGrantWithoutDigest={...grant,approvedAt:"2026-08-18"};
+  delete modifiedGrantWithoutDigest.digest;
+  const modifiedGrant={...modifiedGrantWithoutDigest,
+    digest:`sha256:${authorityDigest(modifiedGrantWithoutDigest)}`};
+  await writeFile(path.join(recipientRoot,"docs/swarmforge-authorities/outcome-bounded-autonomy-v1.json"),
+    `${JSON.stringify(modifiedGrant,null,2)}\n`);
+  await git(recipientRoot,"add","."); await git(recipientRoot,"commit","-qm","modified base grant");
+  const modifiedBase=await git(recipientRoot,"rev-parse","HEAD");
+  const modifiedActive={...daemonActive,commit:modifiedBase,base:modifiedBase};
+  await writeFile(activeFile,Object.entries(modifiedActive).filter(([key])=>key!=="path")
+    .map(([key,value])=>`${key}: ${value}`).join("\n")+"\n\nactive\n");
+  const modifiedHeaders={...daemonHeaders,id:"modified-copy",name:"modified-copy"};
+  modifiedHeaders["content-digest"]=unblockerContentDigest(modifiedHeaders,"bounded\n");
+  const modifiedSource=path.join(senderRoot,".swarmforge/handoffs/outbox/00_modified-copy.handoff");
+  await writeFile(modifiedSource,Object.entries(modifiedHeaders).map(([key,value])=>`${key}: ${value}`)
+    .join("\n")+"\n\nbounded\n");
+  await assert.rejects(exec(process.execPath,[unblockerControl,"deliver-file",modifiedSource,
+    recipientRoot,"specifier"],{cwd:recipientRoot}),/candidate-only|authority grant/i);
+  assert.equal((await readdir(path.join(recipientRoot,".swarmforge/handoffs/inbox/unblockers/new"))).length,0,
+    "a modified same-named base grant cannot substitute for the immutable registered grant");
+  await writeFile(activeFile,Object.entries(daemonActive).filter(([key])=>key!=="path")
+    .map(([key,value])=>`${key}: ${value}`).join("\n")+"\n\nactive\n");
   const batchDir=path.join(recipientRoot,".swarmforge/handoffs/inbox/in_process/batch_fixture");
   await mkdir(batchDir); await import("node:fs/promises").then(({rename})=>rename(activeFile,
     path.join(batchDir,"active.handoff")));
