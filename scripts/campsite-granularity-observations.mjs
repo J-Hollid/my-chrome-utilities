@@ -157,8 +157,10 @@ export async function recordGranularityObservation(root,input,{isBaseAncestor=de
 
 function normalizedDisposition(input) {
   if (!dispositions.has(input.disposition)) throw new Error("Portfolio disposition is invalid");
-  const value={kind:input.disposition,reason:text(input.reason,"Portfolio disposition reason"),
+  const value={promotionIdentity:text(input.promotionIdentity,"Promotion identity"),
+    kind:input.disposition,reason:text(input.reason,"Portfolio disposition reason"),
     recordedAt:timestamp(input.recordedAt)};
+  if (!stableIdentity(value.promotionIdentity)) throw new Error("Promotion identity is invalid");
   if (["selected","combined"].includes(value.kind)) {
     value.refinementIdentity=text(input.refinementIdentity,"Refinement identity");
     if (!stableIdentity(value.refinementIdentity)) throw new Error("Refinement identity is invalid");
@@ -175,7 +177,8 @@ export async function recordGranularityPortfolioDisposition(root,input) {
   return locked(root,(portfolio)=>{
     const observation=portfolio.observations.find((item)=>item.identity===identity);
     if (!observation) throw new Error("Portfolio disposition observation is missing or stale");
-    const prior=observation.dispositionHistory.at(-1);
+    const prior=observation.dispositionHistory.find((item)=>
+      item.promotionIdentity===value.promotionIdentity);
     if (prior) {
       if (valueDigest(prior)!==valueDigest(value)) throw new Error("Portfolio disposition is append-only and cannot be replaced");
       return {status:"reused",observation:structuredClone(observation)};
@@ -186,20 +189,25 @@ export async function recordGranularityPortfolioDisposition(root,input) {
 }
 
 export async function recordGranularityQaProof(root,input) {
-  const proof={refinementIdentity:text(input.refinementIdentity,"Refinement identity"),
+  const proof={promotionIdentity:text(input.promotionIdentity,"Promotion identity"),
+    refinementIdentity:text(input.refinementIdentity,"Refinement identity"),
     task:text(input.task,"Hardening task"),candidateCommit:text(input.candidateCommit,"Hardening candidate"),
     evidence:text(input.evidence,"Hardening evidence"),qaIntegrated:input.qaIntegrated===true,
     recordedAt:timestamp(input.recordedAt)};
-  if (!stableIdentity(proof.refinementIdentity)||!sha.test(proof.candidateCommit)||
+  if (!stableIdentity(proof.promotionIdentity)||!stableIdentity(proof.refinementIdentity)||
+      !sha.test(proof.candidateCommit)||
       proof.evidence!=="review-ready"||!proof.qaIntegrated) {
     throw new Error("Selected hardening requires review-ready evidence and QA integration");
   }
   return locked(root,(portfolio)=>{
     const selected=portfolio.observations.some((observation)=>
       ["selected","combined"].includes(observation.dispositionHistory.at(-1)?.kind)&&
+      observation.dispositionHistory.at(-1).promotionIdentity===proof.promotionIdentity&&
       observation.dispositionHistory.at(-1).refinementIdentity===proof.refinementIdentity);
     if (!selected) throw new Error("Hardening proof has no selected portfolio refinement");
-    const prior=portfolio.hardeningProofs.find((item)=>item.refinementIdentity===proof.refinementIdentity);
+    const prior=portfolio.hardeningProofs.find((item)=>
+      item.promotionIdentity===proof.promotionIdentity&&
+      item.refinementIdentity===proof.refinementIdentity);
     if (prior&&valueDigest(prior)!==valueDigest(proof)) throw new Error("Hardening QA proof is immutable");
     if (!prior) portfolio.hardeningProofs.push(proof);
     return {status:prior?"reused":"recorded",proof:structuredClone(prior??proof)};
@@ -214,13 +222,23 @@ function visiblePortfolio(portfolio) {
 
 export async function listGranularityPortfolio(root) { return visiblePortfolio(await load(root)); }
 
-async function freezeBlocking(portfolio,qaHead,isAncestor) {
+async function freezeBlocking(portfolio,promotionIdentity,qaHead,isAncestor) {
   const blocking=[];
   for (const observation of portfolio.observations) {
-    const disposition=observation.dispositionHistory.at(-1);
+    const latest=observation.dispositionHistory.at(-1);
+    const disposition=latest?.kind==="carried"&&latest.promotionIdentity!==promotionIdentity?
+      observation.dispositionHistory.find((item)=>item.promotionIdentity===promotionIdentity):latest;
     if (!disposition) { blocking.push(`undisposed:${observation.identity}`); continue; }
     if (!["selected","combined"].includes(disposition.kind)) continue;
-    const proof=portfolio.hardeningProofs.find((item)=>item.refinementIdentity===disposition.refinementIdentity);
+    const selectedPeer=portfolio.observations.some((item)=>item.dispositionHistory.some((candidate)=>
+      candidate.promotionIdentity===disposition.promotionIdentity&&candidate.kind==="selected"&&
+      candidate.refinementIdentity===disposition.refinementIdentity));
+    if (disposition.kind==="combined"&&!selectedPeer) {
+      blocking.push(`combined-without-selected:${disposition.refinementIdentity}`); continue;
+    }
+    const proof=portfolio.hardeningProofs.find((item)=>
+      item.promotionIdentity===disposition.promotionIdentity&&
+      item.refinementIdentity===disposition.refinementIdentity);
     if (!proof||proof.evidence!=="review-ready"||!proof.qaIntegrated||
         !await isAncestor(proof.candidateCommit,qaHead)) {
       blocking.push(`selected-hardening-not-on-qa:${disposition.refinementIdentity}`);
@@ -229,25 +247,36 @@ async function freezeBlocking(portfolio,qaHead,isAncestor) {
   return [...new Set(blocking)].sort();
 }
 
-export async function granularityPortfolioFreezeStatus(root,{qaHead,isAncestor}={}) {
+export async function granularityPortfolioFreezeStatus(root,{promotionIdentity="current-promotion",
+  qaHead,isAncestor}={}) {
   const portfolio=await load(root),ancestor=isAncestor??(async(candidate,head)=>{
     try { await exec("git",["merge-base","--is-ancestor",candidate,head],{cwd:root}); return true; }
     catch { return false; }
   });
-  const blocking=await freezeBlocking(portfolio,qaHead??"refs/heads/qa",ancestor);
+  const blocking=await freezeBlocking(portfolio,promotionIdentity,qaHead??"refs/heads/qa",ancestor);
   return {ready:blocking.length===0,blocking,observationCount:portfolio.observations.length};
 }
 
-export function granularityPortfolioFreezeStatusSync(root=process.cwd()) {
+export function granularityPortfolioFreezeStatusSync(root=process.cwd(),promotionIdentity="current-promotion") {
   const portfolio=loadSync(root),blocking=[];
   let qaHead="";
   try { qaHead=execFileSync("git",["rev-parse","refs/heads/qa"],{cwd:root,encoding:"utf8"}).trim(); }
   catch {}
   for (const observation of portfolio.observations) {
-    const disposition=observation.dispositionHistory.at(-1);
+    const latest=observation.dispositionHistory.at(-1);
+    const disposition=latest?.kind==="carried"&&latest.promotionIdentity!==promotionIdentity?
+      observation.dispositionHistory.find((item)=>item.promotionIdentity===promotionIdentity):latest;
     if (!disposition) { blocking.push(`undisposed:${observation.identity}`); continue; }
     if (!["selected","combined"].includes(disposition.kind)) continue;
-    const proof=portfolio.hardeningProofs.find((item)=>item.refinementIdentity===disposition.refinementIdentity);
+    const selectedPeer=portfolio.observations.some((item)=>item.dispositionHistory.some((candidate)=>
+      candidate.promotionIdentity===disposition.promotionIdentity&&candidate.kind==="selected"&&
+      candidate.refinementIdentity===disposition.refinementIdentity));
+    if (disposition.kind==="combined"&&!selectedPeer) {
+      blocking.push(`combined-without-selected:${disposition.refinementIdentity}`); continue;
+    }
+    const proof=portfolio.hardeningProofs.find((item)=>
+      item.promotionIdentity===disposition.promotionIdentity&&
+      item.refinementIdentity===disposition.refinementIdentity);
     let ancestral=false;
     if (proof&&qaHead) {
       try { execFileSync("git",["merge-base","--is-ancestor",proof.candidateCommit,qaHead],

@@ -87,12 +87,13 @@ try {
     {qaHead:"c".repeat(40),isAncestor:async()=>true})).ready,false,
   "an undisposed observation blocks release freeze");
   await recordGranularityPortfolioDisposition(observationRepository,{observationIdentity:identity,
-    disposition:"selected",refinementIdentity:"route-hardening",reason:"measured repeated mismatch",
+    promotionIdentity:"promotion-1",disposition:"selected",refinementIdentity:"route-hardening",reason:"measured repeated mismatch",
     recordedAt:"2026-08-18T14:00:00.000Z"});
   assert.equal((await granularityPortfolioFreezeStatus(observationRepository,
     {qaHead:"c".repeat(40),isAncestor:async()=>true})).ready,false,
   "selected hardening without QA proof blocks release freeze");
   await recordGranularityQaProof(observationRepository,{refinementIdentity:"route-hardening",
+    promotionIdentity:"promotion-1",
     task:"verification-slice-route-fix",candidateCommit:"d".repeat(40),
     evidence:"review-ready",qaIntegrated:true,recordedAt:"2026-08-18T15:00:00.000Z"});
   assert.equal((await granularityPortfolioFreezeStatus(observationRepository,
@@ -103,13 +104,17 @@ try {
     const recorded=await recordGranularityObservation(observationRepository,value,
       {isBaseAncestor:async()=>true});
     await recordGranularityPortfolioDisposition(observationRepository,{observationIdentity:recorded.observation.identity,
-      disposition,refinementIdentity:disposition==="combined"?"route-hardening":undefined,
+      promotionIdentity:"promotion-1",disposition,
+      refinementIdentity:disposition==="combined"?"route-hardening":undefined,
       reason:`explicit ${disposition} rationale`,reconsiderationEvidence:"review next promotion",
       disprovedPremise:disposition==="retired"?"no material mismatch remains":undefined,
       recordedAt:"2026-08-18T17:00:00.000Z"});
   }
   assert.deepEqual(new Set((await listGranularityPortfolio(observationRepository)).observations
     .map(({disposition})=>disposition?.kind)),new Set(["selected","combined","carried","retired"]));
+  assert.equal((await granularityPortfolioFreezeStatus(observationRepository,
+    {promotionIdentity:"promotion-2",qaHead:"c".repeat(40),isAncestor:async()=>true})).ready,false,
+  "a carried observation becomes explicitly undisposed at the next promotion");
 } finally { await rm(observationRepository,{recursive:true,force:true}); }
 
 const persistenceRepository=await mkdtemp(path.join(os.tmpdir(),"stacked-campsite-persistence-"));

@@ -95,11 +95,12 @@ async function cli(args) {
       JSON.parse(await readFile(path.resolve(rest[0]),"utf8"))))); return;
   }
   if (command==="assert-freeze") {
-    const status=await granularityPortfolioFreezeStatus(root,{qaHead:rest[0]});
+    const status=await granularityPortfolioFreezeStatus(root,
+      {promotionIdentity:rest[0],qaHead:rest[1]});
     if (!status.ready) throw new Error(`Granularity portfolio blocks release freeze: ${status.blocking.join(", ")}`);
     console.log(JSON.stringify(status)); return;
   }
-  throw new Error("Use: stacked-campsite-control.mjs prepare <config> | judge-readiness <readiness> <config> | observe <observation> | portfolio | dispose <disposition> | record-hardening <proof> | assert-freeze <qa-head> | preserve <task> <split-base> <prerequisite> <remainder-head> <generation> <causal-paths-json> <routing-json> <manifest> | resume <manifest> <new-qa> | qa-trigger | validate-resume <manifest> <qa-head> <causal-delta> <complete-delta> <resumed-head>");
+  throw new Error("Use: stacked-campsite-control.mjs prepare <config> | judge-readiness <readiness> <config> | observe <observation> | portfolio | dispose <disposition> | record-hardening <proof> | assert-freeze <promotion> <qa-head> | preserve <task> <split-base> <prerequisite> <remainder-head> <generation> <causal-paths-json> <routing-json> <manifest> | resume <manifest> <new-qa> | qa-trigger | validate-resume <manifest> <qa-head> <causal-delta> <complete-delta> <resumed-head>");
 }
 
 if (process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])) {
