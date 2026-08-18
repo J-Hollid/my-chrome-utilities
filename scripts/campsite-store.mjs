@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import { link, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { bindDigest, dispositionIdentity, recordDisposition, stableIdentity,
-  validateDigest, valueDigest } from "./campsite-artifacts.mjs";
+import { bindDigest, campsiteGenerationId, dispositionApplicability, dispositionIdentity,
+  recordDisposition, stableIdentity, validateDigest, valueDigest } from "./campsite-artifacts.mjs";
 
 export async function atomicWrite(target,content,{exclusive=false}={}) {
   await mkdir(path.dirname(target),{recursive:true});
@@ -44,7 +44,7 @@ function requiredDisposition(values,assessment,causalPath) {
 }
 
 function applyDisposition(records,value) {
-  const normalized={...value,consumers:[...new Set(value.consumers??[])].sort()};
+  const normalized={...value,consumers:dispositionApplicability(value).consumers};
   const prior=records.find((item)=>dispositionIdentity(item)===dispositionIdentity(value));
   if (prior&&valueDigest(prior)!==valueDigest(normalized)) {
     throw new Error("Applicable campsite disposition cannot be replaced");
@@ -132,7 +132,24 @@ export async function recoverResumptionTransactions(root) {
   return recovered;
 }
 
-function validatePipelineIdentity(assessment,manifest,preparation) {
+function validatePipelineDispositions(assessment,manifest,dispositions) {
+  const applicable=Array.isArray(manifest.applicability)&&
+    manifest.applicability.length===assessment.causalPaths.length&&
+    Array.isArray(dispositions)&&dispositions.length===assessment.causalPaths.length;
+  if (!applicable) throw new Error("Campsite pipeline applicability is not one-to-one");
+  const expected=new Map(manifest.applicability.map((value)=>[value.path,value]));
+  for (const value of dispositions) {
+    const row=expected.get(value.path);
+    const reviewed=value.reviewedBy&&value.reviewedAt;
+    const exact=row&&value.task===assessment.task&&value.generation===manifest.boundaryGeneration&&
+      valueDigest(dispositionApplicability(value))===valueDigest(row);
+    if (!reviewed||!exact) throw new Error("Campsite disposition differs from manifest applicability");
+    expected.delete(value.path);
+  }
+  if (expected.size) throw new Error("Campsite pipeline applicability is not one-to-one");
+}
+
+function validatePipelineIdentity(assessment,manifest,dispositions,preparation) {
   validateDigest(assessment,"Campsite assessment"); validateDigest(manifest,"Remainder manifest");
   if (![preparation.id,preparation.from,preparation.to,preparation.task].every(stableIdentity)) {
     throw new Error("Preparation handoff identity is invalid");
@@ -143,11 +160,15 @@ function validatePipelineIdentity(assessment,manifest,preparation) {
   if (assessment.candidate!==manifest.candidate) {
     throw new Error("Assessment and preserved remainder candidate generations differ");
   }
+  if (manifest.generationId!==campsiteGenerationId(manifest)) {
+    throw new Error("Remainder manifest generation is modified");
+  }
+  validatePipelineDispositions(assessment,manifest,dispositions);
 }
 
 function pipelineBinding(assessment,manifest,dispositions,preparation) {
   const normalized=dispositions.map((value)=>({...value,
-    consumers:[...new Set(value.consumers??[])].sort()}));
+    consumers:dispositionApplicability(value).consumers}));
   return {assessmentDigest:assessment.digest,manifestDigest:manifest.digest,
     dispositionsDigest:valueDigest(normalized),preparationDigest:valueDigest(preparation)};
 }
@@ -188,7 +209,7 @@ async function createPipeline(root,{assessment,dispositions,manifest,preparation
 
 export async function persistCampsitePipeline(root,input) {
   const {assessment,dispositions,manifest,preparation}=input;
-  validatePipelineIdentity(assessment,manifest,preparation);
+  validatePipelineIdentity(assessment,manifest,dispositions,preparation);
   const receiptPath=path.join(root,".swarmforge","campsites","pipelines",
     `${generationStem(manifest)}.json`);
   const binding=pipelineBinding(assessment,manifest,dispositions,preparation);

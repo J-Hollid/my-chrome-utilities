@@ -58,9 +58,11 @@ function defaultApplicability(causalPaths,boundaryGeneration) {
     consumers:[],failedPremise:false}));
 }
 
-function normalizeApplicabilityRow(value) {
+const normalizedConsumers=(value)=>[...new Set(value.consumers??[])].sort();
+
+export function dispositionApplicability(value) {
   return {path:value.path,boundary:value.boundary,
-    consumers:[...new Set(value.consumers??[])].sort(),failedPremise:Boolean(value.failedPremise)};
+    consumers:normalizedConsumers(value),failedPremise:Boolean(value.failedPremise)};
 }
 
 function validApplicabilityRow(value,causalPath) {
@@ -69,7 +71,7 @@ function validApplicabilityRow(value,causalPath) {
 
 function normalizeApplicability(values,causalPaths,boundaryGeneration) {
   const source=values?.length?values:defaultApplicability(causalPaths,boundaryGeneration);
-  const normalized=source.map(normalizeApplicabilityRow)
+  const normalized=source.map(dispositionApplicability)
     .sort((left,right)=>left.path.localeCompare(right.path)||left.boundary.localeCompare(right.boundary));
   if (normalized.length!==causalPaths.length) {
     throw new Error("Campsite applicability identity is incomplete");
@@ -148,7 +150,7 @@ export function resumeRemainder(manifest,{newQaHead,observedPostRebaseDelta,
 }
 
 export function dispositionIdentity(value) {
-  const consumers=[...new Set(value.consumers??[])].sort().join("\u0001");
+  const consumers=normalizedConsumers(value).join("\u0001");
   return [value.task,value.path,value.boundary,value.generation,consumers,
     String(Boolean(value.failedPremise))].join("\u0000");
 }
@@ -167,7 +169,7 @@ export function recordDisposition(records,value) {
   if (records.some((item)=>dispositionIdentity(item)===dispositionIdentity(value))) {
     throw new Error("Task/path generation already has a disposition");
   }
-  const record={...value,consumers:[...new Set(value.consumers??[])].sort()};
+  const record={...value,consumers:normalizedConsumers(value)};
   records.push(record); return record;
 }
 

@@ -11,6 +11,7 @@ import {
   resumeRemainder,
 } from "../scripts/stacked-campsite-control.mjs";
 import { resumeOntoQa } from "../scripts/campsite-git-runtime.mjs";
+import { persistCampsitePipeline } from "../scripts/campsite-store.mjs";
 
 const exec=promisify(execFile);
 const control=path.resolve("scripts/stacked-campsite-control.mjs");
@@ -44,6 +45,29 @@ assert.throws(()=>recordDisposition(records,{task:"product-task",path:"src/one.t
 assert.equal(recordDisposition(records,{task:"product-task",path:"src/one.ts",boundary:"shell",
   generation:"shell-v1",result:"slice",consumers:["shell"]}).result,"slice",
 "a changed failed-premise state is a new applicability generation");
+
+const persistenceRepository=await mkdtemp(path.join(os.tmpdir(),"stacked-campsite-persistence-"));
+try {
+  const reviewedAt="2026-08-18T00:00:00.000Z";
+  const dispositions=assessment.causalPaths.map((pathValue)=>({task:assessment.task,path:pathValue,
+    boundary:"shell",generation:"shell-v1",result:"slice",consumers:["shell"],
+    reviewedBy:"architect",reviewedAt}));
+  const boundManifest=createRemainderManifest({task:assessment.task,splitBase:"2".repeat(40),
+    prerequisiteCommit:"3".repeat(40),remainderHead:"1".repeat(40),remainderTree:"5".repeat(40),
+    orderedCommits:["1".repeat(40)],changeSetDigest:"6".repeat(64),candidate:assessment.candidate,
+    causalPaths:assessment.causalPaths,boundaryGeneration:"shell-v1",dispositions,
+    expectedPostRebaseDelta:"7".repeat(64),routing:{from:"qa",to:"reviewer"}});
+  const pipeline={assessment,dispositions,manifest:boundManifest,
+    preparation:{id:"prepare-product",from:"coder",to:"refactorer",task:"prepare-product"}};
+  await assert.rejects(persistCampsitePipeline(persistenceRepository,{...pipeline,
+    dispositions:dispositions.map((value,index)=>index?value:{...value,consumers:["flow","shell"]})}),
+  /differs from manifest applicability/u);
+  await assert.rejects(persistCampsitePipeline(persistenceRepository,{...pipeline,
+    dispositions:dispositions.map((value)=>({...value,generation:"shell-v2"}))}),
+  /differs from manifest applicability/u);
+  await assert.rejects(readdir(path.join(persistenceRepository,".swarmforge")),({code})=>code==="ENOENT",
+    "mismatched dispositions are rejected before campsite state mutation");
+} finally { await rm(persistenceRepository,{recursive:true,force:true}); }
 
 const repository=await mkdtemp(path.join(os.tmpdir(),"stacked-campsite-git-"));
 try {
