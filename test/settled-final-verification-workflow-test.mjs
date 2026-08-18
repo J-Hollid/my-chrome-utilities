@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -27,6 +28,7 @@ import {
 import { canonicalTerminalPlanEligible, validateCanonicalMasterEvidenceRecord } from "../scripts/verification-evidence.mjs";
 import { granularityPortfolioFreezeStatusSync } from
   "../scripts/campsite-granularity-observations.mjs";
+import { timeoutIncidentDigest } from "../scripts/verification-reliability-values.mjs";
 import {
   classifyLegacyIncidentRunIntent,
   requireVerificationRunIntent,
@@ -373,20 +375,35 @@ assert.throws(() => handoffReadinessPolicy({
   granularityPortfolioStatus:{ready:false,blocking:["selected-hardening-not-on-qa:route-hardening"]},
 }), /selected-hardening-not-on-qa/i);
 const malformedPortfolioRepository=await mkdtemp(path.join(os.tmpdir(),"granularity-malformed-"));
+let malformedPortfolioRuntime;
+let malformedPortfolioRegressionResult;
 try {
-  const portfolioDirectory=path.join(malformedPortfolioRepository,".swarmforge","campsites");
-  await mkdir(portfolioDirectory,{recursive:true});
-  await writeFile(path.join(portfolioDirectory,"granularity-portfolio.json"),JSON.stringify({
+  await exec("git",["init"],{cwd:malformedPortfolioRepository});
+  const commonDirectory=(await exec("git",["rev-parse","--git-common-dir"],
+    {cwd:malformedPortfolioRepository,encoding:"utf8"})).stdout.trim();
+  const repositoryIdentity=createHash("sha256").update(
+    path.resolve(malformedPortfolioRepository,commonDirectory)).digest("hex");
+  malformedPortfolioRuntime=path.join(os.tmpdir(),"swarmforge-repository-runtime",repositoryIdentity);
+  await mkdir(malformedPortfolioRuntime,{recursive:true});
+  await writeFile(path.join(malformedPortfolioRuntime,"granularity-portfolio.json"),JSON.stringify({
     version:1,observations:{},hardeningProofs:[],
   }));
-  assert.throws(()=>handoffReadinessPolicy({
-    sender:"specifier",recipients:["architect"],task:"qa-master-promotion",
-    readiness:"release-candidate",verified:"qa-candidate",allPackIds:allPacks,
-    granularityPortfolioStatus:granularityPortfolioFreezeStatusSync(
-      malformedPortfolioRepository,"qa-master-promotion"),
-  }),/portfolio is malformed/i,
-  "release-candidate policy fails closed when persisted portfolio schema is invalid");
-} finally { await rm(malformedPortfolioRepository,{recursive:true,force:true}); }
+  let policyError;
+  try {
+    handoffReadinessPolicy({sender:"specifier",recipients:["architect"],
+      task:"qa-master-promotion",readiness:"release-candidate",verified:"qa-candidate",
+      allPackIds:allPacks,granularityPortfolioStatus:granularityPortfolioFreezeStatusSync(
+        malformedPortfolioRepository,"qa-master-promotion")});
+  } catch (error) { policyError=error; }
+  assert.match(policyError?.message??"",/portfolio is malformed/i,
+    "release-candidate policy fails closed when persisted portfolio schema is invalid");
+  malformedPortfolioRegressionResult={malformedStoreRejected:true,
+    fixtureResolvedToRepositoryRuntime:malformedPortfolioRuntime.includes(
+      `${path.sep}swarmforge-repository-runtime${path.sep}`)};
+} finally {
+  await rm(malformedPortfolioRepository,{recursive:true,force:true});
+  if (malformedPortfolioRuntime) await rm(malformedPortfolioRuntime,{recursive:true,force:true});
+}
 assert.deepEqual(handoffReadinessPolicy({
   sender:"architect", recipients:["specifier"], task:"future-slice",
   readiness:"final-ready", verified:allPacks.join(","), allPackIds:allPacks,
@@ -614,4 +631,22 @@ console.log(JSON.stringify({
     scorecard,
   },
 }));
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const expectedPreRepairFailure={malformedStoreRejected:false,
+    fixtureResolvedToRepositoryRuntime:false};
+  const expectedRepairResult={malformedStoreRejected:true,
+    fixtureResolvedToRepositoryRuntime:true};
+  assert.deepEqual(malformedPortfolioRegressionResult,expectedRepairResult);
+  const fixture={id:"repository-runtime-malformed-portfolio-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
+    input:{policy:"release-candidate",store:"granularity-portfolio.json"},
+    expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:malformedPortfolioRegressionResult}}}));
+}
 console.log("settled final verification workflow tests passed");
