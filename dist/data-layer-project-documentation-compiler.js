@@ -19,16 +19,29 @@ const matrixState = (context, path) => { if (context.compiled.conflicts.some((co
 const defaultProfileColumns = ["Property", "Description", "Required", "Allowed values", "Example", "Comments"];
 const profileValue = (column, item) => column === "Property" ? item.path : column === "Description" ? item.description ?? "" : column === "Required" ? item.forbidden ? "Not expected" : item.required ? "Yes" : "No" : column === "Allowed values" ? item.allowedValues?.map(String).join(", ") ?? "" : column === "Example" ? item.examples?.map(String).join(", ") ?? "" : String(item.comments ?? "");
 const publicRows = (table) => { const concepts = new Map(table.conceptGroups?.flatMap(group => Array.from({ length: group.count }, (_, offset) => [group.start + offset, group.name])) ?? []); return table.rows.map((row, index) => ({ property: row[0] ?? "", concept: concepts.get(index) ?? "", cells: row.slice(1).map((value, column) => ({ columnKey: table.headings[column + 1] ?? `column-${column + 2}`, heading: table.headings[column + 1] ?? "", value })) })); };
-const tableTemplateData = (table) => ({ columns: table.headings.map(heading => ({ key: heading, heading })), rows: publicRows(table), concepts: (table.conceptGroups ?? []).map(({ name, start, count }) => ({ name, rows: publicRows(table).slice(start, start + count) })), legend: table.legend ?? "" });
-const flowTemplateData = (snapshot, table) => { const pages = []; for (const context of snapshot.contexts) {
-    if (context.kind === "page-instance") {
-        pages.push({ stepLabel: context.stepLabel, pageName: context.pageName, sourcePageName: context.sourcePageName ?? context.pageName, eventName: context.eventName, heading: `Step ${context.stepLabel} ${context.pageName}`, rows: Object.entries(context.compiled.properties).map(([property, value]) => ({ property, value: String(value.expectedValue ?? value.allowedValues?.join(" or ") ?? "") })), events: [] });
-        continue;
-    }
-    const page = pages.find(candidate => candidate.pageName === context.pageName);
-    if (page && Array.isArray(page.events))
-        page.events.push({ eventName: context.eventName, heading: context.eventName, rows: Object.entries(context.compiled.properties).map(([property, value]) => ({ property, value: String(value.expectedValue ?? value.allowedValues?.join(" or ") ?? "") })) });
-} return { name: snapshot.flowName, pages, columns: tableTemplateData(table).columns, rows: tableTemplateData(table).rows }; };
+const tableTemplateData = (table) => ({ columns: table.headings.slice(1).map(heading => ({ key: heading, heading })), rows: publicRows(table), concepts: (table.conceptGroups ?? []).map(({ name, start, count }) => ({ name, rows: publicRows(table).slice(start, start + count) })), legend: table.legend ?? "" });
+const metadataHeading = { description: "Description", type: "Type", allowedValues: "Allowed values", example: "Documented example", comments: "Comments", provenance: "Provenance" };
+const flowTemplateData = (snapshot, table, metadata) => {
+    const pages = [], pageByFrame = new Map();
+    const rows = (context, contextIndex) => table.rows.map(row => {
+        const property = String(row[0] ?? ""), metadataValues = metadata.map((column, index) => [column, String(row[index + 1] ?? "")]), value = String(row[metadata.length + contextIndex + 1] ?? ""), cells = [{ columnKey: "property", heading: "Property", value: property }, ...metadataValues.map(([column, item]) => ({ columnKey: column, heading: metadataHeading[column], value: item })), { columnKey: "value", heading: "Value", value }];
+        return { property, concept: context.compiled.properties[property]?.concept ?? "", ...Object.fromEntries(metadataValues), value, cells };
+    });
+    for (const [contextIndex, context] of snapshot.contexts.entries())
+        if (context.kind === "page-instance") {
+            const page = { stepLabel: context.stepLabel, pageName: context.pageName, sourcePageName: context.sourcePageName ?? context.pageName, eventName: context.eventName, heading: `Step ${context.stepLabel} ${context.pageName}`, rows: rows(context, contextIndex), events: [] };
+            pages.push(page);
+            pageByFrame.set(context.pageFrameId, page);
+        }
+    for (const [contextIndex, context] of snapshot.contexts.entries())
+        if (context.kind !== "page-instance") {
+            const page = pageByFrame.get(context.pageFrameId);
+            if (page && Array.isArray(page.events))
+                page.events.push({ eventName: context.eventName, heading: context.eventName, rows: rows(context, contextIndex) });
+        }
+    const tableData = tableTemplateData(table);
+    return { name: snapshot.flowName, pages, columns: tableData.columns, rows: tableData.rows };
+};
 const repairTarget = (context, path) => ({ kind: context.sourceKind, id: context.sourceId, ...(path ? { path } : {}) });
 export function reconcileProjectDocumentationConcepts(set, available) { const normalized = new Map(); for (const raw of available) {
     const name = raw.trim();
@@ -76,7 +89,7 @@ export function compileProjectDocumentation(input) {
             const configured = configureFlowDocumentationSnapshot(source.snapshot, { ...(section.configuration?.contextIds ? { contextOrder: section.configuration.contextIds } : {}), ...(section.configuration?.labels ? { stepLabels: section.configuration.labels } : {}) }), paths = section.configuration?.paths ?? flowDocumentationPropertyPaths(configured), metadata = (section.configuration?.columns ?? []).filter((column) => ["description", "type", "allowedValues", "example", "comments"].includes(column));
             revisions[source.entity.id] = flowSourceRevision(configured);
             const table = { ...configureFlowDocumentationTable(configured, "values", { selectedPaths: paths, metadata, pathDisplay: "canonical" }), id: section.id, title: section.name, themeFingerprint: themeFingerprint(theme) };
-            tables.push({ ...table, templateData: flowTemplateData(configured, table) });
+            tables.push({ ...table, templateData: flowTemplateData(configured, table, metadata) });
             diagnostics.push(...configured.diagnostics.map((item) => ({ sectionId: section.id, message: `${item.contextName}: ${item.issue}`, repair: item.repair, repairTarget: { kind: "flows", id: source.entity.id, path: item.path } })));
             continue;
         }

@@ -4,6 +4,7 @@ import { documentationTemplateAssignment } from "./template-library.js";
 import { prepareDocumentationTemplateContext } from "./template-context.js";
 import { parseExcelTemplateDirective, renderExcelTemplateGrid } from "./excel-template.js";
 import { validateExcelTemplateWorkbook } from "./excel-workbook.js";
+import { safeWorksheetName } from "./template-contract.js";
 const excelJs = () => { const value = globalThis.ExcelJS; if (!value)
     throw new Error("The packaged Excel template renderer is unavailable."); return value; };
 const noteText = (note) => typeof note === "string" ? note : note && typeof note === "object" && Array.isArray(note.texts) ? note.texts.map(({ text }) => String(text ?? "")).join("") : "";
@@ -109,8 +110,8 @@ function copyImages(source, sourceSheet, targetBook, targetSheet, rendered, prot
         }
     }
 }
-async function renderCustomInto(output, body, snapshot, table) { const section = snapshot.set.sections.find(({ id }) => id === table.id); const validation = await validateExcelTemplateWorkbook(body, section.kind); if (!validation.valid)
-    throw new Error(validation.findings.map(({ location, message }) => `${location}: ${message}`).join("\n")); const source = new (excelJs().Workbook)(); await source.xlsx.load(await body.arrayBuffer()); const worksheet = source.worksheets[0], prototype = prototypeFromWorksheet(worksheet, section.kind), context = prepareDocumentationTemplateContext(snapshot, table.id), rendered = renderExcelTemplateGrid(prototype, context), target = output.addWorksheet(rendered.worksheetName); for (const cell of rendered.cells) {
+async function renderCustomInto(output, body, snapshot, table, worksheetName) { const section = snapshot.set.sections.find(({ id }) => id === table.id); const validation = await validateExcelTemplateWorkbook(body, section.kind); if (!validation.valid)
+    throw new Error(validation.findings.map(({ location, message }) => `${location}: ${message}`).join("\n")); const source = new (excelJs().Workbook)(); await source.xlsx.load(await body.arrayBuffer()); const worksheet = source.worksheets[0], prototype = prototypeFromWorksheet(worksheet, section.kind), context = prepareDocumentationTemplateContext(snapshot, table.id), rendered = renderExcelTemplateGrid(prototype, context), target = output.addWorksheet(worksheetName); for (const cell of rendered.cells) {
     const destination = target.getCell(cell.address), sourcePoint = cellPoint(cell.sourceAddress ?? cell.address), targetPoint = cellPoint(cell.address);
     destination.value = cell.value;
     destination.style = structuredClone(cell.style ?? {});
@@ -128,23 +129,28 @@ async function renderCustomInto(output, body, snapshot, table) { const section =
         targetColumn.outlineLevel = sourceColumn.outlineLevel;
 } for (const merge of rendered.merges)
     target.mergeCells(merge); target.pageSetup = structuredClone(worksheet.pageSetup); target.headerFooter = structuredClone(worksheet.headerFooter); copyImages(source, worksheet, output, target, rendered, prototype, context); }
+const uniqueWorksheetName = (raw, used) => { const base = safeWorksheetName(raw); let value = base, sequence = 1; while (used.has(value.toLocaleLowerCase())) {
+    sequence += 1;
+    const suffix = ` (${sequence})`;
+    value = `${base.slice(0, 31 - suffix.length)}${suffix}`;
+} used.add(value.toLocaleLowerCase()); return value; };
 export async function writeProjectDocumentationWorkbookWithTemplates(snapshot, selection, readBody) {
     if (snapshot.incomplete && !selection.confirmIncomplete)
         throw new Error("Confirm incomplete documentation before export.");
     const tables = selectProjectDocumentationTables(snapshot, selection);
     if (!tables.length)
         throw new Error("Choose at least one documentation section.");
-    const templates = new Map((snapshot.templates ?? []).map(template => [template.id, template])), output = new (excelJs().Workbook)();
+    const templates = new Map((snapshot.templates ?? []).map(template => [template.id, template])), output = new (excelJs().Workbook)(), usedNames = new Set();
     for (const table of tables) {
-        const section = snapshot.set.sections.find(({ id }) => id === table.id), assigned = documentationTemplateAssignment(snapshot.set, "excel", section.kind);
+        const section = snapshot.set.sections.find(({ id }) => id === table.id), assigned = documentationTemplateAssignment(snapshot.set, "excel", section.kind), worksheetName = uniqueWorksheetName(section.name, usedNames);
         if (assigned === "builtin") {
-            fillBuiltIn(output.addWorksheet(table.title.slice(0, 31)), table);
+            fillBuiltIn(output.addWorksheet(worksheetName), table);
             continue;
         }
         const template = templates.get(assigned);
         if (!template || template.format !== "excel" || template.kind !== section.kind || !template.validation.valid || !template.body)
             throw new Error(`${section.name} Excel template is unavailable or invalid. Open Templates to repair it.`);
-        await renderCustomInto(output, await readBody(template.body.digest), snapshot, table);
+        await renderCustomInto(output, await readBody(template.body.digest), snapshot, table, worksheetName);
     }
     return new Uint8Array(await output.xlsx.writeBuffer());
 }

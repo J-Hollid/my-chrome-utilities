@@ -25,7 +25,6 @@ export const templateBindingsFor=(kind:DocumentationTemplateKind):readonly strin
 export function templateValueAt(context:TemplateContextObject,path:string):TemplateContextValue{
   return path.split(".").reduce<TemplateContextValue>((value,key)=>value&&typeof value==="object"&&!Array.isArray(value)?(value as TemplateContextObject)[key]:undefined,context);
 }
-
 export function safeWorksheetName(raw:string):string{
   const base=String(raw??"").replace(/[\\/*?:[\]]/gu," ").replace(/\s+/gu," ").replace(/^'+|'+$/gu,"").trim()||"Documentation";
   return base.slice(0,31);
@@ -35,4 +34,3 @@ export function templateDigest(prefix:string,value:unknown):string{
   let hash=2166136261;for(const byte of new TextEncoder().encode(JSON.stringify(value))){hash^=byte;hash=Math.imul(hash,16777619);}
   return`${prefix}:${(hash>>>0).toString(16).padStart(8,"0")}`;
 }
-

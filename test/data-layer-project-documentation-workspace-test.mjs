@@ -364,6 +364,11 @@ assert.deepEqual(compiledProject.tables[0].rows.map(([path])=>path),["/purchase_
 assert.equal(compiledProject.tables[0].headings[1],"Description");
 assert.match(compiledProject.tables[0].headings.join("|"),/Purchase label/);
 assert.match(compiledProject.tables[0].headings.join("|"),/Basket review/);
+const compiledFlowTemplate=compiledProject.tables[0].templateData;
+assert.equal(compiledFlowTemplate.pages.length,1,"configured context order does not separate an Event from its Page frame");
+assert.equal(compiledFlowTemplate.pages[0].events[0].eventName,"purchase");
+assert.equal(compiledFlowTemplate.pages[0].rows.find(({property})=>property==="/page_name").description,"Page","Page rows expose configured metadata by its public key");
+assert.deepEqual(compiledFlowTemplate.pages[0].rows.find(({property})=>property==="/page_name").cells.map(({heading})=>heading),["Property","Description","Value"]);
 assert.deepEqual(compiledProject.tables[1].headings.slice(1),compilerSources.matrixContexts.map(({label})=>label));
 assert.match(compiledProject.tables[1].headings.join("|"),/Basket review/);
 assert.equal(new Set(compiledProject.tables[1].rows.flatMap((row)=>row.slice(1))).size>=3,true);
@@ -377,6 +382,12 @@ for(const table of compiledProject.tables.slice(1)){
 assert.equal(compiledProject.tables[1].headings.some((value)=>value.includes("Compiler Sitewide")),false);
 assert.match(renderProjectDocumentationClipboard(compiledProject,{scope:"complete"}).plain,/Basket review/);
 assert.match(new TextDecoder().decode(writeProjectDocumentationWorkbook(compiledProject,{scope:"complete"})),/Basket review/);
+
+const repeatedPageState=structuredClone(compilerState),secondFrame={...structuredClone(repeatedPageState.project.documentationFlowGraphs["flow:compiler"].pageFrames[0]),id:"frame:compiler:second",nameInFlow:"Basket review"},secondOccurrence={...structuredClone(repeatedPageState.project.documentationFlowGraphs["flow:compiler"].occurrences[0]),id:"occurrence:compiler:second",pageFrameId:secondFrame.id,name:"Second purchase"};
+repeatedPageState.project.documentationFlowGraphs["flow:compiler"].pageFrames.push(secondFrame);repeatedPageState.project.documentationFlowGraphs["flow:compiler"].occurrences.push(secondOccurrence);
+const repeatedSet=createProjectDocumentationSet({id:"set:repeated",name:"Repeated Page",themeId:compilerTheme.id,sections:[{id:"flow:repeated",kind:"flow",name:"Repeated Checkout",targetId:"flow:compiler",selected:true},{id:"matrix:repeated",kind:"matrix",name:"Matrix",selected:false,configuration:{contextIds:[]}}]}),repeatedTemplate=compileProjectDocumentation({state:repeatedPageState,set:repeatedSet,theme:compilerTheme,revision:4,generatedAt:"2026-07-26T00:00:00.000Z"}).tables[0].templateData;
+assert.equal(repeatedTemplate.pages.length,2,"repeated references to one canonical Page remain distinct Flow Page contexts");
+assert.deepEqual(repeatedTemplate.pages.map(page=>page.events.length),[1,1],"contained Events stay with their stable Page-frame owner rather than a matching display name");
 
 let openedArticleSchema=createCanonicalSchema({id:"schema:opened-concepts",contributorId:"profile:opened-concepts",contributorName:"Opened Article"}),openedArticleIdentity=0;
 for(const constraint of [

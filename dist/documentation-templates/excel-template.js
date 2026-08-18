@@ -25,7 +25,10 @@ const placeholderPaths = (value) => [...value.matchAll(/\{\{\s*([a-z][a-zA-Z0-9.
 const itemPaths = {
     "flow.pages": ["page.stepLabel", "page.pageName", "page.sourcePageName", "page.eventName", "page.heading", "page.rows", "page.events"],
     "page.events": ["event.eventName", "event.heading", "event.rows"],
-    "table.rows": ["row.concept", "row.cells"], "row.cells": ["cell.columnKey", "cell.heading", "cell.value"],
+    "table.rows": ["row.property", "row.concept", "row.cells"], "flow.rows": ["row.property", "row.concept", "row.cells"],
+    "page.rows": ["row.property", "row.concept", "row.description", "row.type", "row.allowedValues", "row.example", "row.comments", "row.value", "row.cells"],
+    "event.rows": ["row.property", "row.concept", "row.description", "row.type", "row.allowedValues", "row.example", "row.comments", "row.value", "row.cells"],
+    "row.cells": ["cell.columnKey", "cell.heading", "cell.value"],
     "matrix.rows": ["row.property", "row.concept", "row.cells"], "matrix.concepts": ["concept.name", "concept.rows"],
     "profile.rows": ["row.property", "row.concept", "row.cells"], "profile.concepts": ["concept.name", "concept.rows"],
     "concept.rows": ["row.property", "row.concept", "row.cells"],
@@ -68,24 +71,24 @@ export function validateExcelTemplatePrototype(prototype) {
             findings.push({ message: `Merged range ${merge} is invalid.` });
         }
     }
+    const eachDirectives = directives.filter((item) => item.directive.kind === "each").sort((left, right) => { const area = (value) => ((value.rectangle?.bottom ?? 0) - (value.rectangle?.top ?? 0) + 1) * ((value.rectangle?.right ?? 0) - (value.rectangle?.left ?? 0) + 1); return area(right) - area(left); });
+    for (const item of eachDirectives) {
+        const parents = eachDirectives.filter(candidate => candidate !== item && candidate.rectangle && item.rectangle && candidate.rectangle.top <= item.rectangle.top && candidate.rectangle.left <= item.rectangle.left && candidate.rectangle.bottom >= item.rectangle.bottom && candidate.rectangle.right >= item.rectangle.right).sort((a, b) => { const area = (value) => (value.bottom - value.top + 1) * (value.right - value.left + 1); return area(a.rectangle) - area(b.rectangle); }), parent = parents[0];
+        const canonicalAvailable = parent?.canonicalItems ? nestedCollections[parent.canonicalItems] ?? [] : rootCollections[prototype.kind], actualAvailable = parent ? canonicalAvailable.map(collection => collection.replace(new RegExp(`^${itemRoot(parent.canonicalItems)}\\.`, "u"), `${parent.directive.variable}.`)) : canonicalAvailable, index = actualAvailable.indexOf(item.directive.items);
+        if (index < 0) {
+            findings.push({ cell: item.source.cell, message: `${item.source.cell} collection ${item.directive.items} is outside this repeat scope.` });
+            continue;
+        }
+        item.canonicalItems = canonicalAvailable[index];
+    }
     const root = new Set(templateBindingsFor(prototype.kind));
     for (const cell of prototype.cells)
         for (const path of placeholderPaths(String(cell.value))) {
             if (root.has(path))
                 continue;
-            const owner = directives.find(({ directive, rectangle }) => directive.kind === "each" && rectangle && coordinate(cell.address).row >= rectangle.top && coordinate(cell.address).row <= rectangle.bottom && coordinate(cell.address).column >= rectangle.left && coordinate(cell.address).column <= rectangle.right && itemPaths[directive.items]?.includes(path));
+            const point = coordinate(cell.address), owners = eachDirectives.filter(({ rectangle }) => rectangle && point.row >= rectangle.top && point.row <= rectangle.bottom && point.column >= rectangle.left && point.column <= rectangle.right).sort((left, right) => { const area = (value) => (value.bottom - value.top + 1) * (value.right - value.left + 1); return area(left.rectangle) - area(right.rectangle); }), owner = owners.find(({ directive, canonicalItems }) => canonicalItems && itemPaths[canonicalItems]?.map(binding => binding.replace(new RegExp(`^${itemRoot(canonicalItems)}\\.`, "u"), `${directive.variable}.`)).includes(path));
             if (!owner)
                 findings.push({ cell: cell.address, message: `${cell.address} uses out-of-scope binding ${path}.` });
-        }
-    for (const item of directives)
-        if (item.directive.kind === "each") {
-            if (!itemPaths[item.directive.items]) {
-                findings.push({ cell: item.source.cell, message: `${item.source.cell} uses unsupported collection ${item.directive.items}.` });
-                continue;
-            }
-            const parents = directives.filter(candidate => candidate !== item && candidate.directive.kind === "each" && candidate.rectangle && item.rectangle && candidate.rectangle.top <= item.rectangle.top && candidate.rectangle.left <= item.rectangle.left && candidate.rectangle.bottom >= item.rectangle.bottom && candidate.rectangle.right >= item.rectangle.right).sort((a, b) => { const area = (value) => (value.bottom - value.top + 1) * (value.right - value.left + 1); return area(a.rectangle) - area(b.rectangle); }), parent = parents[0]?.directive, available = parent ? nestedCollections[parent.items] ?? [] : rootCollections[prototype.kind];
-            if (!available.includes(item.directive.items))
-                findings.push({ cell: item.source.cell, message: `${item.source.cell} collection ${item.directive.items} is outside this repeat scope.` });
         }
     return { valid: findings.length === 0, findings };
 }

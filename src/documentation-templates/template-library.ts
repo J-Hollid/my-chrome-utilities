@@ -1,5 +1,6 @@
 import {projectDocumentationSafeText,type ProjectDocumentationDraft,type ProjectDocumentationSectionKind,type ProjectDocumentationSet,type ProjectDocumentationTemplate} from "../data-layer-project-documentation-records.js";
 import {templateDigest,type DocumentationTemplateFormat} from "./template-contract.js";
+import {validateRichDocumentationTemplate,type RichDocumentationTemplate,type RichTemplateBlock} from "./rich-template.js";
 
 export type DocumentationTemplateAssignment="builtin"|string;
 type CreateTemplateInput=Omit<ProjectDocumentationTemplate,"contractVersion"|"digest">;
@@ -9,8 +10,21 @@ const display=(format:DocumentationTemplateFormat,kind:ProjectDocumentationSecti
 
 export function createDocumentationTemplate(input:CreateTemplateInput):ProjectDocumentationTemplate{
   const value={...clone(input),id:projectDocumentationSafeText(input.id),name:projectDocumentationSafeText(input.name),contractVersion:1 as const,digest:input.body?.digest??templateDigest("rich",input.richBlocks??[])};
-  if(!value.id)throw new Error("Documentation template needs a stable identity.");if(!value.name)throw new Error("Documentation template needs a name.");if(input.format==="excel"&&!input.body)throw new Error("An Excel template needs one project-owned body.");if(input.format==="rich"&&!input.richBlocks)throw new Error("A Rich page template needs a semantic block tree.");
+  if(!value.id)throw new Error("Documentation template needs a stable identity.");if(!value.name)throw new Error("Documentation template needs a name.");if(input.format==="excel"&&(!input.body||input.richBlocks))throw new Error("An Excel template needs exactly one project-owned body.");if(input.format==="rich"&&(!input.richBlocks||input.body))throw new Error("A Rich page template needs exactly one semantic block tree.");
+  if(input.format==="rich"){const validation=validateRichDocumentationTemplate({...value,blocks:input.richBlocks as unknown as readonly RichTemplateBlock[]} as unknown as RichDocumentationTemplate);if(!validation.valid)throw new Error(validation.findings.map(({blockId,message})=>`${blockId}: ${message}`).join("\n"));return{...value,validation};}
   return value;
+}
+
+export interface DocumentationTemplateBodyReference {digest:string;byteLength:number;kind:ProjectDocumentationSectionKind}
+export function validateDocumentationTemplateRecords(documentation:ProjectDocumentationDraft|undefined):DocumentationTemplateBodyReference[]{
+  if(!documentation)return[];const templates=documentation.templates??[],ids=new Set<string>(),byId=new Map<string,ProjectDocumentationTemplate>(),bodies:DocumentationTemplateBodyReference[]=[];
+  for(const template of templates){
+    if(!template.id||ids.has(template.id))throw new DOMException(`Documentation template identity ${template.id||"(missing)"} is invalid or duplicated.`,"DataError");ids.add(template.id);byId.set(template.id,template);if(template.contractVersion!==1||!["overview","flow","matrix","profile"].includes(template.kind))throw new DOMException(`Documentation template ${template.id} uses an unsupported contract.`,"DataError");
+    if(template.format==="excel"){if(!template.body||template.richBlocks||!/^sha256:[0-9a-f]{64}$/u.test(template.body.digest)||template.body.digest!==template.digest||template.body.byteLength<1||template.body.byteLength>10*1024*1024||!template.validation.valid)throw new DOMException(`Excel documentation template ${template.id} has invalid body metadata.`,"DataError");bodies.push({digest:template.body.digest,byteLength:template.body.byteLength,kind:template.kind});continue;}
+    if(template.format!=="rich"||template.body||!template.richBlocks)throw new DOMException(`Documentation template ${template.id} has an unsupported format.`,"DataError");const blocks=template.richBlocks as unknown as readonly RichTemplateBlock[],validation=validateRichDocumentationTemplate({...template,blocks} as unknown as RichDocumentationTemplate),digest=templateDigest("rich",blocks);if(!validation.valid||template.digest!==digest||!template.validation.valid)throw new DOMException(`Rich documentation template ${template.id} is invalid: ${validation.findings.map(({blockId,message})=>`${blockId}: ${message}`).join("; ")}`,"DataError");
+  }
+  for(const set of documentation.sets)for(const[key,value]of Object.entries(set.templateAssignments??{})){if(value==="builtin")continue;const match=/^(excel|rich):(overview|flow|matrix|profile)$/u.exec(key),template=byId.get(value);if(!match||!template||template.format!==match[1]||template.kind!==match[2])throw new DOMException(`Documentation Set ${set.id} has an incompatible template assignment at ${key}.`,"DataError");}
+  return bodies;
 }
 
 export function documentationTemplateAssignment(set:ProjectDocumentationSet,format:DocumentationTemplateFormat,kind:ProjectDocumentationSectionKind):DocumentationTemplateAssignment{return set.templateAssignments?.[assignmentKey(format,kind)]??"builtin";}
@@ -31,4 +45,3 @@ export function removeDocumentationTemplate(documentation:ProjectDocumentationDr
 export function snapshotTemplateDigests(documentation:ProjectDocumentationDraft,set:ProjectDocumentationSet):Readonly<Record<string,string>>{
   const templates=new Map((documentation.templates??[]).map(template=>[template.id,template]));return Object.fromEntries((["excel","rich"] as const).flatMap(format=>(["overview","flow","matrix","profile"] as const).map(kind=>{const assigned=documentationTemplateAssignment(set,format,kind),template=assigned==="builtin"?undefined:templates.get(assigned);return[assignmentKey(format,kind),template?.digest??"builtin"];})));
 }
-

@@ -1,5 +1,6 @@
 import { projectDocumentationSafeText } from "../data-layer-project-documentation-records.js";
 import { templateDigest } from "./template-contract.js";
+import { validateRichDocumentationTemplate } from "./rich-template.js";
 const clone = (value) => structuredClone(value);
 const assignmentKey = (format, kind) => `${format}:${kind}`;
 const display = (format, kind) => `${format === "excel" ? "Excel" : "Rich page"} ${kind === "profile" ? "Site Profile" : kind[0].toUpperCase() + kind.slice(1)}`;
@@ -9,11 +10,50 @@ export function createDocumentationTemplate(input) {
         throw new Error("Documentation template needs a stable identity.");
     if (!value.name)
         throw new Error("Documentation template needs a name.");
-    if (input.format === "excel" && !input.body)
-        throw new Error("An Excel template needs one project-owned body.");
-    if (input.format === "rich" && !input.richBlocks)
-        throw new Error("A Rich page template needs a semantic block tree.");
+    if (input.format === "excel" && (!input.body || input.richBlocks))
+        throw new Error("An Excel template needs exactly one project-owned body.");
+    if (input.format === "rich" && (!input.richBlocks || input.body))
+        throw new Error("A Rich page template needs exactly one semantic block tree.");
+    if (input.format === "rich") {
+        const validation = validateRichDocumentationTemplate({ ...value, blocks: input.richBlocks });
+        if (!validation.valid)
+            throw new Error(validation.findings.map(({ blockId, message }) => `${blockId}: ${message}`).join("\n"));
+        return { ...value, validation };
+    }
     return value;
+}
+export function validateDocumentationTemplateRecords(documentation) {
+    if (!documentation)
+        return [];
+    const templates = documentation.templates ?? [], ids = new Set(), byId = new Map(), bodies = [];
+    for (const template of templates) {
+        if (!template.id || ids.has(template.id))
+            throw new DOMException(`Documentation template identity ${template.id || "(missing)"} is invalid or duplicated.`, "DataError");
+        ids.add(template.id);
+        byId.set(template.id, template);
+        if (template.contractVersion !== 1 || !["overview", "flow", "matrix", "profile"].includes(template.kind))
+            throw new DOMException(`Documentation template ${template.id} uses an unsupported contract.`, "DataError");
+        if (template.format === "excel") {
+            if (!template.body || template.richBlocks || !/^sha256:[0-9a-f]{64}$/u.test(template.body.digest) || template.body.digest !== template.digest || template.body.byteLength < 1 || template.body.byteLength > 10 * 1024 * 1024 || !template.validation.valid)
+                throw new DOMException(`Excel documentation template ${template.id} has invalid body metadata.`, "DataError");
+            bodies.push({ digest: template.body.digest, byteLength: template.body.byteLength, kind: template.kind });
+            continue;
+        }
+        if (template.format !== "rich" || template.body || !template.richBlocks)
+            throw new DOMException(`Documentation template ${template.id} has an unsupported format.`, "DataError");
+        const blocks = template.richBlocks, validation = validateRichDocumentationTemplate({ ...template, blocks }), digest = templateDigest("rich", blocks);
+        if (!validation.valid || template.digest !== digest || !template.validation.valid)
+            throw new DOMException(`Rich documentation template ${template.id} is invalid: ${validation.findings.map(({ blockId, message }) => `${blockId}: ${message}`).join("; ")}`, "DataError");
+    }
+    for (const set of documentation.sets)
+        for (const [key, value] of Object.entries(set.templateAssignments ?? {})) {
+            if (value === "builtin")
+                continue;
+            const match = /^(excel|rich):(overview|flow|matrix|profile)$/u.exec(key), template = byId.get(value);
+            if (!match || !template || template.format !== match[1] || template.kind !== match[2])
+                throw new DOMException(`Documentation Set ${set.id} has an incompatible template assignment at ${key}.`, "DataError");
+        }
+    return bodies;
 }
 export function documentationTemplateAssignment(set, format, kind) { return set.templateAssignments?.[assignmentKey(format, kind)] ?? "builtin"; }
 export function assignDocumentationTemplate(documentation, setId, format, kind, templateId) {

@@ -48,6 +48,10 @@ assert.equal(rendered.cells.some(({value})=>String(value).includes("{{")),false)
 const unsafe=renderExcelTemplateGrid({...prototype,cells:[{address:"A1",value:"{{project.name}}"}],directives:[]},{...flowContext,project:{...flowContext.project,name:"=1+1\n{{page.id}}"}});
 assert.equal(unsafe.cells[0].value,"=1+1\n{{page.id}}","project values remain literal and are never reparsed as template syntax");
 
+const renamedVariables={...prototype,cells:[{address:"A2",value:"{{entry.pageName}}"},{address:"A3",value:"{{occurrence.eventName}}"}],directives:[{cell:"A2",text:'tw:each(items="flow.pages" var="entry" direction="right" lastCell="B3")'},{cell:"A3",text:'tw:each(items="entry.events" var="occurrence" direction="down" lastCell="A3")'}]};
+assert.equal(validateExcelTemplatePrototype(renamedVariables).valid,true,"declared repeat variables define their nested binding scope");
+assert.deepEqual(renderExcelTemplateGrid(renamedVariables,flowContext).cells.map(({address,value})=>[address,value]),[["A2","Cart"],["C2","Payment"],["A3","view_cart"],["C3","purchase"]]);
+
 const crossing={...prototype,directives:[
   {cell:"A2",text:'tw:each(items="flow.pages" var="page" direction="right" lastCell="B3")'},
   {cell:"B1",text:'tw:each(items="table.rows" var="row" direction="down" lastCell="C2")'},
@@ -101,6 +105,6 @@ const generated=await writeProjectDocumentationWorkbookWithTemplates(matrixSnaps
 const generatedAddresses=new Map();generatedSheet.eachRow({includeEmpty:true},row=>row.eachCell({includeEmpty:true},cell=>generatedAddresses.set(String(cell.value),cell.address)));
 assert.deepEqual(["/cart","/order"].map(value=>generatedAddresses.get(value)),["A3","A5"]);
 assert.equal(generatedSheet.getColumn(1).width,31);assert.equal(generatedSheet.getRow(3).height,27);
+const collidingName="A very long / matrix name that collides",collidingSnapshot={...matrixSnapshot,set:{...matrixSnapshot.set,sections:[{...matrixSnapshot.set.sections[0],name:collidingName},{...matrixSnapshot.set.sections[0],id:"matrix:second",name:collidingName}]},tables:[{...matrixSnapshot.tables[0],title:collidingName},{...matrixSnapshot.tables[0],id:"matrix:second",title:collidingName}]},collidingBytes=await writeProjectDocumentationWorkbookWithTemplates(collidingSnapshot,{scope:"complete"},async()=>matrixBlob),collidingBook=new ExcelJS.Workbook();await collidingBook.xlsx.load(collidingBytes);assert.deepEqual(collidingBook.worksheets.map(({name})=>name),["A very long matrix name that co","A very long matrix name tha (2)"],"custom section names are safely and deterministically unique after truncation");
 
 console.log("documentation Excel template unit test passed");
-

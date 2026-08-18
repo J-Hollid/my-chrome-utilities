@@ -42,6 +42,10 @@ assert.doesNotMatch(rendered.html,/template:flow/u,"generated HTML does not expo
 assert.match(rendered.html,/data-documentation-template="rich"/u);
 assert.equal(rendered.plain,"Journey Checkout\n<Cart>\n<script>bad()</script>\nPayment");
 
+const renamed={...template,blocks:[{id:"pages",type:"repeat",items:"flow.pages",variable:"entry",children:[{id:"page",type:"paragraph",content:[{text:"Page ",emphasis:"emphasis"},{binding:"entry.pageName",emphasis:"strong"}]},{id:"events",type:"repeat",items:"entry.events",variable:"occurrence",children:[{id:"event",type:"paragraph",content:[{binding:"occurrence.eventName"}]}]}]}]};
+assert.equal(validateRichDocumentationTemplate(renamed).valid,true,"renamed repeat variables own their child bindings and collections");
+const renamedOutput=renderRichDocumentationTemplate(renamed,context);assert.match(renamedOutput.html,/<em>Page <\/em><strong>&lt;Cart&gt;<\/strong>/u);assert.equal(renamedOutput.plain,"Page <Cart>\n<script>bad()</script>\nPage Payment");
+
 const grouped={...template,kind:"profile",blocks:[
   {id:"groups",type:"concept-group",source:"profile.concepts"},
 ]};
@@ -56,6 +60,8 @@ assert.equal(groupedOutput.plain,"Commerce\n/cart\tCart identifier");
 
 const invalid={...template,blocks:[{id:"bad",type:"paragraph",content:[{binding:"page.pageName"}]}]};
 assert.match(validateRichDocumentationTemplate(invalid).findings[0].message,/page\.pageName/u);
+assert.match(validateRichDocumentationTemplate({...template,blocks:[{id:"bad-table",type:"data-table",source:"profile.rows"}]}).findings[0].message,/outside this template kind/u);
+assert.equal(validateRichDocumentationTemplate({...template,blocks:[{id:"bad-shape",type:"paragraph",content:[{text:"unsafe",emphasis:"blink"}]}]}).valid,false,"persisted rich blocks reject unsupported inline structure");
 
 const assigned={id:template.id,name:template.name,format:"rich",kind:"flow",contractVersion:1,digest:"rich:first",validation:{valid:true,findings:[]},richBlocks:template.blocks};
 const snapshot={projectId:"project",projectName:"Shop",generatedAt:"2026-08-17T00:00:00.000Z",title:"Specification",incomplete:false,snapshotHash:"snapshot",sourceRevisions:{},set:{id:"set",name:"Set",themeId:"theme",sections:[{id:"flow",name:"Checkout",kind:"flow",selected:true}],templateAssignments:{"rich:flow":assigned.id}},theme:{id:"theme",name:"Theme",clientName:"",logo:"",headerText:"",footerText:"",typography:{family:"Verdana",headingSize:16,bodySize:11},colors:{heading:"#000000",accent:"#000000",stripe:"#ffffff"},density:"comfortable",borders:true,striping:true,highlightedHeadings:true,columnWidths:{}},templateDigests:{"rich:flow":assigned.digest},templates:[assigned],tables:[{id:"flow",title:"Checkout",headings:["Step","Page","Event"],rows:[["1","Cart","Purchase"]],templateData:{columns:[{key:"step",heading:"Step"},{key:"page",heading:"Page"},{key:"event",heading:"Event"}],rows:[{step:"1",page:"Cart",event:"Purchase",cells:[{columnKey:"step",heading:"Step",value:"1"},{columnKey:"page",heading:"Page",value:"Cart"},{columnKey:"event",heading:"Event",value:"Purchase"}]}],pages:[{stepLabel:"1",pageName:"<Cart>",sourcePageName:"Cart",eventName:"Purchase",heading:"Cart",rows:[],events:[{eventName:"<script>bad()</script>",heading:"Purchase",rows:[]}]}],concepts:[],legend:""}}],diagnostics:[]};

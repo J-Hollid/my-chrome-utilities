@@ -3,6 +3,7 @@ import { repairCanonicalBooleanAllowedValues } from "./data-layer-canonical-sche
 import { createFlowVisualArchive, estimateFlowVisualArchiveSize, importFlowVisualArchive, migrateVersion2VisualAssets, writeFlowVisualArchive } from "./flow-visual-asset-portability.js";
 import { validateFlowVisualBody } from "./flow-visual-asset-validation.js";
 import { validateDocumentationTemplateBody } from "./documentation-templates/template-body.js";
+import { validateDocumentationTemplateRecords } from "./documentation-templates/template-library.js";
 import { projectAssetBodyStorageKey } from "./project-asset-body-contribution.js";
 export const DURABLE_PROJECT_DATABASE = "my-chrome-utilities.project-repository";
 export const DURABLE_PROJECT_DATABASE_VERSION = 7;
@@ -372,11 +373,18 @@ export class DurableProjectRepository {
     async putProjectMetadataOnly(state, input = {}) {
         const legacyState = state, requiresSeparation = Object.hasOwn(state.project.collections, "pageGroups");
         state = upgradeSeparatedState(state);
-        const projectId = state.project.id, draftToken = input.draftToken ?? this.options.token(), lastSavedAt = this.options.now(), parts = projectParts(state), publishedRevision = input.publishedRevision ?? 0, declaredRelease = state.project.releases.find(release => release.revision === publishedRevision), publishedProject = input.publishedProject ?? (declaredRelease ? { ...clone(state.project), collections: clone(declaredRelease.snapshot), releases: state.project.releases.filter(candidate => candidate.revision <= publishedRevision), currentRelease: declaredRelease.id } : undefined);
+        const projectId = state.project.id, draftToken = input.draftToken ?? this.options.token(), lastSavedAt = this.options.now(), parts = projectParts(state), publishedRevision = input.publishedRevision ?? 0, declaredRelease = state.project.releases.find(release => release.revision === publishedRevision), publishedProject = input.publishedProject ?? (declaredRelease ? { ...clone(state.project), collections: clone(declaredRelease.snapshot), releases: state.project.releases.filter(candidate => candidate.revision <= publishedRevision), currentRelease: declaredRelease.id } : undefined), templateReferences = [...validateDocumentationTemplateRecords(state.project.documentation), ...validateDocumentationTemplateRecords(publishedProject?.documentation)], templateBodies = new Map((input.templateBodies ?? []).map(body => [body.digest, body]));
         for (const asset of input.visualAssets ?? [])
             await validateFlowVisualBody(asset.metadata, asset.body);
-        for (const body of input.templateBodies ?? [])
+        if (templateBodies.size !== (input.templateBodies ?? []).length)
+            throw new DOMException("Imported documentation template bodies must have unique digests.", "DataError");
+        for (const body of templateBodies.values())
             await validateDocumentationTemplateBody(body, body.body);
+        for (const reference of templateReferences) {
+            const body = templateBodies.get(reference.digest);
+            if (!body || body.byteLength !== reference.byteLength)
+                throw new DOMException(`Documentation template body ${reference.digest} is unavailable for project ${projectId}.`, "DataError");
+        }
         if (publishedRevision > 0 && (!declaredRelease || !publishedProject))
             throw new DOMException(`Project ${projectId} cannot claim Published revision ${publishedRevision} without a matching release snapshot.`, "DataError");
         if (publishedProject && (publishedProject.id !== projectId || publishedProject.currentRelease !== declaredRelease?.id || !same(publishedProject.collections, declaredRelease?.snapshot)))
@@ -524,6 +532,7 @@ export class DurableProjectRepository {
     }
     async saveDraft(command) {
         this.fail(command.label);
+        const templateReferences = validateDocumentationTemplateRecords(command.pendingState.project.documentation);
         for (const item of command.assetBodies ?? []) {
             if (item.identity.namespace !== "documentation-template")
                 continue;
@@ -534,11 +543,16 @@ export class DurableProjectRepository {
         }
         const assetBodies = (command.assetBodies ?? []).map(item => { if (item.identity.projectId !== command.projectId)
             throw new DOMException("A Draft asset body cannot cross its Project boundary.", "DataError"); if (!command.assetBodyOperationId || item.operationId !== command.assetBodyOperationId)
-            throw new DOMException("A Draft asset body must retain its owning operation identity.", "DataError"); return { ...item, key: projectAssetBodyStorageKey(item.identity), body: item.body.slice(0, item.body.size, item.body.type) }; });
+            throw new DOMException("A Draft asset body must retain its owning operation identity.", "DataError"); return { ...item, key: projectAssetBodyStorageKey(item.identity), body: item.body.slice(0, item.body.size, item.body.type) }; }), suppliedBodyKeys = new Set(assetBodies.filter(item => item.identity.namespace === "documentation-template").map(item => item.key));
         const stores = ["projectMetadata", "projectRoots", "projectEntityMetadata", "projectEntities", "flowGraphs", "fixtures", "releases", "visualAssetMetadata", "visualAssetBodies", "changeFeed"], result = await this.backend.transaction(stores, "readwrite", async (transaction) => {
             const metadata = await transaction.get("projectMetadata", command.projectId);
             if (!metadata)
                 throw new Error(`Durable project ${command.projectId} is unavailable.`);
+            for (const reference of templateReferences) {
+                const key = projectAssetBodyStorageKey({ projectId: command.projectId, namespace: "documentation-template", digest: reference.digest });
+                if (!suppliedBodyKeys.has(key) && !await transaction.get("visualAssetBodies", key))
+                    throw new DOMException(`Documentation template body ${reference.digest} is unavailable for this Draft.`, "DataError");
+            }
             const pendingFields = command.patches.map(fieldFor), stale = metadata.draftToken !== command.baseToken || metadata.draftSequence !== command.baseSequence, invalidBase = command.baseSequence > metadata.draftSequence || (command.baseSequence === metadata.draftSequence && metadata.draftToken !== command.baseToken), currentFields = stale ? (invalidBase ? pendingFields : Object.entries(metadata.fieldVersions ?? {}).filter(([, sequence]) => sequence > command.baseSequence).map(([field]) => field)) : [], conflictingFields = pendingFields.filter(field => currentFields.some(current => overlaps(field, current)));
             if (conflictingFields.length) {
                 const currentValues = {}, pendingValues = {};

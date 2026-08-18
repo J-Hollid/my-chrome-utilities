@@ -3,6 +3,9 @@ const collections = { overview: ["overview.fields"], flow: ["flow.pages", "table
 const childBindings = { "overview.fields": ["field.label", "field.value"], "flow.pages": ["page.stepLabel", "page.pageName", "page.sourcePageName", "page.eventName", "page.heading", "page.rows", "page.events"], "page.events": ["event.eventName", "event.heading", "event.rows"], "page.rows": ["row.property", "row.concept", "row.cells"], "event.rows": ["row.property", "row.concept", "row.cells"], "table.rows": ["row.concept", "row.cells"], "flow.rows": ["row.property", "row.cells"], "matrix.rows": ["row.property", "row.concept", "row.cells"], "profile.rows": ["row.property", "row.concept", "row.cells"], "matrix.concepts": ["concept.name", "concept.rows"], "profile.concepts": ["concept.name", "concept.rows"], "concept.rows": ["row.property", "row.concept", "row.cells"], "row.cells": ["cell.columnKey", "cell.heading", "cell.value"] };
 const childCollections = { "flow.pages": ["page.events", "page.rows"], "page.events": ["event.rows"], "page.rows": ["row.cells"], "event.rows": ["row.cells"], "table.rows": ["row.cells"], "flow.rows": ["row.cells"], "matrix.rows": ["row.cells"], "profile.rows": ["row.cells"], "matrix.concepts": ["concept.rows"], "profile.concepts": ["concept.rows"], "concept.rows": ["row.cells"] };
 const itemRoot = (collection) => collection.endsWith(".pages") ? "page" : collection.endsWith(".events") ? "event" : collection.endsWith(".cells") ? "cell" : collection.endsWith(".concepts") ? "concept" : collection.endsWith(".fields") ? "field" : "row";
+const scoped = (paths, canonical, variable) => paths.map(path => path.replace(new RegExp(`^${itemRoot(canonical)}\\.`, "u"), `${variable}.`));
+const rootCollectionMap = (kind) => new Map((collections[kind] ?? []).map(path => [path, path]));
+const childCollectionMap = (canonical, variable) => new Map((childCollections[canonical] ?? []).map(path => [path.replace(new RegExp(`^${itemRoot(canonical)}\\.`, "u"), `${variable}.`), path]));
 export function richTemplateHelpBindingsFor(kind) {
     const help = new Set(templateBindingsFor(kind)), pending = [...collections[kind]], visited = new Set();
     while (pending.length) {
@@ -21,30 +24,76 @@ export function richTemplateHelpBindingsFor(kind) {
     return [...help];
 }
 export function richTemplateBlockScopes(kind, blocks) { const result = {}; const visit = (items, bindings, available) => { for (const block of items) {
-    const nestedBindings = block.type === "repeat" ? [...bindings, ...(childBindings[block.items] ?? [])] : bindings, nestedCollections = block.type === "repeat" ? childCollections[block.items] ?? [] : available;
-    result[block.id] = { bindings: [...bindings], collections: [...available], childBindings: [...nestedBindings], childCollections: [...nestedCollections] };
-    if (block.type === "repeat")
-        visit(block.children, nestedBindings, nestedCollections);
-} }; visit(blocks, templateBindingsFor(kind), collections[kind]); return result; }
+    const repeat = block.type === "repeat" ? block : undefined, canonical = repeat ? available.get(repeat.items) : undefined, nestedBindings = canonical && repeat ? [...bindings, ...scoped(childBindings[canonical] ?? [], canonical, repeat.variable)] : bindings, nestedCollections = canonical && repeat ? childCollectionMap(canonical, repeat.variable) : available;
+    result[block.id] = { bindings: [...bindings], collections: [...available.keys()], childBindings: [...nestedBindings], childCollections: [...nestedCollections.keys()] };
+    if (repeat)
+        visit(repeat.children, nestedBindings, nestedCollections);
+} }; visit(blocks, templateBindingsFor(kind), rootCollectionMap(kind)); return result; }
 export function validateRichDocumentationTemplate(template) {
-    const findings = [], ids = new Set(), root = new Set(templateBindingsFor(template.kind));
-    const visit = (blocks, bindings, availableCollections) => { for (const block of blocks) {
-        if (ids.has(block.id))
-            findings.push({ blockId: block.id, message: `Duplicate block identity ${block.id}.` });
-        ids.add(block.id);
-        if ("content" in block)
-            for (const inline of block.content)
-                if ("binding" in inline && !bindings.has(inline.binding))
-                    findings.push({ blockId: block.id, message: `Binding ${inline.binding} is outside this block scope.` });
-        if (block.type === "repeat") {
-            if (!availableCollections.has(block.items))
-                findings.push({ blockId: block.id, message: `Collection ${block.items} is outside this block scope.` });
-            if (!/^[a-z][a-zA-Z0-9]*$/u.test(block.variable))
-                findings.push({ blockId: block.id, message: "Repeat item name must be a safe binding name." });
-            visit(block.children, new Set([...bindings, ...(childBindings[block.items] ?? [])]), new Set(childCollections[block.items] ?? []));
+    const findings = [], ids = new Set(), root = new Set(templateBindingsFor(template.kind)), tableSources = new Set(["table", template.kind === "overview" ? "overview.fields" : template.kind === "flow" ? "flow.rows" : template.kind === "matrix" ? "matrix.rows" : "profile.rows"]), conceptSources = new Set(["table.concepts", ...(template.kind === "matrix" ? ["matrix.concepts"] : template.kind === "profile" ? ["profile.concepts"] : [])]), knownTypes = new Set(["heading", "paragraph", "divider", "theme-logo", "data-table", "concept-group", "repeat"]);
+    const report = (blockId, message) => findings.push({ blockId: typeof blockId === "string" && blockId ? blockId : "(unknown block)", message });
+    const visit = (rawBlocks, bindings, availableCollections) => {
+        if (!Array.isArray(rawBlocks)) {
+            report("(template)", "Rich template blocks must be an ordered collection.");
+            return;
         }
-    } };
-    visit(template.blocks, root, new Set(collections[template.kind]));
+        for (const raw of rawBlocks) {
+            if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+                report("(unknown block)", "Rich template blocks must be semantic block records.");
+                continue;
+            }
+            const block = raw, id = block.id;
+            if (typeof id !== "string" || !id) {
+                report(id, "A rich template block needs a stable identity.");
+                continue;
+            }
+            if (ids.has(id))
+                report(id, `Duplicate block identity ${id}.`);
+            ids.add(id);
+            if (typeof block.type !== "string" || !knownTypes.has(block.type)) {
+                report(id, `Unsupported rich template block ${String(block.type ?? "")}.`);
+                continue;
+            }
+            if (block.type === "heading" || block.type === "paragraph") {
+                if (block.type === "heading" && ![1, 2, 3].includes(Number(block.level)))
+                    report(id, "Heading level must be 1, 2, or 3.");
+                if (!Array.isArray(block.content)) {
+                    report(id, "Text blocks need ordered text and binding content.");
+                    continue;
+                }
+                for (const rawInline of block.content) {
+                    if (!rawInline || typeof rawInline !== "object" || Array.isArray(rawInline)) {
+                        report(id, "Text content must contain text or binding records.");
+                        continue;
+                    }
+                    const inline = rawInline, hasText = typeof inline.text === "string", hasBinding = typeof inline.binding === "string";
+                    if (hasText === hasBinding)
+                        report(id, "Text content must contain exactly one text or binding value.");
+                    if (hasBinding && !bindings.has(String(inline.binding)))
+                        report(id, `Binding ${String(inline.binding)} is outside this block scope.`);
+                    if (inline.emphasis !== undefined && !['strong', 'emphasis'].includes(String(inline.emphasis)))
+                        report(id, "Text emphasis must be bold, italic, or unset.");
+                }
+            }
+            if (block.type === "data-table" && !tableSources.has(String(block.source)))
+                report(id, `Data table ${String(block.source ?? "")} is outside this template kind.`);
+            if (block.type === "concept-group" && !conceptSources.has(String(block.source)))
+                report(id, `Concept collection ${String(block.source ?? "")} is outside this template kind.`);
+            if (block.type === "repeat") {
+                const canonical = availableCollections.get(String(block.items));
+                if (!canonical)
+                    report(id, `Collection ${String(block.items)} is outside this block scope.`);
+                if (typeof block.variable !== "string" || !/^[a-z][a-zA-Z0-9]*$/u.test(block.variable))
+                    report(id, "Repeat item name must be a safe binding name.");
+                const variable = typeof block.variable === "string" && block.variable ? block.variable : "item", nestedBindings = canonical ? new Set([...bindings, ...scoped(childBindings[canonical] ?? [], canonical, variable)]) : new Set(bindings), nestedCollections = canonical ? childCollectionMap(canonical, variable) : new Map();
+                visit(block.children, nestedBindings, nestedCollections);
+            }
+        }
+    };
+    if (!Object.hasOwn(collections, template.kind))
+        report("(template)", `Unsupported documentation kind ${String(template.kind)}.`);
+    else
+        visit(template.blocks, root, rootCollectionMap(template.kind));
     return { valid: findings.length === 0, findings };
 }
 export function builtInRichTemplate(kind, id, name) {
@@ -53,10 +102,13 @@ export function builtInRichTemplate(kind, id, name) {
 }
 const htmlEscape = (value) => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;").replaceAll("\n", "<br>");
 const scalar = (value) => value == null ? "" : typeof value === "object" ? JSON.stringify(value) : String(value);
-const inlineText = (items, context) => items.map(item => "text" in item ? item.text : scalar(templateValueAt(context, item.binding))).join("");
+const inlineValue = (item, context) => "text" in item ? item.text : scalar(templateValueAt(context, item.binding));
+const inlineText = (items, context) => items.map(item => inlineValue(item, context)).join("");
+const inlineHtml = (items, context) => items.map(item => { const value = htmlEscape(inlineValue(item, context)); return item.emphasis === "strong" ? `<strong>${value}</strong>` : item.emphasis === "emphasis" ? `<em>${value}</em>` : value; }).join("");
 const tableRows = (value) => { if (!value || typeof value !== "object")
     return { headings: [], rows: [] }; if (Array.isArray(value))
-    return { headings: [], rows: value.map(item => [scalar(item)]) }; const table = value, columns = Array.isArray(table.columns) ? table.columns.map(column => scalar(column.heading)) : [], rows = Array.isArray(table.rows) ? table.rows.map(row => { const record = row, cells = Array.isArray(record.cells) ? record.cells.map(cell => scalar(cell.value)) : []; return record.property !== undefined && cells.length < columns.length ? [scalar(record.property), ...cells] : cells; }) : []; return { headings: columns, rows }; };
+    return { headings: [], rows: value.map(item => [scalar(item)]) }; const table = value, columns = Array.isArray(table.columns) ? table.columns.map(column => scalar(column.heading)) : [], records = Array.isArray(table.rows) ? table.rows : [], fields = records.length > 0 && records.every(record => record.label !== undefined), properties = records.some(record => record.property !== undefined), headings = fields ? ["Field", "Value"] : properties ? ["Property", ...columns] : columns, rows = records.map(record => { if (fields)
+    return [scalar(record.label), scalar(record.value)]; const cells = Array.isArray(record.cells) ? record.cells.map(cell => scalar(cell.value)) : []; return properties ? [scalar(record.property), ...cells] : cells; }); return { headings, rows }; };
 export function renderRichDocumentationTemplate(template, context) {
     const validation = validateRichDocumentationTemplate(template);
     if (!validation.valid)
@@ -67,7 +119,7 @@ export function renderRichDocumentationTemplate(template, context) {
         for (const block of blocks) {
             if (block.type === "heading" || block.type === "paragraph") {
                 const value = inlineText(block.content, scope);
-                html += block.type === "heading" ? `<h${block.level}>${htmlEscape(value)}</h${block.level}>` : `<p>${htmlEscape(value)}</p>`;
+                html += block.type === "heading" ? `<h${block.level}>${inlineHtml(block.content, scope)}</h${block.level}>` : `<p>${inlineHtml(block.content, scope)}</p>`;
                 plain.push(value);
                 continue;
             }

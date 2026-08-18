@@ -3,11 +3,15 @@ import { validateFlowVisualBody, validateFlowVisualMetadata } from "./flow-visua
 import { assertFlowVisualArchiveManifest, parseFlowVisualArchiveJson as parseJson, withoutEmbeddedFlowVisualBodies as withoutEmbeddedBodies } from "./flow-visual-archive-format.js";
 import { flowVisualAssetReferences as assetReferences, flowVisualProjectMapping as projectMapping, remapFlowVisualProject as remap } from "./flow-visual-project-identity.js";
 import { validateDocumentationTemplateBody } from "./documentation-templates/template-body.js";
+import { validateExcelTemplateWorkbook } from "./documentation-templates/excel-workbook.js";
+import { validateDocumentationTemplateRecords } from "./documentation-templates/template-library.js";
 export { createMemoryFlowVisualAssetStore } from "./flow-visual-asset-memory-store.js";
 export { createFlowVisualArchive, estimateFlowVisualArchiveSize, writeFlowVisualArchive } from "./flow-visual-archive-export.js";
 const clone = (value) => structuredClone(value);
 const assertUniqueAssetIds = (manifest) => { if (new Set(manifest.assets.map(({ id }) => id)).size !== manifest.assets.length)
     throw new DOMException("The archive manifest contains duplicate visual asset identities.", "DataError"); };
+const assertUniqueTemplateBodies = (manifest) => { const bodies = manifest.templateBodies ?? []; if (new Set(bodies.map(({ digest }) => digest)).size !== bodies.length || new Set(bodies.map(({ entry }) => entry)).size !== bodies.length)
+    throw new DOMException("The archive manifest contains duplicate documentation template bodies.", "DataError"); };
 const assetContract = (asset) => JSON.stringify([asset.digest, asset.mediaType, asset.width, asset.height, asset.byteLength]);
 const archiveEntryContracts = (manifest) => { const contracts = new Map(); for (const asset of manifest.assets) {
     validateFlowVisualMetadata(asset);
@@ -43,13 +47,39 @@ const readTemplateBodies = async (entries, manifest) => { const result = []; for
     await validateDocumentationTemplateBody(metadata, typed);
     result.push({ digest: metadata.digest, byteLength: metadata.byteLength, body: typed });
 } return result; };
+const validateImportedTemplates = async (projects, bodies) => {
+    const references = projects.flatMap(project => validateDocumentationTemplateRecords(project.documentation)), referencedByDigest = new Map();
+    for (const reference of references) {
+        const prior = referencedByDigest.get(reference.digest);
+        if (prior && prior.byteLength !== reference.byteLength)
+            throw new DOMException(`Documentation template body ${reference.digest} has inconsistent metadata.`, "DataError");
+        const value = prior ?? { byteLength: reference.byteLength, kinds: new Set() };
+        value.kinds.add(reference.kind);
+        referencedByDigest.set(reference.digest, value);
+    }
+    const bodyByDigest = new Map(bodies.map(body => [body.digest, body]));
+    if (bodyByDigest.size !== bodies.length || bodyByDigest.size !== referencedByDigest.size)
+        throw new DOMException("The archive documentation template body set does not match its project references.", "DataError");
+    for (const [digest, reference] of referencedByDigest) {
+        const body = bodyByDigest.get(digest);
+        if (!body || body.byteLength !== reference.byteLength)
+            throw new DOMException(`Restore the missing Excel template body ${digest}.`, "DataError");
+        for (const kind of reference.kinds) {
+            const validation = await validateExcelTemplateWorkbook(body.body, kind);
+            if (!validation.valid)
+                throw new DOMException(`Excel documentation template ${digest} is invalid: ${validation.findings.map(({ location, message }) => `${location}: ${message}`).join("; ")}`, "DataError");
+        }
+    }
+};
 export async function importFlowVisualArchive(source, input = {}) {
     const entries = await readArchiveSource(source, input), manifest = await parseJson(entries, "manifest.json");
     assertFlowVisualArchiveManifest(manifest);
     assertUniqueAssetIds(manifest);
+    assertUniqueTemplateBodies(manifest);
     assertDeclaredEntries(entries, manifest, archiveEntryContracts(manifest));
     const { project: sourceProject, published } = await readArchiveProjects(entries, manifest), mapping = archiveMapping(sourceProject, input), assets = await readArchiveAssets(entries, manifest, mapping, input), templateBodies = await readTemplateBodies(entries, manifest);
     assertAssetReferences(manifest, [sourceProject, ...(published ? [published] : [])]);
+    await validateImportedTemplates([sourceProject, ...(published ? [published] : [])], templateBodies);
     return importedArchive(sourceProject, published, mapping, assets, templateBodies);
 }
 export async function migrateVersion2VisualAssets(bundle, input) {

@@ -14,6 +14,23 @@ const cloneWithIds = (block) => { const copy = structuredClone(block); return co
 const editSiblings = (blocks, id, edit) => { const index = blocks.findIndex(block => block.id === id); if (index >= 0)
     return edit(blocks, index); return blocks.map(block => block.type === "repeat" ? { ...block, children: editSiblings(block.children, id, edit) } : block); };
 const replaceBlock = (blocks, id, update) => blocks.map(block => block.id === id ? update(block) : block.type === "repeat" ? { ...block, children: replaceBlock(block.children, id, update) } : block);
+const renameRepeatVariable = (blocks, from, to) => blocks.map(block => {
+    const rename = (value) => value === from ? to : value.startsWith(`${from}.`) ? `${to}${value.slice(from.length)}` : value;
+    if (block.type === "heading" || block.type === "paragraph")
+        return { ...block, content: block.content.map(inline => "binding" in inline ? { ...inline, binding: rename(inline.binding) } : inline) };
+    return block.type === "repeat" ? { ...block, items: rename(block.items), children: renameRepeatVariable(block.children, from, to) } : block;
+});
+const replaceRichText = (content, value) => { const result = []; let replaced = false; for (const inline of content) {
+    if (!("text" in inline)) {
+        result.push(inline);
+        continue;
+    }
+    if (!replaced) {
+        result.push({ ...inline, text: value });
+        replaced = true;
+    }
+} if (!replaced)
+    result.unshift({ text: value }); return result; };
 const dataSource = (kind) => kind === "overview" ? "overview.fields" : kind === "flow" ? "flow.rows" : kind === "matrix" ? "matrix.rows" : "profile.rows";
 const conceptSource = (kind) => kind === "matrix" ? "matrix.concepts" : kind === "profile" ? "profile.concepts" : "table.concepts";
 const rootCollections = (kind) => kind === "overview" ? ["overview.fields"] : kind === "flow" ? ["flow.pages", "table.rows", "flow.rows"] : kind === "matrix" ? ["matrix.rows", "matrix.concepts", "table.rows"] : ["profile.rows", "profile.concepts", "table.rows"];
@@ -73,13 +90,19 @@ function richEditor(detail, selected, templates, options) {
         later.disabled = index === siblings.length - 1;
         detailSurface.append(earlier, later, copy, remove);
         if (selectedBlock.type === "heading" || selectedBlock.type === "paragraph") {
-            const text = document.createElement("input"), binding = document.createElement("select");
+            const text = document.createElement("input"), textEmphasis = document.createElement("select"), binding = document.createElement("select"), bindingEmphasis = document.createElement("select"), emphasisOptions = () => [new Option("No emphasis", ""), new Option("Bold", "strong"), new Option("Italic", "emphasis")];
             text.setAttribute("aria-label", `${selectedBlock.type} text`);
-            text.value = selectedBlock.content.filter((inline) => "text" in inline).map(({ text: value }) => value).join("");
-            text.addEventListener("change", () => commit(replaceBlock(blocks, selectedBlock.id, current => ({ ...current, content: [{ text: text.value }] })), "Edit"));
+            text.value = selectedBlock.content.filter((inline) => ("text" in inline)).map(({ text: value }) => value).join("");
+            text.addEventListener("change", () => commit(replaceBlock(blocks, selectedBlock.id, current => ({ ...current, content: replaceRichText(current.content, text.value) })), "Edit"));
+            textEmphasis.setAttribute("aria-label", `${selectedBlock.type} text emphasis`);
+            textEmphasis.append(...emphasisOptions());
+            textEmphasis.value = selectedBlock.content.find((inline) => ("text" in inline))?.emphasis ?? "";
+            textEmphasis.addEventListener("change", () => commit(replaceBlock(blocks, selectedBlock.id, current => ({ ...current, content: current.content.map(inline => "text" in inline ? { text: inline.text, ...(textEmphasis.value ? { emphasis: textEmphasis.value } : {}) } : inline) })), "Emphasize"));
             binding.setAttribute("aria-label", `${selectedBlock.type} binding`);
             binding.append(...(scope?.bindings ?? []).map(value => new Option(value, value)));
-            detailSurface.append(labelled("Text", text), labelled("Binding", binding), button("Add binding", () => commit(replaceBlock(blocks, selectedBlock.id, current => ({ ...current, content: [...current.content, { binding: binding.value }] })), "Bind")));
+            bindingEmphasis.setAttribute("aria-label", `${selectedBlock.type} binding emphasis`);
+            bindingEmphasis.append(...emphasisOptions());
+            detailSurface.append(labelled("Text", text), labelled("Text emphasis", textEmphasis), labelled("Binding", binding), labelled("Binding emphasis", bindingEmphasis), button("Add binding", () => commit(replaceBlock(blocks, selectedBlock.id, current => ({ ...current, content: [...current.content, { binding: binding.value, ...(bindingEmphasis.value ? { emphasis: bindingEmphasis.value } : {}) }] })), "Bind")));
         }
         if (selectedBlock.type === "repeat") {
             const collection = document.createElement("select"), variable = document.createElement("input");
@@ -89,7 +112,7 @@ function richEditor(detail, selected, templates, options) {
             collection.addEventListener("change", () => commit(replaceBlock(blocks, selectedBlock.id, current => ({ ...current, items: collection.value, variable: collectionVariable(collection.value), children: [] })), "Change collection"));
             variable.setAttribute("aria-label", "Repeat item name");
             variable.value = selectedBlock.variable;
-            variable.addEventListener("change", () => commit(replaceBlock(blocks, selectedBlock.id, current => ({ ...current, variable: variable.value.trim() || "item" })), "Rename repeat item"));
+            variable.addEventListener("change", () => { const next = variable.value.trim() || "item"; commit(replaceBlock(blocks, selectedBlock.id, current => ({ ...current, variable: next, children: renameRepeatVariable(current.children, selectedBlock.variable, next) })), "Rename repeat item"); });
             const addChild = (type) => { const added = newBlock(type, selected.kind, scope?.childCollections); commit(replaceBlock(blocks, selectedBlock.id, current => ({ ...current, children: [...current.children, added] })), "Add child", added.id); };
             detailSurface.append(labelled("Collection", collection), labelled("Item name", variable), button("Add child heading", () => addChild("heading")), button("Add child paragraph", () => addChild("paragraph")), button("Add child data table", () => addChild("data-table")));
             if (scope?.childCollections.length)
