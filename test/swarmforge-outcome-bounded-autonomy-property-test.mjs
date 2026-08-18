@@ -37,10 +37,19 @@ for(let sample=0;sample<300;sample+=1){
     .replace("@@ context","@@ changed prerequisite context");
   assert.equal(contributionDigest(contribution),contributionDigest(rebased));
 
-  const generation={task:"task",candidate:"a".repeat(40),boundaryGeneration:"shell-v1",causalPaths:paths};
+  const applicability=[...new Set(paths)].sort().map((pathValue)=>({path:pathValue,boundary:"shell",
+    consumers:["shell"],failedPremise:false}));
+  const generation={task:"task",candidate:"a".repeat(40),boundaryGeneration:"shell-v1",
+    causalPaths:paths,applicability};
   assert.equal(campsiteGenerationId(generation),campsiteGenerationId({...generation,causalPaths:shuffled}));
   assert.notEqual(campsiteGenerationId(generation),
     campsiteGenerationId({...generation,boundaryGeneration:"shell-v2"}));
+  assert.notEqual(campsiteGenerationId(generation),campsiteGenerationId({...generation,
+    applicability:applicability.map((value)=>({...value,consumers:["flow","shell"]}))}));
+  assert.notEqual(campsiteGenerationId(generation),campsiteGenerationId({...generation,
+    applicability:applicability.map((value)=>({...value,boundary:"flow"}))}));
+  assert.notEqual(campsiteGenerationId(generation),campsiteGenerationId({...generation,
+    applicability:applicability.map((value)=>({...value,failedPremise:true}))}));
 }
 
 const unordered={z:1,a:{z:2,a:3},list:[{z:4,a:5}]};
@@ -48,4 +57,12 @@ const reordered={list:[{a:5,z:4}],a:{a:3,z:2},z:1};
 assert.equal(authorityDigest(unordered),authorityDigest(reordered));
 assert.notEqual(dispositionIdentity({task:"t",path:"p",boundary:"b",generation:"g1"}),
   dispositionIdentity({task:"t",path:"p",boundary:"b",generation:"g2"}));
+assert.notEqual(dispositionIdentity({task:"t",path:"p",boundary:"b",generation:"g1",consumers:["shell"]}),
+  dispositionIdentity({task:"t",path:"p",boundary:"b",generation:"g1",consumers:["flow","shell"]}));
+assert.notEqual(dispositionIdentity({task:"t",path:"p",boundary:"b",generation:"g1",consumers:["shell"]}),
+  dispositionIdentity({task:"t",path:"p",boundary:"b",generation:"g1",consumers:["shell"],
+    failedPremise:"failed"}));
+assert.equal(dispositionIdentity({task:"t",path:"p",boundary:"b",generation:"g1",consumers:["shell"],
+  failedPremise:"first wording"}),dispositionIdentity({task:"t",path:"p",boundary:"b",generation:"g1",
+  consumers:["shell"],failedPremise:"renamed wording"}));
 console.log("SwarmForge outcome-bounded autonomy properties passed.");

@@ -39,7 +39,11 @@ const records=[];
 recordDisposition(records,{task:"product-task",path:"src/one.ts",boundary:"shell",
   generation:"shell-v1",result:"parent-fallback",failedPremise:"seam is not stable",consumers:["shell"]});
 assert.throws(()=>recordDisposition(records,{task:"product-task",path:"src/one.ts",boundary:"shell",
-  generation:"shell-v1",result:"slice",consumers:["shell"]}),/already has a disposition/u);
+  generation:"shell-v1",result:"parent-fallback",failedPremise:"renamed explanation",
+  consumers:["shell"]}),/already has a disposition/u);
+assert.equal(recordDisposition(records,{task:"product-task",path:"src/one.ts",boundary:"shell",
+  generation:"shell-v1",result:"slice",consumers:["shell"]}).result,"slice",
+"a changed failed-premise state is a new applicability generation");
 
 const repository=await mkdtemp(path.join(os.tmpdir(),"stacked-campsite-git-"));
 try {
@@ -69,6 +73,16 @@ try {
   await exec(process.execPath,[control,"preserve","product-task",base,preparation,remainder,
     "shell-v1",JSON.stringify(["src/product.ts"]),JSON.stringify({from:"qa",to:"reviewer"}),
     manifestPath],{cwd:repository});
+  await git(repository,"switch","-qc","unrelated",base);
+  await writeFile(path.join(repository,"unrelated.txt"),"must survive\n");
+  await git(repository,"add","unrelated.txt"); await git(repository,"commit","-qm","unrelated work");
+  const unrelatedHead=await git(repository,"rev-parse","HEAD");
+  await assert.rejects(resumeOntoQa(repository,manifestPath,preparation),/exact preserved remainder HEAD/u);
+  assert.equal(await git(repository,"rev-parse","HEAD"),unrelatedHead);
+  assert.equal(await git(repository,"branch","--show-current"),"unrelated");
+  assert.equal(await readFile(path.join(repository,"unrelated.txt"),"utf8"),"must survive\n",
+    "a first attempt never rewrites an unrelated caller branch");
+  await git(repository,"switch","-q","master");
   await assert.rejects(resumeOntoQa(repository,manifestPath,preparation,
     {faultAt:"resume-git-moved"}),/Injected campsite crash/u);
   assert.notEqual(await git(repository,"rev-parse","HEAD"),remainder,
@@ -195,6 +209,17 @@ try {
     "a materially changed boundary generation receives a new durable identity");
   assert.equal((await readdir(path.join(repository,".swarmforge/campsites/preserved")))
     .filter((name)=>name.startsWith("automatic-product-task-")).length,2);
+  const consumerGeneration=JSON.parse(await readFile(pipelineConfig,"utf8"));
+  consumerGeneration.dispositions=consumerGeneration.dispositions.map((value)=>({...value,
+    consumers:[...value.consumers,"flow"]}));
+  const consumerConfig=path.join(repository,".swarmforge/campsites/pipeline-input-consumers.json");
+  await writeFile(consumerConfig,`${JSON.stringify(consumerGeneration,null,2)}\n`);
+  const consumerPipeline=JSON.parse((await exec(process.execPath,["--input-type=module","-e",readinessRunner],
+    {cwd:repository,env:{...readinessEnvironment,CAMPSITE_CONFIG:consumerConfig}})).stdout);
+  assert.notEqual(consumerPipeline.preserved,firstPipeline.preserved,
+    "a changed reviewed consumer set receives a distinct applicability generation");
+  assert.equal((await readdir(path.join(repository,".swarmforge/campsites/preserved")))
+    .filter((name)=>name.startsWith("automatic-product-task-")).length,3);
   await rm(reviewer,{recursive:true,force:true});
 } finally { await rm(repository,{recursive:true,force:true}); }
 

@@ -53,6 +53,35 @@ export function contributionDigest(value) {
   return deltaDigest(canonicalDiffContribution(value));
 }
 
+function defaultApplicability(causalPaths,boundaryGeneration) {
+  return causalPaths.map((pathValue)=>({path:pathValue,boundary:boundaryGeneration,
+    consumers:[],failedPremise:false}));
+}
+
+function normalizeApplicabilityRow(value) {
+  return {path:value.path,boundary:value.boundary,
+    consumers:[...new Set(value.consumers??[])].sort(),failedPremise:Boolean(value.failedPremise)};
+}
+
+function validApplicabilityRow(value,causalPath) {
+  return value.path===causalPath&&stableIdentity(value.boundary)&&value.consumers.every(stableIdentity);
+}
+
+function normalizeApplicability(values,causalPaths,boundaryGeneration) {
+  const source=values?.length?values:defaultApplicability(causalPaths,boundaryGeneration);
+  const normalized=source.map(normalizeApplicabilityRow)
+    .sort((left,right)=>left.path.localeCompare(right.path)||left.boundary.localeCompare(right.boundary));
+  if (normalized.length!==causalPaths.length) {
+    throw new Error("Campsite applicability identity is incomplete");
+  }
+  for (let index=0;index<normalized.length;index+=1) {
+    if (!validApplicabilityRow(normalized[index],causalPaths[index])) {
+      throw new Error("Campsite applicability identity is incomplete");
+    }
+  }
+  return normalized;
+}
+
 export function campsiteGenerationId(value) {
   const candidate=value.candidate??value.remainderHead??value.remainder?.head;
   const boundaryGeneration=value.boundaryGeneration;
@@ -62,7 +91,9 @@ export function campsiteGenerationId(value) {
   if (![validTask,validCandidate,validBoundary,pathsPresent].every(Boolean)) {
     throw new Error("Campsite generation identity is incomplete");
   }
-  return valueDigest({task:value.task,candidate,boundaryGeneration,causalPaths});
+  const applicability=normalizeApplicability(value.applicability??value.dispositions,
+    causalPaths,boundaryGeneration);
+  return valueDigest({task:value.task,candidate,boundaryGeneration,causalPaths,applicability});
 }
 
 export function aggregateCampsiteAssessment({task,candidate,causalPaths}) {
@@ -86,12 +117,15 @@ export function createRemainderManifest(input) {
   const candidate=input.candidate??input.remainderHead;
   requireSha(candidate,sha40,"candidate");
   const routing=normalizeRouting(input.routing);
-  const generationId=campsiteGenerationId({...input,candidate});
+  const causalPaths=[...new Set(input.causalPaths)].sort();
+  const applicability=normalizeApplicability(input.applicability??input.dispositions,
+    causalPaths,input.boundaryGeneration);
+  const generationId=campsiteGenerationId({...input,candidate,causalPaths,applicability});
   return bindDigest({version:1,task:input.task,splitBase:input.splitBase,
     candidate,generationId,
     prerequisite:{commit:input.prerequisiteCommit},remainder:{task:input.task,head:input.remainderHead,
       tree:input.remainderTree,orderedCommits:[...input.orderedCommits],changeSetDigest:input.changeSetDigest},
-    causalPaths:[...new Set(input.causalPaths)].sort(),boundaryGeneration:input.boundaryGeneration,
+    causalPaths,applicability,boundaryGeneration:input.boundaryGeneration,
     expectedPostRebaseDelta:input.expectedPostRebaseDelta,status:"preserved",routing});
 }
 
@@ -114,7 +148,9 @@ export function resumeRemainder(manifest,{newQaHead,observedPostRebaseDelta,
 }
 
 export function dispositionIdentity(value) {
-  return [value.task,value.path,value.boundary,value.generation].join("\u0000");
+  const consumers=[...new Set(value.consumers??[])].sort().join("\u0001");
+  return [value.task,value.path,value.boundary,value.generation,consumers,
+    String(Boolean(value.failedPremise))].join("\u0000");
 }
 
 function validateDisposition(value) {

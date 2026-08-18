@@ -154,6 +154,7 @@ async function enqueueDelivery({queueRoot,headers,body,grant,active,
 }
 
 async function deliverLocked(input,key,digest) {
+  await recoverUnblockerJournals(input.queueRoot);
   const matches=await matchingBindings(input.queueRoot,key);
   const duplicate=await duplicateDelivery(input.queueRoot,matches,digest);
   if (duplicate) return duplicate;

@@ -29,6 +29,7 @@ export async function prepareCampsite(root,input) {
     prerequisiteCommit:await git(root,"rev-parse",input.manifest.prerequisiteCommit),remainderHead,
     remainderTree,orderedCommits:commits.split(/\n/u).filter(Boolean),
     changeSetDigest:contributionDigest(changeSet),causalPaths:assessment.causalPaths,
+    dispositions:input.dispositions,
     expectedPostRebaseDelta:contributionDigest(delta)});
   return persistCampsitePipeline(root,{assessment,dispositions:input.dispositions,
     manifest,preparation:input.preparation});
@@ -149,7 +150,9 @@ async function establishAttempt(root,manifest,newQaHead,originalBranch) {
   const target=attemptPath(root,manifest);
   const existing=await readJsonIfPresent(target,"Campsite resume attempt");
   if (existing) {
-    if (existing.newQaHead!==newQaHead||existing.remainderHead!==manifest.remainder.head) {
+    const mismatched=existing.task!==manifest.task||existing.generationId!==manifest.generationId||
+      existing.newQaHead!==newQaHead||existing.remainderHead!==manifest.remainder.head;
+    if (mismatched) {
       throw new Error("Campsite resume attempt conflicts with its durable generation");
     }
     return existing;
@@ -226,6 +229,11 @@ export async function resumeOntoQa(root,manifestPath,newQaHead,{requireCurrentQa
     return completed;
   }
   await requireCleanResume(root,manifestPath,manifest,newQaHead,requireCurrentQa);
+  const priorAttempt=await readJsonIfPresent(attemptPath(root,manifest),"Campsite resume attempt");
+  const head=await git(root,"rev-parse","HEAD");
+  if (!priorAttempt&&head!==manifest.remainder.head) {
+    throw new Error("First campsite resume attempt requires the exact preserved remainder HEAD");
+  }
   const originalBranch=await currentBranch(root);
   const attempt=await establishAttempt(root,manifest,newQaHead,originalBranch);
   if (await rebaseStatePresent(root)) await restoreRemainder(root,manifest,attempt.originalBranch);

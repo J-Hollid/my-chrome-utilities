@@ -286,15 +286,21 @@ await rm(legacyDuplicateRoot,{recursive:true,force:true});
 for (const faultAt of ["complete-journal-written","complete-unblocker-moved",
   "complete-unblocker-written"]) {
   const crashRoot=await mkdtemp(path.join(os.tmpdir(),"swarmforge-unblocker-resume-crash-"));
+  const crashHeaders={...validHeaders,from:"specifier",name:`resume-crash-${faultAt}`};
   await deliverUnblocker({queueRoot:crashRoot,
-    headers:{...validHeaders,from:"specifier",name:`resume-crash-${faultAt}`},body:"bounded",grant,active,
+    headers:crashHeaders,body:"bounded",grant,active,
     authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
   await claimUnblocker({queueRoot:crashRoot,active,grant,
     authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
   await assert.rejects(completeUnblocker({queueRoot:crashRoot,active,grant,
     authorityCommitPresentOnBase:true,authorityCommitAncestral:true,faultAt}),/injected crash/i);
-  assert.equal((await completeUnblocker({queueRoot:crashRoot,active,grant,
-    authorityCommitPresentOnBase:true,authorityCommitAncestral:true})).status,"resume",faultAt);
+  const recovered=faultAt==="complete-unblocker-written"
+    ? await deliverUnblocker({queueRoot:crashRoot,headers:crashHeaders,body:"bounded",grant,active,
+      authorityCommitPresentOnBase:true,authorityCommitAncestral:true})
+    : await completeUnblocker({queueRoot:crashRoot,active,grant,
+      authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+  assert.deepEqual(recovered,{kind:"complete",status:"resume",active,
+    binding:{activeHandoff:active.id,task:active.task}},faultAt);
   assert.equal((await readdir(path.join(crashRoot,"unblockers","in_process"))).length,0,faultAt);
   assert.equal((await readdir(path.join(crashRoot,"unblockers","completed"))).length,1,faultAt);
   await rm(crashRoot,{recursive:true,force:true});
@@ -357,7 +363,10 @@ recordDisposition(dispositions,{task:manifest.task,path:"src/broad-a.ts",boundar
   generation:"shell-v1",result:"parent-fallback",failedPremise:"no stable narrower observation",
   consumers:["shell"]});
 assert.throws(()=>recordDisposition(dispositions,{task:manifest.task,path:"src/broad-a.ts",
-  boundary:"shell",generation:"shell-v1",result:"slice",consumers:["shell"]}),/already has a disposition/i);
+  boundary:"shell",generation:"shell-v1",result:"parent-fallback",
+  failedPremise:"renamed premise",consumers:["shell"]}),/already has a disposition/i);
+assert.equal(recordDisposition(dispositions,{task:manifest.task,path:"src/broad-a.ts",
+  boundary:"shell",generation:"shell-v1",result:"slice",consumers:["shell"]}).result,"slice");
 assert.equal(recordDisposition(dispositions,{task:manifest.task,path:"src/broad-a.ts",
   boundary:"shell",generation:"shell-v2",result:"slice",consumers:["shell"]}).generation,"shell-v2");
 assert.throws(()=>resumeRemainder(manifest,{newQaHead:"7".repeat(40),
