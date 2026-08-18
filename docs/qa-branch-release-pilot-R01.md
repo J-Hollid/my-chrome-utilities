@@ -259,6 +259,34 @@ final-only failures dominate, improve the missing focused or medium integration
 coverage before increasing batch size. Do not answer either failure by starting a
 new broad verification-infrastructure program automatically.
 
+### Flow schema-editor scrolling QA measurement
+
+Approved task `flow-instance-schema-editor-scrolling` was first dispatched at
+11:22:53Z on 2026-08-18. Read-only intent paused product coding, the independently
+reviewed route-layout slice reached QA, and the product was reissued from exact QA
+at 13:40:43Z. The resumed role intervals were 1 hour 35 minutes 37 seconds from
+coder claim to review handoff, 29 minutes 7 seconds in refactorer review, and
+15 minutes 8 seconds from architect claim to `qa-ready`. Product reissue to
+`qa-ready` was 2 hours 20 minutes 18 seconds; initial approved dispatch through
+`qa-ready`, including ownership preparation, was 4 hours 38 minutes 8 seconds.
+
+Coder review evidence ran 147 focused tasks in 8 minutes 31 seconds. Because the
+architect refreshed the changed Flow handler mutation manifest, the final tree
+received a fresh 147-task proof in 8 minutes 33 seconds, with `flow_graph`,
+`layered_schema`, and `shell`, properties, installed scenario-047 browser
+evidence, acceptance sessions, and 886-millisecond package proof. No complete
+all-20 run occurred, and no pass was represented as master-ready or final
+regression proof.
+
+The bounded repairs kept the scrolling assertion in Shell stylesheet ownership,
+made the tall Flow evidence fixture compatible with existing example-completeness
+contracts, and declared and conserved all eight runtime-047 evidence leaves.
+There is no unresolved product failure. Recommendation: **adjust** the next
+similar Flow slice by declaring its evidence-leaf partition and tall-fixture
+compatibility before the first evidence run, while retaining the focused QA
+pilot and exact ownership slice. Do not activate another broad verification
+program from this timing variance.
+
 ## VTD-018 disposition
 
 VTD-018 remains a stopped, unintegrated experiment. Candidate `c7ad4698f9` and its

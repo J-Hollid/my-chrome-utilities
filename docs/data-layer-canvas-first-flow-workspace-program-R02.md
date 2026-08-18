@@ -1089,3 +1089,26 @@ including properties and package proof, without an all-20 run. Scenario 047 and
 scroll overflow remain intentionally unimplemented. No slice quarantine is
 active; the original product task is therefore ready for automatic reissue from
 the exact documentation scorecard descendant of this integration.
+
+### Settled scrolling correction
+
+The product correction is QA-integrated at `736823be2d` from exact reissue base
+`7b31239615`. The visible `#layered-schema-editor-host` is now the one contained
+vertical route scroll owner and resets to its upper limit whenever a Flow schema
+route opens. Installed scenario-047 evidence uses repeated wheel input for a
+Page instance and Page Down/Page Up for an Event occurrence. It reaches the
+final Return to Flow control, returns to the first schema-property control, and
+conserves document scroll, Flow camera, contributor ID and scope, canonical
+project bytes, Draft revision, persistence state, and Undo depth. Scenario 046
+continues to prove ordinary route departure and Return-to-Flow restoration.
+
+The exact final plan selected `flow_graph`, `layered_schema`, and `shell` and
+passed 147 focused tasks with properties, installed browser evidence, acceptance
+sessions, package proof, and no all-20 run. The resumed product cycle took
+2 hours 20 minutes 18 seconds from reissue to architect `qa-ready`, exceeding
+the 120-minute estimate by 20 minutes 18 seconds. Evidence ownership, tall
+fixture compatibility, and runtime-leaf conservation were repaired within the
+same product scope before the final proof. No unresolved product failure or
+terminal incident remains. This is QA integration only; cumulative promotion to
+`master` still requires explicit user direction and one frozen all-20 release
+gate.
