@@ -3,6 +3,15 @@
   padding: 1rem;
 }
 
+#layered-schema-editor-host:not([hidden]) {
+  box-sizing: border-box;
+  grid-row: 2;
+  max-block-size: 100%;
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 #layered-schema-editor-host textarea {
   min-height: 7rem;
   width: 100%;

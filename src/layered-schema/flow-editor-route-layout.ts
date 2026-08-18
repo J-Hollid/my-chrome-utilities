@@ -9,7 +9,7 @@ export interface FlowEditorReturnState {
 interface FlowEditorRouteLayoutOptions {
   document: Pick<Document,"querySelector">;
   workspace: Pick<HTMLElement,"hidden">;
-  editorHost: Pick<HTMLElement,"hidden">;
+  editorHost: Pick<HTMLElement,"hidden"|"scrollTop">;
   editor: Pick<HTMLElement,"hidden"|"replaceChildren">;
 }
 
@@ -21,6 +21,7 @@ const escapeSelector=(value:string):string=>globalThis.CSS?.escape(value)??
 export function createFlowEditorRouteLayout(options:FlowEditorRouteLayoutOptions) {
   const open=():void=>{
     options.workspace.hidden=true;
+    options.editorHost.scrollTop=0;
     options.editorHost.hidden=false;
     options.editor.hidden=false;
   };

@@ -20,14 +20,14 @@ import {initialLayeredInstalledExpression,layeredCreatedEntityReadinessState,lay
 import {openFlowSchemaRouteLifecycle,reconcileFlowSchemaRouteLifecycle} from "../dist/layered-schema/flow-route-lifecycle.js";
 import {createFlowEditorRouteLayout} from "../dist/layered-schema/flow-editor-route-layout.js";
 
-const routeWorkspace={hidden:false},routeHost={hidden:true},routeEditor={hidden:true,cleared:false,
+const routeWorkspace={hidden:false},routeHost={hidden:true,scrollTop:73},routeEditor={hidden:true,cleared:false,
   replaceChildren(){this.cleared=true;}},routeLayout=createFlowEditorRouteLayout({
     document:{querySelector(){return null;}},workspace:routeWorkspace,editorHost:routeHost,
     editor:routeEditor,
   });
 routeLayout.open();
-assert.deepEqual([routeWorkspace.hidden,routeHost.hidden,routeEditor.hidden],[true,false,false],
-  "opening a Flow schema route atomically exchanges the canvas workspace for the editor host");
+assert.deepEqual([routeWorkspace.hidden,routeHost.hidden,routeEditor.hidden,routeHost.scrollTop],[true,false,false,0],
+  "opening a Flow schema route atomically exchanges the canvas workspace for the editor host at its upper scroll limit");
 routeLayout.close();
 assert.deepEqual([routeWorkspace.hidden,routeHost.hidden,routeEditor.hidden,routeEditor.cleared],
   [false,true,true,false],"Return to Flow closes the editor without discarding its rendered route");

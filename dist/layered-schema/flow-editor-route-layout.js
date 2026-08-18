@@ -3,6 +3,7 @@ const escapeSelector = (value) => globalThis.CSS?.escape(value) ??
 export function createFlowEditorRouteLayout(options) {
     const open = () => {
         options.workspace.hidden = true;
+        options.editorHost.scrollTop = 0;
         options.editorHost.hidden = false;
         options.editor.hidden = false;
     };
