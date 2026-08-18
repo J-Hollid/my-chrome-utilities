@@ -15,6 +15,7 @@ import { persistCampsitePipeline } from "../scripts/campsite-store.mjs";
 import {
   granularityObservationIdentity,
   granularityPortfolioFreezeStatus,
+  granularityPortfolioFreezeStatusSync,
   listGranularityPortfolio,
   recordGranularityObservation,
   recordGranularityPortfolioDisposition,
@@ -90,19 +91,21 @@ try {
     promotionIdentity:"promotion-1",disposition:"selected",refinementIdentity:"route-hardening",reason:"measured repeated mismatch",
     recordedAt:"2026-08-18T14:00:00.000Z"});
   assert.equal((await granularityPortfolioFreezeStatus(observationRepository,
-    {qaHead:"c".repeat(40),isAncestor:async()=>true})).ready,false,
+    {promotionIdentity:"promotion-1",qaHead:"c".repeat(40),isAncestor:async()=>true})).ready,false,
   "selected hardening without QA proof blocks release freeze");
   await recordGranularityQaProof(observationRepository,{refinementIdentity:"route-hardening",
     promotionIdentity:"promotion-1",
     task:"verification-slice-route-fix",candidateCommit:"d".repeat(40),
     evidence:"review-ready",qaIntegrated:true,recordedAt:"2026-08-18T15:00:00.000Z"});
   assert.equal((await granularityPortfolioFreezeStatus(observationRepository,
-    {qaHead:"c".repeat(40),isAncestor:async()=>true})).ready,true);
+    {promotionIdentity:"promotion-1",qaHead:"c".repeat(40),isAncestor:async()=>true})).ready,true);
+  const dispositionIdentities={selected:identity};
   for (const [suffix,disposition] of [["combined","combined"],["carried","carried"],["retired","retired"]]) {
     const value={...observation,task:`route-${suffix}`,boundaryGeneration:`route-${suffix}`,
       recordedAt:`2026-08-18T16:0${suffix.length}:00.000Z`};
     const recorded=await recordGranularityObservation(observationRepository,value,
       {isBaseAncestor:async()=>true});
+    dispositionIdentities[disposition]=recorded.observation.identity;
     await recordGranularityPortfolioDisposition(observationRepository,{observationIdentity:recorded.observation.identity,
       promotionIdentity:"promotion-1",disposition,
       refinementIdentity:disposition==="combined"?"route-hardening":undefined,
@@ -112,9 +115,15 @@ try {
   }
   assert.deepEqual(new Set((await listGranularityPortfolio(observationRepository)).observations
     .map(({disposition})=>disposition?.kind)),new Set(["selected","combined","carried","retired"]));
-  assert.equal((await granularityPortfolioFreezeStatus(observationRepository,
-    {promotionIdentity:"promotion-2",qaHead:"c".repeat(40),isAncestor:async()=>true})).ready,false,
-  "a carried observation becomes explicitly undisposed at the next promotion");
+  const nextPromotion=await granularityPortfolioFreezeStatus(observationRepository,
+    {promotionIdentity:"promotion-2",qaHead:"c".repeat(40),isAncestor:async()=>true});
+  assert.equal(nextPromotion.ready,false);
+  assert.deepEqual(nextPromotion.blocking,
+    Object.values(dispositionIdentities).map((value)=>`undisposed:${value}`).sort(),
+  "selected, combined, carried, and retired observations all require an explicit next-promotion disposition");
+  assert.deepEqual(granularityPortfolioFreezeStatusSync(
+    observationRepository,"promotion-2").blocking,nextPromotion.blocking,
+  "synchronous release policy uses the same exact promotion-scoped dispositions");
 } finally { await rm(observationRepository,{recursive:true,force:true}); }
 
 const persistenceRepository=await mkdtemp(path.join(os.tmpdir(),"stacked-campsite-persistence-"));

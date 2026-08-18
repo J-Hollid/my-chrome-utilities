@@ -43,21 +43,22 @@ const timestamp=(value,label="Recorded timestamp")=>{
 
 function emptyPortfolio() { return {version:1,observations:[],hardeningProofs:[]}; }
 
+function validatedPortfolio(value) {
+  if (value?.version!==1||!Array.isArray(value.observations)||!Array.isArray(value.hardeningProofs)) {
+    throw new Error("Granularity portfolio is malformed");
+  }
+  return value;
+}
+
 async function load(root) {
   try {
-    const value=JSON.parse(await readFile(targetFor(root),"utf8"));
-    if (value?.version!==1||!Array.isArray(value.observations)||!Array.isArray(value.hardeningProofs)) {
-      throw new Error("Granularity portfolio is malformed");
-    }
-    return value;
+    return validatedPortfolio(JSON.parse(await readFile(targetFor(root),"utf8")));
   } catch (error) { if (error.code==="ENOENT") return emptyPortfolio(); throw error; }
 }
 
 function loadSync(root) {
   try {
-    const value=JSON.parse(readFileSync(targetFor(root),"utf8"));
-    return value?.version===1&&Array.isArray(value.observations)&&Array.isArray(value.hardeningProofs)?
-      value:emptyPortfolio();
+    return validatedPortfolio(JSON.parse(readFileSync(targetFor(root),"utf8")));
   } catch (error) { if (error.code==="ENOENT") return emptyPortfolio(); throw error; }
 }
 
@@ -222,12 +223,13 @@ function visiblePortfolio(portfolio) {
 
 export async function listGranularityPortfolio(root) { return visiblePortfolio(await load(root)); }
 
+const promotionDisposition=(observation,promotionIdentity)=>
+  observation.dispositionHistory.find((item)=>item.promotionIdentity===promotionIdentity);
+
 async function freezeBlocking(portfolio,promotionIdentity,qaHead,isAncestor) {
   const blocking=[];
   for (const observation of portfolio.observations) {
-    const latest=observation.dispositionHistory.at(-1);
-    const disposition=latest?.kind==="carried"&&latest.promotionIdentity!==promotionIdentity?
-      observation.dispositionHistory.find((item)=>item.promotionIdentity===promotionIdentity):latest;
+    const disposition=promotionDisposition(observation,promotionIdentity);
     if (!disposition) { blocking.push(`undisposed:${observation.identity}`); continue; }
     if (!["selected","combined"].includes(disposition.kind)) continue;
     const selectedPeer=portfolio.observations.some((item)=>item.dispositionHistory.some((candidate)=>
@@ -260,12 +262,11 @@ export async function granularityPortfolioFreezeStatus(root,{promotionIdentity="
 export function granularityPortfolioFreezeStatusSync(root=process.cwd(),promotionIdentity="current-promotion") {
   const portfolio=loadSync(root),blocking=[];
   let qaHead="";
-  try { qaHead=execFileSync("git",["rev-parse","refs/heads/qa"],{cwd:root,encoding:"utf8"}).trim(); }
+  try { qaHead=execFileSync("git",["rev-parse","refs/heads/qa"],
+    {cwd:root,encoding:"utf8",stdio:["ignore","pipe","ignore"]}).trim(); }
   catch {}
   for (const observation of portfolio.observations) {
-    const latest=observation.dispositionHistory.at(-1);
-    const disposition=latest?.kind==="carried"&&latest.promotionIdentity!==promotionIdentity?
-      observation.dispositionHistory.find((item)=>item.promotionIdentity===promotionIdentity):latest;
+    const disposition=promotionDisposition(observation,promotionIdentity);
     if (!disposition) { blocking.push(`undisposed:${observation.identity}`); continue; }
     if (!["selected","combined"].includes(disposition.kind)) continue;
     const selectedPeer=portfolio.observations.some((item)=>item.dispositionHistory.some((candidate)=>

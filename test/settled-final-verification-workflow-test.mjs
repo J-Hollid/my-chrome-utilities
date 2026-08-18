@@ -25,6 +25,8 @@ import {
   verifyReviewReadyEvidence,
 } from "../scripts/settled-final-verification.mjs";
 import { canonicalTerminalPlanEligible, validateCanonicalMasterEvidenceRecord } from "../scripts/verification-evidence.mjs";
+import { granularityPortfolioFreezeStatusSync } from
+  "../scripts/campsite-granularity-observations.mjs";
 import {
   classifyLegacyIncidentRunIntent,
   requireVerificationRunIntent,
@@ -370,6 +372,21 @@ assert.throws(() => handoffReadinessPolicy({
   readiness:"release-candidate", verified:"qa-candidate", allPackIds:allPacks,
   granularityPortfolioStatus:{ready:false,blocking:["selected-hardening-not-on-qa:route-hardening"]},
 }), /selected-hardening-not-on-qa/i);
+const malformedPortfolioRepository=await mkdtemp(path.join(os.tmpdir(),"granularity-malformed-"));
+try {
+  const portfolioDirectory=path.join(malformedPortfolioRepository,".swarmforge","campsites");
+  await mkdir(portfolioDirectory,{recursive:true});
+  await writeFile(path.join(portfolioDirectory,"granularity-portfolio.json"),JSON.stringify({
+    version:1,observations:{},hardeningProofs:[],
+  }));
+  assert.throws(()=>handoffReadinessPolicy({
+    sender:"specifier",recipients:["architect"],task:"qa-master-promotion",
+    readiness:"release-candidate",verified:"qa-candidate",allPackIds:allPacks,
+    granularityPortfolioStatus:granularityPortfolioFreezeStatusSync(
+      malformedPortfolioRepository,"qa-master-promotion"),
+  }),/portfolio is malformed/i,
+  "release-candidate policy fails closed when persisted portfolio schema is invalid");
+} finally { await rm(malformedPortfolioRepository,{recursive:true,force:true}); }
 assert.deepEqual(handoffReadinessPolicy({
   sender:"architect", recipients:["specifier"], task:"future-slice",
   readiness:"final-ready", verified:allPacks.join(","), allPackIds:allPacks,
