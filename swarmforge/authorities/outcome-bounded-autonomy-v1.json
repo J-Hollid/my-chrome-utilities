@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "name": "outcome-bounded-autonomy-v1",
+  "approvedBy": "user",
+  "approvedAt": "2026-08-17",
+  "issuerRoles": [
+    "specifier"
+  ],
+  "outcomeBoundaries": {
+    "reversible": true,
+    "preserveApprovedUserVisibleBehavior": true,
+    "noMaterialExternalRiskIncrease": true,
+    "noUserOnlyAuthorityCredentialOrInformation": true,
+    "noMaterialGlobalScopeOrCostExpansion": true,
+    "preserveOrStrengthenSafetyAndEvidence": true
+  },
+  "doesNotAuthorize": [
+    "product behavior changes",
+    "irreversible or material external actions",
+    "user impersonation or credential use",
+    "master integration",
+    "evidence weakening",
+    "authority expansion from free-form message text"
+  ],
+  "acceptanceFeature": "features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature",
+  "digestAlgorithm": "sha256-canonical-json-without-digest",
+  "digest": "sha256:8baa51bc821428f07cca677932256f465265f01c873583e64c8fe0122c388c5e"
+}

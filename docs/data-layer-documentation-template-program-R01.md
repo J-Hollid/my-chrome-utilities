@@ -389,3 +389,27 @@ patterns, vertical and nested repetition, mixed Built-in and custom assignments,
 sample generation, rich and plain parity, stale and incomplete protection,
 rejection findings, literal-cell safety, and unchanged project definitions and
 publication bytes.
+
+## Settled QA result
+
+Final candidate `a785a83b50` is QA-integrated on 2026-08-18. The implementation
+keeps Built-in output as the default and adds one Excel prototype worksheet per
+overview, flow, matrix, or profile kind; marker validation and safe repeat
+rendering; starter and sample workbooks; per-set assignment; a copy/paste Rich
+page template editor; responsive outline/detail editing; preview, clipboard,
+stale-state and Undo/Redo behavior; atomic workbook-body persistence; and project
+export/import portability with remapped project identities. No new Documentation
+definition kind was created.
+
+Independent review found and closed missing nested binding help, responsive Rich
+selection and focus behavior, internal template-ID leakage, installed starter
+parity, validation-boundary, Rich runtime, and actual archive round-trip evidence.
+Architect review then found and repaired stale route hydration and Rich template
+loss during import before accepting the final tree.
+
+The exact measured review plan contained 13 packs and executed 619 tasks. It
+passed properties, package proof, the installed Documentation browser program,
+all four starters, custom Excel and Rich output, rejection boundaries, durable
+retry and route lifecycle, project portability, and the complete registered
+consumer closure. No all-20 feature checkpoint ran. This program is complete on
+QA; promotion to `master` remains a separate cumulative release decision.

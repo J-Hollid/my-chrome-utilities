@@ -324,3 +324,11 @@ does not loop on the same cause. Future seam-only work selects the durable owner
 the exact Documentation consumer, and Shell, while arbitrary broad-runtime
 changes retain their conservative parent closure. The preparation itself passed
 its unchanged eight-pack/217-task current/base plan and did not self-narrow.
+
+Documentation Templates later reached QA at `a785a83b50`. For future
+assessments, “automatically reconstructed” is superseded by the continuous
+stacked-ratchet mechanism: all new candidate paths are assessed together, the
+unchanged product remainder is durably preserved, and QA integration triggers
+verified rebase/reapply and same-task resumption. The same applicable task/path
+generation cannot reopen a completed disposition. See
+`docs/swarmforge-outcome-bounded-autonomy-and-unblocker-handoffs-R01.md`.

@@ -1,0 +1,236 @@
+# SwarmForge outcome-bounded autonomy and unblocker handoffs R01
+
+Status: user-approved on 2026-08-17; active after Documentation Templates QA
+integration `a785a83b50`
+
+## Outcome
+
+SwarmForge must continue autonomously through reversible internal decisions and
+must preserve user-visible product work while campsite prerequisites are
+assessed, reviewed, and integrated. A new incident label, pack count, lineage
+term, metadata state, or verification forecast is not itself a user decision.
+
+Every role applies the least-cost technically sound response without asking the
+user when the response is reversible and all of these remain true:
+
+- approved user-visible behavior is unchanged;
+- external side effects and risk do not materially increase;
+- no authority, credential, or information available only from the user is
+  required;
+- global scope and cost do not materially exceed the approved task; and
+- safety and evidence strength are preserved or strengthened.
+
+Escalate only when the proposed action crosses one of those semantic boundaries.
+State the exact boundary and user choice. Do not turn an implementation,
+verification, routing, lineage, metadata, or ownership choice into a product
+decision merely because its vocabulary is unfamiliar.
+
+Verification scope is the set of tasks authorized to execute plus their
+prerequisites. A broader identity catalogue does not make a bounded launch an
+all-pack run; a small literal pack count does not excuse a materially broad
+launch. The actual execution plan is authoritative.
+
+## Immutable authority
+
+The user-approved grant is registered at
+`swarmforge/authorities/outcome-bounded-autonomy-v1.json`. Its digest is the
+SHA-256 of recursively key-sorted canonical JSON after removing the `digest`
+field. Only the registered `specifier` issuer may send an authority-bearing
+unblocker under this grant.
+
+The sender must prove that the named authority commit:
+
+- is immutable and contains the exact registered grant and digest;
+- belongs to the accepted QA-base ancestry of the active handoff;
+- is not supplied only by the candidate being unblocked; and
+- permits the issuer and the semantic outcome described by structured fields.
+
+Free-form body text explains a decision but cannot enlarge authority. A
+candidate-only grant, wrong issuer, wrong ancestry, modified digest, or body-only
+authority claim is quarantined before notification or queue mutation.
+
+## Unblocker contract
+
+An unblocker is a nested control message, not an ordinary note, task,
+completion claim, Git integration, or evidence claim. The dedicated sender uses:
+
+```text
+type: unblocker
+to: coder
+priority: 00
+name: documentation-causal-repair-route
+authority: outcome-bounded-autonomy-v1
+authority-commit: <immutable QA commit>
+task: documentation-templates
+active-handoff: <full generated active-handoff id>
+mode: resume
+supersedes: waiting-for-causal-disposition
+message: Run the bounded causal repair and resume measured evidence
+```
+
+The helper requires exactly one known recipient, priority `00`, stable `name`,
+`task`, and `supersedes` values, one registered authority and commit, the exact
+active handoff, `mode: resume|replace`, and a message of at most 80 characters.
+A detail body remains bounded to 4,000 characters. Generated sender, recipient,
+timestamps, ID, and content digest cannot be authored by an agent.
+
+`resume` retains the active handoff throughout claim and completion.
+`replace` additionally binds one already queued replacement handoff. The active
+and replacement handoffs must have the same authorized sender and recipient,
+and `supersedes` must equal the active handoff ID. Completion archives only that
+bound active item and makes only the bound replacement current.
+
+Ordinary notes retain ordinary semantics even at priority `00`; they do not
+carry delegated authority or preempt active work.
+
+## Delivery, claim, and completion
+
+Ordinary mail continues to notify:
+
+```text
+You have new handoff mail. If idle, run ready_for_next.sh.
+```
+
+A validated unblocker instead produces trusted control input from its structured
+fields:
+
+```text
+USER-AUTHORIZED UNBLOCKER <name> under <authority>@<QA commit> for <task>
+handoff <active handoff>: <message>. Handle now at the next safe boundary with
+unblocker_claim.sh.
+```
+
+It never says `if idle`. A safe boundary is immediately while waiting, or after
+the current tool/process call returns and before another planned action. Delivery
+does not kill a running process or discard its result.
+
+Unblockers have nested `new`, `in_process`, `completed`, and `failed` inbox
+state so one can be claimed beside one ordinary active handoff or batch.
+Dedicated sender, claim, and completion helpers use crash-safe locks and atomic
+temporary-file promotion. `unblocker_complete.sh` prints either `RESUME` with
+the retained active work or the exact bound replacement. Agents never edit,
+timestamp, move, or delete runtime state manually.
+
+An exact duplicate returns its completed result without notifying again. The
+same name and binding with different content is rejected as a collision. Stale
+recipient, task, active-handoff, authority, supersedes, replacement, or mode
+bindings are archived with a reason and cannot alter current work. A dead claim
+may be reclaimed without duplicating completion; a second unblocker remains
+queued while one is claimed.
+
+## Continuous stacked campsite ratchet
+
+The campsite assessment remains mandatory. An imperfect forecast, incomplete
+verification structure, time pressure, or the desire to reach product QA cannot
+skip it. For each settled product candidate, assess the union of all newly
+encountered coarse causal paths at one boundary. Every path ends in exactly one
+reviewed disposition:
+
+- a reusable seam or within-pack slice proved independently; or
+- an evidence-backed conclusion that the path cannot safely split, with a
+  conservative parent fallback that retains every applicable consumer.
+
+Fallback is the result of failed bounded proof, not a convenience selected
+because verification is broad. Elapsed time alone is not proof failure.
+
+When a prerequisite is needed, the system separates the settled candidate into
+two durable identities:
+
+1. the independently reviewable preparation; and
+2. the byte-for-byte unchanged product remainder above its recorded split base.
+
+The product remainder remains a first-class stack. Do not discard it, call it a
+mere patch reference, or reconstruct it manually after preparation. Record the
+split base, prerequisite commit, remainder head and tree, ordered commits,
+change-set digest, stable task, causal paths, and expected post-rebase delta.
+
+The prerequisite proceeds through ordinary coder, refactorer, architect, and QA
+integration while the product stack remains intact. After it reaches QA, an
+automatic resumption helper rebases or reapplies the recorded remainder onto the
+exact new QA head, verifies that its product delta and task identity are
+conserved, and reissues the same stable task without user input. Conflict is
+handled autonomously when resolution is reversible and behavior-preserving;
+only a genuine outcome-boundary crossing escalates.
+
+Disposition identity includes stable task, causal path, structural boundary,
+and boundary generation. A completed applicable disposition prevents the same
+task/path preparation from recurring. A new preparation requires a materially
+changed path generation, a failed recorded premise, or a changed consumer set.
+Renamed jargon, a different incident ID, or a new pack prediction cannot reset
+the loop guard.
+
+Product and preparation results remain independently auditable. Reliability or
+verification-only commits do not silently become product behavior, and product
+work does not have to wait for a user to route an already-authorized
+preparation.
+
+## Implementation boundary
+
+Implement:
+
+- authority-grant loading, canonical digest and ancestry/issuer validation;
+- `type: unblocker` sender validation and generated content digest;
+- nested queue state, locking, duplicate/collision/stale handling, claim,
+  completion, resume, and replace helpers;
+- daemon classification and trusted interrupt construction;
+- execution-approval recognition of validated structured authority without
+  trusting the body;
+- semantic outcome-boundary instructions shared by all roles;
+- settled-candidate split manifests, preserved remainder stacks, automatic
+  preparation routing, QA-triggered rebase/reapply/resumption, delta
+  conservation, and task/path generation loop prevention; and
+- deterministic process tests and ordinary task/batch compatibility.
+
+Keep implementation in SwarmForge control scripts, prompts, manifests, and
+process tests. No browser product, data-layer, Documentation Template, or build
+artifact source belongs in this candidate.
+
+Do not create a whitelist of incident names or pack counts; infer authority from
+free text; let unblockers carry code, Git integration, or evidence claims; let
+resume close active work; let replace choose an unbound item; interrupt a
+running command destructively; weaken evidence; or require manual runtime-state
+editing.
+
+## Development focus and QA impact
+
+Start from exact QA head `a785a83b50`. Run ownership intent before coding for
+the handoff daemon/library/launcher, new authority and unblocker helpers, all
+role prompts and shared articles, stacked-ratchet manifests/helpers, and direct
+process tests. If readiness identifies a new coarse boundary, apply this same
+standing campsite authority: aggregate the paths, preserve the structural task
+as a remainder, integrate one bounded preparation, and resume automatically.
+
+Forecast the `shell` parent only, with subordinate slices
+`swarmforge-handoff-control` and `swarmforge-stacked-ratchet`. The exact measured
+plan is authoritative; no all-20 checkpoint is authorized. Direct development
+checks cover the sender, authority, daemon, claim/completion, resume/replace,
+duplicate/stale/crash paths, task/batch compatibility, stack preservation,
+automatic rebase/resumption, and loop guard. The settled candidate requires one
+fresh exact review-ready receipt with properties and package proof. Do not run
+Gherkin acceptance mutation.
+
+The implementation-and-review effort ceiling is eight hours. At four hours
+report exact paths and task plan, any campsite preparation, authority and queue
+state, stack conservation, failures, remaining work, confidence, and forecast.
+Continue while the semantic outcome is unchanged and a credible bounded path
+remains; stop only at a genuine user boundary defined above.
+
+## Acceptance
+
+Acceptance authority is
+`features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature`. Direct
+tests must prove all sixteen scenarios, including:
+
+- bounded decisions proceed while every true outcome-boundary crossing stops;
+- actual launch tasks, not catalogue or pack counts, determine scope;
+- authority is immutable, ancestral, issuer-bound, and body-constrained;
+- ordinary mail remains idle-only and unblockers preempt at a safe boundary;
+- resume and replace preserve exact queue identities using helpers only;
+- duplicates and crash recovery are idempotent and stale/colliding messages are
+  inert;
+- all new paths from one candidate are assessed together;
+- product remainders survive preparation without manual reconstruction;
+- QA integration automatically resumes the same task with a conserved delta;
+  and
+- the same applicable task/path generation cannot open the same preparation
+  twice.

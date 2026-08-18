@@ -22,6 +22,7 @@ The settled-candidate verification workflow is integrated at
 | QA-branch release pilot | Active; routine RepoWise scouting stopped after Trial 4 by user decision on 2026-08-15, with optional current-index investigation retained for unfamiliar code or known hotspots | `docs/qa-branch-release-pilot-R01.md` controls feature integration into `qa`; `docs/feature-development-focus-and-advisory-scouting-R01.md` controls the lightweight scoping convention and completed Trial 4 decision. |
 | QA verification ownership readiness | QA-integrated through durable-runtime staging disposition repair `06222ff00f` | Preserve causal `granularity-assessment-required` routing, reviewed seam-or-parent-fallback dispositions, and autonomous product resumption without an all-20 feature run. |
 | QA verification granularity ratchet | Initial ratchet `066ea284de`; first-use mapping repair `8d3cf5012c`; durable-runtime staging repair QA-integrated at `06222ff00f` | Preserve the three-pack staging seam, both reviewed runtime dispositions, conservative broad-file ownership, and automatic product resumption. |
+| SwarmForge outcome-bounded autonomy, priority unblockers, and stacked campsite ratchet | Active by user approval after Documentation Templates QA integration `a785a83b50` | Implement `docs/swarmforge-outcome-bounded-autonomy-and-unblocker-handoffs-R01.md` from this exact QA line: semantic decisions proceed autonomously, trusted unblockers preempt at safe boundaries, and campsite preparations preserve and automatically resume the product remainder. |
 | QA-pilot verification latency correction | Closed after Slice 2 at `e32f9f7c10` by user decision on 2026-08-13 | No coder handoff. Measure the next three ordinary QA product cycles; Slices 3 and 4 remain evidence-triggered backlog items. |
 | QA style verification and Flow modularity | Complete on QA; stage-aware style planning is integrated at `d75132daef`, Flow CSS extraction at `ef440b3018`, corrections through `66dcdfd5d6`, and port snap at `89fee7df48` | Preserve the settled scorecard; do not reopen the abandoned mixed lineage or run all 20 before an explicit master-integration request. |
 | Flow click and drag-ownership correction | QA-integrated at `2b2cf06b45` on 2026-08-16 | Preserve directional Flow scenarios 043–045 and their runtime partners; cumulative promotion to `master` remains a separate release decision. |
@@ -31,7 +32,7 @@ The settled-candidate verification workflow is integrated at
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program; the combined Project Library transport isolation and Flow visual-asset portability delivery is QA-integrated at `1b192105a8` | Preserve that settled transport, content-addressed visual-body, and version-3 archive behavior. No additional VTD-008 controller slice is active. |
-| Documentation template library | Ready to resume after QA-integrated atomic runtime staging repair `06222ff00f`; stopped candidate `d139725a1a` remains a patch reference | Reissue stable task `documentation-templates` from the exact staging-repair scorecard descendant, reconstruct task-owned product changes, and require fresh exact readiness and evidence. |
+| Documentation template library | QA-integrated at `a785a83b50` after exact 13-pack/619-task review evidence | Preserve the four-kind Excel and Rich template library, current-output defaults, atomic body persistence, project portability, assignment, preview, export, validation, responsive editor, and installed evidence. No additional Documentation-template recovery task is active. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Deferred and inactive | The existing two-worker order is within about six seconds of balanced after lock wait is removed; scheduling needed for a possible third worker is bounded inside VTD-017. |
 | VTD-012 registry and planner modularization | Deferred and inactive | Reconsider after broad final-gate and receipt-persistence costs are reduced. |
@@ -61,7 +62,7 @@ distinguishes feature integration into `qa` from an explicit cumulative promotio
 to `master`. Do not inherit VTD-018 candidate `c7ad4698f9`, select another VTD
 item, or start master integration without the corresponding user instruction.
 
-The ordered Documentation-template batch is active outside VTD-008. Its
+The ordered Documentation-template batch is complete on QA outside VTD-008. Its
 behavior-preserving ownership readiness and campsite ratchet are QA-integrated
 through `066ea284de`; first-use mapping repair `8d3cf5012c` adds causal automatic
 assessment, five durable seam-or-fallback dispositions, and a reusable
@@ -92,6 +93,22 @@ paths. A future seam-only change selects `durable_project_repository`,
 conservative. The stopped product commit remains a patch reference only and
 resumes automatically from the exact scorecard descendant. No all-20 feature
 checkpoint is authorized.
+
+Final Documentation Templates candidate `a785a83b50` is now QA-integrated. Its
+exact 13-pack review executed 619 tasks and passed properties, installed Flow
+documentation export, all four starter workbooks, Excel validation and rendering,
+Rich preview/clipboard/sanitization/history, project export/import portability,
+durable route lifecycle, and package proof. Refactorer review closed the scoped
+binding-help, responsive Rich outline/detail, private-ID, and installed-evidence
+gaps before architect acceptance. The product task is complete on QA; cumulative
+promotion to `master` remains a separate user decision.
+
+This integration activates the previously approved structural task
+`swarmforge-outcome-bounded-autonomy`. Its immutable authority grant, feature,
+and program specification are based on this exact QA line. The task implements
+semantic auto-resolution, trusted priority unblockers, and continuous stacked
+campsite preparation without reopening Documentation Templates or running an
+all-20 feature checkpoint.
 
 ## Feature-development throughput authority
 
@@ -478,6 +495,7 @@ historical rename/delete handling.
 | Verification ownership readiness bootstrap | `--pack shell --pack flow_export --pack project_management --pack durable_project_repository`; include the two focused workflow/process-contract unit targets and package proof; one bounded additional exact owner may be recorded as forecast variance, but all 20 is forbidden |
 | Verification granularity ratchet | `--pack shell --pack flow_export --pack project_management --pack durable_project_repository`; include direct slice-planner, conservation, workflow, and process-contract unit targets with properties and package proof; one bounded exact consumer may be recorded as variance, but all 20 is forbidden |
 | Documentation-template mapping repair | Start with `--pack shell --pack flow_export --pack project_management --pack durable_project_repository`; exact preparation ownership is authoritative and may conservatively include the known 13-pack shared-path boundary, with properties and package proof. Never run all 20. Record candidate-path replay, automatic variance routing, slice-or-fallback disposition, exact-pack conservation, and package proof. |
+| Outcome-bounded autonomy and stacked unblockers | Start with `--pack shell` and the exact `swarmforge-handoff-control` plus `swarmforge-stacked-ratchet` process slices. Read-only ownership intent is authoritative; aggregate any new coarse paths once and apply standing campsite preparation without an all-20 checkpoint. |
 | Flow verification proof hardening | `--pack flow_graph` |
 | Flow browser-program partitioning | `--pack flow_graph --focused-task unit:test/verification-process-contract-test.mjs` |
 | Flow relationship snap feedback | `--pack flow_graph` |

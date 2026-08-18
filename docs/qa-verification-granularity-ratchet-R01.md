@@ -501,3 +501,32 @@ from this scorecard's exact QA commit and reconstruct stopped candidate
 staging capability and leave both broad runtime files unchanged. Its fresh exact
 preflight is authoritative; the earlier 10-pack result is a conservation target,
 not a numeric waiver.
+
+## Continuous stacked-ratchet correction
+
+Documentation Templates ultimately reached QA at `a785a83b50`, but its repeated
+manual reconstruction and incident-routing cycles showed that automatic
+resumption was only an instruction, not a durable mechanism. User approval on
+2026-08-17 therefore strengthens the standing campsite rule for future work.
+
+Assessment remains mandatory and evaluates the union of all newly encountered
+coarse paths from one settled candidate. Every path must end in a reviewed seam
+or slice, or an evidence-backed cannot-safely-split parent fallback. Imperfect
+verification structure, forecast variance, elapsed time, pack count, or
+different terminology cannot bypass or restart the assessment.
+
+A preparation now records and preserves the unchanged product remainder as a
+first-class stack with its split base, head/tree, ordered commits, stable task,
+change-set digest, causal paths, and expected delta. The preparation proceeds
+independently while that stack remains intact. After preparation reaches QA, the
+system rebases or reapplies the recorded remainder to the exact new QA head,
+proves delta conservation, and reissues the same task automatically. Future
+implementations must not discard the product candidate and later reconstruct it
+from a patch reference.
+
+Disposition identity includes task, causal path, structural boundary, and
+boundary generation. The same applicable identity cannot create the same
+preparation twice. A new preparation requires a changed generation, consumer
+set, or failed premise. Full mechanics and acceptance are controlled by
+`docs/swarmforge-outcome-bounded-autonomy-and-unblocker-handoffs-R01.md` and
+`features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature`.
