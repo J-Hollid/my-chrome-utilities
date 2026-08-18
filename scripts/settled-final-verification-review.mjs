@@ -1,4 +1,8 @@
-import { validateRunIntentBootstrapReceipt } from "./verification-run-intent.mjs";
+import {
+  validateEligibleRepairAdmissionsReceipt,
+  validateRunIntentBootstrapReceipt,
+} from "./verification-run-intent.mjs";
+import { timeoutIncidentDigest } from "./verification-reliability-values.mjs";
 
 const sha1Pattern = /^[a-f0-9]{40}$/u;
 const sha256Pattern = /^[a-f0-9]{64}$/u;
@@ -112,6 +116,9 @@ export function createReviewReadyRecord({
   if (receipt.runIntentBootstrap) {
     validateRunIntentBootstrapReceipt(receipt, receipt.runIntentBootstrap);
   }
+  if (receipt.eligibleRepairAdmissions) {
+    validateEligibleRepairAdmissionsReceipt(receipt, receipt.eligibleRepairAdmissions);
+  }
   assertIsoTimestamp(receipt.startedAt, "Review receipt start");
   assertIsoTimestamp(receipt.completedAt, "Review receipt completion");
   assertIsoTimestamp(recordedAt, "Review evidence recording");
@@ -123,6 +130,10 @@ export function createReviewReadyRecord({
       runIntent:receipt.runIntent },
     ...(receipt.runIntentBootstrap
       ? { runIntentBootstrap:structuredClone(receipt.runIntentBootstrap) } : {}),
+    ...(receipt.eligibleRepairAdmissions ? {
+      eligibleRepairAdmissions:structuredClone(receipt.eligibleRepairAdmissions),
+      eligibleRepairAdmissionsDigest:timeoutIncidentDigest(receipt.eligibleRepairAdmissions),
+    } : {}),
     startedAt:receipt.startedAt, completedAt:receipt.completedAt, recordedAt,
     finalRegressionClaim:false,
   };
@@ -161,6 +172,22 @@ function assertRecordContents(record) {
        record.runIntentBootstrap.candidateTree !== record.candidateTree ||
        !Array.isArray(record.runIntentBootstrap.coverage))) {
     throw new Error("Review-ready evidence has an invalid run-intent bootstrap binding");
+  }
+  if (record.eligibleRepairAdmissions !== undefined &&
+      (record.eligibleRepairAdmissions?.version !== 1 ||
+       !Array.isArray(record.eligibleRepairAdmissions?.entries) ||
+       !record.eligibleRepairAdmissions.entries.length ||
+       record.eligibleRepairAdmissions.candidateCommit !== record.candidateCommit ||
+       record.eligibleRepairAdmissions.candidateTree !== record.candidateTree ||
+       record.eligibleRepairAdmissionsDigest !==
+         timeoutIncidentDigest(record.eligibleRepairAdmissions))) {
+    throw new Error("Review-ready evidence has an invalid eligible-repair admission binding");
+  }
+  if (record.eligibleRepairAdmissions !== undefined &&
+      (record.eligibleRepairTransaction?.version !== 1 ||
+       record.eligibleRepairTransaction?.status !== "committed" ||
+       !sha256Pattern.test(record.eligibleRepairTransaction?.id ?? ""))) {
+    throw new Error("Review-ready evidence has no committed eligible-repair transaction");
   }
   const obligations = record.terminalObligations;
   if (obligations !== undefined &&

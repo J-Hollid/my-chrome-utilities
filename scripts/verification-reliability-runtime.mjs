@@ -14,20 +14,20 @@ function reviewHandoffRequested(readiness, verified) {
   return [verified === "review-ready", ["review-ready", "qa-ready"].includes(readiness)].every(Boolean);
 }
 
-function packageProofValid({ details, canonicalPath, packagePath, review }) {
+export function packageProofValid({ details, canonicalPath, packagePath, review }) {
   return [details.isFile(), !details.isSymbolicLink(), canonicalPath === packagePath,
-    details.mtimeMs >= Date.parse(review.completedAt)].every(Boolean);
+    details.mtimeMs >= Date.parse(review.startedAt)].every(Boolean);
 }
 
-async function canonicalPackageProof(review) {
-  const packagePath = path.resolve(repositoryRoot, "build/package/my-chrome-utilities.zip");
+export async function canonicalPackageProof(review, { root = repositoryRoot } = {}) {
+  const packagePath = path.resolve(root, "build/package/my-chrome-utilities.zip");
   const [details, canonicalPath, bytes] = await Promise.all([
     lstat(packagePath), realpath(packagePath), readFile(packagePath),
   ]);
   if (!packageProofValid({ details, canonicalPath, packagePath, review })) {
     throw new Error("Terminal verification deferral requires a fresh canonical package proof");
   }
-  return { path:path.relative(repositoryRoot, packagePath),
+  return { path:path.relative(root, packagePath),
     digest:createHash("sha256").update(bytes).digest("hex") };
 }
 
@@ -69,6 +69,10 @@ async function recordEligibleHandoffDeferrals(store, incidents, {
   if (!reviewHandoffRequested(readiness, verified)) return;
   const { verifyReviewReadyEvidence } = await import("./settled-final-verification.mjs");
   const review = await verifyReviewReadyEvidence(commit, base, task);
+  if (review.eligibleRepairAdmissions) {
+    // Admission recording owns the transaction. Handoff validation is read-only.
+    return;
+  }
   const [packageProof,receipt]=await Promise.all([
     canonicalPackageProof(review),boundReviewReceipt(review),
   ]);

@@ -394,6 +394,10 @@ export function createTimeoutIncidentStore({
   const access = createStoreAccess({ root, storeDirectory, legacyStoreDirectories });
   const store = {
     read:access.read,
+    async withAdmissionRecordingLock(operation) {
+      const directory = await access.directory();
+      return withIncidentLock(directory, "eligible-repair-admission-recording", operation);
+    },
     async list() {
       const names = (await Promise.all((await access.readableDirectories()).map((entry) =>
         readdir(entry)))).flat();
@@ -432,7 +436,8 @@ export function createTimeoutIncidentStore({
         }),
       });
       const directory = await access.directory();
-      return withIncidentLock(directory, boundedClosure ? "causal-index" : `create-${randomUUID()}`, async() => {
+      return store.withAdmissionRecordingLock(() => withIncidentLock(directory,
+        boundedClosure ? "causal-index" : `create-${randomUUID()}`, async() => {
         if (boundedClosure) {
           let matching;
           for (const incident of await store.list()) {
@@ -477,7 +482,7 @@ export function createTimeoutIncidentStore({
           throw error;
         }
         return incident;
-      });
+      }));
     },
     async recordRepairAttemptFailure(id, { failure, plan, sourceReceipt, runId } = {}) {
       exactObject(failure, "Governed reliability repair attempt failure");
@@ -599,6 +604,18 @@ export function createTimeoutIncidentStore({
         }
         const projectionCovered=terminalProjectionCoverageValid(incident,proof.projectionCoverage,
           proof.reviewReady?.focusedTaskKeys);
+        const admissionEntry=proof.eligibleRepairAdmissions?.entries?.find(
+          ({incidentId})=>incidentId===id);
+        const admissionTransactionValid=proof.eligibleRepairTransaction?.version===1&&
+          shaPattern.test(proof.eligibleRepairTransaction?.id??"")&&
+          shaPattern.test(proof.eligibleRepairTransaction?.inputDigest??"");
+        const admissionCovered=Boolean(admissionEntry&&
+          admissionTransactionValid&&
+          proof.eligibleRepairAdmissions?.candidateCommit===candidate.commit&&
+          proof.eligibleRepairAdmissions?.candidateTree===candidate.tree&&
+          admissionEntry.failureDigest===incident.failureDigest&&
+          admissionEntry.repairDigest===timeoutIncidentDigest(incident.repair)&&
+          proof.reviewReady?.focusedTaskKeys?.includes(admissionEntry.selectedTaskKey));
         if (proof.candidate?.commit !== candidate.commit || proof.candidate?.tree !== candidate.tree ||
             !await commitDescendsFrom({ root, isAncestor,
               ancestor:timeoutRepairCandidate(incident)?.commit, commit:candidate.commit }) ||
@@ -610,7 +627,7 @@ export function createTimeoutIncidentStore({
             !(proof.reviewReady.focusedTaskKeys.includes(incident.failure.task.key) ||
               proof.runIntentBootstrap?.coverage?.some(({ incidentId, selectedTaskKey }) =>
                 incidentId === id && proof.reviewReady.focusedTaskKeys.includes(selectedTaskKey)) ||
-              projectionCovered) ||
+              projectionCovered || admissionCovered) ||
             !shaPattern.test(proof.package?.digest ?? "")) {
           throw new Error(`Reliability incident ${id} terminal deferral proof is stale or incomplete`);
         }
@@ -627,6 +644,10 @@ export function createTimeoutIncidentStore({
             ? { runIntentBootstrap:structuredClone(proof.runIntentBootstrap) } : {}),
           ...(proof.projectionCoverage
             ? { projectionCoverage:structuredClone(proof.projectionCoverage) } : {}),
+          ...(proof.eligibleRepairAdmissions
+            ? { eligibleRepairAdmissions:structuredClone(proof.eligibleRepairAdmissions) } : {}),
+          ...(proof.eligibleRepairTransaction
+            ? { eligibleRepairTransaction:structuredClone(proof.eligibleRepairTransaction) } : {}),
           package:structuredClone(proof.package),
         };
         const currentProof = incident.terminalVerificationDeferred && {
@@ -638,6 +659,10 @@ export function createTimeoutIncidentStore({
             ? { runIntentBootstrap:incident.terminalVerificationDeferred.runIntentBootstrap } : {}),
           ...(incident.terminalVerificationDeferred.projectionCoverage
             ? { projectionCoverage:incident.terminalVerificationDeferred.projectionCoverage } : {}),
+          ...(incident.terminalVerificationDeferred.eligibleRepairAdmissions
+            ? { eligibleRepairAdmissions:incident.terminalVerificationDeferred.eligibleRepairAdmissions } : {}),
+          ...(incident.terminalVerificationDeferred.eligibleRepairTransaction
+            ? { eligibleRepairTransaction:incident.terminalVerificationDeferred.eligibleRepairTransaction } : {}),
           package:incident.terminalVerificationDeferred.package,
         };
         if (currentProof && timeoutIncidentDigest(currentProof) ===

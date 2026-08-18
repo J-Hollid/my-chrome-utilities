@@ -5754,6 +5754,28 @@
     ],
     "verificationSlices": [
       {
+        "id": "eligible_repair_admission",
+        "sourcePaths": [
+          "scripts/run-focused-acceptance.mjs",
+          "scripts/settled-final-verification-review.mjs",
+          "scripts/settled-final-verification.mjs",
+          "scripts/verification-run-intent.mjs",
+          "scripts/verification-task-succession.mjs",
+          "scripts/verification-evidence.mjs"
+        ],
+        "sourcePrefixes": [
+          "scripts/verification-reliability-"
+        ],
+        "tasks": [
+          "unit:test/settled-final-verification-workflow-test.mjs",
+          "unit:test/verification-evidence-production-path-test.mjs",
+          "unit:test/verification-process-contract-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Exact-candidate eligible repair admission, receipt validation, and transactional review recording"
+      },
+      {
         "id": "swarmforge-handoff-control",
         "sourcePaths": [
           "swarmforge/constitution/articles/project.prompt",

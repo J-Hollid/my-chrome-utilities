@@ -7,6 +7,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 import { loadVerificationPacks, planVerification } from "../scripts/verification-packs.mjs";
+import { canonicalVerificationChangeSet } from "../scripts/verification-changes.mjs";
 
 import {
   consumeTerminalFullObligations,
@@ -20,15 +21,20 @@ import {
   terminalVerificationDeferredRoute,
   terminalVerificationDeferredConservation,
   recordReviewReadyEvidence,
+  recordEligibleRepairReviewTransaction,
   runSettledFinalVerificationCommand,
   validateReviewReadyRecord,
   verifyQaReleaseCandidate,
+  verifyCommittedReviewTransaction,
   verifyReviewReadyEvidence,
 } from "../scripts/settled-final-verification.mjs";
 import { canonicalTerminalPlanEligible, validateCanonicalMasterEvidenceRecord } from "../scripts/verification-evidence.mjs";
 import { granularityPortfolioFreezeStatusSync } from
   "../scripts/campsite-granularity-observations.mjs";
 import { timeoutIncidentDigest } from "../scripts/verification-reliability-values.mjs";
+import { verificationTaskDigest } from "../scripts/verification-task-succession.mjs";
+import { packageProofValid } from "../scripts/verification-reliability-runtime.mjs";
+import { withVerificationNotesLock } from "../scripts/verification-git-notes.mjs";
 import {
   classifyLegacyIncidentRunIntent,
   requireVerificationRunIntent,
@@ -49,6 +55,13 @@ const baseCommit = "1".repeat(40);
 const candidateCommit = "2".repeat(40);
 const candidateTree = "3".repeat(40);
 const packs = await loadVerificationPacks();
+
+assert.equal(packageProofValid({
+  details:{ isFile:()=>true, isSymbolicLink:()=>false,
+    mtimeMs:Date.parse("2026-08-18T10:00:30.000Z") }, canonicalPath:"/tmp/package.zip",
+  packagePath:"/tmp/package.zip", review:{ startedAt:"2026-08-18T10:00:00.000Z",
+    completedAt:"2026-08-18T10:01:00.000Z" },
+}), true, "handoff package proof is fresh when produced after run start but before receipt completion");
 
 assert.equal(verificationRunIntent({}), verificationRunIntents.development);
 assert.equal(verificationRunIntent({ prepareEvidence:"slice" }), verificationRunIntents.review);
@@ -537,6 +550,154 @@ try {
   ), /no bound review-ready evidence/i);
 } finally {
   await rm(evidenceRepository, { recursive:true, force:true });
+}
+
+const admissionRepository = await mkdtemp(path.join(os.tmpdir(), "eligible-repair-review-"));
+try {
+  await exec("git", ["init", "-q"], { cwd:admissionRepository });
+  await exec("git", ["config", "user.name", "Admission Transaction Test"],
+    { cwd:admissionRepository });
+  await exec("git", ["config", "user.email", "admission@example.test"],
+    { cwd:admissionRepository });
+  await writeFile(path.join(admissionRepository, "README.md"), "base\n");
+  await exec("git", ["add", "README.md"], { cwd:admissionRepository });
+  await exec("git", ["commit", "-qm", "base"], { cwd:admissionRepository });
+  const { stdout:admissionBase } = await exec("git", ["rev-parse", "HEAD"],
+    { cwd:admissionRepository });
+  await writeFile(path.join(admissionRepository, "runner.mjs"), "export const admission = true;\n");
+  await exec("git", ["add", "runner.mjs"], { cwd:admissionRepository });
+  await exec("git", ["commit", "-qm", "candidate"], { cwd:admissionRepository });
+  const [{ stdout:admissionCommit }, { stdout:admissionTree }] = await Promise.all([
+    exec("git", ["rev-parse", "HEAD"], { cwd:admissionRepository }),
+    exec("git", ["rev-parse", "HEAD^{tree}"], { cwd:admissionRepository }),
+  ]);
+  const commit = admissionCommit.trim(), tree = admissionTree.trim(), base = admissionBase.trim();
+  const lockOrder = [];
+  let enterFirst, releaseFirst;
+  const firstEntered = new Promise((resolve)=>{ enterFirst = resolve; });
+  const firstRelease = new Promise((resolve)=>{ releaseFirst = resolve; });
+  const firstWriter = withVerificationNotesLock(admissionRepository, async()=>{
+    lockOrder.push("first-enter"); enterFirst(); await firstRelease; lockOrder.push("first-exit");
+  });
+  await firstEntered;
+  const secondWriter = withVerificationNotesLock(admissionRepository, async()=>{
+    lockOrder.push("second-enter");
+  });
+  await new Promise((resolve)=>setTimeout(resolve, 20));
+  assert.deepEqual(lockOrder, ["first-enter"], "the canonical notes lock serializes valid writers");
+  releaseFirst();
+  await Promise.all([firstWriter, secondWriter]);
+  assert.deepEqual(lockOrder, ["first-enter", "first-exit", "second-enter"]);
+  const admissionChangeSet = await canonicalVerificationChangeSet({
+    base, commit, repositoryRoot:admissionRepository,
+  });
+  await mkdir(path.join(admissionRepository, "build", "package"), { recursive:true });
+  await writeFile(path.join(admissionRepository, "build", "package", "my-chrome-utilities.zip"),
+    "fresh package");
+  const selectedIdentity = { key:"unit:test/admission.mjs", stage:"unit", executable:"node",
+    args:["test/admission.mjs"], target:"test/admission.mjs", packId:null, environment:null,
+    requiredCapabilities:[] };
+  const repair = { status:"eligible", candidate:{ commit, tree },
+    checkpoint:{ baseCommit:base, evidenceTask:"eligible-repair-admission" },
+    causalCategory:"review transaction", causalExplanation:"The exact admission is rederived.",
+    regression:{ key:selectedIdentity.key, status:"passed", commit,
+      receiptSha256:"6".repeat(64) },
+    focusedReceipt:{ status:"passed", commit, provenance:"fresh",
+      receiptSha256:"7".repeat(64) },
+    causalProtocol:{ version:2, incidentId:"incident-admission",
+      failureDigest:"3".repeat(64), preRepairResult:{ status:"failed" },
+      repairResult:{ status:"passed" } } };
+  const admissions = { version:1, evidenceTask:"eligible-repair-admission", baseCommit:base,
+    candidateCommit:commit, candidateTree:tree, changeSetDigest:"1".repeat(64),
+    planDigest:"2".repeat(64), entries:[{ incidentId:"incident-admission",
+      failureDigest:"3".repeat(64), causalKey:"4".repeat(64),
+      repairDigest:timeoutIncidentDigest(repair),
+      governedTaskDigest:verificationTaskDigest(selectedIdentity), regressionKey:selectedIdentity.key,
+      selectedTaskKey:selectedIdentity.key,
+      selectedTaskDigest:verificationTaskDigest({
+        args:selectedIdentity.args, environment:null, executable:"node", key:selectedIdentity.key,
+        packId:null, requiredCapabilities:[], stage:"unit", target:selectedIdentity.target,
+      }), coverageKind:"regression" }] };
+  const transactionReceipt = { ...receipt,
+    candidate:{ commit, tree, baseCommit:base, evidenceTask:"eligible-repair-admission",
+      changeSetDigest:"1".repeat(64) },
+    eligibleRepairAdmissions:admissions, plan:{ ...receipt.plan, changedPaths:["runner.mjs"],
+      changeSetDigest:"1".repeat(64), taskPlanDigest:"2".repeat(64) },
+    tasks:{ [selectedIdentity.key]:{ identity:selectedIdentity, status:"passed", provenance:"fresh" },
+      "package:canonical":{ identity:{ key:"package:canonical", stage:"package" },
+        status:"passed", provenance:"fresh" } } };
+  const admitted = createReviewReadyRecord({
+    task:"eligible-repair-admission", baseCommit:base, candidateCommit:commit,
+    candidateTree:tree, changeSet:admissionChangeSet, receipt:transactionReceipt,
+    receiptPath:"tmp/verification-receipts/admitted.json", receiptSha256:"5".repeat(64),
+    recordedAt:"2026-08-11T10:03:00.000Z",
+  });
+  const incident = { id:"incident-admission", state:"unresolved",
+    failureDigest:"3".repeat(64), failure:{ causalKey:"4".repeat(64), task:selectedIdentity }, repair };
+  const deferrals = [];
+  let persistedIncident = structuredClone(incident);
+  let blockingIncidents = [persistedIncident];
+  const store = { read:async()=>structuredClone(persistedIncident),
+    blocking:async()=>blockingIncidents.map((item)=>structuredClone(item)),
+    withAdmissionRecordingLock:async(operation)=>operation(),
+    deferTerminalVerification:async(id, proof)=>{
+      deferrals.push({ id, proof });
+      persistedIncident.terminalVerificationDeferred = {
+        status:"terminal-verification-deferred",
+        repairDigest:timeoutIncidentDigest(persistedIncident.repair),
+        ...structuredClone(proof),
+      };
+    } };
+  const transactionOptions = { repositoryRoot:admissionRepository, store,
+    receiptLoader:async()=>structuredClone(transactionReceipt), packsLoader:async()=>[] };
+  const newIncident = structuredClone(incident);
+  newIncident.id = "incident-newly-applicable";
+  newIncident.failureDigest = "8".repeat(64);
+  newIncident.failure.causalKey = "9".repeat(64);
+  newIncident.repair.causalProtocol = { ...newIncident.repair.causalProtocol,
+    incidentId:newIncident.id, failureDigest:newIncident.failureDigest };
+  blockingIncidents = [persistedIncident, newIncident];
+  await assert.rejects(()=>recordEligibleRepairReviewTransaction(admitted,
+    { version:1, records:[] }, transactionOptions), /admission set changed/i,
+  "a newly applicable unresolved incident blocks incomplete transaction recording");
+  blockingIncidents = [persistedIncident];
+  await assert.rejects(()=>recordEligibleRepairReviewTransaction(admitted,
+    { version:1, records:[] }, { ...transactionOptions,
+      afterDeferrals:async()=>{ throw new Error("simulated crash"); } }), /simulated crash/);
+  await assert.rejects(()=>verifyReviewReadyEvidence(commit, base, "eligible-repair-admission",
+    { repositoryRoot:admissionRepository }), /no bound review-ready evidence/i,
+  "a prepared transaction cannot authorize handoff");
+  await exec("git", ["notes", "--ref=refs/notes/swarmforge-review-ready", "add", "-f", "-m",
+    JSON.stringify({ version:1, records:[{ competing:true }] }), commit],
+  { cwd:admissionRepository });
+  await assert.rejects(()=>recordEligibleRepairReviewTransaction(admitted,
+    { version:1, records:[] }, transactionOptions),
+  /competing review note/i, "a prepared transaction cannot overwrite a competing writer");
+  await exec("git", ["notes", "--ref=refs/notes/swarmforge-review-ready", "remove", commit],
+    { cwd:admissionRepository });
+  const completed = await recordEligibleRepairReviewTransaction(admitted,
+    { version:1, records:[] }, transactionOptions);
+  assert.equal(completed.journal.status, "committed");
+  assert.equal(deferrals.length, 3, "resume revalidates the idempotent incident disposition");
+  assert.equal((await verifyCommittedReviewTransaction(completed.record, admissionRepository,
+    { store })).eligibleRepairTransaction.status, "committed");
+  const replayed = await recordEligibleRepairReviewTransaction(admitted,
+    completed.note, transactionOptions);
+  assert.equal(replayed.journal.status, "committed");
+  assert.equal(deferrals.length, 3, "committed replay is validation-only and cannot downgrade evidence");
+  const committedDeferral = structuredClone(persistedIncident.terminalVerificationDeferred);
+  delete persistedIncident.terminalVerificationDeferred;
+  await assert.rejects(()=>verifyCommittedReviewTransaction(completed.record, admissionRepository,
+    { store }), /lacks its exact committed deferral/i,
+  "a missing committed deferral invalidates the review transaction");
+  persistedIncident.terminalVerificationDeferred = {
+    ...committedDeferral, candidate:{ ...committedDeferral.candidate, tree:"replaced-tree" },
+  };
+  await assert.rejects(()=>verifyCommittedReviewTransaction(completed.record, admissionRepository,
+    { store }), /lacks its exact committed deferral/i,
+  "a replaced committed deferral invalidates the review transaction");
+} finally {
+  await rm(admissionRepository, { recursive:true, force:true });
 }
 
 const releaseRepository = await mkdtemp(path.join(os.tmpdir(), "qa-release-candidate-"));

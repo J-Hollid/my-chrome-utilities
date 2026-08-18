@@ -46,6 +46,15 @@ const focusedFeaturePolicyPaths = new Set([
   "swarmforge/roles/specifier.prompt",
   "verification/granularity-dispositions.json",
 ]);
+const slicedFocusedFeaturePolicyPaths = new Set([
+  "scripts/run-focused-acceptance.mjs",
+  "scripts/settled-final-verification.mjs",
+  "scripts/settled-final-verification-review.mjs",
+  "scripts/verification-evidence.mjs",
+  "scripts/verification-reliability-persistence.mjs",
+  "scripts/verification-run-intent.mjs",
+  "scripts/verification-task-succession.mjs",
+]);
 const testPathKeys = ["unit", "property", "browserAdapters"];
 const prefixOwnedPathKeys = ["source", "process"];
 const reservedTaskEnvironment = new Set([
@@ -1375,8 +1384,16 @@ export function planVerification(
   const allRunnableIds = packs.filter(runnable).map(({ id }) => id);
   const canonicalRunnableSelection = allRunnableIds.length === explicit.size &&
     allRunnableIds.every((id) => explicit.has(id));
+  const focusedPolicyPath = (registry, changedPath) =>
+    focusedFeaturePolicyPaths.has(changedPath) ||
+    slicedFocusedFeaturePolicyPaths.has(changedPath) && (() => {
+      return [registry, packs].some((candidateRegistry) => {
+        const pack = ownerOf(candidateRegistry, changedPath);
+        return pack && verificationSliceMapping(candidateRegistry, pack, changedPath).kind === "slice";
+      });
+    })();
   const hasFocusedFeatureBoundary = changedPaths.some(
-    (changedPath) => !focusedFeaturePolicyPaths.has(changedPath));
+    (changedPath) => !focusedPolicyPath(packs, changedPath));
   if (terminalFull || canonicalRunnableSelection) selected = new Set(allRunnableIds);
 
   const activateSlice = (registry, packId, sliceId, visiting = new Set()) => {
@@ -1419,6 +1436,7 @@ export function planVerification(
 
   const recordSliceMapping = (changedPath, registries) => {
     if (terminalFull || canonicalRunnableSelection) return;
+    if (hasFocusedFeatureBoundary && registries.some((registry) => focusedPolicyPath(registry, changedPath))) return;
     if (registryChanged) {
       for (const registry of registries) {
         const pack = ownerOf(registry, changedPath);
@@ -1447,7 +1465,7 @@ export function planVerification(
     exactVerificationChange = true, forceVerificationExact = false,
   } = {}) => {
     if ((explicit.size || hasFocusedFeatureBoundary) &&
-        focusedFeaturePolicyPaths.has(changedPath) &&
+        focusedPolicyPath(registry, changedPath) &&
         !canonicalRunnableSelection && !terminalFull) {
       return { semantic:[], exactSemantic:[], verificationConsumers:[], boundary:null };
     }

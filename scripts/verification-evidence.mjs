@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { assertFreshDist } from "./dist-artifact.mjs";
 import { acquireDistArtifactLock, inheritedDistArtifactLockIsHeld } from "./dist-artifact-lock.mjs";
+import { acquireVerificationNotesLock } from "./verification-git-notes.mjs";
 import {
   canonicalVerificationChangeSet,
   requireGitAncestor,
@@ -682,6 +683,9 @@ async function parsedReceipt(receiptPath, plan, {
       adapterAuthorizationPackIds:sortedUnique(plan.adapterAuthorizationPackIds ?? []),
     } : {}),
     changeSetDigest:verificationDigest(plan.changeSet),
+    ...(receipt.plan?.taskPlanDigest === undefined ? {} : {
+      taskPlanDigest:verificationDigest(plan.tasks.map(verificationTaskIdentity)),
+    }),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
     ...(receipt.candidate?.evidenceTask === boundedClosureEvidenceTask &&
       !(allowLegacyTerminalClosure && receipt.plan?.terminalClosure === undefined) ? {
@@ -1136,18 +1140,6 @@ async function currentNote(commit, repositoryRoot) {
   }
 }
 
-async function notesLock(repositoryRoot) {
-  const commonDirectory = await git(repositoryRoot, "rev-parse", "--git-common-dir");
-  const lockDirectory = path.join(
-    path.isAbsolute(commonDirectory) ? commonDirectory : path.resolve(repositoryRoot, commonDirectory),
-    "swarmforge-verification-notes.lock",
-  );
-  return acquireDistArtifactLock(lockDirectory, {
-    timeoutMs:120_000,
-    reportAfterMs:5_000,
-  });
-}
-
 async function withRepositoryArtifactLock(repositoryRoot, operation) {
   const lockDirectory = path.join(repositoryRoot, "tmp", ".dist-artifact.lock");
   if (await inheritedDistArtifactLockIsHeld(lockDirectory)) return operation();
@@ -1236,7 +1228,7 @@ export async function recordPendingVerificationEvidence(
     // Global lock order is artifact first, Git notes second. Keeping both for
     // the final snapshot makes an early recorder wait for a running build and
     // prevents a promotion from interleaving with note publication.
-    const releaseNotes = await notesLock(repositoryRoot);
+    const releaseNotes = await acquireVerificationNotesLock(repositoryRoot);
     try {
       await cleanCandidate(repositoryRoot);
       const rawReceiptPath = path.join(repositoryRoot, pending.receipt.sourcePath);
