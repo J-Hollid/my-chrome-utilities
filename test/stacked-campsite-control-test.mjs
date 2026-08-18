@@ -53,7 +53,8 @@ try {
   await writeFile(path.join(repository,"mapping.json"),'{"slice":"ready"}\n');
   await git(repository,"commit","-qam","preparation");
   const preparation=await git(repository,"rev-parse","HEAD");
-  await git(repository,"switch","-q","--detach",remainder);
+  await git(repository,"switch","-q","master");
+  assert.equal(await git(repository,"branch","--show-current"),"master");
   const manifestPath=path.join(repository,"campsite.json");
   await exec(process.execPath,[control,"preserve","product-task",base,preparation,remainder,
     "shell-v1",JSON.stringify(["src/product.ts"]),manifestPath],{cwd:repository});
@@ -67,7 +68,8 @@ try {
   assert.equal(JSON.parse(await readFile(path.join(repository,".swarmforge/campsites/resumed/product-task.json"),
     "utf8")).reissuedTask,"product-task");
 
-  await git(repository,"switch","-q","--detach",remainder);
+  await git(repository,"branch","-f","remainder-work",remainder);
+  await git(repository,"switch","-q","remainder-work");
   await rm(manifestPath);
   const mismatchManifestPath=path.join(repository,".swarmforge/campsites/mismatch-campsite.json");
   await mkdir(path.dirname(mismatchManifestPath),{recursive:true});
@@ -80,6 +82,8 @@ try {
     {cwd:repository}),/complete.*delta|change-set/i);
   assert.equal(await git(repository,"rev-parse","HEAD"),remainder,
     "a failed full-delta check restores the preserved stack head");
+  assert.equal(await git(repository,"branch","--show-current"),"remainder-work",
+    "a failed full-delta check restores the caller's checked-out branch");
   assert.equal(await readFile(path.join(repository,"src/outside.ts"),"utf8"),"export const outside = 2;\n");
 } finally { await rm(repository,{recursive:true,force:true}); }
 console.log("Stacked campsite control contracts passed.");

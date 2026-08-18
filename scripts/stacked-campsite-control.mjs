@@ -108,6 +108,8 @@ async function cli(args) {
     if (dirty.length) throw new Error("Automatic remainder resume requires a clean product worktree");
     const head=await git(root,"rev-parse","HEAD");
     if (head!==manifest.remainder.head) throw new Error("Current HEAD is not the preserved remainder head");
+    let originalBranch="";
+    try { originalBranch=await git(root,"symbolic-ref","--quiet","--short","HEAD"); } catch {}
     const newQaHead=await git(root,"rev-parse",newQaRef);
     try {
       await git(root,"rebase","--onto",newQaHead,manifest.splitBase,manifest.remainder.head);
@@ -126,8 +128,10 @@ async function cli(args) {
       console.log(`REISSUE ${result.reissuedTask} ${result.resumedHead}`); return;
     } catch (error) {
       try { await git(root,"rebase","--abort"); } catch {}
-      if (await git(root,"rev-parse","HEAD")!==manifest.remainder.head) {
-        await git(root,"switch","--detach",manifest.remainder.head);
+      await git(root,"switch","--detach",manifest.remainder.head);
+      if (originalBranch) {
+        await git(root,"branch","--force",originalBranch,manifest.remainder.head);
+        await git(root,"switch",originalBranch);
       }
       throw error;
     }
