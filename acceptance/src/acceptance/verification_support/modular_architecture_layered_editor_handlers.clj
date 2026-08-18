@@ -79,7 +79,7 @@
    {:pattern #"^every one of the 32 current editor files and 87 Layered Schema files matches exactly one boundary$"
     :handler (fn [world _ _]
                (let [c (get-in world [:vtd005/evidence :conservation])]
-                 (assert-vtd005! world (= [32 86] [(:editorFiles c) (:layeredFiles c)])
+                 (assert-vtd005! world (= [32 87] [(:editorFiles c) (:layeredFiles c)])
                                  "Layered editor ownership partition is not exact." {:conservation c})))}])
 
 (defn- multi-change-handlers [example-values verify-throughput!]
