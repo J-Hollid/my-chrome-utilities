@@ -77,9 +77,13 @@ import {
 } from "./report-verification-throughput.mjs";
 import {
   bindRunIntentBootstrapPlan,
+  buildEligibleRepairAdmissions,
   bootstrapReviewIncidentProof,
+  eligibleRepairAdmissionCandidates,
+  revalidateEligibleRepairAdmissions,
   requireVerificationRunIntent,
   runIntentBootstrapCoverage,
+  validateEligibleRepairAdmissionsReceipt,
   validateRunIntentBootstrapBase,
   verificationRunIntent,
   verificationRunIntents,
@@ -1627,11 +1631,6 @@ export async function runFocusedAcceptance(
   } else if (options.changedPaths.length) {
     await validateExplicitChangedPaths(options.changedPaths);
   }
-  if (evidenceTask && !timeoutRepairIncident && !options.runIntentBootstrap) {
-    await assertNoBlockingTimeoutIncidents("HEAD", {
-      changedPaths:options.changeSet?.paths ?? options.changedPaths,
-    });
-  }
   delete options.changedSince;
   delete options.prepareEvidence;
   delete options.resumeReceipt;
@@ -1730,8 +1729,53 @@ export async function runFocusedAcceptance(
     changedStyleTargets:plan.changedStyleTargets ?? {},
     adapterAuthorizationPackIds:[...new Set(plan.adapterAuthorizationPackIds ?? [])].sort(),
     changeSetDigest:plan.changeSet ? verificationDigest(plan.changeSet) : null,
+    taskPlanDigest:verificationDigest(plan.tasks.map(verificationTaskIdentity)),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };
+  let eligibleAdmissionStore;
+  let revalidateEligibleAdmissions;
+  if (evidenceTask && !timeoutRepairIncident && !options.runIntentBootstrap) {
+    eligibleAdmissionStore = createTimeoutIncidentStore();
+    const incidents = await eligibleAdmissionStore.blocking({ commit:candidateCommit });
+    const admissionCandidates = eligibleRepairAdmissionCandidates(incidents);
+    if (admissionCandidates.length) {
+      const admissions = await buildEligibleRepairAdmissions({
+        incidents:admissionCandidates, plan, packs,
+        candidate:{ commit:candidateCommit, tree:candidateTree },
+        baseCommit:changedSince, evidenceTask,
+        changeSetDigest:context.receipt.candidate.changeSetDigest,
+        planDigest:context.receipt.plan.taskPlanDigest,
+      });
+      if (!admissions) {
+        throw new Error("Unresolved reliability incidents have no eligible exact-candidate admission");
+      }
+      if (resumeReceiptPath) {
+        throw new Error("Eligible repair admission requires one fresh review run without receipt resume");
+      }
+      context.receipt.eligibleRepairAdmissions = admissions;
+      revalidateEligibleAdmissions = async(phase) => {
+        await validateVerificationCandidateClean({ repositoryRoot });
+        const [currentCommit, currentTree, currentChangeSet] = await Promise.all([
+          gitValue("rev-parse", "HEAD^{commit}"), gitValue("rev-parse", "HEAD^{tree}"),
+          canonicalVerificationChangeSet({
+            base:changedSince, commit:candidateCommit, repositoryRoot,
+          }),
+        ]);
+        if (currentCommit !== candidateCommit || currentTree !== candidateTree ||
+            verificationDigest(currentChangeSet) !== context.receipt.candidate.changeSetDigest) {
+          throw new Error(`Eligible repair admission candidate changed ${phase}`);
+        }
+        const currentIncidents = await Promise.all(admissions.entries.map(({ incidentId }) =>
+          eligibleAdmissionStore.read(incidentId)));
+        return revalidateEligibleRepairAdmissions({
+          admissions, phase, incidents:currentIncidents, plan, packs,
+          candidate:{ commit:candidateCommit, tree:candidateTree }, baseCommit:changedSince,
+          evidenceTask, changeSetDigest:context.receipt.candidate.changeSetDigest,
+          planDigest:context.receipt.plan.taskPlanDigest,
+        });
+      };
+    }
+  }
   if (options.runIntentBootstrap) {
     const store = createTimeoutIncidentStore();
     const [base, incidents] = await Promise.all([
@@ -1968,6 +2012,7 @@ export async function runFocusedAcceptance(
         : "[verify:resume-rejected] checkpoint identity changed; running every task");
     }
   }
+  await revalidateEligibleAdmissions?.("immediately before task launch");
   console.error(`[verify:plan] ${plan.packIds.length} pack(s), ${plan.tasks.length} task(s), concurrency ${concurrency}, observation concurrency ${observationConcurrency}`);
   try {
     await executeAcceptancePlan(executionPlan, {
@@ -2058,6 +2103,11 @@ export async function runFocusedAcceptance(
       });
     }
     context.receipt.completedAt = new Date().toISOString();
+    if (context.receipt.eligibleRepairAdmissions) {
+      await revalidateEligibleAdmissions("before receipt finalization");
+      validateEligibleRepairAdmissionsReceipt(context.receipt,
+        context.receipt.eligibleRepairAdmissions);
+    }
     if (checkpointGuard) await checkpointGuard.assertBefore({ kind:"receipt-finalization" });
     await context.write();
     plan.receiptPath = context.receiptPath;

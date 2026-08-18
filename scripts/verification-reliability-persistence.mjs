@@ -63,6 +63,15 @@ function deferredDispositionCoreValid(disposition) {
   const bootstrapValid = disposition?.runIntentBootstrap === undefined ||
     (disposition.runIntentBootstrap?.version === 1 &&
      Array.isArray(disposition.runIntentBootstrap?.coverage));
+  const admissionsValid = disposition?.eligibleRepairAdmissions === undefined ||
+    (disposition.eligibleRepairAdmissions?.version === 1 &&
+     Array.isArray(disposition.eligibleRepairAdmissions?.entries) &&
+     disposition.eligibleRepairAdmissions.entries.length > 0);
+  const transactionValid = disposition?.eligibleRepairAdmissions === undefined
+    ? disposition?.eligibleRepairTransaction === undefined
+    : disposition?.eligibleRepairTransaction?.version === 1 &&
+      shaPattern.test(String(disposition.eligibleRepairTransaction?.id)) &&
+      shaPattern.test(String(disposition.eligibleRepairTransaction?.inputDigest));
   return [
     disposition?.status === "terminal-verification-deferred",
     Boolean(disposition?.candidate?.commit), Boolean(disposition?.candidate?.tree),
@@ -75,7 +84,7 @@ function deferredDispositionCoreValid(disposition) {
     Number.isFinite(Date.parse(disposition?.recordedAt)),
     shaPattern.test(String(disposition?.digest)),
     disposition?.digest === timeoutIncidentDigest({ ...disposition, digest:undefined }),
-    bootstrapValid,
+    bootstrapValid, admissionsValid, transactionValid,
   ].every(Boolean);
 }
 
@@ -115,6 +124,8 @@ function deferredProofValid(incident, deferred, latest) {
     root?.carryForward === undefined,
     (root?.reviewReady?.focusedTaskKeys?.includes(incident.failure.task.key) ||
       root?.runIntentBootstrap?.coverage?.some(({ incidentId, selectedTaskKey }) =>
+        incidentId === incident.id && root.reviewReady.focusedTaskKeys.includes(selectedTaskKey)) ||
+      root?.eligibleRepairAdmissions?.entries?.some(({ incidentId, selectedTaskKey }) =>
         incidentId === incident.id && root.reviewReady.focusedTaskKeys.includes(selectedTaskKey))),
     chain.every((disposition) => disposition.repairDigest === deferred.repairDigest),
     latest?.dispositionDigest === deferred.digest, latest?.at === deferred.recordedAt,

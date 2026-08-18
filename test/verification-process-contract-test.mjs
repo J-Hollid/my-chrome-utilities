@@ -142,11 +142,15 @@ import {
 import { canonicalCheckpointBinding } from "../scripts/verification-reliability-receipts.mjs";
 import {
   bindRunIntentBootstrapPlan,
+  buildEligibleRepairAdmissions,
   bootstrapReviewIncidentProof,
   classifyLegacyIncidentRunIntent,
+  eligibleRepairAdmissionCandidates,
   governedRepairAttemptAssociation,
+  revalidateEligibleRepairAdmissions,
   requireVerificationRunIntent,
   runIntentBootstrapCoverage,
+  validateEligibleRepairAdmissionsReceipt,
   validateRunIntentBootstrapBase,
   validateRunIntentBootstrapReceipt,
   verificationRunIntent,
@@ -965,6 +969,8 @@ try {
   });
   const cliRunnerPath = path.join(cliContentionRepository, "scripts/run-focused-acceptance.mjs");
   await copyFile(path.resolve("scripts/run-focused-acceptance.mjs"), cliRunnerPath);
+  await copyFile(path.resolve("scripts/verification-run-intent.mjs"),
+    path.join(cliContentionRepository, "scripts/verification-run-intent.mjs"));
   await copyFile(path.resolve("scripts/verification-packs.mjs"),
     path.join(cliContentionRepository, "scripts/verification-packs.mjs"));
   await copyFile(path.resolve("scripts/verification-shared-boundaries.mjs"),
@@ -1056,6 +1062,7 @@ try {
   await writeFile(path.join(cliContentionRepository, ".git/info/exclude"),
     "node_modules\n.swarmforge\nverification/task-succession.json\n");
   await exec("git", ["add", "scripts/run-focused-acceptance.mjs",
+    "scripts/verification-run-intent.mjs",
     "scripts/settled-final-verification-policy.mjs",
     "scripts/dist-artifact-lock.mjs",
     "scripts/verification-reliability-repair.mjs",
@@ -3198,6 +3205,12 @@ console.log("repairTmp=" + process.env.TMPDIR);
   assert.equal(deferred.state, "unresolved",
     "feature integration defers terminal proof without resolving the incident");
   assert.equal(deferred.terminalVerificationDeferred.status, "terminal-verification-deferred");
+  assert.deepEqual(eligibleRepairAdmissionCandidates([deferred]), [],
+    "a valid deferred-only preflight continues without creating an admission");
+  const malformedDeferred = structuredClone(deferred);
+  malformedDeferred.terminalVerificationDeferred.digest = "0".repeat(64);
+  assert.deepEqual(eligibleRepairAdmissionCandidates([malformedDeferred]).map(({ id }) => id),
+    [deferred.id], "a malformed deferred disposition remains an admission blocker");
   incidentNow = "2026-08-09T00:00:01.000Z";
   const repeatedDeferral = await store.deferTerminalVerification(first.id, {
     candidate:{ commit:"repair-commit", tree:"repair-tree" },
@@ -7521,6 +7534,71 @@ const exactRepairCoverage = await runIntentBootstrapCoverage({ incidents:[exactB
     sourceReceiptSha256:"a".repeat(64) }) });
 assert.equal(exactRepairCoverage[0].admission.kind, "exact-candidate-causal-repair",
   "a bootstrap review failure with an eligible exact-candidate causal repair is admitted once");
+const admissionIncident = {
+  ...structuredClone(exactBootstrapRepair),
+  failureDigest:"1".repeat(64),
+  failure:{ ...structuredClone(exactBootstrapRepair.failure), causalKey:"2".repeat(64) },
+  repair:{ ...structuredClone(exactBootstrapRepair.repair),
+    checkpoint:{ baseCommit:"approved-contract-base", evidenceTask:"eligible-repair-admission" },
+    causalCategory:"readiness or settling", causalExplanation:"The settled control was replaced.",
+    regression:{ ...structuredClone(exactBootstrapRepair.repair.regression),
+      receiptPath:"tmp/verification-receipts/regression.json", receiptSha256:"3".repeat(64) },
+    focusedReceipt:{ ...structuredClone(exactBootstrapRepair.repair.focusedReceipt),
+      provenance:"fresh", receiptPath:"tmp/verification-receipts/focused.json",
+      receiptSha256:"4".repeat(64) },
+    causalProtocol:{ version:2, incidentId:"exact-bootstrap-repair",
+      failureDigest:"1".repeat(64), preRepairResult:{ status:"failed" },
+      repairResult:{ status:"passed" } } },
+};
+const admissions = await buildEligibleRepairAdmissions({
+  incidents:[admissionIncident], plan:bootstrapPlan, packs,
+  candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+  baseCommit:"approved-contract-base", evidenceTask:"eligible-repair-admission",
+  changeSetDigest:"5".repeat(64), planDigest:"6".repeat(64),
+});
+assert.deepEqual(admissions.entries.map(({ incidentId, coverageKind, selectedTaskKey }) =>
+  ({ incidentId, coverageKind, selectedTaskKey })), [{
+  incidentId:"exact-bootstrap-repair", coverageKind:"regression", selectedTaskKey:bootstrapTask.key,
+}], "an eligible exact-candidate repair is admitted from persisted repair proof without source receipt bootstrap");
+assert.equal(admissions.entries[0].repairDigest, timeoutIncidentDigest(admissionIncident.repair));
+for (const phase of ["immediately before task launch", "before receipt finalization"]) {
+  const mutatedIncident = structuredClone(admissionIncident);
+  mutatedIncident.repair.causalExplanation += ` Mutated ${phase}.`;
+  await assert.rejects(()=>revalidateEligibleRepairAdmissions({
+    admissions, phase, incidents:[mutatedIncident], plan:bootstrapPlan, packs,
+    candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+    baseCommit:"approved-contract-base", evidenceTask:"eligible-repair-admission",
+    changeSetDigest:"5".repeat(64), planDigest:"6".repeat(64),
+  }), new RegExp(`changed ${phase}`),
+  `an admitted repair mutation is rejected ${phase}`);
+}
+const admittedReceipt = { eligibleRepairAdmissions:admissions, tasks:{
+  [bootstrapTask.key]:{ identity:bootstrapTask, status:"passed", provenance:"fresh" },
+  "package:canonical":{ identity:{ key:"package:canonical", stage:"package" },
+    status:"passed", provenance:"fresh" },
+} };
+assert.equal(validateEligibleRepairAdmissionsReceipt(admittedReceipt, admissions), admissions,
+  "the receipt requires the selected admission leaf and package to pass freshly");
+await assert.rejects(()=>buildEligibleRepairAdmissions({
+  incidents:[admissionIncident], plan:bootstrapPlan, packs,
+  candidate:{ commit:"stale-candidate", tree:"bootstrap-tree" },
+  baseCommit:"approved-contract-base", evidenceTask:"eligible-repair-admission",
+  changeSetDigest:"5".repeat(64), planDigest:"6".repeat(64),
+}), /exact candidate/i);
+await assert.rejects(()=>buildEligibleRepairAdmissions({
+  incidents:[{ ...admissionIncident, repair:{ ...admissionIncident.repair,
+    regression:{ ...admissionIncident.repair.regression, key:"unit:not-selected" } },
+    failure:{ ...admissionIncident.failure, task:{ ...admissionIncident.failure.task,
+      key:"unit:not-selected", args:["test/not-selected.mjs"] } } }],
+  plan:bootstrapPlan, packs, candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+  baseCommit:"approved-contract-base", evidenceTask:"eligible-repair-admission",
+  changeSetDigest:"5".repeat(64), planDigest:"6".repeat(64),
+  resolveSuccession:async()=>{ throw new Error("no conserved successor"); },
+}), /coverage/i);
+assert.throws(()=>validateEligibleRepairAdmissionsReceipt({ ...admittedReceipt, tasks:{
+  ...admittedReceipt.tasks,
+  [bootstrapTask.key]:{ identity:bootstrapTask, status:"passed", provenance:"reused" },
+} }, admissions), /fresh pass/i);
 const promotionBootstrapRepair = structuredClone(exactBootstrapRepair);
 promotionBootstrapRepair.id = "exact-promotion-bootstrap-repair";
 promotionBootstrapRepair.terminalVerificationDeferred = {

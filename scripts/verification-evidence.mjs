@@ -682,6 +682,9 @@ async function parsedReceipt(receiptPath, plan, {
       adapterAuthorizationPackIds:sortedUnique(plan.adapterAuthorizationPackIds ?? []),
     } : {}),
     changeSetDigest:verificationDigest(plan.changeSet),
+    ...(receipt.plan?.taskPlanDigest === undefined ? {} : {
+      taskPlanDigest:verificationDigest(plan.tasks.map(verificationTaskIdentity)),
+    }),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
     ...(receipt.candidate?.evidenceTask === boundedClosureEvidenceTask &&
       !(allowLegacyTerminalClosure && receipt.plan?.terminalClosure === undefined) ? {
