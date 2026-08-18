@@ -604,6 +604,7 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     propertyRegistryBoundary=context.causalCategory==="other:Flow property registry boundary",
     paintedPortContractRepair=context.causalCategory==="other:stale readiness regression contract",
     tallFixtureCompleteness=context.causalCategory==="other:flow-example-tall-fixture-completeness",
+    runtime047LeafConservation=context.causalCategory==="other:flow-runtime047-evidence-leaf-conservation",
     fixture=targetSelectionRepair?{id:"flow-structured-target-selection-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{requestedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",
@@ -684,6 +685,11 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
           repairedEventCanBecomeComplete:false},
         expectedRepairResult:{tallFixtureAdditionalPresence:"optional",
           repairedEventCanBecomeComplete:true}}
+      :runtime047LeafConservation?{id:"flow-runtime047-evidence-leaf-conservation-v1",
+        causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+        input:{runtime:"runtime047",target:"FLOW_WORKSPACE_CONTROLS_TARGET",leafCount:8},
+        expectedPreRepairFailure:{runtimeKeyDeclared:false,targetLeavesDeclared:0,exactMatch:false},
+        expectedRepairResult:{runtimeKeyDeclared:true,targetLeavesDeclared:8,exactMatch:true}}
       :{id:"flow-readiness-logical-budget-v1",
         causalCategory:"readiness or settling",diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
         input:{target:"FLOW_GRAPH_LEGACY_TARGET",logicalBudgetMilliseconds:120000,
@@ -745,6 +751,14 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
             !routePropertiesSource.includes("index%4===0?'required':'optional'");
           return{tallFixtureAdditionalPresence:optional?"optional":"mixed-required-and-optional",
             repairedEventCanBecomeComplete:optional};})()
+      :runtime047LeafConservation
+        ?(()=>{const partition=registeredFlowPack.browserEvidencePartitions[0].targets
+          .find(({id})=>id==="FLOW_WORKSPACE_CONTROLS_TARGET"),
+          leaves=partition.leaves.filter((leaf)=>leaf.startsWith("flowGraph.runtime047.")),
+          handlerSource=readFileSync("acceptance/src/acceptance/steps/flow_graph.clj","utf8"),
+          runtimeKeyDeclared=/\(range 1 48\)/u.test(handlerSource);
+          return{runtimeKeyDeclared,targetLeavesDeclared:leaves.length,
+            exactMatch:runtimeKeyDeclared&&leaves.length===8};})()
       :{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
         usesLogicalRemainingBudget:/Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u
           .test(flowGraphAdapterSource)},

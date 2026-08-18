@@ -3570,6 +3570,14 @@
           "flowGraph.runtime046.navigationStateInvariant",
           "flowGraph.runtime046.stableReopen",
           "flowGraph.runtime046.returnToFlowRetained",
+          "flowGraph.runtime047.singleScrollOwner",
+          "flowGraph.runtime047.initialBounds",
+          "flowGraph.runtime047.downwardTraversal",
+          "flowGraph.runtime047.returnToFlowReachable",
+          "flowGraph.runtime047.outerAndCameraStable",
+          "flowGraph.runtime047.upwardTraversal",
+          "flowGraph.runtime047.sameContributor",
+          "flowGraph.runtime047.stateInvariant",
           "flowGraph.installedBoundary",
           "flowGraph.runtime017.humanReview",
           "flowGraph.runtime017.primaryContextAbsorbed",
@@ -3889,7 +3897,15 @@
               "flowGraph.runtime046.staleContextDiscarded",
               "flowGraph.runtime046.navigationStateInvariant",
               "flowGraph.runtime046.stableReopen",
-              "flowGraph.runtime046.returnToFlowRetained"
+              "flowGraph.runtime046.returnToFlowRetained",
+              "flowGraph.runtime047.singleScrollOwner",
+              "flowGraph.runtime047.initialBounds",
+              "flowGraph.runtime047.downwardTraversal",
+              "flowGraph.runtime047.returnToFlowReachable",
+              "flowGraph.runtime047.outerAndCameraStable",
+              "flowGraph.runtime047.upwardTraversal",
+              "flowGraph.runtime047.sameContributor",
+              "flowGraph.runtime047.stateInvariant"
             ]
           },
           {
