@@ -358,7 +358,18 @@ assert.deepEqual(handoffReadinessPolicy({
 assert.deepEqual(handoffReadinessPolicy({
   sender:"specifier", recipients:["architect"], task:"qa-master-promotion",
   readiness:"release-candidate", verified:"qa-candidate", allPackIds:allPacks,
+  granularityPortfolioStatus:{ready:true,blocking:[]},
 }), { mode:"master-integration", requiredEvidence:"qa-candidate" });
+assert.throws(() => handoffReadinessPolicy({
+  sender:"specifier", recipients:["architect"], task:"qa-master-promotion",
+  readiness:"release-candidate", verified:"qa-candidate", allPackIds:allPacks,
+  granularityPortfolioStatus:{ready:false,blocking:["undisposed:observation-1"]},
+}), /granularity.*portfolio|undisposed/i);
+assert.throws(() => handoffReadinessPolicy({
+  sender:"specifier", recipients:["architect"], task:"qa-master-promotion",
+  readiness:"release-candidate", verified:"qa-candidate", allPackIds:allPacks,
+  granularityPortfolioStatus:{ready:false,blocking:["selected-hardening-not-on-qa:route-hardening"]},
+}), /selected-hardening-not-on-qa/i);
 assert.deepEqual(handoffReadinessPolicy({
   sender:"architect", recipients:["specifier"], task:"future-slice",
   readiness:"final-ready", verified:allPacks.join(","), allPackIds:allPacks,

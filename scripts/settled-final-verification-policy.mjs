@@ -1,4 +1,5 @@
 import { same, sortedUnique } from "./settled-final-verification-review.mjs";
+import { granularityPortfolioFreezeStatusSync } from "./campsite-granularity-observations.mjs";
 
 function nonNegativeFinite(value, label) {
   if (!Number.isFinite(value) || value < 0) throw new Error(`${label} must be non-negative`);
@@ -114,10 +115,14 @@ function qaPolicy(sender, recipientSet, readiness, verified) {
   return { mode:"qa-integration", requiredEvidence:"review-ready" };
 }
 
-function releasePolicy(sender, recipientSet, readiness, verified) {
+function releasePolicy(sender, recipientSet, readiness, verified,granularityPortfolioStatus) {
   if (sender !== "specifier" || !exactRecipient(recipientSet, "architect")) return null;
   if (readiness !== "release-candidate" || verified !== "qa-candidate") {
     throw new Error("Specifier master-integration handoffs to the architect require an exact QA release candidate");
+  }
+  const portfolio=granularityPortfolioStatus??granularityPortfolioFreezeStatusSync();
+  if (!portfolio.ready) {
+    throw new Error(`Granularity observation portfolio blocks release freeze: ${portfolio.blocking.join(", ")}`);
   }
   return { mode:"master-integration", requiredEvidence:"qa-candidate" };
 }
@@ -166,13 +171,14 @@ function ordinaryPolicy(readiness) {
   return { mode:"ordinary", requiredEvidence:readiness ?? "legacy" };
 }
 
-export function handoffReadinessPolicy({ sender, recipients, task, readiness, verified, allPackIds }) {
+export function handoffReadinessPolicy({ sender, recipients, task, readiness, verified, allPackIds,
+  granularityPortfolioStatus }) {
   const recipientSet = recipientsOf(recipients);
   const bootstrap = bootstrapPolicy(task, readiness, verified);
   if (bootstrap) return bootstrap;
   const review = reviewPolicy(sender, recipientSet, readiness, verified);
   if (review) return review;
-  const release = releasePolicy(sender, recipientSet, readiness, verified);
+  const release = releasePolicy(sender, recipientSet, readiness, verified,granularityPortfolioStatus);
   if (release) return release;
   const qa = qaPolicy(sender, recipientSet, readiness, verified);
   if (qa) return qa;

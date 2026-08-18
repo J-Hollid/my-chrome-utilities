@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 
 import {
+  applyCampsiteReadiness,
   classifyOwnershipReadiness,
   exactOwnershipReadiness,
   intentOwnershipReadiness,
@@ -57,6 +58,34 @@ const classificationRows=[
 ];
 for(const [input,classification] of classificationRows)
   assert.equal(classifyOwnershipReadiness(input).classification,classification);
+assert.match(classifyOwnershipReadiness(classificationRows[1][0]).nextStage,/agent judgment/u);
+assert.match(classifyOwnershipReadiness(classificationRows[3][0]).nextStage,/agent judgment/u);
+assert.match(classifyOwnershipReadiness(classificationRows[4][0]).nextStage,/ownership preparation/u,
+  "all-pack coarse ownership remains a mandatory preparation");
+
+const judgmentInput={version:1,outcome:"deferred-observation",
+  semanticProductScope:"one local route presentation correction",
+  unrelatedSelectedFamilies:["complete export family"],
+  measuredCost:{taskCount:80,criticalPathEstimateMs:120000,failureCount:1},
+  failureSurface:"unrelated export and package failures",
+  seamClarity:"one possible route seam, not yet conserved",
+  preparationCostRisk:"independent extraction would exceed the local correction",
+  rationale:"retain conservative parent coverage and revisit with accumulated evidence",
+  reconsiderationEvidence:"a second occurrence or a shared route boundary"};
+const judged=await applyCampsiteReadiness({classification:"coarse-within-pack",task:"route-fix",
+  baseCommit:"a".repeat(40),paths:["src/route.ts"],plannedPackIds:["owner","consumer"]},
+{judgment:judgmentInput,boundaryGeneration:"route-v1"});
+assert.equal(judged.action,"record-observation");
+assert.equal(judged.planOnly,true,"ownership preflight can expose but never persist a judgment");
+for (const outcome of ["use-reviewed-seam","opportunistic-seam","immediate-preparation",
+  "deferred-observation","parent-fallback"]) {
+  assert.doesNotThrow(()=>applyCampsiteReadiness({classification:"coarse-within-pack",task:"route-fix",
+    baseCommit:"a".repeat(40),paths:["src/route.ts"],plannedPackIds:["owner"]},
+  {judgment:{...judgmentInput,outcome},boundaryGeneration:"route-v1"}));
+}
+assert.throws(()=>applyCampsiteReadiness({classification:"coarse-within-pack",task:"route-fix"},
+  {judgment:{...judgmentInput,roadmap:"touch again later"},boundaryGeneration:"route-v1"}),
+  /roadmap|future touches/i);
 
 let executions=0,writes=0;
 const intent=await intentOwnershipReadiness({intent:{version:1,baseCommit:"a".repeat(40),task:"templates",approvedPackIds:["owner","consumer"],likelyPaths:["src/owner/shared.ts"],proposedPrefixes:[]},packs,plan:(paths)=>({packIds:["owner","consumer"],tasks:[{key:"unit:owner"}],changedOwners:Object.fromEntries(paths.map(path=>[path,["owner","consumer"]]))}),execute:()=>{executions+=1;},write:()=>{writes+=1;}});
@@ -186,15 +215,21 @@ assert.match(roleContracts[0],/likely existing shared integration surfaces/u);
 assert.match(roleContracts[1],/ownership-readiness `intent` plan-only preflight/u);
 assert.match(roleContracts[2],/ownership-preparation candidate/u);
 assert.match(roleContracts[3],/conservative historical union/u);
-assert.match(roleContracts[0],/verification-slice preparation/u);
+assert.match(roleContracts[0],/immediate preparation/u);
 assert.match(roleContracts[1],/coarse-within-pack/u);
 assert.match(roleContracts[2],/slice-plus-remainder|task conservation/u);
 assert.match(roleContracts[3],/selection-miss quarantine/u);
 assert.match(roleContracts[3],/record-selection-miss/u);
 assert.match(roleContracts[0],/record-slice-repair/u);
+for (const contract of roleContracts) assert.match(contract,/judgment|portfolio/u);
+assert.match(roleContracts[1],/semantic product scope/u);
+assert.match(roleContracts[1],/immediate-preparation outcome/u);
+assert.match(roleContracts[0],/selected, combined, carried, or retired/u);
+assert.match(roleContracts[3],/selected-hardening|selected hardening/u);
 const readinessCli=await readFile("scripts/verification-ownership-readiness.mjs","utf8");
 assert.match(readinessCli,/--prefix-proposal/u);
 assert.match(readinessCli,/--within-pack/u);
+assert.match(readinessCli,/planOnly:true/u,"readiness judgment remains plan-only");
 const readinessHandlers=await readFile("acceptance/src/acceptance/verification_support/modular_architecture_vtd015_handlers.clj","utf8");
 assert.match(readinessHandlers,/:prepared-task "unit:test\/verification-process-contract-test\.mjs"/u,
   "readiness acceptance reuses the canonical planned process task");
@@ -272,7 +307,14 @@ console.log(JSON.stringify({verificationOwnershipReadinessAcceptance:{
     slices:{stableIdentity:true,exactSources:true,directTasks:true,prerequisites:true,consumers:true,observable:true,conserved:firstUsePlans.every(plan=>Object.values(plan.verificationSliceConservation).every(({conserved})=>conserved)),exactAndTerminalUnchanged:true},
     mapping:{focused:true,parentFallback:true,historicalUnion:true,invalidFallback:true,ownershipUnavailableStops:true},
     prefixes:{declarationOnly:true,proposalValidated:true,currentConflictRejected:true,exactCommittedPaths:true,noSideEffects:true},
-    routing:{automaticNote:true,pausedNotCompleted:true,reissuedFromQa:true,ordinaryChannel:true,knownCandidateReplay:replayed.plannedPackIds.length===13,durableDispositions:dispositions.dispositions.length===8},
+    routing:{immediatePreparationNote:true,observationUsesConservativePlan:true,pausedNotCompleted:true,
+      reissuedFromQa:true,ordinaryChannel:true,knownCandidateReplay:replayed.plannedPackIds.length===13,
+      durableDispositions:dispositions.dispositions.length===8},
+    judgment:{structuredOutcomes:true,semanticScope:true,unrelatedFamilies:true,measuredCost:true,
+      failureSurface:true,seamClarity:true,preparationRisk:true,noNumericRule:true,allPackMandatory:true},
+    portfolio:{appendOnly:true,duplicateOccurrence:true,identityBound:true,planOnlyNonMutation:true,
+      selected:true,combined:true,carried:true,retired:true,hardeningQaProof:true,preFreezeGate:true,
+      oneTerminalGate:true},
     quarantine:{selectionMiss:true,parentFallback:true,reviewedRepairRequired:true,noExtraAll20:true},
     firstUse:{taskCounts:firstUsePlans.map(({tasks})=>tasks.length),packCounts:firstUsePlans.map(({packIds})=>packIds.length),productBehaviorAbsent:true},
   },

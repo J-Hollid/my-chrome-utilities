@@ -833,6 +833,15 @@ const unsupportedBabashkaGuidance = babashkaBootstrapMessage(lock, "plan9-mips")
 assert.match(unsupportedBabashkaGuidance, /Install Babashka 1\.12\.218 on PATH/u);
 assert.doesNotMatch(unsupportedBabashkaGuidance, /--provision babashka/u,
   "unsupported platforms must never be promised a project-local provision operation");
+const campsiteControlSource=await readFile(path.join(root,"scripts/stacked-campsite-control.mjs"),"utf8");
+for (const command of ["judge-readiness","observe","portfolio","dispose","record-hardening","assert-freeze"]) {
+  assert.equal(campsiteControlSource.includes(`command===\"${command}\"`),true,
+    `stacked campsite control exposes ${command}`);
+}
+const sharedWorkflow=await readFile(path.join(root,"swarmforge/scripts/shared-articles/workflow.prompt"),"utf8");
+assert.match(sharedWorkflow,/Plan-only ownership preflight is read-only/u);
+const sharedHandoffs=await readFile(path.join(root,"swarmforge/scripts/shared-articles/handoffs.prompt"),"utf8");
+assert.match(sharedHandoffs,/release-candidate handoff is rejected.*granularity portfolio/isu);
 assert.equal(lock.codex.requiredFeature, "network_proxy");
 
 console.log("SwarmForge process contracts passed.");

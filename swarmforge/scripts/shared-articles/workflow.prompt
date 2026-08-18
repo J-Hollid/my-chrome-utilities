@@ -32,3 +32,4 @@ By coder.
 - If the functional delivery gate fails, the task is incomplete. Do not describe it as verified, reviewed, architecturally complete, or ready for terminal merge.
 - Prompt, workflow, tooling, documentation, and test-only tasks may complete without production code only when their inbound task explicitly has that scope.
 - QA integration is an intermediate delivery state, not master integration or release completion. Only an exact final-ready master promotion completes the included feature deliveries for approval-to-master measurement.
+- Plan-only ownership preflight is read-only: it may expose bounded judgment inputs but cannot record an observation, open preparation, or mutate portfolio state. Before master-promotion freeze, explicitly dispose the complete observation portfolio and integrate selected hardening into QA; freeze once and retain one terminal all-pack gate.

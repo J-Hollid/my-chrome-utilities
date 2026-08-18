@@ -10,8 +10,16 @@ import {
   recordDisposition,
   resumeRemainder,
 } from "../scripts/stacked-campsite-control.mjs";
-import { resumeOntoQa } from "../scripts/campsite-git-runtime.mjs";
+import { resumeOntoQa, routeCampsiteReadiness } from "../scripts/campsite-git-runtime.mjs";
 import { persistCampsitePipeline } from "../scripts/campsite-store.mjs";
+import {
+  granularityObservationIdentity,
+  granularityPortfolioFreezeStatus,
+  listGranularityPortfolio,
+  recordGranularityObservation,
+  recordGranularityPortfolioDisposition,
+  recordGranularityQaProof,
+} from "../scripts/campsite-granularity-observations.mjs";
 
 const exec=promisify(execFile);
 const control=path.resolve("scripts/stacked-campsite-control.mjs");
@@ -45,6 +53,64 @@ assert.throws(()=>recordDisposition(records,{task:"product-task",path:"src/one.t
 assert.equal(recordDisposition(records,{task:"product-task",path:"src/one.ts",boundary:"shell",
   generation:"shell-v1",result:"slice",consumers:["shell"]}).result,"slice",
 "a changed failed-premise state is a new applicability generation");
+
+const observationRepository=await mkdtemp(path.join(os.tmpdir(),"granularity-observations-"));
+try {
+  const observation={version:1,task:"route-fix",qaBase:"a".repeat(40),
+    causalPaths:["src/route.ts"],boundaryGeneration:"route-v1",
+    semanticProductScope:"one local route presentation correction",
+    selectedPackIds:["owner","consumer"],selectedTaskFamilies:["route","export"],
+    unrelatedTaskFamilies:["export"],candidateSeam:"route presentation seam",
+    measuredCost:{taskCount:80,criticalPathEstimateMs:120000,failureCount:1},
+    failureSurface:"unrelated export failure surface",seamClarity:"candidate seam is coherent but unproved",
+    preparationCostRisk:"independent extraction is broader than the correction",
+    rationale:"defer while retaining conservative parent coverage",
+    reconsiderationEvidence:"another occurrence or a shared boundary",recordedAt:"2026-08-18T12:00:00.000Z"};
+  const identity=granularityObservationIdentity(observation);
+  const first=await recordGranularityObservation(observationRepository,observation,
+    {isBaseAncestor:async()=>true});
+  const second=await recordGranularityObservation(observationRepository,
+    {...observation,recordedAt:"2026-08-18T13:00:00.000Z",
+      measuredCost:{...observation.measuredCost,wallTimeMs:130000}},
+    {isBaseAncestor:async()=>true});
+  assert.equal(first.observation.identity,identity);
+  assert.equal(second.observation.occurrences.length,2,
+    "a repeated task, path, and generation accumulates measured occurrence");
+  assert.equal(second.observation.occurrences[0].recordedAt,"2026-08-18T12:00:00.000Z",
+    "append-only observation history is retained");
+  await assert.rejects(recordGranularityObservation(observationRepository,
+    {...observation,qaBase:"b".repeat(40)},{isBaseAncestor:async()=>false}),/ancestral|QA base/i);
+  await assert.rejects(recordGranularityObservation(observationRepository,
+    {...observation,identity:"0".repeat(64)},{isBaseAncestor:async()=>true}),/identity collision/i);
+  assert.equal((await listGranularityPortfolio(observationRepository)).observations.length,1);
+  assert.equal((await granularityPortfolioFreezeStatus(observationRepository,
+    {qaHead:"c".repeat(40),isAncestor:async()=>true})).ready,false,
+  "an undisposed observation blocks release freeze");
+  await recordGranularityPortfolioDisposition(observationRepository,{observationIdentity:identity,
+    disposition:"selected",refinementIdentity:"route-hardening",reason:"measured repeated mismatch",
+    recordedAt:"2026-08-18T14:00:00.000Z"});
+  assert.equal((await granularityPortfolioFreezeStatus(observationRepository,
+    {qaHead:"c".repeat(40),isAncestor:async()=>true})).ready,false,
+  "selected hardening without QA proof blocks release freeze");
+  await recordGranularityQaProof(observationRepository,{refinementIdentity:"route-hardening",
+    task:"verification-slice-route-fix",candidateCommit:"d".repeat(40),
+    evidence:"review-ready",qaIntegrated:true,recordedAt:"2026-08-18T15:00:00.000Z"});
+  assert.equal((await granularityPortfolioFreezeStatus(observationRepository,
+    {qaHead:"c".repeat(40),isAncestor:async()=>true})).ready,true);
+  for (const [suffix,disposition] of [["combined","combined"],["carried","carried"],["retired","retired"]]) {
+    const value={...observation,task:`route-${suffix}`,boundaryGeneration:`route-${suffix}`,
+      recordedAt:`2026-08-18T16:0${suffix.length}:00.000Z`};
+    const recorded=await recordGranularityObservation(observationRepository,value,
+      {isBaseAncestor:async()=>true});
+    await recordGranularityPortfolioDisposition(observationRepository,{observationIdentity:recorded.observation.identity,
+      disposition,refinementIdentity:disposition==="combined"?"route-hardening":undefined,
+      reason:`explicit ${disposition} rationale`,reconsiderationEvidence:"review next promotion",
+      disprovedPremise:disposition==="retired"?"no material mismatch remains":undefined,
+      recordedAt:"2026-08-18T17:00:00.000Z"});
+  }
+  assert.deepEqual(new Set((await listGranularityPortfolio(observationRepository)).observations
+    .map(({disposition})=>disposition?.kind)),new Set(["selected","combined","carried","retired"]));
+} finally { await rm(observationRepository,{recursive:true,force:true}); }
 
 const persistenceRepository=await mkdtemp(path.join(os.tmpdir(),"stacked-campsite-persistence-"));
 try {
@@ -160,6 +226,15 @@ try {
   await writeFile(pipelineConfig,`${JSON.stringify({
     assessment:{task:"automatic-product-task",candidate:remainder,
       causalPaths:["src/outside.ts","src/product.ts","src/outside.ts"]},
+    judgment:{version:1,outcome:"immediate-preparation",
+      semanticProductScope:"one local product correction",
+      unrelatedSelectedFamilies:["complete shell family"],
+      measuredCost:{taskCount:20,criticalPathEstimateMs:40000,failureCount:0},
+      failureSurface:"unrelated shell process checks",
+      seamClarity:"two exact causal paths form a reusable boundary",
+      preparationCostRisk:"small isolated verification preparation",
+      rationale:"the reusable seam benefit is proportionate to preparation cost",
+      reconsiderationEvidence:"consumer or boundary generation changes"},
     dispositions:[
       {task:"automatic-product-task",path:"src/product.ts",boundary:"shell",generation:"shell-v1",
         result:"slice",consumers:["shell"],reviewedBy:"architect",reviewedAt},
@@ -172,13 +247,13 @@ try {
     preparation:{id:"prepare-automatic-product-task",from:"coder",to:"refactorer",
       task:"verification-slice-automatic-product-task"},
   },null,2)}\n`);
-  const readinessModule=new URL("../scripts/verification-ownership-readiness.mjs",import.meta.url).href;
+  const readinessModule=new URL("../scripts/campsite-git-runtime.mjs",import.meta.url).href;
   const readiness={classification:"granularity-assessment-required",task:"automatic-product-task",
     expansionCauses:[{path:"src/outside.ts",credibleBoundary:true},
       {path:"src/product.ts",credibleBoundary:true}]};
-  const readinessRunner=`const {applyCampsiteReadiness}=await import(${JSON.stringify(readinessModule)});`+
+  const readinessRunner=`const {routeCampsiteReadiness}=await import(${JSON.stringify(readinessModule)});`+
     `const {readFile}=await import('node:fs/promises');`+
-    `const result=await applyCampsiteReadiness(JSON.parse(process.env.READINESS),`+
+    `const result=await routeCampsiteReadiness(process.cwd(),JSON.parse(process.env.READINESS),`+
     `JSON.parse(await readFile(process.env.CAMPSITE_CONFIG,'utf8')));console.log(JSON.stringify(result));`;
   const readinessEnvironment={...process.env,READINESS:JSON.stringify(readiness),CAMPSITE_CONFIG:pipelineConfig};
   const firstPipeline=JSON.parse((await exec(process.execPath,["--input-type=module","-e",readinessRunner],

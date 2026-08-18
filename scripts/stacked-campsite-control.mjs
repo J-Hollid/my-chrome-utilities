@@ -10,12 +10,19 @@ import { contributionDigest, createRemainderManifest, resumeRemainder } from "./
 import { prepareCampsite, resumeOntoQa, routeCampsiteReadiness,
   triggerQaIntegrations } from "./campsite-git-runtime.mjs";
 import { atomicWrite, persistResumption } from "./campsite-store.mjs";
+import { granularityPortfolioFreezeStatus, listGranularityPortfolio,
+  recordGranularityObservation, recordGranularityPortfolioDisposition,
+  recordGranularityQaProof } from "./campsite-granularity-observations.mjs";
 
 export { aggregateCampsiteAssessment, campsiteGenerationId, contributionDigest,
   createRemainderManifest, deltaDigest,
   dispositionIdentity, recordDisposition, resumeRemainder } from "./campsite-artifacts.mjs";
 export { persistCampsitePipeline, persistDispositions } from "./campsite-store.mjs";
 export { prepareCampsite, routeCampsiteReadiness } from "./campsite-git-runtime.mjs";
+export { granularityObservationIdentity, granularityPortfolioFreezeStatus,
+  listGranularityPortfolio, recordGranularityObservation,
+  recordGranularityPortfolioDisposition, recordGranularityQaProof,
+  validateGranularityJudgment } from "./campsite-granularity-observations.mjs";
 
 const exec=promisify(execFile);
 async function git(root,...args) {
@@ -67,7 +74,32 @@ async function cli(args) {
     console.log(JSON.stringify({status:"ok",triggered:results.map(({task,resumedHead})=>({task,resumedHead}))}));
     return;
   }
-  throw new Error("Use: stacked-campsite-control.mjs prepare <config> | preserve <task> <split-base> <prerequisite> <remainder-head> <generation> <causal-paths-json> <routing-json> <manifest> | resume <manifest> <new-qa> | qa-trigger | validate-resume <manifest> <qa-head> <causal-delta> <complete-delta> <resumed-head>");
+  if (command==="judge-readiness") {
+    const readiness=JSON.parse(await readFile(path.resolve(rest[0]),"utf8"));
+    const input=JSON.parse(await readFile(path.resolve(rest[1]),"utf8"));
+    console.log(JSON.stringify(await routeCampsiteReadiness(root,readiness,input))); return;
+  }
+  if (command==="observe") {
+    console.log(JSON.stringify(await recordGranularityObservation(root,
+      JSON.parse(await readFile(path.resolve(rest[0]),"utf8"))))); return;
+  }
+  if (command==="portfolio") {
+    console.log(JSON.stringify(await listGranularityPortfolio(root))); return;
+  }
+  if (command==="dispose") {
+    console.log(JSON.stringify(await recordGranularityPortfolioDisposition(root,
+      JSON.parse(await readFile(path.resolve(rest[0]),"utf8"))))); return;
+  }
+  if (command==="record-hardening") {
+    console.log(JSON.stringify(await recordGranularityQaProof(root,
+      JSON.parse(await readFile(path.resolve(rest[0]),"utf8"))))); return;
+  }
+  if (command==="assert-freeze") {
+    const status=await granularityPortfolioFreezeStatus(root,{qaHead:rest[0]});
+    if (!status.ready) throw new Error(`Granularity portfolio blocks release freeze: ${status.blocking.join(", ")}`);
+    console.log(JSON.stringify(status)); return;
+  }
+  throw new Error("Use: stacked-campsite-control.mjs prepare <config> | judge-readiness <readiness> <config> | observe <observation> | portfolio | dispose <disposition> | record-hardening <proof> | assert-freeze <qa-head> | preserve <task> <split-base> <prerequisite> <remainder-head> <generation> <causal-paths-json> <routing-json> <manifest> | resume <manifest> <new-qa> | qa-trigger | validate-resume <manifest> <qa-head> <causal-delta> <complete-delta> <resumed-head>");
 }
 
 if (process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])) {

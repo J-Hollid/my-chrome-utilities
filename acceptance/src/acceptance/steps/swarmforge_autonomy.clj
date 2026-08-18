@@ -4,19 +4,24 @@
 
 (defonce ^:private verified? (atom false))
 
+(defn- verify-task! [task command marker]
+  (let [result (support/verified-task-result task "node" command)]
+    (support/assert! (zero? (:exit result))
+                     "Outcome-bounded autonomy process contracts failed."
+                     {:out (:out result) :err (:err result)})
+    (support/assert! (str/includes? (:out result) marker)
+                     "Outcome-bounded autonomy process evidence was incomplete."
+                     {:out (:out result)})))
+
 (defn- verify-controls [world]
   (when-not @verified?
-    (let [result (support/verified-task-result
-                  "unit:test/swarmforge-outcome-bounded-autonomy-test.mjs"
-                  "node" "test/swarmforge-outcome-bounded-autonomy-test.mjs")]
-      (support/assert! (zero? (:exit result))
-                       "Outcome-bounded autonomy process contracts failed."
-                       {:out (:out result) :err (:err result)})
-      (support/assert! (str/includes? (:out result)
-                                     "SwarmForge outcome-bounded autonomy contracts passed.")
-                       "Outcome-bounded autonomy process evidence was incomplete."
-                       {:out (:out result)})
-      (reset! verified? true)))
+    (verify-task! "unit:test/swarmforge-outcome-bounded-autonomy-test.mjs"
+                  "test/swarmforge-outcome-bounded-autonomy-test.mjs"
+                  "SwarmForge outcome-bounded autonomy contracts passed.")
+    (verify-task! "unit:test/stacked-campsite-control-test.mjs"
+                  "test/stacked-campsite-control-test.mjs"
+                  "Stacked campsite control contracts passed.")
+    (reset! verified? true))
   (assoc world :swarmforge-autonomy/verified true))
 
 (def step-patterns
@@ -31,11 +36,14 @@
    #"^(?:verification uses a broad canonical identity catalogue to derive a bounded execution plan|the role evaluates scope|scope is determined from tasks authorized to execute and their prerequisites|neither catalogue size nor a literal pack count independently permits or prohibits execution)$"
    #"^(?:an authority-bearing unblocker passed sender and ancestry validation|the daemon delivers its interrupt|trusted control input is constructed from validated structured fields|the execution gate can distinguish delegated user authority from an untrusted body|free-form text cannot enlarge the authority grant)$"
    #"^(?:an authority claim comes from .+|delivery validation runs|it is quarantined without a recipient interrupt or task transition)$"
-   #"^(?:one settled product candidate exposes several new coarse verification paths|the campsite assessment runs|it assesses the union of those paths once at the same candidate boundary|every path ends with a reviewed reusable seam or an evidence-backed cannot-safely-split fallback|an imperfect forecast or elapsed time alone cannot skip the assessment)$"
+   #"^(?:one settled product candidate exposes several new coarse verification paths|the campsite assessment runs|it assesses the union of those paths once at the same candidate boundary|it compares the semantic product change with unrelated verification families, measured or forecast cost, seam coherence, preparation cost, and change risk|every path ends with a reviewed reusable seam, an evidence-backed cannot-safely-split fallback, or a durable non-blocking granularity observation|clearly disproportionate verification weighs materially while an imperfect forecast, pack count, task count, elapsed time, or hypothetical future reuse cannot dictate the decision)$"
    #"^(?:a bounded campsite prerequisite is required|the product candidate is separated for preparation|the prerequisite and the unchanged product remainder receive immutable identities|the product remainder stays preserved as a stack rather than a reconstructed patch reference|the prerequisite follows ordinary independent review and QA integration)$"
    #"^(?:the stacked prerequisite reaches QA|automatic product resumption runs|it rebases or reapplies the preserved remainder onto the exact new QA head|it verifies the resulting tree retains the recorded product delta|it reissues the same stable task without a user decision)$"
    #"^(?:a task and causal path already have a final reviewed seam or fallback disposition|later readiness evaluates the same task, path, and applicable boundary generation|it applies that disposition without creating the same preparation again|a new preparation requires a materially changed path generation or failed disposition premise)$"
-   #"^(?:bounded seam proof cannot complete safely|the recorded proof identifies the failed premise and preserved consumers|the path receives a conservative parent fallback|the product resumes with truthful broad evidence|fallback is not selected merely because verification structure is incomplete or inconvenient)$"])
+   #"^(?:bounded seam proof cannot complete safely|the recorded proof identifies the failed premise and preserved consumers|the path receives a conservative parent fallback|the product resumes with truthful broad evidence|fallback is not selected merely because verification structure is incomplete or inconvenient)$"
+   #"^(?:immediate granularity preparation was selected for a bounded product task|actual preparation becomes materially more complex, risky, or time-consuming than the local behavior it enables|the unintegrated preparation may stop without weakening verification|one durable granularity observation preserves the exact finding and reconsideration evidence|the product resumes with its canonical conservative feature-mode plan when that plan is smaller than all runnable packs)$"
+   #"^(?:a master-promotion request reaches a QA history with active granularity observations|bounded autonomy evaluates the portfolio before release freeze|every observation receives one explicit selected, combined, carried, or retired disposition|selected verification-only work proceeds through ordinary QA review while unrelated product work remains outside the intended release batch|carried observations retain their reasons and become visible again at the next promotion review)$"
+   #"^(?:all selected pre-promotion granularity work is either QA-integrated or explicitly carried|master integration begins|the specifier freezes the exact resulting QA head once|the architect performs one canonical all-20 checkpoint with properties and package proof|no granularity observation is silently resolved by product evidence or by the terminal checkpoint alone)$"])
 
 (def handlers
   (mapv (fn [pattern]

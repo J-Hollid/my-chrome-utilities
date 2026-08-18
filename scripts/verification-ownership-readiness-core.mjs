@@ -9,9 +9,9 @@ import {validateWithinPackMateriality} from "./verification-ownership-within-pac
 const nextStages={
   "bounded-ready":"product implementation starts from the approved QA base",
   "granularity-assessment-required":
-    "a standing-authorized verification-slice preparation starts without another routine user approval",
+    "bounded agent judgment selects a reviewed seam, preparation, observation, or parent fallback",
   "coarse-within-pack":
-    "a standing-authorized verification-slice preparation starts without another routine user approval",
+    "bounded agent judgment selects a reviewed seam, preparation, observation, or parent fallback",
   "coarse-boundary":"a standing-authorized ownership preparation stage starts without another routine user approval",
   "genuinely-global":"implementation waits for current user or release direction",
   "ownership-unavailable":"implementation waits for ownership repair direction without inferring a narrower boundary",

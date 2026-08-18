@@ -5,7 +5,7 @@ import {canonicalVerificationChangeSet,verificationPacksAtCommit} from "./verifi
 import {granularityDispositionsAtCommit} from "./verification-granularity-dispositions.mjs";
 import {loadVerificationPacks} from "./verification-packs.mjs";
 import {activeVerificationSliceQuarantineIds} from "./verification-slice-quarantine.mjs";
-import {routeCampsiteReadiness} from "./stacked-campsite-control.mjs";
+import {validateGranularityJudgment} from "./campsite-granularity-observations.mjs";
 import {exactOwnershipReadiness,intentOwnershipReadiness} from
   "./verification-ownership-readiness-core.mjs";
 
@@ -19,8 +19,25 @@ function parseJsonOption(option,value) {
   catch { throw new Error(`${option} requires valid JSON`); }
 }
 
-export async function applyCampsiteReadiness(answer,config,{repositoryRoot=process.cwd()}={}) {
-  return routeCampsiteReadiness(repositoryRoot,answer,config);
+export function applyCampsiteReadiness(answer,config={}) {
+  if (answer.classification==="coarse-boundary") {
+    return {planOnly:true,action:"mandatory-preparation",classification:answer.classification,
+      reason:"Feature mode cannot defer or execute an all-pack ownership plan"};
+  }
+  if (!["granularity-assessment-required","coarse-within-pack"].includes(answer.classification)) {
+    throw new Error("Readiness does not expose a bounded granularity judgment");
+  }
+  const judgment=validateGranularityJudgment(config.judgment);
+  const actions={"use-reviewed-seam":"continue-reviewed-seam",
+    "opportunistic-seam":"continue-conservative-product-evidence",
+    "immediate-preparation":"prepare-campsite","deferred-observation":"record-observation",
+    "parent-fallback":"continue-parent-fallback"};
+  const causalPaths=[...new Set((answer.expansionCauses??[])
+    .filter(({credibleBoundary=true})=>credibleBoundary).map(({path})=>path)
+    .concat(answer.paths??[]))].sort();
+  return {planOnly:true,action:actions[judgment.outcome],classification:answer.classification,
+    judgment,boundaryGeneration:config.boundaryGeneration,task:answer.task,
+    baseCommit:answer.baseCommit,causalPaths,plannedPackIds:answer.plannedPackIds??[]};
 }
 
 function parseOptions(args) {

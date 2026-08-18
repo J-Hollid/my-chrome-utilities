@@ -8,6 +8,8 @@ import { aggregateCampsiteAssessment, bindDigest, contributionDigest, createRema
   resumeRemainder, validateDigest } from "./campsite-artifacts.mjs";
 import { atomicWrite, persistCampsitePipeline, persistResumption,
   recoverResumptionTransactions } from "./campsite-store.mjs";
+import { recordGranularityObservation, validateGranularityJudgment } from
+  "./campsite-granularity-observations.mjs";
 
 const exec=promisify(execFile);
 async function git(root,...args) {
@@ -44,6 +46,23 @@ export async function routeCampsiteReadiness(root,readiness,input) {
     .map(({path:causalPath})=>causalPath);
   const union=[...new Set(causalPaths.length?causalPaths:input.assessment?.causalPaths??[])].sort();
   if (!union.length) throw new Error("Campsite readiness has no causal paths to assess");
+  if (readiness.classification!=="coarse-boundary") {
+    const judgment=validateGranularityJudgment(input.judgment);
+    if (judgment.outcome==="deferred-observation") {
+      const observation=await recordGranularityObservation(root,{...input.observation,
+        task:readiness.task,qaBase:readiness.baseCommit,causalPaths:union,
+        boundaryGeneration:input.boundaryGeneration,semanticProductScope:judgment.semanticProductScope,
+        unrelatedTaskFamilies:judgment.unrelatedSelectedFamilies,
+        measuredCost:judgment.measuredCost,failureSurface:judgment.failureSurface,
+        seamClarity:judgment.seamClarity,preparationCostRisk:judgment.preparationCostRisk,
+        rationale:judgment.rationale,reconsiderationEvidence:judgment.reconsiderationEvidence});
+      return {status:"deferred-observation",conservativePlan:true,...observation};
+    }
+    if (judgment.outcome!=="immediate-preparation") {
+      return {status:judgment.outcome,conservativePlan:true,task:readiness.task,
+        causalPaths:union,judgment};
+    }
+  }
   return prepareCampsite(root,{...input,assessment:{task:readiness.task,
     candidate:await git(root,"rev-parse","HEAD"),causalPaths:union}});
 }
