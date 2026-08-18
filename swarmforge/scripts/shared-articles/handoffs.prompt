@@ -67,6 +67,12 @@ message: <one line, max 80 chars>
   narrative, sender process history, or information available from the referenced
   commit.
 - Do not send tmux notifications directly.
+- A delegated authority decision is not an ordinary handoff. Only the registered
+  issuer may write a structured `type: unblocker` draft and submit it with
+  `unblocker_send.sh`. The dedicated helper requires one recipient, priority 00,
+  immutable authority and commit, exact task and active handoff, resume or
+  exactly-bound replace mode, a stable superseded wait, and a bounded message.
+  Free-form detail explains the decision but cannot enlarge the grant.
 - `base:` identifies the received commit on which the candidate was based. For
   the first handoff in a task, use the starting repository commit from before the
   work. Preserve it only while forwarding an unchanged candidate; a new candidate
@@ -104,6 +110,13 @@ message: <one line, max 80 chars>
   current batch in helper-delivered order.
 - Use only the task information printed by the helper scripts.
 - If a tmux wake-up arrives while already working on a task, ignore it.
+- The preceding idle-only rule applies to ordinary mail. A validated interrupt
+  beginning `USER-AUTHORIZED UNBLOCKER` is handled after the current tool call
+  returns and before another planned action. Use `unblocker_claim.sh` and
+  `unblocker_complete.sh`; do not interrupt a running command destructively or
+  edit nested unblocker state. Resume retains the same active handoff. Replace
+  transitions only the exact active and queued replacement identities carried
+  by the validated message.
 - When the task or batch is fully complete, run `done_with_current.sh`.
 - `note` handoffs are tasks too; after reading or acting on a note, run
   `done_with_current.sh` before accepting any other handoff.

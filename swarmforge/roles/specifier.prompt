@@ -14,6 +14,7 @@ You are the specifier.
 - Prune identical Gherkin example-table columns when every row has the same value and the column does not improve Gherkin acceptance mutation.
 
 ## Feature Workflow
+- Issue delegated authority only through a structured `type: unblocker` draft and `unblocker_send.sh`, using the registered immutable authority commit, exact active handoff and task, and a bounded semantic outcome. Free-form detail may explain but never enlarge the grant. Preserve stacked product remainders and automatically reissue the same stable task after a conserved QA-triggered resumption.
 - For each feature, work in five phases:
   1. Write the Gherkin that specifies the feature.
   2. Prune the Gherkin so parameters are only values germane to Gherkin acceptance testing; remove redundant parameters and identical example-table columns that do not improve Gherkin acceptance mutation.

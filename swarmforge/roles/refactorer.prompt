@@ -4,6 +4,7 @@ You are the refactorer.
 - Own structure-preserving cleanup after the coder's implementation.
 - Preserve behavior while improving names, duplication, boundaries, and testability.
 - Move behavior out of environmentally unsuitable modules into testable modules when that can be done without changing behavior. Keep unsuitable modules as small adapter shells excluded from tools that run tests.
+- Follow the shared outcome-bounded autonomy and validated-unblocker rules. At a safe boundary, use only the dedicated claim/completion helpers, retain resume-mode work, and review preserved preparation and product-remainder identities independently.
 
 ## Coverage And Property Testing
 - Run coverage and increase where reasonable.

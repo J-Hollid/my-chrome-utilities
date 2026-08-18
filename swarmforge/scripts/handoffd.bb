@@ -2,6 +2,7 @@
 
 (ns handoffd
   (:require [babashka.fs :as fs]
+            [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
             [clojure.string :as str]))
@@ -9,6 +10,8 @@
 (def poll-ms 1000)
 (def wake-message
   "You have new handoff mail. If idle, run ready_for_next.sh.")
+(def script-dir (fs/parent *file*))
+(def unblocker-control (fs/path script-dir "unblocker-control.mjs"))
 
 (defn usage []
   (binding [*out* *err*]
@@ -17,6 +20,7 @@
 
 (def project-root
   (or (first *command-line-args*) (usage)))
+(def run-once? (= "--once" (second *command-line-args*)))
 
 (def state-dir (fs/path project-root ".swarmforge"))
 (def daemon-dir (fs/path state-dir "daemon"))
@@ -91,8 +95,8 @@
   (fs/path (:worktree-path role-info)
            ".swarmforge" "handoffs" "inbox" "new" filename))
 
-(defn notify! [socket session]
-  (let [send-text (sh "tmux" "-S" socket "send-keys" "-t" session "-l" wake-message)
+(defn notify! [socket session message]
+  (let [send-text (sh "tmux" "-S" socket "send-keys" "-t" session "-l" message)
         _ (Thread/sleep 150)
         send-carriage-return (sh "tmux" "-S" socket "send-keys" "-t" session "C-m")
         _ (Thread/sleep 50)
@@ -120,11 +124,19 @@
     (spit (str path ".error") (str reason "\n"))
     (move-with-collision path failed-dir)))
 
+(defn deliver-unblocker! [role-info sender-role path]
+  (let [result (sh "node" (str unblocker-control) "deliver-file" (str path)
+                   (:worktree-path role-info) sender-role)]
+    (when-not (zero? (:exit result))
+      (throw (ex-info (str "unblocker validation failed: " (str/trim (:err result))) result)))
+    (json/parse-string (str/trim (:out result)) true)))
+
 (defn deliver! [roles socket sender-role path]
   (let [filename (fs/file-name path)
         message (parse-message path)
         headers (:headers message)
-        recipients (some-> (get headers "to") (str/split #",") seq)]
+        recipients (some-> (get headers "to") (str/split #",") seq)
+        unblocker? (= "unblocker" (get headers "type"))]
     (if-not recipients
       (fail! path "missing to header")
       (do
@@ -132,12 +144,17 @@
           (let [role-info (get roles recipient)]
             (when-not role-info
               (throw (ex-info (str "unknown recipient " recipient) {:recipient recipient})))
-            (let [target (target-path role-info filename)
-                  delivered (add-delivery-headers message recipient)]
-              (fs/create-dirs (fs/parent target))
-              (when-not (fs/exists? target)
-                (spit (str target) (render-message (:headers delivered) (:body delivered))))
-              (notify! socket (:session role-info)))))
+            (if unblocker?
+              (let [result (deliver-unblocker! role-info sender-role path)
+                    notification (:notification result)]
+                (when-not (str/blank? notification)
+                  (notify! socket (:session role-info) notification)))
+              (let [target (target-path role-info filename)
+                    delivered (add-delivery-headers message recipient)]
+                (fs/create-dirs (fs/parent target))
+                (when-not (fs/exists? target)
+                  (spit (str target) (render-message (:headers delivered) (:body delivered))))
+                (notify! socket (:session role-info) wake-message)))))
         (move-with-collision path
                              (fs/path (get-in roles [sender-role :worktree-path])
                                       ".swarmforge" "handoffs" "sent"))
@@ -191,9 +208,11 @@
   (.addShutdownHook (Runtime/getRuntime) (Thread. shutdown!))
   (log! "started")
   (try
-    (while (not (should-stop?))
+    (if run-once?
       (poll-once!)
-      (sleep-poll! poll-ms))
+      (while (not (should-stop?))
+        (poll-once!)
+        (sleep-poll! poll-ms)))
     (finally
       (fs/delete-if-exists pid-file)
       (log! "stopped"))))

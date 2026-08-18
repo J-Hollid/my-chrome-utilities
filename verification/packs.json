@@ -5700,6 +5700,35 @@
     ],
     "verificationSlices": [
       {
+        "id": "swarmforge-handoff-control",
+        "sourcePaths": [
+          "swarmforge/constitution/articles/project.prompt",
+          "swarmforge/roles/architect.prompt",
+          "swarmforge/roles/coder.prompt",
+          "swarmforge/roles/refactorer.prompt",
+          "swarmforge/roles/specifier.prompt",
+          "swarmforge/scripts/handoff_lib.bb",
+          "swarmforge/scripts/handoffd.bb",
+          "swarmforge/scripts/shared-articles/handoffs.prompt",
+          "swarmforge/scripts/swarm-terminal-adapter.sh",
+          "swarmforge/scripts/swarmforge.bb"
+        ],
+        "sourcePrefixes": ["swarmforge/scripts/unblocker"],
+        "tasks": ["unit:test/swarmforge-outcome-bounded-autonomy-test.mjs"],
+        "prerequisites": ["property:test/swarmforge-outcome-bounded-autonomy-property-test.mjs"],
+        "consumers": [],
+        "observableBoundary": "Validated authority-bearing unblocker delivery and nested handoff control"
+      },
+      {
+        "id": "swarmforge-stacked-ratchet",
+        "sourcePaths": [],
+        "sourcePrefixes": ["scripts/stacked-campsite"],
+        "tasks": ["unit:test/stacked-campsite-control-test.mjs"],
+        "prerequisites": ["property:test/swarmforge-outcome-bounded-autonomy-property-test.mjs"],
+        "consumers": [],
+        "observableBoundary": "Preserved product remainder identity, conserved QA resumption, and disposition loop guard"
+      },
+      {
         "id": "documentation_template_delivery",
         "sourcePaths": ["build-delivered-dependencies.json", "scripts/build-delivered-dependencies.mjs"],
         "sourcePrefixes": [],
@@ -6388,6 +6417,8 @@
       "test/package-clean-checkout-contract-test.mjs",
       "test/settled-final-verification-workflow-test.mjs",
       "test/swarmforge-process-contract-test.mjs",
+      "test/swarmforge-outcome-bounded-autonomy-test.mjs",
+      "test/stacked-campsite-control-test.mjs",
       "test/verification-process-contract-test.mjs",
       "test/verification-evidence-production-path-test.mjs",
       "test/headless-chrome-lifecycle-test.mjs",
@@ -6415,6 +6446,7 @@
     ],
     "property": [
       "test/workspace-tabs-property-test.mjs",
+      "test/swarmforge-outcome-bounded-autonomy-property-test.mjs",
       "test/stylesheet-declarations-property-test.mjs"
     ],
     "features": [
