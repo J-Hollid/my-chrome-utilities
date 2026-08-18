@@ -310,3 +310,38 @@ Feature: Settled candidate final verification
     And every unselected or unsuccessful observation retains an explicit portfolio disposition
     And the specifier freezes the resulting exact QA head once and sends that release candidate directly to the architect
     And the architect runs the ordinary single all-20 checkpoint with properties and package proof on that sealed candidate
+
+  # Settled candidate final verification 028
+  Scenario: Settled candidate final verification 028
+    Given a completed review-evidence receipt contains valid eligible-repair admissions and fresh package proof
+    When review-ready evidence is recorded
+    Then one durable transaction binds the receipt, review-ready record, and terminal-verification-deferred disposition for every admitted incident
+    And recording revalidates the exact candidate, repair digests, selected coverage, fresh task results, plan, toolchain, artifact, and package identities under one canonical lock order
+    And the transaction is committed only when the review-ready record and every matching incident disposition are durable
+    And each incident remains unresolved with its immutable failure and repair history intact
+    And handoff validation performs no late incident mutation
+
+  # Settled candidate final verification 029
+  Scenario Outline: Settled candidate final verification 029
+    Given eligible-repair recording was interrupted with <durable_state>
+    When the same record-review command is invoked with the exact receipt, base, task, and candidate
+    Then transaction recovery produces <recovery_result>
+    And review-ready and QA-ready handoffs remain blocked until the transaction is committed
+    And recovery never duplicates an incident transition or review-ready record
+
+    Examples:
+      | durable_state                                      | recovery_result                                                   |
+      | only the prepared transaction journal              | write every bound record and commit the transaction               |
+      | the review-ready record but no incident disposition | write every missing matching disposition and commit the transaction |
+      | every incident disposition but no review-ready record | write the missing review-ready record and commit the transaction |
+      | both exact records and an uncommitted journal       | validate both records and mark the transaction committed          |
+      | a stale, changed, missing, or conflicting bound record | block without publishing or replacing evidence                 |
+
+  # Settled candidate final verification 030
+  Scenario: Settled candidate final verification 030
+    Given eligible-repair admission recording has one committed exact transaction
+    When review-ready and QA-ready handoffs validate that candidate
+    Then both routes require the matching review-ready evidence, transaction id, and terminal-verification-deferred dispositions
+    And they remain focused claims that permit only the next review or QA fast-forward
+    And no coder, refactorer, or feature-mode architect can request an all-20 fallback through admission
+    And the incident is resolved only by the passing canonical all-20 properties and package checkpoint during explicitly requested master integration

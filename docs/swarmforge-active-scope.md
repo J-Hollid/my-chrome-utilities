@@ -29,7 +29,7 @@ The settled-candidate verification workflow is integrated at
 | Flow instance schema route-lifecycle correction | QA-integrated at `aa19396f45` on 2026-08-16 | Preserve directional Flow scenario 046 and its runtime partner, including ordinary route departure, stable contributor reopening, and Return to Flow behavior. |
 | Flow instance schema-editor scrolling correction | QA-integrated at `736823be2d` on 2026-08-18 after exact 3-pack/147-task review evidence | Preserve directional Flow scenario 047 and its runtime partner for both Page-instance wheel traversal and Event-occurrence keyboard traversal; cumulative promotion to `master` remains a separate release decision. |
 | Project Documentation workspace UX correction | Active follow-up approved by the user on 2026-08-16 | Preserve the QA-integrated Build, Preview, and Export workspace while replacing the flat Site Profile property list with the concept-first Profile filtering and ordering control under `docs/data-layer-project-documentation-workspace-program-R01.md` and its product/runtime feature pair; use the focused `flow_export` boundary. This does not resume an older rejected Project Documentation implementation lineage. |
-| Verification run-intent and deferred-incident corrections | QA-integrated through live registry/planner order correction `cad10c898c` | Preserve exact-set registry completeness, strict receipt/planner identity and artifact pairing, and immutable deferred incidents; no further enabling correction is active. |
+| Verification run-intent and deferred-incident corrections | QA-integrated through live registry/planner order correction `cad10c898c`; exact-candidate eligible-repair admission policy approved on 2026-08-19 | Specify the bounded automatic admission and safely resumable review/deferral transaction under `docs/qa-exact-candidate-eligible-repair-admission-R01.md`; no feature-mode all-20 run is authorized. |
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program; the combined Project Library transport isolation and Flow visual-asset portability delivery is QA-integrated at `1b192105a8` | Preserve that settled transport, content-addressed visual-body, and version-3 archive behavior. No additional VTD-008 controller slice is active. |
@@ -447,6 +447,49 @@ intentionally changes its repair, regression, task-succession, runner, or
 evidence contract. Otherwise leave it unchanged for case-by-case assessment on
 the frozen master-integration candidate. Path overlap alone is not a proof
 obligation and does not authorize an all-20 run.
+
+### Exact-candidate eligible-repair admission
+
+When an ordinary feature evidence run creates an incident and a causal correction
+on the same task lineage makes its repair eligible, the unresolved incident must
+not create a circular dependency between review-ready evidence and terminal
+deferral. Eligibility authorizes one bounded admission into fresh review evidence;
+it does not resolve the incident and does not activate terminal verification.
+
+The admission route must:
+
+- require an immutable eligible repair bound to the exact candidate commit and
+  tree, including its causal category and explanation, deterministic regression,
+  passing focused repair receipt, and causal-protocol result;
+- derive the feature's exact owned-pack plan from its canonical change set and
+  require that plan to execute the repaired regression, the original governed
+  task, or a validated task successor;
+- use the persisted eligible-repair record as the admission proof. The failed
+  source receipt is not required to anticipate the later incident through a
+  bootstrap or deferral declaration;
+- record every admitted incident and selected regression or successor in the
+  immutable review receipt, while preserving normal candidate, toolchain,
+  artifact, plan, and package identities;
+- fail closed for an unresolved repair, unclassified diagnostic, reproduced or
+  changed failure, stale candidate, identity mismatch, missing selected task, or
+  any new failure during the admitted run; and
+- after the exact run and fresh package proof pass, record review-ready evidence
+  and the matching `terminal-verification-deferred` disposition atomically. A
+  crash may leave neither result or a safely resumable transaction, never a
+  handoff record without its incident disposition.
+
+The resulting `review-ready` and `qa-ready` handoffs remain focused claims. The
+incident stays attached to the candidate and is consumed only by the canonical
+all-20 properties and package checkpoint during explicitly requested master
+integration. Coder, refactorer, and feature-mode architect work must not run the
+all-20 gate to resolve or work around this state. A standalone verification-repair
+slice still requires separate user approval and is not implied by eligible-repair
+admission.
+
+Until the runner implements this route, encountering the circular state is a
+bounded verification-tooling blocker. Report `eligible-repair-admission-needed`
+with the incident, candidate, exact pack plan, and regression identity; do not
+recommend or launch an all-20 feature checkpoint as the fallback.
 
 ## Verification-maintenance ratchet
 

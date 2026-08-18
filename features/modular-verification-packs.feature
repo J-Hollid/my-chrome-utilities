@@ -2529,3 +2529,50 @@ Feature: Modular verification packs
     And each refinement receives focused review evidence and architect QA-ready integration before release freeze
     And an unsafe, expanding, or unproved refinement is not integrated and returns to an explicit carried disposition
     And no all-20 checkpoint runs until the resulting QA head is frozen once for the ordinary master-integration gate
+
+  # Modular verification packs 180
+  Scenario: Modular verification packs 180
+    Given an ordinary review-evidence candidate has an unresolved incident with an eligible causal repair bound to its exact commit and tree
+    And its canonical owned-pack plan selects the repaired regression, governed task, or one validated successor
+    When the existing property-enabled prepare-evidence command starts for that candidate and task
+    Then the runner automatically admits the persisted eligible repair into one fresh exact owned-pack run
+    And no additional admission flag, all-pack selector, bootstrap declaration, or source-receipt foresight is required
+    And admission neither resolves the incident nor widens the canonical plan
+    And the runner reports every admitted incident and selected coverage before executing a task
+
+  # Modular verification packs 181
+  Scenario Outline: Modular verification packs 181
+    Given an ordinary review-evidence candidate has <repair_state>
+    And its canonical owned-pack plan has <coverage_state>
+    When eligible-repair admission is evaluated
+    Then the admission result is <admission_result>
+    And a blocked result executes no verification task and creates no review-ready evidence or incident disposition
+
+    Examples:
+      | repair_state                                                        | coverage_state                                      | admission_result                                      |
+      | one eligible repair bound to the exact candidate commit and tree    | its repaired regression is selected                 | admit the incident through its regression             |
+      | one eligible repair bound to the exact candidate commit and tree    | its unchanged governed task is selected              | admit the incident through its governed task          |
+      | one eligible repair bound to the exact candidate commit and tree    | its unique conserved current successor is selected   | admit the incident through that validated successor   |
+      | no eligible repair or an unclassified unresolved failure            | any task coverage                                     | block as unresolved-repair                            |
+      | a reproduced, changed, stale, or differently bound repair           | a related task is selected                            | block as repair-identity-mismatch                     |
+      | one eligible repair bound to the exact candidate commit and tree    | no regression, governed task, or successor is selected | block as eligible-repair-coverage-missing           |
+
+  # Modular verification packs 182
+  Scenario: Modular verification packs 182
+    Given one fresh exact owned-pack review run admits one or more eligible repairs
+    When its immutable receipt is finalized
+    Then eligibleRepairAdmissions version 1 records the evidence task, base, candidate commit and tree, change-set digest, and plan digest
+    And its entries are sorted by incident id and record each incident id, failure digest, causal key, repair digest, regression key, selected task key and digest, and coverage kind
+    And successor coverage also records its destination task digest and conservation digest
+    And the ordinary receipt still binds the locked toolchain, artifact, canonical plan, fresh task results, and package result
+    And every selected admission task or successor has fresh passing provenance in that same receipt
+
+  # Modular verification packs 183
+  Scenario: Modular verification packs 183
+    Given an eligible repair is admitted for an exact candidate and canonical plan
+    When the candidate, tree, task, repair, regression, task succession, registry, plan, toolchain, artifact, or package identity changes before evidence recording
+    Then admission is revalidated and blocks as stale rather than being carried to the changed identity
+    And an ordinary resume receipt cannot supply reused task results to an admitted run
+    And a new task failure records its normal immutable incident and prevents review-ready recording
+    And the original incident remains unresolved without a terminal-verification-deferred disposition
+    And another attempt requires a newly valid exact-candidate state rather than an unchanged evidence retry
