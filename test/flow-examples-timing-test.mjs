@@ -603,6 +603,7 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     plannerShardWiring=context.causalCategory==="other:Flow planner shard wiring",
     propertyRegistryBoundary=context.causalCategory==="other:Flow property registry boundary",
     paintedPortContractRepair=context.causalCategory==="other:stale readiness regression contract",
+    tallFixtureCompleteness=context.causalCategory==="other:flow-example-tall-fixture-completeness",
     fixture=targetSelectionRepair?{id:"flow-structured-target-selection-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{requestedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",
@@ -676,6 +677,13 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
           validatesPaintedViewportReadiness:false},
         expectedRepairResult:{requiresNativeFocusScrollOrdering:false,
           validatesPaintedViewportReadiness:true}}
+      :tallFixtureCompleteness?{id:"flow-example-tall-fixture-completeness-v1",
+        causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+        input:{fixture:"FLOW_GRAPH_EXAMPLES_TARGET",scenario:"runtime021 complete Event example"},
+        expectedPreRepairFailure:{tallFixtureAdditionalPresence:"mixed-required-and-optional",
+          repairedEventCanBecomeComplete:false},
+        expectedRepairResult:{tallFixtureAdditionalPresence:"optional",
+          repairedEventCanBecomeComplete:true}}
       :{id:"flow-readiness-logical-budget-v1",
         causalCategory:"readiness or settling",diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
         input:{target:"FLOW_GRAPH_LEGACY_TARGET",logicalBudgetMilliseconds:120000,
@@ -730,6 +738,13 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         ?{requiresNativeFocusScrollOrdering:false,
           validatesPaintedViewportReadiness:paintedPortReadiness>=0&&
             paintedPortReadiness<sourcePointerDown&&sourcePointerDown<targetPointerMove}
+      :tallFixtureCompleteness
+        ?(()=>{const routePropertiesSource=flowGraphAdapterSource.match(
+          /routeProperties=\(prefix,first\)=>\[first,[\s\S]*?\],propertySet=/u)?.[0]??"",
+          optional=routePropertiesSource.includes("presence:'optional'")&&
+            !routePropertiesSource.includes("index%4===0?'required':'optional'");
+          return{tallFixtureAdditionalPresence:optional?"optional":"mixed-required-and-optional",
+            repairedEventCanBecomeComplete:optional};})()
       :{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
         usesLogicalRemainingBudget:/Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u
           .test(flowGraphAdapterSource)},
