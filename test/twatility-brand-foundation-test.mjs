@@ -80,6 +80,10 @@ for (const file of staticFiles) {
   );
 }
 
+const layeredCss = await readFile("layered-schema.css", "utf8");
+assert.match(layeredCss, /#layered-schema-editor-host:not\(\[hidden\]\)\s*\{[^}]*grid-row:\s*2[^}]*max-block-size:\s*100%[^}]*min-block-size:\s*0[^}]*overflow-y:\s*auto[^}]*overscroll-behavior:\s*contain/su,
+  "the visible layered-schema host is the single contained vertical route scroll owner");
+
 const expectedStylesheets = {
   "side-panel.html": [
     "side-panel.css",

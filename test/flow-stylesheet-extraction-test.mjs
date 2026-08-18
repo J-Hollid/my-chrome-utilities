@@ -23,7 +23,6 @@ const baseCss=await readFile(new URL("../specification-builder.css",import.meta.
 const brandCss=await readFile(new URL("../specification-builder-brand.css",import.meta.url),"utf8");
 const localCss=await readFile(new URL("../src/flow-graph/flow-workspace.css",import.meta.url),"utf8");
 const bridgeCss=await readFile(new URL("../src/flow-graph/flow-workspace-shell.css",import.meta.url),"utf8");
-const layeredCss=await readFile(new URL("../layered-schema.css",import.meta.url),"utf8");
 const extractionBase="66b91e38e6";
 const baseGlobalSources=await Promise.all(["specification-builder.css","specification-builder-brand.css"]
   .map(async(path)=>({path,source:await gitShow(extractionBase,path)})));
@@ -234,8 +233,6 @@ assert.match(localCss,/@media \(forced-colors: active\)/u,"forced-colors present
 assert.doesNotMatch(localCss,/(?:^|[,{]\s*)(?:body|\.twatility-studio|#project-workspace|#workspace-pane|#project-inspector|\.sticky-tools)\b/mu,"feature-local selectors cannot target Studio shell ancestors");
 
 assert.match(bridgeCss,/\.twatility-studio #workspace-pane:has\(\.documentary-flow/u,"the bridge retains ordinary Studio workspace integration");
-assert.match(layeredCss,/#layered-schema-editor-host:not\(\[hidden\]\)\s*\{[^}]*grid-row:\s*2[^}]*max-block-size:\s*100%[^}]*min-block-size:\s*0[^}]*overflow-y:\s*auto[^}]*overscroll-behavior:\s*contain/su,
-  "the visible layered-schema host is the single contained vertical route scroll owner");
 assert.match(bridgeCss,/body\.flow-focus-canvas/u,"the bridge retains Focus Canvas shell integration");
 assert.doesNotMatch(bridgeCss,/\.flow-node|\.flow-edge|\.flow-lane|\.flow-minimap/u,"component presentation cannot leak into the shell bridge");
 
