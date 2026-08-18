@@ -10485,6 +10485,48 @@ function approvedVtd015Vtd014ConservationRegression(context) {
     repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
   };
 }
+function approvedAutonomyVtd014ConservationRegression(context) {
+  const expectedPreRepairFailure = {
+    approvedAdditionsExcluded:false,
+    shellSessionNormalized:false,
+    baselineDigestConserved:false,
+  };
+  const expectedRepairResult = {
+    approvedAdditionsExcluded:true,
+    shellSessionNormalized:true,
+    baselineDigestConserved:true,
+  };
+  const fixture = {
+    id:"approved-autonomy-vtd014-conservation-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{ approvedTaskKeys:[...approvedAutonomyTaskKeys].sort(),
+      aggregateTaskKey:"acceptance-session:shell" },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const currentShellTask = currentTerminalPlan.tasks.find(({ key }) =>
+    key === fixture.input.aggregateTaskKey);
+  const normalizedShellIdentity = normalizedVtd006Identity(currentShellTask);
+  const repairResult = {
+    approvedAdditionsExcluded:fixture.input.approvedTaskKeys.every((key) =>
+      currentTerminalPlan.tasks.filter((task) => task.key === key).length === 1),
+    shellSessionNormalized:!normalizedShellIdentity.target.split(",")
+      .includes(autonomyFeature),
+    baselineDigestConserved:vtd014Evidence.conservation.currentTaskDigest ===
+      vtd014Evidence.conservation.acceptedBaseTaskDigest,
+  };
+  assert.deepEqual(repairResult, expectedRepairResult);
+  const fixtureDigest = verificationDigest(fixture);
+  return {
+    version:2,
+    incidentId:context.incidentId,
+    failureDigest:context.failureDigest,
+    fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
+  };
+}
 function causalProtocolScopeRegression(context) {
   const expectedPreRepairFailure = {
     approvedTaskSetReachable:false,
@@ -10732,6 +10774,9 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         : regressionContext.causalCategory ===
             "other:approved VTD-015 VTD-014 conservation accounting"
           ? approvedVtd015Vtd014ConservationRegression(regressionContext)
+        : regressionContext.causalCategory ===
+            "other:approved autonomy VTD-014 identity conservation"
+          ? approvedAutonomyVtd014ConservationRegression(regressionContext)
         : regressionContext.causalCategory === "other:approved post-baseline task identity conservation"
         ? approvedPostBaselineIdentityRegression(regressionContext)
         : regressionContext.causalCategory === "other:approved verification identity conservation"
