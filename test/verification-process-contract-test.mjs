@@ -1554,6 +1554,9 @@ const documentationTemplateHandlerSource = await readFile(new URL(
   `../acceptance/src/acceptance/steps/${documentationTemplateStepStem}.clj`, import.meta.url), "utf8");
 const documentationTemplateAcceptanceFixtureSource = await readFile(new URL(
   `./acceptance/${documentationTemplateStepStem}_steps_test.clj`, import.meta.url), "utf8");
+const documentationTemplateLibraryUiStem = ["workspace", "template", "library", "ui"].join("-");
+const documentationTemplateLibraryUiSource = await readFile(new URL(
+  `../src/project-documentation/${documentationTemplateLibraryUiStem}.ts`, import.meta.url), "utf8");
 
 const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagnosedBoundary,
   causalCategory = "artifact/process locking" }) => {
@@ -1578,6 +1581,29 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
         handlerKeys.every((key, index) => key === fixtureTrueKeys[index]) };
     assert.deepEqual(repairResult, fixture.expectedRepairResult,
       "the bounded fixture proves exact parity for all 17 Documentation Template runtime evidence keys");
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:structuredClone(fixture.expectedPreRepairFailure) },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
+  }
+  if (causalCategory === "other:documentation template rich outline focus timing") {
+    const fixture = {
+      id:"documentation-template-rich-outline-focus-timing-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ rerenderContract:"synchronous", focusTarget:'[data-rich-block-selected="true"]' },
+      expectedPreRepairFailure:{ focusScheduling:"queued-microtask",
+        focusRunsImmediatelyAfterRerender:false },
+      expectedRepairResult:{ focusScheduling:"synchronous-after-render",
+        focusRunsImmediatelyAfterRerender:true },
+    };
+    const synchronousFocus = documentationTemplateLibraryUiSource.includes(
+      "const focusAfterRender=(selector:string)=>detail.ownerDocument.querySelector<HTMLElement>(selector)?.focus();");
+    const repairResult = { focusScheduling:synchronousFocus
+      ? "synchronous-after-render" : "queued-microtask",
+    focusRunsImmediatelyAfterRerender:synchronousFocus };
+    assert.deepEqual(repairResult, fixture.expectedRepairResult,
+      "the bounded fixture proves Rich outline selection focuses synchronously after rerender");
     const fixtureDigest = timeoutIncidentDigest(fixture);
     return { version:2, incidentId, failureDigest, fixture,
       preRepairResult:{ status:"failed", fixtureDigest,

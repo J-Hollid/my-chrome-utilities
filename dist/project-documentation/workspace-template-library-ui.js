@@ -38,7 +38,7 @@ function richEditor(detail, selected, templates, options) {
         collect(block.children); });
     collect(blocks);
     const selectedBlock = flat.find(block => block.id === options.selectedRichBlockId) ?? flat[0], selectedIndex = selectedBlock ? flat.indexOf(selectedBlock) : -1;
-    const focusAfterRender = (selector) => queueMicrotask(() => detail.ownerDocument.querySelector(selector)?.focus());
+    const focusAfterRender = (selector) => detail.ownerDocument.querySelector(selector)?.focus();
     const choose = (id, showDetail = true) => { options.selectRichBlock(id); options.setRichEditorMobileDetail(showDetail); options.rerender(); focusAfterRender(showDetail ? '[aria-label="Selected rich template block detail"]' : '[data-rich-block-selected="true"]'); };
     const commit = (nextBlocks, label = "Edit", nextSelection = selectedBlock?.id) => { const candidate = { ...selected, blocks: nextBlocks }, validation = validateRichDocumentationTemplate(candidate); if (!validation.valid)
         throw new Error(validation.findings.map(({ blockId, message }) => `${blockId}: ${message}`).join("\n")); const next = { ...selected, richBlocks: recordBlocks(nextBlocks), digest: templateDigest("rich", nextBlocks), validation }; if (nextSelection)
