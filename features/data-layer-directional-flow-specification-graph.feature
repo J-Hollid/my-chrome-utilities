@@ -803,3 +803,21 @@ Feature: Data layer directional Flow specification graph
       | Cart Page instance                        | Project overview               |
       | add_payment_info Event contained by Cart  | Documentation                  |
       | Cart Page instance                        | another Flow                   |
+
+  # Data layer directional Flow specification graph 047
+  Scenario Outline: Data layer directional Flow specification graph 047
+    Given <target> schema contribution editor is open from Checkout journey
+    And its property content places Return to Flow below the visible editor route at the upper scroll limit
+    And the originating Flow camera, contributor identity, canonical project state, Draft revision, and Undo depth are recorded
+    When the operator advances through the schema editor using <downward_input>
+    Then exactly one vertical scroll owner in the visible schema editor route moves downward
+    And Return to Flow becomes visible and keyboard operable at the lower scroll limit
+    And the outer document does not scroll while the recorded Flow camera remains unchanged
+    When the operator returns through the schema editor using <upward_input>
+    Then the same scroll owner returns to its upper limit with the first schema property control visible and keyboard operable
+    And the editor remains open for the same <target> contributor while canonical project state, Draft revision, and Undo depth remain unchanged
+
+    Examples:
+      | target                                   | downward_input                      | upward_input                      |
+      | Cart Page instance                       | repeated downward mouse-wheel input | repeated upward mouse-wheel input |
+      | add_payment_info Event contained by Cart | repeated Page Down keys              | repeated Page Up keys             |

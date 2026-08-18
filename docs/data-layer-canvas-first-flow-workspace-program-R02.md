@@ -985,3 +985,68 @@ departure, whether returning and reopening works without reload, whether the
 initialization fallback remains correctly scoped, the cause of any variance,
 remaining work, confidence, and forecast. Continue bounded work under the QA
 pilot unless product scope, safety, or authority changes.
+
+## Flow Page-instance and Event-occurrence schema-editor scrolling correction slice
+
+Directional Flow scenario 047 and its runtime partner require the schema
+contribution editor opened for a Flow Page instance or Event occurrence to be a
+vertically scrollable workspace. Scenario 046 establishes that this editor is
+owned by the originating Flow route; this slice makes every schema property and
+its final Return to Flow action reachable when that route is taller than the
+available viewport.
+
+The visible schema-editor route has exactly one vertical scroll owner. Repeated
+downward wheel or keyboard input reaches Return to Flow, and reverse input
+returns to the first schema property control. The outer document is not a
+substitute scroll surface. Scrolling does not move the hidden Flow camera,
+change the stable Page-instance or Event-occurrence contributor, save schema
+content, advance the Draft revision, or create an Undo entry. This requirement
+does not change schema composition, property authoring, or Return to Flow's
+existing restoration behavior.
+
+**Development focus:** begin with the active-route layout boundary between
+`src/flow-graph/flow-workspace-shell.css`, `layered-schema.css`, and the
+`#workspace-content` / `#layered-schema-editor-host` visibility transitions in
+`src/data-layer-layered-schema-ui.ts`. The Flow-shell rules must constrain the
+visible canvas workspace without leaving the visible schema-editor route unable
+to scroll after the canvas becomes hidden. Prefer a single editor-route scroll
+owner over nested document, pane, and editor scrollbars. Direct stylesheet and
+route-layout characterization belongs beside
+`test/flow-stylesheet-extraction-test.mjs`; installed wheel and Page Down proof
+for both contributor scopes belongs in
+`test/support/flow-workspace-r02-runtime.mjs` beside runtime 046 and in the Flow
+browser-pack mapping.
+
+**QA impact:** ordinary inspection forecasts the bounded `flow_graph` and
+`layered_schema` packs because the defect crosses the Flow shell bridge and the
+shared schema-editor host. Likely shared integration surfaces are
+`src/flow-graph/flow-workspace-shell.css`, owned by parent pack `flow_graph` as a
+shell bridge consumed by `shell`, and `src/data-layer-layered-schema-ui.ts` plus
+the shell-owned `layered-schema.css`, consumed by parent pack `layered_schema`.
+The existing `layered_schema_composition` source prefix covers the layered
+schema TypeScript surface; no new source prefix is proposed. The coder must run
+read-only ownership intent before product coding, and exact changed-path
+preflight remains authoritative if the stylesheet change adds the `shell` pack.
+The expected review-ready checkpoint is:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_graph \
+  --pack layered_schema \
+  --property \
+  --changed-since <approved-specification-commit> \
+  --prepare-evidence flow-instance-schema-editor-scrolling
+node scripts/package.mjs
+```
+
+The canonical task name is `flow-instance-schema-editor-scrolling`. This
+feature-mode slice does not authorize the all-20 gate. Routine RepoWise scouting
+remains stopped and is not part of the handoff.
+
+The implementation-and-review elapsed effort ceiling is 120 minutes from coder
+receipt to an architect `qa-ready` candidate. At 60 minutes, report Page-instance
+and Event-occurrence schema-editor overflow geometry, the single active scroll
+owner, wheel and keyboard results, Return to Flow reachability, outer-document
+and camera conservation, current exact packs and tasks, any forecast variance,
+failures, remaining work, confidence, and forecast. Continue bounded work under
+the QA pilot unless product scope, safety, or authority changes.

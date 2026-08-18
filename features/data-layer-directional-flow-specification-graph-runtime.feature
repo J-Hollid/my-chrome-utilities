@@ -802,3 +802,22 @@ Feature: Data layer directional Flow specification graph runtime
       | Cart Page instance                        | Project overview               |
       | add_payment_info Event contained by Cart  | Documentation                  |
       | Cart Page instance                        | another Flow                   |
+
+  # Data layer directional Flow specification graph runtime 047
+  Scenario Outline: Data layer directional Flow specification graph runtime 047
+    Given the installed <target> schema contribution editor is open from production Checkout journey
+    And exactly one visible editor-route scroll owner has scroll height greater than client height at vertical scroll position 0
+    And its first schema property control intersects that owner while Return to Flow is below the owner's visible bounds
+    And production Flow camera, contributor ID and scope, canonical project bytes, Saved Draft revision, and Undo depth are recorded
+    When native browser input advances through the schema editor using <downward_input>
+    Then that editor-route scroll owner's vertical scroll position increases
+    And Return to Flow intersects the owner and is keyboard operable at the lower scroll limit
+    And document scroll offsets and the installed Flow camera equal their recorded values
+    When native browser input returns through the schema editor using <upward_input>
+    Then the same scroll owner's vertical scroll position equals 0 with its first schema property control visible and keyboard operable
+    And one composed-schema workspace remains open for the recorded contributor ID and scope while canonical project bytes, Saved Draft revision, and Undo depth remain unchanged
+
+    Examples:
+      | target                                   | downward_input                      | upward_input                      |
+      | Cart Page instance                       | repeated downward mouse-wheel input | repeated upward mouse-wheel input |
+      | add_payment_info Event contained by Cart | repeated Page Down keys              | repeated Page Up keys             |
