@@ -1591,17 +1591,18 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
     const fixture = {
       id:"documentation-template-rich-outline-focus-timing-v1", causalCategory,
       diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
-      input:{ rerenderContract:"synchronous", focusTarget:'[data-rich-block-selected="true"]' },
-      expectedPreRepairFailure:{ focusScheduling:"queued-microtask",
-        focusRunsImmediatelyAfterRerender:false },
-      expectedRepairResult:{ focusScheduling:"synchronous-after-render",
-        focusRunsImmediatelyAfterRerender:true },
+      input:{ rerenderContract:"synchronous plus later persistence rerenders",
+        focusTarget:'[data-rich-block-selected="true"]' },
+      expectedPreRepairFailure:{ focusScheduling:"initiating-rerender-only",
+        laterRerenderRestoresSelectedOutlineFocus:false },
+      expectedRepairResult:{ focusScheduling:"every-outline-mode-render",
+        laterRerenderRestoresSelectedOutlineFocus:true },
     };
-    const synchronousFocus = documentationTemplateLibraryUiSource.includes(
-      "const focusAfterRender=(selector:string)=>detail.ownerDocument.querySelector<HTMLElement>(selector)?.focus();");
-    const repairResult = { focusScheduling:synchronousFocus
-      ? "synchronous-after-render" : "queued-microtask",
-    focusRunsImmediatelyAfterRerender:synchronousFocus };
+    const renderRestoresFocus = documentationTemplateLibraryUiSource.includes(
+      "if(options.selectedRichBlockId&&!options.richEditorMobileDetail)focusAfterRender");
+    const repairResult = { focusScheduling:renderRestoresFocus
+      ? "every-outline-mode-render" : "initiating-rerender-only",
+    laterRerenderRestoresSelectedOutlineFocus:renderRestoresFocus };
     assert.deepEqual(repairResult, fixture.expectedRepairResult,
       "the bounded fixture proves Rich outline selection focuses synchronously after rerender");
     const fixtureDigest = timeoutIncidentDigest(fixture);
