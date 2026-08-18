@@ -102,14 +102,23 @@ try {
         consumers:["shell"],reviewedBy:"architect",reviewedAt},
     ],
     manifest:{splitBase:base,prerequisiteCommit:preparation,remainderHead:remainder,
-      boundaryGeneration:"shell-v1",routing:{from:"qa",to:"coder",priority:"00"}},
+      boundaryGeneration:"shell-v1",routing:{from:"qa",to:"reviewer",priority:"00"}},
     preparation:{id:"prepare-automatic-product-task",from:"coder",to:"refactorer",
       task:"verification-slice-automatic-product-task"},
   },null,2)}\n`);
-  const firstPipeline=JSON.parse((await exec(process.execPath,[control,"prepare",pipelineConfig],
-    {cwd:repository})).stdout);
-  const secondPipeline=JSON.parse((await exec(process.execPath,[control,"prepare",pipelineConfig],
-    {cwd:repository})).stdout);
+  const readinessModule=new URL("../scripts/verification-ownership-readiness.mjs",import.meta.url).href;
+  const readiness={classification:"granularity-assessment-required",task:"automatic-product-task",
+    expansionCauses:[{path:"src/outside.ts",credibleBoundary:true},
+      {path:"src/product.ts",credibleBoundary:true}]};
+  const readinessRunner=`const {applyCampsiteReadiness}=await import(${JSON.stringify(readinessModule)});`+
+    `const {readFile}=await import('node:fs/promises');`+
+    `const result=await applyCampsiteReadiness(JSON.parse(process.env.READINESS),`+
+    `JSON.parse(await readFile(process.env.CAMPSITE_CONFIG,'utf8')));console.log(JSON.stringify(result));`;
+  const readinessEnvironment={...process.env,READINESS:JSON.stringify(readiness),CAMPSITE_CONFIG:pipelineConfig};
+  const firstPipeline=JSON.parse((await exec(process.execPath,["--input-type=module","-e",readinessRunner],
+    {cwd:repository,env:readinessEnvironment})).stdout);
+  const secondPipeline=JSON.parse((await exec(process.execPath,["--input-type=module","-e",readinessRunner],
+    {cwd:repository,env:readinessEnvironment})).stdout);
   assert.equal(secondPipeline.reused,true,"a later process reuses the reviewed task/path generation");
   assert.equal(firstPipeline.preparationHandoff,secondPipeline.preparationHandoff);
   assert.equal((await readdir(path.join(repository,".swarmforge/handoffs/outbox"))).length,1,
@@ -118,11 +127,35 @@ try {
     ".swarmforge/campsites/preserved/automatic-product-task.json");
   await assert.rejects(exec(process.execPath,[control,"resume",automaticManifest,base],{cwd:repository}),
     /does not contain.*prerequisite/i);
-  await exec(process.execPath,[control,"resume",automaticManifest,preparation],{cwd:repository});
-  const reissued=await readdir(path.join(repository,".swarmforge/handoffs/inbox/new"));
-  assert.equal(reissued.length,1);
-  const reissuedText=await readFile(path.join(repository,".swarmforge/handoffs/inbox/new",reissued[0]),"utf8");
+  await rm(firstPipeline.preparationHandoff);
+  const reviewer=await mkdtemp(path.join(os.tmpdir(),"stacked-campsite-reviewer-"));
+  const fakeBin=path.join(repository,".swarmforge/fake-bin"),tmuxLog=path.join(repository,".swarmforge/tmux.log");
+  await mkdir(path.join(repository,".swarmforge"),{recursive:true});
+  await mkdir(path.join(reviewer,".swarmforge/handoffs/inbox/new"),{recursive:true});
+  await git(reviewer,"init","-q");
+  await writeFile(path.join(reviewer,".swarmforge/roles.tsv"),
+    `reviewer\treviewer\t${reviewer}\treviewer-session\tReviewer\tcodex\ttask\n`);
+  await mkdir(fakeBin,{recursive:true});
+  await writeFile(path.join(repository,".swarmforge/roles.tsv"),
+    `coder\tcoder\t${repository}\tcoder-session\tCoder\tcodex\ttask\n`+
+    `reviewer\treviewer\t${reviewer}\treviewer-session\tReviewer\tcodex\ttask\n`);
+  await writeFile(path.join(repository,".swarmforge/tmux-socket"),"fixture-socket\n");
+  await writeFile(path.join(fakeBin,"tmux"),'#!/bin/sh\nprintf \'%s\\n\' "$*" >> "$TMUX_LOG"\n',{mode:0o755});
+  await git(repository,"branch","-f","qa",preparation);
+  await exec("bb",[path.resolve("swarmforge/scripts/handoffd.bb"),repository,"--once"],{
+    cwd:repository,env:{...process.env,PATH:`${fakeBin}${path.delimiter}${process.env.PATH}`,TMUX_LOG:tmuxLog}});
+  const reviewerNew=path.join(reviewer,".swarmforge/handoffs/inbox/new");
+  const reissued=await readdir(reviewerNew);
+  assert.equal(reissued.length,1,`the daemon delivers the conserved task to routing.to: ${
+    await readFile(path.join(repository,".swarmforge/daemon/handoffd.log"),"utf8")}`);
+  const reissuedText=await readFile(path.join(reviewerNew,reissued[0]),"utf8");
   assert.match(reissuedText,/task: automatic-product-task/u);
   assert.match(reissuedText,new RegExp(`base: ${preparation}`,"u"));
+  const claimedOutput=(await exec(path.resolve("swarmforge/scripts/ready_for_next.sh"),[],{
+    cwd:reviewer,env:{...process.env,SWARMFORGE_ROLE:"reviewer"}})).stdout;
+  assert.match(claimedOutput,/TASK_NAME: automatic-product-task/u);
+  assert.equal((await readdir(path.join(reviewer,".swarmforge/handoffs/inbox/in_process"))).length,1,
+    "the declared recipient claims the automatically delivered ordinary handoff");
+  await rm(reviewer,{recursive:true,force:true});
 } finally { await rm(repository,{recursive:true,force:true}); }
 console.log("Stacked campsite control contracts passed.");

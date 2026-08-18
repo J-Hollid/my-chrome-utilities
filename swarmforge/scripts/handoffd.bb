@@ -12,6 +12,9 @@
   "You have new handoff mail. If idle, run ready_for_next.sh.")
 (def script-dir (fs/parent *file*))
 (def unblocker-control (fs/path script-dir "unblocker-control.mjs"))
+(def campsite-control-relative (fs/path "scripts" "stacked-campsite-control.mjs"))
+(def installed-campsite-control
+  (fs/path (fs/parent (fs/parent script-dir)) campsite-control-relative))
 
 (defn usage []
   (binding [*out* *err*]
@@ -168,6 +171,18 @@
                          (str/ends-with? (fs/file-name %) ".handoff")))
            (sort-by #(fs/file-name %))))))
 
+(defn trigger-campsites! [roles]
+  (doseq [[role role-info] roles
+          :let [worktree (:worktree-path role-info)
+                role-control (fs/path worktree campsite-control-relative)
+                control (if (fs/exists? role-control) role-control installed-campsite-control)]
+          :when (fs/exists? control)]
+    (let [result (sh "node" (str control) "qa-trigger" :dir worktree)]
+      (if (zero? (:exit result))
+        (when-not (= "{\"status\":\"ok\",\"triggered\":[]}" (str/trim (:out result)))
+          (log! "campsite-trigger" role (str/trim (:out result))))
+        (log! "campsite-trigger-error" role (str/trim (:err result)))))))
+
 (defn should-stop? []
   (or @stopping-flag (fs/exists? stop-file)))
 
@@ -182,6 +197,7 @@
   (when-not (should-stop?)
     (let [roles (load-roles)
           socket (str/trim (slurp (str socket-file)))]
+      (trigger-campsites! roles)
       (doseq [[role role-info] roles
               path (or (outbox-files role-info) [])
               :while (not (should-stop?))]

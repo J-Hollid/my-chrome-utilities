@@ -1,4 +1,7 @@
 import {fileURLToPath} from "node:url";
+import {readFile} from "node:fs/promises";
+
+import {routeCampsiteReadiness} from "./stacked-campsite-control.mjs";
 
 import {
   canonicalVerificationChangeSet,
@@ -359,6 +362,10 @@ function parseJsonOption(option, value) {
   catch { throw new Error(`${option} requires valid JSON`); }
 }
 
+export async function applyCampsiteReadiness(answer,config,{repositoryRoot=process.cwd()}={}) {
+  return routeCampsiteReadiness(repositoryRoot,answer,config);
+}
+
 function parseOptions(args) {
   const output = {mode:args[0], packs:[], paths:[], prefixes:[]};
   for (let index = 1; index < args.length; index += 1) {
@@ -373,6 +380,7 @@ function parseOptions(args) {
     else if (option === "--prefix-proposal") output.prefixes.push(parseJsonOption(option, value));
     else if (option === "--within-pack") output.withinPack = parseJsonOption(option, value);
     else if (option === "--changed-since") output.changedSince = value;
+    else if (option === "--campsite-config") output.campsiteConfig = value;
     else throw new Error(`Unknown ownership-readiness option: ${option}`);
   }
   return output;
@@ -418,6 +426,11 @@ async function main() {
     });
   } else {
     throw new Error("Use ownership readiness mode intent or exact");
+  }
+  if (options.campsiteConfig) {
+    const input=parseJsonOption("--campsite-config",
+      await readFile(options.campsiteConfig,"utf8"));
+    answer={...answer,campsite:await applyCampsiteReadiness(answer,input)};
   }
   process.stdout.write(`${JSON.stringify(answer, null, 2)}\n`);
 }
