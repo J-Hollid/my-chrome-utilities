@@ -4596,7 +4596,15 @@
         "id": "layered_schema_composition",
         "prefixes": [
           "src/composed-schema",
-          "src/layered-schema",
+          "src/layered-schema/compile-context.ts",
+          "src/layered-schema/compile-merge.ts",
+          "src/layered-schema/compile.ts",
+          "src/layered-schema/conditional-rules.ts",
+          "src/layered-schema/export.ts",
+          "src/layered-schema/flow-route-lifecycle.ts",
+          "src/layered-schema/peer-constraints.ts",
+          "src/layered-schema/targets.ts",
+          "src/layered-schema/validation.ts",
           "src/data-layer-composed-schema",
           "src/data-layer-layered-schema"
         ],
