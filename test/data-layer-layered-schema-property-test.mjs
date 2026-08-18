@@ -4,6 +4,7 @@ import {flowPageFrameContributor,layeredContributorPath,layeredContributorsForPa
 import {documentPageGroupStructure,evaluatePageGroupFixture,pageGroupStructuralSchema,resetDepartedPageApplicabilityPreview} from "../dist/data-layer-page-group-structural-authoring.js";
 import {compileSpecificationProject,createCanonicalProjectEnvelope,evaluateSpecificationObservation} from "../dist/data-layer-specification-engine.js";
 import {openFlowSchemaRouteLifecycle,reconcileFlowSchemaRouteLifecycle} from "../dist/layered-schema/flow-route-lifecycle.js";
+import {createFlowEditorRouteLayout} from "../dist/layered-schema/flow-editor-route-layout.js";
 
 let seed=0x51a7e;
 const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/0x100000000;};
@@ -11,6 +12,17 @@ const pickSubset=(values)=>values.filter(()=>random()>=0.5);
 let nestedRequiredConserved=true,eventTargetsIsolated=true,definedFieldsPolicyConserved=true;
 
 for(let iteration=0;iteration<200;iteration+=1){
+  const workspace={hidden:random()>=0.5},editorHost={hidden:random()>=0.5},editor={hidden:random()>=0.5,
+    clearCount:0,replaceChildren(){this.clearCount+=1;}},layout=createFlowEditorRouteLayout({
+      document:{querySelector(){return null;}},workspace,editorHost,editor,
+    });
+  layout.open();
+  assert.deepEqual([workspace.hidden,editorHost.hidden,editor.hidden],[true,false,false],
+    "every initial visibility state converges on one visible editor route");
+  layout.depart();
+  assert.deepEqual([workspace.hidden,editorHost.hidden,editor.hidden,editor.clearCount],[false,true,true,1],
+    "every ordinary departure converges on one visible Flow workspace and clears once");
+
   const originFlowId=`flow:lifecycle:${iteration}:${Math.floor(random()*1_000_000)}`,contributorId=`contributor:${iteration}:${Math.floor(random()*1_000_000)}`,contributorScope=random()>=0.5?"Flow Page-instance":"Event-occurrence",lifecycle=openFlowSchemaRouteLifecycle(originFlowId,contributorId,contributorScope),snapshot=structuredClone(lifecycle);
   assert.deepEqual(lifecycle,{originFlowId,contributorId,contributorScope,returnFocusOwned:true,flowReturnOwned:true},"opening an arbitrary Flow schema route conserves its complete stable identity and transient ownership");
   assert.equal(reconcileFlowSchemaRouteLifecycle(lifecycle,originFlowId),lifecycle,"rerendering the originating Flow preserves the exact lifecycle object");

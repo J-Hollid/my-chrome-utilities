@@ -18,6 +18,44 @@ import {flowDocumentationSnapshotFromState} from "../dist/data-layer-flow-table-
 import {applySchemaTablePropertyEditorAllocation,schemaTablePropertyEditorAllocation} from "../dist/data-layer-schema-table.js";
 import {initialLayeredInstalledExpression,layeredCreatedEntityReadinessState,layeredEntityCreationResubmissionState,reliableLayeredEntityCreationProgram} from "./support/layered-schema-workflows.mjs";
 import {openFlowSchemaRouteLifecycle,reconcileFlowSchemaRouteLifecycle} from "../dist/layered-schema/flow-route-lifecycle.js";
+import {createFlowEditorRouteLayout} from "../dist/layered-schema/flow-editor-route-layout.js";
+
+const routeWorkspace={hidden:false},routeHost={hidden:true},routeEditor={hidden:true,cleared:false,
+  replaceChildren(){this.cleared=true;}},routeLayout=createFlowEditorRouteLayout({
+    document:{querySelector(){return null;}},workspace:routeWorkspace,editorHost:routeHost,
+    editor:routeEditor,
+  });
+routeLayout.open();
+assert.deepEqual([routeWorkspace.hidden,routeHost.hidden,routeEditor.hidden],[true,false,false],
+  "opening a Flow schema route atomically exchanges the canvas workspace for the editor host");
+routeLayout.close();
+assert.deepEqual([routeWorkspace.hidden,routeHost.hidden,routeEditor.hidden,routeEditor.cleared],
+  [false,true,true,false],"Return to Flow closes the editor without discarding its rendered route");
+routeLayout.open();
+routeLayout.depart();
+assert.deepEqual([routeWorkspace.hidden,routeHost.hidden,routeEditor.hidden,routeEditor.cleared],
+  [false,true,true,true],"ordinary route departure closes and discards the transient editor route");
+
+const pane={scrollLeft:17,scrollTop:29},graph={viewBox:"3 5 700 420",
+  getAttribute(name){return name==="viewBox"?this.viewBox:null;},
+  setAttribute(name,value){if(name==="viewBox")this.viewBox=value;}},
+  example={open:true},flowInvoker={isConnected:true,focused:false,focus(){this.focused=true;}},
+  routeDocument={querySelector(selector){return new Map([
+    ["#workspace-pane",pane],
+    ['[aria-label="Interactive directional Flow canvas"]',graph],
+    ['[data-page-example-for="frame-cart"]',example],
+    ['[aria-label="Selected Page instance inline actions"] [data-flow-schema-contribution="true"]',flowInvoker],
+  ]).get(selector)??null;}},returnLayout=createFlowEditorRouteLayout({document:routeDocument,
+    workspace:routeWorkspace,editorHost:routeHost,editor:routeEditor}),
+  returnState=returnLayout.captureReturn("page-frame","frame-cart",{closest(){return {};}});
+assert.deepEqual(returnState,{scrollLeft:17,scrollTop:29,viewBox:"3 5 700 420",
+  expandedExample:{selector:'[data-page-example-for="frame-cart"]',open:true},
+  originSelector:'[aria-label="Selected Page instance inline actions"] [data-flow-schema-contribution="true"]'},
+"the route seam captures camera-adjacent workspace, disclosure, and exact invoker state without changing it");
+pane.scrollLeft=0;pane.scrollTop=0;graph.viewBox="0 0 100 100";example.open=false;
+returnLayout.restoreReturn(returnState);
+assert.deepEqual([pane.scrollLeft,pane.scrollTop,graph.viewBox,example.open,flowInvoker.focused],
+  [17,29,"3 5 700 420",true,true],"Return to Flow restores the recorded presentation through the extracted seam");
 
 const pageRouteLifecycle=openFlowSchemaRouteLifecycle("flow:checkout","frame:cart","Flow Page-instance");
 assert.deepEqual(reconcileFlowSchemaRouteLifecycle(pageRouteLifecycle,"flow:checkout"),pageRouteLifecycle,

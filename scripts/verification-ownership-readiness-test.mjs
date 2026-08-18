@@ -234,6 +234,18 @@ assert.equal(resumed.expansionCauses.every(({reviewedDisposition})=>reviewedDisp
 const stagingPlan=planVerification(plannedRegistry,{changedPaths:["src/durable-project/project-asset-body-staging.ts"],includeProperties:true});
 assert.deepEqual(stagingPlan.packIds,["durable_project_repository","flow_export","shell"],"the reusable staging seam reaches only its durable owner and exact Documentation/Shell consumers");
 assert.equal(stagingPlan.verificationSliceConservation.durable_project_repository.conserved,true);
+const flowEditorRoutePlan=planVerification(plannedRegistry,{changedPaths:["src/layered-schema/flow-editor-route-layout.ts"],includeProperties:true});
+assert.deepEqual(flowEditorRoutePlan.packIds,["flow_graph","layered_schema"],
+  "the Flow editor route seam reaches only its layered-schema owner and Flow consumer");
+assert.deepEqual(flowEditorRoutePlan.tasks.filter(({stage})=>stage!=="build").map(({key})=>key),[
+  "unit:test/data-layer-layered-schema-test.mjs",
+  "property:test/data-layer-layered-schema-property-test.mjs",
+  "browser-observation:FLOW_GRAPH_EXAMPLES_TARGET+FLOW_GRAPH_LEGACY_TARGET+FLOW_STYLESHEET_EXTRACTION_TARGET+FLOW_WORKSPACE_AUTHORING_TARGET+FLOW_WORKSPACE_CONTROLS_TARGET",
+]);
+assert.equal(dispositions.dispositions.some(({task,path,decision,replacementPaths})=>
+  task==="flow-instance-schema-editor-scrolling"&&path==="src/data-layer-layered-schema-ui.ts"&&
+  decision==="integrated-seam"&&replacementPaths.includes("src/layered-schema/flow-editor-route-layout.ts")),true,
+"the broad Flow schema UI path has one durable integrated route-seam disposition");
 assert.throws(()=>validateGranularityDispositions({version:1,dispositions:[{task:"documentation-templates",path:"src/specification-builder.ts",decision:"integrated-seam",replacementPaths:[],reviewAuthority:"qa-integration",reason:"missing seam"}]}),/exact reviewed seam or parent fallback/u);
 const firstUsePlans=["src/project-asset-body-contribution.ts","src/project-documentation/workspace-contribution.ts","build-delivered-dependencies.json"]
   .map(path=>planVerification(plannedRegistry,{changedPaths:[path],includeProperties:true}));
@@ -260,7 +272,7 @@ console.log(JSON.stringify({verificationOwnershipReadinessAcceptance:{
     slices:{stableIdentity:true,exactSources:true,directTasks:true,prerequisites:true,consumers:true,observable:true,conserved:firstUsePlans.every(plan=>Object.values(plan.verificationSliceConservation).every(({conserved})=>conserved)),exactAndTerminalUnchanged:true},
     mapping:{focused:true,parentFallback:true,historicalUnion:true,invalidFallback:true,ownershipUnavailableStops:true},
     prefixes:{declarationOnly:true,proposalValidated:true,currentConflictRejected:true,exactCommittedPaths:true,noSideEffects:true},
-    routing:{automaticNote:true,pausedNotCompleted:true,reissuedFromQa:true,ordinaryChannel:true,knownCandidateReplay:replayed.plannedPackIds.length===13,durableDispositions:dispositions.dispositions.length===7},
+    routing:{automaticNote:true,pausedNotCompleted:true,reissuedFromQa:true,ordinaryChannel:true,knownCandidateReplay:replayed.plannedPackIds.length===13,durableDispositions:dispositions.dispositions.length===8},
     quarantine:{selectionMiss:true,parentFallback:true,reviewedRepairRequired:true,noExtraAll20:true},
     firstUse:{taskCounts:firstUsePlans.map(({tasks})=>tasks.length),packCounts:firstUsePlans.map(({packIds})=>packIds.length),productBehaviorAbsent:true},
   },

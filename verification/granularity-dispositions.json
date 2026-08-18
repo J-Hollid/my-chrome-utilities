@@ -62,6 +62,16 @@
       ],
       "reviewAuthority": "qa-integration",
       "reason": "The runtime controller delegates body selection and lifecycle to the generic staging seam and retains only command orchestration needed for atomic durable saves and recovery."
+    },
+    {
+      "task": "flow-instance-schema-editor-scrolling",
+      "path": "src/data-layer-layered-schema-ui.ts",
+      "decision": "integrated-seam",
+      "replacementPaths": [
+        "src/layered-schema/flow-editor-route-layout.ts"
+      ],
+      "reviewAuthority": "qa-integration",
+      "reason": "The Flow-launched editor route now delegates workspace/editor-host visibility, ordinary departure cleanup, and Return-to-Flow presentation restoration to the independently tested route-layout seam; general schema composition remains in the broad UI module."
     }
   ]
 }

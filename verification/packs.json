@@ -2913,6 +2913,18 @@
       "durable_project_repository",
       "layered_schema"
     ],
+    "verificationSlices": [
+      {
+        "id": "layered_schema_flow_editor_route_consumer",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": ["browser-observation:FLOW_GRAPH_EXAMPLES_TARGET+FLOW_GRAPH_LEGACY_TARGET+FLOW_STYLESHEET_EXTRACTION_TARGET+FLOW_WORKSPACE_AUTHORING_TARGET+FLOW_WORKSPACE_CONTROLS_TARGET"],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed Flow Page-instance and Event-occurrence schema-editor route lifecycle"
+      }
+    ],
     "impactBoundaries": [
       {
         "id": "flow_workspace_camera_controls",
@@ -4494,6 +4506,13 @@
     ],
     "impactBoundaries": [
       {
+        "id": "layered_schema_flow_editor_route",
+        "prefixes": [
+          "src/layered-schema/flow-editor-route-layout.ts"
+        ],
+        "propagateDependants": false
+      },
+      {
         "id": "canonical_schema_core",
         "prefixes": [
           "src/canonical-schema/",
@@ -4598,6 +4617,17 @@
           "src/data-layer-selective-profile-inheritance-ui.ts"
         ],
         "propagateDependants": false
+      }
+    ],
+    "verificationSlices": [
+      {
+        "id": "layered_schema_flow_editor_route",
+        "sourcePaths": ["src/layered-schema/flow-editor-route-layout.ts"],
+        "sourcePrefixes": [],
+        "tasks": ["unit:test/data-layer-layered-schema-test.mjs"],
+        "prerequisites": ["property:test/data-layer-layered-schema-property-test.mjs"],
+        "consumers": [{"packId": "flow_graph", "sliceId": "layered_schema_flow_editor_route_consumer"}],
+        "observableBoundary": "Flow-launched layered-schema route presentation and active editor-host lifecycle"
       }
     ],
     "unit": [
