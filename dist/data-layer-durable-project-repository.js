@@ -249,7 +249,7 @@ async function verifyStoredProjectParts(transaction, projectId, parts) {
             if (!expected.has(`${store}/${key}`))
                 throw new DOMException(`Property Set migration read-back retained unexpected ${store}/${key}.`, "OperationError");
 }
-const externalLineageKeys = new Set(["sourceLineage", "externalLineage"]), identityMapContainers = new Set(["nodes", "documentationFlowGraphs", "labels"]), identityValueContainers = new Set(["templateAssignments"]);
+const externalLineageKeys = new Set(["sourceLineage", "externalLineage"]), immutableContentKeys = new Set(["richBlocks"]), identityMapContainers = new Set(["nodes", "documentationFlowGraphs", "labels"]), identityValueContainers = new Set(["templateAssignments"]);
 const referenceField = (key) => key === "id" || key === "currentRelease" || /(?:Id|Ids|Reference|References)$/.test(key);
 function projectIdentityMapping(source, targetProjectId) {
     const ids = new Set();
@@ -259,7 +259,7 @@ function projectIdentityMapping(source, targetProjectId) {
         return;
     } if (!record(value))
         return; for (const [key, entry] of Object.entries(value)) {
-        const outside = external || externalLineageKeys.has(key);
+        const outside = external || externalLineageKeys.has(key) || immutableContentKeys.has(key);
         if (!outside && key === "id" && typeof entry === "string")
             ids.add(entry);
         if (!outside && identityMapContainers.has(parentKey))
@@ -281,7 +281,7 @@ function remapProjectReferences(value, mapping, external = false, parentKey = ""
         return value.map(entry => typeof entry === "string" && !external && referenceField(parentKey) ? mapping.get(entry) ?? entry : remapProjectReferences(entry, mapping, external, parentKey));
     if (!record(value))
         return value;
-    return Object.fromEntries(Object.entries(value).map(([key, entry]) => { const outside = external || externalLineageKeys.has(key), mappedKey = !outside && identityMapContainers.has(parentKey) ? mapping.get(key) ?? key : key; if (typeof entry === "string" && !outside && (referenceField(key) || identityValueContainers.has(parentKey)))
+    return Object.fromEntries(Object.entries(value).map(([key, entry]) => { const outside = external || externalLineageKeys.has(key) || immutableContentKeys.has(key), mappedKey = !outside && identityMapContainers.has(parentKey) ? mapping.get(key) ?? key : key; if (typeof entry === "string" && !outside && (referenceField(key) || identityValueContainers.has(parentKey)))
         return [mappedKey, mapping.get(entry) ?? entry]; return [mappedKey, remapProjectReferences(entry, mapping, outside, key)]; }));
 }
 export class DurableProjectRepository {
