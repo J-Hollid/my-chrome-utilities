@@ -107,13 +107,17 @@
    "an existing path whose current ownership conflicts with the proposal"
    "retain current ownership and report the conflict before product coding"})
 
+(def immediate-preparation-results
+  {"a coarse ownership boundary" "standing-authorized ownership preparation"
+   "a coarse-within-pack boundary" "standing-authorized verification-slice preparation"})
+
 (defn- capture-granularity-value [world key value]
   (assoc (granularity-assert! world) key value))
 
 (defn- assert-granularity-relation! [world mapping key expected message]
   (ownership-assert! world (= expected (get mapping (get world key))) message))
 
-(defn handlers [{:keys [example-values]}]
+(defn- review-ready-handlers [{:keys [example-values]}]
   [{:pattern #"^one user-approved task has a specification commit and a stable task name$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^(.+) receives a candidate that may still change$"
@@ -167,7 +171,10 @@
                  (assert! world (and (false? (:fullRegressionClaim qa-ready))
                                      (false? (:masterCompletionClaim qa-ready)))
                           "QA-ready claimed final regression or master completion.")))}
-   {:pattern #"^one fresh canonical run executes all 20 packs with properties and the package check$"
+   ])
+
+(defn- final-gate-handlers [{:keys [example-values]}]
+  [{:pattern #"^one fresh canonical run executes all 20 packs with properties and the package check$"
     :handler (fn [world _ _]
                (let [final (get-in world [:vtd015/evidence :finalReady])]
                  (assert! world (and (= 20 (:packCount final)) (:propertyRequired final) (:packageRequired final))
@@ -234,7 +241,10 @@
                  (assert! world (= result (value-at (get-in world [:vtd015/evidence :actions])
                                                     (:vtd015/action world)))
                           "Review-ready action authorization is incorrect.")))}
-   {:pattern #"^the historical (.+) used (.+) successful full runs before safety completion$"
+   ])
+
+(defn- scorecard-handlers [{:keys [example-values]}]
+  [{:pattern #"^the historical (.+) used (.+) successful full runs before safety completion$"
     :handler (fn [world example captures]
                (let [[lineage runs] (values example-values example captures)]
                  (assert! (assoc world :vtd015/lineage lineage)
@@ -310,7 +320,10 @@
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd015/evidence :bootstrap :noBypass]))
                         "The bootstrap bypasses current safety evidence."))}
-   {:pattern #"^the user explicitly requests master integration and QA contains one or more QA-ready tasks after master$"
+   ])
+
+(defn- qa-release-handlers []
+  [{:pattern #"^the user explicitly requests master integration and QA contains one or more QA-ready tasks after master$"
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd015/evidence :qaPilot :masterIntegration :explicitUserRequest]))
                         "Master integration started without an explicit user request."))}
@@ -357,7 +370,10 @@
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd015/evidence :qaPilot :scorecard :userControlsPromotion]))
                         "Master integration can begin without the user."))}
-   {:pattern #"^a user-approved QA feature names its development focus, QA impact, and likely shared integration surfaces$"
+   ])
+
+(defn- ownership-flow-handlers [{:keys [example-values]}]
+  [{:pattern #"^a user-approved QA feature names its development focus, QA impact, and likely shared integration surfaces$"
     :handler (fn [world _ _] (ownership-prepared world))}
    {:pattern #"^ownership readiness is evaluated before product coding$"
     :handler (fn [world _ _]
@@ -390,6 +406,14 @@
                                   "Ownership readiness authorized an all-20 feature run."))}
    {:pattern #"^an approved feature has a coarse ownership boundary$"
     :handler (fn [world _ _] (ownership-prepared world))}
+   {:pattern #"^bounded agent judgment selected immediate (.+) for (.+)$"
+    :handler (fn [world example captures]
+               (let [[preparation-stage planning-result]
+                     (values example-values example captures)]
+                 (ownership-assert!
+                  (granularity-assert! world)
+                  (= preparation-stage (get immediate-preparation-results planning-result))
+                  "Immediate preparation does not match its planning result.")))}
    {:pattern #"^its (<preparation_stage>|standing-authorized ownership preparation|standing-authorized verification-slice preparation|standing-authorized preparation stage) completes focused review$"
     :handler (fn [world _ _] (granularity-assert! world))}
    {:pattern #"^the preparation is independently committed and integrated into QA from an architect QA-ready handoff$"
@@ -455,7 +479,10 @@
     :handler (fn [world _ _]
                (ownership-assert! world (true? (get-in world [:vtd015/ownership-evidence :obligations :failureRetains]))
                                   "Failed or stale terminal evidence consumed an obligation."))}
-   {:pattern #"^an ownership intent or exact candidate has (.+)$"
+   ])
+
+(defn- granularity-mapping-handlers [{:keys [example-values]}]
+  [{:pattern #"^an ownership intent or exact candidate has (.+)$"
     :handler (fn [world example captures]
                (capture-granularity-value world :vtd015/planning-condition
                                           (first (values example-values example captures))))}
@@ -521,7 +548,10 @@
                 world ownership-intent-results :vtd015/proposed-prefix-state
                 (first (values example-values example captures))
                 "Ownership-intent result does not match its proposed prefix."))}
-   {:pattern #"^(?:a feature forecast and its canonical bounded plan have .+|within-pack readiness is assessed|the readiness result is .+|the workflow action is .+|pack size, task count, forecast variance, or hypothetical future reuse alone never decides whether refinement is worthwhile)$"
+   ])
+
+(defn- granularity-contract-handlers []
+  [{:pattern #"^(?:a feature forecast and its canonical bounded plan have .+|within-pack readiness is assessed|the readiness result is .+|the workflow action is .+|pack size, task count, forecast variance, or hypothetical future reuse alone never decides whether refinement is worthwhile)$"
     :handler (fn [world _ _] (granularity-assert! world))}
    {:pattern #"^(?:one existing verification pack has a proved reusable task boundary|a subordinate verification slice is declared|it has one stable identity, exact source paths, direct registered tasks, prerequisites, consumers, and an observable boundary|the union of its slices and conservative remainder equals the former exact-pack task closure|focused planning may select only the applicable slice, prerequisites, and consumers|exact-pack and terminal planning still select every former task exactly once|no top-level pack, assertion leaf, dependency, property, package proof, or terminal obligation is removed or made optional)$"
     :handler (fn [world _ _] (granularity-assert! world))}
@@ -551,6 +581,15 @@
     :handler (fn [world _ _] (granularity-assert! world))}
    ])
 
+(defn handlers [config]
+  (vec (concat (review-ready-handlers config)
+               (final-gate-handlers config)
+               (scorecard-handlers config)
+               (qa-release-handlers)
+               (ownership-flow-handlers config)
+               (granularity-mapping-handlers config)
+               (granularity-contract-handlers))))
+
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-18T15:23:05.310360325+02:00", :module-hash "-848952973", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1551051199"} {:id "form/1/defonce", :kind "defonce", :line 5, :end-line 5, :hash "701185655"} {:id "form/2/defonce", :kind "defonce", :line 6, :end-line 6, :hash "-1357907350"} {:id "defn-/production-evidence!", :kind "defn-", :line 8, :end-line 15, :hash "-288875895"} {:id "defn-/prepared", :kind "defn-", :line 17, :end-line 18, :hash "693136156"} {:id "defn-/ownership-prepared", :kind "defn-", :line 20, :end-line 29, :hash "63625446"} {:id "defn-/ownership-assert!", :kind "defn-", :line 31, :end-line 33, :hash "-1481341608"} {:id "defn-/granularity-assert!", :kind "defn-", :line 35, :end-line 42, :hash "1069318827"} {:id "defn-/assert!", :kind "defn-", :line 44, :end-line 46, :hash "-1474981311"} {:id "defn-/values", :kind "defn-", :line 48, :end-line 50, :hash "-170718585"} {:id "defn-/value-at", :kind "defn-", :line 52, :end-line 53, :hash "1199202542"} {:id "def/ownership-readiness-results", :kind "def", :line 55, :end-line 60, :hash "-654905179"} {:id "def/boundary-declaration-results", :kind "def", :line 62, :end-line 68, :hash "-1868035828"} {:id "def/ownership-change-results", :kind "def", :line 70, :end-line 78, :hash "-950045580"} {:id "def/within-pack-readiness-results", :kind "def", :line 80, :end-line 88, :hash "1260649229"} {:id "def/within-pack-mapping-results", :kind "def", :line 90, :end-line 100, :hash "-1666536195"} {:id "def/ownership-intent-results", :kind "def", :line 102, :end-line 108, :hash "-1223192190"} {:id "defn-/capture-granularity-value", :kind "defn-", :line 110, :end-line 111, :hash "497315109"} {:id "defn-/assert-granularity-relation!", :kind "defn-", :line 113, :end-line 114, :hash "-19419182"} {:id "defn/handlers", :kind "defn", :line 116, :end-line 540, :hash "-1430946156"}]}
+;; {:version 1, :tested-at "2026-08-18T20:33:27.682054298+02:00", :module-hash "2045575684", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1551051199"} {:id "form/1/defonce", :kind "defonce", :line 5, :end-line 5, :hash "701185655"} {:id "form/2/defonce", :kind "defonce", :line 6, :end-line 6, :hash "-1357907350"} {:id "defn-/production-evidence!", :kind "defn-", :line 8, :end-line 15, :hash "-288875895"} {:id "defn-/prepared", :kind "defn-", :line 17, :end-line 18, :hash "693136156"} {:id "defn-/ownership-prepared", :kind "defn-", :line 20, :end-line 29, :hash "63625446"} {:id "defn-/ownership-assert!", :kind "defn-", :line 31, :end-line 33, :hash "-1481341608"} {:id "defn-/granularity-assert!", :kind "defn-", :line 35, :end-line 42, :hash "1069318827"} {:id "defn-/assert!", :kind "defn-", :line 44, :end-line 46, :hash "-1474981311"} {:id "defn-/values", :kind "defn-", :line 48, :end-line 50, :hash "-170718585"} {:id "defn-/value-at", :kind "defn-", :line 52, :end-line 53, :hash "1199202542"} {:id "def/ownership-readiness-results", :kind "def", :line 55, :end-line 60, :hash "-654905179"} {:id "def/boundary-declaration-results", :kind "def", :line 62, :end-line 68, :hash "-1868035828"} {:id "def/ownership-change-results", :kind "def", :line 70, :end-line 78, :hash "-950045580"} {:id "def/within-pack-readiness-results", :kind "def", :line 80, :end-line 88, :hash "-2133689349"} {:id "def/within-pack-mapping-results", :kind "def", :line 90, :end-line 100, :hash "-1666536195"} {:id "def/ownership-intent-results", :kind "def", :line 102, :end-line 108, :hash "-1223192190"} {:id "def/immediate-preparation-results", :kind "def", :line 110, :end-line 112, :hash "713829812"} {:id "defn-/capture-granularity-value", :kind "defn-", :line 114, :end-line 115, :hash "497315109"} {:id "defn-/assert-granularity-relation!", :kind "defn-", :line 117, :end-line 118, :hash "-19419182"} {:id "defn-/review-ready-handlers", :kind "defn-", :line 120, :end-line 174, :hash "1566725346"} {:id "defn-/final-gate-handlers", :kind "defn-", :line 176, :end-line 244, :hash "-1061038204"} {:id "defn-/scorecard-handlers", :kind "defn-", :line 246, :end-line 323, :hash "-879584147"} {:id "defn-/qa-release-handlers", :kind "defn-", :line 325, :end-line 373, :hash "1389603030"} {:id "defn-/ownership-flow-handlers", :kind "defn-", :line 375, :end-line 482, :hash "-845235047"} {:id "defn-/granularity-mapping-handlers", :kind "defn-", :line 484, :end-line 551, :hash "2031076427"} {:id "defn-/granularity-contract-handlers", :kind "defn-", :line 553, :end-line 582, :hash "-1160902884"} {:id "defn/handlers", :kind "defn", :line 584, :end-line 591, :hash "1966110546"}]}
 ;; clj-mutate-manifest-end
