@@ -67,6 +67,12 @@ try {
   /differs from manifest applicability/u);
   await assert.rejects(readdir(path.join(persistenceRepository,".swarmforge")),({code})=>code==="ENOENT",
     "mismatched dispositions are rejected before campsite state mutation");
+  const firstPipeline=await persistCampsitePipeline(persistenceRepository,pipeline);
+  const reorderedPipeline=await persistCampsitePipeline(persistenceRepository,{...pipeline,
+    dispositions:[...dispositions].reverse()});
+  assert.equal(reorderedPipeline.reused,true,
+    "equivalent reviewed disposition order reuses the durable pipeline identity");
+  assert.equal(reorderedPipeline.digest,firstPipeline.digest);
 } finally { await rm(persistenceRepository,{recursive:true,force:true}); }
 
 const repository=await mkdtemp(path.join(os.tmpdir(),"stacked-campsite-git-"));

@@ -168,7 +168,8 @@ function validatePipelineIdentity(assessment,manifest,dispositions,preparation) 
 
 function pipelineBinding(assessment,manifest,dispositions,preparation) {
   const normalized=dispositions.map((value)=>({...value,
-    consumers:dispositionApplicability(value).consumers}));
+    consumers:dispositionApplicability(value).consumers}))
+    .sort((left,right)=>dispositionIdentity(left).localeCompare(dispositionIdentity(right)));
   return {assessmentDigest:assessment.digest,manifestDigest:manifest.digest,
     dispositionsDigest:valueDigest(normalized),preparationDigest:valueDigest(preparation)};
 }
