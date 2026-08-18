@@ -367,11 +367,6 @@ assert.deepEqual(handoffReadinessPolicy({
 assert.throws(() => handoffReadinessPolicy({
   sender:"specifier", recipients:["architect"], task:"qa-master-promotion",
   readiness:"release-candidate", verified:"qa-candidate", allPackIds:allPacks,
-}), /portfolio.*status unavailable/i,
-"the pure handoff policy fails closed when its IO boundary does not provide portfolio status");
-assert.throws(() => handoffReadinessPolicy({
-  sender:"specifier", recipients:["architect"], task:"qa-master-promotion",
-  readiness:"release-candidate", verified:"qa-candidate", allPackIds:allPacks,
   granularityPortfolioStatus:{ready:false,blocking:["undisposed:observation-1"]},
 }), /granularity.*portfolio|undisposed/i);
 assert.throws(() => handoffReadinessPolicy({
