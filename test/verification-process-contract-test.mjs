@@ -1530,8 +1530,60 @@ const exerciseDeadOwnerLockFixture = ({ reclaimDeadOwner }) => {
 
 let nestedReadOnlyLeaseCompleted = false;
 
+const documentationTemplateRuntimeEvidenceKeys = [
+  "documentationTemplateStarterParity",
+  "documentationTemplateStarterOverview",
+  "documentationTemplateStarterFlow",
+  "documentationTemplateStarterMatrix",
+  "documentationTemplateStarterProfile",
+  "documentationTemplateValidationBoundaries",
+  "documentationTemplateValidationScopedBinding",
+  "documentationTemplateValidationCrossing",
+  "documentationTemplateValidationUnsafePackage",
+  "documentationTemplateValidationSizeLimit",
+  "documentationTemplateValidationEncrypted",
+  "documentationTemplateValidationMalformed",
+  "documentationTemplateRichRuntime",
+  "documentationTemplateRichPreviewClipboard",
+  "documentationTemplateRichSanitization",
+  "documentationTemplateRichHistory",
+  "documentationTemplatePortableReload",
+];
+const documentationTemplateStepStem = ["flow", "table", "documentation", "export"].join("_");
+const documentationTemplateHandlerSource = await readFile(new URL(
+  `../acceptance/src/acceptance/steps/${documentationTemplateStepStem}.clj`, import.meta.url), "utf8");
+const documentationTemplateAcceptanceFixtureSource = await readFile(new URL(
+  `./acceptance/${documentationTemplateStepStem}_steps_test.clj`, import.meta.url), "utf8");
+
 const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagnosedBoundary,
   causalCategory = "artifact/process locking" }) => {
+  if (causalCategory === "other:documentation template acceptance fixture parity") {
+    const handlerKeys = documentationTemplateRuntimeEvidenceKeys.filter((key) =>
+      new RegExp(`:${key}(?=[\\s\\]])`, "u").test(documentationTemplateHandlerSource));
+    const fixtureTrueKeys = documentationTemplateRuntimeEvidenceKeys.filter((key) =>
+      new RegExp(`:${key}\\s+true(?=[\\s}])`, "u").test(documentationTemplateAcceptanceFixtureSource));
+    const fixture = {
+      id:"documentation-template-acceptance-fixture-parity-v1", causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
+      input:{ evidenceKeys:documentationTemplateRuntimeEvidenceKeys,
+        historicalFixtureTrueKeys:[] },
+      expectedPreRepairFailure:{ handlerKeys:documentationTemplateRuntimeEvidenceKeys,
+        fixtureTrueKeys:[], exactParity:false },
+      expectedRepairResult:{ handlerKeys:documentationTemplateRuntimeEvidenceKeys,
+        fixtureTrueKeys:documentationTemplateRuntimeEvidenceKeys, exactParity:true },
+    };
+    const repairResult = { handlerKeys, fixtureTrueKeys,
+      exactParity:handlerKeys.length === documentationTemplateRuntimeEvidenceKeys.length &&
+        fixtureTrueKeys.length === documentationTemplateRuntimeEvidenceKeys.length &&
+        handlerKeys.every((key, index) => key === fixtureTrueKeys[index]) };
+    assert.deepEqual(repairResult, fixture.expectedRepairResult,
+      "the bounded fixture proves exact parity for all 17 Documentation Template runtime evidence keys");
+    const fixtureDigest = timeoutIncidentDigest(fixture);
+    return { version:2, incidentId, failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:structuredClone(fixture.expectedPreRepairFailure) },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
+  }
   if (causalCategory === "other:checkpoint fixture readiness budget") {
     const fixture = {
       id:"checkpoint-fixture-readiness-budget-v1", causalCategory,
