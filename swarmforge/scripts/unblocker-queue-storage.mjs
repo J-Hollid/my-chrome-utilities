@@ -17,24 +17,66 @@ export async function atomicWrite(target,content) {
   await rename(stage,target);
 }
 
-export async function withQueueLock(queueRoot,operation) {
+async function currentOwner(lock) {
+  try { return JSON.parse(await readFile(path.join(lock,"owner.json"),"utf8")); }
+  catch (error) { if (error.code==="ENOENT") return null; throw error; }
+}
+
+async function ownerIsAlive(owner) {
+  let alive=Number.isInteger(owner?.pid)&&owner.pid>0;
+  if (alive) try { process.kill(owner.pid,0); }
+  catch (error) { if (error.code==="ESRCH") alive=false; else throw error; }
+  return alive;
+}
+
+async function acquireLock(lock,token) {
+  try {
+    await mkdir(lock);
+    try { await writeFile(path.join(lock,"owner.json"),JSON.stringify({pid:process.pid,token}),{flag:"wx"}); }
+    catch (error) { await rm(lock,{recursive:true,force:true}); throw error; }
+    return true;
+  } catch (error) {
+    if (error.code==="EEXIST") return false;
+    throw error;
+  }
+}
+
+async function reclaimStaleLock(lock,afterStaleObserved) {
+  let reclaim;
+  try {
+    reclaim=await open(path.join(lock,"reclaim"),"wx");
+    const observed=await currentOwner(lock);
+    if (!observed||await ownerIsAlive(observed)) return;
+    if (afterStaleObserved) await afterStaleObserved(observed);
+    const current=await currentOwner(lock);
+    if (current?.token===observed.token) await rm(lock,{recursive:true,force:true});
+  } catch (error) {
+    if (!["EEXIST","ENOENT"].includes(error.code)) throw error;
+  } finally {
+    if (reclaim) {
+      await reclaim.close();
+      await rm(path.join(lock,"reclaim"),{force:true});
+    }
+  }
+}
+
+async function releaseOwnedLock(lock,token) {
+  const owner=await currentOwner(lock);
+  if (owner?.token===token) await rm(lock,{recursive:true,force:true});
+}
+
+export async function withQueueLock(queueRoot,operation,{afterStaleObserved}={}) {
   const lock=path.join(queueRoot,"unblockers.lock");
   await mkdir(queueRoot,{recursive:true});
   for (let attempt=0;attempt<100;attempt+=1) {
-    try {
-      const handle=await open(lock,"wx");
-      await handle.writeFile(JSON.stringify({pid:process.pid,token:randomUUID()}));
+    const token=randomUUID();
+    const acquired=await acquireLock(lock,token);
+    if (acquired) {
       try { return await operation(); }
-      finally { await handle.close(); await rm(lock,{force:true}); }
-    } catch (error) {
-      if (error.code!=="EEXIST") throw error;
-      try {
-        const owner=JSON.parse(await readFile(lock,"utf8"));
-        try { process.kill(owner.pid,0); }
-        catch (signalError) { if (signalError.code==="ESRCH") await rm(lock,{force:true}); }
-      } catch {}
-      await new Promise((resolve)=>setTimeout(resolve,20));
+      finally { await releaseOwnedLock(lock,token); }
     }
+    await reclaimStaleLock(lock,afterStaleObserved);
+    await new Promise((resolve)=>setTimeout(resolve,20));
   }
   throw new Error("Timed out waiting for unblocker queue lock");
 }

@@ -5723,7 +5723,7 @@
       {
         "id": "swarmforge-stacked-ratchet",
         "sourcePaths": [],
-        "sourcePrefixes": ["scripts/stacked-campsite"],
+        "sourcePrefixes": ["scripts/stacked-campsite", "scripts/campsite-"],
         "tasks": ["unit:test/stacked-campsite-control-test.mjs"],
         "prerequisites": ["property:test/swarmforge-outcome-bounded-autonomy-property-test.mjs"],
         "consumers": [],
