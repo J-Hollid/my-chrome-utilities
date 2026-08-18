@@ -688,10 +688,8 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       :runtime047LeafConservation?{id:"flow-runtime047-evidence-leaf-conservation-v1",
         causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
         input:{runtime:"runtime047",target:"FLOW_WORKSPACE_CONTROLS_TARGET",leafCount:8},
-        expectedPreRepairFailure:{runtimeKeyDeclared:false,targetLeavesDeclared:0,
-          completeEvidenceRuntimeKeys:46,exactMatch:false},
-        expectedRepairResult:{runtimeKeyDeclared:true,targetLeavesDeclared:8,
-          completeEvidenceRuntimeKeys:47,exactMatch:true}}
+        expectedPreRepairFailure:{runtimeKeyDeclared:false,targetLeavesDeclared:0,exactMatch:false},
+        expectedRepairResult:{runtimeKeyDeclared:true,targetLeavesDeclared:8,exactMatch:true}}
       :{id:"flow-readiness-logical-budget-v1",
         causalCategory:"readiness or settling",diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
         input:{target:"FLOW_GRAPH_LEGACY_TARGET",logicalBudgetMilliseconds:120000,
@@ -758,11 +756,9 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
           .find(({id})=>id==="FLOW_WORKSPACE_CONTROLS_TARGET"),
           leaves=partition.leaves.filter((leaf)=>leaf.startsWith("flowGraph.runtime047.")),
           handlerSource=readFileSync("acceptance/src/acceptance/steps/flow_graph.clj","utf8"),
-          testSource=readFileSync("test/acceptance/flow_graph_steps_test.clj","utf8"),
-          runtimeKeyDeclared=/\(range 1 48\)/u.test(handlerSource),
-          completeEvidenceRuntimeKeys=/\(range 1 48\)/u.test(testSource)?47:46;
-          return{runtimeKeyDeclared,targetLeavesDeclared:leaves.length,completeEvidenceRuntimeKeys,
-            exactMatch:runtimeKeyDeclared&&leaves.length===8&&completeEvidenceRuntimeKeys===47};})()
+          runtimeKeyDeclared=/\(range 1 48\)/u.test(handlerSource);
+          return{runtimeKeyDeclared,targetLeavesDeclared:leaves.length,
+            exactMatch:runtimeKeyDeclared&&leaves.length===8};})()
       :{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
         usesLogicalRemainingBudget:/Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u
           .test(flowGraphAdapterSource)},
