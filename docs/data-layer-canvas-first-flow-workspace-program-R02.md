@@ -1050,3 +1050,31 @@ owner, wheel and keyboard results, Return to Flow reachability, outer-document
 and camera conservation, current exact packs and tasks, any forecast variance,
 failures, remaining work, confidence, and forecast. Continue bounded work under
 the QA pilot unless product scope, safety, or authority changes.
+
+### Ownership-readiness pause and automatic verification-slice preparation
+
+The coder's read-only intent from QA `28e7b2dded` returned
+`granularity-assessment-required` before product coding. The broad
+`src/data-layer-layered-schema-ui.ts` path currently selects six packs and 156
+tasks through the propagating `layered_schema_composition` boundary, including
+unrelated `flow_export`, `live_flow_testing`, and
+`property_set_flow_sections` families. No coherent scrolling implementation was
+created, so there is no product commit to merge, preserve, or forward.
+
+Under the standing granularity-ratchet authority, task
+`verification-slice-flow-instance-schema-editor-scrolling` now starts from that
+exact QA head. It may extract the Flow-launched editor-host route presentation
+to `src/layered-schema/flow-editor-route-layout.ts`, register it as
+`layered_schema_flow_editor_route` under parent `layered_schema` with
+`flow_graph` as its exact consumer, and record an `integrated-seam` disposition
+for the broad source path. If the extraction cannot truthfully exclude general
+schema composition, it records a reviewed `parent-fallback` instead. The
+complete preparation contract, conservation requirements, six-pack starting
+forecast, and 120-minute effort boundary are recorded in
+`docs/qa-verification-granularity-ratchet-R01.md`.
+
+The preparation implements no scrolling behavior and does not alter scenario
+047. After its architect `qa-ready` candidate reaches QA, reissue stable product
+task `flow-instance-schema-editor-scrolling` from that exact head without
+another user decision. Fresh product intent and exact preflight remain
+authoritative, and no feature-mode role may run the all-20 gate.
