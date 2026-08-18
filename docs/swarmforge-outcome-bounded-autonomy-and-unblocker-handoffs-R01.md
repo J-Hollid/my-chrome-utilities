@@ -32,8 +32,8 @@ launch. The actual execution plan is authoritative.
 
 ## Immutable authority
 
-The user-approved grant is registered at
-`swarmforge/authorities/outcome-bounded-autonomy-v1.json`. Its digest is the
+The user-approved grant is registered as machine-readable specification data at
+`docs/swarmforge-authorities/outcome-bounded-autonomy-v1.json`. Its digest is the
 SHA-256 of recursively key-sorted canonical JSON after removing the `digest`
 field. Only the registered `specifier` issuer may send an authority-bearing
 unblocker under this grant.
