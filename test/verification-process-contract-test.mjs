@@ -7324,7 +7324,7 @@ for (const [packId, logicalObservations, program] of [
 }
 const layeredSourceInventory = (await verificationInventory()).source
   .filter((sourcePath) => verificationOwner(packs, sourcePath) === "layered_schema");
-assert.equal(layeredSourceInventory.length,86);
+assert.equal(layeredSourceInventory.length,87);
 for (const sourcePath of layeredSourceInventory) {
   assert.ok(planVerification(packs, { changedPaths:[sourcePath] }).changedBoundaries[sourcePath],
     `${sourcePath} has one declared layered-schema impact boundary`);
@@ -10739,10 +10739,10 @@ function layeredSchemaOwnershipCountConservationRegression(context) {
   repairResult.exactPartition = repairResult.ownedSourceInventory === repairResult.handlerDeclaration &&
     repairResult.ownedSourceInventory === repairResult.featureDeclaration;
   const expectedPreRepairFailure = {
-    ownedSourceInventory:86, handlerDeclaration:85, featureDeclaration:85, exactPartition:false,
+    ownedSourceInventory:87, handlerDeclaration:86, featureDeclaration:86, exactPartition:false,
   };
   const expectedRepairResult = {
-    ownedSourceInventory:86, handlerDeclaration:86, featureDeclaration:86, exactPartition:true,
+    ownedSourceInventory:87, handlerDeclaration:87, featureDeclaration:87, exactPartition:true,
   };
   assert.deepEqual(repairResult, expectedRepairResult);
   const fixture = {

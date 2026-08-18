@@ -1136,7 +1136,7 @@ Feature: Modular verification packs
     When VTD-005 classifies the Layered editor source
     Then its exact boundary is <boundary>
     And it selects browser evidence <target>
-    And every one of the 32 current editor files and 86 Layered Schema files matches exactly one boundary
+    And every one of the 32 current editor files and 87 Layered Schema files matches exactly one boundary
 
     Examples:
       | changed_path                                                   | boundary                                  | target                                 |
