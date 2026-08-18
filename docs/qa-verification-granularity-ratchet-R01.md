@@ -4,7 +4,7 @@ Status: the initial ratchet, first-use mapping repair, and durable-runtime
 staging repair are QA-integrated at `066ea284de`, `8d3cf5012c`, and
 `06222ff00f`; the Documentation-template product resumes automatically from the
 staging-repair scorecard descendant; judgment-based deferral and a
-pre-promotion observation portfolio were approved on 2026-08-18
+pre-promotion observation portfolio are QA-integrated at `0b4f8b4a9d`
 
 Prepared: 2026-08-17
 
@@ -642,6 +642,39 @@ failures, remaining work, confidence, and forecast. If this process-only change
 itself exposes a bounded coarse verification path, apply the new judgment and
 retain conservative focused evidence; do not recursively open preparation just
 because the classification exists.
+
+### Settled judgment-and-portfolio result
+
+Specification `1cabea0450` was handed to the coder at 16:43:42Z on 2026-08-18.
+Architect candidate `0b4f8b4a9d` was returned QA-ready at 19:21:08Z and
+fast-forwarded into QA at about 19:24Z: about 2 hours 41 minutes from handoff to
+integration, inside the four-hour ceiling. At the two-hour point the candidate
+was already in independent refactorer review.
+
+Independent review caught two material portfolio defects before QA: an earlier
+promotion disposition could incorrectly satisfy a later promotion, and a
+malformed persisted portfolio could be interpreted as empty instead of failing
+closed. The repaired implementation scopes every disposition and hardening proof
+to one promotion identity, rejects malformed state, and makes the release-
+candidate handoff read the repository-shared portfolio before it may freeze QA.
+The architect also kept portfolio IO at the focused handoff-policy boundary
+while preserving the ordinary settled verification command surface.
+
+Refactorer candidate `f4139bdb06` and final architect candidate `0b4f8b4a9d`
+each passed the exact 77-task `shell` plan with properties, acceptance, and
+package proof. Their focused wall times were about 4 minutes 59 seconds and
+4 minutes 53 seconds; package proof took 883 and 896 milliseconds. No task
+failed and no all-20 checkpoint ran.
+
+The integrated workflow exposes five inspectable judgment outcomes, keeps
+plan-only readiness non-mutating, appends repeated observation occurrences,
+rejects stale or colliding identities, supports selected, combined, carried,
+and retired portfolio dispositions, and blocks release freeze until selected
+hardening is review-ready in exact QA ancestry. All-pack coarse ownership still
+requires immediate preparation. The initial repository portfolio is empty.
+Recommendation: **continue** with this judgment contract and evaluate real
+observations at the next user-requested master-promotion intake; do not create a
+new verification program merely to populate it.
 
 ## Settled Flow schema-editor route disposition preparation
 
