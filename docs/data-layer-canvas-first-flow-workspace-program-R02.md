@@ -1078,3 +1078,14 @@ The preparation implements no scrolling behavior and does not alter scenario
 task `flow-instance-schema-editor-scrolling` from that exact head without
 another user decision. Fresh product intent and exact preflight remain
 authoritative, and no feature-mode role may run the all-20 gate.
+
+The preparation is now QA-integrated at `4daea21df0`. The reviewed extraction
+places only the Flow editor-route layout lifecycle in
+`src/layered-schema/flow-editor-route-layout.ts`, registers the exact
+`layered_schema_flow_editor_route` slice with its `flow_graph` consumer, and
+records the `integrated-seam` disposition for the former broad intent path.
+Conservative review passed 183 focused tasks across the original six-pack set,
+including properties and package proof, without an all-20 run. Scenario 047 and
+scroll overflow remain intentionally unimplemented. No slice quarantine is
+active; the original product task is therefore ready for automatic reissue from
+the exact documentation scorecard descendant of this integration.

@@ -531,7 +531,7 @@ set, or failed premise. Full mechanics and acceptance are controlled by
 `docs/swarmforge-outcome-bounded-autonomy-and-unblocker-handoffs-R01.md` and
 `features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature`.
 
-## Active Flow schema-editor route disposition preparation
+## Settled Flow schema-editor route disposition preparation
 
 Read-only intent for approved product task
 `flow-instance-schema-editor-scrolling` started from QA `28e7b2dded` and stopped
@@ -606,3 +606,27 @@ confidence, and forecast. Continue while product behavior is unchanged and a
 bounded safe completion path remains. Stop for user direction only if coverage
 would weaken, ownership becomes unavailable, the preparation becomes genuinely
 global, or the seam would change product requirements.
+
+The preparation is QA-integrated at `4daea21df0` from base `0444fa50ef`. It
+settled on the preferred `integrated-seam` result: Flow-launched editor-route
+visibility, ordinary-departure cleanup, and Return-to-Flow presentation restore
+now live in `src/layered-schema/flow-editor-route-layout.ts`, while schema
+composition, property authoring, persistence, and collection editors remain in
+their existing owners. Unit and property observations conserve Page-instance
+and Event-occurrence route identity, focus, Flow camera, workspace scroll,
+disclosure state, and cleanup. Scenario 047 and the CSS overflow behavior were
+not changed or claimed complete.
+
+The registered `layered_schema_flow_editor_route` slice has the exact source,
+unit, property prerequisite, and `flow_graph` consumer specified above. The
+durable disposition replaces the broad product intent path with that seam;
+existing CSS bridges are unchanged. Review-ready evidence passed the complete
+six-pack conservative range—`flow_export`, `flow_graph`, `layered_schema`,
+`live_flow_testing`, `property_set_flow_sections`, and `shell`—with properties,
+package proof, and 183 focused tasks. No all-20 run occurred. The original
+156-task forecast was 27 tasks low. Dispatch-to-architect-ready elapsed
+2 hours 7 minutes 54 seconds, about 8 minutes beyond the 120-minute ceiling;
+the overrun changes neither the accepted evidence nor the rule for subsequent
+work. No verification-slice quarantine is active, so no repair transition is
+applicable. The stable product task resumes automatically from the exact
+documentation scorecard descendant of `4daea21df0`.
