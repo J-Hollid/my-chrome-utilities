@@ -3764,6 +3764,12 @@ console.log("repairTmp=" + process.env.TMPDIR);
     "build/acceptance/generated/features-verification-shared-artifact-parallel-execution-feature_acceptance_test.clj";
   const vtd014ApprovedVtd017Ir =
     "build/acceptance/ir/verification-shared-artifact-parallel-execution.json";
+  const vtd014ApprovedAutonomyFeature =
+    "features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature";
+  const vtd014ApprovedAutonomyGenerated =
+    "build/acceptance/generated/features-swarmforge-outcome-bounded-autonomy-and-unblockers-feature_acceptance_test.clj";
+  const vtd014ApprovedAutonomyIr =
+    "build/acceptance/ir/swarmforge-outcome-bounded-autonomy-and-unblockers.json";
   const vtd014DocumentationTemplateFeatures = [
     "features/data-layer-documentation-template-library.feature",
     "features/data-layer-documentation-template-library-runtime.feature",
@@ -3789,9 +3795,11 @@ console.log("repairTmp=" + process.env.TMPDIR);
     if (identity.key === "acceptance-session:shell") {
       identity.args = identity.args.filter((value) =>
         ![vtd014ApprovedVtd015Generated, vtd014ApprovedVtd015Ir,
-          vtd014ApprovedVtd017Generated, vtd014ApprovedVtd017Ir].includes(value));
+          vtd014ApprovedVtd017Generated, vtd014ApprovedVtd017Ir,
+          vtd014ApprovedAutonomyGenerated, vtd014ApprovedAutonomyIr].includes(value));
       identity.target = identity.target.split(",")
-        .filter((value) => ![vtd014ApprovedVtd015Feature, vtd014ApprovedVtd017Feature]
+        .filter((value) => ![vtd014ApprovedVtd015Feature, vtd014ApprovedVtd017Feature,
+          vtd014ApprovedAutonomyFeature]
           .includes(value)).join(",");
     }
     if (identity.key === "acceptance-session:flow_export") {
@@ -3900,6 +3908,8 @@ console.log("repairTmp=" + process.env.TMPDIR);
         `acceptance-generate:${vtd014ApprovedVtd015Feature}`,
         `acceptance-parse:${vtd014ApprovedVtd017Feature}`,
         `acceptance-generate:${vtd014ApprovedVtd017Feature}`,
+        `acceptance-parse:${vtd014ApprovedAutonomyFeature}`,
+        `acceptance-generate:${vtd014ApprovedAutonomyFeature}`,
         ...vtd014DocumentationTemplateFeatures.flatMap((feature) => [
           `acceptance-parse:${feature}`,
           `acceptance-generate:${feature}`,
@@ -5391,6 +5401,10 @@ const vtd017Feature = "features/verification-shared-artifact-parallel-execution.
 const vtd017Generated =
   "build/acceptance/generated/features-verification-shared-artifact-parallel-execution-feature_acceptance_test.clj";
 const vtd017Ir = "build/acceptance/ir/verification-shared-artifact-parallel-execution.json";
+const autonomyFeature = "features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature";
+const autonomyGenerated =
+  "build/acceptance/generated/features-swarmforge-outcome-bounded-autonomy-and-unblockers-feature_acceptance_test.clj";
+const autonomyIr = "build/acceptance/ir/swarmforge-outcome-bounded-autonomy-and-unblockers.json";
 const documentationTemplateFeatures = [
   "features/data-layer-documentation-template-library.feature",
   "features/data-layer-documentation-template-library-runtime.feature",
@@ -5426,9 +5440,10 @@ const normalizedVtd006Identity = (task) => {
   }
   if (identity.key === "acceptance-session:shell") {
     identity.args = identity.args.filter((value) =>
-      ![vtd015Generated, vtd015Ir, vtd017Generated, vtd017Ir].includes(value));
+      ![vtd015Generated, vtd015Ir, vtd017Generated, vtd017Ir,
+        autonomyGenerated, autonomyIr].includes(value));
     identity.target = identity.target.split(",")
-      .filter((value) => ![vtd015Feature, vtd017Feature].includes(value)).join(",");
+      .filter((value) => ![vtd015Feature, vtd017Feature, autonomyFeature].includes(value)).join(",");
   }
   if (identity.key === "acceptance-session:flow_export") {
     identity.args = identity.args.filter((value) =>
@@ -5467,6 +5482,13 @@ const approvedVtd017TaskKeys = new Set([
   `acceptance-parse:${vtd017Feature}`,
   `acceptance-generate:${vtd017Feature}`,
 ]);
+const approvedAutonomyTaskKeys = new Set([
+  "unit:test/swarmforge-outcome-bounded-autonomy-test.mjs",
+  "unit:test/stacked-campsite-control-test.mjs",
+  "property:test/swarmforge-outcome-bounded-autonomy-property-test.mjs",
+  `acceptance-parse:${autonomyFeature}`,
+  `acceptance-generate:${autonomyFeature}`,
+]);
 const approvedDocumentationTemplateTaskKeys = new Set(documentationTemplateFeatures
   .flatMap((feature) => [
     `acceptance-parse:${feature}`,
@@ -5487,6 +5509,7 @@ const approvedFlowStyleExtractionTaskKeys = new Set([
 const approvedVerificationTaskKeys = new Set([
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
+  ...approvedAutonomyTaskKeys,
   ...approvedDocumentationTemplateTaskKeys,
   ...approvedStyleSmokeTaskKeys,
   ...approvedStyleVerificationTaskKeys,
