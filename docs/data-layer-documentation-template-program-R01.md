@@ -1,10 +1,7 @@
 # Data layer documentation template program R01
 
-Status: approved by the user on 2026-08-17; product evidence is paused while the
-user-approved `verification-slice-documentation-templates` mapping repair starts
-from clean QA `1aec21fd2f`. Clean candidate `e8e5fd48` and earlier candidate
-`7f9c8a1121` are patch references only; the product resumes automatically after
-the repair reaches QA
+Status: QA-integrated at `a785a83b50`; the user approved the guided Excel
+authoring correction for QA feature implementation on 2026-08-18
 
 Prepared: 2026-08-17
 
@@ -58,7 +55,7 @@ used its former digest stale.
 
 ## Stable template context
 
-Contract version 1 exposes presentation-safe values only. It never exposes raw
+The public template context exposes presentation-safe values only. It never exposes raw
 project identities, source identities, revision hashes, provenance, diagnostics,
 repair targets, repository keys, Blob URLs, or unpublished template bodies.
 
@@ -105,75 +102,14 @@ Templates cannot sort, filter, query, or mutate the context. Collection order is
 the already-configured Documentation Set order. Missing optional values render as
 empty literal text.
 
-## Excel prototype contract
+## Excel guided workbook contract
 
-An Excel template is one valid, unencrypted, macro-free `.xlsx` workbook with
-exactly one worksheet. The upload identifies its applicable documentation kind
-from exactly one worksheet Note:
-
-```text
-tw:template(kind="flow" contract="1")
-```
-
-The first release preserves ordinary static cells, literal numbers and booleans,
-fonts, fills, borders, alignment, number formats, row heights, column widths,
-merged cells, page setup, headers and footers, and embedded PNG, JPEG, or GIF
-images. The generated worksheet takes the Documentation section's deterministic
-safe name rather than the prototype worksheet name.
-
-Cell text may contain one or more scalar placeholders such as
-`{{project.name}}` or `{{page.pageName}}`. A known optional value that is absent
-becomes empty text. An unknown or out-of-scope path invalidates the template.
-Inserted project values are literal cell content even when they begin with `=`,
-`+`, `-`, or `@`.
-
-An ordinary Excel Note on the top-left cell of a rectangular prototype region
-defines collection repetition:
-
-```text
-tw:each(items="flow.pages" var="page" direction="right" lastCell="D8")
-tw:each(items="table.rows" var="row" direction="down" lastCell="H10")
-```
-
-`lastCell` is the lower-right cell on the same worksheet. `down` inserts enough
-copies of the complete region below the prototype and shifts later content down.
-`right` inserts copies to the right and shifts later content right. Each copy
-retains supported presentation and binds its declared item variable. A collection
-with no items removes the prototype region. Template directives and directive
-Notes are absent from generated output.
-
-Repeat regions may nest only when the inner rectangle is wholly contained by the
-outer rectangle. Crossing, partially overlapping, circular, out-of-bounds, or
-same-direction expansion that would overwrite another directive is invalid.
-Merged cells must be wholly inside or wholly outside each repeated rectangle.
-Generation blocks rather than truncates when expansion would exceed Excel's row
-or column limits.
-
-One image directive may bind the existing theme logo into a rectangular fit area:
-
-```text
-tw:image(source="theme.logo" lastCell="C3")
-```
-
-It preserves the existing supported image bytes and aspect-ratio fit without
-enlargement. An absent logo leaves the area empty.
-
-The template language has no arbitrary expressions, functions, conditions,
-formulas, scripts, macros, queries, external fetches, or access outside the
-versioned binding catalogue. Template workbooks containing formulas, macro or
-add-in parts, external links, linked media, data connections, embedded packages,
-charts, pivot tables, slicers, or unsupported drawings are rejected rather than
-silently altered. The source is limited to 10 MiB, 2,000 ZIP entries, and 50 MiB
-of declared unpacked content. Validation rejects unsafe entry paths, duplicate or
-missing parts, encrypted content, signature or media-type mismatch, decompression
-limit violations, broken relationships, and invalid OOXML.
-
-For each kind, `Download starter template` returns exactly one valid prototype
-worksheet that recreates the Built-in structure using contract-version-1
-markers. Template help in the Library lists every binding valid for the selected
-kind and shows exact worksheet, cell, directive, and binding findings after
-upload. `Download sample-filled workbook` renders the candidate against the
-current selected section without assigning or saving it.
+The current Excel contract is specified by
+`docs/data-layer-guided-excel-template-authoring-R01.md`. It supersedes the
+unadopted contract-version-1 Note and literal-endpoint design. Guided starters,
+visible Template Guide setup, named repeat and image areas, in-tool binding and
+repeat guidance, unsaved candidate preview, and operator-facing findings replace
+that design without compatibility rendering or migration.
 
 ## Rich-page template contract
 

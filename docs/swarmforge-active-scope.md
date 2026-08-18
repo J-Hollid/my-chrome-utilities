@@ -33,7 +33,7 @@ The settled-candidate verification workflow is integrated at
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program; the combined Project Library transport isolation and Flow visual-asset portability delivery is QA-integrated at `1b192105a8` | Preserve that settled transport, content-addressed visual-body, and version-3 archive behavior. No additional VTD-008 controller slice is active. |
-| Documentation template library | QA-integrated at `a785a83b50` after exact 13-pack/619-task review evidence | Preserve the four-kind Excel and Rich template library, current-output defaults, atomic body persistence, project portability, assignment, preview, export, validation, responsive editor, and installed evidence. No additional Documentation-template recovery task is active. |
+| Documentation template library | QA-integrated at `a785a83b50` after exact 13-pack/619-task review evidence; guided Excel authoring correction approved on 2026-08-18 | Implement `guided-excel-template-authoring` from current QA under `docs/data-layer-guided-excel-template-authoring-R01.md`, replacing the unadopted Note-based Excel contract while preserving the Rich contract and settled template-library boundaries. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Deferred and inactive | The existing two-worker order is within about six seconds of balanced after lock wait is removed; scheduling needed for a possible third worker is bounded inside VTD-017. |
 | VTD-012 registry and planner modularization | Deferred and inactive | Reconsider after broad final-gate and receipt-persistence costs are reduced. |
@@ -102,7 +102,10 @@ Rich preview/clipboard/sanitization/history, project export/import portability,
 durable route lifecycle, and package proof. Refactorer review closed the scoped
 binding-help, responsive Rich outline/detail, private-ID, and installed-evidence
 gaps before architect acceptance. The product task is complete on QA; cumulative
-promotion to `master` remains a separate user decision.
+promotion to `master` remains a separate user decision. The later user-approved
+`guided-excel-template-authoring` correction supersedes only the unadopted Excel
+Note and literal-endpoint authoring contract; it does not reopen the completed
+Rich-template or durability lineages.
 
 The previously approved structural task `swarmforge-outcome-bounded-autonomy`
 is QA-integrated at `8f82a6a66f`. Its immutable authority grant, semantic

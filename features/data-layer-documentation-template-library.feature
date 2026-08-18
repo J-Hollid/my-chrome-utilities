@@ -17,8 +17,9 @@ Feature: Data layer documentation template library
     When the operator opens Templates from the persistent Documentation context
     Then the Template Library groups Built-in and project templates by Excel or Rich page and by Overview, Flow, Matrix, or Site Profile
     And Build, Preview, and Export remain the only primary workspace tabs
-    And the Library offers Download starter template, Upload Excel template, and New rich page template for the selected kind
-    And it shows the bindings valid for the selected kind
+    And the Library offers Download guided starter, Select Excel template, and New rich page template for the selected kind
+    And Excel guidance separates single values from repeatable data for the selected kind
+    And selecting an Excel workbook creates an unsaved candidate with inspection, populated preview, and Save template actions
 
   # Data layer documentation template library 003
   Scenario Outline: Data layer documentation template library 003
@@ -92,7 +93,7 @@ Feature: Data layer documentation template library
 
   # Data layer documentation template library 010
   Scenario: Data layer documentation template library 010
-    Given a valid template requests only contract-version-1 public bindings
+    Given a valid template requests only public bindings allowed by its own contract
     When its context is prepared
     Then it receives the configured presentation values from the immutable snapshot
     And it receives no raw identity, revision hash, provenance, diagnostic, repair target, repository key, Blob URL, or template body

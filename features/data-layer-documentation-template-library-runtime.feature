@@ -15,7 +15,8 @@ Feature: Data layer documentation template library runtime
   Scenario: Data layer documentation template library runtime 002
     When actual controls open Templates from Documentation
     Then the installed Template Library exposes format and kind groups without adding a primary workspace tab
-    When actual controls upload Acme flow workbook and create Acme profile page
+    And its Excel guidance exposes searchable single values, repeatable data, examples, and availability
+    When actual controls select, inspect, preview, and save Acme flow workbook and create Acme profile page
     Then production validation records their format, kind, contract version, digest, and validation state
     And actual assignment controls bind them to Excel Flow and Rich page Site Profile
     And no direct state injection or component-only fixture creates those records
