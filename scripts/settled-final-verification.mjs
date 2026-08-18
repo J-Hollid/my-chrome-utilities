@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { canonicalVerificationChangeSet, requireGitAncestor } from "./verification-changes.mjs";
+import { granularityPortfolioFreezeStatusSync } from "./campsite-granularity-observations.mjs";
 import { planVerification } from "./verification-packs.mjs";
 import {
   createReviewReadyRecord,
@@ -149,10 +150,16 @@ async function verifyReleaseCandidate([commit, base]) {
 
 async function validateHandoff([sender, recipientList, task, readiness, verified]) {
   const packs = JSON.parse(await readFile(path.join(repository, "verification/packs.json"), "utf8"));
+  const recipients = recipientList.split(",").filter(Boolean);
+  const granularityPortfolioStatus = sender === "specifier" && recipients.length === 1 &&
+    recipients[0] === "architect" && readiness === "release-candidate"
+    ? granularityPortfolioFreezeStatusSync(repository, task)
+    : undefined;
   const policy = handoffReadinessPolicy({
-    sender, recipients:recipientList.split(",").filter(Boolean), task,
+    sender, recipients, task,
     readiness:readiness === "legacy" ? undefined : readiness, verified,
     allPackIds:planVerification(packs, {terminalFull:true}).selectedPackIds,
+    granularityPortfolioStatus,
   });
   console.log(`handoff readiness passed: ${policy.mode}`);
 }

@@ -1,5 +1,4 @@
 import { same, sortedUnique } from "./settled-final-verification-review.mjs";
-import { granularityPortfolioFreezeStatusSync } from "./campsite-granularity-observations.mjs";
 
 function nonNegativeFinite(value, label) {
   if (!Number.isFinite(value) || value < 0) throw new Error(`${label} must be non-negative`);
@@ -115,14 +114,14 @@ function qaPolicy(sender, recipientSet, readiness, verified) {
   return { mode:"qa-integration", requiredEvidence:"review-ready" };
 }
 
-function releasePolicy(sender, recipientSet, task, readiness, verified,granularityPortfolioStatus) {
+function releasePolicy(sender, recipientSet, readiness, verified, granularityPortfolioStatus) {
   if (sender !== "specifier" || !exactRecipient(recipientSet, "architect")) return null;
   if (readiness !== "release-candidate" || verified !== "qa-candidate") {
     throw new Error("Specifier master-integration handoffs to the architect require an exact QA release candidate");
   }
-  const portfolio=granularityPortfolioStatus??granularityPortfolioFreezeStatusSync(process.cwd(),task);
-  if (!portfolio.ready) {
-    throw new Error(`Granularity observation portfolio blocks release freeze: ${portfolio.blocking.join(", ")}`);
+  if (!granularityPortfolioStatus || granularityPortfolioStatus.ready !== true) {
+    const blocking = granularityPortfolioStatus?.blocking?.join(", ") || "status unavailable";
+    throw new Error(`Granularity observation portfolio blocks release freeze: ${blocking}`);
   }
   return { mode:"master-integration", requiredEvidence:"qa-candidate" };
 }
@@ -178,7 +177,7 @@ export function handoffReadinessPolicy({ sender, recipients, task, readiness, ve
   if (bootstrap) return bootstrap;
   const review = reviewPolicy(sender, recipientSet, readiness, verified);
   if (review) return review;
-  const release = releasePolicy(sender, recipientSet, task, readiness, verified,granularityPortfolioStatus);
+  const release = releasePolicy(sender, recipientSet, readiness, verified, granularityPortfolioStatus);
   if (release) return release;
   const qa = qaPolicy(sender, recipientSet, readiness, verified);
   if (qa) return qa;
