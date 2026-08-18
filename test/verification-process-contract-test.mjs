@@ -5397,6 +5397,7 @@ const vtd006ProgramMigration = new Map([
 const vtd015Feature = "features/settled-candidate-final-verification.feature";
 const vtd015Generated = "build/acceptance/generated/features-settled-candidate-final-verification-feature_acceptance_test.clj";
 const vtd015Ir = "build/acceptance/ir/settled-candidate-final-verification.json";
+const vtd015FeatureSource = await readFile(vtd015Feature, "utf8");
 const vtd017Feature = "features/verification-shared-artifact-parallel-execution.feature";
 const vtd017Generated =
   "build/acceptance/generated/features-verification-shared-artifact-parallel-execution-feature_acceptance_test.clj";
@@ -10786,6 +10787,37 @@ function verificationConsumerOwnershipRegression(context) {
     preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
     repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
 }
+function judgmentRoutingContractRegression(context) {
+  const oldJudgmentStage =
+    "bounded agent judgment compares semantic scope, unrelated verification, seam coherence, and preparation cost";
+  const judgmentStage =
+    "bounded agent judgment selects a reviewed seam, preparation, observation, or parent fallback";
+  const oldMandatoryStage =
+    "a standing-authorized ownership preparation starts because an all-20 feature plan cannot enter QA";
+  const mandatoryStage =
+    "a standing-authorized ownership preparation stage starts without another routine user approval";
+  const occurrences = (source, value) => source.split(value).length - 1;
+  const expectedPreRepairFailure = {judgmentSelectionRows:0,mandatoryPreparationRows:0,
+    oldComparisonRows:2,oldMandatoryRows:1};
+  const expectedRepairResult = {judgmentSelectionRows:2,mandatoryPreparationRows:1,
+    oldComparisonRows:0,oldMandatoryRows:0};
+  const repairResult = {
+    judgmentSelectionRows:occurrences(vtd015FeatureSource, judgmentStage),
+    mandatoryPreparationRows:occurrences(vtd015FeatureSource, mandatoryStage),
+    oldComparisonRows:occurrences(vtd015FeatureSource, oldJudgmentStage),
+    oldMandatoryRows:occurrences(vtd015FeatureSource, oldMandatoryStage),
+  };
+  assert.deepEqual(repairResult, expectedRepairResult,
+    "Scenario 017 keeps bounded judgment and mandatory all-pack preparation routing exact");
+  const fixture = {id:"judgment-routing-contract-v1",causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{feature:vtd015Feature,scenario:"Settled candidate final verification 017"},
+    expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest = verificationDigest(fixture);
+  return {version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
@@ -10821,6 +10853,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           ? layeredSchemaOwnershipCountConservationRegression(regressionContext)
         : regressionContext.causalCategory === "other:verification-consumer-owner-reachability"
           ? verificationConsumerOwnershipRegression(regressionContext)
+        : regressionContext.causalCategory === "other:judgment-routing-contract-drift"
+          ? judgmentRoutingContractRegression(regressionContext)
         : regressionContext.causalCategory === "other:repair-focused prerequisite closure"
           ? repairPrerequisiteClosureRegression(regressionContext)
           : artifactLockTimeoutRepairRegression(regressionContext),
