@@ -17,24 +17,54 @@ export async function atomicWrite(target,content) {
   await rename(stage,target);
 }
 
-export async function withQueueLock(queueRoot,operation) {
+async function currentOwner(lock) {
+  try { return JSON.parse(await readFile(path.join(lock,"owner.json"),"utf8")); }
+  catch (error) { if (error.code==="ENOENT") return null; throw error; }
+}
+
+export async function withQueueLock(queueRoot,operation,{afterStaleObserved}={}) {
   const lock=path.join(queueRoot,"unblockers.lock");
   await mkdir(queueRoot,{recursive:true});
   for (let attempt=0;attempt<100;attempt+=1) {
+    const token=randomUUID();
+    let acquired=false;
     try {
-      const handle=await open(lock,"wx");
-      await handle.writeFile(JSON.stringify({pid:process.pid,token:randomUUID()}));
-      try { return await operation(); }
-      finally { await handle.close(); await rm(lock,{force:true}); }
+      await mkdir(lock);
+      await writeFile(path.join(lock,"owner.json"),JSON.stringify({pid:process.pid,token}),{flag:"wx"});
+      acquired=true;
     } catch (error) {
       if (error.code!=="EEXIST") throw error;
+      let reclaim;
       try {
-        const owner=JSON.parse(await readFile(lock,"utf8"));
-        try { process.kill(owner.pid,0); }
-        catch (signalError) { if (signalError.code==="ESRCH") await rm(lock,{force:true}); }
-      } catch {}
-      await new Promise((resolve)=>setTimeout(resolve,20));
+        reclaim=await open(path.join(lock,"reclaim"),"wx");
+        const observed=await currentOwner(lock);
+        if (observed) {
+          let alive=Number.isInteger(observed.pid)&&observed.pid>0;
+          if (alive) try { process.kill(observed.pid,0); }
+          catch (signalError) { if (signalError.code==="ESRCH") alive=false; else throw signalError; }
+          if (!alive) {
+            if (afterStaleObserved) await afterStaleObserved(observed);
+            const current=await currentOwner(lock);
+            if (current?.token===observed.token) await rm(lock,{recursive:true,force:true});
+          }
+        }
+      } catch (reclaimError) {
+        if (!["EEXIST","ENOENT"].includes(reclaimError.code)) throw reclaimError;
+      } finally {
+        if (reclaim) {
+          await reclaim.close();
+          await rm(path.join(lock,"reclaim"),{force:true});
+        }
+      }
     }
+    if (acquired) {
+      try { return await operation(); }
+      finally {
+        const owner=await currentOwner(lock);
+        if (owner?.token===token) await rm(lock,{recursive:true,force:true});
+      }
+    }
+    await new Promise((resolve)=>setTimeout(resolve,20));
   }
   throw new Error("Timed out waiting for unblocker queue lock");
 }

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { readFile, rename } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { unblockerContentDigest, validateAuthorityClaim, validateStoredUnblocker,
@@ -19,6 +19,14 @@ async function validateTrust(parsed,active,trust) {
   else if (trust?.grant) validateAuthorityClaim({headers:parsed.headers,grant:trust.grant,active,
     authorityCommitPresentOnBase:trust.authorityCommitPresentOnBase,
     authorityCommitAncestral:trust.authorityCommitAncestral});
+}
+
+function resultMatchesActive(result,active) {
+  return result.binding?.activeHandoff===active.id && result.binding?.task===active.task;
+}
+
+function binding(active) {
+  return {activeHandoff:active.id,task:active.task};
 }
 
 export async function deliverUnblocker({queueRoot,headers,body="",grant,active,
@@ -57,7 +65,7 @@ export async function claimUnblocker({queueRoot,active,now=()=>new Date().toISOS
   ...trust}) {
   return withQueueLock(queueRoot,async()=>{
     const recovered=await recoverUnblockerJournals(queueRoot);
-    const recoveredClaim=recovered.find(({kind})=>kind==="claim");
+    const recoveredClaim=recovered.find((result)=>result.kind==="claim"&&resultMatchesActive(result,active));
     if (recoveredClaim) return recoveredClaim;
     await reconcileLegacyClaimDuplicate(queueRoot);
     const inProcess=await queueFiles(queueRoot,"in_process");
@@ -73,12 +81,20 @@ export async function claimUnblocker({queueRoot,active,now=()=>new Date().toISOS
         claim_token:randomUUID(),dequeued_at:now()},parsed.body);
       return runUnblockerJournal(queueRoot,{version:1,id:randomUUID(),kind:"claim",operations:[
         {type:"write",target:file,content,boundary:"claim-written"}],
-      result:{kind:"claim",status:"claimed",reclaimed:true,file,headers:parsed.headers,body:parsed.body}},faultAt);
+      result:{kind:"claim",status:"claimed",reclaimed:true,file,headers:parsed.headers,
+        body:parsed.body,binding:binding(active)}},faultAt);
     }
     for (const file of await queueFiles(queueRoot,"new")) {
       const parsed=parseHandoff(await readFile(file,"utf8"));
       if (parsed.headers["active-handoff"]!==active.id || parsed.headers.task!==active.task) {
-        await rename(file,path.join(queueRoot,"unblockers","failed",path.basename(file))); continue;
+        const target=path.join(queueRoot,"unblockers","failed",path.basename(file));
+        const content=renderHandoff({...parsed.headers,"failure-reason":"stale binding"},parsed.body);
+        await runUnblockerJournal(queueRoot,{version:1,id:randomUUID(),kind:"stale",operations:[
+          {type:"rename",source:file,target,boundary:"stale-moved"},
+          {type:"write",target,content,boundary:"stale-audited"}],
+        result:{kind:"stale",status:"stale",file:target,binding:{
+          activeHandoff:parsed.headers["active-handoff"],task:parsed.headers.task}}},faultAt);
+        continue;
       }
       await validateTrust(parsed,active,trust);
       const target=path.join(queueRoot,"unblockers","in_process",path.basename(file));
@@ -87,7 +103,8 @@ export async function claimUnblocker({queueRoot,active,now=()=>new Date().toISOS
       return runUnblockerJournal(queueRoot,{version:1,id:randomUUID(),kind:"claim",operations:[
         {type:"rename",source:file,target,boundary:"claim-moved"},
         {type:"write",target,content,boundary:"claim-written"}],
-      result:{kind:"claim",status:"claimed",file:target,headers:parsed.headers,body:parsed.body}},faultAt);
+      result:{kind:"claim",status:"claimed",file:target,headers:parsed.headers,body:parsed.body,
+        binding:binding(active)}},faultAt);
     }
     return {status:"none"};
   });
@@ -97,7 +114,8 @@ export async function completeUnblocker({queueRoot,active,replacement,ordinarySt
   now=()=>new Date().toISOString(),faultAt,...trust}) {
   return withQueueLock(queueRoot,async()=>{
     const recovered=await recoverUnblockerJournals(queueRoot);
-    const recoveredCompletion=recovered.find(({kind})=>kind==="complete");
+    const recoveredCompletion=recovered.find((result)=>result.kind==="complete"&&
+      resultMatchesActive(result,active));
     if (recoveredCompletion) return recoveredCompletion;
     const claimed=await queueFiles(queueRoot,"in_process");
     if (claimed.length!==1) throw new Error("Exactly one claimed unblocker is required");
@@ -112,17 +130,19 @@ export async function completeUnblocker({queueRoot,active,replacement,ordinarySt
     const operations=[];
     if (parsed.headers.mode==="replace" && ordinaryState) operations.push(
       {type:"rename",source:ordinaryState.replacementFile,
-        target:path.join(ordinaryState.inProcessDir,path.basename(ordinaryState.replacementFile)),
+        target:ordinaryState.replacementTarget??path.join(ordinaryState.inProcessDir,
+          path.basename(ordinaryState.replacementFile)),
         boundary:"complete-replacement-activated"},
       {type:"rename",source:ordinaryState.activeFile,
-        target:path.join(ordinaryState.completedDir,path.basename(ordinaryState.activeFile)),
+        target:ordinaryState.activeTarget??path.join(ordinaryState.completedDir,
+          path.basename(ordinaryState.activeFile)),
         boundary:"complete-active-archived"});
     operations.push({type:"rename",source:file,target,boundary:"complete-unblocker-moved"},
       {type:"write",target,content:renderHandoff({...parsed.headers,completed_at:now()},parsed.body),
         boundary:"complete-unblocker-written"});
     const result=parsed.headers.mode==="resume"
-      ? {kind:"complete",status:"resume",active}
-      : {kind:"complete",status:"replace",archivedActive:active,replacement};
+      ? {kind:"complete",status:"resume",active,binding:binding(active)}
+      : {kind:"complete",status:"replace",archivedActive:active,replacement,binding:binding(active)};
     return runUnblockerJournal(queueRoot,{version:1,id:randomUUID(),kind:"complete",operations,result},faultAt);
   });
 }

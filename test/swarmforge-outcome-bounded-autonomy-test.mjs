@@ -16,6 +16,8 @@ import {
   validateUnblockerDraft,
   claimUnblocker,
 } from "../swarmforge/scripts/unblocker-control.mjs";
+import { runUnblockerJournal } from "../swarmforge/scripts/unblocker-journal.mjs";
+import { withQueueLock } from "../swarmforge/scripts/unblocker-queue-storage.mjs";
 import {
   aggregateCampsiteAssessment,
   createRemainderManifest,
@@ -148,6 +150,45 @@ const stale=await deliverUnblocker({queueRoot,headers:{...validHeaders,from:"spe
   authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
 assert.equal(stale.status,"stale");
 assert.equal(stale.activeRetained,true);
+
+const staleClaimRoot=await mkdtemp(path.join(os.tmpdir(),"swarmforge-unblocker-stale-claim-"));
+await deliverUnblocker({queueRoot:staleClaimRoot,
+  headers:{...validHeaders,from:"specifier",name:"queued-before-active-changed"},body:"bounded",grant,active,
+  authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+assert.equal((await claimUnblocker({queueRoot:staleClaimRoot,active:{...active,id:"new-active"}})).status,"none");
+const [staleClaimFile]=await readdir(path.join(staleClaimRoot,"unblockers","failed"));
+assert.match(await readFile(path.join(staleClaimRoot,"unblockers","failed",staleClaimFile),"utf8"),
+  /failure-reason: stale binding/u);
+await rm(staleClaimRoot,{recursive:true,force:true});
+
+const bindingRecoveryRoot=await mkdtemp(path.join(os.tmpdir(),"swarmforge-unblocker-binding-recovery-"));
+await deliverUnblocker({queueRoot:bindingRecoveryRoot,
+  headers:{...validHeaders,from:"specifier",name:"binding-specific-recovery"},body:"bounded",grant,active,
+  authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+await assert.rejects(runUnblockerJournal(bindingRecoveryRoot,{version:1,id:"unrelated-claim",kind:"claim",
+  operations:[{type:"write",target:path.join(bindingRecoveryRoot,"unrelated.marker"),content:"done\n",
+    boundary:"claim-written"}],result:{kind:"claim",status:"claimed",file:"unrelated",
+    binding:{activeHandoff:"another-active",task:"another-task"}}},"claim-journal-written"),/injected/ui);
+const bindingClaim=await claimUnblocker({queueRoot:bindingRecoveryRoot,active,grant,
+  authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+assert.equal(bindingClaim.headers.name,"binding-specific-recovery");
+assert.equal(await readFile(path.join(bindingRecoveryRoot,"unrelated.marker"),"utf8"),"done\n");
+await rm(bindingRecoveryRoot,{recursive:true,force:true});
+
+const lockRaceRoot=await mkdtemp(path.join(os.tmpdir(),"swarmforge-unblocker-lock-race-"));
+await mkdir(path.join(lockRaceRoot,"unblockers.lock"));
+await writeFile(path.join(lockRaceRoot,"unblockers.lock","owner.json"),
+  JSON.stringify({pid:99999999,token:"dead-owner"}));
+let inside=0,maximumInside=0,staleObservations=0;
+const contenders=Array.from({length:2},(_,index)=>withQueueLock(lockRaceRoot,async()=>{
+  inside+=1; maximumInside=Math.max(maximumInside,inside);
+  await new Promise((resolve)=>setTimeout(resolve,30));
+  inside-=1; return index;
+},{afterStaleObserved:async()=>{staleObservations+=1; await new Promise((resolve)=>setTimeout(resolve,30));}}));
+assert.deepEqual((await Promise.all(contenders)).sort(),[0,1]);
+assert.equal(maximumInside,1,"stale-owner recovery never removes a successor's lock");
+assert.equal(staleObservations,1,"one guarded waiter retires the exact observed stale token");
+await rm(lockRaceRoot,{recursive:true,force:true});
 
 const tamperRoot=await mkdtemp(path.join(os.tmpdir(),"swarmforge-unblocker-tamper-"));
 await deliverUnblocker({queueRoot:tamperRoot,headers:{...validHeaders,from:"specifier"},body:"bounded",
@@ -350,6 +391,35 @@ try {
     ? await readFile(path.join(senderRoot,".swarmforge/handoffs/outbox",daemonErrors[0]),"utf8") : "");
   const nested=await readdir(path.join(recipientRoot,".swarmforge/handoffs/inbox/unblockers/new"));
   assert.equal(nested.length,1);
+  const helper=path.resolve("swarmforge/scripts/unblocker_claim.sh");
+  const helperComplete=path.resolve("swarmforge/scripts/unblocker_complete.sh");
+  assert.match((await exec(helper,[daemonActive.id],{cwd:recipientRoot})).stdout,/"status": "claimed"/u);
+  assert.match((await exec(helperComplete,[daemonActive.id],{cwd:recipientRoot})).stdout,/RESUME:/u);
+  const activeFile=path.join(recipientRoot,".swarmforge/handoffs/inbox/in_process/active.handoff");
+  const batchDir=path.join(recipientRoot,".swarmforge/handoffs/inbox/in_process/batch_fixture");
+  await mkdir(batchDir); await import("node:fs/promises").then(({rename})=>rename(activeFile,
+    path.join(batchDir,"active.handoff")));
+  await deliverUnblocker({queueRoot:path.join(recipientRoot,".swarmforge/handoffs/inbox"),
+    headers:{...daemonHeaders,name:"installed-batch-helper",id:"installed-batch-helper"},body:"bounded\n",
+    grant,active:daemonActive,authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+  assert.match((await exec(helper,[daemonActive.id],{cwd:recipientRoot})).stdout,/"status": "claimed"/u);
+  assert.match((await exec(helperComplete,[daemonActive.id],{cwd:recipientRoot})).stdout,/RESUME:/u);
+  const installedReplacement={id:"installed-batch-replacement",from:"specifier",recipient:"coder",
+    task:daemonActive.task,commit:acceptedBase,base:acceptedBase};
+  const replacementPath=path.join(recipientRoot,
+    ".swarmforge/handoffs/inbox/new/00_installed-batch-replacement.handoff");
+  await mkdir(path.dirname(replacementPath),{recursive:true});
+  await writeFile(replacementPath,Object.entries(installedReplacement).map(([key,value])=>`${key}: ${value}`)
+    .join("\n")+"\n\nreplacement\n");
+  await deliverUnblocker({queueRoot:path.join(recipientRoot,".swarmforge/handoffs/inbox"),
+    headers:{...daemonHeaders,name:"installed-batch-replace",id:"installed-batch-replace",mode:"replace",
+      supersedes:daemonActive.id,"replacement-handoff":installedReplacement.id},body:"bounded\n",
+    grant,active:daemonActive,authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+  assert.match((await exec(helper,[daemonActive.id],{cwd:recipientRoot})).stdout,/"status": "claimed"/u);
+  assert.match((await exec(helperComplete,[daemonActive.id],{cwd:recipientRoot})).stdout,/"status":"replace"/u);
+  assert.match(await readFile(path.join(batchDir,path.basename(replacementPath)),"utf8"),/replacement/u);
+  assert.equal((await readdir(path.join(recipientRoot,
+    ".swarmforge/handoffs/inbox/completed/batch_fixture"))).includes("active.handoff"),true);
   assert.equal((await readdir(path.join(senderRoot,".swarmforge/handoffs/sent"))).length,1);
   const notification=await readFile(tmuxLog,"utf8");
   assert.match(notification,/USER-AUTHORIZED UNBLOCKER/u);

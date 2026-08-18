@@ -39,13 +39,25 @@ async function roleRows(root) {
   return new Map(rows.filter(Boolean).map((line)=>{const fields=line.split("\t");
     return [fields[0],{role:fields[0],worktreePath:fields[2]}];}));
 }
+async function handoffFiles(directory) {
+  if (!await exists(directory)) return [];
+  const files=[];
+  for (const entry of await readdir(directory,{withFileTypes:true})) {
+    const target=path.join(directory,entry.name);
+    if (entry.isDirectory()) files.push(...await handoffFiles(target));
+    else if (entry.isFile()&&entry.name.endsWith(".handoff")) files.push(target);
+  }
+  return files.sort();
+}
 async function activeHandoff(root,id) {
   const directory=path.join(root,".swarmforge","handoffs","inbox","in_process");
-  for (const name of await readdir(directory)) {
-    if (!name.endsWith(".handoff")) continue;
-    const file=path.join(directory,name),parsed=parseHandoff(await readFile(file,"utf8"));
-    if (parsed.headers.id===id) return {...parsed.headers,path:file};
+  const matches=[];
+  for (const file of await handoffFiles(directory)) {
+    const parsed=parseHandoff(await readFile(file,"utf8"));
+    if (parsed.headers.id===id) matches.push({...parsed.headers,path:file});
   }
+  if (matches.length>1) throw new Error(`Active handoff ${id} is ambiguous`);
+  if (matches.length===1) return matches[0];
   throw new Error(`Active handoff ${id} is unavailable`);
 }
 async function trustContext(root,active,headers) {
@@ -114,16 +126,20 @@ async function complete(root,activeId) {
   let replacement,ordinaryState;
   if (parsed?.headers.mode==="replace") {
     const ordinaryNew=path.join(queueRoot,"new");
-    for (const name of await readdir(ordinaryNew)) {
-      if (!name.endsWith(".handoff")) continue;
-      const file=path.join(ordinaryNew,name);
+    const replacements=[];
+    for (const file of await handoffFiles(ordinaryNew)) {
       const candidate=parseHandoff(await readFile(file,"utf8"));
       if (candidate.headers.id===parsed.headers["replacement-handoff"]) {
-        replacement={...candidate.headers,path:file};
-        ordinaryState={activeFile:active.path,replacementFile:file,
-          completedDir:path.join(queueRoot,"completed"),inProcessDir:path.join(queueRoot,"in_process")};
-        break;
+        replacements.push({...candidate.headers,path:file});
       }
+    }
+    if (replacements.length>1) throw new Error("Bound replacement handoff is ambiguous");
+    if (replacements.length===1) {
+      replacement=replacements[0];
+      const activeRelative=path.relative(path.join(queueRoot,"in_process"),active.path);
+      ordinaryState={activeFile:active.path,replacementFile:replacement.path,
+        activeTarget:path.join(queueRoot,"completed",activeRelative),
+        replacementTarget:path.join(path.dirname(active.path),path.basename(replacement.path))};
     }
   }
   const result=await completeUnblocker({queueRoot,active:activeIdentity(active),replacement,ordinaryState,
