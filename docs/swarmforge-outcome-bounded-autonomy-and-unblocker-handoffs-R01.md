@@ -1,7 +1,6 @@
 # SwarmForge outcome-bounded autonomy and unblocker handoffs R01
 
-Status: user-approved on 2026-08-17; active after Documentation Templates QA
-integration `a785a83b50`
+Status: user-approved on 2026-08-17; QA-integrated at `8f82a6a66f` on 2026-08-18
 
 ## Outcome
 
@@ -234,3 +233,30 @@ tests must prove all sixteen scenarios, including:
   and
 - the same applicable task/path generation cannot open the same preparation
   twice.
+
+## Settled QA result
+
+Final candidate `8f82a6a66f` is QA-integrated. Fourteen implementation and
+review commits add immutable ancestral authority validation; generated and
+digest-bound unblocker transport; nested queue locks, journals, duplicate,
+collision, stale, claim, completion, resume, replace, and crash recovery;
+safe-boundary daemon interrupts; shared semantic instructions; structured
+ownership intent and within-pack materiality; aggregate campsite assessment;
+immutable preparation, disposition, and remainder identities; QA-triggered
+rebase/reapply; full product-delta conservation; and idempotent same-task
+resumption.
+
+The delivery ran from the specifier handoff at 03:25:27Z to architect acceptance
+at 08:01:52Z, about four hours and 36 minutes. Repeated coder, refactorer, and
+architect passes repaired task-identity conservation, authority trust, queue
+decision boundaries, campsite branch and crash recovery, persistence bindings,
+applicability recovery, and canonical pipeline dispositions. Environment
+preflight first reported missing local-loopback and Git-metadata capabilities;
+the final exact run then completed 77 focused `shell`-parent tasks in four
+minutes and 49 seconds with properties and package proof. There was no all-20
+run and no invalidated full run.
+
+Recommendation: continue and measure the next ordinary product cycle. Treat
+renamed incidents, pack-count variance, and reversible lineage or routing
+choices through this integrated authority; reopen the structural task only for
+an observed semantic-boundary, trust, conservation, or recovery defect.

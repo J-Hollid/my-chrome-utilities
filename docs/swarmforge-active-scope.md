@@ -22,7 +22,7 @@ The settled-candidate verification workflow is integrated at
 | QA-branch release pilot | Active; routine RepoWise scouting stopped after Trial 4 by user decision on 2026-08-15, with optional current-index investigation retained for unfamiliar code or known hotspots | `docs/qa-branch-release-pilot-R01.md` controls feature integration into `qa`; `docs/feature-development-focus-and-advisory-scouting-R01.md` controls the lightweight scoping convention and completed Trial 4 decision. |
 | QA verification ownership readiness | QA-integrated through durable-runtime staging disposition repair `06222ff00f` | Preserve causal `granularity-assessment-required` routing, reviewed seam-or-parent-fallback dispositions, and autonomous product resumption without an all-20 feature run. |
 | QA verification granularity ratchet | Initial ratchet `066ea284de`; first-use mapping repair `8d3cf5012c`; durable-runtime staging repair QA-integrated at `06222ff00f` | Preserve the three-pack staging seam, both reviewed runtime dispositions, conservative broad-file ownership, and automatic product resumption. |
-| SwarmForge outcome-bounded autonomy, priority unblockers, and stacked campsite ratchet | Active by user approval after Documentation Templates QA integration `a785a83b50` | Implement `docs/swarmforge-outcome-bounded-autonomy-and-unblocker-handoffs-R01.md` from this exact QA line: semantic decisions proceed autonomously, trusted unblockers preempt at safe boundaries, and campsite preparations preserve and automatically resume the product remainder. |
+| SwarmForge outcome-bounded autonomy, priority unblockers, and stacked campsite ratchet | QA-integrated at `8f82a6a66f` on 2026-08-18 | Preserve semantic outcome-boundary decisions, immutable authority validation, safe priority-unblocker delivery, nested queue recovery, and conserved automatic campsite resumption. Measure the next product cycle; do not reopen this task for renamed incidents or changed pack predictions. |
 | QA-pilot verification latency correction | Closed after Slice 2 at `e32f9f7c10` by user decision on 2026-08-13 | No coder handoff. Measure the next three ordinary QA product cycles; Slices 3 and 4 remain evidence-triggered backlog items. |
 | QA style verification and Flow modularity | Complete on QA; stage-aware style planning is integrated at `d75132daef`, Flow CSS extraction at `ef440b3018`, corrections through `66dcdfd5d6`, and port snap at `89fee7df48` | Preserve the settled scorecard; do not reopen the abandoned mixed lineage or run all 20 before an explicit master-integration request. |
 | Flow click and drag-ownership correction | QA-integrated at `2b2cf06b45` on 2026-08-16 | Preserve directional Flow scenarios 043–045 and their runtime partners; cumulative promotion to `master` remains a separate release decision. |
@@ -103,12 +103,13 @@ binding-help, responsive Rich outline/detail, private-ID, and installed-evidence
 gaps before architect acceptance. The product task is complete on QA; cumulative
 promotion to `master` remains a separate user decision.
 
-This integration activates the previously approved structural task
-`swarmforge-outcome-bounded-autonomy`. Its immutable authority grant, feature,
-and program specification are based on this exact QA line. The task implements
-semantic auto-resolution, trusted priority unblockers, and continuous stacked
-campsite preparation without reopening Documentation Templates or running an
-all-20 feature checkpoint.
+The previously approved structural task `swarmforge-outcome-bounded-autonomy`
+is QA-integrated at `8f82a6a66f`. Its immutable authority grant, semantic
+outcome-boundary rules, trusted priority-unblocker queue, and continuous stacked
+campsite preparation are now part of the SwarmForge control surface. The exact
+review plan used the `shell` parent with its two focused slices and passed 77
+tasks, properties, package proof, queue and crash recovery, full-delta
+conservation, and automatic same-task resumption. No all-20 checkpoint ran.
 
 ## Feature-development throughput authority
 
