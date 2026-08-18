@@ -10786,6 +10786,41 @@ function verificationConsumerOwnershipRegression(context) {
     preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
     repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
 }
+function flowExampleTallFixtureCompletenessRegression(context) {
+  const flowPackSource = readFileSync("test/browser-packs/flow-graph.mjs", "utf8");
+  const routePropertiesSource = flowPackSource.match(
+    /routeProperties=\(prefix,first\)=>\[first,[\s\S]*?\],propertySet=/u,
+  )?.[0] ?? "";
+  const expectedPreRepairFailure = {
+    tallFixtureAdditionalPresence:"mixed-required-and-optional",
+    repairedEventCanBecomeComplete:false,
+  };
+  const expectedRepairResult = {
+    tallFixtureAdditionalPresence:"optional",
+    repairedEventCanBecomeComplete:true,
+  };
+  const repairResult = {
+    tallFixtureAdditionalPresence:
+      routePropertiesSource.includes("presence:'optional'") &&
+        !routePropertiesSource.includes("index%4===0?'required':'optional'")
+        ? "optional"
+        : "mixed-required-and-optional",
+    repairedEventCanBecomeComplete:
+      routePropertiesSource.includes("presence:'optional'") &&
+        !routePropertiesSource.includes("index%4===0?'required':'optional'"),
+  };
+  assert.deepEqual(repairResult, expectedRepairResult,
+    "the tall scrolling fixture must not add unrelated required Event fields");
+  const fixture = { id:"flow-example-tall-fixture-completeness-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{ fixture:"FLOW_GRAPH_EXAMPLES_TARGET", scenario:"runtime021 complete Event example" },
+    expectedPreRepairFailure, expectedRepairResult };
+  const fixtureDigest = verificationDigest(fixture);
+  return { version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
@@ -10821,6 +10856,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           ? layeredSchemaOwnershipCountConservationRegression(regressionContext)
         : regressionContext.causalCategory === "other:verification-consumer-owner-reachability"
           ? verificationConsumerOwnershipRegression(regressionContext)
+        : regressionContext.causalCategory === "other:flow-example-tall-fixture-completeness"
+          ? flowExampleTallFixtureCompletenessRegression(regressionContext)
         : regressionContext.causalCategory === "other:repair-focused prerequisite closure"
           ? repairPrerequisiteClosureRegression(regressionContext)
           : artifactLockTimeoutRepairRegression(regressionContext),
