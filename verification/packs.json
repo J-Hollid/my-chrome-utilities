@@ -5711,7 +5711,8 @@
           "swarmforge/scripts/handoffd.bb",
           "swarmforge/scripts/shared-articles/handoffs.prompt",
           "swarmforge/scripts/swarm-terminal-adapter.sh",
-          "swarmforge/scripts/swarmforge.bb"
+          "swarmforge/scripts/swarmforge.bb",
+          "acceptance/src/acceptance/steps/swarmforge_autonomy.clj"
         ],
         "sourcePrefixes": ["swarmforge/scripts/unblocker"],
         "tasks": ["unit:test/swarmforge-outcome-bounded-autonomy-test.mjs"],
@@ -6450,6 +6451,7 @@
       "test/stylesheet-declarations-property-test.mjs"
     ],
     "features": [
+      "features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature",
       "features/data-layer-secondary-view-separation.feature",
       "features/manifest-v3-side-panel-extension.feature",
       "features/modular-acceptance-execution.feature",
@@ -6487,6 +6489,7 @@
       }
     ],
     "handlers": [
+      "acceptance/src/acceptance/steps/swarmforge_autonomy.clj",
       "acceptance/src/acceptance/steps/all.clj",
       "acceptance/src/acceptance/steps/information_architecture.clj",
       "acceptance/src/acceptance/steps/modular_architecture.clj",
