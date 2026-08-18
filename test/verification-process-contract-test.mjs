@@ -10756,6 +10756,36 @@ function layeredSchemaOwnershipCountConservationRegression(context) {
     preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
     repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
 }
+function verificationConsumerOwnershipRegression(context) {
+  const relevantEdges = codeEdges.filter(({ requiredPath }) => requiredPath === "layered-schema.css")
+    .map(({ requiringOwner, requiringPath, requiredOwner }) => ({
+      requiringOwner, requiringPath, requiredOwner,
+    }));
+  const expectedPreRepairFailure = {
+    relevantEdges:[{ requiringOwner:"flow_graph",
+      requiringPath:"test/flow-stylesheet-extraction-test.mjs", requiredOwner:"shell" }],
+    reachabilityGaps:{ "flow_graph -> shell":[
+      "test/flow-stylesheet-extraction-test.mjs -> layered-schema.css",
+    ] },
+  };
+  const expectedRepairResult = {
+    relevantEdges:[{ requiringOwner:"shell",
+      requiringPath:"test/twatility-brand-foundation-test.mjs", requiredOwner:"shell" }],
+    reachabilityGaps:{},
+  };
+  const repairResult = { relevantEdges, reachabilityGaps:codeReachabilityGapSummary };
+  assert.deepEqual(repairResult, expectedRepairResult,
+    "the bounded regression proves the layered stylesheet assertion stays within Shell ownership");
+  const fixture = { id:"verification-consumer-owner-reachability-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{ stylesheet:"layered-schema.css", assertion:"single contained vertical route scroll owner" },
+    expectedPreRepairFailure, expectedRepairResult };
+  const fixtureDigest = verificationDigest(fixture);
+  return { version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
@@ -10789,6 +10819,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           ? projectOwnerEvidenceContractRegression(regressionContext)
         : regressionContext.causalCategory === "other:layered-schema-ownership-count-conservation"
           ? layeredSchemaOwnershipCountConservationRegression(regressionContext)
+        : regressionContext.causalCategory === "other:verification-consumer-owner-reachability"
+          ? verificationConsumerOwnershipRegression(regressionContext)
         : regressionContext.causalCategory === "other:repair-focused prerequisite closure"
           ? repairPrerequisiteClosureRegression(regressionContext)
           : artifactLockTimeoutRepairRegression(regressionContext),
