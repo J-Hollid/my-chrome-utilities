@@ -1,0 +1,141 @@
+import { execFile } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, readdir, rename, stat, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { promisify } from "node:util";
+
+import { unblockerContentDigest, validateAuthorityClaim, validateTransportUnblocker,
+  validateUnblockerDraft } from "./unblocker-authority.mjs";
+import { parseHandoff, renderHandoff } from "./unblocker-format.mjs";
+import { claimUnblocker, completeUnblocker, deliverUnblocker, queueFiles } from "./unblocker-queue.mjs";
+
+const exec=promisify(execFile);
+async function git(root,...args) {
+  return (await exec("git",args,{cwd:root,encoding:"utf8"})).stdout.trim();
+}
+async function exists(file) {
+  try { await stat(file); return true; }
+  catch (error) { if (error.code==="ENOENT") return false; throw error; }
+}
+async function atomicWrite(target,content) {
+  await mkdir(path.dirname(target),{recursive:true});
+  const stage=path.join(path.dirname(target),`.${path.basename(target)}.${randomUUID()}.tmp`);
+  await writeFile(stage,content,{flag:"wx"}); await rename(stage,target);
+}
+async function authorityAt(root,commit,name) {
+  return JSON.parse(await git(root,"show",`${commit}:docs/swarmforge-authorities/${name}.json`));
+}
+async function projectRoot(repositoryRoot) {
+  if (process.env.SWARMFORGE_PROJECT_ROOT) return path.resolve(process.env.SWARMFORGE_PROJECT_ROOT);
+  if (await exists(path.join(repositoryRoot,".swarmforge","roles.tsv"))) return repositoryRoot;
+  const common=await git(repositoryRoot,"rev-parse","--git-common-dir");
+  const absolute=path.isAbsolute(common)?common:path.resolve(repositoryRoot,common);
+  const candidate=path.dirname(absolute);
+  if (await exists(path.join(candidate,".swarmforge","roles.tsv"))) return candidate;
+  throw new Error("Cannot find SwarmForge project root");
+}
+async function roleRows(root) {
+  const rows=(await readFile(path.join(root,".swarmforge","roles.tsv"),"utf8")).trim().split(/\r?\n/u);
+  return new Map(rows.filter(Boolean).map((line)=>{const fields=line.split("\t");
+    return [fields[0],{role:fields[0],worktreePath:fields[2]}];}));
+}
+async function activeHandoff(root,id) {
+  const directory=path.join(root,".swarmforge","handoffs","inbox","in_process");
+  for (const name of await readdir(directory)) {
+    if (!name.endsWith(".handoff")) continue;
+    const file=path.join(directory,name),parsed=parseHandoff(await readFile(file,"utf8"));
+    if (parsed.headers.id===id) return {...parsed.headers,path:file};
+  }
+  throw new Error(`Active handoff ${id} is unavailable`);
+}
+async function trustContext(root,active,headers) {
+  const grant=await authorityAt(root,headers["authority-commit"],headers.authority);
+  const base=active.base??active.commit;
+  let authorityCommitAncestral=true,authorityCommitPresentOnBase=true;
+  try { await git(root,"merge-base","--is-ancestor",headers["authority-commit"],base); }
+  catch { authorityCommitAncestral=false; }
+  try { await authorityAt(root,base,headers.authority); }
+  catch { authorityCommitPresentOnBase=false; }
+  return {grant,authorityCommitAncestral,authorityCommitPresentOnBase};
+}
+function activeIdentity(active) {
+  return {id:active.id,from:active.from,recipient:active.recipient,task:active.task};
+}
+async function authorityValidator(root,active,headers,body) {
+  const trust=await trustContext(root,active,headers);
+  validateAuthorityClaim({headers,active:activeIdentity(active),...trust});
+}
+
+async function send(root,draftPath) {
+  const parsed=parseHandoff(await readFile(path.resolve(draftPath),"utf8"));
+  validateUnblockerDraft(parsed.headers,parsed.body);
+  const sender=process.env.SWARMFORGE_ROLE;
+  if (!sender) throw new Error("Set SWARMFORGE_ROLE");
+  const sharedRoot=await projectRoot(root),roles=await roleRows(sharedRoot);
+  const recipient=roles.get(parsed.headers.to);
+  if (!recipient?.worktreePath) throw new Error(`Unknown recipient ${parsed.headers.to}`);
+  const active=await activeHandoff(recipient.worktreePath,parsed.headers["active-handoff"]);
+  const headers={...parsed.headers,from:sender},trust=await trustContext(root,active,headers);
+  validateAuthorityClaim({headers,active:activeIdentity(active),...trust});
+  const sequence=(await exec("bb",[path.join(root,"swarmforge/scripts/handoff_lib.bb"),
+    "next-sequence"],{cwd:root,encoding:"utf8",env:process.env})).stdout.trim();
+  const date=new Date(),timestamp=date.toISOString().replaceAll(/[-:]/gu,"").replace(/\.\d{3}Z$/u,"Z");
+  const finalized={id:`${timestamp}_${sequence}_from_${sender}`,...headers,created_at:date.toISOString()};
+  finalized["content-digest"]=unblockerContentDigest(finalized,parsed.body);
+  const filename=`00_${timestamp}_${sequence}_from_${sender}_to_${headers.to}.handoff`;
+  const target=path.join(root,".swarmforge","handoffs","outbox",filename);
+  await atomicWrite(target,renderHandoff(finalized,parsed.body));
+  console.log(`UNBLOCKER QUEUED: ${target}`);
+}
+
+async function deliverFile(source,recipientRoot,sender) {
+  const parsed=parseHandoff(await readFile(path.resolve(source),"utf8"));
+  validateTransportUnblocker(parsed.headers,parsed.body);
+  if (parsed.headers.from!==sender) throw new Error("Unblocker sender does not match its outbox owner");
+  const root=path.resolve(recipientRoot),active=await activeHandoff(root,parsed.headers["active-handoff"]);
+  const trust=await trustContext(root,active,parsed.headers);
+  const result=await deliverUnblocker({queueRoot:path.join(root,".swarmforge","handoffs","inbox"),
+    headers:parsed.headers,body:parsed.body,active:activeIdentity(active),...trust});
+  console.log(JSON.stringify(result));
+}
+
+async function claim(root,activeId) {
+  const active=await activeHandoff(root,activeId),queueRoot=path.join(root,".swarmforge","handoffs","inbox");
+  const result=await claimUnblocker({queueRoot,active:activeIdentity(active),
+    authorityValidator:(headers,body)=>authorityValidator(root,active,headers,body)});
+  console.log(JSON.stringify(result,null,2));
+}
+
+async function complete(root,activeId) {
+  const active=await activeHandoff(root,activeId),queueRoot=path.join(root,".swarmforge","handoffs","inbox");
+  const claimed=await queueFiles(queueRoot,"in_process");
+  if (claimed.length>1) throw new Error("At most one claimed unblocker is allowed");
+  const parsed=claimed.length ? parseHandoff(await readFile(claimed[0],"utf8")) : null;
+  let replacement,ordinaryState;
+  if (parsed?.headers.mode==="replace") {
+    const ordinaryNew=path.join(queueRoot,"new");
+    for (const name of await readdir(ordinaryNew)) {
+      if (!name.endsWith(".handoff")) continue;
+      const file=path.join(ordinaryNew,name);
+      const candidate=parseHandoff(await readFile(file,"utf8"));
+      if (candidate.headers.id===parsed.headers["replacement-handoff"]) {
+        replacement={...candidate.headers,path:file};
+        ordinaryState={activeFile:active.path,replacementFile:file,
+          completedDir:path.join(queueRoot,"completed"),inProcessDir:path.join(queueRoot,"in_process")};
+        break;
+      }
+    }
+  }
+  const result=await completeUnblocker({queueRoot,active:activeIdentity(active),replacement,ordinaryState,
+    authorityValidator:(headers,body)=>authorityValidator(root,active,headers,body)});
+  console.log(result.status==="resume"?`RESUME: ${active.path}`:JSON.stringify(result));
+}
+
+export async function unblockerCli(args,{root=process.cwd()}={}) {
+  const [command,...rest]=args;
+  if (command==="send") return send(root,rest[0]);
+  if (command==="deliver-file") return deliverFile(rest[0],rest[1],rest[2]);
+  if (command==="claim") return claim(root,rest[0]);
+  if (command==="complete") return complete(root,rest[0]);
+  throw new Error("Use: unblocker-control.mjs send <draft> | deliver-file <source> <recipient-root> <sender> | claim <active-id> | complete <active-id>");
+}

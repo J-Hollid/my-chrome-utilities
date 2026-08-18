@@ -11,6 +11,7 @@ import {
   classifyOutcome,
   completeUnblocker,
   deliverUnblocker,
+  unblockerContentDigest,
   validateAuthorityClaim,
   validateUnblockerDraft,
   claimUnblocker,
@@ -23,6 +24,7 @@ import {
 } from "../scripts/stacked-campsite-control.mjs";
 
 const exec=promisify(execFile);
+const unblockerControl=path.resolve("swarmforge/scripts/unblocker-control.mjs");
 async function git(cwd,...args){return (await exec("git",args,{cwd,encoding:"utf8"})).stdout.trim();}
 
 const grantWithoutDigest = {
@@ -70,12 +72,45 @@ for (const crossing of ["reversible", "preservesBehavior", "externalRiskIncrease
 
 // 003-004 and 010-011: authority is structured, immutable, ancestral, and issuer-bound.
 assert.equal(validateUnblockerDraft(validHeaders,"bounded detail").mode,"resume");
+for (const field of ["id","from","recipient","created_at","enqueued_at","dequeued_at",
+  "completed_at","content-digest","unexpected-field"]) {
+  assert.throws(()=>validateUnblockerDraft({...validHeaders,[field]:"agent-authored"},""),
+    /reserved|unknown|generated/i,field);
+}
+const rejectedSendRoot=await mkdtemp(path.join(os.tmpdir(),"swarmforge-unblocker-send-reject-"));
+for (const field of ["id","from","recipient","created_at","enqueued_at","dequeued_at",
+  "completed_at","content-digest","unexpected-field"]) {
+  const draft=path.join(rejectedSendRoot,`${field}.handoff`);
+  await writeFile(draft,`${Object.entries({...validHeaders,[field]:"agent-authored"})
+    .map(([key,value])=>`${key}: ${value}`).join("\n")}\n\nbounded`);
+  await assert.rejects(exec(process.execPath,[unblockerControl,"send",draft],{
+    cwd:rejectedSendRoot,env:{...process.env,SWARMFORGE_ROLE:"specifier"}}),
+  /reserved|unknown|generated/i,field);
+}
+assert.equal((await readdir(rejectedSendRoot)).some((name)=>name===".swarmforge"),false,
+  "draft rejection occurs before sequence allocation or outbox creation");
+await rm(rejectedSendRoot,{recursive:true,force:true});
 for (const [field,value] of [["to","coder,refactorer"],["priority","01"],["mode","run"],
   ["message","x".repeat(81)]]) {
   assert.throws(()=>validateUnblockerDraft({...validHeaders,[field]:value},""),/unblocker/i);
 }
 assert.equal(validateAuthorityClaim({headers:validHeaders,grant,active,
   authorityCommitPresentOnBase:true,authorityCommitAncestral:true}).trusted,true);
+assert.equal(validateAuthorityClaim({headers:{...validHeaders,from:"specifier"},grant,
+  active:{...active,from:"coder"},authorityCommitPresentOnBase:true,
+  authorityCommitAncestral:true}).trusted,true);
+assert.throws(()=>validateAuthorityClaim({headers:{...validHeaders,from:"specifier",mode:"replace",
+  supersedes:active.id,"replacement-handoff":"replacement"},grant,active:{...active,from:"coder"},
+  authorityCommitPresentOnBase:true,authorityCommitAncestral:true}),/replace.*sender|sender.*replace/i);
+const crossRoleRoot=await mkdtemp(path.join(os.tmpdir(),"swarmforge-unblocker-cross-role-"));
+const crossRoleActive={...active,from:"coder"};
+assert.equal((await deliverUnblocker({queueRoot:crossRoleRoot,
+  headers:{...validHeaders,from:"specifier",name:"cross-role-resume"},body:"bounded",grant,
+  active:crossRoleActive,authorityCommitPresentOnBase:true,
+  authorityCommitAncestral:true})).status,"queued");
+assert.equal((await claimUnblocker({queueRoot:crossRoleRoot,active:crossRoleActive,grant,
+  authorityCommitPresentOnBase:true,authorityCommitAncestral:true})).status,"claimed");
+await rm(crossRoleRoot,{recursive:true,force:true});
 for (const change of [
   {authorityCommitPresentOnBase:false}, {authorityCommitAncestral:false},
   {headers:{...validHeaders,from:"coder"}},
@@ -113,6 +148,28 @@ const stale=await deliverUnblocker({queueRoot,headers:{...validHeaders,from:"spe
   authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
 assert.equal(stale.status,"stale");
 assert.equal(stale.activeRetained,true);
+
+const tamperRoot=await mkdtemp(path.join(os.tmpdir(),"swarmforge-unblocker-tamper-"));
+await deliverUnblocker({queueRoot:tamperRoot,headers:{...validHeaders,from:"specifier"},body:"bounded",
+  grant,active,authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+const [tamperFile]=await readdir(path.join(tamperRoot,"unblockers","new"));
+const tamperPath=path.join(tamperRoot,"unblockers","new",tamperFile);
+await writeFile(tamperPath,(await readFile(tamperPath,"utf8")).replace("mode: resume","mode: replace"));
+await assert.rejects(claimUnblocker({queueRoot:tamperRoot,active,grant,
+  authorityCommitPresentOnBase:true,authorityCommitAncestral:true}),/digest|modified/i);
+await rm(tamperRoot,{recursive:true,force:true});
+
+const completionTamperRoot=await mkdtemp(path.join(os.tmpdir(),"swarmforge-unblocker-complete-tamper-"));
+await deliverUnblocker({queueRoot:completionTamperRoot,
+  headers:{...validHeaders,from:"specifier",name:"completion-tamper"},body:"bounded",grant,active,
+  authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+const completionTamperClaim=await claimUnblocker({queueRoot:completionTamperRoot,active,grant,
+  authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+await writeFile(completionTamperClaim.file,(await readFile(completionTamperClaim.file,"utf8"))
+  .replace("message: Resume bounded repair","message: Altered authority"));
+await assert.rejects(completeUnblocker({queueRoot:completionTamperRoot,active,grant,
+  authorityCommitPresentOnBase:true,authorityCommitAncestral:true}),/digest|modified/i);
+await rm(completionTamperRoot,{recursive:true,force:true});
 const replacement={id:"20260818T010100Z_000002_from_specifier",from:"specifier",recipient:"coder",
   task:active.task,path:"replacement.handoff"};
 const replaceHeaders={...validHeaders,from:"specifier",name:"replace-stopped-candidate",mode:"replace",
@@ -130,10 +187,88 @@ await mkdir(ordinaryNew,{recursive:true}); await mkdir(ordinaryCurrent,{recursiv
 const activeFile=path.join(ordinaryCurrent,"active.handoff"),replacementFile=path.join(ordinaryNew,"replacement.handoff");
 await writeFile(activeFile,"active\n"); await writeFile(replacementFile,"replacement\n");
 const replaced=await completeUnblocker({queueRoot,active,replacement,ordinaryState:{activeFile,replacementFile,
-  completedDir:ordinaryCompleted,inProcessDir:ordinaryCurrent}});
+  completedDir:ordinaryCompleted,inProcessDir:ordinaryCurrent},grant,
+  authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
 assert.equal(replaced.status,"replace");
 assert.equal(await readFile(path.join(ordinaryCompleted,"active.handoff"),"utf8"),"active\n");
 assert.equal(await readFile(path.join(ordinaryCurrent,"replacement.handoff"),"utf8"),"replacement\n");
+
+for (const faultAt of ["claim-journal-written","claim-moved","claim-written"]) {
+  const crashRoot=await mkdtemp(path.join(os.tmpdir(),"swarmforge-unblocker-claim-crash-"));
+  const crashHeaders={...validHeaders,from:"specifier",name:`claim-crash-${faultAt}`};
+  await deliverUnblocker({queueRoot:crashRoot,headers:crashHeaders,body:"bounded",grant,active,
+    authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+  await assert.rejects(claimUnblocker({queueRoot:crashRoot,active,grant,
+    authorityCommitPresentOnBase:true,authorityCommitAncestral:true,faultAt}),/injected crash/i);
+  const recovered=await claimUnblocker({queueRoot:crashRoot,active,grant,
+    authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+  assert.ok(["claimed","already-claimed"].includes(recovered.status),faultAt);
+  assert.equal((await readdir(path.join(crashRoot,"unblockers","new"))).length,0,faultAt);
+  assert.equal((await readdir(path.join(crashRoot,"unblockers","in_process"))).length,1,faultAt);
+  await rm(crashRoot,{recursive:true,force:true});
+}
+
+const legacyDuplicateRoot=await mkdtemp(path.join(os.tmpdir(),"swarmforge-unblocker-legacy-duplicate-"));
+const legacyDelivery=await deliverUnblocker({queueRoot:legacyDuplicateRoot,
+  headers:{...validHeaders,from:"specifier",name:"legacy-copy-delete-crash"},body:"bounded",grant,active,
+  authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+const legacyNew=path.join(legacyDuplicateRoot,"unblockers","new",legacyDelivery.filename);
+const legacyQueuedContent=await readFile(legacyNew,"utf8");
+await claimUnblocker({queueRoot:legacyDuplicateRoot,active,grant,
+  authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+await writeFile(legacyNew,legacyQueuedContent);
+assert.equal((await claimUnblocker({queueRoot:legacyDuplicateRoot,active,grant,
+  authorityCommitPresentOnBase:true,authorityCommitAncestral:true})).status,"already-claimed");
+assert.equal((await readdir(path.join(legacyDuplicateRoot,"unblockers","new"))).length,0,
+  "a legacy copy-then-delete crash is retired exactly once");
+await rm(legacyDuplicateRoot,{recursive:true,force:true});
+
+for (const faultAt of ["complete-journal-written","complete-unblocker-moved",
+  "complete-unblocker-written"]) {
+  const crashRoot=await mkdtemp(path.join(os.tmpdir(),"swarmforge-unblocker-resume-crash-"));
+  await deliverUnblocker({queueRoot:crashRoot,
+    headers:{...validHeaders,from:"specifier",name:`resume-crash-${faultAt}`},body:"bounded",grant,active,
+    authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+  await claimUnblocker({queueRoot:crashRoot,active,grant,
+    authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+  await assert.rejects(completeUnblocker({queueRoot:crashRoot,active,grant,
+    authorityCommitPresentOnBase:true,authorityCommitAncestral:true,faultAt}),/injected crash/i);
+  assert.equal((await completeUnblocker({queueRoot:crashRoot,active,grant,
+    authorityCommitPresentOnBase:true,authorityCommitAncestral:true})).status,"resume",faultAt);
+  assert.equal((await readdir(path.join(crashRoot,"unblockers","in_process"))).length,0,faultAt);
+  assert.equal((await readdir(path.join(crashRoot,"unblockers","completed"))).length,1,faultAt);
+  await rm(crashRoot,{recursive:true,force:true});
+}
+
+for (const faultAt of ["complete-journal-written","complete-replacement-activated",
+  "complete-active-archived","complete-unblocker-moved","complete-unblocker-written"]) {
+  const crashRoot=await mkdtemp(path.join(os.tmpdir(),"swarmforge-unblocker-replace-crash-"));
+  const crashReplacement={...replacement,id:`replacement-${faultAt}`};
+  const crashHeaders={...validHeaders,from:"specifier",name:`replace-crash-${faultAt}`,mode:"replace",
+    supersedes:active.id,"replacement-handoff":crashReplacement.id};
+  await deliverUnblocker({queueRoot:crashRoot,headers:crashHeaders,body:"bounded",grant,active,
+    authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+  await claimUnblocker({queueRoot:crashRoot,active,grant,
+    authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+  const ordinaryNewDir=path.join(crashRoot,"ordinary","new");
+  const ordinaryCurrentDir=path.join(crashRoot,"ordinary","in_process");
+  const ordinaryCompletedDir=path.join(crashRoot,"ordinary","completed");
+  await mkdir(ordinaryNewDir,{recursive:true}); await mkdir(ordinaryCurrentDir,{recursive:true});
+  const crashActiveFile=path.join(ordinaryCurrentDir,"active.handoff");
+  const crashReplacementFile=path.join(ordinaryNewDir,"replacement.handoff");
+  await writeFile(crashActiveFile,"active\n"); await writeFile(crashReplacementFile,"replacement\n");
+  const completion={queueRoot:crashRoot,active,replacement:crashReplacement,
+    ordinaryState:{activeFile:crashActiveFile,replacementFile:crashReplacementFile,
+      completedDir:ordinaryCompletedDir,inProcessDir:ordinaryCurrentDir},grant,
+    authorityCommitPresentOnBase:true,authorityCommitAncestral:true};
+  await assert.rejects(completeUnblocker({...completion,faultAt}),/injected crash/i);
+  assert.equal((await completeUnblocker(completion)).status,"replace",faultAt);
+  assert.equal(await readFile(path.join(ordinaryCompletedDir,"active.handoff"),"utf8"),"active\n",faultAt);
+  assert.equal(await readFile(path.join(ordinaryCurrentDir,"replacement.handoff"),"utf8"),
+    "replacement\n",faultAt);
+  assert.equal((await readdir(path.join(crashRoot,"unblockers","in_process"))).length,0,faultAt);
+  await rm(crashRoot,{recursive:true,force:true});
+}
 
 // 009: the launch plan, not catalogue or literal pack count, defines bounded scope.
 assert.equal(boundedExecutionScope({catalogueSize:20,authorizedTasks:["build:dist","browser:one"],
@@ -152,7 +287,8 @@ const manifest=createRemainderManifest({task:assessed.task,splitBase:"1".repeat(
 assert.equal(manifest.remainder.task,"documentation-templates");
 assert.equal(manifest.remainder.orderedCommits.length,1);
 const resumedStack=resumeRemainder(manifest,{newQaHead:"7".repeat(40),
-  observedPostRebaseDelta:"6".repeat(64),resumedHead:"8".repeat(40)});
+  observedPostRebaseDelta:"6".repeat(64),observedChangeSetDigest:"5".repeat(64),
+  resumedHead:"8".repeat(40)});
 assert.equal(resumedStack.reissuedTask,"documentation-templates");
 assert.equal(resumedStack.status,"resumed");
 const dispositions=[];
@@ -164,7 +300,8 @@ assert.throws(()=>recordDisposition(dispositions,{task:manifest.task,path:"src/b
 assert.equal(recordDisposition(dispositions,{task:manifest.task,path:"src/broad-a.ts",
   boundary:"shell",generation:"shell-v2",result:"slice",consumers:["shell"]}).generation,"shell-v2");
 assert.throws(()=>resumeRemainder(manifest,{newQaHead:"7".repeat(40),
-  observedPostRebaseDelta:"9".repeat(64),resumedHead:"8".repeat(40)}),/delta/i);
+  observedPostRebaseDelta:"9".repeat(64),observedChangeSetDigest:"5".repeat(64),
+  resumedHead:"8".repeat(40)}),/delta/i);
 
 assert.equal((await readFile(path.join(queueRoot,"unblockers","completed",delivered.filename),"utf8"))
   .includes("content-digest:"),true);
@@ -194,6 +331,7 @@ try {
       .join("\n")+"\n\nactive\n");
   const daemonHeaders={...validHeaders,id:"generated-id",from:"specifier",
     "authority-commit":authorityCommit,created_at:new Date().toISOString()};
+  daemonHeaders["content-digest"]=unblockerContentDigest(daemonHeaders,"bounded\n");
   const outboxFile=path.join(senderRoot,".swarmforge/handoffs/outbox/00_unblocker.handoff");
   await writeFile(outboxFile,Object.entries(daemonHeaders).map(([key,value])=>`${key}: ${value}`)
     .join("\n")+"\n\nbounded\n");
@@ -206,6 +344,10 @@ try {
     {mode:0o755});
   await exec("bb",[path.resolve("swarmforge/scripts/handoffd.bb"),project,"--once"],{
     cwd:path.resolve("."),env:{...process.env,PATH:`${fakeBin}${path.delimiter}${process.env.PATH}`,TMUX_LOG:tmuxLog}});
+  const daemonErrors=(await readdir(path.join(senderRoot,".swarmforge/handoffs/outbox")))
+    .filter((name)=>name.endsWith(".error"));
+  assert.deepEqual(daemonErrors,[],daemonErrors.length
+    ? await readFile(path.join(senderRoot,".swarmforge/handoffs/outbox",daemonErrors[0]),"utf8") : "");
   const nested=await readdir(path.join(recipientRoot,".swarmforge/handoffs/inbox/unblockers/new"));
   assert.equal(nested.length,1);
   assert.equal((await readdir(path.join(senderRoot,".swarmforge/handoffs/sent"))).length,1);

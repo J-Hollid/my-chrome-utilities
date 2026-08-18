@@ -45,10 +45,14 @@ export function createRemainderManifest(input) {
     expectedPostRebaseDelta:input.expectedPostRebaseDelta,status:"preserved"};
 }
 
-export function resumeRemainder(manifest,{newQaHead,observedPostRebaseDelta,resumedHead}) {
+export function resumeRemainder(manifest,{newQaHead,observedPostRebaseDelta,
+  observedChangeSetDigest,resumedHead}) {
   requireSha(newQaHead,sha40,"new QA head"); requireSha(resumedHead,sha40,"resumed head");
   if (observedPostRebaseDelta!==manifest.expectedPostRebaseDelta) {
     throw new Error("Resumed product delta does not match the preserved remainder");
+  }
+  if (observedChangeSetDigest!==manifest.remainder.changeSetDigest) {
+    throw new Error("Resumed complete change-set delta does not match the preserved remainder");
   }
   return {...manifest,status:"resumed",newQaHead,resumedHead,
     reissuedTask:manifest.task,deltaConserved:true};
@@ -105,24 +109,37 @@ async function cli(args) {
     const head=await git(root,"rev-parse","HEAD");
     if (head!==manifest.remainder.head) throw new Error("Current HEAD is not the preserved remainder head");
     const newQaHead=await git(root,"rev-parse",newQaRef);
-    await git(root,"rebase","--onto",newQaHead,manifest.splitBase,manifest.remainder.head);
-    const resumedHead=await git(root,"rev-parse","HEAD");
-    const delta=await git(root,"diff","--binary",newQaHead,resumedHead,"--",...manifest.causalPaths);
-    const result=resumeRemainder(manifest,{newQaHead,observedPostRebaseDelta:deltaDigest(delta),resumedHead});
-    const target=path.resolve(manifestPath);
-    await writeFile(target,`${JSON.stringify(result,null,2)}\n`);
-    const resumedDir=path.join(root,".swarmforge","campsites","resumed");
-    await mkdir(resumedDir,{recursive:true});
-    await writeFile(path.join(resumedDir,`${manifest.task}.json`),`${JSON.stringify(result,null,2)}\n`);
-    console.log(`REISSUE ${result.reissuedTask} ${result.resumedHead}`); return;
+    try {
+      await git(root,"rebase","--onto",newQaHead,manifest.splitBase,manifest.remainder.head);
+      const resumedHead=await git(root,"rev-parse","HEAD");
+      const [delta,completeDelta]=await Promise.all([
+        git(root,"diff","--binary",newQaHead,resumedHead,"--",...manifest.causalPaths),
+        git(root,"diff","--binary",newQaHead,resumedHead),
+      ]);
+      const result=resumeRemainder(manifest,{newQaHead,observedPostRebaseDelta:deltaDigest(delta),
+        observedChangeSetDigest:deltaDigest(completeDelta),resumedHead});
+      const target=path.resolve(manifestPath);
+      await writeFile(target,`${JSON.stringify(result,null,2)}\n`);
+      const resumedDir=path.join(root,".swarmforge","campsites","resumed");
+      await mkdir(resumedDir,{recursive:true});
+      await writeFile(path.join(resumedDir,`${manifest.task}.json`),`${JSON.stringify(result,null,2)}\n`);
+      console.log(`REISSUE ${result.reissuedTask} ${result.resumedHead}`); return;
+    } catch (error) {
+      try { await git(root,"rebase","--abort"); } catch {}
+      if (await git(root,"rev-parse","HEAD")!==manifest.remainder.head) {
+        await git(root,"switch","--detach",manifest.remainder.head);
+      }
+      throw error;
+    }
   }
   if (command==="validate-resume") {
     const manifest=JSON.parse(await readFile(path.resolve(rest[0]),"utf8"));
-    const result=resumeRemainder(manifest,{newQaHead:rest[1],observedPostRebaseDelta:rest[2],resumedHead:rest[3]});
+    const result=resumeRemainder(manifest,{newQaHead:rest[1],observedPostRebaseDelta:rest[2],
+      observedChangeSetDigest:rest[3],resumedHead:rest[4]});
     await writeFile(path.resolve(rest[0]),`${JSON.stringify(result,null,2)}\n`);
     console.log(`REISSUE ${result.reissuedTask} ${result.resumedHead}`); return;
   }
-  throw new Error("Use: stacked-campsite-control.mjs preserve <task> <split-base> <prerequisite> <remainder-head> <generation> <causal-paths-json> <manifest> | resume <manifest> <new-qa> | validate-resume <manifest> <qa-head> <delta> <resumed-head>");
+  throw new Error("Use: stacked-campsite-control.mjs preserve <task> <split-base> <prerequisite> <remainder-head> <generation> <causal-paths-json> <manifest> | resume <manifest> <new-qa> | validate-resume <manifest> <qa-head> <causal-delta> <complete-delta> <resumed-head>");
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url)===path.resolve(process.argv[1])) {

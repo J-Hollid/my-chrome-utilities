@@ -24,7 +24,11 @@ const manifest=createRemainderManifest({task:assessment.task,splitBase:"2".repea
   causalPaths:assessment.causalPaths,boundaryGeneration:"shell-v1",
   expectedPostRebaseDelta:"7".repeat(64)});
 assert.equal(resumeRemainder(manifest,{newQaHead:"8".repeat(40),
-  observedPostRebaseDelta:"7".repeat(64),resumedHead:"9".repeat(40)}).reissuedTask,"product-task");
+  observedPostRebaseDelta:"7".repeat(64),observedChangeSetDigest:"6".repeat(64),
+  resumedHead:"9".repeat(40)}).reissuedTask,"product-task");
+assert.throws(()=>resumeRemainder(manifest,{newQaHead:"8".repeat(40),
+  observedPostRebaseDelta:"7".repeat(64),observedChangeSetDigest:"0".repeat(64),
+  resumedHead:"9".repeat(40)}),/complete.*delta|change-set/i);
 const records=[];
 recordDisposition(records,{task:"product-task",path:"src/one.ts",boundary:"shell",
   generation:"shell-v1",result:"parent-fallback",failedPremise:"seam is not stable",consumers:["shell"]});
@@ -37,10 +41,12 @@ try {
   await git(repository,"config","user.email","campsite@example.test");
   await mkdir(path.join(repository,"src"));
   await writeFile(path.join(repository,"src/product.ts"),"export const product = 1;\n");
+  await writeFile(path.join(repository,"src/outside.ts"),"export const outside = 1;\n");
   await writeFile(path.join(repository,"mapping.json"),"{}\n");
   await git(repository,"add","."); await git(repository,"commit","-qm","base");
   const base=await git(repository,"rev-parse","HEAD");
   await writeFile(path.join(repository,"src/product.ts"),"export const product = 2;\n");
+  await writeFile(path.join(repository,"src/outside.ts"),"export const outside = 2;\n");
   await git(repository,"commit","-qam","product remainder");
   const remainder=await git(repository,"rev-parse","HEAD");
   await git(repository,"switch","-qc","preparation",base);
@@ -56,8 +62,24 @@ try {
   assert.equal(resumedManifest.status,"resumed");
   assert.equal(resumedManifest.deltaConserved,true);
   assert.equal(await readFile(path.join(repository,"src/product.ts"),"utf8"),"export const product = 2;\n");
+  assert.equal(await readFile(path.join(repository,"src/outside.ts"),"utf8"),"export const outside = 2;\n");
   assert.equal(JSON.parse(await readFile(path.join(repository,"mapping.json"),"utf8")).slice,"ready");
   assert.equal(JSON.parse(await readFile(path.join(repository,".swarmforge/campsites/resumed/product-task.json"),
     "utf8")).reissuedTask,"product-task");
+
+  await git(repository,"switch","-q","--detach",remainder);
+  await rm(manifestPath);
+  const mismatchManifestPath=path.join(repository,".swarmforge/campsites/mismatch-campsite.json");
+  await mkdir(path.dirname(mismatchManifestPath),{recursive:true});
+  await exec(process.execPath,[control,"preserve","mismatch-task",base,preparation,remainder,
+    "shell-v1",JSON.stringify(["src/product.ts"]),mismatchManifestPath],{cwd:repository});
+  const mismatchManifest=JSON.parse(await readFile(mismatchManifestPath,"utf8"));
+  mismatchManifest.remainder.changeSetDigest="0".repeat(64);
+  await writeFile(mismatchManifestPath,`${JSON.stringify(mismatchManifest,null,2)}\n`);
+  await assert.rejects(exec(process.execPath,[control,"resume",mismatchManifestPath,preparation],
+    {cwd:repository}),/complete.*delta|change-set/i);
+  assert.equal(await git(repository,"rev-parse","HEAD"),remainder,
+    "a failed full-delta check restores the preserved stack head");
+  assert.equal(await readFile(path.join(repository,"src/outside.ts"),"utf8"),"export const outside = 2;\n");
 } finally { await rm(repository,{recursive:true,force:true}); }
 console.log("Stacked campsite control contracts passed.");
