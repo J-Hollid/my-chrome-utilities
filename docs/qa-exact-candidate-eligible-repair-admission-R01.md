@@ -1,6 +1,6 @@
 # QA exact-candidate eligible-repair admission R01
 
-Status: policy approved by the user on 2026-08-19; implementation handoff awaits approval of this specification
+Status: policy and implementation handoff approved by the user on 2026-08-19
 
 Prepared: 2026-08-19
 
