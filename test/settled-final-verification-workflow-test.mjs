@@ -597,12 +597,14 @@ try {
   const selectedIdentity = { key:"unit:test/admission.mjs", stage:"unit", executable:"node",
     args:["test/admission.mjs"], target:"test/admission.mjs", packId:null, environment:null,
     requiredCapabilities:[] };
-  const repair = { status:"eligible", candidate:{ commit, tree },
+  const repairSourceCommit = "a".repeat(40), repairSourceTree = "b".repeat(40);
+  const repair = { status:"eligible",
+    candidate:{ commit:repairSourceCommit, tree:repairSourceTree },
     checkpoint:{ baseCommit:base, evidenceTask:"eligible-repair-admission" },
     causalCategory:"review transaction", causalExplanation:"The exact admission is rederived.",
-    regression:{ key:selectedIdentity.key, status:"passed", commit,
+    regression:{ key:selectedIdentity.key, status:"passed", commit:repairSourceCommit,
       receiptSha256:"6".repeat(64) },
-    focusedReceipt:{ status:"passed", commit, provenance:"fresh",
+    focusedReceipt:{ status:"passed", commit:repairSourceCommit, provenance:"fresh",
       receiptSha256:"7".repeat(64) },
     causalProtocol:{ version:2, incidentId:"incident-admission",
       failureDigest:"3".repeat(64), preRepairResult:{ status:"failed" },
@@ -633,7 +635,9 @@ try {
     recordedAt:"2026-08-11T10:03:00.000Z",
   });
   const incident = { id:"incident-admission", state:"unresolved",
-    failureDigest:"3".repeat(64), failure:{ causalKey:"4".repeat(64), task:selectedIdentity }, repair };
+    failureDigest:"3".repeat(64), failure:{ causalKey:"4".repeat(64), task:selectedIdentity }, repair,
+    lineageTransitions:[{ kind:"rebase", fromCommit:repairSourceCommit,
+      toCommit:commit, toTree:tree, at:"2026-08-19T13:57:12.536Z" }] };
   const deferrals = [];
   let persistedIncident = structuredClone(incident);
   let blockingIncidents = [persistedIncident];

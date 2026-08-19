@@ -403,7 +403,7 @@ function deferredPromotionRegressionKey(incident, admission) {
 
 const digestPattern = /^[a-f0-9]{64}$/u;
 
-function eligibleRepairCandidateMatches(incident, candidate) {
+export function eligibleRepairCandidateMatches(incident, candidate) {
   let current = incident?.repair?.candidate;
   if (!current) return false;
   for (const transition of incident.lineageTransitions ?? []) {

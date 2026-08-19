@@ -32,6 +32,7 @@ import { canonicalPackageProof } from "./verification-reliability-runtime.mjs";
 import {
   buildConfirmedFlakyAdmissions, buildEligibleRepairAdmissions,
   confirmedFlakyAdmissionCandidates, eligibleRepairAdmissionCandidates,
+  eligibleRepairCandidateMatches,
 } from "./verification-run-intent.mjs";
 import { withVerificationNotesLock } from "./verification-git-notes.mjs";
 import {
@@ -289,8 +290,8 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
         const eligible = entry.repairDigest !== undefined;
         if (incident.state !== "unresolved" || incident.failureDigest !== entry.failureDigest ||
             eligible && (incident.repair?.status !== "eligible" ||
-              incident.repair?.candidate?.commit !== record.candidateCommit ||
-              incident.repair?.candidate?.tree !== record.candidateTree ||
+              !eligibleRepairCandidateMatches(incident, { commit:record.candidateCommit,
+                tree:record.candidateTree }) ||
               timeoutIncidentDigest(incident.repair) !== entry.repairDigest) ||
             !eligible && (incident.retry?.classification !== "confirmed-flaky" ||
               timeoutIncidentDigest(incident.retry) !== entry.classificationDigest)) {
