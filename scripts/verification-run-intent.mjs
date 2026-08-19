@@ -301,6 +301,7 @@ export function confirmedFlakyAdmissionCandidates(incidents) {
 }
 
 function exactValue(left, right) {
+  if (left === undefined || right === undefined) return left === right;
   return timeoutIncidentDigest(left) === timeoutIncidentDigest(right);
 }
 

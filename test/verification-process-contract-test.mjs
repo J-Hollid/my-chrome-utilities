@@ -7796,6 +7796,22 @@ assert.deepEqual(flakyAdmissions.entries.map(({ incidentId, coverageKind, select
 assert.equal(flakyAdmissions.entries[0].classificationDigest,
   timeoutIncidentDigest(flakyIncident.retry));
 assert.equal(flakyAdmissions.entries[0].registryDigest, flakyDiagnostic.registryDigest);
+const taskScopedDiagnostic = structuredClone(flakyDiagnostic);
+delete taskScopedDiagnostic.diagnostic.scope.logicalTargetIds;
+delete taskScopedDiagnostic.tasks[bootstrapTask.key].execution.logicalTargetIds;
+const taskScopedDiagnosticBytes = Buffer.from(JSON.stringify(taskScopedDiagnostic));
+const taskScopedIncident = structuredClone(flakyIncident);
+delete taskScopedIncident.failure.retryScope.logicalTargetIds;
+taskScopedIncident.retry.receiptSha256 = createHash("sha256")
+  .update(taskScopedDiagnosticBytes).digest("hex");
+const taskScopedAdmissions = await buildConfirmedFlakyAdmissions({ root:"fixture",
+  incidents:[taskScopedIncident], plan:bootstrapPlan, packs,
+  candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+  baseCommit:"approved-contract-base", evidenceTask:"confirmed-flaky-feature-deferral",
+  changeSetDigest:"5".repeat(64), planDigest:"6".repeat(64),
+  receiptLoader:async()=>taskScopedDiagnosticBytes });
+assert.equal(taskScopedAdmissions.entries[0].incidentId, "confirmed-flaky",
+  "ordinary task-scope retries admit exact receipts without logical target identifiers");
 const rebasedFlakyIncident = structuredClone(flakyIncident);
 rebasedFlakyIncident.lineageTransitions = [{ kind:"rebase",
   fromCommit:"bootstrap-candidate", toCommit:"rebased-candidate", toTree:"rebased-tree" }];
