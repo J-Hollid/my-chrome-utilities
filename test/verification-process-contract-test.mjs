@@ -219,6 +219,7 @@ const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
 });
 
 const createAuthorizedTestCommandRunner = (context, options = {}) => async(display, task) => {
+  context.receipt.registryDigest ??= "f".repeat(64);
   const authorizedTask = { ...task, requiredCapabilities:[...(task.requiredCapabilities ?? [])] };
   const launchRoutes = options.launchRoutes ?? new Map([[task.key, "workspace-sandbox"]]);
   const authorizationContext = {
@@ -2579,7 +2580,8 @@ try {
     environment:{ node:"24.19.0", typescript:"5.9.3", platform:"linux-x64",
       executionLoad:"normal", concurrency:4, observationConcurrency:1 },
     artifact:{ inputDigest:"b".repeat(64), outputDigest:"c".repeat(64), buildIdentity:"d".repeat(64) },
-    planDigest:"e".repeat(64), outputSha256:"f".repeat(64), stderrSha256:"0".repeat(64),
+    planDigest:"e".repeat(64), registryDigest:"1".repeat(64),
+    outputSha256:"f".repeat(64), stderrSha256:"0".repeat(64),
     lastProgress:{ boundary:"artifact/setup", phase:"dist-artifact-lock", monotonicMs:599000,
       state:{ pending:true } },
   };
@@ -2621,6 +2623,14 @@ try {
     changedInnerDeadline.failure.retryIdentity;
   assert.equal(innerDeadlineIdentityConserved, true,
     "resolved inner deadlines are part of the unchanged diagnostic identity");
+  const registryMutation = await store.create({ ...failure, runnerRunId:"run-registry-change",
+    registryDigest:"2".repeat(64) });
+  const toolchainMutation = await store.create({ ...failure, runnerRunId:"run-toolchain-change",
+    environment:{ ...failure.environment, node:"25.0.0" } });
+  assert.notEqual(first.failure.retryIdentity, registryMutation.failure.retryIdentity,
+    "the exact verification registry participates in diagnostic retry identity");
+  assert.notEqual(first.failure.retryIdentity, toolchainMutation.failure.retryIdentity,
+    "the exact toolchain participates in diagnostic retry identity");
   for (const task of [
     { key:"build:dist", stage:"build", packId:null, executable:"npm", args:["run", "build"] },
     { key:"acceptance-parse:features/example.feature", stage:"acceptance-parse", packId:"shell",
@@ -2674,8 +2684,11 @@ try {
   await mkdir(receiptDirectory, { recursive:true });
   const writeRunnerReceipt = async(name, receipt) => {
     const target = path.join(receiptDirectory, `${name}.json`);
+    const completeReceipt = { registryDigest:failure.registryDigest, ...receipt,
+      ...(receipt.diagnostic ? { diagnostic:{ registryDigest:failure.registryDigest,
+        ...receipt.diagnostic } } : {}) };
     await writeFile(target, `${JSON.stringify({ version:2, runId:name,
-      completedAt:"2026-08-09T00:00:01.000Z", ...receipt })}\n`);
+      completedAt:"2026-08-09T00:00:01.000Z", ...completeReceipt })}\n`);
     return target;
   };
   assert.equal(first.state, "unresolved");
@@ -2688,7 +2701,7 @@ try {
   assert.equal((await store.list()).filter(({ id }) =>
     concurrentIncidents.some((incident) => incident.id === id)).length, 2,
   "concurrent incident writers retain both immutable documents");
-  assert.equal((await store.blocking({ commit:"failed-commit" })).length, 4);
+  assert.equal((await store.blocking({ commit:"failed-commit" })).length, 6);
   const caseProgressLines = [];
   let caseProgressNow = 100;
   const emitCaseProgress = verificationProgressEmitter({
@@ -2740,15 +2753,20 @@ try {
     /runner receipt path/u, "caller-asserted outcomes are never classification evidence");
   for (const [outcome, classification] of Object.entries({
     passed:"confirmed-flaky", sameFailure:"reproduced-failure", failed:"changed-failure",
-    identityChanged:"diagnostic-contract-failure",
+    identityChanged:"diagnostic-contract-failure", registryChanged:"diagnostic-contract-failure",
+    toolchainChanged:"diagnostic-contract-failure",
   })) {
     const separate = await store.create({ ...failure, runnerRunId:`run-${outcome}` });
     await store.claimDiagnosticRetry(separate.id, separate.failure.retryIdentity);
     const diagnosticReceipt = await writeRunnerReceipt(`diagnostic-${outcome}`, {
       candidate:{ commit:"failed-commit", tree:"failed-tree" },
-      environment:failure.environment, artifact:failure.artifact,
+      registryDigest:outcome === "registryChanged" ? "2".repeat(64) : failure.registryDigest,
+      environment:outcome === "toolchainChanged"
+        ? { ...failure.environment, node:"25.0.0" } : failure.environment,
+      artifact:failure.artifact,
       diagnostic:{ incidentId:separate.id,
         retryIdentity:outcome === "identityChanged" ? "changed" : separate.failure.retryIdentity,
+        registryDigest:outcome === "registryChanged" ? "2".repeat(64) : failure.registryDigest,
         scope:separate.failure.retryScope, resolvedDeadlines:separate.failure.resolvedDeadlines },
       tasks:{ [failure.task.key]:{ identity:failure.task,
         status:outcome === "passed" ? "passed" : "failed", provenance:"fresh",
@@ -3213,6 +3231,7 @@ console.log("repairTmp=" + process.env.TMPDIR);
   const flakyAdmissionEntry = {
     incidentId:confirmedFlakyFixture.id, failureDigest:confirmedFlakyFixture.failureDigest,
     causalKey:confirmedFlakyFixture.failure.causalKey,
+    registryDigest:confirmedFlakyFixture.failure.registryDigest,
     retryIdentity:confirmedFlakyFixture.retry.identity,
     retryReceiptSha256:confirmedFlakyFixture.retry.receiptSha256,
     classificationDigest:timeoutIncidentDigest(confirmedFlakyFixture.retry),
@@ -3427,7 +3446,7 @@ console.log("repairTmp=" + process.env.TMPDIR);
   assert.equal(resolved.repairCheckpoint.reclaimCount, 1,
     "a reclaimed checkpoint atomically replaces incomplete archives from its failed predecessor");
   const repairCommitBlocking = await store.blocking({ commit:"repair-commit" });
-  assert.equal(repairCommitBlocking.length, 10,
+  assert.equal(repairCommitBlocking.length, 14,
     "other classified flakes remain blocking while the repaired incident is resolved");
   const evidence = timeoutResolutionEvidence(resolved);
   assert.equal(evidence.resolutionDigest, resolved.resolution.digest);
@@ -3435,6 +3454,36 @@ console.log("repairTmp=" + process.env.TMPDIR);
   assert.equal(verifiedResolutions[0].packageDigest,
     resolved.resolution.package.digest,
   "Git-note resolution loading recomputes archived checkpoint and package links");
+  const flakyCheckpointRunId = "confirmed-flaky-checkpoint";
+  await store.claimRepairCheckpoint(flakyDeferred.id, flakyCheckpointRunId);
+  const flakyCheckpointReceiptPath = await writeRunnerReceipt(flakyCheckpointRunId, {
+    ...repairReceiptBase, runId:flakyCheckpointRunId,
+    candidate:{ commit:"repair-commit", tree:"repair-tree", baseCommit:"approved-base",
+      evidenceTask:"confirmed-flaky-feature-deferral" },
+    plan:{ mode:"exact", requestedPackIds:[...timeoutRepairPackIds],
+      selectedPackIds:[...timeoutRepairPackIds] }, tasks:completeTasks,
+  });
+  const flakyPackageReceiptPath = await writeRunnerReceipt("confirmed-flaky-package", {
+    ...repairReceiptBase, startedAt:"2026-08-09T00:00:04.000Z",
+    candidate:{ commit:"repair-commit", tree:"repair-tree", baseCommit:"approved-base",
+      evidenceTask:"confirmed-flaky-feature-deferral" },
+    plan:{ mode:"package", checkpointRunId:flakyCheckpointRunId },
+    tasks:{ "package:extension":{ identity:{ key:"package:extension", stage:"package", packId:null,
+      executable:"node", args:["scripts/package.mjs"], target:"build/package/my-chrome-utilities.zip",
+      environment:null, requiredCapabilities:[] }, status:"passed", provenance:"fresh", durationMs:1,
+    output:"build/package/my-chrome-utilities.zip\n" } },
+  });
+  const resolvedFlaky = await store.resolve(flakyDeferred.id, {
+    checkpointReceiptPath:flakyCheckpointReceiptPath,
+    packageReceiptPath:flakyPackageReceiptPath,
+  });
+  assert.equal((await store.read(flakyDeferred.id)).state, "resolved",
+    "a confirmed-flaky resolution survives persisted reload without synthetic repair storage");
+  const auditedFlaky = (await store.resolutions({ commit:"repair-commit" }))
+    .find(({ incidentId }) => incidentId === flakyDeferred.id);
+  assert.equal(auditedFlaky?.basis, "confirmed-flaky",
+    "downstream terminal evidence consumption audits the persisted repair-free resolution");
+  assert.equal(auditedFlaky?.resolutionDigest, resolvedFlaky.resolution.digest);
   const incidentPath = path.join(incidentFixtureRoot, "incidents", `${resolved.id}.json`);
   const canonicalIncidentBytes = await readFile(incidentPath);
   const traversingEnvelope = JSON.parse(canonicalIncidentBytes);
@@ -3988,6 +4037,7 @@ const diagnosticIncident = {
   id:"reachable-diagnostic", failure:{ retryIdentity:"retry-identity", retryScope:{ kind:"task",
     taskKey:"unit:reachable-diagnostic", executionArgs:["-e", "process.stdout.write('diagnostic-ran')"] },
     lineage:{ commit:"failed", tree:"failed-tree" }, environment:diagnosticEnvironment,
+    registryDigest:"3".repeat(64),
     configuredTimeoutMs:600000,
     resolvedDeadlines:{ DIST_ARTIFACT_LOCK_TIMEOUT_MS:600000,
       VERIFICATION_COMMAND_TIMEOUT_MS:600000, VERIFICATION_TERMINATION_GRACE_MS:5000 },
@@ -3998,6 +4048,7 @@ await runTimeoutDiagnosticRetry(diagnosticIncident.id, {
   candidateIdentity:async() => ({ commit:"failed", tree:"failed-tree" }),
   artifactIdentity:async() => diagnosticIncident.failure.artifact,
   deadlineIdentity:() => diagnosticIncident.failure.resolvedDeadlines,
+  registryIdentity:async() => diagnosticIncident.failure.registryDigest,
   store:{
   read:async() => diagnosticIncident,
   claimDiagnosticRetry:async(id, identity) => diagnosticClaims.push([id, identity]),
@@ -4011,18 +4062,34 @@ assert.deepEqual(diagnosticClaims, [[diagnosticIncident.id, diagnosticIncident.f
 assert.equal(diagnosticReceiptObservation.tasks[diagnosticIncident.failure.task.key].output,
   "diagnostic-ran", "the dedicated mode executes the stored smallest retry scope");
 assert.equal(diagnosticReceiptObservation.diagnostic.incidentId, diagnosticIncident.id);
+assert.equal(diagnosticReceiptObservation.registryDigest, diagnosticIncident.failure.registryDigest);
+assert.equal(diagnosticReceiptObservation.diagnostic.registryDigest,
+  diagnosticIncident.failure.registryDigest);
 let changedDeadlineClaimed = false;
 await assert.rejects(runTimeoutDiagnosticRetry(diagnosticIncident.id, {
   candidateIdentity:async() => ({ commit:"failed", tree:"failed-tree" }),
   artifactIdentity:async() => diagnosticIncident.failure.artifact,
   deadlineIdentity:() => ({ ...diagnosticIncident.failure.resolvedDeadlines,
     DIST_ARTIFACT_LOCK_TIMEOUT_MS:999999 }),
+  registryIdentity:async() => diagnosticIncident.failure.registryDigest,
   store:{ read:async() => diagnosticIncident,
     claimDiagnosticRetry:async() => { changedDeadlineClaimed = true; },
     classifyDiagnosticRetry:async() => diagnosticIncident },
 }), /deadline identity changed/u,
 "a changed inner deadline is rejected before the diagnostic allowance is claimed or executed");
 assert.equal(changedDeadlineClaimed, false);
+let changedRegistryClaimed = false;
+await assert.rejects(runTimeoutDiagnosticRetry(diagnosticIncident.id, {
+  candidateIdentity:async() => ({ commit:"failed", tree:"failed-tree" }),
+  artifactIdentity:async() => diagnosticIncident.failure.artifact,
+  deadlineIdentity:() => diagnosticIncident.failure.resolvedDeadlines,
+  registryIdentity:async() => "4".repeat(64),
+  store:{ read:async() => diagnosticIncident,
+    claimDiagnosticRetry:async() => { changedRegistryClaimed = true; },
+    classifyDiagnosticRetry:async() => diagnosticIncident },
+}), /registry identity changed/u,
+"a changed verification registry is rejected before the diagnostic allowance is claimed");
+assert.equal(changedRegistryClaimed, false);
 
 function pack(id, overrides = {}) {
   return {
@@ -7669,6 +7736,7 @@ assert.throws(()=>validateEligibleRepairAdmissionsReceipt({ ...admittedReceipt, 
 } }, admissions), /fresh pass/i);
 const flakyDiagnostic = {
   version:2, runIntent:"repair-focused", completedAt:"2026-08-19T12:11:15.280Z",
+  registryDigest:"b".repeat(64),
   environment:{ node:"24.19.0", platform:"linux-x64" },
   candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree",
     baseCommit:"approved-contract-base", evidenceTask:"confirmed-flaky-feature-deferral",
@@ -7677,6 +7745,7 @@ const flakyDiagnostic = {
   plan:{ mode:"timeout-diagnostic", requestedPackIds:[bootstrapTask.packId],
     selectedPackIds:[bootstrapTask.packId] },
   diagnostic:{ incidentId:"confirmed-flaky", retryIdentity:"8".repeat(64),
+    registryDigest:"b".repeat(64),
     scope:{ kind:"task", executionArgs:bootstrapTask.args, logicalTargetIds:[] },
     resolvedDeadlines:{ VERIFICATION_COMMAND_TIMEOUT_MS:600000 } },
   tasks:{ [bootstrapTask.key]:{ identity:bootstrapTask, status:"passed", provenance:"fresh",
@@ -7689,6 +7758,7 @@ const flakyIncident = {
     baseCommit:"approved-contract-base", evidenceTask:"confirmed-flaky-feature-deferral",
     changeSetDigest:"5".repeat(64) }, task:bootstrapTask, causalKey:"a".repeat(64),
     retryIdentity:"8".repeat(64), retryScope:flakyDiagnostic.diagnostic.scope,
+    registryDigest:flakyDiagnostic.registryDigest,
     resolvedDeadlines:flakyDiagnostic.diagnostic.resolvedDeadlines,
     artifact:flakyDiagnostic.artifact, environment:flakyDiagnostic.environment },
   transitions:[{ type:"diagnostic-retry-claimed" },
@@ -7708,6 +7778,7 @@ assert.deepEqual(flakyAdmissions.entries.map(({ incidentId, coverageKind, select
   coverageKind:"governed-task", selectedTaskKey:bootstrapTask.key }]);
 assert.equal(flakyAdmissions.entries[0].classificationDigest,
   timeoutIncidentDigest(flakyIncident.retry));
+assert.equal(flakyAdmissions.entries[0].registryDigest, flakyDiagnostic.registryDigest);
 const flakyReceipt = { confirmedFlakyAdmissions:flakyAdmissions, tasks:admittedReceipt.tasks };
 assert.equal(validateConfirmedFlakyAdmissionsReceipt(flakyReceipt, flakyAdmissions), flakyAdmissions);
 assert.throws(()=>validateConfirmedFlakyAdmissionsReceipt(flakyReceipt, {
@@ -7721,6 +7792,24 @@ await assert.rejects(()=>revalidateConfirmedFlakyAdmissions({ admissions:flakyAd
   baseCommit:"approved-contract-base", evidenceTask:"confirmed-flaky-feature-deferral",
   changeSetDigest:"5".repeat(64), planDigest:"6".repeat(64),
   receiptLoader:async()=>flakyDiagnosticBytes }), /not bound|changed/i);
+for (const [name, mutate] of [
+  ["registry", (receipt) => { receipt.registryDigest = "c".repeat(64); }],
+  ["diagnostic registry", (receipt) => { receipt.diagnostic.registryDigest = "c".repeat(64); }],
+  ["toolchain", (receipt) => { receipt.environment.node = "25.0.0"; }],
+]) {
+  const mutated = structuredClone(flakyDiagnostic);
+  mutate(mutated);
+  const mutatedBytes = Buffer.from(JSON.stringify(mutated));
+  const mutationIncident = structuredClone(flakyIncident);
+  mutationIncident.retry.receiptSha256 = createHash("sha256").update(mutatedBytes).digest("hex");
+  await assert.rejects(()=>buildConfirmedFlakyAdmissions({ root:"fixture",
+    incidents:[mutationIncident], plan:bootstrapPlan, packs,
+    candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+    baseCommit:"approved-contract-base", evidenceTask:"confirmed-flaky-feature-deferral",
+    changeSetDigest:"5".repeat(64), planDigest:"6".repeat(64),
+    receiptLoader:async()=>mutatedBytes }), /diagnostic receipt is not exact/i,
+  `${name} mutation invalidates confirmed-flaky admission`);
+}
 const promotionBootstrapRepair = structuredClone(exactBootstrapRepair);
 promotionBootstrapRepair.id = "exact-promotion-bootstrap-repair";
 promotionBootstrapRepair.terminalVerificationDeferred = {

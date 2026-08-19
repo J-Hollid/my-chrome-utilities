@@ -110,6 +110,8 @@ function diagnosticOperations({ root, now, read, update }) {
         const task = Object.values(document.receipt.tasks)[0];
         const identityChanged = document.receipt.diagnostic?.incidentId !== id ||
           document.receipt.diagnostic?.retryIdentity !== incident.failure.retryIdentity ||
+          document.receipt.registryDigest !== incident.failure.registryDigest ||
+          document.receipt.diagnostic?.registryDigest !== incident.failure.registryDigest ||
           JSON.stringify(normalized(document.receipt.diagnostic?.resolvedDeadlines)) !==
             JSON.stringify(normalized(incident.failure.resolvedDeadlines)) ||
           JSON.stringify(normalized(document.receipt.diagnostic?.scope)) !==
@@ -743,10 +745,12 @@ export function createTimeoutIncidentStore({
         const packageDocument = await archivedReceiptDocument(
           path.join(directory, incident.resolution.archive.packageReceipt));
         const packageBytes = await safeStoreFile(path.join(directory, incident.resolution.archive.packageZip));
+        const checkpointIncident = terminalCheckpointIncident(incident);
         const canonical = await canonicalCheckpointValidator({
-          document:checkpointDocument, incident, root, allowLegacySeparatePackage:true,
+          document:checkpointDocument, incident:checkpointIncident, root,
+          allowLegacySeparatePackage:true,
         });
-        validatePackageReceipt(packageDocument, checkpointDocument, incident, {
+        validatePackageReceipt(packageDocument, checkpointDocument, checkpointIncident, {
           allowLegacyPrerequisites:true,
         });
         if (canonical.receipt.runId !== incident.resolution.checkpoint.runId ||

@@ -246,6 +246,7 @@ function confirmedFlakyRetry(incident) {
     incident?.repair === undefined && incident?.retry?.status === "classified" &&
     incident.retry.outcome === "passed" && incident.retry.classification === "confirmed-flaky" &&
     incident.retry.identity === incident?.failure?.retryIdentity &&
+    digestPattern.test(incident?.failure?.registryDigest ?? "") &&
     digestPattern.test(incident.retry.receiptSha256 ?? "") && claimed.length === 1 &&
     classified.length === 1 && classified[0].classification === "confirmed-flaky";
 }
@@ -289,6 +290,8 @@ async function diagnosticRetryReceipt(root, incident, loader) {
     exactValue(receipt.plan?.requestedPackIds, [incident.failure.task.packId]) &&
     exactValue(receipt.plan?.selectedPackIds, [incident.failure.task.packId]) &&
     receipt.diagnostic?.retryIdentity === incident.failure.retryIdentity &&
+    receipt.registryDigest === incident.failure.registryDigest &&
+    receipt.diagnostic?.registryDigest === incident.failure.registryDigest &&
     exactValue(receipt.diagnostic?.scope, incident.failure.retryScope) &&
     exactValue(receipt.diagnostic?.resolvedDeadlines, incident.failure.resolvedDeadlines) &&
     receipt.candidate?.commit === incident.failure.lineage.commit &&
@@ -347,7 +350,8 @@ export async function buildConfirmedFlakyAdmissions({
     if (!selected) throw new Error(`Confirmed flaky admission ${incident.id} has no exact selected task coverage`);
     entries.push({
       incidentId:incident.id, failureDigest:incident.failureDigest,
-      causalKey:incident.failure.causalKey, retryIdentity:incident.retry.identity,
+      causalKey:incident.failure.causalKey, registryDigest:incident.failure.registryDigest,
+      retryIdentity:incident.retry.identity,
       retryReceiptSha256:incident.retry.receiptSha256,
       classificationDigest:timeoutIncidentDigest(incident.retry), governedTaskDigest,
       selectedTaskKey:selected.key, selectedTaskDigest:verificationTaskDigest(selected), coverageKind,
@@ -596,7 +600,7 @@ export function validateConfirmedFlakyAdmissionsReceipt(
          admissions.planDigest !== receipt.plan?.taskPlanDigest)) {
     throw new Error("Confirmed flaky admission receipt binding is missing or malformed");
   }
-  const commonKeys = ["incidentId", "failureDigest", "causalKey", "retryIdentity",
+  const commonKeys = ["incidentId", "failureDigest", "causalKey", "registryDigest", "retryIdentity",
     "retryReceiptSha256", "classificationDigest", "governedTaskDigest", "selectedTaskKey",
     "selectedTaskDigest", "coverageKind"];
   const ids = admissions.entries.map(({ incidentId }) => incidentId);
@@ -607,7 +611,7 @@ export function validateConfirmedFlakyAdmissionsReceipt(
     const successor = entry.coverageKind === "successor";
     const expected = successor ? [...commonKeys, "destinationTaskDigest", "conservationDigest"] : commonKeys;
     if (!exactKeys(entry, expected) || typeof entry.incidentId !== "string" || !entry.incidentId ||
-        ![entry.failureDigest, entry.causalKey, entry.retryIdentity, entry.retryReceiptSha256,
+        ![entry.failureDigest, entry.causalKey, entry.registryDigest, entry.retryIdentity, entry.retryReceiptSha256,
           entry.classificationDigest, entry.governedTaskDigest, entry.selectedTaskDigest]
           .every((value) => digestPattern.test(value ?? "")) ||
         typeof entry.selectedTaskKey !== "string" || !entry.selectedTaskKey ||

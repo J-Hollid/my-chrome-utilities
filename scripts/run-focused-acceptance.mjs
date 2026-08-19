@@ -896,6 +896,7 @@ export function createVerificationCommandRunner(context, options = {}) {
         environment:context.receipt.environment,
         artifact:context.receipt.artifact ?? context.receipt.artifactInput ?? null,
         planDigest:verificationDigest(context.receipt.plan ?? {}),
+        registryDigest:context.receipt.registryDigest,
         outputSha256:verificationDigest(freshOut),
         stderrSha256:verificationDigest(freshErr),
         failedBoundary,
@@ -950,11 +951,12 @@ export async function runTimeoutDiagnosticRetry(id, {
       defaultTerminationGraceMs, { maximum:30000 }),
     environment:{ ...process.env, ...(incident.failure.task.environment ?? {}) },
   }),
+  registryIdentity = async() => verificationDigest(await loadVerificationPacks()),
 } = {}) {
   const incident = await store.read(id);
   if (!incident.failure.retryScope) throw new Error(`Reliability incident ${id} has no trusted retry scope`);
-  const [candidate, artifact, deadlines] = await Promise.all([
-    candidateIdentity(), artifactIdentity(), deadlineIdentity(incident),
+  const [candidate, artifact, deadlines, registryDigest] = await Promise.all([
+    candidateIdentity(), artifactIdentity(), deadlineIdentity(incident), registryIdentity(incident),
   ]);
   if (candidate.commit !== incident.failure.lineage.commit || candidate.tree !== incident.failure.lineage.tree ||
       verificationDigest(artifact) !== verificationDigest(incident.failure.artifact)) {
@@ -963,6 +965,9 @@ export async function runTimeoutDiagnosticRetry(id, {
   if (verificationDigest(deadlines) !== verificationDigest(incident.failure.resolvedDeadlines)) {
     throw new Error(`Reliability incident ${id} diagnostic deadline identity changed`);
   }
+  if (registryDigest !== incident.failure.registryDigest) {
+    throw new Error(`Reliability incident ${id} diagnostic registry identity changed`);
+  }
   const concurrency = incident.failure.environment.concurrency;
   const observationConcurrency = incident.failure.environment.observationConcurrency;
   const context = createVerificationReceiptContext(concurrency, observationConcurrency, {
@@ -970,10 +975,12 @@ export async function runTimeoutDiagnosticRetry(id, {
   });
   context.receipt.candidate = { ...structuredClone(incident.failure.lineage), ...candidate };
   context.receipt.artifact = structuredClone(artifact);
+  context.receipt.registryDigest = registryDigest;
   context.receipt.plan = { mode:"timeout-diagnostic", requestedPackIds:[incident.failure.task.packId],
     selectedPackIds:[incident.failure.task.packId] };
   context.receipt.diagnostic = { incidentId:id, retryIdentity:incident.failure.retryIdentity,
-    scope:structuredClone(incident.failure.retryScope), resolvedDeadlines:structuredClone(deadlines) };
+    registryDigest, scope:structuredClone(incident.failure.retryScope),
+    resolvedDeadlines:structuredClone(deadlines) };
   if (JSON.stringify(context.receipt.environment) !== JSON.stringify(incident.failure.environment)) {
     throw new Error(`Reliability incident ${id} diagnostic environment identity changed`);
   }
@@ -1709,6 +1716,7 @@ export async function runFocusedAcceptance(
   const concurrency = environmentInteger("VERIFICATION_CONCURRENCY", 4, { maximum:64 });
   const observationConcurrency = environmentInteger("VERIFICATION_OBSERVATION_CONCURRENCY", 2, { maximum:4 });
   const context = createVerificationReceiptContext(concurrency, observationConcurrency, { runIntent });
+  context.receipt.registryDigest = verificationDigest(packs);
   const inputFingerprint = await createDistInputFingerprint({ root:repositoryRoot });
   const gitValue = (...arguments_) => new Promise((resolve, reject) => {
     execFile("git", arguments_, { cwd:repositoryRoot }, (error, stdout, stderr) => error
