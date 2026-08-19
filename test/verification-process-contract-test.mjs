@@ -10757,7 +10757,8 @@ const vtd009ExactBase = planVerification(vtd009BasePacks, {packIds:["shell"],inc
 const vtd009TerminalBase = planVerification(vtd009BasePacks, {terminalFull:true});
 const vtd009TerminalCurrent = planVerification(packs, {terminalFull:true});
 const vtd009HistoricalShellTasks = localShellPlan.tasks.filter(({ key }) =>
-  key !== "unit:test/workspace-tabs-installed-controller-test.mjs" && !approvedVerificationTaskKeys.has(key));
+  key !== "unit:test/workspace-tabs-installed-controller-test.mjs" &&
+  !postBaseAddedRegisteredTaskKeys.has(key) && !approvedVerificationTaskKeys.has(key));
 assert.deepEqual(vtd009HistoricalShellTasks.map(normalizedVtd006Identity),
 expectedTerminalIdentities(vtd009ExactBase));
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities);
