@@ -87,7 +87,7 @@ function focused(row, context) {
         issue.append(issueHeading, detail, repairs);
         host.append(issue);
     }
-    const focusedContext = { model: context.model, dom, row, conceptSuggestions: context.conceptSuggestions, getDraft: () => context.draft, activeSection: context.activeSection, removedRuleIds: context.removedRuleIds, removedValueIds: context.removedValueIds, restoredRuleIds: context.restoredRuleIds, restoredValueIds: context.restoredValueIds, stagedLocalValueIds: context.stagedLocalValueIds, overriddenRuleIds: context.overriddenRuleIds, overrideRule: context.overrideRule, render: context.render, ...(context.onStructure ? { onStructure: context.onStructure } : {}) };
+    const focusedContext = { model: context.model, ...(context.completeRows ? { completeRows: context.completeRows } : {}), dom, row, conceptSuggestions: context.conceptSuggestions, getDraft: () => context.draft, activeSection: context.activeSection, removedRuleIds: context.removedRuleIds, removedValueIds: context.removedValueIds, restoredRuleIds: context.restoredRuleIds, restoredValueIds: context.restoredValueIds, stagedLocalValueIds: context.stagedLocalValueIds, overriddenRuleIds: context.overriddenRuleIds, overrideRule: context.overrideRule, render: context.render, ...(context.onStructure ? { onStructure: context.onStructure } : {}) };
     if (context.removed)
         host.append(Object.assign(dom.createElement("p"), { textContent: "Whole-property lifecycle staged. Facet and structure controls are unavailable until this reset or removal is cancelled." }));
     else {

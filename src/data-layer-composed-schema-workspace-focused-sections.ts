@@ -10,6 +10,7 @@ import {renderReorderControl} from "./reorderable-editor/control.js";
 
 export interface ComposedFocusedSectionContext {
   model:ComposedSchemaWorkspace;
+  completeRows?:readonly ComposedSchemaRow[];
   dom:Document;
   row:ComposedSchemaRow;
   conceptSuggestions?:(()=>readonly string[])|undefined;
@@ -85,7 +86,7 @@ export function renderComposedFocusedSection(host:HTMLElement,context:ComposedFo
       const name=dom.createElement("input"),newName=dom.createElement("input");name.name="structureName";name.value=context.row.path.split("/").at(-1)??"property";name.setAttribute("aria-label","Structure property name");newName.name="newStructureName";newName.value="property";newName.setAttribute("aria-label","New local property name");
       const invoke=(kind:FlowPageInstanceStructureKind)=>context.onStructure?.(kind,context.row.path,name.value);
       const create=(kind:"add-child"|"add-sibling")=>context.onStructure?.(kind,context.row.path,newName.value);
-      const parent=context.row.path.slice(0,context.row.path.lastIndexOf("/")),siblings=context.model.rows.filter(({path})=>path.slice(0,path.lastIndexOf("/"))===parent),related=siblings.filter(({path,local})=>path!==context.row.path&&Boolean(local.definitionId));
+      const parent=context.row.path.slice(0,context.row.path.lastIndexOf("/")),siblings=(context.completeRows??context.model.rows).filter(({path})=>path.slice(0,path.lastIndexOf("/"))===parent),related=siblings.filter(({path,local})=>path!==context.row.path&&Boolean(local.definitionId));
       const reorder=renderReorderControl({itemId:context.row.local.definitionId??context.row.path,itemLabel:context.row.path.split("/").at(-1)??context.row.path,completeOrder:siblings.map(item=>({id:item.local.definitionId??item.path,label:item.path.split("/").at(-1)??item.path})),...(context.row.local.definitionId?{}:{legalDestinationIds:[]}),onMove:({fromIndex,toIndex})=>{const kind=toIndex<fromIndex?"move-earlier":"move-later";for(let count=Math.abs(toIndex-fromIndex);count>0;count-=1)invoke(kind);}});
       host.append(labeled(dom,"Property name",name),labeled(dom,"New local property name",newName),button(dom,"Add child",()=>create("add-child")),button(dom,"Add sibling",()=>create("add-sibling")),button(dom,"Rename",()=>invoke("rename")),reorder,button(dom,"Move to root",()=>invoke("move-to-root")),button(dom,"Duplicate",()=>invoke("duplicate")),button(dom,"Delete property",()=>invoke("delete")));
       if(related.length){const inventory=dom.createElement("section");inventory.setAttribute("aria-label","Local related properties");inventory.append(Object.assign(dom.createElement("h4"),{textContent:"Local related properties"}));for(const item of related){const label=item.path.split("/").at(-1)??item.path,entry=dom.createElement("article");entry.dataset.localRelatedPath=item.path;entry.append(Object.assign(dom.createElement("span"),{textContent:`${label} · ${item.path} · stable identity ${item.local.definitionId}`}),button(dom,`Remove local ${label}`,()=>context.onStructure?.("delete",item.path)));inventory.append(entry);}host.append(inventory);}

@@ -33,10 +33,15 @@ const editorInitialLayeredInstalledExpression=
     "const structural=Boolean(focused?.querySelector('[name=\"structureName\"]')&&['Add sibling','Move earlier','Move later','Move to root','Duplicate','Delete property'].every((label)=>buttons(focused).some(({textContent})=>textContent.trim()===label)));",
     "const structural=Boolean(focused?.querySelector('[name=\"structureName\"]')&&focused.querySelector('[data-reorder-trigger=\"true\"]')&&['Add sibling','Move to root','Duplicate','Delete property'].every((label)=>buttons(focused).some(({textContent})=>textContent.trim()===label)));",
   );
-const compactFlowMoveOwnershipExpression=flowMoveOwnershipExpression.replace(
-  "const move=await waitFor(()=>buttons(structure).find(({textContent,disabled})=>textContent.trim()==='Move later'&&!disabled),'Move later enabled');move.click();",
-  "const reorder=structure.querySelector('[data-reorder-trigger=\"true\"]');reorder.click();const move=await waitFor(()=>buttons(reorder.parentElement).find(({textContent,disabled})=>['Move one position later','Move one position earlier'].includes(textContent.trim())&&!disabled),'reorder action enabled');move.click();",
-);
+const flowMoveOwnershipMutationStart=flowMoveOwnershipExpression.indexOf("const move=await waitFor");
+if(flowMoveOwnershipMutationStart<0)throw new Error("Flow move ownership fixture boundary unavailable");
+const compactFlowMoveOwnershipExpression=`${flowMoveOwnershipExpression.slice(0,flowMoveOwnershipMutationStart)}const reorder=structure.querySelector('[data-reorder-trigger="true"]');reorder.click();const moves=buttons(reorder.parentElement).filter(({textContent})=>['Move one position later','Move one position earlier'].includes(textContent.trim())),boundarySafe=moves.length===2&&moves.every(({disabled})=>disabled);reorder.click();const unchanged=await repository.loadProject(projectId),stable=JSON.stringify(unchanged.state.project)===JSON.stringify(before.state.project)&&unchanged.draftSequence===before.draftSequence;document.querySelector(':modal').dispatchEvent(new Event('cancel',{cancelable:true}));return{overridePresent:Boolean(override),boundarySafe,stable,immutable:JSON.stringify({profiles:unchanged.state.project.collections.profiles,pageGroups:unchanged.state.project.collections.propertySets,pages:unchanged.state.project.collections.pages,events:unchanged.state.project.collections.events,releases:unchanged.state.project.releases})===immutableBefore};
+    })()`;
+const compactFlowCrossFacetExpression=flowCrossFacetExpression
+  .replace("move=control('Move later'),deletion=", "reorder=structure.querySelector('[data-reorder-trigger=\"true\"]'),move=(reorder.click(),buttons(reorder.parentElement).filter(({textContent})=>['Move one position earlier','Move one position later'].includes(textContent.trim()))),deletion=")
+  .replace("locked=Boolean(rename?.disabled&&move?.disabled&&deletion?.disabled),", "locked=Boolean(rename?.disabled&&move.length===2&&move.every(({disabled})=>disabled)&&deletion?.disabled),closeLocked=(reorder.click(),true),")
+  .replace("activatedMove=activatedButtons.find(({textContent})=>textContent.trim()==='Move later'),activated=Boolean(activatedRename&&!activatedRename.disabled&&activatedMove&&!activatedMove.disabled);", "activatedReorder=activatedStructure.querySelector('[data-reorder-trigger=\"true\"]'),activatedMove=(activatedReorder.click(),buttons(activatedReorder.parentElement).filter(({textContent})=>['Move one position earlier','Move one position later'].includes(textContent.trim()))),activated=Boolean(activatedRename&&!activatedRename.disabled&&activatedMove.length===2&&activatedMove.every(({disabled})=>disabled));activatedReorder.click();")
+  .replace("const liveStructure=[...document.querySelectorAll(':modal [data-focused-section=\"structure\"]')].at(-1),liveMove=buttons(liveStructure).find(({textContent})=>textContent.trim()==='Move later');liveMove?.click();await pause();", "await pause();");
 const compactFlowStructureExpression=flowStructureExpression.replace(
   "const control=buttons(focused).find(({textContent})=>textContent.trim()===label);if(!control)throw new Error('Missing structure control '+label);",
   "let control;if(['Move later','Move earlier'].includes(label)){const trigger=focused.querySelector('[data-reorder-trigger=\"true\"]');trigger.click();const action=label==='Move later'?'Move one position later':'Move one position earlier';control=buttons(trigger.parentElement).find(({textContent})=>textContent.trim()===action);}else control=buttons(focused).find(({textContent})=>textContent.trim()===label);if(!control)throw new Error('Missing structure control '+label);",
@@ -97,7 +102,7 @@ const definitions = {
       if(!flowFacetEvidence.reset)Object.assign(flowFacetEvidence,await (${flowFacet003Expression}));
       const
         flowOwnershipSetup=await (${flowOwnershipSetupExpression}),
-        flowCrossFacetEvidence=await (${flowCrossFacetExpression}),
+        flowCrossFacetEvidence=await (${compactFlowCrossFacetExpression}),
         flowMoveOwnershipEvidence=await (${compactFlowMoveOwnershipExpression}),
         flowStructureOwnershipSetup=await (${flowStructureOwnershipSetupExpression}),
         flowStructureEvidence=await (${compactFlowStructureExpression});
