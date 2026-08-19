@@ -307,6 +307,31 @@ compatibility before the first evidence run, while retaining the focused QA
 pilot and exact ownership slice. Do not activate another broad verification
 program from this timing variance.
 
+### Guided Excel template authoring QA measurement
+
+Approved task `guided-excel-template-authoring` was first dispatched at
+21:16:40Z on 2026-08-18. Product work paused for the independently reviewed
+eligible-repair admission prerequisite and resumed from exact QA scorecard
+`4be970ec` at 06:03:13Z on 2026-08-19. The resumed product reached `qa-ready` in
+2 hours 31 minutes 15 seconds and QA in 2 hours 33 minutes 41 seconds. Initial
+dispatch through QA, including the prerequisite, was 11 hours 20 minutes 14
+seconds.
+
+Six successful focused checkpoints consumed about 29 minutes 45 seconds. The
+settled final three-pack plan selected `flow_export`, `project_management`, and
+`shell` with 135 tasks, properties, installed browser evidence, and package
+proof. Two earlier `flow_export` acceptance failures received deterministic
+repairs and atomic eligible-repair evidence; their exact dispositions remain
+`terminal-verification-deferred`. Five passing focused trees were superseded by
+later reviewed changes. No all-20 run occurred and no evidence was represented
+as final regression or master-ready proof.
+
+Recommendation: **adjust** the next similar authoring slice by settling its
+acceptance example relations, installed evidence-key inventory, extracted-source
+ownership, and layout properties before the first evidence run. Retain the
+focused pilot and automatic eligible-repair route; do not activate a broad new
+verification program from this local evidence-ordering variance.
+
 ## VTD-018 disposition
 
 VTD-018 remains a stopped, unintegrated experiment. Candidate `c7ad4698f9` and its

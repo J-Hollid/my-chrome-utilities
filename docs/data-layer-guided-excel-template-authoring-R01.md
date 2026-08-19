@@ -1,6 +1,6 @@
 # Data layer guided Excel template authoring R01
 
-Status: specification and QA feature implementation approved by the user on 2026-08-18
+Status: QA-integrated at `a8ee95869b` on 2026-08-19
 
 Prepared: 2026-08-18
 
@@ -120,3 +120,52 @@ Likely existing integration surfaces are:
 Expected focused evidence covers the two revised Excel product/runtime features, template Excel and Library unit tests, installed Flow-documentation browser behavior, starter OOXML inspection, movement through an Excel-compatible editor, accessible findings and guide controls, immutable candidate preview, literal-value safety, and package proof when delivered dependencies change.
 
 No stopped coherent candidate exists for this correction, so there are no additional candidate paths to replay. No durable repository, archive, application-composition, or build-delivery change is expected. If intent classification identifies one of those paths, the coder records it as forecast variance before coding and routes it through its existing parent pack or reviewed subordinate slice.
+
+## Settled QA result
+
+The approved feature was first dispatched at 21:16:40Z on 2026-08-18. Its
+initial evidence exposed the eligible-repair admission deadlock, so product work
+paused while the independently reviewed prerequisite reached QA. The conserved
+feature resumed from exact QA scorecard `4be970ec` at 06:03:13Z on 2026-08-19,
+reached architect `qa-ready` at 08:34:28Z, and fast-forwarded into QA at
+08:36:54Z. Resumption-to-QA took 2 hours 33 minutes 41 seconds; initial dispatch
+through QA, including the prerequisite, took 11 hours 20 minutes 14 seconds.
+
+Within the resumed lineage, the first coherent implementation commit arrived
+4 minutes 23 seconds after resumption. That commit to the final pre-architect
+reviewed head took 1 hour 44 minutes 49 seconds; the reviewed head to architect
+handoff took 42 minutes 3 seconds; and handoff to integration took 2 minutes
+26 seconds. The main durable channel does not retain separate intermediate claim
+timestamps, so these are lineage intervals rather than inferred claim-to-claim
+role timings.
+
+Six successful focused checkpoints ran in about 29 minutes 45 seconds total.
+The first two selected three packs and 61 tasks in about 2 minutes 41 seconds
+each; the next selected two packs and 60 tasks in about 2 minutes 36 seconds;
+and the last three selected the settled exact `flow_export`,
+`project_management`, and `shell` plan of 135 tasks in about 7 minutes 17
+seconds, 7 minutes 16 seconds, and 7 minutes 15 seconds. Each accepted receipt
+included properties and package proof. The final tree covers the contract-2
+workbook, named repeat and image areas, searchable authoring catalogue,
+inspectable unsaved preview, installed Flow export, literal-value safety, and
+generated package.
+
+Two earlier evidence runs failed the `flow_export` acceptance session. Incident
+`de9ffec1-dd07-4cf4-b91f-f94b59f91fe6` identified stale contract-1 example
+relations; exact repair
+`d929c43744` passed its deterministic regression and recorded atomic focused
+evidence plus terminal deferral. Incident
+`f307c5b7-6656-464e-8a29-6d71cfb32025` identified an incomplete
+installed-evidence relation after new browser proof keys were added; exact repair
+`1792e9fd82` did the same. Both incidents remain unresolved on their recorded
+repair candidates for the later master checkpoint. Subsequent review separated
+the Excel catalogue and guidance UI, registered their exact ownership, repaired
+authoring behavior, added layout property coverage, and refreshed mutation
+evidence. Five passing focused trees were superseded by those later reviewed
+changes; no all-20 checkpoint or terminal pass ran.
+
+Recommendation: **adjust** the next comparable authoring slice by settling its
+acceptance example relations, installed evidence-key inventory, extracted-source
+ownership, and layout properties before the first evidence-producing run. Retain
+the focused QA pilot and eligible-repair route; do not start another broad
+verification program from these task-local repairs.
