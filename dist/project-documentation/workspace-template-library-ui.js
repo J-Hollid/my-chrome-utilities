@@ -1,5 +1,6 @@
 import { assignDocumentationTemplate, createDocumentationTemplate, documentationTemplateAssignment, removeDocumentationTemplate, replaceDocumentationTemplate } from "../documentation-templates/template-library.js";
 import { writeDocumentationTemplateStarter } from "../documentation-templates/excel-renderer.js";
+import { excelTemplateGuideFor } from "../documentation-templates/excel-template.js";
 import { builtInRichTemplate, richTemplateBlockScopes, richTemplateHelpBindingsFor, validateRichDocumentationTemplate } from "../documentation-templates/rich-template.js";
 import { templateDigest } from "../documentation-templates/template-contract.js";
 import { DOCUMENTATION_TEMPLATE_XLSX_TYPE } from "../documentation-templates/template-body.js";
@@ -10,6 +11,8 @@ const kindName = (kind) => kind === "profile" ? "Site Profile" : kind === "matri
 const digest = async (file) => `sha256:${Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer())), byte => byte.toString(16).padStart(2, "0")).join("")}`;
 const richBlocks = (template) => template.richBlocks;
 const recordBlocks = (blocks) => blocks;
+const excelCandidates = new Map();
+const candidateKey = (options) => `${options.projectId}:${options.set.id}`;
 const cloneWithIds = (block) => { const copy = structuredClone(block); return copy.type === "repeat" ? { ...copy, id: `block:${crypto.randomUUID()}`, children: copy.children.map(cloneWithIds) } : { ...copy, id: `block:${crypto.randomUUID()}` }; };
 const editSiblings = (blocks, id, edit) => { const index = blocks.findIndex(block => block.id === id); if (index >= 0)
     return edit(blocks, index); return blocks.map(block => block.type === "repeat" ? { ...block, children: editSiblings(block.children, id, edit) } : block); };
@@ -125,6 +128,34 @@ function richEditor(detail, selected, templates, options) {
     if (options.selectedRichBlockId && !options.richEditorMobileDetail)
         focusAfterRender('[data-rich-block-selected="true"]');
 }
+function excelGuide(kind) {
+    const details = document.createElement("details"), summary = document.createElement("summary"), search = document.createElement("input"), results = document.createElement("div"), guide = excelTemplateGuideFor(kind);
+    summary.textContent = "Excel template guide";
+    search.type = "search";
+    search.setAttribute("aria-label", `${kindName(kind)} Excel binding and repeat guide search`);
+    search.placeholder = "Search values or repeatable data";
+    const render = () => { const query = search.value.trim().toLocaleLowerCase(), matches = (value) => !query || value.toLocaleLowerCase().includes(query); results.replaceChildren(); const values = guide.values.filter(entry => matches(`${entry.path} ${entry.meaning} ${entry.example} ${entry.available}`)), collections = guide.collections.filter(entry => matches(`${entry.path} ${entry.meaning} ${entry.itemPrefix} ${entry.fields.join(" ")} ${entry.nestedCollections.join(" ")}`)), valueHeading = heading(4, "Single values"), valueList = document.createElement("ul"), collectionHeading = heading(4, "Repeatable data"), collectionList = document.createElement("ul"); valueList.append(...values.map(entry => Object.assign(document.createElement("li"), { textContent: `${entry.placeholder} — ${entry.meaning} — example ${entry.example} — ${entry.available}` }))); collectionList.append(...collections.map(entry => Object.assign(document.createElement("li"), { textContent: `${entry.path} — ${entry.meaning}; item prefix ${entry.itemPrefix}; fields ${entry.fields.join(", ")}; nested ${entry.nestedCollections.join(", ") || "none"}; Across or Down; ${entry.emptyResult}; ${entry.copyBehavior}` }))); results.append(valueHeading, valueList, collectionHeading, collectionList); };
+    search.addEventListener("input", render);
+    render();
+    details.append(summary, search, results);
+    return details;
+}
+function candidateDetail(_host, detail, candidate, templates, options) {
+    detail.append(heading(3, `${candidate.file.name} — unsaved candidate`), Object.assign(document.createElement("p"), { textContent: `${kindName(candidate.kind)} · contract 2 · no template metadata or body has been saved` }));
+    const inspection = document.createElement("section");
+    inspection.setAttribute("aria-label", "Excel template candidate inspection");
+    inspection.append(heading(4, "Candidate inspection"));
+    const bindings = document.createElement("ul");
+    bindings.append(...candidate.validation.inspection.bindings.map(path => Object.assign(document.createElement("li"), { textContent: `Binding cell: ${path}` })));
+    const areas = document.createElement("ul");
+    areas.append(...candidate.validation.inspection.areas.map(area => Object.assign(document.createElement("li"), { textContent: area.type === "repeat" ? `${area.name}: ${area.source}, item prefix ${area.itemPrefix}, ${area.direction}, range ${area.range}, parent ${area.parent ?? "none"}` : `${area.name}: image ${area.source}, range ${area.range}` })));
+    inspection.append(bindings, areas);
+    detail.append(inspection);
+    if (options.previewCandidateExcel)
+        detail.append(button("Populated preview — output only", () => void options.previewCandidateExcel(candidate.file, candidate.kind).then(bytes => options.download?.(`${candidate.file.name.replace(/\.xlsx$/iu, "")}-populated-output.xlsx`, bytes, DOCUMENTATION_TEMPLATE_XLSX_TYPE)).catch(error => detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) })))));
+    detail.append(button("Save template", () => void (async () => { const bodyDigest = await digest(candidate.file), template = createDocumentationTemplate({ id: `documentation-template:${crypto.randomUUID()}`, name: candidate.file.name.replace(/\.xlsx$/iu, ""), format: "excel", kind: candidate.kind, body: { assetId: `documentation-template-body:${crypto.randomUUID()}`, digest: bodyDigest, byteLength: candidate.file.size }, validation: candidate.validation }); await persistBody(options, bodyDigest, candidate.file, { ...options.records, templates: [...templates, template] }, `Save Excel template ${template.name}`); excelCandidates.delete(candidateKey(options)); options.selectTemplate(template.id); options.rerender(); })().catch(error => detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) })))));
+    detail.append(button("Discard candidate", () => { excelCandidates.delete(candidateKey(options)); options.setMobileDetail(false); options.rerender(); }));
+}
 export function renderDocumentationTemplateLibrary(host, options) {
     host.replaceChildren();
     host.className = "documentation-template-library";
@@ -145,61 +176,69 @@ export function renderDocumentationTemplateLibrary(host, options) {
             assignment.addEventListener("change", () => { options.persist(assignDocumentationTemplate(options.records, options.set.id, format, kind, assignment.value), `Assign ${assignment.selectedOptions[0]?.textContent ?? "Built-in"}`); options.rerender(); });
             group.append(heading(3, `${format === "excel" ? "Excel" : "Rich page"} · ${kindName(kind)}`), labelled("Assignment", assignment));
             for (const template of templates.filter(template => template.format === format && template.kind === kind)) {
-                const select = button(template.name, () => { options.selectTemplate(template.id); options.setMobileDetail(true); options.rerender(); });
+                const select = button(template.name, () => { excelCandidates.delete(candidateKey(options)); options.selectTemplate(template.id); options.setMobileDetail(true); options.rerender(); });
                 select.setAttribute("aria-pressed", String(options.selectedTemplateId === template.id));
                 group.append(select);
             }
-            const bindings = document.createElement("details"), bindingList = document.createElement("ul");
-            bindings.append(Object.assign(document.createElement("summary"), { textContent: "Template bindings" }));
-            bindingList.append(...richTemplateHelpBindingsFor(kind).map(value => Object.assign(document.createElement("li"), { textContent: value })));
-            bindings.append(bindingList);
-            group.append(bindings);
+            if (format === "excel")
+                group.append(excelGuide(kind));
+            else {
+                const bindings = document.createElement("details"), bindingList = document.createElement("ul");
+                bindings.append(Object.assign(document.createElement("summary"), { textContent: "Template bindings" }));
+                bindingList.append(...richTemplateHelpBindingsFor(kind).map(value => Object.assign(document.createElement("li"), { textContent: value })));
+                bindings.append(bindingList);
+                group.append(bindings);
+            }
             if (format === "excel") {
-                group.append(button("Download starter template", () => void writeDocumentationTemplateStarter(kind).then(bytes => options.download?.(`${kind}-documentation-template.xlsx`, bytes, DOCUMENTATION_TEMPLATE_XLSX_TYPE))));
+                group.append(button("Download guided starter", () => void writeDocumentationTemplateStarter(kind).then(bytes => options.download?.(`${kind}-documentation-template.xlsx`, bytes, DOCUMENTATION_TEMPLATE_XLSX_TYPE))));
                 const upload = document.createElement("input");
                 upload.type = "file";
                 upload.accept = `.xlsx,${DOCUMENTATION_TEMPLATE_XLSX_TYPE}`;
-                upload.setAttribute("aria-label", `Upload Excel template for ${kindName(kind)}`);
+                upload.setAttribute("aria-label", `Select Excel template for ${kindName(kind)}`);
                 upload.addEventListener("change", () => void (async () => { const file = upload.files?.[0]; if (!file)
                     return; const validation = await validateExcelTemplateWorkbook(file, kind); if (!validation.valid)
-                    throw new Error(validation.findings.map(({ location, message }) => `${location}: ${message}`).join("\n")); const bodyDigest = await digest(file), template = createDocumentationTemplate({ id: `documentation-template:${crypto.randomUUID()}`, name: file.name.replace(/\.xlsx$/iu, ""), format: "excel", kind, body: { assetId: `documentation-template-body:${crypto.randomUUID()}`, digest: bodyDigest, byteLength: file.size }, validation }); await persistBody(options, bodyDigest, file, { ...options.records, templates: [...templates, template] }, `Upload Excel template ${template.name}`); options.selectTemplate(template.id); options.setMobileDetail(true); options.rerender(); })().catch(error => detail.replaceChildren(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) }))));
+                    throw new Error(validation.findings.map(({ location, message }) => `${location}: ${message}`).join("\n")); excelCandidates.set(candidateKey(options), { file, kind, validation }); options.selectTemplate(""); options.setMobileDetail(true); options.rerender(); })().catch(error => detail.replaceChildren(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) }))));
                 group.append(upload);
             }
             else
                 group.append(button("New rich page template", () => { const id = `documentation-template:${crypto.randomUUID()}`, rich = builtInRichTemplate(kind, id, `${kindName(kind)} page`), template = createDocumentationTemplate({ ...rich, richBlocks: recordBlocks(rich.blocks), validation: { valid: true, findings: [] } }); options.persist({ ...options.records, templates: [...templates, template] }, `Create Rich page template ${template.name}`); options.selectTemplate(template.id); options.setMobileDetail(true); options.rerender(); }));
             list.append(group);
         }
-    const selected = templates.find(({ id }) => id === options.selectedTemplateId);
-    detail.append(heading(3, selected?.name ?? "Template detail"));
-    if (!selected)
-        detail.append(Object.assign(document.createElement("p"), { textContent: templates.length ? `${templates.length} project templates. Select one to edit its presentation.` : "Choose an Excel upload or create a Rich page template." }));
+    const candidate = excelCandidates.get(candidateKey(options)), selected = templates.find(({ id }) => id === options.selectedTemplateId);
+    if (candidate)
+        candidateDetail(host, detail, candidate, templates, options);
     else {
-        const name = document.createElement("input");
-        name.value = selected.name;
-        name.setAttribute("aria-label", "Template name");
-        detail.append(labelled("Name", name), button("Rename template", () => { options.persist({ ...options.records, templates: templates.map(template => template.id === selected.id ? { ...selected, name: name.value.trim() || selected.name } : template) }, `Rename documentation template ${selected.name}`); options.rerender(); }), button("Duplicate template", () => { const copy = { ...structuredClone(selected), id: `documentation-template:${crypto.randomUUID()}`, name: `${selected.name} copy` }; options.persist({ ...options.records, templates: [...templates, copy] }, `Duplicate documentation template ${selected.name}`); options.selectTemplate(copy.id); options.rerender(); }), button("Remove template", () => { try {
-            options.persist(removeDocumentationTemplate(options.records, selected.id), `Remove documentation template ${selected.name}`);
-            options.selectTemplate("");
-            options.setMobileDetail(false);
-            options.rerender();
+        detail.append(heading(3, selected?.name ?? "Template detail"));
+        if (!selected)
+            detail.append(Object.assign(document.createElement("p"), { textContent: templates.length ? `${templates.length} project templates. Select one to edit its presentation.` : "Select an Excel template or create a Rich page template." }));
+        else {
+            const name = document.createElement("input");
+            name.value = selected.name;
+            name.setAttribute("aria-label", "Template name");
+            detail.append(labelled("Name", name), button("Rename template", () => { options.persist({ ...options.records, templates: templates.map(template => template.id === selected.id ? { ...selected, name: name.value.trim() || selected.name } : template) }, `Rename documentation template ${selected.name}`); options.rerender(); }), button("Duplicate template", () => { const copy = { ...structuredClone(selected), id: `documentation-template:${crypto.randomUUID()}`, name: `${selected.name} copy` }; options.persist({ ...options.records, templates: [...templates, copy] }, `Duplicate documentation template ${selected.name}`); options.selectTemplate(copy.id); options.rerender(); }), button("Remove template", () => { try {
+                options.persist(removeDocumentationTemplate(options.records, selected.id), `Remove documentation template ${selected.name}`);
+                options.selectTemplate("");
+                options.setMobileDetail(false);
+                options.rerender();
+            }
+            catch (error) {
+                detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) }));
+            } }));
+            if (selected.format === "excel") {
+                if (options.sampleExcel)
+                    detail.append(button("Download sample-filled workbook", () => void options.sampleExcel(selected).then(bytes => options.download?.(`${selected.name.toLowerCase().replace(/[^a-z0-9]+/gu, "-")}-sample.xlsx`, bytes, DOCUMENTATION_TEMPLATE_XLSX_TYPE)).catch(error => detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) })))));
+                const replacement = document.createElement("input");
+                replacement.type = "file";
+                replacement.accept = ".xlsx";
+                replacement.setAttribute("aria-label", "Replace Excel template body");
+                replacement.addEventListener("change", () => void (async () => { const file = replacement.files?.[0]; if (!file)
+                    return; const validation = await validateExcelTemplateWorkbook(file, selected.kind); if (!validation.valid)
+                    throw new Error(validation.findings.map(({ location, message }) => `${location}: ${message}`).join("\n")); const bodyDigest = await digest(file), records = replaceDocumentationTemplate(options.records, selected.id, { assetId: selected.body.assetId, digest: bodyDigest, byteLength: file.size }); await persistBody(options, bodyDigest, file, records, `Replace documentation template ${selected.name}`); options.rerender(); })().catch(error => detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) }))));
+                detail.append(replacement);
+            }
+            else
+                richEditor(detail, selected, templates, options);
         }
-        catch (error) {
-            detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) }));
-        } }));
-        if (selected.format === "excel") {
-            if (options.sampleExcel)
-                detail.append(button("Download sample-filled workbook", () => void options.sampleExcel(selected).then(bytes => options.download?.(`${selected.name.toLowerCase().replace(/[^a-z0-9]+/gu, "-")}-sample.xlsx`, bytes, DOCUMENTATION_TEMPLATE_XLSX_TYPE)).catch(error => detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) })))));
-            const replacement = document.createElement("input");
-            replacement.type = "file";
-            replacement.accept = ".xlsx";
-            replacement.setAttribute("aria-label", "Replace Excel template body");
-            replacement.addEventListener("change", () => void (async () => { const file = replacement.files?.[0]; if (!file)
-                return; const validation = await validateExcelTemplateWorkbook(file, selected.kind); if (!validation.valid)
-                throw new Error(validation.findings.map(({ location, message }) => `${location}: ${message}`).join("\n")); const bodyDigest = await digest(file), records = replaceDocumentationTemplate(options.records, selected.id, { assetId: selected.body.assetId, digest: bodyDigest, byteLength: file.size }); await persistBody(options, bodyDigest, file, records, `Replace documentation template ${selected.name}`); options.rerender(); })().catch(error => detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) }))));
-            detail.append(replacement);
-        }
-        else
-            richEditor(detail, selected, templates, options);
     }
     detail.append(button("Back to template list", () => { options.setMobileDetail(false); options.rerender(); }));
     grid.append(list, detail);

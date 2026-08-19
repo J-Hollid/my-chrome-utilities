@@ -9,10 +9,15 @@ import {
   snapshotTemplateDigests,
 } from "../dist/documentation-templates/template-library.js";
 import {DOCUMENTATION_TEMPLATE_XLSX_TYPE} from "../dist/documentation-templates/template-body.js";
+import {excelTemplateGuideFor} from "../dist/documentation-templates/excel-template.js";
 import {createMemoryDurableProjectRepository,durableDraftCommand} from "../dist/data-layer-durable-project-repository.js";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
 
 let documentation={sets:[{id:"set:client",name:"Client specification",themeId:"theme:client",sections:[]}],themes:[],templates:[]};
+const flowGuide=excelTemplateGuideFor("flow");
+assert.ok(flowGuide.values.every(entry=>entry.placeholder===`{{${entry.path}}}`&&entry.meaning&&entry.example&&entry.available));
+assert.deepEqual(flowGuide.collections.find(({path})=>path==="flow.pages"),{path:"flow.pages",meaning:"Flow Page contexts",itemPrefix:"page",fields:["page.stepLabel","page.pageName","page.sourcePageName","page.eventName","page.heading","page.rows","page.events"],nestedCollections:["page.events","page.rows"],directions:["Across","Down"],emptyResult:"No copy",copyBehavior:"The complete named repeat area is copied for every item."});
+assert.ok(flowGuide.collections.some(({path,nestedCollections})=>path==="page.events"&&nestedCollections.includes("event.rows")));
 const template=createDocumentationTemplate({id:"template:flow",name:"Acme flow workbook",format:"excel",kind:"flow",body:{assetId:"body:first",digest:"sha256:first",byteLength:12},validation:{valid:true,findings:[]}});
 documentation={...documentation,templates:[template]};
 documentation=assignDocumentationTemplate(documentation,"set:client","excel","flow",template.id);

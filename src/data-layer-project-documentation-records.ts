@@ -52,7 +52,7 @@ export interface ProjectDocumentationTemplate {
   name:string;
   format:"excel"|"rich";
   kind:ProjectDocumentationSectionKind;
-  contractVersion:1;
+  contractVersion:1|2;
   digest:string;
   validation:{valid:boolean;findings:readonly ProjectDocumentationTemplateFinding[]};
   body?:{assetId:string;digest:string;byteLength:number};

@@ -2,33 +2,31 @@ import { selectProjectDocumentationTables } from "../data-layer-project-document
 import { fitProjectDocumentationLogo } from "../data-layer-project-documentation-records.js";
 import { documentationTemplateAssignment } from "./template-library.js";
 import { prepareDocumentationTemplateContext } from "./template-context.js";
-import { parseExcelTemplateDirective, renderExcelTemplateGrid } from "./excel-template.js";
+import { renderExcelTemplateGrid } from "./excel-template.js";
 import { validateExcelTemplateWorkbook } from "./excel-workbook.js";
 import { safeWorksheetName } from "./template-contract.js";
 const excelJs = () => { const value = globalThis.ExcelJS; if (!value)
     throw new Error("The packaged Excel template renderer is unavailable."); return value; };
-const noteText = (note) => typeof note === "string" ? note : note && typeof note === "object" && Array.isArray(note.texts) ? note.texts.map(({ text }) => String(text ?? "")).join("") : "";
 const literalCellValue = (value) => typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? value : value == null ? "" : String(value);
 const starterPrototype = (kind) => {
-    const template = { cell: "A1", text: `tw:template(kind="${kind}" contract="1")` };
     if (kind === "overview")
-        return { kind, contractVersion: 1, worksheetName: "Overview prototype", cells: [{ address: "A1", value: "{{section.name}}" }, { address: "A3", value: "{{field.label}}" }, { address: "B3", value: "{{field.value}}" }], directives: [template, { cell: "A3", text: 'tw:each(items="overview.fields" var="field" direction="down" lastCell="B3")' }], merges: [] };
+        return { kind, contractVersion: 2, worksheetName: "Template", cells: [{ address: "A1", value: "{{section.name}}" }, { address: "A3", value: "{{field.label}}" }, { address: "B3", value: "{{field.value}}" }], areas: [{ name: "FieldRow", type: "repeat", source: "overview.fields", direction: "down", range: "A3:B3" }], merges: [] };
     if (kind === "flow")
-        return { kind, contractVersion: 1, worksheetName: "Flow prototype", cells: [{ address: "A1", value: "{{section.name}}" }, { address: "A3", value: "{{page.stepLabel}}" }, { address: "B3", value: "{{page.pageName}}" }, { address: "A5", value: "{{event.eventName}}" }], directives: [template, { cell: "A3", text: 'tw:each(items="flow.pages" var="page" direction="right" lastCell="D8")' }, { cell: "A5", text: 'tw:each(items="page.events" var="event" direction="down" lastCell="B5")' }], merges: [] };
+        return { kind, contractVersion: 2, worksheetName: "Template", cells: [{ address: "A1", value: "{{section.name}}" }, { address: "A3", value: "{{page.stepLabel}}" }, { address: "B3", value: "{{page.pageName}}" }, { address: "A5", value: "{{event.eventName}}" }], areas: [{ name: "PageCard", type: "repeat", source: "flow.pages", direction: "across", range: "A3:D8" }, { name: "EventRow", type: "repeat", source: "page.events", direction: "down", range: "A5:B5" }, { name: "ThemeLogo", type: "image", source: "theme.logo", range: "C1:D2" }], merges: [] };
     if (kind === "matrix")
-        return { kind, contractVersion: 1, worksheetName: "Matrix prototype", cells: [{ address: "A1", value: "{{section.name}}" }, { address: "A3", value: "{{row.property}}" }, { address: "B3", value: "{{cell.value}}" }], directives: [template, { cell: "A3", text: 'tw:each(items="matrix.rows" var="row" direction="down" lastCell="C4")' }, { cell: "B3", text: 'tw:each(items="row.cells" var="cell" direction="right" lastCell="C3")' }], merges: [] };
-    return { kind, contractVersion: 1, worksheetName: "Profile prototype", cells: [{ address: "A1", value: "{{section.name}}" }, { address: "A3", value: "{{concept.name}}" }, { address: "A4", value: "{{row.property}}" }, { address: "B4", value: "{{cell.value}}" }], directives: [template, { cell: "A3", text: 'tw:each(items="profile.concepts" var="concept" direction="down" lastCell="D6")' }, { cell: "A4", text: 'tw:each(items="concept.rows" var="row" direction="down" lastCell="D4")' }, { cell: "B4", text: 'tw:each(items="row.cells" var="cell" direction="right" lastCell="C4")' }], merges: [] };
+        return { kind, contractVersion: 2, worksheetName: "Template", cells: [{ address: "A1", value: "{{section.name}}" }, { address: "A3", value: "{{row.property}}" }, { address: "B3", value: "{{cell.value}}" }], areas: [{ name: "RowPattern", type: "repeat", source: "matrix.rows", direction: "down", range: "A3:C4" }, { name: "CellPattern", type: "repeat", source: "row.cells", direction: "across", range: "B3:C3" }], merges: [] };
+    return { kind, contractVersion: 2, worksheetName: "Template", cells: [{ address: "A1", value: "{{section.name}}" }, { address: "A3", value: "{{concept.name}}" }, { address: "A4", value: "{{row.property}}" }, { address: "B4", value: "{{cell.value}}" }], areas: [{ name: "ConceptPattern", type: "repeat", source: "profile.concepts", direction: "down", range: "A3:D6" }, { name: "RowPattern", type: "repeat", source: "concept.rows", direction: "down", range: "A4:D4" }, { name: "CellPattern", type: "repeat", source: "row.cells", direction: "across", range: "B4:C4" }], merges: [] };
 };
-export async function writeDocumentationTemplateStarter(kind) { const workbook = new (excelJs().Workbook)(), prototype = starterPrototype(kind), worksheet = workbook.addWorksheet(prototype.worksheetName); for (const cell of prototype.cells) {
+const absoluteNamedRange = (range) => `'Template'!${range.split(":").map(cell => `$${cell.replace(/([A-Z]+)(\d+)/u, "$1$$$2")}`).join(":")}`;
+export async function writeDocumentationTemplateStarter(kind) { const workbook = new (excelJs().Workbook)(), prototype = starterPrototype(kind), worksheet = workbook.addWorksheet("Template"), guide = workbook.addWorksheet("Template Guide"); for (const cell of prototype.cells) {
     worksheet.getCell(cell.address).value = cell.value;
     worksheet.getCell(cell.address).style = { font: { name: "Arial", size: 11 }, alignment: { vertical: "top", wrapText: true } };
-} for (const source of prototype.directives)
-    worksheet.getCell(source.cell).note = source.text; worksheet.getColumn(1).width = 28; worksheet.getColumn(2).width = 34; return new Uint8Array(await workbook.xlsx.writeBuffer()); }
-function prototypeFromWorksheet(worksheet, kind) {
-    const cells = new Map(), directives = [];
-    worksheet.eachRow({ includeEmpty: true }, row => row.eachCell({ includeEmpty: true }, cell => { const note = noteText(cell.note), directive = note.startsWith("tw:"); if (directive)
-        directives.push({ cell: cell.address, text: note }); if (cell.value !== null && cell.value !== undefined || directive || Object.keys(cell.style).length)
-        cells.set(cell.address, { address: cell.address, sourceAddress: cell.address, value: literalCellValue(cell.value), style: structuredClone(cell.style), ...(!directive && cell.note ? { note: structuredClone(cell.note) } : {}) }); }));
+} worksheet.getColumn(1).width = 28; worksheet.getColumn(2).width = 34; for (const area of prototype.areas)
+    workbook.definedNames.add(absoluteNamedRange(area.range), area.name); guide.getCell("A1").value = "Guided Excel template"; guide.getCell("A2").value = "Use exact {{value.paths}} for single values. A repeat area copies the complete named Template range in configured order."; guide.getCell("A3").value = "Examples: Down rows, Across cards, and nested repeats. Empty repeatable data produces no copy."; guide.addTable?.({ name: "TemplateSettings", ref: "A5", headerRow: true, columns: [{ name: "Setting" }, { name: "Value" }], rows: [["Contract", 2], ["Kind", kind]] }); guide.addTable?.({ name: "TemplateAreas", ref: "A10", headerRow: true, columns: [{ name: "Area" }, { name: "Type" }, { name: "Source" }, { name: "Direction" }], rows: prototype.areas.map(area => [area.name, area.type === "repeat" ? "Repeat" : "Image", area.source, area.type === "repeat" ? (area.direction === "across" ? "Across" : "Down") : ""]) }); guide.getCell("F1").value = "Single values"; guide.getCell("F2").value = "{{project.name}} — Project name — Shop — available everywhere"; guide.getCell("F4").value = "Repeatable data"; guide.getCell("F5").value = "flow.pages — Page contexts — item prefix page — Across or Down — complete named area copied"; guide.getCell("F6").value = "page.events — contained Events — item prefix event — nested inside flow.pages"; return new Uint8Array(await workbook.xlsx.writeBuffer()); }
+function prototypeFromWorkbook(workbook, kind) {
+    const worksheet = workbook.getWorksheet?.("Template") ?? workbook.worksheets.find(({ name }) => name === "Template"), guide = workbook.getWorksheet?.("Template Guide") ?? workbook.worksheets.find(({ name }) => name === "Template Guide"), cells = new Map();
+    worksheet.eachRow({ includeEmpty: true }, row => row.eachCell({ includeEmpty: true }, cell => { if (cell.value !== null && cell.value !== undefined || Object.keys(cell.style).length)
+        cells.set(cell.address, { address: cell.address, sourceAddress: cell.address, value: literalCellValue(cell.value), style: structuredClone(cell.style) }); }));
     const ensure = (address) => { if (!cells.has(address))
         cells.set(address, { address, sourceAddress: address, value: "", style: {} }); };
     for (const merge of worksheet.model?.merges ?? []) {
@@ -41,7 +39,9 @@ function prototypeFromWorksheet(worksheet, kind) {
         ensure(cellAddress(start.row, start.column));
         ensure(cellAddress(end.row, end.column));
     }
-    return { kind, contractVersion: 1, worksheetName: worksheet.name, cells: [...cells.values()], directives, merges: [...(worksheet.model?.merges ?? [])] };
+    const named = new Map(workbook.definedNames.model.map(item => [item.name, item.ranges[0]?.replace(/^'?Template'?!/u, "").replaceAll("$", "")])), table = guide.getTable?.("TemplateAreas").table, ref = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/u.exec(table?.tableRef ?? ""), columnNumber = (letters) => [...letters].reduce((value, letter) => value * 26 + letter.charCodeAt(0) - 64, 0), rows = table?.rows ?? (ref ? Array.from({ length: Number(ref[4]) - Number(ref[2]) }, (_, rowOffset) => Array.from({ length: columnNumber(ref[3]) - columnNumber(ref[1]) + 1 }, (_, columnOffset) => guide.getCell(Number(ref[2]) + 1 + rowOffset, columnNumber(ref[1]) + columnOffset).value)) : []), areas = rows.flatMap(row => { const name = String(row[0] ?? ""), type = String(row[1] ?? "").toLowerCase(), source = String(row[2] ?? ""), direction = String(row[3] ?? "").toLowerCase(), range = named.get(name); if (!range)
+        return []; return type === "repeat" && (direction === "across" || direction === "down") ? [{ name, type: "repeat", source, direction, range }] : type === "image" && source === "theme.logo" ? [{ name, type: "image", source: "theme.logo", range }] : []; });
+    return { kind, contractVersion: 2, worksheetName: "Template", cells: [...cells.values()], areas, merges: [...(worksheet.model?.merges ?? [])] };
 }
 function fillBuiltIn(worksheet, table) { worksheet.getCell("A1").value = table.title; table.headings.forEach((value, index) => worksheet.getCell(`${String.fromCharCode(65 + index)}2`).value = value); table.rows.forEach((row, rowIndex) => row.forEach((value, columnIndex) => worksheet.getCell(`${String.fromCharCode(65 + columnIndex)}${rowIndex + 3}`).value = value)); }
 const cellPoint = (address) => { const match = /^([A-Z]+)([1-9]\d*)$/u.exec(address); let column = 0; for (const value of match?.[1] ?? "")
@@ -99,19 +99,18 @@ function copyImages(source, sourceSheet, targetBook, targetSheet, rendered, prot
     if (!intrinsic)
         return;
     const logoId = targetBook.addImage(logo);
-    for (const sourceDirective of prototype.directives) {
-        const directive = parseExcelTemplateDirective(sourceDirective.text);
-        if (directive.kind !== "image")
+    for (const area of prototype.areas) {
+        if (area.type !== "image")
             continue;
-        const start = cellPoint(sourceDirective.cell), end = cellPoint(directive.lastCell), bounds = rectanglePixels(sourceSheet, start, end), fitted = fitProjectDocumentationLogo(intrinsic.width, intrinsic.height, bounds.width, bounds.height);
-        for (const cell of rendered.cells.filter(item => item.sourceAddress === sourceDirective.cell)) {
+        const [startText, endText = startText] = area.range.split(":"), start = cellPoint(startText), end = cellPoint(endText), bounds = rectanglePixels(sourceSheet, start, end), fitted = fitProjectDocumentationLogo(intrinsic.width, intrinsic.height, bounds.width, bounds.height);
+        for (const cell of rendered.cells.filter(item => item.sourceAddress === startText)) {
             const target = cellPoint(cell.address);
             targetSheet.addImage(logoId, { tl: { row: target.row - 1, col: target.column - 1 }, ext: fitted, editAs: "oneCell" });
         }
     }
 }
 async function renderCustomInto(output, body, snapshot, table, worksheetName) { const section = snapshot.set.sections.find(({ id }) => id === table.id); const validation = await validateExcelTemplateWorkbook(body, section.kind); if (!validation.valid)
-    throw new Error(validation.findings.map(({ location, message }) => `${location}: ${message}`).join("\n")); const source = new (excelJs().Workbook)(); await source.xlsx.load(await body.arrayBuffer()); const worksheet = source.worksheets[0], prototype = prototypeFromWorksheet(worksheet, section.kind), context = prepareDocumentationTemplateContext(snapshot, table.id), rendered = renderExcelTemplateGrid(prototype, context), target = output.addWorksheet(worksheetName); for (const cell of rendered.cells) {
+    throw new Error(validation.findings.map(({ location, message }) => `${location}: ${message}`).join("\n")); const source = new (excelJs().Workbook)(); await source.xlsx.load(await body.arrayBuffer()); const worksheet = source.getWorksheet?.("Template") ?? source.worksheets.find(({ name }) => name === "Template"), prototype = prototypeFromWorkbook(source, section.kind), context = prepareDocumentationTemplateContext(snapshot, table.id), rendered = renderExcelTemplateGrid(prototype, context), target = output.addWorksheet(worksheetName); for (const cell of rendered.cells) {
     const destination = target.getCell(cell.address), sourcePoint = cellPoint(cell.sourceAddress ?? cell.address), targetPoint = cellPoint(cell.address);
     destination.value = cell.value;
     destination.style = structuredClone(cell.style ?? {});

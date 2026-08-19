@@ -5,7 +5,7 @@ const clone = (value) => structuredClone(value);
 const assignmentKey = (format, kind) => `${format}:${kind}`;
 const display = (format, kind) => `${format === "excel" ? "Excel" : "Rich page"} ${kind === "profile" ? "Site Profile" : kind[0].toUpperCase() + kind.slice(1)}`;
 export function createDocumentationTemplate(input) {
-    const value = { ...clone(input), id: projectDocumentationSafeText(input.id), name: projectDocumentationSafeText(input.name), contractVersion: 1, digest: input.body?.digest ?? templateDigest("rich", input.richBlocks ?? []) };
+    const value = { ...clone(input), id: projectDocumentationSafeText(input.id), name: projectDocumentationSafeText(input.name), contractVersion: (input.format === "excel" ? 2 : 1), digest: input.body?.digest ?? templateDigest("rich", input.richBlocks ?? []) };
     if (!value.id)
         throw new Error("Documentation template needs a stable identity.");
     if (!value.name)
@@ -31,14 +31,16 @@ export function validateDocumentationTemplateRecords(documentation) {
             throw new DOMException(`Documentation template identity ${template.id || "(missing)"} is invalid or duplicated.`, "DataError");
         ids.add(template.id);
         byId.set(template.id, template);
-        if (template.contractVersion !== 1 || !["overview", "flow", "matrix", "profile"].includes(template.kind))
+        if (!["overview", "flow", "matrix", "profile"].includes(template.kind))
             throw new DOMException(`Documentation template ${template.id} uses an unsupported contract.`, "DataError");
         if (template.format === "excel") {
-            if (!template.body || template.richBlocks || !/^sha256:[0-9a-f]{64}$/u.test(template.body.digest) || template.body.digest !== template.digest || template.body.byteLength < 1 || template.body.byteLength > 10 * 1024 * 1024 || !template.validation.valid)
+            if (template.contractVersion !== 2 || !template.body || template.richBlocks || !/^sha256:[0-9a-f]{64}$/u.test(template.body.digest) || template.body.digest !== template.digest || template.body.byteLength < 1 || template.body.byteLength > 10 * 1024 * 1024 || !template.validation.valid)
                 throw new DOMException(`Excel documentation template ${template.id} has invalid body metadata.`, "DataError");
             bodies.push({ digest: template.body.digest, byteLength: template.body.byteLength, kind: template.kind });
             continue;
         }
+        if (template.contractVersion !== 1)
+            throw new DOMException(`Documentation template ${template.id} uses an unsupported contract.`, "DataError");
         if (template.format !== "rich" || template.body || !template.richBlocks)
             throw new DOMException(`Documentation template ${template.id} has an unsupported format.`, "DataError");
         const blocks = template.richBlocks, validation = validateRichDocumentationTemplate({ ...template, blocks }), digest = templateDigest("rich", blocks);

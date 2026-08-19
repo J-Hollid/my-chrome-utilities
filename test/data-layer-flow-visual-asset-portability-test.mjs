@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
+import ExcelJS from "exceljs";
 import {
   createFlowVisualArchive,
   createMemoryFlowVisualAssetStore,
@@ -12,7 +13,10 @@ import {addProjectEntity,createSpecificationProject} from "../dist/data-layer-sp
 import {flowDocumentationSnapshotFromState} from "../dist/data-layer-flow-documentation-snapshot.js";
 import {zipDocumentationFiles} from "../dist/data-layer-flow-table-documentation-export.js";
 import {templateDigest} from "../dist/documentation-templates/template-contract.js";
+import {writeDocumentationTemplateStarter} from "../dist/documentation-templates/excel-renderer.js";
 import {verificationDigest} from "../scripts/verification-evidence.mjs";
+
+globalThis.ExcelJS=ExcelJS;
 
 const png=Uint8Array.from(Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=","base64"));
 const digest=`sha256:${Buffer.from(await crypto.subtle.digest("SHA-256",png)).toString("hex")}`;
@@ -89,14 +93,7 @@ assert.equal(imported.project.id,"project:copy");
 assert.equal(imported.project.documentationFlowGraphs["copy:flow:checkout"].pageFrames[0].conceptVisual.assetId,"copy:asset:cart");
 assert.equal(imported.publishedProject.documentationFlowGraphs["copy:flow:checkout"].pageFrames[0].conceptVisual.assetId,"copy:asset:cart");
 
-const workbookBytes=zipDocumentationFiles([
-  {name:"[Content_Types].xml",content:'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/></Types>'},
-  {name:"_rels/.rels",content:'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
-  {name:"xl/workbook.xml",content:'<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheets><sheet name="Flow" sheetId="1"/></sheets></workbook>'},
-  {name:"xl/_rels/workbook.xml.rels",content:'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>'},
-  {name:"xl/worksheets/sheet1.xml",content:'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData/></worksheet>'},
-  {name:"xl/comments1.xml",content:'<comments xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><authors><author>Twatility</author></authors><commentList><comment ref="A1"><text><t>tw:template(kind="flow" contract="1")</t></text></comment></commentList></comments>'},
-]),workbookBody=new Blob([workbookBytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),workbookDigest=`sha256:${Buffer.from(await crypto.subtle.digest("SHA-256",await workbookBody.arrayBuffer())).toString("hex")}`,templateProject={...structuredClone(project),documentation:{sets:[{id:"set:templates",name:"Templates",themeId:"theme:templates",sections:[],templateAssignments:{"excel:flow":"template:flow"}}],themes:[],templates:[{id:"template:flow",name:"Flow workbook",format:"excel",kind:"flow",contractVersion:1,digest:workbookDigest,validation:{valid:true,findings:[]},body:{assetId:"template-body:flow",digest:workbookDigest,byteLength:workbookBody.size}}]}};
+const workbookBytes=await writeDocumentationTemplateStarter("flow"),workbookBody=new Blob([workbookBytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),workbookDigest=`sha256:${Buffer.from(await crypto.subtle.digest("SHA-256",await workbookBody.arrayBuffer())).toString("hex")}`,templateProject={...structuredClone(project),documentation:{sets:[{id:"set:templates",name:"Templates",themeId:"theme:templates",sections:[],templateAssignments:{"excel:flow":"template:flow"}}],themes:[],templates:[{id:"template:flow",name:"Flow workbook",format:"excel",kind:"flow",contractVersion:2,digest:workbookDigest,validation:{valid:true,findings:[]},body:{assetId:"template-body:flow",digest:workbookDigest,byteLength:workbookBody.size}}]}};
 const templateArchive=await createFlowVisualArchive({project:templateProject,assets:[{metadata,body:new Blob([png],{type:metadata.mediaType})}],templateBodies:[{digest:workbookDigest,byteLength:workbookBody.size,body:workbookBody}]});
 const importedTemplate=await importFlowVisualArchive(templateArchive,{projectId:"project:template-copy",id:old=>`template:${old}`});
 assert.equal(importedTemplate.templateBodies.length,1,"one digest-addressed Excel body is imported exactly once");
