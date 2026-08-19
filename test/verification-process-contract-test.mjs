@@ -28,6 +28,7 @@ import {
 import {
   canonicalVerificationChangeSet, verificationPacksAtCommit,
 } from "../scripts/verification-changes.mjs";
+import { intentOwnershipReadiness } from "../scripts/verification-ownership-readiness-core.mjs";
 import {
   browserTargetConfigurations,
   completeBrowserObservationOutput,
@@ -11302,6 +11303,41 @@ function judgmentRoutingContractRegression(context) {
     preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
     repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
 }
+async function reorderableEditorRegistryContractRegression(context) {
+  const expectedPreRepairFailure = {
+    specificationBuilderUnresolved:true,
+    shellSourceCount:18,
+    canonicalStructureTargetCount:1,
+  };
+  const expectedRepairResult = {
+    specificationBuilderUnresolved:false,
+    shellSourceCount:20,
+    canonicalStructureTargetCount:0,
+  };
+  const canonicalStructurePlan=planVerification(packs,{
+    changedPaths:["src/canonical-schema-focused/structure.ts"],
+  });
+  const readiness=await intentOwnershipReadiness({intent:{version:1,baseCommit:"a".repeat(40),
+    task:"compact-reorderable-editor-controls",approvedPackIds:["schemas","defects",
+      "live_flow_testing","project_assurance_severity","guided_test_cases","shell"],
+    likelyPaths:["src/specification-builder.ts"],proposedPrefixes:[]},packs});
+  const repairResult = {
+    specificationBuilderUnresolved:readiness.unresolvedExpansionCauses
+      .includes("src/specification-builder.ts"),
+    shellSourceCount:shellSourcePaths.length,
+    canonicalStructureTargetCount:canonicalStructurePlan.observationTasks
+      .flatMap(({logicalTargetIds})=>logicalTargetIds).length,
+  };
+  assert.deepEqual(repairResult,expectedRepairResult,
+    "the reorderable editor registry contracts expose their exact repaired ownership");
+  const fixture={id:"reorderable-editor-registry-contract-v1",causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{task:"compact-reorderable-editor-controls"},expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest=verificationDigest(fixture);
+  return {version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
@@ -11339,6 +11375,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           ? verificationConsumerOwnershipRegression(regressionContext)
         : regressionContext.causalCategory === "other:judgment-routing-contract-drift"
           ? judgmentRoutingContractRegression(regressionContext)
+        : regressionContext.causalCategory === "other:reorderable editor registry contracts"
+          ? await reorderableEditorRegistryContractRegression(regressionContext)
         : regressionContext.causalCategory === "other:repair-focused prerequisite closure"
           ? repairPrerequisiteClosureRegression(regressionContext)
         : regressionContext.causalCategory === "other:confirmed-flaky acceptance evidence routing"
