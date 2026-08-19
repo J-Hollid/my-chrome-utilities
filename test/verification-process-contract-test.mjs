@@ -7798,7 +7798,6 @@ assert.equal(flakyAdmissions.entries[0].classificationDigest,
 assert.equal(flakyAdmissions.entries[0].registryDigest, flakyDiagnostic.registryDigest);
 const taskScopedDiagnostic = structuredClone(flakyDiagnostic);
 delete taskScopedDiagnostic.diagnostic.scope.logicalTargetIds;
-delete taskScopedDiagnostic.tasks[bootstrapTask.key].execution.logicalTargetIds;
 const taskScopedDiagnosticBytes = Buffer.from(JSON.stringify(taskScopedDiagnostic));
 const taskScopedIncident = structuredClone(flakyIncident);
 delete taskScopedIncident.failure.retryScope.logicalTargetIds;

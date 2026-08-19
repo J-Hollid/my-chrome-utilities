@@ -301,7 +301,6 @@ export function confirmedFlakyAdmissionCandidates(incidents) {
 }
 
 function exactValue(left, right) {
-  if (left === undefined || right === undefined) return left === right;
   return timeoutIncidentDigest(left) === timeoutIncidentDigest(right);
 }
 
@@ -347,7 +346,8 @@ async function diagnosticRetryReceipt(root, incident, loader, registryProofLoade
     result?.status === "passed" && result.provenance === "fresh" &&
     verificationTaskDigest(result.identity) === verificationTaskDigest(incident.failure.task) &&
     exactValue(result.execution?.args, incident.failure.retryScope?.executionArgs) &&
-    exactValue(result.execution?.logicalTargetIds, incident.failure.retryScope?.logicalTargetIds) &&
+    exactValue(result.execution?.logicalTargetIds ?? [],
+      incident.failure.retryScope?.logicalTargetIds ?? []) &&
     typeof receipt.completedAt === "string" && Number.isFinite(Date.parse(receipt.completedAt));
   if (!exactDiagnostic) {
     throw new Error(`Confirmed flaky admission ${incident.id} diagnostic receipt is not exact`);
