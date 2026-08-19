@@ -24,7 +24,9 @@ import {
   terminalVerificationDeferredRoute,
 } from "./settled-final-verification-policy.mjs";
 import { terminalVerificationDeferredConservation } from "./verification-reliability-deferred.mjs";
-import { createTimeoutIncidentStore } from "./verification-reliability-store.mjs";
+import {
+  createTimeoutIncidentStore, eligibleDeferredIncident,
+} from "./verification-reliability-store.mjs";
 import { timeoutIncidentDigest } from "./verification-reliability-values.mjs";
 import { canonicalPackageProof } from "./verification-reliability-runtime.mjs";
 import {
@@ -134,7 +136,8 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
   const flakyIds = new Set((record.confirmedFlakyAdmissions?.entries ?? [])
     .map(({ incidentId }) => incidentId));
   const admittedIds = new Set([...eligibleIds, ...flakyIds]);
-  const unadmittedBlocking = blocking.filter(({ id }) => !admittedIds.has(id));
+  const unadmittedBlocking = blocking.filter((incident) =>
+    !admittedIds.has(incident.id) && !eligibleDeferredIncident(incident));
   if (unadmittedBlocking.length) {
     throw new Error("Reliability admission set changed before review recording");
   }

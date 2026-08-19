@@ -366,7 +366,7 @@ function approvedSpecificationPath(changedPath) {
   return specificationPathPrefixes.some((prefix) => changedPath.startsWith(prefix));
 }
 
-function eligibleDeferredIncident(incident) {
+export function eligibleDeferredIncident(incident) {
   return incident.terminalVerificationDeferred?.status === "terminal-verification-deferred" &&
     (incident.repair?.status === "eligible" ||
       incident.terminalVerificationDeferred?.basis === "confirmed-flaky");

@@ -660,10 +660,15 @@ try {
   await assert.rejects(()=>recordEligibleRepairReviewTransaction(admitted,
     { version:1, records:[] }, transactionOptions), /admission set changed/i,
   "a newly applicable unresolved incident blocks incomplete transaction recording");
-  blockingIncidents = [persistedIncident];
+  const alreadyDeferredIncident = { ...structuredClone(newIncident), id:"incident-already-deferred",
+    terminalVerificationDeferred:{ status:"terminal-verification-deferred",
+      candidate:{ commit:"6".repeat(40), tree:"7".repeat(40) },
+      repairDigest:timeoutIncidentDigest(newIncident.repair) } };
+  blockingIncidents = [persistedIncident, alreadyDeferredIncident];
   await assert.rejects(()=>recordEligibleRepairReviewTransaction(admitted,
     { version:1, records:[] }, { ...transactionOptions,
-      afterDeferrals:async()=>{ throw new Error("simulated crash"); } }), /simulated crash/);
+      afterDeferrals:async()=>{ throw new Error("simulated crash"); } }), /simulated crash/,
+  "an older terminal deferral remains nonblocking while the admitted transaction records");
   await assert.rejects(()=>verifyReviewReadyEvidence(commit, base, "eligible-repair-admission",
     { repositoryRoot:admissionRepository }), /no bound review-ready evidence/i,
   "a prepared transaction cannot authorize handoff");
