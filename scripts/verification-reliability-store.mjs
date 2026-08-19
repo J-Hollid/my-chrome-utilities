@@ -403,6 +403,24 @@ function permittedHandoffRelationship(readiness, relationship) {
   return routes.get(readiness) ?? false;
 }
 
+async function gitConservesRebasedChangeSet({ root, incident, fromCommit, toCommit }) {
+  const baseCommit = incident.failure?.lineage?.baseCommit;
+  if (typeof baseCommit !== "string" || !baseCommit) return false;
+  try {
+    await Promise.all([
+      git(root, "merge-base", "--is-ancestor", baseCommit, fromCommit),
+      git(root, "merge-base", "--is-ancestor", baseCommit, toCommit),
+    ]);
+    const paths = (await git(root, "diff", "--name-only", "-z", `${baseCommit}..${fromCommit}`))
+      .split("\0").filter(Boolean);
+    if (!paths.length) return false;
+    await git(root, "diff", "--quiet", fromCommit, toCommit, "--", ...paths);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function createTimeoutIncidentStore({
   storeDirectory, legacyStoreDirectories, root = repositoryRoot, now = () => new Date().toISOString(),
   randomId = () => randomUUID(), isAncestor,
@@ -422,6 +440,7 @@ export function createTimeoutIncidentStore({
   candidateChangedPaths = async(fromCommit, toCommit) =>
     (await git(root, "diff", "--name-only", `${fromCommit}..${toCommit}`))
       .split(/\r?\n/u).filter(Boolean),
+  conservesRebasedChangeSet = (input) => gitConservesRebasedChangeSet({ root, ...input }),
   canonicalCheckpointValidator = defaultCanonicalCheckpointValidator,
   canonicalRepairTaskIdentities = defaultCanonicalRepairTaskIdentities,
 } = {}) {
@@ -810,7 +829,10 @@ export function createTimeoutIncidentStore({
           }
           const preservesLineage = await commitDescendsFrom({ root, isAncestor,
             ancestor:mapping.fromCommit, commit:mapping.toCommit });
-          if (!preservesLineage && source.tree !== replacement.tree) {
+          const conservesChangeSet = !preservesLineage && source.tree !== replacement.tree &&
+            await conservesRebasedChangeSet({ incident, fromCommit:mapping.fromCommit,
+              toCommit:mapping.toCommit });
+          if (!preservesLineage && source.tree !== replacement.tree && !conservesChangeSet) {
             throw new Error(`Reliability incident ${id} rebase replacement is unrelated to the affected lineage or change set`);
           }
           durable = { kind:"rebase", fromCommit:mapping.fromCommit,

@@ -2527,6 +2527,7 @@ try {
   let incidentCandidate = { commit:"repair-commit", tree:"repair-tree" };
   let incidentCandidateChangedPaths = [];
   let incidentCandidateChangedRange = [];
+  let conservedRebasePair = [];
   const store = createTimeoutIncidentStore({
     root:incidentFixtureRoot,
     storeDirectory:path.join(incidentFixtureRoot, "incidents"),
@@ -2541,6 +2542,7 @@ try {
       commit,
       tree:{ "failed-commit":"failed-tree", "repair-commit":"repair-tree",
         "rebased-commit":"rebased-tree", "reclaimed-commit":"repair-tree",
+        "rebased-delta-commit":"rebased-delta-tree",
         "genuinely-unrelated":"unrelated-tree" }[commit],
     }),
     currentCandidate:async() => incidentCandidate,
@@ -2549,6 +2551,8 @@ try {
       incidentCandidateChangedRange = [fromCommit, toCommit];
       return incidentCandidateChangedPaths;
     },
+    conservesRebasedChangeSet:async({ fromCommit, toCommit }) =>
+      JSON.stringify([fromCommit, toCommit]) === JSON.stringify(conservedRebasePair),
     canonicalRepairTaskIdentities:async() => canonicalRepairIdentities,
     canonicalCheckpointValidator:async({ document, incident }) => {
       const actualKeys = Object.keys(document.receipt.tasks).sort();
@@ -3535,6 +3539,17 @@ console.log("repairTmp=" + process.env.TMPDIR);
   }), /lineage|change.?set|unrelated/u,
   "a genuine unrelated branch cannot inherit the affected incident");
   const unrelatedRebaseRejected = true;
+  const conservedRebaseIncident = await store.create({
+    ...failure, runnerRunId:"run-conserved-rebase",
+  });
+  conservedRebasePair = ["failed-commit", "rebased-delta-commit"];
+  const conservedRebase = await store.recordLineageTransition(conservedRebaseIncident.id, {
+    kind:"rebase", fromCommit:"failed-commit", toCommit:"rebased-delta-commit",
+    toTree:"rebased-delta-tree",
+  });
+  assert.equal(conservedRebase.lineageTransitions[0].toCommit, "rebased-delta-commit",
+    "a non-ancestral QA reissue may inherit the incident only through exact change-set conservation");
+  conservedRebasePair = [];
   const abandoned = await store.recordLineageTransition(concurrentIncidents[1].id, {
     kind:"abandon", fromCommit:"failed-commit",
     userDecision:{ approvedBy:"specifier", approved:true, reference:"user-decision-42" },
