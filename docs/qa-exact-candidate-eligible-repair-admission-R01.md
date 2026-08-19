@@ -1,6 +1,6 @@
 # QA exact-candidate eligible-repair admission R01
 
-Status: policy and implementation handoff approved by the user on 2026-08-19
+Status: QA-integrated at `183496edb9` on 2026-08-19
 
 Prepared: 2026-08-19
 
@@ -88,7 +88,10 @@ A committed transaction permits the ordinary coder-to-refactorer, refactorer-to-
 
 No coder, refactorer, or feature-mode architect may use all-pack execution as admission, repair, evidence, or fallback. Only an explicitly requested master-integration phase may run the canonical all-20 properties and package checkpoint, resolve matching deferred incidents, and supply final-ready evidence.
 
-Until this implementation reaches QA, the product task reports `eligible-repair-admission-needed` with the incident id, candidate, exact pack plan, and regression identity. It does not merge the policy reference or run an all-pack checkpoint.
+The implementation is now on QA. A product task that previously reported
+`eligible-repair-admission-needed` resumes from the exact current QA head and
+revalidates its repaired candidate through this route. It does not merge the
+stopped product lineage or run an all-pack checkpoint.
 
 ## Development focus and QA impact
 
@@ -120,3 +123,34 @@ The settled candidate produces one Shell-only property-enabled review receipt wi
 The implementation effort ceiling is six active hours. At three active hours report admission preflight, receipt schema, transaction and crash-recovery status, task-succession coverage, current exact plan, failures, variance, remaining work, confidence, and completion forecast. Continue while the approved policy and fail-closed safety boundary remain unchanged and a credible bounded path exists.
 
 After architect `qa-ready` integration, reissue `guided-excel-template-authoring` from that exact QA head. Reconstruct its product and causal browser repair from current QA, using `690279385c` only as a patch reference; do not merge its stopped lineage or policy commit `06ca81cd`.
+
+## Settled QA result
+
+Specification `e00d4689b5` was handed to the coder at 22:29:02Z on
+2026-08-18. Exact architect candidate `183496edb9` reached the specifier at
+05:58:23Z on 2026-08-19 and QA fast-forwarded at 06:00:03Z. The durable wall
+interval from handoff to QA was 7 hours 31 minutes 1 second; the final QA-ready
+handoff-to-integration interval was 1 minute 40 seconds. The available durable
+timestamps do not partition that wall interval into active and waiting time, so
+they do not establish whether the six-active-hour ceiling was crossed.
+
+An initial implementation candidate stopped before launching review tasks
+because the existing unresolved feature incidents were not eligible for that
+setup candidate. The correction retained fail-closed exact-candidate admission
+and supplied a bounded first-use path without mutating those incidents or using
+terminal authority. Independent review then tightened governed-task identity,
+successor conservation, canonical Git-note locking, current incident-set
+revalidation, and crash-safe transaction recovery.
+
+Three accepted Shell-only checkpoints each ran 77 tasks with properties and
+package proof in 4 minutes 55 seconds, 4 minutes 56 seconds, and 4 minutes
+53 seconds, about 14 minutes 44 seconds total. The first passing tree was
+superseded by the review repairs; the corrected tree was rerun at its final merge
+identity. No accepted task failed, no all-20 checkpoint ran, and no terminal
+proof was claimed or invalidated.
+
+Recommendation: **continue** by resuming the already-approved
+`guided-excel-template-authoring` task from this integration scorecard's exact QA
+descendant. Keep its existing incident unresolved until the repaired product
+candidate obtains atomic focused review evidence and matching terminal deferral;
+master resolution remains exclusive to the later user-requested all-20 gate.
