@@ -7597,6 +7597,19 @@ assert.deepEqual(admissions.entries.map(({ incidentId, coverageKind, selectedTas
   incidentId:"exact-bootstrap-repair", coverageKind:"regression", selectedTaskKey:bootstrapTask.key,
 }], "an eligible exact-candidate repair is admitted from persisted repair proof without source receipt bootstrap");
 assert.equal(admissions.entries[0].repairDigest, timeoutIncidentDigest(admissionIncident.repair));
+const rebasedAdmissionIncident = { ...structuredClone(admissionIncident),
+  lineageTransitions:[{ kind:"rebase", fromCommit:"bootstrap-candidate",
+    toCommit:"rebased-candidate", toTree:"rebased-tree",
+    at:"2026-08-19T13:35:58.539Z" }] };
+const rebasedAdmissions = await buildEligibleRepairAdmissions({
+  incidents:[rebasedAdmissionIncident], plan:bootstrapPlan, packs,
+  candidate:{ commit:"rebased-candidate", tree:"rebased-tree" },
+  baseCommit:"approved-contract-base", evidenceTask:"eligible-repair-admission",
+  changeSetDigest:"5".repeat(64), planDigest:"6".repeat(64),
+});
+assert.equal(rebasedAdmissions.entries[0].repairDigest,
+  timeoutIncidentDigest(rebasedAdmissionIncident.repair),
+"an eligible repair remains admissible after its exact validated recorded rebase");
 for (const phase of ["immediately before task launch", "before receipt finalization"]) {
   const mutatedIncident = structuredClone(admissionIncident);
   mutatedIncident.repair.causalExplanation += ` Mutated ${phase}.`;

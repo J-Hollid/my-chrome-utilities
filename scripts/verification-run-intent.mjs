@@ -405,20 +405,25 @@ const digestPattern = /^[a-f0-9]{64}$/u;
 
 function validEligibleRepairProof(incident, candidate, baseCommit, evidenceTask) {
   const repair = incident?.repair;
+  const latestLineage = incident?.lineageTransitions?.at(-1);
+  const candidateMatches = repair?.candidate?.commit === candidate?.commit &&
+      repair?.candidate?.tree === candidate?.tree ||
+    latestLineage?.kind === "rebase" &&
+      latestLineage.fromCommit === repair?.candidate?.commit &&
+      latestLineage.toCommit === candidate?.commit && latestLineage.toTree === candidate?.tree;
   return [
     incident?.state === "unresolved",
     repair?.status === "eligible",
-    repair?.candidate?.commit === candidate?.commit,
-    repair?.candidate?.tree === candidate?.tree,
+    candidateMatches,
     repair?.checkpoint?.baseCommit === baseCommit,
     repair?.checkpoint?.evidenceTask === evidenceTask,
     typeof repair?.causalCategory === "string" && Boolean(repair.causalCategory),
     typeof repair?.causalExplanation === "string" && Boolean(repair.causalExplanation),
     repair?.regression?.status === "passed",
-    repair?.regression?.commit === candidate?.commit,
+    repair?.regression?.commit === repair?.candidate?.commit,
     digestPattern.test(repair?.regression?.receiptSha256 ?? ""),
     repair?.focusedReceipt?.status === "passed",
-    repair?.focusedReceipt?.commit === candidate?.commit,
+    repair?.focusedReceipt?.commit === repair?.candidate?.commit,
     repair?.focusedReceipt?.provenance === "fresh",
     digestPattern.test(repair?.focusedReceipt?.receiptSha256 ?? ""),
     repair?.causalProtocol?.version === 2,
