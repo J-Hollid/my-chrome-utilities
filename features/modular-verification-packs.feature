@@ -1158,7 +1158,7 @@ Feature: Modular verification packs
       | src/canonical-schema-focused/documentation.ts                  | canonical_editor_document_integration     | LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET |
       | src/canonical-schema-focused/example.ts                        | canonical_editor_document_integration     | LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET |
       | src/canonical-schema-focused/presence.ts                       | canonical_editor_document_integration     | LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET |
-      | src/canonical-schema-focused/structure.ts                      | canonical_editor_document_integration     | LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET |
+      | src/canonical-schema-focused/structure.ts                      | canonical_editor_document_integration     | no Layered editor targets              |
       | src/canonical-schema-focused/values.ts                         | canonical_editor_document_integration     | LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET |
       | src/data-layer-canonical-schema-focused-command.ts             | canonical_editor_document_integration     | LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET |
       | src/data-layer-canonical-schema-focused-drafts.ts              | canonical_editor_document_integration     | LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET |
