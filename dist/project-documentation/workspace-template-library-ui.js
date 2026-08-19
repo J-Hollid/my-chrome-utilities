@@ -147,11 +147,12 @@ function candidateDetail(_host, detail, candidate, templates, options) {
 function unavailableDetail(detail, selected, options) {
     const problem = documentationTemplateProblems(options.records).find(({ templateId }) => templateId === selected.id);
     detail.append(heading(3, selected.name));
-    const alert = document.createElement("section");
+    const alert = document.createElement("section"), findings = document.createElement("div");
     alert.role = "alert";
     alert.setAttribute("aria-label", "Unavailable documentation template");
     alert.append(heading(4, `${problem.format} · ${problem.kind} unavailable`), Object.assign(document.createElement("p"), { textContent: `${problem.assignments.length} affected Documentation Set${problem.assignments.length === 1 ? "" : "s"}. Custom output remains blocked until repaired.` }));
-    detail.append(alert);
+    findings.setAttribute("aria-label", "Current workbook findings");
+    detail.append(alert, findings);
     const assignments = document.createElement("ul");
     assignments.setAttribute("aria-label", "Affected Documentation Set assignments");
     for (const [index, assignment] of problem.assignments.entries()) {
@@ -168,7 +169,7 @@ function unavailableDetail(detail, selected, options) {
     if (selected.format === "excel" && selected.body && options.loadBody) {
         const revalidate = button("Revalidate saved workbook", () => void (async () => { const body = await options.loadBody(options.projectId, selected.body.digest); if (!body)
             throw new Error("The exact saved workbook body is unavailable."); const validation = await validateExcelTemplateWorkbook(body, selected.kind); if (!validation.valid) {
-            renderExcelTemplateFindings(detail, validation.findings);
+            renderExcelTemplateFindings(findings, validation.findings);
             return;
         } const bodyDigest = await digest(body), records = repairDocumentationTemplateMetadata(options.records, selected.id, body, validation, bodyDigest); await persistBody(options, bodyDigest, body, records, `Revalidate saved workbook ${selected.name}`); options.rerender(); })().catch(error => detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) }))));
         if (!problem.assignments.length)
@@ -182,7 +183,7 @@ function unavailableDetail(detail, selected, options) {
         replacement.setAttribute("aria-label", "Replace workbook");
         replacement.addEventListener("change", () => void (async () => { const file = replacement.files?.[0]; if (!file)
             return; const validation = await validateExcelTemplateWorkbook(file, selected.kind); if (!validation.valid) {
-            renderExcelTemplateFindings(detail, validation.findings);
+            renderExcelTemplateFindings(findings, validation.findings);
             return;
         } const bodyDigest = await digest(file), records = repairDocumentationTemplateMetadata(options.records, selected.id, file, validation, bodyDigest); await persistBody(options, bodyDigest, file, records, `Replace documentation template ${selected.name}`); options.rerender(); })());
         detail.append(replacement);

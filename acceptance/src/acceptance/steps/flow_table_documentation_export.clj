@@ -153,6 +153,9 @@
                 :documentationTemplatePresentation
                 :documentationTemplateGuideExamples
                 :documentationTemplateActiveContentFinding
+                :documentationTemplatePurview
+                :documentationTemplateRecoveryFailure
+                :documentationTemplateInvalidTransitions
                 :documentationTemplateRecovery]
                (map #(keyword (str "export" (format "%03d" %))) (range 1 35)))))
 
