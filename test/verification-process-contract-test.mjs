@@ -3896,6 +3896,20 @@ console.log("repairTmp=" + process.env.TMPDIR);
     "features/data-layer-rich-page-documentation-templates.feature",
     "features/data-layer-rich-page-documentation-templates-runtime.feature",
   ];
+  const compactReorderableEditorFeatures = [
+    "features/data-layer-compact-reorderable-editor-controls.feature",
+    "features/data-layer-compact-reorderable-editor-controls-runtime.feature",
+  ];
+  const compactReorderableEditorAcceptanceArtifacts = compactReorderableEditorFeatures
+    .flatMap((feature) => {
+      const basename = feature.slice(feature.lastIndexOf("/") + 1).replace(/\.feature$/u, "");
+      const slug = feature.toLowerCase().replace(/[^a-z0-9]+/gu, "-")
+        .replace(/(^-+|-+$)/gu, "");
+      return [
+        `build/acceptance/generated/${slug}_acceptance_test.clj`,
+        `build/acceptance/ir/${basename}.json`,
+      ];
+    });
   const normalizedCurrentVtd014TaskIdentity = (task) => {
     const identity = verificationTaskIdentity(task);
     if (identity.stage === "browser-observation" &&
@@ -3914,10 +3928,11 @@ console.log("repairTmp=" + process.env.TMPDIR);
       identity.args = identity.args.filter((value) =>
         ![vtd014ApprovedVtd015Generated, vtd014ApprovedVtd015Ir,
           vtd014ApprovedVtd017Generated, vtd014ApprovedVtd017Ir,
-          vtd014ApprovedAutonomyGenerated, vtd014ApprovedAutonomyIr].includes(value));
+          vtd014ApprovedAutonomyGenerated, vtd014ApprovedAutonomyIr,
+          ...compactReorderableEditorAcceptanceArtifacts].includes(value));
       identity.target = identity.target.split(",")
         .filter((value) => ![vtd014ApprovedVtd015Feature, vtd014ApprovedVtd017Feature,
-          vtd014ApprovedAutonomyFeature]
+          vtd014ApprovedAutonomyFeature,...compactReorderableEditorFeatures]
           .includes(value)).join(",");
     }
     if (identity.key === "acceptance-session:flow_export") {
@@ -4028,6 +4043,10 @@ console.log("repairTmp=" + process.env.TMPDIR);
         `acceptance-generate:${vtd014ApprovedVtd017Feature}`,
         `acceptance-parse:${vtd014ApprovedAutonomyFeature}`,
         `acceptance-generate:${vtd014ApprovedAutonomyFeature}`,
+        ...compactReorderableEditorFeatures.flatMap((feature) => [
+          `acceptance-parse:${feature}`,
+          `acceptance-generate:${feature}`,
+        ]),
         ...vtd014DocumentationTemplateFeatures.flatMap((feature) => [
           `acceptance-parse:${feature}`,
           `acceptance-generate:${feature}`,
@@ -5559,6 +5578,20 @@ const documentationTemplateAcceptanceArtifacts = documentationTemplateFeatures.f
     `build/acceptance/ir/${basename}.json`,
   ];
 });
+const compactReorderableEditorFeatures = [
+  "features/data-layer-compact-reorderable-editor-controls.feature",
+  "features/data-layer-compact-reorderable-editor-controls-runtime.feature",
+];
+const compactReorderableEditorAcceptanceArtifacts = compactReorderableEditorFeatures
+  .flatMap((feature) => {
+    const basename = feature.slice(feature.lastIndexOf("/") + 1).replace(/\.feature$/u, "");
+    const slug = feature.toLowerCase().replace(/[^a-z0-9]+/gu, "-")
+      .replace(/(^-+|-+$)/gu, "");
+    return [
+      `build/acceptance/generated/${slug}_acceptance_test.clj`,
+      `build/acceptance/ir/${basename}.json`,
+    ];
+  });
 const normalizedVtd006Identity = (task) => {
   let encoded = JSON.stringify(verificationTaskIdentity(task));
   for (const [current, previous] of vtd006ProgramMigration) encoded = encoded.replaceAll(current, previous);
@@ -5578,9 +5611,10 @@ const normalizedVtd006Identity = (task) => {
   if (identity.key === "acceptance-session:shell") {
     identity.args = identity.args.filter((value) =>
       ![vtd015Generated, vtd015Ir, vtd017Generated, vtd017Ir,
-        autonomyGenerated, autonomyIr].includes(value));
+        autonomyGenerated, autonomyIr,...compactReorderableEditorAcceptanceArtifacts].includes(value));
     identity.target = identity.target.split(",")
-      .filter((value) => ![vtd015Feature, vtd017Feature, autonomyFeature].includes(value)).join(",");
+      .filter((value) => ![vtd015Feature, vtd017Feature, autonomyFeature,
+        ...compactReorderableEditorFeatures].includes(value)).join(",");
   }
   if (identity.key === "acceptance-session:flow_export") {
     identity.args = identity.args.filter((value) =>
@@ -5631,6 +5665,11 @@ const approvedDocumentationTemplateTaskKeys = new Set(documentationTemplateFeatu
     `acceptance-parse:${feature}`,
     `acceptance-generate:${feature}`,
   ]));
+const approvedCompactReorderableEditorTaskKeys = new Set(compactReorderableEditorFeatures
+  .flatMap((feature) => [
+    `acceptance-parse:${feature}`,
+    `acceptance-generate:${feature}`,
+  ]));
 const approvedStyleSmokeTaskKeys = new Set([
   "browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
   "browser-observation:SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
@@ -5648,6 +5687,7 @@ const approvedVerificationTaskKeys = new Set([
   ...approvedVtd017TaskKeys,
   ...approvedAutonomyTaskKeys,
   ...approvedDocumentationTemplateTaskKeys,
+  ...approvedCompactReorderableEditorTaskKeys,
   ...approvedStyleSmokeTaskKeys,
   ...approvedStyleVerificationTaskKeys,
   ...approvedFlowStyleExtractionTaskKeys,
@@ -6290,7 +6330,7 @@ const schemasLoadedStepDiagnostic = await captureRejection(() => validateIsolate
 }));
 assert.match(schemasLoadedStepDiagnostic,/Loaded cross-pack step consumer blocks isolation.*defects/u);
 const shellHandler = packs.find(({id}) => id === "shell").handlers.find((handler) =>
-  handler !== "acceptance/src/acceptance/steps/all.clj");
+  handler.endsWith("/information_architecture.clj"));
 const schemasNamespaceDiagnostic = await captureRejection(() => validateIsolatedVerificationHandlers(packs,{
   readSource:async(handlerPath) => {
     const source = await readFile(new URL(`../${handlerPath}`,import.meta.url),"utf8");
