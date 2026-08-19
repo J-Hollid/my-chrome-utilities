@@ -19,7 +19,7 @@ export const authoringConceptRuntimeExpression=String.raw`(async()=>{
   const repository=await openIndexedDbProjectRepository(),projectId=await repository.activeProjectId(),beforeSeed=await repository.loadProject(projectId),seedState=structuredClone(beforeSeed.state),profile=seedState.project.collections.profiles.find(({name})=>name==='Sitewide'),cart=seedState.project.collections.pages.find(({name})=>name==='Cart');
   if(!profile?.canonicalSchema||!cart)throw new Error('Sitewide and Cart Concept prerequisites unavailable');
   const rows=canonical.canonicalTableRows(profile.canonicalSchema),products=rows.find(({path})=>path==='/products'),productName=rows.find(({path})=>path==='/products/*/name'),productId=rows.find(({path})=>path==='/products/*/id'),line=rows.find(({path})=>path==='/lineOfCustomer'),pageType=rows.find(({path})=>path==='/page_type'),revisionProbe=rows.find(({path})=>path==='/profileRevisionProbe');
-  if(!products||!productName||!productId||!line||!pageType||!revisionProbe)throw new Error('recursive Concept fixtures unavailable');
+  if(!products||!productName||!productId||!line||!pageType||!revisionProbe)throw new Error('recursive Concept fixtures unavailable: '+rows.map(({path})=>path).join(', '));
   profile.canonicalSchema.nodes[products.id].concept=' ecommerce ';
   profile.canonicalSchema.nodes[line.id].concept='Page';
   delete profile.canonicalSchema.nodes[productName.id].concept;

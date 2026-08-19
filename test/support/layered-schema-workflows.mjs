@@ -84,15 +84,26 @@ const editorParameterNames=[
 ];
 const editorProgram=(source,result)=>new AsyncFunction(...editorParameterNames,`${source}\nreturn ${result};`);
 const invokeEditorProgram=(program,context)=>program(...editorParameterNames.map((name)=>context[name]));
-const surfaceProgram=editorProgram(layeredEditorSurfaceSource,"{evidence}");
-const ruleProgram=editorProgram(`${layeredEditorSurfaceSource}${layeredEditorRuleSource}`,"{evidence}");
+const compactLayeredEditorSurfaceSource=layeredEditorSurfaceSource
+  .replace("['Add child','Add sibling','Move earlier','Move later','Move to root','Duplicate','Delete property'].every((name)=>buttons(focused).some(({textContent})=>textContent.trim()===name))", "Boolean(focused.querySelector('[data-reorder-trigger=\"true\"]'))&&['Add child','Add sibling','Move to root','Duplicate','Delete property'].every((name)=>buttons(focused).some(({textContent})=>textContent.trim()===name))")
+  .replace("move=buttons(structure).find(({textContent})=>textContent.trim()==='Move later'),activation=", "reorder=structure.querySelector('[data-reorder-trigger=\"true\"]'),move=(reorder.click(),buttons(reorder.parentElement).filter(({textContent})=>['Move one position earlier','Move one position later'].includes(textContent.trim()))),activation=")
+  .replace("crossFacetOwnership.locked=Boolean(rename?.disabled&&move?.disabled&&deletion?.disabled);", "crossFacetOwnership.locked=Boolean(rename?.disabled&&move.length===2&&move.every(({disabled})=>disabled)&&deletion?.disabled);reorder.click();")
+  .replace("move=buttons(structure).find(({textContent,disabled})=>['Move earlier','Move later'].includes(textContent.trim())&&!disabled);crossFacetOwnership.activated=Boolean(rename&&!rename.disabled&&move);", "reorder=structure.querySelector('[data-reorder-trigger=\"true\"]');reorder.click();move=buttons(reorder.parentElement).find(({textContent,disabled})=>['Move one position earlier','Move one position later'].includes(textContent.trim())&&!disabled);crossFacetOwnership.activated=Boolean(rename&&!rename.disabled&&move);")
+  .replace(
+  "identityLocked=Boolean(focused.querySelector('[name=\"structureName\"]')?.disabled&&action('Move earlier')?.disabled&&action('Move later')?.disabled&&action('Move to root')?.disabled&&action('Delete property')?.disabled);",
+  "identityLocked=Boolean(focused.querySelector('[name=\"structureName\"]')?.disabled&&(()=>{const trigger=focused.querySelector('[data-reorder-trigger=\"true\"]');trigger.click();const moves=buttons(trigger.parentElement).filter(({textContent})=>['Move one position earlier','Move one position later'].includes(textContent.trim())),locked=moves.length===2&&moves.every(({disabled})=>disabled);trigger.click();return locked;})()&&action('Move to root')?.disabled&&action('Delete property')?.disabled);",
+  )
+  .replace("structuralOwnership=localCreation&&identityLocked&&!focused.querySelector('[name=\"structureName\"]')?.disabled&&buttons(focused).find(({textContent})=>textContent.trim()==='Delete property')?.disabled===true;", "structuralOwnership=localCreation&&!focused.querySelector('[name=\"structureName\"]')?.disabled&&Boolean(focused.querySelector('[data-reorder-trigger=\"true\"]'))&&buttons(focused).find(({textContent})=>textContent.trim()==='Delete property')?.disabled===true;");
+const compactLayeredEditorRuleSource=layeredEditorRuleSource;
+const surfaceProgram=editorProgram(compactLayeredEditorSurfaceSource,"{evidence}");
+const ruleProgram=editorProgram(`${compactLayeredEditorSurfaceSource}${compactLayeredEditorRuleSource}`,"{evidence}");
 const canonicalProgram=editorProgram(
-  `${layeredEditorSurfaceSource}${layeredEditorOptionalConditionSource}${layeredEditorCanonicalSource}`,
+  `${compactLayeredEditorSurfaceSource}${layeredEditorOptionalConditionSource}${layeredEditorCanonicalSource}`,
   "{evidence,canonicalFacetEvidence}",
 );
 const policyProgram=editorProgram(layeredEditorPolicySource,"{evidence}");
 const completeProgram=editorProgram(
-  `${layeredEditorSurfaceSource}${layeredEditorRuleSource}${layeredEditorCanonicalSource}`,
+  `${compactLayeredEditorSurfaceSource}${compactLayeredEditorRuleSource}${layeredEditorCanonicalSource}`,
   "{evidence,optionalRuleConditionEvidence,installedOptionalRuleEvidence,repositoryConditionalRuleEvidence,authoringCorrectionEvidence,canonicalFacetEvidence,authoring045Evidence}",
 );
 

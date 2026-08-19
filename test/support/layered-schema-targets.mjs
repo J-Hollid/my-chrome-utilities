@@ -29,7 +29,24 @@ import { runProfileInheritanceControlsRuntimeProbe } from "./profile-inheritance
 import { runJournalFreeInstalledRuntimeProbe } from "./journal-free-installed-runtime-probe.mjs";
 
 const editorInitialLayeredInstalledExpression=
-  reliableLayeredEntityCreationProgram(initialLayeredInstalledExpression);
+  reliableLayeredEntityCreationProgram(initialLayeredInstalledExpression).replace(
+    "const structural=Boolean(focused?.querySelector('[name=\"structureName\"]')&&['Add sibling','Move earlier','Move later','Move to root','Duplicate','Delete property'].every((label)=>buttons(focused).some(({textContent})=>textContent.trim()===label)));",
+    "const structural=Boolean(focused?.querySelector('[name=\"structureName\"]')&&focused.querySelector('[data-reorder-trigger=\"true\"]')&&['Add sibling','Move to root','Duplicate','Delete property'].every((label)=>buttons(focused).some(({textContent})=>textContent.trim()===label)));",
+  );
+const compactFlowMoveOwnershipExpression=flowMoveOwnershipExpression.replace(
+  "const move=await waitFor(()=>buttons(structure).find(({textContent,disabled})=>textContent.trim()==='Move later'&&!disabled),'Move later enabled');move.click();",
+  "const reorder=structure.querySelector('[data-reorder-trigger=\"true\"]');reorder.click();const move=await waitFor(()=>buttons(reorder.parentElement).find(({textContent,disabled})=>['Move one position later','Move one position earlier'].includes(textContent.trim())&&!disabled),'reorder action enabled');move.click();",
+);
+const compactFlowStructureExpression=flowStructureExpression.replace(
+  "const control=buttons(focused).find(({textContent})=>textContent.trim()===label);if(!control)throw new Error('Missing structure control '+label);",
+  "let control;if(['Move later','Move earlier'].includes(label)){const trigger=focused.querySelector('[data-reorder-trigger=\"true\"]');trigger.click();const action=label==='Move later'?'Move one position later':'Move one position earlier';control=buttons(trigger.parentElement).find(({textContent})=>textContent.trim()===action);}else control=buttons(focused).find(({textContent})=>textContent.trim()===label);if(!control)throw new Error('Missing structure control '+label);",
+);
+const compactPageGroupRuntimeExpression=pageGroupRuntimeExpression
+  .replace("globalThis.__pageGroupStructuralStage='reorder';", "globalThis.__pageGroupStructuralStage='reorder';const moveApplicationLater=(row)=>{const trigger=row.querySelector('[data-reorder-trigger=\"true\"]');trigger.click();buttons(trigger.parentElement).find(({textContent})=>textContent.trim()==='Move one position later').click();};")
+  .replace("applicationNames=(root)=>[...root.querySelectorAll('[aria-label=\"Applied Property Sets\"] li')].map(({textContent})=>['Checkout','Retail Checkout','Signed-in Checkout','Trade Checkout'].find((name)=>textContent.startsWith(name+' ·')))", "applicationNames=(root)=>[...root.querySelectorAll('[aria-label=\"Applied Property Sets\"] li')].map((row)=>['Checkout','Retail Checkout','Signed-in Checkout','Trade Checkout'].find((name)=>row.querySelector(':scope > p')?.textContent.startsWith(name+' ·')))")
+  .replace(",moveLater=buttons(retailRow).find(({textContent})=>textContent.trim()==='Move later');moveLater.click();let confirm", ";moveApplicationLater(retailRow);let confirm")
+  .replace("buttons(retailRow).find(({textContent})=>textContent.trim()==='Move later').click()", "moveApplicationLater(retailRow)")
+  .replace("buttons(retailMoved).find(({textContent})=>textContent.trim()==='Move later').click()", "moveApplicationLater(retailMoved)");
 const initialCoreKeys=["installedBoundary","consequential","persistenceReload",
   ...Array.from({length:14},(_,index)=>`authoring${String(index+1).padStart(3,"0")}`),
   ...[17,18,19,21,22,23,24,25].map(index=>`authoring${String(index).padStart(3,"0")}`),
@@ -81,9 +98,9 @@ const definitions = {
       const
         flowOwnershipSetup=await (${flowOwnershipSetupExpression}),
         flowCrossFacetEvidence=await (${flowCrossFacetExpression}),
-        flowMoveOwnershipEvidence=await (${flowMoveOwnershipExpression}),
+        flowMoveOwnershipEvidence=await (${compactFlowMoveOwnershipExpression}),
         flowStructureOwnershipSetup=await (${flowStructureOwnershipSetupExpression}),
-        flowStructureEvidence=await (${flowStructureExpression});
+        flowStructureEvidence=await (${compactFlowStructureExpression});
       return{layeredSchema:{
         flowFacet001:flowFacetEvidence.allSections,
         flowFacet002:flowFacetEvidence.saved,
@@ -102,7 +119,7 @@ const definitions = {
       const pageGroupStructuralSeed=await (${pageGroupSeedExpression});
       return pageGroupStructuralSeed;`,
     expression:()=>`
-      try{const pageGroupStructuralEvidence=await (${pageGroupRuntimeExpression});return{layeredSchema:pageGroupStructuralEvidence};}
+      try{const pageGroupStructuralEvidence=await (${compactPageGroupRuntimeExpression});return{layeredSchema:pageGroupStructuralEvidence};}
       catch(error){throw new Error(String(error)+' [stage '+String(globalThis.__pageGroupStructuralStage??'startup')+']');}`,
   },
   LAYERED_SCHEMA_INHERITANCE_TARGET:{
