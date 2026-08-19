@@ -10746,6 +10746,29 @@ function causalProtocolScopeRegression(context) {
   };
 }
 const verificationProcessContractSource = await readFile(new URL(import.meta.url), "utf8");
+const confirmedFlakyHandlerSource = await readFile(new URL(
+  "../acceptance/src/acceptance/verification_support/modular_architecture_vtd015_handlers.clj",
+  import.meta.url), "utf8");
+function confirmedFlakyAcceptanceEvidenceRoutingRegression(context) {
+  const expectedPreRepairFailure = { processEvidenceBound:false, featureAll20AssertionScoped:false };
+  const expectedRepairResult = { processEvidenceBound:true, featureAll20AssertionScoped:true };
+  const repairResult = {
+    processEvidenceBound:confirmedFlakyHandlerSource.includes(
+      "verificationConfirmedFlakyFeatureDeferralAcceptance"),
+    featureAll20AssertionScoped:[":vtd015/confirmed-flaky-evidence", ":featureAll20Authorized"]
+      .every((value) => confirmedFlakyHandlerSource.includes(value)),
+  };
+  assert.deepEqual(repairResult, expectedRepairResult);
+  const fixture = { id:"confirmed-flaky-acceptance-evidence-routing-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{ scenario:"Modular verification packs 187" },
+    expectedPreRepairFailure, expectedRepairResult };
+  const fixtureDigest = verificationDigest(fixture);
+  return { version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
+}
 function isolatedCliFixtureDependencyRegression(context) {
   const expectedPreRepairFailure = {
     importedPolicyCopied:false,
@@ -11042,6 +11065,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           ? judgmentRoutingContractRegression(regressionContext)
         : regressionContext.causalCategory === "other:repair-focused prerequisite closure"
           ? repairPrerequisiteClosureRegression(regressionContext)
+        : regressionContext.causalCategory === "other:confirmed-flaky acceptance evidence routing"
+          ? confirmedFlakyAcceptanceEvidenceRoutingRegression(regressionContext)
           : artifactLockTimeoutRepairRegression(regressionContext),
   }));
 }
