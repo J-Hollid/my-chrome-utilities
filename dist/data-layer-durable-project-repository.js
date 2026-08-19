@@ -3,7 +3,7 @@ import { repairCanonicalBooleanAllowedValues } from "./data-layer-canonical-sche
 import { createFlowVisualArchive, estimateFlowVisualArchiveSize, importFlowVisualArchive, migrateVersion2VisualAssets, writeFlowVisualArchive } from "./flow-visual-asset-portability.js";
 import { validateFlowVisualBody } from "./flow-visual-asset-validation.js";
 import { validateDocumentationTemplateBody } from "./documentation-templates/template-body.js";
-import { validateDocumentationTemplateRecords } from "./documentation-templates/template-library.js";
+import { validateDocumentationTemplateRecords, validateDocumentationTemplateTransition } from "./documentation-templates/template-library.js";
 import { projectAssetBodyStorageKey } from "./project-asset-body-contribution.js";
 export const DURABLE_PROJECT_DATABASE = "my-chrome-utilities.project-repository";
 export const DURABLE_PROJECT_DATABASE_VERSION = 7;
@@ -532,7 +532,6 @@ export class DurableProjectRepository {
     }
     async saveDraft(command) {
         this.fail(command.label);
-        const templateReferences = validateDocumentationTemplateRecords(command.pendingState.project.documentation);
         for (const item of command.assetBodies ?? []) {
             if (item.identity.namespace !== "documentation-template")
                 continue;
@@ -545,9 +544,10 @@ export class DurableProjectRepository {
             throw new DOMException("A Draft asset body cannot cross its Project boundary.", "DataError"); if (!command.assetBodyOperationId || item.operationId !== command.assetBodyOperationId)
             throw new DOMException("A Draft asset body must retain its owning operation identity.", "DataError"); return { ...item, key: projectAssetBodyStorageKey(item.identity), body: item.body.slice(0, item.body.size, item.body.type) }; }), suppliedBodyKeys = new Set(assetBodies.filter(item => item.identity.namespace === "documentation-template").map(item => item.key));
         const stores = ["projectMetadata", "projectRoots", "projectEntityMetadata", "projectEntities", "flowGraphs", "fixtures", "releases", "visualAssetMetadata", "visualAssetBodies", "changeFeed"], result = await this.backend.transaction(stores, "readwrite", async (transaction) => {
-            const metadata = await transaction.get("projectMetadata", command.projectId);
-            if (!metadata)
+            const metadata = await transaction.get("projectMetadata", command.projectId), storedRoot = await transaction.get("projectRoots", command.projectId);
+            if (!metadata || !storedRoot)
                 throw new Error(`Durable project ${command.projectId} is unavailable.`);
+            const templateReferences = validateDocumentationTemplateTransition(storedRoot.project.documentation, command.pendingState.project.documentation);
             for (const reference of templateReferences) {
                 const key = projectAssetBodyStorageKey({ projectId: command.projectId, namespace: "documentation-template", digest: reference.digest });
                 if (!suppliedBodyKeys.has(key) && !await transaction.get("visualAssetBodies", key))

@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import {createSpecificationProject,transactProject} from "../dist/data-layer-specification-project.js";
 import {createMemoryDurableProjectRepository,durableDraftCommand} from "../dist/data-layer-durable-project-repository.js";
 import {durableStorageDiagnosticsDisplay} from "../dist/data-layer-durable-project-repository-presentation-ui.js";
+import {validateDocumentationTemplateTransition} from "../dist/documentation-templates/template-library.js";
+
+for(let index=0;index<96;index+=1){const digest=`sha256:${index.toString(16).padStart(64,"0")}`,template={id:`template:${index}`,name:`Template ${index}`,format:"excel",kind:["overview","flow","matrix","profile"][index%4],contractVersion:2,digest:`sha256:${"f".repeat(64)}`,body:{assetId:`body:${index}`,digest,byteLength:index+1},validation:{valid:true,findings:[]}},set={id:`set:${index}`,name:`Set ${index}`,themeId:`theme:${index}`,sections:[],templateAssignments:{[`excel:${template.kind}`]:template.id}},stored={sets:[set],themes:[],templates:[template]},unrelated=structuredClone(stored);unrelated.themes.push({id:`theme:extra:${index}`});assert.deepEqual(validateDocumentationTemplateTransition(stored,unrelated),[],"every unchanged invalid generated record may cross an unrelated transition");const changed=structuredClone(unrelated);changed.templates[0].name+=` changed`;assert.throws(()=>validateDocumentationTemplateTransition(stored,changed),DOMException,"every changed invalid generated record remains rejected");}
 
 for(let index=0;index<200;index+=1){
   const bytes=(index*7919)%250000,input={lastSavedAt:`saved:${index}`,publishedRevision:index,

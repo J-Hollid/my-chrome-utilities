@@ -12,7 +12,7 @@ import { renderDocumentationSetCreationUi } from "./project-documentation/worksp
 import { renderDocumentationTemplateLibrary } from "./project-documentation/workspace-template-library-ui.js";
 import { writeProjectDocumentationWorkbookWithTemplates } from "./documentation-templates/excel-renderer.js";
 import { renderProjectDocumentationRichWithTemplates } from "./documentation-templates/rich-renderer.js";
-import { documentationTemplateAssignment } from "./documentation-templates/template-library.js";
+import { documentationTemplateAssignment, documentationTemplateProblems } from "./documentation-templates/template-library.js";
 import { documentationPreviewSelection, documentationTabAfterKey, } from "./project-documentation/workspace-navigation.js";
 export { consumeDocumentationIncompleteConfirmation, documentationExportPresentation, documentationExportSelection, documentationPreviewSelection, documentationTabAfterKey, };
 const defaultPorts = () => ({
@@ -110,6 +110,16 @@ export function installProjectDocumentationWorkspaceUi(options) {
         addContent.setAttribute("aria-expanded", String(addContentOpen));
         documentSettings.setAttribute("aria-expanded", String(documentSettingsOpen));
         setRegion.append(heading(2, "Document outline"), outline, addContent, documentSettings);
+        const templateProblem = documentationTemplateProblems(records)[0];
+        if (templateProblem) {
+            const issue = document.createElement("section"), summary = document.createElement("p"), technical = document.createElement("details"), go = button("Go to problem", () => { templatesOpen = true; selectedTemplateId = templateProblem.templateId; templateMobileDetail = true; render(host); queueMicrotask(() => host.querySelector('[data-template-repair-primary="true"]')?.focus()); });
+            issue.role = "alert";
+            issue.setAttribute("aria-label", "Documentation template problem");
+            summary.textContent = `${templateProblem.name} · ${templateProblem.format} · ${templateProblem.kind} · ${templateProblem.assignments.length} affected Documentation Set${templateProblem.assignments.length === 1 ? "" : "s"}.`;
+            technical.append(Object.assign(document.createElement("summary"), { textContent: "Technical details" }), Object.assign(document.createElement("pre"), { textContent: JSON.stringify({ templateId: templateProblem.templateId, invariant: templateProblem.invariant }, null, 2) }));
+            issue.append(summary, go, technical);
+            contextHeader.append(issue);
+        }
         renderDocumentationContent(content, set, available, saveSet);
         const selectedSection = set.sections.find(({ id }) => id === selectedSectionId);
         renderSectionConfiguration(configure, set, selectedSection, available);
@@ -121,7 +131,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
         templateRegion.id = "documentation-template-panel";
         templateRegion.hidden = !templatesOpen;
         if (templatesOpen)
-            renderDocumentationTemplateLibrary(templateRegion, { records, set, projectId: state.project.id, mobileDetail: templateMobileDetail, selectedTemplateId, selectedRichBlockId, richEditorMobileDetail, persist, ...(options.storeTemplateBody ? { storeBody: options.storeTemplateBody } : {}), ...(options.discardTemplateBody ? { discardBody: options.discardTemplateBody } : {}), download: ports.download, sampleExcel: async (template) => { const current = compile(); if (!current || !options.loadTemplateBody || !template.body)
+            renderDocumentationTemplateLibrary(templateRegion, { records, set, projectId: state.project.id, mobileDetail: templateMobileDetail, selectedTemplateId, selectedRichBlockId, richEditorMobileDetail, persist, ...(options.storeTemplateBody ? { storeBody: options.storeTemplateBody } : {}), ...(options.discardTemplateBody ? { discardBody: options.discardTemplateBody } : {}), ...(options.loadTemplateBody ? { loadBody: options.loadTemplateBody } : {}), download: ports.download, sampleExcel: async (template) => { const current = compile(); if (!current || !options.loadTemplateBody || !template.body)
                     throw new Error("The current immutable documentation snapshot or template body is unavailable."); const section = current.set.sections.find(item => item.selected && item.kind === template.kind); if (!section)
                     throw new Error(`Select a ${template.kind} section before generating a sample.`); const assignedSet = { ...current, set: { ...current.set, templateAssignments: { ...(current.set.templateAssignments ?? {}), [`excel:${template.kind}`]: template.id } }, templates: records.templates ?? [] }; return writeProjectDocumentationWorkbookWithTemplates(assignedSet, { scope: "current", currentSectionId: section.id, confirmIncomplete: true }, async (bodyDigest) => { const body = await options.loadTemplateBody(state.project.id, bodyDigest); if (!body)
                     throw new Error("The selected Excel template body is unavailable."); return body; }); }, previewCandidateExcel: async (file, kind) => { const current = compile(); if (!current)

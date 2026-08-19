@@ -1,4 +1,4 @@
-import { assignDocumentationTemplate, createDocumentationTemplate, documentationTemplateAssignment, removeDocumentationTemplate, replaceDocumentationTemplate } from "../documentation-templates/template-library.js";
+import { assignDocumentationTemplate, createDocumentationTemplate, documentationTemplateAssignment, documentationTemplateProblems, repairDocumentationTemplateMetadata, removeDocumentationTemplate, replaceDocumentationTemplate } from "../documentation-templates/template-library.js";
 import { writeDocumentationTemplateStarter } from "../documentation-templates/excel-renderer.js";
 import { builtInRichTemplate, richTemplateBlockScopes, richTemplateHelpBindingsFor, validateRichDocumentationTemplate } from "../documentation-templates/rich-template.js";
 import { templateDigest } from "../documentation-templates/template-contract.js";
@@ -144,12 +144,65 @@ function candidateDetail(_host, detail, candidate, templates, options) {
     detail.append(button("Save template", () => void (async () => { const bodyDigest = await digest(candidate.file), template = createDocumentationTemplate({ id: `documentation-template:${crypto.randomUUID()}`, name: candidate.file.name.replace(/\.xlsx$/iu, ""), format: "excel", kind: candidate.kind, body: { assetId: `documentation-template-body:${crypto.randomUUID()}`, digest: bodyDigest, byteLength: candidate.file.size }, validation: candidate.validation }); await persistBody(options, bodyDigest, candidate.file, { ...options.records, templates: [...templates, template] }, `Save Excel template ${template.name}`); excelCandidates.delete(candidateKey(options)); options.selectTemplate(template.id); options.rerender(); })().catch(error => detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) })))));
     detail.append(button("Discard candidate", () => { excelCandidates.delete(candidateKey(options)); options.setMobileDetail(false); options.rerender(); }));
 }
+function unavailableDetail(detail, selected, options) {
+    const problem = documentationTemplateProblems(options.records).find(({ templateId }) => templateId === selected.id);
+    detail.append(heading(3, selected.name));
+    const alert = document.createElement("section");
+    alert.role = "alert";
+    alert.setAttribute("aria-label", "Unavailable documentation template");
+    alert.append(heading(4, `${problem.format} · ${problem.kind} unavailable`), Object.assign(document.createElement("p"), { textContent: `${problem.assignments.length} affected Documentation Set${problem.assignments.length === 1 ? "" : "s"}. Custom output remains blocked until repaired.` }));
+    detail.append(alert);
+    const assignments = document.createElement("ul");
+    assignments.setAttribute("aria-label", "Affected Documentation Set assignments");
+    for (const [index, assignment] of problem.assignments.entries()) {
+        const item = document.createElement("li"), repair = button("Assign Built-in", () => { options.persist(assignDocumentationTemplate(options.records, assignment.setId, selected.format, selected.kind, "builtin"), `Assign Built-in for ${assignment.setName}`); options.rerender(); });
+        if (index === 0)
+            repair.dataset.templateRepairPrimary = "true";
+        item.append(`${assignment.setName} · ${assignment.key} `, repair);
+        assignments.append(item);
+    }
+    detail.append(assignments);
+    const technical = document.createElement("details");
+    technical.append(Object.assign(document.createElement("summary"), { textContent: "Technical details" }), Object.assign(document.createElement("pre"), { textContent: JSON.stringify({ templateId: selected.id, invariant: problem.invariant }, null, 2) }));
+    detail.append(technical);
+    if (selected.format === "excel" && selected.body && options.loadBody) {
+        const revalidate = button("Revalidate saved workbook", () => void (async () => { const body = await options.loadBody(options.projectId, selected.body.digest); if (!body)
+            throw new Error("The exact saved workbook body is unavailable."); const validation = await validateExcelTemplateWorkbook(body, selected.kind); if (!validation.valid) {
+            renderExcelTemplateFindings(detail, validation.findings);
+            return;
+        } const bodyDigest = await digest(body), records = repairDocumentationTemplateMetadata(options.records, selected.id, body, validation, bodyDigest); await persistBody(options, bodyDigest, body, records, `Revalidate saved workbook ${selected.name}`); options.rerender(); })().catch(error => detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) }))));
+        if (!problem.assignments.length)
+            revalidate.dataset.templateRepairPrimary = "true";
+        detail.append(revalidate);
+    }
+    if (selected.format === "excel") {
+        const replacement = document.createElement("input");
+        replacement.type = "file";
+        replacement.accept = ".xlsx";
+        replacement.setAttribute("aria-label", "Replace workbook");
+        replacement.addEventListener("change", () => void (async () => { const file = replacement.files?.[0]; if (!file)
+            return; const validation = await validateExcelTemplateWorkbook(file, selected.kind); if (!validation.valid) {
+            renderExcelTemplateFindings(detail, validation.findings);
+            return;
+        } const bodyDigest = await digest(file), records = repairDocumentationTemplateMetadata(options.records, selected.id, file, validation, bodyDigest); await persistBody(options, bodyDigest, file, records, `Replace documentation template ${selected.name}`); options.rerender(); })());
+        detail.append(replacement);
+    }
+    detail.append(button("Remove template", () => { try {
+        options.persist(removeDocumentationTemplate(options.records, selected.id), `Remove documentation template ${selected.name}`);
+        options.selectTemplate("");
+        options.setMobileDetail(false);
+        options.rerender();
+    }
+    catch (error) {
+        detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) }));
+    } }));
+}
 export function renderDocumentationTemplateLibrary(host, options) {
     host.replaceChildren();
     host.className = "documentation-template-library";
     host.setAttribute("aria-label", "Documentation Template Library");
     host.append(heading(2, "Templates"));
-    const grid = document.createElement("div"), list = document.createElement("section"), detail = document.createElement("section"), templates = options.records.templates ?? [];
+    const grid = document.createElement("div"), list = document.createElement("section"), detail = document.createElement("section"), templates = options.records.templates ?? [], problems = documentationTemplateProblems(options.records), unavailableIds = new Set(problems.map(({ templateId }) => templateId));
     grid.className = "documentation-template-library-grid";
     list.dataset.mobileSurface = options.mobileDetail ? "inactive" : "active";
     detail.dataset.mobileSurface = options.mobileDetail ? "active" : "inactive";
@@ -229,6 +282,16 @@ export function renderDocumentationTemplateLibrary(host, options) {
             else
                 richEditor(detail, selected, templates, options);
         }
+    }
+    for (const problem of problems)
+        list.querySelectorAll("button").forEach(control => { if (control.textContent === problem.name)
+            control.textContent = `${problem.name} — unavailable`; });
+    list.querySelectorAll("option").forEach(option => { if (unavailableIds.has(option.value) && !option.selected)
+        option.disabled = true; });
+    const selectedProblem = selected && unavailableIds.has(selected.id) && problems.find(({ templateId }) => templateId === selected.id);
+    if (selected && selectedProblem) {
+        detail.replaceChildren();
+        unavailableDetail(detail, selected, options);
     }
     detail.append(button("Back to template list", () => { options.setMobileDetail(false); options.rerender(); }));
     grid.append(list, detail);

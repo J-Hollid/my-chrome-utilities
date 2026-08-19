@@ -6,7 +6,7 @@ import {flowDocumentationSnapshotFromState} from "./data-layer-flow-documentatio
 import type {ProjectDocumentationProfileColumn,ProjectDocumentationSection,ProjectDocumentationSet,ProjectDocumentationTheme} from "./data-layer-project-documentation-records.js";
 import {compileProjectDocumentationSnapshot,themeFingerprint,type ProjectDocumentationDiagnostic,type ProjectDocumentationSnapshot,type ProjectDocumentationTable} from "./data-layer-project-documentation-workspace.js";
 import type {Profile,ProjectEntity,ProjectEntityKind,ProjectState,Requirement} from "./data-layer-specification-project.js";
-import {snapshotTemplateDigests} from "./documentation-templates/template-library.js";
+import {documentationTemplateUnavailableInvariant,snapshotTemplateDigests} from "./documentation-templates/template-library.js";
 import type {TemplateContextObject} from "./documentation-templates/template-contract.js";
 
 export type ProjectDocumentationMatrixContextKind="page-definition"|"event-definition"|"page-instance"|"event-occurrence";
@@ -96,7 +96,8 @@ export function compileProjectDocumentation(input:CompileProjectDocumentationInp
   }
   for(const table of tables)if(!table.templateData)table.templateData=tableTemplateData(table);
   const documentation=state.project.documentation??{sets:[set],themes:[theme]};
-  return compileProjectDocumentationSnapshot({projectId:state.project.id,projectName:state.project.name,projectPurpose:state.project.description,projectWebsite:state.project.site,set,theme,sourceRevisions:revisions,templateDigests:snapshotTemplateDigests(documentation,set),templates:documentation.templates??[],generatedAt,tables,diagnostics});
+  const templates=(documentation.templates??[]).map(template=>documentationTemplateUnavailableInvariant(template)?{...template,validation:{...template.validation,valid:false}}:template);
+  return compileProjectDocumentationSnapshot({projectId:state.project.id,projectName:state.project.name,projectPurpose:state.project.description,projectWebsite:state.project.site,set,theme,sourceRevisions:revisions,templateDigests:snapshotTemplateDigests(documentation,set),templates,generatedAt,tables,diagnostics});
 }
 
 export function projectDocumentationProfileColumns():readonly ProjectDocumentationProfileColumn[]{return defaultProfileColumns;}

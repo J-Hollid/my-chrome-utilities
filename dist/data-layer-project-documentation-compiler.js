@@ -4,7 +4,7 @@ import { layeredContributorPath, layeredContributorsForPath } from "./data-layer
 import { configureFlowDocumentationSnapshot, configureFlowDocumentationTable, flowDocumentationPropertyPaths } from "./data-layer-flow-table-documentation-export.js";
 import { flowDocumentationSnapshotFromState } from "./data-layer-flow-documentation-snapshot.js";
 import { compileProjectDocumentationSnapshot, themeFingerprint } from "./data-layer-project-documentation-workspace.js";
-import { snapshotTemplateDigests } from "./documentation-templates/template-library.js";
+import { documentationTemplateUnavailableInvariant, snapshotTemplateDigests } from "./documentation-templates/template-library.js";
 const stableRevision = (value) => { let hash = 2166136261; for (const byte of new TextEncoder().encode(JSON.stringify(value)))
     hash = Math.imul(hash ^ byte, 16777619); return hash >>> 0; };
 const flowSourceRevision = (snapshot) => stableRevision({ graphRevision: snapshot.graphRevision, contexts: snapshot.contexts.map(({ id, effectiveRevision }) => ({ id, effectiveRevision })) });
@@ -116,7 +116,8 @@ export function compileProjectDocumentation(input) {
         if (!table.templateData)
             table.templateData = tableTemplateData(table);
     const documentation = state.project.documentation ?? { sets: [set], themes: [theme] };
-    return compileProjectDocumentationSnapshot({ projectId: state.project.id, projectName: state.project.name, projectPurpose: state.project.description, projectWebsite: state.project.site, set, theme, sourceRevisions: revisions, templateDigests: snapshotTemplateDigests(documentation, set), templates: documentation.templates ?? [], generatedAt, tables, diagnostics });
+    const templates = (documentation.templates ?? []).map(template => documentationTemplateUnavailableInvariant(template) ? { ...template, validation: { ...template.validation, valid: false } } : template);
+    return compileProjectDocumentationSnapshot({ projectId: state.project.id, projectName: state.project.name, projectPurpose: state.project.description, projectWebsite: state.project.site, set, theme, sourceRevisions: revisions, templateDigests: snapshotTemplateDigests(documentation, set), templates, generatedAt, tables, diagnostics });
 }
 export function projectDocumentationProfileColumns() { return defaultProfileColumns; }
 export { projectDocumentationProfilePaths } from "./project-documentation/profile-concept-properties.js";

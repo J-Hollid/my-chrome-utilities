@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import ExcelJS from "exceljs";
+import JSZip from "jszip";
 
 import {
   excelTemplateGuideFor,
@@ -90,6 +91,8 @@ assert.equal(validated.valid,true,validated.findings.map(({message})=>message).j
 assert.equal(validated.kind,"flow");
 assert.equal(validated.contractVersion,2);
 assert.deepEqual(validated.inspection.bindings,[{cell:"A1",path:"project.name"}],"inspection preserves the editable cell location for every binding");
+
+const labelledZip=await JSZip.loadAsync(workbookBytes),contentTypes=await labelledZip.file("[Content_Types].xml").async("string"),relationships=await labelledZip.file("_rels/.rels").async("string"),labelId="2f5f16bb-bf25-4d92-9fce-87f9a2dd4e76";labelledZip.file("[Content_Types].xml",contentTypes.replace("</Types>",'<Override PartName="/docProps/custom.xml" ContentType="application/vnd.openxmlformats-officedocument.custom-properties+xml"/></Types>'));labelledZip.file("_rels/.rels",relationships.replace("</Relationships>",'<Relationship Id="purviewCustomProperties" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties" Target="docProps/custom.xml"/></Relationships>'));labelledZip.file("docProps/custom.xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/custom-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><property fmtid="{D5CDD505-2E9C-101B-9397-08002B2CF9AE}" pid="2" name="MSIP_Label_${labelId}_Enabled"><vt:lpwstr>true</vt:lpwstr></property><property fmtid="{D5CDD505-2E9C-101B-9397-08002B2CF9AE}" pid="3" name="MSIP_Label_${labelId}_Name"><vt:lpwstr>Confidential</vt:lpwstr></property><property fmtid="{D5CDD505-2E9C-101B-9397-08002B2CF9AE}" pid="4" name="Sensitivity"><vt:lpwstr>3</vt:lpwstr></property></Properties>`);const labelledBytes=await labelledZip.generateAsync({type:"uint8array",compression:"DEFLATE"}),labelledValidation=await validateExcelTemplateWorkbook(new Blob([labelledBytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),"flow"),reopenedLabelled=await JSZip.loadAsync(labelledBytes),labelXml=await reopenedLabelled.file("docProps/custom.xml").async("string");assert.equal(labelledValidation.valid,true,labelledValidation.findings.map(({message})=>message).join("\n"));assert.match(labelXml,/MSIP_Label_.*_Enabled/u);assert.match(labelXml,/<vt:lpwstr>Confidential<\/vt:lpwstr>/u,"non-encrypting Purview custom properties remain inert package metadata in the exact selected bytes");
 
 const legacyBook=new ExcelJS.Workbook(),legacySheet=legacyBook.addWorksheet("Template");legacySheet.getCell("A1").note='tw:template(kind="flow" contract="1")';const legacyBytes=await legacyBook.xlsx.writeBuffer(),legacy=await validateExcelTemplateWorkbook(new Blob([legacyBytes]),"flow");assert.equal(legacy.valid,false);assert.match(legacy.findings.map(({message})=>message).join("\n"),/guided starter/u,"worksheet Notes never declare current template behavior");
 
