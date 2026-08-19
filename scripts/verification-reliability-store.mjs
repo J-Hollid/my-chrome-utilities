@@ -394,6 +394,10 @@ export function createTimeoutIncidentStore({
   const access = createStoreAccess({ root, storeDirectory, legacyStoreDirectories });
   const store = {
     read:access.read,
+    async withAdmissionRecordingLock(operation) {
+      const directory = await access.directory();
+      return withIncidentLock(directory, "eligible-repair-admission-recording", operation);
+    },
     async list() {
       const names = (await Promise.all((await access.readableDirectories()).map((entry) =>
         readdir(entry)))).flat();
@@ -432,7 +436,8 @@ export function createTimeoutIncidentStore({
         }),
       });
       const directory = await access.directory();
-      return withIncidentLock(directory, boundedClosure ? "causal-index" : `create-${randomUUID()}`, async() => {
+      return store.withAdmissionRecordingLock(() => withIncidentLock(directory,
+        boundedClosure ? "causal-index" : `create-${randomUUID()}`, async() => {
         if (boundedClosure) {
           let matching;
           for (const incident of await store.list()) {
@@ -477,7 +482,7 @@ export function createTimeoutIncidentStore({
           throw error;
         }
         return incident;
-      });
+      }));
     },
     async recordRepairAttemptFailure(id, { failure, plan, sourceReceipt, runId } = {}) {
       exactObject(failure, "Governed reliability repair attempt failure");

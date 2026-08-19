@@ -65,7 +65,7 @@ eligibleRepairAdmissions:
   entries[]
 ```
 
-Entries are sorted by incident id. Each entry records `incidentId`, `failureDigest`, `causalKey`, `repairDigest`, `regressionKey`, `selectedTaskKey`, `selectedTaskDigest`, and `coverageKind` (`regression`, `governed-task`, or `successor`). Successor entries additionally record `destinationTaskDigest` and `conservationDigest`.
+Entries are sorted by incident id. Each entry records `incidentId`, `failureDigest`, `causalKey`, `repairDigest`, `governedTaskDigest`, `regressionKey`, `selectedTaskKey`, `selectedTaskDigest`, and `coverageKind` (`regression`, `governed-task`, or `successor`). `governedTaskDigest` binds the failed task identity so governed coverage must select it exactly. Successor entries additionally record `destinationTaskDigest` and `conservationDigest`, and must select the exact conserved destination rather than the governed source.
 
 The existing receipt continues to bind the normal candidate, change set, canonical plan, registry and toolchain identity, artifact, task results, environment, timestamps, and package task. Every selected admission task must appear once with `fresh` passing provenance. The admission object is copied into the review-ready record and its digest participates in the resulting transaction identity.
 

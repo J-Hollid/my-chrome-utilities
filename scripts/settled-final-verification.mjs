@@ -4,8 +4,10 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { canonicalVerificationChangeSet, requireGitAncestor } from "./verification-changes.mjs";
-import { planVerification } from "./verification-packs.mjs";
+import {
+  canonicalVerificationChangeSet, requireGitAncestor, verificationPacksAtCommit,
+} from "./verification-changes.mjs";
+import { planVerification, verificationTaskIdentity } from "./verification-packs.mjs";
 import {
   createReviewReadyRecord,
   consumeTerminalFullObligations,
@@ -23,11 +25,16 @@ import {
 } from "./settled-final-verification-policy.mjs";
 import { terminalVerificationDeferredConservation } from "./verification-reliability-deferred.mjs";
 import { createTimeoutIncidentStore } from "./verification-reliability-store.mjs";
-import {
-  atomicReplace, defaultRepositoryRuntimeDirectory, ensureSafeDirectory, withIncidentLock,
-} from "./verification-reliability-persistence.mjs";
 import { timeoutIncidentDigest } from "./verification-reliability-values.mjs";
 import { canonicalPackageProof } from "./verification-reliability-runtime.mjs";
+import {
+  buildEligibleRepairAdmissions, eligibleRepairAdmissionCandidates,
+} from "./verification-run-intent.mjs";
+import { withVerificationNotesLock } from "./verification-git-notes.mjs";
+import {
+  eligibleRepairReviewTransactionDirectory, readEligibleRepairReviewTransaction,
+  withEligibleRepairReviewTransactionLock, writeEligibleRepairReviewTransaction,
+} from "./eligible-repair-review-transaction-store.mjs";
 
 export {
   createReviewReadyRecord,
@@ -67,16 +74,6 @@ async function currentReviewNote(commit, root) {
   }
 }
 
-async function reviewTransactionDirectory(root) {
-  return ensureSafeDirectory(path.join(await defaultRepositoryRuntimeDirectory(root),
-    "eligible-repair-review-transactions"));
-}
-
-async function readTransaction(target) {
-  try { return JSON.parse(await readFile(target, "utf8")); }
-  catch (error) { if (error.code === "ENOENT") return null; throw error; }
-}
-
 function admittedDeferralProof(record, packageProof, transaction) {
   return {
     candidate:{ commit:record.candidateCommit, tree:record.candidateTree },
@@ -94,13 +91,75 @@ function transactionRecord(record, id) {
   return { ...record, eligibleRepairTransaction:{ version:1, id, status:"committed" } };
 }
 
+async function boundAdmissionReceipt(record, root) {
+  const relative = record.receipt?.path;
+  if (typeof relative !== "string" ||
+      !/^tmp\/verification-receipts\/[A-Za-z0-9._-]+\.json$/u.test(relative)) {
+    throw new Error("Eligible repair transaction requires a canonical receipt path");
+  }
+  const target = path.resolve(root, relative);
+  if (path.relative(root, target).split(path.sep).join("/") !== relative) {
+    throw new Error("Eligible repair transaction receipt escapes the repository");
+  }
+  const bytes = await readFile(target);
+  if (createHash("sha256").update(bytes).digest("hex") !== record.receipt.sha256) {
+    throw new Error("Eligible repair transaction receipt digest changed");
+  }
+  return JSON.parse(bytes);
+}
+
+async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
+  repositoryRoot, store, receiptLoader = boundAdmissionReceipt,
+  packsLoader = (commit) => verificationPacksAtCommit(commit, { repositoryRoot }),
+}) {
+  const [receipt, packs, blocking, admittedIncidents] = await Promise.all([
+    receiptLoader(record, repositoryRoot), packsLoader(record.candidateCommit),
+    store.blocking({ commit:record.candidateCommit }),
+    Promise.all(record.eligibleRepairAdmissions.entries.map(({ incidentId }) =>
+      store.read(incidentId))),
+  ]);
+  if (timeoutIncidentDigest(receipt.eligibleRepairAdmissions) !==
+      timeoutIncidentDigest(record.eligibleRepairAdmissions) ||
+      receipt.plan?.taskPlanDigest !== record.eligibleRepairAdmissions.planDigest ||
+      receipt.candidate?.changeSetDigest !== record.eligibleRepairAdmissions.changeSetDigest) {
+    throw new Error("Eligible repair admission receipt changed before review recording");
+  }
+  const admittedIds = new Set(record.eligibleRepairAdmissions.entries.map(({ incidentId }) => incidentId));
+  const currentById = new Map([...blocking, ...admittedIncidents]
+    .map((incident) => [incident.id, structuredClone(incident)]));
+  const candidates = eligibleRepairAdmissionCandidates([...currentById.values()].map((incident) =>
+    admittedIds.has(incident.id) ? { ...incident, terminalVerificationDeferred:undefined } : incident));
+  const plan = { tasks:Object.values(receipt.tasks ?? {})
+    .map(({ identity }) => identity)
+    .filter((identity) => typeof identity?.key === "string" && Array.isArray(identity.args))
+    .map(verificationTaskIdentity) };
+  const rebuilt = await buildEligibleRepairAdmissions({
+    incidents:candidates, plan, packs,
+    candidate:{ commit:record.candidateCommit, tree:record.candidateTree },
+    baseCommit:record.baseCommit, evidenceTask:record.task,
+    changeSetDigest:record.eligibleRepairAdmissions.changeSetDigest,
+    planDigest:record.eligibleRepairAdmissions.planDigest,
+  });
+  if (timeoutIncidentDigest(rebuilt) !== timeoutIncidentDigest(record.eligibleRepairAdmissions)) {
+    throw new Error("Eligible repair admission set changed before review recording");
+  }
+  for (const incident of admittedIncidents) {
+    const bound = incident.terminalVerificationDeferred?.eligibleRepairTransaction;
+    if (bound && timeoutIncidentDigest(bound) !== timeoutIncidentDigest(transactionBinding)) {
+      throw new Error(`Eligible repair admission ${incident.id} is bound to another transaction`);
+    }
+  }
+  return { receipt, packs, incidents:admittedIncidents, admissions:rebuilt };
+}
+
 export async function verifyCommittedReviewTransaction(record, root, {
   store = createTimeoutIncidentStore({ root }),
 } = {}) {
   const transaction = record.eligibleRepairTransaction;
   if (!transaction) return record;
-  const target = path.join(await reviewTransactionDirectory(root), `${transaction.id}.json`);
-  const journal = await readTransaction(target);
+  const target = path.join(await eligibleRepairReviewTransactionDirectory(root),
+    `${transaction.id}.json`);
+  const journal = await readEligibleRepairReviewTransaction(target);
   if (transaction.version !== 1 || transaction.status !== "committed" ||
       journal?.version !== 1 || journal.status !== "committed" ||
       journal.id !== transaction.id || journal.inputDigest !== timeoutIncidentDigest({
@@ -140,6 +199,8 @@ export async function verifyCommittedReviewTransaction(record, root, {
 export async function recordEligibleRepairReviewTransaction(record, note, {
   repositoryRoot = repository,
   store = createTimeoutIncidentStore({ root:repositoryRoot }),
+  receiptLoader,
+  packsLoader,
   afterDeferrals,
 } = {}) {
   const admissions = record.eligibleRepairAdmissions;
@@ -156,14 +217,16 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
   const records = [...note.records.filter((item) =>
     !(item.task === record.task && item.baseCommit === record.baseCommit)), committedRecord];
   const desiredNote = { version:1, records };
-  const directory = await reviewTransactionDirectory(repositoryRoot);
-  const target = path.join(directory, `${id}.json`);
   const incidentIds = admissions.entries.map(({ incidentId }) => incidentId).sort();
-  const lockIdentity = `review-note-${record.candidateCommit}`;
-  return withIncidentLock(directory, lockIdentity, async() => {
+  return withVerificationNotesLock(repositoryRoot, () =>
+    withEligibleRepairReviewTransactionLock(repositoryRoot, record.candidateCommit,
+      ({ directory }) => store.withAdmissionRecordingLock(async() => {
+    await rederiveEligibleRepairAdmissions(record, transactionBinding,
+      { repositoryRoot, store, receiptLoader, packsLoader });
+    const target = path.join(directory, `${id}.json`);
     const liveNote = await currentReviewNote(record.candidateCommit, repositoryRoot);
     const liveNoteDigest = timeoutIncidentDigest(liveNote);
-    let journal = await readTransaction(target);
+    let journal = await readEligibleRepairReviewTransaction(target);
     if (!journal) {
       if (liveNoteDigest !== timeoutIncidentDigest(note)) {
         throw new Error("Eligible repair review transaction observed a competing review note writer");
@@ -184,7 +247,7 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
       journal = { version:1, id, status:"prepared", inputDigest,
         priorNoteDigest:timeoutIncidentDigest(note), desiredNoteDigest:timeoutIncidentDigest(desiredNote),
         incidentIds, incidents, preparedAt:new Date().toISOString() };
-      await atomicReplace(target, journal);
+      await writeEligibleRepairReviewTransaction(target, journal);
     } else if (journal.inputDigest !== inputDigest ||
         journal.desiredNoteDigest !== timeoutIncidentDigest(desiredNote) ||
         timeoutIncidentDigest(journal.incidentIds) !== timeoutIncidentDigest(incidentIds)) {
@@ -208,7 +271,7 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
     }
     journal = { ...journal, status:"deferrals-written", packageProof,
       deferralsWrittenAt:journal.deferralsWrittenAt ?? new Date().toISOString() };
-    await atomicReplace(target, journal);
+    await writeEligibleRepairReviewTransaction(target, journal);
     await afterDeferrals?.(structuredClone(journal));
     const currentNote = await currentReviewNote(record.candidateCommit, repositoryRoot);
     const currentNoteDigest = timeoutIncidentDigest(currentNote);
@@ -220,9 +283,9 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
       record.candidateCommit], { input:JSON.stringify(desiredNote) });
     journal = { ...journal, status:"committed",
       committedAt:journal.committedAt ?? new Date().toISOString() };
-    await atomicReplace(target, journal);
+    await writeEligibleRepairReviewTransaction(target, journal);
     return { record:committedRecord, note:desiredNote, journal };
-  });
+  })));
 }
 
 async function reviewContext(commit, base, repositoryRoot) {
@@ -259,11 +322,15 @@ export async function recordReviewReadyEvidence(receiptFile, base, task, {
     return (await recordEligibleRepairReviewTransaction(record, note,
       { repositoryRoot })).record;
   }
-  const records = [...note.records.filter((item) =>
-    !(item.task === task && item.baseCommit === baseCommit)), record];
-  await git(repositoryRoot, ["notes", `--ref=${reviewNotesRef}`, "add", "-f", "-F", "-", candidateCommit],
-    { input:JSON.stringify({ version:1, records }) });
-  return record;
+  return withVerificationNotesLock(repositoryRoot, async() => {
+    const current = await currentReviewNote(candidateCommit, repositoryRoot);
+    const records = [...current.records.filter((item) =>
+      !(item.task === task && item.baseCommit === baseCommit)), record];
+    await git(repositoryRoot,
+      ["notes", `--ref=${reviewNotesRef}`, "add", "-f", "-F", "-", candidateCommit],
+      { input:JSON.stringify({ version:1, records }) });
+    return record;
+  });
 }
 
 export async function verifyReviewReadyEvidence(commit, base, task, {

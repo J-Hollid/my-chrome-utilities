@@ -313,8 +313,7 @@ export async function buildEligibleRepairAdmissions({
   const selectedByKey = new Map(selectedIdentities.map((identity) => [identity.key, identity]));
   const selectedByDigest = new Map(selectedIdentities.map((identity) =>
     [verificationTaskDigest(identity), identity]));
-  const canonicalIdentities = planVerification(packs, { terminalFull:true }).tasks
-    .map(verificationTaskIdentity);
+  let canonicalIdentities;
   const entries = [];
   for (const incident of [...incidents].sort((left, right) => left.id.localeCompare(right.id))) {
     if (!validEligibleRepairProof(incident, candidate, baseCommit, evidenceTask)) {
@@ -327,6 +326,8 @@ export async function buildEligibleRepairAdmissions({
     let coverageKind = regression ? "regression" : governed ? "governed-task" : undefined;
     let succession;
     if (!selected) {
+      canonicalIdentities ??= planVerification(packs, { terminalFull:true }).tasks
+        .map(verificationTaskIdentity);
       try {
         succession = await resolveSuccession({ incident, currentIdentities:canonicalIdentities,
           currentPacks:packs });
@@ -344,6 +345,7 @@ export async function buildEligibleRepairAdmissions({
       failureDigest:incident.failureDigest,
       causalKey:incident.failure.causalKey,
       repairDigest:timeoutIncidentDigest(incident.repair),
+      governedTaskDigest:governedDigest,
       regressionKey:incident.repair.regression.key,
       selectedTaskKey:selected.key,
       selectedTaskDigest:verificationTaskDigest(selected),
@@ -371,7 +373,16 @@ export async function revalidateEligibleRepairAdmissions({
 }
 
 export function validateEligibleRepairAdmissionsReceipt(receipt, admissions = receipt?.eligibleRepairAdmissions) {
+  const exactKeys = (value, expected) => value && typeof value === "object" && !Array.isArray(value) &&
+    JSON.stringify(Object.keys(value).sort()) === JSON.stringify([...expected].sort());
+  const admissionKeys = ["version", "evidenceTask", "baseCommit", "candidateCommit",
+    "candidateTree", "changeSetDigest", "planDigest", "entries"];
   if (admissions?.version !== 1 || !Array.isArray(admissions.entries) || !admissions.entries.length ||
+      !exactKeys(admissions, admissionKeys) ||
+      ![admissions.evidenceTask, admissions.baseCommit, admissions.candidateCommit,
+        admissions.candidateTree].every((value) => typeof value === "string" && Boolean(value)) ||
+      ![admissions.changeSetDigest, admissions.planDigest]
+        .every((value) => digestPattern.test(value ?? "")) ||
       admissions.candidateCommit !== receipt?.candidate?.commit && receipt?.candidate !== undefined ||
       admissions.candidateTree !== receipt?.candidate?.tree && receipt?.candidate !== undefined ||
       receipt?.candidate !== undefined &&
@@ -382,7 +393,33 @@ export function validateEligibleRepairAdmissionsReceipt(receipt, admissions = re
          admissions.planDigest !== receipt.plan?.taskPlanDigest)) {
     throw new Error("Eligible repair admission receipt binding is missing or malformed");
   }
+  const commonEntryKeys = ["incidentId", "failureDigest", "causalKey", "repairDigest", "governedTaskDigest",
+    "regressionKey", "selectedTaskKey", "selectedTaskDigest", "coverageKind"];
+  const incidentIds = admissions.entries.map(({ incidentId }) => incidentId);
+  if (new Set(incidentIds).size !== incidentIds.length ||
+      JSON.stringify(incidentIds) !== JSON.stringify([...incidentIds].sort())) {
+    throw new Error("Eligible repair admission entries must be sorted and unique");
+  }
   for (const entry of admissions.entries) {
+    const successor = entry.coverageKind === "successor";
+    const expectedKeys = successor
+      ? [...commonEntryKeys, "destinationTaskDigest", "conservationDigest"] : commonEntryKeys;
+    if (!exactKeys(entry, expectedKeys) || typeof entry.incidentId !== "string" || !entry.incidentId ||
+        ![entry.failureDigest, entry.causalKey, entry.repairDigest, entry.governedTaskDigest,
+          entry.selectedTaskDigest]
+          .every((value) => digestPattern.test(value ?? "")) ||
+        typeof entry.regressionKey !== "string" || !entry.regressionKey ||
+        typeof entry.selectedTaskKey !== "string" || !entry.selectedTaskKey ||
+        !["regression", "governed-task", "successor"].includes(entry.coverageKind) ||
+        entry.coverageKind === "regression" && entry.selectedTaskKey !== entry.regressionKey ||
+        entry.coverageKind !== "regression" && entry.selectedTaskKey === entry.regressionKey ||
+        entry.coverageKind === "governed-task" &&
+          entry.selectedTaskDigest !== entry.governedTaskDigest ||
+        successor && (entry.destinationTaskDigest !== entry.selectedTaskDigest ||
+          entry.selectedTaskDigest === entry.governedTaskDigest ||
+          !digestPattern.test(entry.conservationDigest ?? ""))) {
+      throw new Error(`Eligible repair admission ${entry.incidentId ?? "entry"} is malformed or causally conflicting`);
+    }
     const result = receipt.tasks?.[entry.selectedTaskKey];
     if (result?.status !== "passed" || result.provenance !== "fresh" ||
         verificationTaskDigest(result.identity) !== entry.selectedTaskDigest) {

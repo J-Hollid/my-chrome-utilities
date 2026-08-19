@@ -7579,6 +7579,23 @@ const admittedReceipt = { eligibleRepairAdmissions:admissions, tasks:{
 } };
 assert.equal(validateEligibleRepairAdmissionsReceipt(admittedReceipt, admissions), admissions,
   "the receipt requires the selected admission leaf and package to pass freshly");
+assert.throws(()=>validateEligibleRepairAdmissionsReceipt(admittedReceipt, {
+  ...admissions, entries:[...admissions.entries, structuredClone(admissions.entries[0])],
+}), /sorted and unique/i, "duplicate admission entries fail closed");
+assert.throws(()=>validateEligibleRepairAdmissionsReceipt(admittedReceipt, {
+  ...admissions, entries:[{ ...admissions.entries[0], coverageKind:"invented-coverage" }],
+}), /malformed or causally conflicting/i, "unknown coverage kinds fail closed");
+assert.throws(()=>validateEligibleRepairAdmissionsReceipt(admittedReceipt, {
+  ...admissions, entries:[{ ...admissions.entries[0], selectedTaskKey:"package:canonical",
+    selectedTaskDigest:verificationTaskDigest({ key:"package:canonical", stage:"package" }) }],
+}), /malformed or causally conflicting/i,
+"regression coverage cannot name an unrelated freshly passing task");
+assert.throws(()=>validateEligibleRepairAdmissionsReceipt(admittedReceipt, {
+  ...admissions, entries:[{ ...admissions.entries[0], unexpected:true }],
+}), /malformed or causally conflicting/i, "extra admission fields fail closed");
+assert.throws(()=>validateEligibleRepairAdmissionsReceipt(admittedReceipt, {
+  ...admissions, entries:[{ ...admissions.entries[0], coverageKind:"successor" }],
+}), /malformed or causally conflicting/i, "successor coverage requires exact conservation fields");
 await assert.rejects(()=>buildEligibleRepairAdmissions({
   incidents:[admissionIncident], plan:bootstrapPlan, packs,
   candidate:{ commit:"stale-candidate", tree:"bootstrap-tree" },
