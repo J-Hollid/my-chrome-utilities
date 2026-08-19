@@ -6602,6 +6602,10 @@ const shellBoundaryCases = {
   "src/panel-empty-states-ui.ts":["shell"],
   "src/workspace-tabs-ui.ts":["shell"],
   "src/workspace-tabs.ts":["command-palette", "hotkeys", "shell"],
+  "src/reorderable-editor/control.ts":["schemas", "defects", "flow_export", "layered_schema",
+    "property_set_flow_sections", "shell"],
+  "src/reorderable-editor/model.ts":["schemas", "defects", "flow_export", "layered_schema",
+    "property_set_flow_sections", "shell"],
   "src/active-page-observation.ts":["capture", "event-library", "project_event_transport", "schemas",
     "defects", "replay", "live_flow_testing", "project_assurance_severity", "guided_test_cases", "shell"],
   "src/side-panel-action-hierarchy.ts":["event-library", "project_event_transport", "schemas",
@@ -6615,7 +6619,7 @@ for (const [changedPath, expectedPackIds] of Object.entries(shellBoundaryCases))
 }
 const shellSourcePaths = helperValidationInventory.source
   .filter((sourcePath) => verificationOwner(packs, sourcePath) === "shell");
-assert.equal(shellSourcePaths.length, 18,
+assert.equal(shellSourcePaths.length, 20,
   "every Shell-owned TypeScript file participates in one exact boundary");
 for (const platformPath of shellSourcePaths.filter((sourcePath) => !(sourcePath in shellBoundaryCases))) {
   assert.deepEqual(planVerification(packs, {changedPaths:[platformPath]}).packIds,
