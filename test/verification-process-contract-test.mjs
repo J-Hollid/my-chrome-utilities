@@ -7794,6 +7794,24 @@ assert.deepEqual(flakyAdmissions.entries.map(({ incidentId, coverageKind, select
 assert.equal(flakyAdmissions.entries[0].classificationDigest,
   timeoutIncidentDigest(flakyIncident.retry));
 assert.equal(flakyAdmissions.entries[0].registryDigest, flakyDiagnostic.registryDigest);
+const rebasedFlakyIncident = structuredClone(flakyIncident);
+rebasedFlakyIncident.lineageTransitions = [{ kind:"rebase",
+  fromCommit:"bootstrap-candidate", toCommit:"rebased-candidate", toTree:"rebased-tree" }];
+const rebasedFlakyAdmissions = await buildConfirmedFlakyAdmissions({ root:"fixture",
+  incidents:[rebasedFlakyIncident], plan:bootstrapPlan, packs,
+  candidate:{ commit:"rebased-candidate", tree:"rebased-tree" },
+  baseCommit:"new-approved-base", evidenceTask:"confirmed-flaky-feature-deferral",
+  changeSetDigest:"5".repeat(64), planDigest:"6".repeat(64),
+  receiptLoader:async()=>flakyDiagnosticBytes });
+assert.equal(rebasedFlakyAdmissions.baseCommit, "new-approved-base",
+  "a validated terminal rebase binds fresh review evidence to the current QA base");
+await assert.rejects(()=>buildConfirmedFlakyAdmissions({ root:"fixture",
+  incidents:[flakyIncident], plan:bootstrapPlan, packs,
+  candidate:{ commit:"rebased-candidate", tree:"rebased-tree" },
+  baseCommit:"new-approved-base", evidenceTask:"confirmed-flaky-feature-deferral",
+  changeSetDigest:"5".repeat(64), planDigest:"6".repeat(64),
+  receiptLoader:async()=>flakyDiagnosticBytes }), /exact conserved candidate/i,
+"a candidate cannot advance its review base without the recorded rebase");
 const flakyReceipt = { confirmedFlakyAdmissions:flakyAdmissions, tasks:admittedReceipt.tasks };
 assert.equal(validateConfirmedFlakyAdmissionsReceipt(flakyReceipt, flakyAdmissions), flakyAdmissions);
 assert.throws(()=>validateConfirmedFlakyAdmissionsReceipt(flakyReceipt, {

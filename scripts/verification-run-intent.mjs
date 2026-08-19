@@ -304,9 +304,11 @@ function exactValue(left, right) {
   return timeoutIncidentDigest(left) === timeoutIncidentDigest(right);
 }
 
-function incidentLineageMatchesCandidate(incident, candidate) {
+function incidentLineageMatchesCandidate(incident, candidate, baseCommit) {
   if (incident.failure?.lineage?.commit === candidate?.commit &&
-      incident.failure?.lineage?.tree === candidate?.tree) return true;
+      incident.failure?.lineage?.tree === candidate?.tree) {
+    return incident.failure.lineage.baseCommit === baseCommit;
+  }
   const latest = incident.lineageTransitions?.at(-1);
   return latest?.kind === "rebase" && latest.toCommit === candidate?.commit &&
     latest.toTree === candidate?.tree;
@@ -365,8 +367,8 @@ export async function buildConfirmedFlakyAdmissions({
   let canonicalIdentities;
   const entries = [];
   for (const incident of [...incidents].sort((left, right) => left.id.localeCompare(right.id))) {
-    if (!confirmedFlakyRetry(incident) || !incidentLineageMatchesCandidate(incident, candidate) ||
-        incident.failure?.lineage?.baseCommit !== baseCommit ||
+    if (!confirmedFlakyRetry(incident) ||
+        !incidentLineageMatchesCandidate(incident, candidate, baseCommit) ||
         incident.failure?.lineage?.evidenceTask !== evidenceTask) {
       throw new Error(`Confirmed flaky admission ${incident.id} is not bound to the exact conserved candidate`);
     }
