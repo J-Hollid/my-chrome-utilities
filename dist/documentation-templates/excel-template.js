@@ -8,7 +8,10 @@ const coordinate = (raw) => {
     let column = 0;
     for (const char of match[1])
         column = column * 26 + char.charCodeAt(0) - 64;
-    return { row: Number(match[2]), column };
+    const row = Number(match[2]);
+    if (column > 16_384 || row > 1_048_576)
+        throw new Error(`Cell ${raw} is outside Excel worksheet limits.`);
+    return { row, column };
 };
 const address = ({ row, column }) => { let letters = "", current = column; while (current > 0) {
     current -= 1;

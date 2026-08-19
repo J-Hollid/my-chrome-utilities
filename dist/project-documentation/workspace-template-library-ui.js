@@ -140,13 +140,31 @@ function excelGuide(kind) {
     details.append(summary, search, results);
     return details;
 }
+function renderExcelFindings(detail, findings) {
+    const alert = document.createElement("section"), list = document.createElement("ul");
+    alert.role = "alert";
+    alert.setAttribute("aria-label", "Excel template findings");
+    alert.append(heading(3, "Excel template needs repair"));
+    for (const finding of findings) {
+        const item = document.createElement("li"), rule = document.createElement("p"), repair = document.createElement("p"), technical = document.createElement("details");
+        item.setAttribute("aria-label", `Excel template finding at ${finding.location}`);
+        item.append(Object.assign(document.createElement("p"), { textContent: `${finding.location}: ${finding.message}` }));
+        rule.textContent = `Authoring rule: ${finding.rule ?? "Use only the guided workbook structure, supported bindings, and complete named areas."}`;
+        repair.textContent = `Suggested action: ${finding.repair ?? "Correct this item in Excel, then choose the workbook again."}`;
+        technical.append(Object.assign(document.createElement("summary"), { textContent: "Technical details" }), Object.assign(document.createElement("pre"), { textContent: finding.technical ?? JSON.stringify({ location: finding.location, message: finding.message }, null, 2) }));
+        item.append(rule, repair, technical);
+        list.append(item);
+    }
+    alert.append(list);
+    detail.replaceChildren(alert);
+}
 function candidateDetail(_host, detail, candidate, templates, options) {
     detail.append(heading(3, `${candidate.file.name} — unsaved candidate`), Object.assign(document.createElement("p"), { textContent: `${kindName(candidate.kind)} · contract 2 · no template metadata or body has been saved` }));
     const inspection = document.createElement("section");
     inspection.setAttribute("aria-label", "Excel template candidate inspection");
     inspection.append(heading(4, "Candidate inspection"));
     const bindings = document.createElement("ul");
-    bindings.append(...candidate.validation.inspection.bindings.map(path => Object.assign(document.createElement("li"), { textContent: `Binding cell: ${path}` })));
+    bindings.append(...candidate.validation.inspection.bindings.map(binding => Object.assign(document.createElement("li"), { textContent: `Binding cell ${binding.cell}: ${binding.path}` })));
     const areas = document.createElement("ul");
     areas.append(...candidate.validation.inspection.areas.map(area => Object.assign(document.createElement("li"), { textContent: area.type === "repeat" ? `${area.name}: ${area.source}, item prefix ${area.itemPrefix}, ${area.direction}, range ${area.range}, parent ${area.parent ?? "none"}` : `${area.name}: image ${area.source}, range ${area.range}` })));
     inspection.append(bindings, areas);
@@ -196,8 +214,10 @@ export function renderDocumentationTemplateLibrary(host, options) {
                 upload.accept = `.xlsx,${DOCUMENTATION_TEMPLATE_XLSX_TYPE}`;
                 upload.setAttribute("aria-label", `Select Excel template for ${kindName(kind)}`);
                 upload.addEventListener("change", () => void (async () => { const file = upload.files?.[0]; if (!file)
-                    return; const validation = await validateExcelTemplateWorkbook(file, kind); if (!validation.valid)
-                    throw new Error(validation.findings.map(({ location, message }) => `${location}: ${message}`).join("\n")); excelCandidates.set(candidateKey(options), { file, kind, validation }); options.selectTemplate(""); options.setMobileDetail(true); options.rerender(); })().catch(error => detail.replaceChildren(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) }))));
+                    return; const validation = await validateExcelTemplateWorkbook(file, kind); if (!validation.valid) {
+                    renderExcelFindings(detail, validation.findings);
+                    return;
+                } excelCandidates.set(candidateKey(options), { file, kind, validation }); options.selectTemplate(""); options.setMobileDetail(true); options.rerender(); })().catch(error => detail.replaceChildren(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) }))));
                 group.append(upload);
             }
             else
