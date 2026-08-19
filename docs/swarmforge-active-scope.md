@@ -29,11 +29,11 @@ The settled-candidate verification workflow is integrated at
 | Flow instance schema route-lifecycle correction | QA-integrated at `aa19396f45` on 2026-08-16 | Preserve directional Flow scenario 046 and its runtime partner, including ordinary route departure, stable contributor reopening, and Return to Flow behavior. |
 | Flow instance schema-editor scrolling correction | QA-integrated at `736823be2d` on 2026-08-18 after exact 3-pack/147-task review evidence | Preserve directional Flow scenario 047 and its runtime partner for both Page-instance wheel traversal and Event-occurrence keyboard traversal; cumulative promotion to `master` remains a separate release decision. |
 | Project Documentation workspace UX correction | Active follow-up approved by the user on 2026-08-16 | Preserve the QA-integrated Build, Preview, and Export workspace while replacing the flat Site Profile property list with the concept-first Profile filtering and ordering control under `docs/data-layer-project-documentation-workspace-program-R01.md` and its product/runtime feature pair; use the focused `flow_export` boundary. This does not resume an older rejected Project Documentation implementation lineage. |
-| Verification run-intent and deferred-incident corrections | Exact-candidate eligible-repair admission is QA-integrated at `183496edb9`; confirmed-flaky feature deferral is QA-integrated at `cf60d5c0f3` | Apply the repair-free confirmed-flaky admission and atomic deferral route to the conserved recovery candidate; preserve diagnostic passes as classification-only proof and keep all deferred incidents unresolved for master integration. No feature-mode all-20 run is authorized. |
+| Verification run-intent and deferred-incident corrections | Exact-candidate eligible-repair admission is QA-integrated at `183496edb9`; confirmed-flaky feature deferral is QA-integrated at `cf60d5c0f3` and exercised by recovery candidate `08cbfe8fef` | Preserve incident `e5df733f-58e5-45e6-8488-bda10eb58bf4` and every earlier deferred incident as unresolved master-integration obligations; diagnostic passes remain classification-only proof. No feature-mode all-20 run is authorized. |
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program; the combined Project Library transport isolation and Flow visual-asset portability delivery is QA-integrated at `1b192105a8` | Preserve that settled transport, content-addressed visual-body, and version-3 archive behavior. No additional VTD-008 controller slice is active. |
-| Documentation template library | Guided Excel template authoring is QA-integrated at `a8ee95869b` after exact 3-pack/135-task review evidence; documentation-template recovery correction approved on 2026-08-19 | Implement `documentation-template-recovery` from current QA under `docs/data-layer-documentation-template-recovery-R01.md`; preserve contract-2 authoring, strict new-state validation, the unchanged Rich contract, and both terminal-deferred repair incidents. |
+| Documentation template library | Guided Excel template authoring is QA-integrated at `a8ee95869b`; documentation-template recovery is QA-integrated at `08cbfe8fef` after exact 7-pack/210-task review evidence | Preserve recovery for invalid stored Excel records, strict fail-closed validation of new state, operator-facing problem routing, nonencrypting Purview-label compatibility, the unchanged Rich contract, and all terminal-deferred incidents. Cumulative promotion to `master` remains a separate user decision. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Deferred and inactive | The existing two-worker order is within about six seconds of balanced after lock wait is removed; scheduling needed for a possible third worker is bounded inside VTD-017. |
 | VTD-012 registry and planner modularization | Deferred and inactive | Reconsider after broad final-gate and receipt-persistence costs are reduced. |
@@ -107,7 +107,7 @@ promotion to `master` remains a separate user decision. The later user-approved
 Note and literal-endpoint authoring contract; it does not reopen the completed
 Rich-template or durability lineages.
 
-The user-approved `documentation-template-recovery` correction addresses a
+The QA-integrated `documentation-template-recovery` correction addresses a
 post-integration trap in which invalid stored Excel template metadata blocks
 every Draft save, including Assign Built-in and removal. Start the correction
 from the exact current QA specification descendant. Preserve fail-closed custom
@@ -118,18 +118,18 @@ operator-facing `Go to problem` route. A confirmed readable, sample-filled,
 unencrypted workbook with a nonfunctional Microsoft Purview label makes stored
 record validation—not workbook parsing—the primary diagnosis boundary.
 
-Product candidate `f6db2c89a9` implements that approved recovery behavior but
-its seven-pack evidence run encountered incident
+Patch-reference candidate `f6db2c89a9` first implemented that approved recovery
+behavior but its seven-pack evidence run encountered incident
 `e5df733f-58e5-45e6-8488-bda10eb58bf4`: the grouped `flow_graph` browser task
 failed at `FLOW_WORKSPACE_AUTHORING_TARGET`, and its one exact governed retry
 then passed as `confirmed-flaky`. Verification-only correction
 `confirmed-flaky-feature-deferral` is QA-integrated at `cf60d5c0f3`; it
 preserves that classification as a master-integration obligation while
 requiring a new complete canonical owned-pack pass and package proof for
-review-ready evidence. Reissue `documentation-template-recovery` from the exact
-QA scorecard descendant and reconstruct the byte-for-byte product delta from
-`a31d16884f` to `f6db2c89a9`; the stopped product branch is a patch reference
-only.
+review-ready evidence. Reconstructed candidate `08cbfe8fef` is now QA-integrated
+after exact seven-pack/210-task review evidence. The incident remains unresolved
+under its atomic terminal deferral; the stopped product branch remains a patch
+reference only.
 
 The previously approved structural task `swarmforge-outcome-bounded-autonomy`
 is QA-integrated at `8f82a6a66f`. Its immutable authority grant, semantic

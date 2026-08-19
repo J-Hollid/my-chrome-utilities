@@ -1,6 +1,6 @@
 # Data layer documentation template recovery R01
 
-Status: User-approved on 2026-08-19
+Status: QA-integrated at `08cbfe8fef` on 2026-08-19
 
 Prepared: 2026-08-19
 
@@ -158,3 +158,26 @@ This correction does not rewrite an invalid workbook, silently assign Built-in,
 drop a template or assignment during load, weaken package validation, remove a
 Microsoft label, decrypt protected content, change project portability, or add
 output-label enforcement. It does not promote accumulated QA work to `master`.
+
+## Settled QA result
+
+Exact architect candidate `08cbfe8fef` is QA-integrated with bound review-ready
+evidence for seven owned packs and 210 fresh focused tasks, including properties,
+installed browser controls, and package proof. The accepted review run started
+at 17:04:09Z and completed at 17:16:19Z, about 12 minutes 11 seconds.
+
+The integrated behavior lets an unchanged invalid stored Excel template survive
+unrelated Draft saves while keeping its custom output unavailable. Template
+Library findings expose the operator-facing template name, kind, assignment
+count, failed invariant, and `Go to problem` route. Operators can assign
+Built-in, remove an unreferenced invalid template, or revalidate a readable
+stored workbook in place; failed recovery changes nothing. New invalid upload,
+replacement, and assignment transitions remain atomic and fail closed.
+Unencrypted workbooks carrying nonfunctional Microsoft Purview classification
+properties are accepted with exact bytes retained, while encrypted counterparts
+remain rejected before persistence.
+
+Confirmed-flaky incident `e5df733f-58e5-45e6-8488-bda10eb58bf4` remains
+unresolved under its valid `terminal-verification-deferred` disposition for
+explicit master integration. No all-20 feature checkpoint ran and this QA result
+does not claim release completion.
