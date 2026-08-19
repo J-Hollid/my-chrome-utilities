@@ -144,5 +144,5 @@
     (is (nil? (#'flow-export/assert-runtime! evidence)))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-17T00:19:12.207275928+02:00", :module-hash "645483274", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1511126195"} {:id "defn-/applicable-handler?", :kind "defn-", :line 5, :end-line 10, :hash "-1188712919"} {:id "form/2/deftest", :kind "deftest", :line 12, :end-line 18, :hash "497408386"} {:id "form/3/deftest", :kind "deftest", :line 20, :end-line 91, :hash "1285331522"} {:id "form/4/deftest", :kind "deftest", :line 93, :end-line 113, :hash "2104015462"}]}
+;; {:version 1, :tested-at "2026-08-19T10:24:00.910249692+02:00", :module-hash "-58664197", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1511126195"} {:id "defn-/applicable-handler?", :kind "defn-", :line 5, :end-line 10, :hash "-1188712919"} {:id "form/2/deftest", :kind "deftest", :line 12, :end-line 18, :hash "497408386"} {:id "form/3/deftest", :kind "deftest", :line 20, :end-line 91, :hash "1285331522"} {:id "form/4/deftest", :kind "deftest", :line 93, :end-line 144, :hash "-650837646"}]}
 ;; clj-mutate-manifest-end
