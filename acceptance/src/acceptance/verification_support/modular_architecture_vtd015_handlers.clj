@@ -4,6 +4,7 @@
 
 (defonce ^:private evidence (atom nil))
 (defonce ^:private ownership-evidence (atom nil))
+(defonce ^:private confirmed-flaky-evidence (atom nil))
 
 (defn- production-evidence! []
   (process-evidence/load! evidence
@@ -27,6 +28,17 @@
             :key :verificationOwnershipReadinessAcceptance
             :failure "Verification ownership-readiness process contract failed."
             :missing "Verification ownership-readiness evidence is missing."})))
+
+(defn- confirmed-flaky-prepared [world]
+  (assoc world :vtd015/confirmed-flaky-evidence
+         (process-evidence/load! confirmed-flaky-evidence
+           {:command ["node" "test/verification-process-contract-test.mjs"]
+            :prepared-task "unit:test/verification-process-contract-test.mjs"
+            :fallback ["node" "test/verification-process-contract-test.mjs"]
+            :prefix "{\"verificationConfirmedFlakyFeatureDeferralAcceptance\""
+            :key :verificationConfirmedFlakyFeatureDeferralAcceptance
+            :failure "Confirmed-flaky feature deferral process contract failed."
+            :missing "Confirmed-flaky feature deferral evidence is missing."})))
 
 (defn- ownership-assert! [world predicate message]
   (support/assert! predicate message {:evidence (:vtd015/ownership-evidence world)})
@@ -402,8 +414,17 @@
                                     "Ownership readiness selected the wrong workflow stage.")))}
    {:pattern #"^no feature-mode all-20 run is authorized$"
     :handler (fn [world _ _]
-               (ownership-assert! world (false? (get-in world [:vtd015/ownership-evidence :routing :featureAll20Authorized]))
-                                  "Ownership readiness authorized an all-20 feature run."))}
+               (if (:vtd015/ownership-evidence world)
+                 (ownership-assert! world
+                                    (false? (get-in world [:vtd015/ownership-evidence :routing :featureAll20Authorized]))
+                                    "Ownership readiness authorized an all-20 feature run.")
+                 (let [prepared-world (confirmed-flaky-prepared world)]
+                   (support/assert!
+                    (false? (get-in prepared-world
+                                    [:vtd015/confirmed-flaky-evidence :routing :featureAll20Authorized]))
+                    "Confirmed-flaky admission authorized an all-20 feature run."
+                    {:evidence (:vtd015/confirmed-flaky-evidence prepared-world)})
+                   prepared-world)))}
    {:pattern #"^an approved feature has a coarse ownership boundary$"
     :handler (fn [world _ _] (ownership-prepared world))}
    {:pattern #"^bounded agent judgment selected immediate (.+) for (.+)$"

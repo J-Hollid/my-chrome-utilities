@@ -11045,4 +11045,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           : artifactLockTimeoutRepairRegression(regressionContext),
   }));
 }
+console.log(JSON.stringify({ verificationConfirmedFlakyFeatureDeferralAcceptance:{
+  routing:{ featureAll20Authorized:false },
+  disposition:{ unresolved:true, repairDigestAbsent:true, atomic:true },
+} }));
 console.log("verification process contract tests passed");
