@@ -56,7 +56,7 @@ async function purviewWorkbookFixtures(){
 }
 const purviewFixtures=await purviewWorkbookFixtures();
 
-+function failedSavedWorkbookSeedExpression(){
+function failedSavedWorkbookSeedExpression(){
   return `(async()=>{
     const repository=await (await import('/data-layer-durable-project-repository.js')).openIndexedDbProjectRepository();
     const renderer=await import('/documentation-templates/excel-renderer.js');
