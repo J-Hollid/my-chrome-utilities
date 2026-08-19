@@ -7446,7 +7446,14 @@ for (const [boundary,{paths,targets}] of Object.entries(layeredEditorClasses)) {
     assert.equal(plan.changedBoundaries[changedPath],boundary,
       `${changedPath} has its exact VTD-005 editor boundary`);
     assert.deepEqual(plan.packIds,["layered_schema"]);
-    assert.deepEqual(plan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).sort(),targets.sort());
+    const expectedTargets=changedPath==="src/canonical-schema-focused/structure.ts"?[]:targets;
+    assert.deepEqual(plan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).sort(),
+      [...expectedTargets].sort());
+    if(changedPath==="src/canonical-schema-focused/structure.ts")assert.deepEqual(
+      plan.unitTasks.map(({key})=>key),[
+        "unit:test/data-layer-composed-schema-workspace-test.mjs",
+        "unit:test/data-layer-focused-schema-property-ui-test.mjs",
+      ],"the reorder-only structure adapter uses its exact consumer slice");
   }
 }
 const canonicalEditorPlan = planVerification(packs, {
