@@ -1,7 +1,9 @@
 import { reconcileProjectDocumentationConcepts } from "../data-layer-project-documentation-compiler.js";
 import { projectCanonicalConcepts } from "../data-layer-layered-schema-project.js";
 import { createProjectDocumentationSet } from "../data-layer-project-documentation-records.js";
-import { documentationButton as button, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled } from "./workspace-ui-elements.js";
+import { documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled } from "./workspace-ui-elements.js";
+import { renderReorderControl } from "../reorderable-editor/control.js";
+import { reorderValues } from "../reorderable-editor/model.js";
 export function renderDocumentationContent(host, set, available, saveSet) {
     const flowSearch = controlInput("flowSearch", "", "search"), profileSearch = controlInput("profileSearch", "", "search");
     flowSearch.setAttribute("aria-label", "Search Flows");
@@ -42,17 +44,13 @@ export function renderDocumentationConceptConfiguration(set, state, saveSet) {
     region.setAttribute("aria-label", "Documentation concept configuration");
     region.append(heading(2, "Document settings"), Object.assign(document.createElement("p"), { textContent: "Concept configuration affects Site Profile tables and the Data capture matrix. It does not affect Flow value maps." }));
     list.setAttribute("aria-label", "Ordered documentation concepts");
-    for (const [index, concept] of concepts.entries()) {
-        const item = document.createElement("li"), include = document.createElement("input"), earlier = button("Move concept earlier", () => { if (index < 1)
-            return; const next = [...concepts], [value] = next.splice(index, 1); next.splice(index - 1, 0, value); saveSet(createProjectDocumentationSet({ ...set, concepts: next }), `Move concept ${concept.name} earlier`); }), later = button("Move concept later", () => { if (index >= concepts.length - 1)
-            return; const next = [...concepts], [value] = next.splice(index, 1); next.splice(index + 1, 0, value); saveSet(createProjectDocumentationSet({ ...set, concepts: next }), `Move concept ${concept.name} later`); });
+    for (const concept of concepts) {
+        const item = document.createElement("li"), include = document.createElement("input"), reorder = renderReorderControl({ itemId: concept.name, itemLabel: concept.name, completeOrder: concepts.map(({ name }) => ({ id: name, label: name })), dropTarget: item, orderedContainer: list, onMove: ({ itemId, toIndex }) => saveSet(createProjectDocumentationSet({ ...set, concepts: reorderValues(concepts, itemId, toIndex, value => value.name) }), `Reorder concept ${concept.name}`) });
         include.type = "checkbox";
         include.checked = concept.included;
         include.addEventListener("change", () => saveSet(createProjectDocumentationSet({ ...set, concepts: concepts.map((candidate) => candidate.name === concept.name ? { ...candidate, included: include.checked } : candidate) }), `${include.checked ? "Include" : "Exclude"} concept ${concept.name}`));
-        earlier.disabled = index === 0;
-        later.disabled = index === concepts.length - 1;
         item.dataset.documentationConcept = concept.name;
-        item.append(labelled(concept.name, include), earlier, later);
+        item.append(reorder, labelled(concept.name, include));
         list.append(item);
     }
     headings.type = "checkbox";

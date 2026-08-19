@@ -3,6 +3,8 @@ import {projectCanonicalConcepts} from "../data-layer-layered-schema-project.js"
 import {createProjectDocumentationSet,type ProjectDocumentationSet} from "../data-layer-project-documentation-records.js";
 import type {ProjectState} from "../data-layer-specification-project.js";
 import {documentationButton as button,documentationControlInput as controlInput,documentationHeading as heading,documentationLabelled as labelled} from "./workspace-ui-elements.js";
+import {renderReorderControl} from "../reorderable-editor/control.js";
+import {reorderValues} from "../reorderable-editor/model.js";
 
 type SaveSet=(set:ProjectDocumentationSet,label:string)=>void;
 
@@ -29,9 +31,9 @@ export function renderDocumentationConceptConfiguration(set:ProjectDocumentation
   region.setAttribute("aria-label","Documentation concept configuration");
   region.append(heading(2,"Document settings"),Object.assign(document.createElement("p"),{textContent:"Concept configuration affects Site Profile tables and the Data capture matrix. It does not affect Flow value maps."}));
   list.setAttribute("aria-label","Ordered documentation concepts");
-  for(const [index,concept] of concepts.entries()){
-    const item=document.createElement("li"),include=document.createElement("input"),earlier=button("Move concept earlier",()=>{if(index<1)return;const next=[...concepts],[value]=next.splice(index,1);next.splice(index-1,0,value!);saveSet(createProjectDocumentationSet({...set,concepts:next}),`Move concept ${concept.name} earlier`);}),later=button("Move concept later",()=>{if(index>=concepts.length-1)return;const next=[...concepts],[value]=next.splice(index,1);next.splice(index+1,0,value!);saveSet(createProjectDocumentationSet({...set,concepts:next}),`Move concept ${concept.name} later`);});
-    include.type="checkbox";include.checked=concept.included;include.addEventListener("change",()=>saveSet(createProjectDocumentationSet({...set,concepts:concepts.map((candidate)=>candidate.name===concept.name?{...candidate,included:include.checked}:candidate)}),`${include.checked?"Include":"Exclude"} concept ${concept.name}`));earlier.disabled=index===0;later.disabled=index===concepts.length-1;item.dataset.documentationConcept=concept.name;item.append(labelled(concept.name,include),earlier,later);list.append(item);
+  for(const concept of concepts){
+    const item=document.createElement("li"),include=document.createElement("input"),reorder=renderReorderControl({itemId:concept.name,itemLabel:concept.name,completeOrder:concepts.map(({name})=>({id:name,label:name})),dropTarget:item,orderedContainer:list,onMove:({itemId,toIndex})=>saveSet(createProjectDocumentationSet({...set,concepts:reorderValues(concepts,itemId,toIndex,value=>value.name)}),`Reorder concept ${concept.name}`)});
+    include.type="checkbox";include.checked=concept.included;include.addEventListener("change",()=>saveSet(createProjectDocumentationSet({...set,concepts:concepts.map((candidate)=>candidate.name===concept.name?{...candidate,included:include.checked}:candidate)}),`${include.checked?"Include":"Exclude"} concept ${concept.name}`));item.dataset.documentationConcept=concept.name;item.append(reorder,labelled(concept.name,include));list.append(item);
   }
   headings.type="checkbox";headings.checked=set.includeConceptSubheadings===true;headings.addEventListener("change",()=>saveSet(createProjectDocumentationSet({...set,concepts,includeConceptSubheadings:headings.checked}),`${headings.checked?"Include":"Hide"} concept subheadings`));region.append(list,labelled("Include concept subheadings",headings));
   return region;

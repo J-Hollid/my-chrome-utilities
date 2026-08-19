@@ -1,9 +1,11 @@
 import { flowDocumentationPropertyPaths } from "../data-layer-flow-table-documentation-export.js";
 import { projectDocumentationProfileColumns } from "../data-layer-project-documentation-compiler.js";
 import { declareStudioChoice } from "../data-layer-studio-choice-controls.js";
-import { documentationButton as button, documentationCheckedOrder as checkedOrder, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled, documentationMove as move, documentationSetChecked as setChecked, } from "./workspace-ui-elements.js";
+import { documentationCheckedOrder as checkedOrder, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled, documentationSetChecked as setChecked, } from "./workspace-ui-elements.js";
 import { createDocumentationProfileConceptRenderer } from "./workspace-profile-concepts-ui.js";
 import { projectDocumentationProfileConceptProperties } from "./profile-concept-properties.js";
+import { renderReorderControl } from "../reorderable-editor/control.js";
+import { reorderValues } from "../reorderable-editor/model.js";
 export function createDocumentationSectionConfigurationRenderer(mutateSection) {
     const renderProfileConcepts = createDocumentationProfileConceptRenderer(mutateSection);
     const renderOrderedChoices = (host, input) => {
@@ -17,10 +19,9 @@ export function createDocumentationSectionConfigurationRenderer(mutateSection) {
             check.addEventListener("change", () => input.onChange(setChecked(input.selected, item.id, check.checked)));
             row.append(labelled(item.label, check));
             if (check.checked) {
-                const earlier = button("Move earlier", () => input.onChange(move(input.selected, item.id, -1))), later = button("Move later", () => input.onChange(move(input.selected, item.id, 1)));
-                earlier.disabled = input.selected.indexOf(item.id) === 0;
-                later.disabled = input.selected.indexOf(item.id) === input.selected.length - 1;
-                row.append(earlier, later);
+                row.prepend(renderReorderControl({ itemId: item.id, itemLabel: item.label,
+                    completeOrder: input.selected.map(id => ({ id, label: input.all.find(candidate => candidate.id === id)?.label ?? id })),
+                    dropTarget: row, orderedContainer: list, onMove: ({ itemId, toIndex }) => input.onChange(reorderValues(input.selected, itemId, toIndex, value => value)) }));
             }
             list.append(row);
         }

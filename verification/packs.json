@@ -1483,6 +1483,25 @@
   },
   {
     "id": "schemas",
+    "verificationSlices": [
+      {
+        "id": "schema_builder_reorder_adapters",
+        "sourcePaths": [
+          "src/data-layer-schema-assignment-data-conditions-ui.ts",
+          "src/data-layer-schema-specification-builder-ui.ts",
+          "src/specification-builder.ts"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-schema-assignment-data-conditions-test.mjs",
+          "unit:test/data-layer-schema-specification-builder-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumerOnly": true,
+        "consumers": [],
+        "observableBoundary": "Schema builder reorder adapters preserve predicate, column, and guided-array editor semantics"
+      }
+    ],
     "representativeChangedPath": "src/data-layer-allowed-value-expansion-ui.ts",
     "source": [
       "src/data-layer-allowed-value-expansion-ui.ts",
@@ -2616,6 +2635,22 @@
   },
   {
     "id": "defects",
+    "verificationSlices": [
+      {
+        "id": "defect_reproduction_reorder_adapter",
+        "sourcePaths": [
+          "src/data-layer-defect-report-reproduction-controls.ts"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-defect-report-ui-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumerOnly": true,
+        "consumers": [],
+        "observableBoundary": "Defect reproduction reorder adapter preserves pathname segments and report editing"
+      }
+    ],
     "representativeChangedPath": "src/data-layer-defect-library-ui.ts",
     "source": [
       "src/data-layer-defect",
@@ -4368,6 +4403,25 @@
     ],
     "verificationSlices": [
       {
+        "id": "documentation_reorder_adapters",
+        "sourcePaths": [
+          "src/data-layer-flow-table-documentation-export-ui.ts",
+          "src/data-layer-project-documentation-workspace-ui.ts",
+          "src/project-documentation/workspace-build-ui.ts",
+          "src/project-documentation/workspace-content-ui.ts",
+          "src/project-documentation/workspace-template-library-ui.ts"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-project-documentation-workspace-test.mjs",
+          "unit:test/data-layer-documentation-template-rich-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumerOnly": true,
+        "consumers": [],
+        "observableBoundary": "Documentation reorder adapters preserve selection, configuration, template, and export semantics"
+      },
+      {
         "id": "documentation_template_workspace",
         "sourcePaths": ["src/project-documentation/workspace-contribution.ts"],
         "sourcePrefixes": [
@@ -4646,6 +4700,23 @@
       }
     ],
     "verificationSlices": [
+      {
+        "id": "schema_authoring_reorder_adapters",
+        "sourcePaths": [
+          "src/canonical-schema-focused/structure.ts",
+          "src/composed-schema/facet-builder-common.ts",
+          "src/data-layer-composed-schema-workspace-focused-sections.ts"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-composed-schema-workspace-test.mjs",
+          "unit:test/data-layer-focused-schema-property-ui-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumerOnly": true,
+        "consumers": [],
+        "observableBoundary": "Canonical and composed schema reorder adapters preserve identity, ownership, and facet drafts"
+      },
       {
         "id": "layered_schema_flow_editor_route",
         "sourcePaths": ["src/layered-schema/flow-editor-route-layout.ts"],
@@ -5291,6 +5362,22 @@
   },
   {
     "id": "property_set_flow_sections",
+    "verificationSlices": [
+      {
+        "id": "property_set_application_reorder_adapter",
+        "sourcePaths": [
+          "src/data-layer-property-set-flow-section-ui.ts"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-property-set-flow-section-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumerOnly": true,
+        "consumers": [],
+        "observableBoundary": "Property Set application reorder adapter preserves impact review and durable commands"
+      }
+    ],
     "representativeChangedPath": "src/data-layer-property-set-flow-section-ui.ts",
     "source": [
       "src/data-layer-property-set-flow-section.ts",
@@ -5756,6 +5843,26 @@
     ],
     "verificationSlices": [
       {
+        "id": "shared_reorderable_editor_controls",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "src/reorderable-editor/"
+        ],
+        "tasks": [
+          "unit:test/reorderable-editor-model-test.mjs",
+          "unit:test/reorderable-editor-control-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {"packId": "defects", "sliceId": "defect_reproduction_reorder_adapter"},
+          {"packId": "flow_export", "sliceId": "documentation_reorder_adapters"},
+          {"packId": "layered_schema", "sliceId": "schema_authoring_reorder_adapters"},
+          {"packId": "property_set_flow_sections", "sliceId": "property_set_application_reorder_adapter"},
+          {"packId": "schemas", "sliceId": "schema_builder_reorder_adapters"}
+        ],
+        "observableBoundary": "Shared accessible reorder handle, movement menu, destination dialog, focus, feedback, and drag placement"
+      },
+      {
         "id": "eligible_repair_admission",
         "sourcePaths": [
           "scripts/run-focused-acceptance.mjs",
@@ -5906,6 +6013,21 @@
       }
     ],
     "impactBoundaries": [
+      {
+        "id": "shared_reorderable_editor_controls",
+        "prefixes": [
+          "src/reorderable-editor"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "browser presentation",
+        "consumers": [
+          "defects",
+          "flow_export",
+          "layered_schema",
+          "property_set_flow_sections",
+          "schemas"
+        ]
+      },
       {
         "id": "shell_local_presentation",
         "prefixes": [
@@ -6475,6 +6597,7 @@
       "src/background",
       "src/panel-",
       "src/platform",
+      "src/reorderable-editor",
       "src/side-panel",
       "src/utility-registry",
       "src/workspace"
@@ -6491,6 +6614,8 @@
     ],
     "unit": [
       "test/background-command-test.mjs",
+      "test/reorderable-editor-control-test.mjs",
+      "test/reorderable-editor-model-test.mjs",
       "test/information-architecture-runtime-test.mjs",
       "test/modular-utility-architecture-test.mjs",
       "test/package-clean-checkout-contract-test.mjs",
@@ -6529,6 +6654,8 @@
       "test/stylesheet-declarations-property-test.mjs"
     ],
     "features": [
+      "features/data-layer-compact-reorderable-editor-controls.feature",
+      "features/data-layer-compact-reorderable-editor-controls-runtime.feature",
       "features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature",
       "features/data-layer-secondary-view-separation.feature",
       "features/manifest-v3-side-panel-extension.feature",
@@ -6568,6 +6695,7 @@
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/all.clj",
+      "acceptance/src/acceptance/steps/reorderable_editor_controls.clj",
       "acceptance/src/acceptance/steps/information_architecture.clj",
       "acceptance/src/acceptance/steps/swarmforge_autonomy.clj",
       "acceptance/src/acceptance/steps/modular_architecture.clj",

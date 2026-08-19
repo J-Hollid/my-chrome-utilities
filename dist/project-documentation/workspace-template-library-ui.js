@@ -6,6 +6,8 @@ import { DOCUMENTATION_TEMPLATE_XLSX_TYPE } from "../documentation-templates/tem
 import { validateExcelTemplateWorkbook } from "../documentation-templates/excel-workbook.js";
 import { renderExcelTemplateFindings, renderExcelTemplateGuide } from "./workspace-excel-template-guidance-ui.js";
 import { documentationButton as button, documentationHeading as heading, documentationLabelled as labelled } from "./workspace-ui-elements.js";
+import { renderReorderControl } from "../reorderable-editor/control.js";
+import { reorderValues } from "../reorderable-editor/model.js";
 const formats = ["excel", "rich"], kinds = ["overview", "flow", "matrix", "profile"];
 const kindName = (kind) => kind === "profile" ? "Site Profile" : kind === "matrix" ? "Data capture matrix" : kind[0].toUpperCase() + kind.slice(1);
 const digest = async (file) => `sha256:${Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer())), byte => byte.toString(16).padStart(2, "0")).join("")}`;
@@ -70,8 +72,9 @@ function richEditor(detail, selected, templates, options) {
     outlineSurface.dataset.mobileSurface = options.richEditorMobileDetail ? "inactive" : "active";
     detailSurface.dataset.mobileSurface = options.richEditorMobileDetail ? "active" : "inactive";
     outline.setAttribute("aria-label", "Rich template outline");
-    const ids = flat.map(block => block.id), renderItems = (parent, items) => items.forEach(block => { const item = document.createElement("li"), select = button(block.type, () => choose(block.id)); select.dataset.richBlockId = block.id; select.dataset.richBlockSelected = String(block.id === selectedBlock?.id); select.setAttribute("aria-current", String(block.id === selectedBlock?.id)); select.addEventListener("keydown", event => { const current = ids.indexOf(block.id), target = event.key === "ArrowDown" ? Math.min(ids.length - 1, current + 1) : event.key === "ArrowUp" ? Math.max(0, current - 1) : event.key === "Home" ? 0 : event.key === "End" ? ids.length - 1 : -1; if (target < 0)
-        return; event.preventDefault(); choose(ids[target], false); }); item.append(select); if (block.type === "repeat") {
+    const ids = flat.map(block => block.id), renderItems = (parent, items) => items.forEach(block => { const item = document.createElement("li"), select = button(block.type, () => choose(block.id)), reorder = renderReorderControl({ itemId: block.id, itemLabel: `${block.type} block`, completeOrder: items.map(candidate => ({ id: candidate.id, label: `${candidate.type} block` })), dropTarget: item, orderedContainer: parent, onMove: ({ itemId, fromIndex, toIndex }) => { if (fromIndex < 0)
+            return false; commit(editSiblings(blocks, itemId, (siblings) => reorderValues(siblings, itemId, toIndex, value => value.id)), "Move", itemId); } }); select.dataset.richBlockId = block.id; select.dataset.richBlockSelected = String(block.id === selectedBlock?.id); select.setAttribute("aria-current", String(block.id === selectedBlock?.id)); select.addEventListener("keydown", event => { const current = ids.indexOf(block.id), target = event.key === "ArrowDown" ? Math.min(ids.length - 1, current + 1) : event.key === "ArrowUp" ? Math.max(0, current - 1) : event.key === "Home" ? 0 : event.key === "End" ? ids.length - 1 : -1; if (target < 0)
+        return; event.preventDefault(); choose(ids[target], false); }); item.append(reorder, select); if (block.type === "repeat") {
         const children = document.createElement("ol");
         children.setAttribute("aria-label", `${block.items} child blocks`);
         renderItems(children, block.children);
@@ -84,14 +87,8 @@ function richEditor(detail, selected, templates, options) {
     detailSurface.tabIndex = -1;
     detailSurface.append(heading(4, selectedBlock ? `${selectedBlock.type} block` : "Select a block"));
     if (selectedBlock) {
-        const scope = scopes[selectedBlock.id], siblings = (() => { let found = blocks; const visit = (items) => { if (items.some(block => block.id === selectedBlock.id)) {
-            found = items;
-            return true;
-        } return items.some(block => block.type === "repeat" && visit(block.children)); }; visit(blocks); return found; })(), index = siblings.findIndex(block => block.id === selectedBlock.id), move = (offset) => commit(editSiblings(blocks, selectedBlock.id, (items, current) => { const next = [...items], target = current + offset; if (target < 0 || target >= next.length)
-            return next; [next[current], next[target]] = [next[target], next[current]]; return next; }), "Move"), earlier = button("Move earlier", () => move(-1)), later = button("Move later", () => move(1)), copied = cloneWithIds(selectedBlock), copy = button("Copy block", () => commit(editSiblings(blocks, selectedBlock.id, (items, current) => [...items.slice(0, current + 1), copied, ...items.slice(current + 1)]), "Copy", copied.id)), fallback = flat[selectedIndex + 1]?.id ?? flat[selectedIndex - 1]?.id ?? "", remove = button("Remove block", () => commit(editSiblings(blocks, selectedBlock.id, (items, current) => items.filter((_, candidate) => candidate !== current)), "Remove", fallback));
-        earlier.disabled = index === 0;
-        later.disabled = index === siblings.length - 1;
-        detailSurface.append(earlier, later, copy, remove);
+        const scope = scopes[selectedBlock.id], copied = cloneWithIds(selectedBlock), copy = button("Copy block", () => commit(editSiblings(blocks, selectedBlock.id, (items, current) => [...items.slice(0, current + 1), copied, ...items.slice(current + 1)]), "Copy", copied.id)), fallback = flat[selectedIndex + 1]?.id ?? flat[selectedIndex - 1]?.id ?? "", remove = button("Remove block", () => commit(editSiblings(blocks, selectedBlock.id, (items, current) => items.filter((_, candidate) => candidate !== current)), "Remove", fallback));
+        detailSurface.append(copy, remove);
         if (selectedBlock.type === "heading" || selectedBlock.type === "paragraph") {
             const text = document.createElement("input"), textEmphasis = document.createElement("select"), binding = document.createElement("select"), bindingEmphasis = document.createElement("select"), emphasisOptions = () => [new Option("No emphasis", ""), new Option("Bold", "strong"), new Option("Italic", "emphasis")];
             text.setAttribute("aria-label", `${selectedBlock.type} text`);

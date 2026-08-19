@@ -2524,7 +2524,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       reproductionStepActionRowsObservations.push(reproductionStepActionRows);
       assert.equal(reproductionStepActionRows.width, width);
       assert.equal(reproductionStepActionRows.text, "2. Click Checkout");
-      assert.deepEqual(reproductionStepActionRows.actionOrder, ["+", "Adjust", "Remove", "Move earlier", "Move later"]);
+      assert.deepEqual(reproductionStepActionRows.actionOrder, ["Reorder", "+", "Adjust", "Remove"]);
       assert.deepEqual(reproductionStepActionRows.tabOrder, reproductionStepActionRows.actionOrder);
       assert.equal(reproductionStepActionRows.textBeforeActions, true);
       assert.equal(reproductionStepActionRows.guidanceAfterActions, true);

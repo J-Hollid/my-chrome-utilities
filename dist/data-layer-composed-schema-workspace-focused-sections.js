@@ -3,6 +3,7 @@ import { focusedDefinitionFacetOwnershipActions } from "./data-layer-focused-sch
 import { schemaTableAllowedValues, schemaTableExampleControl, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
 import { renderComposedFocusedCondition } from "./data-layer-composed-schema-workspace-focused-conditions.js";
 import { renderComposedFocusedRules } from "./data-layer-composed-schema-workspace-focused-rules.js";
+import { renderReorderControl } from "./reorderable-editor/control.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const valueText = (value) => value === undefined ? "unset" : typeof value === "string" ? value : JSON.stringify(value);
@@ -223,8 +224,10 @@ export function renderComposedFocusedSection(host, context) {
             newName.setAttribute("aria-label", "New local property name");
             const invoke = (kind) => context.onStructure?.(kind, context.row.path, name.value);
             const create = (kind) => context.onStructure?.(kind, context.row.path, newName.value);
-            host.append(labeled(dom, "Property name", name), labeled(dom, "New local property name", newName), button(dom, "Add child", () => create("add-child")), button(dom, "Add sibling", () => create("add-sibling")), button(dom, "Rename", () => invoke("rename")), button(dom, "Move earlier", () => invoke("move-earlier")), button(dom, "Move later", () => invoke("move-later")), button(dom, "Move to root", () => invoke("move-to-root")), button(dom, "Duplicate", () => invoke("duplicate")), button(dom, "Delete property", () => invoke("delete")));
             const parent = context.row.path.slice(0, context.row.path.lastIndexOf("/")), related = context.model.rows.filter(({ path, local }) => path !== context.row.path && path.slice(0, path.lastIndexOf("/")) === parent && Boolean(local.definitionId));
+            const siblings = [context.row, ...related].sort((left, right) => left.path.localeCompare(right.path)), reorder = renderReorderControl({ itemId: context.row.local.definitionId ?? context.row.path, itemLabel: context.row.path.split("/").at(-1) ?? context.row.path, completeOrder: siblings.map(item => ({ id: item.local.definitionId ?? item.path, label: item.path.split("/").at(-1) ?? item.path })), onMove: ({ fromIndex, toIndex }) => { const kind = toIndex < fromIndex ? "move-earlier" : "move-later"; for (let count = Math.abs(toIndex - fromIndex); count > 0; count -= 1)
+                    invoke(kind); } });
+            host.append(labeled(dom, "Property name", name), labeled(dom, "New local property name", newName), button(dom, "Add child", () => create("add-child")), button(dom, "Add sibling", () => create("add-sibling")), button(dom, "Rename", () => invoke("rename")), reorder, button(dom, "Move to root", () => invoke("move-to-root")), button(dom, "Duplicate", () => invoke("duplicate")), button(dom, "Delete property", () => invoke("delete")));
             if (related.length) {
                 const inventory = dom.createElement("section");
                 inventory.setAttribute("aria-label", "Local related properties");

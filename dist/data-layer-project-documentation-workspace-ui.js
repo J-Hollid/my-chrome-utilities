@@ -2,7 +2,9 @@ import { compileProjectDocumentation, projectDocumentationSources } from "./data
 import { createProjectDocumentationSet, } from "./data-layer-project-documentation-records.js";
 import { projectDocumentationSnapshotStale, selectProjectDocumentationTables, themeFingerprint, } from "./data-layer-project-documentation-workspace.js";
 import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
-import { documentationButton as button, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled, documentationLogoArea as logoArea, documentationMoveVisible as moveVisible, renderDocumentationTable as renderTable, } from "./project-documentation/workspace-ui-elements.js";
+import { renderReorderControl } from "./reorderable-editor/control.js";
+import { reorderValues } from "./reorderable-editor/model.js";
+import { documentationButton as button, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled, documentationLogoArea as logoArea, renderDocumentationTable as renderTable, } from "./project-documentation/workspace-ui-elements.js";
 import { consumeDocumentationIncompleteConfirmation, documentationExportPresentation, documentationExportSelection, renderDocumentationExport, } from "./project-documentation/workspace-export-ui.js";
 import { createDocumentationSectionConfigurationRenderer } from "./project-documentation/workspace-build-ui.js";
 import { renderDocumentationConceptConfiguration, renderDocumentationContent } from "./project-documentation/workspace-content-ui.js";
@@ -88,12 +90,10 @@ export function installProjectDocumentationWorkspaceUi(options) {
         const outline = document.createElement("ol");
         outline.setAttribute("aria-label", "Documentation section outline");
         for (const section of selectedSections) {
-            const item = document.createElement("li"), select = button(`${section.name} · ${section.kind}`, () => { selectedSectionId = section.id; previewSectionId = section.id; mobileBuildSurface = "configuration"; render(host); }), earlier = button("Move earlier", () => saveSet(createProjectDocumentationSet({ ...set, sections: moveVisible(set.sections, section, -1, ({ selected }) => selected) }), `Reorder ${section.name}`)), later = button("Move later", () => saveSet(createProjectDocumentationSet({ ...set, sections: moveVisible(set.sections, section, 1, ({ selected }) => selected) }), `Reorder ${section.name}`));
+            const item = document.createElement("li"), select = button(`${section.name} · ${section.kind}`, () => { selectedSectionId = section.id; previewSectionId = section.id; mobileBuildSurface = "configuration"; render(host); }), reorder = renderReorderControl({ itemId: section.id, itemLabel: section.name, completeOrder: selectedSections.map(({ id, name }) => ({ id, label: name })), dropTarget: item, orderedContainer: outline, onMove: ({ itemId, toIndex }) => { const moved = reorderValues(selectedSections, itemId, toIndex, value => value.id); let selectedIndex = 0; const sections = set.sections.map(value => value.selected ? moved[selectedIndex++] : value); saveSet(createProjectDocumentationSet({ ...set, sections }), `Reorder ${section.name}`); } });
             select.setAttribute("aria-current", String(section.id === selectedSectionId));
-            earlier.disabled = selectedSections.indexOf(section) === 0;
-            later.disabled = selectedSections.indexOf(section) === selectedSections.length - 1;
             item.dataset.sectionKind = section.kind;
-            item.append(select, earlier, later);
+            item.append(reorder, select);
             outline.append(item);
         }
         const editTheme = button(`Edit theme · ${theme.name}`, () => { themeOpen = !themeOpen; render(host); });

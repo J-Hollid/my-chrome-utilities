@@ -8,11 +8,12 @@ import {
   documentationControlInput as controlInput,
   documentationHeading as heading,
   documentationLabelled as labelled,
-  documentationMove as move,
   documentationSetChecked as setChecked,
 } from "./workspace-ui-elements.js";
 import {createDocumentationProfileConceptRenderer} from "./workspace-profile-concepts-ui.js";
 import {projectDocumentationProfileConceptProperties} from "./profile-concept-properties.js";
+import {renderReorderControl} from "../reorderable-editor/control.js";
+import {reorderValues} from "../reorderable-editor/model.js";
 
 type MutateSection=(set:ProjectDocumentationSet,sectionId:string,update:(section:ProjectDocumentationSection)=>ProjectDocumentationSection,label:string)=>void;
 
@@ -29,10 +30,9 @@ export function createDocumentationSectionConfigurationRenderer(mutateSection:Mu
       check.addEventListener("change",()=>input.onChange(setChecked(input.selected,item.id,check.checked)));
       row.append(labelled(item.label,check));
       if(check.checked){
-        const earlier=button("Move earlier",()=>input.onChange(move(input.selected,item.id,-1))),later=button("Move later",()=>input.onChange(move(input.selected,item.id,1)));
-        earlier.disabled=input.selected.indexOf(item.id)===0;
-        later.disabled=input.selected.indexOf(item.id)===input.selected.length-1;
-        row.append(earlier,later);
+        row.prepend(renderReorderControl({itemId:item.id,itemLabel:item.label,
+          completeOrder:input.selected.map(id=>({id,label:input.all.find(candidate=>candidate.id===id)?.label??id})),
+          dropTarget:row,orderedContainer:list,onMove:({itemId,toIndex})=>input.onChange(reorderValues(input.selected,itemId,toIndex,value=>value))}));
       }
       list.append(row);
     }

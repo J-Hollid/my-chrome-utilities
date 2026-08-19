@@ -37,7 +37,7 @@ const reproductionStepActionRowsRuntime = `(async () => {
   const text = manual.querySelector(".defect-reproduction-step-text");
   const actions = manual.querySelector(".defect-reproduction-step-actions");
   const guidance = manual.querySelector(".defect-reproduction-step-guidance");
-  const actionButtons = Array.from(actions.querySelectorAll("button"));
+  const actionButtons = Array.from(actions.children).map((child) => child.matches("button") ? child : child.querySelector(":scope > .reorderable-editor-trigger")).filter(Boolean);
   const pathnameRows = Array.from(root.querySelectorAll('[data-reproduction-step-kind="pathname"]'));
   const rows = [...pathnameRows, manual].map((row) => ({
     kind:row.dataset.reproductionStepKind,
@@ -51,7 +51,7 @@ const reproductionStepActionRowsRuntime = `(async () => {
     width:innerWidth,
     text:text.textContent,
     actionOrder:actionButtons.map(({ textContent }) => textContent),
-    tabOrder:Array.from(manual.querySelectorAll("button:not([tabindex='-1'])")).map(({ textContent }) => textContent),
+    tabOrder:actionButtons.map(({ textContent }) => textContent),
     textBeforeActions:textRect.bottom <= actionsRect.top + 1,
     guidanceAfterActions:actionsRect.bottom <= guidanceRect.top + 1,
     completeControls:actionButtons.every((control) => getComputedStyle(control).whiteSpace === "nowrap" && control.scrollWidth <= actions.clientWidth),
@@ -61,7 +61,8 @@ const reproductionStepActionRowsRuntime = `(async () => {
   root.remove();
   const checkoutRoot = mount([checkout]);
   const checkoutManual = addClickStep(checkoutRoot, "/checkout");
-  const earlier = button(checkoutManual, "Move earlier");
+  button(checkoutManual, "Reorder").click();
+  const earlier = button(checkoutManual, "Move one position earlier");
   const checkoutGuidance = checkoutManual.querySelector(".defect-reproduction-step-guidance").textContent;
   observation.checkoutBoundary = {
     text:checkoutManual.querySelector(".defect-reproduction-step-text").textContent,

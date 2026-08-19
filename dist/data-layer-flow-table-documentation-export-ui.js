@@ -2,6 +2,8 @@ import { flowDocumentationSnapshotFromState } from "./data-layer-flow-documentat
 export { flowDocumentationSnapshotFromState } from "./data-layer-flow-documentation-snapshot.js";
 import { configureFlowDocumentationSnapshot, configureFlowDocumentationTable, flowDocumentationCellDetail, flowDocumentationPropertyPaths, flowDocumentationSnapshotStale, renderFlowDocumentationClipboard, writeFlowDocumentationWorkbook, } from "./data-layer-flow-table-documentation-export.js";
 import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
+import { renderReorderControl } from "./reorderable-editor/control.js";
+import { reorderValues } from "./reorderable-editor/model.js";
 const createButton = (text, action) => {
     const value = document.createElement("button");
     value.type = "button";
@@ -29,8 +31,6 @@ export function installFlowDocumentationExportUi(options) {
     const fresh = (state, flowId, revision) => { snapshot = flowDocumentationSnapshotFromState(state, flowId, new Date().toISOString(), revision); propertyOrder = [...flowDocumentationPropertyPaths(snapshot)]; selectedPaths = new Set(propertyOrder); contextOrder = snapshot.contexts.map(({ id }) => id); selectedContexts = new Set(contextOrder); stepLabels = Object.fromEntries(snapshot.contexts.map(({ id, stepLabel }) => [id, stepLabel])); metadata = []; confirmedIncomplete = false; feedbackText = ""; };
     const configuredSnapshot = () => configureFlowDocumentationSnapshot(snapshot, { contextOrder: contextOrder.filter((id) => selectedContexts.has(id)), stepLabels });
     const configuredTable = (kind = view) => configureFlowDocumentationTable(configuredSnapshot(), kind, { selectedPaths: propertyOrder.filter((path) => selectedPaths.has(path)), metadata, pathDisplay, headingParts });
-    const move = (items, item, direction) => { const index = items.indexOf(item), target = index + direction; if (index < 0 || target < 0 || target >= items.length)
-        return items; const next = [...items]; [next[index], next[target]] = [next[target], next[index]]; return next; };
     const staleState = (state, flowId, revision) => { const live = flowDocumentationSnapshotFromState(state, flowId, snapshot.generatedAt, revision); return flowDocumentationSnapshotStale(snapshot, { graphRevision: live.graphRevision, contextRevisions: Object.fromEntries(live.contexts.map(({ id, effectiveRevision }) => [id, effectiveRevision])) }); };
     function renderTable(host, value, detail) {
         const tableElement = document.createElement("table"), head = document.createElement("thead"), headRow = document.createElement("tr"), body = document.createElement("tbody"), metadataCount = metadata.length, currentSnapshot = configuredSnapshot();
@@ -101,7 +101,7 @@ export function installFlowDocumentationExportUi(options) {
             check.type = "checkbox";
             check.checked = selectedPaths.has(path);
             check.addEventListener("change", () => { check.checked ? selectedPaths.add(path) : selectedPaths.delete(path); renderWorkspace(); });
-            item.append(labelled(path, check), createButton("Move earlier", () => { propertyOrder = move(propertyOrder, path, -1); renderWorkspace(); }), createButton("Move later", () => { propertyOrder = move(propertyOrder, path, 1); renderWorkspace(); }));
+            item.append(renderReorderControl({ itemId: path, itemLabel: path, completeOrder: propertyOrder.map(id => ({ id, label: id })), filterActive: Boolean(search.trim()), dropTarget: item, orderedContainer: propertyList, onMove: ({ itemId, toIndex }) => { propertyOrder = reorderValues(propertyOrder, itemId, toIndex, value => value); renderWorkspace(); } }), labelled(path, check));
             propertyList.append(item);
         }
         propertyFieldset.append(propertyList, createButton("Reset property columns", () => { propertyOrder = [...flowDocumentationPropertyPaths(snapshot)]; selectedPaths = new Set(propertyOrder); metadata = []; renderWorkspace(); }));
@@ -110,17 +110,12 @@ export function installFlowDocumentationExportUi(options) {
         for (const [key, label] of metadataOptions) {
             const item = document.createElement("li"), check = document.createElement("input");
             item.dataset.metadataKey = key;
-            item.draggable = metadata.includes(key);
-            item.addEventListener("dragstart", (event) => event.dataTransfer?.setData("application/x-flow-documentation-metadata", key));
-            item.addEventListener("dragover", (event) => event.preventDefault());
-            item.addEventListener("drop", (event) => { event.preventDefault(); const dragged = event.dataTransfer?.getData("application/x-flow-documentation-metadata"); if (!metadata.includes(dragged) || dragged === key)
-                return; const without = metadata.filter((value) => value !== dragged), target = without.indexOf(key); metadata = [...without.slice(0, target), dragged, ...without.slice(target)]; renderWorkspace(); });
             check.type = "checkbox";
             check.checked = metadata.includes(key);
             check.addEventListener("change", () => { metadata = check.checked ? [...metadata, key] : metadata.filter((value) => value !== key); renderWorkspace(); });
             item.append(labelled(label, check));
             if (metadata.includes(key))
-                item.append(createButton("Move earlier", () => { metadata = move(metadata, key, -1); renderWorkspace(); }), createButton("Move later", () => { metadata = move(metadata, key, 1); renderWorkspace(); }));
+                item.prepend(renderReorderControl({ itemId: key, itemLabel: label, completeOrder: metadata.map(id => ({ id, label: metadataOptions.find(([candidate]) => candidate === id)?.[1] ?? id })), dropTarget: item, orderedContainer: metadataList, onMove: ({ itemId, toIndex }) => { metadata = reorderValues(metadata, itemId, toIndex, value => value); renderWorkspace(); } }));
             metadataList.append(item);
         }
         metadataFieldset.append(metadataList);
@@ -139,7 +134,7 @@ export function installFlowDocumentationExportUi(options) {
             label.value = stepLabels[id] ?? context.stepLabel;
             label.setAttribute("aria-label", `Step label for ${context.pageName} ${context.eventName}`);
             label.addEventListener("change", () => { stepLabels[id] = label.value.trim() || context.stepLabel; renderWorkspace(); });
-            item.append(labelled(`${context.pageName} / ${context.eventName} · ${context.kind}${source}`, check), label, createButton("Move earlier", () => { contextOrder = move(contextOrder, id, -1); renderWorkspace(); }), createButton("Move later", () => { contextOrder = move(contextOrder, id, 1); renderWorkspace(); }));
+            item.append(renderReorderControl({ itemId: id, itemLabel: `${context.pageName} / ${context.eventName}`, completeOrder: contextOrder.map(candidateId => { const candidate = base.contexts.find(value => value.id === candidateId); return { id: candidateId, label: `${candidate.pageName} / ${candidate.eventName}` }; }), dropTarget: item, orderedContainer: contextList, onMove: ({ itemId, toIndex }) => { contextOrder = reorderValues(contextOrder, itemId, toIndex, value => value); renderWorkspace(); } }), labelled(`${context.pageName} / ${context.eventName} · ${context.kind}${source}`, check), label);
             contextList.append(item);
         }
         contextFieldset.append(contextList, createButton("Reset context order", () => { contextOrder = snapshot.contexts.map(({ id }) => id); selectedContexts = new Set(contextOrder); stepLabels = Object.fromEntries(snapshot.contexts.map(({ id, stepLabel }) => [id, stepLabel])); renderWorkspace(); }));

@@ -1,5 +1,6 @@
 import { addProjectEntity, adoptSavedSchema, buildReleaseReview, commitStagedProjectImport, commitSavedSchemaReview, confirmCanonicalMigration, exportSpecificationProjectState, restoreReleaseAsDraft, saveProjectAssignment, searchProjectAssignments, stageProjectImport, stageSavedSchemaSynchronization, transactProject, } from "./data-layer-specification-project.js";
 import { openDurableProjectRuntime } from "./data-layer-durable-project-runtime.js";
+import { renderReorderControl } from "./reorderable-editor/control.js";
 import { createDurablePersistenceReadiness } from "./durable-project/persistence-readiness.js";
 import { durableConflictSemanticField, durableProjectRouteForWorkspace } from "./data-layer-durable-project-repository.js";
 import { applyStagedBulkAction, commitStagedBulkRequirements, stageBulkRequirements } from "./data-layer-specification-bulk.js";
@@ -536,13 +537,13 @@ function mountGuidedInputBuilder(host, options) {
                 const group = document.createElement("fieldset"), legend = document.createElement("legend"), items = Array.isArray(value) ? value : [], children = byParent(`${descriptor.path}/*`);
                 legend.textContent = `${concretePath} · Array${descriptor.required ? " · required" : ""}`;
                 group.dataset.guidedArray = concretePath;
-                items.forEach((_item, index) => { const item = document.createElement("fieldset"), itemLegend = document.createElement("legend"), earlier = document.createElement("button"), later = document.createElement("button"), remove = document.createElement("button"); itemLegend.textContent = `Item ${index + 1}`; earlier.type = later.type = remove.type = "button"; earlier.textContent = "Move earlier"; later.textContent = "Move later"; remove.textContent = "Remove item"; earlier.disabled = index === 0; later.disabled = index === items.length - 1; earlier.addEventListener("click", () => { options.update(guidedArrayMove(options.input(), concretePath, index, index - 1)); render(); }); later.addEventListener("click", () => { options.update(guidedArrayMove(options.input(), concretePath, index, index + 1)); render(); }); remove.addEventListener("click", () => { const next = [...items]; next.splice(index, 1); update(concretePath, next); }); item.append(itemLegend); if (children.length)
+                items.forEach((_item, index) => { const item = document.createElement("fieldset"), itemLegend = document.createElement("legend"), remove = document.createElement("button"), itemId = `${concretePath}:item:${index}`, reorder = renderReorderControl({ itemId, itemLabel: `Item ${index + 1}`, completeOrder: items.map((_candidate, candidateIndex) => ({ id: `${concretePath}:item:${candidateIndex}`, label: `Item ${candidateIndex + 1}` })), dropTarget: item, preserveTargetSemantics: true, onMove: ({ fromIndex, toIndex }) => { options.update(guidedArrayMove(options.input(), concretePath, fromIndex, toIndex)); render(); } }); itemLegend.textContent = `Item ${index + 1}`; remove.type = "button"; remove.textContent = "Remove item"; remove.addEventListener("click", () => { const next = [...items]; next.splice(index, 1); update(concretePath, next); }); item.append(itemLegend, reorder); if (children.length)
                     for (const child of children)
                         item.append(renderDescriptor(child, child.path.replace(`${descriptor.path}/*`, `${concretePath}/${index}`)));
                 else {
                     const itemType = String(descriptor.constraints.itemType ?? "string"), synthetic = { ...descriptor, path: `${descriptor.path}/*`, control: itemType === "number" || itemType === "integer" ? "number" : itemType === "boolean" ? "boolean" : "text", jsonTypes: [itemType], required: true };
                     item.append(renderScalar(synthetic, `${concretePath}/${index}`));
-                } item.append(earlier, later, remove); group.append(item); });
+                } item.append(remove); group.append(item); });
                 const add = document.createElement("button");
                 add.type = "button";
                 add.textContent = "Add array item";

@@ -1,5 +1,7 @@
 import { comparisonValueFromInput, operatorsForConditionType, } from "./data-layer-conditional-validation-rules.js";
 import { assignmentDataConditionSummary, validateAssignmentDataConditions, } from "./data-layer-schema-assignment-data-conditions.js";
+import { renderReorderControl } from "./reorderable-editor/control.js";
+import { reorderValues } from "./reorderable-editor/model.js";
 function element(tag, text) {
     const result = document.createElement(tag);
     if (text !== undefined)
@@ -119,18 +121,14 @@ export function renderAssignmentDataConditionEditor(root, state, changed) {
         comparison.dataset.predicateIndex = String(index);
         comparison.hidden = predicate.operator === "Exists" || predicate.operator === "Does not exist";
         comparison.addEventListener("change", () => replacePredicate(index, withComparison(predicate, comparison.value)));
-        const earlier = element("button", "Move earlier");
-        earlier.type = "button";
-        earlier.disabled = index === 0;
-        earlier.addEventListener("click", () => { const predicates = [...(state.group?.predicates ?? [])]; [predicates[index - 1], predicates[index]] = [predicates[index], predicates[index - 1]]; update({ ...state, group: { ...state.group, predicates } }); });
-        const later = element("button", "Move later");
-        later.type = "button";
-        later.disabled = index === state.group.predicates.length - 1;
-        later.addEventListener("click", () => { const predicates = [...(state.group?.predicates ?? [])]; [predicates[index], predicates[index + 1]] = [predicates[index + 1], predicates[index]]; update({ ...state, group: { ...state.group, predicates } }); });
+        const predicateIdentity = (candidate, candidateIndex) => `${candidate.propertyPath}\u0000${candidate.operator}\u0000${candidateIndex}`;
+        const reorder = renderReorderControl({ itemId: predicateIdentity(predicate, index), itemLabel: predicate.propertyPath || `Condition ${index + 1}`,
+            completeOrder: state.group.predicates.map((candidate, candidateIndex) => ({ id: predicateIdentity(candidate, candidateIndex), label: candidate.propertyPath || `Condition ${candidateIndex + 1}` })),
+            dropTarget: row, orderedContainer: list, onMove: ({ itemId, toIndex }) => update({ ...state, group: { ...state.group, predicates: reorderValues(state.group.predicates, itemId, toIndex, predicateIdentity) } }) });
         const remove = element("button", "Remove condition");
         remove.type = "button";
         remove.addEventListener("click", () => update({ ...state, group: { ...state.group, predicates: state.group?.predicates.filter((_, candidate) => candidate !== index) ?? [] } }));
-        row.append(labelledControl("Property path", path), labelledControl("Detected type", type), labelledControl("Operator", predicateOperator), labelledControl("Configured value", comparison), earlier, later, remove);
+        row.append(reorder, labelledControl("Property path", path), labelledControl("Detected type", type), labelledControl("Operator", predicateOperator), labelledControl("Configured value", comparison), remove);
         list.append(row);
     }
     const add = element("button", "Add condition");

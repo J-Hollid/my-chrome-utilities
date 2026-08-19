@@ -17,6 +17,8 @@ import {
 } from "./data-layer-schema-specification-builder.js";
 import type { SchemaDefinition } from "./data-layer-schema-verification.js";
 import {declareStudioChoice} from "./data-layer-studio-choice-controls.js";
+import {renderReorderControl} from "./reorderable-editor/control.js";
+import {reorderValues} from "./reorderable-editor/model.js";
 
 export interface SpecificationClipboardPort {
   writeRich(html: string, plain: string): Promise<void>;
@@ -162,20 +164,11 @@ export function renderSchemaSpecificationBuilder(
             : column === "example" ? row.example ?? ""
               : column === "allowedValues" ? row.allowedValueGroups.join("\n")
                 : row.comments;
-    headRow.replaceChildren(...columns.map((column, index) => {
+    headRow.replaceChildren(...columns.map((column) => {
       const cell = document.createElement("th");
       cell.dataset.specificationColumn = column;
-      cell.draggable = true;
       cell.append(Object.assign(document.createElement("span"), { textContent:specificationColumnLabels[column] }));
-      const earlier = document.createElement("button"); earlier.type = "button"; earlier.textContent = "Move left"; earlier.setAttribute("aria-label", `Move ${specificationColumnLabels[column]} left`); earlier.disabled = index === 0;
-      const later = document.createElement("button"); later.type = "button"; later.textContent = "Move right"; later.setAttribute("aria-label", `Move ${specificationColumnLabels[column]} right`); later.disabled = index === columns.length - 1;
-      earlier.addEventListener("click", () => { [columns[index - 1], columns[index]] = [columns[index]!, columns[index - 1]!]; renderPreview(); });
-      later.addEventListener("click", () => { [columns[index], columns[index + 1]] = [columns[index + 1]!, columns[index]!]; renderPreview(); });
-      cell.addEventListener("dragstart", (event) => { cell.classList.add("is-dragging"); event.dataTransfer?.setData("text/plain", column); });
-      cell.addEventListener("dragend", () => cell.classList.remove("is-dragging"));
-      cell.addEventListener("dragover", (event) => event.preventDefault());
-      cell.addEventListener("drop", (event) => { event.preventDefault(); const moved = event.dataTransfer?.getData("text/plain") as SpecificationColumn; const from = columns.indexOf(moved); const to = columns.indexOf(column); if (from < 0 || to < 0) return; columns.splice(from, 1); columns.splice(to, 0, moved); renderPreview(); });
-      cell.append(earlier, later);
+      cell.append(renderReorderControl({itemId:column,itemLabel:specificationColumnLabels[column],completeOrder:columns.map(id=>({id,label:specificationColumnLabels[id]})),dropTarget:cell,preserveTargetSemantics:true,onMove:({itemId,toIndex})=>{columns=reorderValues(columns,itemId,toIndex,value=>value);renderPreview();}}));
       return cell;
     }));
     body.replaceChildren(...rows.map((row) => {

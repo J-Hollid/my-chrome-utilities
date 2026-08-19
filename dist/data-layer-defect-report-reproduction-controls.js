@@ -1,4 +1,5 @@
 import { addManualReproductionStep, adjustManualReproductionStep, generatePathnameSkeleton, moveManualReproductionStep, removeManualReproductionStep, reproductionStepPreview, } from "./data-layer-defect-report.js";
+import { renderReorderControl } from "./reorderable-editor/control.js";
 function copyTemplate(template) {
     return { ...template };
 }
@@ -63,7 +64,11 @@ export function appendReproductionControls(controls, steps, context, state, opti
         addActions.clear();
         rowHosts.clear();
         adjustActions.clear();
-        const rendered = state.report().reproductionSteps.map((step, index) => {
+        const currentSteps = state.report().reproductionSteps;
+        const stepIdentity = (candidate, candidateIndex) => candidate.kind === "manual" ? `manual:${candidate.id}` : `${candidate.kind}:${candidate.visitId}:${candidateIndex}`;
+        const completeOrder = currentSteps.map((candidate, candidateIndex) => ({ id: stepIdentity(candidate, candidateIndex), label: candidate.text.replace(/^\d+\.\s*/, "") }));
+        steps.setAttribute("role", "list");
+        const rendered = currentSteps.map((step, index) => {
             const item = document.createElement("li");
             item.dataset.reproductionStepKind = step.kind;
             item.dataset.visitId = step.visitId;
@@ -105,21 +110,13 @@ export function appendReproductionControls(controls, steps, context, state, opti
                 remove.type = "button";
                 remove.textContent = "Remove";
                 remove.addEventListener("click", () => updateSteps(removeManualReproductionStep(state.report().reproductionSteps, step.id)));
-                const earlier = document.createElement("button");
-                earlier.type = "button";
-                earlier.textContent = "Move earlier";
-                const previous = state.report().reproductionSteps[index - 1];
-                earlier.disabled = previous?.kind !== "manual" || previous.visitId !== step.visitId;
-                earlier.addEventListener("click", () => updateSteps(moveManualReproductionStep(state.report().reproductionSteps, step.id, "earlier")));
-                const later = document.createElement("button");
-                later.type = "button";
-                later.textContent = "Move later";
-                const following = state.report().reproductionSteps[index + 1];
-                later.disabled = following?.kind !== "manual" || following.visitId !== step.visitId;
-                later.addEventListener("click", () => updateSteps(moveManualReproductionStep(state.report().reproductionSteps, step.id, "later")));
+                const reorder = renderReorderControl({ itemId: `manual:${step.id}`, itemLabel: step.text.replace(/^\d+\.\s*/, ""), completeOrder,
+                    legalDestinationIds: currentSteps.flatMap((candidate, candidateIndex) => candidate.kind === "manual" && candidate.visitId === step.visitId ? [stepIdentity(candidate, candidateIndex)] : []),
+                    scopeLabel: step.pathname, dropTarget: item, orderedContainer: steps, onMove: ({ itemId, fromIndex, toIndex }) => { let next = currentSteps; const direction = toIndex < fromIndex ? "earlier" : "later"; for (let count = Math.abs(toIndex - fromIndex); count > 0; count -= 1)
+                        next = moveManualReproductionStep(next, itemId.replace(/^manual:/u, ""), direction); updateSteps(next); } });
                 const segmentNote = document.createElement("small");
                 segmentNote.textContent = `Reordering stays within ${step.pathname}.`;
-                appendStepPresentation(item, text, [add, adjust, remove, earlier, later], segmentNote);
+                appendStepPresentation(item, text, [reorder, add, adjust, remove], segmentNote);
                 return item;
             }
             const input = document.createElement("input");

@@ -1,4 +1,5 @@
 import { addFlowEventOccurrence, addFlowPageFrameToSection, addPropertySetApplication, connectFlowPageFrames, createFlowSection, inspectSectionRemovalWithContents, moveFlowPageFramePresentation, moveFlowSection, movePageFrameToSection, orderedPropertySetApplications, removeFlowSection, removeFlowSectionWithContents, removePropertySetApplication, renameAndResizeFlowSection, reorderPropertySetApplication, setPropertySetApplicationApplicability } from "./data-layer-property-set-flow-section.js";
+import { renderReorderControl } from "./reorderable-editor/control.js";
 const number = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
 const graphFor = (state, flowId) => (state.project.documentationFlowGraphs?.[flowId] ?? {});
 export function mountPropertyCompositionWorkspace({ host, state, pageId, id, onSave, onOpen }) {
@@ -22,29 +23,24 @@ export function mountPropertyCompositionWorkspace({ host, state, pageId, id, onS
     const renderResults = () => { const query = search.value.trim().toLocaleLowerCase(), applied = new Set(orderedPropertySetApplications(state.project, page.id).map(({ propertySetId }) => propertySetId)); results.replaceChildren(...propertySets.filter((set) => !applied.has(set.id) && set.name.toLocaleLowerCase().includes(query)).map((set) => { const button = document.createElement("button"); button.type = "button"; button.textContent = `Apply ${set.name}`; button.setAttribute("aria-label", `Apply Property Set ${set.name} to ${page.name}`); button.addEventListener("click", () => onSave(addPropertySetApplication(state, page.id, set.id, newApplicability.value || undefined, id))); return button; })); };
     search.addEventListener("input", renderResults);
     renderResults();
-    const applications = orderedPropertySetApplications(state.project, page.id), stageReorder = (application, delta) => { const target = Math.max(0, Math.min(applications.length - 1, applications.findIndex(({ id }) => id === application.id) + delta)), other = applications[target] ?? application, next = reorderPropertySetApplication(state, page.id, application.propertySetId, delta), paths = [...new Set([application, other].flatMap(({ propertySetId }) => (byId.get(propertySetId)?.schemaConstraints ?? []).flatMap(({ path }) => path ? [path] : [])))], summary = document.createElement("p"), confirm = document.createElement("button"), cancel = document.createElement("button"); summary.textContent = `Review application order for ${page.name}: ${applications.map(({ propertySetId }) => byId.get(propertySetId)?.name ?? propertySetId).join(" then ")} becomes ${orderedPropertySetApplications(next.project, page.id).map(({ propertySetId }) => byId.get(propertySetId)?.name ?? propertySetId).join(" then ")}. Impacted properties: ${paths.join(", ") || "none"}. Both Property Sets remain visible as effective or superseded provenance; invariant and structural conflicts remain blocked.`; confirm.type = cancel.type = "button"; confirm.textContent = "Confirm application reorder"; cancel.textContent = "Cancel application reorder"; confirm.addEventListener("click", () => onSave(next)); cancel.addEventListener("click", () => { review.hidden = true; review.replaceChildren(); }); review.replaceChildren(summary, confirm, cancel); review.hidden = false; confirm.focus(); };
-    for (const [order, application] of applications.entries()) {
-        const set = byId.get(application.propertySetId), row = document.createElement("li"), summary = document.createElement("p"), applicability = document.createElement("select"), open = document.createElement("button"), earlier = document.createElement("button"), later = document.createElement("button"), remove = document.createElement("button");
+    const applications = orderedPropertySetApplications(state.project, page.id), focusReorder = (applicationId) => queueMicrotask(() => document.querySelector(`[data-reorder-item-id="${applicationId}"]`)?.focus({ preventScroll: true })), stageReorder = (application, delta) => { const target = Math.max(0, Math.min(applications.length - 1, applications.findIndex(({ id }) => id === application.id) + delta)), other = applications[target] ?? application, next = reorderPropertySetApplication(state, page.id, application.propertySetId, delta), paths = [...new Set([application, other].flatMap(({ propertySetId }) => (byId.get(propertySetId)?.schemaConstraints ?? []).flatMap(({ path }) => path ? [path] : [])))], summary = document.createElement("p"), confirm = document.createElement("button"), cancel = document.createElement("button"); summary.textContent = `Review application order for ${page.name}: ${applications.map(({ propertySetId }) => byId.get(propertySetId)?.name ?? propertySetId).join(" then ")} becomes ${orderedPropertySetApplications(next.project, page.id).map(({ propertySetId }) => byId.get(propertySetId)?.name ?? propertySetId).join(" then ")}. Impacted properties: ${paths.join(", ") || "none"}. Both Property Sets remain visible as effective or superseded provenance; invariant and structural conflicts remain blocked.`; confirm.type = cancel.type = "button"; confirm.textContent = "Confirm application reorder"; cancel.textContent = "Cancel application reorder"; confirm.addEventListener("click", () => { onSave(next); focusReorder(application.id); }); cancel.addEventListener("click", () => { review.hidden = true; review.replaceChildren(); focusReorder(application.id); }); review.replaceChildren(summary, confirm, cancel); review.hidden = false; confirm.focus(); };
+    for (const application of applications) {
+        const set = byId.get(application.propertySetId), row = document.createElement("li"), summary = document.createElement("p"), applicability = document.createElement("select"), open = document.createElement("button"), remove = document.createElement("button"), reorder = renderReorderControl({ itemId: application.id, itemLabel: set?.name ?? application.propertySetId, completeOrder: applications.map(candidate => ({ id: candidate.id, label: byId.get(candidate.propertySetId)?.name ?? candidate.propertySetId })), dropTarget: row, orderedContainer: list, onMove: ({ itemId, fromIndex, toIndex }) => { const moved = applications.find(candidate => candidate.id === itemId); if (moved)
+                stageReorder(moved, toIndex - fromIndex); return false; } });
         row.dataset.propertySetApplicationId = application.id;
         summary.textContent = `${set?.name ?? application.propertySetId} · applicability ${application.applicabilitySetId ?? "Always"} · complete effective contribution · provenance Property Set ${set?.name ?? application.propertySetId}`;
         applicability.setAttribute("aria-label", `Applicability Set for ${set?.name ?? application.propertySetId} on ${page.name}`);
         applicability.append(new Option("Always", ""), ...applicabilitySets.map((candidate) => new Option(candidate.name, candidate.id)));
         applicability.value = application.applicabilitySetId ?? "";
         applicability.addEventListener("change", () => onSave(setPropertySetApplicationApplicability(state, page.id, application.propertySetId, applicability.value || undefined)));
-        for (const control of [open, earlier, later, remove])
+        for (const control of [open, remove])
             control.type = "button";
         open.textContent = "Open Property Set";
         open.setAttribute("aria-label", `Open Property Set ${set?.name ?? application.propertySetId}`);
-        earlier.textContent = "Move earlier";
-        later.textContent = "Move later";
         remove.textContent = "Remove application";
-        earlier.disabled = order === 0;
-        later.disabled = order === applications.length - 1;
         open.addEventListener("click", () => onOpen?.(application.propertySetId));
-        earlier.addEventListener("click", () => stageReorder(application, -1));
-        later.addEventListener("click", () => stageReorder(application, 1));
         remove.addEventListener("click", () => onSave(removePropertySetApplication(state, page.id, application.propertySetId)));
-        row.append(summary, applicability, open, earlier, later, remove);
+        row.append(reorder, summary, applicability, open, remove);
         list.append(row);
     }
     workspace.append(heading, guidance, search, newApplicability, results, review, list);
