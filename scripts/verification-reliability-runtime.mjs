@@ -69,7 +69,7 @@ async function recordEligibleHandoffDeferrals(store, incidents, {
   if (!reviewHandoffRequested(readiness, verified)) return;
   const { verifyReviewReadyEvidence } = await import("./settled-final-verification.mjs");
   const review = await verifyReviewReadyEvidence(commit, base, task);
-  if (review.eligibleRepairAdmissions) {
+  if (review.eligibleRepairAdmissions || review.confirmedFlakyAdmissions) {
     // Admission recording owns the transaction. Handoff validation is read-only.
     return;
   }

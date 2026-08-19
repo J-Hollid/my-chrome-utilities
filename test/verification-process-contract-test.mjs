@@ -142,15 +142,18 @@ import {
 import { canonicalCheckpointBinding } from "../scripts/verification-reliability-receipts.mjs";
 import {
   bindRunIntentBootstrapPlan,
+  buildConfirmedFlakyAdmissions,
   buildEligibleRepairAdmissions,
   bootstrapReviewIncidentProof,
   classifyLegacyIncidentRunIntent,
   eligibleRepairAdmissionCandidates,
   governedRepairAttemptAssociation,
+  revalidateConfirmedFlakyAdmissions,
   revalidateEligibleRepairAdmissions,
   requireVerificationRunIntent,
   runIntentBootstrapCoverage,
   validateEligibleRepairAdmissionsReceipt,
+  validateConfirmedFlakyAdmissionsReceipt,
   validateRunIntentBootstrapBase,
   validateRunIntentBootstrapReceipt,
   verificationRunIntent,
@@ -2730,6 +2733,7 @@ try {
   });
   const classifiedFirst = await store.classifyDiagnosticRetry(first.id, firstDiagnosticReceipt);
   const classifications = {};
+  let confirmedFlakyFixture;
   const fabricated = await store.create({ ...failure, runnerRunId:"run-fabricated" });
   await store.claimDiagnosticRetry(fabricated.id, fabricated.failure.retryIdentity);
   await assert.rejects(store.classifyDiagnosticRetry(fabricated.id, { outcome:"passed" }),
@@ -2755,6 +2759,7 @@ try {
     const classified = await store.classifyDiagnosticRetry(separate.id, diagnosticReceipt);
     assert.equal(classified.retry.classification, classification);
     assert.equal(classified.state, "unresolved");
+    if (outcome === "passed") confirmedFlakyFixture = classified;
     classifications[outcome] = classified.retry.classification;
   }
   const nonTimeoutEvidence = {};
@@ -3205,6 +3210,37 @@ console.log("repairTmp=" + process.env.TMPDIR);
   assert.equal(deferred.state, "unresolved",
     "feature integration defers terminal proof without resolving the incident");
   assert.equal(deferred.terminalVerificationDeferred.status, "terminal-verification-deferred");
+  const flakyAdmissionEntry = {
+    incidentId:confirmedFlakyFixture.id, failureDigest:confirmedFlakyFixture.failureDigest,
+    causalKey:confirmedFlakyFixture.failure.causalKey,
+    retryIdentity:confirmedFlakyFixture.retry.identity,
+    retryReceiptSha256:confirmedFlakyFixture.retry.receiptSha256,
+    classificationDigest:timeoutIncidentDigest(confirmedFlakyFixture.retry),
+    governedTaskDigest:verificationTaskDigest(confirmedFlakyFixture.failure.task),
+    selectedTaskKey:confirmedFlakyFixture.failure.task.key,
+    selectedTaskDigest:verificationTaskDigest(confirmedFlakyFixture.failure.task),
+    coverageKind:"governed-task",
+  };
+  const flakyAdmissions = { version:1, evidenceTask:"confirmed-flaky-feature-deferral",
+    baseCommit:"approved-base", candidateCommit:"repair-commit", candidateTree:"repair-tree",
+    changeSetDigest:"6".repeat(64), planDigest:"7".repeat(64), entries:[flakyAdmissionEntry] };
+  const flakyDeferred = await store.deferTerminalVerification(confirmedFlakyFixture.id, {
+    candidate:{ commit:"repair-commit", tree:"repair-tree" },
+    reviewReady:{ task:"confirmed-flaky-feature-deferral", baseCommit:"approved-base",
+      candidateCommit:"repair-commit", candidateTree:"repair-tree",
+      receiptSha256:"8".repeat(64), focusedTaskKeys:[confirmedFlakyFixture.failure.task.key] },
+    confirmedFlakyAdmissions:flakyAdmissions,
+    eligibleRepairTransaction:{ version:1, id:"9".repeat(64), inputDigest:"a".repeat(64) },
+    package:{ path:"build/package/my-chrome-utilities.zip", digest:"b".repeat(64) },
+  });
+  assert.equal(flakyDeferred.terminalVerificationDeferred.basis, "confirmed-flaky");
+  assert.equal(flakyDeferred.terminalVerificationDeferred.repairDigest, undefined,
+    "confirmed-flaky deferral never invents a repair digest");
+  assert.equal(flakyDeferred.state, "unresolved",
+    "confirmed-flaky review deferral remains a master checkpoint obligation");
+  assert.equal((await store.blockingForHandoff({ commit:"repair-commit",
+    readiness:"review-ready" })).some(({ id }) => id === confirmedFlakyFixture.id), false,
+  "an exact atomic confirmed-flaky disposition permits normal feature review routing");
   assert.deepEqual(eligibleRepairAdmissionCandidates([deferred]), [],
     "a valid deferred-only preflight continues without creating an admission");
   const malformedDeferred = structuredClone(deferred);
@@ -7616,6 +7652,60 @@ assert.throws(()=>validateEligibleRepairAdmissionsReceipt({ ...admittedReceipt, 
   ...admittedReceipt.tasks,
   [bootstrapTask.key]:{ identity:bootstrapTask, status:"passed", provenance:"reused" },
 } }, admissions), /fresh pass/i);
+const flakyDiagnostic = {
+  version:2, runIntent:"repair-focused", completedAt:"2026-08-19T12:11:15.280Z",
+  environment:{ node:"24.19.0", platform:"linux-x64" },
+  candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree",
+    baseCommit:"approved-contract-base", evidenceTask:"confirmed-flaky-feature-deferral",
+    changeSetDigest:"5".repeat(64) },
+  artifact:{ schemaVersion:1, outputDigest:"7".repeat(64) },
+  plan:{ mode:"timeout-diagnostic", requestedPackIds:[bootstrapTask.packId],
+    selectedPackIds:[bootstrapTask.packId] },
+  diagnostic:{ incidentId:"confirmed-flaky", retryIdentity:"8".repeat(64),
+    scope:{ kind:"task", executionArgs:bootstrapTask.args, logicalTargetIds:[] },
+    resolvedDeadlines:{ VERIFICATION_COMMAND_TIMEOUT_MS:600000 } },
+  tasks:{ [bootstrapTask.key]:{ identity:bootstrapTask, status:"passed", provenance:"fresh",
+    execution:{ args:bootstrapTask.args, logicalTargetIds:[] } } },
+};
+const flakyDiagnosticBytes = Buffer.from(JSON.stringify(flakyDiagnostic));
+const flakyIncident = {
+  id:"confirmed-flaky", state:"unresolved", failureDigest:"9".repeat(64),
+  failure:{ lineage:{ commit:"bootstrap-candidate", tree:"bootstrap-tree",
+    baseCommit:"approved-contract-base", evidenceTask:"confirmed-flaky-feature-deferral",
+    changeSetDigest:"5".repeat(64) }, task:bootstrapTask, causalKey:"a".repeat(64),
+    retryIdentity:"8".repeat(64), retryScope:flakyDiagnostic.diagnostic.scope,
+    resolvedDeadlines:flakyDiagnostic.diagnostic.resolvedDeadlines,
+    artifact:flakyDiagnostic.artifact, environment:flakyDiagnostic.environment },
+  transitions:[{ type:"diagnostic-retry-claimed" },
+    { type:"diagnostic-retry-classified", classification:"confirmed-flaky" }],
+  retry:{ status:"classified", identity:"8".repeat(64), outcome:"passed",
+    classification:"confirmed-flaky", receiptPath:"tmp/verification-receipts/flaky.json",
+    receiptSha256:createHash("sha256").update(flakyDiagnosticBytes).digest("hex") },
+};
+const flakyAdmissions = await buildConfirmedFlakyAdmissions({ root:"fixture",
+  incidents:[flakyIncident], plan:bootstrapPlan, packs,
+  candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+  baseCommit:"approved-contract-base", evidenceTask:"confirmed-flaky-feature-deferral",
+  changeSetDigest:"5".repeat(64), planDigest:"6".repeat(64),
+  receiptLoader:async()=>flakyDiagnosticBytes });
+assert.deepEqual(flakyAdmissions.entries.map(({ incidentId, coverageKind, selectedTaskKey }) =>
+  ({ incidentId, coverageKind, selectedTaskKey })), [{ incidentId:"confirmed-flaky",
+  coverageKind:"governed-task", selectedTaskKey:bootstrapTask.key }]);
+assert.equal(flakyAdmissions.entries[0].classificationDigest,
+  timeoutIncidentDigest(flakyIncident.retry));
+const flakyReceipt = { confirmedFlakyAdmissions:flakyAdmissions, tasks:admittedReceipt.tasks };
+assert.equal(validateConfirmedFlakyAdmissionsReceipt(flakyReceipt, flakyAdmissions), flakyAdmissions);
+assert.throws(()=>validateConfirmedFlakyAdmissionsReceipt(flakyReceipt, {
+  ...flakyAdmissions, entries:[{ ...flakyAdmissions.entries[0], repairDigest:"b".repeat(64) }],
+}), /malformed or causally conflicting/i, "confirmed-flaky evidence cannot invent repair proof");
+const changedFlaky = structuredClone(flakyIncident);
+changedFlaky.retry.classification = "reproduced";
+await assert.rejects(()=>revalidateConfirmedFlakyAdmissions({ admissions:flakyAdmissions,
+  phase:"before receipt finalization", root:"fixture", incidents:[changedFlaky],
+  plan:bootstrapPlan, packs, candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+  baseCommit:"approved-contract-base", evidenceTask:"confirmed-flaky-feature-deferral",
+  changeSetDigest:"5".repeat(64), planDigest:"6".repeat(64),
+  receiptLoader:async()=>flakyDiagnosticBytes }), /not bound|changed/i);
 const promotionBootstrapRepair = structuredClone(exactBootstrapRepair);
 promotionBootstrapRepair.id = "exact-promotion-bootstrap-repair";
 promotionBootstrapRepair.terminalVerificationDeferred = {

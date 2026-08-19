@@ -67,7 +67,13 @@ function deferredDispositionCoreValid(disposition) {
     (disposition.eligibleRepairAdmissions?.version === 1 &&
      Array.isArray(disposition.eligibleRepairAdmissions?.entries) &&
      disposition.eligibleRepairAdmissions.entries.length > 0);
-  const transactionValid = disposition?.eligibleRepairAdmissions === undefined
+  const flakyAdmissionsValid = disposition?.confirmedFlakyAdmissions === undefined ||
+    (disposition.confirmedFlakyAdmissions?.version === 1 &&
+     Array.isArray(disposition.confirmedFlakyAdmissions?.entries) &&
+     disposition.confirmedFlakyAdmissions.entries.length > 0);
+  const hasAdmissions = disposition?.eligibleRepairAdmissions !== undefined ||
+    disposition?.confirmedFlakyAdmissions !== undefined;
+  const transactionValid = !hasAdmissions
     ? disposition?.eligibleRepairTransaction === undefined
     : disposition?.eligibleRepairTransaction?.version === 1 &&
       shaPattern.test(String(disposition.eligibleRepairTransaction?.id)) &&
@@ -80,11 +86,16 @@ function deferredDispositionCoreValid(disposition) {
     Array.isArray(disposition?.reviewReady?.focusedTaskKeys),
     Boolean(disposition?.reviewReady?.focusedTaskKeys?.length),
     shaPattern.test(String(disposition?.package?.digest)),
-    shaPattern.test(String(disposition?.repairDigest)),
+    disposition?.basis === "confirmed-flaky"
+      ? shaPattern.test(String(disposition?.classificationDigest)) &&
+        shaPattern.test(String(disposition?.diagnostic?.retryIdentity)) &&
+        shaPattern.test(String(disposition?.diagnostic?.receiptSha256)) &&
+        disposition?.repairDigest === undefined
+      : shaPattern.test(String(disposition?.repairDigest)),
     Number.isFinite(Date.parse(disposition?.recordedAt)),
     shaPattern.test(String(disposition?.digest)),
     disposition?.digest === timeoutIncidentDigest({ ...disposition, digest:undefined }),
-    bootstrapValid, admissionsValid, transactionValid,
+    bootstrapValid, admissionsValid, flakyAdmissionsValid, transactionValid,
   ].every(Boolean);
 }
 
@@ -126,8 +137,13 @@ function deferredProofValid(incident, deferred, latest) {
       root?.runIntentBootstrap?.coverage?.some(({ incidentId, selectedTaskKey }) =>
         incidentId === incident.id && root.reviewReady.focusedTaskKeys.includes(selectedTaskKey)) ||
       root?.eligibleRepairAdmissions?.entries?.some(({ incidentId, selectedTaskKey }) =>
+        incidentId === incident.id && root.reviewReady.focusedTaskKeys.includes(selectedTaskKey)) ||
+      root?.confirmedFlakyAdmissions?.entries?.some(({ incidentId, selectedTaskKey }) =>
         incidentId === incident.id && root.reviewReady.focusedTaskKeys.includes(selectedTaskKey))),
-    chain.every((disposition) => disposition.repairDigest === deferred.repairDigest),
+    deferred.basis === "confirmed-flaky"
+      ? chain.every((disposition) => disposition.basis === "confirmed-flaky" &&
+          disposition.classificationDigest === deferred.classificationDigest)
+      : chain.every((disposition) => disposition.repairDigest === deferred.repairDigest),
     latest?.dispositionDigest === deferred.digest, latest?.at === deferred.recordedAt,
     Boolean(latest?.carried) === Boolean(deferred.carryForward)].every(Boolean);
 }
@@ -189,10 +205,13 @@ function validateTransitionHistory(incident) {
   if (incident.repairCheckpoint && incident.repairCheckpoint.status !== "claimed") {
     transitionHistoryError(incident.id, "repair checkpoint is not claimed");
   }
-  if (incident.repairCheckpoint && !incident.repair) {
+  if (incident.repairCheckpoint && !incident.repair &&
+      incident.terminalVerificationDeferred?.basis !== "confirmed-flaky") {
     transitionHistoryError(incident.id, "checkpoint claim has no repair proposal");
   }
-  if (incident.state === "resolved" && (!incident.repair || !incident.repairCheckpoint || !incident.retry)) {
+  if (incident.state === "resolved" &&
+      (!(incident.repair || incident.terminalVerificationDeferred?.basis === "confirmed-flaky") ||
+       !incident.repairCheckpoint || !incident.retry)) {
     transitionHistoryError(incident.id, "resolution is missing diagnostic, repair, or checkpoint state");
   }
   requireCount("diagnostic-retry-claimed", ["claimed", "classified"].includes(retryStatus) ? 1 : 0);
@@ -289,7 +308,12 @@ function validateTransitionHistory(incident) {
   if (incident.terminalVerificationDeferred !== undefined) {
     const deferred = incident.terminalVerificationDeferred;
     const latest = deferredTransitions.at(-1);
-    if (incident.repair?.status !== "eligible" || !deferredProofValid(incident, deferred, latest)) {
+    const confirmedFlaky = deferred.basis === "confirmed-flaky" && incident.repair === undefined &&
+      incident.retry?.status === "classified" && incident.retry.outcome === "passed" &&
+      incident.retry.classification === "confirmed-flaky" &&
+      deferred.classificationDigest === timeoutIncidentDigest(incident.retry);
+    if (!(incident.repair?.status === "eligible" || confirmedFlaky) ||
+        !deferredProofValid(incident, deferred, latest)) {
       transitionHistoryError(incident.id, "terminal verification deferral is malformed");
     }
   } else if (deferredTransitions.length) {

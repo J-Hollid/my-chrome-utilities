@@ -77,13 +77,17 @@ import {
 } from "./report-verification-throughput.mjs";
 import {
   bindRunIntentBootstrapPlan,
+  buildConfirmedFlakyAdmissions,
   buildEligibleRepairAdmissions,
   bootstrapReviewIncidentProof,
+  confirmedFlakyAdmissionCandidates,
   eligibleRepairAdmissionCandidates,
+  revalidateConfirmedFlakyAdmissions,
   revalidateEligibleRepairAdmissions,
   requireVerificationRunIntent,
   runIntentBootstrapCoverage,
   validateEligibleRepairAdmissionsReceipt,
+  validateConfirmedFlakyAdmissionsReceipt,
   validateRunIntentBootstrapBase,
   verificationRunIntent,
   verificationRunIntents,
@@ -439,12 +443,18 @@ export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, cand
   const boundedClosureCheckpoint = baseCommit === boundedClosureContractRevision &&
     evidenceTask === boundedClosureEvidenceTask;
   const incompatible = blocking.find((incident) => {
-    const repairCandidate = timeoutRepairCandidate(incident);
-    return incident.repair?.status !== "eligible" ||
+    const confirmedFlaky = incident.terminalVerificationDeferred?.basis === "confirmed-flaky";
+    const repairCandidate = confirmedFlaky
+      ? incident.terminalVerificationDeferred.candidate : timeoutRepairCandidate(incident);
+    const binding = confirmedFlaky ? {
+      baseCommit:incident.terminalVerificationDeferred.reviewReady.baseCommit,
+      evidenceTask:incident.terminalVerificationDeferred.reviewReady.task,
+    } : incident.repair?.checkpoint;
+    return !(incident.repair?.status === "eligible" || confirmedFlaky) ||
     repairCandidate?.commit !== candidateCommit ||
     repairCandidate?.tree !== candidateTree ||
-    (!boundedClosureCheckpoint && (incident.repair.checkpoint.baseCommit !== baseCommit ||
-      incident.repair.checkpoint.evidenceTask !== evidenceTask)) ||
+    (!boundedClosureCheckpoint && (binding?.baseCommit !== baseCommit ||
+      binding?.evidenceTask !== evidenceTask)) ||
     (boundedClosureCheckpoint && !["blocking-product-repair", "blocking-verification-repair"]
       .includes(incident.closureAudit?.kind));
   });
@@ -1732,28 +1742,41 @@ export async function runFocusedAcceptance(
     taskPlanDigest:verificationDigest(plan.tasks.map(verificationTaskIdentity)),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };
-  let eligibleAdmissionStore;
-  let revalidateEligibleAdmissions;
+  let admissionStore;
+  let revalidateAdmissions;
   if (evidenceTask && !timeoutRepairIncident && !options.runIntentBootstrap) {
-    eligibleAdmissionStore = createTimeoutIncidentStore();
-    const incidents = await eligibleAdmissionStore.blocking({ commit:candidateCommit });
-    const admissionCandidates = eligibleRepairAdmissionCandidates(incidents);
-    if (admissionCandidates.length) {
-      const admissions = await buildEligibleRepairAdmissions({
-        incidents:admissionCandidates, plan, packs,
+    admissionStore = createTimeoutIncidentStore();
+    const incidents = await admissionStore.blocking({ commit:candidateCommit });
+    const eligibleCandidates = eligibleRepairAdmissionCandidates(incidents)
+      .filter((incident) => incident.repair?.status === "eligible");
+    const flakyCandidates = confirmedFlakyAdmissionCandidates(incidents);
+    const alreadyDeferred = incidents.filter((incident) =>
+      incident.terminalVerificationDeferred?.status === "terminal-verification-deferred");
+    const admittedIds = new Set([...eligibleCandidates, ...flakyCandidates, ...alreadyDeferred]
+      .map(({ id }) => id));
+    const unadmitted = incidents.filter(({ id }) => !admittedIds.has(id));
+    if (unadmitted.length) {
+      throw new Error(`Unresolved reliability incidents have no admissible proof: ${
+        unadmitted.map(({ id }) => id).sort().join(", ")}`);
+    }
+    if (eligibleCandidates.length || flakyCandidates.length) {
+      const common = {
+        plan, packs,
         candidate:{ commit:candidateCommit, tree:candidateTree },
         baseCommit:changedSince, evidenceTask,
         changeSetDigest:context.receipt.candidate.changeSetDigest,
         planDigest:context.receipt.plan.taskPlanDigest,
-      });
-      if (!admissions) {
-        throw new Error("Unresolved reliability incidents have no eligible exact-candidate admission");
-      }
+      };
+      const [eligibleAdmissions, confirmedFlakyAdmissions] = await Promise.all([
+        buildEligibleRepairAdmissions({ ...common, incidents:eligibleCandidates }),
+        buildConfirmedFlakyAdmissions({ ...common, root:repositoryRoot, incidents:flakyCandidates }),
+      ]);
       if (resumeReceiptPath) {
-        throw new Error("Eligible repair admission requires one fresh review run without receipt resume");
+        throw new Error("Reliability admission requires one fresh review run without receipt resume");
       }
-      context.receipt.eligibleRepairAdmissions = admissions;
-      revalidateEligibleAdmissions = async(phase) => {
+      if (eligibleAdmissions) context.receipt.eligibleRepairAdmissions = eligibleAdmissions;
+      if (confirmedFlakyAdmissions) context.receipt.confirmedFlakyAdmissions = confirmedFlakyAdmissions;
+      revalidateAdmissions = async(phase) => {
         await validateVerificationCandidateClean({ repositoryRoot });
         const [currentCommit, currentTree, currentChangeSet] = await Promise.all([
           gitValue("rev-parse", "HEAD^{commit}"), gitValue("rev-parse", "HEAD^{tree}"),
@@ -1763,15 +1786,17 @@ export async function runFocusedAcceptance(
         ]);
         if (currentCommit !== candidateCommit || currentTree !== candidateTree ||
             verificationDigest(currentChangeSet) !== context.receipt.candidate.changeSetDigest) {
-          throw new Error(`Eligible repair admission candidate changed ${phase}`);
+          throw new Error(`Reliability admission candidate changed ${phase}`);
         }
-        const currentIncidents = await Promise.all(admissions.entries.map(({ incidentId }) =>
-          eligibleAdmissionStore.read(incidentId)));
-        return revalidateEligibleRepairAdmissions({
-          admissions, phase, incidents:currentIncidents, plan, packs,
-          candidate:{ commit:candidateCommit, tree:candidateTree }, baseCommit:changedSince,
-          evidenceTask, changeSetDigest:context.receipt.candidate.changeSetDigest,
-          planDigest:context.receipt.plan.taskPlanDigest,
+        const current = new Map(await Promise.all([...admittedIds].map(async(id) =>
+          [id, await admissionStore.read(id)])));
+        if (eligibleAdmissions) await revalidateEligibleRepairAdmissions({
+          admissions:eligibleAdmissions, phase,
+          incidents:eligibleCandidates.map(({ id }) => current.get(id)), ...common,
+        });
+        if (confirmedFlakyAdmissions) await revalidateConfirmedFlakyAdmissions({
+          admissions:confirmedFlakyAdmissions, phase, root:repositoryRoot,
+          incidents:flakyCandidates.map(({ id }) => current.get(id)), ...common,
         });
       };
     }
@@ -2012,7 +2037,7 @@ export async function runFocusedAcceptance(
         : "[verify:resume-rejected] checkpoint identity changed; running every task");
     }
   }
-  await revalidateEligibleAdmissions?.("immediately before task launch");
+  await revalidateAdmissions?.("immediately before task launch");
   console.error(`[verify:plan] ${plan.packIds.length} pack(s), ${plan.tasks.length} task(s), concurrency ${concurrency}, observation concurrency ${observationConcurrency}`);
   try {
     await executeAcceptancePlan(executionPlan, {
@@ -2104,9 +2129,14 @@ export async function runFocusedAcceptance(
     }
     context.receipt.completedAt = new Date().toISOString();
     if (context.receipt.eligibleRepairAdmissions) {
-      await revalidateEligibleAdmissions("before receipt finalization");
+      await revalidateAdmissions("before receipt finalization");
       validateEligibleRepairAdmissionsReceipt(context.receipt,
         context.receipt.eligibleRepairAdmissions);
+    }
+    if (context.receipt.confirmedFlakyAdmissions) {
+      await revalidateAdmissions("before receipt finalization");
+      validateConfirmedFlakyAdmissionsReceipt(context.receipt,
+        context.receipt.confirmedFlakyAdmissions);
     }
     if (checkpointGuard) await checkpointGuard.assertBefore({ kind:"receipt-finalization" });
     await context.write();

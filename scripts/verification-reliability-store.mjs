@@ -202,17 +202,21 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
     },
     claimRepairCheckpoint(id, runId) {
       return update(id, (incident) => {
-        if (incident.state !== "unresolved" || incident.repair?.status !== "eligible") {
-          throw new Error(`Reliability incident ${id} has no eligible repair`);
+        const confirmedFlaky=incident.terminalVerificationDeferred?.basis==="confirmed-flaky";
+        if (incident.state !== "unresolved" ||
+            !(incident.repair?.status === "eligible" || confirmedFlaky)) {
+          throw new Error(`Reliability incident ${id} has no terminal checkpoint disposition`);
         }
         const at = now();
         if (incident.repairCheckpoint) {
-          const candidate = timeoutRepairCandidate(incident);
+          const candidate = terminalCheckpointCandidate(incident);
           const reclaimCount = Number(incident.repairCheckpoint.reclaimCount ?? 0);
+          const sourceCandidate=incident.repair?.candidate?.commit??
+            incident.terminalVerificationDeferred?.candidate?.commit;
           const repairRebases = (incident.lineageTransitions ?? []).filter(({kind, fromCommit}) =>
-            kind === "rebase" && (fromCommit === incident.repair.candidate.commit ||
+            kind === "rebase" && (fromCommit === sourceCandidate ||
               (incident.lineageTransitions ?? []).some(({toCommit}) => toCommit === fromCommit))).length;
-          if (candidate.commit === incident.repair.candidate.commit || reclaimCount >= repairRebases) {
+          if (candidate.commit === sourceCandidate || reclaimCount >= repairRebases) {
             throw new Error(`Reliability incident ${id} repair checkpoint was already used`);
           }
           return transition({ ...incident, repairCheckpoint:{ status:"claimed", runId, claimedAt:at,
@@ -233,13 +237,15 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
           await realpath(resolvedPackagePath) !== resolvedPackagePath) {
         throw new Error("Package result must be a canonical regular file");
       }
+      const checkpointIncident = terminalCheckpointIncident(incidentBeforeResolution);
       const canonicalCheckpoint = await canonicalCheckpointValidator({
-        document:checkpointDocument, incident:incidentBeforeResolution, root,
+        document:checkpointDocument, incident:checkpointIncident, root,
       });
-      validatePackageReceipt(packageDocument, checkpointDocument, incidentBeforeResolution);
+      validatePackageReceipt(packageDocument, checkpointDocument, checkpointIncident);
+      const confirmedFlaky=incidentBeforeResolution.terminalVerificationDeferred?.basis==="confirmed-flaky";
       if (incidentBeforeResolution.state !== "unresolved" ||
-          incidentBeforeResolution.repair?.status !== "eligible") {
-        throw new Error(`Reliability incident ${id} has no eligible repair`);
+          !(incidentBeforeResolution.repair?.status === "eligible" || confirmedFlaky)) {
+        throw new Error(`Reliability incident ${id} has no terminal checkpoint disposition`);
       }
       const checkpoint = checkpointDocument.receipt;
       if (incidentBeforeResolution.repairCheckpoint?.status !== "claimed" ||
@@ -259,8 +265,10 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
         archiveBytes(path.join(store, archive.packageZip), packageBytes, { replaceExisting }),
       ]);
       return update(id, (incident) => {
-        if (incident.state !== "unresolved" || incident.repair?.status !== "eligible") {
-          throw new Error(`Reliability incident ${id} has no eligible repair`);
+        const currentConfirmedFlaky=incident.terminalVerificationDeferred?.basis==="confirmed-flaky";
+        if (incident.state !== "unresolved" ||
+            !(incident.repair?.status === "eligible" || currentConfirmedFlaky)) {
+          throw new Error(`Reliability incident ${id} has no terminal checkpoint disposition`);
         }
         if (incident.repairCheckpoint?.status !== "claimed" ||
             incident.repairCheckpoint.runId !== checkpoint.runId ||
@@ -321,9 +329,29 @@ function recordedLineageTree(incident, commit) {
     ({ kind, toCommit }) => kind === "rebase" && toCommit === commit)?.toTree;
 }
 
+function terminalCheckpointCandidate(incident) {
+  let candidate = timeoutRepairCandidate(incident) ??
+    (incident.terminalVerificationDeferred?.basis === "confirmed-flaky"
+      ? structuredClone(incident.terminalVerificationDeferred.candidate) : undefined);
+  if (!candidate) return undefined;
+  for (const mapping of incident.lineageTransitions ?? []) {
+    if (mapping.kind === "rebase" && mapping.fromCommit === candidate.commit) {
+      candidate = { commit:mapping.toCommit, tree:mapping.toTree };
+    }
+  }
+  return candidate;
+}
+
+function terminalCheckpointIncident(incident) {
+  if (incident.terminalVerificationDeferred?.basis !== "confirmed-flaky") return incident;
+  return { ...incident, repair:{ status:"eligible", candidate:terminalCheckpointCandidate(incident),
+    checkpoint:{ baseCommit:incident.terminalVerificationDeferred.reviewReady.baseCommit,
+      evidenceTask:incident.terminalVerificationDeferred.reviewReady.task } } };
+}
+
 async function lineageApplies({ root, isAncestor, incident, commit, resolution = false }) {
   const anchors = resolution
-    ? [timeoutRepairCandidate(incident)?.commit]
+    ? [terminalCheckpointCandidate(incident)?.commit]
     : [...activeLineageAnchors(incident)];
   for (const ancestor of anchors) {
     if (await commitDescendsFrom({ root, isAncestor, ancestor, commit })) return true;
@@ -339,10 +367,9 @@ function approvedSpecificationPath(changedPath) {
 }
 
 function eligibleDeferredIncident(incident) {
-  return [
-    incident.terminalVerificationDeferred?.status === "terminal-verification-deferred",
-    incident.repair?.status === "eligible",
-  ].every(Boolean);
+  return incident.terminalVerificationDeferred?.status === "terminal-verification-deferred" &&
+    (incident.repair?.status === "eligible" ||
+      incident.terminalVerificationDeferred?.basis === "confirmed-flaky");
 }
 
 async function handoffCandidateRelationship({ root, isAncestor, candidateChangedPaths,
@@ -599,8 +626,15 @@ export function createTimeoutIncidentStore({
       exactObject(proof, "Terminal verification deferral proof");
       const candidate = await currentCandidate();
       return access.update(id, async(incident) => {
-        if (incident.state !== "unresolved" || incident.repair?.status !== "eligible") {
-          throw new Error(`Reliability incident ${id} has no eligible repair to defer`);
+        const flakyEntry=proof.confirmedFlakyAdmissions?.entries?.find(
+          ({incidentId})=>incidentId===id);
+        const confirmedFlaky=Boolean(flakyEntry&&incident.retry?.status==="classified"&&
+          incident.retry.outcome==="passed"&&incident.retry.classification==="confirmed-flaky"&&
+          incident.retry.identity===incident.failure?.retryIdentity&&
+          timeoutIncidentDigest(incident.retry)===flakyEntry.classificationDigest);
+        if (incident.state !== "unresolved" ||
+            !(incident.repair?.status === "eligible" || confirmedFlaky)) {
+          throw new Error(`Reliability incident ${id} has no admissible disposition to defer`);
         }
         const projectionCovered=terminalProjectionCoverageValid(incident,proof.projectionCoverage,
           proof.reviewReady?.focusedTaskKeys);
@@ -616,9 +650,19 @@ export function createTimeoutIncidentStore({
           admissionEntry.failureDigest===incident.failureDigest&&
           admissionEntry.repairDigest===timeoutIncidentDigest(incident.repair)&&
           proof.reviewReady?.focusedTaskKeys?.includes(admissionEntry.selectedTaskKey));
+        const flakyAdmissionCovered=Boolean(confirmedFlaky&&admissionTransactionValid&&
+          proof.confirmedFlakyAdmissions?.candidateCommit===candidate.commit&&
+          proof.confirmedFlakyAdmissions?.candidateTree===candidate.tree&&
+          flakyEntry.failureDigest===incident.failureDigest&&
+          flakyEntry.retryIdentity===incident.retry.identity&&
+          flakyEntry.retryReceiptSha256===incident.retry.receiptSha256&&
+          proof.reviewReady?.focusedTaskKeys?.includes(flakyEntry.selectedTaskKey));
+        const lineageAncestor=incident.repair?.status==="eligible"
+          ? timeoutRepairCandidate(incident)?.commit
+          : [...activeLineageAnchors(incident)][0];
         if (proof.candidate?.commit !== candidate.commit || proof.candidate?.tree !== candidate.tree ||
             !await commitDescendsFrom({ root, isAncestor,
-              ancestor:timeoutRepairCandidate(incident)?.commit, commit:candidate.commit }) ||
+              ancestor:lineageAncestor, commit:candidate.commit }) ||
             proof.reviewReady?.candidateCommit !== candidate.commit ||
             proof.reviewReady?.candidateTree !== candidate.tree || !proof.reviewReady?.task ||
             !proof.reviewReady?.baseCommit ||
@@ -627,7 +671,7 @@ export function createTimeoutIncidentStore({
             !(proof.reviewReady.focusedTaskKeys.includes(incident.failure.task.key) ||
               proof.runIntentBootstrap?.coverage?.some(({ incidentId, selectedTaskKey }) =>
                 incidentId === id && proof.reviewReady.focusedTaskKeys.includes(selectedTaskKey)) ||
-              projectionCovered || admissionCovered) ||
+              projectionCovered || admissionCovered || flakyAdmissionCovered) ||
             !shaPattern.test(proof.package?.digest ?? "")) {
           throw new Error(`Reliability incident ${id} terminal deferral proof is stale or incomplete`);
         }
@@ -638,7 +682,11 @@ export function createTimeoutIncidentStore({
         const proofDisposition = {
           status:"terminal-verification-deferred",
           candidate:structuredClone(proof.candidate),
-          repairDigest:timeoutIncidentDigest(incident.repair),
+          ...(confirmedFlaky ? { basis:"confirmed-flaky",
+            classificationDigest:flakyEntry.classificationDigest,
+            diagnostic:{ retryIdentity:incident.retry.identity,
+              receiptSha256:incident.retry.receiptSha256 } }
+            : { repairDigest:timeoutIncidentDigest(incident.repair) }),
           reviewReady,
           ...(proof.runIntentBootstrap
             ? { runIntentBootstrap:structuredClone(proof.runIntentBootstrap) } : {}),
@@ -646,6 +694,8 @@ export function createTimeoutIncidentStore({
             ? { projectionCoverage:structuredClone(proof.projectionCoverage) } : {}),
           ...(proof.eligibleRepairAdmissions
             ? { eligibleRepairAdmissions:structuredClone(proof.eligibleRepairAdmissions) } : {}),
+          ...(proof.confirmedFlakyAdmissions
+            ? { confirmedFlakyAdmissions:structuredClone(proof.confirmedFlakyAdmissions) } : {}),
           ...(proof.eligibleRepairTransaction
             ? { eligibleRepairTransaction:structuredClone(proof.eligibleRepairTransaction) } : {}),
           package:structuredClone(proof.package),
@@ -653,7 +703,11 @@ export function createTimeoutIncidentStore({
         const currentProof = incident.terminalVerificationDeferred && {
           status:incident.terminalVerificationDeferred.status,
           candidate:incident.terminalVerificationDeferred.candidate,
-          repairDigest:incident.terminalVerificationDeferred.repairDigest,
+          ...(incident.terminalVerificationDeferred.basis === "confirmed-flaky"
+            ? { basis:"confirmed-flaky",
+              classificationDigest:incident.terminalVerificationDeferred.classificationDigest,
+              diagnostic:incident.terminalVerificationDeferred.diagnostic }
+            : { repairDigest:incident.terminalVerificationDeferred.repairDigest }),
           reviewReady:incident.terminalVerificationDeferred.reviewReady,
           ...(incident.terminalVerificationDeferred.runIntentBootstrap
             ? { runIntentBootstrap:incident.terminalVerificationDeferred.runIntentBootstrap } : {}),
@@ -661,6 +715,8 @@ export function createTimeoutIncidentStore({
             ? { projectionCoverage:incident.terminalVerificationDeferred.projectionCoverage } : {}),
           ...(incident.terminalVerificationDeferred.eligibleRepairAdmissions
             ? { eligibleRepairAdmissions:incident.terminalVerificationDeferred.eligibleRepairAdmissions } : {}),
+          ...(incident.terminalVerificationDeferred.confirmedFlakyAdmissions
+            ? { confirmedFlakyAdmissions:incident.terminalVerificationDeferred.confirmedFlakyAdmissions } : {}),
           ...(incident.terminalVerificationDeferred.eligibleRepairTransaction
             ? { eligibleRepairTransaction:incident.terminalVerificationDeferred.eligibleRepairTransaction } : {}),
           package:incident.terminalVerificationDeferred.package,
@@ -699,7 +755,16 @@ export function createTimeoutIncidentStore({
             timeoutIncidentDigest(packageBytes) !== incident.resolution.package.digest) {
           throw new Error(`Reliability incident ${incident.id} archived resolution evidence does not match`);
         }
-        records.push(timeoutResolutionEvidence(incident));
+        if (incident.terminalVerificationDeferred?.basis === "confirmed-flaky") {
+          const resolvedCandidate = terminalCheckpointCandidate(incident);
+          records.push({ incidentId:incident.id, failureDigest:incident.failureDigest,
+            diagnosticClassification:incident.retry.classification, basis:"confirmed-flaky",
+            repairCommit:resolvedCandidate.commit, repairTree:resolvedCandidate.tree,
+            checkpointReceiptSha256:incident.resolution.checkpoint.receiptSha256,
+            packageReceiptSha256:incident.resolution.package.receiptSha256,
+            packageDigest:incident.resolution.package.digest,
+            resolutionDigest:incident.resolution.digest });
+        } else records.push(timeoutResolutionEvidence(incident));
       }
       return records;
     },

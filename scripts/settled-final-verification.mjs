@@ -28,7 +28,8 @@ import { createTimeoutIncidentStore } from "./verification-reliability-store.mjs
 import { timeoutIncidentDigest } from "./verification-reliability-values.mjs";
 import { canonicalPackageProof } from "./verification-reliability-runtime.mjs";
 import {
-  buildEligibleRepairAdmissions, eligibleRepairAdmissionCandidates,
+  buildConfirmedFlakyAdmissions, buildEligibleRepairAdmissions,
+  confirmedFlakyAdmissionCandidates, eligibleRepairAdmissionCandidates,
 } from "./verification-run-intent.mjs";
 import { withVerificationNotesLock } from "./verification-git-notes.mjs";
 import {
@@ -82,6 +83,7 @@ function admittedDeferralProof(record, packageProof, transaction) {
       receiptSha256:record.receipt.sha256,
       focusedTaskKeys:[...record.focusedScope.taskKeys] },
     eligibleRepairAdmissions:structuredClone(record.eligibleRepairAdmissions),
+    confirmedFlakyAdmissions:structuredClone(record.confirmedFlakyAdmissions),
     eligibleRepairTransaction:structuredClone(transaction),
     package:structuredClone(packageProof),
   };
@@ -115,33 +117,59 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
   const [receipt, packs, blocking, admittedIncidents] = await Promise.all([
     receiptLoader(record, repositoryRoot), packsLoader(record.candidateCommit),
     store.blocking({ commit:record.candidateCommit }),
-    Promise.all(record.eligibleRepairAdmissions.entries.map(({ incidentId }) =>
+    Promise.all([...(record.eligibleRepairAdmissions?.entries ?? []),
+      ...(record.confirmedFlakyAdmissions?.entries ?? [])].map(({ incidentId }) =>
       store.read(incidentId))),
   ]);
-  if (timeoutIncidentDigest(receipt.eligibleRepairAdmissions) !==
-      timeoutIncidentDigest(record.eligibleRepairAdmissions) ||
-      receipt.plan?.taskPlanDigest !== record.eligibleRepairAdmissions.planDigest ||
-      receipt.candidate?.changeSetDigest !== record.eligibleRepairAdmissions.changeSetDigest) {
-    throw new Error("Eligible repair admission receipt changed before review recording");
+  for (const [field, admissions] of [["eligibleRepairAdmissions", record.eligibleRepairAdmissions],
+    ["confirmedFlakyAdmissions", record.confirmedFlakyAdmissions]]) {
+    if (admissions && (timeoutIncidentDigest(receipt[field]) !== timeoutIncidentDigest(admissions) ||
+        receipt.plan?.taskPlanDigest !== admissions.planDigest ||
+        receipt.candidate?.changeSetDigest !== admissions.changeSetDigest)) {
+      throw new Error("Reliability admission receipt changed before review recording");
+    }
   }
-  const admittedIds = new Set(record.eligibleRepairAdmissions.entries.map(({ incidentId }) => incidentId));
+  const eligibleIds = new Set((record.eligibleRepairAdmissions?.entries ?? [])
+    .map(({ incidentId }) => incidentId));
+  const flakyIds = new Set((record.confirmedFlakyAdmissions?.entries ?? [])
+    .map(({ incidentId }) => incidentId));
+  const admittedIds = new Set([...eligibleIds, ...flakyIds]);
+  const unadmittedBlocking = blocking.filter(({ id }) => !admittedIds.has(id));
+  if (unadmittedBlocking.length) {
+    throw new Error("Reliability admission set changed before review recording");
+  }
   const currentById = new Map([...blocking, ...admittedIncidents]
     .map((incident) => [incident.id, structuredClone(incident)]));
-  const candidates = eligibleRepairAdmissionCandidates([...currentById.values()].map((incident) =>
-    admittedIds.has(incident.id) ? { ...incident, terminalVerificationDeferred:undefined } : incident));
+  const current = [...currentById.values()].map((incident) => admittedIds.has(incident.id)
+    ? { ...incident, terminalVerificationDeferred:undefined,
+      transitions:(incident.transitions ?? []).filter(
+        ({ type }) => type !== "terminal-verification-deferred") }
+    : incident);
+  const candidates = eligibleRepairAdmissionCandidates(current)
+    .filter(({ id }) => eligibleIds.has(id));
+  const flakyCandidates = confirmedFlakyAdmissionCandidates(current)
+    .filter(({ id }) => flakyIds.has(id));
   const plan = { tasks:Object.values(receipt.tasks ?? {})
     .map(({ identity }) => identity)
     .filter((identity) => typeof identity?.key === "string" && Array.isArray(identity.args))
     .map(verificationTaskIdentity) };
-  const rebuilt = await buildEligibleRepairAdmissions({
+  const inputs = {
     incidents:candidates, plan, packs,
     candidate:{ commit:record.candidateCommit, tree:record.candidateTree },
     baseCommit:record.baseCommit, evidenceTask:record.task,
-    changeSetDigest:record.eligibleRepairAdmissions.changeSetDigest,
-    planDigest:record.eligibleRepairAdmissions.planDigest,
-  });
-  if (timeoutIncidentDigest(rebuilt) !== timeoutIncidentDigest(record.eligibleRepairAdmissions)) {
-    throw new Error("Eligible repair admission set changed before review recording");
+    changeSetDigest:(record.eligibleRepairAdmissions ?? record.confirmedFlakyAdmissions).changeSetDigest,
+    planDigest:(record.eligibleRepairAdmissions ?? record.confirmedFlakyAdmissions).planDigest,
+  };
+  const [rebuilt, rebuiltFlaky] = await Promise.all([
+    record.eligibleRepairAdmissions ? buildEligibleRepairAdmissions(inputs) : null,
+    record.confirmedFlakyAdmissions ? buildConfirmedFlakyAdmissions({ ...inputs,
+      root:repositoryRoot, incidents:flakyCandidates }) : null,
+  ]);
+  if (record.eligibleRepairAdmissions &&
+        timeoutIncidentDigest(rebuilt) !== timeoutIncidentDigest(record.eligibleRepairAdmissions) ||
+      record.confirmedFlakyAdmissions &&
+        timeoutIncidentDigest(rebuiltFlaky) !== timeoutIncidentDigest(record.confirmedFlakyAdmissions)) {
+    throw new Error("Reliability admission set changed before review recording");
   }
   for (const incident of admittedIncidents) {
     const bound = incident.terminalVerificationDeferred?.eligibleRepairTransaction;
@@ -149,7 +177,8 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
       throw new Error(`Eligible repair admission ${incident.id} is bound to another transaction`);
     }
   }
-  return { receipt, packs, incidents:admittedIncidents, admissions:rebuilt };
+  return { receipt, packs, incidents:admittedIncidents, admissions:rebuilt,
+    confirmedFlakyAdmissions:rebuiltFlaky };
 }
 
 export async function verifyCommittedReviewTransaction(record, root, {
@@ -165,32 +194,45 @@ export async function verifyCommittedReviewTransaction(record, root, {
       journal.id !== transaction.id || journal.inputDigest !== timeoutIncidentDigest({
         candidateCommit:record.candidateCommit, candidateTree:record.candidateTree,
         task:record.task, receiptSha256:record.receipt.sha256,
-        admissionsDigest:record.eligibleRepairAdmissionsDigest,
+        ...(record.eligibleRepairAdmissionsDigest
+          ? { admissionsDigest:record.eligibleRepairAdmissionsDigest } : {}),
+        ...(record.confirmedFlakyAdmissionsDigest
+          ? { confirmedFlakyAdmissionsDigest:record.confirmedFlakyAdmissionsDigest } : {}),
       }) || timeoutIncidentDigest(journal.incidentIds) !== timeoutIncidentDigest(
-        (record.eligibleRepairAdmissions?.entries ?? []).map(({ incidentId }) => incidentId).sort())) {
-    throw new Error("Eligible repair review transaction is not durably committed");
+        [...(record.eligibleRepairAdmissions?.entries ?? []),
+          ...(record.confirmedFlakyAdmissions?.entries ?? [])]
+          .map(({ incidentId }) => incidentId).sort())) {
+    throw new Error("Reliability admission review transaction is not durably committed");
   }
   const expectedTransaction = { version:1, id:transaction.id, inputDigest:journal.inputDigest };
-  for (const entry of record.eligibleRepairAdmissions?.entries ?? []) {
+  for (const entry of [...(record.eligibleRepairAdmissions?.entries ?? []),
+    ...(record.confirmedFlakyAdmissions?.entries ?? [])]) {
     const incident = await store.read(entry.incidentId);
     const deferred = incident.terminalVerificationDeferred;
+    const eligible = entry.repairDigest !== undefined;
     if (incident.id !== entry.incidentId || incident.failureDigest !== entry.failureDigest ||
-        timeoutIncidentDigest(incident.repair) !== entry.repairDigest ||
+        eligible && timeoutIncidentDigest(incident.repair) !== entry.repairDigest ||
+        !eligible && timeoutIncidentDigest(incident.retry) !== entry.classificationDigest ||
         deferred?.status !== "terminal-verification-deferred" ||
         deferred.candidate?.commit !== record.candidateCommit ||
         deferred.candidate?.tree !== record.candidateTree ||
-        deferred.repairDigest !== entry.repairDigest ||
+        eligible && deferred.repairDigest !== entry.repairDigest ||
+        !eligible && (deferred.basis !== "confirmed-flaky" ||
+          deferred.classificationDigest !== entry.classificationDigest ||
+          deferred.repairDigest !== undefined) ||
         deferred.reviewReady?.task !== record.task ||
         deferred.reviewReady?.baseCommit !== record.baseCommit ||
         deferred.reviewReady?.candidateCommit !== record.candidateCommit ||
         deferred.reviewReady?.candidateTree !== record.candidateTree ||
         deferred.reviewReady?.receiptSha256 !== record.receipt.sha256 ||
-        timeoutIncidentDigest(deferred.eligibleRepairAdmissions) !==
+        record.eligibleRepairAdmissions && timeoutIncidentDigest(deferred.eligibleRepairAdmissions) !==
           timeoutIncidentDigest(record.eligibleRepairAdmissions) ||
+        record.confirmedFlakyAdmissions && timeoutIncidentDigest(deferred.confirmedFlakyAdmissions) !==
+          timeoutIncidentDigest(record.confirmedFlakyAdmissions) ||
         timeoutIncidentDigest(deferred.eligibleRepairTransaction) !==
           timeoutIncidentDigest(expectedTransaction) ||
         timeoutIncidentDigest(deferred.package) !== timeoutIncidentDigest(journal.packageProof)) {
-      throw new Error(`Eligible repair admission ${entry.incidentId} lacks its exact committed deferral`);
+      throw new Error(`Reliability admission ${entry.incidentId} lacks its exact committed deferral`);
     }
   }
   return record;
@@ -203,12 +245,18 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
   packsLoader,
   afterDeferrals,
 } = {}) {
-  const admissions = record.eligibleRepairAdmissions;
-  if (!admissions) return { record, note };
+  const eligibleAdmissions = record.eligibleRepairAdmissions;
+  const confirmedFlakyAdmissions = record.confirmedFlakyAdmissions;
+  if (!eligibleAdmissions && !confirmedFlakyAdmissions) return { record, note };
+  const entries = [...(eligibleAdmissions?.entries ?? []),
+    ...(confirmedFlakyAdmissions?.entries ?? [])];
   const input = {
     candidateCommit:record.candidateCommit, candidateTree:record.candidateTree,
     task:record.task, receiptSha256:record.receipt.sha256,
-    admissionsDigest:record.eligibleRepairAdmissionsDigest,
+    ...(record.eligibleRepairAdmissionsDigest
+      ? { admissionsDigest:record.eligibleRepairAdmissionsDigest } : {}),
+    ...(record.confirmedFlakyAdmissionsDigest
+      ? { confirmedFlakyAdmissionsDigest:record.confirmedFlakyAdmissionsDigest } : {}),
   };
   const inputDigest = timeoutIncidentDigest(input);
   const id = timeoutIncidentDigest({ version:1, ...input });
@@ -217,7 +265,7 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
   const records = [...note.records.filter((item) =>
     !(item.task === record.task && item.baseCommit === record.baseCommit)), committedRecord];
   const desiredNote = { version:1, records };
-  const incidentIds = admissions.entries.map(({ incidentId }) => incidentId).sort();
+  const incidentIds = entries.map(({ incidentId }) => incidentId).sort();
   return withVerificationNotesLock(repositoryRoot, () =>
     withEligibleRepairReviewTransactionLock(repositoryRoot, record.candidateCommit,
       ({ directory }) => store.withAdmissionRecordingLock(async() => {
@@ -232,17 +280,22 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
         throw new Error("Eligible repair review transaction observed a competing review note writer");
       }
       const incidents = [];
-      for (const entry of [...admissions.entries].sort((left, right) =>
+      for (const entry of [...entries].sort((left, right) =>
         left.incidentId.localeCompare(right.incidentId))) {
         const incident = await store.read(entry.incidentId);
-        if (incident.state !== "unresolved" || incident.repair?.status !== "eligible" ||
-            incident.repair?.candidate?.commit !== record.candidateCommit ||
-            incident.repair?.candidate?.tree !== record.candidateTree ||
-            incident.failureDigest !== entry.failureDigest ||
-            timeoutIncidentDigest(incident.repair) !== entry.repairDigest) {
-          throw new Error(`Eligible repair admission ${entry.incidentId} changed before review recording`);
+        const eligible = entry.repairDigest !== undefined;
+        if (incident.state !== "unresolved" || incident.failureDigest !== entry.failureDigest ||
+            eligible && (incident.repair?.status !== "eligible" ||
+              incident.repair?.candidate?.commit !== record.candidateCommit ||
+              incident.repair?.candidate?.tree !== record.candidateTree ||
+              timeoutIncidentDigest(incident.repair) !== entry.repairDigest) ||
+            !eligible && (incident.retry?.classification !== "confirmed-flaky" ||
+              timeoutIncidentDigest(incident.retry) !== entry.classificationDigest)) {
+          throw new Error(`Reliability admission ${entry.incidentId} changed before review recording`);
         }
-        incidents.push({ id:entry.incidentId, repairDigest:entry.repairDigest });
+        incidents.push({ id:entry.incidentId, basis:eligible ? "eligible-repair" : "confirmed-flaky",
+          ...(eligible ? { repairDigest:entry.repairDigest }
+            : { classificationDigest:entry.classificationDigest }) });
       }
       journal = { version:1, id, status:"prepared", inputDigest,
         priorNoteDigest:timeoutIncidentDigest(note), desiredNoteDigest:timeoutIncidentDigest(desiredNote),
@@ -265,7 +318,7 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
     }
     const packageProof = await canonicalPackageProof(record, { root:repositoryRoot });
     const proof = admittedDeferralProof(record, packageProof, transactionBinding);
-    for (const entry of [...admissions.entries].sort((left, right) =>
+    for (const entry of [...entries].sort((left, right) =>
       left.incidentId.localeCompare(right.incidentId))) {
       await store.deferTerminalVerification(entry.incidentId, proof);
     }
@@ -318,7 +371,7 @@ export async function recordReviewReadyEvidence(receiptFile, base, task, {
     receiptPath:path.relative(repositoryRoot, path.resolve(repositoryRoot, receiptFile)),
     receiptSha256:createHash("sha256").update(receiptBytes).digest("hex"),
   });
-  if (record.eligibleRepairAdmissions) {
+  if (record.eligibleRepairAdmissions || record.confirmedFlakyAdmissions) {
     return (await recordEligibleRepairReviewTransaction(record, note,
       { repositoryRoot })).record;
   }

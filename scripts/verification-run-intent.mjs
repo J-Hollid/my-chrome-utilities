@@ -239,6 +239,135 @@ export function eligibleRepairAdmissionCandidates(incidents) {
   });
 }
 
+function confirmedFlakyRetry(incident) {
+  const claimed = incident?.transitions?.filter(({ type }) => type === "diagnostic-retry-claimed") ?? [];
+  const classified = incident?.transitions?.filter(({ type }) => type === "diagnostic-retry-classified") ?? [];
+  return incident?.state === "unresolved" && incident?.terminalVerificationDeferred === undefined &&
+    incident?.repair === undefined && incident?.retry?.status === "classified" &&
+    incident.retry.outcome === "passed" && incident.retry.classification === "confirmed-flaky" &&
+    incident.retry.identity === incident?.failure?.retryIdentity &&
+    digestPattern.test(incident.retry.receiptSha256 ?? "") && claimed.length === 1 &&
+    classified.length === 1 && classified[0].classification === "confirmed-flaky";
+}
+
+export function confirmedFlakyAdmissionCandidates(incidents) {
+  return incidents.filter((incident) => {
+    try { validateIncident(incident); }
+    catch { return false; }
+    return confirmedFlakyRetry(incident);
+  });
+}
+
+function exactValue(left, right) {
+  return timeoutIncidentDigest(left) === timeoutIncidentDigest(right);
+}
+
+function incidentLineageMatchesCandidate(incident, candidate) {
+  if (incident.failure?.lineage?.commit === candidate?.commit &&
+      incident.failure?.lineage?.tree === candidate?.tree) return true;
+  const latest = incident.lineageTransitions?.at(-1);
+  return latest?.kind === "rebase" && latest.toCommit === candidate?.commit &&
+    latest.toTree === candidate?.tree;
+}
+
+async function diagnosticRetryReceipt(root, incident, loader) {
+  const relative = incident.retry?.receiptPath;
+  const absolute = safeLegacyReceiptPath(root, relative);
+  if (!absolute) throw new Error(`Confirmed flaky admission ${incident.id} has no canonical diagnostic receipt`);
+  const bytes = loader ? await loader(absolute, incident) : await readFile(absolute);
+  const buffer = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
+  if (createHash("sha256").update(buffer).digest("hex") !== incident.retry.receiptSha256) {
+    throw new Error(`Confirmed flaky admission ${incident.id} diagnostic receipt digest changed`);
+  }
+  let receipt;
+  try { receipt = JSON.parse(buffer); }
+  catch { throw new Error(`Confirmed flaky admission ${incident.id} diagnostic receipt is malformed`); }
+  const results = Object.values(receipt.tasks ?? {});
+  const result = results.length === 1 ? results[0] : undefined;
+  const exactDiagnostic = receipt.runIntent === verificationRunIntents.repair &&
+    receipt.plan?.mode === "timeout-diagnostic" && receipt.diagnostic?.incidentId === incident.id &&
+    exactValue(receipt.plan?.requestedPackIds, [incident.failure.task.packId]) &&
+    exactValue(receipt.plan?.selectedPackIds, [incident.failure.task.packId]) &&
+    receipt.diagnostic?.retryIdentity === incident.failure.retryIdentity &&
+    exactValue(receipt.diagnostic?.scope, incident.failure.retryScope) &&
+    exactValue(receipt.diagnostic?.resolvedDeadlines, incident.failure.resolvedDeadlines) &&
+    receipt.candidate?.commit === incident.failure.lineage.commit &&
+    receipt.candidate?.tree === incident.failure.lineage.tree &&
+    receipt.candidate?.baseCommit === incident.failure.lineage.baseCommit &&
+    receipt.candidate?.evidenceTask === incident.failure.lineage.evidenceTask &&
+    receipt.candidate?.changeSetDigest === incident.failure.lineage.changeSetDigest &&
+    exactValue(receipt.artifact, incident.failure.artifact) &&
+    exactValue(receipt.environment, incident.failure.environment) &&
+    result?.status === "passed" && result.provenance === "fresh" &&
+    verificationTaskDigest(result.identity) === verificationTaskDigest(incident.failure.task) &&
+    exactValue(result.execution?.args, incident.failure.retryScope?.executionArgs) &&
+    exactValue(result.execution?.logicalTargetIds, incident.failure.retryScope?.logicalTargetIds) &&
+    typeof receipt.completedAt === "string" && Number.isFinite(Date.parse(receipt.completedAt));
+  if (!exactDiagnostic) {
+    throw new Error(`Confirmed flaky admission ${incident.id} diagnostic receipt is not exact`);
+  }
+  return receipt;
+}
+
+export async function buildConfirmedFlakyAdmissions({
+  root, incidents, plan, packs, candidate, baseCommit, evidenceTask, changeSetDigest, planDigest,
+  receiptLoader, resolveSuccession = resolveIncidentTaskSuccession,
+}) {
+  if (![changeSetDigest, planDigest].every((value) => digestPattern.test(value ?? ""))) {
+    throw new Error("Confirmed flaky admission requires bound change-set and plan digests");
+  }
+  const selectedIdentities = plan.tasks.map(verificationTaskIdentity);
+  const selectedByDigest = new Map(selectedIdentities.map((identity) =>
+    [verificationTaskDigest(identity), identity]));
+  let canonicalIdentities;
+  const entries = [];
+  for (const incident of [...incidents].sort((left, right) => left.id.localeCompare(right.id))) {
+    if (!confirmedFlakyRetry(incident) || !incidentLineageMatchesCandidate(incident, candidate) ||
+        incident.failure?.lineage?.baseCommit !== baseCommit ||
+        incident.failure?.lineage?.evidenceTask !== evidenceTask) {
+      throw new Error(`Confirmed flaky admission ${incident.id} is not bound to the exact conserved candidate`);
+    }
+    await diagnosticRetryReceipt(root, incident, receiptLoader);
+    const governedTaskDigest = verificationTaskDigest(incident.failure.task);
+    let selected = selectedByDigest.get(governedTaskDigest);
+    let coverageKind = selected ? "governed-task" : undefined;
+    let succession;
+    if (!selected) {
+      canonicalIdentities ??= planVerification(packs, { terminalFull:true }).tasks
+        .map(verificationTaskIdentity);
+      try {
+        succession = await resolveSuccession({ incident, currentIdentities:canonicalIdentities,
+          currentPacks:packs });
+        selected = selectedByDigest.get(succession.destinationTaskDigest);
+      } catch {
+        // Normalize graph diagnostics at the admission boundary.
+      }
+      if (selected) coverageKind = "successor";
+    }
+    if (!selected) throw new Error(`Confirmed flaky admission ${incident.id} has no exact selected task coverage`);
+    entries.push({
+      incidentId:incident.id, failureDigest:incident.failureDigest,
+      causalKey:incident.failure.causalKey, retryIdentity:incident.retry.identity,
+      retryReceiptSha256:incident.retry.receiptSha256,
+      classificationDigest:timeoutIncidentDigest(incident.retry), governedTaskDigest,
+      selectedTaskKey:selected.key, selectedTaskDigest:verificationTaskDigest(selected), coverageKind,
+      ...(succession ? { destinationTaskDigest:succession.destinationTaskDigest,
+        conservationDigest:succession.conservationDigest } : {}),
+    });
+  }
+  if (!entries.length) return null;
+  return { version:1, evidenceTask, baseCommit, candidateCommit:candidate.commit,
+    candidateTree:candidate.tree, changeSetDigest, planDigest, entries };
+}
+
+export async function revalidateConfirmedFlakyAdmissions({ admissions, phase, ...inputs }) {
+  const current = await buildConfirmedFlakyAdmissions(inputs);
+  if (timeoutIncidentDigest(current) !== timeoutIncidentDigest(admissions)) {
+    throw new Error(`Confirmed flaky admission changed ${phase}`);
+  }
+  return current;
+}
+
 export async function bootstrapReviewIncidentProof({ root, incident, evidenceTask }) {
   const sourcePath = safeLegacyReceiptPath(root, incident?.failure?.sourceReceipt);
   if (!sourcePath) return null;
@@ -430,6 +559,65 @@ export function validateEligibleRepairAdmissionsReceipt(receipt, admissions = re
     .find(({ identity }) => identity?.stage === "package");
   if (packageResult?.status !== "passed" || packageResult.provenance !== "fresh") {
     throw new Error("Eligible repair admission requires fresh package proof");
+  }
+  return admissions;
+}
+
+export function validateConfirmedFlakyAdmissionsReceipt(
+  receipt, admissions = receipt?.confirmedFlakyAdmissions,
+) {
+  const exactKeys = (value, expected) => value && typeof value === "object" && !Array.isArray(value) &&
+    JSON.stringify(Object.keys(value).sort()) === JSON.stringify([...expected].sort());
+  const admissionKeys = ["version", "evidenceTask", "baseCommit", "candidateCommit",
+    "candidateTree", "changeSetDigest", "planDigest", "entries"];
+  if (admissions?.version !== 1 || !Array.isArray(admissions.entries) || !admissions.entries.length ||
+      !exactKeys(admissions, admissionKeys) ||
+      ![admissions.evidenceTask, admissions.baseCommit, admissions.candidateCommit,
+        admissions.candidateTree].every((value) => typeof value === "string" && Boolean(value)) ||
+      ![admissions.changeSetDigest, admissions.planDigest]
+        .every((value) => digestPattern.test(value ?? "")) ||
+      receipt?.candidate !== undefined &&
+        (admissions.candidateCommit !== receipt.candidate.commit ||
+         admissions.candidateTree !== receipt.candidate.tree ||
+         admissions.evidenceTask !== receipt.candidate.evidenceTask ||
+         admissions.baseCommit !== receipt.candidate.baseCommit ||
+         admissions.changeSetDigest !== receipt.candidate.changeSetDigest ||
+         admissions.changeSetDigest !== receipt.plan?.changeSetDigest ||
+         admissions.planDigest !== receipt.plan?.taskPlanDigest)) {
+    throw new Error("Confirmed flaky admission receipt binding is missing or malformed");
+  }
+  const commonKeys = ["incidentId", "failureDigest", "causalKey", "retryIdentity",
+    "retryReceiptSha256", "classificationDigest", "governedTaskDigest", "selectedTaskKey",
+    "selectedTaskDigest", "coverageKind"];
+  const ids = admissions.entries.map(({ incidentId }) => incidentId);
+  if (new Set(ids).size !== ids.length || JSON.stringify(ids) !== JSON.stringify([...ids].sort())) {
+    throw new Error("Confirmed flaky admission entries must be sorted and unique");
+  }
+  for (const entry of admissions.entries) {
+    const successor = entry.coverageKind === "successor";
+    const expected = successor ? [...commonKeys, "destinationTaskDigest", "conservationDigest"] : commonKeys;
+    if (!exactKeys(entry, expected) || typeof entry.incidentId !== "string" || !entry.incidentId ||
+        ![entry.failureDigest, entry.causalKey, entry.retryIdentity, entry.retryReceiptSha256,
+          entry.classificationDigest, entry.governedTaskDigest, entry.selectedTaskDigest]
+          .every((value) => digestPattern.test(value ?? "")) ||
+        typeof entry.selectedTaskKey !== "string" || !entry.selectedTaskKey ||
+        !["governed-task", "successor"].includes(entry.coverageKind) ||
+        entry.coverageKind === "governed-task" && entry.selectedTaskDigest !== entry.governedTaskDigest ||
+        successor && (entry.destinationTaskDigest !== entry.selectedTaskDigest ||
+          entry.selectedTaskDigest === entry.governedTaskDigest ||
+          !digestPattern.test(entry.conservationDigest ?? ""))) {
+      throw new Error(`Confirmed flaky admission ${entry.incidentId ?? "entry"} is malformed or causally conflicting`);
+    }
+    const result = receipt.tasks?.[entry.selectedTaskKey];
+    if (result?.status !== "passed" || result.provenance !== "fresh" ||
+        verificationTaskDigest(result.identity) !== entry.selectedTaskDigest) {
+      throw new Error(`Confirmed flaky admission requires a fresh pass for ${entry.selectedTaskKey}`);
+    }
+  }
+  const packageResult = Object.values(receipt.tasks ?? {})
+    .find(({ identity }) => identity?.stage === "package");
+  if (packageResult?.status !== "passed" || packageResult.provenance !== "fresh") {
+    throw new Error("Confirmed flaky admission requires fresh package proof");
   }
   return admissions;
 }

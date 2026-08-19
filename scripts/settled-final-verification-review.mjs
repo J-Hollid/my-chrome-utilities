@@ -1,4 +1,5 @@
 import {
+  validateConfirmedFlakyAdmissionsReceipt,
   validateEligibleRepairAdmissionsReceipt,
   validateRunIntentBootstrapReceipt,
 } from "./verification-run-intent.mjs";
@@ -119,6 +120,9 @@ export function createReviewReadyRecord({
   if (receipt.eligibleRepairAdmissions) {
     validateEligibleRepairAdmissionsReceipt(receipt, receipt.eligibleRepairAdmissions);
   }
+  if (receipt.confirmedFlakyAdmissions) {
+    validateConfirmedFlakyAdmissionsReceipt(receipt, receipt.confirmedFlakyAdmissions);
+  }
   assertIsoTimestamp(receipt.startedAt, "Review receipt start");
   assertIsoTimestamp(receipt.completedAt, "Review receipt completion");
   assertIsoTimestamp(recordedAt, "Review evidence recording");
@@ -133,6 +137,10 @@ export function createReviewReadyRecord({
     ...(receipt.eligibleRepairAdmissions ? {
       eligibleRepairAdmissions:structuredClone(receipt.eligibleRepairAdmissions),
       eligibleRepairAdmissionsDigest:timeoutIncidentDigest(receipt.eligibleRepairAdmissions),
+    } : {}),
+    ...(receipt.confirmedFlakyAdmissions ? {
+      confirmedFlakyAdmissions:structuredClone(receipt.confirmedFlakyAdmissions),
+      confirmedFlakyAdmissionsDigest:timeoutIncidentDigest(receipt.confirmedFlakyAdmissions),
     } : {}),
     startedAt:receipt.startedAt, completedAt:receipt.completedAt, recordedAt,
     finalRegressionClaim:false,
@@ -183,7 +191,16 @@ function assertRecordContents(record) {
          timeoutIncidentDigest(record.eligibleRepairAdmissions))) {
     throw new Error("Review-ready evidence has an invalid eligible-repair admission binding");
   }
-  if (record.eligibleRepairAdmissions !== undefined &&
+  if (record.confirmedFlakyAdmissions !== undefined &&
+      (record.confirmedFlakyAdmissions?.version !== 1 ||
+       !Array.isArray(record.confirmedFlakyAdmissions?.entries) ||
+       !record.confirmedFlakyAdmissions.entries.length ||
+       record.confirmedFlakyAdmissions.candidateCommit !== record.candidateCommit ||
+       record.confirmedFlakyAdmissions.candidateTree !== record.candidateTree ||
+       record.confirmedFlakyAdmissionsDigest !== timeoutIncidentDigest(record.confirmedFlakyAdmissions))) {
+    throw new Error("Review-ready evidence has an invalid confirmed-flaky admission binding");
+  }
+  if ((record.eligibleRepairAdmissions !== undefined || record.confirmedFlakyAdmissions !== undefined) &&
       (record.eligibleRepairTransaction?.version !== 1 ||
        record.eligibleRepairTransaction?.status !== "committed" ||
        !sha256Pattern.test(record.eligibleRepairTransaction?.id ?? ""))) {
