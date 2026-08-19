@@ -7810,6 +7810,63 @@ for (const [name, mutate] of [
     receiptLoader:async()=>mutatedBytes }), /diagnostic receipt is not exact/i,
   `${name} mutation invalidates confirmed-flaky admission`);
 }
+const legacyFlakyDiagnostic = structuredClone(flakyDiagnostic);
+delete legacyFlakyDiagnostic.registryDigest;
+delete legacyFlakyDiagnostic.diagnostic.registryDigest;
+const legacyFlakyDiagnosticBytes = Buffer.from(JSON.stringify(legacyFlakyDiagnostic));
+const legacyFlakyIncident = structuredClone(flakyIncident);
+delete legacyFlakyIncident.failure.registryDigest;
+legacyFlakyIncident.retry.receiptSha256 = createHash("sha256")
+  .update(legacyFlakyDiagnosticBytes).digest("hex");
+const immutableLegacyIncidentDigest = timeoutIncidentDigest(legacyFlakyIncident);
+const immutableLegacyReceiptDigest = verificationDigest(legacyFlakyDiagnosticBytes);
+const exactLegacyRegistryProof = async() => ({
+  commit:legacyFlakyIncident.failure.lineage.commit,
+  tree:legacyFlakyIncident.failure.lineage.tree,
+  packs,
+});
+const legacyFlakyAdmissions = await buildConfirmedFlakyAdmissions({ root:"fixture",
+  incidents:[legacyFlakyIncident], plan:bootstrapPlan, packs,
+  candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+  baseCommit:"approved-contract-base", evidenceTask:"confirmed-flaky-feature-deferral",
+  changeSetDigest:"5".repeat(64), planDigest:"6".repeat(64),
+  receiptLoader:async()=>legacyFlakyDiagnosticBytes,
+  registryProofLoader:exactLegacyRegistryProof });
+assert.equal(legacyFlakyAdmissions.entries[0].registryDigest, verificationDigest(packs),
+  "the named legacy shape derives registry identity from its exact source candidate");
+assert.equal(timeoutIncidentDigest(legacyFlakyIncident), immutableLegacyIncidentDigest,
+  "legacy admission preserves the immutable incident");
+assert.equal(verificationDigest(legacyFlakyDiagnosticBytes), immutableLegacyReceiptDigest,
+  "legacy admission preserves the immutable diagnostic receipt bytes");
+for (const [name, proof] of [
+  ["changed commit", { commit:"changed-candidate", tree:"bootstrap-tree", packs }],
+  ["changed tree", { commit:"bootstrap-candidate", tree:"changed-tree", packs }],
+  ["missing registry", { commit:"bootstrap-candidate", tree:"bootstrap-tree" }],
+  ["ambiguous registry", { commit:"bootstrap-candidate", tree:"bootstrap-tree",
+    packs:[packs, packs] }],
+]) {
+  await assert.rejects(()=>buildConfirmedFlakyAdmissions({ root:"fixture",
+    incidents:[legacyFlakyIncident], plan:bootstrapPlan, packs,
+    candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+    baseCommit:"approved-contract-base", evidenceTask:"confirmed-flaky-feature-deferral",
+    changeSetDigest:"5".repeat(64), planDigest:"6".repeat(64),
+    receiptLoader:async()=>legacyFlakyDiagnosticBytes,
+    registryProofLoader:async()=>proof }), /registry proof/i,
+  `${name} fails legacy confirmed-flaky admission closed`);
+}
+const partialLegacyDiagnostic = structuredClone(legacyFlakyDiagnostic);
+partialLegacyDiagnostic.registryDigest = verificationDigest(packs);
+const partialLegacyBytes = Buffer.from(JSON.stringify(partialLegacyDiagnostic));
+const partialLegacyIncident = structuredClone(legacyFlakyIncident);
+partialLegacyIncident.retry.receiptSha256 = verificationDigest(partialLegacyBytes);
+await assert.rejects(()=>buildConfirmedFlakyAdmissions({ root:"fixture",
+  incidents:[partialLegacyIncident], plan:bootstrapPlan, packs,
+  candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+  baseCommit:"approved-contract-base", evidenceTask:"confirmed-flaky-feature-deferral",
+  changeSetDigest:"5".repeat(64), planDigest:"6".repeat(64),
+  receiptLoader:async()=>partialLegacyBytes,
+  registryProofLoader:exactLegacyRegistryProof }), /diagnostic receipt is not exact/i,
+"partial explicit registry evidence does not fall back to legacy derivation");
 const promotionBootstrapRepair = structuredClone(exactBootstrapRepair);
 promotionBootstrapRepair.id = "exact-promotion-bootstrap-repair";
 promotionBootstrapRepair.terminalVerificationDeferred = {

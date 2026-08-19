@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { canonicalGitCommit, verificationPacksAtCommit } from "./verification-changes.mjs";
 import { planVerification, verificationTaskIdentity } from "./verification-packs.mjs";
 import {
   resolveIncidentTaskSuccession,
@@ -246,9 +247,49 @@ function confirmedFlakyRetry(incident) {
     incident?.repair === undefined && incident?.retry?.status === "classified" &&
     incident.retry.outcome === "passed" && incident.retry.classification === "confirmed-flaky" &&
     incident.retry.identity === incident?.failure?.retryIdentity &&
-    digestPattern.test(incident?.failure?.registryDigest ?? "") &&
+    (incident?.failure?.registryDigest === undefined ||
+      digestPattern.test(incident.failure.registryDigest)) &&
     digestPattern.test(incident.retry.receiptSha256 ?? "") && claimed.length === 1 &&
     classified.length === 1 && classified[0].classification === "confirmed-flaky";
+}
+
+async function historicalRegistryProof(root, incident) {
+  const commit = await canonicalGitCommit(incident.failure.lineage.commit, { repositoryRoot:root });
+  const [tree, packs] = await Promise.all([
+    gitValue(root, "rev-parse", `${commit}^{tree}`).then((value) => value.trim()),
+    verificationPacksAtCommit(commit, { repositoryRoot:root }),
+  ]);
+  return { commit, tree, packs };
+}
+
+async function exactDiagnosticRegistry(root, incident, receipt, registryProofLoader) {
+  const values = [incident.failure?.registryDigest, receipt.registryDigest,
+    receipt.diagnostic?.registryDigest];
+  if (values.every((value) => digestPattern.test(value ?? ""))) {
+    if (!values.every((value) => value === values[0])) {
+      throw new Error(`Confirmed flaky admission ${incident.id} diagnostic receipt is not exact`);
+    }
+    return values[0];
+  }
+  if (values.some((value) => value !== undefined)) {
+    throw new Error(`Confirmed flaky admission ${incident.id} diagnostic receipt is not exact`);
+  }
+  let proof;
+  try {
+    proof = await (registryProofLoader ?? historicalRegistryProof)(root, incident);
+    if (proof?.commit !== incident.failure.lineage.commit ||
+        proof?.tree !== incident.failure.lineage.tree || !Array.isArray(proof?.packs)) {
+      throw new Error("identity mismatch");
+    }
+    planVerification(proof.packs, { terminalFull:true });
+  } catch {
+    throw new Error(`Confirmed flaky admission ${incident.id} has no exact registry proof`);
+  }
+  const registryDigest = timeoutIncidentDigest(proof.packs);
+  if (!digestPattern.test(registryDigest)) {
+    throw new Error(`Confirmed flaky admission ${incident.id} has no exact registry proof`);
+  }
+  return registryDigest;
 }
 
 export function confirmedFlakyAdmissionCandidates(incidents) {
@@ -271,7 +312,7 @@ function incidentLineageMatchesCandidate(incident, candidate) {
     latest.toTree === candidate?.tree;
 }
 
-async function diagnosticRetryReceipt(root, incident, loader) {
+async function diagnosticRetryReceipt(root, incident, loader, registryProofLoader) {
   const relative = incident.retry?.receiptPath;
   const absolute = safeLegacyReceiptPath(root, relative);
   if (!absolute) throw new Error(`Confirmed flaky admission ${incident.id} has no canonical diagnostic receipt`);
@@ -283,6 +324,7 @@ async function diagnosticRetryReceipt(root, incident, loader) {
   let receipt;
   try { receipt = JSON.parse(buffer); }
   catch { throw new Error(`Confirmed flaky admission ${incident.id} diagnostic receipt is malformed`); }
+  const registryDigest = await exactDiagnosticRegistry(root, incident, receipt, registryProofLoader);
   const results = Object.values(receipt.tasks ?? {});
   const result = results.length === 1 ? results[0] : undefined;
   const exactDiagnostic = receipt.runIntent === verificationRunIntents.repair &&
@@ -290,8 +332,6 @@ async function diagnosticRetryReceipt(root, incident, loader) {
     exactValue(receipt.plan?.requestedPackIds, [incident.failure.task.packId]) &&
     exactValue(receipt.plan?.selectedPackIds, [incident.failure.task.packId]) &&
     receipt.diagnostic?.retryIdentity === incident.failure.retryIdentity &&
-    receipt.registryDigest === incident.failure.registryDigest &&
-    receipt.diagnostic?.registryDigest === incident.failure.registryDigest &&
     exactValue(receipt.diagnostic?.scope, incident.failure.retryScope) &&
     exactValue(receipt.diagnostic?.resolvedDeadlines, incident.failure.resolvedDeadlines) &&
     receipt.candidate?.commit === incident.failure.lineage.commit &&
@@ -309,12 +349,12 @@ async function diagnosticRetryReceipt(root, incident, loader) {
   if (!exactDiagnostic) {
     throw new Error(`Confirmed flaky admission ${incident.id} diagnostic receipt is not exact`);
   }
-  return receipt;
+  return { receipt, registryDigest };
 }
 
 export async function buildConfirmedFlakyAdmissions({
   root, incidents, plan, packs, candidate, baseCommit, evidenceTask, changeSetDigest, planDigest,
-  receiptLoader, resolveSuccession = resolveIncidentTaskSuccession,
+  receiptLoader, registryProofLoader, resolveSuccession = resolveIncidentTaskSuccession,
 }) {
   if (![changeSetDigest, planDigest].every((value) => digestPattern.test(value ?? ""))) {
     throw new Error("Confirmed flaky admission requires bound change-set and plan digests");
@@ -330,7 +370,8 @@ export async function buildConfirmedFlakyAdmissions({
         incident.failure?.lineage?.evidenceTask !== evidenceTask) {
       throw new Error(`Confirmed flaky admission ${incident.id} is not bound to the exact conserved candidate`);
     }
-    await diagnosticRetryReceipt(root, incident, receiptLoader);
+    const { registryDigest } = await diagnosticRetryReceipt(
+      root, incident, receiptLoader, registryProofLoader);
     const governedTaskDigest = verificationTaskDigest(incident.failure.task);
     let selected = selectedByDigest.get(governedTaskDigest);
     let coverageKind = selected ? "governed-task" : undefined;
@@ -350,7 +391,7 @@ export async function buildConfirmedFlakyAdmissions({
     if (!selected) throw new Error(`Confirmed flaky admission ${incident.id} has no exact selected task coverage`);
     entries.push({
       incidentId:incident.id, failureDigest:incident.failureDigest,
-      causalKey:incident.failure.causalKey, registryDigest:incident.failure.registryDigest,
+      causalKey:incident.failure.causalKey, registryDigest,
       retryIdentity:incident.retry.identity,
       retryReceiptSha256:incident.retry.receiptSha256,
       classificationDigest:timeoutIncidentDigest(incident.retry), governedTaskDigest,
