@@ -1405,6 +1405,9 @@ assert.throws(() => terminalClosureExecution({ attempt:undefined, runnablePackCo
 assert.match(await readFile(new URL("../scripts/verification-evidence.mjs", import.meta.url), "utf8"),
   /allowLegacyTerminalClosure && receipt\.plan\?\.terminalClosure === undefined/u,
 "archived pre-policy closure receipts alone may omit terminal closure metadata");
+assert.match(await readFile(new URL("../scripts/verification-evidence.mjs", import.meta.url), "utf8"),
+  /runIntentBootstrap, confirmedFlakyAdmissions \}\] = await Promise\.all[\s\S]*?runIntentBootstrap, confirmedFlakyAdmissions,/u,
+"completed receipt compatibility preserves confirmed-flaky admissions through pending evidence");
 
 const terminalPackageKey = "package:extension";
 const terminalFreshTasks = {

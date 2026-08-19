@@ -874,7 +874,7 @@ export async function validateVerificationEvidenceCompatibility({
     };
   }
   const [{ bytes, results, environment, artifact:receiptArtifact, checkpointAttempt, runIntent,
-    runIntentBootstrap }] = await Promise.all([
+    runIntentBootstrap, confirmedFlakyAdmissions }] = await Promise.all([
     parsedReceipt(absoluteReceiptPath, planRecord),
   ]);
   const artifact = artifactIdentity(buildManifest);
@@ -886,7 +886,7 @@ export async function validateVerificationEvidenceCompatibility({
   return {
     commit, tree, baseCommit, sourceIdentity, planRecord, actualChangeSet,
     receiptSourcePath, bytes, results, environment, artifact, checkpointAttempt, runIntent,
-    runIntentBootstrap,
+    runIntentBootstrap, confirmedFlakyAdmissions,
   };
 }
 
