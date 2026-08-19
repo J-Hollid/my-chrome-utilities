@@ -257,7 +257,9 @@ const documentationIntent={version:1,baseCommit:"a".repeat(40),task:"documentati
 const replayed=await intentOwnershipReadiness({intent:documentationIntent,packs:plannedRegistry});
 assert.equal(replayed.plannedPackIds.length,13,"the real stopped-candidate paths reproduce the known 13-pack variance");
 assert.equal(replayed.classification,"granularity-assessment-required","unreviewed credible variance routes assessment without --within-pack");
-assert.deepEqual(replayed.unresolvedExpansionCauses,stoppedCandidatePaths.slice().sort());
+assert.deepEqual(replayed.unresolvedExpansionCauses,stoppedCandidatePaths
+  .filter((path)=>path!=="src/specification-builder.ts").sort(),
+"the shared reorderable-editor slice resolves Specification Builder ownership while legacy broad paths remain assessed");
 const dispositions=await loadGranularityDispositions();
 assert.equal(dispositions.dispositions.filter(({task})=>task==="documentation-templates").length,7,"every first-use and durable-staging causal path has one durable disposition");
 const secondAssessmentIntent={...documentationIntent,likelyPaths:[...stoppedCandidatePaths,...durableStagingPaths]};
