@@ -1,6 +1,6 @@
 # QA confirmed-flaky feature deferral R01
 
-Status: approved correction for immediate QA implementation on 2026-08-19
+Status: QA-integrated at `cf60d5c0f3` on 2026-08-19
 
 Prepared: 2026-08-19
 
@@ -161,3 +161,18 @@ the byte-for-byte product delta from base `a31d16884f` to patch reference
 `f6db2c89a9`, record the validated incident rebase transition, and run the fresh
 canonical seven-pack review route. Do not merge the stopped branch, reopen
 product behavior, weaken its ownership plan, or run all 20 packs.
+
+## Settled QA result
+
+Exact architect candidate `cf60d5c0f3` reached the specifier with bound
+review-ready evidence for 77 focused Shell tasks, properties, and package proof.
+QA fast-forwarded to that exact candidate without an all-20 run. The integrated
+route keeps a passing governed diagnostic as classification-only proof, requires
+fresh canonical owned-pack evidence before feature review can proceed, records
+confirmed-flaky deferral atomically without inventing a repair, and retains the
+incident as an unresolved master-integration obligation.
+
+Recommendation: **continue** by reissuing `documentation-template-recovery`
+from the exact QA scorecard descendant. Preserve `f6db2c89a9` only as the patch
+reference for its already reviewed product delta, record the validated incident
+rebase, and obtain one fresh canonical seven-pack review receipt.
