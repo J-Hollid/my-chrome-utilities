@@ -256,9 +256,9 @@ Feature: Data layer project documentation workspace
   # Data layer project documentation workspace 022
   Scenario: Data layer project documentation workspace 022
     Given Client specification has saved concept order ecommerce, page, and Ungrouped
-    When the operator moves Ungrouped earlier twice
+    When the operator chooses Move one position earlier twice from Ungrouped's Reorder menu
     Then the ordered checklist and Documentation Set store Ungrouped, ecommerce, and page
-    And Ungrouped has the same enabled positional reorder controls as a named concept
+    And Ungrouped has the same enabled Reorder menu actions as a named concept
     And each move creates one reversible project command
     When the operator refreshes grouped output
     Then every selected Site Profile, the Data capture matrix, rich copy, plain-text fallback, and Excel order their non-empty groups as UNGROUPED, ECOMMERCE, and PAGE

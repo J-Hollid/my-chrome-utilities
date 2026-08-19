@@ -708,7 +708,7 @@ Feature: Data layer canonical Shared Profile schema authoring
     And a replaceable inherited rule requires Replace here before editing
     And Replace here creates a new local stable rule identity naming the inherited rule while leaving that source rule unchanged
     And Add child, Add sibling, and Duplicate create new local structure without first overriding the inherited property
-    And Rename, Move earlier, Move later, and Move to root require Override here before changing inherited structural identity
+    And Rename and Reorder require Override here before changing inherited structural identity
     And Delete property is unavailable for inherited structure, while local structure can be renamed, moved, duplicated, or deleted directly
     And no Structure operation uses Replace here
 

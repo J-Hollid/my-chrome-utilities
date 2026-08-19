@@ -89,7 +89,7 @@ Feature: Data layer Flow table documentation export runtime
   # Data layer Flow table documentation export runtime 008
   Scenario: Data layer Flow table documentation export runtime 008
     When actual controls select property rows and add Description, Type, Allowed values, Documented example, and Comments
-    And pointer and keyboard controls reorder metadata and context columns
+    And pointer drag handles or equivalent single-pointer and keyboard Reorder menus reorder metadata and context columns
     Then production previews and exports retain both selections and orders
     And installed reset actions independently restore property-column and context defaults
     And Include headings plus all three existing table styles remain operable

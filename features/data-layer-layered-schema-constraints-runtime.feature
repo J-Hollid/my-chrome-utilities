@@ -196,8 +196,8 @@ Feature: Data layer layered schema constraints runtime
     And rendered guidance explains top-to-bottom guarded refinement
     And canonical Cart storage contains one ordered stable-reference membership list
     And production Page Group member views derive Cart without a second editable membership collection
-    And each row exposes Open Page Group, Move earlier, Move later, and Remove at 360px without horizontal page scroll
-    When installed keyboard controls move Trade Checkout before Retail Checkout
+    And each row exposes Open Page Group, one compact Reorder control, and Remove at 360px without horizontal page scroll
+    When the installed keyboard-operated Reorder menu moves Trade Checkout before Retail Checkout
     Then only the ordered Cart membership command is persisted and focus returns to Trade Checkout at position 2
     And the rendered impact preview names affected properties, Page instances, compiled targets, and stale exports before commit
 

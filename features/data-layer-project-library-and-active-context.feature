@@ -272,7 +272,7 @@ Feature: Data layer project library and active context
     When the operator opens Cart
     Then Page details, Inherited schema, and Effective and local schema form distinct regions
     And one visible Add to Page Group action opens the searchable membership picker without an adjacent duplicate Page actions command
-    And each membership retains Open Page Group, Move earlier, Move later, and Remove
+    And each membership retains Open Page Group, one compact Reorder control, and Remove
     And Add Shared Profile starts the existing selective inheritance recipe without a raw Shared Profile multi-select
     And applicability choices sit beside the effective-schema preview and state Preview only — not saved
     When the operator leaves Cart and returns

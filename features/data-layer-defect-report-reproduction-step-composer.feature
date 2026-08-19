@@ -126,7 +126,7 @@ Feature: Data layer defect report reproduction step composer
     Given manual step 2 is Click Checkout in a reproduction builder of width <builder_width>
     When manual step 2 is rendered
     Then 2. Click Checkout occupies a full row before its actions
-    And +, Adjust, Remove, Move earlier, and Move later are displayed in an action row beneath the step text
+    And +, Adjust, Remove, and one compact Reorder action are displayed in an action row beneath the step text
     And action controls wrap as complete controls without splitting their captions across lines
     And the reproduction step does not overflow horizontally
     And its segment guidance is displayed on a separate row after the actions
@@ -142,13 +142,13 @@ Feature: Data layer defect report reproduction step composer
     When their row actions are inspected
     Then every step presents its text before its associated action row
     And each + action retains an accessible name identifying its step and pathname section
-    And a manual step orders actions +, Adjust, Remove, Move earlier, and Move later
+    And a manual step orders actions +, Adjust, Remove, and Reorder
     And keyboard navigation follows the displayed action order
 
   # Data layer defect report reproduction step composer 015
   Scenario: Data layer defect report reproduction step composer 015
     Given manual step 2 belongs to /checkout and cannot move earlier across its pathname anchor
     When the step actions are displayed
-    Then Move earlier remains visible and disabled
+    Then the Reorder menu keeps Move one position earlier visible and disabled
     And guidance states Reordering stays within /checkout
     And guidance to choose another pathname segment is absent

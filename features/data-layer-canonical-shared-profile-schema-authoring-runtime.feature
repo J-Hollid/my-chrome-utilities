@@ -708,7 +708,7 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     And a replaceable inherited rule requires Replace here before an edit control is mounted
     And actual Replace here stages a new local rule ID with the source rule ID while the inherited rule hash remains unchanged
     And Add child, Add sibling, and Duplicate stage new local structure with no preceding property override command
-    And inherited Rename, Move earlier, Move later, and Move to root remain unavailable until Override here establishes structural ownership
+    And inherited Rename and Reorder controls remain unavailable until Override here establishes structural ownership
     And inherited Delete property remains unavailable while every local structure operation is directly operable
     And DOM inspection finds no Structure-level Replace here control
 

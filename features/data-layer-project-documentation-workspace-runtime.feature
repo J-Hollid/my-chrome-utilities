@@ -255,9 +255,9 @@ Feature: Data layer project documentation workspace runtime
   # Data layer project documentation workspace runtime 022
   Scenario: Data layer project documentation workspace runtime 022
     Given durable concept order is ecommerce, page, and Ungrouped
-    When actual controls activate Move concept earlier twice for Ungrouped
+    When actual controls choose Move one position earlier twice from Ungrouped's Reorder menu
     Then installed checklist order and durable bytes are Ungrouped, ecommerce, and page
-    And Ungrouped reorder-button disabled states depend only on its current first or last position
+    And Ungrouped's movement-menu disabled states depend only on its current first or last position
     And command and Undo counts increase once per move
     When actual controls refresh grouped output
     Then parsed Sitewide, Opened Article, matrix, clipboard, plain-text, and workbook group order is UNGROUPED, ECOMMERCE, and PAGE

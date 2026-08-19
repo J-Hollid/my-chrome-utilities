@@ -274,7 +274,7 @@ Feature: Data layer project library and active context runtime
     When actual controls open its installed workspace
     Then landmark inspection finds Page details, Inherited schema, and Effective and local schema regions
     And exactly one visible Add to Page Group action opens production membership search without an adjacent duplicate menu command
-    And every membership row retains Open Page Group, Move earlier, Move later, and Remove controls
+    And every membership row retains Open Page Group, one compact Reorder control, and Remove controls
     And Add Shared Profile mounts the production selective-inheritance recipe while no raw profileIds multi-select exists
     And applicability controls are adjacent to the effective-schema preview and described as Preview only — not saved
     When actual navigation leaves Cart and returns

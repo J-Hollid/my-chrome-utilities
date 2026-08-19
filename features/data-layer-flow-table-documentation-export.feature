@@ -103,7 +103,7 @@ Feature: Data layer Flow table documentation export
   Scenario: Data layer Flow table documentation export 008
     When the operator searches and selects property rows
     And adds Description, Type, Allowed values, Documented example, and Comments metadata columns
-    And reorders metadata columns and context columns by drag or keyboard controls
+    And reorders metadata columns and context columns by drag handles or their equivalent single-pointer and keyboard Reorder menus
     Then both previews and every export preserve the selected rows and orders
     And Reset property columns and Reset context order restore their respective defaults independently
     And the configuration reuses Include headings and Plain, Bordered, or Bordered with highlighted headings

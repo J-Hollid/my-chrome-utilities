@@ -68,7 +68,7 @@ Feature: Data layer schema specification builder customization
     Then the preview columns are ordered Property name, Description, Type, Mandatory, Example value, Allowed values, and Comments
     And every preview row and copied representation uses that column order
     And property row order is unchanged
-    When the operator uses a heading's Move left or Move right action
+    When the operator uses a heading's Reorder menu to move it one column earlier or later
     Then the same column movement is available without dragging
     And unavailable movement beyond the first or last position is disabled
     And Reset column order restores the default seven-column order with Comments last

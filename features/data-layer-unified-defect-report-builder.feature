@@ -77,7 +77,7 @@ Feature: Data layer unified defect report builder
     Given the missing-event reproduction composer is open for the /products segment
     When the operator adds <step_kind> with <step_input>
     Then the numbered journey includes <step_text> before the next pathname anchor
-    And Adjust, Remove, Move earlier, Move later, and the contextual add action behave as in a validation-issue report
+    And Adjust, Remove, one compact Reorder action, and the contextual add action behave as in a validation-issue report
 
     Examples:
       | step_kind       | step_input                    | step_text                              |

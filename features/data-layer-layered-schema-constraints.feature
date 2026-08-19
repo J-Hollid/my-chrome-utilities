@@ -197,8 +197,8 @@ Feature: Data layer layered schema constraints
     And guidance says rules apply from top to bottom and later groups may only make legal refinements
     And Cart stores those ordered stable references as the sole editable membership source
     And each Page Group derives its Cart membership without storing a competing editable order
-    And each stack row offers Open Page Group, Move earlier, Move later, and Remove at 360px without horizontal page scrolling
-    When keyboard controls move Trade Checkout before Retail Checkout
+    And each stack row offers Open Page Group, one compact Reorder control, and Remove at 360px without horizontal page scrolling
+    When the keyboard-operated Reorder menu moves Trade Checkout before Retail Checkout
     Then only Cart membership order changes and focus returns to Trade Checkout in position 2
     And the impact preview identifies affected properties, Page instances, compiled targets, and stale exports before commit
 
