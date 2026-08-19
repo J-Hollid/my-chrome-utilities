@@ -140,6 +140,8 @@ import {
   verificationProgressEmitter,
 } from "../scripts/verification-reliability-incidents.mjs";
 import { canonicalCheckpointBinding } from "../scripts/verification-reliability-receipts.mjs";
+import { confirmedFlakyAdmissionCoversEvidenceCandidate } from
+  "../scripts/verification-reliability-evidence-policy.mjs";
 import {
   bindRunIntentBootstrapPlan,
   buildConfirmedFlakyAdmissions,
@@ -7805,6 +7807,16 @@ const rebasedFlakyAdmissions = await buildConfirmedFlakyAdmissions({ root:"fixtu
   receiptLoader:async()=>flakyDiagnosticBytes });
 assert.equal(rebasedFlakyAdmissions.baseCommit, "new-approved-base",
   "a validated terminal rebase binds fresh review evidence to the current QA base");
+assert.equal(confirmedFlakyAdmissionCoversEvidenceCandidate({
+  incident:rebasedFlakyIncident, commit:"rebased-candidate",
+  admissions:rebasedFlakyAdmissions,
+}), true, "the exact admitted incident may pass the pending-evidence blocker");
+assert.equal(confirmedFlakyAdmissionCoversEvidenceCandidate({
+  incident:rebasedFlakyIncident, commit:"rebased-candidate",
+  admissions:{ ...rebasedFlakyAdmissions, entries:[{
+    ...rebasedFlakyAdmissions.entries[0], classificationDigest:"0".repeat(64),
+  }] },
+}), false, "changed confirmed-flaky admission proof remains evidence-blocking");
 await assert.rejects(()=>buildConfirmedFlakyAdmissions({ root:"fixture",
   incidents:[flakyIncident], plan:bootstrapPlan, packs,
   candidate:{ commit:"rebased-candidate", tree:"rebased-tree" },

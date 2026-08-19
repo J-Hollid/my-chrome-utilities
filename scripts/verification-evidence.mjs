@@ -759,6 +759,7 @@ async function parsedReceipt(receiptPath, plan, {
     validateRunIntentBootstrapReceipt(receipt, receipt.runIntentBootstrap);
   }
   return { bytes, results, environment, artifact:receiptArtifact, runIntent:receipt.runIntent,
+    confirmedFlakyAdmissions:receipt.confirmedFlakyAdmissions,
     runIntentBootstrap:receipt.runIntentBootstrap,
     checkpointAttempt:checkpointAttempt ? {
       id:checkpointAttempt.id, identityDigest:checkpointAttempt.identityDigest,
@@ -1063,7 +1064,7 @@ export async function createPendingVerificationEvidence({
   const {
     commit, tree, baseCommit, sourceIdentity, planRecord, actualChangeSet,
     receiptSourcePath, bytes, results, environment, artifact, checkpointAttempt,
-    runIntent, runIntentBootstrap,
+    runIntent, runIntentBootstrap, confirmedFlakyAdmissions,
   } = await validateVerificationEvidenceCompatibility({
     task, plan, receiptPath, changedSince, buildManifest, repositoryRoot,
     requireCompletedReceipt:true,
@@ -1084,6 +1085,7 @@ export async function createPendingVerificationEvidence({
   } else {
     await assertNoBlockingTimeoutIncidents("HEAD", {
       root:repositoryRoot, changedPaths:actualChangeSet.paths,
+      confirmedFlakyAdmissions,
     });
   }
   const reliabilityResolutions = await createTimeoutIncidentStore({ root:repositoryRoot })
@@ -1262,6 +1264,7 @@ export async function recordPendingVerificationEvidence(
       } else {
         await assertNoBlockingTimeoutIncidents(commit, {
           root:repositoryRoot, changedPaths:pending.changeSet.paths,
+          confirmedFlakyAdmissions:rawReceipt.confirmedFlakyAdmissions,
         });
       }
       const currentReliabilityResolutions = await createTimeoutIncidentStore({ root:repositoryRoot })

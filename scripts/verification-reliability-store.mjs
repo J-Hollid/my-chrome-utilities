@@ -21,7 +21,8 @@ import {
   classifyLegacyIncidentRunIntent, governedRepairAttemptAssociation,
 } from "./verification-run-intent.mjs";
 import { terminalProjectionCoverageValid } from "./verification-reliability-deferred.mjs";
-import {eligibleRepairCoversEvidenceCandidate} from "./verification-reliability-evidence-policy.mjs";
+import {confirmedFlakyAdmissionCoversEvidenceCandidate,
+  eligibleRepairCoversEvidenceCandidate} from "./verification-reliability-evidence-policy.mjs";
 import {
   exactObject, git, normalized, repositoryRoot, retryClassifications, shaPattern,
   stableIncidentId, timeoutIncidentDigest,
@@ -627,13 +628,17 @@ export function createTimeoutIncidentStore({
       }
       return applicable;
     },
-    async blockingForEvidence({ commit }) {
+    async blockingForEvidence({ commit, confirmedFlakyAdmissions }) {
       const blocked = [];
       for (const incident of await this.blocking({ commit })) {
         const eligibleRepairDescendant = await eligibleRepairCoversEvidenceCandidate({
           incident, commit, root, isAncestor, commitDescendsFrom,
         });
-        if (!eligibleDeferredIncident(incident) && !eligibleRepairDescendant) blocked.push(incident);
+        const confirmedFlakyAdmission = confirmedFlakyAdmissionCoversEvidenceCandidate({
+          incident, commit, admissions:confirmedFlakyAdmissions,
+        });
+        if (!eligibleDeferredIncident(incident) && !eligibleRepairDescendant &&
+            !confirmedFlakyAdmission) blocked.push(incident);
       }
       return blocked;
     },
@@ -892,7 +897,8 @@ export async function assertNoBlockingTimeoutIncidents(commit = "HEAD", options 
   const canonical = await git(root, "rev-parse", `${commit}^{commit}`);
   const store = createTimeoutIncidentStore({ ...options, root });
   const incidents = options.changedPaths
-    ? await store.blockingForEvidence({ commit:canonical, changedPaths:options.changedPaths })
+    ? await store.blockingForEvidence({ commit:canonical, changedPaths:options.changedPaths,
+      confirmedFlakyAdmissions:options.confirmedFlakyAdmissions })
     : await store.blocking({ commit:canonical });
   if (incidents.length) {
     throw new Error(`Unresolved reliability incident(s) block verification evidence and Git handoff: ${
