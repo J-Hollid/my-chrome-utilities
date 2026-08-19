@@ -80,7 +80,7 @@ export function validateExcelTemplatePrototype(prototype:ExcelTemplatePrototype)
     if(!available.includes(item.area.source))findings.push({area:item.area.name,message:`${item.area.name} cannot repeat that data here.`,repair:`Choose a collection shown as available in the ${prototype.kind==="flow"?"Flow":prototype.kind} guide.`});
   }
   for(const merge of prototype.merges){
-    try{const bounds=rectangle(merge);for(const item of repeats)if(overlaps(bounds,item.rectangle)&&!contains(item.rectangle,bounds)&&!contains(bounds,item.rectangle))findings.push({area:item.area.name,message:`Merged range ${merge} crosses repeat area ${item.area.name}.`,repair:"Keep the merged cells wholly inside or outside the repeat area."});}
+    try{const bounds=rectangle(merge);for(const item of repeats)if(overlaps(bounds,item.rectangle)&&!contains(item.rectangle,bounds))findings.push({area:item.area.name,message:`Merged range ${merge} crosses or encloses repeat area ${item.area.name}.`,repair:"Keep the merged cells wholly inside or outside the repeat area."});}
     catch{findings.push({message:`Merged range ${merge} is invalid.`});}
   }
   const roots=new Set(templateBindingsFor(prototype.kind));

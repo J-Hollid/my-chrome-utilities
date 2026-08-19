@@ -22,7 +22,7 @@ export async function writeDocumentationTemplateStarter(kind) { const workbook =
     worksheet.getCell(cell.address).value = cell.value;
     worksheet.getCell(cell.address).style = { font: { name: "Arial", size: 11 }, alignment: { vertical: "top", wrapText: true } };
 } worksheet.getColumn(1).width = 28; worksheet.getColumn(2).width = 34; for (const area of prototype.areas)
-    workbook.definedNames.add(absoluteNamedRange(area.range), area.name); guide.getCell("A1").value = "Guided Excel template"; guide.getCell("A2").value = "Use exact {{value.paths}} for single values. A repeat area copies the complete named Template range in configured order."; guide.getCell("A3").value = "Examples: Down rows, Across cards, and nested repeats. Empty repeatable data produces no copy."; guide.addTable?.({ name: "TemplateSettings", ref: "A5", headerRow: true, columns: [{ name: "Setting" }, { name: "Value" }], rows: [["Contract", 2], ["Kind", kind]] }); guide.addTable?.({ name: "TemplateAreas", ref: "A10", headerRow: true, columns: [{ name: "Area" }, { name: "Type" }, { name: "Source" }, { name: "Direction" }], rows: prototype.areas.map(area => [area.name, area.type === "repeat" ? "Repeat" : "Image", area.source, area.type === "repeat" ? (area.direction === "across" ? "Across" : "Down") : ""]) }); guide.getCell("F1").value = "Single values"; catalogue.values.forEach((entry, index) => { guide.getCell(index + 2, 6).value = `${entry.placeholder} — ${entry.meaning} — example ${entry.example} — ${entry.available}`; }); const collectionStart = catalogue.values.length + 3; guide.getCell(collectionStart, 6).value = "Repeatable data"; catalogue.collections.forEach((entry, index) => { guide.getCell(collectionStart + index + 1, 6).value = `${entry.path} — ${entry.meaning}; item prefix ${entry.itemPrefix}; fields ${entry.fields.join(", ") || "none"}; nested ${entry.nestedCollections.join(", ") || "none"}; ${entry.directions.join(" or ")}; ${entry.emptyResult}; ${entry.copyBehavior}`; }); guide.getColumn(6).width = 120; return new Uint8Array(await workbook.xlsx.writeBuffer()); }
+    workbook.definedNames.add(absoluteNamedRange(area.range), area.name); guide.getCell("A1").value = "Guided Excel template"; guide.getCell("A2").value = "Use exact {{value.paths}} for single values. A repeat area copies the complete named Template range in configured order."; guide.getCell("A3").value = "Examples: Down rows, Across cards, and nested repeats. Empty repeatable data produces no copy."; guide.addTable?.({ name: "TemplateSettings", ref: "A5", headerRow: true, columns: [{ name: "Setting" }, { name: "Value" }], rows: [["Contract", 2], ["Kind", kind]] }); guide.addTable?.({ name: "TemplateAreas", ref: "A10", headerRow: true, columns: [{ name: "Area" }, { name: "Type" }, { name: "Source" }, { name: "Direction" }], rows: prototype.areas.map(area => [area.name, area.type === "repeat" ? "Repeat" : "Image", area.source, area.type === "repeat" ? (area.direction === "across" ? "Across" : "Down") : ""]) }); guide.getCell("F1").value = "Single values"; catalogue.values.forEach((entry, index) => { guide.getCell(index + 2, 6).value = `${entry.placeholder} — ${entry.meaning} — example ${entry.example} — ${entry.available}`; }); const collectionStart = catalogue.values.length + 3; guide.getCell(collectionStart, 6).value = "Repeatable data"; catalogue.collections.forEach((entry, index) => { guide.getCell(collectionStart + index + 1, 6).value = `${entry.path} — ${entry.meaning}; item prefix ${entry.itemPrefix}; fields ${entry.fields.join(", ") || "none"}; nested ${entry.nestedCollections.join(", ") || "none"}; ${entry.directions.join(" or ")}; ${entry.emptyResult}; ${entry.copyBehavior}; Template Guide example ${entry.example}`; }); const examplesStart = collectionStart + catalogue.collections.length + 2; guide.getCell(examplesStart, 6).value = "Copyable TemplateAreas examples"; catalogue.areaExamples.forEach((entry, index) => { guide.getCell(examplesStart + index + 1, 6).value = `${entry.area} | ${entry.type} | ${entry.source} | ${entry.direction} | ${entry.range} | parent ${entry.parent ?? "none"}`; }); guide.getColumn(6).width = 120; return new Uint8Array(await workbook.xlsx.writeBuffer()); }
 function prototypeFromWorkbook(workbook, kind) {
     const worksheet = workbook.getWorksheet?.("Template") ?? workbook.worksheets.find(({ name }) => name === "Template"), guide = workbook.getWorksheet?.("Template Guide") ?? workbook.worksheets.find(({ name }) => name === "Template Guide"), cells = new Map();
     worksheet.eachRow({ includeEmpty: true }, row => row.eachCell({ includeEmpty: true }, cell => { if (cell.value !== null && cell.value !== undefined || Object.keys(cell.style).length)
@@ -41,12 +41,29 @@ function prototypeFromWorkbook(workbook, kind) {
     }
     const named = new Map(workbook.definedNames.model.map(item => [item.name, item.ranges[0]?.replace(/^'?Template'?!/u, "").replaceAll("$", "")])), table = guide.getTable?.("TemplateAreas").table, ref = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/u.exec(table?.tableRef ?? ""), columnNumber = (letters) => [...letters].reduce((value, letter) => value * 26 + letter.charCodeAt(0) - 64, 0), rows = table?.rows ?? (ref ? Array.from({ length: Number(ref[4]) - Number(ref[2]) }, (_, rowOffset) => Array.from({ length: columnNumber(ref[3]) - columnNumber(ref[1]) + 1 }, (_, columnOffset) => guide.getCell(Number(ref[2]) + 1 + rowOffset, columnNumber(ref[1]) + columnOffset).value)) : []), areas = rows.flatMap(row => { const name = String(row[0] ?? ""), type = String(row[1] ?? "").toLowerCase(), source = String(row[2] ?? ""), direction = String(row[3] ?? "").toLowerCase(), range = named.get(name); if (!range)
         return []; return type === "repeat" && (direction === "across" || direction === "down") ? [{ name, type: "repeat", source, direction, range }] : type === "image" && source === "theme.logo" ? [{ name, type: "image", source: "theme.logo", range }] : []; });
+    const areaBounds = areas.map(area => { const [start, end = start] = area.range.split(":"), first = cellPoint(start), last = cellPoint(end); return { first, last }; });
     for (const area of areas)
         if (area.type === "image") {
             const [start, end = start] = area.range.split(":");
             ensure(start);
             ensure(end);
         }
+    for (let row = 1; row <= worksheet.rowCount; row += 1)
+        if (worksheet.getRow(row).height !== undefined) {
+            ensure(cellAddress(row, 1));
+            for (const { first, last } of areaBounds)
+                if (row >= first.row && row <= last.row)
+                    ensure(cellAddress(row, first.column));
+        }
+    for (let column = 1; column <= worksheet.columns.length; column += 1) {
+        const source = worksheet.getColumn(column);
+        if (source.width === undefined && source.hidden === undefined && source.outlineLevel === undefined)
+            continue;
+        ensure(cellAddress(1, column));
+        for (const { first, last } of areaBounds)
+            if (column >= first.column && column <= last.column)
+                ensure(cellAddress(first.row, column));
+    }
     return { kind, contractVersion: 2, worksheetName: "Template", cells: [...cells.values()], areas, merges: [...(worksheet.model?.merges ?? [])] };
 }
 function fillBuiltIn(worksheet, table) { worksheet.getCell("A1").value = table.title; table.headings.forEach((value, index) => worksheet.getCell(`${String.fromCharCode(65 + index)}2`).value = value); table.rows.forEach((row, rowIndex) => row.forEach((value, columnIndex) => worksheet.getCell(`${String.fromCharCode(65 + columnIndex)}${rowIndex + 3}`).value = value)); }

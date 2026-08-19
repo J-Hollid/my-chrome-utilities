@@ -7,7 +7,7 @@ await import("./data-layer-documentation-template-excel-test.mjs");
 await import("./data-layer-documentation-template-rich-test.mjs");
 await import("./data-layer-documentation-template-library-test.mjs");
 const flowHandler=await readFile("acceptance/src/acceptance/steps/flow_table_documentation_export.clj","utf8");
-for(const key of ["documentationTemplateMovedArea","documentationTemplateEmptyLogoArea","documentationTemplateFindingUi"])assert.ok(flowHandler.includes(`:${key}`),`acceptance runtime relation includes ${key}`);
+for(const key of ["documentationTemplateMovedArea","documentationTemplateEmptyLogoArea","documentationTemplateFindingUi","documentationTemplatePresentation","documentationTemplateGuideExamples","documentationTemplateActiveContentFinding"])assert.ok(flowHandler.includes(`:${key}`),`acceptance runtime relation includes ${key}`);
 
 if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),

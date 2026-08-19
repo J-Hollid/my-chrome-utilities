@@ -149,7 +149,10 @@
                 :documentationTemplatePortableReload
                 :documentationTemplateMovedArea
                 :documentationTemplateEmptyLogoArea
-                :documentationTemplateFindingUi]
+                :documentationTemplateFindingUi
+                :documentationTemplatePresentation
+                :documentationTemplateGuideExamples
+                :documentationTemplateActiveContentFinding]
                (map #(keyword (str "export" (format "%03d" %))) (range 1 35)))))
 
 (defn- assert-runtime! [evidence]

@@ -71,8 +71,8 @@ export function validateExcelTemplatePrototype(prototype) {
         try {
             const bounds = rectangle(merge);
             for (const item of repeats)
-                if (overlaps(bounds, item.rectangle) && !contains(item.rectangle, bounds) && !contains(bounds, item.rectangle))
-                    findings.push({ area: item.area.name, message: `Merged range ${merge} crosses repeat area ${item.area.name}.`, repair: "Keep the merged cells wholly inside or outside the repeat area." });
+                if (overlaps(bounds, item.rectangle) && !contains(item.rectangle, bounds))
+                    findings.push({ area: item.area.name, message: `Merged range ${merge} crosses or encloses repeat area ${item.area.name}.`, repair: "Keep the merged cells wholly inside or outside the repeat area." });
         }
         catch {
             findings.push({ message: `Merged range ${merge} is invalid.` });

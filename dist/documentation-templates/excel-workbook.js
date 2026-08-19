@@ -79,6 +79,21 @@ const internalTarget = (relationshipName, target) => { if (target.startsWith("/"
     else
         normal.push(segment);
 } const value = normal.join("/"); return safeFlowVisualArchivePath(value) ? value : undefined; };
+const activeContentRule = "Guided templates cannot contain formulas or external workbook connections.";
+const activeContentRepair = "Replace formulas with literal text and remove active or external workbook content.";
+const sheetNamesByPart = (texts) => { const result = new Map(), workbook = texts.get("xl/workbook.xml") ?? "", relationships = texts.get("xl/_rels/workbook.xml.rels") ?? "", targets = new Map(); for (const match of relationships.matchAll(/<Relationship\b([^>]*)\/?>(?:<\/Relationship>)?/gu)) {
+    const value = attributes(match[1]);
+    if (value.Id && value.Target) {
+        const target = internalTarget("xl/_rels/workbook.xml.rels", value.Target);
+        if (target)
+            targets.set(value.Id, target);
+    }
+} for (const match of workbook.matchAll(/<sheet\b([^>]*)\/?>(?:<\/sheet>)?/gu)) {
+    const value = attributes(match[1]), target = value["r:id"] && targets.get(value["r:id"]);
+    if (target && value.name)
+        result.set(target, xmlText(value.name));
+} return result; };
+const formulaCells = (text) => [...text.matchAll(/<c\b([^>]*)>([\s\S]*?)<\/c>/gu)].filter(([, , body]) => /<f(?:\s|>)/u.test(body ?? "")).map(([, raw]) => attributes(raw).r).filter((value) => Boolean(value));
 const excelJs = () => { const value = globalThis.ExcelJS; if (!value)
     throw new Error("The packaged Excel template parser is unavailable."); return value; };
 const cellValue = (value) => typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? value : value == null ? "" : String(value);
@@ -184,14 +199,15 @@ export async function validateExcelTemplateWorkbook(source, expectedKind) {
         catch (error) {
             findings.push({ location: entry.name, message: error instanceof Error ? error.message : String(error) });
         }
+    const sheetNames = sheetNamesByPart(texts);
     for (const [name, text] of texts) {
-        if (/<f(?:\s|>)/u.test(text))
-            findings.push({ location: name, message: "Remove workbook formulas." });
+        for (const cell of formulaCells(text))
+            findings.push({ location: `${sheetNames.get(name) ?? name} ${cell}`, message: `${cell} contains a formula or active workbook content. Remove workbook formulas.`, rule: activeContentRule, repair: activeContentRepair, technical: JSON.stringify({ part: name, cell }) });
         if (name.endsWith(".rels")) {
             for (const match of text.matchAll(/<Relationship\b([^>]*)\/?>(?:<\/Relationship>)?/gu)) {
                 const attrs = attributes(match[1]), external = attrs.TargetMode?.toLowerCase() === "external";
                 if (external) {
-                    findings.push({ location: name, message: "Remove external workbook content." });
+                    findings.push({ location: `${name} relationship ${attrs.Id ?? "(unnamed)"}`, message: "External workbook content cannot be used.", rule: activeContentRule, repair: activeContentRepair, technical: JSON.stringify({ part: name, relationship: attrs.Id ?? null, target: attrs.Target ?? null, type: attrs.Type ?? null }) });
                     continue;
                 }
                 const target = attrs.Target && internalTarget(name, attrs.Target);

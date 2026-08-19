@@ -119,6 +119,12 @@
                         :documentationTemplateRichHistory true
                         :documentationTemplateReload true
                         :documentationTemplatePortableReload true
+                        :documentationTemplateMovedArea true
+                        :documentationTemplateEmptyLogoArea true
+                        :documentationTemplateFindingUi true
+                        :documentationTemplatePresentation true
+                        :documentationTemplateGuideExamples true
+                        :documentationTemplateActiveContentFinding true
                         :export021 true
                         :export022 true
                         :export023 true

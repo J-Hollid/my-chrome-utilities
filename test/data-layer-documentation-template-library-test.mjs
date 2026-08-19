@@ -16,8 +16,12 @@ import {createSpecificationProject} from "../dist/data-layer-specification-proje
 let documentation={sets:[{id:"set:client",name:"Client specification",themeId:"theme:client",sections:[]}],themes:[],templates:[]};
 const flowGuide=excelTemplateGuideFor("flow");
 assert.ok(flowGuide.values.every(entry=>entry.placeholder===`{{${entry.path}}}`&&entry.meaning&&entry.example&&entry.available));
-assert.deepEqual(flowGuide.collections.find(({path})=>path==="flow.pages"),{path:"flow.pages",meaning:"Flow Page contexts",itemPrefix:"page",fields:["page.stepLabel","page.pageName","page.sourcePageName","page.eventName","page.heading","page.rows","page.events"],nestedCollections:["page.events","page.rows"],directions:["Across","Down"],emptyResult:"No copy",copyBehavior:"The complete named repeat area is copied for every item."});
+assert.equal(flowGuide.values.find(({path})=>path==="project.name").available,"Template root and every repeat area");
+assert.equal(flowGuide.values.find(({path})=>path==="page.pageName").available,"Inside repeats of flow.pages");
+assert.equal(flowGuide.values.find(({path})=>path==="event.eventName").available,"Inside repeats of page.events");
+assert.deepEqual(flowGuide.collections.find(({path})=>path==="flow.pages"),{path:"flow.pages",meaning:"Flow Page contexts",itemPrefix:"page",fields:["page.stepLabel","page.pageName","page.sourcePageName","page.eventName","page.heading","page.rows","page.events"],nestedCollections:["page.events","page.rows"],directions:["Across","Down"],emptyResult:"No copy",copyBehavior:"The complete named repeat area is copied for every item.",example:"PageCard | Repeat | flow.pages | Across | named range A3:D8"});
 assert.ok(flowGuide.collections.some(({path,nestedCollections})=>path==="page.events"&&nestedCollections.includes("event.rows")));
+assert.deepEqual(flowGuide.areaExamples,[{area:"PageCard",type:"Repeat",source:"flow.pages",direction:"Across",range:"A3:D8"},{area:"EventRow",type:"Repeat",source:"page.events",direction:"Down",range:"A5:B5",parent:"PageCard"},{area:"ThemeLogo",type:"Image",source:"theme.logo",direction:"",range:"C1:D2"}],"Flow guidance exposes workbook-aligned copyable area rows");
 const template=createDocumentationTemplate({id:"template:flow",name:"Acme flow workbook",format:"excel",kind:"flow",body:{assetId:"body:first",digest:"sha256:first",byteLength:12},validation:{valid:true,findings:[]}});
 documentation={...documentation,templates:[template]};
 documentation=assignDocumentationTemplate(documentation,"set:client","excel","flow",template.id);

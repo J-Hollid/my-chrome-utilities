@@ -11,11 +11,23 @@ export function renderExcelTemplateGuide(kind) {
         const query = search.value.trim().toLocaleLowerCase(), matches = (value) => !query || value.toLocaleLowerCase().includes(query);
         results.replaceChildren();
         const values = guide.values.filter(entry => matches(`${entry.path} ${entry.meaning} ${entry.example} ${entry.available}`));
-        const collections = guide.collections.filter(entry => matches(`${entry.path} ${entry.meaning} ${entry.itemPrefix} ${entry.fields.join(" ")} ${entry.nestedCollections.join(" ")}`));
-        const valueHeading = heading(4, "Single values"), valueList = document.createElement("ul"), collectionHeading = heading(4, "Repeatable data"), collectionList = document.createElement("ul");
+        const collections = guide.collections.filter(entry => matches(`${entry.path} ${entry.meaning} ${entry.itemPrefix} ${entry.fields.join(" ")} ${entry.nestedCollections.join(" ")} ${entry.example}`)), areaExamples = guide.areaExamples.filter(entry => matches(`${entry.area} ${entry.type} ${entry.source} ${entry.direction} ${entry.range} ${entry.parent ?? ""}`));
+        const valueHeading = heading(4, "Single values"), valueList = document.createElement("ul"), collectionHeading = heading(4, "Repeatable data"), collectionList = document.createElement("ul"), exampleHeading = heading(4, "Copyable TemplateAreas examples"), exampleTable = document.createElement("table"), exampleHead = document.createElement("thead"), exampleBody = document.createElement("tbody");
         valueList.append(...values.map(entry => Object.assign(document.createElement("li"), { textContent: `${entry.placeholder} — ${entry.meaning} — example ${entry.example} — ${entry.available}` })));
-        collectionList.append(...collections.map(entry => Object.assign(document.createElement("li"), { textContent: `${entry.path} — ${entry.meaning}; item prefix ${entry.itemPrefix}; fields ${entry.fields.join(", ")}; nested ${entry.nestedCollections.join(", ") || "none"}; Across or Down; ${entry.emptyResult}; ${entry.copyBehavior}` })));
-        results.append(valueHeading, valueList, collectionHeading, collectionList);
+        collectionList.append(...collections.map(entry => Object.assign(document.createElement("li"), { textContent: `${entry.path} — ${entry.meaning}; item prefix ${entry.itemPrefix}; fields ${entry.fields.join(", ")}; nested ${entry.nestedCollections.join(", ") || "none"}; Across or Down; ${entry.emptyResult}; ${entry.copyBehavior} Template Guide example: ${entry.example}` })));
+        const headRow = document.createElement("tr");
+        for (const label of ["Area", "Type", "Source", "Direction", "Range", "Parent"])
+            headRow.append(Object.assign(document.createElement("th"), { scope: "col", textContent: label }));
+        exampleHead.append(headRow);
+        for (const example of areaExamples) {
+            const row = document.createElement("tr");
+            for (const value of [example.area, example.type, example.source, example.direction, example.range, example.parent ?? ""])
+                row.append(Object.assign(document.createElement("td"), { textContent: value }));
+            exampleBody.append(row);
+        }
+        exampleTable.setAttribute("aria-label", `${kindName(kind)} copyable TemplateAreas examples`);
+        exampleTable.append(exampleHead, exampleBody);
+        results.append(valueHeading, valueList, collectionHeading, collectionList, exampleHeading, exampleTable);
     };
     search.addEventListener("input", render);
     render();
