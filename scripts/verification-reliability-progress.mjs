@@ -129,7 +129,6 @@ export function retryIdentity(failure) {
     applicableLimit:failure.applicableLimit, resolvedDeadlines:failure.resolvedDeadlines,
     fingerprint:failure.fingerprint,
     environment:failure.environment, artifact:failure.artifact, planDigest:failure.planDigest,
-    registryDigest:failure.registryDigest,
     scope:diagnosticRetryScope({ task:failure.task,
       lastProgress:failure.failedBoundary ?? failure.lastProgress }),
   });

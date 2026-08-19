@@ -138,6 +138,11 @@ function diagnosticOperations({ root, now, read, update }) {
   };
 }
 
+function registryBoundRetryIdentity(failure) {
+  return timeoutIncidentDigest({ version:1, identity:retryIdentity(failure),
+    registryDigest:failure.registryDigest });
+}
+
 function repairOperations({ root, now, read, update, directory, isAncestor, currentCandidate,
   changedPaths, canonicalCheckpointValidator, canonicalRepairTaskIdentities }) {
   return {
@@ -460,7 +465,7 @@ export function createTimeoutIncidentStore({
         catch { return undefined; }
       })();
       const immutableFailure = structuredClone({ ...failure,
-        retryScope:scoped, retryIdentity:scoped ? retryIdentity(failure) : timeoutIncidentDigest({
+        retryScope:scoped, retryIdentity:scoped ? registryBoundRetryIdentity(failure) : timeoutIncidentDigest({
           lineage:failure.lineage, task:failure.task, progressContract:"untrusted",
         }),
       });
