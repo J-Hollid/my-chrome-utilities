@@ -107,3 +107,13 @@ Feature: Data layer Excel documentation templates runtime
     Then parser tracing proves Notes and Comments supplied no template instruction
     And visible feedback offers the current guided starter instead of migration
     And no renderer, repository write, assignment, or download is invoked
+
+  # Data layer Excel documentation templates runtime 012
+  Scenario: Data layer Excel documentation templates runtime 012
+    Given an actual guided starter contains documented Microsoft Purview sensitivity-label Custom File Properties without encryption
+    When production validation and the installed candidate controls inspect and save it
+    Then independent OOXML inspection proves the label properties are present and the workbook remains an unencrypted valid package
+    And production validation accepts the guided contract without interpreting label properties as template behavior
+    And repository inspection finds exact candidate bytes with matching digest and byte length
+    When the same guided workbook is protected by a sensitivity label that applies encryption
+    Then production validation rejects it as encrypted before any candidate, template metadata, body, assignment, or project revision is saved

@@ -111,3 +111,66 @@ Feature: Data layer documentation template library
       | viewport_width | library_layout                                      |
       | 1280 pixels    | the template list and selected detail appear together |
       | 360 pixels     | the template list and selected detail open one at a time |
+
+  # Data layer documentation template library 012
+  Scenario Outline: Data layer documentation template library 012
+    Given assigned Excel template Acme flow workbook was saved previously with <invalid_metadata>
+    When the operator saves an unrelated project change
+    Then the unrelated change is saved without changing Acme flow workbook, its exact body, or its assignment
+    And Excel Flow preview and export remain blocked without silently using Built-in
+    And other documentation formats, kinds, and project saves remain available
+    And the Template Library identifies <invalid_metadata> as the reason Acme flow workbook is unavailable
+    And the problem does not describe Acme flow workbook only by its internal identity
+
+    Examples:
+      | invalid_metadata                              |
+      | a missing valid validation state              |
+      | a body digest different from its record digest |
+      | a nonpositive body byte length                |
+      | an unsupported Excel contract version         |
+
+  # Data layer documentation template library 013
+  Scenario: Data layer documentation template library 013
+    Given assigned Excel template Acme flow workbook has invalid stored metadata
+    When the operator assigns Built-in to Excel Flow
+    Then the assignment is saved even though the unchanged invalid template remains in the Library
+    And Excel Flow uses Built-in only after that explicit assignment
+    And Acme flow workbook is visibly unavailable and cannot be newly assigned, duplicated, previewed, or exported
+    And removal becomes available when no Documentation Set assignment refers to Acme flow workbook
+
+  # Data layer documentation template library 014
+  Scenario: Data layer documentation template library 014
+    Given the project already contains an invalid stored Excel template
+    When an upload, replacement, or assignment would introduce another invalid template record
+    Then the new operation is rejected atomically with its exact failing metadata invariant
+    And no new template metadata, body, assignment, or project revision is saved
+    And tolerating the unchanged existing record does not weaken workbook, body, assignment, or portability validation
+
+  # Data layer documentation template library 015
+  Scenario: Data layer documentation template library 015
+    Given invalid template Quarterly flow workbook has an internal identity and is assigned to Excel Flow by several Documentation Sets
+    And independent workbook validation and sample filling succeed for its exact body
+    When the workspace reports the template problem
+    Then the primary message names Quarterly flow workbook, Excel Flow, and the number of affected Documentation Sets
+    And the primary message does not require the operator to recognize its internal identity
+    And Go to problem opens Templates with Quarterly flow workbook selected and every affected Documentation Set assignment visible
+    And the repair actions identify Revalidate saved workbook, Assign Built-in, and Replace workbook without requiring manual template lookup
+    And collapsed technical details retain the internal identity and exact failed record invariant for diagnosis
+
+  # Data layer documentation template library 016
+  Scenario: Data layer documentation template library 016
+    Given Quarterly flow workbook has invalid stored metadata but its exact saved body passes current guided Flow validation
+    And several Documentation Sets assign Quarterly flow workbook to Excel Flow
+    When the operator activates Revalidate saved workbook
+    Then current validation rebuilds only its derived contract, digest, byte length, and validation metadata from the saved body
+    And one atomic reversible project command preserves the exact body, template name, stable identity, and every assignment
+    And the existing preview becomes visibly stale until the operator refreshes it
+    When the operator refreshes the preview
+    Then Quarterly flow workbook is available and Excel Flow uses its revalidated body
+
+  # Data layer documentation template library 017
+  Scenario: Data layer documentation template library 017
+    Given Quarterly flow workbook has invalid stored metadata and its exact saved body fails current guided Flow validation
+    When the operator activates Revalidate saved workbook
+    Then no template metadata, body, assignment, preview, or project revision changes
+    And the current workbook findings and Assign Built-in action remain available

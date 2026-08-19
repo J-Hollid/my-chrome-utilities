@@ -179,3 +179,14 @@ Feature: Data layer Excel documentation templates
     And the candidate is rejected as not using the current guided template format
     And the finding offers Download guided starter
     And no legacy template migration or rendering is attempted
+
+  # Data layer Excel documentation templates 016
+  Scenario: Data layer Excel documentation templates 016
+    Given Excel saved a valid guided starter with documented Microsoft Purview sensitivity-label Custom File Properties
+    And the sensitivity label did not encrypt the workbook or add active content
+    When guided validation inspects the candidate
+    Then the label properties are treated as nonfunctional package metadata rather than template instructions
+    And the candidate is accepted by the same contract, binding, area, relationship, and size rules as the unlabelled starter
+    When the operator saves the candidate
+    Then the exact labelled workbook bytes and their matching digest and byte length are saved atomically
+    And no label property becomes a binding, repeat area, external relationship, or project field

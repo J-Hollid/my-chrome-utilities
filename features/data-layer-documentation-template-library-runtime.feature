@@ -73,3 +73,45 @@ Feature: Data layer documentation template library runtime
       | viewport_width | rendered_layout                                      |
       | 1280 pixels    | list and detail are both visible                     |
       | 360 pixels     | list and detail are mutually exclusive visible views |
+
+  # Data layer documentation template library runtime 009
+  Scenario: Data layer documentation template library runtime 009
+    Given production storage contains an assigned Excel template record with invalid body metadata and its previously saved body
+    When an actual unrelated project control saves a change
+    Then repository inspection finds that change committed and the invalid template record, exact body, and assignment unchanged
+    And installed Preview and Export block only the affected Excel kind without invoking Built-in
+    And the Template Library exposes the exact invalid metadata invariant with working Go to problem and Assign Built-in actions
+    When actual controls assign Built-in and then remove the unreferenced template
+    Then both Draft commands commit through the production repository
+    And reload retains Built-in output without the invalid template record or a recurring save error
+
+  # Data layer documentation template library runtime 010
+  Scenario: Data layer documentation template library runtime 010
+    Given production storage already contains an unchanged invalid Excel template record
+    When actual upload, replacement, and assignment controls each propose invalid new template metadata
+    Then the production repository rejects every new invalid transition atomically with its exact invariant
+    And repository inspection finds no new body, template, assignment, revision, or partial recovery
+
+  # Data layer documentation template library runtime 011
+  Scenario: Data layer documentation template library runtime 011
+    Given one invalid production Excel template has a readable workbook body and assignments in several Documentation Sets
+    When an actual workspace control exposes its problem and the operator activates Go to problem
+    Then the visible message uses the template name, Excel kind, and affected Documentation Set count without requiring its internal identity
+    And installed navigation opens Templates with the exact template selected and every referencing assignment visible
+    And keyboard focus reaches the first applicable repair action
+    And the internal identity and failed record invariant appear only in collapsed technical details
+
+  # Data layer documentation template library runtime 012
+  Scenario: Data layer documentation template library runtime 012
+    Given an invalid production template record refers to a saved body that passes current guided validation and sample filling
+    When actual controls activate Revalidate saved workbook
+    Then production validation reads the stored body and one atomic Draft command repairs only its derived template metadata
+    And repository inspection finds the exact body bytes, stable template identity, name, and all assignments preserved
+    And installed preview becomes stale and returns to custom Excel output only after Refresh preview
+
+  # Data layer documentation template library runtime 013
+  Scenario: Data layer documentation template library runtime 013
+    Given an invalid production template record refers to a saved body that fails current guided validation
+    When actual controls activate Revalidate saved workbook
+    Then visible workbook findings and Assign Built-in remain available
+    And repository inspection finds no metadata, body, assignment, preview, or revision change

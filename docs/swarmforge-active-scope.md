@@ -33,7 +33,7 @@ The settled-candidate verification workflow is integrated at
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program; the combined Project Library transport isolation and Flow visual-asset portability delivery is QA-integrated at `1b192105a8` | Preserve that settled transport, content-addressed visual-body, and version-3 archive behavior. No additional VTD-008 controller slice is active. |
-| Documentation template library | Guided Excel template authoring is QA-integrated at `a8ee95869b` after exact 3-pack/135-task review evidence | Preserve contract-2 guided workbook authoring, the unchanged Rich contract, and both terminal-deferred repair incidents; cumulative promotion to `master` remains a separate release decision. |
+| Documentation template library | Guided Excel template authoring is QA-integrated at `a8ee95869b` after exact 3-pack/135-task review evidence; documentation-template recovery correction approved on 2026-08-19 | Implement `documentation-template-recovery` from current QA under `docs/data-layer-documentation-template-recovery-R01.md`; preserve contract-2 authoring, strict new-state validation, the unchanged Rich contract, and both terminal-deferred repair incidents. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Deferred and inactive | The existing two-worker order is within about six seconds of balanced after lock wait is removed; scheduling needed for a possible third worker is bounded inside VTD-017. |
 | VTD-012 registry and planner modularization | Deferred and inactive | Reconsider after broad final-gate and receipt-persistence costs are reduced. |
@@ -106,6 +106,17 @@ promotion to `master` remains a separate user decision. The later user-approved
 `guided-excel-template-authoring` correction supersedes only the unadopted Excel
 Note and literal-endpoint authoring contract; it does not reopen the completed
 Rich-template or durability lineages.
+
+The user-approved `documentation-template-recovery` correction addresses a
+post-integration trap in which invalid stored Excel template metadata blocks
+every Draft save, including Assign Built-in and removal. Start the correction
+from the exact current QA specification descendant. Preserve fail-closed custom
+output and strict validation of new or changed template state while allowing
+unchanged invalid records to survive unrelated saves, in-place validation of a
+readable stored workbook, explicit Built-in/removal recovery, and an
+operator-facing `Go to problem` route. A confirmed readable, sample-filled,
+unencrypted workbook with a nonfunctional Microsoft Purview label makes stored
+record validation—not workbook parsing—the primary diagnosis boundary.
 
 The previously approved structural task `swarmforge-outcome-bounded-autonomy`
 is QA-integrated at `8f82a6a66f`. Its immutable authority grant, semantic
@@ -263,6 +274,7 @@ Read only the program documents relevant to the selected task.
 | Selected-Flow table documentation | `docs/data-layer-flow-table-documentation-export-program-R01.md` |
 | Project Documentation workspace | `docs/data-layer-project-documentation-workspace-program-R01.md` |
 | Documentation templates | `docs/data-layer-documentation-template-program-R01.md` |
+| Documentation template recovery | `docs/data-layer-documentation-template-recovery-R01.md` |
 | Operator-guided Live Flow testing | `docs/data-layer-live-flow-guided-testing-program-R01.md` |
 | Project library, context, and portability | `docs/data-layer-project-management-program-R01.md` |
 | Flow concept-visual asset storage and portability | `docs/flow-concept-visual-asset-storage-portability-R01.md` |
