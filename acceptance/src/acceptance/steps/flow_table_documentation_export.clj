@@ -152,7 +152,8 @@
                 :documentationTemplateFindingUi
                 :documentationTemplatePresentation
                 :documentationTemplateGuideExamples
-                :documentationTemplateActiveContentFinding]
+                :documentationTemplateActiveContentFinding
+                :documentationTemplateRecovery]
                (map #(keyword (str "export" (format "%03d" %))) (range 1 35)))))
 
 (defn- assert-runtime! [evidence]

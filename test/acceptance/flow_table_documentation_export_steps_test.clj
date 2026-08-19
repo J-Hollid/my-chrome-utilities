@@ -125,6 +125,7 @@
                         :documentationTemplatePresentation true
                         :documentationTemplateGuideExamples true
                         :documentationTemplateActiveContentFinding true
+                        :documentationTemplateRecovery true
                         :export021 true
                         :export022 true
                         :export023 true
