@@ -7600,10 +7600,12 @@ assert.equal(admissions.entries[0].repairDigest, timeoutIncidentDigest(admission
 const rebasedAdmissionIncident = { ...structuredClone(admissionIncident),
   lineageTransitions:[{ kind:"rebase", fromCommit:"bootstrap-candidate",
     toCommit:"rebased-candidate", toTree:"rebased-tree",
-    at:"2026-08-19T13:35:58.539Z" }] };
+    at:"2026-08-19T13:35:58.539Z" }, { kind:"rebase", fromCommit:"rebased-candidate",
+    toCommit:"twice-rebased-candidate", toTree:"twice-rebased-tree",
+    at:"2026-08-19T13:45:58.539Z" }] };
 const rebasedAdmissions = await buildEligibleRepairAdmissions({
   incidents:[rebasedAdmissionIncident], plan:bootstrapPlan, packs,
-  candidate:{ commit:"rebased-candidate", tree:"rebased-tree" },
+  candidate:{ commit:"twice-rebased-candidate", tree:"twice-rebased-tree" },
   baseCommit:"approved-contract-base", evidenceTask:"eligible-repair-admission",
   changeSetDigest:"5".repeat(64), planDigest:"6".repeat(64),
 });

@@ -403,18 +403,23 @@ function deferredPromotionRegressionKey(incident, admission) {
 
 const digestPattern = /^[a-f0-9]{64}$/u;
 
+function eligibleRepairCandidateMatches(incident, candidate) {
+  let current = incident?.repair?.candidate;
+  if (!current) return false;
+  for (const transition of incident.lineageTransitions ?? []) {
+    if (transition.kind === "rebase" && transition.fromCommit === current.commit) {
+      current = { commit:transition.toCommit, tree:transition.toTree };
+    }
+  }
+  return current.commit === candidate?.commit && current.tree === candidate?.tree;
+}
+
 function validEligibleRepairProof(incident, candidate, baseCommit, evidenceTask) {
   const repair = incident?.repair;
-  const latestLineage = incident?.lineageTransitions?.at(-1);
-  const candidateMatches = repair?.candidate?.commit === candidate?.commit &&
-      repair?.candidate?.tree === candidate?.tree ||
-    latestLineage?.kind === "rebase" &&
-      latestLineage.fromCommit === repair?.candidate?.commit &&
-      latestLineage.toCommit === candidate?.commit && latestLineage.toTree === candidate?.tree;
   return [
     incident?.state === "unresolved",
     repair?.status === "eligible",
-    candidateMatches,
+    eligibleRepairCandidateMatches(incident, candidate),
     repair?.checkpoint?.baseCommit === baseCommit,
     repair?.checkpoint?.evidenceTask === evidenceTask,
     typeof repair?.causalCategory === "string" && Boolean(repair.causalCategory),
