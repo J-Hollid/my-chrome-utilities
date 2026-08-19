@@ -75,6 +75,14 @@ reviewable change.
    permits focused review and QA integration only; it is neither resolution nor
    abandonment. Missing, failing, stale, or identity-mismatched proof remains
    blocking.
+   The same bounded route applies when one exact governed diagnostic retry passes
+   and is durably classified `confirmed-flaky`: that diagnostic remains
+   classification proof only, the complete canonical owned-pack review and
+   package must pass freshly, and atomic deferral records no invented repair.
+   Reproduced, changed, unclassified, stale, multiply retried, uncovered, or
+   identity-mismatched failures remain blocking. The incident is resolved only
+   by matching passing evidence in the later explicitly requested all-20
+   checkpoint; terminal recurrence blocks final-ready recording.
    A later independently approved slice may start from that QA descendant. Its
    feature-mode roles do not audit, reverify, mutate, or re-defer every earlier
    incident, including one whose shared disposition was recorded on an abandoned

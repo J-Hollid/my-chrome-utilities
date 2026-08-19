@@ -29,7 +29,7 @@ The settled-candidate verification workflow is integrated at
 | Flow instance schema route-lifecycle correction | QA-integrated at `aa19396f45` on 2026-08-16 | Preserve directional Flow scenario 046 and its runtime partner, including ordinary route departure, stable contributor reopening, and Return to Flow behavior. |
 | Flow instance schema-editor scrolling correction | QA-integrated at `736823be2d` on 2026-08-18 after exact 3-pack/147-task review evidence | Preserve directional Flow scenario 047 and its runtime partner for both Page-instance wheel traversal and Event-occurrence keyboard traversal; cumulative promotion to `master` remains a separate release decision. |
 | Project Documentation workspace UX correction | Active follow-up approved by the user on 2026-08-16 | Preserve the QA-integrated Build, Preview, and Export workspace while replacing the flat Site Profile property list with the concept-first Profile filtering and ordering control under `docs/data-layer-project-documentation-workspace-program-R01.md` and its product/runtime feature pair; use the focused `flow_export` boundary. This does not resume an older rejected Project Documentation implementation lineage. |
-| Verification run-intent and deferred-incident corrections | Exact-candidate eligible-repair admission is QA-integrated at `183496edb9`; guided Excel first use recorded two atomic focused deferrals | Preserve incidents `de9ffec1-dd07-4cf4-b91f-f94b59f91fe6` and `f307c5b7-6656-464e-8a29-6d71cfb32025` as unresolved master-integration obligations; no feature-mode all-20 run is authorized. |
+| Verification run-intent and deferred-incident corrections | Exact-candidate eligible-repair admission is QA-integrated at `183496edb9`; confirmed-flaky feature deferral is approved for immediate implementation on 2026-08-19 | Implement `confirmed-flaky-feature-deferral` from current QA under `docs/qa-confirmed-flaky-feature-deferral-R01.md`; preserve the diagnostic pass as classification-only proof and keep all deferred incidents unresolved for master integration. No feature-mode all-20 run is authorized. |
 | Feature-development throughput course adjustment | Approved at `2b093eec4f`; enabling sequence stopped after VTD-018 exceeded its stop threshold | Product-delivery timing is now measured through the QA-branch release pilot. |
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program; the combined Project Library transport isolation and Flow visual-asset portability delivery is QA-integrated at `1b192105a8` | Preserve that settled transport, content-addressed visual-body, and version-3 archive behavior. No additional VTD-008 controller slice is active. |
@@ -117,6 +117,18 @@ readable stored workbook, explicit Built-in/removal recovery, and an
 operator-facing `Go to problem` route. A confirmed readable, sample-filled,
 unencrypted workbook with a nonfunctional Microsoft Purview label makes stored
 record validation—not workbook parsing—the primary diagnosis boundary.
+
+Product candidate `f6db2c89a9` implements that approved recovery behavior but
+its seven-pack evidence run encountered incident
+`e5df733f-58e5-45e6-8488-bda10eb58bf4`: the grouped `flow_graph` browser task
+failed at `FLOW_WORKSPACE_AUTHORING_TARGET`, and its one exact governed retry
+then passed as `confirmed-flaky`. The active verification-only correction
+`confirmed-flaky-feature-deferral` must preserve that classification as a
+master-integration obligation while requiring a new complete canonical
+owned-pack pass and package proof for review-ready evidence. After its QA-ready
+integration, reissue `documentation-template-recovery` from the exact new QA
+head and reconstruct the byte-for-byte product delta from `a31d16884f` to
+`f6db2c89a9`; the stopped product branch is a patch reference only.
 
 The previously approved structural task `swarmforge-outcome-bounded-autonomy`
 is QA-integrated at `8f82a6a66f`. Its immutable authority grant, semantic
@@ -295,6 +307,8 @@ Read only the program documents relevant to the selected task.
 | QA-pilot verification latency correction | `docs/qa-pilot-verification-latency-correction-R01.md` |
 | QA style verification and Flow modularity | `docs/qa-style-verification-and-flow-modularity-program-R01.md` |
 | Verification run-intent correction | `docs/verification-run-intent-correction-R01.md` |
+| QA exact-candidate eligible-repair admission | `docs/qa-exact-candidate-eligible-repair-admission-R01.md` |
+| QA confirmed-flaky feature deferral | `docs/qa-confirmed-flaky-feature-deferral-R01.md` |
 | Stopped VTD-018 experiment | `docs/vtd018-incremental-verification-receipts-R01.md` |
 | Feature-development throughput course adjustment | `docs/feature-development-throughput-course-adjustment-R01.md` |
 

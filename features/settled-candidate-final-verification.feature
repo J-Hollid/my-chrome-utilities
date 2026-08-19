@@ -345,3 +345,41 @@ Feature: Settled candidate final verification
     And they remain focused claims that permit only the next review or QA fast-forward
     And no coder, refactorer, or feature-mode architect can request an all-20 fallback through admission
     And the incident is resolved only by the passing canonical all-20 properties and package checkpoint during explicitly requested master integration
+
+  # Settled candidate final verification 031
+  Scenario: Settled candidate final verification 031
+    Given a completed review-evidence receipt contains valid confirmed-flaky admissions, fresh governed coverage, and fresh package proof
+    When review-ready evidence is recorded
+    Then one durable transaction binds the receipt, review-ready record, and terminal-verification-deferred disposition for every admitted incident
+    And recording revalidates the exact candidate, diagnostic classification and receipt, selected fresh coverage, plan, toolchain, artifact, environment, deadlines, and package identities under one canonical lock order
+    And each confirmed-flaky disposition records its diagnostic basis without inventing a causal repair or repair digest
+    And the transaction is committed only when the review-ready record and every matching incident disposition are durable
+    And each incident remains unresolved with its immutable failure and diagnostic history intact
+
+  # Settled candidate final verification 032
+  Scenario Outline: Settled candidate final verification 032
+    Given confirmed-flaky recording was interrupted with <durable_state>
+    When the same record-review command is invoked with the exact receipt, base, task, and candidate
+    Then transaction recovery produces <recovery_result>
+    And review-ready and QA-ready handoffs remain blocked until the transaction is committed
+    And recovery never duplicates an incident transition or review-ready record
+
+    Examples:
+      | durable_state                                             | recovery_result                                                     |
+      | only the prepared combined transaction journal            | write every bound record and commit the transaction                 |
+      | the review-ready record but a missing incident disposition | write every missing matching disposition and commit the transaction |
+      | every incident disposition but no review-ready record      | write the missing review-ready record and commit the transaction    |
+      | all exact records and an uncommitted journal               | validate every record and mark the transaction committed            |
+      | a stale, changed, missing, or conflicting bound record     | block without publishing or replacing evidence                      |
+
+  # Settled candidate final verification 033
+  Scenario Outline: Settled candidate final verification 033
+    Given a confirmed-flaky admission has one committed exact transaction and remains unresolved
+    When <checkpoint_result> occurs during explicitly requested master integration
+    Then the terminal result is <terminal_result>
+    And the immutable feature failure and diagnostic history remain auditable
+
+    Examples:
+      | checkpoint_result                                                                                                         | terminal_result                                                                    |
+      | the governed task or validated current successor passes in the fresh canonical all-20 properties and package checkpoint   | resolve the obligation with that exact terminal evidence                           |
+      | the same failure reproduces, a changed failure occurs, identity is stale, or governed coverage is absent                   | block final-ready recording and retain the unresolved incident for causal repair   |

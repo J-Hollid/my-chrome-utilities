@@ -2576,3 +2576,50 @@ Feature: Modular verification packs
     And a new task failure records its normal immutable incident and prevents review-ready recording
     And the original incident remains unresolved without a terminal-verification-deferred disposition
     And another attempt requires a newly valid exact-candidate state rather than an unchanged evidence retry
+
+  # Modular verification packs 184
+  Scenario: Modular verification packs 184
+    Given an ordinary review-evidence candidate has an unresolved incident whose one exact governed diagnostic retry passed and is classified confirmed-flaky
+    And its canonical owned-pack plan selects the unchanged governed task or one validated conserved successor
+    When the existing property-enabled prepare-evidence command starts for that candidate and task
+    Then the runner automatically admits the confirmed-flaky incident into one fresh complete canonical owned-pack run
+    And no causal repair, new admission flag, pack widening, all-pack selector, or source-receipt foresight is required
+    And the diagnostic pass remains classification proof rather than review evidence
+    And the runner reports every admitted incident and selected coverage before executing a task
+
+  # Modular verification packs 185
+  Scenario Outline: Modular verification packs 185
+    Given an ordinary review-evidence candidate has <diagnostic_state>
+    And its canonical owned-pack plan has <coverage_state>
+    When confirmed-flaky admission is evaluated
+    Then the admission result is <admission_result>
+    And a blocked result executes no verification task and creates no review-ready evidence or incident disposition
+
+    Examples:
+      | diagnostic_state                                                        | coverage_state                                     | admission_result                                    |
+      | one exact fresh retry classified confirmed-flaky for the current identity | its unchanged governed task is selected            | admit the incident through its governed task        |
+      | one exact fresh retry classified confirmed-flaky for a conserved rebase   | its unique conserved current successor is selected | admit the incident through that validated successor |
+      | one exact fresh retry classified confirmed-flaky                          | no governed task or successor is selected          | block as confirmed-flaky-coverage-missing           |
+      | a claimed, unclassified, reproduced, changed, or contract-failing retry   | a related task is selected                         | block as diagnostic-classification-ineligible       |
+      | a stale, missing, multiply used, or identity-mismatched retry or receipt   | a related task is selected                         | block as diagnostic-identity-mismatch               |
+      | one eligible causal repair instead of a confirmed-flaky diagnostic         | its repaired regression is selected                | use the unchanged eligible-repair admission route   |
+
+  # Modular verification packs 186
+  Scenario: Modular verification packs 186
+    Given one fresh exact owned-pack review run admits one or more confirmed-flaky incidents
+    When its immutable receipt is finalized
+    Then confirmedFlakyAdmissions version 1 records the evidence task, base, candidate commit and tree, change-set digest, and plan digest
+    And its entries are sorted by incident id and record each incident id, failure digest, causal key, retry identity, retry receipt digest, classification digest, selected task identity, governed task digest, and coverage kind
+    And successor coverage also records its destination task digest and conservation digest
+    And the ordinary receipt still binds the locked toolchain, artifact, environment, deadlines, canonical plan, fresh task results, and package result
+    And every selected admission task or successor has fresh passing provenance in that same receipt
+
+  # Modular verification packs 187
+  Scenario: Modular verification packs 187
+    Given a confirmed-flaky incident is admitted for an exact candidate and canonical plan
+    When its candidate, tree, lineage, task, retry, diagnostic receipt, succession, registry, plan, toolchain, artifact, environment, deadline, or package identity changes before evidence recording
+    Then admission is revalidated and blocks as stale rather than being carried to the changed identity
+    And a resume receipt cannot supply reused diagnostic or task results to the admitted run
+    And a new task failure records its normal immutable incident and prevents review-ready recording
+    And the confirmed-flaky incident remains unresolved without a terminal-verification-deferred disposition
+    And no feature-mode all-20 run is authorized
