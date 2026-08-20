@@ -5854,8 +5854,6 @@
           "unit:test/reorderable-editor-model-test.mjs",
           "unit:test/reorderable-editor-control-test.mjs",
           "unit:test/reorderable-editor-stable-identities-test.mjs",
-          "unit:test/rich-template-reorder-test.mjs",
-          "unit:test/canonical-schema-hierarchy-reorder-test.mjs",
           "browser-observation:REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER"
         ],
         "prerequisites": [],

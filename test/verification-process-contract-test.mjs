@@ -4038,6 +4038,7 @@ console.log("repairTmp=" + process.env.TMPDIR);
         "property:test/stylesheet-declarations-property-test.mjs",
         "browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
         "browser-observation:SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
+        "browser-observation:REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER",
         `acceptance-parse:${vtd014ApprovedVtd015Feature}`,
         `acceptance-generate:${vtd014ApprovedVtd015Feature}`,
         `acceptance-parse:${vtd014ApprovedVtd017Feature}`,
@@ -5666,11 +5667,13 @@ const approvedDocumentationTemplateTaskKeys = new Set(documentationTemplateFeatu
     `acceptance-parse:${feature}`,
     `acceptance-generate:${feature}`,
   ]));
-const approvedCompactReorderableEditorTaskKeys = new Set(compactReorderableEditorFeatures
-  .flatMap((feature) => [
+const approvedCompactReorderableEditorTaskKeys = new Set([
+  ...compactReorderableEditorFeatures.flatMap((feature) => [
     `acceptance-parse:${feature}`,
     `acceptance-generate:${feature}`,
-  ]));
+  ]),
+  "browser-observation:REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER",
+]);
 const approvedStyleSmokeTaskKeys = new Set([
   "browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
   "browser-observation:SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
@@ -6607,6 +6610,8 @@ const shellBoundaryCases = {
     "property_set_flow_sections", "shell"],
   "src/reorderable-editor/model.ts":["schemas", "defects", "flow_export", "layered_schema",
     "property_set_flow_sections", "shell"],
+  "src/reorderable-editor/stable-identities.ts":["schemas", "defects", "flow_export", "layered_schema",
+    "property_set_flow_sections", "shell"],
   "src/active-page-observation.ts":["capture", "event-library", "project_event_transport", "schemas",
     "defects", "replay", "live_flow_testing", "project_assurance_severity", "guided_test_cases", "shell"],
   "src/side-panel-action-hierarchy.ts":["event-library", "project_event_transport", "schemas",
@@ -6620,7 +6625,7 @@ for (const [changedPath, expectedPackIds] of Object.entries(shellBoundaryCases))
 }
 const shellSourcePaths = helperValidationInventory.source
   .filter((sourcePath) => verificationOwner(packs, sourcePath) === "shell");
-assert.equal(shellSourcePaths.length, 20,
+assert.equal(shellSourcePaths.length, 21,
   "every Shell-owned TypeScript file participates in one exact boundary");
 for (const platformPath of shellSourcePaths.filter((sourcePath) => !(sourcePath in shellBoundaryCases))) {
   assert.deepEqual(planVerification(packs, {changedPaths:[platformPath]}).packIds,
@@ -6636,7 +6641,7 @@ assert.deepEqual(localShellPlan.unitTasks.map(({ target }) => target), shellPack
 assert.deepEqual(localShellPlan.propertyTasks.map(({ target }) => target), shellPack.property,
   "local Shell property tasks conserve the declared Shell property leaves in canonical order");
 assert.equal(localShellPlan.browserTasks.length, 3);
-assert.equal(localShellPlan.observationTasks.length, 1);
+assert.equal(localShellPlan.observationTasks.length, 2);
 assert.equal(localShellPlan.parserTasks.length, localShellPlan.features.length);
 assert.equal(localShellPlan.generatorTasks.length, localShellPlan.features.length);
 assert.equal(localShellPlan.checkpointTasks.length, 3);
@@ -6798,13 +6803,19 @@ assert.equal(new Set(shellContainmentTargets.map(({ sessionBatch }) => sessionBa
 assert.ok(shellContainmentTargets.every(({ sessionBatch }) => sessionBatch),
   "the real registry does not leave compatible containment targets unbatched");
 assert.deepEqual(shellBrowserBatch.browserAdapterPerformance, [{
+  path:"test/browser-packs/reorderable-editor-controls.mjs",
+  singleTargetP90Milliseconds:15000,
+  maximumSingleTargetP90Milliseconds:30000,
+  targetIds:["REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER"],
+  sessionBatch:"reorderable-editor-controls",
+},{
   path:"test/browser-packs/side-panel-shell.mjs",
   singleTargetP90Milliseconds:18000,
   maximumSingleTargetP90Milliseconds:10000,
   targetIds:["SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER",
     "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER"],
   sessionBatch:"shell-containment",
-}], "the slow shared program declares independently selectable batched targets");
+}], "the Shell browser programs declare independently selectable batched targets");
 assert.match(componentLayoutBrowserSource, /SWARMFORGE_BROWSER_TARGET_IDS/u,
   "the shared browser program consumes logical target identities");
 assert.match(componentLayoutBrowserSource, /SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS/u,
@@ -7536,7 +7547,7 @@ assert.deepEqual({tasks:exactLayeredPlan.tasks.length,unit:exactLayeredPlan.unit
   property:exactLayeredPlan.propertyTasks.length,observations:exactLayeredPlan.observationTasks.length,
   parses:exactLayeredPlan.parserTasks.length,generators:exactLayeredPlan.generatorTasks.length,
   sessions:exactLayeredPlan.sessionTasks.length},
-{tasks:52,unit:19,property:13,observations:4,parses:7,generators:7,sessions:1});
+{tasks:53,unit:20,property:13,observations:4,parses:7,generators:7,sessions:1});
 assert.deepEqual(terminalIdentities(exactLayeredPlan),expectedTerminalIdentities(baseExactLayeredPlan),
   "VTD-005 changes routing without changing exact owner task identities");
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,
@@ -9077,6 +9088,7 @@ const acceptedPostCalibrationBrowserTargets = [...new Set(packs.flatMap((pack) =
 assert.deepEqual(acceptedPostCalibrationBrowserTargets, [
   "EVENT_LIBRARY_RENDERED_SMOKE_TARGET",
   "FLOW_STYLESHEET_EXTRACTION_TARGET",
+  "REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER",
   "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
   "STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
 ], "only the exact approved post-calibration browser targets defer durable timing evidence");
