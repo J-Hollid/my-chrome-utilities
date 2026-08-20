@@ -3705,16 +3705,17 @@ console.log("repairTmp=" + process.env.TMPDIR);
   const acceptedRegisteredTaskKeys = registeredTaskKeys(acceptedBasePacks);
   const postBaseAddedRegisteredTaskKeys = new Set([...registeredTaskKeys(timeoutPackRegistry)]
     .filter((key) => !acceptedRegisteredTaskKeys.has(key)));
-  const approvedStyleSmokeTargetIds = new Set([
+  const approvedPostBaselineBrowserTargetIds = new Set([
     "STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
     "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
     "FLOW_STYLESHEET_EXTRACTION_TARGET",
+    "REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER",
   ]);
   const packContract = (packs) => packs.filter(({ id }) => allPackIds.includes(id))
     .map(({ id, dependencies, browserObservations,
       checkpointCommands }) => ({ id, dependencies,
       browserObservations:(browserObservations ?? []).filter(({ id: targetId }) =>
-        !approvedStyleSmokeTargetIds.has(targetId)), checkpointCommands }));
+        !approvedPostBaselineBrowserTargetIds.has(targetId)), checkpointCommands }));
   const currentCalibration = JSON.parse(await readFile(
     new URL("../verification/performance-calibration.json", import.meta.url), "utf8"));
   const acceptedBaseCalibration = JSON.parse(await new Promise((resolve, reject) => execFile("git",
@@ -4067,6 +4068,9 @@ console.log("repairTmp=" + process.env.TMPDIR);
   assert.equal(vtd014Evidence.conservation.currentTaskDigest,
     vtd014Evidence.conservation.acceptedBaseTaskDigest,
     "VTD-014 conservation excludes registry-approved post-baseline tasks");
+  assert.equal(vtd014Evidence.conservation.currentPackContractDigest,
+    vtd014Evidence.conservation.acceptedBasePackContractDigest,
+    "VTD-014 conservation excludes registry-approved post-baseline browser targets");
 } finally {
   await rm(incidentFixtureRoot, { recursive:true, force:true });
 }
