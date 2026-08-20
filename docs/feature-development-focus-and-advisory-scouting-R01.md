@@ -10,7 +10,7 @@ Prepared: 2026-08-14
 Make the first development loop cheap without turning verification tuning into a
 new program. A feature begins with only the checks that directly observe the
 behavior under construction, expands once to its bounded presumed impact for QA
-sign-off, and leaves the complete 20-pack checkpoint to explicit master
+sign-off, and leaves the complete all-runnable-pack checkpoint to explicit master
 integration.
 
 Development focus and QA impact remain documentation. The later user-approved
@@ -50,10 +50,10 @@ the evidence follows that set without waiting for another user decision. An
 underdeclared evidence invocation may stop before launching tasks, but that is a
 cheap correction signal: rerun once with every pack named by the canonical plan
 and record the forecast variance. It is not an implementation blocker or
-authority conflict. If exact planning selects all 20 packs,
+authority conflict. If exact planning selects every runnable pack,
 ownership-readiness classification decides whether the feature is bounded,
 needs a standing-authorized preparation stage, or requires user direction. No
-feature role runs the all-20 checkpoint merely to gain confidence.
+feature role runs the all-runnable-pack checkpoint merely to gain confidence.
 
 The same rule applies to task scope inside selected packs. A wider exact task
 plan than forecast is recorded and proceeds; it is not a new product scope or a
@@ -80,9 +80,11 @@ limited to canonical ownership readiness; it does not reactivate routine
 RepoWise scouting or authorize unrelated verification optimization.
 
 The later user-approved granularity ratchet makes this coverage ratchet
-executable within packs. It refines only a boundary encountered by actual work,
-keeps the 20 top-level packs stable, and preserves each exact-pack and terminal
-task closure.
+executable within packs. It refines only a boundary encountered by actual work
+and preserves each exact-pack and terminal task closure. The subsequently
+approved taxonomy-evolution contract allows a proved independent boundary to be
+promoted through a separate conserved migration; it treats the runnable pack
+count as registry-derived rather than fixed.
 
 ## Advisory RepoWise scouting pilot
 

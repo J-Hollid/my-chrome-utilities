@@ -39,14 +39,14 @@ Feature: Settled candidate final verification
 
     Examples:
       | later_change                                                        | evidence_effect                         | required_action                                      |
-      | production, test, build, registry, runner, or workflow input changes | final evidence is invalid               | settle the changed tree and run all 20 packs freshly |
+      | production, test, build, registry, runner, or workflow input changes | final evidence is invalid               | settle the changed tree and run all runnable packs freshly |
       | documentation-only recording preserves every bound identity          | final product evidence remains eligible | promote or integrate without another product run     |
 
   # Settled candidate final verification 004
   Scenario: Settled candidate final verification 004
     Given one task in the fresh final run fails
     When the exact cause is recorded, repaired, and proved with its smallest causal regression
-    Then the changed candidate runs all 20 packs with properties and the package check freshly
+    Then the changed candidate runs all runnable packs from its exact registry with properties and the package check freshly
     And the failed result remains recorded
     And no retry, lower-concurrency run, carried passing leaf, or unrelated receipt can turn the failure green
 
@@ -101,7 +101,7 @@ Feature: Settled candidate final verification
     Given the user explicitly requests master integration and QA contains one or more QA-ready tasks after master
     When the specifier freezes the exact QA head as a release candidate based on current master
     Then the architect starts a clean release lineage at that exact candidate
-    And one fresh canonical run executes all 20 packs with properties and the package check
+    And one fresh canonical run executes all runnable packs from the exact registry with properties and the package check
     And its durable evidence binds the master base, release task, candidate tree, complete plan, artifact, toolchain, receipt, and timestamps
     And only that passing sealed tree may advance master
     And QA and master finish on the same verified commit
@@ -127,7 +127,7 @@ Feature: Settled candidate final verification
     Examples:
       | approved_scope | candidate_change                                  | planned_scope         | authorization_result                                                                                              |
       | flow_graph     | only the approved Flow product and evidence paths | flow_graph            | the exact focused plan is authorized once                                                                         |
-      | flow_graph     | an incidental shared verification-runner repair   | all 20 runnable packs | execution stops for a user choice to restore product scope or approve and integrate a standalone infrastructure slice |
+      | flow_graph     | an incidental shared verification-runner repair   | all runnable packs | execution stops for a user choice to restore product scope or approve and integrate a standalone infrastructure slice |
 
   # Settled candidate final verification 012
   Scenario: Settled candidate final verification 012
@@ -149,7 +149,7 @@ Feature: Settled candidate final verification
     And an unrepaired incident, failing regression, stale focused receipt, failing package, or changed bound identity remains blocking
     And a later feature candidate is not required to audit, reverify, mutate, copy, or re-defer that incident merely because its changed paths overlap incident inputs or its disposition is recorded on an abandoned parallel candidate
     And feature-mode incident work resumes only when ordinary focused work reproduces its diagnosed failure boundary or the approved slice intentionally changes its repair contract
-    And only one passing master-integration all-20 checkpoint with properties and package proof resolves the deferred incident and supplies final evidence
+    And only one passing master-integration all-runnable-pack checkpoint with properties and package proof resolves the deferred incident and supplies final evidence
 
     Examples:
       | readiness         | integration_mode    | gate_result                                                                     |
@@ -178,10 +178,10 @@ Feature: Settled candidate final verification
   Scenario: Settled candidate final verification 015
     Given the frozen QA release candidate contains one or more recorded style terminal obligations
     When the architect performs the one user-requested master-integration checkpoint
-    Then all 20 runnable packs execute with properties and package proof on one sealed candidate
+    Then all runnable packs from the exact registry execute with properties and package proof on one sealed candidate
     And a passing final receipt consumes every matching style obligation and supplies final-ready evidence
     And a failure or behavior-bearing candidate change leaves the obligations active and requires the existing focused repair plus one fresh terminal checkpoint
-    And no additional all-20 run is required for styling merely because the same passing receipt covered other accumulated QA work
+    And no additional all-runnable-pack run is required for styling merely because the same passing receipt covered other accumulated QA work
 
   # Settled candidate final verification 016
   Scenario: Settled candidate final verification 016
@@ -195,7 +195,7 @@ Feature: Settled candidate final verification
     Given ownership readiness classifies an approved feature as <classification>
     When the feature workflow selects its next stage
     Then the workflow routes to <next_stage>
-    And no feature-mode all-20 run is authorized
+    And no feature-mode all-runnable-pack run is authorized
 
     Examples:
       | classification        | next_stage                                                                                          |
@@ -245,7 +245,7 @@ Feature: Settled candidate final verification
     When the feature workflow chooses whether to continue
     Then it performs <next_action>
     And no bounded forecast variance becomes a product-scope blocker
-    And no feature-mode all-20 run is authorized
+    And no feature-mode all-runnable-pack run is authorized
 
     Examples:
       | planning_result                                                     | next_action                                                                                          |
@@ -290,7 +290,7 @@ Feature: Settled candidate final verification
     And immediate refinement is judged more complex, risky, or time-consuming than the behavior it enables
     When the feature proceeds with canonical conservative verification
     Then one durable granularity observation records the exact mismatch and judgment without changing product scope
-    And the observation does not narrow the current evidence plan or authorize an all-20 feature run
+    And the observation does not narrow the current evidence plan or authorize an all-runnable-pack feature run
     And preparation may be reconsidered from measured later evidence without assuming a roadmap or predicted touch frequency
 
   # Settled candidate final verification 026
@@ -309,7 +309,7 @@ Feature: Settled candidate final verification
     Then only architect QA-ready refinements advance QA before release freeze
     And every unselected or unsuccessful observation retains an explicit portfolio disposition
     And the specifier freezes the resulting exact QA head once and sends that release candidate directly to the architect
-    And the architect runs the ordinary single all-20 checkpoint with properties and package proof on that sealed candidate
+    And the architect runs the ordinary single all-runnable-pack checkpoint with properties and package proof on that sealed candidate
 
   # Settled candidate final verification 028
   Scenario: Settled candidate final verification 028
@@ -343,8 +343,8 @@ Feature: Settled candidate final verification
     When review-ready and QA-ready handoffs validate that candidate
     Then both routes require the matching review-ready evidence, transaction id, and terminal-verification-deferred dispositions
     And they remain focused claims that permit only the next review or QA fast-forward
-    And no coder, refactorer, or feature-mode architect can request an all-20 fallback through admission
-    And the incident is resolved only by the passing canonical all-20 properties and package checkpoint during explicitly requested master integration
+    And no coder, refactorer, or feature-mode architect can request an all-runnable-pack fallback through admission
+    And the incident is resolved only by the passing canonical all-runnable-pack properties and package checkpoint during explicitly requested master integration
 
   # Settled candidate final verification 031
   Scenario: Settled candidate final verification 031
@@ -381,5 +381,5 @@ Feature: Settled candidate final verification
 
     Examples:
       | checkpoint_result                                                                                                         | terminal_result                                                                    |
-      | the governed task or validated current successor passes in the fresh canonical all-20 properties and package checkpoint   | resolve the obligation with that exact terminal evidence                           |
+      | the governed task or validated current successor passes in the fresh canonical all-runnable-pack properties and package checkpoint | resolve the obligation with that exact terminal evidence                    |
       | the same failure reproduces, a changed failure occurs, identity is stale, or governed coverage is absent                   | block final-ready recording and retain the unresolved incident for causal repair   |

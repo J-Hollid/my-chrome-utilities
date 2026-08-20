@@ -12,9 +12,12 @@ Prepared: 2026-08-17
 
 Refine a selected verification pack only when real feature work proves that its
 internal task boundary is materially broader than the behavior being changed.
-Preserve each of the 20 packs as a stable QA capability, preserve every existing
-assertion and exact-pack task, and let later features select a smaller declared
-slice with its proven consumers.
+Preserve every existing assertion and exact-pack task while letting later
+features select a smaller declared slice with its proven consumers. Under the
+user-approved taxonomy evolution in
+`docs/qa-verification-pack-taxonomy-evolution-R01.md`, the current twenty-pack
+count is derived rather than fixed, and a separately reviewed topology migration
+may promote a proved independent boundary without weakening evidence.
 
 This is the within-pack continuation of
 `docs/qa-verification-ownership-readiness-R01.md`. Ownership readiness determines
@@ -92,10 +95,12 @@ A verification slice is subordinate to exactly one existing pack and declares:
 
 Slices are additive. The union of a pack's slices and conservative remainder
 must equal the pack's former exact task closure. An exact-pack invocation still
-executes that complete closure. Terminal master integration still executes all
-20 complete packs with properties and package proof. A slice cannot create a new
-top-level pack, hide an existing task, duplicate one logical observation, remove
-a dependency, or make an assertion optional.
+executes that complete closure. Terminal master integration executes every
+runnable pack in the exact candidate registry with properties and package proof.
+A slice declaration cannot silently create a new top-level pack, hide an
+existing task, duplicate one logical observation, remove a dependency, or make
+an assertion optional. A separate reviewed topology migration may promote a
+proved independent slice under the taxonomy-evolution conservation contract.
 
 A changed path with a valid slice selects that slice, its prerequisites, and its
 declared consumers. A new or unclassified path with a known parent owner selects

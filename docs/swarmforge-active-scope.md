@@ -21,7 +21,8 @@ The settled-candidate verification workflow is integrated at
 |---|---|---|
 | QA-branch release pilot | Active; routine RepoWise scouting stopped after Trial 4 by user decision on 2026-08-15, with optional current-index investigation retained for unfamiliar code or known hotspots | `docs/qa-branch-release-pilot-R01.md` controls feature integration into `qa`; `docs/feature-development-focus-and-advisory-scouting-R01.md` controls the lightweight scoping convention and completed Trial 4 decision. |
 | QA verification ownership readiness | QA-integrated through durable-runtime staging disposition repair `06222ff00f` | Preserve causal `granularity-assessment-required` routing, reviewed seam-or-parent-fallback dispositions, and autonomous product resumption without an all-20 feature run. |
-| QA verification granularity ratchet | Judgment-based deferral, append-only observations, explicit pre-promotion portfolio intake, and fail-closed freeze enforcement are QA-integrated at `0b4f8b4a9d` | Apply structured judgment to real bounded coarse findings, retain conservative evidence for deferrals, and review every observation at the next user-requested master promotion; preserve mandatory all-pack preparation and one final all-20 gate. |
+| QA verification granularity ratchet | Judgment-based deferral, append-only observations, explicit pre-promotion portfolio intake, and fail-closed freeze enforcement are QA-integrated at `0b4f8b4a9d` | Apply structured judgment to real bounded coarse findings, retain conservative evidence for deferrals, and review every observation at the next user-requested master promotion; preserve mandatory all-pack preparation and one final all-runnable-pack gate. |
+| QA verification pack taxonomy evolution | User-approved specification decision recorded on 2026-08-20; implementation not yet handed off | `docs/qa-verification-pack-taxonomy-evolution-R01.md` supersedes fixed-cardinality policy: derive the count from the exact runnable registry, preserve one final all-runnable-pack gate, and assess `schemas`, `capture`, `selective_profile_inheritance`, and `project_assurance_severity` without pre-authorizing a split. |
 | SwarmForge outcome-bounded autonomy, priority unblockers, and stacked campsite ratchet | Core autonomy and campsite mechanics QA-integrated at `8f82a6a66f`; judgment and portfolio lifecycle QA-integrated at `0b4f8b4a9d` | Preserve semantic outcome boundaries, immutable authority validation, nested queue recovery, conserved automatic resumption, and promotion-scoped fail-closed observation handling without reopening product behavior. |
 | QA-pilot verification latency correction | Closed after Slice 2 at `e32f9f7c10` by user decision on 2026-08-13 | No coder handoff. Measure the next three ordinary QA product cycles; Slices 3 and 4 remain evidence-triggered backlog items. |
 | QA style verification and Flow modularity | Complete on QA; stage-aware style planning is integrated at `d75132daef`, Flow CSS extraction at `ef440b3018`, corrections through `66dcdfd5d6`, and port snap at `89fee7df48` | Preserve the settled scorecard; do not reopen the abandoned mixed lineage or run all 20 before an explicit master-integration request. |
@@ -150,12 +151,14 @@ deliveries.
 
 Safety remains non-negotiable. Feature tasks use focused checks while changing and
 may integrate into `qa` only through an exact architect `qa-ready` handoff. The
-all-20 gate does not run per QA-integrated task. When the user explicitly requests
-master integration, freeze the cumulative QA head; that settled release candidate
-runs all 20 packs with properties and the package check. If it fails, record and
-repair or revert the exact cause, prove the change with focused evidence, and rerun
-all 20 packs on the changed candidate. Only the exact final-ready tree may advance
-`master`.
+all-runnable-pack gate does not run per QA-integrated task. When the user explicitly
+requests master integration, freeze the cumulative QA head; that settled release
+candidate runs every runnable pack from its exact registry with properties and the
+package check. If it fails, record and repair or revert the exact cause, prove the
+change with focused evidence, and rerun every runnable pack on the changed
+candidate. Only the exact final-ready tree may advance `master`. Historical
+`all-20` wording and receipts describe the current twenty-pack registry and do not
+freeze later registry cardinality.
 
 The integrated final-gate speed work uses one coordinator and one deduplicated
 plan, not 20 competing pack runners. VTD-017 removed the exclusive artifact wait
@@ -306,6 +309,7 @@ Read only the program documents relevant to the selected task.
 | QA-branch release pilot | `docs/qa-branch-release-pilot-R01.md` |
 | QA verification ownership readiness | `docs/qa-verification-ownership-readiness-R01.md` |
 | QA verification granularity ratchet | `docs/qa-verification-granularity-ratchet-R01.md` |
+| QA verification pack taxonomy evolution | `docs/qa-verification-pack-taxonomy-evolution-R01.md` |
 | Feature development focus and advisory scouting | `docs/feature-development-focus-and-advisory-scouting-R01.md` |
 | QA-pilot verification latency correction | `docs/qa-pilot-verification-latency-correction-R01.md` |
 | QA style verification and Flow modularity | `docs/qa-style-verification-and-flow-modularity-program-R01.md` |
@@ -571,6 +575,7 @@ historical rename/delete handling.
 | QA release-pilot workflow changes | `--pack shell --focused-task unit:test/settled-final-verification-workflow-test.mjs --focused-task unit:test/verification-process-contract-test.mjs` |
 | Verification ownership readiness bootstrap | `--pack shell --pack flow_export --pack project_management --pack durable_project_repository`; include the two focused workflow/process-contract unit targets and package proof; one bounded additional exact owner may be recorded as forecast variance, but all 20 is forbidden |
 | Verification granularity ratchet | `--pack shell --pack flow_export --pack project_management --pack durable_project_repository`; include direct slice-planner, conservation, workflow, and process-contract unit targets with properties and package proof; one bounded exact consumer may be recorded as variance, but all 20 is forbidden |
+| Registry-derived verification packs | Start from `--pack shell` plus the exact modular-pack, throughput-reporting, reliability-closure, and process-contract targets selected by read-only intent; treat every runnable pack as a declared consumer and stop for independent ownership preparation if the plan is `coarse-boundary`. Preserve the current registry topology and never run the all-runnable-pack gate in feature mode. |
 | Documentation-template mapping repair | Start with `--pack shell --pack flow_export --pack project_management --pack durable_project_repository`; exact preparation ownership is authoritative and may conservatively include the known 13-pack shared-path boundary, with properties and package proof. Never run all 20. Record candidate-path replay, automatic variance routing, slice-or-fallback disposition, exact-pack conservation, and package proof. |
 | Outcome-bounded autonomy and stacked unblockers | Start with `--pack shell` and the exact `swarmforge-handoff-control` plus `swarmforge-stacked-ratchet` process slices. Read-only ownership intent is authoritative; aggregate new coarse paths once, apply bounded judgment, preserve deferred observations, and keep all-20 exclusive to the final master gate. |
 | Flow verification proof hardening | `--pack flow_graph` |

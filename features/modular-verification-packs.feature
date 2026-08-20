@@ -2493,10 +2493,10 @@ Feature: Modular verification packs
     Given a focused QA candidate used an active subordinate verification slice
     And the user-requested terminal checkpoint finds a causal failure outside that applicable slice
     When the selection miss is recorded
-    Then the failed release candidate follows the existing focused repair and fresh all-20 checkpoint rule
+    Then the failed release candidate follows the existing focused repair and fresh all-runnable-pack checkpoint rule
     And the implicated slice becomes ineligible for narrowing until an independently reviewed mapping repair reaches QA
     And later feature work uses the conservative parent-pack closure during that quarantine
-    And no separate all-20 calibration run, automatic assertion deletion, or undeclared narrowing is authorized
+    And no separate all-runnable-pack calibration run, automatic assertion deletion, or undeclared narrowing is authorized
 
   # Modular verification packs 177
   Scenario: Modular verification packs 177
@@ -2528,7 +2528,7 @@ Feature: Modular verification packs
     Then they preserve every product behavior, assertion, owner, consumer, exact-pack task, terminal obligation, and package input
     And each refinement receives focused review evidence and architect QA-ready integration before release freeze
     And an unsafe, expanding, or unproved refinement is not integrated and returns to an explicit carried disposition
-    And no all-20 checkpoint runs until the resulting QA head is frozen once for the ordinary master-integration gate
+    And no all-runnable-pack checkpoint runs until the resulting QA head is frozen once for the ordinary master-integration gate
 
   # Modular verification packs 180
   Scenario: Modular verification packs 180
@@ -2622,4 +2622,63 @@ Feature: Modular verification packs
     And a resume receipt cannot supply reused diagnostic or task results to the admitted run
     And a new task failure records its normal immutable incident and prevents review-ready recording
     And the confirmed-flaky incident remains unresolved without a terminal-verification-deferred disposition
-    And no feature-mode all-20 run is authorized
+    And no feature-mode all-runnable-pack run is authorized
+
+  # Modular verification packs 188
+  Scenario Outline: Modular verification packs 188
+    Given the exact candidate registry has <registry_state>
+    When terminal pack scope is derived
+    Then the runnable set is <runnable_set>
+    And terminal verification includes that complete runnable set with properties and package proof
+    And no fixed numerical cardinality decides the result
+
+    Examples:
+      | registry_state                                                         | runnable_set                                      |
+      | twenty runnable entries and one empty compatibility identity           | the twenty entries with runnable tasks            |
+      | one additional valid independently runnable pack                       | the former runnable entries plus the new pack     |
+      | one former pack replaced by two conserved independently runnable packs | the retained entries plus both replacement packs |
+
+  # Modular verification packs 189
+  Scenario Outline: Modular verification packs 189
+    Given a possible pack boundary has <boundary_evidence>
+    When topology judgment is recorded
+    Then the boundary decision is <boundary_decision>
+    And the cardinality effect is <cardinality_effect>
+
+    Examples:
+      | boundary_evidence                                                                                                      | boundary_decision                                      | cardinality_effect                         |
+      | independent behavior, exact ownership, stable execution, repeated unrelated parent work, and complete conservation    | eligible for one separately reviewed pack promotion    | may change after the migration is approved |
+      | an internal seam whose outcome depends on its parent or declared consumers                                             | retain as a subordinate verification slice             | unchanged                                  |
+      | only a large task count, elapsed time, source count, forecast, or preferred pack count                                 | retain the current parent and record diagnostic evidence | unchanged                                 |
+      | an apparently independent boundary whose former closure cannot be conserved exactly                                   | retain the conservative parent fallback                | unchanged                                  |
+
+  # Modular verification packs 190
+  Scenario: Modular verification packs 190
+    Given one approved topology migration changes the runnable pack set
+    When current and compatible historical ownership are planned
+    Then every former source path, task, prerequisite, assertion, consumer, reliability boundary, observation, performance obligation, and package input is conserved exactly once
+    And current planning uses the new ownership while historical changed paths use the union of old and new closures
+    And exact-pack selectors, calibration, reporting, receipts, reliability closure, and terminal planning bind the same exact registry identity
+    And an added runnable pack becomes terminally required without changing another numerical constant
+
+  # Modular verification packs 191
+  Scenario Outline: Modular verification packs 191
+    Given a pack definition has <definition_state>
+    When registry validity and runnable cardinality are evaluated
+    Then its classification is <pack_classification>
+    And its terminal treatment is <terminal_treatment>
+
+    Examples:
+      | definition_state                                                                  | pack_classification                                  | terminal_treatment                              |
+      | no owned source, runnable task, or independently observed behavior                 | non-runnable compatibility metadata                  | excluded from the runnable set                  |
+      | runnable behavior evidence and an explicit verification-only production owner     | valid verification-only behavior pack                | included with every registered task             |
+      | runnable behavior evidence but no source owner or verification-only classification | invalid ambiguous pack                               | block before planning                           |
+
+  # Modular verification packs 192
+  Scenario: Modular verification packs 192
+    Given registry-derived cardinality mechanics affect terminal closure, calibration, reporting, and evidence for every runnable pack
+    When read-only ownership intent is classified before implementation
+    Then every exact shared integration path and runnable-pack consumer is reported
+    And a coarse-boundary result stops coding for independently reviewed ownership preparation
+    And a bounded granularity result receives one durable seam-or-parent-fallback disposition
+    And no feature-mode all-runnable-pack run is authorized
