@@ -225,7 +225,7 @@ function refreshBrowserTargetRuntime() {
   : activeBrowserTargetEnvironment.SCHEMA_RENAMING_BROWSER_ADAPTER === "1" ? [720]
   : activeBrowserTargetEnvironment.SCHEMA_PROPERTY_FILTER_SORT_BROWSER_ADAPTER === "1" ? [720]
   : activeBrowserTargetEnvironment.SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER === "1" ? [320]
-  : activeBrowserTargetEnvironment.REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER === "1" ? [360, 1280, 320]
+  : activeBrowserTargetEnvironment.REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER === "1" ? [360, 520, 1280, 320]
     : activeBrowserTargetEnvironment.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || activeBrowserTargetEnvironment.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" ? [720]
       : [320, 360, 520, 720];
   schemaLibraryExportFixture = activeBrowserTargetEnvironment.SCHEMA_LIBRARY_EXPORT_FIXTURE ?? "2:4";

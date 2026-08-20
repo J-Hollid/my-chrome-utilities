@@ -43,10 +43,12 @@
 
 (def ^:private builder-widths
   {"360 CSS px" 360
-   "320 CSS px" 320})
+   "520 CSS px" 520
+   "1280 CSS px" 1280
+   "320 CSS px at 400 percent text zoom" 320})
 
 (defn- assert-action-rows! [example observations]
-  (support/assert! (= [360 1280 320] (mapv :width observations)) "The reproduction action rows were not verified at the approved responsive widths." {:observations observations})
+  (support/assert! (= [360 520 1280 320] (mapv :width observations)) "The reproduction action rows were not verified at the approved responsive widths." {:observations observations})
   (when-let [builder-width (:builder_width example)]
     (let [expected-width (get builder-widths builder-width)]
       (support/assert! expected-width "The reproduction builder example uses an unsupported width." {:example example})
