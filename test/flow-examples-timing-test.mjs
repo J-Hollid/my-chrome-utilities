@@ -606,6 +606,7 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     tallFixtureCompleteness=context.causalCategory==="other:flow-example-tall-fixture-completeness",
     runtime047LeafConservation=context.causalCategory==="other:flow-runtime047-evidence-leaf-conservation",
     detachedEvaluationSettlement=context.causalCategory==="other:Flow detached evaluation promise settlement",
+    modalDismissalDeadlineRepair=context.causalCategory==="other:fixed-attempt modal dismissal",
     fixture=targetSelectionRepair?{id:"flow-structured-target-selection-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{requestedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",
@@ -696,6 +697,12 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         input:{boundary:"Flow evaluate",devtoolsError:"Promise was collected",executeExactlyOnce:true},
         expectedPreRepairFailure:{returnsPromiseToDevtools:true,settlesByBoundedPolling:false},
         expectedRepairResult:{returnsPromiseToDevtools:false,settlesByBoundedPolling:true}}
+      :modalDismissalDeadlineRepair?{id:"layered-schema-modal-dismissal-deadline-v1",
+        causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+        input:{entryPoint:"test/support/layered-schema-targets.mjs",
+          operation:"dismiss any active modal before hierarchy reorder"},
+        expectedPreRepairFailure:{fixedAttemptBound:true,monotonicDeadline:false},
+        expectedRepairResult:{fixedAttemptBound:false,monotonicDeadline:true}}
       :{id:"flow-readiness-logical-budget-v1",
         causalCategory:"readiness or settling",diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
         input:{target:"FLOW_GRAPH_LEGACY_TARGET",logicalBudgetMilliseconds:120000,
@@ -770,6 +777,11 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
           settlesByBoundedPolling:/predicateDescription:"detached Flow evaluation settlement"/u
             .test(flowGraphAdapterSource)&&/globalThis\.__flowEvaluationStates/u
             .test(flowGraphAdapterSource)}
+      :modalDismissalDeadlineRepair
+        ?(()=>{const source=readFileSync("test/support/layered-schema-targets.mjs","utf8");
+          return{fixedAttemptBound:/for\(let layer=0;layer<4&&document\.querySelector\(':modal'\)/u.test(source),
+            monotonicDeadline:/modalDismissalDeadline=performance\.now\(\)\+1600;while\(document\.querySelector\(':modal'\)\)/u.test(source)&&
+              /performance\.now\(\)>=modalDismissalDeadline/u.test(source)};})()
       :{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
         usesLogicalRemainingBudget:/Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u
           .test(flowGraphAdapterSource)},
