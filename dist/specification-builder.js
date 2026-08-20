@@ -1851,7 +1851,7 @@ durableProjectRuntime.subscribe(({ library: incoming, active }) => {
     library = structuredClone(incoming);
     if (!active)
         return;
-    const focusedReorderItemId = document.activeElement instanceof HTMLElement ? document.activeElement.dataset.reorderItemId : undefined;
+    const focusedReorder = document.activeElement instanceof HTMLElement ? { itemId: document.activeElement.dataset.reorderItemId, focusKey: document.activeElement.dataset.reorderFocusKey } : undefined;
     state = { ...structuredClone(active.state), history: { undo: [], redo: [] } };
     lastCommittedState = structuredClone(state);
     canonicalRevision = active.draftSequence;
@@ -1872,8 +1872,8 @@ durableProjectRuntime.subscribe(({ library: incoming, active }) => {
         queueMicrotask(() => { const control = q(`#${controlId}`); (control.disabled ? document.querySelector("[data-profile-inheritance-card], #workspace-content h1") : control)?.focus({ preventScroll: true }); if (pendingHistoryFocus === controlId)
             pendingHistoryFocus = undefined; });
     }
-    if (focusedReorderItemId)
-        queueMicrotask(() => document.querySelector(`[data-reorder-item-id="${CSS.escape(focusedReorderItemId)}"]`)?.focus({ preventScroll: true }));
+    if (focusedReorder?.itemId)
+        queueMicrotask(() => document.querySelector(focusedReorder.focusKey ? `[data-reorder-focus-key="${CSS.escape(focusedReorder.focusKey)}"]` : `[data-reorder-item-id="${CSS.escape(focusedReorder.itemId)}"]`)?.focus({ preventScroll: true }));
     queueMicrotask(restorePendingLifecycleFocus);
     queueMicrotask(restorePendingWorkspaceFocus);
     q("#project-state").textContent = `Updated to the newer Saved Draft · Published revision ${publishedRevision}`;

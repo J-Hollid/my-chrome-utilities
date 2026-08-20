@@ -4,7 +4,7 @@ import { createProjectDocumentationSet } from "../data-layer-project-documentati
 import { documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled } from "./workspace-ui-elements.js";
 import { renderReorderControl } from "../reorderable-editor/control.js";
 import { reorderValues } from "../reorderable-editor/model.js";
-export function renderDocumentationContent(host, set, available, saveSet) {
+export function renderDocumentationContent(host, set, available, saveSet, focusScope = host) {
     const flowSearch = controlInput("flowSearch", "", "search"), profileSearch = controlInput("profileSearch", "", "search");
     flowSearch.setAttribute("aria-label", "Search Flows");
     profileSearch.setAttribute("aria-label", "Search Site Profiles");
@@ -41,7 +41,7 @@ export function renderDocumentationContent(host, set, available, saveSet) {
     const ordered = document.createElement("ol"), contentSections = set.sections.filter(({ kind }) => kind === "overview" || kind === "flow" || kind === "profile");
     ordered.setAttribute("aria-label", "Documentation Set content choices");
     for (const section of contentSections) {
-        const item = document.createElement("li"), include = document.createElement("input"), reorder = renderReorderControl({ itemId: section.id, itemLabel: section.name, completeOrder: contentSections.map(({ id, name }) => ({ id, label: name })), dropTarget: item, orderedContainer: ordered, onMove: ({ itemId, toIndex }) => { const moved = reorderValues(contentSections, itemId, toIndex, value => value.id); let index = 0; const sections = set.sections.map(candidate => candidate.kind === "overview" || candidate.kind === "flow" || candidate.kind === "profile" ? moved[index++] : candidate); saveSet(createProjectDocumentationSet({ ...set, sections }), `Reorder content choice ${section.name}`); return true; } });
+        const item = document.createElement("li"), include = document.createElement("input"), reorder = renderReorderControl({ itemId: section.id, itemLabel: section.name, completeOrder: contentSections.map(({ id, name }) => ({ id, label: name })), dropTarget: item, orderedContainer: ordered, focusScope, focusScopeId: `documentation-content:${set.id}`, onMove: ({ itemId, toIndex }) => { const moved = reorderValues(contentSections, itemId, toIndex, value => value.id); let index = 0; const sections = set.sections.map(candidate => candidate.kind === "overview" || candidate.kind === "flow" || candidate.kind === "profile" ? moved[index++] : candidate); saveSet(createProjectDocumentationSet({ ...set, sections }), `Reorder content choice ${section.name}`); return true; } });
         include.type = "checkbox";
         include.checked = section.kind === "overview" ? section.selected : true;
         include.addEventListener("change", () => { const sections = section.kind === "overview" ? set.sections.map(candidate => candidate.id === section.id ? { ...candidate, selected: include.checked } : candidate) : set.sections.filter(({ id }) => id !== section.id); saveSet(createProjectDocumentationSet({ ...set, sections }), `${include.checked ? "Select" : "Remove"} ${section.name}`); });

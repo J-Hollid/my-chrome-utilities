@@ -5,6 +5,7 @@ const liveRegions = new WeakMap();
 const undoRegions = new WeakMap();
 const localDraftMoves = new WeakMap();
 const triggerScopes = new WeakMap();
+const focusKey = (scopeId, itemId) => `${encodeURIComponent(scopeId)}|${encodeURIComponent(itemId)}`;
 const clearDropIndicator = (target) => {
     target.classList.remove("reorder-drop-before", "reorder-drop-after");
     styles(target, { borderBlockStart: "", borderBlockEnd: "" });
@@ -36,11 +37,25 @@ function liveRegion(doc) {
     return output;
 }
 const stableTrigger = (doc, itemId, fallback) => {
-    const selector = `[data-reorder-item-id="${itemId.replaceAll('"', '\\"')}"]`;
-    const scoped = triggerScopes.get(fallback)?.querySelector?.(selector);
+    const origin = triggerScopes.get(fallback), itemSelector = `[data-reorder-item-id="${itemId.replaceAll('"', '\\"')}"]`, selector = origin?.id ? `[data-reorder-focus-key="${focusKey(origin.id, itemId)}"]` : itemSelector;
+    const scoped = origin?.root.querySelector?.(selector);
     return scoped?.isConnected ? scoped : doc.querySelector?.(selector) ?? fallback;
 };
 function focusTrigger(doc, itemId, fallback) {
+    const origin = triggerScopes.get(fallback);
+    if (origin?.id && typeof MutationObserver !== "undefined") {
+        const observer = new MutationObserver(() => {
+            if (fallback.isConnected)
+                return;
+            const replacement = stableTrigger(doc, itemId, fallback);
+            if (replacement === fallback || !replacement.isConnected)
+                return;
+            observer.disconnect();
+            clearTimeout(expiry);
+            replacement.focus({ preventScroll: true });
+        }), expiry = setTimeout(() => observer.disconnect(), 1000);
+        observer.observe(doc.documentElement ?? origin.root, { childList: true, subtree: true });
+    }
     queueMicrotask(() => stableTrigger(doc, itemId, fallback).focus({ preventScroll: true }));
 }
 export function announceReorderCompletion(doc, completion) {
@@ -86,9 +101,14 @@ export function renderReorderControl(options) {
     trigger.className = "reorderable-editor-trigger";
     trigger.dataset.reorderTrigger = "true";
     trigger.dataset.reorderItemId = options.itemId;
+    if (options.focusScopeId) {
+        const key = focusKey(options.focusScopeId, options.itemId);
+        trigger.dataset.reorderFocusKey = key;
+        trigger.setAttribute("data-reorder-focus-key", key);
+    }
     if (options.localDraftUndo)
         localDraftMoves.set(trigger, options.onMove);
-    triggerScopes.set(trigger, options.focusScope ?? options.orderedContainer ?? options.dropTarget?.parentElement ?? options.dropTarget ?? doc);
+    triggerScopes.set(trigger, { root: options.focusScope ?? options.orderedContainer ?? options.dropTarget?.parentElement ?? options.dropTarget ?? doc, ...(options.focusScopeId ? { id: options.focusScopeId } : {}) });
     trigger.setAttribute("data-reorder-trigger", "true");
     trigger.setAttribute("data-reorder-item-id", options.itemId);
     trigger.setAttribute("aria-label", model.accessibleName);

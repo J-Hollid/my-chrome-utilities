@@ -24,6 +24,7 @@ export interface ReorderControlOptions<T extends ReorderableItem> {
   dropTarget?:HTMLElement;
   orderedContainer?:HTMLElement;
   focusScope?:ParentNode;
+  focusScopeId?:string;
   legalDestinationIds?:readonly string[];
   moveDestinations?:readonly ReorderDestination[];
   dragScopeId?:string;
@@ -48,7 +49,10 @@ let dragSession:DragSession|undefined;
 const liveRegions=new WeakMap<Document,HTMLOutputElement>();
 const undoRegions=new WeakMap<Document,HTMLElement>();
 const localDraftMoves=new WeakMap<HTMLButtonElement,(request:ReorderRequest)=>boolean>();
-const triggerScopes=new WeakMap<HTMLButtonElement,ParentNode>();
+interface TriggerScope {root:ParentNode;id?:string}
+const triggerScopes=new WeakMap<HTMLButtonElement,TriggerScope>();
+
+const focusKey=(scopeId:string,itemId:string):string=>`${encodeURIComponent(scopeId)}|${encodeURIComponent(itemId)}`;
 
 const clearDropIndicator=(target:HTMLElement):void=>{
   target.classList.remove("reorder-drop-before","reorder-drop-after");
@@ -74,12 +78,23 @@ function liveRegion(doc:Document):HTMLOutputElement {
 }
 
 const stableTrigger=(doc:Document,itemId:string,fallback:HTMLButtonElement):HTMLButtonElement=>{
-  const selector=`[data-reorder-item-id="${itemId.replaceAll('"','\\"')}"]`;
-  const scoped=triggerScopes.get(fallback)?.querySelector?.<HTMLButtonElement>(selector);
+  const origin=triggerScopes.get(fallback),itemSelector=`[data-reorder-item-id="${itemId.replaceAll('"','\\"')}"]`,
+    selector=origin?.id?`[data-reorder-focus-key="${focusKey(origin.id,itemId)}"]`:itemSelector;
+  const scoped=origin?.root.querySelector?.<HTMLButtonElement>(selector);
   return scoped?.isConnected?scoped:doc.querySelector?.<HTMLButtonElement>(selector)??fallback;
 };
 
 function focusTrigger(doc:Document,itemId:string,fallback:HTMLButtonElement):void {
+  const origin=triggerScopes.get(fallback);
+  if(origin?.id&&typeof MutationObserver!=="undefined"){
+    const observer=new MutationObserver(()=>{
+      if(fallback.isConnected)return;
+      const replacement=stableTrigger(doc,itemId,fallback);
+      if(replacement===fallback||!replacement.isConnected)return;
+      observer.disconnect();clearTimeout(expiry);replacement.focus({preventScroll:true});
+    }),expiry=setTimeout(()=>observer.disconnect(),1000);
+    observer.observe(doc.documentElement??origin.root as Node,{childList:true,subtree:true});
+  }
   queueMicrotask(()=>stableTrigger(doc,itemId,fallback).focus({preventScroll:true}));
 }
 
@@ -125,8 +140,9 @@ export function renderReorderControl<T extends ReorderableItem>(options:ReorderC
   const menuId=`reorder-menu-${++identity}`,dialogId=`reorder-dialog-${identity}`;
   wrapper.className="reorderable-editor-control";styles(wrapper,{display:"inline-flex",position:"relative",maxWidth:"100%"});
   trigger.className="reorderable-editor-trigger";trigger.dataset.reorderTrigger="true";trigger.dataset.reorderItemId=options.itemId;
+  if(options.focusScopeId){const key=focusKey(options.focusScopeId,options.itemId);trigger.dataset.reorderFocusKey=key;trigger.setAttribute("data-reorder-focus-key",key);}
   if(options.localDraftUndo)localDraftMoves.set(trigger,options.onMove);
-  triggerScopes.set(trigger,options.focusScope??options.orderedContainer??options.dropTarget?.parentElement??options.dropTarget??doc);
+  triggerScopes.set(trigger,{root:options.focusScope??options.orderedContainer??options.dropTarget?.parentElement??options.dropTarget??doc,...(options.focusScopeId?{id:options.focusScopeId}:{})});
   trigger.setAttribute("data-reorder-trigger","true");trigger.setAttribute("data-reorder-item-id",options.itemId);
   trigger.setAttribute("aria-label",model.accessibleName);trigger.setAttribute("aria-haspopup","menu");
   trigger.setAttribute("aria-expanded","false");trigger.setAttribute("aria-controls",menuId);

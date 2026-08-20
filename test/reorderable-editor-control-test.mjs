@@ -18,7 +18,7 @@ class FakeElement {
   }
   append(...children){for(const child of children){if(child instanceof FakeElement){child.remove();child.parent=this;}this.children.push(child);}}
   prepend(...children){for(const child of children){if(child instanceof FakeElement){child.remove();child.parent=this;}}this.children=[...children,...this.children];}
-  replaceChildren(...children){this.children=[];this.append(...children);}
+  replaceChildren(...children){for(const child of this.children)if(child instanceof FakeElement)child.parent=undefined;this.children=[];this.append(...children);}
   remove(){if(this.parent)this.parent.children=this.parent.children.filter(child=>child!==this);this.parent=undefined;}
   setAttribute(name,value){this.attributes.set(name,String(value));}
   getAttribute(name){return this.attributes.get(name)??null;}
@@ -151,6 +151,7 @@ scopeDocument.body.append(leftList,rightList);
 for(const [list,prefix] of [[leftList,"left"],[rightList,"right"]])for(const entry of dragOrder.slice(0,2)){
   const target=scopeDocument.createElement("li"),entryControl=renderReorderControl({
     itemId:entry.id,itemLabel:`${prefix} ${entry.label}`,completeOrder:dragOrder.slice(0,2),dropTarget:target,orderedContainer:list,
+    focusScopeId:prefix,
     onMove:(request)=>{crossMoves.push({prefix,request});return true;},
   });
   target.append(entryControl);list.append(target);
@@ -164,6 +165,19 @@ const rightTwo=rightList.children[1].querySelector("[data-reorder-trigger]");
 announceReorderCompletion(scopeDocument,{itemId:"two",itemLabel:"right Two",fromIndex:1,toIndex:0,fallbackTrigger:rightTwo});
 await new Promise(resolve=>queueMicrotask(resolve));
 assert.equal(scopeDocument.activeElement===rightTwo,true,"completion focus stays in the originating ordered container when identities overlap");
+const replacementLeft=scopeDocument.createElement("ol"),replacementRight=scopeDocument.createElement("ol");
+for(const [list,prefix] of [[replacementLeft,"left"],[replacementRight,"right"]])for(const entry of dragOrder.slice(0,2)){
+  const target=scopeDocument.createElement("li"),entryControl=renderReorderControl({
+    itemId:entry.id,itemLabel:`${prefix} ${entry.label}`,completeOrder:dragOrder.slice(0,2),dropTarget:target,orderedContainer:list,
+    focusScopeId:prefix,onMove:()=>true,
+  });
+  target.append(entryControl);list.append(target);
+}
+scopeDocument.body.replaceChildren(replacementLeft,replacementRight);
+announceReorderCompletion(scopeDocument,{itemId:"two",itemLabel:"right Two",fromIndex:1,toIndex:0,fallbackTrigger:rightTwo});
+await new Promise(resolve=>queueMicrotask(resolve));
+const replacementRightTwo=replacementRight.children[1].querySelector("[data-reorder-trigger]");
+assert.equal(scopeDocument.activeElement===replacementRightTwo,true,"completion focus stays in the originating list after both ordered containers are replaced");
 
 const undoDocument=new FakeDocument(),undoList=undoDocument.createElement("ol"),undoRow=undoDocument.createElement("li"),undoMoves=[];
 undoDocument.body.append(undoList);undoList.append(undoRow);
