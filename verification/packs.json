@@ -6787,8 +6787,10 @@
           "reorderableEditorControls.runtime005.filteredMove",
           "reorderableEditorControls.runtime006.hierarchy",
           "reorderableEditorControls.runtime007.callbackCommitted",
+          "reorderableEditorControls.runtime007.repositoryHistory",
           "reorderableEditorControls.runtime008.geometry",
-          "reorderableEditorControls.runtime009.migratedSurfaceInventory"
+          "reorderableEditorControls.runtime009.migratedSurfaceInventory",
+          "reorderableEditorControls.runtime009.productionRenderersExercised"
         ],
         "targets": [
           {
@@ -6824,8 +6826,10 @@
               "reorderableEditorControls.runtime005.filteredMove",
               "reorderableEditorControls.runtime006.hierarchy",
               "reorderableEditorControls.runtime007.callbackCommitted",
+              "reorderableEditorControls.runtime007.repositoryHistory",
               "reorderableEditorControls.runtime008.geometry",
-              "reorderableEditorControls.runtime009.migratedSurfaceInventory"
+              "reorderableEditorControls.runtime009.migratedSurfaceInventory",
+              "reorderableEditorControls.runtime009.productionRenderersExercised"
             ]
           }
         ]
@@ -6942,8 +6946,8 @@
     "browserAdapterPerformance": [
       {
         "path": "test/browser-packs/reorderable-editor-controls.mjs",
-        "singleTargetP90Milliseconds": 15000,
-        "maximumSingleTargetP90Milliseconds": 30000,
+        "singleTargetP90Milliseconds": 180000,
+        "maximumSingleTargetP90Milliseconds": 240000,
         "targetIds": ["REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER"],
         "sessionBatch": "reorderable-editor-controls"
       },

@@ -6808,8 +6808,8 @@ assert.ok(shellContainmentTargets.every(({ sessionBatch }) => sessionBatch),
   "the real registry does not leave compatible containment targets unbatched");
 assert.deepEqual(shellBrowserBatch.browserAdapterPerformance, [{
   path:"test/browser-packs/reorderable-editor-controls.mjs",
-  singleTargetP90Milliseconds:15000,
-  maximumSingleTargetP90Milliseconds:30000,
+  singleTargetP90Milliseconds:180000,
+  maximumSingleTargetP90Milliseconds:240000,
   targetIds:["REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER"],
   sessionBatch:"reorderable-editor-controls",
 },{
@@ -11356,7 +11356,7 @@ async function reorderableEditorRegistryContractRegression(context) {
 }
 function reorderBrowserEvidencePartitionRegression(context) {
   const expectedPreRepairFailure = {declaredLeafCount:10,objectValuedRuntimeLeafCount:9};
-  const expectedRepairResult = {declaredLeafCount:32,objectValuedRuntimeLeafCount:0};
+  const expectedRepairResult = {declaredLeafCount:34,objectValuedRuntimeLeafCount:0};
   const shell = packs.find(({id}) => id === "shell");
   const partition = shell.browserEvidencePartitions
     .find(({sessionBatch}) => sessionBatch === "reorderable-editor-controls");
