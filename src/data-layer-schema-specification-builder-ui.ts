@@ -17,7 +17,7 @@ import {
 } from "./data-layer-schema-specification-builder.js";
 import type { SchemaDefinition } from "./data-layer-schema-verification.js";
 import {declareStudioChoice} from "./data-layer-studio-choice-controls.js";
-import {renderReorderControl} from "./reorderable-editor/control.js";
+import {renderLocalDraftReorderControl as renderReorderControl} from "./reorderable-editor/control.js";
 import {reorderValues} from "./reorderable-editor/model.js";
 
 export interface SpecificationClipboardPort {

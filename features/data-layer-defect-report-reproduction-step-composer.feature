@@ -134,7 +134,9 @@ Feature: Data layer defect report reproduction step composer
     Examples:
       | builder_width |
       | 360 CSS px    |
-      | 320 CSS px    |
+      | 520 CSS px    |
+      | 1280 CSS px   |
+      | 320 CSS px at 400 percent text zoom |
 
   # Data layer defect report reproduction step composer 014
   Scenario: Data layer defect report reproduction step composer 014

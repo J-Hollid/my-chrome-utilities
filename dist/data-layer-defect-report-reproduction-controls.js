@@ -1,5 +1,5 @@
 import { addManualReproductionStep, adjustManualReproductionStep, generatePathnameSkeleton, moveManualReproductionStep, removeManualReproductionStep, reproductionStepPreview, } from "./data-layer-defect-report.js";
-import { renderReorderControl } from "./reorderable-editor/control.js";
+import { renderLocalDraftReorderControl as renderReorderControl } from "./reorderable-editor/control.js";
 function copyTemplate(template) {
     return { ...template };
 }

@@ -1,6 +1,6 @@
 import { deriveSpecificationRows, defaultSpecificationColumns, retainedSpecificationPreviewScroll, renderSpecificationClipboard, specificationExampleChoices, specificationColumnLabels, specificationProperties, specificationSurfaces, typeSpecificationExampleSelection, } from "./data-layer-schema-specification-builder.js";
 import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
-import { renderReorderControl } from "./reorderable-editor/control.js";
+import { renderLocalDraftReorderControl as renderReorderControl } from "./reorderable-editor/control.js";
 import { reorderValues } from "./reorderable-editor/model.js";
 function isDescendant(parent, child) {
     return child.startsWith(`${parent}/`) || child.startsWith(`${parent}/*/`);

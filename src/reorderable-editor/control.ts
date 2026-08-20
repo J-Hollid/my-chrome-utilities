@@ -27,6 +27,7 @@ export interface ReorderControlOptions<T extends ReorderableItem> {
   moveDestinations?:readonly ReorderDestination[];
   dragScopeId?:string;
   filterActive?:boolean;
+  localDraftUndo?:boolean;
   scopeLabel?:string;
   preserveTargetSemantics?:boolean;
 }
@@ -37,12 +38,15 @@ interface DragSession {
   itemLabel:string;
   completeOrder:readonly ReorderableItem[];
   legalDestinationIds:ReadonlySet<string>;
-  dragScopeId?:string;
+  dragScope:string|HTMLElement;
   onMove:(request:ReorderRequest)=>boolean;
+  offerUndo?:(fromIndex:number,toIndex:number)=>void;
   trigger:HTMLButtonElement;
 }
 let dragSession:DragSession|undefined;
 const liveRegions=new WeakMap<Document,HTMLOutputElement>();
+const undoRegions=new WeakMap<Document,HTMLElement>();
+const localDraftMoves=new WeakMap<HTMLButtonElement,(request:ReorderRequest)=>boolean>();
 
 const clearDropIndicator=(target:HTMLElement):void=>{
   target.classList.remove("reorder-drop-before","reorder-drop-after");
@@ -74,6 +78,26 @@ function focusTrigger(doc:Document,itemId:string,fallback:HTMLButtonElement):voi
   queueMicrotask(()=>stableTrigger(doc,itemId,fallback).focus({preventScroll:true}));
 }
 
+export interface ReorderCompletion {
+  itemId:string;
+  itemLabel:string;
+  fromIndex:number;
+  toIndex:number;
+  fallbackTrigger?:HTMLButtonElement;
+}
+
+export function announceReorderCompletion(doc:Document,completion:ReorderCompletion):void {
+  liveRegion(doc).textContent=`${completion.itemLabel} moved from position ${completion.fromIndex+1} to position ${completion.toIndex+1}`;
+  const fallback=completion.fallbackTrigger??doc.querySelector?.<HTMLButtonElement>(`[data-reorder-item-id="${completion.itemId.replaceAll('"','\\"')}"]`);
+  if(fallback)focusTrigger(doc,completion.itemId,fallback);
+}
+
+function undoRegion(doc:Document):HTMLElement {
+  const existing=undoRegions.get(doc);if(existing)return existing;
+  const region=doc.createElement("div");region.dataset.reorderUndo="true";region.setAttribute("data-reorder-undo","true");region.hidden=true;
+  (doc.body??doc.documentElement)?.append?.(region);undoRegions.set(doc,region);return region;
+}
+
 function legalOrder<T extends ReorderableItem>(options:ReorderControlOptions<T>):readonly T[] {
   if(!options.legalDestinationIds)return options.completeOrder;
   const ids=new Set([...options.legalDestinationIds,options.itemId]);
@@ -96,10 +120,12 @@ export function renderReorderControl<T extends ReorderableItem>(options:ReorderC
   const menuId=`reorder-menu-${++identity}`,dialogId=`reorder-dialog-${identity}`;
   wrapper.className="reorderable-editor-control";styles(wrapper,{display:"inline-flex",position:"relative",maxWidth:"100%"});
   trigger.className="reorderable-editor-trigger";trigger.dataset.reorderTrigger="true";trigger.dataset.reorderItemId=options.itemId;
+  if(options.localDraftUndo)localDraftMoves.set(trigger,options.onMove);
   trigger.setAttribute("data-reorder-trigger","true");trigger.setAttribute("data-reorder-item-id",options.itemId);
   trigger.setAttribute("aria-label",model.accessibleName);trigger.setAttribute("aria-haspopup","menu");
   trigger.setAttribute("aria-expanded","false");trigger.setAttribute("aria-controls",menuId);
-  trigger.draggable=model.canDrag;styles(trigger,{minWidth:"44px",minHeight:"44px",touchAction:"manipulation"});
+  const currentDragScope=()=>options.dragScopeId??options.orderedContainer??options.dropTarget?.parentElement??undefined;
+  trigger.draggable=model.canDrag&&Boolean(options.dragScopeId??options.orderedContainer??options.dropTarget);styles(trigger,{minWidth:"44px",minHeight:"44px",touchAction:"manipulation"});
   menu.id=menuId;menu.setAttribute("role","menu");menu.hidden=true;menu.className="reorderable-editor-menu";
   styles(menu,{position:"absolute",zIndex:"20",maxWidth:"calc(100vw - 16px)",insetInlineStart:"0",top:"100%"});
   dialog.id=dialogId;dialog.setAttribute("role","dialog");dialog.setAttribute("aria-modal","true");dialog.setAttribute("aria-label",`Move ${options.itemLabel}`);dialog.hidden=true;
@@ -109,8 +135,12 @@ export function renderReorderControl<T extends ReorderableItem>(options:ReorderC
   const openMenu=()=>{menu.hidden=false;trigger.setAttribute("aria-expanded","true");queueMicrotask(()=>menu.querySelector?.<HTMLButtonElement>('button:not([disabled])')?.focus());};
   const announceAndFocus=(fromIndex:number,toIndex:number,result:boolean)=>{
     if(result!==true)return;
-    liveRegion(doc).textContent=`${options.itemLabel} moved from position ${fromIndex+1} to position ${toIndex+1}`;
-    focusTrigger(doc,options.itemId,trigger);
+    announceReorderCompletion(doc,{itemId:options.itemId,itemLabel:options.itemLabel,fromIndex,toIndex,fallbackTrigger:trigger});
+  };
+  const offerUndo=(fromIndex:number,toIndex:number)=>{
+    if(!options.localDraftUndo)return;
+    const region=undoRegion(doc),undo=button(doc,"Undo move");region.replaceChildren(undo);region.hidden=false;
+    undo.addEventListener("click",()=>{const currentTrigger=stableTrigger(doc,options.itemId,trigger),apply=localDraftMoves.get(currentTrigger)??options.onMove,result=apply({itemId:options.itemId,fromIndex:toIndex,toIndex:fromIndex,method:"menu"});if(result!==true)return;region.hidden=true;announceReorderCompletion(doc,{itemId:options.itemId,itemLabel:options.itemLabel,fromIndex:toIndex,toIndex:fromIndex,fallbackTrigger:currentTrigger});});
   };
   const move=(toIndex:number,method:ReorderRequest["method"],destination?:ReorderDestination,placement?:"before"|"after")=>{
     const fromIndex=options.completeOrder.findIndex(({id})=>id===options.itemId);
@@ -118,6 +148,7 @@ export function renderReorderControl<T extends ReorderableItem>(options:ReorderC
     const result=options.onMove({itemId:options.itemId,fromIndex,toIndex,method,
       ...(destination?{destinationId:destination.itemId,...(destination.parentId!==undefined?{destinationParentId:destination.parentId}:{}),...(placement?{placement}:{})}: {})});
     announceAndFocus(fromIndex,toIndex,result);
+    if(result===true)offerUndo(fromIndex,toIndex);
   };
   const closeDialog=()=>{dialog.hidden=true;focusTrigger(doc,options.itemId,trigger);};
   const openDialog=()=>{
@@ -150,7 +181,7 @@ export function renderReorderControl<T extends ReorderableItem>(options:ReorderC
   }
   trigger.addEventListener("click",()=>menu.hidden?openMenu():closeMenu());
   trigger.addEventListener("keydown",event=>{if([" ","Enter","ArrowDown"].includes(event.key)){event.preventDefault();openMenu();}else if(event.key==="Escape")closeMenu();});
-  trigger.addEventListener("dragstart",event=>{if(!model.canDrag){event.preventDefault();return;}dragSession={itemId:options.itemId,itemLabel:options.itemLabel,completeOrder:options.completeOrder,legalDestinationIds:new Set(options.legalDestinationIds??options.completeOrder.map(({id})=>id)),...(options.dragScopeId?{dragScopeId:options.dragScopeId}:{}),onMove:options.onMove,trigger};event.dataTransfer?.setData("application/x-reorderable-editor-item",options.itemId);});
+  trigger.addEventListener("dragstart",event=>{const dragScope=currentDragScope();if(!model.canDrag||dragScope===undefined){event.preventDefault();dragSession=undefined;return;}dragSession={itemId:options.itemId,itemLabel:options.itemLabel,completeOrder:options.completeOrder,legalDestinationIds:new Set(options.legalDestinationIds??options.completeOrder.map(({id})=>id)),dragScope,onMove:options.onMove,...(options.localDraftUndo?{offerUndo}:{}),trigger};event.dataTransfer?.setData("application/x-reorderable-editor-item",options.itemId);});
   trigger.addEventListener("dragend",()=>{dragSession=undefined;if(options.dropTarget)clearDropIndicator(options.dropTarget);});
   dialog.addEventListener("keydown",event=>{if(event.key==="Escape"){event.preventDefault();closeDialog();}});
 
@@ -158,11 +189,15 @@ export function renderReorderControl<T extends ReorderableItem>(options:ReorderC
   if(options.dropTarget){
     const target=options.dropTarget;target.draggable=false;
     if(!options.preserveTargetSemantics){target.setAttribute("role","listitem");target.setAttribute("aria-label",options.itemLabel);target.setAttribute("aria-posinset",String(model.position));target.setAttribute("aria-setsize",String(model.count));}
-    const legalDrag=():DragSession|undefined=>{const session=dragSession;if(!session||session.itemId===options.itemId||!session.legalDestinationIds.has(options.itemId))return undefined;if(session.dragScopeId!==undefined&&session.dragScopeId!==options.dragScopeId)return undefined;return session;};
+    const legalDrag=():DragSession|undefined=>{const session=dragSession,dragScope=currentDragScope();if(!session||session.itemId===options.itemId||!session.legalDestinationIds.has(options.itemId)||dragScope===undefined||session.dragScope!==dragScope)return undefined;return session;};
     target.addEventListener("dragover",event=>{if(!legalDrag())return;event.preventDefault();const after=event.clientY>=target.getBoundingClientRect().top+target.getBoundingClientRect().height/2;target.classList.toggle("reorder-drop-before",!after);target.classList.toggle("reorder-drop-after",after);styles(target,{borderBlockStart:after?"":"3px solid currentColor",borderBlockEnd:after?"3px solid currentColor":""});});
     target.addEventListener("dragleave",()=>clearDropIndicator(target));
-    target.addEventListener("drop",event=>{const session=legalDrag(),transferId=event.dataTransfer?.getData("application/x-reorderable-editor-item");if(!session||transferId&&transferId!==session.itemId)return;event.preventDefault();const after=event.clientY>=target.getBoundingClientRect().top+target.getBoundingClientRect().height/2,fromIndex=session.completeOrder.findIndex(({id})=>id===session.itemId),toIndex=reorderPlacementIndex(session.completeOrder,session.itemId,options.itemId,after?"after":"before");clearDropIndicator(target);dragSession=undefined;if(fromIndex<0||fromIndex===toIndex)return;const result=session.onMove({itemId:session.itemId,fromIndex,toIndex,method:"drag",destinationId:options.itemId,placement:after?"after":"before"});if(result!==true)return;liveRegion(doc).textContent=`${session.itemLabel} moved from position ${fromIndex+1} to position ${toIndex+1}`;focusTrigger(doc,session.itemId,session.trigger);});
+    target.addEventListener("drop",event=>{const session=legalDrag(),transferId=event.dataTransfer?.getData("application/x-reorderable-editor-item");if(!session||transferId&&transferId!==session.itemId)return;event.preventDefault();const after=event.clientY>=target.getBoundingClientRect().top+target.getBoundingClientRect().height/2,fromIndex=session.completeOrder.findIndex(({id})=>id===session.itemId),toIndex=reorderPlacementIndex(session.completeOrder,session.itemId,options.itemId,after?"after":"before");clearDropIndicator(target);dragSession=undefined;if(fromIndex<0||fromIndex===toIndex)return;const result=session.onMove({itemId:session.itemId,fromIndex,toIndex,method:"drag",destinationId:options.itemId,placement:after?"after":"before"});if(result!==true)return;announceReorderCompletion(doc,{itemId:session.itemId,itemLabel:session.itemLabel,fromIndex,toIndex,fallbackTrigger:session.trigger});session.offerUndo?.(fromIndex,toIndex);});
   }
 
   wrapper.append(trigger,menu,dialog);return wrapper;
+}
+
+export function renderLocalDraftReorderControl<T extends ReorderableItem>(options:ReorderControlOptions<T>):HTMLElement {
+  return renderReorderControl({...options,localDraftUndo:true});
 }

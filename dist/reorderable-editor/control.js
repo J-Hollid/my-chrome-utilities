@@ -2,6 +2,8 @@ import { reorderControlModel, reorderPlacementIndex, } from "./model.js";
 let identity = 0;
 let dragSession;
 const liveRegions = new WeakMap();
+const undoRegions = new WeakMap();
+const localDraftMoves = new WeakMap();
 const clearDropIndicator = (target) => {
     target.classList.remove("reorder-drop-before", "reorder-drop-after");
     styles(target, { borderBlockStart: "", borderBlockEnd: "" });
@@ -36,6 +38,24 @@ const stableTrigger = (doc, itemId, fallback) => doc.querySelector?.(`[data-reor
 function focusTrigger(doc, itemId, fallback) {
     queueMicrotask(() => stableTrigger(doc, itemId, fallback).focus({ preventScroll: true }));
 }
+export function announceReorderCompletion(doc, completion) {
+    liveRegion(doc).textContent = `${completion.itemLabel} moved from position ${completion.fromIndex + 1} to position ${completion.toIndex + 1}`;
+    const fallback = completion.fallbackTrigger ?? doc.querySelector?.(`[data-reorder-item-id="${completion.itemId.replaceAll('"', '\\"')}"]`);
+    if (fallback)
+        focusTrigger(doc, completion.itemId, fallback);
+}
+function undoRegion(doc) {
+    const existing = undoRegions.get(doc);
+    if (existing)
+        return existing;
+    const region = doc.createElement("div");
+    region.dataset.reorderUndo = "true";
+    region.setAttribute("data-reorder-undo", "true");
+    region.hidden = true;
+    (doc.body ?? doc.documentElement)?.append?.(region);
+    undoRegions.set(doc, region);
+    return region;
+}
 function legalOrder(options) {
     if (!options.legalDestinationIds)
         return options.completeOrder;
@@ -61,13 +81,16 @@ export function renderReorderControl(options) {
     trigger.className = "reorderable-editor-trigger";
     trigger.dataset.reorderTrigger = "true";
     trigger.dataset.reorderItemId = options.itemId;
+    if (options.localDraftUndo)
+        localDraftMoves.set(trigger, options.onMove);
     trigger.setAttribute("data-reorder-trigger", "true");
     trigger.setAttribute("data-reorder-item-id", options.itemId);
     trigger.setAttribute("aria-label", model.accessibleName);
     trigger.setAttribute("aria-haspopup", "menu");
     trigger.setAttribute("aria-expanded", "false");
     trigger.setAttribute("aria-controls", menuId);
-    trigger.draggable = model.canDrag;
+    const currentDragScope = () => options.dragScopeId ?? options.orderedContainer ?? options.dropTarget?.parentElement ?? undefined;
+    trigger.draggable = model.canDrag && Boolean(options.dragScopeId ?? options.orderedContainer ?? options.dropTarget);
     styles(trigger, { minWidth: "44px", minHeight: "44px", touchAction: "manipulation" });
     menu.id = menuId;
     menu.setAttribute("role", "menu");
@@ -86,8 +109,16 @@ export function renderReorderControl(options) {
     const announceAndFocus = (fromIndex, toIndex, result) => {
         if (result !== true)
             return;
-        liveRegion(doc).textContent = `${options.itemLabel} moved from position ${fromIndex + 1} to position ${toIndex + 1}`;
-        focusTrigger(doc, options.itemId, trigger);
+        announceReorderCompletion(doc, { itemId: options.itemId, itemLabel: options.itemLabel, fromIndex, toIndex, fallbackTrigger: trigger });
+    };
+    const offerUndo = (fromIndex, toIndex) => {
+        if (!options.localDraftUndo)
+            return;
+        const region = undoRegion(doc), undo = button(doc, "Undo move");
+        region.replaceChildren(undo);
+        region.hidden = false;
+        undo.addEventListener("click", () => { const currentTrigger = stableTrigger(doc, options.itemId, trigger), apply = localDraftMoves.get(currentTrigger) ?? options.onMove, result = apply({ itemId: options.itemId, fromIndex: toIndex, toIndex: fromIndex, method: "menu" }); if (result !== true)
+            return; region.hidden = true; announceReorderCompletion(doc, { itemId: options.itemId, itemLabel: options.itemLabel, fromIndex: toIndex, toIndex: fromIndex, fallbackTrigger: currentTrigger }); });
     };
     const move = (toIndex, method, destination, placement) => {
         const fromIndex = options.completeOrder.findIndex(({ id }) => id === options.itemId);
@@ -96,6 +127,8 @@ export function renderReorderControl(options) {
         const result = options.onMove({ itemId: options.itemId, fromIndex, toIndex, method,
             ...(destination ? { destinationId: destination.itemId, ...(destination.parentId !== undefined ? { destinationParentId: destination.parentId } : {}), ...(placement ? { placement } : {}) } : {}) });
         announceAndFocus(fromIndex, toIndex, result);
+        if (result === true)
+            offerUndo(fromIndex, toIndex);
     };
     const closeDialog = () => { dialog.hidden = true; focusTrigger(doc, options.itemId, trigger); };
     const openDialog = () => {
@@ -152,10 +185,11 @@ export function renderReorderControl(options) {
     }
     else if (event.key === "Escape")
         closeMenu(); });
-    trigger.addEventListener("dragstart", event => { if (!model.canDrag) {
+    trigger.addEventListener("dragstart", event => { const dragScope = currentDragScope(); if (!model.canDrag || dragScope === undefined) {
         event.preventDefault();
+        dragSession = undefined;
         return;
-    } dragSession = { itemId: options.itemId, itemLabel: options.itemLabel, completeOrder: options.completeOrder, legalDestinationIds: new Set(options.legalDestinationIds ?? options.completeOrder.map(({ id }) => id)), ...(options.dragScopeId ? { dragScopeId: options.dragScopeId } : {}), onMove: options.onMove, trigger }; event.dataTransfer?.setData("application/x-reorderable-editor-item", options.itemId); });
+    } dragSession = { itemId: options.itemId, itemLabel: options.itemLabel, completeOrder: options.completeOrder, legalDestinationIds: new Set(options.legalDestinationIds ?? options.completeOrder.map(({ id }) => id)), dragScope, onMove: options.onMove, ...(options.localDraftUndo ? { offerUndo } : {}), trigger }; event.dataTransfer?.setData("application/x-reorderable-editor-item", options.itemId); });
     trigger.addEventListener("dragend", () => { dragSession = undefined; if (options.dropTarget)
         clearDropIndicator(options.dropTarget); });
     dialog.addEventListener("keydown", event => { if (event.key === "Escape") {
@@ -173,8 +207,7 @@ export function renderReorderControl(options) {
             target.setAttribute("aria-posinset", String(model.position));
             target.setAttribute("aria-setsize", String(model.count));
         }
-        const legalDrag = () => { const session = dragSession; if (!session || session.itemId === options.itemId || !session.legalDestinationIds.has(options.itemId))
-            return undefined; if (session.dragScopeId !== undefined && session.dragScopeId !== options.dragScopeId)
+        const legalDrag = () => { const session = dragSession, dragScope = currentDragScope(); if (!session || session.itemId === options.itemId || !session.legalDestinationIds.has(options.itemId) || dragScope === undefined || session.dragScope !== dragScope)
             return undefined; return session; };
         target.addEventListener("dragover", event => { if (!legalDrag())
             return; event.preventDefault(); const after = event.clientY >= target.getBoundingClientRect().top + target.getBoundingClientRect().height / 2; target.classList.toggle("reorder-drop-before", !after); target.classList.toggle("reorder-drop-after", after); styles(target, { borderBlockStart: after ? "" : "3px solid currentColor", borderBlockEnd: after ? "3px solid currentColor" : "" }); });
@@ -182,9 +215,12 @@ export function renderReorderControl(options) {
         target.addEventListener("drop", event => { const session = legalDrag(), transferId = event.dataTransfer?.getData("application/x-reorderable-editor-item"); if (!session || transferId && transferId !== session.itemId)
             return; event.preventDefault(); const after = event.clientY >= target.getBoundingClientRect().top + target.getBoundingClientRect().height / 2, fromIndex = session.completeOrder.findIndex(({ id }) => id === session.itemId), toIndex = reorderPlacementIndex(session.completeOrder, session.itemId, options.itemId, after ? "after" : "before"); clearDropIndicator(target); dragSession = undefined; if (fromIndex < 0 || fromIndex === toIndex)
             return; const result = session.onMove({ itemId: session.itemId, fromIndex, toIndex, method: "drag", destinationId: options.itemId, placement: after ? "after" : "before" }); if (result !== true)
-            return; liveRegion(doc).textContent = `${session.itemLabel} moved from position ${fromIndex + 1} to position ${toIndex + 1}`; focusTrigger(doc, session.itemId, session.trigger); });
+            return; announceReorderCompletion(doc, { itemId: session.itemId, itemLabel: session.itemLabel, fromIndex, toIndex, fallbackTrigger: session.trigger }); session.offerUndo?.(fromIndex, toIndex); });
     }
     wrapper.append(trigger, menu, dialog);
     return wrapper;
+}
+export function renderLocalDraftReorderControl(options) {
+    return renderReorderControl({ ...options, localDraftUndo: true });
 }
 //# sourceMappingURL=control.js.map

@@ -38,7 +38,7 @@ export function canonicalNavigatorRows(context) {
     return ordered.map(({ row }) => row);
 }
 export function renderNavigatorRows(tree, context) {
-    const { dom, document } = context;
+    const { dom, document } = context, filterActive = Boolean(context.query.trim()) || context.propertyFilter !== "all";
     for (const row of canonicalNavigatorRows(context)) {
         const article = dom.createElement("article"), choose = button(dom, `${"› ".repeat(row.depth)}${row.node.name} · ${row.path} · ${row.node.type}`, () => context.openProperty(row.node, choose));
         choose.dataset.propertyId = row.id;
@@ -48,7 +48,7 @@ export function renderNavigatorRows(tree, context) {
         const actions = button(dom, "Property actions", () => { context.setMenuPropertyId(row.id); context.openProperty(row.node, actions); });
         actions.setAttribute("aria-label", `Property actions for ${row.path}`);
         actions.dataset.propertyActionsPath = row.path;
-        const siblings = orderedChildren(context, row.node.parentId), reorder = renderReorderControl({ itemId: row.node.id, itemLabel: row.node.name, completeOrder: siblings.map(({ id, name }) => ({ id, label: name })), legalDestinationIds: focusedStructureOwned(row.node) ? siblings.filter(focusedStructureOwned).map(({ id }) => id) : [], moveDestinations: focusedStructureOwned(row.node) ? canonicalMoveDestinations(document, row.node) : [], dropTarget: article, orderedContainer: tree, onMove: (request) => reorderProperty(context, row.node, request) });
+        const siblings = orderedChildren(context, row.node.parentId), reorder = renderReorderControl({ itemId: row.node.id, itemLabel: row.node.name, completeOrder: siblings.map(({ id, name }) => ({ id, label: name })), legalDestinationIds: focusedStructureOwned(row.node) ? siblings.filter(focusedStructureOwned).map(({ id }) => id) : [], moveDestinations: focusedStructureOwned(row.node) ? canonicalMoveDestinations(document, row.node) : [], filterActive, dropTarget: article, orderedContainer: tree, onMove: (request) => reorderProperty(context, row.node, request) });
         article.append(choose, actions, reorder);
         tree.append(article);
         if (row.node.type === "array") {
@@ -87,7 +87,7 @@ const conceptCell = (context, node) => { const control = editableCell(context, n
     suggestions.append(new Option(concept, concept)); control.setAttribute("role", "combobox"); control.setAttribute("aria-autocomplete", "list"); control.setAttribute("list", listId); return { control, suggestions }; };
 const sourceText = (node, fallback) => node.provenance.map(({ contributorName, source, state }) => contributorName ?? state ?? (source === "created" ? fallback : source)).join(", ") || fallback;
 function renderTable(tree, context) {
-    const { dom } = context, table = context.tableElement ?? dom.createElement("table"), head = dom.createElement("thead"), headRow = dom.createElement("tr"), body = dom.createElement("tbody");
+    const { dom } = context, table = context.tableElement ?? dom.createElement("table"), head = dom.createElement("thead"), headRow = dom.createElement("tr"), body = dom.createElement("tbody"), filterActive = Boolean(context.query.trim()) || context.propertyFilter !== "all";
     let pendingOverlay;
     const cell = (index, text) => { const value = dom.createElement("td"), metadata = schemaTableCellMetadata[index]; value.dataset.schemaTableCell = metadata.key; value.dataset.schemaTableLabel = metadata.label; if (text !== undefined)
         value.textContent = text; return value; };
@@ -153,7 +153,7 @@ function renderTable(tree, context) {
         const node = context.document.nodes[row.dataset.propertyId ?? ""], source = row.querySelector("[data-schema-table-cell='source']");
         if (!node || !source)
             continue;
-        const siblings = orderedChildren(context, node.parentId), reorder = renderReorderControl({ itemId: node.id, itemLabel: node.name, completeOrder: siblings.map(({ id, name }) => ({ id, label: name })), legalDestinationIds: focusedStructureOwned(node) ? siblings.filter(focusedStructureOwned).map(({ id }) => id) : [], moveDestinations: focusedStructureOwned(node) ? canonicalMoveDestinations(context.document, node) : [], dropTarget: row, preserveTargetSemantics: true, onMove: (request) => reorderProperty(context, node, request) });
+        const siblings = orderedChildren(context, node.parentId), reorder = renderReorderControl({ itemId: node.id, itemLabel: node.name, completeOrder: siblings.map(({ id, name }) => ({ id, label: name })), legalDestinationIds: focusedStructureOwned(node) ? siblings.filter(focusedStructureOwned).map(({ id }) => id) : [], moveDestinations: focusedStructureOwned(node) ? canonicalMoveDestinations(context.document, node) : [], filterActive, dropTarget: row, orderedContainer: body, preserveTargetSemantics: true, onMove: (request) => reorderProperty(context, node, request) });
         source.prepend(reorder);
     }
     table.replaceChildren(head, body);

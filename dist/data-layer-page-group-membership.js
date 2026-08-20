@@ -1,5 +1,5 @@
 import { transactProject } from "./data-layer-specification-project.js";
-import { renderReorderControl } from "./reorderable-editor/control.js";
+import { announceReorderCompletion, renderReorderControl } from "./reorderable-editor/control.js";
 const storedIds = (page) => Array.isArray(page.pageGroupIds) ? page.pageGroupIds.map(String) : undefined;
 const unique = (values) => [...new Set(values)];
 const legacyIds = (project, pageId) => project.collections.propertySets.filter((group) => (group.pageIds ?? []).includes(pageId)).map(({ id }) => id);
@@ -146,7 +146,7 @@ export function mountPageGroupMembershipEditor(host, options) {
             dialog.setAttribute("aria-label", "Page Group membership reorder review");
             summary.textContent = review.summary;
             order.textContent = `${review.currentPageGroupIds.join(" → ")} becomes ${review.proposedPageGroupIds.join(" → ")}.`;
-            const cancel = button("Cancel membership reorder", () => { const id = pending.request.itemId; pending = undefined; render(); focusTrigger(id); }), confirm = button("Confirm membership reorder", () => { const id = pending.request.itemId, next = movePageGroupMembership(options.current(), options.pageId, id, pending.delta); pending = undefined; options.persist(next); render(); focusTrigger(id); });
+            const cancel = button("Cancel membership reorder", () => { const id = pending.request.itemId; pending = undefined; render(); focusTrigger(id); }), confirm = button("Confirm membership reorder", () => { const request = pending.request, label = rows.find(({ id }) => id === request.itemId)?.label ?? request.itemId, next = movePageGroupMembership(options.current(), options.pageId, request.itemId, pending.delta); pending = undefined; options.persist(next); render(); announceReorderCompletion(doc, { itemId: request.itemId, itemLabel: label, fromIndex: request.fromIndex, toIndex: request.toIndex }); });
             dialog.append(summary, order, cancel, confirm);
             section.append(dialog);
             queueMicrotask(() => { if (typeof dialog.showModal === "function")

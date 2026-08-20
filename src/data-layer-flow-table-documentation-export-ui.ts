@@ -16,7 +16,7 @@ import {
 } from "./data-layer-flow-table-documentation-export.js";
 import type {ProjectState} from "./utilities/data-layer/schemas.js";
 import {declareStudioChoice} from "./data-layer-studio-choice-controls.js";
-import {renderReorderControl} from "./reorderable-editor/control.js";
+import {renderLocalDraftReorderControl as renderReorderControl} from "./reorderable-editor/control.js";
 import {reorderValues} from "./reorderable-editor/model.js";
 
 export interface FlowDocumentationExportPorts {

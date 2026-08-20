@@ -1,6 +1,6 @@
 import { addComposedAllowedValue, removeComposedAllowedValue, typedComposedValue } from "../data-layer-composed-schema-builders.js";
 import { button, clone, labeled, option } from "./facet-builder-context.js";
-import { renderReorderControl } from "../reorderable-editor/control.js";
+import { renderLocalDraftReorderControl as renderReorderControl } from "../reorderable-editor/control.js";
 import { reorderValues } from "../reorderable-editor/model.js";
 export function renderCommonFacets(context) {
     const { options, draft, setDraft, setFeedback, render } = context, common = document.createElement("fieldset"), legend = document.createElement("legend"), type = document.createElement("select"), presence = document.createElement("select"), expected = document.createElement("input"), documentation = document.createElement("textarea");
@@ -31,7 +31,7 @@ export function renderAllowedValues(context) {
     allowed.setAttribute("aria-label", "Composed allowed values builder");
     legend.textContent = "Allowed values";
     draft().allowedValues.forEach((entry, index) => {
-        const row = document.createElement("div"), value = document.createElement("input"), itemId = identity(entry, index), reorder = renderReorderControl({ itemId, itemLabel: `Allowed value ${String(entry ?? "") || index + 1}`, completeOrder: draft().allowedValues.map((candidate, candidateIndex) => ({ id: identity(candidate, candidateIndex), label: `Allowed value ${String(candidate ?? "") || candidateIndex + 1}` })), dropTarget: row, orderedContainer: rows, onMove: ({ itemId, toIndex }) => { const current = draft(), allowedValues = reorderValues(current.allowedValues, itemId, toIndex, identity), allowedValueIds = current.allowedValueIds ? reorderValues(current.allowedValueIds, itemId, toIndex, (_id, candidateIndex) => identity(undefined, candidateIndex)) : undefined, fromIndex = stableIds.indexOf(itemId); allowedValueIdentities.move(fromIndex, toIndex); setDraft({ ...current, allowedValues, ...(allowedValueIds ? { allowedValueIds } : {}) }); render(); return true; } });
+        const row = document.createElement("div"), value = document.createElement("input"), itemId = identity(entry, index), reorder = renderReorderControl({ itemId, itemLabel: `Allowed value ${String(entry ?? "") || index + 1}`, completeOrder: draft().allowedValues.map((candidate, candidateIndex) => ({ id: identity(candidate, candidateIndex), label: `Allowed value ${String(candidate ?? "") || candidateIndex + 1}` })), dropTarget: row, orderedContainer: rows, onMove: ({ itemId, toIndex }) => { const current = draft(), currentIds = allowedValueIdentities.values(), currentIdentity = (_entry, candidateIndex) => currentIds[candidateIndex], allowedValues = reorderValues(current.allowedValues, itemId, toIndex, currentIdentity), allowedValueIds = current.allowedValueIds ? reorderValues(current.allowedValueIds, itemId, toIndex, currentIdentity) : undefined, fromIndex = currentIds.indexOf(itemId); allowedValueIdentities.move(fromIndex, toIndex); setDraft({ ...current, allowedValues, ...(allowedValueIds ? { allowedValueIds } : {}) }); render(); return true; } });
         value.value = String(entry ?? "");
         value.setAttribute("aria-label", `Allowed value ${index + 1}`);
         value.addEventListener("change", () => { try {

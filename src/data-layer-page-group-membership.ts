@@ -1,5 +1,5 @@
 import {transactProject,type ProjectEntity,type ProjectState,type SpecificationProject} from "./data-layer-specification-project.js";
-import {renderReorderControl,type ReorderRequest} from "./reorderable-editor/control.js";
+import {announceReorderCompletion,renderReorderControl,type ReorderRequest} from "./reorderable-editor/control.js";
 
 export interface PageGroupMembershipMigration {
   pageId:string;
@@ -141,7 +141,7 @@ export function mountPageGroupMembershipEditor(host:HTMLElement,options:PageGrou
     if(pending){
       const review=inspectPageGroupMembershipMove(state.project,options.pageId,pending.request.itemId,pending.delta),dialog=doc.createElement("dialog"),summary=doc.createElement("p"),order=doc.createElement("p");
       dialog.setAttribute("aria-label","Page Group membership reorder review");summary.textContent=review.summary;order.textContent=`${review.currentPageGroupIds.join(" → ")} becomes ${review.proposedPageGroupIds.join(" → ")}.`;
-      const cancel=button("Cancel membership reorder",()=>{const id=pending!.request.itemId;pending=undefined;render();focusTrigger(id);}),confirm=button("Confirm membership reorder",()=>{const id=pending!.request.itemId,next=movePageGroupMembership(options.current(),options.pageId,id,pending!.delta);pending=undefined;options.persist(next);render();focusTrigger(id);});
+      const cancel=button("Cancel membership reorder",()=>{const id=pending!.request.itemId;pending=undefined;render();focusTrigger(id);}),confirm=button("Confirm membership reorder",()=>{const request=pending!.request,label=rows.find(({id})=>id===request.itemId)?.label??request.itemId,next=movePageGroupMembership(options.current(),options.pageId,request.itemId,pending!.delta);pending=undefined;options.persist(next);render();announceReorderCompletion(doc,{itemId:request.itemId,itemLabel:label,fromIndex:request.fromIndex,toIndex:request.toIndex});});
       dialog.append(summary,order,cancel,confirm);section.append(dialog);queueMicrotask(()=>{if(typeof dialog.showModal==="function")dialog.showModal();else dialog.setAttribute("open","");confirm.focus();});
     }
     host.replaceChildren(section);

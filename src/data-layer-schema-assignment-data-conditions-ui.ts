@@ -13,7 +13,7 @@ import {
   type AssignmentDataConditionGroup,
   type AssignmentDataPredicate,
 } from "./data-layer-schema-assignment-data-conditions.js";
-import {renderReorderControl} from "./reorderable-editor/control.js";
+import {renderLocalDraftReorderControl as renderReorderControl} from "./reorderable-editor/control.js";
 import {reorderValues} from "./reorderable-editor/model.js";
 import {StableIdentitySequence} from "./reorderable-editor/stable-identities.js";
 
@@ -136,7 +136,7 @@ export function renderAssignmentDataConditionEditor(
     const predicateIdentity=(_candidate:AssignmentDataPredicate,candidateIndex:number)=>stablePredicateIds[candidateIndex]!;
     const reorder=renderReorderControl({itemId:predicateIdentity(predicate,index),itemLabel:predicate.propertyPath||`Condition ${index+1}`,
       completeOrder:state.group.predicates.map((candidate,candidateIndex)=>({id:predicateIdentity(candidate,candidateIndex),label:candidate.propertyPath||`Condition ${candidateIndex+1}`})),
-      dropTarget:row,orderedContainer:list,onMove:({itemId,fromIndex,toIndex})=>{const predicates=reorderValues(state.group!.predicates,itemId,toIndex,predicateIdentity);predicateIdentities.move(fromIndex,toIndex);update({...state,group:{...(state.group as AssignmentDataConditionGroup),predicates}});return true;}});
+      dropTarget:row,orderedContainer:list,onMove:({itemId,toIndex})=>{const currentIds=predicateIdentities.values(),currentIdentity=(_candidate:AssignmentDataPredicate,candidateIndex:number)=>currentIds[candidateIndex]!,fromIndex=currentIds.indexOf(itemId),predicates=reorderValues(state.group!.predicates,itemId,toIndex,currentIdentity);predicateIdentities.move(fromIndex,toIndex);update({...state,group:{...(state.group as AssignmentDataConditionGroup),predicates}});return true;}});
     const remove = element("button", "Remove condition"); remove.type = "button";
     remove.addEventListener("click", () => { predicateIdentities.remove(index); update({ ...state, group:{ ...(state.group as AssignmentDataConditionGroup), predicates:state.group?.predicates.filter((_, candidate) => candidate !== index) ?? [] } }); });
     row.append(reorder,labelledControl("Property path", path), labelledControl("Detected type", type), labelledControl("Operator", predicateOperator), labelledControl("Configured value", comparison), remove);

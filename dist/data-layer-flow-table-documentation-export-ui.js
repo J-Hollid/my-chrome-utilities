@@ -2,7 +2,7 @@ import { flowDocumentationSnapshotFromState } from "./data-layer-flow-documentat
 export { flowDocumentationSnapshotFromState } from "./data-layer-flow-documentation-snapshot.js";
 import { configureFlowDocumentationSnapshot, configureFlowDocumentationTable, flowDocumentationCellDetail, flowDocumentationPropertyPaths, flowDocumentationSnapshotStale, renderFlowDocumentationClipboard, writeFlowDocumentationWorkbook, } from "./data-layer-flow-table-documentation-export.js";
 import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
-import { renderReorderControl } from "./reorderable-editor/control.js";
+import { renderLocalDraftReorderControl as renderReorderControl } from "./reorderable-editor/control.js";
 import { reorderValues } from "./reorderable-editor/model.js";
 const createButton = (text, action) => {
     const value = document.createElement("button");

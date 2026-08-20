@@ -50,7 +50,7 @@ class FakeDocument {
 const document=new FakeDocument();
 globalThis.document=document;
 
-const {renderReorderControl}=await import("../dist/reorderable-editor/control.js");
+const {announceReorderCompletion,renderReorderControl}=await import("../dist/reorderable-editor/control.js");
 const order=[{id:"alpha",label:"Alpha"},{id:"bravo",label:"Bravo"},{id:"charlie",label:"Charlie"}];
 const row=document.createElement("li"),moves=[];
 document.body.append(row);
@@ -77,6 +77,10 @@ assert.equal(row.getAttribute("aria-setsize"),"3");
 assert.ok(!trigger.attributes.has("aria-grabbed"));
 assert.ok(Number(trigger.style.minWidth.replace("px",""))>=44);
 assert.ok(Number(trigger.style.minHeight.replace("px",""))>=44);
+const filteredTransfer={setCalls:0,setData(){this.setCalls+=1;}};
+const filteredDrag=trigger.dispatch("dragstart",{dataTransfer:filteredTransfer});
+assert.equal(filteredDrag.defaultPrevented,true,"an active filter rejects dragstart, not only draggable styling");
+assert.equal(filteredTransfer.setCalls,0,"a filtered control cannot publish a drag session");
 
 trigger.click();
 assert.equal(trigger.getAttribute("aria-expanded"),"true");
@@ -140,5 +144,35 @@ dragRows.get("one").dispatch("drop",{dataTransfer:transfer,clientY:0});
 assert.equal(dragMoves.length,2);
 assert.equal(dragDocument.querySelector("[data-reorder-status]").textContent,
   "Two moved from position 2 to position 1");
+
+const scopeDocument=new FakeDocument(),leftList=scopeDocument.createElement("ol"),rightList=scopeDocument.createElement("ol"),crossMoves=[];
+scopeDocument.body.append(leftList,rightList);
+for(const [list,prefix] of [[leftList,"left"],[rightList,"right"]])for(const entry of dragOrder.slice(0,2)){
+  const target=scopeDocument.createElement("li"),entryControl=renderReorderControl({
+    itemId:entry.id,itemLabel:`${prefix} ${entry.label}`,completeOrder:dragOrder.slice(0,2),dropTarget:target,orderedContainer:list,
+    onMove:(request)=>{crossMoves.push({prefix,request});return true;},
+  });
+  target.append(entryControl);list.append(target);
+}
+const scopedTransfer={value:"",setData(_type,value){this.value=value;},getData(){return this.value;}};
+leftList.children[1].querySelector("[data-reorder-trigger]").dispatch("dragstart",{dataTransfer:scopedTransfer});
+const crossDrop=rightList.children[0].dispatch("drop",{dataTransfer:scopedTransfer,clientY:0});
+assert.equal(crossDrop.defaultPrevented,undefined,"a second list with overlapping item identities rejects the foreign session");
+assert.deepEqual(crossMoves,[],"a drop never invokes a callback across ordered-container boundaries");
+
+const undoDocument=new FakeDocument(),undoList=undoDocument.createElement("ol"),undoRow=undoDocument.createElement("li"),undoMoves=[];
+undoDocument.body.append(undoList);undoList.append(undoRow);
+const undoControl=renderReorderControl({itemId:"bravo",itemLabel:"Bravo",completeOrder:order,dropTarget:undoRow,orderedContainer:undoList,localDraftUndo:true,onMove:(request)=>{undoMoves.push(request);return true;}});
+undoRow.append(undoControl);undoControl.querySelector("[data-reorder-trigger]").click();undoControl.querySelector("[role=menu]").querySelectorAll("button")[3].click();
+const undoMove=undoDocument.querySelector("[data-reorder-undo]");
+assert.equal(undoMove.hidden,false,"a successful local-draft move exposes Undo move");
+undoMove.querySelector("button").click();
+assert.deepEqual(undoMoves.at(-1),{itemId:"bravo",fromIndex:2,toIndex:1,method:"menu"},"Undo move applies the exact inverse position");
+assert.equal(undoMove.hidden,true);
+
+announceReorderCompletion(undoDocument,{itemId:"bravo",itemLabel:"Bravo",fromIndex:1,toIndex:2});
+assert.equal(undoDocument.querySelector("[data-reorder-status]").textContent,"Bravo moved from position 2 to position 3");
+await new Promise(resolve=>queueMicrotask(resolve));
+assert.equal(undoDocument.activeElement,undoControl.querySelector("[data-reorder-trigger]"),"a deferred consequential completion restores the stable trigger");
 
 console.log("reorderable editor control tests passed");

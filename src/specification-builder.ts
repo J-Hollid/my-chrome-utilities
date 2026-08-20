@@ -25,7 +25,7 @@ import {
   type SavedSchemaSynchronizationReview,
 } from "./data-layer-specification-project.js";
 import {openDurableProjectRuntime} from "./data-layer-durable-project-runtime.js";
-import {renderReorderControl} from "./reorderable-editor/control.js";
+import {renderLocalDraftReorderControl as renderReorderControl} from "./reorderable-editor/control.js";
 import {StableIdentitySequence} from "./reorderable-editor/stable-identities.js";
 import {createDurablePersistenceReadiness} from "./durable-project/persistence-readiness.js";
 import {durableConflictSemanticField,durableProjectRouteForWorkspace,type DurableDraftConflict} from "./data-layer-durable-project-repository.js";

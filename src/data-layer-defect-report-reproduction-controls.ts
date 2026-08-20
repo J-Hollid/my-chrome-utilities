@@ -10,7 +10,7 @@ import {
 } from "./data-layer-defect-report.js";
 import type { DefectReportContext } from "./data-layer-defect-report-browser.js";
 import type { ComposableDefectReport, DefectReportBuilderState } from "./data-layer-defect-report-ui-controls.js";
-import {renderReorderControl} from "./reorderable-editor/control.js";
+import {renderLocalDraftReorderControl as renderReorderControl} from "./reorderable-editor/control.js";
 
 type ComposerStage = "idle" | "templates" | "configure";
 

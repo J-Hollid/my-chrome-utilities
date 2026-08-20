@@ -1,6 +1,6 @@
 import { comparisonValueFromInput, operatorsForConditionType, } from "./data-layer-conditional-validation-rules.js";
 import { assignmentDataConditionSummary, validateAssignmentDataConditions, } from "./data-layer-schema-assignment-data-conditions.js";
-import { renderReorderControl } from "./reorderable-editor/control.js";
+import { renderLocalDraftReorderControl as renderReorderControl } from "./reorderable-editor/control.js";
 import { reorderValues } from "./reorderable-editor/model.js";
 import { StableIdentitySequence } from "./reorderable-editor/stable-identities.js";
 const predicateIdentitySequences = new WeakMap();
@@ -130,7 +130,7 @@ export function renderAssignmentDataConditionEditor(root, state, changed) {
         const predicateIdentity = (_candidate, candidateIndex) => stablePredicateIds[candidateIndex];
         const reorder = renderReorderControl({ itemId: predicateIdentity(predicate, index), itemLabel: predicate.propertyPath || `Condition ${index + 1}`,
             completeOrder: state.group.predicates.map((candidate, candidateIndex) => ({ id: predicateIdentity(candidate, candidateIndex), label: candidate.propertyPath || `Condition ${candidateIndex + 1}` })),
-            dropTarget: row, orderedContainer: list, onMove: ({ itemId, fromIndex, toIndex }) => { const predicates = reorderValues(state.group.predicates, itemId, toIndex, predicateIdentity); predicateIdentities.move(fromIndex, toIndex); update({ ...state, group: { ...state.group, predicates } }); return true; } });
+            dropTarget: row, orderedContainer: list, onMove: ({ itemId, toIndex }) => { const currentIds = predicateIdentities.values(), currentIdentity = (_candidate, candidateIndex) => currentIds[candidateIndex], fromIndex = currentIds.indexOf(itemId), predicates = reorderValues(state.group.predicates, itemId, toIndex, currentIdentity); predicateIdentities.move(fromIndex, toIndex); update({ ...state, group: { ...state.group, predicates } }); return true; } });
         const remove = element("button", "Remove condition");
         remove.type = "button";
         remove.addEventListener("click", () => { predicateIdentities.remove(index); update({ ...state, group: { ...state.group, predicates: state.group?.predicates.filter((_, candidate) => candidate !== index) ?? [] } }); });
