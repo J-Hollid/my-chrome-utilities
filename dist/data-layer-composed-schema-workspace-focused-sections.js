@@ -11,12 +11,11 @@ const stableValueId = (owner, value) => { let hash = 2166136261; for (const char
     hash ^= char.charCodeAt(0);
     hash = Math.imul(hash, 16777619);
 } return `allowed-value:${owner}:${(hash >>> 0).toString(16)}`; };
-const structureParent = (path) => path.slice(0, path.lastIndexOf("/"));
-const structureSubtree = (path, candidate) => candidate === path || candidate.startsWith(`${path}/`);
-const composedMoveDestinations = (rows, moving) => {
-    const legalRows = rows.filter(({ local }) => Boolean(local.definitionId) && !structureSubtree(moving.path, local.path));
-    const parents = [[null, "Root"], ...legalRows.filter(({ effective }) => effective.type === "object" || (effective.type === "array" && effective.itemType === "object")).map(({ path }) => [path, path])];
-    return parents.flatMap(([parentId, parentLabel]) => legalRows.filter(({ path }) => structureParent(path) === (parentId ?? "")).map(({ path }) => ({ itemId: path, label: path.split("/").at(-1) ?? path, parentId, parentLabel })));
+export const structureParent = (path) => path.slice(0, path.lastIndexOf("/"));
+export const structureSubtree = (path, candidate) => candidate === path || candidate.startsWith(`${path}/`);
+export const composedMoveDestinations = (rows, moving) => {
+    const legalRows = rows.filter(({ local }) => Boolean(local.definitionId) && !structureSubtree(moving.path, local.path)), currentParent = structureParent(moving.path), parents = [[null, "Root"], ...(currentParent ? [[currentParent, currentParent]] : []), ...legalRows.filter(({ path, effective }) => path !== currentParent && (effective.type === "object" || (effective.type === "array" && effective.itemType === "object"))).map(({ path }) => [path, path])];
+    return parents.flatMap(([parentId, parentLabel]) => legalRows.filter(({ path }) => structureParent(path) === (parentId ?? "")).map(({ path, local }) => ({ itemId: local.definitionId, label: path.split("/").at(-1) ?? path, parentId, parentLabel })));
 };
 const clearExampleInput = (draft) => { delete draft.exampleInput; delete draft.exampleIssue; };
 const stageCustomExample = (draft, type, text) => {
@@ -232,8 +231,8 @@ export function renderComposedFocusedSection(host, context) {
             const invoke = (kind) => context.onStructure?.({ kind, path: context.row.path, name: name.value });
             const create = (kind) => context.onStructure?.({ kind, path: context.row.path, name: newName.value });
             const parent = context.row.path.slice(0, context.row.path.lastIndexOf("/")), siblings = (context.completeRows ?? context.model.rows).filter(({ path }) => path.slice(0, path.lastIndexOf("/")) === parent), related = siblings.filter(({ path, local }) => path !== context.row.path && Boolean(local.definitionId));
-            const reorder = renderReorderControl({ itemId: context.row.local.definitionId ?? context.row.path, itemLabel: context.row.path.split("/").at(-1) ?? context.row.path, completeOrder: siblings.map(item => ({ id: item.local.definitionId ?? item.path, label: item.path.split("/").at(-1) ?? item.path })), ...(context.row.local.definitionId ? { moveDestinations: composedMoveDestinations(context.completeRows ?? context.model.rows, context.row) } : { legalDestinationIds: [], moveDestinations: [] }), onMove: ({ fromIndex, toIndex, method, destinationId, destinationParentId, placement }) => { if (method === "dialog" && destinationId && placement) {
-                    const parentPath = destinationParentId ?? "", destinations = (context.completeRows ?? context.model.rows).filter(({ path, local }) => Boolean(local.definitionId) && !structureSubtree(context.row.path, path) && structureParent(path) === parentPath), index = destinations.findIndex(({ path }) => path === destinationId), afterPath = placement === "after" ? destinationId : index > 0 ? destinations[index - 1].path : undefined;
+            const reorder = renderReorderControl({ itemId: context.row.local.definitionId ?? context.row.path, itemLabel: context.row.path.split("/").at(-1) ?? context.row.path, completeOrder: siblings.map(item => ({ id: item.local.definitionId ?? item.path, label: item.path.split("/").at(-1) ?? item.path })), ...(context.row.local.definitionId ? { legalDestinationIds: siblings.filter(item => Boolean(item.local.definitionId)).map(item => item.local.definitionId), moveDestinations: composedMoveDestinations(context.completeRows ?? context.model.rows, context.row) } : { legalDestinationIds: [], moveDestinations: [] }), onMove: ({ fromIndex, toIndex, method, destinationId, destinationParentId, placement }) => { if (method === "dialog" && destinationId && placement) {
+                    const parentPath = destinationParentId ?? "", destinations = (context.completeRows ?? context.model.rows).filter(({ path, local }) => Boolean(local.definitionId) && !structureSubtree(context.row.path, path) && structureParent(path) === parentPath), index = destinations.findIndex(({ local }) => local.definitionId === destinationId), afterPath = placement === "after" ? destinations[index]?.path : index > 0 ? destinations[index - 1].path : undefined;
                     if (index < 0)
                         return false;
                     context.onStructure?.({ kind: "move", path: context.row.path, destinationParentPath: parentPath, ...(afterPath ? { afterPath } : {}) });

@@ -154,12 +154,12 @@
         {
           "selector": "#workspace-pane",
           "hidden": false,
-          "display": "block",
+          "display": "grid",
           "left": 259,
           "right": 1426,
           "top": 95.046875,
           "bottom": 960,
-          "overflowY": "auto"
+          "overflowY": "hidden"
         },
         {
           "selector": "#project-inspector",

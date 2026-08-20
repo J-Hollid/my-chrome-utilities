@@ -5260,7 +5260,9 @@
           "layeredSchema.pageGroupStructural006",
           "layeredSchema.pageGroupStructural007",
           "layeredSchema.pageGroupStructural008",
-          "layeredSchema.pageGroupStructural009"
+          "layeredSchema.pageGroupStructural009",
+          "layeredSchema.membershipReorderVerified",
+          "layeredSchema.propertySetApplicationReorderVerified"
         ],
         "targets": [
           {
@@ -5288,7 +5290,9 @@
               "layeredSchema.pageGroupStructural006",
               "layeredSchema.pageGroupStructural007",
               "layeredSchema.pageGroupStructural008",
-              "layeredSchema.pageGroupStructural009"
+              "layeredSchema.pageGroupStructural009",
+              "layeredSchema.membershipReorderVerified",
+              "layeredSchema.propertySetApplicationReorderVerified"
             ]
           }
         ]

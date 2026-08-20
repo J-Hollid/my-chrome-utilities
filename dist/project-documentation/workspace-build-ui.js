@@ -11,7 +11,8 @@ export function createDocumentationSectionConfigurationRenderer(mutateSection) {
     const renderOrderedChoices = (host, input) => {
         const selected = new Set(input.selected), list = document.createElement("ol");
         list.setAttribute("aria-label", `${input.name} order`);
-        for (const item of input.all) {
+        const ordered = [...input.selected.map(id => input.all.find(item => item.id === id)).filter((item) => Boolean(item)), ...input.all.filter(item => !selected.has(item.id))];
+        for (const item of ordered) {
             const row = document.createElement("li"), check = document.createElement("input");
             check.type = "checkbox";
             declareStudioChoice(check, input.choiceKey);

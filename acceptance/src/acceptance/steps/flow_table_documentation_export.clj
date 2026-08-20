@@ -1,5 +1,6 @@
 (ns acceptance.steps.flow-table-documentation-export
-  (:require [acceptance.steps.support :as support]))
+  (:require [acceptance.steps.support :as support]
+            [clojure.string :as str]))
 
 (def feature-files
   ["features/data-layer-flow-table-documentation-export.feature"
@@ -121,7 +122,8 @@
 (def runtime-paths
   (set (concat [:installedBoundary
                 :headingLifecycleStart
-                :orderingControls]
+                :orderingControls
+                :reorderEvidence]
                [:documentationTemplates
                 :documentationTemplateStarters
                 :documentationTemplateStarterParity
@@ -160,10 +162,18 @@
                (map #(keyword (str "export" (format "%03d" %))) (range 1 35)))))
 
 (defn- assert-runtime! [evidence]
-  (support/assert! (and (= runtime-paths (set (keys evidence)))
-                        (every? true? (vals evidence)))
+  (let [{:keys [inventory before moved moveSequences undoTrace redoTrace appended]}
+        (:reorderEvidence evidence)]
+    (support/assert! (and (= runtime-paths (set (keys evidence)))
+                          (every? true? (vals (dissoc evidence :reorderEvidence)))
+                          (= 4 (count inventory) (count before) (count moved))
+                          (not= before moved)
+                          (= 3 (count moveSequences) (count undoTrace) (count redoTrace))
+                          (= (str/join "|" before) (last undoTrace))
+                          (= (str/join "|" moved) (last redoTrace))
+                          (= 5 (count appended)))
                    "Installed Flow documentation export evidence is incomplete."
-                   evidence))
+                   evidence)))
 
 (def handlers
   (support/verified-feature-mode-handlers

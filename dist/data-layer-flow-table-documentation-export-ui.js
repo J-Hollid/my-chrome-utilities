@@ -105,9 +105,9 @@ export function installFlowDocumentationExportUi(options) {
             propertyList.append(item);
         }
         propertyFieldset.append(propertyList, createButton("Reset property columns", () => { propertyOrder = [...flowDocumentationPropertyPaths(snapshot)]; selectedPaths = new Set(propertyOrder); metadata = []; renderWorkspace(); }));
-        const metadataFieldset = document.createElement("fieldset"), metadataOptions = [["description", "Description"], ["type", "Type"], ["allowedValues", "Allowed values"], ["example", "Documented example"], ["comments", "Comments"], ["provenance", "Provenance"]];
+        const metadataFieldset = document.createElement("fieldset"), metadataOptions = [["description", "Description"], ["type", "Type"], ["allowedValues", "Allowed values"], ["example", "Documented example"], ["comments", "Comments"], ["provenance", "Provenance"]], orderedMetadataOptions = [...metadata.map((id) => metadataOptions.find(([candidate]) => candidate === id)), ...metadataOptions.filter(([id]) => !metadata.includes(id))];
         metadataFieldset.append(Object.assign(document.createElement("legend"), { textContent: "Optional metadata columns" }));
-        for (const [key, label] of metadataOptions) {
+        for (const [key, label] of orderedMetadataOptions) {
             const item = document.createElement("li"), check = document.createElement("input");
             item.dataset.metadataKey = key;
             check.type = "checkbox";
@@ -193,6 +193,16 @@ export function installFlowDocumentationExportUi(options) {
     }
     function render() {
         document.querySelectorAll("[data-flow-documentation-export]").forEach((control) => control.remove());
+        if (open) {
+            renderWorkspace();
+            return;
+        }
+        const host = document.querySelector("#flow-graph-workspace"), { state, flowId, flow } = current();
+        if (!host || !state || !flowId || !flow)
+            return;
+        const launch = createButton("Configure Flow documentation", () => { open = true; snapshot = undefined; renderWorkspace(); });
+        launch.dataset.flowDocumentationExport = "true";
+        host.prepend(launch);
     }
     return { render };
 }

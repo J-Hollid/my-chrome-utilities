@@ -14,7 +14,7 @@ const replacePath=(path:string,from:string,to:string):string=>path===from?to:pat
 const suffixName=(path:string,name:string):string=>{const parent=parentPath(path);return `${parent}/${name}`;};
 const frameFor=(state:ProjectState,flowId:string,frameId:string):ProjectEntity=>{const graph=(state.project.documentationFlowGraphs as Record<string,FlowGraph>)[flowId],frame=graph?.pageFrames?.find(({id})=>id===frameId);if(!graph||!frame)throw new Error(`Flow Page instance ${frameId} is unavailable.`);return frame;};
 const constraintsFor=(frame:ProjectEntity):LayerConstraint[]=>clone((frame.localSchemaContributions as LayerConstraint[]|undefined)??[]);
-const existingPath=(constraints:readonly LayerConstraint[],path:string,ignorePath?:string):boolean=>constraints.some(({path:candidate})=>candidate!==ignorePath&&subtree(ignorePath??"\0",candidate)?false:candidate===path);
+const existingPath=(constraints:readonly LayerConstraint[],path:string,ignorePath?:string):boolean=>constraints.some(({path:candidate})=>candidate===path&&(!ignorePath||!subtree(ignorePath,candidate)));
 const moveBlock=(constraints:LayerConstraint[],path:string,delta:number):LayerConstraint[]=>{
   const siblingPaths=[...new Set(constraints.filter(({path:candidate})=>parentPath(candidate)===parentPath(path)).map(({path:candidate})=>candidate))],siblingIndex=siblingPaths.indexOf(path),targetIndex=siblingIndex+delta;
   if(siblingIndex<0||targetIndex<0||targetIndex>=siblingPaths.length)return constraints;

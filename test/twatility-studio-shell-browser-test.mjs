@@ -252,9 +252,9 @@ try {
   const seeded = await evaluate(
     studio,
     `(async()=>{
-      const {createSpecificationProject}=await import("./data-layer-specification-project.js");
-      const {createProjectCollectionEntity}=await import("./data-layer-project-entity-lifecycle.js");
-      const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js");
+      const {createSpecificationProject}=await import(new URL("./data-layer-specification-project.js",location.href).href);
+      const {createProjectCollectionEntity}=await import(new URL("./data-layer-project-entity-lifecycle.js",location.href).href);
+      const {openIndexedDbProjectRepository}=await import(new URL("./data-layer-durable-project-repository.js",location.href).href);
       let sequence=0;
       const makeId=(kind)=>kind==="project"?"project-studio":kind+":studio:"+sequence++;
       let state=createSpecificationProject({
@@ -318,7 +318,7 @@ try {
   await viewport(studio, 1280, 900, overviewUrl);
   const initialProject = await evaluate(
     studio,
-    `(async()=>{const record=await (await (await import("./data-layer-durable-project-repository.js")).openIndexedDbProjectRepository()).loadProject("project-studio");return JSON.stringify({state:record.state,draftToken:record.draftToken,draftSequence:record.draftSequence,publishedRevision:record.publishedRevision});})()`,
+    `(async()=>{const record=await (await (await import(new URL("./data-layer-durable-project-repository.js",location.href).href)).openIndexedDbProjectRepository()).loadProject("project-studio");return JSON.stringify({state:record.state,draftToken:record.draftToken,draftSequence:record.draftSequence,publishedRevision:record.publishedRevision});})()`,
   );
   const initial = await evaluate(
     studio,
@@ -525,7 +525,7 @@ try {
 
   const finalProject = await evaluate(
     studio,
-    `(async()=>{const record=await (await (await import("./data-layer-durable-project-repository.js")).openIndexedDbProjectRepository()).loadProject("project-studio");return JSON.stringify({state:record.state,draftToken:record.draftToken,draftSequence:record.draftSequence,publishedRevision:record.publishedRevision});})()`,
+    `(async()=>{const record=await (await (await import(new URL("./data-layer-durable-project-repository.js",location.href).href)).openIndexedDbProjectRepository()).loadProject("project-studio");return JSON.stringify({state:record.state,draftToken:record.draftToken,draftSequence:record.draftSequence,publishedRevision:record.publishedRevision});})()`,
   );
   assert.equal(
     finalProject,

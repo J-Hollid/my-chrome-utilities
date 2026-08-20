@@ -34,7 +34,7 @@
       (str/includes? (:addName row) " section from step ")]))
 
 (defn- assert-action-row! [observation]
-  (support/assert! (= "2. Click Checkout" (:text observation)) "The manual step text differs in the browser." observation)
+  (support/assert! (= "3. Click Bravo" (:text observation)) "The representative reorderable manual step differs in the browser." observation)
   (support/assert! (= action-order (:actionOrder observation)) "Manual-step browser actions are unordered." observation)
   (support/assert! (= (:actionOrder observation) (:tabOrder observation)) "Keyboard navigation order differs from the displayed action order." observation)
   (support/assert! (complete-layout? observation) "The reproduction step does not preserve its three-row responsive layout." observation)
@@ -43,10 +43,10 @@
 
 (def ^:private builder-widths
   {"360 CSS px" 360
-   "520 CSS px" 520})
+   "320 CSS px" 320})
 
 (defn- assert-action-rows! [example observations]
-  (support/assert! (= [360 520] (mapv :width observations)) "The reproduction action rows were not verified at both specified widths." observations)
+  (support/assert! (= [360 1280 320] (mapv :width observations)) "The reproduction action rows were not verified at the approved responsive widths." {:observations observations})
   (when-let [builder-width (:builder_width example)]
     (let [expected-width (get builder-widths builder-width)]
       (support/assert! expected-width "The reproduction builder example uses an unsupported width." {:example example})

@@ -225,7 +225,7 @@ function refreshBrowserTargetRuntime() {
   : activeBrowserTargetEnvironment.SCHEMA_RENAMING_BROWSER_ADAPTER === "1" ? [720]
   : activeBrowserTargetEnvironment.SCHEMA_PROPERTY_FILTER_SORT_BROWSER_ADAPTER === "1" ? [720]
   : activeBrowserTargetEnvironment.SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER === "1" ? [320]
-  : activeBrowserTargetEnvironment.REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER === "1" ? [360, 520]
+  : activeBrowserTargetEnvironment.REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER === "1" ? [360, 1280, 320]
     : activeBrowserTargetEnvironment.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || activeBrowserTargetEnvironment.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" ? [720]
       : [320, 360, 520, 720];
   schemaLibraryExportFixture = activeBrowserTargetEnvironment.SCHEMA_LIBRARY_EXPORT_FIXTURE ?? "2:4";
@@ -2519,21 +2519,41 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       afterLaterEvent:"1 of 3 events",
       }, `Payload path filter picker violated its ${width}px browser contract`);
     }
-    if (width === 360 || width === 520) {
+    if ([320, 360, 520, 1280].includes(width) &&
+        (activeBrowserTargetEnvironment.REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER === "1" ||
+         !requestedBrowserAdapter)) {
       const reproductionStepActionRows = await evaluate(socket, reproductionStepActionRowsRuntime);
       reproductionStepActionRowsObservations.push(reproductionStepActionRows);
       assert.equal(reproductionStepActionRows.width, width);
-      assert.equal(reproductionStepActionRows.text, "2. Click Checkout");
+      assert.equal(reproductionStepActionRows.text, "3. Click Bravo");
       assert.equal(reproductionStepActionRows.actionOrder.length, 4, JSON.stringify(reproductionStepActionRows.actionOrder));
       assert.deepEqual(reproductionStepActionRows.actionOrder, ["Reorder", "+", "Adjust", "Remove"]);
       assert.equal(reproductionStepActionRows.actionOrder[3], "Remove");
       assert.deepEqual(reproductionStepActionRows.tabOrder, reproductionStepActionRows.actionOrder);
       assert.equal(reproductionStepActionRows.tabOrder[3], "Remove");
-      assert.equal(reproductionStepActionRows.textBeforeActions, true);
-      assert.equal(reproductionStepActionRows.guidanceAfterActions, true);
-      assert.equal(reproductionStepActionRows.completeControls, true);
-      assert.equal(reproductionStepActionRows.noHorizontalOverflow, true);
-      assert.equal(reproductionStepActionRows.rows.every(({ textBeforeActions, addName }) => textBeforeActions && /^Add step to \//.test(addName)), true);
+      assert.equal(reproductionStepActionRows.textBeforeActions, true,JSON.stringify(reproductionStepActionRows));
+      assert.equal(reproductionStepActionRows.guidanceAfterActions, true,JSON.stringify(reproductionStepActionRows));
+      assert.equal(reproductionStepActionRows.completeControls, true,JSON.stringify(reproductionStepActionRows));
+      assert.equal(reproductionStepActionRows.noHorizontalOverflow, true,JSON.stringify(reproductionStepActionRows));
+      assert.equal(reproductionStepActionRows.rows.every(({ textBeforeActions, addName }) => textBeforeActions && /^Add step to \//.test(addName)), true,JSON.stringify(reproductionStepActionRows));
+      assert.deepEqual(reproductionStepActionRows.reorderEvidence.closedSemantics,{
+        type:"button",accessibleName:"Reorder Click Bravo, position 2 of 3",hasPopup:"menu",expanded:"false",
+        controls:reproductionStepActionRows.reorderEvidence.closedSemantics.controls,menuRole:"menu",itemRole:"listitem",itemLabel:"Click Bravo",position:"2",setSize:"3",
+        ariaGrabbed:false,triggerDraggable:true,rowDraggable:false,target:reproductionStepActionRows.reorderEvidence.closedSemantics.target,
+      });
+      assert.match(reproductionStepActionRows.reorderEvidence.closedSemantics.controls,/^reorder-menu-/);
+      assert.equal(reproductionStepActionRows.reorderEvidence.closedSemantics.target.width>=44,true,JSON.stringify(reproductionStepActionRows.reorderEvidence));
+      assert.equal(reproductionStepActionRows.reorderEvidence.closedSemantics.target.height>=44,true,JSON.stringify(reproductionStepActionRows.reorderEvidence));
+      assert.deepEqual(reproductionStepActionRows.reorderEvidence.keyboard,{firstFocused:"Move to first",endFocused:"Move…",escapeRestored:true});
+      assert.deepEqual(reproductionStepActionRows.reorderEvidence.menuLabels.map(({label})=>label),["Move to first","Move one position earlier","Move one position later","Move to last","Move…"]);
+      assert.deepEqual(reproductionStepActionRows.reorderEvidence.movedRows,["Click Alpha","Click Charlie","Click Delta","Click Bravo"]);
+      assert.equal(reproductionStepActionRows.reorderEvidence.focusedAfterMove,"manual:manual-2");
+      assert.equal(reproductionStepActionRows.reorderEvidence.status,"Click Bravo moved from position 2 to position 4");
+      assert.equal(reproductionStepActionRows.reorderEvidence.geometry.documentOverflow,false,JSON.stringify(reproductionStepActionRows.reorderEvidence.geometry));
+      assert.equal(reproductionStepActionRows.reorderEvidence.geometry.menuInside,true,JSON.stringify(reproductionStepActionRows.reorderEvidence.geometry));
+      assert.equal(reproductionStepActionRows.reorderEvidence.geometry.dialogInside,true,JSON.stringify(reproductionStepActionRows.reorderEvidence.geometry));
+      assert.equal(reproductionStepActionRows.reorderEvidence.geometry.noActionOverlap,true,JSON.stringify(reproductionStepActionRows.reorderEvidence.geometry));
+      if(width===320)assert.equal(reproductionStepActionRows.reorderEvidence.geometry.rootFontSize,"64px");
       assert.deepEqual(reproductionStepActionRows.checkoutBoundary, {
         text:"2. Click Checkout",
         earlierVisible:true,

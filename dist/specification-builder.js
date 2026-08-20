@@ -10,7 +10,7 @@ import { compileSpecificationProject as executeCompileSpecificationProject, crea
 import { entityPurposeGuidance, projectAuthoringGuidance } from "./data-layer-specification-guidance.js";
 import { installExecutableFlowBuilder } from "./data-layer-specification-executable-flow-ui.js";
 import { applyFlowPageGroupLaneSelection, flowPageGroupLaneIds, installFlowGraphBuilder } from "./utilities/data-layer/flow-graph.js";
-import { pageGroupMembers } from "./data-layer-page-group-membership.js";
+import { mountPageGroupMembershipEditor, pageGroupMembers, removePageGroupMembership } from "./data-layer-page-group-membership.js";
 import { restoreSchemaLibrary, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 const projectPreflight = (current, revision) => specificationPreflight({ ...createCanonicalProjectEnvelope(current.project, current.draft?.id ?? "release"), revision });
 const nextProjectReleaseRevision = (current, published) => Math.max(published, ...current.project.releases.map((release) => release.revision)) + 1;
@@ -1160,6 +1160,10 @@ function renderProjectEntityWorkspace(content, kind, entity) { if (!state)
     workspace.append(status);
     return;
 } if (kind === "pages") {
+    const memberships = document.createElement("div");
+    workspace.append(memberships);
+    mountPageGroupMembershipEditor(memberships, { current: () => state, pageId: entity.id, persist, open: (pageGroupId) => openProjectEntityWorkspace("propertySets", pageGroupId), remove: (pageGroupId) => { if (state)
+            persist(removePageGroupMembership(state, entity.id, pageGroupId)); } });
     renderProfileInheritanceEditor(workspace, entity, true);
     renderComposedSchemaWorkspace(workspace, entity, "pages", "Page", [...(pageApplicabilityPreviews.get(entity.id) ?? new Set())]);
 } if (kind === "propertySets") {
@@ -1847,7 +1851,7 @@ durableProjectRuntime.subscribe(({ library: incoming, active }) => {
     library = structuredClone(incoming);
     if (!active)
         return;
-    const focusedMembershipId = document.activeElement instanceof HTMLElement ? document.activeElement.closest("[data-page-group-membership-id]")?.dataset.pageGroupMembershipId : undefined;
+    const focusedReorderItemId = document.activeElement instanceof HTMLElement ? document.activeElement.dataset.reorderItemId : undefined;
     state = { ...structuredClone(active.state), history: { undo: [], redo: [] } };
     lastCommittedState = structuredClone(state);
     canonicalRevision = active.draftSequence;
@@ -1868,8 +1872,8 @@ durableProjectRuntime.subscribe(({ library: incoming, active }) => {
         queueMicrotask(() => { const control = q(`#${controlId}`); (control.disabled ? document.querySelector("[data-profile-inheritance-card], #workspace-content h1") : control)?.focus({ preventScroll: true }); if (pendingHistoryFocus === controlId)
             pendingHistoryFocus = undefined; });
     }
-    if (focusedMembershipId)
-        queueMicrotask(() => document.querySelector(`[data-page-group-membership-id="${CSS.escape(focusedMembershipId)}"]`)?.focus());
+    if (focusedReorderItemId)
+        queueMicrotask(() => document.querySelector(`[data-reorder-item-id="${CSS.escape(focusedReorderItemId)}"]`)?.focus({ preventScroll: true }));
     queueMicrotask(restorePendingLifecycleFocus);
     queueMicrotask(restorePendingWorkspaceFocus);
     q("#project-state").textContent = `Updated to the newer Saved Draft · Published revision ${publishedRevision}`;

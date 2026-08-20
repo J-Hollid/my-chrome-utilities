@@ -80,7 +80,7 @@ assert.deepEqual(Object.fromEntries(sidePanelTargetContract
   DEFECT_REPORT_SEMANTIC_DIFFERENCES_BROWSER_ADAPTER:[320],
   DEFECT_REPORT_UNDECLARED_REMOVAL_BROWSER_ADAPTER:[320],
   EVENT_OCCURRENCE_DEFECT_REPORT_BROWSER_ADAPTER:[320],
-  REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER:[360, 520],
+  REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER:[360, 1280, 320],
   REQUIRED_PROPERTY_DEFECT_SCHEMA_CHOICES_BROWSER_ADAPTER:[320],
 }, "all installed targets retain their exact canonical viewport sequences");
 assert.equal(sidePanelTargetContract.every(({ viewport }) => Object.isFrozen(viewport)), true);

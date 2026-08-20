@@ -2,6 +2,35 @@ import { canonicalPropertyPath, canonicalTableRows } from "../data-layer-canonic
 import { applySchemaTablePathAllocation, bindSchemaTableQuickEdit, mountSchemaTableOverlay, schemaTableAllowedValues, schemaTableCellMetadata, schemaTableColumns, schemaTableSortComparison } from "../data-layer-schema-table.js";
 import { button } from "./dom.js";
 import { canonicalFacetText } from "../data-layer-canonical-schema-facets.js";
+import { canonicalMoveDestinations } from "./structure.js";
+import { renderReorderControl } from "../reorderable-editor/control.js";
+import { reorderValues } from "../reorderable-editor/model.js";
+import { focusedStructureOwned } from "../data-layer-canonical-schema-focused-drafts.js";
+const orderedChildren = (context, parentId) => Object.values(context.document.nodes).filter(node => node.parentId === parentId).sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
+const reorderProperty = (context, node, request) => {
+    if (request.method === "dialog" && request.destinationId && request.placement) {
+        const parentId = request.destinationParentId ?? undefined, excluded = new Set([node.id]), pending = [node.id];
+        while (pending.length) {
+            const current = pending.pop();
+            for (const child of Object.values(context.document.nodes).filter(candidate => candidate.parentId === current))
+                if (!excluded.has(child.id)) {
+                    excluded.add(child.id);
+                    pending.push(child.id);
+                }
+        }
+        const siblings = orderedChildren(context, parentId).filter(candidate => !excluded.has(candidate.id)), destination = siblings.findIndex(({ id }) => id === request.destinationId);
+        if (destination < 0)
+            return false;
+        const afterIndex = request.placement === "after" ? destination : destination - 1, afterId = afterIndex >= 0 ? siblings[afterIndex].id : undefined;
+        context.command({ kind: "move", baseRevision: context.document.revision, propertyId: node.id, ...(parentId ? { parentId } : {}), ...(afterId ? { afterId } : {}) });
+        return true;
+    }
+    const siblings = orderedChildren(context, node.parentId), next = reorderValues(siblings, node.id, request.toIndex, value => value.id), position = next.findIndex(({ id }) => id === node.id), afterId = position > 0 ? next[position - 1].id : undefined;
+    if (position < 0)
+        return false;
+    context.command({ kind: "move", baseRevision: context.document.revision, propertyId: node.id, ...(node.parentId ? { parentId: node.parentId } : {}), ...(afterId ? { afterId } : {}) });
+    return true;
+};
 export function canonicalNavigatorRows(context) {
     const query = context.query.trim().toLowerCase(), matches = (node) => !query || String(node.name ?? "").toLowerCase().includes(query) || canonicalPropertyPath(context.document, node.id).toLowerCase().includes(query), facet = (node) => context.propertyFilter === "all" || context.propertyFilter === "conditions" && Boolean(node.presence.condition) || context.propertyFilter === "documentation" && Boolean(node.documentation.displayText || node.documentation.description || node.documentation.comments) || context.propertyFilter === "issues" && node.provenance.some(({ state }) => state === "shadowed");
     const source = (node) => node.provenance.map(({ contributorName, source, state }) => contributorName ?? state ?? source).join(", ") || context.document.contributorName, rows = canonicalTableRows(context.document).filter(({ node }) => matches(node) && facet(node)), ordered = rows.map((row, order) => ({ row, order }));
@@ -19,7 +48,8 @@ export function renderNavigatorRows(tree, context) {
         const actions = button(dom, "Property actions", () => { context.setMenuPropertyId(row.id); context.openProperty(row.node, actions); });
         actions.setAttribute("aria-label", `Property actions for ${row.path}`);
         actions.dataset.propertyActionsPath = row.path;
-        article.append(choose, actions);
+        const siblings = orderedChildren(context, row.node.parentId), reorder = renderReorderControl({ itemId: row.node.id, itemLabel: row.node.name, completeOrder: siblings.map(({ id, name }) => ({ id, label: name })), legalDestinationIds: focusedStructureOwned(row.node) ? siblings.filter(focusedStructureOwned).map(({ id }) => id) : [], moveDestinations: focusedStructureOwned(row.node) ? canonicalMoveDestinations(document, row.node) : [], dropTarget: article, orderedContainer: tree, onMove: (request) => reorderProperty(context, row.node, request) });
+        article.append(choose, actions, reorder);
         tree.append(article);
         if (row.node.type === "array") {
             let item = row.node.itemSchema ?? (row.node.itemType ? { id: `item:${row.node.id}`, type: row.node.itemType } : undefined), level = row.depth + 1;
@@ -118,6 +148,13 @@ function renderTable(tree, context) {
             pendingOverlay = { trigger, path: row.path, layers };
         }
         body.append(tr);
+    }
+    for (const row of Array.from(body.querySelectorAll("tr"))) {
+        const node = context.document.nodes[row.dataset.propertyId ?? ""], source = row.querySelector("[data-schema-table-cell='source']");
+        if (!node || !source)
+            continue;
+        const siblings = orderedChildren(context, node.parentId), reorder = renderReorderControl({ itemId: node.id, itemLabel: node.name, completeOrder: siblings.map(({ id, name }) => ({ id, label: name })), legalDestinationIds: focusedStructureOwned(node) ? siblings.filter(focusedStructureOwned).map(({ id }) => id) : [], moveDestinations: focusedStructureOwned(node) ? canonicalMoveDestinations(context.document, node) : [], dropTarget: row, preserveTargetSemantics: true, onMove: (request) => reorderProperty(context, node, request) });
+        source.prepend(reorder);
     }
     table.replaceChildren(head, body);
     table.setAttribute("aria-label", "Canonical property table");

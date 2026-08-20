@@ -50,7 +50,8 @@ const clearDropIndicator=(target:HTMLElement):void=>{
 };
 
 const button=(doc:Document,label:string):HTMLButtonElement=>{
-  const control=doc.createElement("button");control.type="button";control.textContent=label;return control;
+  const control=doc.createElement("button");control.type="button";control.textContent=label;
+  styles(control,{boxSizing:"border-box",maxWidth:"100%",whiteSpace:"normal",overflowWrap:"anywhere"});return control;
 };
 
 const styles=(element:HTMLElement,values:Record<string,string>):void=>{
@@ -93,7 +94,7 @@ export function renderReorderControl<T extends ReorderableItem>(options:ReorderC
   const doc=options.dropTarget?.ownerDocument??globalThis.document,model=reorderControlModel(options);
   const wrapper=doc.createElement("span"),trigger=button(doc,"Reorder"),menu=doc.createElement("div"),dialog=doc.createElement("div");
   const menuId=`reorder-menu-${++identity}`,dialogId=`reorder-dialog-${identity}`;
-  wrapper.className="reorderable-editor-control";styles(wrapper,{display:"inline-flex",position:"relative"});
+  wrapper.className="reorderable-editor-control";styles(wrapper,{display:"inline-flex",position:"relative",maxWidth:"100%"});
   trigger.className="reorderable-editor-trigger";trigger.dataset.reorderTrigger="true";trigger.dataset.reorderItemId=options.itemId;
   trigger.setAttribute("data-reorder-trigger","true");trigger.setAttribute("data-reorder-item-id",options.itemId);
   trigger.setAttribute("aria-label",model.accessibleName);trigger.setAttribute("aria-haspopup","menu");
@@ -102,7 +103,7 @@ export function renderReorderControl<T extends ReorderableItem>(options:ReorderC
   menu.id=menuId;menu.setAttribute("role","menu");menu.hidden=true;menu.className="reorderable-editor-menu";
   styles(menu,{position:"absolute",zIndex:"20",maxWidth:"calc(100vw - 16px)",insetInlineStart:"0",top:"100%"});
   dialog.id=dialogId;dialog.setAttribute("role","dialog");dialog.setAttribute("aria-modal","true");dialog.setAttribute("aria-label",`Move ${options.itemLabel}`);dialog.hidden=true;
-  dialog.className="reorderable-editor-dialog";styles(dialog,{position:"fixed",zIndex:"30",maxWidth:"calc(100vw - 16px)",maxHeight:"calc(100vh - 16px)",overflow:"auto"});
+  dialog.className="reorderable-editor-dialog";styles(dialog,{position:"fixed",zIndex:"30",inset:"8px",maxWidth:"calc(100vw - 16px)",maxHeight:"calc(100vh - 16px)",overflow:"auto",overflowWrap:"anywhere"});
 
   const closeMenu=()=>{menu.hidden=true;trigger.setAttribute("aria-expanded","false");};
   const openMenu=()=>{menu.hidden=false;trigger.setAttribute("aria-expanded","true");queueMicrotask(()=>menu.querySelector?.<HTMLButtonElement>('button:not([disabled])')?.focus());};

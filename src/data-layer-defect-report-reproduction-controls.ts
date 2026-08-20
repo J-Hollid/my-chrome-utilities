@@ -124,7 +124,8 @@ export function appendReproductionControls<Report extends ComposableDefectReport
         });
         const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Remove";
         remove.addEventListener("click", () => updateSteps(removeManualReproductionStep(state.report().reproductionSteps, step.id)));
-        const reorder=renderReorderControl({itemId:`manual:${step.id}`,itemLabel:step.text.replace(/^\d+\.\s*/,""),completeOrder,
+        const scopedOrder=completeOrder.filter(({id})=>currentSteps.find((candidate,candidateIndex)=>stepIdentity(candidate,candidateIndex)===id)?.visitId===step.visitId&&id.startsWith("manual:"));
+        const reorder=renderReorderControl({itemId:`manual:${step.id}`,itemLabel:step.text.replace(/^\d+\.\s*/,""),completeOrder:scopedOrder,
           legalDestinationIds:currentSteps.flatMap((candidate,candidateIndex)=>candidate.kind==="manual"&&candidate.visitId===step.visitId?[stepIdentity(candidate,candidateIndex)]:[]),
           scopeLabel:step.pathname,dropTarget:item,orderedContainer:steps,onMove:({itemId,fromIndex,toIndex})=>{let next=currentSteps;const direction=toIndex<fromIndex?"earlier":"later";for(let count=Math.abs(toIndex-fromIndex);count>0;count-=1)next=moveManualReproductionStep(next,itemId.replace(/^manual:/u,""),direction);updateSteps(next);return true;}});
         const segmentNote = document.createElement("small"); segmentNote.textContent = `Reordering stays within ${step.pathname}.`;

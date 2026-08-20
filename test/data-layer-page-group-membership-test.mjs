@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import {
   addPageGroupMembership,
   confirmPageGroupMembershipMigration,
+  inspectPageGroupMembershipMove,
   inspectPageGroupMembershipRemoval,
   movePageGroupMembership,
   orderedPageGroupIds,
+  pageGroupMembershipPresentation,
   pageGroupMembers,
   previewPageGroupMembershipMove,
   removePageGroupMembership,
@@ -35,11 +37,25 @@ assert.deepEqual(orderedPageGroupIds(state.project,cart.id),[checkout.id,retail.
 assert.throws(()=>addPageGroupMembership(state,cart.id,retail.id),/already belongs/);
 assert.throws(()=>addPageGroupMembership(state,cart.id,"group:missing"),/Unknown Property Set/);
 assert.deepEqual(pageGroupMembers(state.project,trade.id).map(({id})=>id),[cart.id],"group members derive from Page-owned membership");
+assert.deepEqual(pageGroupMembershipPresentation(state.project,cart.id),[
+  {id:checkout.id,label:"Checkout",position:1,count:3},
+  {id:retail.id,label:"Retail Checkout",position:2,count:3},
+  {id:trade.id,label:"Trade Checkout",position:3,count:3},
+],"the installed membership renderer receives the complete canonical order and stable identities");
 
 const beforeOrderProject=structuredClone(state.project),beforeOrderHistory=state.history.undo.length;
 const stagedOrder=previewPageGroupMembershipMove(state.project,cart.id,trade.id,-1);
 assert.deepEqual(stagedOrder,[checkout.id,trade.id,retail.id],"reorder preview exposes the requested order before commit");
 assert.deepEqual(orderedPageGroupIds(state.project,cart.id),[checkout.id,retail.id,trade.id],"preview does not mutate canonical membership");
+const moveReview=inspectPageGroupMembershipMove(state.project,cart.id,trade.id,-1);
+assert.deepEqual(moveReview.currentPageGroupIds,[checkout.id,retail.id,trade.id]);
+assert.deepEqual(moveReview.proposedPageGroupIds,[checkout.id,trade.id,retail.id]);
+assert.equal(moveReview.pageName,"Cart");
+assert.equal(moveReview.pageGroupName,"Trade Checkout");
+assert.match(moveReview.summary,/effective property composition/i);
+assert.match(moveReview.summary,/compiled targets/i);
+assert.match(moveReview.summary,/exports/i);
+assert.deepEqual(orderedPageGroupIds(state.project,cart.id),[checkout.id,retail.id,trade.id],"impact review is byte-preserving");
 state=movePageGroupMembership(state,cart.id,trade.id,-1);
 assert.deepEqual(orderedPageGroupIds(state.project,cart.id),[checkout.id,trade.id,retail.id]);
 assert.deepEqual({...state.project.collections.pages[0],pageGroupIds:undefined},{...beforeOrderProject.collections.pages[0],pageGroupIds:undefined},"reorder changes no Page fields beyond membership order");

@@ -1,4 +1,5 @@
 import {transactProject,type ProjectEntity,type ProjectState,type SpecificationProject} from "./data-layer-specification-project.js";
+import {renderReorderControl,type ReorderRequest} from "./reorderable-editor/control.js";
 
 export interface PageGroupMembershipMigration {
   pageId:string;
@@ -13,6 +14,16 @@ export interface PageGroupMembershipRemovalReview {
   message:string;
   actions:{label:string;kind:"move-frame"|"remove-frame";flowId:string;frameId:string;pageGroupId?:string}[];
   affectedTargets:string[];
+}
+
+export interface PageGroupMembershipMoveReview {
+  pageId:string;
+  pageName:string;
+  pageGroupId:string;
+  pageGroupName:string;
+  currentPageGroupIds:string[];
+  proposedPageGroupIds:string[];
+  summary:string;
 }
 
 const storedIds=(page:ProjectEntity):string[]|undefined=>Array.isArray(page.pageGroupIds)?page.pageGroupIds.map(String):undefined;
@@ -50,6 +61,13 @@ export function previewPageGroupMembershipMove(project:SpecificationProject,page
   const to=Math.max(0,Math.min(current.length-1,from+delta));if(to===from)return current;const next=[...current],moved=next.splice(from,1)[0]!;next.splice(to,0,moved);return next;
 }
 
+export function inspectPageGroupMembershipMove(project:SpecificationProject,pageId:string,pageGroupId:string,delta:number):PageGroupMembershipMoveReview{
+  const page=project.collections.pages.find(({id})=>id===pageId);if(!page)throw new Error(`Unknown Page ${pageId}.`);
+  const pageGroup=project.collections.propertySets.find(({id})=>id===pageGroupId);if(!pageGroup)throw new Error(`Unknown Property Set ${pageGroupId}.`);
+  const currentPageGroupIds=orderedPageGroupIds(project,pageId),proposedPageGroupIds=previewPageGroupMembershipMove(project,pageId,pageGroupId,delta);
+  return{pageId,pageName:page.name,pageGroupId,pageGroupName:pageGroup.name,currentPageGroupIds,proposedPageGroupIds,summary:`Reordering ${pageGroup.name} changes effective property composition for ${page.name}; affected Page instances and compiled targets are recomputed, and documentation exports become stale.`};
+}
+
 export function movePageGroupMembership(state:ProjectState,pageId:string,pageGroupId:string,delta:number):ProjectState{
   if(requiresPageGroupMembershipMigration(state.project,pageId))return state;
   const page=state.project.collections.pages.find(({id})=>id===pageId),current=orderedPageGroupIds(state.project,pageId),next=previewPageGroupMembershipMove(state.project,pageId,pageGroupId,delta);if(!page||next===current||next.join("\0")===current.join("\0"))return state;
@@ -82,4 +100,51 @@ export function confirmPageGroupMembershipMigration(state:ProjectState,review:Pa
   if(review.missingPageGroupIds.length)throw new Error(`Cannot migrate missing Property Set ${review.missingPageGroupIds.join(", ")}.`);if(review.duplicatePageGroupIds.length)throw new Error(`Cannot migrate duplicate Property Set ${review.duplicatePageGroupIds.join(", ")}.`);
   const page=state.project.collections.pages.find(({id})=>id===review.pageId);if(!page)throw new Error(`Unknown Page ${review.pageId}.`);
   return transactProject(state,`Migrate ordered Property Set membership for ${page.name}`,(project)=>({...project,collections:{...project.collections,pages:project.collections.pages.map((candidate)=>candidate.id===page.id?{...candidate,pageGroupIds:[...review.proposedPageGroupIds]}:candidate),propertySets:project.collections.propertySets.map((group)=>{if(!Array.isArray(group.pageIds))return group;const pageIds=(group.pageIds as string[]).filter((id)=>id!==page.id),next={...group};if(pageIds.length)next.pageIds=pageIds;else delete next.pageIds;return next;})}}));
+}
+
+export interface PageGroupMembershipPresentationRow {
+  id:string;
+  label:string;
+  position:number;
+  count:number;
+}
+
+export interface PageGroupMembershipUiOptions {
+  current:()=>ProjectState;
+  pageId:string;
+  persist:(state:ProjectState)=>void;
+  open:(pageGroupId:string)=>void;
+  remove:(pageGroupId:string)=>void;
+}
+
+export function pageGroupMembershipPresentation(project:SpecificationProject,pageId:string):PageGroupMembershipPresentationRow[]{
+  const ids=orderedPageGroupIds(project,pageId),groups=new Map(project.collections.propertySets.map((group)=>[group.id,group]));
+  return ids.map((id,index)=>({id,label:groups.get(id)?.name??id,position:index+1,count:ids.length}));
+}
+
+export function mountPageGroupMembershipEditor(host:HTMLElement,options:PageGroupMembershipUiOptions):{render:()=>void}{
+  let pending:{request:ReorderRequest;delta:number}|undefined;
+  const doc=host.ownerDocument;
+  const focusTrigger=(id:string)=>queueMicrotask(()=>host.querySelector<HTMLButtonElement>(`[data-page-group-membership-id="${CSS.escape(id)}"] [data-reorder-trigger="true"]`)?.focus({preventScroll:true}));
+  const button=(label:string,action:()=>void)=>{const control=doc.createElement("button");control.type="button";control.textContent=label;control.addEventListener("click",action);return control;};
+  const render=()=>{
+    const state=options.current(),page=state.project.collections.pages.find(({id})=>id===options.pageId),rows=pageGroupMembershipPresentation(state.project,options.pageId),section=doc.createElement("section"),list=doc.createElement("ol"),heading=doc.createElement("h2");
+    if(!page){host.replaceChildren();return;}
+    section.setAttribute("aria-label","Page Group memberships");heading.textContent="Page Group memberships";list.setAttribute("aria-label",`${page.name} Page Group membership stack`);section.append(heading,list);
+    for(const row of rows){
+      const item=doc.createElement("li"),open=button("Open Page Group",()=>options.open(row.id)),remove=button("Remove",()=>options.remove(row.id)),reorder=renderReorderControl({
+        itemId:row.id,itemLabel:row.label,completeOrder:rows.map(({id,label})=>({id,label})),dropTarget:item,orderedContainer:list,
+        onMove:(request)=>{pending={request,delta:request.toIndex-request.fromIndex};render();return false;},
+      });
+      item.dataset.pageGroupMembershipId=row.id;item.append(reorder,doc.createTextNode(row.label),open,remove);list.append(item);
+    }
+    if(pending){
+      const review=inspectPageGroupMembershipMove(state.project,options.pageId,pending.request.itemId,pending.delta),dialog=doc.createElement("dialog"),summary=doc.createElement("p"),order=doc.createElement("p");
+      dialog.setAttribute("aria-label","Page Group membership reorder review");summary.textContent=review.summary;order.textContent=`${review.currentPageGroupIds.join(" → ")} becomes ${review.proposedPageGroupIds.join(" → ")}.`;
+      const cancel=button("Cancel membership reorder",()=>{const id=pending!.request.itemId;pending=undefined;render();focusTrigger(id);}),confirm=button("Confirm membership reorder",()=>{const id=pending!.request.itemId,next=movePageGroupMembership(options.current(),options.pageId,id,pending!.delta);pending=undefined;options.persist(next);render();focusTrigger(id);});
+      dialog.append(summary,order,cancel,confirm);section.append(dialog);queueMicrotask(()=>{if(typeof dialog.showModal==="function")dialog.showModal();else dialog.setAttribute("open","");confirm.focus();});
+    }
+    host.replaceChildren(section);
+  };
+  render();return{render};
 }

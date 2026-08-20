@@ -10,6 +10,7 @@ const button = (doc, label) => {
     const control = doc.createElement("button");
     control.type = "button";
     control.textContent = label;
+    styles(control, { boxSizing: "border-box", maxWidth: "100%", whiteSpace: "normal", overflowWrap: "anywhere" });
     return control;
 };
 const styles = (element, values) => {
@@ -56,7 +57,7 @@ export function renderReorderControl(options) {
     const wrapper = doc.createElement("span"), trigger = button(doc, "Reorder"), menu = doc.createElement("div"), dialog = doc.createElement("div");
     const menuId = `reorder-menu-${++identity}`, dialogId = `reorder-dialog-${identity}`;
     wrapper.className = "reorderable-editor-control";
-    styles(wrapper, { display: "inline-flex", position: "relative" });
+    styles(wrapper, { display: "inline-flex", position: "relative", maxWidth: "100%" });
     trigger.className = "reorderable-editor-trigger";
     trigger.dataset.reorderTrigger = "true";
     trigger.dataset.reorderItemId = options.itemId;
@@ -79,7 +80,7 @@ export function renderReorderControl(options) {
     dialog.setAttribute("aria-label", `Move ${options.itemLabel}`);
     dialog.hidden = true;
     dialog.className = "reorderable-editor-dialog";
-    styles(dialog, { position: "fixed", zIndex: "30", maxWidth: "calc(100vw - 16px)", maxHeight: "calc(100vh - 16px)", overflow: "auto" });
+    styles(dialog, { position: "fixed", zIndex: "30", inset: "8px", maxWidth: "calc(100vw - 16px)", maxHeight: "calc(100vh - 16px)", overflow: "auto", overflowWrap: "anywhere" });
     const closeMenu = () => { menu.hidden = true; trigger.setAttribute("aria-expanded", "false"); };
     const openMenu = () => { menu.hidden = false; trigger.setAttribute("aria-expanded", "true"); queueMicrotask(() => menu.querySelector?.('button:not([disabled])')?.focus()); };
     const announceAndFocus = (fromIndex, toIndex, result) => {

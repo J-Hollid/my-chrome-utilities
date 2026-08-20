@@ -1,4 +1,5 @@
 const reproductionStepActionRowsRuntime = `(async () => {
+  const originalFontSize=document.documentElement.style.fontSize;if(innerWidth===320)document.documentElement.style.fontSize="400%";
   const ui = await import("/data-layer-defect-report-ui.js");
   const event = (id, pathname, captureTime) => ({
     id, name:id, sourceId:"dataLayer", sourceName:"Data layer", captureTime,
@@ -15,16 +16,16 @@ const reproductionStepActionRowsRuntime = `(async () => {
     if (!match) throw new Error("Missing " + label);
     return match;
   };
-  const addClickStep = (root, pathname) => {
+  const addClickStep = (root, pathname, componentName="Checkout") => {
     const pathnameRow = Array.from(root.querySelectorAll('[data-reproduction-step-kind="pathname"]'))
       .find((row) => row.querySelector("input").value.endsWith(pathname));
     if (!pathnameRow) throw new Error("Missing pathname row " + pathname);
     pathnameRow.querySelector("[data-add-reproduction-step]").click();
     button(root, "Click component").click();
     const name = root.querySelector('[data-reproduction-field="componentName"]');
-    name.value = "Checkout"; name.dispatchEvent(new Event("input", { bubbles:true }));
+    name.value = componentName; name.dispatchEvent(new Event("input", { bubbles:true }));
     button(root, "Add step").click();
-    return Array.from(root.querySelectorAll('[data-reproduction-step-kind="manual"]')).find((row) => row.textContent.includes("Click Checkout"));
+    return Array.from(root.querySelectorAll('[data-reproduction-step-kind="manual"]')).find((row) => row.textContent.includes("Click " + componentName));
   };
   const mount = (events) => {
     const root = document.createElement("section"); root.className = "reproduction-action-rows-browser-fixture";
@@ -32,14 +33,17 @@ const reproductionStepActionRowsRuntime = `(async () => {
     button(root, "Generate pathname steps").click(); return root;
   };
   const root = mount([products, checkout]);
-  const manual = addClickStep(root, "/products");
+  addClickStep(root, "/products", "Alpha");
+  let manual = addClickStep(root, "/products", "Bravo");
+  addClickStep(root, "/products", "Charlie");
+  manual=Array.from(root.querySelectorAll('[data-reproduction-step-kind="manual"]')).find((row)=>row.textContent.includes("Click Bravo"));
   if (!manual) throw new Error("Missing generated manual step");
   const text = manual.querySelector(".defect-reproduction-step-text");
   const actions = manual.querySelector(".defect-reproduction-step-actions");
   const guidance = manual.querySelector(".defect-reproduction-step-guidance");
   const actionButtons = Array.from(actions.children).map((child) => child.matches("button") ? child : child.querySelector(":scope > .reorderable-editor-trigger")).filter(Boolean);
   const pathnameRows = Array.from(root.querySelectorAll('[data-reproduction-step-kind="pathname"]'));
-  const rows = [...pathnameRows, manual].map((row) => ({
+  const rows = Array.from(root.querySelectorAll('[data-reproduction-step-kind]')).map((row) => ({
     kind:row.dataset.reproductionStepKind,
     textBeforeActions:Array.from(row.children).indexOf(row.querySelector(".defect-reproduction-step-text")) < Array.from(row.children).indexOf(row.querySelector(".defect-reproduction-step-actions")),
     addName:row.querySelector("[data-add-reproduction-step]").getAttribute("aria-label"),
@@ -47,6 +51,13 @@ const reproductionStepActionRowsRuntime = `(async () => {
   const textRect = text.getBoundingClientRect();
   const actionsRect = actions.getBoundingClientRect();
   const guidanceRect = guidance.getBoundingClientRect();
+  const completeControls=actionButtons.every((control) => control.scrollWidth <= actions.clientWidth),noHorizontalOverflow=innerWidth===320?document.documentElement.scrollWidth<=document.documentElement.clientWidth:manual.scrollWidth <= manual.clientWidth && root.scrollWidth <= root.clientWidth;
+  let trigger=manual.querySelector('[data-reorder-trigger="true"]'),menu=trigger.parentElement.querySelector('[role="menu"]');const item=trigger.closest('[data-reproduction-step-kind="manual"]'),triggerRect=trigger.getBoundingClientRect();
+  const closedSemantics={type:trigger.type,accessibleName:trigger.getAttribute("aria-label"),hasPopup:trigger.getAttribute("aria-haspopup"),expanded:trigger.getAttribute("aria-expanded"),controls:trigger.getAttribute("aria-controls"),menuRole:menu.getAttribute("role"),itemRole:item.getAttribute("role"),itemLabel:item.getAttribute("aria-label"),position:item.getAttribute("aria-posinset"),setSize:item.getAttribute("aria-setsize"),ariaGrabbed:item.hasAttribute("aria-grabbed")||trigger.hasAttribute("aria-grabbed"),triggerDraggable:trigger.draggable,rowDraggable:item.draggable,target:{width:triggerRect.width,height:triggerRect.height}};
+  addClickStep(root,"/products","Delta");manual=Array.from(root.querySelectorAll('[data-reproduction-step-kind="manual"]')).find((row)=>row.textContent.includes("Click Bravo"));trigger=manual.querySelector('[data-reorder-trigger="true"]');menu=trigger.parentElement.querySelector('[role="menu"]');
+  trigger.focus();trigger.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));await Promise.resolve();const firstFocused=document.activeElement?.textContent;document.activeElement?.dispatchEvent(new KeyboardEvent("keydown",{key:"End",bubbles:true,cancelable:true}));const endFocused=document.activeElement?.textContent;document.activeElement?.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));const escapeRestored=document.activeElement===trigger&&menu.hidden&&trigger.getAttribute("aria-expanded")==="false";
+  trigger.click();const menuLabels=Array.from(menu.querySelectorAll('button'),control=>({label:control.textContent,disabled:control.disabled})),menuRect=menu.getBoundingClientRect(),moveLast=Array.from(menu.querySelectorAll('button')).find(({textContent})=>textContent==="Move to last");moveLast.click();await new Promise(resolve=>setTimeout(resolve,0));const movedRows=Array.from(root.querySelectorAll('[data-reproduction-step-kind="manual"]'),row=>row.querySelector('.defect-reproduction-step-text').textContent.replace(/^[0-9]+[.] /,"")),focusedAfterMove=document.activeElement?.dataset.reorderItemId??"",status=document.querySelector('[data-reorder-status="true"]')?.textContent??"";
+  manual=Array.from(root.querySelectorAll('[data-reproduction-step-kind="manual"]')).find((row)=>row.textContent.includes("Click Bravo"));trigger=manual.querySelector('[data-reorder-trigger="true"]');trigger.click();const moveDialogAction=Array.from(trigger.parentElement.querySelectorAll('button')).find(({textContent})=>textContent==="Move…");moveDialogAction.click();const dialog=trigger.parentElement.querySelector('[role="dialog"]'),dialogRect=dialog.getBoundingClientRect(),dialogActions=Array.from(dialog.querySelectorAll('button')).map(control=>control.getBoundingClientRect()),overlap=(left,right)=>left.left<right.right&&right.left<left.right&&left.top<right.bottom&&right.top<left.bottom,overflowOffenders=Array.from(document.querySelectorAll('*')).map(element=>({element,rect:element.getBoundingClientRect()})).filter(({rect})=>rect.right>innerWidth+1||rect.left< -1).sort((left,right)=>right.rect.right-left.rect.right).slice(0,5).map(({element,rect})=>({tag:element.tagName,id:element.id,className:String(element.className),right:rect.right,width:rect.width}));const geometry={rootFontSize:getComputedStyle(document.documentElement).fontSize,documentOverflow:document.documentElement.scrollWidth>document.documentElement.clientWidth,overflowOffenders,menuInside:menuRect.left>=0&&menuRect.right<=innerWidth,dialogInside:dialogRect.left>=0&&dialogRect.right<=innerWidth&&dialogRect.top>=0&&dialogRect.bottom<=innerHeight,noActionOverlap:dialogActions.every((rect,index)=>dialogActions.slice(index+1).every(other=>!overlap(rect,other)))};dialog.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));
   const observation = {
     width:innerWidth,
     text:text.textContent,
@@ -54,8 +65,9 @@ const reproductionStepActionRowsRuntime = `(async () => {
     tabOrder:actionButtons.map(({ textContent }) => textContent),
     textBeforeActions:textRect.bottom <= actionsRect.top + 1,
     guidanceAfterActions:actionsRect.bottom <= guidanceRect.top + 1,
-    completeControls:actionButtons.every((control) => getComputedStyle(control).whiteSpace === "nowrap" && control.scrollWidth <= actions.clientWidth),
-    noHorizontalOverflow:manual.scrollWidth <= manual.clientWidth && root.scrollWidth <= root.clientWidth,
+    completeControls,
+    noHorizontalOverflow,
+    reorderEvidence:{closedSemantics,keyboard:{firstFocused,endFocused,escapeRestored},menuLabels,movedRows,focusedAfterMove,status,geometry},
     rows,
   };
   root.remove();
@@ -71,7 +83,7 @@ const reproductionStepActionRowsRuntime = `(async () => {
     guidance:checkoutGuidance,
     chooseAnotherAbsent:!checkoutGuidance.includes("choose another pathname segment"),
   };
-  checkoutRoot.remove();
+  checkoutRoot.remove();document.documentElement.style.fontSize=originalFontSize;
   return observation;
 })()`;
 

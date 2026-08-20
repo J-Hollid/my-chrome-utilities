@@ -94,6 +94,19 @@
   (let [evidence (into {:installedBoundary true
                         :headingLifecycleStart true
                         :orderingControls true
+                        :reorderEvidence
+                        {:inventory [{:id "ecommerce"} {:id "Page"}
+                                     {:id "technical"} {:id "Ungrouped"}]
+                         :before ["ecommerce" "Page" "technical" "Ungrouped"]
+                         :moved ["Ungrouped" "ecommerce" "Page" "technical"]
+                         :moveSequences [1 1 1]
+                         :undoTrace ["ecommerce|Ungrouped|Page|technical"
+                                     "ecommerce|Page|Ungrouped|technical"
+                                     "ecommerce|Page|technical|Ungrouped"]
+                         :redoTrace ["ecommerce|Page|Ungrouped|technical"
+                                     "ecommerce|Ungrouped|Page|technical"
+                                     "Ungrouped|ecommerce|Page|technical"]
+                         :appended ["Ungrouped" "ecommerce" "Page" "technical" "Acquisition"]}
                         :documentationTemplates true
                         :documentationTemplateStarters true
                         :documentationTemplateStarterParity true

@@ -31,6 +31,9 @@ assert.ok(local().some(({path})=>path==="/copy"),"Move controls retain the prope
 apply({kind:"move",path:"/copy",destinationParentPath:"/shippingRoot",afterPath:"/shippingRoot/second"});
 assert.ok(local().some(({path})=>path==="/shippingRoot/copy"),
   "Move… changes the parent and preserves the moved subtree identity");
+apply({kind:"move",path:"/shippingRoot/copy",destinationParentPath:"/shippingRoot"});
+assert.deepEqual(local().filter(({path})=>path.startsWith("/shippingRoot/")).map(({path})=>path),["/shippingRoot/copy","/shippingRoot/second"],
+  "Move… can select a different edge within the current parent without treating itself as a path collision");
 apply({kind:"move",path:"/shippingRoot/copy",destinationParentPath:"",afterPath:"/renamed"});
 assert.ok(local().some(({path})=>path==="/copy"),"the inverse hierarchical move restores the former parent");
 apply({kind:"delete",path:"/copy"});

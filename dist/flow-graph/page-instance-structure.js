@@ -10,7 +10,7 @@ const suffixName = (path, name) => { const parent = parentPath(path); return `${
 const frameFor = (state, flowId, frameId) => { const graph = state.project.documentationFlowGraphs[flowId], frame = graph?.pageFrames?.find(({ id }) => id === frameId); if (!graph || !frame)
     throw new Error(`Flow Page instance ${frameId} is unavailable.`); return frame; };
 const constraintsFor = (frame) => clone(frame.localSchemaContributions ?? []);
-const existingPath = (constraints, path, ignorePath) => constraints.some(({ path: candidate }) => candidate !== ignorePath && subtree(ignorePath ?? "\0", candidate) ? false : candidate === path);
+const existingPath = (constraints, path, ignorePath) => constraints.some(({ path: candidate }) => candidate === path && (!ignorePath || !subtree(ignorePath, candidate)));
 const moveBlock = (constraints, path, delta) => {
     const siblingPaths = [...new Set(constraints.filter(({ path: candidate }) => parentPath(candidate) === parentPath(path)).map(({ path: candidate }) => candidate))], siblingIndex = siblingPaths.indexOf(path), targetIndex = siblingIndex + delta;
     if (siblingIndex < 0 || targetIndex < 0 || targetIndex >= siblingPaths.length)

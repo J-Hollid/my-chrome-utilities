@@ -340,7 +340,7 @@ export function flowWorkspaceR02Runtime(seeded, { stopAfterRuntime,
   const skipped=document.activeElement===canvas||(skip.textContent.trim()==='Skip to canvas'&&canvas.getAttribute('tabindex')==='0');
   const cameraBeforeFocus=canvas.dataset.viewport;
   const ordinaryWorkspaceRect=workspace.getBoundingClientRect(),ordinaryToolbarRect=toolbar.getBoundingClientRect(),ordinaryCanvasRect=viewport.getBoundingClientRect();
-  click('Focus Canvas',toolbar);await pause();
+  click('Focus Canvas',toolbar);await waitFor(()=>{refresh();return button('Exit Focus Canvas',toolbar);},'Focus Canvas activation');
   const focused=document.body.classList.contains('flow-focus-canvas');
   const focusedCanvasRect=viewport.getBoundingClientRect(),focusedToolbarRect=toolbar.getBoundingClientRect();
   click('Exit Focus Canvas',toolbar);await pause();refresh();

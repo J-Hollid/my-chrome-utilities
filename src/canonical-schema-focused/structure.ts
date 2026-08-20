@@ -30,7 +30,7 @@ export const canonicalMoveDestinations=(document:CanonicalSchemaDocument,working
       .filter(candidate=>!excluded.has(candidate.id)&&acceptsChildren(candidate)&&(candidate.structureOwned===true||!candidate.inheritedDefinition))
       .map(candidate=>[candidate,candidate.name] as [CanonicalPropertyNode,string]),
   ];
-  return parents.flatMap(([parent,parentLabel])=>orderedChildren(document,parent?.id,excluded).map(sibling=>({
+  return parents.flatMap(([parent,parentLabel])=>orderedChildren(document,parent?.id,excluded).filter(sibling=>sibling.structureOwned===true||!sibling.inheritedDefinition).map(sibling=>({
     itemId:sibling.id,label:sibling.name,parentId:parent?.id??null,parentLabel,
   })));
 };
@@ -53,7 +53,7 @@ const canonicalMove=(context:CanonicalFocusedSectionContext,working:CanonicalPro
 export const renderCanonicalStructuralControls=(dom:Document,context:CanonicalFocusedSectionContext,working:CanonicalPropertyNode):HTMLElement[]=>{
   const document=context.current(),siblings=orderedChildren(document,working.parentId),reorder=renderReorderControl({
     itemId:working.id,itemLabel:working.name,completeOrder:siblings.map(({id,name})=>({id,label:name})),
-    moveDestinations:canonicalMoveDestinations(document,working),onMove:(request)=>canonicalMove(context,working,request),
+    legalDestinationIds:siblings.map(({id})=>id),moveDestinations:canonicalMoveDestinations(document,working),onMove:(request)=>canonicalMove(context,working,request),
   }),toRoot=button(dom,"Move to root",()=>{if(!working.parentId)return;applyStructure(context,{kind:"move",propertyId:working.id});}),duplicate=button(dom,"Duplicate",()=>applyStructure(context,{kind:"duplicate",propertyId:working.id,id:context.id})),remove=button(dom,"Delete property",()=>applyStructure(context,{kind:"delete",propertyId:working.id}));
   toRoot.disabled=!working.parentId;return[reorder,toRoot,duplicate,remove];
 };
