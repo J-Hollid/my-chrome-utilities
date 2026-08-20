@@ -1,12 +1,62 @@
-import type {CanonicalPropertyNode} from "../data-layer-canonical-schema.js";
+import type {CanonicalPropertyNode,CanonicalSchemaDocument} from "../data-layer-canonical-schema.js";
 import type {CanonicalFocusedSectionContext} from "../data-layer-canonical-schema-focused-sections.js";
 import {button,input,labeled} from "./dom.js";
-import {renderReorderControl} from "../reorderable-editor/control.js";
-import {reorderValues} from "../reorderable-editor/model.js";
+import {renderReorderControl,type ReorderRequest} from "../reorderable-editor/control.js";
+import {reorderValues,type ReorderDestination} from "../reorderable-editor/model.js";
 
 export const applyStructure=(context:CanonicalFocusedSectionContext,operation:Parameters<CanonicalFocusedSectionContext["stageStructure"]>[0]):void=>context.stageStructure(operation);
 
-export const renderCanonicalStructuralControls=(dom:Document,context:CanonicalFocusedSectionContext,working:CanonicalPropertyNode):HTMLElement[]=>{const document=context.current(),siblings=Object.values(document.nodes).filter(({parentId})=>parentId===working.parentId).sort((left,right)=>left.order-right.order||left.id.localeCompare(right.id)),reorder=renderReorderControl({itemId:working.id,itemLabel:working.name,completeOrder:siblings.map(({id,name})=>({id,label:name})),onMove:({itemId,toIndex})=>{const next=reorderValues(siblings,itemId,toIndex,value=>value.id),position=next.findIndex(({id})=>id===working.id),afterId=position>0?next[position-1]!.id:undefined;applyStructure(context,{kind:"move",propertyId:working.id,...(working.parentId?{parentId:working.parentId}:{}),...(afterId?{afterId}:{})});}}),toRoot=button(dom,"Move to root",()=>{if(!working.parentId)return;applyStructure(context,{kind:"move",propertyId:working.id});}),duplicate=button(dom,"Duplicate",()=>applyStructure(context,{kind:"duplicate",propertyId:working.id,id:context.id})),remove=button(dom,"Delete property",()=>applyStructure(context,{kind:"delete",propertyId:working.id}));toRoot.disabled=!working.parentId;return[reorder,toRoot,duplicate,remove];};
+const orderedChildren=(document:CanonicalSchemaDocument,parentId:string|undefined,excluded=new Set<string>()):CanonicalPropertyNode[]=>
+  Object.values(document.nodes).filter(node=>node.parentId===parentId&&!excluded.has(node.id))
+    .sort((left,right)=>left.order-right.order||left.id.localeCompare(right.id));
+
+const descendantIds=(document:CanonicalSchemaDocument,itemId:string):Set<string>=>{
+  const result=new Set<string>([itemId]),pending=[itemId];
+  while(pending.length){const parentId=pending.pop()!;for(const child of orderedChildren(document,parentId))if(!result.has(child.id)){result.add(child.id);pending.push(child.id);}}
+  return result;
+};
+
+const acceptsChildren=(node:CanonicalPropertyNode):boolean=>{
+  if(node.type==="object")return true;
+  let item=node.itemSchema;
+  while(item?.type==="array")item=item.items;
+  return node.type==="array"&&(item?.type??node.itemType)==="object";
+};
+
+export const canonicalMoveDestinations=(document:CanonicalSchemaDocument,working:CanonicalPropertyNode):ReorderDestination[]=>{
+  const excluded=descendantIds(document,working.id),parents:[CanonicalPropertyNode|undefined,string][]=[
+    [undefined,"Root"],
+    ...Object.values(document.nodes)
+      .filter(candidate=>!excluded.has(candidate.id)&&acceptsChildren(candidate)&&(candidate.structureOwned===true||!candidate.inheritedDefinition))
+      .map(candidate=>[candidate,candidate.name] as [CanonicalPropertyNode,string]),
+  ];
+  return parents.flatMap(([parent,parentLabel])=>orderedChildren(document,parent?.id,excluded).map(sibling=>({
+    itemId:sibling.id,label:sibling.name,parentId:parent?.id??null,parentLabel,
+  })));
+};
+
+const canonicalMove=(context:CanonicalFocusedSectionContext,working:CanonicalPropertyNode,request:ReorderRequest):boolean=>{
+  const document=context.current();
+  if(request.method==="dialog"&&request.destinationId&&request.placement){
+    const parentId=request.destinationParentId??undefined,excluded=descendantIds(document,working.id),siblings=orderedChildren(document,parentId,excluded),destination=siblings.findIndex(({id})=>id===request.destinationId);
+    if(destination<0)return false;
+    const afterIndex=request.placement==="after"?destination:destination-1,afterId=afterIndex>=0?siblings[afterIndex]!.id:undefined;
+    applyStructure(context,{kind:"move",propertyId:working.id,...(parentId?{parentId}:{}),...(afterId?{afterId}:{})});
+    return true;
+  }
+  const siblings=orderedChildren(document,working.parentId),next=reorderValues(siblings,working.id,request.toIndex,value=>value.id),position=next.findIndex(({id})=>id===working.id),afterId=position>0?next[position-1]!.id:undefined;
+  if(position<0)return false;
+  applyStructure(context,{kind:"move",propertyId:working.id,...(working.parentId?{parentId:working.parentId}:{}),...(afterId?{afterId}:{})});
+  return true;
+};
+
+export const renderCanonicalStructuralControls=(dom:Document,context:CanonicalFocusedSectionContext,working:CanonicalPropertyNode):HTMLElement[]=>{
+  const document=context.current(),siblings=orderedChildren(document,working.parentId),reorder=renderReorderControl({
+    itemId:working.id,itemLabel:working.name,completeOrder:siblings.map(({id,name})=>({id,label:name})),
+    moveDestinations:canonicalMoveDestinations(document,working),onMove:(request)=>canonicalMove(context,working,request),
+  }),toRoot=button(dom,"Move to root",()=>{if(!working.parentId)return;applyStructure(context,{kind:"move",propertyId:working.id});}),duplicate=button(dom,"Duplicate",()=>applyStructure(context,{kind:"duplicate",propertyId:working.id,id:context.id})),remove=button(dom,"Delete property",()=>applyStructure(context,{kind:"delete",propertyId:working.id}));
+  toRoot.disabled=!working.parentId;return[reorder,toRoot,duplicate,remove];
+};
 
 export function renderStructureFacet(host:HTMLElement,context:CanonicalFocusedSectionContext,working:CanonicalPropertyNode):void {
   const {dom}=context,name=input(dom,"structureName",working.name),newName=input(dom,"newStructureName","property"),terminalItem=(()=>{let item=working.itemSchema;while(item?.type==="array")item=item.items;return item?.type??working.itemType;})();name.addEventListener("input",()=>{const next=context.getWorking();if(next)next.name=name.value;});

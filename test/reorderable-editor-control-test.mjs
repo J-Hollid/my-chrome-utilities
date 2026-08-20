@@ -9,7 +9,7 @@ class FakeElement {
     this.listeners=new Map();
     this.dataset={};
     this.style={setProperty:(name,value)=>this.style[name]=value};
-    this.classList={add:(...names)=>names.forEach(name=>this.classes.add(name)),remove:(...names)=>names.forEach(name=>this.classes.delete(name))};
+    this.classList={add:(...names)=>names.forEach(name=>this.classes.add(name)),remove:(...names)=>names.forEach(name=>this.classes.delete(name)),toggle:(name,enabled)=>enabled?this.classes.add(name):this.classes.delete(name)};
     this.classes=new Set();
     this.textContent="";
     this.hidden=false;
@@ -60,7 +60,7 @@ const control=renderReorderControl({
   completeOrder:order,
   dropTarget:row,
   filterActive:true,
-  onMove:(request)=>moves.push(request),
+  onMove:(request)=>{moves.push(request);return true;},
 });
 row.append(control);
 
@@ -104,5 +104,41 @@ assert.deepEqual(dialog.querySelectorAll("button").map(({textContent})=>textCont
 dialog.querySelectorAll("button").at(-1).click();
 assert.equal(dialog.hidden,true);
 assert.equal(document.activeElement,trigger);
+
+const dragDocument=new FakeDocument(),dragList=dragDocument.createElement("ol"),dragMoves=[];
+dragDocument.body.append(dragList);
+let commitDrop=false;
+const dragOrder=[{id:"one",label:"One"},{id:"two",label:"Two"},{id:"three",label:"Three"}];
+const dragRows=new Map();
+for(const entry of dragOrder){
+  const dragRow=dragDocument.createElement("li");
+  const dragControl=renderReorderControl({
+    itemId:entry.id,itemLabel:entry.label,completeOrder:dragOrder,
+    legalDestinationIds:entry.id==="two"?["one","two"]:undefined,
+    dropTarget:dragRow,orderedContainer:dragList,
+    onMove:entry.id==="two"?(request)=>{dragMoves.push(request);return commitDrop;}:
+      ()=>{throw new Error("a drop must be committed by the dragged item's callback");},
+  });
+  dragRow.append(dragControl);dragList.append(dragRow);dragRows.set(entry.id,dragRow);
+}
+const transfer={value:"",setData(_type,value){this.value=value;},getData(){return this.value;}};
+const dragTrigger=dragRows.get("two").querySelector("[data-reorder-trigger]");
+dragTrigger.dispatch("dragstart",{dataTransfer:transfer});
+const illegalDrop=dragRows.get("three").dispatch("drop",{dataTransfer:transfer,clientY:39});
+assert.equal(illegalDrop.defaultPrevented,undefined,"a target outside the dragged item's legal scope rejects the drop");
+assert.deepEqual(dragMoves,[]);
+
+dragTrigger.dispatch("dragstart",{dataTransfer:transfer});
+dragRows.get("one").dispatch("drop",{dataTransfer:transfer,clientY:0});
+assert.equal(dragMoves.length,1,"the dragged item's callback evaluates a legal drop");
+assert.equal(dragDocument.querySelector("[data-reorder-status]"),null,
+  "a rejected/no-op callback cannot announce a successful move");
+
+commitDrop=true;
+dragTrigger.dispatch("dragstart",{dataTransfer:transfer});
+dragRows.get("one").dispatch("drop",{dataTransfer:transfer,clientY:0});
+assert.equal(dragMoves.length,2);
+assert.equal(dragDocument.querySelector("[data-reorder-status]").textContent,
+  "Two moved from position 2 to position 1");
 
 console.log("reorderable editor control tests passed");

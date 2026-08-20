@@ -5,8 +5,9 @@ import {focusedDefinitionFacetOwnershipActions,type FocusedPropertySection} from
 import {schemaTableAllowedValues,schemaTableExampleControl,schemaTableStageAllowedValues} from "./data-layer-schema-table.js";
 import {renderComposedFocusedCondition} from "./data-layer-composed-schema-workspace-focused-conditions.js";
 import {renderComposedFocusedRules} from "./data-layer-composed-schema-workspace-focused-rules.js";
-import type {FlowPageInstanceStructureKind} from "./flow-graph/page-instance-structure.js";
+import type {FlowPageInstanceStructureCommand,FlowPageInstanceStructureKind} from "./flow-graph/page-instance-structure.js";
 import {renderReorderControl} from "./reorderable-editor/control.js";
+import type {ReorderDestination} from "./reorderable-editor/model.js";
 
 export interface ComposedFocusedSectionContext {
   model:ComposedSchemaWorkspace;
@@ -24,13 +25,20 @@ export interface ComposedFocusedSectionContext {
   overriddenRuleIds:Set<string>;
   overrideRule:(id:string)=>void;
   render:()=>void;
-  onStructure?:(kind:FlowPageInstanceStructureKind,path:string,name?:string)=>void|undefined;
+  onStructure?:(command:FlowPageInstanceStructureCommand)=>void|undefined;
 }
 
 const labeled=(dom:Document,text:string,control:HTMLElement):HTMLLabelElement=>{const label=dom.createElement("label");label.append(text,control);return label;};
 const button=(dom:Document,text:string,run:()=>void):HTMLButtonElement=>{const control=dom.createElement("button");control.type="button";control.textContent=text;control.addEventListener("click",run);return control;};
 const valueText=(value:unknown):string=>value===undefined?"unset":typeof value==="string"?value:JSON.stringify(value);
 const stableValueId=(owner:string,value:unknown):string=>{let hash=2166136261;for(const char of JSON.stringify(value)){hash^=char.charCodeAt(0);hash=Math.imul(hash,16777619);}return `allowed-value:${owner}:${(hash>>>0).toString(16)}`;};
+const structureParent=(path:string):string=>path.slice(0,path.lastIndexOf("/"));
+const structureSubtree=(path:string,candidate:string):boolean=>candidate===path||candidate.startsWith(`${path}/`);
+const composedMoveDestinations=(rows:readonly ComposedSchemaRow[],moving:ComposedSchemaRow):ReorderDestination[]=>{
+  const legalRows=rows.filter(({local})=>Boolean(local.definitionId)&&!structureSubtree(moving.path,local.path));
+  const parents:[string|null,string][]=[[null,"Root"],...legalRows.filter(({effective})=>effective.type==="object"||(effective.type==="array"&&effective.itemType==="object")).map(({path})=>[path,path] as [string,string])];
+  return parents.flatMap(([parentId,parentLabel])=>legalRows.filter(({path})=>structureParent(path)===(parentId??"")).map(({path})=>({itemId:path,label:path.split("/").at(-1)??path,parentId,parentLabel})));
+};
 const clearExampleInput=(draft:ComposedFacetDraft):void=>{delete draft.exampleInput;delete draft.exampleIssue;};
 const stageCustomExample=(draft:ComposedFacetDraft,type:string|undefined,text:string):string|undefined=>{
   draft.exampleInput=text;
@@ -84,12 +92,12 @@ export function renderComposedFocusedSection(host:HTMLElement,context:ComposedFo
     host.append(labeled(dom,"Array item type",itemType),Object.assign(dom.createElement("p"),{textContent:`Stable identity ${context.row.effective.definitionId??context.row.path}`}));
     if(context.onStructure){
       const name=dom.createElement("input"),newName=dom.createElement("input");name.name="structureName";name.value=context.row.path.split("/").at(-1)??"property";name.setAttribute("aria-label","Structure property name");newName.name="newStructureName";newName.value="property";newName.setAttribute("aria-label","New local property name");
-      const invoke=(kind:FlowPageInstanceStructureKind)=>context.onStructure?.(kind,context.row.path,name.value);
-      const create=(kind:"add-child"|"add-sibling")=>context.onStructure?.(kind,context.row.path,newName.value);
+      const invoke=(kind:FlowPageInstanceStructureKind)=>context.onStructure?.({kind,path:context.row.path,name:name.value});
+      const create=(kind:"add-child"|"add-sibling")=>context.onStructure?.({kind,path:context.row.path,name:newName.value});
       const parent=context.row.path.slice(0,context.row.path.lastIndexOf("/")),siblings=(context.completeRows??context.model.rows).filter(({path})=>path.slice(0,path.lastIndexOf("/"))===parent),related=siblings.filter(({path,local})=>path!==context.row.path&&Boolean(local.definitionId));
-      const reorder=renderReorderControl({itemId:context.row.local.definitionId??context.row.path,itemLabel:context.row.path.split("/").at(-1)??context.row.path,completeOrder:siblings.map(item=>({id:item.local.definitionId??item.path,label:item.path.split("/").at(-1)??item.path})),...(context.row.local.definitionId?{}:{legalDestinationIds:[]}),onMove:({fromIndex,toIndex})=>{const kind=toIndex<fromIndex?"move-earlier":"move-later";for(let count=Math.abs(toIndex-fromIndex);count>0;count-=1)invoke(kind);}});
+      const reorder=renderReorderControl({itemId:context.row.local.definitionId??context.row.path,itemLabel:context.row.path.split("/").at(-1)??context.row.path,completeOrder:siblings.map(item=>({id:item.local.definitionId??item.path,label:item.path.split("/").at(-1)??item.path})),...(context.row.local.definitionId?{moveDestinations:composedMoveDestinations(context.completeRows??context.model.rows,context.row)}:{legalDestinationIds:[],moveDestinations:[]}),onMove:({fromIndex,toIndex,method,destinationId,destinationParentId,placement})=>{if(method==="dialog"&&destinationId&&placement){const parentPath=destinationParentId??"",destinations=(context.completeRows??context.model.rows).filter(({path,local})=>Boolean(local.definitionId)&&!structureSubtree(context.row.path,path)&&structureParent(path)===parentPath),index=destinations.findIndex(({path})=>path===destinationId),afterPath=placement==="after"?destinationId:index>0?destinations[index-1]!.path:undefined;if(index<0)return false;context.onStructure?.({kind:"move",path:context.row.path,destinationParentPath:parentPath,...(afterPath?{afterPath}:{})});return true;}const kind=toIndex<fromIndex?"move-earlier":"move-later";for(let count=Math.abs(toIndex-fromIndex);count>0;count-=1)invoke(kind);return true;}});
       host.append(labeled(dom,"Property name",name),labeled(dom,"New local property name",newName),button(dom,"Add child",()=>create("add-child")),button(dom,"Add sibling",()=>create("add-sibling")),button(dom,"Rename",()=>invoke("rename")),reorder,button(dom,"Move to root",()=>invoke("move-to-root")),button(dom,"Duplicate",()=>invoke("duplicate")),button(dom,"Delete property",()=>invoke("delete")));
-      if(related.length){const inventory=dom.createElement("section");inventory.setAttribute("aria-label","Local related properties");inventory.append(Object.assign(dom.createElement("h4"),{textContent:"Local related properties"}));for(const item of related){const label=item.path.split("/").at(-1)??item.path,entry=dom.createElement("article");entry.dataset.localRelatedPath=item.path;entry.append(Object.assign(dom.createElement("span"),{textContent:`${label} · ${item.path} · stable identity ${item.local.definitionId}`}),button(dom,`Remove local ${label}`,()=>context.onStructure?.("delete",item.path)));inventory.append(entry);}host.append(inventory);}
+      if(related.length){const inventory=dom.createElement("section");inventory.setAttribute("aria-label","Local related properties");inventory.append(Object.assign(dom.createElement("h4"),{textContent:"Local related properties"}));for(const item of related){const label=item.path.split("/").at(-1)??item.path,entry=dom.createElement("article");entry.dataset.localRelatedPath=item.path;entry.append(Object.assign(dom.createElement("span"),{textContent:`${label} · ${item.path} · stable identity ${item.local.definitionId}`}),button(dom,`Remove local ${label}`,()=>context.onStructure?.({kind:"delete",path:item.path})));inventory.append(entry);}host.append(inventory);}
     }
   }
 }

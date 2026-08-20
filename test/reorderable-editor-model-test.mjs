@@ -55,6 +55,18 @@ assert.equal(segment.actions.find(({ id }) => id === "later").disabled, true);
 assert.equal(segment.guidance, "Reordering stays within /products.");
 assert.deepEqual(segment.destinations.map(({ itemId }) => itemId), ["alpha"]);
 
+const hierarchy = reorderControlModel({
+  itemId:"bravo",
+  itemLabel:"Bravo",
+  completeOrder:items,
+  moveDestinations:[
+    { itemId:"echo", label:"Echo", parentId:"parent:other", parentLabel:"Other parent" },
+  ],
+});
+assert.deepEqual(hierarchy.destinations, [
+  { itemId:"echo", label:"Echo", parentId:"parent:other", parentLabel:"Other parent" },
+], "Move… may expose exact edges under another legal parent");
+
 const moved = reorderItems(items, "bravo", 3);
 assert.deepEqual(moved.map(({ id }) => id), ["alpha", "charlie", "delta", "bravo"]);
 assert.equal(moved[3], items[1], "reordering preserves the stable item object and edited state");

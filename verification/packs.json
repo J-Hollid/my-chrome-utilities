@@ -4437,6 +4437,7 @@
     "unit": [
       "test/data-layer-flow-table-documentation-export-test.mjs",
       "test/data-layer-project-documentation-workspace-test.mjs",
+      "test/rich-template-reorder-test.mjs",
       "test/data-layer-documentation-template-acceptance-test.mjs",
       "test/data-layer-documentation-template-excel-test.mjs",
       "test/data-layer-documentation-template-library-test.mjs",
@@ -4736,6 +4737,7 @@
       "test/data-layer-canonical-migration-acknowledgement-test.mjs",
       "test/data-layer-side-panel-unified-schema-editor-test.mjs",
       "test/data-layer-composed-schema-builders-test.mjs",
+      "test/canonical-schema-hierarchy-reorder-test.mjs",
       "test/data-layer-composed-schema-workspace-test.mjs",
       "test/data-layer-compact-inheritance-workspace-test.mjs",
       "test/data-layer-focused-schema-property-ui-test.mjs",
@@ -5850,7 +5852,11 @@
         ],
         "tasks": [
           "unit:test/reorderable-editor-model-test.mjs",
-          "unit:test/reorderable-editor-control-test.mjs"
+          "unit:test/reorderable-editor-control-test.mjs",
+          "unit:test/reorderable-editor-stable-identities-test.mjs",
+          "unit:test/rich-template-reorder-test.mjs",
+          "unit:test/canonical-schema-hierarchy-reorder-test.mjs",
+          "browser-observation:REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER"
         ],
         "prerequisites": [],
         "consumers": [
@@ -6616,6 +6622,7 @@
       "test/background-command-test.mjs",
       "test/reorderable-editor-control-test.mjs",
       "test/reorderable-editor-model-test.mjs",
+      "test/reorderable-editor-stable-identities-test.mjs",
       "test/information-architecture-runtime-test.mjs",
       "test/modular-utility-architecture-test.mjs",
       "test/package-clean-checkout-contract-test.mjs",
@@ -6650,6 +6657,7 @@
     ],
     "property": [
       "test/workspace-tabs-property-test.mjs",
+      "test/reorderable-editor-property-test.mjs",
       "test/swarmforge-outcome-bounded-autonomy-property-test.mjs",
       "test/stylesheet-declarations-property-test.mjs"
     ],
@@ -6709,6 +6717,7 @@
     ],
     "browserAdapters": [
       "test/browser-packs/shell.mjs",
+      "test/browser-packs/reorderable-editor-controls.mjs",
       "test/side-panel-component-layout-runtime-test.mjs",
       "test/twatility-brand-foundation-browser-test.mjs",
       "test/twatility-side-panel-shell-browser-test.mjs",
@@ -6719,6 +6728,10 @@
       {
         "path": "test/browser-packs/shell.mjs",
         "mode": "shared"
+      },
+      {
+        "path": "test/browser-packs/reorderable-editor-controls.mjs",
+        "mode": "integration"
       },
       {
         "path": "test/side-panel-component-layout-runtime-test.mjs",
@@ -6742,6 +6755,39 @@
       }
     ],
     "browserEvidencePartitions": [
+      {
+        "path": "test/browser-packs/reorderable-editor-controls.mjs",
+        "sessionBatch": "reorderable-editor-controls",
+        "originalLeaves": [
+          "reorderableEditorControls.installedBoundary",
+          "reorderableEditorControls.runtime001",
+          "reorderableEditorControls.runtime002",
+          "reorderableEditorControls.runtime003",
+          "reorderableEditorControls.runtime004",
+          "reorderableEditorControls.runtime005",
+          "reorderableEditorControls.runtime006",
+          "reorderableEditorControls.runtime007",
+          "reorderableEditorControls.runtime008",
+          "reorderableEditorControls.runtime009"
+        ],
+        "targets": [
+          {
+            "id": "REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER",
+            "leaves": [
+              "reorderableEditorControls.installedBoundary",
+              "reorderableEditorControls.runtime001",
+              "reorderableEditorControls.runtime002",
+              "reorderableEditorControls.runtime003",
+              "reorderableEditorControls.runtime004",
+              "reorderableEditorControls.runtime005",
+              "reorderableEditorControls.runtime006",
+              "reorderableEditorControls.runtime007",
+              "reorderableEditorControls.runtime008",
+              "reorderableEditorControls.runtime009"
+            ]
+          }
+        ]
+      },
       {
         "path": "test/browser-packs/side-panel-shell.mjs",
         "sessionBatch": "shell-containment",
@@ -6799,6 +6845,16 @@
     ],
     "browserObservations": [
       {
+        "id": "REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER",
+        "path": "test/browser-packs/reorderable-editor-controls.mjs",
+        "environment": {"REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER": "1"},
+        "sessionBatch": "reorderable-editor-controls",
+        "observationKeys": ["reorderableEditorControls"],
+        "features": [
+          "features/data-layer-compact-reorderable-editor-controls-runtime.feature"
+        ]
+      },
+      {
         "id": "STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
         "path": "test/browser-packs/global-style-smoke.mjs",
         "environment": {"STUDIO_GLOBAL_STYLE_SMOKE_TARGET": "1"},
@@ -6842,6 +6898,13 @@
       }
     ],
     "browserAdapterPerformance": [
+      {
+        "path": "test/browser-packs/reorderable-editor-controls.mjs",
+        "singleTargetP90Milliseconds": 15000,
+        "maximumSingleTargetP90Milliseconds": 30000,
+        "targetIds": ["REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER"],
+        "sessionBatch": "reorderable-editor-controls"
+      },
       {
         "path": "test/browser-packs/side-panel-shell.mjs",
         "singleTargetP90Milliseconds": 18000,

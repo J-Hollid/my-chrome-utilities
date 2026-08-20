@@ -28,6 +28,11 @@ assert.ok(local().some(({path})=>path==="/copy"),"Duplicate creates a distinct l
 apply({kind:"move-later",path:"/copy"});
 apply({kind:"move-earlier",path:"/copy"});
 assert.ok(local().some(({path})=>path==="/copy"),"Move controls retain the property while changing sibling order");
+apply({kind:"move",path:"/copy",destinationParentPath:"/shippingRoot",afterPath:"/shippingRoot/second"});
+assert.ok(local().some(({path})=>path==="/shippingRoot/copy"),
+  "Move… changes the parent and preserves the moved subtree identity");
+apply({kind:"move",path:"/shippingRoot/copy",destinationParentPath:"",afterPath:"/renamed"});
+assert.ok(local().some(({path})=>path==="/copy"),"the inverse hierarchical move restores the former parent");
 apply({kind:"delete",path:"/copy"});
 assert.equal(local().some(({path})=>path==="/copy"),false,"Delete removes only the selected local property");
 const undoCount=state.history.undo.length;

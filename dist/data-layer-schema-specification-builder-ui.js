@@ -148,7 +148,7 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
             const cell = document.createElement("th");
             cell.dataset.specificationColumn = column;
             cell.append(Object.assign(document.createElement("span"), { textContent: specificationColumnLabels[column] }));
-            cell.append(renderReorderControl({ itemId: column, itemLabel: specificationColumnLabels[column], completeOrder: columns.map(id => ({ id, label: specificationColumnLabels[id] })), dropTarget: cell, preserveTargetSemantics: true, onMove: ({ itemId, toIndex }) => { columns = reorderValues(columns, itemId, toIndex, value => value); renderPreview(); } }));
+            cell.append(renderReorderControl({ itemId: column, itemLabel: specificationColumnLabels[column], completeOrder: columns.map(id => ({ id, label: specificationColumnLabels[id] })), dropTarget: cell, preserveTargetSemantics: true, onMove: ({ itemId, toIndex }) => { columns = reorderValues(columns, itemId, toIndex, value => value); renderPreview(); return true; } }));
             return cell;
         }));
         body.replaceChildren(...rows.map((row) => {

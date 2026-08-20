@@ -18,9 +18,9 @@ export function reorderControlModel(input) {
             action("earlier", "Move one position earlier", first),
             action("later", "Move one position later", last),
             action("last", "Move to last", last),
-            action("move", "Move…", legalOrder.length <= 1),
+            action("move", "Move…", input.moveDestinations ? input.moveDestinations.length === 0 : legalOrder.length <= 1),
         ],
-        destinations: legalOrder.filter(({ id }) => id !== input.itemId)
+        destinations: input.moveDestinations ? [...input.moveDestinations] : legalOrder.filter(({ id }) => id !== input.itemId)
             .map(({ id, label }) => ({ itemId: id, label: label ?? id })),
         ...(input.scopeLabel ? { guidance: `Reordering stays within ${input.scopeLabel}.` } : {}),
     };

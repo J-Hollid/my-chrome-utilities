@@ -18,6 +18,36 @@ const candidateKey = (options) => `${options.projectId}:${options.set.id}`;
 const cloneWithIds = (block) => { const copy = structuredClone(block); return copy.type === "repeat" ? { ...copy, id: `block:${crypto.randomUUID()}`, children: copy.children.map(cloneWithIds) } : { ...copy, id: `block:${crypto.randomUUID()}` }; };
 const editSiblings = (blocks, id, edit) => { const index = blocks.findIndex(block => block.id === id); if (index >= 0)
     return edit(blocks, index); return blocks.map(block => block.type === "repeat" ? { ...block, children: editSiblings(block.children, id, edit) } : block); };
+const richDescendantIds = (block) => { const ids = new Set([block.id]); if (block.type === "repeat")
+    for (const child of block.children)
+        for (const id of richDescendantIds(child))
+            ids.add(id); return ids; };
+const richBlockById = (blocks, id) => { for (const block of blocks) {
+    if (block.id === id)
+        return block;
+    if (block.type === "repeat") {
+        const found = richBlockById(block.children, id);
+        if (found)
+            return found;
+    }
+} return undefined; };
+export const richBlockMoveDestinations = (blocks, itemId) => { const moving = richBlockById(blocks, itemId); if (!moving)
+    return []; const excluded = richDescendantIds(moving), parents = [[null, "Template root", blocks]]; const collect = (items) => items.forEach(block => { if (block.type === "repeat" && !excluded.has(block.id)) {
+    parents.push([block, `${block.variable} repeat`, block.children]);
+    collect(block.children);
+} }); collect(blocks); return parents.flatMap(([parent, parentLabel, items]) => items.filter(block => !excluded.has(block.id)).map(block => ({ itemId: block.id, label: `${block.type} block`, parentId: parent?.id ?? null, parentLabel }))); };
+const removeRichBlock = (blocks, id) => { const index = blocks.findIndex(block => block.id === id); if (index >= 0)
+    return { block: blocks[index], blocks: blocks.filter((_, candidate) => candidate !== index) }; for (const block of blocks)
+    if (block.type === "repeat") {
+        const removed = removeRichBlock(block.children, id);
+        if (removed.block)
+            return { block: removed.block, blocks: blocks.map(candidate => candidate.id === block.id ? { ...block, children: removed.blocks } : candidate) };
+    } return { blocks }; };
+const editRichParent = (blocks, parentId, edit) => parentId === null ? edit(blocks) : blocks.map(block => block.id === parentId && block.type === "repeat" ? { ...block, children: edit(block.children) } : block.type === "repeat" ? { ...block, children: editRichParent(block.children, parentId, edit) } : block);
+export const moveRichBlock = (blocks, itemId, parentId, destinationId, placement) => { const moving = richBlockById(blocks, itemId); if (!moving || richDescendantIds(moving).has(parentId ?? ""))
+    return blocks; const removed = removeRichBlock(blocks, itemId); if (!removed.block)
+    return blocks; let inserted = false; const result = editRichParent(removed.blocks, parentId, items => { const index = items.findIndex(({ id }) => id === destinationId); if (index < 0)
+    return items; inserted = true; const next = [...items]; next.splice(index + (placement === "after" ? 1 : 0), 0, removed.block); return next; }); return inserted ? result : blocks; };
 const replaceBlock = (blocks, id, update) => blocks.map(block => block.id === id ? update(block) : block.type === "repeat" ? { ...block, children: replaceBlock(block.children, id, update) } : block);
 const renameRepeatVariable = (blocks, from, to) => blocks.map(block => {
     const rename = (value) => value === from ? to : value.startsWith(`${from}.`) ? `${to}${value.slice(from.length)}` : value;
@@ -72,14 +102,36 @@ function richEditor(detail, selected, templates, options) {
     outlineSurface.dataset.mobileSurface = options.richEditorMobileDetail ? "inactive" : "active";
     detailSurface.dataset.mobileSurface = options.richEditorMobileDetail ? "active" : "inactive";
     outline.setAttribute("aria-label", "Rich template outline");
-    const ids = flat.map(block => block.id), renderItems = (parent, items) => items.forEach(block => { const item = document.createElement("li"), select = button(block.type, () => choose(block.id)), reorder = renderReorderControl({ itemId: block.id, itemLabel: `${block.type} block`, completeOrder: items.map(candidate => ({ id: candidate.id, label: `${candidate.type} block` })), dropTarget: item, orderedContainer: parent, onMove: ({ itemId, fromIndex, toIndex }) => { if (fromIndex < 0)
-            return false; commit(editSiblings(blocks, itemId, (siblings) => reorderValues(siblings, itemId, toIndex, value => value.id)), "Move", itemId); } }); select.dataset.richBlockId = block.id; select.dataset.richBlockSelected = String(block.id === selectedBlock?.id); select.setAttribute("aria-current", String(block.id === selectedBlock?.id)); select.addEventListener("keydown", event => { const current = ids.indexOf(block.id), target = event.key === "ArrowDown" ? Math.min(ids.length - 1, current + 1) : event.key === "ArrowUp" ? Math.max(0, current - 1) : event.key === "Home" ? 0 : event.key === "End" ? ids.length - 1 : -1; if (target < 0)
-        return; event.preventDefault(); choose(ids[target], false); }); item.append(reorder, select); if (block.type === "repeat") {
-        const children = document.createElement("ol");
-        children.setAttribute("aria-label", `${block.items} child blocks`);
-        renderItems(children, block.children);
-        item.append(children);
-    } parent.append(item); });
+    const ids = flat.map(block => block.id), renderItems = (parent, items) => items.forEach(block => {
+        const item = document.createElement("li"), select = button(block.type, () => choose(block.id)), reorder = renderReorderControl({
+            itemId: block.id, itemLabel: `${block.type} block`, completeOrder: items.map(candidate => ({ id: candidate.id, label: `${candidate.type} block` })),
+            moveDestinations: richBlockMoveDestinations(blocks, block.id), dropTarget: item, orderedContainer: parent,
+            onMove: ({ itemId, fromIndex, toIndex, method, destinationId, destinationParentId, placement }) => {
+                if (fromIndex < 0)
+                    return false;
+                const moved = method === "dialog" && destinationId && placement
+                    ? moveRichBlock(blocks, itemId, destinationParentId ?? null, destinationId, placement)
+                    : editSiblings(blocks, itemId, (siblings) => reorderValues(siblings, itemId, toIndex, value => value.id));
+                if (moved === blocks)
+                    return false;
+                commit(moved, "Move", itemId);
+                return true;
+            },
+        });
+        select.dataset.richBlockId = block.id;
+        select.dataset.richBlockSelected = String(block.id === selectedBlock?.id);
+        select.setAttribute("aria-current", String(block.id === selectedBlock?.id));
+        select.addEventListener("keydown", event => { const current = ids.indexOf(block.id), target = event.key === "ArrowDown" ? Math.min(ids.length - 1, current + 1) : event.key === "ArrowUp" ? Math.max(0, current - 1) : event.key === "Home" ? 0 : event.key === "End" ? ids.length - 1 : -1; if (target < 0)
+            return; event.preventDefault(); choose(ids[target], false); });
+        item.append(reorder, select);
+        if (block.type === "repeat") {
+            const children = document.createElement("ol");
+            children.setAttribute("aria-label", `${block.items} child blocks`);
+            renderItems(children, block.children);
+            item.append(children);
+        }
+        parent.append(item);
+    });
     renderItems(outline, blocks);
     outlineSurface.append(heading(4, "Template outline"), outline);
     for (const type of ["heading", "paragraph", "divider", "theme-logo", "repeat", "data-table", "concept-group"])

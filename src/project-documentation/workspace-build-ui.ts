@@ -32,7 +32,7 @@ export function createDocumentationSectionConfigurationRenderer(mutateSection:Mu
       if(check.checked){
         row.prepend(renderReorderControl({itemId:item.id,itemLabel:item.label,
           completeOrder:input.selected.map(id=>({id,label:input.all.find(candidate=>candidate.id===id)?.label??id})),
-          dropTarget:row,orderedContainer:list,onMove:({itemId,toIndex})=>input.onChange(reorderValues(input.selected,itemId,toIndex,value=>value))}));
+          dropTarget:row,orderedContainer:list,onMove:({itemId,toIndex})=>{input.onChange(reorderValues(input.selected,itemId,toIndex,value=>value));return true;}}));
       }
       list.append(row);
     }

@@ -1,6 +1,6 @@
 import { reorderControlModel, reorderPlacementIndex, } from "./model.js";
 let identity = 0;
-let draggedItemId;
+let dragSession;
 const liveRegions = new WeakMap();
 const clearDropIndicator = (target) => {
     target.classList.remove("reorder-drop-before", "reorder-drop-after");
@@ -83,16 +83,17 @@ export function renderReorderControl(options) {
     const closeMenu = () => { menu.hidden = true; trigger.setAttribute("aria-expanded", "false"); };
     const openMenu = () => { menu.hidden = false; trigger.setAttribute("aria-expanded", "true"); queueMicrotask(() => menu.querySelector?.('button:not([disabled])')?.focus()); };
     const announceAndFocus = (fromIndex, toIndex, result) => {
-        if (result === false)
+        if (result !== true)
             return;
         liveRegion(doc).textContent = `${options.itemLabel} moved from position ${fromIndex + 1} to position ${toIndex + 1}`;
         focusTrigger(doc, options.itemId, trigger);
     };
-    const move = (toIndex, method) => {
+    const move = (toIndex, method, destination, placement) => {
         const fromIndex = options.completeOrder.findIndex(({ id }) => id === options.itemId);
-        if (fromIndex < 0 || fromIndex === toIndex)
+        if (fromIndex < 0 || (fromIndex === toIndex && destination?.parentId === undefined))
             return;
-        const result = options.onMove({ itemId: options.itemId, fromIndex, toIndex, method });
+        const result = options.onMove({ itemId: options.itemId, fromIndex, toIndex, method,
+            ...(destination ? { destinationId: destination.itemId, ...(destination.parentId !== undefined ? { destinationParentId: destination.parentId } : {}), ...(placement ? { placement } : {}) } : {}) });
         announceAndFocus(fromIndex, toIndex, result);
     };
     const closeDialog = () => { dialog.hidden = true; focusTrigger(doc, options.itemId, trigger); };
@@ -106,8 +107,9 @@ export function renderReorderControl(options) {
             dialog.append(Object.assign(doc.createElement("p"), { textContent: model.guidance }));
         for (const destination of model.destinations) {
             for (const placement of ["before", "after"]) {
-                const control = button(doc, `Move ${placement} ${destination.label}`);
-                control.addEventListener("click", () => { const toIndex = reorderPlacementIndex(options.completeOrder, options.itemId, destination.itemId, placement); dialog.hidden = true; move(toIndex, "dialog"); });
+                const location = destination.parentLabel ? ` in ${destination.parentLabel}` : "";
+                const control = button(doc, `Move ${placement} ${destination.label}${location}`);
+                control.addEventListener("click", () => { const toIndex = reorderPlacementIndex(options.completeOrder, options.itemId, destination.itemId, placement); dialog.hidden = true; move(toIndex, "dialog", destination, placement); });
                 dialog.append(control);
             }
         }
@@ -152,8 +154,8 @@ export function renderReorderControl(options) {
     trigger.addEventListener("dragstart", event => { if (!model.canDrag) {
         event.preventDefault();
         return;
-    } draggedItemId = options.itemId; event.dataTransfer?.setData("application/x-reorderable-editor-item", options.itemId); });
-    trigger.addEventListener("dragend", () => { draggedItemId = undefined; if (options.dropTarget)
+    } dragSession = { itemId: options.itemId, itemLabel: options.itemLabel, completeOrder: options.completeOrder, legalDestinationIds: new Set(options.legalDestinationIds ?? options.completeOrder.map(({ id }) => id)), ...(options.dragScopeId ? { dragScopeId: options.dragScopeId } : {}), onMove: options.onMove, trigger }; event.dataTransfer?.setData("application/x-reorderable-editor-item", options.itemId); });
+    trigger.addEventListener("dragend", () => { dragSession = undefined; if (options.dropTarget)
         clearDropIndicator(options.dropTarget); });
     dialog.addEventListener("keydown", event => { if (event.key === "Escape") {
         event.preventDefault();
@@ -170,13 +172,16 @@ export function renderReorderControl(options) {
             target.setAttribute("aria-posinset", String(model.position));
             target.setAttribute("aria-setsize", String(model.count));
         }
-        target.addEventListener("dragover", event => { if (!model.canDrag || !draggedItemId || draggedItemId === options.itemId)
+        const legalDrag = () => { const session = dragSession; if (!session || session.itemId === options.itemId || !session.legalDestinationIds.has(options.itemId))
+            return undefined; if (session.dragScopeId !== undefined && session.dragScopeId !== options.dragScopeId)
+            return undefined; return session; };
+        target.addEventListener("dragover", event => { if (!legalDrag())
             return; event.preventDefault(); const after = event.clientY >= target.getBoundingClientRect().top + target.getBoundingClientRect().height / 2; target.classList.toggle("reorder-drop-before", !after); target.classList.toggle("reorder-drop-after", after); styles(target, { borderBlockStart: after ? "" : "3px solid currentColor", borderBlockEnd: after ? "3px solid currentColor" : "" }); });
         target.addEventListener("dragleave", () => clearDropIndicator(target));
-        target.addEventListener("drop", event => { const itemId = event.dataTransfer?.getData("application/x-reorderable-editor-item") || draggedItemId; if (!model.canDrag || !itemId || itemId === options.itemId)
-            return; event.preventDefault(); const after = event.clientY >= target.getBoundingClientRect().top + target.getBoundingClientRect().height / 2, fromIndex = options.completeOrder.findIndex(({ id }) => id === itemId), toIndex = reorderPlacementIndex(options.completeOrder, itemId, options.itemId, after ? "after" : "before"), itemLabel = options.completeOrder.find(({ id }) => id === itemId)?.label ?? itemId; clearDropIndicator(target); draggedItemId = undefined; if (fromIndex < 0 || fromIndex === toIndex)
-            return; const result = options.onMove({ itemId, fromIndex, toIndex, method: "drag" }); if (result === false)
-            return; liveRegion(doc).textContent = `${itemLabel} moved from position ${fromIndex + 1} to position ${toIndex + 1}`; focusTrigger(doc, itemId, trigger); });
+        target.addEventListener("drop", event => { const session = legalDrag(), transferId = event.dataTransfer?.getData("application/x-reorderable-editor-item"); if (!session || transferId && transferId !== session.itemId)
+            return; event.preventDefault(); const after = event.clientY >= target.getBoundingClientRect().top + target.getBoundingClientRect().height / 2, fromIndex = session.completeOrder.findIndex(({ id }) => id === session.itemId), toIndex = reorderPlacementIndex(session.completeOrder, session.itemId, options.itemId, after ? "after" : "before"); clearDropIndicator(target); dragSession = undefined; if (fromIndex < 0 || fromIndex === toIndex)
+            return; const result = session.onMove({ itemId: session.itemId, fromIndex, toIndex, method: "drag", destinationId: options.itemId, placement: after ? "after" : "before" }); if (result !== true)
+            return; liveRegion(doc).textContent = `${session.itemLabel} moved from position ${fromIndex + 1} to position ${toIndex + 1}`; focusTrigger(doc, session.itemId, session.trigger); });
     }
     wrapper.append(trigger, menu, dialog);
     return wrapper;

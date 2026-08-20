@@ -1,8 +1,8 @@
 import {transactProject,type ProjectEntity,type ProjectState} from "../data-layer-specification-project.js";
 import type {LayerConstraint} from "../data-layer-layered-schema.js";
 
-export type FlowPageInstanceStructureKind="add-child"|"add-sibling"|"rename"|"move-earlier"|"move-later"|"move-to-root"|"duplicate"|"delete";
-export interface FlowPageInstanceStructureCommand {kind:FlowPageInstanceStructureKind;path:string;name?:string;}
+export type FlowPageInstanceStructureKind="add-child"|"add-sibling"|"rename"|"move-earlier"|"move-later"|"move-to-root"|"move"|"duplicate"|"delete";
+export interface FlowPageInstanceStructureCommand {kind:FlowPageInstanceStructureKind;path:string;name?:string;destinationParentPath?:string;afterPath?:string;}
 type FlowGraph={pageFrames?:ProjectEntity[]};
 
 const clone=<T>(value:T):T=>structuredClone(value);
@@ -22,6 +22,19 @@ const moveBlock=(constraints:LayerConstraint[],path:string,delta:number):LayerCo
   remainder.splice(insertAt,0,...block);return remainder;
 };
 const remapSubtree=(constraints:LayerConstraint[],from:string,to:string,id:(kind:string)=>string):LayerConstraint[]=>constraints.map((constraint,index)=>{if(!subtree(from,constraint.path))return constraint;const next={...constraint,path:replacePath(constraint.path,from,to)};if(index===constraints.findIndex(({path})=>path===from))next.definitionId=next.definitionId??id("property");return next;});
+const moveToEdge=(constraints:LayerConstraint[],command:FlowPageInstanceStructureCommand,id:(kind:string)=>string):LayerConstraint[]=>{
+  const name=command.path.split("/").at(-1)!;
+  const parent=command.destinationParentPath??"";
+  const to=`${parent}/${name}`;
+  if(subtree(command.path,parent))throw new Error("A property cannot move into its own descendant.");
+  if(existingPath(constraints,to,command.path))throw new Error(`Property ${to} already exists.`);
+  const block=remapSubtree(constraints.filter(({path})=>subtree(command.path,path)),command.path,to,id);
+  const remainder=constraints.filter(({path})=>!subtree(command.path,path));
+  if(!command.afterPath){const first=remainder.findIndex(({path})=>parentPath(path)===parent);remainder.splice(first<0?remainder.length:first,0,...block);return remainder;}
+  const after=replacePath(command.afterPath,command.path,to),indexes=remainder.flatMap((constraint,index)=>subtree(after,constraint.path)?[index]:[]);
+  if(!indexes.length)throw new Error(`Move destination ${command.afterPath} is unavailable.`);
+  remainder.splice(indexes.at(-1)!+1,0,...block);return remainder;
+};
 
 export function editConstraints(constraints:LayerConstraint[],command:FlowPageInstanceStructureCommand,id:(kind:string)=>string):LayerConstraint[]{
   const target=constraints.find(({path})=>path===command.path);
@@ -35,6 +48,7 @@ export function editConstraints(constraints:LayerConstraint[],command:FlowPageIn
   }
   if(!target)throw new Error(`Local Flow Page-instance property ${command.path} is unavailable.`);
   if(command.kind==="delete")return constraints.filter(({path})=>!subtree(command.path,path));
+  if(command.kind==="move")return moveToEdge(constraints,command,id);
   if(command.kind==="duplicate"){
     const name=cleanName(command.name,`${command.path.split("/").at(-1)} copy`),to=suffixName(parentPath(command.path),name);
     if(existingPath(constraints,to))throw new Error(`Property ${to} already exists.`);

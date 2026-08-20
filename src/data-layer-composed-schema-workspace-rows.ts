@@ -4,7 +4,7 @@ import {composedSchemaRowOwnershipInput} from "./data-layer-composed-schema-owne
 import {renderFocusedPropertyMenu} from "./data-layer-focused-schema-property-menu.js";
 import {focusedOwnershipActionTarget,focusedSectionOwnershipActions,focusedPropertyProvenanceSummary,focusedPropertySectionLabels,gateFocusedOwnershipSection,type FocusedOwnershipSession,type FocusedPropertyPrimarySection,type FocusedPropertySection} from "./data-layer-focused-schema-property-ui.js";
 import {renderComposedFocusedSection} from "./data-layer-composed-schema-workspace-focused-sections.js";
-import type {FlowPageInstanceStructureCommand,FlowPageInstanceStructureKind} from "./flow-graph/page-instance-structure.js";
+import type {FlowPageInstanceStructureCommand} from "./flow-graph/page-instance-structure.js";
 import {applySchemaTablePathAllocation,applySchemaTablePropertyEditorAllocation,bindSchemaTableQuickEdit,clearSchemaTableOverlay,ensureSchemaTablePropertyEditorContainmentStyle,mountSchemaTableOverlay,schemaTableAllowedValues,type SchemaTableEditableFacet,type SchemaTableQuickEditResult} from "./data-layer-schema-table.js";
 
 export interface ComposedRowsContext {
@@ -13,7 +13,7 @@ export interface ComposedRowsContext {
   pendingAction:"reset"|"remove"|undefined;pendingStructure:readonly FlowPageInstanceStructureCommand[];beginAction:(row:ComposedSchemaRow,focus?:HTMLElement)=>void;cancelAction:()=>void;confirmAction:(row:ComposedSchemaRow)=>void;
   ownershipSession:FocusedOwnershipSession;activateOwnership:(action:string)=>void;
   open:(row:ComposedSchemaRow,focus?:HTMLElement,section?:FocusedPropertySection)=>void;commitInline:(row:ComposedSchemaRow,facet:SchemaTableEditableFacet,value:string)=>SchemaTableQuickEditResult;resetInline:(row:ComposedSchemaRow,facet:"concept"|"type"|"presence")=>SchemaTableQuickEditResult;cancelInline:()=>void;inlineDiagnostic:(message:string)=>void;quickEditRoot:()=>ParentNode;quickEditScope:string;close:()=>void;closeChild:()=>void;beginReview:()=>void;cancelReview:()=>void;save:(row:ComposedSchemaRow)=>void;render:()=>void;selectSection:(section:FocusedPropertySection)=>void;
-  onStructure?:(kind:FlowPageInstanceStructureKind,path:string,name?:string)=>void|undefined;
+  onStructure?:(command:FlowPageInstanceStructureCommand)=>void|undefined;
 }
 const button=(dom:Document,text:string,run:()=>void):HTMLButtonElement=>{const control=dom.createElement("button");control.type="button";control.textContent=text;control.addEventListener("click",run);return control;};
 function applyPersistedItemOwnership(host:HTMLElement,row:ComposedSchemaRow):void {

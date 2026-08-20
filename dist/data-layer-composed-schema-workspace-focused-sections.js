@@ -11,6 +11,13 @@ const stableValueId = (owner, value) => { let hash = 2166136261; for (const char
     hash ^= char.charCodeAt(0);
     hash = Math.imul(hash, 16777619);
 } return `allowed-value:${owner}:${(hash >>> 0).toString(16)}`; };
+const structureParent = (path) => path.slice(0, path.lastIndexOf("/"));
+const structureSubtree = (path, candidate) => candidate === path || candidate.startsWith(`${path}/`);
+const composedMoveDestinations = (rows, moving) => {
+    const legalRows = rows.filter(({ local }) => Boolean(local.definitionId) && !structureSubtree(moving.path, local.path));
+    const parents = [[null, "Root"], ...legalRows.filter(({ effective }) => effective.type === "object" || (effective.type === "array" && effective.itemType === "object")).map(({ path }) => [path, path])];
+    return parents.flatMap(([parentId, parentLabel]) => legalRows.filter(({ path }) => structureParent(path) === (parentId ?? "")).map(({ path }) => ({ itemId: path, label: path.split("/").at(-1) ?? path, parentId, parentLabel })));
+};
 const clearExampleInput = (draft) => { delete draft.exampleInput; delete draft.exampleIssue; };
 const stageCustomExample = (draft, type, text) => {
     draft.exampleInput = text;
@@ -222,11 +229,17 @@ export function renderComposedFocusedSection(host, context) {
             newName.name = "newStructureName";
             newName.value = "property";
             newName.setAttribute("aria-label", "New local property name");
-            const invoke = (kind) => context.onStructure?.(kind, context.row.path, name.value);
-            const create = (kind) => context.onStructure?.(kind, context.row.path, newName.value);
+            const invoke = (kind) => context.onStructure?.({ kind, path: context.row.path, name: name.value });
+            const create = (kind) => context.onStructure?.({ kind, path: context.row.path, name: newName.value });
             const parent = context.row.path.slice(0, context.row.path.lastIndexOf("/")), siblings = (context.completeRows ?? context.model.rows).filter(({ path }) => path.slice(0, path.lastIndexOf("/")) === parent), related = siblings.filter(({ path, local }) => path !== context.row.path && Boolean(local.definitionId));
-            const reorder = renderReorderControl({ itemId: context.row.local.definitionId ?? context.row.path, itemLabel: context.row.path.split("/").at(-1) ?? context.row.path, completeOrder: siblings.map(item => ({ id: item.local.definitionId ?? item.path, label: item.path.split("/").at(-1) ?? item.path })), ...(context.row.local.definitionId ? {} : { legalDestinationIds: [] }), onMove: ({ fromIndex, toIndex }) => { const kind = toIndex < fromIndex ? "move-earlier" : "move-later"; for (let count = Math.abs(toIndex - fromIndex); count > 0; count -= 1)
-                    invoke(kind); } });
+            const reorder = renderReorderControl({ itemId: context.row.local.definitionId ?? context.row.path, itemLabel: context.row.path.split("/").at(-1) ?? context.row.path, completeOrder: siblings.map(item => ({ id: item.local.definitionId ?? item.path, label: item.path.split("/").at(-1) ?? item.path })), ...(context.row.local.definitionId ? { moveDestinations: composedMoveDestinations(context.completeRows ?? context.model.rows, context.row) } : { legalDestinationIds: [], moveDestinations: [] }), onMove: ({ fromIndex, toIndex, method, destinationId, destinationParentId, placement }) => { if (method === "dialog" && destinationId && placement) {
+                    const parentPath = destinationParentId ?? "", destinations = (context.completeRows ?? context.model.rows).filter(({ path, local }) => Boolean(local.definitionId) && !structureSubtree(context.row.path, path) && structureParent(path) === parentPath), index = destinations.findIndex(({ path }) => path === destinationId), afterPath = placement === "after" ? destinationId : index > 0 ? destinations[index - 1].path : undefined;
+                    if (index < 0)
+                        return false;
+                    context.onStructure?.({ kind: "move", path: context.row.path, destinationParentPath: parentPath, ...(afterPath ? { afterPath } : {}) });
+                    return true;
+                } const kind = toIndex < fromIndex ? "move-earlier" : "move-later"; for (let count = Math.abs(toIndex - fromIndex); count > 0; count -= 1)
+                    invoke(kind); return true; } });
             host.append(labeled(dom, "Property name", name), labeled(dom, "New local property name", newName), button(dom, "Add child", () => create("add-child")), button(dom, "Add sibling", () => create("add-sibling")), button(dom, "Rename", () => invoke("rename")), reorder, button(dom, "Move to root", () => invoke("move-to-root")), button(dom, "Duplicate", () => invoke("duplicate")), button(dom, "Delete property", () => invoke("delete")));
             if (related.length) {
                 const inventory = dom.createElement("section");
@@ -235,7 +248,7 @@ export function renderComposedFocusedSection(host, context) {
                 for (const item of related) {
                     const label = item.path.split("/").at(-1) ?? item.path, entry = dom.createElement("article");
                     entry.dataset.localRelatedPath = item.path;
-                    entry.append(Object.assign(dom.createElement("span"), { textContent: `${label} · ${item.path} · stable identity ${item.local.definitionId}` }), button(dom, `Remove local ${label}`, () => context.onStructure?.("delete", item.path)));
+                    entry.append(Object.assign(dom.createElement("span"), { textContent: `${label} · ${item.path} · stable identity ${item.local.definitionId}` }), button(dom, `Remove local ${label}`, () => context.onStructure?.({ kind: "delete", path: item.path })));
                     inventory.append(entry);
                 }
                 host.append(inventory);

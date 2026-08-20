@@ -1,6 +1,7 @@
 import { addProjectEntity, adoptSavedSchema, buildReleaseReview, commitStagedProjectImport, commitSavedSchemaReview, confirmCanonicalMigration, exportSpecificationProjectState, restoreReleaseAsDraft, saveProjectAssignment, searchProjectAssignments, stageProjectImport, stageSavedSchemaSynchronization, transactProject, } from "./data-layer-specification-project.js";
 import { openDurableProjectRuntime } from "./data-layer-durable-project-runtime.js";
 import { renderReorderControl } from "./reorderable-editor/control.js";
+import { StableIdentitySequence } from "./reorderable-editor/stable-identities.js";
 import { createDurablePersistenceReadiness } from "./durable-project/persistence-readiness.js";
 import { durableConflictSemanticField, durableProjectRouteForWorkspace } from "./data-layer-durable-project-repository.js";
 import { applyStagedBulkAction, commitStagedBulkRequirements, stageBulkRequirements } from "./data-layer-specification-bulk.js";
@@ -430,6 +431,7 @@ function guidedControlsForSchema(schema, input) {
     return guidedInputControls(effective, input);
 }
 function mountGuidedInputBuilder(host, options) {
+    const guidedArrayIdentities = new Map();
     const render = () => {
         const controls = options.controls(), input = options.input();
         host.replaceChildren(Object.assign(document.createElement("legend"), { textContent: "Structured input" }));
@@ -537,7 +539,10 @@ function mountGuidedInputBuilder(host, options) {
                 const group = document.createElement("fieldset"), legend = document.createElement("legend"), items = Array.isArray(value) ? value : [], children = byParent(`${descriptor.path}/*`);
                 legend.textContent = `${concretePath} · Array${descriptor.required ? " · required" : ""}`;
                 group.dataset.guidedArray = concretePath;
-                items.forEach((_item, index) => { const item = document.createElement("fieldset"), itemLegend = document.createElement("legend"), remove = document.createElement("button"), itemId = `${concretePath}:item:${index}`, reorder = renderReorderControl({ itemId, itemLabel: `Item ${index + 1}`, completeOrder: items.map((_candidate, candidateIndex) => ({ id: `${concretePath}:item:${candidateIndex}`, label: `Item ${candidateIndex + 1}` })), dropTarget: item, preserveTargetSemantics: true, onMove: ({ fromIndex, toIndex }) => { options.update(guidedArrayMove(options.input(), concretePath, fromIndex, toIndex)); render(); } }); itemLegend.textContent = `Item ${index + 1}`; remove.type = "button"; remove.textContent = "Remove item"; remove.addEventListener("click", () => { const next = [...items]; next.splice(index, 1); update(concretePath, next); }); item.append(itemLegend, reorder); if (children.length)
+                const identities = guidedArrayIdentities.get(concretePath) ?? new StableIdentitySequence(`guided-array:${concretePath}`);
+                guidedArrayIdentities.set(concretePath, identities);
+                const stableIds = identities.reconcile(items.length);
+                items.forEach((_item, index) => { const item = document.createElement("fieldset"), itemLegend = document.createElement("legend"), remove = document.createElement("button"), itemId = stableIds[index], reorder = renderReorderControl({ itemId, itemLabel: `Item ${index + 1}`, completeOrder: items.map((_candidate, candidateIndex) => ({ id: stableIds[candidateIndex], label: `Item ${candidateIndex + 1}` })), dropTarget: item, preserveTargetSemantics: true, onMove: ({ fromIndex, toIndex }) => { options.update(guidedArrayMove(options.input(), concretePath, fromIndex, toIndex)); identities.move(fromIndex, toIndex); render(); return true; } }); itemLegend.textContent = `Item ${index + 1}`; remove.type = "button"; remove.textContent = "Remove item"; remove.addEventListener("click", () => { const next = [...items]; next.splice(index, 1); identities.remove(index); update(concretePath, next); }); item.append(itemLegend, reorder); if (children.length)
                     for (const child of children)
                         item.append(renderDescriptor(child, child.path.replace(`${descriptor.path}/*`, `${concretePath}/${index}`)));
                 else {
@@ -547,7 +552,7 @@ function mountGuidedInputBuilder(host, options) {
                 const add = document.createElement("button");
                 add.type = "button";
                 add.textContent = "Add array item";
-                add.addEventListener("click", () => update(concretePath, [...items, descriptor.constraints.itemType === "object" ? {} : descriptor.constraints.itemType === "array" ? [] : descriptor.constraints.itemType === "boolean" ? false : descriptor.constraints.itemType === "number" || descriptor.constraints.itemType === "integer" ? 0 : ""]));
+                add.addEventListener("click", () => { identities.append(); update(concretePath, [...items, descriptor.constraints.itemType === "object" ? {} : descriptor.constraints.itemType === "array" ? [] : descriptor.constraints.itemType === "boolean" ? false : descriptor.constraints.itemType === "number" || descriptor.constraints.itemType === "integer" ? 0 : ""]); });
                 group.prepend(legend);
                 group.append(add);
                 return group;

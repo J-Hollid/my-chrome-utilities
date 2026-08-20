@@ -22,6 +22,27 @@ const moveBlock = (constraints, path, delta) => {
 const remapSubtree = (constraints, from, to, id) => constraints.map((constraint, index) => { if (!subtree(from, constraint.path))
     return constraint; const next = { ...constraint, path: replacePath(constraint.path, from, to) }; if (index === constraints.findIndex(({ path }) => path === from))
     next.definitionId = next.definitionId ?? id("property"); return next; });
+const moveToEdge = (constraints, command, id) => {
+    const name = command.path.split("/").at(-1);
+    const parent = command.destinationParentPath ?? "";
+    const to = `${parent}/${name}`;
+    if (subtree(command.path, parent))
+        throw new Error("A property cannot move into its own descendant.");
+    if (existingPath(constraints, to, command.path))
+        throw new Error(`Property ${to} already exists.`);
+    const block = remapSubtree(constraints.filter(({ path }) => subtree(command.path, path)), command.path, to, id);
+    const remainder = constraints.filter(({ path }) => !subtree(command.path, path));
+    if (!command.afterPath) {
+        const first = remainder.findIndex(({ path }) => parentPath(path) === parent);
+        remainder.splice(first < 0 ? remainder.length : first, 0, ...block);
+        return remainder;
+    }
+    const after = replacePath(command.afterPath, command.path, to), indexes = remainder.flatMap((constraint, index) => subtree(after, constraint.path) ? [index] : []);
+    if (!indexes.length)
+        throw new Error(`Move destination ${command.afterPath} is unavailable.`);
+    remainder.splice(indexes.at(-1) + 1, 0, ...block);
+    return remainder;
+};
 export function editConstraints(constraints, command, id) {
     const target = constraints.find(({ path }) => path === command.path);
     if (command.kind === "add-child" || command.kind === "add-sibling") {
@@ -39,6 +60,8 @@ export function editConstraints(constraints, command, id) {
         throw new Error(`Local Flow Page-instance property ${command.path} is unavailable.`);
     if (command.kind === "delete")
         return constraints.filter(({ path }) => !subtree(command.path, path));
+    if (command.kind === "move")
+        return moveToEdge(constraints, command, id);
     if (command.kind === "duplicate") {
         const name = cleanName(command.name, `${command.path.split("/").at(-1)} copy`), to = suffixName(parentPath(command.path), name);
         if (existingPath(constraints, to))

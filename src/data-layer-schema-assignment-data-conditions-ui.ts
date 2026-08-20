@@ -15,6 +15,9 @@ import {
 } from "./data-layer-schema-assignment-data-conditions.js";
 import {renderReorderControl} from "./reorderable-editor/control.js";
 import {reorderValues} from "./reorderable-editor/model.js";
+import {StableIdentitySequence} from "./reorderable-editor/stable-identities.js";
+
+const predicateIdentitySequences=new WeakMap<HTMLElement,StableIdentitySequence>();
 
 export interface AssignmentDataConditionEditorState {
   target: AssignmentConditionTarget;
@@ -79,6 +82,7 @@ export function renderAssignmentDataConditionEditor(
   const assistance = element("output"); assistance.id = "schema-assignment-condition-assistance"; assistance.setAttribute("aria-live", "polite");
 
   if (!state.group) {
+    predicateIdentitySequences.delete(root);
     summary.textContent = "No data conditions. This assignment is unrestricted by event data.";
     const add = element("button", "Add Data layer conditions"); add.type = "button"; add.id = "add-schema-assignment-data-conditions";
     add.dataset.assignmentConditionControl = "add-group";
@@ -97,6 +101,9 @@ export function renderAssignmentDataConditionEditor(
   const removeGroup = element("button", "Remove data conditions"); removeGroup.type = "button"; removeGroup.dataset.assignmentConditionControl = "remove-group";
   removeGroup.addEventListener("click", () => { const { group:_group, ...withoutGroup } = state; update(withoutGroup); });
   const list = element("ol"); list.id = "schema-assignment-condition-predicates";
+  const predicateIdentities=predicateIdentitySequences.get(root)??new StableIdentitySequence("assignment-condition");
+  predicateIdentitySequences.set(root,predicateIdentities);
+  const stablePredicateIds=predicateIdentities.reconcile(state.group.predicates.length);
   const suggestions = element("datalist"); suggestions.id = "schema-assignment-condition-path-suggestions";
   suggestions.replaceChildren(...state.suggestions.map(({ propertyPath, detectedType }) => Object.assign(element("option", `${propertyPath} · ${detectedType}`), { value:propertyPath })));
 
@@ -126,17 +133,17 @@ export function renderAssignmentDataConditionEditor(
     const comparison = element("input"); comparison.value = comparisonText(predicate); comparison.placeholder = predicate.operator === "Is one of" ? "comma-separated values" : "comparison value"; comparison.dataset.assignmentConditionControl = "comparison"; comparison.dataset.predicateIndex = String(index);
     comparison.hidden = predicate.operator === "Exists" || predicate.operator === "Does not exist";
     comparison.addEventListener("change", () => replacePredicate(index, withComparison(predicate, comparison.value)));
-    const predicateIdentity=(candidate:AssignmentDataPredicate,candidateIndex:number)=>`${candidate.propertyPath}\u0000${candidate.operator}\u0000${candidateIndex}`;
+    const predicateIdentity=(_candidate:AssignmentDataPredicate,candidateIndex:number)=>stablePredicateIds[candidateIndex]!;
     const reorder=renderReorderControl({itemId:predicateIdentity(predicate,index),itemLabel:predicate.propertyPath||`Condition ${index+1}`,
       completeOrder:state.group.predicates.map((candidate,candidateIndex)=>({id:predicateIdentity(candidate,candidateIndex),label:candidate.propertyPath||`Condition ${candidateIndex+1}`})),
-      dropTarget:row,orderedContainer:list,onMove:({itemId,toIndex})=>update({...state,group:{...(state.group as AssignmentDataConditionGroup),predicates:reorderValues(state.group!.predicates,itemId,toIndex,predicateIdentity)}})});
+      dropTarget:row,orderedContainer:list,onMove:({itemId,fromIndex,toIndex})=>{const predicates=reorderValues(state.group!.predicates,itemId,toIndex,predicateIdentity);predicateIdentities.move(fromIndex,toIndex);update({...state,group:{...(state.group as AssignmentDataConditionGroup),predicates}});return true;}});
     const remove = element("button", "Remove condition"); remove.type = "button";
-    remove.addEventListener("click", () => update({ ...state, group:{ ...(state.group as AssignmentDataConditionGroup), predicates:state.group?.predicates.filter((_, candidate) => candidate !== index) ?? [] } }));
+    remove.addEventListener("click", () => { predicateIdentities.remove(index); update({ ...state, group:{ ...(state.group as AssignmentDataConditionGroup), predicates:state.group?.predicates.filter((_, candidate) => candidate !== index) ?? [] } }); });
     row.append(reorder,labelledControl("Property path", path), labelledControl("Detected type", type), labelledControl("Operator", predicateOperator), labelledControl("Configured value", comparison), remove);
     list.append(row);
   }
   const add = element("button", "Add condition"); add.type = "button"; add.id = "add-schema-assignment-condition"; add.dataset.assignmentConditionControl = "add-predicate";
-  add.addEventListener("click", () => update({ ...state, group:{ ...(state.group as AssignmentDataConditionGroup), predicates:[...state.group!.predicates, { propertyPath:"", detectedType:"string", operator:"Exists" }] } }));
+  add.addEventListener("click", () => { predicateIdentities.append(); update({ ...state, group:{ ...(state.group as AssignmentDataConditionGroup), predicates:[...state.group!.predicates, { propertyPath:"", detectedType:"string", operator:"Exists" }] } }); });
   const validation = validateAssignmentDataConditions(state.group);
   assistance.textContent = validation.assistance;
   summary.textContent = assignmentDataConditionSummary({ target:state.target, conditionTarget:state.target, dataConditionGroup:state.group });

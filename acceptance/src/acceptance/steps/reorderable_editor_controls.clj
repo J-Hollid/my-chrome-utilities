@@ -10,7 +10,7 @@
    "the built extension is running with production editor, repository, history, pointer, keyboard, and accessibility adapters" :runtime})
 
 (defonce model-verified? (atom false))
-(defonce runtime-verified? (atom false))
+(defonce browser-observation (atom nil))
 
 (defn- verify-model! []
   (support/cached-command-verification!
@@ -19,18 +19,30 @@
    "node" "test/reorderable-editor-model-test.mjs"))
 
 (defn- observe-runtime! []
-  (support/cached-command-verification!
-   runtime-verified?
-   "Reorderable editor production-control verification failed. "
-   "node" "test/reorderable-editor-control-test.mjs")
-  true)
+  (support/cached-browser-observation!
+   browser-observation
+   {:adapter-env "REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER"
+    :observation-key :reorderableEditorControls
+    :runtime-error "Reorderable editor installed-browser verification failed."
+    :missing-error "Reorderable editor installed-browser evidence is missing."}))
 
-(defn- validate-example! [_mode _example] true)
+(def authoritative-examples
+  (support/authoritative-feature-examples feature-files))
+
+(defn- validate-example! [_mode example]
+  (support/validate-authoritative-example!
+   authoritative-examples example
+   "Reorderable editor example was outside the authoritative feature contract."))
 
 (defn- assert-runtime! [observed]
-  (support/assert! observed
-                   "Reorderable editor production-control evidence is missing."
-                   {:observed observed}))
+  (let [runtime-keys #{:runtime001 :runtime002 :runtime003 :runtime004 :runtime005
+                       :runtime006 :runtime007 :runtime008 :runtime009}]
+    (support/assert!
+     (and (= (conj runtime-keys :installedBoundary) (set (keys observed)))
+          (true? (:installedBoundary observed))
+          (every? #(support/all-values-true? (get observed %)) runtime-keys))
+     "Reorderable editor installed production evidence is incomplete."
+     {:observed observed})))
 
 (def handlers
   (support/verified-feature-mode-handlers
