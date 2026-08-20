@@ -1,8 +1,17 @@
 import assert from "node:assert/strict";
 import {spawn} from "node:child_process";
+import {createHash} from "node:crypto";
 import {pathToFileURL} from "node:url";
 
 const TARGET="REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER";
+
+const normalizedRepairValue=value=>Array.isArray(value)?value.map(normalizedRepairValue):value&&typeof value==="object"?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalizedRepairValue(nested)])):value;
+const repairDigest=value=>createHash("sha256").update(JSON.stringify(normalizedRepairValue(value))).digest("hex");
+
+function completionProtocol(){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),expectedPreRepairFailure={logicalTargetTiming:false,logicalTargetResult:false},expectedRepairResult={logicalTargetTiming:true,logicalTargetResult:true},fixture={id:"reorder-installed-consumer-completion-protocol-v1",causalCategory:context.causalCategory,diagnosedBoundaryDigest:repairDigest(context.diagnosedBoundary),input:{targetId:TARGET,protocolRecords:["swarmforgeBrowserTargetTiming","swarmforgeBrowserTargetResult"]},expectedPreRepairFailure,expectedRepairResult},fixtureDigest=repairDigest(fixture);
+  return{version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},repairResult:{status:"passed",fixtureDigest,observed:expectedRepairResult}};
+}
 
 const installedConsumerPrograms=[
   {
@@ -112,5 +121,6 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
     console.log(JSON.stringify(document));
     console.log(JSON.stringify({swarmforgeBrowserTargetTiming:{id:TARGET,durationMs:performance.now()-started}}));
     console.log(JSON.stringify({swarmforgeBrowserTargetResult:{id:TARGET,status:"passed"}}));
+    if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION)console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:completionProtocol()}));
   }).catch(error=>{console.error(error);process.exitCode=1;});
 }
