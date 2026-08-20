@@ -195,7 +195,9 @@ function browserPolicyFacts(pathname,text=readFileSync(pathname,"utf8")){
     ts.forEachChild(node,visit);
   };
   visit(source);
-  return {pathname,fixedDelays,fixedAttempts};
+  const monotonicModalDismissal=/modalDismissalDeadline=performance\.now\(\)\+1600;while\(document\.querySelector\(':modal'\)\)/u.test(text)&&
+    /performance\.now\(\)>=modalDismissalDeadline/u.test(text);
+  return {pathname,fixedDelays,fixedAttempts,monotonicModalDismissal};
 }
 
 function protocolProgramFacts(pathname,text=readFileSync(pathname,"utf8")){
@@ -778,10 +780,10 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
             .test(flowGraphAdapterSource)&&/globalThis\.__flowEvaluationStates/u
             .test(flowGraphAdapterSource)}
       :modalDismissalDeadlineRepair
-        ?(()=>{const source=readFileSync("test/support/layered-schema-targets.mjs","utf8");
-          return{fixedAttemptBound:/for\(let layer=0;layer<4&&document\.querySelector\(':modal'\)/u.test(source),
-            monotonicDeadline:/modalDismissalDeadline=performance\.now\(\)\+1600;while\(document\.querySelector\(':modal'\)\)/u.test(source)&&
-              /performance\.now\(\)>=modalDismissalDeadline/u.test(source)};})()
+        ?(()=>{const policy=browserPolicyEvidence.find(({pathname})=>
+          pathname.endsWith("layered-schema-targets.mjs"));
+          return{fixedAttemptBound:policy.fixedAttempts.some(({condition})=>
+            condition.includes("layer<4")),monotonicDeadline:policy.monotonicModalDismissal};})()
       :{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
         usesLogicalRemainingBudget:/Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u
           .test(flowGraphAdapterSource)},
