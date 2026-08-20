@@ -27,6 +27,7 @@ class FakeElement {
   dispatch(name,values={}){const event={target:this,currentTarget:this,key:"",clientY:0,preventDefault(){this.defaultPrevented=true;},stopPropagation(){},...values};for(const listener of this.listeners.get(name)??[])listener(event);return event;}
   click(){this.dispatch("click");}
   focus(){this.ownerDocument.activeElement=this;}
+  get isConnected(){for(let node=this;node;node=node.parent)if(node===this.ownerDocument.body)return true;return false;}
   querySelector(selector){return descendants(this).find(element=>matches(element,selector))??null;}
   querySelectorAll(selector){return descendants(this).filter(element=>matches(element,selector));}
   getBoundingClientRect(){return{top:0,height:40,left:0,width:200};}
@@ -159,6 +160,10 @@ leftList.children[1].querySelector("[data-reorder-trigger]").dispatch("dragstart
 const crossDrop=rightList.children[0].dispatch("drop",{dataTransfer:scopedTransfer,clientY:0});
 assert.equal(crossDrop.defaultPrevented,undefined,"a second list with overlapping item identities rejects the foreign session");
 assert.deepEqual(crossMoves,[],"a drop never invokes a callback across ordered-container boundaries");
+const rightTwo=rightList.children[1].querySelector("[data-reorder-trigger]");
+announceReorderCompletion(scopeDocument,{itemId:"two",itemLabel:"right Two",fromIndex:1,toIndex:0,fallbackTrigger:rightTwo});
+await new Promise(resolve=>queueMicrotask(resolve));
+assert.equal(scopeDocument.activeElement===rightTwo,true,"completion focus stays in the originating ordered container when identities overlap");
 
 const undoDocument=new FakeDocument(),undoList=undoDocument.createElement("ol"),undoRow=undoDocument.createElement("li"),undoMoves=[];
 undoDocument.body.append(undoList);undoList.append(undoRow);

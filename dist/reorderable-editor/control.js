@@ -4,6 +4,7 @@ let dragSession;
 const liveRegions = new WeakMap();
 const undoRegions = new WeakMap();
 const localDraftMoves = new WeakMap();
+const triggerScopes = new WeakMap();
 const clearDropIndicator = (target) => {
     target.classList.remove("reorder-drop-before", "reorder-drop-after");
     styles(target, { borderBlockStart: "", borderBlockEnd: "" });
@@ -34,7 +35,11 @@ function liveRegion(doc) {
     liveRegions.set(doc, output);
     return output;
 }
-const stableTrigger = (doc, itemId, fallback) => doc.querySelector?.(`[data-reorder-item-id="${itemId.replaceAll('"', '\\"')}"]`) ?? fallback;
+const stableTrigger = (doc, itemId, fallback) => {
+    const selector = `[data-reorder-item-id="${itemId.replaceAll('"', '\\"')}"]`;
+    const scoped = triggerScopes.get(fallback)?.querySelector?.(selector);
+    return scoped?.isConnected ? scoped : doc.querySelector?.(selector) ?? fallback;
+};
 function focusTrigger(doc, itemId, fallback) {
     queueMicrotask(() => stableTrigger(doc, itemId, fallback).focus({ preventScroll: true }));
 }
@@ -83,6 +88,7 @@ export function renderReorderControl(options) {
     trigger.dataset.reorderItemId = options.itemId;
     if (options.localDraftUndo)
         localDraftMoves.set(trigger, options.onMove);
+    triggerScopes.set(trigger, options.focusScope ?? options.orderedContainer ?? options.dropTarget?.parentElement ?? options.dropTarget ?? doc);
     trigger.setAttribute("data-reorder-trigger", "true");
     trigger.setAttribute("data-reorder-item-id", options.itemId);
     trigger.setAttribute("aria-label", model.accessibleName);

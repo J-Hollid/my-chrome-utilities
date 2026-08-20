@@ -23,6 +23,7 @@ export interface ReorderControlOptions<T extends ReorderableItem> {
   onMove:(request:ReorderRequest)=>boolean;
   dropTarget?:HTMLElement;
   orderedContainer?:HTMLElement;
+  focusScope?:ParentNode;
   legalDestinationIds?:readonly string[];
   moveDestinations?:readonly ReorderDestination[];
   dragScopeId?:string;
@@ -47,6 +48,7 @@ let dragSession:DragSession|undefined;
 const liveRegions=new WeakMap<Document,HTMLOutputElement>();
 const undoRegions=new WeakMap<Document,HTMLElement>();
 const localDraftMoves=new WeakMap<HTMLButtonElement,(request:ReorderRequest)=>boolean>();
+const triggerScopes=new WeakMap<HTMLButtonElement,ParentNode>();
 
 const clearDropIndicator=(target:HTMLElement):void=>{
   target.classList.remove("reorder-drop-before","reorder-drop-after");
@@ -71,8 +73,11 @@ function liveRegion(doc:Document):HTMLOutputElement {
   (doc.body??doc.documentElement)?.append?.(output);liveRegions.set(doc,output);return output;
 }
 
-const stableTrigger=(doc:Document,itemId:string,fallback:HTMLButtonElement):HTMLButtonElement=>
-  doc.querySelector?.<HTMLButtonElement>(`[data-reorder-item-id="${itemId.replaceAll('"','\\"')}"]`)??fallback;
+const stableTrigger=(doc:Document,itemId:string,fallback:HTMLButtonElement):HTMLButtonElement=>{
+  const selector=`[data-reorder-item-id="${itemId.replaceAll('"','\\"')}"]`;
+  const scoped=triggerScopes.get(fallback)?.querySelector?.<HTMLButtonElement>(selector);
+  return scoped?.isConnected?scoped:doc.querySelector?.<HTMLButtonElement>(selector)??fallback;
+};
 
 function focusTrigger(doc:Document,itemId:string,fallback:HTMLButtonElement):void {
   queueMicrotask(()=>stableTrigger(doc,itemId,fallback).focus({preventScroll:true}));
@@ -121,6 +126,7 @@ export function renderReorderControl<T extends ReorderableItem>(options:ReorderC
   wrapper.className="reorderable-editor-control";styles(wrapper,{display:"inline-flex",position:"relative",maxWidth:"100%"});
   trigger.className="reorderable-editor-trigger";trigger.dataset.reorderTrigger="true";trigger.dataset.reorderItemId=options.itemId;
   if(options.localDraftUndo)localDraftMoves.set(trigger,options.onMove);
+  triggerScopes.set(trigger,options.focusScope??options.orderedContainer??options.dropTarget?.parentElement??options.dropTarget??doc);
   trigger.setAttribute("data-reorder-trigger","true");trigger.setAttribute("data-reorder-item-id",options.itemId);
   trigger.setAttribute("aria-label",model.accessibleName);trigger.setAttribute("aria-haspopup","menu");
   trigger.setAttribute("aria-expanded","false");trigger.setAttribute("aria-controls",menuId);
