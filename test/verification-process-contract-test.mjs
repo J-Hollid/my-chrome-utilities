@@ -11350,6 +11350,29 @@ async function reorderableEditorRegistryContractRegression(context) {
     preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
     repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
 }
+function reorderBrowserEvidencePartitionRegression(context) {
+  const expectedPreRepairFailure = {declaredLeafCount:10,objectValuedRuntimeLeafCount:9};
+  const expectedRepairResult = {declaredLeafCount:32,objectValuedRuntimeLeafCount:0};
+  const shell = packs.find(({id}) => id === "shell");
+  const partition = shell.browserEvidencePartitions
+    .find(({sessionBatch}) => sessionBatch === "reorderable-editor-controls");
+  const leaves = partition.targets
+    .find(({id}) => id === "REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER").leaves;
+  const repairResult = {declaredLeafCount:leaves.length,
+    objectValuedRuntimeLeafCount:leaves.filter((leaf) =>
+      /^reorderableEditorControls\.runtime\d+$/u.test(leaf)).length};
+  assert.deepEqual(repairResult, expectedRepairResult,
+    "the reorder browser partition assigns only nested boolean assertion leaves");
+  const fixture = {id:"reorder-browser-boolean-evidence-leaves-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{targetId:"REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER",runtimeGroupCount:9},
+    expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest = verificationDigest(fixture);
+  return {version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
@@ -11389,6 +11412,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           ? judgmentRoutingContractRegression(regressionContext)
         : regressionContext.causalCategory === "other:reorderable editor registry contracts"
           ? await reorderableEditorRegistryContractRegression(regressionContext)
+        : regressionContext.causalCategory === "other:browser evidence partition"
+          ? reorderBrowserEvidencePartitionRegression(regressionContext)
         : regressionContext.causalCategory === "other:repair-focused prerequisite closure"
           ? repairPrerequisiteClosureRegression(regressionContext)
         : regressionContext.causalCategory === "other:confirmed-flaky acceptance evidence routing"

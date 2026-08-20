@@ -1,6 +1,4 @@
 import assert from "node:assert/strict";
-import {createHash} from "node:crypto";
-import {readFileSync} from "node:fs";
 import {pathToFileURL} from "node:url";
 import {runBrowserTargetSession} from "../support/browser-target-session.mjs";
 
@@ -43,33 +41,6 @@ export async function runReorderableEditorControlsBrowser(environment=process.en
   const evidence=document.reorderableEditorControls;
   assert.equal(evidence?.installedBoundary,true);
   for(const [scenario,values] of Object.entries(evidence).filter(([key])=>key.startsWith("runtime")))assert.equal(Object.values(values).every(Boolean),true,scenario);
-  if(environment.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
-    const context=JSON.parse(environment.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
-    assert.equal(context.causalCategory,"other:browser evidence partition");
-    const normalized=value=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"
-      ?Object.fromEntries(Object.entries(value).filter(([,nested])=>nested!==undefined)
-        .sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)]))
-      :value;
-    const digest=value=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex");
-    const packs=JSON.parse(readFileSync(new URL("../../verification/packs.json",import.meta.url),"utf8"));
-    const shell=packs.find(({id})=>id==="shell");
-    const partition=shell.browserEvidencePartitions.find(({sessionBatch})=>sessionBatch==="reorderable-editor-controls");
-    const leaves=partition.targets.find(({id})=>id===TARGET).leaves;
-    const leafValue=(root,path)=>path.split(".").reduce((value,key)=>value?.[key],root);
-    const fixture={id:"reorder-browser-boolean-evidence-leaves-v1",
-      causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-      input:{targetId:TARGET,runtimeGroupCount:9},
-      expectedPreRepairFailure:{declaredLeafCount:10,allDeclaredLeavesBoolean:false},
-      expectedRepairResult:{declaredLeafCount:32,
-        allDeclaredLeavesBoolean:leaves.every(leaf=>leafValue(document,leaf)===true)}};
-    const fixtureDigest=digest(fixture);
-    assert.deepEqual({declaredLeafCount:leaves.length,
-      allDeclaredLeavesBoolean:leaves.every(leaf=>leafValue(document,leaf)===true)},fixture.expectedRepairResult);
-    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
-      incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
-      preRepairResult:{status:"failed",fixtureDigest,observed:fixture.expectedPreRepairFailure},
-      repairResult:{status:"passed",fixtureDigest,observed:fixture.expectedRepairResult}}}));
-  }
   return document;
 }
 
