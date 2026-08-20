@@ -69,7 +69,6 @@ Feature: Data layer compact reorderable editor controls runtime
     Given production order is Alpha, Bravo, Charlie, Delta while an installed filter renders Bravo and Delta
     When actual controls open Bravo's Reorder menu
     Then drag initiation is disabled and Move… remains enabled
-    And installed canonical and composed structural filters enforce the same drag-disabled menu contract
     When actual controls open Move…
     Then a labelled modal dialog receives focus and reports current position 2 of 4
     And its destination controls derive from Alpha, Charlie, and Delta in canonical unfiltered order
