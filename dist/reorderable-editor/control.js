@@ -60,7 +60,7 @@ function focusTrigger(doc, itemId, fallback) {
 }
 export function announceReorderCompletion(doc, completion) {
     liveRegion(doc).textContent = `${completion.itemLabel} moved from position ${completion.fromIndex + 1} to position ${completion.toIndex + 1}`;
-    const fallback = completion.fallbackTrigger ?? doc.querySelector?.(`[data-reorder-item-id="${completion.itemId.replaceAll('"', '\\"')}"]`);
+    const fallback = completion.fallbackTrigger ?? doc.querySelector?.(`[data-reorder-focus-key="${focusKey(completion.focusScopeId, completion.itemId)}"]`);
     if (fallback)
         focusTrigger(doc, completion.itemId, fallback);
 }
@@ -101,14 +101,12 @@ export function renderReorderControl(options) {
     trigger.className = "reorderable-editor-trigger";
     trigger.dataset.reorderTrigger = "true";
     trigger.dataset.reorderItemId = options.itemId;
-    if (options.focusScopeId) {
-        const key = focusKey(options.focusScopeId, options.itemId);
-        trigger.dataset.reorderFocusKey = key;
-        trigger.setAttribute("data-reorder-focus-key", key);
-    }
+    const stableFocusKey = focusKey(options.focusScopeId, options.itemId);
+    trigger.dataset.reorderFocusKey = stableFocusKey;
+    trigger.setAttribute("data-reorder-focus-key", stableFocusKey);
     if (options.localDraftUndo)
         localDraftMoves.set(trigger, options.onMove);
-    triggerScopes.set(trigger, { root: options.focusScope ?? options.orderedContainer ?? options.dropTarget?.parentElement ?? options.dropTarget ?? doc, ...(options.focusScopeId ? { id: options.focusScopeId } : {}) });
+    triggerScopes.set(trigger, { root: options.focusScope ?? options.orderedContainer ?? options.dropTarget?.parentElement ?? options.dropTarget ?? doc, id: options.focusScopeId });
     trigger.setAttribute("data-reorder-trigger", "true");
     trigger.setAttribute("data-reorder-item-id", options.itemId);
     trigger.setAttribute("aria-label", model.accessibleName);

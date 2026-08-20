@@ -51,7 +51,7 @@ const canonicalMove=(context:CanonicalFocusedSectionContext,working:CanonicalPro
 };
 
 export const renderCanonicalStructuralControls=(dom:Document,context:CanonicalFocusedSectionContext,working:CanonicalPropertyNode):HTMLElement[]=>{
-  const document=context.current(),siblings=orderedChildren(document,working.parentId),reorder=renderReorderControl({
+  const document=context.current(),siblings=orderedChildren(document,working.parentId),reorder=renderReorderControl({focusScopeId:`canonical-focused-structure:${document.id}:${working.parentId??"root"}`,
     itemId:working.id,itemLabel:working.name,completeOrder:siblings.map(({id,name})=>({id,label:name})),
     legalDestinationIds:siblings.map(({id})=>id),moveDestinations:canonicalMoveDestinations(document,working),onMove:(request)=>canonicalMove(context,working,request),
   }),toRoot=button(dom,"Move to root",()=>{if(!working.parentId)return;applyStructure(context,{kind:"move",propertyId:working.id});}),duplicate=button(dom,"Duplicate",()=>applyStructure(context,{kind:"duplicate",propertyId:working.id,id:context.id})),remove=button(dom,"Delete property",()=>applyStructure(context,{kind:"delete",propertyId:working.id}));

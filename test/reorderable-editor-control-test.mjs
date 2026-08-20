@@ -181,7 +181,7 @@ assert.equal(scopeDocument.activeElement===replacementRightTwo,true,"completion 
 
 const undoDocument=new FakeDocument(),undoList=undoDocument.createElement("ol"),undoRow=undoDocument.createElement("li"),undoMoves=[];
 undoDocument.body.append(undoList);undoList.append(undoRow);
-const undoControl=renderReorderControl({itemId:"bravo",itemLabel:"Bravo",completeOrder:order,dropTarget:undoRow,orderedContainer:undoList,localDraftUndo:true,onMove:(request)=>{undoMoves.push(request);return true;}});
+const undoControl=renderReorderControl({focusScopeId:"undo",itemId:"bravo",itemLabel:"Bravo",completeOrder:order,dropTarget:undoRow,orderedContainer:undoList,localDraftUndo:true,onMove:(request)=>{undoMoves.push(request);return true;}});
 undoRow.append(undoControl);undoControl.querySelector("[data-reorder-trigger]").click();undoControl.querySelector("[role=menu]").querySelectorAll("button")[3].click();
 const undoMove=undoDocument.querySelector("[data-reorder-undo]");
 assert.equal(undoMove.hidden,false,"a successful local-draft move exposes Undo move");
@@ -189,7 +189,7 @@ undoMove.querySelector("button").click();
 assert.deepEqual(undoMoves.at(-1),{itemId:"bravo",fromIndex:2,toIndex:1,method:"menu"},"Undo move applies the exact inverse position");
 assert.equal(undoMove.hidden,true);
 
-announceReorderCompletion(undoDocument,{itemId:"bravo",itemLabel:"Bravo",fromIndex:1,toIndex:2});
+announceReorderCompletion(undoDocument,{focusScopeId:"undo",itemId:"bravo",itemLabel:"Bravo",fromIndex:1,toIndex:2});
 assert.equal(undoDocument.querySelector("[data-reorder-status]").textContent,"Bravo moved from position 2 to position 3");
 await new Promise(resolve=>queueMicrotask(resolve));
 assert.equal(undoDocument.activeElement,undoControl.querySelector("[data-reorder-trigger]"),"a deferred consequential completion restores the stable trigger");

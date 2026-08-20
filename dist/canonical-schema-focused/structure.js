@@ -52,7 +52,7 @@ const canonicalMove = (context, working, request) => {
     return true;
 };
 export const renderCanonicalStructuralControls = (dom, context, working) => {
-    const document = context.current(), siblings = orderedChildren(document, working.parentId), reorder = renderReorderControl({
+    const document = context.current(), siblings = orderedChildren(document, working.parentId), reorder = renderReorderControl({ focusScopeId: `canonical-focused-structure:${document.id}:${working.parentId ?? "root"}`,
         itemId: working.id, itemLabel: working.name, completeOrder: siblings.map(({ id, name }) => ({ id, label: name })),
         legalDestinationIds: siblings.map(({ id }) => id), moveDestinations: canonicalMoveDestinations(document, working), onMove: (request) => canonicalMove(context, working, request),
     }), toRoot = button(dom, "Move to root", () => { if (!working.parentId)

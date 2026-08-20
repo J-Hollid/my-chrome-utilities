@@ -103,7 +103,7 @@ function richEditor(detail, selected, templates, options) {
     detailSurface.dataset.mobileSurface = options.richEditorMobileDetail ? "active" : "inactive";
     outline.setAttribute("aria-label", "Rich template outline");
     const ids = flat.map(block => block.id), renderItems = (parent, items) => items.forEach(block => {
-        const item = document.createElement("li"), select = button(block.type, () => choose(block.id)), reorder = renderReorderControl({
+        const item = document.createElement("li"), select = button(block.type, () => choose(block.id)), reorder = renderReorderControl({ focusScopeId: `rich-template-blocks:${selected.id}`,
             itemId: block.id, itemLabel: `${block.type} block`, completeOrder: items.map(candidate => ({ id: candidate.id, label: `${candidate.type} block` })),
             moveDestinations: richBlockMoveDestinations(blocks, block.id), dropTarget: item, orderedContainer: parent,
             onMove: ({ itemId, fromIndex, toIndex, method, destinationId, destinationParentId, placement }) => {

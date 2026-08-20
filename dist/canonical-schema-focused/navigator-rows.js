@@ -48,7 +48,7 @@ export function renderNavigatorRows(tree, context) {
         const actions = button(dom, "Property actions", () => { context.setMenuPropertyId(row.id); context.openProperty(row.node, actions); });
         actions.setAttribute("aria-label", `Property actions for ${row.path}`);
         actions.dataset.propertyActionsPath = row.path;
-        const siblings = orderedChildren(context, row.node.parentId), reorder = renderReorderControl({ itemId: row.node.id, itemLabel: row.node.name, completeOrder: siblings.map(({ id, name }) => ({ id, label: name })), legalDestinationIds: focusedStructureOwned(row.node) ? siblings.filter(focusedStructureOwned).map(({ id }) => id) : [], moveDestinations: focusedStructureOwned(row.node) ? canonicalMoveDestinations(document, row.node) : [], filterActive, dropTarget: article, orderedContainer: tree, onMove: (request) => reorderProperty(context, row.node, request) });
+        const siblings = orderedChildren(context, row.node.parentId), reorder = renderReorderControl({ focusScopeId: `canonical-navigator-tree:${document.id}`, itemId: row.node.id, itemLabel: row.node.name, completeOrder: siblings.map(({ id, name }) => ({ id, label: name })), legalDestinationIds: focusedStructureOwned(row.node) ? siblings.filter(focusedStructureOwned).map(({ id }) => id) : [], moveDestinations: focusedStructureOwned(row.node) ? canonicalMoveDestinations(document, row.node) : [], filterActive, dropTarget: article, orderedContainer: tree, onMove: (request) => reorderProperty(context, row.node, request) });
         article.append(choose, actions, reorder);
         tree.append(article);
         if (row.node.type === "array") {
@@ -153,7 +153,7 @@ function renderTable(tree, context) {
         const node = context.document.nodes[row.dataset.propertyId ?? ""], source = row.querySelector("[data-schema-table-cell='source']");
         if (!node || !source)
             continue;
-        const siblings = orderedChildren(context, node.parentId), reorder = renderReorderControl({ itemId: node.id, itemLabel: node.name, completeOrder: siblings.map(({ id, name }) => ({ id, label: name })), legalDestinationIds: focusedStructureOwned(node) ? siblings.filter(focusedStructureOwned).map(({ id }) => id) : [], moveDestinations: focusedStructureOwned(node) ? canonicalMoveDestinations(context.document, node) : [], filterActive, dropTarget: row, orderedContainer: body, preserveTargetSemantics: true, onMove: (request) => reorderProperty(context, node, request) });
+        const siblings = orderedChildren(context, node.parentId), reorder = renderReorderControl({ focusScopeId: `canonical-navigator-table:${context.document.id}`, itemId: node.id, itemLabel: node.name, completeOrder: siblings.map(({ id, name }) => ({ id, label: name })), legalDestinationIds: focusedStructureOwned(node) ? siblings.filter(focusedStructureOwned).map(({ id }) => id) : [], moveDestinations: focusedStructureOwned(node) ? canonicalMoveDestinations(context.document, node) : [], filterActive, dropTarget: row, orderedContainer: body, preserveTargetSemantics: true, onMove: (request) => reorderProperty(context, node, request) });
         source.prepend(reorder);
     }
     table.replaceChildren(head, body);

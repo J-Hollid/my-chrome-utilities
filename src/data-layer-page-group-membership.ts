@@ -132,7 +132,7 @@ export function mountPageGroupMembershipEditor(host:HTMLElement,options:PageGrou
     if(!page){host.replaceChildren();return;}
     section.setAttribute("aria-label","Page Group memberships");heading.textContent="Page Group memberships";list.setAttribute("aria-label",`${page.name} Page Group membership stack`);section.append(heading,list);
     for(const row of rows){
-      const item=doc.createElement("li"),open=button("Open Page Group",()=>options.open(row.id)),remove=button("Remove",()=>options.remove(row.id)),reorder=renderReorderControl({
+      const item=doc.createElement("li"),open=button("Open Page Group",()=>options.open(row.id)),remove=button("Remove",()=>options.remove(row.id)),reorder=renderReorderControl({focusScopeId:`page-group-memberships:${options.pageId}`,
         itemId:row.id,itemLabel:row.label,completeOrder:rows.map(({id,label})=>({id,label})),dropTarget:item,orderedContainer:list,
         onMove:(request)=>{pending={request,delta:request.toIndex-request.fromIndex};render();return false;},
       });
@@ -141,7 +141,7 @@ export function mountPageGroupMembershipEditor(host:HTMLElement,options:PageGrou
     if(pending){
       const review=inspectPageGroupMembershipMove(state.project,options.pageId,pending.request.itemId,pending.delta),dialog=doc.createElement("dialog"),summary=doc.createElement("p"),order=doc.createElement("p");
       dialog.setAttribute("aria-label","Page Group membership reorder review");summary.textContent=review.summary;order.textContent=`${review.currentPageGroupIds.join(" → ")} becomes ${review.proposedPageGroupIds.join(" → ")}.`;
-      const cancel=button("Cancel membership reorder",()=>{const id=pending!.request.itemId;pending=undefined;render();focusTrigger(id);}),confirm=button("Confirm membership reorder",()=>{const request=pending!.request,label=rows.find(({id})=>id===request.itemId)?.label??request.itemId,next=movePageGroupMembership(options.current(),options.pageId,request.itemId,pending!.delta);pending=undefined;options.persist(next);render();announceReorderCompletion(doc,{itemId:request.itemId,itemLabel:label,fromIndex:request.fromIndex,toIndex:request.toIndex});});
+      const cancel=button("Cancel membership reorder",()=>{const id=pending!.request.itemId;pending=undefined;render();focusTrigger(id);}),confirm=button("Confirm membership reorder",()=>{const request=pending!.request,label=rows.find(({id})=>id===request.itemId)?.label??request.itemId,next=movePageGroupMembership(options.current(),options.pageId,request.itemId,pending!.delta);pending=undefined;options.persist(next);render();announceReorderCompletion(doc,{focusScopeId:`page-group-memberships:${options.pageId}`,itemId:request.itemId,itemLabel:label,fromIndex:request.fromIndex,toIndex:request.toIndex});});
       dialog.append(summary,order,cancel,confirm);section.append(dialog);queueMicrotask(()=>{if(typeof dialog.showModal==="function")dialog.showModal();else dialog.setAttribute("open","");confirm.focus();});
     }
     host.replaceChildren(section);

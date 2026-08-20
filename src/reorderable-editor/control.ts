@@ -24,7 +24,7 @@ export interface ReorderControlOptions<T extends ReorderableItem> {
   dropTarget?:HTMLElement;
   orderedContainer?:HTMLElement;
   focusScope?:ParentNode;
-  focusScopeId?:string;
+  focusScopeId:string;
   legalDestinationIds?:readonly string[];
   moveDestinations?:readonly ReorderDestination[];
   dragScopeId?:string;
@@ -98,17 +98,20 @@ function focusTrigger(doc:Document,itemId:string,fallback:HTMLButtonElement):voi
   queueMicrotask(()=>stableTrigger(doc,itemId,fallback).focus({preventScroll:true}));
 }
 
-export interface ReorderCompletion {
+interface ReorderCompletionDetails {
   itemId:string;
   itemLabel:string;
   fromIndex:number;
   toIndex:number;
-  fallbackTrigger?:HTMLButtonElement;
 }
+export type ReorderCompletion=ReorderCompletionDetails&(
+  |{fallbackTrigger:HTMLButtonElement;focusScopeId?:never}
+  |{focusScopeId:string;fallbackTrigger?:never}
+);
 
 export function announceReorderCompletion(doc:Document,completion:ReorderCompletion):void {
   liveRegion(doc).textContent=`${completion.itemLabel} moved from position ${completion.fromIndex+1} to position ${completion.toIndex+1}`;
-  const fallback=completion.fallbackTrigger??doc.querySelector?.<HTMLButtonElement>(`[data-reorder-item-id="${completion.itemId.replaceAll('"','\\"')}"]`);
+  const fallback=completion.fallbackTrigger??doc.querySelector?.<HTMLButtonElement>(`[data-reorder-focus-key="${focusKey(completion.focusScopeId,completion.itemId)}"]`);
   if(fallback)focusTrigger(doc,completion.itemId,fallback);
 }
 
@@ -140,9 +143,9 @@ export function renderReorderControl<T extends ReorderableItem>(options:ReorderC
   const menuId=`reorder-menu-${++identity}`,dialogId=`reorder-dialog-${identity}`;
   wrapper.className="reorderable-editor-control";styles(wrapper,{display:"inline-flex",position:"relative",maxWidth:"100%"});
   trigger.className="reorderable-editor-trigger";trigger.dataset.reorderTrigger="true";trigger.dataset.reorderItemId=options.itemId;
-  if(options.focusScopeId){const key=focusKey(options.focusScopeId,options.itemId);trigger.dataset.reorderFocusKey=key;trigger.setAttribute("data-reorder-focus-key",key);}
+  const stableFocusKey=focusKey(options.focusScopeId,options.itemId);trigger.dataset.reorderFocusKey=stableFocusKey;trigger.setAttribute("data-reorder-focus-key",stableFocusKey);
   if(options.localDraftUndo)localDraftMoves.set(trigger,options.onMove);
-  triggerScopes.set(trigger,{root:options.focusScope??options.orderedContainer??options.dropTarget?.parentElement??options.dropTarget??doc,...(options.focusScopeId?{id:options.focusScopeId}:{})});
+  triggerScopes.set(trigger,{root:options.focusScope??options.orderedContainer??options.dropTarget?.parentElement??options.dropTarget??doc,id:options.focusScopeId});
   trigger.setAttribute("data-reorder-trigger","true");trigger.setAttribute("data-reorder-item-id",options.itemId);
   trigger.setAttribute("aria-label",model.accessibleName);trigger.setAttribute("aria-haspopup","menu");
   trigger.setAttribute("aria-expanded","false");trigger.setAttribute("aria-controls",menuId);

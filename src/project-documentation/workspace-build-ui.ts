@@ -31,7 +31,7 @@ export function createDocumentationSectionConfigurationRenderer(mutateSection:Mu
       check.addEventListener("change",()=>input.onChange(setChecked(input.selected,item.id,check.checked)));
       row.append(labelled(item.label,check));
       if(check.checked){
-        row.prepend(renderReorderControl({itemId:item.id,itemLabel:item.label,
+        row.prepend(renderReorderControl({focusScopeId:`documentation-choices:${input.name}`,itemId:item.id,itemLabel:item.label,
           completeOrder:input.selected.map(id=>({id,label:input.all.find(candidate=>candidate.id===id)?.label??id})),
           dropTarget:row,orderedContainer:list,onMove:({itemId,toIndex})=>{input.onChange(reorderValues(input.selected,itemId,toIndex,value=>value));return true;}}));
       }

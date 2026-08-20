@@ -134,7 +134,7 @@ export function renderAssignmentDataConditionEditor(
     comparison.hidden = predicate.operator === "Exists" || predicate.operator === "Does not exist";
     comparison.addEventListener("change", () => replacePredicate(index, withComparison(predicate, comparison.value)));
     const predicateIdentity=(_candidate:AssignmentDataPredicate,candidateIndex:number)=>stablePredicateIds[candidateIndex]!;
-    const reorder=renderReorderControl({itemId:predicateIdentity(predicate,index),itemLabel:predicate.propertyPath||`Condition ${index+1}`,
+    const reorder=renderReorderControl({focusScopeId:"assignment-data-predicates",itemId:predicateIdentity(predicate,index),itemLabel:predicate.propertyPath||`Condition ${index+1}`,
       completeOrder:state.group.predicates.map((candidate,candidateIndex)=>({id:predicateIdentity(candidate,candidateIndex),label:candidate.propertyPath||`Condition ${candidateIndex+1}`})),
       dropTarget:row,orderedContainer:list,onMove:({itemId,toIndex})=>{const currentIds=predicateIdentities.values(),currentIdentity=(_candidate:AssignmentDataPredicate,candidateIndex:number)=>currentIds[candidateIndex]!,fromIndex=currentIds.indexOf(itemId),predicates=reorderValues(state.group!.predicates,itemId,toIndex,currentIdentity);predicateIdentities.move(fromIndex,toIndex);update({...state,group:{...(state.group as AssignmentDataConditionGroup),predicates}});return true;}});
     const remove = element("button", "Remove condition"); remove.type = "button";

@@ -101,7 +101,7 @@ export function installFlowDocumentationExportUi(options) {
             check.type = "checkbox";
             check.checked = selectedPaths.has(path);
             check.addEventListener("change", () => { check.checked ? selectedPaths.add(path) : selectedPaths.delete(path); renderWorkspace(); });
-            item.append(renderReorderControl({ itemId: path, itemLabel: path, completeOrder: propertyOrder.map(id => ({ id, label: id })), filterActive: Boolean(search.trim()), dropTarget: item, orderedContainer: propertyList, onMove: ({ itemId, toIndex }) => { propertyOrder = reorderValues(propertyOrder, itemId, toIndex, value => value); renderWorkspace(); return true; } }), labelled(path, check));
+            item.append(renderReorderControl({ focusScopeId: `flow-documentation-properties:${flowId}`, itemId: path, itemLabel: path, completeOrder: propertyOrder.map(id => ({ id, label: id })), filterActive: Boolean(search.trim()), dropTarget: item, orderedContainer: propertyList, onMove: ({ itemId, toIndex }) => { propertyOrder = reorderValues(propertyOrder, itemId, toIndex, value => value); renderWorkspace(); return true; } }), labelled(path, check));
             propertyList.append(item);
         }
         propertyFieldset.append(propertyList, createButton("Reset property columns", () => { propertyOrder = [...flowDocumentationPropertyPaths(snapshot)]; selectedPaths = new Set(propertyOrder); metadata = []; renderWorkspace(); }));
@@ -115,7 +115,7 @@ export function installFlowDocumentationExportUi(options) {
             check.addEventListener("change", () => { metadata = check.checked ? [...metadata, key] : metadata.filter((value) => value !== key); renderWorkspace(); });
             item.append(labelled(label, check));
             if (metadata.includes(key))
-                item.prepend(renderReorderControl({ itemId: key, itemLabel: label, completeOrder: metadata.map(id => ({ id, label: metadataOptions.find(([candidate]) => candidate === id)?.[1] ?? id })), dropTarget: item, orderedContainer: metadataList, onMove: ({ itemId, toIndex }) => { metadata = reorderValues(metadata, itemId, toIndex, value => value); renderWorkspace(); return true; } }));
+                item.prepend(renderReorderControl({ focusScopeId: `flow-documentation-metadata:${flowId}`, itemId: key, itemLabel: label, completeOrder: metadata.map(id => ({ id, label: metadataOptions.find(([candidate]) => candidate === id)?.[1] ?? id })), dropTarget: item, orderedContainer: metadataList, onMove: ({ itemId, toIndex }) => { metadata = reorderValues(metadata, itemId, toIndex, value => value); renderWorkspace(); return true; } }));
             metadataList.append(item);
         }
         metadataFieldset.append(metadataList);
@@ -134,7 +134,7 @@ export function installFlowDocumentationExportUi(options) {
             label.value = stepLabels[id] ?? context.stepLabel;
             label.setAttribute("aria-label", `Step label for ${context.pageName} ${context.eventName}`);
             label.addEventListener("change", () => { stepLabels[id] = label.value.trim() || context.stepLabel; renderWorkspace(); });
-            item.append(renderReorderControl({ itemId: id, itemLabel: `${context.pageName} / ${context.eventName}`, completeOrder: contextOrder.map(candidateId => { const candidate = base.contexts.find(value => value.id === candidateId); return { id: candidateId, label: `${candidate.pageName} / ${candidate.eventName}` }; }), dropTarget: item, orderedContainer: contextList, onMove: ({ itemId, toIndex }) => { contextOrder = reorderValues(contextOrder, itemId, toIndex, value => value); renderWorkspace(); return true; } }), labelled(`${context.pageName} / ${context.eventName} · ${context.kind}${source}`, check), label);
+            item.append(renderReorderControl({ focusScopeId: `flow-documentation-contexts:${flowId}`, itemId: id, itemLabel: `${context.pageName} / ${context.eventName}`, completeOrder: contextOrder.map(candidateId => { const candidate = base.contexts.find(value => value.id === candidateId); return { id: candidateId, label: `${candidate.pageName} / ${candidate.eventName}` }; }), dropTarget: item, orderedContainer: contextList, onMove: ({ itemId, toIndex }) => { contextOrder = reorderValues(contextOrder, itemId, toIndex, value => value); renderWorkspace(); return true; } }), labelled(`${context.pageName} / ${context.eventName} · ${context.kind}${source}`, check), label);
             contextList.append(item);
         }
         contextFieldset.append(contextList, createButton("Reset context order", () => { contextOrder = snapshot.contexts.map(({ id }) => id); selectedContexts = new Set(contextOrder); stepLabels = Object.fromEntries(snapshot.contexts.map(({ id, stepLabel }) => [id, stepLabel])); renderWorkspace(); }));
