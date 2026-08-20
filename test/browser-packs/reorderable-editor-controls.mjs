@@ -107,5 +107,8 @@ export async function runReorderableEditorControlsBrowser(environment=process.en
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
-  runReorderableEditorControlsBrowser().then(document=>console.log(JSON.stringify(document))).catch(error=>{console.error(error);process.exitCode=1;});
+  runReorderableEditorControlsBrowser().then(document=>{
+    console.log(JSON.stringify(document));
+    console.log(JSON.stringify({swarmforgeBrowserTargetResult:{id:TARGET,status:"passed"}}));
+  }).catch(error=>{console.error(error);process.exitCode=1;});
 }
