@@ -605,6 +605,7 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     paintedPortContractRepair=context.causalCategory==="other:stale readiness regression contract",
     tallFixtureCompleteness=context.causalCategory==="other:flow-example-tall-fixture-completeness",
     runtime047LeafConservation=context.causalCategory==="other:flow-runtime047-evidence-leaf-conservation",
+    detachedSeedSettlement=context.causalCategory==="other:Flow detached seed promise settlement",
     fixture=targetSelectionRepair?{id:"flow-structured-target-selection-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{requestedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",
@@ -690,6 +691,11 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         input:{runtime:"runtime047",target:"FLOW_WORKSPACE_CONTROLS_TARGET",leafCount:8},
         expectedPreRepairFailure:{runtimeKeyDeclared:false,targetLeavesDeclared:0,exactMatch:false},
         expectedRepairResult:{runtimeKeyDeclared:true,targetLeavesDeclared:8,exactMatch:true}}
+      :detachedSeedSettlement?{id:"flow-detached-seed-promise-settlement-v1",
+        causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+        input:{phase:"seed",devtoolsError:"Promise was collected",idempotentSeed:true},
+        expectedPreRepairFailure:{returnsPromiseToDevtools:true,settlesByBoundedPolling:false},
+        expectedRepairResult:{returnsPromiseToDevtools:false,settlesByBoundedPolling:true}}
       :{id:"flow-readiness-logical-budget-v1",
         causalCategory:"readiness or settling",diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
         input:{target:"FLOW_GRAPH_LEGACY_TARGET",logicalBudgetMilliseconds:120000,
@@ -759,6 +765,12 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
           runtimeKeyDeclared=/\(range 1 48\)/u.test(handlerSource);
           return{runtimeKeyDeclared,targetLeavesDeclared:leaves.length,
             exactMatch:runtimeKeyDeclared&&leaves.length===8};})()
+      :detachedSeedSettlement
+        ?{returnsPromiseToDevtools:!/Promise\.resolve\(\$\{expression\}\)[\s\S]*return true/u
+            .test(flowGraphAdapterSource),
+          settlesByBoundedPolling:/predicateDescription:"detached Flow seed promise settlement"/u
+            .test(flowGraphAdapterSource)&&/const seeded\s*=\s*await evaluateSeed\(/u
+            .test(flowGraphAdapterSource)}
       :{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
         usesLogicalRemainingBudget:/Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u
           .test(flowGraphAdapterSource)},
