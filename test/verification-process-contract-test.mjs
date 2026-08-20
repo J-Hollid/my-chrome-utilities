@@ -11377,6 +11377,29 @@ function reorderBrowserEvidencePartitionRegression(context) {
     preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
     repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
 }
+function reorderVerificationOwnerEvidenceRegression(context) {
+  const expectedPreRepairFailure = {layeredUnitCount:19,exactTaskCount:52,
+    reorderTargetConserved:false};
+  const expectedRepairResult = {layeredUnitCount:20,exactTaskCount:53,
+    reorderTargetConserved:true};
+  const repairResult = {
+    layeredUnitCount:vtd005Acceptance.conservation.unit,
+    exactTaskCount:vtd005Acceptance.conservation.exactTasks,
+    reorderTargetConserved:vtd014Evidence.conservation.currentPackContractDigest ===
+      vtd014Evidence.conservation.acceptedBasePackContractDigest,
+  };
+  assert.deepEqual(repairResult, expectedRepairResult,
+    "reorder verification owner evidence remains exact in Layered and VTD-014 conservation");
+  const fixture = {id:"reorder-verification-owner-evidence-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{task:"compact-reorderable-editor-controls",ownerPack:"layered_schema"},
+    expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest = verificationDigest(fixture);
+  return {version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
@@ -11418,6 +11441,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           ? await reorderableEditorRegistryContractRegression(regressionContext)
         : regressionContext.causalCategory === "other:browser evidence partition"
           ? reorderBrowserEvidencePartitionRegression(regressionContext)
+        : regressionContext.causalCategory === "other:reorder verification owner evidence"
+          ? reorderVerificationOwnerEvidenceRegression(regressionContext)
         : regressionContext.causalCategory === "other:repair-focused prerequisite closure"
           ? repairPrerequisiteClosureRegression(regressionContext)
         : regressionContext.causalCategory === "other:confirmed-flaky acceptance evidence routing"
