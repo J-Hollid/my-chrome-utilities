@@ -151,6 +151,7 @@ function productionCallFacts(pathname,names){
   return calls;
 }
 
+const monotonicModalDismissalByPath=new Map();
 function browserPolicyFacts(pathname,text=readFileSync(pathname,"utf8")){
   const source=ts.createSourceFile(pathname,text,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
   const fixedDelays=[],fixedAttempts=[];
@@ -197,7 +198,8 @@ function browserPolicyFacts(pathname,text=readFileSync(pathname,"utf8")){
   visit(source);
   const monotonicModalDismissal=/modalDismissalDeadline=performance\.now\(\)\+1600;while\(document\.querySelector\(':modal'\)\)/u.test(text)&&
     /performance\.now\(\)>=modalDismissalDeadline/u.test(text);
-  return {pathname,fixedDelays,fixedAttempts,monotonicModalDismissal};
+  monotonicModalDismissalByPath.set(pathname,monotonicModalDismissal);
+  return {pathname,fixedDelays,fixedAttempts};
 }
 
 function protocolProgramFacts(pathname,text=readFileSync(pathname,"utf8")){
@@ -783,7 +785,7 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         ?(()=>{const policy=browserPolicyEvidence.find(({pathname})=>
           pathname.endsWith("layered-schema-targets.mjs"));
           return{fixedAttemptBound:policy.fixedAttempts.some(({condition})=>
-            condition.includes("layer<4")),monotonicDeadline:policy.monotonicModalDismissal};})()
+            condition.includes("layer<4")),monotonicDeadline:monotonicModalDismissalByPath.get(policy.pathname)};})()
       :{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
         usesLogicalRemainingBudget:/Math\.max\(1,\s*remainingMilliseconds\(\)-50\)/u
           .test(flowGraphAdapterSource)},
