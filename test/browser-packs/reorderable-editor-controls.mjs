@@ -8,9 +8,10 @@ const TARGET="REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER";
 const normalizedRepairValue=value=>Array.isArray(value)?value.map(normalizedRepairValue):value&&typeof value==="object"?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalizedRepairValue(nested)])):value;
 const repairDigest=value=>createHash("sha256").update(JSON.stringify(normalizedRepairValue(value))).digest("hex");
 
-function completionProtocol(){
-  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),expectedPreRepairFailure={logicalTargetTiming:false,logicalTargetResult:false},expectedRepairResult={logicalTargetTiming:true,logicalTargetResult:true},fixture={id:"reorder-installed-consumer-completion-protocol-v1",causalCategory:context.causalCategory,diagnosedBoundaryDigest:repairDigest(context.diagnosedBoundary),input:{targetId:TARGET,protocolRecords:["swarmforgeBrowserTargetTiming","swarmforgeBrowserTargetResult"]},expectedPreRepairFailure,expectedRepairResult},fixtureDigest=repairDigest(fixture);
-  return{version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},repairResult:{status:"passed",fixtureDigest,observed:expectedRepairResult}};
+function completionProtocol(evidence){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),viewportRepair=context.causalCategory==="other:stale viewport acceptance contract",expectedPreRepairFailure=viewportRepair?{exactViewportMatrix:false,geometry:true}:{logicalTargetTiming:false,logicalTargetResult:false},expectedRepairResult=viewportRepair?{exactViewportMatrix:true,geometry:true}:{logicalTargetTiming:true,logicalTargetResult:true},repairResult=viewportRepair?{exactViewportMatrix:evidence.runtime001["manual reproduction steps"],geometry:evidence.runtime008.geometry}:expectedRepairResult,fixture={id:viewportRepair?"reproduction-step-viewport-contract-v1":"reorder-installed-consumer-completion-protocol-v1",causalCategory:context.causalCategory,diagnosedBoundaryDigest:repairDigest(context.diagnosedBoundary),input:viewportRepair?{expectedSequence:[360,520,1280,320],examples:["360 CSS px","520 CSS px","1280 CSS px","320 CSS px at 400 percent text zoom"]}:{targetId:TARGET,protocolRecords:["swarmforgeBrowserTargetTiming","swarmforgeBrowserTargetResult"]},expectedPreRepairFailure,expectedRepairResult},fixtureDigest=repairDigest(fixture);
+  assert.deepEqual(repairResult,expectedRepairResult);
+  return{version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
 }
 
 const installedConsumerPrograms=[
@@ -139,6 +140,6 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
     console.log(JSON.stringify(document));
     console.log(JSON.stringify({swarmforgeBrowserTargetTiming:{id:TARGET,durationMs:performance.now()-started}}));
     console.log(JSON.stringify({swarmforgeBrowserTargetResult:{id:TARGET,status:"passed"}}));
-    if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION)console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:completionProtocol()}));
+    if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION)console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:completionProtocol(document.reorderableEditorControls)}));
   }).catch(error=>{console.error(error);process.exitCode=1;});
 }
