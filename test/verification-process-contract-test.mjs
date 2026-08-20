@@ -11323,7 +11323,7 @@ async function reorderableEditorRegistryContractRegression(context) {
   };
   const expectedRepairResult = {
     specificationBuilderUnresolved:false,
-    shellSourceCount:20,
+    shellSourceCount:21,
     canonicalStructureTargetCount:0,
   };
   const canonicalStructurePlan=planVerification(packs,{
