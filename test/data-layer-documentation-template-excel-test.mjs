@@ -92,6 +92,41 @@ assert.equal(validated.kind,"flow");
 assert.equal(validated.contractVersion,2);
 assert.deepEqual(validated.inspection.bindings,[{cell:"A1",path:"project.name"}],"inspection preserves the editable cell location for every binding");
 
+const printerSettingsContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.printerSettings",printerSettingsRelationshipType="http://schemas.openxmlformats.org/officeDocument/2006/relationships/printerSettings";
+async function withPrinterSettings(bytes,{worksheet="Template",part="xl/printerSettings/printerSettings1.bin",contentType=printerSettingsContentType,relationshipType=printerSettingsRelationshipType,targetMode,includeRelationship=true,duplicateRelationship=false}={}){
+  const zip=await JSZip.loadAsync(bytes),sheetNumber=worksheet==="Template"?1:worksheet==="Template Guide"?2:undefined,relationshipName=sheetNumber?`xl/worksheets/_rels/sheet${sheetNumber}.xml.rels`:"xl/_rels/workbook.xml.rels",contentTypes=await zip.file("[Content_Types].xml").async("string"),partName=`/${part}`;
+  zip.file("[Content_Types].xml",contentTypes.replace("</Types>",`<Override PartName="${partName}" ContentType="${contentType}"/></Types>`));
+  zip.file(part,new Uint8Array([0x00,0x01,0x50,0x53,0xff]));
+  if(includeRelationship){
+    const target=sheetNumber?`../printerSettings/${part.split("/").at(-1)}`:`printerSettings/${part.split("/").at(-1)}`,mode=targetMode?` TargetMode="${targetMode}"`:"",relationships=[`<Relationship Id="rIdPrinterSettings" Type="${relationshipType}" Target="${target}"${mode}/>`];
+    if(duplicateRelationship)relationships.push(`<Relationship Id="rIdPrinterSettingsDuplicate" Type="${relationshipType}" Target="${target}"/>`);
+    const existingRelationships=zip.file(relationshipName)?await zip.file(relationshipName).async("string"):'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+    zip.file(relationshipName,existingRelationships.replace("</Relationships>",`${relationships.join("")}</Relationships>`));
+    if(sheetNumber){const sheetName=`xl/worksheets/sheet${sheetNumber}.xml`,sheet=await zip.file(sheetName).async("string"),related=sheet.includes("<pageSetup")?sheet.replace("<pageSetup",'<pageSetup r:id="rIdPrinterSettings"'):sheet.replace("</worksheet>",'<pageSetup r:id="rIdPrinterSettings"/></worksheet>');zip.file(sheetName,related);}
+  }
+  return zip.generateAsync({type:"uint8array",compression:"DEFLATE"});
+}
+for(const sample of [
+  {worksheet:"Template",part:"xl/printerSettings/printerSettings1.bin"},
+  {worksheet:"Template Guide",part:"xl/printerSettings/printerSettings27.bin"},
+]){
+  const bytes=await withPrinterSettings(workbookBytes,sample),result=await validateExcelTemplateWorkbook(new Blob([bytes]),"flow");
+  assert.equal(result.valid,true,`${sample.worksheet} standard printer settings: ${result.findings.map(({location,message})=>`${location}: ${message}`).join("\n")}`);
+}
+for(const [label,options] of [
+  ["unrecognized binary content",{contentType:"application/octet-stream"}],
+  ["nonstandard printer-settings part name",{part:"xl/printerSettings/device.bin"}],
+  ["unrelated binary relationship",{relationshipType:"http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject"}],
+  ["missing printer-settings relationship",{includeRelationship:false}],
+  ["external printer-settings relationship",{targetMode:"External"}],
+  ["printer settings related from an unapproved package source",{worksheet:"Workbook"}],
+  ["ambiguous printer-settings relationships",{duplicateRelationship:true}],
+]){
+  const bytes=await withPrinterSettings(workbookBytes,options),result=await validateExcelTemplateWorkbook(new Blob([bytes]),"flow");
+  assert.equal(result.valid,false,label);
+  assert.match(result.findings.map(({location,message})=>`${location}: ${message}`).join("\n"),/printer|binary|macro|active|unsupported/iu,label);
+}
+
 const labelledZip=await JSZip.loadAsync(workbookBytes),contentTypes=await labelledZip.file("[Content_Types].xml").async("string"),relationships=await labelledZip.file("_rels/.rels").async("string"),labelId="2f5f16bb-bf25-4d92-9fce-87f9a2dd4e76";labelledZip.file("[Content_Types].xml",contentTypes.replace("</Types>",'<Override PartName="/docProps/custom.xml" ContentType="application/vnd.openxmlformats-officedocument.custom-properties+xml"/></Types>'));labelledZip.file("_rels/.rels",relationships.replace("</Relationships>",'<Relationship Id="purviewCustomProperties" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties" Target="docProps/custom.xml"/></Relationships>'));labelledZip.file("docProps/custom.xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/custom-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><property fmtid="{D5CDD505-2E9C-101B-9397-08002B2CF9AE}" pid="2" name="MSIP_Label_${labelId}_Enabled"><vt:lpwstr>true</vt:lpwstr></property><property fmtid="{D5CDD505-2E9C-101B-9397-08002B2CF9AE}" pid="3" name="MSIP_Label_${labelId}_Name"><vt:lpwstr>Confidential</vt:lpwstr></property><property fmtid="{D5CDD505-2E9C-101B-9397-08002B2CF9AE}" pid="4" name="Sensitivity"><vt:lpwstr>3</vt:lpwstr></property></Properties>`);const labelledBytes=await labelledZip.generateAsync({type:"uint8array",compression:"DEFLATE"}),labelledValidation=await validateExcelTemplateWorkbook(new Blob([labelledBytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),"flow"),reopenedLabelled=await JSZip.loadAsync(labelledBytes),labelXml=await reopenedLabelled.file("docProps/custom.xml").async("string");assert.equal(labelledValidation.valid,true,labelledValidation.findings.map(({message})=>message).join("\n"));assert.match(labelXml,/MSIP_Label_.*_Enabled/u);assert.match(labelXml,/<vt:lpwstr>Confidential<\/vt:lpwstr>/u,"non-encrypting Purview custom properties remain inert package metadata in the exact selected bytes");
 
 const legacyBook=new ExcelJS.Workbook(),legacySheet=legacyBook.addWorksheet("Template");legacySheet.getCell("A1").note='tw:template(kind="flow" contract="1")';const legacyBytes=await legacyBook.xlsx.writeBuffer(),legacy=await validateExcelTemplateWorkbook(new Blob([legacyBytes]),"flow");assert.equal(legacy.valid,false);assert.match(legacy.findings.map(({message})=>message).join("\n"),/guided starter/u,"worksheet Notes never declare current template behavior");

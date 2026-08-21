@@ -139,6 +139,7 @@
                         :documentationTemplateGuideExamples true
                         :documentationTemplateActiveContentFinding true
                         :documentationTemplatePurview true
+                        :documentationTemplatePrinterSettings true
                         :documentationTemplateRecoveryFailure true
                         :documentationTemplateInvalidTransitions true
                         :documentationTemplateRecovery true

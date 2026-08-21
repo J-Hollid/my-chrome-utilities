@@ -79,6 +79,28 @@ const internalTarget = (relationshipName, target) => { if (target.startsWith("/"
     else
         normal.push(segment);
 } const value = normal.join("/"); return safeFlowVisualArchivePath(value) ? value : undefined; };
+const printerSettingsContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.printerSettings";
+const printerSettingsRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/printerSettings";
+const packageRelationships = (texts) => [...texts].flatMap(([part, text]) => part.endsWith(".rels") ? [...text.matchAll(/<Relationship\b([^>]*)\/?>(?:<\/Relationship>)?/gu)].map((match) => { const value = attributes(match[1]), external = value.TargetMode?.toLowerCase() === "external"; return { part, id: value.Id, type: value.Type, target: value.Target, targetPart: !external && value.Target ? internalTarget(part, value.Target) : undefined, external }; }) : []);
+const packageContentTypes = (text) => { const defaults = new Map(), overrides = new Map(); for (const match of text.matchAll(/<(Default|Override)\b([^>]*)\/?>(?:<\/(?:Default|Override)>)?/gu)) {
+    const value = attributes(match[2]);
+    if (match[1] === "Default" && value.Extension && value.ContentType)
+        defaults.set(value.Extension.toLowerCase(), value.ContentType);
+    if (match[1] === "Override" && value.PartName && value.ContentType)
+        overrides.set(value.PartName.replace(/^\//u, ""), value.ContentType);
+} return { defaults, overrides }; };
+const contentTypeFor = (name, contentTypes) => contentTypes.overrides.get(name) ?? contentTypes.defaults.get(name.split(".").at(-1)?.toLowerCase() ?? "");
+const validPrinterSettingsParts = (entries, texts, sheetNames) => {
+    const contentTypes = packageContentTypes(texts.get("[Content_Types].xml") ?? ""), relationships = packageRelationships(texts), valid = new Set();
+    for (const { name } of entries) {
+        if (!/^xl\/printerSettings\/printerSettings\d+\.bin$/u.test(name) || contentTypeFor(name, contentTypes) !== printerSettingsContentType)
+            continue;
+        const inbound = relationships.filter(({ external, targetPart }) => !external && targetPart === name), printerRelationships = inbound.filter(({ type }) => type === printerSettingsRelationshipType);
+        if (inbound.length === 1 && printerRelationships.length === 1 && ["Template", "Template Guide"].includes(sheetNames.get(relationshipOwner(printerRelationships[0].part)) ?? ""))
+            valid.add(name);
+    }
+    return valid;
+};
 const activeContentRule = "Guided templates cannot contain formulas or external workbook connections.";
 const activeContentRepair = "Replace formulas with literal text and remove active or external workbook content.";
 const sheetNamesByPart = (texts) => { const result = new Map(), workbook = texts.get("xl/workbook.xml") ?? "", relationships = texts.get("xl/_rels/workbook.xml.rels") ?? "", targets = new Map(); for (const match of relationships.matchAll(/<Relationship\b([^>]*)\/?>(?:<\/Relationship>)?/gu)) {
@@ -187,10 +209,6 @@ export async function validateExcelTemplateWorkbook(source, expectedKind) {
     for (const name of required)
         if (!byName.has(name))
             findings.push({ location: name, message: `The workbook is missing ${name}.` });
-    const unsupported = /^(?:xl\/(?:externalLinks|connections|embeddings|charts|pivotTables|pivotCache|slicers|activeX|ctrlProps)|customXml|word|ppt)\//u;
-    for (const { name } of entries)
-        if (unsupported.test(name) || /vbaProject|activeX|oleObject|signature|\.bin$/iu.test(name))
-            findings.push({ location: name, message: "Use inert macro-free workbook content." });
     const readable = entries.filter(({ name }) => /\.(?:xml|rels)$/u.test(name)), texts = new Map();
     for (const entry of readable)
         try {
@@ -199,7 +217,10 @@ export async function validateExcelTemplateWorkbook(source, expectedKind) {
         catch (error) {
             findings.push({ location: entry.name, message: error instanceof Error ? error.message : String(error) });
         }
-    const sheetNames = sheetNamesByPart(texts);
+    const sheetNames = sheetNamesByPart(texts), acceptedPrinterSettings = validPrinterSettingsParts(entries, texts, sheetNames), unsupported = /^(?:xl\/(?:externalLinks|connections|embeddings|charts|pivotTables|pivotCache|slicers|activeX|ctrlProps)|customXml|word|ppt)\//u;
+    for (const { name } of entries)
+        if (unsupported.test(name) || /vbaProject|activeX|oleObject|signature/iu.test(name) || /\.bin$/iu.test(name) && !acceptedPrinterSettings.has(name))
+            findings.push({ location: name, message: "Use inert macro-free workbook content." });
     for (const [name, text] of texts) {
         for (const cell of formulaCells(text))
             findings.push({ location: `${sheetNames.get(name) ?? name} ${cell}`, message: `${cell} contains a formula or active workbook content. Remove workbook formulas.`, rule: activeContentRule, repair: activeContentRepair, technical: JSON.stringify({ part: name, cell }) });
