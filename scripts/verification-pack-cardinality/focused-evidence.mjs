@@ -41,6 +41,7 @@ const approvedPaths = new Set([
   "scripts/verification-run-intent.mjs",
   "scripts/verification-slice-quarantine.mjs",
   "scripts/verification-task-succession.mjs",
+  "scripts/verification-task-succession-test.mjs",
   "test/settled-final-verification-workflow-test.mjs",
   "test/verification-evidence-production-path-test.mjs",
   "test/verification-pack-cardinality-contract-test.mjs",
