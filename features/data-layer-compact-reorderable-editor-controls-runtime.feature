@@ -6,10 +6,10 @@ Feature: Data layer compact reorderable editor controls runtime
 
   # Data layer compact reorderable editor controls runtime 001
   Scenario Outline: Data layer compact reorderable editor controls runtime 001
-    Given actual navigation opens <installed_surface>
+    Given actual navigation opens <installed_surface> with an actionable <ordered_item>
     When DOM inspection examines one <ordered_item>
-    Then exactly one visible button is its Reorder trigger and drag handle
-    And its accessible name contains the item label, current position, and set size
+    Then exactly one visible Reorder affordance is its drag handle
+    And the item exposes its label, current position, and set size to accessibility APIs
     And the original <primary_controls> remain independently operable
     And no persistent paired positional buttons occur in the item
 
@@ -23,8 +23,8 @@ Feature: Data layer compact reorderable editor controls runtime
       | Documentation Set content                 | concept row                  | inclusion checkbox                            |
       | the Documentation Set outline             | section row                  | section-selection button                      |
       | the Rich template editor                  | block item                   | block editor actions                          |
-      | the canonical property editor             | structural property          | structural editor actions                     |
-      | the composed property editor              | structural property          | structural editor actions                     |
+      | the canonical property Tree or focused Structure editor | structural property | structural editor actions                     |
+      | the composed property Tree or focused Structure editor  | structural property | structural editor actions                     |
       | the composed allowed-values editor        | allowed-value row            | typed-value input and remove                  |
       | Page Property Set applications            | application row              | applicability select, open, and remove        |
       | assignment data conditions                | predicate row                | path, type, operator, comparison, and remove  |
@@ -131,3 +131,64 @@ Feature: Data layer compact reorderable editor controls runtime
     Then no visible Move earlier and Move later, Move up and Move down, or Move left and Move right pair remains
     And each surface invokes its existing domain reorder operation through the shared interaction contract
     And no reorder changes inclusion, edited values, validation, stable identity, or unrelated stored bytes
+
+  # Data layer compact reorderable editor controls runtime 010
+  Scenario Outline: Data layer compact reorderable editor controls runtime 010
+    Given actual navigation opens the <schema_projection> Table with inherited and locally owned rows
+    When DOM and geometry inspection examine the installed table
+    Then each row's Property editor cell contains exactly one Property actions button and no Reorder control
+    And no Table cell or row is draggable or owns a reorder drop target
+    And each Path cell contains the complete friendly path and no button
+    And Path retains its agreed combined width without horizontal table overflow caused by movement controls
+    And headings, inline editors, provenance content, validation state, and focused-editor routing remain unchanged
+
+    Examples:
+      | schema_projection |
+      | canonical schema  |
+      | composed schema   |
+
+  # Data layer compact reorderable editor controls runtime 011
+  Scenario: Data layer compact reorderable editor controls runtime 011
+    Given installed schema structural editors contain one inherited property, one locally owned singleton, and locally owned movable siblings
+    When DOM inspection compares their Tree and focused Structure controls
+    Then the inherited property and locally owned singleton expose no Reorder grip or draggable target
+    And Override here on the inherited property establishes local structural identity before a Reorder grip can appear
+    And every locally owned property with a legal destination exposes exactly one grip as its drag handle
+    And the item's one movement-menu button exposes at least one enabled legal movement action
+    And pointer drag can start only from the grip and only toward a legal structural destination
+
+  # Data layer compact reorderable editor controls runtime 012
+  Scenario: Data layer compact reorderable editor controls runtime 012
+    Given actual Page Property composition contains one applied Property Set
+    When DOM inspection examines the application list
+    Then it contains no Reorder trigger, movement menu, draggable application, or reorder drop target
+    When production state adds a second applied Property Set and rerenders
+    Then each application contains exactly one Reorder trigger and no paired positional buttons
+    And every trigger's menu contains at least one enabled legal movement action
+    And pointer drag starts only from the trigger
+
+  # Data layer compact reorderable editor controls runtime 013
+  Scenario: Data layer compact reorderable editor controls runtime 013
+    Given every migrated installed surface contains an actionable reorder item in each supported row, card, tree, block, and configured-heading host
+    When DOM, accessibility, and computed-geometry inspection examine every visible handle at rest
+    Then each item contains exactly one inline SVG vertical six-dot grip and no visible Reorder text
+    And each grip is aria-hidden, uses currentColor, and measures 16 by 16 CSS pixels
+    And each grip is centered within one 44 by 44 CSS-pixel pointer target to within one CSS pixel on both axes
+    And each target's block center matches its host's block center without text wrapping or movement-control horizontal overflow
+    And the target has no visible filled surface, border, or shadow at rest
+    When pointer hover, keyboard focus, forced colors, product themes, and an active drag are inspected
+    Then the installed control retains distinguishable hover, focus, grip, grab, and grabbing states
+
+  # Data layer compact reorderable editor controls runtime 014
+  Scenario Outline: Data layer compact reorderable editor controls runtime 014
+    Given an installed actionable reorder item <actions_menu_state>
+    When source, DOM, tab-order, and accessibility inspection examine the item
+    Then the installed handle is <installed_handle_contract>
+    And the installed movement menu is <installed_menu_contract>
+    And exactly one menu button exposes all legal non-dragging movement outcomes
+    And drag initiation remains confined to the six-dot grip target
+
+    Examples:
+      | actions_menu_state               | installed_handle_contract                                                   | installed_menu_contract                                                       |
+      | has no existing actions menu     | a native Reorder menu button using the grip target and complete accessible name    | owned by the grip with expanded state and the controlled movement menu             |
+      | already has an actions menu      | the non-button grip target with no additional tab stop                           | owned by the one existing actions menu with no second menu button                  |

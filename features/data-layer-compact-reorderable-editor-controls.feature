@@ -8,7 +8,7 @@ Feature: Data layer compact reorderable editor controls
   Scenario Outline: Data layer compact reorderable editor controls 001
     Given <surface> shows <item_content> for each item in <ordering_scope>
     When the operator inspects one reorderable item
-    Then the item offers one compact Reorder trigger that is also its drag handle
+    Then the item offers one compact Reorder affordance that is its drag handle
     And no persistent paired earlier and later, up and down, or left and right move buttons are present
     And <item_content> retains its existing behavior independently of reordering
     And a move cannot cross <ordering_scope>
@@ -132,3 +132,70 @@ Feature: Data layer compact reorderable editor controls
     And the item content wraps without horizontal page scrolling
     And the menu and destination dialog remain inside the viewport
     And no hidden paired positional controls reserve row space
+
+  # Data layer compact reorderable editor controls 010
+  Scenario Outline: Data layer compact reorderable editor controls 010
+    Given the <schema_projection> Table contains inherited and locally owned properties
+    When the property table renders
+    Then the first intrinsic-width Property editor column contains only its existing Property actions button
+    And no Reorder trigger, drag handle, or drop target appears in any Table cell
+    And Path contains only the complete friendly property path at its agreed combined width
+    And every remaining heading, data cell, inline editor, provenance value, and validation state retains its agreed allocation
+    And structural movement remains available only from the corresponding Tree or focused Structure editor
+
+    Examples:
+      | schema_projection |
+      | canonical schema  |
+      | composed schema   |
+
+  # Data layer compact reorderable editor controls 011
+  Scenario: Data layer compact reorderable editor controls 011
+    Given inherited and locally owned sibling properties appear in schema structural editors
+    When the operator compares the Tree and focused Structure editor
+    Then an inherited property has no Reorder affordance until Override here establishes its local structural identity
+    And a locally owned property with no legal destination has no Reorder affordance or drag target
+    And a locally owned property with a legal destination has exactly one grip that is its drag handle
+    And the item's one movement menu contains at least one enabled legal action
+    And the move cannot cross an ownership, sibling, parent, or descendant boundary prohibited by the existing schema rules
+
+  # Data layer compact reorderable editor controls 012
+  Scenario: Data layer compact reorderable editor controls 012
+    Given Page Property composition contains exactly one applied Property Set
+    When the application row renders
+    Then no Reorder trigger, movement menu, drag handle, or drop target appears
+    When a second Property Set is applied
+    Then each application row has exactly one Reorder trigger that is its drag handle
+    And each movement menu contains at least one enabled legal action
+
+  # Data layer compact reorderable editor controls 013
+  Scenario Outline: Data layer compact reorderable editor controls 013
+    Given an actionable reorder control appears at the leading edge of <host_shape>
+    When the operator inspects the item at rest
+    Then one always-visible vertical six-dot grip represents reordering without visible Reorder text
+    And the 16 CSS-pixel grip is centered in a square 44 by 44 CSS-pixel target
+    And the target is centered on the host without wrapping or increasing its block size beyond the existing content and target
+    And no permanent filled button surface, border, or shadow makes the grip appear bulkier than the host
+    When the operator hovers, focuses, or drags from the grip
+    Then hover, visible focus, and grab or grabbing feedback clearly identify its current interaction state
+    And product themes and forced colors retain the grip and focus indication
+
+    Examples:
+      | host_shape                |
+      | an ordered list row       |
+      | an ordered card           |
+      | a structural tree item    |
+      | a configured column heading |
+
+  # Data layer compact reorderable editor controls 014
+  Scenario Outline: Data layer compact reorderable editor controls 014
+    Given an actionable reorder item <actions_menu_state>
+    When its drag handle and actions render
+    Then the rendered handle is <handle_contract>
+    And the movement menu is <movement_menu_contract>
+    And the item contains exactly one movement-menu button
+    And every non-dragging movement outcome remains available to pointer, keyboard, speech, and assistive-technology users
+
+    Examples:
+      | actions_menu_state               | handle_contract                                                      | movement_menu_contract                                                  |
+      | has no existing actions menu     | the native button and sole drag handle                                | opened by the grip button                                                 |
+      | already has an actions menu      | a non-button drag affordance with no additional focus stop             | the one existing actions menu containing the movement actions             |

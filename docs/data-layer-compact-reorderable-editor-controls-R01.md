@@ -1,16 +1,18 @@
 # Data layer compact reorderable editor controls R01
 
-Status: approved for immediate QA implementation on 2026-08-19
+Status: QA-integrated at `43c019bb`; schema projection, no-op, and compact-handle
+presentation corrections approved on 2026-08-21
 
 Prepared: 2026-08-19
 
 ## Outcome
 
-Ordered editor items use one compact control instead of a persistent pair of
-Move earlier and Move later buttons. The control is both the visible drag handle
-and the button that opens an accessible movement menu. Pointer users can drag a
-flat item directly; touch, keyboard, speech, switch, and other single-pointer
-users can perform the same move from the menu without dragging.
+Ordered editor items use one compact handle and one movement menu instead of a
+persistent pair of Move earlier and Move later buttons. The handle owns that menu
+when the item has no existing actions menu; otherwise the one existing menu owns
+the movement actions. Pointer users can drag a flat item directly; touch,
+keyboard, speech, switch, and other single-pointer users can perform the same move
+from the menu without dragging.
 
 The pattern removes duplicated row chrome without making drag the only way to
 reorder. It applies to ordered rows that also contain a checkbox, text input,
@@ -37,6 +39,11 @@ The selected pattern follows current primary guidance:
   drag target to that handle when the item contains interactive controls, a
   before-or-after drop indicator, one handle menu when movement is the only row
   action, and a Move dialog for trees.
+- [Google's Material icon
+  set](https://github.com/google/material-design-icons) maintains conventional
+  `drag_indicator` and `drag_handle` vector symbols on pixel-aligned icon grids.
+  This product uses a self-contained inline SVG grip rather than a generated
+  bitmap, external web font, or font-dependent Unicode symbol.
 - [WAI-ARIA Authoring Practices menu-button
   guidance](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/examples/menu-button-links/)
   supplies the expected button, menu, focus, Escape, Home, End, and arrow-key
@@ -45,7 +52,7 @@ The selected pattern follows current primary guidance:
 - [WCAG 2.2 Understanding 2.5.8 Target Size
   (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum)
   requires a 24 by 24 CSS-pixel target or sufficient spacing. This product uses
-  a 44 by 44 CSS-pixel minimum for the sole persistent reorder trigger because
+  a 44 by 44 CSS-pixel minimum for the persistent reorder handle because
   the editors are routinely operated at narrow and touch viewports.
 - [Apple drag-and-drop guidance](https://developer.apple.com/design/human-interface-guidelines/drag-and-drop)
   recommends making a completed drag reversible. Every reorder therefore uses
@@ -56,12 +63,20 @@ custom keyboard drag mode, or an entire interactive row as the drag source.
 
 ## Interaction contract
 
-Every reorderable item shows one always-visible handle/menu button named
-`Reorder <item>, position <n> of <count>`. Activating the button opens a compact
-menu with Move to first, Move one position earlier, Move one position later,
-Move to last, and Move… actions. Boundary actions remain visible but disabled so
-the menu does not jump as positions change. Move… opens a destination dialog
-for an exact before-or-after placement.
+Every actionable reorderable item shows one always-visible drag handle. When the
+item has no existing actions menu, the handle is the one menu button named
+`Reorder <item>, position <n> of <count>`. When the item already has an actions
+menu, that existing menu contains the movement outcomes and the handle adds no
+second menu button or tab stop. Activating the movement menu opens a compact menu
+with Move to first, Move one position earlier, Move one position later, Move to
+last, and Move… actions. Boundary actions remain visible but disabled so the menu
+does not jump as positions change. Move… opens a destination dialog for an exact
+before-or-after placement.
+
+An item is actionable reorderable only when it has at least one legal destination
+in the complete order. When no legal destination exists, the surface renders no
+Reorder trigger, drag handle, movement menu, or drop target for that item. A
+persistent trigger whose complete movement menu is disabled is prohibited.
 
 Dragging starts only from the handle. A visible insertion indicator identifies
 the exact before-or-after result. Clicking, selecting text in, or operating the
@@ -69,7 +84,7 @@ checkbox, input, select, disclosure, link, or primary action inside the same
 item cannot begin a drag or change order. A cancelled or invalid drop changes
 nothing.
 
-After a successful move, focus returns to the same stable item trigger in its
+After a successful move, focus returns to the same stable movement-menu trigger in its
 new position. A polite status message names the item and its old and new
 positions. The move is reversible through the surface's normal project Undo or,
 for an unsaved local draft, an Undo move action that restores the exact previous
@@ -172,6 +187,136 @@ dialogs, focus and announcement behavior, consequential reviews, exact planned
 packs, forecast variance, remaining work, confidence, and completion forecast.
 Continue by default while the approved interaction and domain-preservation
 boundaries remain unchanged and a credible bounded path exists.
+
+## Approved schema projection and no-op correction
+
+Stable task name: `schema-reorder-control-scope-correction`.
+
+The canonical and composed schema Table views are editing projections, not
+structural drag surfaces. Their first intrinsic-width Property editor cell keeps
+exactly its existing Property actions button. No Reorder trigger appears in any
+Table cell, and no movement control is relocated into Path, Source, State,
+Inheritance, or another data column. Path retains the complete friendly path and
+the combined width established by the schema-table contract. Every remaining
+heading, cell allocation, inline editor, provenance value, validation state, and
+focused-editor route remains unchanged.
+
+Canonical Tree and focused Structure editors remain the structural reorder
+surfaces. An inherited property has no Reorder affordance until Override here
+establishes local structural identity. A locally owned property shows one Reorder
+handle only when it has at least one legal structural destination; that handle is
+the sole drag source and the item's one movement menu offers at least one enabled
+movement action.
+Ownership, legal sibling and parent boundaries, review, persistence, and Undo
+continue to follow the existing schema-authoring contracts.
+
+Page Property composition remains an ordered application surface. With zero or
+one applied Property Set it shows no Reorder trigger, menu, drag handle, or drop
+target. With two or more applications, every application has one compact Reorder
+trigger, at least one enabled legal movement action, and direct drag from that
+trigger. Boundary actions may remain visible and disabled while another movement
+action is enabled. Every requested move still opens the existing impact review
+before persistence and follows the existing confirmation, command, focus,
+announcement, reload, and Undo rules.
+
+This correction changes presentation and interaction eligibility only. It adds
+no data-model, storage-format, domain-command, ordering-rule, or ownership change.
+
+### Correction development focus and QA impact
+
+The coder must first run governed read-only ownership intent classification from
+the current QA head. A `coarse-boundary` result requires independently reviewed
+ownership preparation. `granularity-assessment-required` and
+`coarse-within-pack` require recorded judgment and do not automatically start
+preparation. No new source prefix is proposed.
+
+Likely existing integration surfaces and proposed verification topology are:
+
+| Existing source path or prefix | Proposed parent pack | Proposed subordinate slice | Exact consumers |
+|---|---|---|---|
+| `src/canonical-schema-focused/navigator-rows.ts` and `src/data-layer-composed-schema-workspace-rows.ts` | `layered_schema` | `schema_authoring_reorder_adapters` | canonical Table and Tree projections, composed Table projection, and their focused-editor routes |
+| `src/canonical-schema-focused/structure.ts` and `src/data-layer-composed-schema-workspace-focused-sections.ts` | `layered_schema` | `schema_authoring_reorder_adapters` | canonical and composed focused Structure editors |
+| `src/data-layer-property-set-flow-section-ui.ts` | `property_set_flow_sections` | `property_set_application_reorder_adapter` | Page Property composition application rows and impact review |
+| `src/reorderable-editor/` | `shell` | `shared_reorderable_editor_controls` | only the schema-authoring and Property Set application adapters above, and only if the no-legal-destination rule requires a shared-primitive change |
+
+Direct development checks focus on exact schema Table DOM and column allocation,
+inherited versus locally owned structural controls, singleton and multi-application
+Property composition, enabled legal menu movement, drag initiation, and unchanged
+impact review. The QA impact forecast is `layered_schema` and
+`property_set_flow_sections`, plus `shell` only if the shared primitive changes.
+The exact changed-path plan is authoritative and feature mode does not run the
+all-pack gate.
+
+The correction implementation-and-review effort ceiling is four active hours. At
+two active hours, report Table projection restoration, inherited and local
+ownership states, singleton and multi-application results, the exact planned
+packs, focused failures, forecast variance, remaining work, confidence, and
+completion forecast. Continue by default while these approved boundaries remain
+unchanged and a credible bounded path exists.
+
+## Approved compact-handle presentation correction
+
+Stable task name: `compact-reorder-handle-presentation`.
+
+Every legitimate reorder handle uses one always-visible vertical six-dot grip
+drawn as a self-contained inline SVG. The visible grip is 16 by 16 CSS pixels,
+uses `currentColor`, is hidden from the accessibility tree, and contains no
+visible Reorder text. It is not a generated bitmap, external image, web-font
+glyph, emoji, or font-dependent Unicode character.
+
+The grip is centered in a square 44 by 44 CSS-pixel pointer target. The target is
+placed at the leading edge and centered on the row, card, tree item, block, or
+configured-column heading that it orders. It has fixed square geometry, zero
+text-driven padding, no permanent filled surface, border, or shadow at rest, and
+does not wrap or increase the host's block size beyond the larger of 44 CSS
+pixels and the host's existing content. Hover supplies a clear surface change,
+focus retains the product's strong visible ring, and an available pointer drag
+uses grab and grabbing cursors. Forced-color and product-theme rendering retain
+the grip and focus indication.
+
+When an item has no existing actions menu, the 44-pixel grip target is its one
+native movement-menu button. The button retains the complete accessible name,
+expanded state, controlled-menu relationship, keyboard behavior, and drag
+ownership from the existing contract. When an item already has a More, Property
+actions, or equivalent actions menu, the grip is a non-button drag affordance,
+adds no focus stop, and that one existing menu owns the same movement actions.
+Direct Open, Remove, checkbox, field, or other non-menu controls do not count as
+an existing actions menu and do not displace the grip menu button.
+
+The presentation correction changes no movement outcome, legal destination,
+filter behavior, ownership rule, impact review, focus restoration, announcement,
+persistence, or Undo behavior.
+
+### Compact-handle development focus and QA impact
+
+The coder must first run governed read-only ownership intent classification from
+the current QA head. A `coarse-boundary` result requires independently reviewed
+ownership preparation. `granularity-assessment-required` and
+`coarse-within-pack` require recorded judgment and do not automatically start
+preparation. No new source prefix or image asset is proposed.
+
+Likely existing integration surfaces and proposed verification topology are:
+
+| Existing source path or prefix | Proposed parent pack | Proposed subordinate slice | Exact consumers |
+|---|---|---|---|
+| `src/reorderable-editor/` | `shell` | `shared_reorderable_editor_controls` | every legitimate reorder adapter in `defects`, `flow_export`, `layered_schema`, `property_set_flow_sections`, and `schemas` |
+| `side-panel.css`, `side-panel-brand.css`, `specification-builder.css`, `specification-builder-brand.css`, and `schema-authoring-brand.css` | `shell` | `shared_reorderable_editor_controls` | side-panel and Studio row, card, tree, block, and configured-heading hosts, only where host styles must stop overriding the shared handle contract |
+| existing consumer renderers listed under the original Development focus | their existing parent packs | their existing reorder-adapter slices | menu ownership integration only for items that already have a More, Property actions, or equivalent actions menu |
+
+Direct development checks focus on inline-SVG identity, 16-pixel visible geometry,
+44-pixel pointer geometry, centerline alignment, resting and interactive states,
+theme and forced-color visibility, absence of visible text and wrapping, and
+exactly one movement-menu button per item. The QA impact forecast is `shell`,
+`defects`, `flow_export`, `layered_schema`, `property_set_flow_sections`, and
+`schemas`. The exact changed-path plan is authoritative and feature mode does
+not run the all-pack gate.
+
+The presentation implementation-and-review effort ceiling is six active hours.
+At three active hours, report the shared handle geometry and states, side-panel
+and Studio host alignment, existing-menu integration, exact planned packs,
+focused failures, forecast variance, remaining work, confidence, and completion
+forecast. Continue by default while these approved boundaries remain unchanged
+and a credible bounded path exists.
 
 ## Exclusions
 
