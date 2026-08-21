@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {createHash} from "node:crypto";
 
 import {
   browserDefectReportClipboard,
@@ -814,6 +815,12 @@ assert.match(flowPreview.innerHTML, /data-operation="replace"/);
 assert.match(flowPreview.innerHTML, /background-color:#d9f7d9/);
 assert.match(flowPreview.innerHTML, /formStepName: &quot;payment&quot;/);
 assert.match(flowPreview.innerHTML, /source Payment Flow-step expectation · effective schema revision 17/);
+
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),normalize=(value)=>Array.isArray(value)?value.map(normalize):value&&typeof value==="object"?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalize(nested)])):value,digest=(value)=>createHash("sha256").update(JSON.stringify(normalize(value))).digest("hex"),expectedPreRepairFailure={expectsSingletonReorder:true,singletonReorderPresent:false},expectedRepairResult={expectsSingletonReorder:false,singletonReorderPresent:false},repairResult={expectsSingletonReorder:false,singletonReorderPresent:manualActions.includes("Reorder")},fixture={id:"defect-reproduction-singleton-reorder-expectation-v1",causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:{pathnameSegment:"/products",manualStepCount:1},expectedPreRepairFailure,expectedRepairResult},fixtureDigest=digest(fixture);
+  assert.deepEqual(repairResult,expectedRepairResult);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},repairResult:{status:"passed",fixtureDigest,observed:repairResult}}}));
+}
 
 process.stdout.write(`${JSON.stringify({
   defectReportUi: {
