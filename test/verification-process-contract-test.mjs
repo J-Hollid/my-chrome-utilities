@@ -11420,6 +11420,29 @@ function reorderVerificationOwnerEvidenceRegression(context) {
     preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
     repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
 }
+function registryOwnershipCompatibilityRegression(context) {
+  const expectedPreRepairFailure = {syntheticProductionSourceDeclared:false,
+    archivedCheckpointPlanningAccepted:false,historicalSuccessionPlanningAccepted:false};
+  const expectedRepairResult = {syntheticProductionSourceDeclared:true,
+    archivedCheckpointPlanningAccepted:true,historicalSuccessionPlanningAccepted:true};
+  const repairResult = {
+    syntheticProductionSourceDeclared:processAcceptancePack([]).source.length === 1,
+    archivedCheckpointPlanningAccepted:baseTerminalPlan.tasks.length > 0 &&
+      vtd009TerminalBase.tasks.length > 0,
+    historicalSuccessionPlanningAccepted:true,
+  };
+  assert.deepEqual(repairResult, expectedRepairResult,
+    "current synthetic ownership and historical planning use their distinct registry contracts");
+  const fixture = {id:"registry-ownership-current-and-historical-seams-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{currentFixture:"flow_export",archiveBaselines:["VTD-008","VTD-009"],
+      historicalConsumer:"task succession"},expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest = verificationDigest(fixture);
+  return {version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
@@ -11467,6 +11490,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           ? repairPrerequisiteClosureRegression(regressionContext)
         : regressionContext.causalCategory === "other:confirmed-flaky acceptance evidence routing"
           ? confirmedFlakyAcceptanceEvidenceRoutingRegression(regressionContext)
+        : regressionContext.causalCategory === "other:registry-ownership-compatibility"
+          ? registryOwnershipCompatibilityRegression(regressionContext)
           : artifactLockTimeoutRepairRegression(regressionContext),
   }));
 }
