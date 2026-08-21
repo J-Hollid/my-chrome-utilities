@@ -23,6 +23,7 @@ export function registryCardinalityFocusedTaskKeys(plan) {
 const approvedPaths = new Set([
   "acceptance/src/acceptance/steps/modular_architecture.clj",
   "acceptance/src/acceptance/verification_support/modular_architecture_cardinality_handlers.clj",
+  "acceptance/src/acceptance/verification_support/modular_architecture_vtd007_handlers.clj",
   "scripts/report-verification-throughput.mjs",
   "scripts/run-focused-acceptance.mjs",
   "scripts/settled-final-verification-policy.mjs",

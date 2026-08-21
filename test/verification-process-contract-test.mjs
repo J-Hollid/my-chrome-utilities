@@ -5097,6 +5097,18 @@ assert.doesNotMatch(modularVtd007HandlerSource,
 assert.match(modularVtd007HandlerSource,
   /prepared-task\s+"unit:test\/flow-examples-timing-test\.mjs"/u,
   "the Flow production probe consumes its declared strict-receipt predecessor");
+assert.match(modularVtd007HandlerSource,
+  /planVerification\(delivered,\{packIds:ids,includeProperties:true,historicalRegistryFallback:true\}\)/u,
+  "the delivered registry comparison opts into explicit historical compatibility");
+assert.match(modularVtd007HandlerSource,
+  /planVerification\(base,\{packIds:ids,includeProperties:true,historicalRegistryFallback:true\}\)/u,
+  "the base registry comparison opts into explicit historical compatibility");
+assert.match(modularVtd007HandlerSource,
+  /strictCurrentAmbiguityRejected[\s\S]*explicit verification-only production owner/u,
+  "the historical adapter does not relax ambiguous current-registry ownership");
+assert.doesNotMatch(modularVtd007HandlerSource,
+  /planVerification\(current,\{(?:packIds:ids,includeProperties:true|terminalFull:true),historicalRegistryFallback:true\}\)/u,
+  "current registry comparisons remain on strict ownership validation");
 const modularVtd014HandlerSource = await readFile(new URL(
   "../acceptance/src/acceptance/verification_support/modular_architecture_vtd014_handlers.clj",
   import.meta.url), "utf8");

@@ -238,16 +238,24 @@
        "const normalize=x=>{let s=JSON.stringify(x);for(const [a,b]of migration)s=s.replaceAll(a,b);return JSON.parse(s)};"
        "const expectedCapabilities=new Map(['test/flow-examples-timing-test.mjs','test/headless-chrome-lifecycle-test.mjs','test/verification-process-contract-test.mjs'].map(x=>[x,['local-loopback']]));"
        "const actualIdentity=p=>p.tasks.map(x=>normalize(verificationTaskIdentity(x))),expectedIdentity=p=>p.tasks.map(x=>{const y=normalize(verificationTaskIdentity(x));if(expectedCapabilities.has(y.target))y.requiredCapabilities=expectedCapabilities.get(y.target);return y}),same=(a,b)=>JSON.stringify(a)===JSON.stringify(b),unique=(xs,k)=>new Set(xs.map(x=>x[k])).size===xs.length;"
-       "const currentExact=planVerification(current,{packIds:ids,includeProperties:true}),currentTerminal=planVerification(current,{terminalFull:true}),exact=planVerification(delivered,{packIds:ids,includeProperties:true}),baseExact=planVerification(base,{packIds:ids,includeProperties:true}),terminal=planVerification(delivered,{terminalFull:true}),baseTerminal=planVerification(base,{terminalFull:true});"
+       "const currentExact=planVerification(current,{packIds:ids,includeProperties:true}),currentTerminal=planVerification(current,{terminalFull:true}),exact=planVerification(delivered,{packIds:ids,includeProperties:true,historicalRegistryFallback:true}),baseExact=planVerification(base,{packIds:ids,includeProperties:true,historicalRegistryFallback:true}),terminal=planVerification(delivered,{terminalFull:true,historicalRegistryFallback:true}),baseTerminal=planVerification(base,{terminalFull:true,historicalRegistryFallback:true});"
+       "let strictCurrentAmbiguityRejected=false;try{planVerification([{id:'owner',source:['src/owner.ts'],unit:[]},{id:'ambiguous',source:[],unit:['test/ambiguous-test.mjs']}],{packIds:['ambiguous']});}catch(error){strictCurrentAmbiguityRejected=/explicit verification-only production owner/u.test(error.message);}"
        "const executions=packs=>normalize({targets:packs.flatMap(p=>(p.browserObservations??[]).map(x=>({packId:p.id,id:x.id,path:x.path,environment:x.environment,features:x.features}))),features:packs.flatMap(p=>(p.features??[]).map(feature=>({packId:p.id,feature}))),handlers:packs.flatMap(p=>(p.handlers??[]).map(handler=>({packId:p.id,handler}))),evidence:packs.flatMap(p=>(p.browserEvidencePartitions??[]).map(x=>({packId:p.id,path:x.path,sessionBatch:x.sessionBatch,originalLeaves:x.originalLeaves,targets:x.targets}))) });"
        "const now=executions(current),delivery=executions(delivered),prior=executions(base);"
-       "console.log(JSON.stringify({exactPlanConserved:same(actualIdentity(exact),actualIdentity(baseExact)),terminalPlanConserved:same(actualIdentity(terminal),actualIdentity(baseTerminal)),tasksExactlyOnce:unique(currentExact.tasks,'key')&&unique(currentTerminal.tasks,'key'),targetsExactlyOnce:unique(now.targets,'id')&&same(delivery.targets,prior.targets),featuresExactlyOnce:unique(now.features,'feature')&&same(delivery.features,prior.features),handlersExactlyOnce:unique(now.handlers,'handler')&&same(delivery.handlers,prior.handlers),evidenceLeavesConserved:same(delivery.evidence,prior.evidence),exactTaskCount:currentExact.tasks.length,terminalTaskCount:currentTerminal.tasks.length,targetCount:now.targets.length,featureCount:now.features.length,handlerCount:now.handlers.length}));"))
+       "console.log(JSON.stringify({exactPlanConserved:same(actualIdentity(exact),actualIdentity(baseExact)),terminalPlanConserved:same(actualIdentity(terminal),actualIdentity(baseTerminal)),historicalPlansReconstructed:exact.tasks.length>0&&baseExact.tasks.length>0&&terminal.tasks.length>0&&baseTerminal.tasks.length>0,strictCurrentAmbiguityRejected,tasksExactlyOnce:unique(currentExact.tasks,'key')&&unique(currentTerminal.tasks,'key'),targetsExactlyOnce:unique(now.targets,'id')&&same(delivery.targets,prior.targets),featuresExactlyOnce:unique(now.features,'feature')&&same(delivery.features,prior.features),handlersExactlyOnce:unique(now.handlers,'handler')&&same(delivery.handlers,prior.handlers),evidenceLeavesConserved:same(delivery.evidence,prior.evidence),exactTaskCount:currentExact.tasks.length,terminalTaskCount:currentTerminal.tasks.length,targetCount:now.targets.length,featureCount:now.features.length,handlerCount:now.handlers.length}));"))
 
 (defn- plan-conservation-evidence! []
   (let [result (shell/sh "node" "--input-type=module" "--eval" plan-conservation-program)]
     (assert! (zero? (:exit result)) "Canonical verification plans could not be compared."
              {:stderr (:err result)})
-    (json/parse-string (str/trim (:out result)) true)))
+    (let [evidence (json/parse-string (str/trim (:out result)) true)]
+      (assert! (:historicalPlansReconstructed evidence)
+               "Archived verification plans did not use explicit historical compatibility."
+               {:evidence evidence})
+      (assert! (:strictCurrentAmbiguityRejected evidence)
+               "Current ambiguous verification ownership did not fail closed."
+               {:evidence evidence})
+      evidence)))
 
 (defn- verify-production-boundary! []
   (let [{:keys [evidence lifecycle-evidence]} (run-production-probes!)
