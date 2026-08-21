@@ -853,7 +853,7 @@ process.stdout.write(`${JSON.stringify({
       customPreview,
       customBlankSubmissionUnavailable,
       manualActions,
-      manualActionRow: manualActionRow.children.map(({ textContent },index) => index===0 ? "Reorder" : textContent),
+      manualActionRow: manualActionRow.children.map(({ textContent }) => textContent),
       manualRowStructure: manualClick.children.slice(0, 3).map(({ className }) => className),
       adjustedText: "Click Checkout — primary checkout action",
       adjustedCount: adjustedReproductionCount,
