@@ -2,7 +2,9 @@
 
 Status: approved by the user for immediate activation; ownership-readiness and
 within-pack granularity refinements approved on 2026-08-17; judgment-based
-granularity deferral and pre-promotion portfolio intake approved on 2026-08-18
+granularity deferral and pre-promotion portfolio intake approved on 2026-08-18;
+first cumulative promotion completed at `70c94a8ce6` and natural-lull promotion
+timing confirmed by the user on 2026-08-21
 
 Prepared: 2026-08-12
 
@@ -10,7 +12,10 @@ Prepared: 2026-08-12
 
 Reduce development latency by running change-appropriate focused checks while
 features accumulate on `qa`, then run the complete end-to-end gate once for an
-explicitly requested promotion of the frozen cumulative tree to `master`.
+explicitly requested promotion of the frozen cumulative tree to `master`. The
+request is expected at a natural delivery lull chosen from current priorities
+and feature momentum, not when an arbitrary task-count or calendar threshold is
+reached.
 
 This is a delivery-process pilot, not permission to weaken regression coverage.
 `qa` is the frequently integrated development line. `master` remains the exact
@@ -187,6 +192,12 @@ infrastructure changes should normally occupy a release batch alone.
 ### Master integration mode
 
 Use this mode only when the user explicitly requests promotion to `master`.
+Promotion timing follows natural delivery boundaries: the user may choose a
+lull because priorities have settled, active feature work has slowed, or the
+accumulated QA state is worth releasing as one coherent tree. There is no target,
+minimum, or maximum batch size and no scheduled release interval. Accumulated
+task count is measurement context only; it never starts, delays, or accelerates
+promotion by itself.
 
 1. The specifier reports the exact `master` base, current `qa` head, accumulated
    QA-integrated tasks, elapsed queue time, and complete durable granularity-
@@ -221,7 +232,9 @@ Use this mode only when the user explicitly requests promotion to `master`.
    one fresh complete gate. No unchanged retry may turn a failure green.
 
 Neither the specifier nor another role starts master integration merely because a
-batch reaches a suggested size. The user owns the promotion instruction.
+batch reaches a suggested size or age. The user owns the promotion instruction,
+and its timing follows priorities and feature momentum rather than an artificial
+batch-size rule.
 
 ## Branch invariants
 
@@ -282,10 +295,46 @@ when:
 - final-only failure diagnosis and repair do not consume the gate saving; and
 - no feature waits on `qa` longer than the user considers acceptable.
 
-If active time falls but approval-to-master latency rises, shorten the batch. If
-final-only failures dominate, improve the missing focused or medium integration
-coverage before increasing batch size. Do not answer either failure by starting a
-new broad verification-infrastructure program automatically.
+If active time falls but approval-to-master latency rises, report the waiting-time
+trade-off and ask whether it remains acceptable in light of current priorities
+and feature momentum. Do not respond by imposing a smaller batch, larger batch,
+or fixed calendar. If final-only failures dominate, improve the missing focused
+or medium integration coverage and the pre-promotion evidence checks. Do not
+answer either failure by starting a new broad verification-infrastructure program
+automatically.
+
+### First cumulative master-promotion scorecard and decision
+
+The first cumulative promotion completed on 2026-08-21. `qa` and `master` were
+fast-forwarded from master base `64e7a43c95` to exact final-ready commit
+`70c94a8ce6` and tree `704aba4f903b`. Forty QA-ready handoffs were accumulated.
+The observation portfolio was empty at freeze.
+
+Eight complete-gate attempts were started. Four failed and remained recorded;
+four passed. Two passing candidates were superseded by later repairs. A third
+pass proved the final tree but was bound to the closure task and intermediate
+base, so it remained valid terminal proof without being valid promotion evidence.
+The promotion-bound final run passed all 884 tasks across every runnable pack,
+properties, generated acceptance, browser observations, and package creation in
+22 minutes 35.358 seconds. Its durable evidence digest is
+`89e730ab85bb71793fa49a6584ff9077ff8325d282588fa229e8ff3b9939f9d8`.
+
+The current release lineage closed 29 incident records through nine corrective
+commits or checkpoint adjustments; 19 audited off-lineage records were retired as
+nonblocking. Promotion authorization to the master fast-forward took 4 hours
+23 minutes 2 seconds. The final gate amortized to 33.9 seconds per accumulated
+task. The baseline model reports 11 hours 30 minutes 57 seconds of gross terminal
+time avoided relative to forty independent promotions, but this is not claimed as
+measured net saving because the four partial failed runs lack reliable completion
+timestamps.
+
+The settled recommendation is **adjust**: retain the exact final all-runnable-pack
+gate and priority-driven natural-lull promotion timing; improve pre-promotion
+checks for branding expectations, generated-test ownership, Flow geometry,
+incident-ledger consistency, and exact promotion task/base evidence binding. The
+user explicitly rejected an artificial batch-size limit on 2026-08-21. Future
+scorecards may use task count to explain amortization and waiting time, but must
+not convert it into a release trigger or target.
 
 ### Flow schema-editor scrolling QA measurement
 

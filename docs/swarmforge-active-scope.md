@@ -19,7 +19,7 @@ The settled-candidate verification workflow is integrated at
 
 | Program | Current state | Next authority |
 |---|---|---|
-| QA-branch release pilot | Active; routine RepoWise scouting stopped after Trial 4 by user decision on 2026-08-15, with optional current-index investigation retained for unfamiliar code or known hotspots | `docs/qa-branch-release-pilot-R01.md` controls feature integration into `qa`; `docs/feature-development-focus-and-advisory-scouting-R01.md` controls the lightweight scoping convention and completed Trial 4 decision. |
+| QA-branch release pilot | Active; first cumulative promotion completed at `70c94a8ce6` on 2026-08-21; natural-lull promotion timing is confirmed and artificial task-count or calendar thresholds are prohibited | `docs/qa-branch-release-pilot-R01.md` controls feature integration into `qa`, natural-lull master promotion, the settled first-promotion scorecard, and required pre-promotion checks; `docs/feature-development-focus-and-advisory-scouting-R01.md` controls the lightweight scoping convention and completed Trial 4 decision. |
 | QA verification ownership readiness | QA-integrated through durable-runtime staging disposition repair `06222ff00f` | Preserve causal `granularity-assessment-required` routing, reviewed seam-or-parent-fallback dispositions, and autonomous product resumption without an all-20 feature run. |
 | QA verification granularity ratchet | Judgment-based deferral, append-only observations, explicit pre-promotion portfolio intake, and fail-closed freeze enforcement are QA-integrated at `0b4f8b4a9d` | Apply structured judgment to real bounded coarse findings, retain conservative evidence for deferrals, and review every observation at the next user-requested master promotion; preserve mandatory all-pack preparation and one final all-runnable-pack gate. |
 | QA verification pack taxonomy evolution | Bounded focused evidence reaffirmed by the user on 2026-08-21; three mechanical genuinely-global declarations are audit-only and prohibited | Reissue `registry-derived-verification-packs` from the exact correction commit. Keep `scripts/verification-reliability-values.mjs` and `scripts/verification-reliability-receipts.mjs` unchanged; compose terminal-repair defaults under the slice-owned cardinality adapter; retain `scripts/verification-pack-cardinality/` only under the Shell-owned slice with no registry pack consumers; prove executable synthetic registries and the specification-bound focused route; and do not request the same acceptance again while that scope is conserved. |
@@ -64,6 +64,13 @@ QA-branch release pilot. At the start of the next request, the specifier
 distinguishes feature integration into `qa` from an explicit cumulative promotion
 to `master`. Do not inherit VTD-018 candidate `c7ad4698f9`, select another VTD
 item, or start master integration without the corresponding user instruction.
+The first cumulative promotion completed at `70c94a8ce6` on 2026-08-21. Future
+promotions occur when the user identifies a natural delivery lull from priorities
+and feature momentum. Accumulated task count and elapsed QA waiting time are
+scorecard evidence only: do not impose a minimum, maximum, target batch size, or
+fixed schedule. Before freezing the next user-requested promotion, apply the
+focused preflight and exact promotion task/base evidence-binding corrections in
+`docs/qa-branch-release-pilot-R01.md`.
 
 The ordered Documentation-template batch is complete on QA outside VTD-008. Its
 behavior-preserving ownership readiness and campsite ratchet are QA-integrated
