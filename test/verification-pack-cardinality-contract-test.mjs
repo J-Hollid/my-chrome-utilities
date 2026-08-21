@@ -11,7 +11,8 @@ import {
 } from "../scripts/verification-pack-cardinality/contract.mjs";
 import { planVerification, verificationTaskIdentity } from "../scripts/verification-packs.mjs";
 import { terminalClosureExecution } from "../scripts/verification-reliability-closure.mjs";
-import { canonicalRepairTaskIdentities } from "../scripts/verification-reliability-receipts.mjs";
+import { canonicalRepairTaskIdentities } from
+  "../scripts/verification-pack-cardinality/reliability-adapter.mjs";
 import { timeoutRepairPackIds } from "../scripts/verification-reliability-values.mjs";
 import { validateCanonicalMasterEvidenceRecord } from "../scripts/verification-evidence.mjs";
 

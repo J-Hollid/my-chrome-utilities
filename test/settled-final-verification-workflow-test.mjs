@@ -141,8 +141,14 @@ assert.throws(() => validateRegistryCardinalityFocusedEvidence({
   ...cardinalityEvidenceInput,
   changedPaths:[...cardinalityEvidenceInput.changedPaths,
     "scripts/verification-reliability-values.mjs"],
-}), /prohibited reliability-values/u,
+}), /prohibited reliability helpers/u,
 "the no-touch helper fails closed before evidence recording");
+assert.throws(() => validateRegistryCardinalityFocusedEvidence({
+  ...cardinalityEvidenceInput,
+  changedPaths:[...cardinalityEvidenceInput.changedPaths,
+    "scripts/verification-reliability-receipts.mjs"],
+}), /prohibited reliability helpers/u,
+"the receipt helper also fails closed before evidence recording");
 assert.throws(() => validateRegistryCardinalityFocusedEvidence({
   ...cardinalityEvidenceInput,
   changedPaths:[...cardinalityEvidenceInput.changedPaths, "src/commands.ts"],

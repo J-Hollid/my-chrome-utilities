@@ -10,9 +10,12 @@ import {
   validateEnvelope, validateIncident, withIncidentLock, writeExclusive,
 } from "./verification-reliability-persistence.mjs";
 import {
-  defaultCanonicalCheckpointValidator, defaultCanonicalRepairTaskIdentities, freshPassingReceipt,
-  receiptDocument, validatePackageReceipt,
+  freshPassingReceipt, receiptDocument, validatePackageReceipt,
 } from "./verification-reliability-receipts.mjs";
+import {
+  registryDerivedCanonicalCheckpointValidator,
+  registryDerivedCanonicalRepairTaskIdentities,
+} from "./verification-pack-cardinality/reliability-adapter.mjs";
 import {
   timeoutResolutionEvidence, validateRepairReceiptSemantics, validateTimeoutRepairProposal,
   timeoutRepairCandidate,
@@ -442,8 +445,8 @@ export function createTimeoutIncidentStore({
     (await git(root, "diff", "--name-only", `${fromCommit}..${toCommit}`))
       .split(/\r?\n/u).filter(Boolean),
   conservesRebasedChangeSet = (input) => gitConservesRebasedChangeSet({ root, ...input }),
-  canonicalCheckpointValidator = defaultCanonicalCheckpointValidator,
-  canonicalRepairTaskIdentities = defaultCanonicalRepairTaskIdentities,
+  canonicalCheckpointValidator = registryDerivedCanonicalCheckpointValidator,
+  canonicalRepairTaskIdentities = registryDerivedCanonicalRepairTaskIdentities,
 } = {}) {
   const access = createStoreAccess({ root, storeDirectory, legacyStoreDirectories });
   const store = {

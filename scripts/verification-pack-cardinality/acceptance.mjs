@@ -69,6 +69,8 @@ async function verifyScenario193(packs) {
   assert.equal(shell.globalImpact.includes("scripts/verification-pack-cardinality/"), false);
   const helper = await readFile(new URL("../verification-reliability-values.mjs", import.meta.url), "utf8");
   assert.equal(helper.includes("verification-pack-cardinality"), false);
+  const receipts = await readFile(new URL("../verification-reliability-receipts.mjs", import.meta.url), "utf8");
+  assert.equal(receipts.includes("verification-pack-cardinality"), false);
 }
 
 async function verifyScenario194(packs) {
@@ -95,7 +97,11 @@ function verifyScenario195() {
   assert.throws(() => validateRegistryCardinalityFocusedEvidence({
     ...input,
     changedPaths:[...input.changedPaths, "scripts/verification-reliability-values.mjs"],
-  }), /prohibited reliability-values/u);
+  }), /prohibited reliability helpers/u);
+  assert.throws(() => validateRegistryCardinalityFocusedEvidence({
+    ...input,
+    changedPaths:[...input.changedPaths, "scripts/verification-reliability-receipts.mjs"],
+  }), /prohibited reliability helpers/u);
   assert.throws(() => validateRegistryCardinalityFocusedEvidence({
     ...input, changedPaths:[...input.changedPaths, "src/product.ts"],
   }), /outside the approved path set/u);

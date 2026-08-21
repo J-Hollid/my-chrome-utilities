@@ -24,12 +24,12 @@
 
 (def scenario-step-patterns
   {"193" [#"^stopped registry-derived cardinality candidates changed every known terminal, calibration, reporting, evidence, reliability, runner, and ownership integration path$"
-          #"^their genuinely-global expansions came from a rejected edit to the shared reliability-values helper and a stale global-impact registration for the bounded cardinality prefix$"
+          #"^their genuinely-global expansions came from rejected edits to the shared reliability-values and reliability-receipts helpers and a stale global-impact registration for the bounded cardinality prefix$"
           #"^the user-authorized bounded reconstruction is planned$"
-          #"^both global declarations remain recorded as audit-only forecast variance and are prohibited in the resumed candidate$"
-          #"^the helper stays unchanged while the cardinality prefix is retained only by its Shell-owned verification slice$"
+          #"^every global declaration remains recorded as audit-only forecast variance and is prohibited in the resumed candidate$"
+          #"^both shared helpers stay unchanged while the cardinality prefix and its reliability adapter are retained only by the Shell-owned verification slice$"
           #"^the slice has no registry-level pack consumers because executable generic proof observes its semantic runnable-pack consumers$"
-          #"^exact candidate preflight fails if the prohibited helper changed or the cardinality prefix remains globally registered$"
+          #"^exact candidate preflight fails if either prohibited helper changed or the cardinality prefix remains globally registered$"
           #"^no further acceptance is required while product scope and those bounded ownership rules remain unchanged$"]
    "194" [#"^the focused cardinality contract is evaluated against (.+)$"
           #"^its runnable identities and executable proof are validated$"
@@ -56,7 +56,7 @@
           #"^registry-derived-verification-packs resumes from the exact specification QA head$"
           #"^it keeps the same stable product task identity without another acceptance round-trip$"
           #"^the coherent product remainder is conserved and reapplied onto that exact head$"
-          #"^the reliability-values helper stays unchanged while an adapter injects the exact registry-derived runnable identities$"
+          #"^the reliability-values and reliability-receipts helpers stay unchanged while bounded adapters inject the exact registry-derived runnable identities$"
           #"^the stale cardinality global-impact entry is removed while the Shell-owned slice, its direct tasks, and its empty registry-consumer set remain$"
           #"^the resumed candidate uses only its specification-bound focused evidence route$"
           #"^fresh read-only intent and exact candidate preflight enforce the no-touch boundary before product evidence$"]})

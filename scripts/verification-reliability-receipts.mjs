@@ -2,10 +2,8 @@ import { lstat, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 
 import {
-  normalized, timeoutIncidentDigest,
+  normalized, timeoutIncidentDigest, timeoutRepairPackIds,
 } from "./verification-reliability-values.mjs";
-import { createVerificationPackCardinalityAdapter } from
-  "./verification-pack-cardinality/contract.mjs";
 import { timeoutRepairCandidate } from "./verification-reliability-repair.mjs";
 import {
   boundedClosureContractRevision,
@@ -59,12 +57,9 @@ export function canonicalCheckpointBinding(incident, receipt) {
 }
 
 export async function defaultCanonicalCheckpointValidator({
-  document, incident, root, allowLegacySeparatePackage = false, packs,
+  document, incident, root, allowLegacySeparatePackage = false,
 }) {
   const { validateCanonicalVerificationCheckpoint } = await import("./verification-evidence.mjs");
-  const registry = packs ?? await import("./verification-packs.mjs")
-    .then(({ loadVerificationPacks }) => loadVerificationPacks());
-  const exactRunnablePackIds = createVerificationPackCardinalityAdapter(registry).runnablePackIds;
   const candidate = timeoutRepairCandidate(incident);
   const binding = canonicalCheckpointBinding(incident, document.receipt);
   return validateCanonicalVerificationCheckpoint({
@@ -73,7 +68,7 @@ export async function defaultCanonicalCheckpointValidator({
     tree:candidate.tree,
     baseCommit:binding.baseCommit,
     evidenceTask:binding.evidenceTask,
-    packIds:exactRunnablePackIds,
+    packIds:timeoutRepairPackIds,
     repositoryRoot:root,
     allowLegacySeparatePackage,
     allowLegacyTerminalClosure:allowLegacySeparatePackage,
@@ -84,15 +79,7 @@ export async function defaultCanonicalRepairTaskIdentities() {
   const { loadVerificationPacks, planVerification, verificationTaskIdentity } =
     await import("./verification-packs.mjs");
   const packs = await loadVerificationPacks();
-  return canonicalRepairTaskIdentities(packs, { planVerification, verificationTaskIdentity });
-}
-
-export function canonicalRepairTaskIdentities(packs, {
-  planVerification,
-  verificationTaskIdentity,
-}) {
-  const exactRunnablePackIds = createVerificationPackCardinalityAdapter(packs).runnablePackIds;
-  return planVerification(packs, { packIds:exactRunnablePackIds, includeProperties:true })
+  return planVerification(packs, { packIds:timeoutRepairPackIds, includeProperties:true })
     .tasks.map(verificationTaskIdentity);
 }
 

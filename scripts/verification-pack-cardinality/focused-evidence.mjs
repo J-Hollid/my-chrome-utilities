@@ -1,5 +1,8 @@
 const taskIdentity = "registry-derived-verification-packs";
-const prohibitedReliabilityValues = "scripts/verification-reliability-values.mjs";
+const prohibitedReliabilityHelpers = new Set([
+  "scripts/verification-reliability-values.mjs",
+  "scripts/verification-reliability-receipts.mjs",
+]);
 
 export const registryCardinalityEvidenceTaskKeys = Object.freeze([
   "unit:test/verification-pack-cardinality-contract-test.mjs",
@@ -34,7 +37,6 @@ const approvedPaths = new Set([
   "scripts/verification-reliability-closure-audit.mjs",
   "scripts/verification-reliability-closure.mjs",
   "scripts/verification-reliability-incidents.mjs",
-  "scripts/verification-reliability-receipts.mjs",
   "scripts/verification-reliability-store.mjs",
   "scripts/verification-run-intent.mjs",
   "scripts/verification-slice-quarantine.mjs",
@@ -66,8 +68,9 @@ export function validateRegistryCardinalityFocusedEvidence({
       new Set(changedPaths).size !== changedPaths.length) {
     throw new Error("Registry cardinality focused evidence requires one exact changed-path set");
   }
-  if (changedPaths.includes(prohibitedReliabilityValues)) {
-    throw new Error("Registry cardinality focused evidence rejects the prohibited reliability-values helper");
+  const prohibited = changedPaths.filter((path) => prohibitedReliabilityHelpers.has(path));
+  if (prohibited.length) {
+    throw new Error(`Registry cardinality focused evidence rejects prohibited reliability helpers: ${prohibited.join(", ")}`);
   }
   const unapproved = changedPaths.filter((path) => !approvedPath(path));
   if (unapproved.length) {
