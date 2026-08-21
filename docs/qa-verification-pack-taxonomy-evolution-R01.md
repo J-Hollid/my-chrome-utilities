@@ -1,7 +1,7 @@
 # QA verification pack taxonomy evolution R01
 
-Status: user-approved specification decision recorded on 2026-08-20;
-implementation and the first topology migrations await an explicit coder handoff
+Status: user-approved specification decision recorded on 2026-08-20; the first
+product candidate stopped at mandatory ownership preparation on 2026-08-21
 
 Prepared: 2026-08-20
 
@@ -118,7 +118,116 @@ Each assessment is a separate task. No row pre-approves a registry change, and
 no implementation may batch unrelated product refactoring into the cardinality
 correction.
 
-## Development focus and QA impact
+## Mandatory first-use ownership preparation
+
+The user-approved product task `registry-derived-verification-packs` started from
+exact QA `465af2a504`. Stopped coherent candidate `bf234ead7b` demonstrated that
+the cardinality contract affects terminal selection, calibration, reporting,
+evidence, and reliability identity for every runnable-pack consumer. Its
+caller-selected Shell evidence path and consumer-free slice are a same-range
+narrowing bypass. Under scenario 192 and standing ownership-readiness authority,
+stable preparation task
+`verification-slice-registry-derived-verification-packs` starts independently
+from exact QA `465af2a504`. The candidate is an audited patch reference only and
+must not be integrated wholesale.
+
+The preparation establishes verification ownership without removing a fixed
+cardinality check, changing pack classification or topology, or implementing
+the product task. It must establish all of the following:
+
+1. **Known-candidate replay.** Read-only intent includes every changed
+   integration path from `bf234ead7b` and deterministically returns
+   `coarse-boundary` with no task execution. It reports every exact shared path
+   and every runnable pack in the evaluated registry as a consumer. A
+   caller-selected `shell` plan cannot replace or suppress that result.
+2. **Stable owned seam.** Parent pack `shell` owns subordinate slice
+   `verification_pack_cardinality_contract` under proposed prefix
+   `scripts/verification-pack-cardinality/`. The slice declares direct
+   cardinality-contract observations and prerequisites plus every exact runnable
+   consumer. A compatible added runnable pack becomes a consumer; an empty
+   compatibility identity does not. Missing, duplicate, unknown, non-runnable,
+   or ambiguous consumers fail closed before execution.
+3. **Exact consumer observations.** Each runnable consumer has an explicit
+   bounded observation of its use of terminal closure, calibration/reporting,
+   receipt/evidence validation, or reliability closure. Consumer identities do
+   not silently authorize their complete unrelated parent-pack task closures.
+   An unclassified shared path retains the conservative parent fallback.
+4. **Conservative same-range proof.** The preparation cannot consume its new
+   slice to narrow its own current/base evidence range. Its canonical changed-
+   path plan is authoritative and includes properties and package proof. Naming
+   all runnable consumers is not authority for the complete all-runnable-pack
+   task closure, which remains exclusive to explicit master integration.
+5. **Durable dispositions and conservation.** Every exact causal path receives
+   one reviewed integrated-seam or conservative parent-fallback disposition.
+   Conserve the `shell` parent closure, each exact consumer observation,
+   current and historical planning, exact-pack closures, terminal closure,
+   assertions, package inputs, incidents, and terminal obligations. The same
+   task, path, boundary, and generation cannot reopen this preparation.
+6. **Clean product resumption.** After architect `qa-ready` integration, reissue
+   the original stable product task from the exact new QA head. Reconstruct only
+   approved task-owned behavior from stopped commits `0a52f69a`, `31777846`,
+   and `3ffa07e1`, with the required `By coder.` metadata; do not restore the
+   rejected generic tooling-evidence bypass. Keep
+   `scripts/verification-reliability-values.mjs` pure by injecting the exact
+   registry-derived runnable identities through an adapter, and add an end-to-
+   end regression that proves scenario 192 routes the coarse stop before product
+   coding. Fresh intent and exact candidate preflight must consume the reviewed
+   dispositions before product evidence.
+
+The stopped candidate's complete changed integration-path forecast is:
+
+- `acceptance/src/acceptance/steps/modular_architecture.clj`;
+- `acceptance/src/acceptance/verification_support/modular_architecture_cardinality_handlers.clj`;
+- `acceptance/src/acceptance/verification_support/modular_architecture_vtd007_handlers.clj`;
+- `scripts/report-verification-throughput.mjs`;
+- `scripts/run-focused-acceptance.mjs`;
+- `scripts/settled-final-verification-policy.mjs`;
+- `scripts/settled-final-verification-review.mjs`;
+- `scripts/verification-changes.mjs`;
+- `scripts/verification-evidence.mjs`;
+- `scripts/verification-ownership-readiness-test.mjs`;
+- `scripts/verification-ownership-readiness.mjs`;
+- `scripts/verification-pack-cardinality/contract.mjs`;
+- `scripts/verification-packs.mjs`;
+- `scripts/verification-reliability-closure.mjs`;
+- `scripts/verification-reliability-store.mjs`;
+- `scripts/verification-reliability-values.mjs`;
+- `scripts/verification-run-intent.mjs`;
+- `scripts/verification-slice-quarantine.mjs`;
+- `scripts/verification-task-succession-test.mjs`;
+- `scripts/verification-task-succession.mjs`;
+- `test/settled-final-verification-workflow-test.mjs`;
+- `test/verification-pack-cardinality-contract-test.mjs`;
+- `test/verification-process-contract-test.mjs`; and
+- `verification/packs.json`.
+
+**Development focus:** scenario-192 read-only intent replay; exact consumer-set
+validation against current, added-runnable, and empty-compatibility registries;
+fail-closed incomplete mapping; direct cardinality boundary tasks and
+prerequisites; same-range narrowing rejection; current/base conservation;
+durable dispositions; and exact-QA product resumption.
+
+**QA impact:** forecast parent `shell`, subordinate slice
+`verification_pack_cardinality_contract`, and bounded consumer observations for
+`branding_polish`, `capture`, `command-palette`, `defects`,
+`durable_project_repository`, `event-library`, `flow_export`, `flow_graph`,
+`guided_test_cases`, `hotkeys`, `layered_schema`, `live_flow_testing`,
+`project_assurance_severity`, `project_event_transport`, `project_management`,
+`property_set_flow_sections`, `replay`, `schema_relationship_tree`, `schemas`,
+and `shell`. Exact read-only intent and exact candidate preflight remain
+authoritative. Execute only the bounded contract tasks, prerequisites, and
+consumer observations selected by that plan, with properties and package proof.
+If the plan requires the complete all-runnable-pack task closure or consumer
+ownership cannot be proved, stop before execution; do not run the terminal gate.
+
+The preparation implementation-and-review effort ceiling is four hours from
+coder receipt to architect `qa-ready`. At two hours report intent replay,
+consumer declarations and observations, exact packs and task count, dispositions,
+same-range conservation, failures, remaining work, confidence, and forecast.
+Continue while behavior and evidence remain unchanged and a bounded safe path
+exists.
+
+## Resumed product development focus and QA impact
 
 The first implementation changes cardinality mechanics only. It must remove
 fixed-count validation while leaving the current registry topology and all

@@ -2682,3 +2682,65 @@ Feature: Modular verification packs
     And a coarse-boundary result stops coding for independently reviewed ownership preparation
     And a bounded granularity result receives one durable seam-or-parent-fallback disposition
     And no feature-mode all-runnable-pack run is authorized
+
+  # Modular verification packs 193
+  Scenario: Modular verification packs 193
+    Given the stopped registry-derived cardinality candidate changed every known terminal, calibration, reporting, evidence, reliability, runner, and ownership integration path
+    When ownership-preparation intent replays those paths against the exact QA registry
+    Then coarse-boundary is the only accepted classification
+    And each runnable registry identity appears in the reported consumer mapping
+    And intent preflight executes no task or repository write
+    And a caller-selected Shell plan cannot replace the reported consumer boundary
+
+  # Modular verification packs 194
+  Scenario Outline: Modular verification packs 194
+    Given the cardinality ownership seam is evaluated against <registry_state>
+    When its exact consumer declaration is validated
+    Then the declared consumer set is <consumer_set>
+    And its owning pack remains Shell under the verification_pack_cardinality_contract slice
+
+    Examples:
+      | registry_state                                               | consumer_set                                      |
+      | the current exact registry                                   | every current runnable pack                       |
+      | a compatible registry with one added runnable pack           | every former runnable pack plus the added pack    |
+      | a registry with one empty compatibility identity             | every runnable pack without the empty identity    |
+
+  # Modular verification packs 195
+  Scenario Outline: Modular verification packs 195
+    Given a cardinality ownership declaration has <mapping_state>
+    When focused selection is planned
+    Then the mapping result is <mapping_result>
+    And no incomplete mapping narrows the conservative parent closure
+
+    Examples:
+      | mapping_state                                                      | mapping_result                                              |
+      | one exact owner, direct observation, prerequisite, and every runnable consumer | select the declared cardinality boundary and consumers |
+      | a missing or duplicate runnable consumer                           | fail closed before task execution                           |
+      | an unknown, non-runnable, or ambiguous consumer                     | fail closed before task execution                           |
+      | an unclassified shared integration path                            | retain its conservative parent fallback                    |
+
+  # Modular verification packs 196
+  Scenario: Modular verification packs 196
+    Given ownership preparation adds the cardinality seam and its exact registry consumers
+    When the preparation candidate plans its own current and historical change set
+    Then it cannot use the new seam to narrow that same evidence range
+    And its canonical changed-path task plan with properties and package proof remains authoritative
+    And naming every runnable consumer does not authorize the complete all-runnable-pack task closure
+    And no terminal checkpoint runs in feature mode
+
+  # Modular verification packs 197
+  Scenario: Modular verification packs 197
+    Given the cardinality ownership preparation has settled
+    When independent review records its durable dispositions
+    Then every stopped-candidate causal path has one reviewed seam or conservative parent-fallback disposition
+    And the Shell parent closure, each consumer observation, exact-pack closure, and terminal closure are conserved
+    And the cardinality seam changes no runnable-pack count, registry topology, product behavior, or terminal obligation
+
+  # Modular verification packs 198
+  Scenario: Modular verification packs 198
+    Given the cardinality ownership preparation reaches QA with review-ready evidence
+    When the registry-derived-verification-packs product task resumes
+    Then it starts from that exact QA head under the same stable task identity
+    And the stopped candidate is used only as an audited patch reference
+    And the resumed candidate cannot restore a generic caller-selected tooling evidence bypass
+    And fresh read-only intent and exact candidate preflight consume the reviewed disposition before product evidence
