@@ -295,7 +295,7 @@ const afterFirstAddActionCount = descendants(reproduction).filter(({ dataset }) 
 assert.equal(afterFirstAddActionCount, 3);
 let manualClick = element(reproduction, ({ dataset }) => dataset.reproductionStepId === "manual-1");
 const manualActions = descendants(manualClick).filter(({ tagName, dataset }) => tagName === "BUTTON" && !dataset.addReproductionStep).map(({ textContent }) => textContent);
-assert.ok(manualActions.includes("Reorder"));
+assert.ok(!manualActions.includes("Reorder"), "a singleton pathname segment has no legal reorder destination");
 assert.ok(manualActions.includes("Adjust") && manualActions.includes("Remove"));
 assert.ok(!manualActions.includes("Move earlier") && !manualActions.includes("Move later"));
 const manualActionRow = element(manualClick, ({ className }) => className === "defect-reproduction-step-actions");
