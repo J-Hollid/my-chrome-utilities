@@ -17,8 +17,7 @@
 (def ^:private action-order ["Reorder" "+" "Adjust" "Remove"])
 (def ^:private checkout-boundary
   {:text "2. Click Checkout"
-   :earlierVisible true
-   :earlierDisabled true
+   :reorderSuppressed true
    :guidance "Reordering stays within /checkout."
    :chooseAnotherAbsent true})
 
