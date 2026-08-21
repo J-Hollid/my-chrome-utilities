@@ -15,6 +15,10 @@ import { canonicalRepairTaskIdentities } from
   "../scripts/verification-pack-cardinality/reliability-adapter.mjs";
 import { timeoutRepairPackIds } from "../scripts/verification-reliability-values.mjs";
 import { validateCanonicalMasterEvidenceRecord } from "../scripts/verification-evidence.mjs";
+import {
+  registryCardinalityFocusedTaskKeys,
+  validateRegistryCardinalityFocusedEvidence,
+} from "../scripts/verification-pack-cardinality/focused-evidence.mjs";
 
 function runnablePack(id) {
   return {
@@ -177,6 +181,46 @@ assert.deepEqual(cardinalitySlice.tasks, [
   "unit:test/verification-evidence-production-path-test.mjs",
   "unit:test/verification-process-contract-test.mjs",
 ], "the slice declares only the exact named cardinality evidence tasks");
+const focusedCardinalityKeys = registryCardinalityFocusedTaskKeys(
+  planVerification(currentRegistry, { packIds:["shell"], includeProperties:true }));
+assert.ok(focusedCardinalityKeys.includes("acceptance-session:shell"),
+  "the specification-bound focused plan includes its registered Gherkin acceptance session");
+const focusedEvidenceInput = {
+  task:"registry-derived-verification-packs",
+  candidateRegistry:currentRegistry,
+  changedPaths:["scripts/verification-pack-cardinality/contract.mjs"],
+  taskKeys:focusedCardinalityKeys,
+  syntheticProofs:{ current:true, addedRunnable:true, emptyCompatibility:true },
+  includeProperties:true,
+  includePackage:true,
+  terminalFull:false,
+};
+assert.equal(validateRegistryCardinalityFocusedEvidence(focusedEvidenceInput).mode,
+  "registry-cardinality-focused",
+"the exact candidate registry satisfies slice-only ownership preflight");
+assert.throws(() => validateRegistryCardinalityFocusedEvidence({
+  ...focusedEvidenceInput,
+  taskKeys:focusedEvidenceInput.taskKeys.filter((key) => key !== "acceptance-session:shell"),
+}), /Shell acceptance session/u,
+"focused evidence cannot omit registered Gherkin acceptance");
+assert.throws(() => validateRegistryCardinalityFocusedEvidence({
+  ...focusedEvidenceInput,
+  candidateRegistry:currentRegistry.map((pack) => pack.id === "shell"
+    ? { ...pack, globalImpact:[...pack.globalImpact, "scripts/verification-pack-cardinality/"] }
+    : pack),
+}), /globally impactful/u,
+"restoring cardinality global impact fails before focused evidence");
+assert.throws(() => validateRegistryCardinalityFocusedEvidence({
+  ...focusedEvidenceInput,
+  candidateRegistry:currentRegistry.map((pack) => pack.id === "shell" ? {
+    ...pack,
+    verificationSlices:pack.verificationSlices.map((slice) =>
+      slice.id === "verification_pack_cardinality_contract"
+        ? { ...slice, consumers:[{ packId:"shell", sliceId:"eligible_repair_admission" }] }
+        : slice),
+  } : pack),
+}), /empty registry consumer set/u,
+"a cardinality registry consumer fails before focused evidence");
 assert.equal(shellPack.globalImpact.includes("scripts/verification-pack-cardinality/"), false,
   "the bounded cardinality prefix is not also registered as globally impactful");
 assert.deepEqual(await dispatchedPackIds(currentRegistry),

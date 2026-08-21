@@ -1413,6 +1413,21 @@ export function closeVerificationPlanPrerequisites(plan, canonicalPlan = plan) {
   };
 }
 
+export function validateRegistryCardinalityReviewPreflight({
+  packs, evidenceTask, plan, terminalFull = false,
+}) {
+  return validateRegistryCardinalityFocusedEvidence({
+    task:evidenceTask,
+    candidateRegistry:packs,
+    changedPaths:plan?.changedPaths,
+    taskKeys:plan?.tasks?.map(({ key }) => key),
+    syntheticProofs:{ current:true, addedRunnable:true, emptyCompatibility:true },
+    includeProperties:plan?.includeProperties,
+    includePackage:plan?.tasks?.some(({ key }) => key === "package:extension"),
+    terminalFull,
+  });
+}
+
 export function createRepositoryCheckpointIdentityGuard({
   repositoryRoot:root = repositoryRoot, expected, context, attemptId, launchRoutes = new Map(),
   inputFingerprintOptions = {}, artifactValidator = ({ root:artifactRoot }) =>
@@ -1756,14 +1771,8 @@ export async function runFocusedAcceptance(
     plan = planPackageTask(plan);
   }
   if (cardinalityReviewEvidence) {
-    validateRegistryCardinalityFocusedEvidence({
-      task:evidenceTask,
-      changedPaths:plan.changedPaths,
-      taskKeys:plan.tasks.map(({ key }) => key),
-      syntheticProofs:{ current:true, addedRunnable:true, emptyCompatibility:true },
-      includeProperties:plan.includeProperties,
-      includePackage:true,
-      terminalFull:options.terminalFull,
+    validateRegistryCardinalityReviewPreflight({
+      packs, evidenceTask, plan, terminalFull:options.terminalFull,
     });
   }
   const concurrency = environmentInteger("VERIFICATION_CONCURRENCY", 4, { maximum:64 });

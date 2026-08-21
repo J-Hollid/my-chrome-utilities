@@ -81,6 +81,7 @@ import {
   runTimeoutDiagnosticRetry,
   validateCurrentArtifactForConsumers,
   validateExplicitChangedPaths,
+  validateRegistryCardinalityReviewPreflight,
   verificationArtifactIdentity,
   verificationPromotionTasks,
   verificationResumeIdentity,
@@ -5055,6 +5056,39 @@ assert.equal(failedParallelLeaseReleased, true,
 
 const packs = await loadVerificationPacks();
 await validateVerificationPacks(packs);
+const cardinalityProcessInput = {
+  evidenceTask:"registry-derived-verification-packs",
+  packs,
+  plan:{
+    changedPaths:["scripts/verification-pack-cardinality/contract.mjs"],
+    tasks:["unit:test/verification-pack-cardinality-contract-test.mjs",
+      "unit:test/settled-final-verification-workflow-test.mjs",
+      "unit:test/verification-evidence-production-path-test.mjs",
+      "unit:test/verification-process-contract-test.mjs",
+      "property:test/workspace-tabs-property-test.mjs", "acceptance-session:shell",
+      "package:extension"].map((key) => ({ key })),
+    includeProperties:true,
+  },
+  terminalFull:false,
+};
+assert.throws(() => validateRegistryCardinalityReviewPreflight({
+  ...cardinalityProcessInput,
+  packs:packs.map((pack) => pack.id === "shell"
+    ? { ...pack, globalImpact:[...pack.globalImpact, "scripts/verification-pack-cardinality/"] }
+    : pack),
+}), /globally impactful/u,
+"the process preflight rejects restored cardinality global impact");
+assert.throws(() => validateRegistryCardinalityReviewPreflight({
+  ...cardinalityProcessInput,
+  packs:packs.map((pack) => pack.id === "shell" ? {
+    ...pack,
+    verificationSlices:pack.verificationSlices.map((slice) =>
+      slice.id === "verification_pack_cardinality_contract"
+        ? { ...slice, consumers:[{ packId:"shell", sliceId:"eligible_repair_admission" }] }
+        : slice),
+  } : pack),
+}), /empty registry consumer set/u,
+"the process preflight rejects a cardinality registry consumer");
 await assert.rejects(() => validateVerificationPacks(packs.map((pack) =>
   pack.id === "project_management" ? { ...pack, executionPrerequisites:[{
     path:"test/flow-examples-timing-test.mjs", requiredCapabilities:["local-loopback"],

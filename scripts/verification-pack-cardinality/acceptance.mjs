@@ -29,12 +29,14 @@ async function dispatchedIds(packs) {
   return ids.sort();
 }
 
-function cardinalityEvidenceInput(changedPaths) {
+function cardinalityEvidenceInput(changedPaths, packs) {
   return {
     task:"registry-derived-verification-packs",
+    candidateRegistry:packs,
     changedPaths,
     taskKeys:[...registryCardinalityEvidenceTaskKeys,
-      "property:test/workspace-tabs-property-test.mjs", "package:extension"],
+      "property:test/workspace-tabs-property-test.mjs", "acceptance-session:shell",
+      "package:extension"],
     syntheticProofs:{ current:true, addedRunnable:true, emptyCompatibility:true },
     includeProperties:true,
     includePackage:true,
@@ -84,16 +86,19 @@ async function verifyScenario194(packs) {
     ["alpha", "beta", "gamma"]);
 }
 
-function verifyScenario195() {
+function verifyScenario195(packs) {
   const input = cardinalityEvidenceInput([
     "scripts/verification-pack-cardinality/contract.mjs",
     "test/verification-pack-cardinality-contract-test.mjs",
-  ]);
+  ], packs);
   assert.equal(validateRegistryCardinalityFocusedEvidence(input).mode,
     "registry-cardinality-focused");
   assert.throws(() => validateRegistryCardinalityFocusedEvidence({
     ...input, task:"generic-tooling-candidate",
   }), /exact task identity/u);
+  assert.throws(() => validateRegistryCardinalityFocusedEvidence({
+    ...input, taskKeys:input.taskKeys.filter((key) => key !== "acceptance-session:shell"),
+  }), /Shell acceptance session/u);
   assert.throws(() => validateRegistryCardinalityFocusedEvidence({
     ...input,
     changedPaths:[...input.changedPaths, "scripts/verification-reliability-values.mjs"],
@@ -105,6 +110,23 @@ function verifyScenario195() {
   assert.throws(() => validateRegistryCardinalityFocusedEvidence({
     ...input, changedPaths:[...input.changedPaths, "src/product.ts"],
   }), /outside the approved path set/u);
+  assert.throws(() => validateRegistryCardinalityFocusedEvidence({
+    ...input,
+    candidateRegistry:packs.map((pack) => pack.id === "shell"
+      ? { ...pack, globalImpact:[...(pack.globalImpact ?? []),
+        "scripts/verification-pack-cardinality/"] }
+      : pack),
+  }), /globally impactful/u);
+  assert.throws(() => validateRegistryCardinalityFocusedEvidence({
+    ...input,
+    candidateRegistry:packs.map((pack) => pack.id === "shell" ? {
+      ...pack,
+      verificationSlices:pack.verificationSlices.map((slice) =>
+        slice.id === "verification_pack_cardinality_contract"
+          ? { ...slice, consumers:[{ packId:"shell", sliceId:"eligible_repair_admission" }] }
+          : slice),
+    } : pack),
+  }), /empty registry consumer set/u);
 }
 
 function verifyScenario196(packs) {
@@ -112,6 +134,7 @@ function verifyScenario196(packs) {
   const keys = registryCardinalityFocusedTaskKeys(shellPlan);
   assert.ok(registryCardinalityEvidenceTaskKeys.every((key) => keys.includes(key)));
   assert.ok(keys.some((key) => key.startsWith("property:")));
+  assert.ok(keys.includes("acceptance-session:shell"));
   assert.ok(keys.includes("package:extension"));
   assert.ok(keys.length < shellPlan.tasks.length);
 }
@@ -130,12 +153,12 @@ export async function verifyRegistryCardinalityAcceptance(scenario) {
   if (scenario === "192") await verifyScenario192(packs);
   else if (scenario === "193") await verifyScenario193(packs);
   else if (scenario === "194") await verifyScenario194(packs);
-  else if (scenario === "195") verifyScenario195();
+  else if (scenario === "195") verifyScenario195(packs);
   else if (scenario === "196") verifyScenario196(packs);
   else if (scenario === "197") verifyScenario197(packs);
   else if (scenario === "198") {
     await verifyScenario193(packs);
-    verifyScenario195();
+    verifyScenario195(packs);
   } else throw new Error(`Unknown registry-cardinality acceptance scenario: ${scenario}`);
   return { scenario, status:"passed" };
 }

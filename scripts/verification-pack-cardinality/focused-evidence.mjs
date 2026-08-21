@@ -1,4 +1,7 @@
 const taskIdentity = "registry-derived-verification-packs";
+const cardinalityPrefix = "scripts/verification-pack-cardinality/";
+const cardinalitySliceId = "verification_pack_cardinality_contract";
+const cardinalityAcceptanceTaskKey = "acceptance-session:shell";
 const prohibitedReliabilityHelpers = new Set([
   "scripts/verification-reliability-values.mjs",
   "scripts/verification-reliability-receipts.mjs",
@@ -16,6 +19,7 @@ export function registryCardinalityFocusedTaskKeys(plan) {
   return Object.freeze([
     ...registryCardinalityEvidenceTaskKeys,
     ...properties,
+    cardinalityAcceptanceTaskKey,
     "package:extension",
   ]);
 }
@@ -58,8 +62,79 @@ function approvedPath(path) {
   return path.startsWith("scripts/verification-pack-cardinality/") || approvedPaths.has(path);
 }
 
+function pathsOverlap(left, right) {
+  return left === right || left.startsWith(right) || right.startsWith(left);
+}
+
+function assertCandidateRegistryOwnership(candidateRegistry) {
+  if (!Array.isArray(candidateRegistry) || !candidateRegistry.length) {
+    throw new Error("Registry cardinality focused evidence requires the exact candidate registry");
+  }
+  const sliceDeclarations = [];
+  const globalDeclarations = [];
+  const sharedDeclarations = [];
+  const propagatingDeclarations = [];
+  for (const pack of candidateRegistry) {
+    for (const slice of pack?.verificationSlices ?? []) {
+      for (const prefix of slice?.sourcePrefixes ?? []) {
+        if (pathsOverlap(prefix, cardinalityPrefix)) {
+          sliceDeclarations.push({ pack, slice, kind:"prefix", path:prefix });
+        }
+      }
+      for (const sourcePath of slice?.sourcePaths ?? []) {
+        if (pathsOverlap(sourcePath, cardinalityPrefix)) {
+          sliceDeclarations.push({ pack, slice, kind:"path", path:sourcePath });
+        }
+      }
+    }
+    for (const prefix of pack?.globalImpact ?? []) {
+      if (pathsOverlap(prefix, cardinalityPrefix)) globalDeclarations.push({ pack, prefix });
+    }
+    for (const boundary of pack?.sharedBoundaries ?? []) {
+      for (const prefix of boundary?.prefixes ?? []) {
+        if (pathsOverlap(prefix, cardinalityPrefix)) {
+          sharedDeclarations.push({ pack, boundary, prefix });
+        }
+      }
+    }
+    for (const boundary of pack?.impactBoundaries ?? []) {
+      if (boundary?.propagateDependants !== true) continue;
+      for (const prefix of boundary?.prefixes ?? []) {
+        if (pathsOverlap(prefix, cardinalityPrefix)) {
+          propagatingDeclarations.push({ pack, boundary, prefix });
+        }
+      }
+    }
+  }
+  const [declaration] = sliceDeclarations;
+  if (sliceDeclarations.length !== 1 || declaration.pack?.id !== "shell" ||
+      declaration.slice?.id !== cardinalitySliceId || declaration.kind !== "prefix" ||
+      declaration.path !== cardinalityPrefix) {
+    throw new Error("Registry cardinality prefix must be declared exactly once by the Shell cardinality slice");
+  }
+  if (!Array.isArray(declaration.slice.consumers) || declaration.slice.consumers.length) {
+    throw new Error("Registry cardinality slice requires an empty registry consumer set");
+  }
+  if (globalDeclarations.length) {
+    throw new Error("Registry cardinality prefix cannot also be globally impactful");
+  }
+  if (sharedDeclarations.length) {
+    throw new Error("Registry cardinality prefix cannot also use shared-boundary ownership");
+  }
+  if (propagatingDeclarations.length) {
+    throw new Error("Registry cardinality prefix cannot also use propagating impact ownership");
+  }
+  return Object.freeze({
+    packId:"shell",
+    sliceId:cardinalitySliceId,
+    sourcePrefix:cardinalityPrefix,
+    consumers:Object.freeze([]),
+  });
+}
+
 export function validateRegistryCardinalityFocusedEvidence({
   task,
+  candidateRegistry,
   changedPaths,
   taskKeys,
   syntheticProofs,
@@ -70,6 +145,7 @@ export function validateRegistryCardinalityFocusedEvidence({
   if (task !== taskIdentity) {
     throw new Error("Registry cardinality focused evidence requires the exact task identity");
   }
+  const ownership = assertCandidateRegistryOwnership(candidateRegistry);
   if (!Array.isArray(changedPaths) || !changedPaths.length ||
       new Set(changedPaths).size !== changedPaths.length) {
     throw new Error("Registry cardinality focused evidence requires one exact changed-path set");
@@ -85,6 +161,9 @@ export function validateRegistryCardinalityFocusedEvidence({
   const keys = new Set(taskKeys ?? []);
   if (registryCardinalityEvidenceTaskKeys.some((key) => !keys.has(key))) {
     throw new Error("Registry cardinality focused evidence requires all named evidence tasks");
+  }
+  if (!keys.has(cardinalityAcceptanceTaskKey)) {
+    throw new Error("Registry cardinality focused evidence requires the Shell acceptance session");
   }
   if (!includeProperties || ![...keys].some((key) => key.startsWith("property:"))) {
     throw new Error("Registry cardinality focused evidence requires property proof");
@@ -104,6 +183,7 @@ export function validateRegistryCardinalityFocusedEvidence({
     task,
     changedPaths:Object.freeze([...changedPaths].sort()),
     taskKeys:Object.freeze([...keys].sort()),
+    ownership,
     syntheticProofs:Object.freeze({
       current:true,
       addedRunnable:true,
