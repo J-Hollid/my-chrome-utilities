@@ -2686,61 +2686,65 @@ Feature: Modular verification packs
   # Modular verification packs 193
   Scenario: Modular verification packs 193
     Given the stopped registry-derived cardinality candidate changed every known terminal, calibration, reporting, evidence, reliability, runner, and ownership integration path
-    When ownership-preparation intent replays those paths against the exact QA registry
-    Then coarse-boundary is the only accepted classification
-    And each runnable registry identity appears in the reported consumer mapping
-    And intent preflight executes no task or repository write
-    And a caller-selected Shell plan cannot replace the reported consumer boundary
+    And its only genuinely-global expansion came from a rejected edit to the shared reliability-values helper
+    When the user-authorized bounded reconstruction is planned
+    Then the rejected helper path remains recorded as audit-only forecast variance and is prohibited in the resumed candidate
+    And read-only intent plans the adapter and existing callers without treating that rejected path as a current implementation input
+    And exact candidate preflight fails if the prohibited helper path changed
+    And no further acceptance is required while product scope and that no-touch boundary remain unchanged
 
   # Modular verification packs 194
   Scenario Outline: Modular verification packs 194
-    Given the cardinality ownership seam is evaluated against <registry_state>
-    When its exact consumer declaration is validated
-    Then the declared consumer set is <consumer_set>
-    And its owning pack remains Shell under the verification_pack_cardinality_contract slice
+    Given the focused cardinality contract is evaluated against <registry_state>
+    When its runnable identities and executable proof are validated
+    Then the derived runnable set is <runnable_set>
+    And representative synthetic pack execution proves the set can be dispatched
+    And consumer identity does not require an unrelated product-pack closure
 
     Examples:
-      | registry_state                                               | consumer_set                                      |
-      | the current exact registry                                   | every current runnable pack                       |
-      | a compatible registry with one added runnable pack           | every former runnable pack plus the added pack    |
-      | a registry with one empty compatibility identity             | every runnable pack without the empty identity    |
+      | registry_state                                   | runnable_set                                   |
+      | the current exact registry                       | every current runnable identity                |
+      | a compatible registry with one added runnable pack | every former identity plus the added identity  |
+      | a registry with one empty compatibility identity | every runnable identity without the empty one  |
 
   # Modular verification packs 195
   Scenario Outline: Modular verification packs 195
-    Given a cardinality ownership declaration has <mapping_state>
-    When focused selection is planned
-    Then the mapping result is <mapping_result>
-    And no incomplete mapping narrows the conservative parent closure
+    Given a bounded cardinality candidate has <candidate_state>
+    When review-evidence scope is validated
+    Then the evidence decision is <evidence_decision>
+    And a generic caller-selected tooling plan cannot satisfy the bounded contract
 
     Examples:
-      | mapping_state                                                      | mapping_result                                              |
-      | one exact owner, direct observation, prerequisite, and every runnable consumer | select the declared cardinality boundary and consumers |
-      | a missing or duplicate runnable consumer                           | fail closed before task execution                           |
-      | an unknown, non-runnable, or ambiguous consumer                     | fail closed before task execution                           |
-      | an unclassified shared integration path                            | retain its conservative parent fallback                    |
+      | candidate_state                                                        | evidence_decision                                             |
+      | only the named adapter, terminal, calibration, reporting, evidence, and reliability callers changed | run the specification-bound focused cardinality plan |
+      | one named cardinality observation or synthetic execution proof is missing | fail closed before review-ready recording               |
+      | the prohibited reliability-values helper changed                      | reject the candidate as outside the authorized boundary       |
+      | a product, persistence, migration, or security path changed            | require current scope classification before execution         |
 
   # Modular verification packs 196
   Scenario: Modular verification packs 196
-    Given ownership preparation adds the cardinality seam and its exact registry consumers
-    When the preparation candidate plans its own current and historical change set
-    Then it cannot use the new seam to narrow that same evidence range
-    And its canonical changed-path task plan with properties and package proof remains authoritative
-    And naming every runnable consumer does not authorize the complete all-runnable-pack task closure
-    And no terminal checkpoint runs in feature mode
+    Given registry-derived cardinality changes verification infrastructure without product behavior
+    When the settled candidate produces review-ready evidence
+    Then the exact named cardinality, workflow, evidence, reliability, and process-contract tasks pass with properties and package proof
+    And synthetic registries prove current, added-runnable, and empty-compatibility execution
+    And the evidence is bound to the exact approved no-touch path set
+    And no complete product-pack closure or terminal checkpoint runs in feature mode
 
   # Modular verification packs 197
   Scenario: Modular verification packs 197
-    Given the cardinality ownership preparation has settled
-    When independent review records its durable dispositions
-    Then every stopped-candidate causal path has one reviewed seam or conservative parent-fallback disposition
-    And the Shell parent closure, each consumer observation, exact-pack closure, and terminal closure are conserved
-    And the cardinality seam changes no runnable-pack count, registry topology, product behavior, or terminal obligation
+    Given the bounded cardinality candidate passes independent review
+    When current and compatible historical registries are compared
+    Then each former task, prerequisite, consumer, calibration row, evidence identity, reliability obligation, and package input is conserved
+    And the current registry topology and every existing exact-pack closure remain unchanged
+    And a later added runnable pack becomes terminally required through the same generic contract
+    And the user-requested master promotion retains one final all-runnable-pack checkpoint
 
   # Modular verification packs 198
   Scenario: Modular verification packs 198
-    Given the cardinality ownership preparation reaches QA with review-ready evidence
-    When the registry-derived-verification-packs product task resumes
-    Then it starts from that exact QA head under the same stable task identity
+    Given the user reaffirmed bounded focused evidence for registry-derived cardinality
+    When registry-derived-verification-packs resumes from the exact specification QA head
+    Then it keeps the same stable product task identity without another acceptance round-trip
     And the stopped candidate is used only as an audited patch reference
-    And the resumed candidate cannot restore a generic caller-selected tooling evidence bypass
-    And fresh read-only intent and exact candidate preflight consume the reviewed disposition before product evidence
+    And the reliability-values helper stays unchanged while an adapter injects the exact registry-derived runnable identities
+    And the resumed candidate uses only its specification-bound focused evidence route
+    And fresh read-only intent and exact candidate preflight enforce the no-touch boundary before product evidence
