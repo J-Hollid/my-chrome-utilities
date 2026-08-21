@@ -17,6 +17,25 @@ const button = (doc, label) => {
     styles(control, { boxSizing: "border-box", maxWidth: "100%", whiteSpace: "normal", overflowWrap: "anywhere" });
     return control;
 };
+const reorderGrip = (doc) => {
+    const grip = doc.createElementNS("http://www.w3.org/2000/svg", "svg");
+    grip.dataset.reorderGrip = "true";
+    grip.setAttribute("data-reorder-grip", "true");
+    grip.setAttribute("viewBox", "0 0 16 16");
+    grip.setAttribute("aria-hidden", "true");
+    grip.setAttribute("focusable", "false");
+    grip.setAttribute("fill", "currentColor");
+    styles(grip, { display: "block", width: "16px", height: "16px", flex: "0 0 16px" });
+    for (const y of [3, 8, 13])
+        for (const x of [5, 11]) {
+            const dot = doc.createElementNS("http://www.w3.org/2000/svg", "circle");
+            dot.setAttribute("cx", String(x));
+            dot.setAttribute("cy", String(y));
+            dot.setAttribute("r", "1.5");
+            grip.append(dot);
+        }
+    return grip;
+};
 const styles = (element, values) => {
     if (!element.style)
         return;
@@ -94,33 +113,41 @@ function actionIndex(options, action) {
 }
 export function renderReorderControl(options) {
     const doc = options.dropTarget?.ownerDocument ?? globalThis.document, model = reorderControlModel(options);
-    const wrapper = doc.createElement("span"), trigger = button(doc, "Reorder"), menu = doc.createElement("div"), dialog = doc.createElement("div");
+    const wrapper = doc.createElement("span"), ownedMenu = !options.existingActionsMenu, trigger = options.existingActionsMenu?.trigger ?? button(doc, ""), handle = options.existingActionsMenu ? doc.createElement("span") : trigger, menu = options.existingActionsMenu?.menu ?? doc.createElement("div"), dialog = doc.createElement("div");
     const menuId = `reorder-menu-${++identity}`, dialogId = `reorder-dialog-${identity}`;
     wrapper.className = "reorderable-editor-control";
-    styles(wrapper, { display: "inline-flex", position: "relative", maxWidth: "100%" });
-    trigger.className = "reorderable-editor-trigger";
-    trigger.dataset.reorderTrigger = "true";
-    trigger.dataset.reorderItemId = options.itemId;
+    styles(wrapper, { display: "inline-flex", position: "relative", maxWidth: "44px", alignItems: "center", alignSelf: "center", verticalAlign: "middle", flex: "0 0 44px", order: "-1" });
+    handle.className = "reorderable-editor-trigger reorderable-editor-drag-handle";
+    handle.dataset.reorderTrigger = "true";
+    handle.dataset.reorderItemId = options.itemId;
     const stableFocusKey = focusKey(options.focusScopeId, options.itemId);
     trigger.dataset.reorderFocusKey = stableFocusKey;
     trigger.setAttribute("data-reorder-focus-key", stableFocusKey);
     if (options.localDraftUndo)
         localDraftMoves.set(trigger, options.onMove);
     triggerScopes.set(trigger, { root: options.focusScope ?? options.orderedContainer ?? options.dropTarget?.parentElement ?? options.dropTarget ?? doc, id: options.focusScopeId });
-    trigger.setAttribute("data-reorder-trigger", "true");
-    trigger.setAttribute("data-reorder-item-id", options.itemId);
-    trigger.setAttribute("aria-label", model.accessibleName);
+    handle.setAttribute("data-reorder-trigger", "true");
+    handle.setAttribute("data-reorder-item-id", options.itemId);
+    handle.append(reorderGrip(doc));
+    if (options.existingActionsMenu)
+        trigger.dataset.reorderMenuButton = "true";
+    if (ownedMenu)
+        trigger.setAttribute("aria-label", model.accessibleName);
     trigger.setAttribute("aria-haspopup", "menu");
-    trigger.setAttribute("aria-expanded", "false");
-    trigger.setAttribute("aria-controls", menuId);
+    trigger.setAttribute("aria-expanded", String(options.existingActionsMenu?.expanded ?? false));
+    trigger.setAttribute("aria-controls", menu.id || menuId);
     const currentDragScope = () => options.dragScopeId ?? options.orderedContainer ?? options.dropTarget?.parentElement ?? undefined;
-    trigger.draggable = model.canDrag && Boolean(options.dragScopeId ?? options.orderedContainer ?? options.dropTarget);
-    styles(trigger, { minWidth: "44px", minHeight: "44px", touchAction: "manipulation" });
-    menu.id = menuId;
-    menu.setAttribute("role", "menu");
-    menu.hidden = true;
-    menu.className = "reorderable-editor-menu";
-    styles(menu, { position: "absolute", zIndex: "20", maxWidth: "calc(100vw - 16px)", insetInlineStart: "0", top: "100%" });
+    handle.draggable = model.canDrag && Boolean(options.dragScopeId ?? options.orderedContainer ?? options.dropTarget);
+    styles(handle, { boxSizing: "border-box", display: "inline-flex", alignItems: "center", justifyContent: "center", width: "44px", height: "44px", minWidth: "44px", minHeight: "44px", padding: "0px", margin: "0px", background: "transparent", border: "0px", boxShadow: "none", whiteSpace: "nowrap", overflow: "visible", touchAction: "manipulation", cursor: handle.draggable ? "grab" : "default" });
+    handle.addEventListener("pointerenter", () => { handle.dataset.reorderHover = "true"; styles(handle, { background: "color-mix(in srgb, currentColor 14%, Canvas 86%)" }); });
+    handle.addEventListener("pointerleave", () => { delete handle.dataset.reorderHover; styles(handle, { background: "transparent" }); });
+    menu.id = menu.id || menuId;
+    if (ownedMenu) {
+        menu.setAttribute("role", "menu");
+        menu.hidden = true;
+        menu.className = "reorderable-editor-menu";
+        styles(menu, { position: "absolute", zIndex: "20", maxWidth: "calc(100vw - 16px)", insetInlineStart: "0", top: "100%" });
+    }
     dialog.id = dialogId;
     dialog.setAttribute("role", "dialog");
     dialog.setAttribute("aria-modal", "true");
@@ -128,8 +155,10 @@ export function renderReorderControl(options) {
     dialog.hidden = true;
     dialog.className = "reorderable-editor-dialog";
     styles(dialog, { position: "fixed", zIndex: "30", inset: "8px", maxWidth: "calc(100vw - 16px)", maxHeight: "calc(100vh - 16px)", overflow: "auto", overflowWrap: "anywhere" });
-    const closeMenu = () => { menu.hidden = true; trigger.setAttribute("aria-expanded", "false"); };
-    const openMenu = () => { menu.hidden = false; trigger.setAttribute("aria-expanded", "true"); queueMicrotask(() => menu.querySelector?.('button:not([disabled])')?.focus()); };
+    const closeMenu = () => { if (!ownedMenu)
+        return; menu.hidden = true; trigger.setAttribute("aria-expanded", "false"); };
+    const openMenu = () => { if (!ownedMenu)
+        return; menu.hidden = false; trigger.setAttribute("aria-expanded", "true"); queueMicrotask(() => menu.querySelector?.('button:not([disabled])')?.focus()); };
     const announceAndFocus = (fromIndex, toIndex, result) => {
         if (result !== true)
             return;
@@ -180,6 +209,7 @@ export function renderReorderControl(options) {
     for (const item of model.actions) {
         const control = button(doc, item.label);
         control.setAttribute("role", "menuitem");
+        control.dataset.reorderMovementAction = item.id;
         control.disabled = item.disabled;
         control.addEventListener("click", () => { if (item.disabled)
             return; if (item.id === "move") {
@@ -202,19 +232,21 @@ export function renderReorderControl(options) {
         });
         menu.append(control);
     }
-    trigger.addEventListener("click", () => menu.hidden ? openMenu() : closeMenu());
-    trigger.addEventListener("keydown", event => { if ([" ", "Enter", "ArrowDown"].includes(event.key)) {
-        event.preventDefault();
-        openMenu();
+    if (ownedMenu) {
+        trigger.addEventListener("click", () => menu.hidden ? openMenu() : closeMenu());
+        trigger.addEventListener("keydown", event => { if ([" ", "Enter", "ArrowDown"].includes(event.key)) {
+            event.preventDefault();
+            openMenu();
+        }
+        else if (event.key === "Escape")
+            closeMenu(); });
     }
-    else if (event.key === "Escape")
-        closeMenu(); });
-    trigger.addEventListener("dragstart", event => { const dragScope = currentDragScope(); if (!model.canDrag || dragScope === undefined) {
+    handle.addEventListener("dragstart", event => { const dragScope = currentDragScope(); if (!model.canDrag || dragScope === undefined) {
         event.preventDefault();
         dragSession = undefined;
         return;
-    } dragSession = { itemId: options.itemId, itemLabel: options.itemLabel, completeOrder: options.completeOrder, legalDestinationIds: new Set(options.legalDestinationIds ?? options.completeOrder.map(({ id }) => id)), dragScope, onMove: options.onMove, ...(options.localDraftUndo ? { offerUndo } : {}), trigger }; event.dataTransfer?.setData("application/x-reorderable-editor-item", options.itemId); });
-    trigger.addEventListener("dragend", () => { dragSession = undefined; if (options.dropTarget)
+    } handle.dataset.reorderDragging = "true"; styles(handle, { cursor: "grabbing" }); dragSession = { itemId: options.itemId, itemLabel: options.itemLabel, completeOrder: options.completeOrder, legalDestinationIds: new Set(options.legalDestinationIds ?? options.completeOrder.map(({ id }) => id)), dragScope, onMove: options.onMove, ...(options.localDraftUndo ? { offerUndo } : {}), trigger }; event.dataTransfer?.setData("application/x-reorderable-editor-item", options.itemId); });
+    handle.addEventListener("dragend", () => { delete handle.dataset.reorderDragging; styles(handle, { cursor: handle.draggable ? "grab" : "default" }); dragSession = undefined; if (options.dropTarget)
         clearDropIndicator(options.dropTarget); });
     dialog.addEventListener("keydown", event => { if (event.key === "Escape") {
         event.preventDefault();
@@ -241,7 +273,7 @@ export function renderReorderControl(options) {
             return; const result = session.onMove({ itemId: session.itemId, fromIndex, toIndex, method: "drag", destinationId: options.itemId, placement: after ? "after" : "before" }); if (result !== true)
             return; announceReorderCompletion(doc, { itemId: session.itemId, itemLabel: session.itemLabel, fromIndex, toIndex, fallbackTrigger: session.trigger }); session.offerUndo?.(fromIndex, toIndex); });
     }
-    wrapper.append(trigger, menu, dialog);
+    wrapper.append(handle, ...(ownedMenu ? [menu] : []), dialog);
     return wrapper;
 }
 export function renderLocalDraftReorderControl(options) {

@@ -41,7 +41,7 @@ const reproductionStepActionRowsRuntime = `(async () => {
   const text = manual.querySelector(".defect-reproduction-step-text");
   const actions = manual.querySelector(".defect-reproduction-step-actions");
   const guidance = manual.querySelector(".defect-reproduction-step-guidance");
-  const actionButtons = Array.from(actions.children).map((child) => child.matches("button") ? child : child.querySelector(":scope > .reorderable-editor-trigger")).filter(Boolean);
+  const actionButtons = [manual.querySelector('[data-reorder-trigger="true"]'),...Array.from(actions.children).map((child) => child.matches("button") ? child : child.querySelector(":scope > .reorderable-editor-trigger"))].filter(Boolean);
   const pathnameRows = Array.from(root.querySelectorAll('[data-reproduction-step-kind="pathname"]'));
   const rows = Array.from(root.querySelectorAll('[data-reproduction-step-kind]')).map((row) => ({
     kind:row.dataset.reproductionStepKind,
@@ -52,8 +52,10 @@ const reproductionStepActionRowsRuntime = `(async () => {
   const actionsRect = actions.getBoundingClientRect();
   const guidanceRect = guidance.getBoundingClientRect();
   const completeControls=actionButtons.every((control) => control.scrollWidth <= actions.clientWidth),noHorizontalOverflow=innerWidth===320?document.documentElement.scrollWidth<=document.documentElement.clientWidth:manual.scrollWidth <= manual.clientWidth && root.scrollWidth <= root.clientWidth;
-  let trigger=manual.querySelector('[data-reorder-trigger="true"]'),menu=trigger.parentElement.querySelector('[role="menu"]');const item=trigger.closest('[data-reproduction-step-kind="manual"]'),triggerRect=trigger.getBoundingClientRect();
+  let trigger=manual.querySelector('[data-reorder-trigger="true"]'),menu=trigger.parentElement.querySelector('[role="menu"]');const item=trigger.closest('[data-reproduction-step-kind="manual"]'),triggerRect=trigger.getBoundingClientRect(),grip=trigger.querySelector('[data-reorder-grip="true"]'),gripRect=grip.getBoundingClientRect(),itemRect=item.getBoundingClientRect(),restStyle=getComputedStyle(trigger);
   const closedSemantics={type:trigger.type,accessibleName:trigger.getAttribute("aria-label"),hasPopup:trigger.getAttribute("aria-haspopup"),expanded:trigger.getAttribute("aria-expanded"),controls:trigger.getAttribute("aria-controls"),menuRole:menu.getAttribute("role"),itemRole:item.getAttribute("role"),itemLabel:item.getAttribute("aria-label"),position:item.getAttribute("aria-posinset"),setSize:item.getAttribute("aria-setsize"),ariaGrabbed:item.hasAttribute("aria-grabbed")||trigger.hasAttribute("aria-grabbed"),triggerDraggable:trigger.draggable,rowDraggable:item.draggable,target:{width:triggerRect.width,height:triggerRect.height}};
+  trigger.dispatchEvent(new PointerEvent("pointerenter",{bubbles:true}));const hoverBackground=getComputedStyle(trigger).backgroundColor;trigger.dispatchEvent(new PointerEvent("pointerleave",{bubbles:true}));trigger.focus();const focusStyle=getComputedStyle(trigger);const focusOutline={style:focusStyle.outlineStyle,width:focusStyle.outlineWidth,color:focusStyle.outlineColor};const dragTransfer=new DataTransfer();trigger.dispatchEvent(new DragEvent("dragstart",{bubbles:true,dataTransfer:dragTransfer}));const dragCursor=getComputedStyle(trigger).cursor;trigger.dispatchEvent(new DragEvent("dragend",{bubbles:true,dataTransfer:dragTransfer}));
+  const presentation={inlineSvg:grip.tagName==="svg",dots:grip.querySelectorAll("circle").length,ariaHidden:grip.getAttribute("aria-hidden"),fill:grip.getAttribute("fill"),visibleText:trigger.textContent.trim(),grip:{width:gripRect.width,height:gripRect.height},target:{width:triggerRect.width,height:triggerRect.height},gripCenter:{x:Math.abs((gripRect.left+gripRect.width/2)-(triggerRect.left+triggerRect.width/2)),y:Math.abs((gripRect.top+gripRect.height/2)-(triggerRect.top+triggerRect.height/2))},hostCenter:Math.abs((triggerRect.top+triggerRect.height/2)-(itemRect.top+itemRect.height/2)),rest:{background:restStyle.backgroundColor,border:[restStyle.borderTopWidth,restStyle.borderRightWidth,restStyle.borderBottomWidth,restStyle.borderLeftWidth],shadow:restStyle.boxShadow,whiteSpace:restStyle.whiteSpace},states:{hoverBackground,focusOutline,restCursor:restStyle.cursor,dragCursor},themeReady:grip.getAttribute("fill")==="currentColor"&&getComputedStyle(grip).color===getComputedStyle(trigger).color,forcedColorReady:grip.getAttribute("fill")==="currentColor"&&focusOutline.style!=="none"};
   addClickStep(root,"/products","Delta");manual=Array.from(root.querySelectorAll('[data-reproduction-step-kind="manual"]')).find((row)=>row.textContent.includes("Click Bravo"));trigger=manual.querySelector('[data-reorder-trigger="true"]');menu=trigger.parentElement.querySelector('[role="menu"]');
   trigger.focus();trigger.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));await Promise.resolve();const firstFocused=document.activeElement?.textContent;document.activeElement?.dispatchEvent(new KeyboardEvent("keydown",{key:"End",bubbles:true,cancelable:true}));const endFocused=document.activeElement?.textContent;document.activeElement?.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));const escapeRestored=document.activeElement===trigger&&menu.hidden&&trigger.getAttribute("aria-expanded")==="false";
   trigger.click();const menuLabels=Array.from(menu.querySelectorAll('button'),control=>({label:control.textContent,disabled:control.disabled})),menuRect=menu.getBoundingClientRect(),moveLast=Array.from(menu.querySelectorAll('button')).find(({textContent})=>textContent==="Move to last");moveLast.click();await new Promise(resolve=>setTimeout(resolve,0));const movedRows=Array.from(root.querySelectorAll('[data-reproduction-step-kind="manual"]'),row=>row.querySelector('.defect-reproduction-step-text').textContent.replace(/^[0-9]+[.] /,"")),focusedAfterMove=document.activeElement?.dataset.reorderItemId??"",status=document.querySelector('[data-reorder-status="true"]')?.textContent??"";
@@ -67,13 +69,13 @@ const reproductionStepActionRowsRuntime = `(async () => {
     guidanceAfterActions:actionsRect.bottom <= guidanceRect.top + 1,
     completeControls,
     noHorizontalOverflow,
-    reorderEvidence:{closedSemantics,keyboard:{firstFocused,endFocused,escapeRestored},menuLabels,movedRows,focusedAfterMove,status,geometry},
+    reorderEvidence:{closedSemantics,presentation,keyboard:{firstFocused,endFocused,escapeRestored},menuLabels,movedRows,focusedAfterMove,status,geometry},
     rows,
   };
   root.remove();
   const checkoutRoot = mount([checkout]);
   const checkoutManual = addClickStep(checkoutRoot, "/checkout");
-  button(checkoutManual, "Reorder").click();
+  checkoutManual.querySelector('[data-reorder-trigger="true"]').click();
   const earlier = button(checkoutManual, "Move one position earlier");
   const checkoutGuidance = checkoutManual.querySelector(".defect-reproduction-step-guidance").textContent;
   observation.checkoutBoundary = {

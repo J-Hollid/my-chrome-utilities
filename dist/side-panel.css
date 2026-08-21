@@ -285,6 +285,9 @@ pre { max-inline-size:100%; max-block-size:20rem; margin:0; overflow:auto; white
 .defect-reproduction-composer { display:grid; gap:.5rem; margin-block:.5rem; padding:.6rem; border:1px solid var(--line); }
 .defect-reproduction-composer > section { display:grid; gap:.45rem; }
 [data-reproduction-step-kind] { display:grid; grid-template-columns:minmax(0,1fr); gap:.35rem; min-inline-size:0; }
+[data-reproduction-step-kind]:has(> .reorderable-editor-control) { grid-template-columns:44px minmax(0,1fr); align-items:center; }
+[data-reproduction-step-kind] > .reorderable-editor-control { grid-column:1; grid-row:1 / span 3; }
+[data-reproduction-step-kind] > :is(.defect-reproduction-step-text,.defect-reproduction-step-actions,.defect-reproduction-step-guidance) { grid-column:2; }
 .defect-reproduction-step-text { min-inline-size:0; overflow-wrap:anywhere; }
 .defect-reproduction-step-actions { display:flex; flex-wrap:wrap; gap:.35rem; min-inline-size:0; }
 .defect-reproduction-step-actions button { max-inline-size:100%; white-space:normal; overflow-wrap:anywhere; }
