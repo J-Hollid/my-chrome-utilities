@@ -61,6 +61,14 @@
              :runtime
              {"declared_type" "GIF"
               "diagnostic" "Choose a valid GIF image"})))
+  (is (map? (flow-export/validate-example!
+             :model
+             {"package_boundary" "an unrecognized or active binary part"
+              "diagnostic" "Use inert macro-free workbook content"})))
+  (is (map? (flow-export/validate-example!
+             :runtime
+             {"worksheet" "Template Guide"
+              "printer_settings_part" "xl/printerSettings/printerSettings2.bin"})))
   (let [example {"instance_count" "4"
                  "source_page" "Generic checkout page"
                  "first_name" "Customer details"
