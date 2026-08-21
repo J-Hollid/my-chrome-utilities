@@ -1064,7 +1064,7 @@ function validateRecordDocument(record, { allowLegacyExecutionLoad = false } = {
   if (!same(record.packIds, sortedUnique(record.packIds ?? [])) || !record.packIds.length) {
     throw new Error("Verification evidence has an invalid exact pack set");
   }
-  if (!same(record.plan, planDocument(record.plan))) {
+  if (!same(record.plan, planDocument(record.plan, { evidenceTask:record.task }))) {
     throw new Error("Verification evidence plan is not in canonical exact-pack form");
   }
   if (record.planDigest !== verificationDigest(record.plan)) throw new Error("Verification plan digest does not match its plan");
