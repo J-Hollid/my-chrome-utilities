@@ -69,10 +69,22 @@ export function timeoutRepairCandidate(incident) {
   return candidate;
 }
 
+export function terminalConfirmedFlakyIncident(incident) {
+  return incident.repair === undefined &&
+    incident.retry?.status === "classified" &&
+    incident.retry.identity === incident.failure?.retryIdentity &&
+    incident.retry.outcome === "passed" &&
+    incident.retry.classification === "confirmed-flaky" &&
+    incident.closureAudit?.kind === "blocking-product-repair" &&
+    incident.closureAudit.blocking === true && incident.closureAudit.resolved === false;
+}
+
 export function terminalCheckpointCandidate(incident) {
   let candidate = timeoutRepairCandidate(incident) ??
     (incident.terminalVerificationDeferred?.basis === "confirmed-flaky"
-      ? structuredClone(incident.terminalVerificationDeferred.candidate) : undefined);
+      ? structuredClone(incident.terminalVerificationDeferred.candidate)
+      : terminalConfirmedFlakyIncident(incident)
+        ? structuredClone(incident.failure.lineage) : undefined);
   if (!candidate) return undefined;
   for (const mapping of incident.lineageTransitions ?? []) {
     if (mapping.kind === "rebase" && mapping.fromCommit === candidate.commit) {

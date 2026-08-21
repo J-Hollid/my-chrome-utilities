@@ -18,7 +18,7 @@ import {
 } from "./verification-pack-cardinality/reliability-adapter.mjs";
 import {
   timeoutResolutionEvidence, validateRepairReceiptSemantics, validateTimeoutRepairProposal,
-  terminalCheckpointCandidate, timeoutRepairCandidate,
+  terminalCheckpointCandidate, terminalConfirmedFlakyIncident, timeoutRepairCandidate,
 } from "./verification-reliability-repair.mjs";
 import {
   classifyLegacyIncidentRunIntent, governedRepairAttemptAssociation,
@@ -213,7 +213,8 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
     },
     claimRepairCheckpoint(id, runId) {
       return update(id, (incident) => {
-        const confirmedFlaky=incident.terminalVerificationDeferred?.basis==="confirmed-flaky";
+        const confirmedFlaky=incident.terminalVerificationDeferred?.basis==="confirmed-flaky" ||
+          terminalConfirmedFlakyIncident(incident);
         if (incident.state !== "unresolved" ||
             !(incident.repair?.status === "eligible" || confirmedFlaky)) {
           throw new Error(`Reliability incident ${id} has no terminal checkpoint disposition`);
@@ -223,7 +224,8 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
           const candidate = terminalCheckpointCandidate(incident);
           const reclaimCount = Number(incident.repairCheckpoint.reclaimCount ?? 0);
           const sourceCandidate=incident.repair?.candidate?.commit??
-            incident.terminalVerificationDeferred?.candidate?.commit;
+            incident.terminalVerificationDeferred?.candidate?.commit??
+            incident.failure.lineage.commit;
           const repairRebases = (incident.lineageTransitions ?? []).filter(({kind, fromCommit}) =>
             kind === "rebase" && (fromCommit === sourceCandidate ||
               (incident.lineageTransitions ?? []).some(({toCommit}) => toCommit === fromCommit))).length;
@@ -253,7 +255,9 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
         document:checkpointDocument, incident:checkpointIncident, root,
       });
       validatePackageReceipt(packageDocument, checkpointDocument, checkpointIncident);
-      const confirmedFlaky=incidentBeforeResolution.terminalVerificationDeferred?.basis==="confirmed-flaky";
+      const confirmedFlaky=
+        incidentBeforeResolution.terminalVerificationDeferred?.basis==="confirmed-flaky" ||
+        terminalConfirmedFlakyIncident(incidentBeforeResolution);
       if (incidentBeforeResolution.state !== "unresolved" ||
           !(incidentBeforeResolution.repair?.status === "eligible" || confirmedFlaky)) {
         throw new Error(`Reliability incident ${id} has no terminal checkpoint disposition`);
@@ -276,7 +280,9 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
         archiveBytes(path.join(store, archive.packageZip), packageBytes, { replaceExisting }),
       ]);
       return update(id, (incident) => {
-        const currentConfirmedFlaky=incident.terminalVerificationDeferred?.basis==="confirmed-flaky";
+        const currentConfirmedFlaky=
+          incident.terminalVerificationDeferred?.basis==="confirmed-flaky" ||
+          terminalConfirmedFlakyIncident(incident);
         if (incident.state !== "unresolved" ||
             !(incident.repair?.status === "eligible" || currentConfirmedFlaky)) {
           throw new Error(`Reliability incident ${id} has no terminal checkpoint disposition`);
@@ -341,10 +347,15 @@ function recordedLineageTree(incident, commit) {
 }
 
 function terminalCheckpointIncident(incident) {
-  if (incident.terminalVerificationDeferred?.basis !== "confirmed-flaky") return incident;
+  const deferred = incident.terminalVerificationDeferred;
+  if (deferred?.basis !== "confirmed-flaky" && !terminalConfirmedFlakyIncident(incident)) {
+    return incident;
+  }
   return { ...incident, repair:{ status:"eligible", candidate:terminalCheckpointCandidate(incident),
-    checkpoint:{ baseCommit:incident.terminalVerificationDeferred.reviewReady.baseCommit,
-      evidenceTask:incident.terminalVerificationDeferred.reviewReady.task } } };
+    checkpoint:{
+      baseCommit:deferred?.reviewReady.baseCommit ?? incident.failure.lineage.baseCommit,
+      evidenceTask:deferred?.reviewReady.task ?? incident.failure.lineage.evidenceTask,
+    } } };
 }
 
 async function lineageApplies({ root, isAncestor, incident, commit, resolution = false }) {
@@ -778,7 +789,8 @@ export function createTimeoutIncidentStore({
             timeoutIncidentDigest(packageBytes) !== incident.resolution.package.digest) {
           throw new Error(`Reliability incident ${incident.id} archived resolution evidence does not match`);
         }
-        if (incident.terminalVerificationDeferred?.basis === "confirmed-flaky") {
+        if (incident.terminalVerificationDeferred?.basis === "confirmed-flaky" ||
+            terminalConfirmedFlakyIncident(incident)) {
           const resolvedCandidate = terminalCheckpointCandidate(incident);
           records.push({ incidentId:incident.id, failureDigest:incident.failureDigest,
             diagnosticClassification:incident.retry.classification, basis:"confirmed-flaky",

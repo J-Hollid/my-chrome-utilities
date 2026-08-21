@@ -1578,6 +1578,33 @@ assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-conf
   baseCommit:boundedClosureContractRevision, evidenceTask:boundedClosureEvidenceTask,
   requestedPackIds:timeoutRepairPackIds }), ["incident-confirmed-flaky-rebased"],
 "the bounded closure checkpoint follows an audited confirmed-flaky rebase to the selected candidate");
+const directTerminalConfirmedFlaky = {
+  id:"incident-terminal-confirmed-flaky",
+  failure:{ retryIdentity:"retry-identity", lineage:{
+    commit:"failed-repair", tree:"failed-repair-tree",
+    baseCommit:boundedClosureContractRevision, evidenceTask:boundedClosureEvidenceTask,
+  } },
+  retry:{ status:"classified", identity:"retry-identity", outcome:"passed",
+    classification:"confirmed-flaky" },
+  lineageTransitions:[{ kind:"rebase", fromCommit:"failed-repair",
+    toCommit:"repair-commit", toTree:"repair-tree" }],
+  closureAudit:{ kind:"blocking-product-repair", blocking:true, resolved:false,
+    failureDomain:"product-runtime" },
+};
+assert.deepEqual(compatibleTimeoutRepairIncidentIds({
+  requestedId:"incident-terminal-confirmed-flaky", blocking:[directTerminalConfirmedFlaky],
+  candidateCommit:"repair-commit", candidateTree:"repair-tree",
+  baseCommit:boundedClosureContractRevision, evidenceTask:boundedClosureEvidenceTask,
+  requestedPackIds:timeoutRepairPackIds,
+}), ["incident-terminal-confirmed-flaky"],
+"the bounded closure checkpoint directly consumes its own classified confirmed-flaky failure");
+await assert.rejects(async() => compatibleTimeoutRepairIncidentIds({
+  requestedId:"incident-terminal-confirmed-flaky", blocking:[directTerminalConfirmedFlaky],
+  candidateCommit:"repair-commit", candidateTree:"repair-tree",
+  baseCommit:"ordinary-base", evidenceTask:"ordinary-review",
+  requestedPackIds:timeoutRepairPackIds,
+}), /incompatible reliability incident/u,
+"ordinary review cannot consume an undeferred confirmed-flaky terminal failure");
 const admissionEligible = (id, closureAudit) => ({
   id, state:"unresolved", repair:{ status:"eligible" },
   ...(closureAudit ? { closureAudit } : {}),

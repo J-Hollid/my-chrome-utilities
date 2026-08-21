@@ -205,12 +205,21 @@ function validateTransitionHistory(incident) {
   if (incident.repairCheckpoint && incident.repairCheckpoint.status !== "claimed") {
     transitionHistoryError(incident.id, "repair checkpoint is not claimed");
   }
+  const terminalConfirmedFlaky = incident.repair === undefined &&
+    incident.retry?.status === "classified" &&
+    incident.retry.identity === incident.failure?.retryIdentity &&
+    incident.retry.outcome === "passed" &&
+    incident.retry.classification === "confirmed-flaky" &&
+    incident.closureAudit?.kind === "blocking-product-repair" &&
+    incident.closureAudit.blocking === true && incident.closureAudit.resolved === false;
   if (incident.repairCheckpoint && !incident.repair &&
-      incident.terminalVerificationDeferred?.basis !== "confirmed-flaky") {
+      incident.terminalVerificationDeferred?.basis !== "confirmed-flaky" &&
+      !terminalConfirmedFlaky) {
     transitionHistoryError(incident.id, "checkpoint claim has no repair proposal");
   }
   if (incident.state === "resolved" &&
-      (!(incident.repair || incident.terminalVerificationDeferred?.basis === "confirmed-flaky") ||
+      (!(incident.repair || incident.terminalVerificationDeferred?.basis === "confirmed-flaky" ||
+        terminalConfirmedFlaky) ||
        !incident.repairCheckpoint || !incident.retry)) {
     transitionHistoryError(incident.id, "resolution is missing diagnostic, repair, or checkpoint state");
   }
