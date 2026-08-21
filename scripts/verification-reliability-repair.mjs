@@ -69,6 +69,19 @@ export function timeoutRepairCandidate(incident) {
   return candidate;
 }
 
+export function terminalCheckpointCandidate(incident) {
+  let candidate = timeoutRepairCandidate(incident) ??
+    (incident.terminalVerificationDeferred?.basis === "confirmed-flaky"
+      ? structuredClone(incident.terminalVerificationDeferred.candidate) : undefined);
+  if (!candidate) return undefined;
+  for (const mapping of incident.lineageTransitions ?? []) {
+    if (mapping.kind === "rebase" && mapping.fromCommit === candidate.commit) {
+      candidate = { commit:mapping.toCommit, tree:mapping.toTree };
+    }
+  }
+  return candidate;
+}
+
 export function timeoutRepairFocusedTaskKeys(incident, changedPaths, regressionKey, taskSuccession) {
   validateIncident(incident);
   const internalExecutionContract = incident.failure.failureClass === "execution-contract-failure" &&

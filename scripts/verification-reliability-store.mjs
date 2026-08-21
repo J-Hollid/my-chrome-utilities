@@ -18,7 +18,7 @@ import {
 } from "./verification-pack-cardinality/reliability-adapter.mjs";
 import {
   timeoutResolutionEvidence, validateRepairReceiptSemantics, validateTimeoutRepairProposal,
-  timeoutRepairCandidate,
+  terminalCheckpointCandidate, timeoutRepairCandidate,
 } from "./verification-reliability-repair.mjs";
 import {
   classifyLegacyIncidentRunIntent, governedRepairAttemptAssociation,
@@ -338,19 +338,6 @@ function recordedLineageTree(incident, commit) {
   if (incident.repair?.candidate?.commit === commit) return incident.repair.candidate.tree;
   return (incident.lineageTransitions ?? []).find(
     ({ kind, toCommit }) => kind === "rebase" && toCommit === commit)?.toTree;
-}
-
-function terminalCheckpointCandidate(incident) {
-  let candidate = timeoutRepairCandidate(incident) ??
-    (incident.terminalVerificationDeferred?.basis === "confirmed-flaky"
-      ? structuredClone(incident.terminalVerificationDeferred.candidate) : undefined);
-  if (!candidate) return undefined;
-  for (const mapping of incident.lineageTransitions ?? []) {
-    if (mapping.kind === "rebase" && mapping.fromCommit === candidate.commit) {
-      candidate = { commit:mapping.toCommit, tree:mapping.toTree };
-    }
-  }
-  return candidate;
 }
 
 function terminalCheckpointIncident(incident) {

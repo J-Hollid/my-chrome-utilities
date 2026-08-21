@@ -35,12 +35,12 @@ import {
   reliabilityFailureFingerprint,
   resolvedVerificationDeadlines,
   timeoutRepairCausalCategory,
-  timeoutRepairCandidate,
   timeoutRepairDiagnosedBoundary,
   timeoutRepairFocusedExecutionTaskPlan,
   timeoutRepairFocusedTaskPlan,
   timeoutRepairPackageTaskIdentity,
   timeoutRepairPackIds,
+  terminalCheckpointCandidate,
 } from "./verification-reliability-incidents.mjs";
 import {
   classifyExecutionRestriction, consumeVerificationLaunchAuthorization,
@@ -453,8 +453,7 @@ export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, cand
     evidenceTask === boundedClosureEvidenceTask;
   const incompatible = blocking.find((incident) => {
     const confirmedFlaky = incident.terminalVerificationDeferred?.basis === "confirmed-flaky";
-    const repairCandidate = confirmedFlaky
-      ? incident.terminalVerificationDeferred.candidate : timeoutRepairCandidate(incident);
+    const repairCandidate = terminalCheckpointCandidate(incident);
     const binding = confirmedFlaky ? {
       baseCommit:incident.terminalVerificationDeferred.reviewReady.baseCommit,
       evidenceTask:incident.terminalVerificationDeferred.reviewReady.task,

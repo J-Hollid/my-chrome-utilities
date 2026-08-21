@@ -1560,6 +1560,23 @@ assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-reba
   baseCommit:boundedClosureContractRevision, evidenceTask:boundedClosureEvidenceTask,
   requestedPackIds:timeoutRepairPackIds }), ["incident-rebased"],
 "the frozen bounded closure checkpoint retains an audited eligible product repair");
+const boundedConfirmedFlakyCompatible = {
+  id:"incident-confirmed-flaky-rebased",
+  terminalVerificationDeferred:{
+    basis:"confirmed-flaky",
+    candidate:{ commit:"failed-repair", tree:"failed-repair-tree" },
+    reviewReady:{ baseCommit:"approved-base", task:"vtd014-timeout-repair-gate" },
+  },
+  lineageTransitions:[{ kind:"rebase", fromCommit:"failed-repair",
+    toCommit:"repair-commit", toTree:"repair-tree" }],
+  closureAudit:{ kind:"blocking-product-repair", blocking:true, resolved:false,
+    failureDomain:"product-runtime" },
+};
+assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-confirmed-flaky-rebased",
+  blocking:[boundedConfirmedFlakyCompatible], candidateCommit:"repair-commit", candidateTree:"repair-tree",
+  baseCommit:boundedClosureContractRevision, evidenceTask:boundedClosureEvidenceTask,
+  requestedPackIds:timeoutRepairPackIds }), ["incident-confirmed-flaky-rebased"],
+"the bounded closure checkpoint follows an audited confirmed-flaky rebase to the selected candidate");
 await assert.rejects(async() => compatibleTimeoutRepairIncidentIds({
   requestedId:"incident-rebased", blocking:[rebasedCompatible], candidateCommit:"repair-commit",
   candidateTree:"repair-tree", baseCommit:boundedClosureContractRevision,
