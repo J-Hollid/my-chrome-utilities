@@ -208,3 +208,7 @@
                    (:acceptance/scenario-name world)))
     :handler (fn [world _example _captures] (verify-scenario! "192") world)}]
    (scenario-handlers))))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-08-21T13:37:09.474734915+02:00", :module-hash "-1375514436", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "614548719"} {:id "form/1/defonce", :kind "defonce", :line 4, :end-line 4, :hash "415811200"} {:id "form/2/defonce", :kind "defonce", :line 5, :end-line 5, :hash "-568914931"} {:id "defn-/verify-contract!", :kind "defn-", :line 7, :end-line 14, :hash "-770965252"} {:id "defn-/verify-scenario!", :kind "defn-", :line 16, :end-line 23, :hash "-683048577"} {:id "def/scenario-step-patterns", :kind "def", :line 25, :end-line 62, :hash "-14965349"} {:id "defn-/scenario-handlers", :kind "defn-", :line 64, :end-line 70, :hash "926015239"} {:id "def/registry-results", :kind "def", :line 72, :end-line 78, :hash "-250315058"} {:id "def/boundary-results", :kind "def", :line 80, :end-line 89, :hash "1588091392"} {:id "def/definition-results", :kind "def", :line 91, :end-line 97, :hash "-670989563"} {:id "defn-/assert-equal!", :kind "defn-", :line 99, :end-line 101, :hash "533656939"} {:id "defn-/values", :kind "defn-", :line 103, :end-line 105, :hash "-170718585"} {:id "defn/handlers", :kind "defn", :line 107, :end-line 210, :hash "306322870"}]}
+;; clj-mutate-manifest-end
