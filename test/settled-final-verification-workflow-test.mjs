@@ -468,19 +468,19 @@ assert.deepEqual(handoffReadinessPolicy({
 
 assert.deepEqual(finalEvidenceEffect({
   changedPaths:["src/side-panel.ts"], boundIdentitiesEqual:false,
-}), { eligible:false, action:"settle-and-rerun-all-20" });
+}), { eligible:false, action:"settle-and-rerun-all-runnable-packs" });
 assert.deepEqual(finalEvidenceEffect({
   changedPaths:["docs/scorecard.md"], boundIdentitiesEqual:true,
 }), { eligible:true, action:"promote-or-integrate" });
 assert.deepEqual(finalEvidenceEffect({
   changedPaths:["features/changed-contract.feature"], boundIdentitiesEqual:true,
-}), { eligible:false, action:"settle-and-rerun-all-20" });
+}), { eligible:false, action:"settle-and-rerun-all-runnable-packs" });
 assert.deepEqual(finalEvidenceEffect({
   changedPaths:["manifest.json"], boundIdentitiesEqual:true,
-}), { eligible:false, action:"settle-and-rerun-all-20" });
+}), { eligible:false, action:"settle-and-rerun-all-runnable-packs" });
 assert.deepEqual(finalEvidenceEffect({
   changedPaths:["docs/scorecard.md", "verification/packs.json"], boundIdentitiesEqual:false,
-}), { eligible:false, action:"settle-and-rerun-all-20" });
+}), { eligible:false, action:"settle-and-rerun-all-runnable-packs" });
 
 const scorecard = deliveryScorecard({
   approvedAt:"2026-08-11T10:00:00.000Z", integratedAt:"2026-08-11T11:00:00.000Z",
@@ -752,12 +752,12 @@ console.log(JSON.stringify({
     invalidation:{
       rows:{
         "production, test, build, registry, runner, or workflow input changes":{
-          effect:"final evidence is invalid", action:"settle the changed tree and run all 20 packs freshly" },
+          effect:"final evidence is invalid", action:"settle the changed tree and run all runnable packs freshly" },
         "documentation-only recording preserves every bound identity":{
           effect:"final product evidence remains eligible", action:"promote or integrate without another product run" },
       },
     },
-    failure:{ recorded:true, causalFocusedProof:true, freshAll20:true, package:true,
+    failure:{ recorded:true, causalFocusedProof:true, freshAllRunnablePacks:true, package:true,
       noRetry:true, noLowerConcurrency:true, noCarriedLeaf:true, noUnrelatedReceipt:true },
     actions:{
       "focused refactorer or architect review":"permit the next named review role",

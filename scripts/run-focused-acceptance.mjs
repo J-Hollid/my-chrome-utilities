@@ -438,7 +438,7 @@ export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, cand
     throw new Error("Repair checkpoint requires an applicable reliability incident");
   }
   if (JSON.stringify([...requestedPackIds].sort()) !== JSON.stringify(timeoutRepairPackIds)) {
-    throw new Error("Repair checkpoint requires the eligible repair candidate and exact all-20 plan");
+    throw new Error("Repair checkpoint requires the eligible repair candidate and exact all-runnable-pack plan");
   }
   const boundedClosureCheckpoint = baseCommit === boundedClosureContractRevision &&
     evidenceTask === boundedClosureEvidenceTask;

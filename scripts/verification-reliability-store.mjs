@@ -259,7 +259,7 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
       if (incidentBeforeResolution.repairCheckpoint?.status !== "claimed" ||
           incidentBeforeResolution.repairCheckpoint.runId !== checkpoint.runId ||
           canonicalCheckpoint.receipt.runId !== checkpoint.runId) {
-        throw new Error(`Reliability incident ${id} resolution requires one canonical all-20 checkpoint and package`);
+        throw new Error(`Reliability incident ${id} resolution requires one canonical all-runnable-pack checkpoint and package`);
       }
       const packageBytes = await readFile(resolvedPackagePath);
       const store = await directory();
@@ -281,7 +281,7 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
         if (incident.repairCheckpoint?.status !== "claimed" ||
             incident.repairCheckpoint.runId !== checkpoint.runId ||
             canonicalCheckpoint.receipt.runId !== checkpoint.runId) {
-          throw new Error(`Reliability incident ${id} resolution requires one canonical all-20 checkpoint and package`);
+          throw new Error(`Reliability incident ${id} resolution requires one canonical all-runnable-pack checkpoint and package`);
         }
         const checkpointResult = { status:"passed", commit:checkpoint.candidate.commit,
           tree:checkpoint.candidate.tree, reusedTaskCount:0,

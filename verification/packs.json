@@ -5849,6 +5849,21 @@
     ],
     "verificationSlices": [
       {
+        "id": "verification_pack_cardinality_contract",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "scripts/verification-pack-cardinality/"
+        ],
+        "tasks": [
+          "unit:test/verification-pack-cardinality-contract-test.mjs",
+          "unit:test/settled-final-verification-workflow-test.mjs",
+          "unit:test/verification-process-contract-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Registry-derived runnable-pack cardinality for terminal closure, calibration, reporting, and evidence"
+      },
+      {
         "id": "shared_reorderable_editor_controls",
         "sourcePaths": [],
         "sourcePrefixes": [
@@ -6559,6 +6574,7 @@
       "scripts/settled-final-verification-policy.mjs",
       "scripts/settled-final-verification-review.mjs",
       "scripts/verification-evidence.mjs",
+      "scripts/verification-pack-cardinality/",
       "scripts/verification-packs.mjs",
       "scripts/verification-reliability-incidents.mjs",
       "scripts/verification-reliability-persistence.mjs",
@@ -6632,6 +6648,7 @@
       "test/swarmforge-process-contract-test.mjs",
       "test/swarmforge-outcome-bounded-autonomy-test.mjs",
       "test/stacked-campsite-control-test.mjs",
+      "test/verification-pack-cardinality-contract-test.mjs",
       "test/verification-process-contract-test.mjs",
       "test/verification-evidence-production-path-test.mjs",
       "test/headless-chrome-lifecycle-test.mjs",

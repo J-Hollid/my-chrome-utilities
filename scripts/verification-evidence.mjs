@@ -522,7 +522,7 @@ export async function validateCanonicalMasterCheckpointEvidence(options = {}) {
       !same(sortedUnique(options.packIds ?? []), sortedUnique(expectedPackIds)) ||
       !same(sortedUnique(checkpoint.plan.packIds), sortedUnique(expectedPackIds)) ||
       !checkpoint.plan.tasks.some(({ key }) => key.startsWith("property:"))) {
-    throw new Error("Canonical master evidence requires the exact runnable all-20 plan with properties");
+    throw new Error("Canonical master evidence requires the exact all-runnable-pack plan with properties");
   }
   return checkpoint;
 }
@@ -539,7 +539,7 @@ export function validateCanonicalMasterEvidenceRecord(record, {
   const receiptTasks = record?.receipt?.tasks ?? [];
   if (record?.version !== 2 || record.status !== "passed" || record.commit !== candidateCommit ||
       record.tree !== candidateTree || record.baseCommit !== masterBaseCommit ||
-      plan?.mode !== "exact" || plan.includeProperties !== true || allPacks.length !== 20 ||
+      plan?.mode !== "exact" || plan.includeProperties !== true || !allPacks.length ||
       !same(sortedUnique(record.packIds), allPacks) || !same(sortedUnique(plan.packIds), allPacks) ||
       !same(sortedUnique(plan.selectedPackIds), allPacks) ||
       !plan.tasks.some(({ key = "" }) => key.startsWith("property:")) ||
@@ -547,7 +547,7 @@ export function validateCanonicalMasterEvidenceRecord(record, {
       ![artifact.buildIdentity, artifact.inputDigest, artifact.outputDigest].every((value) => shaPattern.test(value ?? "")) ||
       !Array.isArray(receiptTasks) || !receiptTasks.length ||
       receiptTasks.some(({ status }) => status !== "passed")) {
-    throw new Error("Canonical master evidence record is not an exact fresh all-20 proof");
+    throw new Error("Canonical master evidence record is not an exact fresh all-runnable-pack proof");
   }
   return record;
 }
@@ -1474,7 +1474,7 @@ export async function verifyVerificationEvidence(
   }).selectedPackIds;
   const requestedIsCanonical = same(sortedUnique(requestedPacks), sortedUnique(canonicalRunnablePacks));
   if (requestedIsCanonical && !terminalEligible) {
-    throw new Error("Canonical all-20 verification evidence requires one terminal-eligible plan record");
+    throw new Error("Canonical all-runnable-pack verification evidence requires one terminal-eligible plan record");
   }
   const hasConsumption = records.some((record) => record.consumedTerminalObligations !== undefined);
   if (!terminalEligible && hasConsumption) throw new Error("Focused evidence cannot carry terminal obligation consumption");

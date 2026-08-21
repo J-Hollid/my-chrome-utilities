@@ -1,6 +1,7 @@
 (ns acceptance.steps.modular-architecture
   (:require [acceptance.verification-support.modular-architecture-capture-handlers :as capture]
             [acceptance.verification-support.modular-architecture-calibration :as calibration]
+            [acceptance.verification-support.modular-architecture-cardinality-handlers :as cardinality]
             [acceptance.verification-support.modular-architecture-durable-repository-handlers :as durable-repository]
             [acceptance.verification-support.modular-architecture-event-library-handlers :as event-library]
             [acceptance.verification-support.modular-architecture-layered-editor-handlers :as layered-editor]
@@ -781,6 +782,7 @@
                (vtd017/handlers {:example-values example-values})
                (vtd014/handlers {:example-values example-values})
                (vtd015/handlers {:example-values example-values})
+               (cardinality/handlers example-values)
                (vtd009/handlers
                 {:example-values example-values
                  :verify-throughput! verify-throughput!})

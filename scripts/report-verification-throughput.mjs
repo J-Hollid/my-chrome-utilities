@@ -4,6 +4,8 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { loadVerificationPacks, planVerification } from "./verification-packs.mjs";
+import { assertCompleteRunnablePackSelection } from
+  "./verification-pack-cardinality/contract.mjs";
 import {
   archiveCanonicalReceiptCandidates,
   buildCanonicalTimingLedger,
@@ -940,9 +942,13 @@ export function verificationPerformanceCalibration(
   }));
   const declaredBrowserTargetCount = new Set(packs.flatMap((pack) =>
     (pack.browserObservations ?? []).map(({ id }) => id))).size;
-  if (runnablePacks.length !== 20 ||
-      Object.keys(browserTargets).length !== declaredBrowserTargetCount) {
-    throw new Error(`Performance calibration must cover 20 runnable packs and ${
+  const registryPackIds = planVerification(packs, { terminalFull:true }).selectedPackIds;
+  assertCompleteRunnablePackSelection({
+    registryPackIds,
+    selectedPackIds:runnablePacks.map(({ id }) => id),
+  });
+  if (Object.keys(browserTargets).length !== declaredBrowserTargetCount) {
+    throw new Error(`Performance calibration must cover every runnable pack and ${
       declaredBrowserTargetCount} browser targets`);
   }
   const declaredFallbackTarget = packs

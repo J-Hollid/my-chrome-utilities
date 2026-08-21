@@ -980,6 +980,10 @@ try {
     path.join(cliContentionRepository, "scripts/verification-run-intent.mjs"));
   await copyFile(path.resolve("scripts/verification-packs.mjs"),
     path.join(cliContentionRepository, "scripts/verification-packs.mjs"));
+  await mkdir(path.join(cliContentionRepository, "scripts/verification-pack-cardinality"),
+    { recursive:true });
+  await copyFile(path.resolve("scripts/verification-pack-cardinality/contract.mjs"),
+    path.join(cliContentionRepository, "scripts/verification-pack-cardinality/contract.mjs"));
   await copyFile(path.resolve("scripts/verification-shared-boundaries.mjs"),
     path.join(cliContentionRepository, "scripts/verification-shared-boundaries.mjs"));
   await copyFile(path.resolve("scripts/settled-final-verification-policy.mjs"),
@@ -1007,6 +1011,8 @@ try {
     path.join(cliContentionRepository, "test/stylesheet-declarations-property-test.mjs"));
   await copyFile(path.resolve("test/data-layer-flow-visual-asset-portability-property-test.mjs"),
     path.join(cliContentionRepository, "test/data-layer-flow-visual-asset-portability-property-test.mjs"));
+  await copyFile(path.resolve("test/verification-pack-cardinality-contract-test.mjs"),
+    path.join(cliContentionRepository, "test/verification-pack-cardinality-contract-test.mjs"));
   for (const documentationTemplateTest of [
     "data-layer-documentation-template-acceptance-test.mjs",
     "data-layer-documentation-template-excel-test.mjs",
@@ -1079,9 +1085,11 @@ try {
     "scripts/verification-same-target-planner-projection.mjs",
     "scripts/verification-task-succession.mjs",
     "scripts/verification-styles.mjs", "scripts/verification-packs.mjs",
+    "scripts/verification-pack-cardinality/contract.mjs",
     "scripts/verification-shared-boundaries.mjs",
     "test/browser-packs/global-style-smoke.mjs", "test/stylesheet-declarations-property-test.mjs",
     "test/data-layer-flow-visual-asset-portability-property-test.mjs",
+    "test/verification-pack-cardinality-contract-test.mjs",
     "test/data-layer-documentation-template-acceptance-test.mjs",
     "test/data-layer-documentation-template-excel-test.mjs",
     "test/data-layer-documentation-template-library-test.mjs",

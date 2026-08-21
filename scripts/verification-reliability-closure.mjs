@@ -224,8 +224,8 @@ export function inputEquivalentTaskProof({ priorResult, priorInput, currentInput
 }
 
 export function terminalClosureExecution({ attempt, runnablePackCount } = {}) {
-  if (runnablePackCount !== 20) {
-    throw new Error("Bounded terminal closure requires all 20 runnable packs");
+  if (!Number.isInteger(runnablePackCount) || runnablePackCount < 1) {
+    throw new Error("Bounded terminal closure requires the exact runnable pack count");
   }
   if (attempt === "initial") {
     return { taskPolicy:"fresh-all", runnablePackCount, packagePolicy:"fresh" };

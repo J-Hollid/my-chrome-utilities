@@ -170,7 +170,7 @@ const conservativeConflict=planVerification(conflicting,{changedPaths:["src/owne
 assert.deepEqual(conservativeConflict.unitTasks.map(({key})=>key),["unit:test/owner-a.mjs","unit:test/owner-b.mjs"]);
 assert.match(conservativeConflict.verificationSliceDiagnostics[0],/conflicting verification slices/u);
 const quarantined=verificationSliceSelectionMiss({sliceId:"future",causalFailureOutsideSlice:true});
-assert.deepEqual(quarantined,{sliceId:"future",quarantined:true,fallback:"parent-pack",terminalAction:"focused-repair-then-fresh-all-20"});
+assert.deepEqual(quarantined,{sliceId:"future",quarantined:true,fallback:"parent-pack",terminalAction:"focused-repair-then-fresh-all-runnable-packs"});
 const quarantinePlan=planVerification(slicedPacks,{changedPaths:["src/owner/future.ts"],quarantinedSliceIds:["future"]});
 assert.deepEqual(quarantinePlan.unitTasks.filter(({packId})=>packId==="owner").map(({key})=>key),["unit:test/owner-a.mjs","unit:test/owner-b.mjs"]);
 assert.match(quarantinePlan.verificationSliceDiagnostics.join(" "),/quarantined/u);

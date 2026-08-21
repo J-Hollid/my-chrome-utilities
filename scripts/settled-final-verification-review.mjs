@@ -4,6 +4,8 @@ import {
   validateRunIntentBootstrapReceipt,
 } from "./verification-run-intent.mjs";
 import { timeoutIncidentDigest } from "./verification-reliability-values.mjs";
+import { assertCompleteRunnablePackSelection } from
+  "./verification-pack-cardinality/contract.mjs";
 
 const sha1Pattern = /^[a-f0-9]{40}$/u;
 const sha256Pattern = /^[a-f0-9]{64}$/u;
@@ -236,8 +238,20 @@ function assertCanonicalMasterCheckpoint(proof, {
   const receipt = proof?.receipt;
   const hasProperties = plan?.includeProperties === true &&
     (plan.tasks ?? []).some(({ key = "" }) => key.startsWith("property:"));
-  const hasAllPacks = allPacks.length === 20 && same(sortedUnique(plan?.packIds), allPacks) &&
-    same(sortedUnique(plan?.selectedPackIds), allPacks);
+  let hasAllPacks = false;
+  try {
+    assertCompleteRunnablePackSelection({
+      registryPackIds:allPacks,
+      selectedPackIds:sortedUnique(plan?.packIds),
+    });
+    assertCompleteRunnablePackSelection({
+      registryPackIds:allPacks,
+      selectedPackIds:sortedUnique(plan?.selectedPackIds),
+    });
+    hasAllPacks = true;
+  } catch {
+    hasAllPacks = false;
+  }
   const evidenceCandidateCommit = proof?.commit ?? proof?.receipt?.candidate?.commit;
   const evidenceCandidateTree = proof?.tree ?? proof?.receipt?.candidate?.tree;
   const evidenceBaseCommit = proof?.baseCommit ?? proof?.receipt?.candidate?.baseCommit;
@@ -246,7 +260,7 @@ function assertCanonicalMasterCheckpoint(proof, {
       evidenceCandidateCommit !== candidateCommit || evidenceCandidateTree !== candidateTree ||
       evidenceBaseCommit !== baseCommit || !artifact?.buildIdentity ||
       !artifact?.inputDigest || !artifact?.outputDigest) {
-    throw new Error("Terminal obligations require canonical all-20 properties/package/evidence proof");
+    throw new Error("Terminal obligations require canonical all-runnable-pack properties/package/evidence proof");
   }
   return proof;
 }

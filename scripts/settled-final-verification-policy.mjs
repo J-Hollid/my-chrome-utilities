@@ -192,7 +192,7 @@ export function finalEvidenceEffect({ changedPaths, boundIdentitiesEqual }) {
   const behaviorBearing = (changedPaths ?? []).some((changedPath) =>
     !changedPath.startsWith("docs/") && !(changedPath.endsWith(".md") && !changedPath.includes("/")));
   return behaviorBearing || !boundIdentitiesEqual
-    ? { eligible:false, action:"settle-and-rerun-all-20" }
+    ? { eligible:false, action:"settle-and-rerun-all-runnable-packs" }
     : { eligible:true, action:"promote-or-integrate" };
 }
 

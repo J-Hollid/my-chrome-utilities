@@ -27,6 +27,7 @@ export {
 } from "./verification-styles.mjs";
 import ts from "typescript";
 import {sharedBoundaryPlanFor,validateSharedBoundaryDeclarations} from "./verification-shared-boundaries.mjs";
+import { runnablePackIdsFromRegistry } from "./verification-pack-cardinality/contract.mjs";
 export {sharedBoundaryPlanFor,validateSharedBoundaryDeclarations} from "./verification-shared-boundaries.mjs";
 
 const registryUrl = new URL("../verification/packs.json", import.meta.url);
@@ -1039,7 +1040,9 @@ export function verificationSliceSelectionMiss({sliceId, causalFailureOutsideSli
     sliceId,
     quarantined:Boolean(causalFailureOutsideSlice && !reviewedMappingRepair),
     fallback:causalFailureOutsideSlice && !reviewedMappingRepair ? "parent-pack" : "slice-eligible",
-    terminalAction:causalFailureOutsideSlice ? "focused-repair-then-fresh-all-20" : "no-selection-miss",
+    terminalAction:causalFailureOutsideSlice
+      ? "focused-repair-then-fresh-all-runnable-packs"
+      : "no-selection-miss",
   };
 }
 
@@ -1221,8 +1224,7 @@ function featureTasks(features, packs) {
 }
 
 function runnable(pack) {
-  return [...exactOwnedPathKeys.filter((key) => key !== "handlers").flatMap((key) => values(pack, key)),
-    ...values(pack, "browserObservations"), ...values(pack, "checkpointCommands")].length > 0;
+  return runnablePackIdsFromRegistry([pack]).length > 0;
 }
 
 function uniquePackIds(tasks) {
