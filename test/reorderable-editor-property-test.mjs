@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 
-import { reorderItems, reorderPlacementIndex } from "../dist/reorderable-editor/model.js";
+import {
+  reorderControlModel,
+  reorderItems,
+  reorderPlacementIndex,
+} from "../dist/reorderable-editor/model.js";
 import { StableIdentitySequence } from "../dist/reorderable-editor/stable-identities.js";
 
 let seed = 0x6d2b79f5;
@@ -33,6 +37,21 @@ for (let sample = 0; sample < 400; sample += 1) {
   const placementIndex = reorderPlacementIndex(items, items[from].id, items[destination].id, placement);
   assert.ok(placementIndex >= 0 && placementIndex < length, "placement remains inside the legal list");
 
+  const legalDestinationIds = items
+    .filter(() => random(2) === 0)
+    .map(({ id }) => id);
+  const control = reorderControlModel({
+    itemId:items[from].id,
+    itemLabel:items[from].id,
+    completeOrder:items,
+    legalDestinationIds,
+  });
+  const hasLegalDestination = legalDestinationIds.some((id) => id !== items[from].id);
+  assert.equal(control.actionable, hasLegalDestination,
+    "a control is actionable exactly when its ordering scope has another legal item");
+  assert.equal(control.actionable, control.actions.some(({ disabled }) => !disabled),
+    "actionability agrees with the movement menu");
+
   let identityNumber = 0;
   const identities = new StableIdentitySequence("generated", () => `identity:${sample}:${++identityNumber}`);
   identities.reconcile(length);
@@ -40,5 +59,13 @@ for (let sample = 0; sample < 400; sample += 1) {
   identities.move(from, to);
   assert.equal(identities.values()[to], stable, "stable identity follows the moved item");
 }
+
+const singleton = reorderControlModel({
+  itemId:"only",
+  itemLabel:"Only",
+  completeOrder:[{ id:"only" }],
+});
+assert.equal(singleton.actionable, false,
+  "a singleton default ordering scope has no legal movement outcome");
 
 console.log("reorderable editor properties: 400 generated cases passed");
