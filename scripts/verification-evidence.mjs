@@ -261,9 +261,11 @@ function recordedSubset(recorded, canonical) {
 
 export function legacyArchivedCheckpointTaskIdentities(receipt, candidatePacks, packIds) {
   const candidates = [
-    ...planVerification(candidatePacks, { terminalFull:true, includeProperties:true }).tasks,
+    ...planVerification(candidatePacks, {
+      terminalFull:true, includeProperties:true, historicalRegistryFallback:true,
+    }).tasks,
     ...sortedUnique(packIds).flatMap((packId) => planVerification(candidatePacks, {
-      packIds:[packId], includeProperties:true,
+      packIds:[packId], includeProperties:true, historicalRegistryFallback:true,
     }).tasks),
   ].map(verificationTaskIdentity);
   for (const result of Object.values(receipt.tasks ?? {})) {
@@ -271,6 +273,7 @@ export function legacyArchivedCheckpointTaskIdentities(receipt, candidatePacks, 
     if (identity?.stage === "browser-observation" && Array.isArray(identity.logicalTargetIds)) {
       candidates.push(...planVerification(candidatePacks, {
         packIds:[identity.packId], browserTargetIds:identity.logicalTargetIds,
+        historicalRegistryFallback:true,
       }).tasks.map(verificationTaskIdentity));
     }
     if (identity?.stage === "acceptance-session" && typeof identity.target === "string") {

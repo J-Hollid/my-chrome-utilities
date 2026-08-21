@@ -199,10 +199,11 @@ export async function resolveIncidentTaskSuccession({incident,currentIdentities,
     const focusedHistoricalPlan=logicalSlice.kind==="browser-target"
       ?planVerification(historicalPacks,{packIds:[historicalPacks.find(pack=>
         (pack.browserObservations??[]).some(({id})=>id===diagnosedTarget)).id],
-        browserTargetIds:[diagnosedTarget]})
-      :planVerification(historicalPacks,{terminalFull:true});
+        browserTargetIds:[diagnosedTarget],historicalRegistryFallback:true})
+      :planVerification(historicalPacks,{terminalFull:true,historicalRegistryFallback:true});
     const historicalIdentities=(logicalSlice.kind==="browser-target"
-      ?[...focusedHistoricalPlan.tasks,...planVerification(historicalPacks,{terminalFull:true}).tasks]
+      ?[...focusedHistoricalPlan.tasks,...planVerification(historicalPacks,
+        {terminalFull:true,historicalRegistryFallback:true}).tasks]
       :focusedHistoricalPlan.tasks).map(verificationTaskIdentity);
     if(!historicalRegistryDeclaresTask(successionGraph.identities[step.sourceTaskDigest],
       historicalPacks,historicalIdentities))

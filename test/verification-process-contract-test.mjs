@@ -475,6 +475,7 @@ const addedAcceptanceRegistryFeatures=["features/template-library.feature","feat
   "features/excel-templates.feature","features/excel-templates-runtime.feature",
   "features/rich-templates.feature","features/rich-templates-runtime.feature"];
 const processAcceptancePack=(features)=>({id:"flow_export",features,
+  source:["src/data-layer-project-documentation-workspace-ui.ts"],
   verificationInputs:["test/flow-export-test.mjs"]});
 const plannedProcessAcceptanceSession=(packs)=>verificationTaskIdentity(planVerification(packs,
   {packIds:["flow_export"]}).tasks.find(({key})=>key==="acceptance-session:flow_export"));
@@ -2347,9 +2348,9 @@ await assert.rejects(() => candidatePredatesRunIntentImplementation("ambiguous-a
   /unknown revision|Needed a single revision|ambiguous/u,
 "an unresolved archive candidate cannot be classified as pre-intent");
 const preIntentArchivePacks = await verificationPacksAtCommit(
-  "66b91e38e6c55d6611daaa572d626ca3dfbb3dd9");
+  "66b91e38e6c55d6611daaa572d626ca3dfbb3dd9", { historicalRegistryFallback:true });
 const preIntentBuildIdentity = verificationTaskIdentity(planVerification(preIntentArchivePacks, {
-  terminalFull:true, includeProperties:true,
+  terminalFull:true, includeProperties:true, historicalRegistryFallback:true,
 }).tasks.find(({ key }) => key === "build:dist"));
 assert.deepEqual(legacyArchivedCheckpointTaskIdentities({ tasks:{
   [preIntentBuildIdentity.key]:{ identity:preIntentBuildIdentity },
@@ -2927,7 +2928,8 @@ console.log("repairTmp=" + process.env.TMPDIR);
         { status:"M", path:"swarmforge/roles/coder.prompt" }],
       paths:["src/repair.ts", "swarmforge/roles/coder.prompt"] }),
     incidentChangedPathsLoader:async() => ["src/repair.ts"],
-    verificationPacksLoader:async() => ({}),
+    verificationPacksLoader:async() => [{ id:"shell", source:["src/repair.ts"],
+      unit:[runnerRegressionPath] }],
     verificationPacksValidator:async() => {},
     receiptContextFactory:(concurrency, observationConcurrency, options) => createVerificationReceiptContext(
       concurrency, observationConcurrency, { ...options, receiptDirectory:runnerReceiptDirectory }),
@@ -3703,12 +3705,13 @@ console.log("repairTmp=" + process.env.TMPDIR);
       : resolve(stdout.trim().split(/\r?\n/u).filter(Boolean))));
   assert.deepEqual(postSuccessionSpecificationChangedFiles.filter(
     (file) => file.startsWith("features/")), []);
-  const acceptedBasePacks = await verificationPacksAtCommit(vtd014AcceptedBaseCommit);
+  const acceptedBasePacks = await verificationPacksAtCommit(vtd014AcceptedBaseCommit,
+    { historicalRegistryFallback:true });
   const allPackIds = [...timeoutRepairPackIds];
   const currentConservationPlan = planVerification(timeoutPackRegistry,
     { packIds:allPackIds, includeProperties:true });
   const acceptedBaseConservationPlan = planVerification(acceptedBasePacks,
-    { packIds:allPackIds, includeProperties:true });
+    { packIds:allPackIds, includeProperties:true, historicalRegistryFallback:true });
   const registeredTaskKeys = (registry) => new Set(registry.flatMap((pack) => [
     ...(pack.unit??[]).map((target) => `unit:${target}`),
     ...(pack.property??[]).map((target) => `property:${target}`),
@@ -3817,7 +3820,8 @@ console.log("repairTmp=" + process.env.TMPDIR);
   };
   await import("../scripts/verification-task-succession-test.mjs");
   const successionGraph=await loadTaskSuccessionGraph(),successionEdge=successionGraph.edges[0],
-    successionFixturePacks=await verificationPacksAtCommit("c98889b1"),
+    successionFixturePacks=await verificationPacksAtCommit("c98889b1",
+      {historicalRegistryFallback:true}),
     successionSource=successionGraph.identities[successionEdge.sourceTaskDigest],
     successionIncident={id:"d3a49b37-e016-4bed-830c-9531045a6773",state:"unresolved",
       failure:{task:structuredClone(successionSource),retryScope:{kind:"target",
@@ -4177,6 +4181,7 @@ const synthetic = [
     source:[], process:["scripts/", "acceptance/src/acceptance/"],
     globalImpact:["acceptance/src/acceptance/pack_session.clj"],
     features:[], handlers:[], unit:["test/process-test.mjs"],
+    verificationOnly:{productionOwner:"alpha"},
   }),
   pack("empty", {
     source:[], unit:[], features:[], handlers:[], dependencies:["alpha"],
@@ -4838,6 +4843,7 @@ const focusedProcessOwnershipPacks = [
     source:[], process:["scripts/", "verification/"],
     unit:["test/verification-process-contract-test.mjs"],
     features:[], handlers:[],
+    verificationOnly:{productionOwner:"flow"},
   }),
 ];
 for (const processPath of [
@@ -5557,7 +5563,8 @@ for (const [key, taskKey] of [["unit", "unitTasks"], ["property", "propertyTasks
 assert.deepEqual(exactProjectPlan.sessionTasks.map(({ packId }) => packId), ["project_management"],
   "the one exact owner session consumes the one isolated project-management handler");
 const vtd008BasePacks = JSON.parse(await exec("git", ["show", "0adee4fa84:verification/packs.json"]));
-const baseTerminalPlan = planVerification(vtd008BasePacks, {terminalFull:true});
+const baseTerminalPlan = planVerification(vtd008BasePacks,
+  {terminalFull:true,historicalRegistryFallback:true});
 const currentTerminalPlan = planVerification(packs, {terminalFull:true});
 const vtd006ProgramMigration = new Map([
   ["test/browser-packs/side-panel-capture.mjs", "test/side-panel-component-layout-runtime-test.mjs"],
@@ -6054,7 +6061,7 @@ assert.deepEqual(eventEvidenceProfile,
   "all Event Library owner evidence identities remain conserved");
 const exactEventPlan = planVerification(packs,{packIds:["event-library"],includeProperties:true});
 const acceptedEventPlan = planVerification(vtd008BasePacks,
-  {packIds:["event-library"],includeProperties:true});
+  {packIds:["event-library"],includeProperties:true,historicalRegistryFallback:true});
 assert.deepEqual(terminalIdentities(exactEventPlan), terminalIdentities(acceptedEventPlan),
   "the exact Event Library plan remains identical to the accepted specification base");
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,
@@ -10781,8 +10788,10 @@ assert.deepEqual(vtd009ShellCalibration.exactPackDuration,
 assert.deepEqual(committedCalibrationReport.runnablePacks.filter(({id}) => id !== "shell"),
   vtd009BaseCalibration.runnablePacks.filter(({id}) => id !== "shell"));
 assert.deepEqual(committedCalibrationReport.browserTargets, vtd009BaseCalibration.browserTargets);
-const vtd009ExactBase = planVerification(vtd009BasePacks, {packIds:["shell"],includeProperties:true});
-const vtd009TerminalBase = planVerification(vtd009BasePacks, {terminalFull:true});
+const vtd009ExactBase = planVerification(vtd009BasePacks,
+  {packIds:["shell"],includeProperties:true,historicalRegistryFallback:true});
+const vtd009TerminalBase = planVerification(vtd009BasePacks,
+  {terminalFull:true,historicalRegistryFallback:true});
 const vtd009TerminalCurrent = planVerification(packs, {terminalFull:true});
 const vtd009HistoricalShellTasks = localShellPlan.tasks.filter(({ key }) =>
   key !== "unit:test/workspace-tabs-installed-controller-test.mjs" &&

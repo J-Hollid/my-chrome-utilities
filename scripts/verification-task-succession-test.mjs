@@ -223,6 +223,7 @@ const flowExportAcceptance=(features)=>({...acceptanceTask(features),key:"accept
   packId:"flow_export",args:["acceptance-pack-runner","flow_export",
     ...acceptanceTask(features).args.slice(2)]});
 const flowExportPack=(features)=>({id:"flow_export",features,
+  source:["src/data-layer-project-documentation-workspace-ui.ts"],
   verificationInputs:["test/data-layer-flow-table-documentation-export-test.mjs"]});
 const plannedFlowExportAcceptance=(packs)=>verificationTaskIdentity(planVerification(packs,
   {packIds:["flow_export"]}).tasks.find(({key})=>key==="acceptance-session:flow_export"));
