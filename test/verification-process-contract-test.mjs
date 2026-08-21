@@ -11108,6 +11108,9 @@ const verificationProcessContractSource = await readFile(new URL(import.meta.url
 const confirmedFlakyHandlerSource = await readFile(new URL(
   "../acceptance/src/acceptance/verification_support/modular_architecture_vtd015_handlers.clj",
   import.meta.url), "utf8");
+const cardinalityHandlerSource = await readFile(new URL(
+  "../acceptance/src/acceptance/verification_support/modular_architecture_cardinality_handlers.clj",
+  import.meta.url), "utf8");
 function confirmedFlakyAcceptanceEvidenceRoutingRegression(context) {
   const expectedPreRepairFailure = { processEvidenceBound:false, featureAll20AssertionScoped:false };
   const expectedRepairResult = { processEvidenceBound:true, featureAll20AssertionScoped:true };
@@ -11489,6 +11492,35 @@ function registryOwnershipCompatibilityRegression(context) {
     preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
     repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
 }
+function cardinalityAcceptanceReceiptRegistrationRegression(context) {
+  const shell = packs.find(({ id }) => id === "shell");
+  const slice = shell.verificationSlices.find(
+    ({ id }) => id === "verification_pack_cardinality_contract");
+  const taskKey = "unit:scripts/verification-pack-cardinality/acceptance.mjs";
+  const expectedPreRepairFailure = {registeredUnit:false,sliceTask:false,scenarioScoped:false,
+    derivedPhraseRouted:false};
+  const expectedRepairResult = {registeredUnit:true,sliceTask:true,scenarioScoped:true,
+    derivedPhraseRouted:true};
+  const repairResult = {
+    registeredUnit:shell.unit.includes("scripts/verification-pack-cardinality/acceptance.mjs"),
+    sliceTask:slice.tasks.includes(taskKey),
+    scenarioScoped:cardinalityHandlerSource.includes(
+      '(= "Modular verification packs 192"\n                   (:acceptance/scenario-name world))'),
+    derivedPhraseRouted:confirmedFlakyHandlerSource.includes(
+      '#"^no feature-mode all-runnable-pack run is authorized$"'),
+  };
+  assert.deepEqual(repairResult, expectedRepairResult,
+    "cardinality acceptance is a registered receipt prerequisite with scenario-local routing");
+  const fixture = {id:"cardinality-acceptance-receipt-registration-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{scenarioRange:"Modular verification packs 192-198",taskKey},
+    expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest = verificationDigest(fixture);
+  return {version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
@@ -11538,6 +11570,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           ? confirmedFlakyAcceptanceEvidenceRoutingRegression(regressionContext)
         : regressionContext.causalCategory === "other:registry-ownership-compatibility"
           ? registryOwnershipCompatibilityRegression(regressionContext)
+        : regressionContext.causalCategory === "other:cardinality acceptance receipt registration"
+          ? cardinalityAcceptanceReceiptRegistrationRegression(regressionContext)
           : artifactLockTimeoutRepairRegression(regressionContext),
   }));
 }
