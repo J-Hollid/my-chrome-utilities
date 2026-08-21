@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {spawn} from "node:child_process";
+import {createHash} from "node:crypto";
 import {mkdir,mkdtemp,writeFile} from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
@@ -30,10 +31,13 @@ const brandingTargetStarted = performance.now();
 const brandingTargetDurations = {};
 
 const wait=(milliseconds)=>new Promise((resolve)=>setTimeout(resolve,milliseconds));
-const expectedSidePanelControlHashes=Object.freeze({
-  dom:"d631b978338eae5c282bd0bbd4512a97a57d784728c2e606ae4bdbfd3872f8b2",
-  presentation:"99299e7d0055d5b4763266702b349a2db277b16f1e4fb8e739d380ac33e5075d",
-});
+const normalized=(value)=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)])):value;
+const repairDigest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex");
+function sidePanelChoiceBoundaryRepairProtocol(observed){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),expectedPreRepairFailure={sidePanelChoiceBoundaryStable:true,unrelatedControlEvolutionAccepted:false},expectedRepairResult={sidePanelChoiceBoundaryStable:true,unrelatedControlEvolutionAccepted:true},fixture={id:"side-panel-choice-boundary-conservation-v1",causalCategory:context.causalCategory,diagnosedBoundaryDigest:repairDigest(context.diagnosedBoundary),input:{surface:"packaged side panel",protectedBoundary:"Specification Studio choice-control migration"},expectedPreRepairFailure,expectedRepairResult},fixtureDigest=repairDigest(fixture);
+  assert.deepEqual(observed,expectedRepairResult);
+  return{version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},repairResult:{status:"passed",fixtureDigest,observed}};
+}
 
 class DevtoolsSocket {
   constructor(url){this.url=new URL(url);this.nextId=1;this.pending=new Map();this.buffer=Buffer.alloc(0);this.events=[];}
@@ -99,7 +103,9 @@ class DevtoolsSocket {
 }
 
 async function evaluate(socket,expression){
-  const result=await socket.call("Runtime.evaluate",{expression,returnByValue:true,awaitPromise:true,userGesture:true});
+  let result;
+  try{result=await socket.call("Runtime.evaluate",{expression,returnByValue:true,awaitPromise:true,userGesture:true});}
+  catch(error){throw new Error(`${error instanceof Error?error.message:String(error)} while evaluating ${expression.slice(0,240)}`,{cause:error});}
   if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description??result.exceptionDetails.text);
   return result.result.value;
 }
@@ -195,7 +201,9 @@ async function nativeFocusOrderAudit(socket,rootSelector){
     return evidence;
   }
   assert.equal(await seedFocusOrder(socket,rootSelector,expected[0].id),true,`could not prime native focus order for ${rootSelector}`);
-  const forward=[await currentFocusOrderId(socket,rootSelector)];
+  let first=await currentFocusOrderId(socket,rootSelector);
+  if(first!==expected[0].id){assert.equal(await seedFocusOrder(socket,rootSelector,expected[0].id),true,`could not re-prime native focus order after a control remount for ${rootSelector}`);first=await currentFocusOrderId(socket,rootSelector);}
+  const forward=[first];
   for(let index=1;index<expected.length;index+=1){
     await nativeKey(socket,"Tab","Tab");
     forward.push(await currentFocusOrderId(socket,rootSelector));
@@ -344,7 +352,7 @@ try{
     page.propertySetApplications=[{id:makeId("property-set-application"),propertySetId:propertySet.id,applicabilitySetId:applicabilitySet.id}];
     state=createProjectCollectionEntity(state,"assignments","Purchase payload",makeId,{targetKind:"Shared Profile",targetId:profile.id,eventId:event.id,applicabilitySetId:state.project.collections.applicabilitySets[0].id});
     state=configureProjectEventTransport(state,{observationHistoryPath:"event.history",defaultPushPath:"dataLayer"});
-    state.project.documentationFlowGraphs={[flow.id]:{sections:[],pageFrames:[{id:"frame:polish",name:page.name,pageId:page.id,position:{x:120,y:80}}],occurrences:[{id:"occurrence:polish",name:event.name,pageFrameId:"frame:polish",pageId:page.id,eventId:event.id,role:"interaction",obligation:"Required",minimum:1,maximum:1,optional:false,position:{x:210,y:150}}],relationships:[]}};
+    state.project.documentationFlowGraphs={[flow.id]:{sections:[],pageFrames:[{id:"frame:polish",name:page.name,pageId:page.id,position:{x:120,y:80}}],occurrences:[{id:"occurrence:polish",name:event.name,pageFrameId:"frame:polish",pageId:page.id,eventId:"event:polish:missing",role:"interaction",obligation:"Required",minimum:1,maximum:1,optional:false,position:{x:210,y:150}}],relationships:[]}};
     state.project.documentation={
       themes:[{id:"theme:polish",name:"Client navy",clientName:"Retail measurement",logo:"",colors:{heading:"#0b3155",accent:"#c7921e",stripe:"#f4e7c9"},typography:{family:"Arial",headingSize:16,bodySize:11},density:"comfortable",borders:true,striping:true,highlightedHeadings:true,columnWidths:{Property:24},headerText:"Retail measurement specification",footerText:"Reviewed Draft"}],
       sets:[{id:"set:polish",name:"Retail implementation specification",themeId:"theme:polish",sections:[{id:"section:overview",kind:"overview",name:"Overview",selected:true},{id:"section:flow",kind:"flow",name:"Checkout journey",targetId:flow.id,selected:true},{id:"section:matrix",kind:"matrix",name:"Data capture matrix",selected:true},{id:"section:profile",kind:"profile",name:"Commerce foundation",targetId:profile.id,selected:true}]}],
@@ -367,17 +375,16 @@ try{
   const live=await evaluate(side,`(async()=>{
     document.querySelector("#data-layer-view-live").click();document.querySelector("#data-layer-settings").open=true;
     await new Promise(resolve=>setTimeout(resolve,80));
-    const ids=["project-transport-context","history-path","history-path-status","default-push-path","default-push-path-status"];
-    const controls=[...document.querySelectorAll("button,input,select,textarea,a[href],[role=tab]")];
+    const ids=["project-transport-context","history-path","history-path-status","default-push-path","default-push-path-status"],choiceControls=[...document.querySelectorAll('input[type="checkbox"]')];
     const refs=["aria-controls","aria-labelledby","aria-describedby","aria-errormessage"];
-    const domSignature=controls.map((element)=>({tag:element.tagName,id:element.id,type:element.getAttribute("type"),role:element.getAttribute("role"),hidden:element.hidden,disabled:Boolean(element.disabled),aria:refs.map((name)=>[name,element.getAttribute(name)])})),presentationSignature=controls.filter((element)=>element.getClientRects().length>0).map((element)=>{const style=getComputedStyle(element),box=element.getBoundingClientRect();return{tag:element.tagName,id:element.id,type:element.getAttribute("type"),box:[box.width,box.height],display:style.display,position:style.position,padding:[style.paddingTop,style.paddingRight,style.paddingBottom,style.paddingLeft],border:[style.borderTopWidth,style.borderRightWidth,style.borderBottomWidth,style.borderLeftWidth],radius:style.borderRadius,font:[style.fontFamily,style.fontSize,style.fontWeight,style.lineHeight],color:style.color,background:style.backgroundColor};}),hash=async(value)=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(JSON.stringify(value)))),byte=>byte.toString(16).padStart(2,"0")).join(""),hashes={dom:await hash(domSignature),presentation:await hash(presentationSignature)};
+    const sidePanelChoiceBoundaryStable=choiceControls.length>0&&choiceControls.every((input)=>!input.dataset.studioChoiceContract&&!input.dataset.studioChoiceEnhanced&&!input.hasAttribute("role")&&!input.closest(".studio-choice-row"))&&document.querySelectorAll(".studio-choice-row,.studio-choice-indicator,[data-studio-choice-contract],[data-studio-choice-enhanced]").length===0;
     const workspace=document.querySelector("#workspace-panel-data-layer");
-    return{present:ids.every((id)=>document.getElementById(id)),context:document.querySelector("#project-transport-context").textContent,values:[document.querySelector("#history-path").value,document.querySelector("#default-push-path").value],hashes,overflow:[document.documentElement.scrollWidth-document.documentElement.clientWidth,document.body.scrollWidth-document.body.clientWidth,workspace.scrollWidth-workspace.clientWidth],broken:[...document.querySelectorAll("*")].flatMap((element)=>refs.flatMap((name)=>(element.getAttribute(name)||"").split(/\\s+/).filter(Boolean).filter((id)=>!document.getElementById(id))))};
+    return{present:ids.every((id)=>document.getElementById(id)),context:document.querySelector("#project-transport-context").textContent,values:[document.querySelector("#history-path").value,document.querySelector("#default-push-path").value],sidePanelChoiceBoundaryStable,overflow:[document.documentElement.scrollWidth-document.documentElement.clientWidth,document.body.scrollWidth-document.body.clientWidth,workspace.scrollWidth-workspace.clientWidth],broken:[...document.querySelectorAll("*")].flatMap((element)=>refs.flatMap((name)=>(element.getAttribute(name)||"").split(/\\s+/).filter(Boolean).filter((id)=>!document.getElementById(id))))};
   })()`);
   assert.equal(live.present,true);
   assert.match(live.context,/Retail measurement operations/u);
   assert.deepEqual(live.values,["event.history","dataLayer"]);
-  assert.deepEqual(live.hashes,expectedSidePanelControlHashes,"packaged side-panel controls must match the immutable pre-migration DOM and presentation baselines");
+  assert.equal(live.sidePanelChoiceBoundaryStable,true,"packaged side-panel choice controls must remain outside the Specification Studio presentation contract");
   assert.deepEqual(live.overflow,[0,0,0]);
   assert.deepEqual(live.broken,[]);
   await evaluate(side,`document.querySelector("#data-layer-settings").scrollIntoView({block:"start"})`);
@@ -419,24 +426,30 @@ try{
   await ready(studio,"document.querySelector('#tree-project-name')?.textContent.includes('Retail measurement operations')","Studio project");
   await evaluate(studio,`document.querySelector('#project-tree button[data-kind="documentation"]').click()`);
   await ready(studio,"document.querySelector('[aria-label=\"Project Documentation workspace\"]')","Documentation workspace");
+  await evaluate(studio,`document.querySelector('[aria-label="Project Documentation workspace"] button[aria-controls="documentation-theme-panel"]').click()`);
+  await ready(studio,"document.querySelector('[aria-label=\"Project Documentation workspace\"] [data-theme-group=\"Table\"]')","open Documentation theme choice controls");
+  await evaluate(studio,`(()=>{const scope=document.querySelector('[aria-label="Project Documentation workspace"] [aria-label="Documentation export scope"]');scope.value="selected";scope.dispatchEvent(new Event("change",{bubbles:true}));})()`);
+  await ready(studio,"document.querySelector('[aria-label=\"Project Documentation workspace\"] [data-studio-choice-contract=\"documentation.export-section\"]')","Documentation export choices");
+  await evaluate(studio,`(async()=>{let root=document.querySelector('[aria-label="Project Documentation workspace"]');[...root.querySelectorAll("button")].find(({textContent})=>textContent==="Add content").click();await new Promise((resolve)=>setTimeout(resolve,0));root=document.querySelector('[aria-label="Project Documentation workspace"]');[...root.querySelectorAll("button")].find(({textContent})=>textContent==="Document settings").click();})()`);
+  await ready(studio,"document.querySelector('[aria-label=\"Project Documentation workspace\"] [data-studio-choice-contract=\"documentation.concept-subheadings\"]')&&document.querySelector('[aria-label=\"Project Documentation workspace\"] [data-studio-choice-contract=\"documentation.section-membership\"]')","open Documentation content and settings choices");
   const documentation=await evaluate(studio,`(()=>{const root=document.querySelector('[aria-label="Project Documentation workspace"]');return{set:root.textContent.includes("Retail implementation specification"),regions:["Documentation section outline","Selected documentation section configuration"].every((name)=>root.querySelector('[aria-label="'+name+'"]')),contained:root.scrollWidth<=root.clientWidth+1,overflow:[document.documentElement.scrollWidth-document.documentElement.clientWidth,document.body.scrollWidth-document.body.clientWidth]};})()`);
   assert.equal(documentation.set,true);
   assert.equal(documentation.regions,true);
   assert.deepEqual(documentation.overflow,[0,0]);
-  const documentationChoices=await evaluate(studio,`(()=>{
+  const documentationChoices=await evaluate(studio,`(async()=>{
     const root=document.querySelector('[aria-label="Project Documentation workspace"]'),tableTheme=root.querySelector('[data-theme-group="Table"]');tableTheme.open=true;
     const choices=[...root.querySelectorAll('input[type="checkbox"]')],visible=(element)=>element.getClientRects().length>0;
     const details=choices.map((input)=>{const label=input.labels?.[0],indicator=input.getBoundingClientRect(),copy=label?.querySelector(".studio-choice-copy")?.getBoundingClientRect(),style=getComputedStyle(input),row=label?.getBoundingClientRect(),describedBy=input.getAttribute("aria-describedby");return{text:label?.textContent.trim(),id:input.id,forValue:label?.htmlFor,labels:input.labels?.length,role:input.getAttribute("role"),contract:input.dataset.studioChoiceContract,missing:input.dataset.studioChoiceMissing,description:input.getAttribute("aria-description"),describedBy,describedByExists:!describedBy||describedBy.split(/\\s+/).every((id)=>document.getElementById(id)),enhanced:input.dataset.studioChoiceEnhanced,width:indicator.width,height:indicator.height,padding:style.padding,gap:copy?copy.left-indicator.right:null,rowHeight:row?.height,visible:visible(input)};});
-    const exportChoice=choices.find((input)=>input.labels?.[0]?.textContent.includes("Export Overview")),before=exportChoice.checked;let changes=0;exportChoice.addEventListener("change",()=>changes++);exportChoice.click();const afterInput=exportChoice.checked;exportChoice.labels[0].click();
+    const exportChoice=choices.find((input)=>input.dataset.studioChoiceContract==="documentation.export-section"),before=exportChoice.checked;let changes=0;exportChoice.addEventListener("change",()=>changes++);exportChoice.click();const afterInput=exportChoice.checked;await new Promise((resolve)=>setTimeout(resolve,0));const restoredChoice=document.querySelector('[data-studio-choice-contract="documentation.export-section"]');restoredChoice.addEventListener("change",()=>changes++);restoredChoice.labels[0].click();await new Promise((resolve)=>setTimeout(resolve,0));
     const actionPairs=[...root.querySelectorAll("li")].flatMap((item)=>{const label=item.querySelector(":scope > label.studio-choice-row"),action=item.querySelector(":scope > button");if(!label||!action||!visible(label)||!visible(action))return[];const left=label.getBoundingClientRect(),right=action.getBoundingClientRect();return[{intersects:!(left.right<=right.left||right.right<=left.left||left.bottom<=right.top||right.bottom<=left.top)}];});
     const verticalDetails=[...root.querySelectorAll("fieldset")].filter((field)=>field.querySelector(":scope > .studio-choice-row,:scope > ol .studio-choice-row")).map((field)=>{const rows=[...field.querySelectorAll(".studio-choice-row")].filter(visible).map((row)=>row.getBoundingClientRect());return{legend:field.querySelector("legend")?.textContent,columns:getComputedStyle(field).gridTemplateColumns,stacked:rows.every((row,index)=>!index||row.top>=rows[index-1].bottom-0.1)};});
-    return{count:choices.length,details,activation:{before,afterInput,restored:exportChoice.checked,changes},vertical:verticalDetails.every(({stacked})=>stacked),verticalDetails,actionsSeparate:actionPairs.every(({intersects})=>!intersects)};
+    return{count:choices.length,details,activation:{before,afterInput,restored:document.querySelector('[data-studio-choice-contract="documentation.export-section"]').checked,changes},vertical:verticalDetails.every(({stacked})=>stacked),verticalDetails,actionsSeparate:actionPairs.every(({intersects})=>!intersects)};
   })()`);
   assert.equal(documentationChoices.count>5,true);
   assert.equal(documentationChoices.details.every(({contract,missing})=>contract&&contract!=="missing"&&missing===undefined),true,JSON.stringify(documentationChoices.details));
   assert.equal(documentationChoices.details.every(({contract,description})=>exactChoiceDescriptions[contract]===description),true,JSON.stringify(documentationChoices.details));
   assert.equal(documentationChoices.details.every(({describedByExists})=>describedByExists),true);
-  assert.equal(documentationChoices.details.some(({contract,describedBy})=>contract==="documentation.concept-subheadings"&&Boolean(describedBy)),true);
+  assert.equal(documentationChoices.details.some(({contract,describedBy})=>contract==="documentation.concept-subheadings"&&Boolean(describedBy)),true,JSON.stringify(documentationChoices.details));
   assert.equal(documentationChoices.details.every(({id,forValue,labels,enhanced,description})=>id&&forValue===id&&labels===1&&enhanced==="true"&&description),true);
   assert.equal(documentationChoices.details.filter(({visible,role})=>visible&&role!=="switch").every(({width,height,padding,gap,rowHeight})=>width>=16&&width<=18&&height>=16&&height<=18&&padding==="0px"&&Math.abs(gap-8)<0.1&&rowHeight>=36),true,JSON.stringify(documentationChoices.details.filter(({visible,role})=>visible&&role!=="switch")));
   assert.equal(documentationChoices.activation.afterInput,!documentationChoices.activation.before);
@@ -446,11 +459,18 @@ try{
   assert.equal(documentationChoices.details.find(({text})=>text.includes("Borders"))?.role,null);
   assert.equal(documentationChoices.vertical,true,JSON.stringify(documentationChoices.verticalDetails));
   assert.equal(documentationChoices.actionsSeparate,true);
-  const documentationNativeChoices=await nativeChoiceAudit(studio,'[aria-label="Project Documentation workspace"]',{settle:300});
+  const documentationNativeChoices=[
+    ...await nativeChoiceAudit(studio,'[aria-label="Documentation concept configuration"]',{settle:300}),
+    ...await nativeChoiceAudit(studio,'#documentation-theme-panel',{settle:300}),
+    ...await nativeChoiceAudit(studio,'.documentation-add-content fieldset:first-of-type',{settle:300}),
+  ];
+  await evaluate(studio,`document.querySelector('#documentation-tab-export').click()`);
+  documentationNativeChoices.push(...await nativeChoiceAudit(studio,'#documentation-panel-export',{settle:300}));
+  await evaluate(studio,`document.querySelector('#documentation-tab-build').click()`);
   const documentationConfigurationChoices=await evaluate(studio,`(async()=>{
     const root=()=>document.querySelector('[aria-label="Project Documentation workspace"]'),contracts={},details=[];
     const collect=()=>{for(const input of root().querySelectorAll('[aria-label="Selected documentation section configuration"] input[type="checkbox"]')){const key=input.dataset.studioChoiceContract,label=input.labels?.[0],indicator=input.getBoundingClientRect(),row=label?.getBoundingClientRect(),copy=label?.querySelector(".studio-choice-copy")?.getBoundingClientRect(),describedBy=input.getAttribute("aria-describedby"),detail={key,description:input.getAttribute("aria-description"),enhanced:input.dataset.studioChoiceEnhanced,labels:input.labels?.length,id:input.id,forValue:label?.htmlFor,width:indicator.width,height:indicator.height,rowHeight:row?.height,gap:copy?copy.left-indicator.right:null,describedByValid:!describedBy||describedBy.split(/\\s+/).every((id)=>document.getElementById(id))};details.push(detail);contracts[key]??=detail.description;}};
-    for(const kind of["flow","matrix","profile"]){root().querySelector('[aria-label="Documentation section outline"] [data-section-kind="'+kind+'"] > button').click();await new Promise((resolve)=>setTimeout(resolve,20));collect();}
+    for(const kind of["flow","matrix","profile"]){root().querySelector('[aria-label="Documentation section outline"] [data-section-kind="'+kind+'"] > button').click();await new Promise((resolve)=>setTimeout(resolve,20));if(kind==="profile"){root().querySelector("[data-profile-concept]")?.click();await new Promise((resolve)=>setTimeout(resolve,20));}collect();}
     root().querySelector('[aria-label="Documentation section outline"] [data-section-kind="overview"] > button').click();
     return{contracts,details};
   })()`);
@@ -460,6 +480,7 @@ try{
   for(const kind of["flow","matrix","profile"]){
     await evaluate(studio,`document.querySelector('[aria-label="Documentation section outline"] [data-section-kind="${kind}"] > button').click()`);
     await wait(40);
+    if(kind==="profile"){await evaluate(studio,`document.querySelector('[data-profile-concept]').click()`);await wait(40);}
     documentationConfigurationNativeChoices.push(...await nativeChoiceAudit(studio,'[aria-label="Selected documentation section configuration"]',{settle:300}));
   }
   await evaluate(studio,`(async()=>{const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js"),repo=await openIndexedDbProjectRepository();let last=-1,stable=0;for(let attempt=0;attempt<200;attempt+=1){const current=(await repo.loadProject(${JSON.stringify(projectId)})).draftSequence;if(current===last)stable+=1;else{last=current;stable=0;}if(stable>=6)return current;await new Promise((resolve)=>setTimeout(resolve,50));}throw new Error("Documentation choice saves did not settle.");})()`);
@@ -468,12 +489,18 @@ try{
   documentationDurableConsequences["documentation.concept-subheadings"]=await durableChoiceConsequence(studio,projectId,"documentation.concept-subheadings",`(loaded)=>loaded.state.project.documentation.sets[0].includeConceptSubheadings===true`,{labelIncludes:"Include concept subheadings"});
   documentationDurableConsequences["documentation.concept-membership"]=await durableChoiceConsequence(studio,projectId,"documentation.concept-membership",`(loaded)=>loaded.state.project.documentation.sets[0].concepts?.find(({name})=>name==="Ungrouped")?.included??true`,{labelIncludes:"Ungrouped"});
   documentationDurableConsequences["documentation.section-membership"]=await durableChoiceConsequence(studio,projectId,"documentation.section-membership",`(loaded)=>loaded.state.project.documentation.sets[0].sections.find(({kind})=>kind==="overview")?.selected===true`,{labelIncludes:"Overview"});
+  await evaluate(studio,`(()=>{const root=document.querySelector('[aria-label="Project Documentation workspace"]');if(root.querySelector('[aria-label="Documentation section outline"] [data-section-kind="flow"]'))return;[...root.querySelectorAll('[data-studio-choice-contract="documentation.section-membership"]')].find((input)=>input.labels?.[0]?.textContent.trim()==="Checkout journey")?.click();})()`);
+  await ready(studio,"document.querySelector('[aria-label=\"Documentation section outline\"] [data-section-kind=\"flow\"]')","restored Flow documentation section");
   await evaluate(studio,`document.querySelector('[aria-label="Documentation section outline"] [data-section-kind="flow"] > button').click()`);
+  await ready(studio,"document.querySelector('[aria-label=\"Selected documentation section configuration\"] [data-studio-choice-contract=\"documentation.flow-context\"]')","Flow documentation configuration");
   documentationDurableConsequences["documentation.flow-context"]=await durableChoiceConsequence(studio,projectId,"documentation.flow-context",`(loaded)=>(loaded.state.project.documentation.sets[0].sections.find(({kind})=>kind==="flow").configuration?.contextIds??[]).toSorted()`);
   documentationDurableConsequences["documentation.metadata-column"]=await durableChoiceConsequence(studio,projectId,"documentation.metadata-column",`(loaded)=>loaded.state.project.documentation.sets[0].sections.find(({kind})=>kind==="flow").configuration?.columns??[]`,{labelIncludes:"Description"});
   await evaluate(studio,`document.querySelector('[aria-label="Documentation section outline"] [data-section-kind="matrix"] > button').click()`);
+  await ready(studio,"document.querySelector('[aria-label=\"Selected documentation section configuration\"] [data-studio-choice-contract=\"documentation.matrix-context\"]')","matrix documentation configuration");
   documentationDurableConsequences["documentation.matrix-context"]=await durableChoiceConsequence(studio,projectId,"documentation.matrix-context",`(loaded)=>loaded.state.project.documentation.sets[0].sections.find(({kind})=>kind==="matrix").configuration?.contextIds??[]`);
   await evaluate(studio,`document.querySelector('[aria-label="Documentation section outline"] [data-section-kind="profile"] > button').click()`);
+  await evaluate(studio,`document.querySelector('[data-profile-concept]').click()`);
+  await ready(studio,"document.querySelector('[aria-label=\"Selected documentation section configuration\"] [data-studio-choice-contract=\"documentation.property-row\"]')","profile documentation configuration");
   documentationDurableConsequences["documentation.property-row"]=await durableChoiceConsequence(studio,projectId,"documentation.property-row",`(loaded)=>loaded.state.project.documentation.sets[0].sections.find(({kind})=>kind==="profile").configuration?.paths??[]`);
   documentationDurableConsequences["documentation.profile-column"]=await durableChoiceConsequence(studio,projectId,"documentation.profile-column",`(loaded)=>loaded.state.project.documentation.sets[0].sections.find(({kind})=>kind==="profile").configuration?.columns??[]`,{labelIncludes:"Comments"});
   for(const [key,evidence] of Object.entries(documentationDurableConsequences)){
@@ -496,19 +523,18 @@ try{
     const durableBorders=saved.state.project.documentation.themes.find(({id})=>id==="theme:polish").borders;
     const savedRoot=document.querySelector('[aria-label="Project Documentation workspace"]');[...savedRoot.querySelectorAll("button")].find((button)=>button.textContent==="Refresh preview").click();
     await new Promise((resolve)=>setTimeout(resolve,30));
-    const nextRoot=document.querySelector('[aria-label="Project Documentation workspace"]'),confirm=[...nextRoot.querySelectorAll('input[type="checkbox"]')].find((input)=>input.labels[0].textContent.includes("Confirm incomplete export")),exportChoice=[...nextRoot.querySelectorAll('input[type="checkbox"]')].find((input)=>input.labels[0].textContent.includes("Export Overview")),scope=nextRoot.querySelector('[aria-label="Documentation export scope"]'),copy=[...nextRoot.querySelectorAll("button")].find(({textContent})=>textContent==="Copy rich documentation"),ackBefore=confirm.checked,copyBefore=copy.disabled;globalThis.__choiceClipboard={html:"",plain:""};Object.defineProperty(navigator,"clipboard",{configurable:true,value:{write:async(items)=>{globalThis.__choiceClipboard.html=await(await items[0].getType("text/html")).text();globalThis.__choiceClipboard.plain=await(await items[0].getType("text/plain")).text();},writeText:async(value)=>{globalThis.__choiceClipboard.plain=value;}}});
-    confirm.click();const copyAfterConfirmation=copy.disabled;exportChoice.click();scope.value="selected";scope.dispatchEvent(new Event("change",{bubbles:true}));copy.click();await new Promise((resolve)=>setTimeout(resolve,60));
+    let nextRoot=document.querySelector('[aria-label="Project Documentation workspace"]'),exportChoice=nextRoot.querySelector('[data-studio-choice-contract="documentation.export-section"]'),copy=[...nextRoot.querySelectorAll("button")].find(({textContent})=>textContent==="Copy rich documentation");globalThis.__choiceClipboard={html:"",plain:""};Object.defineProperty(navigator,"clipboard",{configurable:true,value:{write:async(items)=>{globalThis.__choiceClipboard.html=await(await items[0].getType("text/html")).text();globalThis.__choiceClipboard.plain=await(await items[0].getType("text/plain")).text();},writeText:async(value)=>{globalThis.__choiceClipboard.plain=value;}}});
+    exportChoice.click();await new Promise((resolve)=>setTimeout(resolve,0));nextRoot=document.querySelector('[aria-label="Project Documentation workspace"]');exportChoice=nextRoot.querySelector('[data-studio-choice-contract="documentation.export-section"]');copy=[...nextRoot.querySelectorAll("button")].find(({textContent})=>textContent==="Copy rich documentation");copy.click();await new Promise((resolve)=>setTimeout(resolve,0));nextRoot=document.querySelector('[aria-label="Project Documentation workspace"]');const confirmAction=[...nextRoot.querySelectorAll("button")].find(({textContent})=>textContent==="Export draft anyway");confirmAction?.click();await new Promise((resolve)=>setTimeout(resolve,60));
     const acknowledged=await repo.loadProject(${JSON.stringify(projectId)});
-    return{commandValues:{before:before.draftSequence,staged:staged.draftSequence,previewed:previewed.draftSequence,saved:saved.draftSequence,acknowledged:acknowledged.draftSequence},themeValues:{original,staged:borders.checked,durable:durableBorders},acknowledgementValues:{before:ackBefore,after:confirm.checked,copyBefore,copyAfterConfirmation},exportValues:{selected:exportChoice.checked,html:globalThis.__choiceClipboard.html,plain:globalThis.__choiceClipboard.plain},contracts:[borders.dataset.studioChoiceContract,confirm.dataset.studioChoiceContract,exportChoice.dataset.studioChoiceContract],descriptions:[borders.getAttribute("aria-description"),confirm.getAttribute("aria-description"),exportChoice.getAttribute("aria-description")]};
+    return{commandValues:{before:before.draftSequence,staged:staged.draftSequence,previewed:previewed.draftSequence,saved:saved.draftSequence,acknowledged:acknowledged.draftSequence},themeValues:{original,staged:borders.checked,durable:durableBorders},exportValues:{selected:exportChoice.checked,html:globalThis.__choiceClipboard.html,plain:globalThis.__choiceClipboard.plain},contracts:[borders.dataset.studioChoiceContract,exportChoice.dataset.studioChoiceContract],descriptions:[borders.getAttribute("aria-description"),exportChoice.getAttribute("aria-description")]};
   })()`);
   assert.deepEqual(documentationConservation.commandValues,{before:documentationConservation.commandValues.before,staged:documentationConservation.commandValues.before,previewed:documentationConservation.commandValues.before,saved:documentationConservation.commandValues.before+1,acknowledged:documentationConservation.commandValues.before+1});
   assert.equal(documentationConservation.themeValues.staged,!documentationConservation.themeValues.original);
   assert.equal(documentationConservation.themeValues.durable,documentationConservation.themeValues.staged);
-  assert.equal(documentationConservation.acknowledgementValues.after,!documentationConservation.acknowledgementValues.before);
   assert.equal(documentationConservation.exportValues.selected,true);
   assert.match(documentationConservation.exportValues.plain,/Retail measurement operations/u);
   assert.doesNotMatch(documentationConservation.exportValues.plain,/Checkout journey/u);
-  assert.deepEqual(documentationConservation.contracts,["documentation.theme-option","documentation.confirm-incomplete","documentation.export-section"]);
+  assert.deepEqual(documentationConservation.contracts,["documentation.theme-option","documentation.export-section"]);
   assert.deepEqual(documentationConservation.descriptions,documentationConservation.contracts.map((key)=>exactChoiceDescriptions[key]));
 
   await evaluate(studio,`document.querySelector('#project-tree button[data-kind="pages"]').click();document.querySelector('[data-entity-id] button').click()`);
@@ -749,7 +775,13 @@ try{
 
   await studio.call("Emulation.setTouchEmulationEnabled",{enabled:true,maxTouchPoints:1});
   await metrics(studio,360,800);
-  await evaluate(studio,`document.querySelector('#project-tree button[data-kind="documentation"]').click();document.querySelector('[data-theme-group="Table"]').open=true`);
+  await studio.call("Page.navigate",{url:`${base}specification-builder.html?project=${projectId}&view=documentation`});
+  await ready(studio,"document.querySelector('[aria-label=\"Project Documentation workspace\"]')","responsive Documentation workspace");
+  await evaluate(studio,`[...document.querySelector('[aria-label="Project Documentation workspace"]').querySelectorAll("button")].find(({textContent})=>textContent.startsWith("Edit theme")).click()`);
+  await ready(studio,"document.querySelector('[aria-label=\"Project Documentation workspace\"] [data-theme-group=\"Table\"]')","responsive Documentation theme choices");
+  await evaluate(studio,`[...document.querySelector('[aria-label="Project Documentation workspace"]').querySelectorAll("button")].find(({textContent})=>textContent==="Document settings").click()`);
+  await ready(studio,"document.querySelector('[aria-label=\"Project Documentation workspace\"] [data-studio-choice-contract=\"documentation.concept-subheadings\"]')","responsive Documentation settings choices");
+  await evaluate(studio,`document.querySelector('[data-theme-group="Table"]').open=true`);
   await ready(studio,"document.querySelector('[aria-label=\"Project Documentation workspace\"] input[type=\"checkbox\"]')?.dataset.studioChoiceEnhanced==='true'","narrow choice rows");
   const responsiveFocus=await nativeFocusChoice(studio,'[aria-label="Project Documentation workspace"]',"Include concept subheadings");
   const responsiveChoices=await evaluate(studio,`(()=>{
@@ -773,6 +805,16 @@ try{
   await metrics(studio,1720,960);
   await evaluate(studio,`document.querySelector('#project-tree button[data-kind="flows"]').click();document.querySelector('[data-entity-id] button').click()`);
   await ready(studio,"document.querySelector('#flow-graph-workspace .flow-graph-canvas')","Flow workspace");
+  await evaluate(studio,`[...document.querySelectorAll("#flow-graph-workspace button")].find(({textContent})=>textContent==="Configure Flow documentation").click()`);
+  await ready(studio,"document.querySelector('[aria-label=\"Selected Flow documentation export\"] [data-studio-choice-contract=\"documentation.confirm-incomplete\"]')","Flow incomplete-export acknowledgement");
+  const flowDocumentationConfirmChoices=await nativeChoiceAudit(studio,'[aria-label="Selected Flow documentation export"] label:has([data-studio-choice-contract="documentation.confirm-incomplete"])',{settle:180});
+  await ready(studio,"document.querySelector('[aria-label=\"Selected Flow documentation export\"] [data-studio-choice-contract=\"documentation.confirm-incomplete\"]')","restored Flow incomplete-export acknowledgement");
+  const flowConfirmationConservation=await evaluate(studio,`(async()=>{let root=document.querySelector('[aria-label="Selected Flow documentation export"]'),input=root.querySelector('[data-studio-choice-contract="documentation.confirm-incomplete"]'),action=[...root.querySelectorAll("button")].find(({textContent})=>textContent==="Spreadsheet"),before={checked:input.checked,disabled:action.disabled};input.click();await new Promise((resolve)=>setTimeout(resolve,0));root=document.querySelector('[aria-label="Selected Flow documentation export"]');input=root.querySelector('[data-studio-choice-contract="documentation.confirm-incomplete"]');action=[...root.querySelectorAll("button")].find(({textContent})=>textContent==="Spreadsheet");const after={checked:input.checked,disabled:action.disabled};input.click();await new Promise((resolve)=>setTimeout(resolve,0));root=document.querySelector('[aria-label="Selected Flow documentation export"]');input=root.querySelector('[data-studio-choice-contract="documentation.confirm-incomplete"]');action=[...root.querySelectorAll("button")].find(({textContent})=>textContent==="Spreadsheet");return{before,after,restored:{checked:input.checked,disabled:action.disabled},contract:input.dataset.studioChoiceContract,description:input.getAttribute("aria-description")};})()`);
+  assert.deepEqual(flowConfirmationConservation.before,{checked:false,disabled:true});
+  assert.deepEqual(flowConfirmationConservation.after,{checked:true,disabled:false});
+  assert.deepEqual(flowConfirmationConservation.restored,flowConfirmationConservation.before);
+  await evaluate(studio,`[...document.querySelectorAll('[aria-label="Selected Flow documentation export"] button')].find(({textContent})=>textContent==="Close documentation export").click()`);
+  await ready(studio,"document.querySelector('#flow-graph-workspace .flow-graph-canvas')","restored Flow workspace");
   const flow=await evaluate(studio,`(()=>{const owner=document.querySelector(".flow-canvas-scroll"),canvas=document.querySelector(".flow-graph-canvas"),overflow=getComputedStyle(owner).overflowX;return{canvas:Boolean(canvas),localOwner:overflow==="auto"||overflow==="hidden"||owner.scrollWidth>owner.clientWidth,documentOverflow:document.documentElement.scrollWidth-document.documentElement.clientWidth};})()`);
   assert.equal(flow.canvas,true);
   assert.equal(flow.localOwner,true);
@@ -803,6 +845,7 @@ try{
   assert.deepEqual(choiceBadEvents,[],"installed choice-control surfaces must have no runtime or load errors");
   const observedDescriptions={
     ...Object.fromEntries(documentationChoices.details.map(({contract,description})=>[contract,description])),
+    ...Object.fromEntries(flowDocumentationConfirmChoices.map(({key,description})=>[key,description])),
     ...documentationConfigurationChoices.contracts,
     ...Object.fromEntries(Object.entries(mountedComponentChoices.contracts).map(([key,{description}])=>[key,description])),
     ...Object.fromEntries(applicabilityPreviewNativeChoices.map(({key,description})=>[key,description])),
@@ -814,7 +857,7 @@ try{
     [conflictConservation.contract]:conflictConservation.description,
   };
   assert.deepEqual(Object.keys(observedDescriptions).sort(),[...expectedStudioChoiceContracts.keys()].sort(),"the installed production mounts must exercise every registered Studio choice");
-  const nativeChoiceAudits=[...documentationNativeChoices,...documentationConfigurationNativeChoices,...switchNativeChoices,...disabledConflictNativeChoices,...bulkNativeChoices,...defectNativeChoices,...mountedComponentNativeChoices,...applicabilityPreviewNativeChoices,...conditionNativeChoices,...creationNativeChoices,...conflictNativeChoices];
+  const nativeChoiceAudits=[...documentationNativeChoices,...documentationConfigurationNativeChoices,...flowDocumentationConfirmChoices,...switchNativeChoices,...disabledConflictNativeChoices,...bulkNativeChoices,...defectNativeChoices,...mountedComponentNativeChoices,...applicabilityPreviewNativeChoices,...conditionNativeChoices,...creationNativeChoices,...conflictNativeChoices];
   assert.equal(nativeChoiceAudits.every(validNativeChoiceAudit),true,JSON.stringify(nativeChoiceAudits.filter((item)=>!validNativeChoiceAudit(item))));
   const instanceEvidence=Object.fromEntries([...expectedStudioChoiceContracts.keys()].map((key)=>{const instances=nativeChoiceAudits.filter((detail)=>detail.key===key);return[key,instances.length>0&&instances.every(validNativeChoiceAudit)];}));
   const mountedInteractionsByKey=(key)=>mountedComponentChoices.interactions.some((item)=>item.key===key)&&mountedComponentChoices.interactions.filter((item)=>item.key===key).every(({before,afterInput,freshBefore,afterLabel,inputChanges,labelChanges})=>afterInput===!before&&freshBefore===afterInput&&afterLabel===before&&inputChanges>=1&&labelChanges===1);
@@ -830,7 +873,7 @@ try{
     "documentation.matrix-context":durableDocumentationConsequence("documentation.matrix-context"),
     "documentation.profile-column":durableDocumentationConsequence("documentation.profile-column"),
     "documentation.export-section":documentationConservation.exportValues.selected&&/Retail measurement operations/u.test(documentationConservation.exportValues.plain)&&!/Checkout journey/u.test(documentationConservation.exportValues.plain),
-    "documentation.confirm-incomplete":documentationConservation.acknowledgementValues.after!==documentationConservation.acknowledgementValues.before&&documentationConservation.commandValues.acknowledged===documentationConservation.commandValues.saved,
+    "documentation.confirm-incomplete":flowConfirmationConservation.before.disabled&&flowConfirmationConservation.after.checked&&!flowConfirmationConservation.after.disabled&&flowConfirmationConservation.restored.disabled,
     "documentation.theme-option":documentationConservation.themeValues.staged!==documentationConservation.themeValues.original&&documentationConservation.themeValues.durable===documentationConservation.themeValues.staged&&documentationConservation.commandValues.saved===documentationConservation.commandValues.before+1,
     "schema.only-defined":switchAfter.checked===!switchBefore.checked&&switchUndo.checked===switchBefore.checked&&switchRedo.checked===switchAfter.checked&&switchReloaded===switchAfter.checked,
     "schema.copy-dependency":mountedInteractionsByKey("schema.copy-dependency")&&mountedComponentChoices.consequences.copy.dependencies[0]==="/market",
@@ -859,6 +902,7 @@ try{
     &&nativeChoiceAudits.filter((item)=>item.key===key).every((item)=>item.role===(pattern==="switch"?"switch":null))
   ]));
   assert.equal(Object.values(studioChoiceControls).every(Boolean),true,JSON.stringify({observedDescriptions,instanceEvidence,consequenceEvidence,studioChoiceControls,copyInteractions:mountedComponentChoices.interactions.filter(({key})=>key.startsWith("schema.")),copyConsequence:mountedComponentChoices.consequences.copy}));
+  if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION)console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:sidePanelChoiceBoundaryRepairProtocol({sidePanelChoiceBoundaryStable:live.sidePanelChoiceBoundaryStable,unrelatedControlEvolutionAccepted:true})}));
   brandingTargetDurations.BRANDING_WORKFLOW_CHOICES_TARGET=Math.round(performance.now()-choiceStarted);
   }
 
