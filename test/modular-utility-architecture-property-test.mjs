@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {createHash} from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -451,7 +452,7 @@ for (let sample = 0; sample < 100; sample += 1) {
   const consumers = Array.from({ length:consumerCount }, (_, index) => `consumer-${sample}-${index}`);
   const selectedConsumers = consumers.filter((_, index) => (sample + index) % 3 !== 0);
   const helperPacks = [{
-    id:`process-${sample}`,
+    id:`process-${sample}`,verificationOnly:{productionOwner:consumers[0]},
     source:[], process:["test/support/"], globalImpact:["test/support/"],
     dependencies:[], sharedComponents:[], verificationInputs:[], runtimeInputs:[],
     verificationHelpers:[{ path:helperPath, consumers:selectedConsumers }],
@@ -712,6 +713,24 @@ for (let sample = 0; sample < 100; sample += 1) {
   nodes.set(missingPanel, { dataset:{} });
   assert.throws(() => bindUtilityPanels([...utilities, { ...utilities[0], id:"duplicate-owner" }], root),
     /owned by both/);
+}
+
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
+    normalized=(value)=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"
+      ?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right))
+        .map(([key,nested])=>[key,normalized(nested)])):value,
+    digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
+    expectedPreRepairFailure={explicitVerificationOnlyOwner:false,generatedPlansRunnable:false},
+    expectedRepairResult={explicitVerificationOnlyOwner:true,generatedPlansRunnable:true},
+    fixture={id:"generated-verification-only-pack-owner-v1",causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{generatedPackPrefix:"process-",cardinalityContract:"source-less runnable pack"},
+      expectedPreRepairFailure,expectedRepairResult},fixtureDigest=digest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:expectedRepairResult}}}));
 }
 
 console.log(`modular properties: 20 canonical timing receipts with duplicate provenance, isolated classes, and immutable cutoff partitions, ${declaredContracts.length} declared contracts, 100 bounded schedules, 100 verification budget calibrations with plan-scoped evidence, 100 undeclared contracts, 100 direct cross-module imports, 100 architecture boundaries, 100 verification graphs, 100 Chrome lifecycle argument sets, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 controlled-reference models, 100 shell capability models, 100 storage models, and 100 panel models passed`);
