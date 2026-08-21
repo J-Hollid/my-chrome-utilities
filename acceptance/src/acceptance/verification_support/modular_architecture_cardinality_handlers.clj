@@ -16,7 +16,7 @@
 (defn- verify-scenario! [scenario]
   (when-not (contains? @verified-scenarios scenario)
     (let [result (support/verified-command-result
-                  "node" "scripts/verification-pack-cardinality/acceptance.mjs" scenario)]
+                  "node" "scripts/verification-pack-cardinality/acceptance.mjs")]
       (support/assert! (zero? (:exit result))
                        (str "Registry-derived cardinality scenario " scenario " failed.")
                        {:out (:out result) :err (:err result)})
@@ -203,5 +203,8 @@
    {:pattern #"^a bounded granularity result receives one durable seam-or-parent-fallback disposition$"
     :handler (fn [world _example _captures] (verify-contract!) world)}
    {:pattern #"^no feature-mode all-runnable-pack run is authorized$"
+    :applies? (fn [world]
+                (= "Modular verification packs 192"
+                   (:acceptance/scenario-name world)))
     :handler (fn [world _example _captures] (verify-scenario! "192") world)}]
    (scenario-handlers))))

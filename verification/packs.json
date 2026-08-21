@@ -5858,6 +5858,7 @@
           "scripts/verification-pack-cardinality/"
         ],
         "tasks": [
+          "unit:scripts/verification-pack-cardinality/acceptance.mjs",
           "unit:test/verification-pack-cardinality-contract-test.mjs",
           "unit:test/settled-final-verification-workflow-test.mjs",
           "unit:test/verification-evidence-production-path-test.mjs",
@@ -6651,6 +6652,7 @@
       "test/swarmforge-process-contract-test.mjs",
       "test/swarmforge-outcome-bounded-autonomy-test.mjs",
       "test/stacked-campsite-control-test.mjs",
+      "scripts/verification-pack-cardinality/acceptance.mjs",
       "test/verification-pack-cardinality-contract-test.mjs",
       "test/verification-process-contract-test.mjs",
       "test/verification-evidence-production-path-test.mjs",

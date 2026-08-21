@@ -8,6 +8,7 @@ const prohibitedReliabilityHelpers = new Set([
 ]);
 
 export const registryCardinalityEvidenceTaskKeys = Object.freeze([
+  "unit:scripts/verification-pack-cardinality/acceptance.mjs",
   "unit:test/verification-pack-cardinality-contract-test.mjs",
   "unit:test/settled-final-verification-workflow-test.mjs",
   "unit:test/verification-evidence-production-path-test.mjs",

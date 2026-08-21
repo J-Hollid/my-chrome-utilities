@@ -176,6 +176,7 @@ assert.ok(cardinalitySlice, "the Shell pack owns the cardinality contract throug
 assert.deepEqual(cardinalitySlice.consumers, [],
   "semantic runnable-pack consumers do not become registry consumer edges");
 assert.deepEqual(cardinalitySlice.tasks, [
+  "unit:scripts/verification-pack-cardinality/acceptance.mjs",
   "unit:test/verification-pack-cardinality-contract-test.mjs",
   "unit:test/settled-final-verification-workflow-test.mjs",
   "unit:test/verification-evidence-production-path-test.mjs",

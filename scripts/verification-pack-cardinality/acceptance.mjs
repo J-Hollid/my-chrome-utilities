@@ -148,23 +148,34 @@ function verifyScenario197(packs) {
   assert.equal(added.length, current.length + 1);
 }
 
+async function verifyScenario198(packs) {
+  await verifyScenario193(packs);
+  verifyScenario195(packs);
+}
+
 export async function verifyRegistryCardinalityAcceptance(scenario) {
   const packs = await loadVerificationPacks();
-  if (scenario === "192") await verifyScenario192(packs);
+  if (scenario === "all") {
+    await verifyScenario192(packs);
+    await verifyScenario193(packs);
+    await verifyScenario194(packs);
+    verifyScenario195(packs);
+    verifyScenario196(packs);
+    verifyScenario197(packs);
+    await verifyScenario198(packs);
+  } else if (scenario === "192") await verifyScenario192(packs);
   else if (scenario === "193") await verifyScenario193(packs);
   else if (scenario === "194") await verifyScenario194(packs);
   else if (scenario === "195") verifyScenario195(packs);
   else if (scenario === "196") verifyScenario196(packs);
   else if (scenario === "197") verifyScenario197(packs);
-  else if (scenario === "198") {
-    await verifyScenario193(packs);
-    verifyScenario195(packs);
-  } else throw new Error(`Unknown registry-cardinality acceptance scenario: ${scenario}`);
+  else if (scenario === "198") await verifyScenario198(packs);
+  else throw new Error(`Unknown registry-cardinality acceptance scenario: ${scenario}`);
   return { scenario, status:"passed" };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  verifyRegistryCardinalityAcceptance(process.argv[2])
+  verifyRegistryCardinalityAcceptance(process.argv[2] ?? "all")
     .then((result) => process.stdout.write(`${JSON.stringify(result)}\n`))
     .catch((error) => { console.error(error.message); process.exitCode = 1; });
 }

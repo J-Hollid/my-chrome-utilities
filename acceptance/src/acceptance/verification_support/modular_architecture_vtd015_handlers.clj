@@ -412,7 +412,10 @@
                                     (= expected (value-at (get-in world [:vtd015/ownership-evidence :routing :rows])
                                                           (:vtd015/ownership-classification world)))
                                     "Ownership readiness selected the wrong workflow stage.")))}
-   {:pattern #"^no feature-mode all-20 run is authorized$"
+   {:pattern #"^no feature-mode all-runnable-pack run is authorized$"
+    :applies? (fn [world]
+                (not= "Modular verification packs 192"
+                      (:acceptance/scenario-name world)))
     :handler (fn [world _ _]
                (if (:vtd015/ownership-evidence world)
                  (ownership-assert! world
