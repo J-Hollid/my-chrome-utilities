@@ -27,7 +27,8 @@ export {
 } from "./verification-styles.mjs";
 import ts from "typescript";
 import {sharedBoundaryPlanFor,validateSharedBoundaryDeclarations} from "./verification-shared-boundaries.mjs";
-import { runnablePackIdsFromRegistry } from "./verification-pack-cardinality/contract.mjs";
+import { isRunnablePack, runnablePackIdsFromRegistry } from
+  "./verification-pack-cardinality/contract.mjs";
 export {sharedBoundaryPlanFor,validateSharedBoundaryDeclarations} from "./verification-shared-boundaries.mjs";
 
 const registryUrl = new URL("../verification/packs.json", import.meta.url);
@@ -897,6 +898,7 @@ function validateDeclaredTasks(packs) {
 }
 
 export async function validateVerificationPacks(packs, { inventory } = {}) {
+  runnablePackIdsFromRegistry(packs);
   const ids = new Set();
   for (const pack of packs) {
     if (ids.has(pack.id)) throw new Error(`Verification pack ids must be unique: ${pack.id}`);
@@ -1224,7 +1226,7 @@ function featureTasks(features, packs) {
 }
 
 function runnable(pack) {
-  return runnablePackIdsFromRegistry([pack]).length > 0;
+  return isRunnablePack(pack);
 }
 
 function uniquePackIds(tasks) {
@@ -1285,6 +1287,9 @@ export function planVerification(
     quarantinedSliceIds = packs.quarantinedSliceIds ?? [],
   } = {},
 ) {
+  runnablePackIdsFromRegistry(packs, {
+    allowLegacySourceLess:historicalRegistryFallback || packs.legacySourceLessOwnership === true,
+  });
   const known = new Set(packs.map(({ id }) => id));
   validateDependencies(packs, known);
   if (new Set(packIds).size !== packIds.length) throw new Error("Select every explicit verification pack once");

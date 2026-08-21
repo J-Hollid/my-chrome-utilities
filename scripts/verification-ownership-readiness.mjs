@@ -74,7 +74,8 @@ async function exactAnswer(options,packs,granularityDispositions) {
   if (!options.changedSince) throw new Error("Exact ownership readiness requires --changed-since");
   const changeSet=await canonicalVerificationChangeSet({base:options.changedSince,
     repositoryRoot:process.cwd()});
-  const basePacks=await verificationPacksAtCommit(changeSet.baseCommit,{repositoryRoot:process.cwd()});
+  const basePacks=await verificationPacksAtCommit(changeSet.baseCommit,{
+    repositoryRoot:process.cwd(),historicalRegistryFallback:true});
   const quarantinedSliceIds=await activeVerificationSliceQuarantineIds(
     changeSet.commit,{repositoryRoot:process.cwd()});
   return exactOwnershipReadiness({intent:options.intent,packs,changeSet,basePacks,quarantinedSliceIds,

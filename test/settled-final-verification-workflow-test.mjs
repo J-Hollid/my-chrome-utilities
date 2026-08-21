@@ -36,6 +36,10 @@ import { verificationTaskDigest } from "../scripts/verification-task-succession.
 import { packageProofValid } from "../scripts/verification-reliability-runtime.mjs";
 import { withVerificationNotesLock } from "../scripts/verification-git-notes.mjs";
 import {
+  registryCardinalityEvidenceTaskKeys,
+  validateRegistryCardinalityFocusedEvidence,
+} from "../scripts/verification-pack-cardinality/focused-evidence.mjs";
+import {
   classifyLegacyIncidentRunIntent,
   requireVerificationRunIntent,
   verificationRunIntent,
@@ -109,6 +113,52 @@ for (const productPath of ["src/commands.ts", "dist/commands.js", "side-panel.ht
 }
 assert.equal(reviewReadyProductCandidatePath("scripts/run-focused-acceptance.mjs"), false,
   "verification tooling alone is not misclassified as a product candidate");
+
+const cardinalityEvidenceInput = {
+  task:"registry-derived-verification-packs",
+  changedPaths:[
+    "scripts/verification-pack-cardinality/contract.mjs",
+    "scripts/verification-packs.mjs",
+    "test/verification-pack-cardinality-contract-test.mjs",
+    "verification/packs.json",
+  ],
+  taskKeys:[...registryCardinalityEvidenceTaskKeys, "property:test/workspace-tabs-property-test.mjs",
+    "package:extension"],
+  syntheticProofs:{ current:true, addedRunnable:true, emptyCompatibility:true },
+  includeProperties:true,
+  includePackage:true,
+  terminalFull:false,
+};
+assert.equal(validateRegistryCardinalityFocusedEvidence(cardinalityEvidenceInput).mode,
+  "registry-cardinality-focused",
+  "the exact specification-bound cardinality route is accepted");
+assert.throws(() => validateRegistryCardinalityFocusedEvidence({
+  ...cardinalityEvidenceInput,
+  task:"generic-tooling-candidate",
+}), /exact task identity/u,
+"a generic caller-selected tooling plan cannot use the cardinality route");
+assert.throws(() => validateRegistryCardinalityFocusedEvidence({
+  ...cardinalityEvidenceInput,
+  changedPaths:[...cardinalityEvidenceInput.changedPaths,
+    "scripts/verification-reliability-values.mjs"],
+}), /prohibited reliability-values/u,
+"the no-touch helper fails closed before evidence recording");
+assert.throws(() => validateRegistryCardinalityFocusedEvidence({
+  ...cardinalityEvidenceInput,
+  changedPaths:[...cardinalityEvidenceInput.changedPaths, "src/commands.ts"],
+}), /outside the approved path set/u,
+"a product change cannot use the verification-only cardinality route");
+assert.throws(() => validateRegistryCardinalityFocusedEvidence({
+  ...cardinalityEvidenceInput,
+  syntheticProofs:{ current:true, addedRunnable:false, emptyCompatibility:true },
+}), /synthetic execution proofs/u,
+"missing added-pack dispatch proof fails before review-ready recording");
+assert.throws(() => validateRegistryCardinalityFocusedEvidence({
+  ...cardinalityEvidenceInput,
+  taskKeys:cardinalityEvidenceInput.taskKeys.filter((key) =>
+    key !== "unit:test/verification-process-contract-test.mjs"),
+}), /named evidence tasks/u,
+"missing a named evidence task fails closed");
 
 const focusedScopePreflight = reviewReadyScopePreflight({
   approvedPackIds:["flow_graph"], plannedPackIds:["flow_graph"], taskCount:17,

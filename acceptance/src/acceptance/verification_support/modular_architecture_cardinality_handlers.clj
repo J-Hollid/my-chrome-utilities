@@ -2,6 +2,7 @@
   (:require [acceptance.steps.support :as support]))
 
 (defonce ^:private verified? (atom false))
+(defonce ^:private verified-scenarios (atom #{}))
 
 (defn- verify-contract! []
   (when-not @verified?
@@ -11,6 +12,62 @@
                        "Registry-derived cardinality contract failed."
                        {:out (:out result) :err (:err result)})
       (reset! verified? true))))
+
+(defn- verify-scenario! [scenario]
+  (when-not (contains? @verified-scenarios scenario)
+    (let [result (support/verified-command-result
+                  "node" "scripts/verification-pack-cardinality/acceptance.mjs" scenario)]
+      (support/assert! (zero? (:exit result))
+                       (str "Registry-derived cardinality scenario " scenario " failed.")
+                       {:out (:out result) :err (:err result)})
+      (swap! verified-scenarios conj scenario))))
+
+(def scenario-step-patterns
+  {"193" [#"^stopped registry-derived cardinality candidates changed every known terminal, calibration, reporting, evidence, reliability, runner, and ownership integration path$"
+          #"^their genuinely-global expansions came from a rejected edit to the shared reliability-values helper and a stale global-impact registration for the bounded cardinality prefix$"
+          #"^the user-authorized bounded reconstruction is planned$"
+          #"^both global declarations remain recorded as audit-only forecast variance and are prohibited in the resumed candidate$"
+          #"^the helper stays unchanged while the cardinality prefix is retained only by its Shell-owned verification slice$"
+          #"^the slice has no registry-level pack consumers because executable generic proof observes its semantic runnable-pack consumers$"
+          #"^exact candidate preflight fails if the prohibited helper changed or the cardinality prefix remains globally registered$"
+          #"^no further acceptance is required while product scope and those bounded ownership rules remain unchanged$"]
+   "194" [#"^the focused cardinality contract is evaluated against (.+)$"
+          #"^its runnable identities and executable proof are validated$"
+          #"^the derived runnable set is (.+)$"
+          #"^representative synthetic pack execution proves the set can be dispatched$"
+          #"^consumer identity does not require an unrelated product-pack closure$"]
+   "195" [#"^a bounded cardinality candidate has (.+)$"
+          #"^review-evidence scope is validated$"
+          #"^the evidence decision is (.+)$"
+          #"^a generic caller-selected tooling plan cannot satisfy the bounded contract$"]
+   "196" [#"^registry-derived cardinality changes verification infrastructure without product behavior$"
+          #"^the settled candidate produces review-ready evidence$"
+          #"^the exact named cardinality, workflow, evidence, reliability, and process-contract tasks pass with properties and package proof$"
+          #"^synthetic registries prove current, added-runnable, and empty-compatibility execution$"
+          #"^the evidence is bound to the exact approved no-touch path set$"
+          #"^no complete product-pack closure or terminal checkpoint runs in feature mode$"]
+   "197" [#"^the bounded cardinality candidate passes independent review$"
+          #"^current and compatible historical registries are compared$"
+          #"^each former task, prerequisite, consumer, calibration row, evidence identity, reliability obligation, and package input is conserved$"
+          #"^the current registry topology and every existing exact-pack closure remain unchanged$"
+          #"^a later added runnable pack becomes terminally required through the same generic contract$"
+          #"^the user-requested master promotion retains one final all-runnable-pack checkpoint$"]
+   "198" [#"^the user reaffirmed bounded focused evidence for registry-derived cardinality$"
+          #"^registry-derived-verification-packs resumes from the exact specification QA head$"
+          #"^it keeps the same stable product task identity without another acceptance round-trip$"
+          #"^the coherent product remainder is conserved and reapplied onto that exact head$"
+          #"^the reliability-values helper stays unchanged while an adapter injects the exact registry-derived runnable identities$"
+          #"^the stale cardinality global-impact entry is removed while the Shell-owned slice, its direct tasks, and its empty registry-consumer set remain$"
+          #"^the resumed candidate uses only its specification-bound focused evidence route$"
+          #"^fresh read-only intent and exact candidate preflight enforce the no-touch boundary before product evidence$"]})
+
+(defn- scenario-handlers []
+  (vec (for [[scenario patterns] scenario-step-patterns
+             pattern patterns]
+         {:pattern pattern
+          :handler (fn [world _example _captures]
+                     (verify-scenario! scenario)
+                     world)})))
 
 (def registry-results
   {"twenty runnable entries and one empty compatibility identity"
@@ -48,6 +105,7 @@
     (if (seq resolved) resolved captures)))
 
 (defn handlers [example-values]
+  (vec (concat
   [{:pattern #"^the exact candidate registry has (.+)$"
     :handler (fn [world example captures]
                (let [[state] (values example-values example captures)]
@@ -132,7 +190,7 @@
 
    {:pattern #"^registry-derived cardinality mechanics affect terminal closure, calibration, reporting, and evidence for every runnable pack$"
     :handler (fn [world _example _captures]
-               (verify-contract!) (assoc world :cardinality/intent true))}
+               (verify-scenario! "192") (assoc world :cardinality/intent true))}
    {:pattern #"^read-only ownership intent is classified before implementation$"
     :handler (fn [world _example _captures]
                (support/assert! (:cardinality/intent world)
@@ -145,4 +203,5 @@
    {:pattern #"^a bounded granularity result receives one durable seam-or-parent-fallback disposition$"
     :handler (fn [world _example _captures] (verify-contract!) world)}
    {:pattern #"^no feature-mode all-runnable-pack run is authorized$"
-    :handler (fn [world _example _captures] (verify-contract!) world)}])
+    :handler (fn [world _example _captures] (verify-scenario! "192") world)}]
+   (scenario-handlers))))

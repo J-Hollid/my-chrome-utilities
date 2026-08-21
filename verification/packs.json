@@ -5421,6 +5421,9 @@
     "id": "project_assurance_severity",
     "representativeChangedPath": "features/data-layer-project-assurance-severity.feature",
     "source": [],
+    "verificationOnly": {
+      "productionOwner": "schemas"
+    },
     "dependencies": [
       "schemas"
     ],
@@ -5857,6 +5860,7 @@
         "tasks": [
           "unit:test/verification-pack-cardinality-contract-test.mjs",
           "unit:test/settled-final-verification-workflow-test.mjs",
+          "unit:test/verification-evidence-production-path-test.mjs",
           "unit:test/verification-process-contract-test.mjs"
         ],
         "prerequisites": [],

@@ -11,8 +11,9 @@ import { createTimeoutIncidentStore } from "./verification-reliability-store.mjs
 import { loadVerificationPacks, planVerification,
   verificationTaskIdentity } from "./verification-packs.mjs";
 import { resolveIncidentTaskSuccession } from "./verification-task-succession.mjs";
-import { git, normalized, timeoutIncidentDigest,
-  timeoutRepairPackIds } from "./verification-reliability-values.mjs";
+import { git, normalized, timeoutIncidentDigest } from "./verification-reliability-values.mjs";
+import { createVerificationPackCardinalityAdapter } from
+  "./verification-pack-cardinality/contract.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const defaultManifest = path.join(repositoryRoot, "verification", "vtd014-closure-audit.json");
@@ -73,8 +74,9 @@ export async function auditVtd014Closure({
   const selectedLineage = { commit:candidateCommit, tree:candidateTree,
     assessmentCandidate:manifest.assessmentCandidate };
   const packs = await loadVerificationPacks();
+  const exactRunnablePackIds = createVerificationPackCardinalityAdapter(packs).runnablePackIds;
   const currentIdentities = planVerification(packs, {
-    packIds:timeoutRepairPackIds, includeProperties:true,
+    packIds:exactRunnablePackIds, includeProperties:true,
   }).tasks.map(verificationTaskIdentity);
   const results = [];
   for (const incident of incidents) {

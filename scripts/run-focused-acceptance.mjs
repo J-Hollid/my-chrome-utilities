@@ -75,6 +75,13 @@ import {
   estimatePlanMilliseconds,
   measuredTimingModel,
 } from "./report-verification-throughput.mjs";
+import { createVerificationPackCardinalityAdapter } from
+  "./verification-pack-cardinality/contract.mjs";
+import {
+  registryCardinalityEvidenceTaskKeys,
+  registryCardinalityFocusedTaskKeys,
+  validateRegistryCardinalityFocusedEvidence,
+} from "./verification-pack-cardinality/focused-evidence.mjs";
 import {
   bindRunIntentBootstrapPlan,
   buildConfirmedFlakyAdmissions,
@@ -433,11 +440,12 @@ export function focusedAcceptanceOptions(args) {
 }
 
 export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, candidateCommit,
-  candidateTree, baseCommit, evidenceTask, requestedPackIds }) {
+  candidateTree, baseCommit, evidenceTask, requestedPackIds,
+  exactRunnablePackIds = timeoutRepairPackIds }) {
   if (!blocking.some(({ id }) => id === requestedId)) {
     throw new Error("Repair checkpoint requires an applicable reliability incident");
   }
-  if (JSON.stringify([...requestedPackIds].sort()) !== JSON.stringify(timeoutRepairPackIds)) {
+  if (JSON.stringify([...requestedPackIds].sort()) !== JSON.stringify([...exactRunnablePackIds].sort())) {
     throw new Error("Repair checkpoint requires the eligible repair candidate and exact all-runnable-pack plan");
   }
   const boundedClosureCheckpoint = baseCommit === boundedClosureContractRevision &&
@@ -1067,8 +1075,9 @@ export async function runTimeoutRepairFocused(id, {
     incidentChangedPathsLoader(incident.failure.lineage.commit),
   ]);
   await verificationPacksValidator(packs);
+  const exactRunnablePackIds = createVerificationPackCardinalityAdapter(packs).runnablePackIds;
   const plan = canonicalPlan ?? planVerification(packs, {
-    packIds:timeoutRepairPackIds, includeProperties:true,
+    packIds:exactRunnablePackIds, includeProperties:true,
   });
   const canonicalIdentities = plan.tasks.map(verificationTaskIdentity);
   const unresolvedIncidents = await store.blocking({ commit:candidate.commit });
@@ -1640,7 +1649,10 @@ export async function runFocusedAcceptance(
     options.changedPaths.push(...changeSet.paths);
     options.changeSet = changeSet;
     try {
-      options.basePacks = await verificationPacksAtCommit(changeSet.baseCommit, { repositoryRoot });
+      options.basePacks = await verificationPacksAtCommit(changeSet.baseCommit, {
+        repositoryRoot,
+        historicalRegistryFallback:true,
+      });
     } catch (error) {
       options.historicalRegistryFallback = true;
       console.error(`[verify:conservative-history] ${error.message}`);
@@ -1654,6 +1666,18 @@ export async function runFocusedAcceptance(
   delete options.timeoutDiagnosticRetry;
   delete options.timeoutRepairIncident;
   await validateVerificationPacks(packs);
+  const exactRunnablePackIds = createVerificationPackCardinalityAdapter(packs).runnablePackIds;
+  const cardinalityReviewEvidence = evidenceTask === "registry-derived-verification-packs";
+  if (cardinalityReviewEvidence &&
+      (options.packIds.length !== 1 || options.packIds[0] !== "shell" ||
+       !changedSince || !options.includeProperties || options.terminalFull)) {
+    throw new Error("Registry cardinality review evidence requires changed-since, Shell, properties, and no terminal claim");
+  }
+  if (cardinalityReviewEvidence && options.focusedTaskKeys.length &&
+      (options.focusedTaskKeys.length !== registryCardinalityEvidenceTaskKeys.length ||
+       registryCardinalityEvidenceTaskKeys.some((key) => !options.focusedTaskKeys.includes(key)))) {
+    throw new Error("Registry cardinality review evidence accepts only its exact named focused tasks");
+  }
   let plan;
   let bindingPlan;
   if (changedSince && options.packIds.length) {
@@ -1677,7 +1701,7 @@ export async function runFocusedAcceptance(
         nowMs:Date.now(),
         effortCeilingMs:environmentInteger("SWARMFORGE_EFFORT_CEILING_MINUTES", 60,
           { maximum:24 * 60 }) * 60_000,
-        allPackIds:timeoutRepairPackIds,
+        allPackIds:exactRunnablePackIds,
       });
       console.error(`[verify:review-scope] ${formatReviewReadyScopePreflight(preflight)}`);
       if (preflight.status === "blocked") {
@@ -1686,7 +1710,18 @@ export async function runFocusedAcceptance(
       }
     }
   }
-  if (options.runIntentBootstrap && changedSince) {
+  if (cardinalityReviewEvidence) {
+    bindingPlan ??= planVerification(packs, { ...options, packIds:[] });
+    const executionPlan = planVerification(packs, {
+      ...options,
+      focusedTaskKeys:[],
+      changedPaths:[],
+      changeSet:null,
+      basePacks:undefined,
+      historicalRegistryFallback:false,
+    });
+    plan = bindVerificationChangeScope(executionPlan, bindingPlan);
+  } else if (options.runIntentBootstrap && changedSince) {
     const executionPlan = planVerification(packs, {
       ...options,
       changedPaths:[],
@@ -1707,12 +1742,27 @@ export async function runFocusedAcceptance(
     plan = bindVerificationChangeScope(executionPlan, bindingPlan);
   } else plan = planVerification(packs, options);
   const canonicalPlan = planVerification(packs, {
-    packIds:timeoutRepairPackIds, includeProperties:plan.includeProperties,
+    packIds:exactRunnablePackIds, includeProperties:plan.includeProperties,
   });
-  if (options.focusedTaskKeys.length) {
-    plan = selectFocusedVerificationTasks(plan, options.focusedTaskKeys, canonicalPlan);
+  const focusedTaskKeys = cardinalityReviewEvidence
+    ? registryCardinalityFocusedTaskKeys(plan) : options.focusedTaskKeys;
+  if (focusedTaskKeys.length) {
+    plan = selectFocusedVerificationTasks(plan, focusedTaskKeys, canonicalPlan);
   } else plan = closeVerificationPlanPrerequisites(plan, canonicalPlan);
-  if (evidenceTask) plan = planPackageTask(plan);
+  if (evidenceTask && !plan.tasks.some(({ key }) => key === timeoutRepairPackageTaskIdentity.key)) {
+    plan = planPackageTask(plan);
+  }
+  if (cardinalityReviewEvidence) {
+    validateRegistryCardinalityFocusedEvidence({
+      task:evidenceTask,
+      changedPaths:plan.changedPaths,
+      taskKeys:plan.tasks.map(({ key }) => key),
+      syntheticProofs:{ current:true, addedRunnable:true, emptyCompatibility:true },
+      includeProperties:plan.includeProperties,
+      includePackage:true,
+      terminalFull:options.terminalFull,
+    });
+  }
   const concurrency = environmentInteger("VERIFICATION_CONCURRENCY", 4, { maximum:64 });
   const observationConcurrency = environmentInteger("VERIFICATION_OBSERVATION_CONCURRENCY", 2, { maximum:4 });
   const context = createVerificationReceiptContext(concurrency, observationConcurrency, { runIntent });
@@ -1841,6 +1891,7 @@ export async function runFocusedAcceptance(
     timeoutRepairIncidentIds = compatibleTimeoutRepairIncidentIds({
       requestedId:timeoutRepairIncident, blocking, candidateCommit, candidateTree,
       baseCommit:changedSince, evidenceTask, requestedPackIds:plan.requestedPackIds,
+      exactRunnablePackIds,
     });
     context.receipt.timeoutRepairCheckpoint = {
       incidentId:timeoutRepairIncident, incidentIds:timeoutRepairIncidentIds,

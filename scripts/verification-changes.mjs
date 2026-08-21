@@ -93,10 +93,13 @@ export async function canonicalVerificationChangeSet({
 
 export async function verificationPacksAtCommit(
   commit,
-  { repositoryRoot = defaultRepositoryRoot } = {},
+  { repositoryRoot = defaultRepositoryRoot, historicalRegistryFallback = false } = {},
 ) {
   const output = await git(repositoryRoot, ["show", `${commit}:verification/packs.json`]);
   const packs = JSON.parse(output);
   if (!Array.isArray(packs)) throw new Error("Historical verification registry is not an array");
+  if (historicalRegistryFallback) {
+    Object.defineProperty(packs, "legacySourceLessOwnership", { value:true });
+  }
   return packs;
 }

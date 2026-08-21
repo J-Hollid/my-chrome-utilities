@@ -984,6 +984,8 @@ try {
     { recursive:true });
   await copyFile(path.resolve("scripts/verification-pack-cardinality/contract.mjs"),
     path.join(cliContentionRepository, "scripts/verification-pack-cardinality/contract.mjs"));
+  await copyFile(path.resolve("scripts/verification-pack-cardinality/focused-evidence.mjs"),
+    path.join(cliContentionRepository, "scripts/verification-pack-cardinality/focused-evidence.mjs"));
   await copyFile(path.resolve("scripts/verification-shared-boundaries.mjs"),
     path.join(cliContentionRepository, "scripts/verification-shared-boundaries.mjs"));
   await copyFile(path.resolve("scripts/settled-final-verification-policy.mjs"),
@@ -1086,6 +1088,7 @@ try {
     "scripts/verification-task-succession.mjs",
     "scripts/verification-styles.mjs", "scripts/verification-packs.mjs",
     "scripts/verification-pack-cardinality/contract.mjs",
+    "scripts/verification-pack-cardinality/focused-evidence.mjs",
     "scripts/verification-shared-boundaries.mjs",
     "test/browser-packs/global-style-smoke.mjs", "test/stylesheet-declarations-property-test.mjs",
     "test/data-layer-flow-visual-asset-portability-property-test.mjs",

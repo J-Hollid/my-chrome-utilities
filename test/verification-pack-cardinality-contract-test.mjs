@@ -3,10 +3,15 @@ import { readFile } from "node:fs/promises";
 
 import {
   assertCompleteRunnablePackSelection,
+  classifyPackDefinition,
+  createVerificationPackCardinalityAdapter,
+  dispatchRepresentativeRunnablePacks,
+  runnablePackIdsFromRegistry,
   runnablePackRegistryIdentity,
 } from "../scripts/verification-pack-cardinality/contract.mjs";
-import { planVerification } from "../scripts/verification-packs.mjs";
+import { planVerification, verificationTaskIdentity } from "../scripts/verification-packs.mjs";
 import { terminalClosureExecution } from "../scripts/verification-reliability-closure.mjs";
+import { canonicalRepairTaskIdentities } from "../scripts/verification-reliability-receipts.mjs";
 import { timeoutRepairPackIds } from "../scripts/verification-reliability-values.mjs";
 import { validateCanonicalMasterEvidenceRecord } from "../scripts/verification-evidence.mjs";
 
@@ -25,6 +30,39 @@ const compatibilityIdentity = {
   dependencies:[],
 };
 
+const productionOwner = runnablePack("production-owner");
+const verificationOnlyBehavior = {
+  id:"observed-behavior",
+  source:[],
+  dependencies:[],
+  unit:["test/observed-behavior-test.mjs"],
+  verificationOnly:{ productionOwner:"production-owner" },
+};
+assert.deepEqual(classifyPackDefinition(compatibilityIdentity, [compatibilityIdentity]), {
+  classification:"non-runnable compatibility metadata",
+  terminalTreatment:"excluded from the runnable set",
+});
+assert.deepEqual(classifyPackDefinition(verificationOnlyBehavior,
+  [productionOwner, verificationOnlyBehavior]), {
+  classification:"valid verification-only behavior pack",
+  terminalTreatment:"included with every registered task",
+});
+assert.deepEqual(classifyPackDefinition({
+  id:"ambiguous", source:[], unit:["test/ambiguous-test.mjs"],
+}, [productionOwner]), {
+  classification:"invalid ambiguous pack",
+  terminalTreatment:"block before planning",
+});
+assert.throws(() => runnablePackIdsFromRegistry([
+  productionOwner,
+  { id:"ambiguous", source:[], unit:["test/ambiguous-test.mjs"] },
+]), /verification-only production owner/u,
+"a source-less runnable pack fails closed without an explicit production owner");
+assert.deepEqual(runnablePackIdsFromRegistry([
+  { id:"legacy", source:[], unit:["test/legacy-test.mjs"] },
+], { allowLegacySourceLess:true }), ["legacy"],
+"an explicit historical compatibility route can reconstruct a pre-contract registry");
+
 const twoPackRegistry = [runnablePack("alpha"), runnablePack("beta"), compatibilityIdentity];
 const twoPackIds = planVerification(twoPackRegistry, { terminalFull:true }).selectedPackIds;
 assert.deepEqual(twoPackIds, ["alpha", "beta"],
@@ -37,12 +75,42 @@ assert.deepEqual(terminalClosureExecution({ attempt:"initial", runnablePackCount
   taskPolicy:"fresh-all", runnablePackCount:2, packagePolicy:"fresh",
 }, "terminal closure accepts a complete non-twenty synthetic registry");
 
+async function dispatchedPackIds(registry) {
+  const calls = [];
+  const result = await dispatchRepresentativeRunnablePacks(registry, async ({ packId, task }) => {
+    calls.push({ packId, key:task.key });
+    return { status:"passed", packId, key:task.key };
+  });
+  assert.ok(result.every(({ status }) => status === "passed"),
+    "every representative synthetic dispatch completes successfully");
+  return calls.map(({ packId }) => packId).sort();
+}
+
+const twoPackCardinality = createVerificationPackCardinalityAdapter(twoPackRegistry);
+assert.deepEqual(twoPackCardinality.runnablePackIds, twoPackIds,
+  "the injected adapter exposes the exact derived runnable identities");
+assert.deepEqual(await dispatchedPackIds(twoPackRegistry), twoPackIds,
+  "the current synthetic registry dispatches one representative task per runnable pack");
+assert.deepEqual(new Set(canonicalRepairTaskIdentities(twoPackRegistry, {
+  planVerification, verificationTaskIdentity,
+}).map(({ packId }) => packId).filter(Boolean)), new Set(twoPackIds),
+"the reliability adapter receives the exact synthetic runnable identities");
+
 const expandedPackIds = planVerification([
   ...twoPackRegistry,
   runnablePack("gamma"),
 ], { terminalFull:true }).selectedPackIds;
 assert.deepEqual(expandedPackIds, ["alpha", "beta", "gamma"],
   "a newly added runnable pack automatically joins terminal scope");
+assert.deepEqual(await dispatchedPackIds([
+  ...twoPackRegistry,
+  runnablePack("gamma"),
+]), expandedPackIds,
+"an added runnable pack is actually dispatched without changing a numerical constant");
+assert.deepEqual(await dispatchedPackIds([
+  runnablePack("alpha"), runnablePack("beta"), compatibilityIdentity,
+]), ["alpha", "beta"],
+"an empty compatibility identity is excluded from executable dispatch");
 assert.notEqual(runnablePackRegistryIdentity(twoPackIds), runnablePackRegistryIdentity(expandedPackIds),
   "receipts can bind the exact runnable registry identity, not only a count");
 assert.throws(() => assertCompleteRunnablePackSelection({
@@ -102,8 +170,17 @@ const cardinalitySlice = shellPack.verificationSlices.find(
 assert.ok(cardinalitySlice, "the Shell pack owns the cardinality contract through its named slice");
 assert.deepEqual(cardinalitySlice.consumers, [],
   "semantic runnable-pack consumers do not become registry consumer edges");
+assert.deepEqual(cardinalitySlice.tasks, [
+  "unit:test/verification-pack-cardinality-contract-test.mjs",
+  "unit:test/settled-final-verification-workflow-test.mjs",
+  "unit:test/verification-evidence-production-path-test.mjs",
+  "unit:test/verification-process-contract-test.mjs",
+], "the slice declares only the exact named cardinality evidence tasks");
 assert.equal(shellPack.globalImpact.includes("scripts/verification-pack-cardinality/"), false,
   "the bounded cardinality prefix is not also registered as globally impactful");
+assert.deepEqual(await dispatchedPackIds(currentRegistry),
+  [...planVerification(currentRegistry, { terminalFull:true }).selectedPackIds].sort(),
+  "the current exact registry dispatches one synthetic representative per runnable identity");
 assert.deepEqual(timeoutRepairPackIds,
   [...planVerification(currentRegistry, { terminalFull:true }).selectedPackIds].sort(),
   "reliability closure derives its pack set from the current registry");

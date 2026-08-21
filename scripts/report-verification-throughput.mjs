@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { loadVerificationPacks, planVerification } from "./verification-packs.mjs";
-import { assertCompleteRunnablePackSelection } from
+import { assertCompleteRunnablePackSelection, createVerificationPackCardinalityAdapter } from
   "./verification-pack-cardinality/contract.mjs";
 import {
   archiveCanonicalReceiptCandidates,
@@ -942,7 +942,7 @@ export function verificationPerformanceCalibration(
   }));
   const declaredBrowserTargetCount = new Set(packs.flatMap((pack) =>
     (pack.browserObservations ?? []).map(({ id }) => id))).size;
-  const registryPackIds = planVerification(packs, { terminalFull:true }).selectedPackIds;
+  const registryPackIds = createVerificationPackCardinalityAdapter(packs).runnablePackIds;
   assertCompleteRunnablePackSelection({
     registryPackIds,
     selectedPackIds:runnablePacks.map(({ id }) => id),
