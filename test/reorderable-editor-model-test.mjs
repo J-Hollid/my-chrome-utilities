@@ -40,6 +40,7 @@ const boundary = reorderControlModel({
   itemLabel:"Alpha",
   completeOrder:items,
 });
+assert.equal(boundary.actionable, true, "a boundary item remains actionable when another destination exists");
 assert.deepEqual(boundary.actions.map(({ disabled }) => disabled),
   [true, true, false, false, false],
   "boundary actions stay present but disabled");
@@ -54,6 +55,15 @@ const segment = reorderControlModel({
 assert.equal(segment.actions.find(({ id }) => id === "later").disabled, true);
 assert.equal(segment.guidance, "Reordering stays within /products.");
 assert.deepEqual(segment.destinations.map(({ itemId }) => itemId), ["alpha"]);
+
+const singleton = reorderControlModel({
+  itemId:"alpha",
+  itemLabel:"Alpha",
+  completeOrder:[items[0]],
+});
+assert.equal(singleton.actionable, false,
+  "an item with no legal destination does not expose a no-op reorder control");
+assert.equal(singleton.actions.every(({ disabled }) => disabled), true);
 
 const hierarchy = reorderControlModel({
   itemId:"bravo",

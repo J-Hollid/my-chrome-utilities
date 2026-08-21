@@ -94,7 +94,10 @@ function actionIndex(options, action) {
 }
 export function renderReorderControl(options) {
     const doc = options.dropTarget?.ownerDocument ?? globalThis.document, model = reorderControlModel(options);
-    const wrapper = doc.createElement("span"), trigger = button(doc, "Reorder"), menu = doc.createElement("div"), dialog = doc.createElement("div");
+    const wrapper = doc.createElement("span");
+    if (!model.actionable)
+        return wrapper;
+    const trigger = button(doc, "Reorder"), menu = doc.createElement("div"), dialog = doc.createElement("div");
     const menuId = `reorder-menu-${++identity}`, dialogId = `reorder-dialog-${identity}`;
     wrapper.className = "reorderable-editor-control";
     styles(wrapper, { display: "inline-flex", position: "relative", maxWidth: "100%" });

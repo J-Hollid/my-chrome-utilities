@@ -2556,8 +2556,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       if(width===320)assert.equal(reproductionStepActionRows.reorderEvidence.geometry.rootFontSize,"64px");
       assert.deepEqual(reproductionStepActionRows.checkoutBoundary, {
         text:"2. Click Checkout",
-        earlierVisible:true,
-        earlierDisabled:true,
+        reorderSuppressed:true,
         guidance:"Reordering stays within /checkout.",
         chooseAnotherAbsent:true,
       });

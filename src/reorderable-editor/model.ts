@@ -32,6 +32,7 @@ export interface ReorderControlModel {
   accessibleName:string;
   position:number;
   count:number;
+  actionable:boolean;
   canDrag:boolean;
   actions:ReorderAction[];
   destinations:ReorderDestination[];
@@ -48,18 +49,20 @@ export function reorderControlModel<T extends ReorderableItem>(input:ReorderCont
   const legalOrder=input.completeOrder.filter(({id})=>legalIds.has(id));
   const legalPosition=legalOrder.findIndex(({id})=>id===input.itemId);
   const first=legalPosition<=0,last=legalPosition===legalOrder.length-1;
+  const actions=[
+    action("first","Move to first",first),
+    action("earlier","Move one position earlier",first),
+    action("later","Move one position later",last),
+    action("last","Move to last",last),
+    action("move","Move…",input.moveDestinations?input.moveDestinations.length===0:legalOrder.length<=1),
+  ];
   return{
     accessibleName:`Reorder ${input.itemLabel}, position ${position+1} of ${input.completeOrder.length}`,
     position:position+1,
     count:input.completeOrder.length,
+    actionable:actions.some(({disabled})=>!disabled),
     canDrag:!input.filterActive,
-    actions:[
-      action("first","Move to first",first),
-      action("earlier","Move one position earlier",first),
-      action("later","Move one position later",last),
-      action("last","Move to last",last),
-      action("move","Move…",input.moveDestinations?input.moveDestinations.length===0:legalOrder.length<=1),
-    ],
+    actions,
     destinations:input.moveDestinations?[...input.moveDestinations]:legalOrder.filter(({id})=>id!==input.itemId)
       .map(({id,label})=>({itemId:id,label:label??id})),
     ...(input.scopeLabel?{guidance:`Reordering stays within ${input.scopeLabel}.`}:{}),

@@ -73,13 +73,10 @@ const reproductionStepActionRowsRuntime = `(async () => {
   root.remove();
   const checkoutRoot = mount([checkout]);
   const checkoutManual = addClickStep(checkoutRoot, "/checkout");
-  button(checkoutManual, "Reorder").click();
-  const earlier = button(checkoutManual, "Move one position earlier");
   const checkoutGuidance = checkoutManual.querySelector(".defect-reproduction-step-guidance").textContent;
   observation.checkoutBoundary = {
     text:checkoutManual.querySelector(".defect-reproduction-step-text").textContent,
-    earlierVisible:earlier.getClientRects().length > 0,
-    earlierDisabled:earlier.disabled,
+    reorderSuppressed:!checkoutManual.querySelector('[data-reorder-trigger="true"]'),
     guidance:checkoutGuidance,
     chooseAnotherAbsent:!checkoutGuidance.includes("choose another pathname segment"),
   };

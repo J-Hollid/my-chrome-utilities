@@ -42,7 +42,7 @@ const conceptCell=(context:CanonicalSchemaRenderContext,node:ReturnType<typeof c
 const sourceText=(node:ReturnType<typeof canonicalNavigatorRows>[number]["node"],fallback:string):string=>node.provenance.map(({contributorName,source,state})=>contributorName??state??(source==="created"?fallback:source)).join(", ")||fallback;
 
 function renderTable(tree:HTMLElement,context:CanonicalSchemaRenderContext):void {
-  const {dom}=context,table=context.tableElement??dom.createElement("table"),head=dom.createElement("thead"),headRow=dom.createElement("tr"),body=dom.createElement("tbody"),filterActive=Boolean(context.query.trim())||context.propertyFilter!=="all";let pendingOverlay:{trigger:HTMLElement;path:string;layers:HTMLElement[]}|undefined;
+  const {dom}=context,table=context.tableElement??dom.createElement("table"),head=dom.createElement("thead"),headRow=dom.createElement("tr"),body=dom.createElement("tbody");let pendingOverlay:{trigger:HTMLElement;path:string;layers:HTMLElement[]}|undefined;
   const cell=(index:number,text?:string):HTMLTableCellElement=>{const value=dom.createElement("td"),metadata=schemaTableCellMetadata[index]!;value.dataset.schemaTableCell=metadata.key;value.dataset.schemaTableLabel=metadata.label;if(text!==undefined)value.textContent=text;return value;};
   for(const [index,{label}] of schemaTableColumns.entries()){const heading=Object.assign(dom.createElement("th"),{textContent:label});if(index===0){heading.setAttribute("aria-label","Property editor");heading.style.width="1%";heading.style.whiteSpace="nowrap";}headRow.append(heading);}
   head.append(headRow);
@@ -52,7 +52,6 @@ function renderTable(tree:HTMLElement,context:CanonicalSchemaRenderContext):void
     if(context.menuPropertyId===row.id){const layers=[context.renderMenu(row.node)];if(context.focusedPropertyId===row.id){layers.push(context.renderFocusedEditor(context.document,row.node));if(context.review)layers.push(context.review);}pendingOverlay={trigger,path:row.path,layers};}
     body.append(tr);
   }
-  for(const row of Array.from(body.querySelectorAll<HTMLTableRowElement>("tr"))){const node=context.document.nodes[row.dataset.propertyId??""],source=row.querySelector<HTMLElement>("[data-schema-table-cell='source']");if(!node||!source)continue;const siblings=orderedChildren(context,node.parentId),reorder=renderReorderControl({focusScopeId:`canonical-navigator-table:${context.document.id}`,itemId:node.id,itemLabel:node.name,completeOrder:siblings.map(({id,name})=>({id,label:name})),legalDestinationIds:focusedStructureOwned(node)?siblings.filter(focusedStructureOwned).map(({id})=>id):[],moveDestinations:focusedStructureOwned(node)?canonicalMoveDestinations(context.document,node):[],filterActive,dropTarget:row,orderedContainer:body,preserveTargetSemantics:true,onMove:(request)=>reorderProperty(context,node,request)});source.prepend(reorder);}
   table.replaceChildren(head,body);table.setAttribute("aria-label","Canonical property table");table.dataset.canonicalView="table";tree.replaceChildren(table);tree.dataset.canonicalView="table";if(pendingOverlay)mountSchemaTableOverlay(context.options.host,pendingOverlay.trigger,pendingOverlay.path,pendingOverlay.layers,context.dismissOverlay);
 }
 

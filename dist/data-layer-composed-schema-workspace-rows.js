@@ -1,9 +1,8 @@
 import { composedSchemaRowOwnershipInput } from "./data-layer-composed-schema-ownership.js";
 import { renderFocusedPropertyMenu } from "./data-layer-focused-schema-property-menu.js";
 import { focusedOwnershipActionTarget, focusedSectionOwnershipActions, focusedPropertyProvenanceSummary, focusedPropertySectionLabels, gateFocusedOwnershipSection } from "./data-layer-focused-schema-property-ui.js";
-import { composedMoveDestinations, renderComposedFocusedSection, structureParent, structureSubtree } from "./data-layer-composed-schema-workspace-focused-sections.js";
+import { renderComposedFocusedSection } from "./data-layer-composed-schema-workspace-focused-sections.js";
 import { applySchemaTablePathAllocation, applySchemaTablePropertyEditorAllocation, bindSchemaTableQuickEdit, clearSchemaTableOverlay, ensureSchemaTablePropertyEditorContainmentStyle, mountSchemaTableOverlay, schemaTableAllowedValues } from "./data-layer-schema-table.js";
-import { renderReorderControl } from "./reorderable-editor/control.js";
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 function applyPersistedItemOwnership(host, row) {
     const overriddenValues = new Set((row.local.allowedValueProvenance ?? []).filter(({ state }) => state === "overridden").map(({ id }) => id));
@@ -88,7 +87,7 @@ function focused(row, context) {
         issue.append(issueHeading, detail, repairs);
         host.append(issue);
     }
-    const focusedContext = { model: context.model, ...(context.completeRows ? { completeRows: context.completeRows } : {}), ...(context.filterActive !== undefined ? { filterActive: context.filterActive } : {}), dom, row, conceptSuggestions: context.conceptSuggestions, getDraft: () => context.draft, activeSection: context.activeSection, removedRuleIds: context.removedRuleIds, removedValueIds: context.removedValueIds, restoredRuleIds: context.restoredRuleIds, restoredValueIds: context.restoredValueIds, stagedLocalValueIds: context.stagedLocalValueIds, overriddenRuleIds: context.overriddenRuleIds, overrideRule: context.overrideRule, render: context.render, ...(context.onStructure ? { onStructure: context.onStructure } : {}) };
+    const focusedContext = { model: context.model, ...(context.completeRows ? { completeRows: context.completeRows } : {}), ...(context.filterActive !== undefined ? { filterActive: context.filterActive } : {}), dom, row, conceptSuggestions: context.conceptSuggestions, getDraft: () => context.draft, activeSection: context.activeSection, structureOwned: context.ownershipSession.activated.includes("structure"), removedRuleIds: context.removedRuleIds, removedValueIds: context.removedValueIds, restoredRuleIds: context.restoredRuleIds, restoredValueIds: context.restoredValueIds, stagedLocalValueIds: context.stagedLocalValueIds, overriddenRuleIds: context.overriddenRuleIds, overrideRule: context.overrideRule, render: context.render, ...(context.onStructure ? { onStructure: context.onStructure } : {}) };
     if (context.removed)
         host.append(Object.assign(dom.createElement("p"), { textContent: "Whole-property lifecycle staged. Facet and structure controls are unavailable until this reset or removal is cancelled." }));
     else {
@@ -177,16 +176,7 @@ export function renderComposedRows(rows, context) {
         propertyActions.setAttribute("aria-label", `Property actions for ${row.path}${row.validationState === "blocked" ? "; Needs decision" : ""}`);
         propertyActions.dataset.propertyActionsPath = row.path;
         applySchemaTablePropertyEditorAllocation(undefined, identity, propertyActions);
-        const completeRows = context.completeRows ?? context.model.rows, parent = structureParent(row.path), siblings = completeRows.filter(candidate => structureParent(candidate.path) === parent), itemId = row.local.definitionId ?? row.path, reorder = renderReorderControl({ focusScopeId: `composed-schema-table:${context.model.heading}`, itemId, itemLabel: row.path.split("/").at(-1) ?? row.path, completeOrder: siblings.map(candidate => ({ id: candidate.local.definitionId ?? candidate.path, label: candidate.path.split("/").at(-1) ?? candidate.path })), ...(row.local.definitionId ? { legalDestinationIds: siblings.filter(candidate => Boolean(candidate.local.definitionId)).map(candidate => candidate.local.definitionId), moveDestinations: composedMoveDestinations(completeRows, row) } : { legalDestinationIds: [], moveDestinations: [] }), ...(context.filterActive !== undefined ? { filterActive: context.filterActive } : {}), dropTarget: tr, preserveTargetSemantics: true, onMove: ({ fromIndex, toIndex, method, destinationId, destinationParentId, placement }) => { if (!context.onStructure || !row.local.definitionId)
-                return false; if (method === "dialog" && destinationId && placement) {
-                const parentPath = destinationParentId ?? "", destinations = completeRows.filter(({ path, local }) => Boolean(local.definitionId) && !structureSubtree(row.path, path) && structureParent(path) === parentPath), index = destinations.findIndex(({ local }) => local.definitionId === destinationId), afterPath = placement === "after" ? destinations[index]?.path : index > 0 ? destinations[index - 1].path : undefined;
-                if (index < 0)
-                    return false;
-                context.onStructure({ kind: "move", path: row.path, destinationParentPath: parentPath, ...(afterPath ? { afterPath } : {}) });
-                return true;
-            } const kind = toIndex < fromIndex ? "move-earlier" : "move-later"; for (let count = Math.abs(toIndex - fromIndex); count > 0; count -= 1)
-                context.onStructure({ kind, path: row.path }); return true; } });
-        identity.append(reorder, propertyActions);
+        identity.append(propertyActions);
         const pathCell = cell(1, row.path), conceptCell = cell(2), typeCell = cell(3), presenceCell = cell(4), appendReset = (host, facet, label) => { if (!row.inherited || !Object.hasOwn(row.local, facet))
             return; const reset = button(dom, `Reset ${label} to parent`, () => { const result = context.resetInline(row, facet); if (result.status === "invalid")
             context.inlineDiagnostic(result.diagnostic); }); reset.setAttribute("aria-label", `Reset ${label} to parent for ${row.path}`); reset.dataset.inlineFacetReset = facet; host.append(reset); };
@@ -231,11 +221,6 @@ export function renderComposedRows(rows, context) {
             pendingOverlay = { trigger: propertyActions, path: row.path, layers };
         }
         body.append(tr);
-    }
-    for (const row of Array.from(body.querySelectorAll("tr"))) {
-        const reorder = row.querySelector("[data-reorder-trigger='true']")?.parentElement, path = row.querySelector("[data-schema-table-cell='path']");
-        if (reorder && path)
-            path.prepend(reorder);
     }
     table.replaceChildren(head, body);
     table.setAttribute("aria-label", `${context.model.heading} rows`);

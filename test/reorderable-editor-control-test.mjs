@@ -53,6 +53,19 @@ globalThis.document=document;
 
 const {announceReorderCompletion,renderReorderControl}=await import("../dist/reorderable-editor/control.js");
 const order=[{id:"alpha",label:"Alpha"},{id:"bravo",label:"Bravo"},{id:"charlie",label:"Charlie"}];
+const singletonRow=document.createElement("li");
+document.body.append(singletonRow);
+const singletonControl=renderReorderControl({
+  itemId:"alpha",itemLabel:"Alpha",completeOrder:[order[0]],dropTarget:singletonRow,
+  orderedContainer:document.createElement("ol"),focusScopeId:"singleton",
+  onMove:()=>{throw new Error("a no-op reorder control must never invoke movement");},
+});
+singletonRow.append(singletonControl);
+assert.equal(singletonControl.querySelector("[data-reorder-trigger]"),null,
+  "an item without a legal destination renders no Reorder trigger");
+assert.equal(singletonRow.draggable,false);
+assert.equal(singletonRow.getAttribute("role"),null,
+  "a suppressed no-op control does not install reorder drop semantics");
 const row=document.createElement("li"),moves=[];
 document.body.append(row);
 const control=renderReorderControl({
