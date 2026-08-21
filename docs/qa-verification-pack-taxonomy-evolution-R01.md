@@ -1,8 +1,8 @@
 # QA verification pack taxonomy evolution R01
 
 Status: user-approved specification decision recorded on 2026-08-20; bounded
-focused evidence reaffirmed and the unnecessary preparation retired on
-2026-08-21
+focused evidence reaffirmed, the unnecessary preparation retired, and stale
+global ownership declarations disposed on 2026-08-21
 
 Prepared: 2026-08-20
 
@@ -131,6 +131,18 @@ helper ownership reaches every runnable pack and has no credible current-path
 boundary. That mechanical result does not invalidate the approved low-risk
 focused-evidence decision.
 
+First coherent reconstruction `698d622e` kept that prohibited helper unchanged,
+but exact preflight still returned `genuinely-global`, 20 packs, and 884 tasks.
+Its sole expansion cause was another stale declaration inherited from audited
+patch `0a52f69a`: `scripts/verification-pack-cardinality/` was registered both
+as the bounded `verification_pack_cardinality_contract` slice and under
+`shell.globalImpact`. Those declarations contradict one another. The global
+entry is audit-only forecast variance and must be removed; the slice is the
+authoritative current ownership. This reversible correction changes no product
+scope, executable proof, terminal obligation, or evidence strength, so the
+user's durable focused-evidence acceptance authorizes it without another
+round-trip or ownership preparation.
+
 The user reaffirmed on 2026-08-21 that this verification-only behavior does not
 warrant a complete product-pack feature run when executable synthetic registries
 prove that the derived set can actually dispatch packs. This is durable current
@@ -144,15 +156,21 @@ The bounded reconstruction must establish all of the following:
 
 1. **Historical variance without current scope.** Preserve the stopped
    candidate's complete changed-path inventory for audit. Classify the rejected
-   `scripts/verification-reliability-values.mjs` edit as audit-only forecast
-   variance, not a current likely implementation path. Exact candidate preflight
-   must reject the candidate if that file changed.
+   `scripts/verification-reliability-values.mjs` edit and the stale cardinality
+   prefix `shell.globalImpact` entry as audit-only forecast variance, not current
+   implementation inputs. Exact candidate preflight must reject the candidate
+   if that file changed or the prefix remains globally registered.
 2. **Pure injected boundary.** Keep
    `scripts/verification-reliability-values.mjs` unchanged and pure. Derive the
    exact runnable identities in the cardinality contract and inject them through
    an adapter into reliability, terminal, calibration, reporting, and evidence
-   callers. Proposed prefix `scripts/verification-pack-cardinality/` remains
-   owned by `shell` under slice `verification_pack_cardinality_contract`.
+   callers. Register prefix `scripts/verification-pack-cardinality/` exactly once
+   as owned by `shell` under slice `verification_pack_cardinality_contract`, with
+   the exact named direct tasks and `consumers: []`. Remove it from
+   `shell.globalImpact` and do not duplicate it in another global, shared, or
+   propagating ownership declaration. Every runnable identity is the semantic
+   subject of the contract, not a registry consumer edge that selects unrelated
+   pack closures.
 3. **Executable generic proof.** Test the current registry, a compatible
    registry with one added runnable pack, and a registry with an empty
    compatibility identity. Each fixture must prove both the derived identity set
@@ -169,12 +187,13 @@ The bounded reconstruction must establish all of the following:
    evidence identities, reliability obligations, package inputs, and the final
    all-runnable-pack master checkpoint. A later valid added pack becomes
    terminally required through the same generic contract.
-6. **Clean reconstruction.** Use stopped candidate `bf234ead7b` only as an
-   audited patch reference. Reconstruct approved task-owned behavior from
-   commits `0a52f69a`, `31777846`, and `3ffa07e1` with required `By coder.`
-   metadata, remove the rejected generic tooling-evidence bypass, keep the
-   reliability-values helper unchanged, and add the end-to-end no-touch and
-   focused-routing regressions.
+6. **Conserved reconstruction.** Preserve coherent product remainder
+   `698d622e` and rebase or reapply its exact approved delta onto the correction
+   QA head. Earlier commits `bf234ead7b`, `0a52f69a`, `31777846`, and
+   `3ffa07e1` remain audited lineage references. Remove the stale global-impact
+   entry and rejected generic tooling-evidence bypass, keep the reliability-
+   values helper unchanged, retain required `By coder.` metadata, and add the
+   end-to-end no-touch, slice-only ownership, and focused-routing regressions.
 
 The stopped candidate's audit inventory is the existing integration paths in
 `acceptance/src/acceptance/steps/modular_architecture.clj`,
@@ -185,9 +204,10 @@ the ownership-readiness modules, `scripts/verification-packs.mjs`, the
 verification reliability modules, run-intent, slice-quarantine and task-
 succession modules, the settled workflow and process-contract tests, and
 `verification/packs.json`, plus proposed cardinality contract and direct test
-files. Only `scripts/verification-reliability-values.mjs` has the explicit
-audit-only, no-touch disposition; all actual candidate paths remain subject to
-fresh intent and exact preflight.
+files. Only `scripts/verification-reliability-values.mjs` and the cardinality
+prefix's stale `shell.globalImpact` entry have explicit audit-only, prohibited
+dispositions; all actual candidate paths remain subject to fresh intent and
+exact preflight.
 
 ## Development focus and QA impact
 
@@ -206,15 +226,17 @@ surfaces are:
 
 The proposed new source prefix is
 `scripts/verification-pack-cardinality/`, owned by parent pack `shell` under
-proposed subordinate slice `verification_pack_cardinality_contract`. Its exact
-consumers are every runnable pack in the evaluated registry because terminal
-closure, calibration, and evidence reporting consume the same derived set.
-Those semantic consumers are proved through the generic executable contract;
-they do not authorize unrelated product-pack task closures.
+proposed subordinate slice `verification_pack_cardinality_contract`. Its
+registry-level consumer list is empty. Terminal closure, calibration, and
+evidence reporting semantically consume the same registry-derived identities;
+that relationship is proved through the generic executable contract rather than
+`globalImpact` or pack-consumer fan-out, so it does not authorize unrelated
+product-pack task closures.
 
 Before coding, run read-only ownership intent against the current QA base with
-the actual reconstructed path forecast and the audit-only no-touch disposition.
-Exact candidate preflight must prove the prohibited helper stayed unchanged.
+the actual reconstructed path forecast and both audit-only dispositions. Exact
+candidate preflight must prove the prohibited helper stayed unchanged and the
+cardinality prefix has slice-only ownership.
 Any new product, persistence, migration, security, or genuinely global path is
 new scope and stops; the already settled historical replay does not.
 
@@ -222,7 +244,8 @@ new scope and stops; the already settled historical replay does not.
 test, verification process-contract test, and scenarios 188–198. Prove current,
 added-runnable, and empty-compatibility registries through executable synthetic
 pack dispatch, fail-closed ambiguity, the prohibited helper no-touch guard, and
-the specification-bound focused evidence route.
+the slice-only prefix guard, empty registry-consumer declaration, and
+specification-bound focused evidence route.
 
 **QA impact:** `shell` with the exact named cardinality, workflow, evidence,
 reliability, and process-contract tasks, properties, acceptance for the changed

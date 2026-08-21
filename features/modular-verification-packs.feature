@@ -2685,13 +2685,14 @@ Feature: Modular verification packs
 
   # Modular verification packs 193
   Scenario: Modular verification packs 193
-    Given the stopped registry-derived cardinality candidate changed every known terminal, calibration, reporting, evidence, reliability, runner, and ownership integration path
-    And its only genuinely-global expansion came from a rejected edit to the shared reliability-values helper
+    Given stopped registry-derived cardinality candidates changed every known terminal, calibration, reporting, evidence, reliability, runner, and ownership integration path
+    And their genuinely-global expansions came from a rejected edit to the shared reliability-values helper and a stale global-impact registration for the bounded cardinality prefix
     When the user-authorized bounded reconstruction is planned
-    Then the rejected helper path remains recorded as audit-only forecast variance and is prohibited in the resumed candidate
-    And read-only intent plans the adapter and existing callers without treating that rejected path as a current implementation input
-    And exact candidate preflight fails if the prohibited helper path changed
-    And no further acceptance is required while product scope and that no-touch boundary remain unchanged
+    Then both global declarations remain recorded as audit-only forecast variance and are prohibited in the resumed candidate
+    And the helper stays unchanged while the cardinality prefix is retained only by its Shell-owned verification slice
+    And the slice has no registry-level pack consumers because executable generic proof observes its semantic runnable-pack consumers
+    And exact candidate preflight fails if the prohibited helper changed or the cardinality prefix remains globally registered
+    And no further acceptance is required while product scope and those bounded ownership rules remain unchanged
 
   # Modular verification packs 194
   Scenario Outline: Modular verification packs 194
@@ -2719,6 +2720,7 @@ Feature: Modular verification packs
       | only the named adapter, terminal, calibration, reporting, evidence, and reliability callers changed | run the specification-bound focused cardinality plan |
       | one named cardinality observation or synthetic execution proof is missing | fail closed before review-ready recording               |
       | the prohibited reliability-values helper changed                      | reject the candidate as outside the authorized boundary       |
+      | the cardinality prefix is also declared globally impactful            | reject the candidate as contradictory ownership               |
       | a product, persistence, migration, or security path changed            | require current scope classification before execution         |
 
   # Modular verification packs 196
@@ -2744,7 +2746,8 @@ Feature: Modular verification packs
     Given the user reaffirmed bounded focused evidence for registry-derived cardinality
     When registry-derived-verification-packs resumes from the exact specification QA head
     Then it keeps the same stable product task identity without another acceptance round-trip
-    And the stopped candidate is used only as an audited patch reference
+    And the coherent product remainder is conserved and reapplied onto that exact head
     And the reliability-values helper stays unchanged while an adapter injects the exact registry-derived runnable identities
+    And the stale cardinality global-impact entry is removed while the Shell-owned slice, its direct tasks, and its empty registry-consumer set remain
     And the resumed candidate uses only its specification-bound focused evidence route
     And fresh read-only intent and exact candidate preflight enforce the no-touch boundary before product evidence
