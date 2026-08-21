@@ -93,12 +93,11 @@ assert.equal(validated.contractVersion,2);
 assert.deepEqual(validated.inspection.bindings,[{cell:"A1",path:"project.name"}],"inspection preserves the editable cell location for every binding");
 
 const printerSettingsContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.printerSettings",printerSettingsRelationshipType="http://schemas.openxmlformats.org/officeDocument/2006/relationships/printerSettings";
-async function withPrinterSettings(bytes,{worksheet="Template",part="xl/printerSettings/printerSettings1.bin",contentType=printerSettingsContentType,relationshipType=printerSettingsRelationshipType,targetMode,includeRelationship=true,duplicateRelationship=false}={}){
+async function withPrinterSettings(bytes,{worksheet="Template",part="xl/printerSettings/printerSettings1.bin",contentType=printerSettingsContentType,relationshipType=printerSettingsRelationshipType,relationshipTarget,targetMode,includePart=true,includeRelationship=true,duplicateRelationship=false}={}){
   const zip=await JSZip.loadAsync(bytes),sheetNumber=worksheet==="Template"?1:worksheet==="Template Guide"?2:undefined,relationshipName=sheetNumber?`xl/worksheets/_rels/sheet${sheetNumber}.xml.rels`:"xl/_rels/workbook.xml.rels",contentTypes=await zip.file("[Content_Types].xml").async("string"),partName=`/${part}`;
-  zip.file("[Content_Types].xml",contentTypes.replace("</Types>",`<Override PartName="${partName}" ContentType="${contentType}"/></Types>`));
-  zip.file(part,new Uint8Array([0x00,0x01,0x50,0x53,0xff]));
+  if(includePart){zip.file("[Content_Types].xml",contentTypes.replace("</Types>",`<Override PartName="${partName}" ContentType="${contentType}"/></Types>`));zip.file(part,new Uint8Array([0x00,0x01,0x50,0x53,0xff]));}
   if(includeRelationship){
-    const target=sheetNumber?`../printerSettings/${part.split("/").at(-1)}`:`printerSettings/${part.split("/").at(-1)}`,mode=targetMode?` TargetMode="${targetMode}"`:"",relationships=[`<Relationship Id="rIdPrinterSettings" Type="${relationshipType}" Target="${target}"${mode}/>`];
+    const target=relationshipTarget??(sheetNumber?`../printerSettings/${part.split("/").at(-1)}`:`printerSettings/${part.split("/").at(-1)}`),mode=targetMode?` TargetMode="${targetMode}"`:"",relationships=[`<Relationship Id="rIdPrinterSettings" Type="${relationshipType}" Target="${target}"${mode}/>`];
     if(duplicateRelationship)relationships.push(`<Relationship Id="rIdPrinterSettingsDuplicate" Type="${relationshipType}" Target="${target}"/>`);
     const existingRelationships=zip.file(relationshipName)?await zip.file(relationshipName).async("string"):'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
     zip.file(relationshipName,existingRelationships.replace("</Relationships>",`${relationships.join("")}</Relationships>`));
@@ -121,6 +120,7 @@ for(const [label,options] of [
   ["external printer-settings relationship",{targetMode:"External"}],
   ["printer settings related from an unapproved package source",{worksheet:"Workbook"}],
   ["ambiguous printer-settings relationships",{duplicateRelationship:true}],
+  ["printer-settings relationship targeting a non-printer part",{includePart:false,relationshipTarget:"../styles.xml"}],
 ]){
   const bytes=await withPrinterSettings(workbookBytes,options),result=await validateExcelTemplateWorkbook(new Blob([bytes]),"flow");
   assert.equal(result.valid,false,label);

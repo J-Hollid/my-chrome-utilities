@@ -234,7 +234,7 @@ export async function validateExcelTemplateWorkbook(source, expectedKind) {
                 const target = attrs.Target && internalTarget(name, attrs.Target);
                 if (!target || !byName.has(target))
                     findings.push({ location: name, message: `Relationship ${attrs.Id ?? "(unnamed)"} has a broken target ${attrs.Target ?? ""}.` });
-                if (/(?:chart|pivot|slicer|connection|oleObject|control|externalLink)/iu.test(attrs.Type ?? "") || /\/package$/iu.test(attrs.Type ?? ""))
+                if (attrs.Type === printerSettingsRelationshipType && (!target || !acceptedPrinterSettings.has(target)) || /(?:chart|pivot|slicer|connection|oleObject|control|externalLink)/iu.test(attrs.Type ?? "") || /\/package$/iu.test(attrs.Type ?? ""))
                     findings.push({ location: name, message: `Relationship ${attrs.Id ?? "(unnamed)"} uses unsupported workbook content.` });
             }
         }
