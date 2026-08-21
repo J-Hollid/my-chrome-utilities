@@ -79,6 +79,7 @@ import { createVerificationPackCardinalityAdapter } from
   "./verification-pack-cardinality/contract.mjs";
 import {
   registryCardinalityEvidenceTaskKeys,
+  registryCardinalityFocusedPlanMode,
   registryCardinalityFocusedTaskKeys,
   validateRegistryCardinalityFocusedEvidence,
 } from "./verification-pack-cardinality/focused-evidence.mjs";
@@ -1558,7 +1559,9 @@ export async function checkpointPreflight({
       environmentInteger("VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES", defaultOutputLimitBytes, {
         maximum:maximumOutputLimitBytes,
       });
-      if (evidenceTask && (plan.mode !== "exact" || !plan.includeProperties ||
+      if (evidenceTask && (plan.mode !== "exact" && !registryCardinalityFocusedPlanMode({
+        task:evidenceTask, mode:plan.mode,
+      }) || !plan.includeProperties ||
           !plan.changeSet || !plan.baseCommit || !plan.claimPackIds?.length)) {
         throw new Error("Checkpoint preflight requires an exact canonical evidence plan");
       }

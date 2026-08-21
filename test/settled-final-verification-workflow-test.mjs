@@ -37,6 +37,7 @@ import { packageProofValid } from "../scripts/verification-reliability-runtime.m
 import { withVerificationNotesLock } from "../scripts/verification-git-notes.mjs";
 import {
   registryCardinalityEvidenceTaskKeys,
+  registryCardinalityFocusedPlanMode,
   validateRegistryCardinalityFocusedEvidence,
 } from "../scripts/verification-pack-cardinality/focused-evidence.mjs";
 import {
@@ -132,6 +133,12 @@ const cardinalityEvidenceInput = {
 assert.equal(validateRegistryCardinalityFocusedEvidence(cardinalityEvidenceInput).mode,
   "registry-cardinality-focused",
   "the exact specification-bound cardinality route is accepted");
+assert.equal(registryCardinalityFocusedPlanMode({
+  task:"registry-derived-verification-packs", mode:"focused-task",
+}), true, "checkpoint preflight recognizes the exact specification-bound focused mode");
+assert.equal(registryCardinalityFocusedPlanMode({
+  task:"generic-tooling-candidate", mode:"focused-task",
+}), false, "generic focused tooling does not receive a checkpoint mode exception");
 assert.throws(() => validateRegistryCardinalityFocusedEvidence({
   ...cardinalityEvidenceInput,
   task:"generic-tooling-candidate",

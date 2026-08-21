@@ -48,6 +48,10 @@ const approvedPaths = new Set([
   "verification/packs.json",
 ]);
 
+export function registryCardinalityFocusedPlanMode({ task, mode } = {}) {
+  return task === taskIdentity && mode === "focused-task";
+}
+
 function approvedPath(path) {
   return path.startsWith("scripts/verification-pack-cardinality/") || approvedPaths.has(path);
 }
