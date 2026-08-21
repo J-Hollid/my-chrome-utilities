@@ -6574,7 +6574,6 @@
       "scripts/settled-final-verification-policy.mjs",
       "scripts/settled-final-verification-review.mjs",
       "scripts/verification-evidence.mjs",
-      "scripts/verification-pack-cardinality/",
       "scripts/verification-packs.mjs",
       "scripts/verification-reliability-incidents.mjs",
       "scripts/verification-reliability-persistence.mjs",

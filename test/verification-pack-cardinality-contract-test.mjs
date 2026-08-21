@@ -96,6 +96,14 @@ assert.throws(() => validateCanonicalMasterEvidenceRecord(canonicalEvidence(twoP
 
 const currentRegistry = JSON.parse(await readFile(
   new URL("../verification/packs.json", import.meta.url), "utf8"));
+const shellPack = currentRegistry.find(({ id }) => id === "shell");
+const cardinalitySlice = shellPack.verificationSlices.find(
+  ({ id }) => id === "verification_pack_cardinality_contract");
+assert.ok(cardinalitySlice, "the Shell pack owns the cardinality contract through its named slice");
+assert.deepEqual(cardinalitySlice.consumers, [],
+  "semantic runnable-pack consumers do not become registry consumer edges");
+assert.equal(shellPack.globalImpact.includes("scripts/verification-pack-cardinality/"), false,
+  "the bounded cardinality prefix is not also registered as globally impactful");
 assert.deepEqual(timeoutRepairPackIds,
   [...planVerification(currentRegistry, { terminalFull:true }).selectedPackIds].sort(),
   "reliability closure derives its pack set from the current registry");
