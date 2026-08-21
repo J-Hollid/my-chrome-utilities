@@ -12,16 +12,24 @@ for(const key of ["documentationTemplateMovedArea","documentationTemplateEmptyLo
 if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
     handler=flowHandler,
-    expectedPreRepairFailure={guidedPackageRows:false,guidedBindingRows:false},
-    expectedRepairResult={guidedPackageRows:true,guidedBindingRows:true},
-    observed={
+    printerSettingsMapping=context.causalCategory==="other:Excel printer settings acceptance mapping",
+    expectedPreRepairFailure=printerSettingsMapping
+      ?{printerSettingsPackageRow:false,printerSettingsRuntimeRow:false}
+      :{guidedPackageRows:false,guidedBindingRows:false},
+    expectedRepairResult=printerSettingsMapping
+      ?{printerSettingsPackageRow:true,printerSettingsRuntimeRow:true}
+      :{guidedPackageRows:true,guidedBindingRows:true},
+    observed=printerSettingsMapping?{
+      printerSettingsPackageRow:handler.includes("an unrecognized or active binary part")&&handler.includes("Use inert macro-free workbook content"),
+      printerSettingsRuntimeRow:handler.includes("Template Guide")&&handler.includes("xl/printerSettings/printerSettings2.bin"),
+    }:{
       guidedPackageRows:handler.includes("a formula or external workbook connection")&&handler.includes("Remove active or external workbook content"),
       guidedBindingRows:handler.includes("a binding outside its required repeat")&&handler.includes("its Template worksheet, cell, and required repeat"),
     },fixture={
-      id:"guided-excel-acceptance-example-relations-v1",
+      id:printerSettingsMapping?"excel-printer-settings-acceptance-relations-v1":"guided-excel-acceptance-example-relations-v1",
       causalCategory:context.causalCategory,
       diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
-      input:{handler:"flow_table_documentation_export",contract:2},
+      input:{handler:"flow_table_documentation_export",contract:printerSettingsMapping?"printer-settings":"guided-authoring"},
       expectedPreRepairFailure,expectedRepairResult,
     },fixtureDigest=verificationDigest(fixture);
   assert.deepEqual(observed,expectedRepairResult);
