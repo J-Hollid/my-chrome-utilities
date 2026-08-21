@@ -112,6 +112,7 @@ Feature: Data layer Excel documentation templates
       | encrypted or invalid OOXML content         | Choose a valid unencrypted .xlsx         |
       | a broken or unsupported relationship       | Identify the unsupported workbook part   |
       | a formula or external workbook connection  | Remove active or external workbook content |
+      | an unrecognized or active binary part      | Use inert macro-free workbook content    |
 
   # Data layer Excel documentation templates 010
   Scenario: Data layer Excel documentation templates 010
@@ -188,5 +189,21 @@ Feature: Data layer Excel documentation templates
     Then the label properties are treated as nonfunctional package metadata rather than template instructions
     And the candidate is accepted by the same contract, binding, area, relationship, and size rules as the unlabelled starter
     When the operator saves the candidate
-    Then the exact labelled workbook bytes and their matching digest and byte length are saved atomically
+    Then the exact candidate workbook bytes and their matching digest and byte length are saved atomically
     And no label property becomes a binding, repeat area, external relationship, or project field
+
+  # Data layer Excel documentation templates 017
+  Scenario Outline: Data layer Excel documentation templates 017
+    Given Excel saved a valid guided workbook with standard printer settings for <worksheet>
+    And <printer_settings_part> has the standard printer-settings content type and one internal relationship from <worksheet>
+    When guided validation inspects the candidate
+    Then the printer settings are treated as inert presentation metadata rather than macro or template behavior
+    And the candidate can be previewed, saved, assigned, and rendered under the ordinary guided contract
+    And only supported Template page setup, headers, and footers can affect populated output
+    When the operator saves the candidate
+    Then the exact candidate workbook bytes and their matching digest and byte length are saved atomically
+
+    Examples:
+      | worksheet      | printer_settings_part                                |
+      | Template       | xl/printerSettings/printerSettings1.bin              |
+      | Template Guide | xl/printerSettings/printerSettings2.bin              |

@@ -65,6 +65,7 @@ Feature: Data layer Excel documentation templates runtime
       | a formula and external workbook link     | the formula cell and relationship part   |
       | an unsafe package entry and size overflow | the package and violated limit           |
       | encrypted or malformed OOXML             | the selected workbook                    |
+      | an unrecognized or active binary part    | its binary package part                  |
 
   # Data layer Excel documentation templates runtime 007
   Scenario: Data layer Excel documentation templates runtime 007
@@ -114,6 +115,22 @@ Feature: Data layer Excel documentation templates runtime
     When production validation and the installed candidate controls inspect and save it
     Then independent OOXML inspection proves the label properties are present and the workbook remains an unencrypted valid package
     And production validation accepts the guided contract without interpreting label properties as template behavior
-    And repository inspection finds exact candidate bytes with matching digest and byte length
+    And repository inspection finds the exact candidate bytes with matching digest and byte length
     When the same guided workbook is protected by a sensitivity label that applies encryption
     Then production validation rejects it as encrypted before any candidate, template metadata, body, assignment, or project revision is saved
+
+  # Data layer Excel documentation templates runtime 013
+  Scenario Outline: Data layer Excel documentation templates runtime 013
+    Given an actual guided Flow workbook saved by Excel contains standard printer settings for <worksheet>
+    And independent OOXML inspection finds <printer_settings_part> with its standard content type and one internal relationship from <worksheet>
+    When the operator selects it and requests Populated preview — output only through installed controls
+    Then production validation accepts the guided workbook without interpreting the printer settings as macro or template behavior
+    And the output preserves supported Template page setup, headers, and footers without consuming printer-specific instructions
+    And repository tracing records no template save, assignment, project revision, or publication write
+    When the operator activates Save template
+    Then repository inspection finds the exact candidate bytes with matching digest and byte length
+
+    Examples:
+      | worksheet      | printer_settings_part                                |
+      | Template       | xl/printerSettings/printerSettings1.bin              |
+      | Template Guide | xl/printerSettings/printerSettings2.bin              |

@@ -94,6 +94,18 @@ An invalid parent repeat suppresses dependent binding findings until the parent 
 
 Package, active-content, size, and Excel-limit failures retain their existing fail-closed behavior. Invalid candidates cannot be previewed, saved, assigned, or rendered. Project values remain literal and cannot create formulas, placeholders, workbook instructions, relationships, or additional layout.
 
+Standard printer-settings parts written by Excel are inert package metadata, not
+macros or template behavior. A printer-settings binary is accepted only when it
+uses the standard printer-settings content type, has one safe internal
+relationship from an existing `Template` or `Template Guide` worksheet, and is
+the target of that relationship. Arbitrary binary parts, external targets,
+macros, ActiveX controls, embedded packages, signatures, and broken or ambiguous
+printer-settings relationships remain rejected. Accepted printer settings do
+not add bindings, repeat areas, instructions, project fields, or output behavior;
+only the already supported `Template` page setup, headers, and footers can affect
+populated output. Saving retains the exact selected workbook bytes and their
+matching digest and byte length.
+
 ## Preserved boundaries and exclusions
 
 The template remains a presentation-only consumer of the existing immutable documentation snapshot. It cannot select, sort, filter, query, regroup, or mutate documentation data. The configured kinds, roots, collections, order, privacy boundary, incomplete-Draft behavior, output scopes, portability, assignment, staleness, and Built-in fallback remain unchanged.
@@ -169,3 +181,36 @@ acceptance example relations, installed evidence-key inventory, extracted-source
 ownership, and layout properties before the first evidence-producing run. Retain
 the focused QA pilot and eligible-repair route; do not start another broad
 verification program from these task-local repairs.
+
+## Excel printer-settings compatibility correction
+
+Stable task name: `excel-printer-settings-compatibility`.
+
+The current validator rejects every `.bin` package part, including standard
+printer settings created when Excel saves an otherwise valid guided workbook.
+Correct that false positive without introducing a general binary-content
+exception. Cover printer settings related from both `Template` and `Template
+Guide`, arbitrary numbering of standard printer-settings parts, exact candidate
+inspection and persistence, and unchanged rejection of unrecognized or active
+binary content.
+
+**Development focus:** begin with
+`test/data-layer-documentation-template-excel-test.mjs` using small actual OOXML
+fixtures for accepted worksheet printer settings and rejected binary or
+relationship variants. Then cover candidate preview and exact-byte save through
+the installed Documentation Template Library.
+
+**QA impact:** forecast `flow_export` and its declared `shell` Documentation
+workspace consumer, with package proof if delivered files change. The exact
+changed-path plan is authoritative. Likely existing shared integration surfaces
+are `src/documentation-templates/excel-workbook.ts`, the Excel template unit
+test, the installed Flow-documentation browser target, and generated `dist/`
+companions. No new source prefix, persistence behavior, archive behavior, or
+all-runnable-pack feature checkpoint is expected.
+
+The implementation-and-review effort ceiling is four active hours. At two active
+hours report accepted and rejected package variants, installed preview and save
+status, the exact planned packs and tasks, failures, remaining work, confidence,
+and completion forecast. Continue while the accepted printer-settings boundary
+remains narrow, inert, internally related, and covered by unchanged active-
+content rejection.
