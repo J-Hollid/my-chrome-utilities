@@ -451,8 +451,10 @@ function closeEvidencePlanPrerequisites(plan, canonicalPlan) {
   return { ...plan, ...groups, tasks:evidenceTaskGroups.flatMap((group) => groups[group]) };
 }
 
-export function closeCanonicalEvidencePlanPrerequisites(plan, candidatePacks) {
-  const runnablePackIds = createVerificationPackCardinalityAdapter(candidatePacks).runnablePackIds;
+export function closeCanonicalEvidencePlanPrerequisites(plan, candidatePacks,
+  { allowLegacySourceLess = false } = {}) {
+  const runnablePackIds = createVerificationPackCardinalityAdapter(candidatePacks,
+    { allowLegacySourceLess }).runnablePackIds;
   return closeEvidencePlanPrerequisites(plan, planVerification(candidatePacks, {
     packIds:runnablePackIds,
     includeProperties:true,
@@ -515,9 +517,12 @@ function canonicalRegistryCardinalityPlan(candidatePacks, {
 
 async function canonicalPlanDocument({
   commit, baseCommit, changeSet, packIds, repositoryRoot, includePackage = true,
-  runIntentBootstrap = false, evidenceTask,
+  runIntentBootstrap = false, evidenceTask, allowLegacyCandidateOwnership = false,
 }) {
-  const candidatePacks = await verificationPacksAtCommit(commit, { repositoryRoot });
+  const candidatePacks = await verificationPacksAtCommit(commit, {
+    repositoryRoot,
+    historicalRegistryFallback:allowLegacyCandidateOwnership,
+  });
   let basePacks;
   let historicalRegistryFallback = false;
   try {
@@ -545,7 +550,8 @@ async function canonicalPlanDocument({
       historicalRegistryFallback,
     });
   if (evidenceTask !== "registry-derived-verification-packs") {
-    plan = closeCanonicalEvidencePlanPrerequisites(plan, candidatePacks);
+    plan = closeCanonicalEvidencePlanPrerequisites(plan, candidatePacks,
+      { allowLegacySourceLess:allowLegacyCandidateOwnership });
     if (includePackage) plan = withEvidencePackageTask(plan);
   }
   return planDocument(plan, { evidenceTask });
@@ -566,6 +572,7 @@ export async function validateCanonicalVerificationCheckpoint({
   const plan = await canonicalPlanDocument({
     commit, baseCommit, changeSet, packIds:sortedUnique(packIds ?? []), repositoryRoot,
     includePackage:!legacySeparatePackage, evidenceTask,
+    allowLegacyCandidateOwnership:allowLegacySeparatePackage,
   });
   if (receipt.candidate?.commit !== commit || receipt.candidate?.tree !== tree ||
       receipt.candidate?.baseCommit !== baseCommit ||

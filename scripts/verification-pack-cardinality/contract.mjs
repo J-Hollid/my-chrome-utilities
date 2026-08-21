@@ -95,8 +95,8 @@ export function runnablePackRegistryIdentity(packIds) {
   return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
 }
 
-export function createVerificationPackCardinalityAdapter(packs) {
-  const runnablePackIds = Object.freeze(runnablePackIdsFromRegistry(packs));
+export function createVerificationPackCardinalityAdapter(packs, options = {}) {
+  const runnablePackIds = Object.freeze(runnablePackIdsFromRegistry(packs, options));
   const byId = new Map(packs.map((pack) => [pack.id, pack]));
   return Object.freeze({
     runnablePackIds,
