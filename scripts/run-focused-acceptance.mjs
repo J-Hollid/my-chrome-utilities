@@ -472,6 +472,26 @@ export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, cand
   return blocking.map(({ id }) => id).sort();
 }
 
+export function reliabilityAdmissionPartition({ incidents, baseCommit, evidenceTask }) {
+  const boundedClosureCheckpoint = baseCommit === boundedClosureContractRevision &&
+    evidenceTask === boundedClosureEvidenceTask;
+  const auditedRepairIds = new Set(boundedClosureCheckpoint ? incidents
+    .filter((incident) => incident.repair?.status === "eligible" &&
+      ["blocking-product-repair", "blocking-verification-repair"]
+        .includes(incident.closureAudit?.kind))
+    .map(({ id }) => id) : []);
+  const eligibleCandidates = eligibleRepairAdmissionCandidates(incidents)
+    .filter((incident) => incident.repair?.status === "eligible" &&
+      !auditedRepairIds.has(incident.id));
+  const flakyCandidates = confirmedFlakyAdmissionCandidates(incidents);
+  const alreadyDeferred = incidents.filter((incident) =>
+    incident.terminalVerificationDeferred?.status === "terminal-verification-deferred");
+  const admittedIds = new Set([...eligibleCandidates, ...flakyCandidates, ...alreadyDeferred]
+    .map(({ id }) => id));
+  for (const id of auditedRepairIds) admittedIds.add(id);
+  return { eligibleCandidates, flakyCandidates, alreadyDeferred, admittedIds };
+}
+
 function terminateProcessGroup(child, signal) {
   if (process.platform === "win32") return child.kill(signal);
   try { process.kill(-child.pid, signal); return true; }
@@ -1816,13 +1836,9 @@ export async function runFocusedAcceptance(
   if (evidenceTask && !timeoutRepairIncident && !options.runIntentBootstrap) {
     admissionStore = createTimeoutIncidentStore();
     const incidents = await admissionStore.blocking({ commit:candidateCommit });
-    const eligibleCandidates = eligibleRepairAdmissionCandidates(incidents)
-      .filter((incident) => incident.repair?.status === "eligible");
-    const flakyCandidates = confirmedFlakyAdmissionCandidates(incidents);
-    const alreadyDeferred = incidents.filter((incident) =>
-      incident.terminalVerificationDeferred?.status === "terminal-verification-deferred");
-    const admittedIds = new Set([...eligibleCandidates, ...flakyCandidates, ...alreadyDeferred]
-      .map(({ id }) => id));
+    const { eligibleCandidates, flakyCandidates, admittedIds } = reliabilityAdmissionPartition({
+      incidents, baseCommit:changedSince, evidenceTask,
+    });
     const unadmitted = incidents.filter(({ id }) => !admittedIds.has(id));
     if (unadmitted.length) {
       throw new Error(`Unresolved reliability incidents have no admissible proof: ${

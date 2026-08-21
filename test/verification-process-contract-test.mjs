@@ -75,6 +75,7 @@ import {
   focusedAcceptanceOptions,
   selectFocusedVerificationTasks,
   prepareCheckpointExecution,
+  reliabilityAdmissionPartition,
   reviewReadyScopeGuardRequired,
   resumeVerificationPlan,
   runTimeoutRepairFocused,
@@ -1577,6 +1578,30 @@ assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-conf
   baseCommit:boundedClosureContractRevision, evidenceTask:boundedClosureEvidenceTask,
   requestedPackIds:timeoutRepairPackIds }), ["incident-confirmed-flaky-rebased"],
 "the bounded closure checkpoint follows an audited confirmed-flaky rebase to the selected candidate");
+const admissionEligible = (id, closureAudit) => ({
+  id, state:"unresolved", repair:{ status:"eligible" },
+  ...(closureAudit ? { closureAudit } : {}),
+});
+const auditedAdmissionRepair = admissionEligible("incident-audited", {
+  kind:"blocking-product-repair", blocking:true, resolved:false,
+  failureDomain:"product-runtime",
+});
+const ordinaryAdmissionRepair = admissionEligible("incident-ordinary");
+const boundedAdmissionPartition = reliabilityAdmissionPartition({
+  incidents:[auditedAdmissionRepair, ordinaryAdmissionRepair],
+  baseCommit:boundedClosureContractRevision,
+  evidenceTask:boundedClosureEvidenceTask,
+});
+assert.deepEqual(boundedAdmissionPartition.eligibleCandidates.map(({ id }) => id),
+  ["incident-ordinary"],
+"bounded closure does not redundantly re-admit an audited eligible repair");
+assert.equal(boundedAdmissionPartition.admittedIds.has("incident-audited"), true,
+"an audited eligible repair remains an admitted bounded-closure obligation");
+assert.deepEqual(reliabilityAdmissionPartition({
+  incidents:[auditedAdmissionRepair, ordinaryAdmissionRepair],
+  baseCommit:"ordinary-base", evidenceTask:"ordinary-review",
+}).eligibleCandidates.map(({ id }) => id), ["incident-audited", "incident-ordinary"],
+"ordinary review preserves eligible repair admission behavior");
 await assert.rejects(async() => compatibleTimeoutRepairIncidentIds({
   requestedId:"incident-rebased", blocking:[rebasedCompatible], candidateCommit:"repair-commit",
   candidateTree:"repair-tree", baseCommit:boundedClosureContractRevision,
