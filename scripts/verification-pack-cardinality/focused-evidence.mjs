@@ -132,9 +132,26 @@ function assertCandidateRegistryOwnership(candidateRegistry) {
   });
 }
 
+function assertCandidateOwnershipProof(proof) {
+  if (!proof || Array.isArray(proof) ||
+      Object.keys(proof).sort().join(",") !== "consumers,packId,sliceId,sourcePrefix" ||
+      proof.packId !== "shell" || proof.sliceId !== cardinalitySliceId ||
+      proof.sourcePrefix !== cardinalityPrefix || !Array.isArray(proof.consumers) ||
+      proof.consumers.length) {
+    throw new Error("Registry cardinality focused evidence requires exact slice ownership proof");
+  }
+  return Object.freeze({
+    packId:"shell",
+    sliceId:cardinalitySliceId,
+    sourcePrefix:cardinalityPrefix,
+    consumers:Object.freeze([]),
+  });
+}
+
 export function validateRegistryCardinalityFocusedEvidence({
   task,
   candidateRegistry,
+  candidateOwnership,
   changedPaths,
   taskKeys,
   syntheticProofs,
@@ -145,7 +162,9 @@ export function validateRegistryCardinalityFocusedEvidence({
   if (task !== taskIdentity) {
     throw new Error("Registry cardinality focused evidence requires the exact task identity");
   }
-  const ownership = assertCandidateRegistryOwnership(candidateRegistry);
+  const ownership = candidateRegistry
+    ? assertCandidateRegistryOwnership(candidateRegistry)
+    : assertCandidateOwnershipProof(candidateOwnership);
   if (!Array.isArray(changedPaths) || !changedPaths.length ||
       new Set(changedPaths).size !== changedPaths.length) {
     throw new Error("Registry cardinality focused evidence requires one exact changed-path set");

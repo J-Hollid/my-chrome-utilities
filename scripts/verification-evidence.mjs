@@ -356,7 +356,7 @@ function receiptEnvironment(environment, { allowLegacyExecutionLoad = false } = 
   };
 }
 
-function planDocument(plan, { evidenceTask } = {}) {
+function planDocument(plan, { evidenceTask, candidateRegistry } = {}) {
   if (plan?.version !== 2 || !Array.isArray(plan.tasks)) {
     throw new Error("Verification evidence requires a version 2 structured plan");
   }
@@ -382,17 +382,18 @@ function planDocument(plan, { evidenceTask } = {}) {
     throw new Error("Verification evidence requires the canonical version 1 Git change set");
   }
   const identities = plan.tasks.map(verificationTaskIdentity);
-  if (cardinalityFocused) {
-    validateRegistryCardinalityFocusedEvidence({
+  const cardinalityEvidence = cardinalityFocused
+    ? validateRegistryCardinalityFocusedEvidence({
       task:evidenceTask,
+      candidateRegistry,
+      candidateOwnership:plan.cardinalityOwnership,
       changedPaths:plan.changedPaths,
       taskKeys:identities.map(({ key }) => key),
       syntheticProofs:{ current:true, addedRunnable:true, emptyCompatibility:true },
       includeProperties:plan.includeProperties,
       includePackage:identities.some(({ key }) => key === "package:extension"),
       terminalFull:false,
-    });
-  }
+    }) : undefined;
   const keys = identities.map(({ key }) => key);
   if (!identities.length || new Set(keys).size !== keys.length) {
     throw new Error("Verification evidence requires a non-empty plan with unique task identities");
@@ -423,6 +424,7 @@ function planDocument(plan, { evidenceTask } = {}) {
     includeProperties:Boolean(plan.includeProperties),
     stages:plan.stages,
     tasks:identities,
+    ...(cardinalityEvidence ? { cardinalityOwnership:cardinalityEvidence.ownership } : {}),
   };
 }
 
@@ -554,7 +556,7 @@ async function canonicalPlanDocument({
       { allowLegacySourceLess:allowLegacyCandidateOwnership });
     if (includePackage) plan = withEvidencePackageTask(plan);
   }
-  return planDocument(plan, { evidenceTask });
+  return planDocument(plan, { evidenceTask, candidateRegistry:candidatePacks });
 }
 
 export async function validateCanonicalVerificationCheckpoint({
@@ -923,7 +925,10 @@ export async function validateVerificationEvidenceCompatibility({
     git(repositoryRoot, "rev-parse", `${changedSince}^{commit}`),
     repositoryIdentity(repositoryRoot),
   ]);
-  const planRecord = planDocument(plan, { evidenceTask:task });
+  const candidateRegistry = task === "registry-derived-verification-packs"
+    ? await verificationPacksAtCommit(commit, { repositoryRoot })
+    : undefined;
+  const planRecord = planDocument(plan, { evidenceTask:task, candidateRegistry });
   const actualChangeSet = await canonicalVerificationChangeSet({
     base:baseCommit,
     commit,

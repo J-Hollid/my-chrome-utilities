@@ -117,6 +117,7 @@ assert.equal(reviewReadyProductCandidatePath("scripts/run-focused-acceptance.mjs
 
 const cardinalityEvidenceInput = {
   task:"registry-derived-verification-packs",
+  candidateRegistry:packs,
   changedPaths:[
     "scripts/verification-pack-cardinality/contract.mjs",
     "scripts/verification-packs.mjs",
@@ -124,7 +125,7 @@ const cardinalityEvidenceInput = {
     "verification/packs.json",
   ],
   taskKeys:[...registryCardinalityEvidenceTaskKeys, "property:test/workspace-tabs-property-test.mjs",
-    "package:extension"],
+    "acceptance-session:shell", "package:extension"],
   syntheticProofs:{ current:true, addedRunnable:true, emptyCompatibility:true },
   includeProperties:true,
   includePackage:true,
