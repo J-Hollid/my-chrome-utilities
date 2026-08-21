@@ -133,6 +133,14 @@ function registryBindsCompleteAcceptanceSession(identity,features,packs){
     historicalRegistryDeclaresTask(identity,packs,[]);
 }
 
+function terminalDeferralBindsEligibleRepair(incident){
+  const deferred=incident.terminalVerificationDeferred,admissions=deferred?.eligibleRepairAdmissions?.entries;
+  return deferred?.status==="terminal-verification-deferred"&&
+    typeof incident.failureDigest==="string"&&typeof deferred.repairDigest==="string"&&
+    Array.isArray(admissions)&&admissions.some(entry=>entry.incidentId===incident.id&&
+      entry.failureDigest===incident.failureDigest&&entry.repairDigest===deferred.repairDigest);
+}
+
 async function monotonicDeferredAcceptanceSessionExpansion({incident,currentIdentities,currentPacks,
   loadHistoricalPacks,loadSourceReceipt}){
   const source=incident.failure?.task;
@@ -146,17 +154,18 @@ async function monotonicDeferredAcceptanceSessionExpansion({incident,currentIden
   if(currentMatches.length!==1)return false;
   const current=currentMatches[0],currentFeatures=acceptanceSessionFeatures(current);
   if(!currentFeatures||currentFeatures.length<=historicalFeatures.length)return false;
-  let receipt,historicalPacks;
-  try{
-    [receipt,historicalPacks]=await Promise.all([
-      loadSourceReceipt(incident.failure.sourceReceipt),
-      loadHistoricalPacks(incident.failure.lineage?.commit,"verification/packs.json"),
-    ]);
-  }catch{return false;}
-  const recorded=receipt?.tasks?.[source.key];
-  if(receipt?.candidate?.commit!==incident.failure.lineage?.commit||
-      receipt?.candidate?.tree!==incident.failure.lineage?.tree||recorded?.status!=="failed"||
-      !same(recorded.identity,source)||
+  let historicalPacks;
+  try{historicalPacks=await loadHistoricalPacks(
+    incident.failure.lineage?.commit,"verification/packs.json");}
+  catch{return false;}
+  let receipt;
+  try{receipt=await loadSourceReceipt(incident.failure.sourceReceipt);}
+  catch{if(!terminalDeferralBindsEligibleRepair(incident))return false;}
+  const recorded=receipt?.tasks?.[source.key],sourceReceiptBound=receipt?(
+    receipt.candidate?.commit===incident.failure.lineage?.commit&&
+    receipt.candidate?.tree===incident.failure.lineage?.tree&&recorded?.status==="failed"&&
+    same(recorded.identity,source)):terminalDeferralBindsEligibleRepair(incident);
+  if(!sourceReceiptBound||
       !registryBindsCompleteAcceptanceSession(source,historicalFeatures,historicalPacks)||
       !registryBindsCompleteAcceptanceSession(current,currentFeatures,currentPacks))return false;
   let historicalIndex=0;

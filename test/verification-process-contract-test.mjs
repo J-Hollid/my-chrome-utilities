@@ -505,6 +505,30 @@ assert.deepEqual(await validateUnresolvedIncidentTaskSuccession({incidents:[defe
 }),[],"a verified deferred acceptance session does not block an unrelated governed repair after monotonic expansion");
 assert.deepEqual(deferredAcceptanceIncident,deferredAcceptanceBefore,
   "acceptance-session repair preflight preserves immutable incident state");
+const durablyDeferredAcceptanceIncident=structuredClone(deferredAcceptanceIncident);
+durablyDeferredAcceptanceIncident.failureDigest="1".repeat(64);
+durablyDeferredAcceptanceIncident.terminalVerificationDeferred.repairDigest="2".repeat(64);
+durablyDeferredAcceptanceIncident.terminalVerificationDeferred.eligibleRepairAdmissions={entries:[{
+  incidentId:durablyDeferredAcceptanceIncident.id,
+  failureDigest:durablyDeferredAcceptanceIncident.failureDigest,
+  repairDigest:durablyDeferredAcceptanceIncident.terminalVerificationDeferred.repairDigest,
+}]};
+assert.deepEqual(await validateUnresolvedIncidentTaskSuccession({
+  incidents:[durablyDeferredAcceptanceIncident],currentIdentities:[expandedAcceptanceSession],
+  currentPacks:expandedAcceptancePacks,graph:{version:1,identities:{},boundaries:{},edges:[]},
+  loadHistoricalPacks:async()=>historicalAcceptancePacks,
+  loadSourceReceipt:async()=>{throw new Error("ephemeral source receipt is unavailable");},
+}),[],"a durable terminal admission substitutes for an unavailable ephemeral failure receipt");
+const unboundDeferredAcceptanceIncident=structuredClone(durablyDeferredAcceptanceIncident);
+unboundDeferredAcceptanceIncident.terminalVerificationDeferred.eligibleRepairAdmissions.entries[0]
+  .repairDigest="3".repeat(64);
+await assert.rejects(()=>validateUnresolvedIncidentTaskSuccession({
+  incidents:[unboundDeferredAcceptanceIncident],currentIdentities:[expandedAcceptanceSession],
+  currentPacks:expandedAcceptancePacks,graph:{version:1,identities:{},boundaries:{},edges:[]},
+  loadHistoricalPacks:async()=>historicalAcceptancePacks,
+  loadSourceReceipt:async()=>{throw new Error("ephemeral source receipt is unavailable");},
+}),/same-target planner projection requires one diagnosed target/iu,
+"an unbound durable admission cannot replace the historical failure receipt");
 const projectedEligibleIncident={...projectedIncident,repair:{focusedTaskPlan:[{
   identity:projectedCurrent,roles:["diagnosed-boundary"],taskSuccession:{
     version:sameTargetProjection.version,sourceTaskDigest:sameTargetProjection.sourceTaskDigest,
