@@ -859,6 +859,8 @@ assert.equal(repeatedInstanceProgram.match(/actionable Page instance inline acti
   "runtime024 must stabilize each Page-instance action before opening its schema workspace");
 assert.equal(repeatedInstanceProgram.match(/await openInstanceSchema\(/gu)?.length,2,
   "runtime024 must use the stabilized action for both repeated-instance editor routes");
+assert.equal(repeatedInstanceProgram.match(/await actionableControl\(/gu)?.length,8,
+  "runtime024 must stabilize every toolbar, property, review, and reset control before clicking");
 assert.doesNotMatch(repeatedInstanceProgram,
   /q\('\[data-flow-schema-contribution="true"\]'[^;]+\)\.click\(\)/u,
   "runtime024 must not click a transient inline action without a readiness boundary");
