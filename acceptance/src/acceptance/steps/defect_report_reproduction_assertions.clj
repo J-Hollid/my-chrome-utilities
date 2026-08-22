@@ -14,7 +14,7 @@
       (support/assert! match "Scroll example was not exercised by the production UI." {:example example})
       (support/assert! (= (:step_text example) (:stepText match)) "Scroll example preview differs." {:example example :match match}))))
 
-(def ^:private action-order ["Reorder" "+" "Adjust" "Remove"])
+(def ^:private action-order ["" "+" "Adjust" "Remove"])
 (def ^:private checkout-boundary
   {:text "2. Click Checkout"
    :earlierVisible true
@@ -92,9 +92,9 @@
                        (:scrollPreviews composer)) "Scroll previews differ." composer)
     (support/assert! (= "Apply the free delivery filter" (:customPreview composer)) "Custom preview differs." composer)
     (support/assert! (true? (:customBlankSubmissionUnavailable composer)) "Blank custom text could be submitted." composer)
-    (support/assert! (= ["Reorder" "Move to first" "Move one position earlier" "Move one position later" "Move to last" "Move…" "Adjust" "Remove"] (:manualActions composer)) "Manual-step actions are incomplete." composer)
-    (support/assert! (= ["Reorder" "+" "Adjust" "Remove"] (:manualActionRow composer)) "Manual-step actions are not grouped in display order." composer)
-    (support/assert! (= ["defect-reproduction-step-text" "defect-reproduction-step-actions" "defect-reproduction-step-guidance"] (:manualRowStructure composer)) "Manual-step rows are not structured as text, actions, then guidance." composer)
+    (support/assert! (= ["" "Move to first" "Move one position earlier" "Move one position later" "Move to last" "Move…" "Adjust" "Remove"] (:manualActions composer)) "Manual-step actions are incomplete." composer)
+    (support/assert! (= ["+" "Adjust" "Remove"] (:manualActionRow composer)) "Manual-step actions are not grouped in display order." composer)
+    (support/assert! (= ["reorderable-editor-control" "defect-reproduction-step-text" "defect-reproduction-step-actions"] (:manualRowStructure composer)) "Manual-step rows do not begin with the grip, text, and action group." composer)
     (support/assert! (= 3 (:afterFirstAddActionCount composer)) "An added manual row did not receive its own adjacent add action." composer)
     (support/assert! (= "Click Checkout — primary checkout action" (:adjustedText composer)) "Adjusted click text differs." composer)
     (support/assert! (= 1 (:adjustedCount composer)) "Adjusting created a duplicate manual step." composer)

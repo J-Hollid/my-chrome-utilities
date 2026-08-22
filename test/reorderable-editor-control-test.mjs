@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {focusableOverlayControls,overlayFocusabilityRepairProtocol} from "./support/layered-schema-overlay-focusability.mjs";
+import {compactGripAcceptanceRepairProtocol,focusableOverlayControls,overlayFocusabilityRepairProtocol} from "./support/layered-schema-overlay-focusability.mjs";
 
 class FakeElement {
   constructor(tagName,ownerDocument) {
@@ -255,8 +255,13 @@ const overlayBoundaryControls=[
 ];
 assert.deepEqual(focusableOverlayControls(overlayBoundaryControls).map(({label})=>label),["Definition"],
   "disabled boundary movement commands are not included in an overlay focusability probe");
-if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION)console.log(JSON.stringify({
-  swarmforgeTimeoutRepairRegression:overlayFocusabilityRepairProtocol(overlayBoundaryControls),
-}));
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
+    compactAcceptance=context.causalCategory==="other:defect-reorder-acceptance-contract";
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:compactAcceptance
+    ?compactGripAcceptanceRepairProtocol({visibleGripLabel:trigger.textContent,inlineGrip:grip.tagName==="SVG",
+      movementLabels:actions.map(({textContent})=>textContent)})
+    :overlayFocusabilityRepairProtocol(overlayBoundaryControls)}));
+}
 
 console.log("reorderable editor control tests passed");
