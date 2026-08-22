@@ -859,11 +859,11 @@ assert.equal(repeatedInstanceProgram.match(/actionable Page instance inline acti
   "runtime024 must stabilize each Page-instance action before opening its schema workspace");
 assert.equal(repeatedInstanceProgram.match(/await openInstanceSchema\(/gu)?.length,2,
   "runtime024 must use the stabilized action for both repeated-instance editor routes");
-assert.equal(repeatedInstanceProgram.match(/await actionableControl\(/gu)?.length,8,
+assert.equal(repeatedInstanceProgram.match(/await actionableControl\(/gu)?.length,7,
   "runtime024 must stabilize every toolbar, property, review, and reset control before clicking");
 assert.match(repeatedInstanceProgram,
-  /actionableControl\(\(\)=>\{workspace=q\(workspaceSelector\);return q\('\[aria-label\^="Property actions"\]',q\('\[data-flow-instance-effective-path="\/currency"\]',workspace\)\);\}/u,
-  "runtime024 must reacquire the replaced workspace and hydrated property row during readiness");
+  /availablePaths:rows\.map\(\(\{dataset\}\)=>dataset\.flowInstanceEffectivePath\)/u,
+  "runtime024 must retain the live rendered-path inventory when Property actions never settle");
 assert.doesNotMatch(repeatedInstanceProgram,
   /q\('\[data-flow-schema-contribution="true"\]'[^;]+\)\.click\(\)/u,
   "runtime024 must not click a transient inline action without a readiness boundary");
