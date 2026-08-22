@@ -1305,3 +1305,41 @@ and forecast. Continue while the correction remains evidence-contract-only and
 evidence is preserved; product scope, weaker evidence, unavailable ownership, or
 a genuinely global execution plan stops for current direction. No
 all-runnable-pack feature checkpoint is authorized.
+
+### Settled evidence-contract repair result
+
+Candidate `fc80795bb1` is QA-integrated. It advances the handler and fixture to
+runtime001 through runtime050 and directly proves that omission or falsification
+of runtime050 fails. Its only changed paths are
+`acceptance/src/acceptance/steps/flow_graph.clj` and
+`test/acceptance/flow_graph_steps_test.clj`; the second candidate commit refreshes
+only their required Clojure mutation manifests after the contract and proof
+changed.
+
+The corrected specification was handed to the coder at 16:40:36Z on 2026-08-22
+and reached the architect-approved candidate at 17:24:04Z, about 43 minutes 28
+seconds later and within the 60-minute ceiling. One complete exact
+`flow_graph,shell` checkpoint passed 107 focused tasks with properties and
+package proof from 17:13:24Z through 17:21:01Z, about 7 minutes 37 seconds. No
+checkpoint failed or was invalidated, and no all-runnable-pack gate ran. The
+fixture-only first specification was corrected about six minutes after handoff
+when clean-base proof showed that the unchanged handler ignored runtime050.
+
+Recommendation: continue the approved Page-card product now, but include both
+sides of a newly introduced runtime evidence key in future verification-impact
+forecasts. Reissue stable task `flow-page-card-effective-name` from the exact
+scorecard descendant of `fc80795bb1`. Use `02ceabfd62` and `8bbb93e6c6` only as
+patch references, omit the already integrated handler and fixture range hunks,
+and conserve the property strengthening from `8bbb93e6c6`. The stopped coherent
+remainder's known likely paths are
+`acceptance/src/acceptance/steps/flow_graph.clj`,
+`src/flow-graph/workspace-card-ui.ts`, its generated JavaScript and source map,
+`test/browser-packs/flow-graph.mjs`,
+`test/data-layer-flow-workspace-test.mjs`,
+`test/data-layer-flow-graph-property-test.mjs`,
+`test/flow-evidence-reporter-test.mjs`,
+`test/support/flow-evidence-reporter.mjs`,
+`test/support/flow-workspace-r02-runtime.mjs`, and `verification/packs.json`.
+Run fresh read-only intent and exact preflight from the resumed QA head; the
+original focused `flow_graph` product boundary remains the forecast, and the
+canonical result is authoritative.
