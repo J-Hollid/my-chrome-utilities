@@ -271,8 +271,7 @@
 
 .documentary-flow .flow-canvas-scroll.is-connecting .flow-graph-canvas[data-semantic-detail="identity"] .flow-node { display: inline; }
 
-.documentary-flow .flow-page-identity { font-weight: 700; }
-
+.documentary-flow .flow-page-source,
 .documentary-flow .flow-readiness { fill: #40566c; font-size: 11px; }
 
 .documentary-flow .flow-readiness { font-weight: 800; }
