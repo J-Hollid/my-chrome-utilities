@@ -6269,6 +6269,13 @@
         ]
       },
       {
+        "path": "test/support/layered-schema-overlay-focusability.mjs",
+        "consumers": [
+          "layered_schema",
+          "shell"
+        ]
+      },
+      {
         "path": "test/support/layered-schema-targets.mjs",
         "consumers": [
           "layered_schema"
