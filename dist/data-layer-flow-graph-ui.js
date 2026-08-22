@@ -5,7 +5,7 @@ import { button, elementByData, entityName, flowEdgeGeometry, flowPortPoint, nod
 import { flowPointerSnapTarget, flowPortSnapTarget } from "./flow-graph/relationship-port-snap.js";
 import { flowBoundsContains, flowPointerDelta } from "./flow-graph/page-placement.js";
 import { createFlowConceptVisualActions, flowConceptVisualHeightExtension, renderFlowConceptVisual } from "./flow-graph/concept-visual-workspace.js";
-import { flowConceptVisualAssets } from "./flow-graph/concept-visuals.js";
+import { flowConceptVisualAssets, flowConceptVisualAttachment } from "./flow-graph/concept-visuals.js";
 import { flowItemActivationRequest, flowItemMenuRequest } from "./flow-graph/workspace-item-menu.js";
 import { advanceFlowItemPointerGesture, completeFlowItemPointerGesture, startFlowItemPointerGesture } from "./flow-graph/workspace-item-pointer.js";
 import { upgradeFlowWorkspace } from "./flow-graph/workspace-ui.js";
@@ -78,12 +78,23 @@ export function installFlowGraphBuilder(options) {
         if (badge)
             badge.style.display = "none";
     } });
-    const hydrateThumbnail = async (assetId) => { const cached = thumbnailBytes.get(assetId); if (cached) {
+    const waitForVisualAssetCommit = async (projectId, flowId, targetId, asset) => { let failure; void options.settled().catch(error => { failure = error; }); for (;;) {
+        if (failure)
+            throw failure;
+        const live = current(), liveGraph = live.state && live.flowId === flowId ? documentaryFlowGraph(live.state.project, flowId) : undefined, target = { kind: liveGraph?.pageFrames.some(({ id }) => id === targetId) ? "page-frame" : "occurrence", id: targetId };
+        if (live.state?.project.id !== projectId || flowConceptVisualAttachment(live.state.project, flowId, target)?.assetId !== asset.id)
+            throw new DOMException(`Visual asset ${asset.id} changed before its durable save settled.`, "AbortError");
+        const [loaded, metadata] = await Promise.all([options.repository.loadProject(projectId), options.repository.listConceptVisualAssetMetadata(projectId)]), attachment = flowConceptVisualAttachment(loaded.state.project, flowId, target);
+        if (attachment?.assetId === asset.id && metadata.some(({ id, digest }) => id === asset.id && digest === asset.digest))
+            return;
+        await new Promise(resolve => setTimeout(resolve, 20));
+    } };
+    const hydrateThumbnail = async (assetId, targetId) => { const cached = thumbnailBytes.get(assetId); if (cached) {
         installThumbnail(assetId, cached);
         return;
     } const pending = thumbnailHydrations.get(assetId); if (pending)
-        return pending; const work = (async () => { const project = current().state?.project, projectId = project?.id, asset = project && flowConceptVisualAssets(project).find(({ id }) => id === assetId); if (!projectId || !asset)
-        return; const thumbnail = await resolveFlowVisualThumbnailAfterSave({ projectId, asset, waitForSave: options.settled, matchesCurrentAsset: () => { const live = current().state?.project; return live?.id === projectId && flowConceptVisualAssets(live).some(({ id, digest }) => id === asset.id && digest === asset.digest); }, loadThumbnail: () => options.repository.loadConceptVisualAssetThumbnail(projectId, assetId), loadOriginal: () => options.repository.loadConceptVisualAssetBody(projectId, assetId), createThumbnail: createFlowVisualThumbnail, storeThumbnail: (owner, id, body) => options.repository.storeConceptVisualAssetThumbnail(owner, id, body) }), bytes = await blobUrl(thumbnail); thumbnailBytes.set(assetId, bytes); installThumbnail(assetId, bytes); })(); thumbnailHydrations.set(assetId, work); try {
+        return pending; const work = (async () => { const context = current(), project = context.state?.project, projectId = project?.id, flowId = context.flowId, asset = project && flowConceptVisualAssets(project).find(({ id }) => id === assetId); if (!projectId || !flowId || !asset)
+        return; const thumbnail = await resolveFlowVisualThumbnailAfterSave({ projectId, asset, waitForSave: () => waitForVisualAssetCommit(projectId, flowId, targetId, asset), matchesCurrentAsset: () => { const live = current().state?.project; return live?.id === projectId && flowConceptVisualAssets(live).some(({ id, digest }) => id === asset.id && digest === asset.digest); }, loadThumbnail: () => options.repository.loadConceptVisualAssetThumbnail(projectId, assetId), loadOriginal: () => options.repository.loadConceptVisualAssetBody(projectId, assetId), createThumbnail: createFlowVisualThumbnail, storeThumbnail: (owner, id, body) => options.repository.storeConceptVisualAssetThumbnail(owner, id, body) }), bytes = await blobUrl(thumbnail); thumbnailBytes.set(assetId, bytes); installThumbnail(assetId, bytes); })(); thumbnailHydrations.set(assetId, work); try {
         await work;
     }
     finally {
@@ -903,8 +914,8 @@ export function installFlowGraphBuilder(options) {
         thumbnailObserver = undefined;
         if (thumbnailVisuals) {
             const pending = canvas.querySelectorAll("[data-flow-visual-pending][data-flow-visual-asset-id]"), hydrateVisible = (item) => { const root = canvasScroll.getBoundingClientRect(), box = item.getBoundingClientRect(); if (root.width <= 0 || root.height <= 0 || box.width <= 0 || box.height <= 0 || box.right <= root.left || box.left >= root.right || box.bottom <= root.top || box.top >= root.bottom)
-                return false; thumbnailObserver?.unobserve(item); const assetId = item.dataset.flowVisualAssetId; if (assetId)
-                void hydrateThumbnail(assetId).catch(() => { }); return true; };
+                return false; thumbnailObserver?.unobserve(item); const assetId = item.dataset.flowVisualAssetId, targetId = item.dataset.flowVisualThumbnail; if (assetId && targetId)
+                void hydrateThumbnail(assetId, targetId).catch(() => { }); return true; };
             if (typeof IntersectionObserver === "function") {
                 thumbnailObserver = new IntersectionObserver(entries => { for (const entry of entries)
                     if (entry.isIntersecting)
@@ -912,6 +923,7 @@ export function installFlowGraphBuilder(options) {
                 pending.forEach(item => thumbnailObserver.observe(item));
                 if (enteredThumbnailVisuals)
                     queueMicrotask(() => pending.forEach(hydrateVisible));
+                requestAnimationFrame(() => pending.forEach(hydrateVisible));
             }
             else
                 pending.forEach(hydrateVisible);
