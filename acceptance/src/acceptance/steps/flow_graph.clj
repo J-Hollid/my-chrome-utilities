@@ -82,7 +82,7 @@
                          {:out (:out result)})
         (reset! browser-observation observed))))
 (def runtime-evidence-keys
-  (set (map #(keyword (format "runtime%03d" %)) (range 1 50))))
+  (set (map #(keyword (format "runtime%03d" %)) (range 1 51))))
 (def required-evidence-keys (conj runtime-evidence-keys :installedBoundary))
 (def flow001-examples
   {["360" "800" "hidden"] :narrow-navigation-hidden
@@ -174,6 +174,9 @@
      "/groups/*/products/*/product_id" "nested test" "SKU-99"
      "/groups/0/products/0/product_name" "/groups/0/products/0/product_id"
      "{\"groups\":[{\"products\":[{\"product_name\":\"nested test\",\"product_id\":\"SKU-99\"}]}]}" ]})
+(def flow050-examples
+  #{["uses its current source name" "Cart"]
+    ["has Flow-specific name Basket" "Basket"]})
 (defn- exact-example-key [example columns discriminators examples message]
   (let [row (mapv #(support/example-value example %) columns)]
     (when (some #(support/example-value example %) discriminators)
@@ -243,6 +246,12 @@
       (support/assert! (contains? flow048-examples row)
                        "Unknown Flow 048 derived array example." {:row row})
       :derived-array-example)))
+(defn flow050-example-key [example]
+  (when (support/example-value example "naming_state")
+    (let [row (mapv #(support/example-value example %) ["naming_state" "display_name"])]
+      (support/assert! (contains? flow050-examples row)
+                       "Unknown Flow 050 Page-card naming example." {:row row})
+      :page-card-effective-name)))
 (defn validate-example! [mode example]
   (flow001-example-key mode example)
   (flow002-example-key example)
@@ -258,6 +267,7 @@
   (flow028-example-key example)
   (flow029-example-key example)
   (flow048-example-key example)
+  (flow050-example-key example)
   example)
 (defn all-true? [values]
   (support/all-values-true? (when (map? values) (dissoc values :measurements))))

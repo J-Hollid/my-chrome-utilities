@@ -1,15 +1,41 @@
+export interface CompactFlowPageIdentityInput {
+  sourceName:string;
+  nameInFlow?:string|undefined;
+  status:string;
+}
+
+export interface CompactFlowPageIdentity {
+  visibleName:string;
+  accessibleName:string;
+}
+
+export function compactFlowPageIdentity({sourceName,nameInFlow,status}:CompactFlowPageIdentityInput):CompactFlowPageIdentity {
+  const visibleName=nameInFlow?.trim()||sourceName;
+  return {
+    visibleName,
+    accessibleName:`${visibleName}. Context-setting Page. Source Page ${sourceName}. ${status}. Drag or use Arrow keys to move.`,
+  };
+}
+
 export function decorateCompactFlowCards(canvas: SVGSVGElement, duplicateFrames?: HTMLElement, outline?: HTMLOListElement): void {
   for (const card of Array.from(duplicateFrames?.querySelectorAll<HTMLElement>("[data-page-frame-id]") ?? [])) {
     const frameId = card.dataset.pageFrameId;
     const group = frameId ? canvas.querySelector<SVGGElement>(`[data-page-frame-id="${CSS.escape(frameId)}"]`) : undefined;
-    if (!group || group.querySelector(".flow-page-source")) continue;
-    const source = card.querySelector<HTMLInputElement>('[aria-label^="Name in this Flow for "]')?.getAttribute("aria-label")?.replace("Name in this Flow for ", "") ?? "Page";
+    if (!group || group.querySelector(".flow-page-identity")) continue;
+    const nameControl=card.querySelector<HTMLInputElement>('[aria-label^="Name in this Flow for "]');
+    const source = nameControl?.getAttribute("aria-label")?.replace("Name in this Flow for ", "") ?? "Page";
     const status = card.querySelector<HTMLDetailsElement>("[data-example-status]")?.dataset.exampleStatus ?? "Incomplete";
-    const provenance = document.createElementNS(canvas.namespaceURI, "text"), readiness = document.createElementNS(canvas.namespaceURI, "text");
-    provenance.setAttribute("x", "14"); provenance.setAttribute("y", "54"); provenance.classList.add("flow-page-source"); provenance.textContent = source;
-    readiness.setAttribute("x", "14"); readiness.setAttribute("y", "76"); readiness.classList.add("flow-readiness"); readiness.textContent = status;
-    group.classList.add("flow-page-card"); group.append(provenance, readiness);
-    group.setAttribute("aria-label", `${group.getAttribute("aria-label") ?? "Page frame"}. Source Page ${source}. ${status}.`);
+    const identity=compactFlowPageIdentity({sourceName:source,nameInFlow:nameControl?.value,status});
+    const visibleIdentity=Array.from(group.children).find((child):child is SVGTextElement=>
+      child.tagName.toLowerCase()==="text"&&!child.classList.contains("flow-readiness"));
+    if(!visibleIdentity)continue;
+    visibleIdentity.textContent=identity.visibleName;
+    visibleIdentity.classList.add("flow-page-identity");
+    for(const staleSource of Array.from(group.querySelectorAll(".flow-page-source")))staleSource.remove();
+    const readiness = document.createElementNS(canvas.namespaceURI, "text");
+    readiness.setAttribute("x", "14"); readiness.setAttribute("y", "54"); readiness.classList.add("flow-readiness"); readiness.textContent = status;
+    group.classList.add("flow-page-card"); group.append(readiness);
+    group.setAttribute("aria-label",identity.accessibleName);
   }
   for (const row of Array.from(outline?.querySelectorAll<HTMLElement>("[data-occurrence-id]") ?? [])) {
     const occurrenceId = row.dataset.occurrenceId;
