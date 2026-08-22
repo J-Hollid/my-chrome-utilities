@@ -45,7 +45,7 @@ export function renderNavigatorRows(tree, context) {
         choose.setAttribute("aria-current", String((context.activePropertyId ?? document.selectedPropertyId) === row.id));
         article.dataset.propertyRow = "true";
         article.dataset.propertyId = row.id;
-        const actions = button(dom, "Property actions", () => { context.setMenuPropertyId(row.id); context.openProperty(row.node, actions); }), propertyMenu = context.renderMenu(row.node);
+        const actions = button(dom, "Property actions", () => { context.setMenuPropertyId(row.id); context.openProperty(row.node, actions); }), propertyMenu = context.menuPropertyId === row.id ? context.renderMenu(row.node) : dom.createElement("div");
         actions.setAttribute("aria-label", `Property actions for ${row.path}`);
         actions.dataset.propertyActionsPath = row.path;
         const siblings = orderedChildren(context, row.node.parentId), reorder = renderReorderControl({
@@ -110,7 +110,7 @@ function renderTable(tree, context) {
     }
     head.append(headRow);
     for (const row of canonicalNavigatorRows(context)) {
-        const node = context.working?.id === row.id ? context.working : row.node, tr = dom.createElement("tr"), identity = cell(0), trigger = button(dom, "⋯", () => context.openProperty(row.node, trigger)), propertyMenu = context.renderMenu(row.node), example = node.documentation.example.value, states = node.provenance.map(({ state }) => state).filter(Boolean), invalid = states.includes("conflict") || states.includes("shadowed");
+        const node = context.working?.id === row.id ? context.working : row.node, tr = dom.createElement("tr"), identity = cell(0), trigger = button(dom, "⋯", () => context.openProperty(row.node, trigger)), example = node.documentation.example.value, states = node.provenance.map(({ state }) => state).filter(Boolean), invalid = states.includes("conflict") || states.includes("shadowed");
         tr.dataset.propertyRow = "true";
         tr.dataset.propertyId = row.id;
         tr.dataset.validationState = invalid ? "invalid" : "valid";
@@ -147,7 +147,7 @@ function renderTable(tree, context) {
         }
         tr.append(cell(8, sourceText(node, context.document.contributorName)), cell(9, states.join(", ") || "local"));
         if (context.menuPropertyId === row.id) {
-            const layers = [propertyMenu];
+            const layers = [context.renderMenu(row.node)];
             if (context.focusedPropertyId === row.id) {
                 layers.push(context.renderFocusedEditor(context.document, row.node));
                 if (context.review)
