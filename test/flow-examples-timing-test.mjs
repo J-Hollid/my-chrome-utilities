@@ -30,6 +30,7 @@ import {
   flowGraphRuntimeCanvasReady,
   flowGraphRuntimeDefinitionReady,
   flowGraphRuntimeEditorReady,
+  flowGraphRuntimeInlineActionReady,
   flowGraphRuntimeReturnReady,
   flowGraphRepeatedInstanceEvidence,
   flowGraphRepeatedInstanceReadinessLimitMilliseconds,
@@ -839,6 +840,10 @@ assertReadinessFactors(flowGraphRuntimeDefinitionReady,
 assertReadinessFactors(flowGraphRuntimeEditorReady,
   {editorConnected:true,workspaceConnected:true},
   [["editorConnected",false],["workspaceConnected",false]],"runtime024 editor readiness");
+assertReadinessFactors(flowGraphRuntimeInlineActionReady,
+  {actionConnected:true,actionDisabled:false,surfaceConnected:true},
+  [["actionConnected",false],["actionDisabled",true],["surfaceConnected",false]],
+  "runtime024 inline-action readiness");
 assertReadinessFactors(flowGraphRuntimeReturnReady,
   {returnConnected:true,returnDisabled:false,width:120,height:32},
   [["returnConnected",false],["returnDisabled",true],["width",0],["height",0]],
@@ -850,6 +855,13 @@ assert.doesNotMatch(repeatedInstanceProgram,/attempt<40/u,
   "runtime024 navigation must not accept a stale canvas through a fixed retry loop");
 assert.match(repeatedInstanceProgram,/actionable runtime024 Flow canvas/u,
   "runtime024 must wait for visible Flow geometry before selecting an instance");
+assert.equal(repeatedInstanceProgram.match(/actionable Page instance inline actions/gu)?.length,1,
+  "runtime024 must stabilize each Page-instance action before opening its schema workspace");
+assert.equal(repeatedInstanceProgram.match(/await openInstanceSchema\(/gu)?.length,2,
+  "runtime024 must use the stabilized action for both repeated-instance editor routes");
+assert.doesNotMatch(repeatedInstanceProgram,
+  /q\('\[data-flow-schema-contribution="true"\]'[^;]+\)\.click\(\)/u,
+  "runtime024 must not click a transient inline action without a readiness boundary");
 assert.match(repeatedInstanceProgram,/actionable Definition section/u,
   "runtime024 must stabilize the live Definition control before its one click");
 assert.match(repeatedInstanceProgram,/actionable Definition editor/u,
