@@ -1,4 +1,3 @@
-import { clone } from "../data-layer-flow-graph.js";
 export const pointerParts = (path) => path.split("/").filter(Boolean).map((part) => part.replaceAll("~1", "/").replaceAll("~0", "~"));
 const compatibleContainer = (value, array) => array ? Array.isArray(value) : Boolean(value) && typeof value === "object" && !Array.isArray(value);
 export const setAtPath = (payload, path, value) => {
@@ -9,7 +8,7 @@ export const setAtPath = (payload, path, value) => {
     for (let index = 0; index < parts.length; index += 1) {
         const part = parts[index], last = index === parts.length - 1, key = part === "*" ? 0 : part;
         if (last) {
-            parent[key] = clone(value);
+            parent[key] = structuredClone(value);
             return;
         }
         const array = parts[index + 1] === "*", current = parent[key];
