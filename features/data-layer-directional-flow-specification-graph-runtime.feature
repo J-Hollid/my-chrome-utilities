@@ -873,3 +873,16 @@ Feature: Data layer directional Flow specification graph runtime
       | naming_state                    | display_name |
       | uses its current source name    | Cart         |
       | has Flow-specific name Basket   | Basket       |
+
+  # Data layer directional Flow specification graph runtime 051
+  Scenario: Data layer directional Flow specification graph runtime 051
+    Given production Cart Page frame contains add_payment_info with one saved Event-occurrence concept visual
+    And installed Checkout uses Badges at 100 percent with compact Event-card, Page-frame, relationship-anchor, and canvas geometry recorded
+    When actual controls select Thumbnails
+    Then the measured Event-card background contains its title, Interaction Event detail, Derived JSON example disclosure, and complete 16-to-10 thumbnail viewport
+    And the thumbnail rectangle begins below and intersects none of those Event-content rectangles
+    And the measured Cart Page-frame background contains the complete Event-card background with its recorded child padding
+    And measured Page relationship anchors derive from the expanded Page frame while the canvas viewBox contains it
+    When actual controls select Badges
+    Then measured Event-card, Page-frame, Page relationship-anchor, and canvas geometry equal their recorded compact values
+    And serialized Page and Event coordinates, Flow topology, project bytes, Saved Draft revision, and Undo depth equal their recorded values

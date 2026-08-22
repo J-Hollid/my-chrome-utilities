@@ -871,3 +871,17 @@ Feature: Data layer directional Flow specification graph
       | naming_state                    | display_name |
       | uses its current source name    | Cart         |
       | has Flow-specific name Basket   | Basket       |
+
+  # Data layer directional Flow specification graph 051
+  Scenario: Data layer directional Flow specification graph 051
+    Given Cart Page instance contains add_payment_info Event occurrence
+    And the Event occurrence has a saved concept visual
+    And Checkout uses Badges at its near semantic-detail level
+    When the operator changes Checkout to Thumbnails
+    Then the contained Event card expands to place a complete 16-to-10 preview below its Event title, interaction detail, and Derived JSON example disclosure
+    And the preview covers none of that Event content
+    And the Cart Page frame expands to contain the complete Event card with its existing child padding
+    And Page relationship anchors use the expanded Page frame while canvas presentation bounds contain it
+    When the operator changes Checkout back to Badges
+    Then Event-card, Page-frame, relationship-anchor, and canvas presentation geometry returns to its compact state
+    And stored Page and Event coordinates, Flow topology, project bytes, Draft, revision, and Undo remain unchanged
