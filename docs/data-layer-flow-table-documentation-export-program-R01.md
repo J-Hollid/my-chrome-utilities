@@ -327,3 +327,38 @@ remains a presentation-only correction with conserved canonical identity. A
 changed product requirement, unavailable ownership, or genuinely global plan
 stops for current direction. No all-runnable-pack feature checkpoint is
 authorized.
+
+### Settled property-row presentation result
+
+Final candidate `47268f930b` is QA-integrated on 2026-08-22. The approved
+specification commit at 19:16:58Z reached the coder handoff at 19:17:13Z and QA
+at 20:05:43Z: 48 minutes 45 seconds from specification commit, or 48 minutes
+30 seconds from handoff. The first implementation commit arrived 8 minutes 57
+seconds after handoff. Its lineage reached the final candidate 24 minutes 45
+seconds later, then reached the architect `qa-ready` handoff 12 minutes 31
+seconds after the final candidate commit. Architect handoff to QA integration
+took 2 minutes 17 seconds.
+
+The final exact review selected parent pack `flow_export` and 33 tasks. Its one
+durable review-evidence run started at 19:52:08Z, passed at 19:54:46Z in 2
+minutes 38 seconds, and was recorded at 19:55:38Z. No failed or invalidated
+review-evidence run is recorded for this task. The three-commit implementation
+lineage includes two review refinements after the initial presentation change:
+concept-output observations were aligned to the public names, then canonical
+selection, metadata, value, and concept identity were protected against
+colliding display names. Generated collision cases now cover literal dots,
+wildcard-looking segments, and canonical order.
+
+The settled output presents `page_name`, `commerce.order_id`,
+`products[x].product_name`, and `groups[x].products[x].product_id` consistently
+in previews, the stable public `row.property` binding, clipboard formats,
+Built-in workbooks, assigned Excel output, and Rich Page output. Canonical paths
+remain unchanged for schema and Documentation configuration, selection and
+ordering, lookups, diagnostics, provenance, and repairs.
+
+This was focused feature integration only. No all-pack or final-regression run
+executed, the review record has `finalRegressionClaim: false` and no terminal
+obligation, and `master` proof was neither replaced nor claimed. Recommendation:
+**continue** the focused QA method for the next comparable presentation slice,
+and retain the explicit public-label/canonical-identity split plus collision
+properties as its design and evidence pattern.
