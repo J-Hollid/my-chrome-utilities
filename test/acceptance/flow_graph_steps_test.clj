@@ -86,6 +86,8 @@
   (is (true? (boolean (flow-graph/complete-browser-evidence? (assoc complete-evidence :runtime026 {:exact true})))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :installedBoundary)))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? (assoc-in complete-evidence [:runtime021 :exact] false)))))
+  (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :runtime050)))))
+  (is (false? (boolean (flow-graph/complete-browser-evidence? (assoc-in complete-evidence [:runtime050 :exact] false)))))
   (is (true? (boolean (flow-graph/complete-browser-evidence? complete-evidence)))))
 
 (deftest flow005-examples-require-exact-mode-specific-values

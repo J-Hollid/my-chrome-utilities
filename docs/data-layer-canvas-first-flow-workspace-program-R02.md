@@ -1232,3 +1232,76 @@ identity count for default and Flow-renamed Page instances, accessible source an
 context semantics, current exact packs and tasks, failures, remaining work,
 confidence, and forecast. Continue bounded work under the QA pilot unless product
 scope, safety, or authority changes.
+
+## Flow Page-card evidence-contract repair stage
+
+The first coherent product lineage for `flow-page-card-effective-name` reached
+coder candidate `02ceabfd62` from approved base `fad15521c0`, followed by
+refactorer candidate `8bbb93e6c6`. Product and installed runtime evidence now
+require runtime keys 001 through 050, but both sides of the Clojure evidence
+contract still stop at runtime049: the required-key set in
+`acceptance/src/acceptance/steps/flow_graph.clj` and the complete-evidence
+fixture in `test/acceptance/flow_graph_steps_test.clj`. A fixture-only change
+cannot prove runtime050 is required because the unchanged handler would ignore
+that key. The resulting review-scope expansion from the approved `flow_graph`
+product plan to `flow_graph,shell` is attributable verification maintenance,
+not changed Page-card behavior or a new product decision.
+
+Standing outcome-bounded authority activates independent task
+`verification-slice-flow-page-card-effective-name` from current QA. It changes
+the handler and fixture exclusive range ends from 50 to 51 so the acceptance
+contract requires, and complete evidence contains, exactly runtime001 through
+runtime050. Direct assertions must show that complete evidence passes and that
+omitting or falsifying runtime050 fails. Existing non-vacuity and other
+missing-key rejection behavior remain intact; the repair neither invents a
+future runtime key nor weakens another evidence leaf.
+
+The preparation owns only the matching handler required-key range, shared
+fixture range, and their direct proof. It must not include the Flow 050 example
+validator, Page-card implementation, stylesheet, property strengthening,
+browser evidence, feature files, registry, reporter, or generated product
+artifacts. Product commits through `02ceabfd62` and the product-specific
+property-test strengthening from `8bbb93e6c6` remain the preserved stacked
+remainder; only the two exact evidence-contract range hunks transfer to the
+preparation. After architect `qa-ready` integration, automatic resumption must
+reapply that conserved remainder to the exact new QA head and reissue stable
+task `flow-page-card-effective-name` without another user decision or duplicate
+range edits.
+
+**Development focus:** begin and end with
+`acceptance/src/acceptance/steps/flow_graph.clj` and
+`test/acceptance/flow_graph_steps_test.clj`. Change only the runtime-key range in
+the handler and the matching fixture range plus direct runtime050 rejection
+assertions in the test. Direct proof runs the
+`acceptance.flow-graph-steps-test` namespace and demonstrates that a complete
+runtime001-through-runtime050 map passes while omission or falsification of
+runtime050 fails. No Gherkin acceptance mutation is authorized.
+
+**QA impact:** the exact integration surfaces are
+`acceptance/src/acceptance/steps/flow_graph.clj`, owned by parent pack
+`flow_graph`, and `test/acceptance/flow_graph_steps_test.clj`, owned by parent
+pack `shell` through its process prefix. The canonical intent classification on
+base `b2c73832fca984e88996012f6b5c9769cec0128b` is `bounded-ready` for exactly
+`flow_graph,shell` with no expansion cause. No new source prefix or verification
+slice declaration is proposed. Exact candidate preflight remains authoritative,
+but the expected preparation plan is the focused two-pack contract with
+properties and package proof:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_graph \
+  --pack shell \
+  --property \
+  --changed-since <approved-preparation-specification-commit> \
+  --prepare-evidence verification-slice-flow-page-card-effective-name
+node scripts/package.mjs
+```
+
+The preparation implementation-and-review elapsed effort ceiling is 60 minutes
+from coder receipt to architect `qa-ready`. At 30 minutes, report the exact
+changed paths, runtime050 inclusion and omission/falsification rejection, exact
+packs and tasks, remainder conservation, failures, remaining work, confidence,
+and forecast. Continue while the correction remains evidence-contract-only and
+evidence is preserved; product scope, weaker evidence, unavailable ownership, or
+a genuinely global execution plan stops for current direction. No
+all-runnable-pack feature checkpoint is authorized.
