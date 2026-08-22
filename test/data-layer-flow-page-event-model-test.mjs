@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import {
   addEventOccurrenceToPage,
+  deriveFlowOccurrenceExample,
   deriveFlowPageFrameExample,
   documentaryFlowGraph,
+  flowOccurrenceExampleEditorRows,
   inspectOccurrencePageChange,
   projectFlowGraph,
   reassignFlowOccurrencePage,
@@ -94,5 +96,44 @@ const pageExample=deriveFlowPageFrameExample(state.project,flow.id,paymentFrame.
 assert.equal(pageExample.status,"Incomplete");
 assert.deepEqual(pageExample.payload,{});
 assert.deepEqual(pageExample.issues.map(({path,code})=>({path,code})),[{path:"/payment_only",code:"REQUIRED_EXAMPLE"}]);
+
+const pageArrayConstraints=[
+  {path:"/products",type:"array",itemType:"object",presence:"required",target:"context"},
+  {path:"/products/*/product_name",type:"string",presence:"required",examples:["test"],target:"context"},
+  {path:"/products/*/product_id",type:"string",presence:"required",examples:["SKU-42"],target:"context"},
+];
+const occurrenceArrayConstraints=[
+  {path:"/groups",type:"array",itemType:"object",presence:"required",target:"interaction"},
+  {path:"/groups/*/products",type:"array",itemType:"object",presence:"required",target:"interaction"},
+  {path:"/groups/*/products/*/product_name",type:"string",presence:"required",examples:["nested test"],target:"interaction"},
+  {path:"/groups/*/products/*/product_id",type:"string",presence:"required",examples:["SKU-99"],target:"interaction"},
+];
+const arrayProject={...state.project,
+  collections:{...state.project.collections,pages:state.project.collections.pages.map((page)=>
+    page.id===payment.id?{...page,localSchemaContributions:pageArrayConstraints}:page)},
+  documentationFlowGraphs:{...state.project.documentationFlowGraphs,
+    [flow.id]:{...state.project.documentationFlowGraphs[flow.id],
+      occurrences:state.project.documentationFlowGraphs[flow.id].occurrences.map((candidate)=>
+        candidate.id===occurrence.id?{...candidate,localSchemaContributions:occurrenceArrayConstraints}:candidate)}},
+};
+const pageArrayExample=deriveFlowPageFrameExample(arrayProject,flow.id,paymentFrame.id);
+assert.equal(pageArrayExample.status,"Complete");
+assert.deepEqual(pageArrayExample.payload,{products:[{product_name:"test",product_id:"SKU-42"}]});
+assert.deepEqual(pageArrayExample.provenance,Object.fromEntries(pageArrayConstraints.slice(1).map(({path})=>[path,"Payment"])));
+assert.equal(JSON.stringify(pageArrayExample.payload).includes('"*"'),false);
+
+const occurrenceArrayExample=deriveFlowOccurrenceExample(arrayProject,flow.id,occurrence.id);
+assert.equal(occurrenceArrayExample.status,"Complete");
+assert.deepEqual(occurrenceArrayExample.payload,{groups:[{products:[{product_name:"nested test",product_id:"SKU-99"}]}]});
+assert.equal(JSON.stringify(occurrenceArrayExample.payload).includes('"*"'),false);
+assert.deepEqual(
+  flowOccurrenceExampleEditorRows(arrayProject,flow.id,occurrence.id)
+    .filter(({path})=>path.endsWith("product_name")||path.endsWith("product_id"))
+    .map(({path,value})=>({path,value})),
+  [
+    {path:"/groups/*/products/*/product_name",value:"nested test"},
+    {path:"/groups/*/products/*/product_id",value:"SKU-99"},
+  ],
+);
 
 console.log("Flow Page context-event model tests passed");
