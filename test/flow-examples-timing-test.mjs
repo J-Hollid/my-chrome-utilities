@@ -44,6 +44,7 @@ import {
   flowAuthoringProofResult,
   decodeDevtoolsTextFrame,
   encodeDevtoolsTextFrame,
+  observeFlowPointerClickOwnership,
   planFlowBrowserTargets,
   flowSectionDrawActionabilityState,
   flowSectionTargetState,
@@ -518,6 +519,8 @@ for(const [field,value,behavior] of [
   assert.match(result.violations[0].message,new RegExp(`^${behavior}: expected .*; observed `));
 }
 const drawRuntimeProgram=flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"});
+assert.match(observeFlowPointerClickOwnership.toString(),/commandId:'runtime048:restore'/u,
+  "runtime048 must restore the project snapshot after its derived-example fixture");
 assert.match(drawRuntimeProgram,
   /pointer\(target,'pointermove'.*pointer\(target,'pointerup'/u,
   "the installed relationship helper dispatches acquisition and release at the measured port, avoiding canvas-edge auto-pan");
