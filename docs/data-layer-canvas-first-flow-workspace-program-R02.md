@@ -1232,3 +1232,64 @@ identity count for default and Flow-renamed Page instances, accessible source an
 context semantics, current exact packs and tasks, failures, remaining work,
 confidence, and forecast. Continue bounded work under the QA pilot unless product
 scope, safety, or authority changes.
+
+## Flow Page-card evidence-fixture repair stage
+
+The first coherent product lineage for `flow-page-card-effective-name` reached
+coder candidate `02ceabfd62` from approved base `fad15521c0`, followed by
+refactorer candidate `8bbb93e6c6`. Product and installed runtime evidence now
+require runtime keys 001 through 050, but the shared Clojure acceptance-test
+fixture in `test/acceptance/flow_graph_steps_test.clj` still constructs only
+runtime001 through runtime049. The resulting review-scope expansion from the
+approved `flow_graph` product plan to `flow_graph,shell` is attributable
+verification maintenance, not changed Page-card behavior or a new product
+decision.
+
+Standing outcome-bounded authority activates independent task
+`verification-slice-flow-page-card-effective-name` from current QA. It changes
+the fixture's exclusive range end from 50 to 51 so complete evidence contains
+exactly runtime001 through runtime050. It must prove runtime050 is required,
+retain the existing non-vacuity and missing-key rejection behavior, and neither
+invent a future runtime key nor weaken another evidence leaf.
+
+The preparation owns only that shared-fixture correction and its direct proof.
+It must not include the Page-card implementation, stylesheet, property
+strengthening, browser evidence, acceptance handler, feature files, registry, or
+generated product artifacts. Product commits through `02ceabfd62` and the
+product-specific property-test strengthening from `8bbb93e6c6` remain the
+preserved stacked remainder; only the one-line shared-fixture hunk transfers to
+the preparation. After architect `qa-ready` integration, automatic resumption
+must reapply that conserved remainder to the exact new QA head and reissue stable
+task `flow-page-card-effective-name` without another user decision or a duplicate
+fixture edit.
+
+**Development focus:** begin and end with
+`test/acceptance/flow_graph_steps_test.clj`. Direct proof runs the
+`acceptance.flow-graph-steps-test` namespace and demonstrates that a complete
+runtime001-through-runtime050 map passes while omission or falsification of
+runtime050 fails. No Gherkin acceptance mutation is authorized.
+
+**QA impact:** the exact shared integration surface is
+`test/acceptance/flow_graph_steps_test.clj`, owned by parent pack `shell` through
+its process prefix and consumed by the `flow_graph` acceptance handler. No new
+source prefix or verification slice declaration is proposed. Read-only intent
+and exact candidate preflight remain authoritative, but the expected preparation
+plan is the focused `shell` parent with properties and package proof:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack shell \
+  --property \
+  --changed-since <approved-preparation-specification-commit> \
+  --prepare-evidence verification-slice-flow-page-card-effective-name
+node scripts/package.mjs
+```
+
+The preparation implementation-and-review elapsed effort ceiling is 60 minutes
+from coder receipt to architect `qa-ready`. At 30 minutes, report the exact
+changed paths, runtime050 inclusion and missing-key rejection, exact packs and
+tasks, remainder conservation, failures, remaining work, confidence, and
+forecast. Continue while the correction remains fixture-only and evidence is
+preserved; product scope, weaker evidence, unavailable ownership, or a genuinely
+global execution plan stops for current direction. No all-runnable-pack feature
+checkpoint is authorized.
