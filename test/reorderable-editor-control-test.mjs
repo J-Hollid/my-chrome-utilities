@@ -104,6 +104,7 @@ assert.equal(trigger.style.boxShadow,"none");
 trigger.dispatch("pointerenter");
 assert.equal(trigger.dataset.reorderHover,"true");
 assert.match(trigger.style.background,/color-mix/u);
+assert.match(trigger.style.background,/transparent/u,"the hover surface retains visible current-color contrast instead of resolving through a transparent system canvas");
 trigger.dispatch("pointerleave");
 assert.equal(trigger.dataset.reorderHover,undefined);
 assert.equal(trigger.style.background,"transparent");

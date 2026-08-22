@@ -89,6 +89,10 @@
                (assert! world (evidence world :validation :trackedDeclared)
                         "Unregistered helper fallback remains possible." {}))}])
 
+(def ^:private dormant-active-evidence
+  {"test/support/branding-workflow-targets.mjs" "the registered branding workflow browser program"
+   "test/support/layered-schema-parity-runtime.mjs" "the current Layered Schema browser programs"})
+
 (defn- dormant-handlers [example-values verify-throughput!]
   [{:pattern #"^dormant support file (.+) has no importer, registration, executable leaf, browser target, acceptance contract, or checkpoint$"
     :handler (fn [world example captures]
@@ -101,9 +105,13 @@
                (assert! world (some #{(:vtd009/dormant world)} (evidence world :dormant :removed))
                         "Dormant helper remains tracked." {}))}
    {:pattern #"^its intended evidence remains supplied by (.+)$"
-    :handler (fn [world _ _]
-               (assert! world (evidence world :dormant :assertionLeavesConserved)
-                        "Dormant-file removal lost intended evidence." {}))}
+    :handler (fn [world example captures]
+               (let [expected (get dormant-active-evidence (:vtd009/dormant world))
+                     actual (first (values example-values example captures))]
+                 (assert! world (and (evidence world :dormant :assertionLeavesConserved)
+                                     (= expected actual))
+                          "Dormant-file removal lost intended evidence."
+                          {:helper (:vtd009/dormant world) :expected expected :actual actual})))}
    {:pattern #"^no active assertion leaf or task identity is removed$"
     :handler (fn [world _ _]
                (assert! world (and (evidence world :dormant :assertionLeavesConserved)
@@ -278,5 +286,5 @@
                (snapshot-handlers verify-throughput!))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-09T02:39:40.413470955+02:00", :module-hash "79549429", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1195833157"} {:id "defn-/values", :kind "defn-", :line 5, :end-line 7, :hash "-170718585"} {:id "defn-/ready", :kind "defn-", :line 9, :end-line 10, :hash "475939197"} {:id "defn-/assert!", :kind "defn-", :line 12, :end-line 14, :hash "-1557256114"} {:id "defn-/evidence", :kind "defn-", :line 16, :end-line 17, :hash "1303825807"} {:id "def/scopes", :kind "def", :line 19, :end-line 27, :hash "244864918"} {:id "defn-/scope", :kind "defn-", :line 29, :end-line 32, :hash "1976674990"} {:id "defn-/helper-handlers", :kind "defn-", :line 34, :end-line 66, :hash "-194006725"} {:id "defn-/validation-handlers", :kind "defn-", :line 68, :end-line 90, :hash "-1764443311"} {:id "defn-/dormant-handlers", :kind "defn-", :line 92, :end-line 124, :hash "-1824396624"} {:id "defn-/boundary-handlers", :kind "defn-", :line 126, :end-line 154, :hash "-318829380"} {:id "defn-/representative-handlers", :kind "defn-", :line 156, :end-line 182, :hash "-2000121832"} {:id "def/history-prefixes", :kind "def", :line 184, :end-line 189, :hash "-1907895100"} {:id "defn-/history-key", :kind "defn-", :line 191, :end-line 195, :hash "-153313306"} {:id "defn-/history-handlers", :kind "defn-", :line 197, :end-line 217, :hash "1079822317"} {:id "defn-/snapshot-handlers", :kind "defn-", :line 219, :end-line 269, :hash "-554645162"} {:id "defn/handlers", :kind "defn", :line 271, :end-line 278, :hash "1641483224"}]}
+;; {:version 1, :tested-at "2026-08-22T06:49:41.964338092+02:00", :module-hash "-1398835859", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1195833157"} {:id "defn-/values", :kind "defn-", :line 5, :end-line 7, :hash "-170718585"} {:id "defn-/ready", :kind "defn-", :line 9, :end-line 10, :hash "475939197"} {:id "defn-/assert!", :kind "defn-", :line 12, :end-line 14, :hash "-1557256114"} {:id "defn-/evidence", :kind "defn-", :line 16, :end-line 17, :hash "1303825807"} {:id "def/scopes", :kind "def", :line 19, :end-line 27, :hash "244864918"} {:id "defn-/scope", :kind "defn-", :line 29, :end-line 32, :hash "1976674990"} {:id "defn-/helper-handlers", :kind "defn-", :line 34, :end-line 66, :hash "1948837908"} {:id "defn-/validation-handlers", :kind "defn-", :line 68, :end-line 90, :hash "-1764443311"} {:id "def/dormant-active-evidence", :kind "def", :line 92, :end-line 94, :hash "1823360074"} {:id "defn-/dormant-handlers", :kind "defn-", :line 96, :end-line 132, :hash "-899402331"} {:id "defn-/boundary-handlers", :kind "defn-", :line 134, :end-line 162, :hash "-318829380"} {:id "defn-/representative-handlers", :kind "defn-", :line 164, :end-line 190, :hash "-2000121832"} {:id "def/history-prefixes", :kind "def", :line 192, :end-line 197, :hash "-1907895100"} {:id "defn-/history-key", :kind "defn-", :line 199, :end-line 203, :hash "-153313306"} {:id "defn-/history-handlers", :kind "defn-", :line 205, :end-line 225, :hash "1079822317"} {:id "defn-/snapshot-handlers", :kind "defn-", :line 227, :end-line 277, :hash "-554645162"} {:id "defn/handlers", :kind "defn", :line 279, :end-line 286, :hash "1641483224"}]}
 ;; clj-mutate-manifest-end
