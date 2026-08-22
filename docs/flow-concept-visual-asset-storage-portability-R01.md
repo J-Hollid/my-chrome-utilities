@@ -209,3 +209,80 @@ multiple-image galleries, image editing, OCR, AI interpretation, and OPFS storag
 are excluded. OPFS may be reconsidered only if the explicit benchmark shows that
 project-scoped IndexedDB Blob records cannot meet this workload without changing
 the portable contract.
+
+## Flow visual thumbnail save-settlement correction
+
+The user reported that selecting Thumbnails immediately after saving a Flow
+concept visual can leave the item at Preparing preview and reject background
+hydration with `NotFoundError: Original visual body ... is unavailable`, while
+activating the same placeholder or fallback badge still opens the correct image
+in the viewer. The current paths explain that split: the viewer can resolve the
+just-staged bytes from the active project projection, while visible-thumbnail
+hydration launches an unobserved durable body read before the corresponding
+Draft transaction is guaranteed to have committed. A rejected hydration is
+removed from the in-flight map without settling or retrying its rendered
+placeholder.
+
+Directional Flow scenario 049 and its runtime partner correct this
+save-settlement race for both Page-instance and Event-occurrence attachments.
+The pending placeholder and labelled fallback badge remain operable from the
+staged image. Once the matching Draft commits, the same visible attachment
+automatically becomes a contained 16-to-10 thumbnail without another mode
+change, reload, or user action. Promise rejection is observed rather than left
+unhandled. The correction must not disguise a genuinely missing committed
+original as success: save failure retains the existing durable failure surface,
+and later hydration may succeed only from matching staged bytes or a committed
+body for the same project, asset identity, and digest.
+
+The correction preserves the canonical original, attachment metadata, visual
+display state, content-addressed body identity, bounded disposable thumbnail
+cache, viewer behavior, and storage diagnostics. It does not add a project
+command for display-mode changes, duplicate original bytes, create more than one
+thumbnail record for the same asset, eagerly hydrate off-screen images, or make
+thumbnail cache entries portable project content.
+
+**Development focus:** start in `src/data-layer-flow-graph-ui.ts` at the
+visible-thumbnail hydration and durable-save settlement boundary, with
+`src/flow-graph/concept-visual-workspace.ts` as the existing presentation
+partner. Add deterministic direct coverage that holds one matching visual Draft
+save before commit, proves no premature unavailable-body read or unhandled
+rejection, releases it, and observes automatic coalesced thumbnail settlement.
+Extend the installed `FLOW_WORKSPACE_AUTHORING_TARGET` proof with runtime 049 for
+both pending invokers and preserve the existing runtime 034 and 035 storage,
+visibility, viewer, and bounded-hydration observations. Do not change durable
+repository or archive semantics unless direct evidence disproves the diagnosed
+UI settlement race.
+
+**QA impact:** the likely shared integration surfaces are the existing
+`flow_graph` boundaries `flow_graph_semantic_model` for
+`src/data-layer-flow-graph-ui.ts` and `flow_workspace_surface_composition` for
+`src/flow-graph/concept-visual-workspace.ts`. No new source prefix is proposed.
+Forecast `flow_graph`, `flow_export`, `live_flow_testing`, and
+`property_set_flow_sections`; the coder must run read-only ownership intent
+before product coding and the exact changed-path plan remains authoritative.
+Because this task explicitly changes the hydration boundary, run the settled
+300-image benchmark once after the candidate settles and retain its new boundary
+fingerprint. The benchmark remains task-local and outside routine packs.
+
+For the settled candidate, run focused review evidence and package proof with:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_graph \
+  --pack flow_export \
+  --pack live_flow_testing \
+  --pack property_set_flow_sections \
+  --property \
+  --changed-since <approved-specification-commit> \
+  --prepare-evidence flow-visual-thumbnail-save-race
+node scripts/package.mjs
+```
+
+The canonical task name is `flow-visual-thumbnail-save-race`. Feature mode does
+not authorize an all-runnable-pack checkpoint, and routine RepoWise scouting
+remains stopped. The implementation-and-review elapsed effort ceiling is 180
+minutes. At 90 minutes report the exact changed-path plan, held-save direct and
+installed evidence, runtime 034/035 conservation, benchmark status, any forecast
+variance, remaining work, confidence, and completion forecast. Continue while
+product requirements and safety remain unchanged and a bounded completion path
+exists.

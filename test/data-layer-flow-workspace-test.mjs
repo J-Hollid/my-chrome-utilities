@@ -58,6 +58,7 @@ import {
 } from "../dist/flow-graph/workspace-item-menu.js";
 import {FLOW_PORT_SNAP_RADIUS,flowPointerSnapTarget,flowPortSnapTarget} from "../dist/flow-graph/relationship-port-snap.js";
 import {createDurablePersistenceReadiness} from "../dist/durable-project/persistence-readiness.js";
+import {resolveFlowVisualThumbnailAfterSave} from "../dist/data-layer-flow-graph-ui.js";
 
 const persistenceStatuses=[];
 let releaseSettlement;
@@ -70,6 +71,34 @@ releaseSettlement();
 await Promise.resolve();
 await Promise.resolve();
 assert.deepEqual(persistenceStatuses,["saving","saving"],"an older save completion cannot advertise a settled reload boundary while a newer command is pending");
+
+const thumbnailCalls=[];
+let releaseVisualSave;
+const visualSave=new Promise((resolve)=>{releaseVisualSave=resolve;});
+const pendingThumbnail=resolveFlowVisualThumbnailAfterSave({
+  projectId:"project",asset:{id:"visual",digest:"sha256:visual",mediaType:"image/png",
+    bytes:"data:image/png;base64,AQID"},
+  waitForSave:()=>visualSave,
+  matchesCurrentAsset:()=>true,
+  loadThumbnail:async()=>{thumbnailCalls.push("load-thumbnail");},
+  loadOriginal:async()=>{thumbnailCalls.push("load-original");throw new Error("premature body read");},
+  createThumbnail:async(body)=>{thumbnailCalls.push(`create:${body.size}`);return new Blob(["thumb"],{type:"image/webp"});},
+  storeThumbnail:async(_projectId,_assetId,body)=>{thumbnailCalls.push(`store:${body.size}`);},
+});
+await Promise.resolve();
+assert.deepEqual(thumbnailCalls,[],"a staged visual performs no durable thumbnail or original-body work before its matching save settles");
+releaseVisualSave();
+const settledThumbnail=await pendingThumbnail;
+assert.equal(settledThumbnail.size,5);
+assert.deepEqual(thumbnailCalls,["load-thumbnail","create:3","store:5"],
+  "the same staged body creates and stores one thumbnail automatically after commit without an original-body read");
+
+await assert.rejects(()=>resolveFlowVisualThumbnailAfterSave({
+  projectId:"project",asset:{id:"missing",digest:"sha256:missing",mediaType:"image/png"},
+  waitForSave:async()=>{},matchesCurrentAsset:()=>true,loadThumbnail:async()=>undefined,
+  loadOriginal:async()=>{throw new DOMException("Original visual body is unavailable","NotFoundError");},
+  createThumbnail:async()=>new Blob(),storeThumbnail:async()=>{},
+}),{name:"NotFoundError"},"a genuinely missing committed original retains its durable failure");
 const settledStatuses=[];
 const settledReadiness=createDurablePersistenceReadiness((status)=>settledStatuses.push(status),async()=>{});
 settledReadiness.saving();

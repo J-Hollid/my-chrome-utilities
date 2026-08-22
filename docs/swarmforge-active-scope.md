@@ -29,7 +29,8 @@ The settled-candidate verification workflow is integrated at
 | Flow click and drag-ownership correction | QA-integrated at `2b2cf06b45` on 2026-08-16 | Preserve directional Flow scenarios 043–045 and their runtime partners; cumulative promotion to `master` remains a separate release decision. |
 | Flow instance schema route-lifecycle correction | QA-integrated at `aa19396f45` on 2026-08-16 | Preserve directional Flow scenario 046 and its runtime partner, including ordinary route departure, stable contributor reopening, and Return to Flow behavior. |
 | Flow instance schema-editor scrolling correction | QA-integrated at `736823be2d` on 2026-08-18 after exact 3-pack/147-task review evidence | Preserve directional Flow scenario 047 and its runtime partner for both Page-instance wheel traversal and Event-occurrence keyboard traversal; cumulative promotion to `master` remains a separate release decision. |
-| Flow derived JSON array-example correction | User-approved for coder handoff on 2026-08-22 | Add directional Flow scenario 048 and its runtime partner under `docs/data-layer-canvas-first-flow-workspace-program-R02.md` as task `flow-derived-json-array-examples`; materialize every canonical wildcard item segment as an array in derived Page-instance and Event-occurrence JSON, preserve sibling values in one item, and use the focused `flow_graph`, `flow_export`, `live_flow_testing`, and `property_set_flow_sections` forecast with no all-runnable-pack gate. |
+| Flow derived JSON array-example correction | QA-integrated at `b11b4a4356` on 2026-08-22 after exact 4-pack/71-task review evidence | Preserve directional Flow scenario 048 and its runtime partner; wildcard item segments materialize as arrays in derived Page-instance and Event-occurrence JSON, sibling values share one item, and cumulative promotion to `master` remains separate. |
+| Flow visual thumbnail save-settlement correction | User-approved for coder handoff on 2026-08-22 | Add directional Flow scenario 049 and its runtime partner under `docs/flow-concept-visual-asset-storage-portability-R01.md` as task `flow-visual-thumbnail-save-race`; keep the just-saved viewer and pending preview operable, settle the same preview automatically after its durable save, preserve one original body and a bounded thumbnail cache, and use the focused `flow_graph`, `flow_export`, `live_flow_testing`, and `property_set_flow_sections` forecast with no all-runnable-pack gate. |
 | Project Documentation workspace UX correction | Active follow-up approved by the user on 2026-08-16 | Preserve the QA-integrated Build, Preview, and Export workspace while replacing the flat Site Profile property list with the concept-first Profile filtering and ordering control under `docs/data-layer-project-documentation-workspace-program-R01.md` and its product/runtime feature pair; use the focused `flow_export` boundary. This does not resume an older rejected Project Documentation implementation lineage. |
 | Compact reorderable editor controls | QA-integrated at `43c019bb`; schema projection, no-op, and compact-handle presentation corrections approved on 2026-08-21 | Implement stable tasks `schema-reorder-control-scope-correction` and `compact-reorder-handle-presentation` from `docs/data-layer-compact-reorderable-editor-controls-R01.md`; restore schema Table allocations, preserve ownership-gated movement, suppress controls with no legal destination, replace visible Reorder text with the aligned six-dot grip contract, consolidate movement actions into an existing actions menu where present, run read-only ownership intent before product coding, and preserve every listed domain boundary. |
 | Verification run-intent and deferred-incident corrections | Exact-candidate eligible-repair admission is QA-integrated at `183496edb9`; confirmed-flaky feature deferral is QA-integrated at `cf60d5c0f3` and exercised by recovery candidate `08cbfe8fef` | Preserve incident `e5df733f-58e5-45e6-8488-bda10eb58bf4` and every earlier deferred incident as unresolved master-integration obligations; diagnostic passes remain classification-only proof. No feature-mode all-20 run is authorized. |
@@ -383,6 +384,10 @@ accidentally reactivated.
   in a canonical item path as an array containing an example item. Sibling
   examples at the same item path share that item, recursive item paths create
   recursive arrays, and `*` is never emitted as a JSON member name.
+- A visible concept visual saved while its durable Draft is still settling may
+  show Preparing preview only for that bounded interval. The pending preview and
+  fallback badge remain operable, and the same thumbnail resolves automatically
+  after commit without an unavailable-original rejection or another user action.
 
 ### Project, assurance, and durability
 
@@ -596,6 +601,7 @@ historical rename/delete handling.
 | Stage-aware stylesheet ownership | `--pack shell --focused-task unit:test/settled-final-verification-workflow-test.mjs --focused-task unit:test/verification-process-contract-test.mjs` |
 | Flow stylesheet extraction | `--pack flow_graph --pack shell` |
 | Flow derived JSON array examples | `--pack flow_graph --pack flow_export --pack live_flow_testing --pack property_set_flow_sections` |
+| Flow visual thumbnail save settlement | `--pack flow_graph --pack flow_export --pack live_flow_testing --pack property_set_flow_sections` |
 | Verification run-intent correction | `--pack shell --focused-task unit:test/settled-final-verification-workflow-test.mjs --focused-task unit:test/verification-process-contract-test.mjs` |
 
 Run the selected packs with:

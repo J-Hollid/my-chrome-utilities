@@ -837,3 +837,25 @@ Feature: Data layer directional Flow specification graph runtime
       | target                                   | first_path                           | second_path                        | first_value | second_value | first_concrete_path                    | second_concrete_path                | expected_json                                                        |
       | Cart Page instance                       | /products/*/product_name             | /products/*/product_id             | test        | SKU-42       | /products/0/product_name               | /products/0/product_id              | {"products":[{"product_name":"test","product_id":"SKU-42"}]} |
       | add_payment_info Event contained by Cart | /groups/*/products/*/product_name    | /groups/*/products/*/product_id    | nested test | SKU-99       | /groups/0/products/0/product_name      | /groups/0/products/0/product_id     | {"groups":[{"products":[{"product_name":"nested test","product_id":"SKU-99"}]}]} |
+
+  # Data layer directional Flow specification graph runtime 049
+  Scenario Outline: Data layer directional Flow specification graph runtime 049
+    Given production <target> has no concept visual and Checkout uses Badges visual-display mode
+    And a controlled repository gate holds the next concept-visual Draft transaction before commit
+    When actual Visual editor controls save a valid PNG described as <description>
+    Then installed save status remains Saving for that transaction
+    When actual controls select Thumbnails
+    Then the installed <target> renders an operable Preparing preview placeholder and labelled fallback badge before commit
+    When <pending_invoker> receives native browser activation
+    Then one named viewer decodes the complete staged image and renders <description>
+    When actual controls close the viewer and release the matching Draft transaction
+    Then installed save status confirms Saved and the placeholder becomes a contained 16-to-10 image without another operator action
+    And browser observation records no unavailable-original error or unhandled promise rejection
+    And an installed reload retains the same attachment, original digest and bytes, and ready thumbnail
+    And repository inspection finds one original body and no more than one thumbnail for the asset
+    And serialized view-mode changes add no Draft command or Undo entry
+
+    Examples:
+      | target                                    | description                     | pending_invoker           |
+      | Cart Page instance                        | Cart save-settlement visual     | Preparing preview         |
+      | add_payment_info Event contained by Cart  | Payment save-settlement visual  | the labelled visual badge |

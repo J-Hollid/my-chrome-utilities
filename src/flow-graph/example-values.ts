@@ -1,5 +1,3 @@
-import {clone} from "../data-layer-flow-graph.js";
-
 export interface FlowExampleIssue {path:string;code:"REQUIRED_EXAMPLE"|"TYPE"|"CONFLICT"|string;message:string;editHref:string}
 export interface FlowOccurrenceExample {status:"Complete"|"Incomplete"|"Invalid"|"Blocked";payload:Record<string,unknown>;formattedJson:string;provenance:Record<string,string>;issues:FlowExampleIssue[]}
 export interface FlowOccurrenceExampleEditorRow {path:string;type?:string;value:unknown}
@@ -12,7 +10,7 @@ export const setAtPath=(payload:Record<string,unknown>,path:string,value:unknown
   let parent:Record<string,unknown>|unknown[]=payload;
   for(let index=0;index<parts.length;index+=1){
     const part=parts[index]!,last=index===parts.length-1,key=part==="*"?0:part;
-    if(last){(parent as Record<string|number,unknown>)[key]=clone(value);return;}
+    if(last){(parent as Record<string|number,unknown>)[key]=structuredClone(value);return;}
     const array=parts[index+1]==="*",current=(parent as Record<string|number,unknown>)[key];
     if(!compatibleContainer(current,array))(parent as Record<string|number,unknown>)[key]=array?[]:{};
     parent=(parent as Record<string|number,Record<string,unknown>|unknown[]>)[key]!;
