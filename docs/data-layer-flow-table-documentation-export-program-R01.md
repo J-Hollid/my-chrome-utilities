@@ -362,3 +362,68 @@ obligation, and `master` proof was neither replaced nor claimed. Recommendation:
 **continue** the focused QA method for the next comparable presentation slice,
 and retain the explicit public-label/canonical-identity split plus collision
 properties as its design and evidence pattern.
+
+### Layered Page-group display-path evidence repair
+
+The governed review of independent task
+`verification-slice-flow-nested-event-thumbnail-containment` at candidate
+`565e217111` selected Shell's installed reorderable-editor aggregate and exposed
+incident `72e3562d-1ec3-4275-a06e-d400deea414e`. Both the source receipt and its
+single diagnostic retry fail the same nested
+`LAYERED_SCHEMA_PAGE_GROUP_TARGET`: `pageGroupStructural006` and
+`pageGroupStructural009` are false while every other assigned leaf passes. The
+two leaves share one causal mismatch. Their browser workflow reads the first
+column of the rendered Documentation data-capture matrix, which has correctly
+used public display paths since `documentation-property-display-path` was
+QA-integrated at `47268f930b`, but compares those cells with obsolete canonical
+slash paths.
+
+Standing outcome-bounded authority activates independent task
+`verification-repair-layered-page-group-display-paths` from current QA. Align
+only the installed Page-group workflow expectations with the settled public
+row contract: the required root rows are `funnel_name`, `checkout_property`,
+`funnel_step`, `retail_property`, `signed_in_property`, `trade_property`, and
+`cart_property`, and the inherited root row is `currency`. The rendered matrix
+must not regain a leading slash. Existing assertions for the `Property` and
+`Page Cart` headings, matrix states, absence of internal provenance, Flow
+inheritance, fixture provenance, and every other Page-group leaf remain intact.
+Canonical slash paths remain authoritative in schema state, configuration,
+effective-schema lookup, diagnostics, provenance, and repairs; this repair does
+not change product output or relax canonical-identity proof.
+
+**Development focus:** begin and end with
+`test/support/layered-schema-workflows.mjs`. Change only the stale rendered-row
+expectations used by `pageGroupStructural006` and `pageGroupStructural009`.
+Do not change product TypeScript, generated artifacts, Gherkin, acceptance
+handlers, browser target routing, registry leaves, other Page-group assertions,
+or the nested-Event thumbnail candidate. Direct proof must execute
+`LAYERED_SCHEMA_PAGE_GROUP_TARGET`, show all its assigned leaves pass, and retain
+the public-name-versus-canonical-identity boundary established by the settled
+property-row feature.
+
+**QA impact:** the exact causal path is already declared as a support-module
+consumer of parent pack `layered_schema`; it introduces no new source prefix,
+subordinate slice, or consumer. The coder must run read-only ownership intent
+from this approved QA base before editing, and exact candidate preflight remains
+authoritative. The expected review-ready checkpoint is:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack layered_schema \
+  --property \
+  --changed-since <approved-repair-specification-commit> \
+  --prepare-evidence verification-repair-layered-page-group-display-paths
+node scripts/package.mjs
+```
+
+The implementation-and-review elapsed effort ceiling is 45 minutes. At 20
+minutes, report the exact changed path, both repaired leaves, public matrix row
+names, canonical-state conservation, exact packs and tasks, failures, remaining
+work, confidence, and forecast. Continue only while the candidate remains a
+single-path installed-expectation repair. Product changes, weakened evidence,
+registry mutation, unavailable ownership, or a broader plan stops for current
+direction. No all-runnable-pack feature checkpoint is authorized. After
+architect `qa-ready` integration, automatically reissue
+`verification-slice-flow-nested-event-thumbnail-containment` from that exact QA
+head; its Shell aggregate then supplies the required cross-consumer regression
+and resolves the blocking incident only if the original exact plan passes.
