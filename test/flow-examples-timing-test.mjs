@@ -30,6 +30,7 @@ import {
   flowGraphRuntimeCanvasReady,
   flowGraphRuntimeDefinitionReady,
   flowGraphRuntimeEditorReady,
+  flowGraphRuntimeInlineActionReady,
   flowGraphRuntimeReturnReady,
   flowGraphRepeatedInstanceEvidence,
   flowGraphRepeatedInstanceReadinessLimitMilliseconds,
@@ -43,6 +44,7 @@ import {
   flowAuthoringProofResult,
   decodeDevtoolsTextFrame,
   encodeDevtoolsTextFrame,
+  observeFlowPointerClickOwnership,
   planFlowBrowserTargets,
   flowSectionDrawActionabilityState,
   flowSectionTargetState,
@@ -517,6 +519,10 @@ for(const [field,value,behavior] of [
   assert.match(result.violations[0].message,new RegExp(`^${behavior}: expected .*; observed `));
 }
 const drawRuntimeProgram=flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"});
+assert.match(drawRuntimeProgram,/Focus Canvas exit control/u,
+  "Flow relationship creation must observe the Focus Canvas exit control before clicking it");
+assert.match(observeFlowPointerClickOwnership.toString(),/commandId:'runtime048:restore'/u,
+  "runtime048 must restore the project snapshot after its derived-example fixture");
 assert.match(drawRuntimeProgram,
   /pointer\(target,'pointermove'.*pointer\(target,'pointerup'/u,
   "the installed relationship helper dispatches acquisition and release at the measured port, avoiding canvas-edge auto-pan");
@@ -611,7 +617,14 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     runtime047LeafConservation=context.causalCategory==="other:flow-runtime047-evidence-leaf-conservation",
     detachedEvaluationSettlement=context.causalCategory==="other:Flow detached evaluation promise settlement",
     modalDismissalDeadlineRepair=context.causalCategory==="other:fixed-attempt modal dismissal",
-    fixture=targetSelectionRepair?{id:"flow-structured-target-selection-v1",
+    runtimeFixtureConservation=context.causalCategory==="other:runtime fixture conservation",
+    fixture=runtimeFixtureConservation?{id:"flow-runtime048-fixture-conservation-v1",
+      causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{fixtureRuntime:"runtime048",deferredConsumerRuntime:"runtime024",
+        conservedState:"Page property-set applications"},
+      expectedPreRepairFailure:{restoresProjectSnapshot:false,deferredPropertySetPreserved:false},
+      expectedRepairResult:{restoresProjectSnapshot:true,deferredPropertySetPreserved:true}}
+      :targetSelectionRepair?{id:"flow-structured-target-selection-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{requestedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",
         selectedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET"},
@@ -715,7 +728,12 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         expectedRepairResult:{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
           usesLogicalRemainingBudget:true}},
     preRepairResult=fixture.expectedPreRepairFailure,
-    repairResult=targetSelectionRepair
+    repairResult=runtimeFixtureConservation
+      ?(()=>{const source=observeFlowPointerClickOwnership.toString(),restores=
+          source.includes("commandId:'runtime048:restore'")&&
+          source.includes("structuredClone(base.state)");
+        return{restoresProjectSnapshot:restores,deferredPropertySetPreserved:restores};})()
+      :targetSelectionRepair
       ?{supportedTargets:["FLOW_WORKSPACE_AUTHORING_TARGET","FLOW_WORKSPACE_CONTROLS_TARGET"],
         controlsPartitionAccepted:flowAuthoringProofResult({...flowAuthoringProofContract,
           requestedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",
@@ -839,6 +857,10 @@ assertReadinessFactors(flowGraphRuntimeDefinitionReady,
 assertReadinessFactors(flowGraphRuntimeEditorReady,
   {editorConnected:true,workspaceConnected:true},
   [["editorConnected",false],["workspaceConnected",false]],"runtime024 editor readiness");
+assertReadinessFactors(flowGraphRuntimeInlineActionReady,
+  {actionConnected:true,actionDisabled:false,surfaceConnected:true},
+  [["actionConnected",false],["actionDisabled",true],["surfaceConnected",false]],
+  "runtime024 inline-action readiness");
 assertReadinessFactors(flowGraphRuntimeReturnReady,
   {returnConnected:true,returnDisabled:false,width:120,height:32},
   [["returnConnected",false],["returnDisabled",true],["width",0],["height",0]],
@@ -850,6 +872,18 @@ assert.doesNotMatch(repeatedInstanceProgram,/attempt<40/u,
   "runtime024 navigation must not accept a stale canvas through a fixed retry loop");
 assert.match(repeatedInstanceProgram,/actionable runtime024 Flow canvas/u,
   "runtime024 must wait for visible Flow geometry before selecting an instance");
+assert.equal(repeatedInstanceProgram.match(/actionable Page instance inline actions/gu)?.length,1,
+  "runtime024 must stabilize each Page-instance action before opening its schema workspace");
+assert.equal(repeatedInstanceProgram.match(/await openInstanceSchema\(/gu)?.length,2,
+  "runtime024 must use the stabilized action for both repeated-instance editor routes");
+assert.equal(repeatedInstanceProgram.match(/await actionableControl\(/gu)?.length,7,
+  "runtime024 must stabilize every toolbar, property, review, and reset control before clicking");
+assert.match(repeatedInstanceProgram,
+  /availablePaths:rows\.map\(\(\{dataset\}\)=>dataset\.flowInstanceEffectivePath\)/u,
+  "runtime024 must retain the live rendered-path inventory when Property actions never settle");
+assert.doesNotMatch(repeatedInstanceProgram,
+  /q\('\[data-flow-schema-contribution="true"\]'[^;]+\)\.click\(\)/u,
+  "runtime024 must not click a transient inline action without a readiness boundary");
 assert.match(repeatedInstanceProgram,/actionable Definition section/u,
   "runtime024 must stabilize the live Definition control before its one click");
 assert.match(repeatedInstanceProgram,/actionable Definition editor/u,

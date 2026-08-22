@@ -1112,3 +1112,66 @@ same product scope before the final proof. No unresolved product failure or
 terminal incident remains. This is QA integration only; cumulative promotion to
 `master` still requires explicit user direction and one frozen all-20 release
 gate.
+
+## Flow derived JSON array-example correction slice
+
+Directional Flow scenario 048 and its runtime partner correct derived examples
+whose canonical property paths traverse Array Items. The current projector
+treats the wildcard in `/products/*/product_name` as a literal object key and
+renders `products` as an object containing `*`. The effective validator then
+rejects that payload because the schema requires `products` to be an array.
+
+Every `*` segment in a canonical example path is an item traversal marker, never
+a JSON member name. Derivation materializes an array at that segment and writes
+the configured value into its first example item. Sibling paths beneath the same
+array share that item rather than overwriting the array or creating one item per
+property. Recursive wildcard paths materialize recursive arrays. The resulting
+payload is parsed and validated through the existing effective Page-instance or
+Event-occurrence schema, retains canonical wildcard provenance and concrete
+indexed validation paths, and reports Complete when all required examples are
+present and type-valid.
+
+This correction changes neither canonical schema paths nor stored example
+definitions. It does not persist a derived payload, infer production cardinality,
+create multiple example items, change occurrence targeting, or alter Incomplete,
+Invalid, and Blocked semantics for unrelated causes.
+
+**Development focus:** begin with wildcard-aware example-path projection in
+`src/flow-graph/example-values.ts`. Direct tests cover one array of object items,
+two recursively nested arrays, sibling-value conservation in the same first item,
+concrete indexed lookup, and absence of a literal `*` member for both Page and
+Event derivation. Installed scenario-048 proof belongs in
+`test/support/flow-workspace-r02-runtime.mjs` and the existing Flow browser
+evidence mapping. Prefer one shared path projector used by both
+`deriveFlowPageFrameExample` and `deriveFlowOccurrenceExample`.
+
+**QA impact:** the likely existing shared integration surface is
+`src/flow-graph/example-values.ts`, owned by parent pack `flow_graph` under the
+propagating `flow_graph_semantic_model` boundary. Its forecast consumers are
+`flow_export`, `live_flow_testing`, and `property_set_flow_sections`; no new
+source prefix is proposed. The coder must run read-only ownership intent before
+product coding, and the exact changed-path plan remains authoritative. The
+expected review-ready checkpoint is:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_graph \
+  --pack flow_export \
+  --pack live_flow_testing \
+  --pack property_set_flow_sections \
+  --property \
+  --changed-since <approved-specification-commit> \
+  --prepare-evidence flow-derived-json-array-examples
+node scripts/package.mjs
+```
+
+The canonical task name is `flow-derived-json-array-examples`. This feature-mode
+slice does not authorize the all-runnable-pack gate. Routine RepoWise scouting
+remains stopped and is not part of the handoff.
+
+The implementation-and-review elapsed effort ceiling is 120 minutes from coder
+receipt to an architect `qa-ready` candidate. At 60 minutes, report one-level and
+recursive array materialization, sibling-value conservation, Page-instance and
+Event-occurrence validation status, current exact packs and tasks, failures,
+remaining work, confidence, and forecast. Continue bounded work under the QA
+pilot unless product scope, safety, or authority changes.
