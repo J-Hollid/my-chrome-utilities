@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { utilityRegistry, composeUtilityShell, extensionShell } from "../dist/utility-registry.js";
 import { bindUtilityPanels, mountUtility, mountUtilityShell, renderUtilityDirectory } from "../dist/platform/utility-shell-dom.js";
@@ -177,4 +178,26 @@ assert.deepEqual(fullCliPlan.features,packs.flatMap(({features})=>features).sort
 const bbTasks=await readFile(new URL("../bb.edn",import.meta.url),"utf8");
 assert.ok(bbTasks.includes('"node" "scripts/run-focused-acceptance.mjs" "--full"'));
 assert.throws(()=>planVerification(packs,{changedPaths:["src/unowned-module.ts"]}),/Assign every changed path to one verification pack/);
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
+    normalized=(value)=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"
+      ?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right))
+        .map(([key,nested])=>[key,normalized(nested)])):value,
+    digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
+    shellPack=packs.find(({id})=>id==="shell"),
+    helper=shellPack.verificationHelpers.find(({path})=>path==="test/support/layered-schema-overlay-focusability.mjs"),
+    declarationInventory=shellPack.verificationHelpers.filter(({path})=>
+      !path.startsWith("test/support/side-panel-")&&path!=="test/support/browser-observation-control.mjs").length,
+    expectedPreRepairFailure={declared:false,consumers:[],declarationInventory:21},
+    expectedRepairResult={declared:Boolean(helper),consumers:helper?.consumers??[],declarationInventory};
+  assert.deepEqual(expectedRepairResult,{declared:true,consumers:["layered_schema","shell"],declarationInventory:22});
+  const fixture={id:"verification-helper-inventory-contract-v1",causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{helperPath:"test/support/layered-schema-overlay-focusability.mjs"},
+    expectedPreRepairFailure,expectedRepairResult},fixtureDigest=digest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:expectedRepairResult}}}));
+}
 console.log("modular utility architecture tests passed");

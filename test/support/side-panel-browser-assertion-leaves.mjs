@@ -1,5 +1,15 @@
 // Generated from the accepted pre-extraction installed observations. Keep this
 // inventory explicit: wildcard roots cannot prove deep handler-leaf conservation.
+const reorderPresentationLeaves=(index)=>[
+  ...["inlineSvg","dots","ariaHidden","fill","visibleText","hostCenter","themeReady","forcedColorReady"].map((leaf)=>["reproductionStepActionRows",index,"reorderEvidence","presentation",leaf]),
+  ...["grip","target","gripCenter"].flatMap((group)=>["width","height"].map((leaf)=>["reproductionStepActionRows",index,"reorderEvidence","presentation",group,group==="gripCenter"&&leaf==="width"?"x":group==="gripCenter"?"y":leaf])),
+  ["reproductionStepActionRows",index,"reorderEvidence","presentation","rest","background"],
+  ...Array.from({length:4},(_,border)=>["reproductionStepActionRows",index,"reorderEvidence","presentation","rest","border",border]),
+  ...["shadow","whiteSpace"].map((leaf)=>["reproductionStepActionRows",index,"reorderEvidence","presentation","rest",leaf]),
+  ["reproductionStepActionRows",index,"reorderEvidence","presentation","states","hoverBackground"],
+  ...["style","width","color"].map((leaf)=>["reproductionStepActionRows",index,"reorderEvidence","presentation","states","focusOutline",leaf]),
+  ...["restCursor","dragCursor"].map((leaf)=>["reproductionStepActionRows",index,"reorderEvidence","presentation","states",leaf]),
+];
 const assertionLeavesByTarget = {
   "FRESH_LIVE_SESSION_BROWSER_ADAPTER": [
     ["freshLiveSession","initial","initial","id"],
@@ -6806,6 +6816,7 @@ const assertionLeavesByTarget = {
     ...["type","accessibleName","hasPopup","expanded","controls","menuRole","itemRole","itemLabel","position","setSize","ariaGrabbed","triggerDraggable","rowDraggable"].map((leaf)=>["reproductionStepActionRows",0,"reorderEvidence","closedSemantics",leaf]),
     ["reproductionStepActionRows",0,"reorderEvidence","closedSemantics","target","width"],
     ["reproductionStepActionRows",0,"reorderEvidence","closedSemantics","target","height"],
+    ...reorderPresentationLeaves(0),
     ...["firstFocused","endFocused","escapeRestored"].map((leaf)=>["reproductionStepActionRows",0,"reorderEvidence","keyboard",leaf]),
     ...Array.from({length:5},(_,index)=>[["reproductionStepActionRows",0,"reorderEvidence","menuLabels",index,"label"],["reproductionStepActionRows",0,"reorderEvidence","menuLabels",index,"disabled"]]).flat(),
     ...Array.from({length:4},(_,index)=>["reproductionStepActionRows",0,"reorderEvidence","movedRows",index]),
@@ -6848,6 +6859,7 @@ const assertionLeavesByTarget = {
     ...["type","accessibleName","hasPopup","expanded","controls","menuRole","itemRole","itemLabel","position","setSize","ariaGrabbed","triggerDraggable","rowDraggable"].map((leaf)=>["reproductionStepActionRows",1,"reorderEvidence","closedSemantics",leaf]),
     ["reproductionStepActionRows",1,"reorderEvidence","closedSemantics","target","width"],
     ["reproductionStepActionRows",1,"reorderEvidence","closedSemantics","target","height"],
+    ...reorderPresentationLeaves(1),
     ...["firstFocused","endFocused","escapeRestored"].map((leaf)=>["reproductionStepActionRows",1,"reorderEvidence","keyboard",leaf]),
     ...Array.from({length:5},(_,index)=>[["reproductionStepActionRows",1,"reorderEvidence","menuLabels",index,"label"],["reproductionStepActionRows",1,"reorderEvidence","menuLabels",index,"disabled"]]).flat(),
     ...Array.from({length:4},(_,index)=>["reproductionStepActionRows",1,"reorderEvidence","movedRows",index]),

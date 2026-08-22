@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {compactGripAcceptanceRepairProtocol,focusableOverlayControls,overlayFocusabilityRepairProtocol} from "./support/layered-schema-overlay-focusability.mjs";
 
 class FakeElement {
   constructor(tagName,ownerDocument) {
@@ -45,6 +46,7 @@ const descendants=(root)=>root.children.flatMap(child=>child instanceof FakeElem
 class FakeDocument {
   constructor(){this.body=new FakeElement("body",this);this.activeElement=this.body;}
   createElement(tagName){return new FakeElement(tagName,this);}
+  createElementNS(_namespace,tagName){return this.createElement(tagName);}
   querySelector(selector){return this.body.querySelector(selector);}
 }
 
@@ -84,6 +86,27 @@ assert.equal(trigger.getAttribute("aria-label"),"Reorder Bravo, position 2 of 3"
 assert.equal(trigger.getAttribute("aria-haspopup"),"menu");
 assert.equal(trigger.getAttribute("aria-expanded"),"false");
 assert.equal(trigger.draggable,false,"filtering disables direct dragging");
+assert.equal(trigger.textContent,"","the grip button has no visible Reorder text");
+const grip=trigger.querySelector("[data-reorder-grip]");
+assert.ok(grip,"the pointer target contains an inline grip");
+assert.equal(grip.tagName,"SVG");
+assert.equal(grip.getAttribute("aria-hidden"),"true");
+assert.equal(grip.getAttribute("viewBox"),"0 0 16 16");
+assert.equal(grip.style.width,"16px");
+assert.equal(grip.style.height,"16px");
+assert.equal(grip.children.length,6,"the vertical grip contains six dots");
+assert.equal(trigger.style.width,"44px");
+assert.equal(trigger.style.height,"44px");
+assert.equal(trigger.style.padding,"0px");
+assert.equal(trigger.style.background,"transparent");
+assert.equal(trigger.style.border,"0px");
+assert.equal(trigger.style.boxShadow,"none");
+trigger.dispatch("pointerenter");
+assert.equal(trigger.dataset.reorderHover,"true");
+assert.match(trigger.style.background,/color-mix/u);
+trigger.dispatch("pointerleave");
+assert.equal(trigger.dataset.reorderHover,undefined);
+assert.equal(trigger.style.background,"transparent");
 assert.equal(row.draggable,false,"interactive row body never becomes the drag source");
 assert.equal(row.getAttribute("role"),"listitem");
 assert.equal(row.getAttribute("aria-posinset"),"2");
@@ -123,6 +146,30 @@ dialog.querySelectorAll("button").at(-1).click();
 assert.equal(dialog.hidden,true);
 assert.equal(document.activeElement,trigger);
 
+const menuOwnedDocument=new FakeDocument(),menuOwnedRow=menuOwnedDocument.createElement("article"),
+  actionsTrigger=menuOwnedDocument.createElement("button"),actionsMenu=menuOwnedDocument.createElement("div");
+actionsTrigger.textContent="Property actions";actionsTrigger.setAttribute("aria-label","Property actions for /bravo");actionsMenu.setAttribute("role","menu");
+menuOwnedDocument.body.append(menuOwnedRow,actionsMenu);
+const menuOwnedControl=renderReorderControl({
+  focusScopeId:"property-tree",itemId:"bravo",itemLabel:"Bravo",completeOrder:order,
+  dropTarget:menuOwnedRow,existingActionsMenu:{trigger:actionsTrigger,menu:actionsMenu,expanded:true},onMove:()=>true,
+});
+menuOwnedRow.append(menuOwnedControl,actionsTrigger);
+const menuOwnedHandle=menuOwnedControl.querySelector("[data-reorder-trigger]");
+assert.equal(menuOwnedHandle.tagName,"SPAN","an existing actions menu makes the grip a non-button drag target");
+assert.equal(menuOwnedHandle.attributes.has("tabindex"),false,"the non-button grip adds no focus stop");
+assert.equal(menuOwnedHandle.draggable,true);
+assert.equal(actionsTrigger.getAttribute("aria-haspopup"),"menu");
+assert.equal(actionsTrigger.getAttribute("aria-expanded"),"true");
+assert.equal(actionsTrigger.getAttribute("aria-controls"),actionsMenu.id);
+assert.equal(actionsTrigger.getAttribute("aria-label"),"Property actions for /bravo","existing menu identity remains intact");
+assert.equal(actionsTrigger.dataset.reorderMenuButton,"true");
+assert.deepEqual(actionsMenu.querySelectorAll("button").map(({textContent})=>textContent),[
+  "Move to first","Move one position earlier","Move one position later","Move to last","Move…",
+]);
+assert.equal(descendants(menuOwnedRow).filter(element=>element.tagName==="BUTTON"&&element.getAttribute("aria-haspopup")==="menu").length,1,
+  "the existing actions trigger is the sole movement-menu button");
+
 const dragDocument=new FakeDocument(),dragList=dragDocument.createElement("ol"),dragMoves=[];
 dragDocument.body.append(dragList);
 let commitDrop=false;
@@ -141,6 +188,13 @@ for(const entry of dragOrder){
 }
 const transfer={value:"",setData(_type,value){this.value=value;},getData(){return this.value;}};
 const dragTrigger=dragRows.get("two").querySelector("[data-reorder-trigger]");
+assert.equal(dragTrigger.style.cursor,"grab");
+dragTrigger.dispatch("dragstart",{dataTransfer:transfer});
+assert.equal(dragTrigger.dataset.reorderDragging,"true");
+assert.equal(dragTrigger.style.cursor,"grabbing");
+dragTrigger.dispatch("dragend");
+assert.equal(dragTrigger.dataset.reorderDragging,undefined);
+assert.equal(dragTrigger.style.cursor,"grab");
 dragTrigger.dispatch("dragstart",{dataTransfer:transfer});
 const illegalDrop=dragRows.get("three").dispatch("drop",{dataTransfer:transfer,clientY:39});
 assert.equal(illegalDrop.defaultPrevented,undefined,"a target outside the dragged item's legal scope rejects the drop");
@@ -206,5 +260,21 @@ announceReorderCompletion(undoDocument,{focusScopeId:"undo",itemId:"bravo",itemL
 assert.equal(undoDocument.querySelector("[data-reorder-status]").textContent,"Bravo moved from position 2 to position 3");
 await new Promise(resolve=>queueMicrotask(resolve));
 assert.equal(undoDocument.activeElement,undoControl.querySelector("[data-reorder-trigger]"),"a deferred consequential completion restores the stable trigger");
+
+const overlayBoundaryControls=[
+  {label:"Definition",disabled:false},
+  {label:"Move one position later",disabled:true},
+  {label:"Move to last",disabled:true},
+];
+assert.deepEqual(focusableOverlayControls(overlayBoundaryControls).map(({label})=>label),["Definition"],
+  "disabled boundary movement commands are not included in an overlay focusability probe");
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
+    compactAcceptance=context.causalCategory==="other:defect-reorder-acceptance-contract";
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:compactAcceptance
+    ?compactGripAcceptanceRepairProtocol({visibleGripLabel:trigger.textContent,inlineGrip:grip.tagName==="SVG",
+      movementLabels:actions.map(({textContent})=>textContent)})
+    :overlayFocusabilityRepairProtocol(overlayBoundaryControls)}));
+}
 
 console.log("reorderable editor control tests passed");

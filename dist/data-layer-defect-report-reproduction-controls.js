@@ -5,12 +5,13 @@ function copyTemplate(template) {
 }
 function appendStepPresentation(item, text, controls, guidance) {
     text.className = "defect-reproduction-step-text";
-    const actions = document.createElement("div");
+    const reorder = controls.find((control) => control.classList?.contains?.("reorderable-editor-control") ||
+        typeof control.className === "string" && control.className.split(/\s+/u).includes("reorderable-editor-control")), actions = document.createElement("div");
     actions.className = "defect-reproduction-step-actions";
-    actions.append(...controls);
+    actions.append(...controls.filter((control) => control !== reorder && !control.hidden));
     if (guidance)
         guidance.className = "defect-reproduction-step-guidance";
-    item.append(...[text, actions, guidance].filter((element) => Boolean(element)));
+    item.append(...[reorder, text, actions, guidance].filter((element) => Boolean(element)));
 }
 export function appendReproductionControls(controls, steps, context, state, options = {}) {
     let selectedVisitId;
