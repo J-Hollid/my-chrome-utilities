@@ -1343,3 +1343,42 @@ remainder's known likely paths are
 Run fresh read-only intent and exact preflight from the resumed QA head; the
 original focused `flow_graph` product boundary remains the forecast, and the
 canonical result is authoritative.
+
+### Settled Page-card effective-name delivery result
+
+Final candidate `d6f44d355e` is QA-integrated. Compact Flow Page cards now show
+exactly one visible identity: the trimmed Flow-specific name when present,
+otherwise the current canonical Page name. The separate visible
+`Context-setting Page` heading and canonical-source line are absent. The
+accessible name retains context-setting and canonical-source semantics, and the
+runtime proof conserves readiness, actions, ports, coordinates, occurrences,
+and repository state. Canonical Page renaming does not replace a stored
+Flow-specific name.
+
+The approved specification was handed to the coder at 15:31:00Z on 2026-08-22.
+The first coherent product candidate was committed about ten minutes later;
+independent strengthening reached `8bbb93e6c6` at 16:27:06Z. At the 60-minute
+handoff boundary, exact readiness reported the attributable Shell fixture
+expansion before launching evidence. The two-sided repair specification was
+settled and reissued by 16:40:36Z, its candidate became architect `qa-ready` at
+17:24:04Z, and the conserved product resumed at 17:27:12Z. The final product
+candidate became architect `qa-ready` at 17:48:14Z, about 21 minutes after
+resumption and 2 hours 17 minutes after the initial handoff including the
+independent prerequisite cycle.
+
+Two complete focused checkpoints passed: the prerequisite's exact
+`flow_graph,shell` 107-task run in about 7 minutes 37 seconds and the resumed
+product's exact `flow_graph` 22-task run in about 2 minutes 47 seconds. Combined
+focused verification time was about 10 minutes 24 seconds. No checkpoint failed
+or was invalidated, no evidence rerun was needed, and no all-runnable-pack gate
+ran. The blocked initial launch and fixture-only proof contradiction were
+resolved before evidence; their repair aligned the handler and fixture without
+changing approved Page-card behavior. Existing master terminal proof remains
+untouched, no new terminal obligation is attached, and this QA integration is
+not a master release claim.
+
+Recommendation: continue ordinary feature delivery. Adjust future Flow runtime
+forecasts so a new evidence key names both the handler's required-key set and
+the shared complete-evidence fixture before product evidence planning. Preserve
+scenario 050, its runtime partner, the QA-integrated runtime050 contract, and
+the final one-pack product evidence at subsequent cumulative promotion.
