@@ -1752,7 +1752,7 @@ projectDocumentationWorkspaceUi = installProjectDocumentationWorkspaceContributi
             setTimeout(() => focusPath(attempt + 1), 25); };
         queueMicrotask(focusPath);
     } } });
-flowGraphBuilder = installFlowGraphBuilder({ context: flowBuilderContext, persist, id, repository: durableProjectRuntime.repository, openOccurrenceSchema: (occurrenceId, path, originFocus) => layeredSchemaUi?.openGraphOccurrenceSchema(occurrenceId, path, originFocus) ?? false });
+flowGraphBuilder = installFlowGraphBuilder({ context: flowBuilderContext, persist, settled: () => durableProjectRuntime.settled("project"), id, repository: durableProjectRuntime.repository, openOccurrenceSchema: (occurrenceId, path, originFocus) => layeredSchemaUi?.openGraphOccurrenceSchema(occurrenceId, path, originFocus) ?? false });
 flowDocumentationExportUi = installFlowDocumentationExportUi({ context: flowBuilderContext, renderFlow: () => { flowGraphBuilder?.render(); flowDocumentationExportUi?.render(); }, openRepair: (contextId, path, repair) => { const selectPath = () => setTimeout(() => Array.from(document.querySelectorAll("[data-property-id]")).find((candidate) => candidate.dataset.propertyId === path || candidate.textContent?.includes(path))?.click(), 0); if (repair.startsWith("Open contributing schema ")) {
         const name = repair.slice("Open contributing schema ".length), match = ["profiles", "events", "propertySets", "pages", "flows"].flatMap((kind) => state.project.collections[kind].map((entity) => ({ kind, entity }))).find(({ entity }) => entity.name === name);
         if (match) {

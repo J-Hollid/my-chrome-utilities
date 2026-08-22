@@ -5,6 +5,7 @@ import { button, elementByData, entityName, flowEdgeGeometry, flowPortPoint, nod
 import { flowPointerSnapTarget, flowPortSnapTarget } from "./flow-graph/relationship-port-snap.js";
 import { flowBoundsContains, flowPointerDelta } from "./flow-graph/page-placement.js";
 import { createFlowConceptVisualActions, flowConceptVisualHeightExtension, renderFlowConceptVisual } from "./flow-graph/concept-visual-workspace.js";
+import { flowConceptVisualAssets } from "./flow-graph/concept-visuals.js";
 import { flowItemActivationRequest, flowItemMenuRequest } from "./flow-graph/workspace-item-menu.js";
 import { advanceFlowItemPointerGesture, completeFlowItemPointerGesture, startFlowItemPointerGesture } from "./flow-graph/workspace-item-pointer.js";
 import { upgradeFlowWorkspace } from "./flow-graph/workspace-ui.js";
@@ -12,6 +13,28 @@ import { createFlowVisualThumbnail } from "./flow-visual-thumbnail.js";
 import { flowSelectionContains, primaryFlowSelection, selectionAfterActivation, selectionAfterRemoval, selectionFromStoredView, storedViewWithSelection } from "./flow-graph/workspace-selection.js";
 import { createFlowExampleDetailsRenderer } from "./flow-graph/example-details-ui.js";
 export function contextSettingPageLabel(pageName) { return `${pageName} · Context-setting Page`; }
+const stagedFlowVisualBody = (asset) => {
+    if (!asset.bytes)
+        return undefined;
+    const match = new RegExp(`^data:${asset.mediaType};base64,(.+)$`).exec(asset.bytes);
+    if (!match)
+        throw new DOMException(`Visual ${asset.id} has unreadable staged bytes.`, "DataError");
+    const raw = atob(match[1]);
+    return new Blob([Uint8Array.from(raw, character => character.charCodeAt(0))], { type: asset.mediaType });
+};
+export async function resolveFlowVisualThumbnailAfterSave(options) {
+    const staged = stagedFlowVisualBody(options.asset);
+    if (staged)
+        await options.waitForSave();
+    if (!options.matchesCurrentAsset())
+        throw new DOMException(`Visual asset ${options.asset.id} changed before thumbnail settlement.`, "AbortError");
+    const cached = await options.loadThumbnail();
+    if (cached)
+        return cached;
+    const thumbnail = await options.createThumbnail(staged ?? await options.loadOriginal());
+    await options.storeThumbnail(options.projectId, options.asset.id, thumbnail);
+    return thumbnail;
+}
 export { ownsPointerDrag, restorePointerCancellationFocus, flowEdgeGeometry };
 export function flowViewAfterRelationshipDeletion(view, relationshipId) { const selection = selectionFromStoredView(view); if (!selection.some(({ kind, id }) => kind === "relationship" && id === relationshipId))
     return view; if (!view.selectedItems) {
@@ -59,12 +82,8 @@ export function installFlowGraphBuilder(options) {
         installThumbnail(assetId, cached);
         return;
     } const pending = thumbnailHydrations.get(assetId); if (pending)
-        return pending; const work = (async () => { const projectId = current().state?.project.id; if (!projectId)
-        return; let thumbnail = await options.repository.loadConceptVisualAssetThumbnail(projectId, assetId); if (!thumbnail) {
-        const original = await options.repository.loadConceptVisualAssetBody(projectId, assetId);
-        thumbnail = await createFlowVisualThumbnail(original);
-        await options.repository.storeConceptVisualAssetThumbnail(projectId, assetId, thumbnail);
-    } const bytes = await blobUrl(thumbnail); thumbnailBytes.set(assetId, bytes); installThumbnail(assetId, bytes); })(); thumbnailHydrations.set(assetId, work); try {
+        return pending; const work = (async () => { const project = current().state?.project, projectId = project?.id, asset = project && flowConceptVisualAssets(project).find(({ id }) => id === assetId); if (!projectId || !asset)
+        return; const thumbnail = await resolveFlowVisualThumbnailAfterSave({ projectId, asset, waitForSave: options.settled, matchesCurrentAsset: () => { const live = current().state?.project; return live?.id === projectId && flowConceptVisualAssets(live).some(({ id, digest }) => id === asset.id && digest === asset.digest); }, loadThumbnail: () => options.repository.loadConceptVisualAssetThumbnail(projectId, assetId), loadOriginal: () => options.repository.loadConceptVisualAssetBody(projectId, assetId), createThumbnail: createFlowVisualThumbnail, storeThumbnail: (owner, id, body) => options.repository.storeConceptVisualAssetThumbnail(owner, id, body) }), bytes = await blobUrl(thumbnail); thumbnailBytes.set(assetId, bytes); installThumbnail(assetId, bytes); })(); thumbnailHydrations.set(assetId, work); try {
         await work;
     }
     finally {
@@ -885,7 +904,7 @@ export function installFlowGraphBuilder(options) {
         if (thumbnailVisuals) {
             const pending = canvas.querySelectorAll("[data-flow-visual-pending][data-flow-visual-asset-id]"), hydrateVisible = (item) => { const root = canvasScroll.getBoundingClientRect(), box = item.getBoundingClientRect(); if (root.width <= 0 || root.height <= 0 || box.width <= 0 || box.height <= 0 || box.right <= root.left || box.left >= root.right || box.bottom <= root.top || box.top >= root.bottom)
                 return false; thumbnailObserver?.unobserve(item); const assetId = item.dataset.flowVisualAssetId; if (assetId)
-                void hydrateThumbnail(assetId); return true; };
+                void hydrateThumbnail(assetId).catch(() => { }); return true; };
             if (typeof IntersectionObserver === "function") {
                 thumbnailObserver = new IntersectionObserver(entries => { for (const entry of entries)
                     if (entry.isIntersecting)
