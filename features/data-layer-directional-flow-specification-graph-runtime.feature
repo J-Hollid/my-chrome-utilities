@@ -196,7 +196,7 @@ Feature: Data layer directional Flow specification graph runtime
   Scenario: Data layer directional Flow specification graph runtime 013
     Given production Cart frame is named Basket in this Flow, has source Page Cart, status Incomplete, and two occurrences
     When the installed canvas renders at 100 percent
-    Then one compact Page card renders Basket, subdued Cart provenance, and Incomplete without JSON
+    Then one compact Page card renders Basket once as its visible Page identity and Incomplete without JSON
     And its compact Event cards render names, optional triggers, and readiness without a duplicate Page list
     When actual pointer hover, keyboard focus, or selection targets Basket
     Then labelled semantic ports and an unscaled toolbar expose Rename in Flow, Add Event, Connect, Duplicate, Details, Open schema contribution, and Remove
@@ -206,10 +206,10 @@ Feature: Data layer directional Flow specification graph runtime
 
   # Data layer directional Flow specification graph runtime 014
   Scenario: Data layer directional Flow specification graph runtime 014
-    Given production Sales contains Cart and add_payment_info with Page relationships
+    Given production Sales contains Cart named Basket page in this Flow and add_payment_info with Page relationships
     When actual controls use the Sales context menu to rename it Acquisition
-    And actual collection controls rename Cart to Basket page and add_payment_info to payment_details_added
-    Then installed canvas, Add results, Details, and Outline render the current names
+    And actual collection controls rename canonical Cart to Cart source renamed and add_payment_info to payment_details_added
+    Then the installed canvas Page card and Outline retain Basket page while Add results and Details render Cart source renamed and payment_details_added
     And canonical Section, Page, Event, occurrence, trigger, and relationship IDs remain byte-identical
     When the built extension reloads
     Then stored containment, coordinates, selection UI state, endpoints, and inferred kinds are restored
@@ -859,3 +859,17 @@ Feature: Data layer directional Flow specification graph runtime
       | target                                    | description                     | pending_invoker           |
       | Cart Page instance                        | Cart save-settlement visual     | Preparing preview         |
       | add_payment_info Event contained by Cart  | Payment save-settlement visual  | the labelled visual badge |
+
+  # Data layer directional Flow specification graph runtime 050
+  Scenario Outline: Data layer directional Flow specification graph runtime 050
+    Given production Cart Page instance <naming_state> with Incomplete readiness
+    When installed compact-card identity decoration settles at 100 percent
+    Then exactly one visible Page identity text node in the card equals <display_name>
+    And the card has no second visible Page-name text node and no visible text contains Context-setting Page
+    And its accessible name identifies the context-setting Page and source Page Cart
+    And repository inspection finds unchanged readiness, occurrences, actions, ports, coordinates, source name, and Flow-specific name
+
+    Examples:
+      | naming_state                    | display_name |
+      | uses its current source name    | Cart         |
+      | has Flow-specific name Basket   | Basket       |

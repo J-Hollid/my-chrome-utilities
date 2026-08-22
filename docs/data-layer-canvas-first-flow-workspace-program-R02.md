@@ -137,10 +137,15 @@ documentation order.
 ### Compact Page and Event cards
 
 The canvas has one representation of each Page instance. A compact Page card makes
-its Flow-specific name primary, its canonical Page source secondary, and its
-Complete, Incomplete, Invalid, or Blocked readiness visible. Contained Events are
-compact mini-cards with name, optional trigger, and readiness. The separate
-pre-canvas Page-frame list is removed.
+one effective Page name visible: its Flow-specific name when one is stored,
+otherwise the current canonical Page name. It does not repeat that name in a
+top-level heading, show the canonical source as secondary provenance, or render
+`Context-setting Page` as visible card text. Complete, Incomplete, Invalid, or
+Blocked readiness remains visible. Contained Events are compact mini-cards with
+name, optional trigger, and readiness. The separate pre-canvas Page-frame list is
+removed. Canonical source identity and context-setting semantics remain available
+in contextual Details and accessible state, and `Use Page name` still removes the
+Flow-specific override.
 
 The visual treatment is restrained: one thin Page header, one flat content surface,
 one boundary, and no stack of nested panel shadows. Sections use a low-emphasis
@@ -273,7 +278,7 @@ migration or restore Page Groups to Flow authoring.
 | Canvas remains below growing controls or occupies only a small layout track | 001, 002, 020 | Ordinary canvas reaches every available route edge, Focus Canvas covers the viewport behind overlay controls, persistent chrome is constant, and the outer document does not scroll |
 | Sections still behave as vertical schema lanes | 003, 004, 007, 014, 015 | Sections are arbitrary 2D, explicitly contain any Page, and remain schema-neutral |
 | Contextual creation mutates reusable definitions | 002, 004, 005, 006, 010 | Add and edge-drop reuse canonical Pages and Events while creating stable Flow-local instances |
-| Cards remain duplicated or visually overloaded | 013, 021, 025 | One compact semantic-zoom card projection retains readiness while Details owns full examples and repairs |
+| Cards remain duplicated or visually overloaded | 013, 021, 025, 050 | One compact semantic-zoom card projection shows one effective Page identity and readiness while Details owns source provenance, full examples, and repairs |
 | Camera cannot be panned or changes project meaning | 016, 027 | Direct background, modified pointer, middle-button, touch, and keyboard pan work in ordinary and focused modes while pan, zoom, fit, and minimap remain UI state excluded from canonical data and Undo |
 | Layout assistance rewrites semantics | 019 | Tidy is previewed, explicit, presentation-only, and undoable |
 | Outline consumes space or becomes a second model | 018 | Closed Outline reserves no width and on-demand navigation uses the same stable graph |
@@ -1175,3 +1180,55 @@ recursive array materialization, sibling-value conservation, Page-instance and
 Event-occurrence validation status, current exact packs and tasks, failures,
 remaining work, confidence, and forecast. Continue bounded work under the QA
 pilot unless product scope, safety, or authority changes.
+
+## Flow Page-card effective-name correction slice
+
+Directional Flow scenario 050 and its runtime partner replace the compact Page
+card's two visible identity lines with one. The card shows its stored
+Flow-specific name when present and otherwise shows the current canonical Page
+name. It no longer renders a separate top-level name with `Context-setting Page`
+or a secondary canonical-source provenance line. Renaming a canonical Page does
+not replace an existing Flow-specific name on that card. Source Page identity and
+context-setting semantics remain available through contextual Details and the
+accessible name; readiness, contained Events, semantic ports, contextual actions,
+coordinates, persistence, and name-reset behavior are unchanged.
+
+**Development focus:** begin with the compact identity projection in
+`src/flow-graph/workspace-card-ui.ts`, its feature-local presentation in
+`src/flow-graph/flow-workspace.css`, and direct characterization in
+`test/data-layer-flow-workspace-test.mjs`. Installed proof belongs in
+`test/support/flow-workspace-r02-runtime.mjs` under the existing
+`FLOW_WORKSPACE_CONTROLS_TARGET`, covering both an unrenamed Page instance and a
+Flow-specific override. The runtime evidence must count visible identity text,
+not merely search the complete canvas text.
+
+**QA impact:** the likely existing shared integration surface is
+`src/flow-graph/workspace-card-ui.ts`, owned by parent pack `flow_graph` under
+the non-propagating `flow_workspace_surface_composition` boundary. The
+feature-local stylesheet has the same owner and no consumers. No new source
+prefix is proposed, and no stopped coherent candidate contributes integration
+paths to this correction. The coder must run read-only ownership intent before
+product coding. If the candidate changes `src/data-layer-flow-graph-ui.ts` or
+`src/data-layer-flow-graph-ui-page-frame.ts`, exact planning must include the
+consumers of their propagating `flow_graph_semantic_model` boundary rather than
+preserving this one-pack forecast. The expected review-ready checkpoint is:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_graph \
+  --property \
+  --changed-since <approved-specification-commit> \
+  --prepare-evidence flow-page-card-effective-name
+node scripts/package.mjs
+```
+
+The canonical task name is `flow-page-card-effective-name`. This feature-mode
+slice does not authorize the all-runnable-pack gate. Routine RepoWise scouting
+remains stopped and is not part of the handoff.
+
+The implementation-and-review elapsed effort ceiling is 60 minutes from coder
+receipt to an architect `qa-ready` candidate. At 30 minutes, report the visible
+identity count for default and Flow-renamed Page instances, accessible source and
+context semantics, current exact packs and tasks, failures, remaining work,
+confidence, and forecast. Continue bounded work under the QA pilot unless product
+scope, safety, or authority changes.

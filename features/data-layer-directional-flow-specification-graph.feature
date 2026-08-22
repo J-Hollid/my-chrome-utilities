@@ -198,7 +198,7 @@ Feature: Data layer directional Flow specification graph
   Scenario: Data layer directional Flow specification graph 013
     Given Cart has Flow-specific name Basket, source Page Cart, status Incomplete, and two interaction Events
     When the canvas renders at normal zoom
-    Then one compact Page card shows Basket prominently, Cart as subtle provenance, and Incomplete without expanded JSON
+    Then one compact Page card shows Basket once as its visible Page identity and Incomplete without expanded JSON
     And its Events render as compact mini-cards with name, optional trigger, and readiness
     And no duplicate pre-canvas Page card or list is rendered
     When the operator focuses or selects Basket
@@ -209,10 +209,10 @@ Feature: Data layer directional Flow specification graph
 
   # Data layer directional Flow specification graph 014
   Scenario: Data layer directional Flow specification graph 014
-    Given Sales Section contains Cart and add_payment_info with Page relationships
+    Given Sales Section contains Cart named Basket page in this Flow and add_payment_info with Page relationships
     When the operator renames Sales to Acquisition from its context menu
-    And Cart Page is renamed Basket page and add_payment_info Event is renamed payment_details_added
-    Then canvas, Add search, contextual details, and Outline show the current human names
+    And the canonical Cart Page is renamed Cart source renamed and add_payment_info Event is renamed payment_details_added
+    Then the canvas Page card and Outline retain Basket page while Add search and contextual details show Cart source renamed and payment_details_added
     And stored Section, Page, Event, occurrence, trigger, and relationship identities remain unchanged
     When the Flow reloads
     Then Section containment, coordinates, selection, directed endpoints, and relationship meaning are unchanged
@@ -857,3 +857,17 @@ Feature: Data layer directional Flow specification graph
       | target                                    | description                     | pending_invoker          |
       | Cart Page instance                        | Cart save-settlement visual     | Preparing preview        |
       | add_payment_info Event contained by Cart  | Payment save-settlement visual  | the labelled visual badge |
+
+  # Data layer directional Flow specification graph 050
+  Scenario Outline: Data layer directional Flow specification graph 050
+    Given a Cart Page instance <naming_state> with Incomplete readiness
+    When the compact card derives its visible Page identity
+    Then exactly one visible Page identity in the card is <display_name>
+    And the card renders neither a second Page-name line nor visible Context-setting Page text
+    And source Page Cart remains available in contextual Details and assistive semantics
+    And readiness, contained Events, actions, ports, coordinates, and stored names remain unchanged
+
+    Examples:
+      | naming_state                    | display_name |
+      | uses its current source name    | Cart         |
+      | has Flow-specific name Basket   | Basket       |
