@@ -615,7 +615,14 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     runtime047LeafConservation=context.causalCategory==="other:flow-runtime047-evidence-leaf-conservation",
     detachedEvaluationSettlement=context.causalCategory==="other:Flow detached evaluation promise settlement",
     modalDismissalDeadlineRepair=context.causalCategory==="other:fixed-attempt modal dismissal",
-    fixture=targetSelectionRepair?{id:"flow-structured-target-selection-v1",
+    runtimeFixtureConservation=context.causalCategory==="other:runtime fixture conservation",
+    fixture=runtimeFixtureConservation?{id:"flow-runtime048-fixture-conservation-v1",
+      causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{fixtureRuntime:"runtime048",deferredConsumerRuntime:"runtime024",
+        conservedState:"Page property-set applications"},
+      expectedPreRepairFailure:{restoresProjectSnapshot:false,deferredPropertySetPreserved:false},
+      expectedRepairResult:{restoresProjectSnapshot:true,deferredPropertySetPreserved:true}}
+      :targetSelectionRepair?{id:"flow-structured-target-selection-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{requestedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",
         selectedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET"},
@@ -719,7 +726,12 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         expectedRepairResult:{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
           usesLogicalRemainingBudget:true}},
     preRepairResult=fixture.expectedPreRepairFailure,
-    repairResult=targetSelectionRepair
+    repairResult=runtimeFixtureConservation
+      ?(()=>{const source=observeFlowPointerClickOwnership.toString(),restores=
+          source.includes("commandId:'runtime048:restore'")&&
+          source.includes("structuredClone(base.state)");
+        return{restoresProjectSnapshot:restores,deferredPropertySetPreserved:restores};})()
+      :targetSelectionRepair
       ?{supportedTargets:["FLOW_WORKSPACE_AUTHORING_TARGET","FLOW_WORKSPACE_CONTROLS_TARGET"],
         controlsPartitionAccepted:flowAuthoringProofResult({...flowAuthoringProofContract,
           requestedTargetId:"FLOW_WORKSPACE_CONTROLS_TARGET",
