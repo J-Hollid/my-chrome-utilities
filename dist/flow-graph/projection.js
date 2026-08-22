@@ -1,6 +1,22 @@
 import { FLOW_GRAPH_GEOMETRY, clone, effectiveFlowPageFrameName, inferFlowRelationshipKind, legacyBindingOccurrence, relationshipEndpoint, relationshipPorts, storedGraph } from "../data-layer-flow-graph.js";
 export { flowOutline, flowRelationshipText, inspectFlowGraph } from "./projection-inspection.js";
 import { inspectFlowGraph } from "./projection-inspection.js";
+export function flowGraphPresentationHeights(graph, options = {}) {
+    const occurrences = Object.fromEntries(graph.nodes.map((node) => [
+        node.id,
+        FLOW_GRAPH_GEOMETRY.eventHeight + Math.max(0, Number(options.occurrenceHeightExtensions?.[node.id] ?? 0)),
+    ]));
+    const pageFrames = Object.fromEntries(graph.connectionEndpoints.map((frame) => {
+        const containedBottoms = graph.nodes
+            .filter((node) => node.pageFrameId === frame.id && node.layout)
+            .map((node) => node.layout.y - frame.layout.y + occurrences[node.id] +
+            FLOW_GRAPH_GEOMETRY.pageFrameChildBottomPadding);
+        const containedHeight = Math.max(frame.height, ...containedBottoms);
+        return [frame.id, containedHeight +
+                Math.max(0, Number(options.pageFrameHeightExtensions?.[frame.id] ?? 0))];
+    }));
+    return { occurrences, pageFrames };
+}
 export function projectFlowGraph(project, flowId) {
     const flow = project.collections.flows.find(({ id }) => id === flowId);
     if (!flow)

@@ -3,6 +3,32 @@ import type {DocumentaryPageFrameRecord,FlowCatalog,FlowGraph,FlowGraphProjectio
 import type {ProjectEntity,SpecificationProject} from "../utilities/data-layer/schemas.js";
 export {flowOutline,flowRelationshipText,inspectFlowGraph} from "./projection-inspection.js";
 import {inspectFlowGraph} from "./projection-inspection.js";
+
+export interface FlowGraphPresentationHeights{
+  occurrences:Readonly<Record<string,number>>;
+  pageFrames:Readonly<Record<string,number>>;
+}
+
+export function flowGraphPresentationHeights(graph:FlowGraph,options:{
+  occurrenceHeightExtensions?:Readonly<Record<string,number>>;
+  pageFrameHeightExtensions?:Readonly<Record<string,number>>;
+}={}):FlowGraphPresentationHeights{
+  const occurrences=Object.fromEntries(graph.nodes.map((node)=>[
+    node.id,
+    FLOW_GRAPH_GEOMETRY.eventHeight+Math.max(0,Number(options.occurrenceHeightExtensions?.[node.id]??0)),
+  ]));
+  const pageFrames=Object.fromEntries(graph.connectionEndpoints.map((frame)=>{
+    const containedBottoms=graph.nodes
+      .filter((node)=>node.pageFrameId===frame.id&&node.layout)
+      .map((node)=>node.layout!.y-frame.layout.y+occurrences[node.id]!+
+        FLOW_GRAPH_GEOMETRY.pageFrameChildBottomPadding);
+    const containedHeight=Math.max(frame.height,...containedBottoms);
+    return[frame.id,containedHeight+
+      Math.max(0,Number(options.pageFrameHeightExtensions?.[frame.id]??0))];
+  }));
+  return{occurrences,pageFrames};
+}
+
 export function projectFlowGraph(project:SpecificationProject,flowId:string):FlowGraphProjection{
   const flow=project.collections.flows.find(({id})=>id===flowId);if(!flow)throw new Error(`Unknown Flow ${flowId}`);
   const stored=storedGraph(project,flowId),lanes=stored.sections.map(clone),frameById=new Map(stored.pageFrames.map((frame)=>[frame.id,frame])),frameSize=(frame:DocumentaryPageFrameRecord)=>{const children=stored.occurrences.filter(({pageFrameId})=>pageFrameId===frame.id),width=Math.max(FLOW_GRAPH_GEOMETRY.pageFrameMinWidth,...children.map((child)=>Number((child.position as {x?:number}|undefined)?.x??24)+FLOW_GRAPH_GEOMETRY.eventWidth+FLOW_GRAPH_GEOMETRY.pageFrameChildRightPadding)),height=Math.max(FLOW_GRAPH_GEOMETRY.pageFrameMinHeight,...children.map((child)=>Number((child.position as {y?:number}|undefined)?.y??70)+FLOW_GRAPH_GEOMETRY.eventHeight+FLOW_GRAPH_GEOMETRY.pageFrameChildBottomPadding));return{width,height};},laneBands:FlowLaneBand[]=stored.sections.map((section)=>{const bounds=(section.bounds as {x?:number;y?:number;width?:number;height?:number}|undefined)??{};return{id:section.id,name:section.name,x:Number(bounds.x??20),y:Number(bounds.y??40),width:Number(bounds.width??640),height:Number(bounds.height??190)};}),sectionById=new Map(stored.sections.map((section)=>[section.id,section]));
