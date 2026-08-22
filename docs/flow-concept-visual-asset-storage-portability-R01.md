@@ -332,10 +332,15 @@ pack `flow_graph` boundary `flow_workspace_surface_composition` for
 existing `flow_export`, `live_flow_testing`, and
 `property_set_flow_sections` consumers; the latter remains local to
 `flow_graph`. No new source prefix is proposed, and no stopped coherent candidate
-contributes integration paths. The coder must run read-only ownership intent
-before product coding; the exact changed-path plan remains authoritative, and a
-`coarse-boundary` result requires independently reviewed ownership preparation.
-This geometry-only task does not rerun the 300-image storage benchmark.
+contributed integration paths at specification time. Stopped coherent product
+reference `698d68d2` now contributes known changes in
+`src/data-layer-flow-graph-ui.ts`, `src/data-layer-flow-graph.ts`,
+`src/flow-graph/concept-visual-workspace.ts`, and
+`src/flow-graph/projection.ts`, plus the shared evidence paths dispositioned
+below. The coder must run read-only ownership intent before product coding; the
+exact changed-path plan remains authoritative, and a `coarse-boundary` result
+requires independently reviewed ownership preparation. This geometry-only task
+does not rerun the 300-image storage benchmark.
 
 For the settled candidate, run focused review evidence and package proof with:
 
@@ -361,3 +366,81 @@ installed Event-content separation, Event-in-Page containment, relationship and
 canvas geometry, compact-mode restoration, current exact packs and tasks,
 failures, remaining work, confidence, and forecast. Continue bounded work under
 the QA pilot unless product scope, safety, or authority changes.
+
+## Flow nested-Event thumbnail evidence-contract repair stage
+
+The first coherent product lineage for
+`flow-nested-event-thumbnail-containment` reached candidate `c5cacaf242` from
+approved QA base `ce7cc6083c`; stopped coherent reference `698d68d2` adds the
+generated presentation-height property conservation. Product and installed
+runtime evidence now require runtime keys 001 through 051, but the shared Flow
+acceptance handler and its complete-evidence fixture still stop at runtime050.
+Read-only intent therefore classified the product plan as
+`granularity-assessment-required`: these two unrelated evidence-contract paths
+add the Shell task family, expanding the original four-pack/71-task forecast to
+five packs/153 tasks. The product/runtime boundary is sound, the seam is exact,
+and a two-path preparation avoids repeatedly exposing the product review to that
+unrelated Shell failure surface.
+
+Standing outcome-bounded authority activates independent task
+`verification-slice-flow-nested-event-thumbnail-containment` from current QA.
+It advances the handler and fixture exclusive range ends from 51 to 52 so the
+acceptance contract requires, and complete evidence contains, exactly
+runtime001 through runtime051. Direct assertions must prove complete evidence
+passes and that omitting or falsifying runtime051 fails. Existing non-vacuity,
+earlier-key rejection, and installed-boundary requirements remain intact; the
+repair neither invents runtime052 nor weakens another evidence leaf.
+
+The preparation owns only these two exact causal-path dispositions:
+
+1. `acceptance/src/acceptance/steps/flow_graph.clj` remains the existing
+   `flow_graph` acceptance-handler seam and advances only its required-key
+   range. Its additional Shell selection is the current process-parent fallback;
+   no new source prefix is warranted for a one-line feature-contract boundary.
+2. `test/acceptance/flow_graph_steps_test.clj` remains the Shell-owned direct
+   fixture for that handler and advances only its matching complete-evidence
+   range plus runtime051 omission and falsification assertions. The Shell parent
+   fallback is deliberate because this test path introduces no reusable product
+   source boundary.
+
+The candidate must retain those one-to-one dispositions for independent review.
+It must not include product TypeScript, generated artifacts, the presentation-
+height property, browser evidence, feature files, registry changes, or another
+verification declaration. All such changes in stopped reference `698d68d2`,
+including the `c5cacaf242` product delta, remain the conserved product remainder.
+After architect `qa-ready` integration, the specifier records the reviewed slice
+repair when applicable, reapplies that exact remainder to the new QA head, and
+reissues stable task `flow-nested-event-thumbnail-containment` without another
+user decision or duplicate evidence-range edits.
+
+**Development focus:** begin and end with
+`acceptance/src/acceptance/steps/flow_graph.clj` and
+`test/acceptance/flow_graph_steps_test.clj`. Direct proof runs the
+`acceptance.flow-graph-steps-test` namespace and demonstrates that one complete
+runtime001-through-runtime051 map passes while omission or falsification of
+runtime051 fails. No Gherkin acceptance mutation is authorized.
+
+**QA impact:** the exact preparation surfaces are the existing parent pack
+`flow_graph` acceptance handler and the Shell process-parent fixture. No new
+source prefix or verification-slice declaration is proposed. Read-only intent
+and exact candidate preflight remain authoritative, but the expected focused
+preparation plan is `flow_graph,shell` with properties and package proof:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_graph \
+  --pack shell \
+  --property \
+  --changed-since <approved-preparation-specification-commit> \
+  --prepare-evidence verification-slice-flow-nested-event-thumbnail-containment
+node scripts/package.mjs
+```
+
+The preparation implementation-and-review elapsed effort ceiling is 60 minutes
+from coder receipt to architect `qa-ready`. At 30 minutes, report the two exact
+changed paths, runtime051 inclusion and omission/falsification rejection,
+durable path dispositions, exact packs and tasks, product-remainder conservation,
+failures, remaining work, confidence, and forecast. Continue while the change
+remains evidence-contract-only and coverage is preserved; product scope, weaker
+evidence, unavailable ownership, or a genuinely global plan stops for current
+direction. No all-runnable-pack feature checkpoint is authorized.
