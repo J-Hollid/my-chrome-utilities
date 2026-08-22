@@ -836,3 +836,24 @@ Feature: Data layer directional Flow specification graph
       | target                                   | first_path                           | second_path                        | first_value | second_value | first_concrete_path                    | second_concrete_path                | expected_json                                                        |
       | Cart Page instance                       | /products/*/product_name             | /products/*/product_id             | test        | SKU-42       | /products/0/product_name               | /products/0/product_id              | {"products":[{"product_name":"test","product_id":"SKU-42"}]} |
       | add_payment_info Event contained by Cart | /groups/*/products/*/product_name    | /groups/*/products/*/product_id    | nested test | SKU-99       | /groups/0/products/0/product_name      | /groups/0/products/0/product_id     | {"groups":[{"products":[{"product_name":"nested test","product_id":"SKU-99"}]}]} |
+
+  # Data layer directional Flow specification graph 049
+  Scenario Outline: Data layer directional Flow specification graph 049
+    Given <target> has no concept visual and Checkout uses Badges visual-display mode
+    And the next concept-visual Draft save remains unsettled after accepting the image
+    When the operator saves a valid PNG described as <description>
+    When the operator changes Checkout to Thumbnails
+    Then <target> shows an operable Preparing preview placeholder and labelled fallback badge while the save remains unsettled
+    When <pending_invoker> receives operator activation
+    Then the named viewer opens with the complete just-saved image and <description>
+    When the operator closes the viewer and the matching Saved Draft settles
+    Then the placeholder resolves without further input to a contained 16-to-10 preview for the same asset
+    And no unavailable-original error or unhandled promise rejection occurs
+    And reloading Checkout preserves the same attachment, original image bytes, and ready preview
+    And the project stores one original body and at most one disposable thumbnail for the asset
+    And changing visual-display mode creates no additional Draft or Undo entry
+
+    Examples:
+      | target                                    | description                     | pending_invoker          |
+      | Cart Page instance                        | Cart save-settlement visual     | Preparing preview        |
+      | add_payment_info Event contained by Cart  | Payment save-settlement visual  | the labelled visual badge |
