@@ -9,13 +9,13 @@ export interface FlowDocumentationDiagnostic{contextId:string;contextName:string
 export interface FlowDocumentationTable{title:string;headings:readonly string[];rows:readonly (readonly string[])[];legend?:string;conceptGroups?:readonly {name:string;start:number;count:number}[]}
 export interface FlowDocumentationClipboard{plain:string;html:string}
 export type FlowDocumentationMetadata="description"|"type"|"allowedValues"|"example"|"comments"|"provenance";
-export interface FlowDocumentationTableConfiguration{selectedPaths?:readonly string[];metadata?:readonly FlowDocumentationMetadata[];pathDisplay?:"display"|"canonical";headingParts?:{step:boolean;page:boolean;event:boolean}}
+export interface FlowDocumentationTableConfiguration{selectedPaths?:readonly string[];metadata?:readonly FlowDocumentationMetadata[];headingParts?:{step:boolean;page:boolean;event:boolean}}
 export interface FlowDocumentationCellDetail{summary:string;rule:string;revision:string;provenance:string;repairs:readonly string[]}
 
 const deepFreeze=<T>(value:T):T=>{if(value&&typeof value==="object"&&!Object.isFrozen(value)){Object.freeze(value);for(const child of Object.values(value as Record<string,unknown>))deepFreeze(child);}return value;};
 const contextName=(context:Pick<FlowDocumentationContextInput,"pageName"|"eventName">)=>`${context.pageName} / ${context.eventName}`;
 const contextProvenance=(context:FlowDocumentationContextInput):string=>[`effective revision ${context.effectiveRevision}`,...(context.sourcePageName?[`Source Page ${context.sourcePageName}`]:[]),...context.compiled.provenance.map(({contributorName})=>contributorName)].join("; ");
-const displayPath=(path:string)=>path.split("/").filter(Boolean).join(".").replaceAll(".*","[]");
+export const flowDocumentationDisplayPath=(path:string):string=>path.split("/").filter(Boolean).reduce((display,segment)=>segment==="*"?`${display}[x]`:display?`${display}.${segment}`:segment,"");
 const same=(left:unknown,right:unknown)=>JSON.stringify(left)===JSON.stringify(right);
 
 export function compileFlowDocumentationSnapshot(input:FlowDocumentationSnapshotInput):FlowDocumentationSnapshot{
@@ -39,13 +39,13 @@ export const flowDocumentationPropertyPaths=(snapshot:FlowDocumentationSnapshot)
 const headings=(snapshot:FlowDocumentationSnapshot)=>[snapshot.flowName,...snapshot.contexts.map((context)=>`Step ${context.stepLabel} ${contextName(context)}`)];
 
 export function flowValueMapTable(snapshot:FlowDocumentationSnapshot):FlowDocumentationTable{
-  return{title:snapshot.title,headings:headings(snapshot),rows:paths(snapshot).map((path)=>[displayPath(path),...snapshot.contexts.map((context)=>conflictAt(context,path)?"Blocked conflicting definitions":context.compiled.properties[path]?expectedText(context.compiled.properties[path]!):context.unresolved?.some((item)=>item.path===path)?"Incomplete":"")])};
+  return{title:snapshot.title,headings:headings(snapshot),rows:paths(snapshot).map((path)=>[flowDocumentationDisplayPath(path),...snapshot.contexts.map((context)=>conflictAt(context,path)?"Blocked conflicting definitions":context.compiled.properties[path]?expectedText(context.compiled.properties[path]!):context.unresolved?.some((item)=>item.path===path)?"Incomplete":"")])};
 }
 function matrixMark(context:FlowDocumentationContextInput,path:string):string{
   if(conflictAt(context,path))return"!";if(context.unresolved?.some((item)=>item.path===path))return"Incomplete";const property=context.compiled.properties[path];if(!property)return"—";if(property.presence==="forbidden")return"N";if(property.condition)return"C";if(property.presence==="required")return"M";return"O";
 }
 export function captureMatrixTable(snapshot:FlowDocumentationSnapshot):FlowDocumentationTable{
-  return{title:snapshot.title,headings:headings(snapshot),rows:paths(snapshot).map((path)=>[displayPath(path),...snapshot.contexts.map((context)=>matrixMark(context,path))]),legend:"M Mandatory · O Optional · C Conditional · N Not expected · — Not defined · ! Blocked"};
+  return{title:snapshot.title,headings:headings(snapshot),rows:paths(snapshot).map((path)=>[flowDocumentationDisplayPath(path),...snapshot.contexts.map((context)=>matrixMark(context,path))]),legend:"M Mandatory · O Optional · C Conditional · N Not expected · — Not defined · ! Blocked"};
 }
 
 export function configureFlowDocumentationSnapshot(snapshot:FlowDocumentationSnapshot,configuration:{contextOrder?:readonly string[];stepLabels?:Readonly<Record<string,string>>}):FlowDocumentationSnapshot{
@@ -78,8 +78,8 @@ function metadataValue(snapshot:FlowDocumentationSnapshot,path:string,metadata:F
   return String((property as EffectiveProperty&{comments?:unknown}).comments??"");
 }
 export function configureFlowDocumentationTable(snapshot:FlowDocumentationSnapshot,kind:"values"|"matrix",configuration:FlowDocumentationTableConfiguration={}):FlowDocumentationTable{
-  const source=kind==="values"?flowValueMapTable(snapshot):captureMatrixTable(snapshot),selected=configuration.selectedPaths??paths(snapshot),rowsByPath=new Map(source.rows.map((row)=>[row[0],row])),metadata=configuration.metadata??[];
-  const rows=selected.flatMap((path)=>{const sourceRow=rowsByPath.get(displayPath(path));if(!sourceRow)return[];return[[configuration.pathDisplay==="canonical"?path:sourceRow[0]!,...metadata.map((column)=>metadataValue(snapshot,path,column)),...sourceRow.slice(1)]];});
+  const source=kind==="values"?flowValueMapTable(snapshot):captureMatrixTable(snapshot),canonicalPaths=paths(snapshot),selected=configuration.selectedPaths??canonicalPaths,rowsByCanonicalPath=new Map(canonicalPaths.map((path,index)=>[path,source.rows[index]!])),metadata=configuration.metadata??[];
+  const rows=selected.flatMap((path)=>{const sourceRow=rowsByCanonicalPath.get(path);if(!sourceRow)return[];return[[sourceRow[0]!,...metadata.map((column)=>metadataValue(snapshot,path,column)),...sourceRow.slice(1)]];});
   const contextHeadings=configuration.headingParts?snapshot.contexts.map((context)=>{const pageEvent=[configuration.headingParts!.page?context.pageName:"",configuration.headingParts!.event?context.eventName:""].filter(Boolean).join(" / "),parts=[...(configuration.headingParts!.step?[`Step ${context.stepLabel}`]:[]),...(pageEvent?[pageEvent]:[])];return parts.join(" ")||"Context";}):source.headings.slice(1);
   return{...source,headings:[source.headings[0]!,...metadata.map((column)=>metadataLabels[column]),...contextHeadings],rows};
 }
@@ -87,7 +87,7 @@ export function configureFlowDocumentationTable(snapshot:FlowDocumentationSnapsh
 export function flowDocumentationCellDetail(snapshot:FlowDocumentationSnapshot,contextId:string,path:string):FlowDocumentationCellDetail{
   const context=snapshot.contexts.find(({id})=>id===contextId);if(!context)throw new Error(`Unknown documentation context ${contextId}`);const property=context.compiled.properties[path],conflict=conflictAt(context,path),unresolved=context.unresolved?.find((item)=>item.path===path),origins=property?.origins??[];
   const propertyRule=property?.presence==="required"&&property.expectedValue===undefined&&!property.allowedValues?.length&&!property.condition?`${expectedText(property)} — missing documentation value`:property?.presence==="forbidden"?`${expectedText(property)} — forbidden rule`:property?expectedText(property):undefined;
-  return{summary:`${contextName(context)} · ${displayPath(path)}`,rule:conflict?`Blocked — ${conflict.message}`:unresolved?`Incomplete — ${unresolved.issue}`:propertyRule??"Incomplete — property is not resolved for this context",revision:`Effective revision ${context.effectiveRevision}`,provenance:conflict?conflict.contributors.join("; "):origins.map(({contributorName,scope})=>`${contributorName} (${scope})`).join("; ")||"No contributing definition",repairs:conflict?[`Open effective property ${path}`,...conflict.contributors.map((name)=>`Open contributing schema ${name}`)]:unresolved?[unresolved.repair,`Open effective property ${path}`]:[`Open effective property ${path}`,...origins.map(({contributorName})=>`Open contributing schema ${contributorName}`)]};
+  return{summary:`${contextName(context)} · ${flowDocumentationDisplayPath(path)}`,rule:conflict?`Blocked — ${conflict.message}`:unresolved?`Incomplete — ${unresolved.issue}`:propertyRule??"Incomplete — property is not resolved for this context",revision:`Effective revision ${context.effectiveRevision}`,provenance:conflict?conflict.contributors.join("; "):origins.map(({contributorName,scope})=>`${contributorName} (${scope})`).join("; ")||"No contributing definition",repairs:conflict?[`Open effective property ${path}`,...conflict.contributors.map((name)=>`Open contributing schema ${name}`)]:unresolved?[unresolved.repair,`Open effective property ${path}`]:[`Open effective property ${path}`,...origins.map(({contributorName})=>`Open contributing schema ${contributorName}`)]};
 }
 
 const escapeHtml=(value:unknown)=>String(value??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("\n","<br>");

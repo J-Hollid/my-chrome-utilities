@@ -336,9 +336,9 @@ const compilerState={
   project:{
     id:"project:compiler",name:"Compiler Shop",description:"Configured documentation",site:"compiler.example",environments:["Production"],namingConventions:{property:"snake_case",event:"snake_case"},publicationPolicy:{warningsBlock:false,fixturesRequired:false},releases:[],
     collections:{
-      profiles:[{id:"profile:compiler",name:"Compiler Sitewide",requirements:[{path:"/site_id",type:"string",required:true,description:"Site",examples:["shop"]},{path:"/locale",type:"string",description:"Locale"}]}],
+      profiles:[{id:"profile:compiler",name:"Compiler Sitewide",requirements:[{path:"/site_id",type:"string",required:true,description:"Site",examples:["shop"]},{path:"/locale",type:"string",description:"Locale"},{path:"/commerce/order_id",type:"string",description:"Nested order",allowedValues:["nested-value"],concept:"Nested concept"},{path:"/commerce.order_id",type:"string",description:"Literal dot order",allowedValues:["literal-dot-value"],concept:"Literal dot concept"},{path:"/products/*/product_name",type:"string"},{path:"/groups/*/products/*/product_id",type:"string"}]}],
       propertySets:[{id:"group:compiler",name:"Checkout",schemaConstraints:[{path:"/currency",type:"string",allowedValues:["EUR"]}]}],
-      pages:[{id:"page:compiler",name:"Cart",eventName:"pageview",profileIds:["profile:compiler"],propertySetApplications:[{id:"application:compiler",name:"Checkout",propertySetId:"group:compiler"}],schemaConstraints:[{path:"/page_name",type:"string",presence:"required",documentation:"Page"}]}],
+      pages:[{id:"page:compiler",name:"Cart",eventName:"pageview",profileIds:["profile:compiler"],propertySetApplications:[{id:"application:compiler",name:"Checkout",propertySetId:"group:compiler"}],schemaConstraints:[{path:"/page_name",type:"string",presence:"required",documentation:"Page"},{path:"/commerce/order_id",type:"string",documentation:"Nested order"},{path:"/commerce.order_id",type:"string",documentation:"Literal dot order"}]}],
       events:[{id:"event:compiler",name:"Purchase",eventName:"purchase",schemaConstraints:[{path:"/purchase_id",type:"string",presence:"required"}]}],
       flows:[{id:"flow:compiler",name:"Checkout compiler journey"}],applicabilitySets:[],fixtures:[],assignments:[],
     },
@@ -358,23 +358,35 @@ const contextByKind=Object.fromEntries(compilerSources.matrixContexts.map((conte
   {id:"matrix-section",kind:"matrix",name:"Data capture matrix",selected:true,configuration:{contextIds:[contextByKind["page-definition"],contextByKind["event-definition"],contextByKind["page-instance"],contextByKind["event-occurrence"]]}},
   {id:"profile-section",kind:"profile",name:"Compiler Sitewide",targetId:"profile:compiler",selected:true,configuration:{paths:["/locale","/site_id"],columns:["Property","Required","Description"]}},
 ]});
+const compilerCanonicalBytes=JSON.stringify({collections:compilerState.project.collections,set:compilerSet});
 const compiledProject=compileProjectDocumentation({state:compilerState,set:compilerSet,theme:compilerTheme,revision:4,generatedAt:"2026-07-26T00:00:00.000Z"});
+assert.equal(JSON.stringify({collections:compilerState.project.collections,set:compilerSet}),compilerCanonicalBytes,"compilation conserves canonical schema and Documentation configuration bytes");
+const collisionSet=createProjectDocumentationSet({id:"set:collision",name:"Collision",themeId:compilerTheme.id,sections:[
+  {id:"flow:collision",kind:"flow",name:"Collision flow",targetId:"flow:compiler",selected:true,configuration:{paths:["/commerce/order_id","/commerce.order_id"],columns:["description"]}},
+  {id:"matrix:collision",kind:"matrix",name:"Matrix",selected:false,configuration:{contextIds:[]}},
+]}),collisionCompilation=compileProjectDocumentation({state:compilerState,set:collisionSet,theme:compilerTheme,revision:4,generatedAt:"2026-07-26T00:00:00.000Z"}),collisionTemplateRows=collisionCompilation.tables[0].templateData.pages[0].rows;
+assert.deepEqual(collisionTemplateRows.map(({property,description,value,concept})=>({property,description,value,concept})),[
+  {property:"commerce.order_id",description:"Nested order",value:"nested-value",concept:"Nested concept"},
+  {property:"commerce.order_id",description:"Literal dot order",value:"literal-dot-value",concept:"Literal dot concept"},
+],"flow template rows preserve canonical metadata, values, and concepts across a display-path collision");
 const unavailableTemplate={id:"template:unavailable",name:"Quarterly flow workbook",format:"excel",kind:"flow",contractVersion:2,digest:`sha256:${"b".repeat(64)}`,body:{assetId:"body:unavailable",digest:`sha256:${"a".repeat(64)}`,byteLength:128},validation:{valid:true,findings:[]}},assignedCompilerSet=createProjectDocumentationSet({...compilerSet,templateAssignments:{"excel:flow":unavailableTemplate.id}}),invalidTemplateState=structuredClone(compilerState);invalidTemplateState.project.documentation={sets:[assignedCompilerSet],themes:[compilerTheme],templates:[unavailableTemplate]};const unavailableSnapshot=compileProjectDocumentation({state:invalidTemplateState,set:assignedCompilerSet,theme:compilerTheme,revision:4,generatedAt:"2026-07-26T00:00:00.000Z"});assert.equal(unavailableSnapshot.templates[0].validation.valid,false,"compiled custom output keeps an invalid stored template unavailable instead of falling back or trusting its saved validation flag");
 assert.deepEqual(compiledProject.tables.map(({title})=>title),["Checkout configured","Data capture matrix","Compiler Sitewide"]);
-assert.deepEqual(compiledProject.tables[0].rows.map(([path])=>path),["/purchase_id","/page_name"]);
+assert.deepEqual(compiledProject.tables[0].rows.map(([path])=>path),["purchase_id","page_name"]);
 assert.equal(compiledProject.tables[0].headings[1],"Description");
 assert.match(compiledProject.tables[0].headings.join("|"),/Purchase label/);
 assert.match(compiledProject.tables[0].headings.join("|"),/Basket review/);
 const compiledFlowTemplate=compiledProject.tables[0].templateData;
 assert.equal(compiledFlowTemplate.pages.length,1,"configured context order does not separate an Event from its Page frame");
 assert.equal(compiledFlowTemplate.pages[0].events[0].eventName,"purchase");
-assert.equal(compiledFlowTemplate.pages[0].rows.find(({property})=>property==="/page_name").description,"Page","Page rows expose configured metadata by its public key");
-assert.deepEqual(compiledFlowTemplate.pages[0].rows.find(({property})=>property==="/page_name").cells.map(({heading})=>heading),["Property","Description","Value"]);
+assert.equal(compiledFlowTemplate.pages[0].rows.find(({property})=>property==="page_name").description,"Page","display rows retain metadata looked up by canonical path");
+assert.deepEqual(compiledFlowTemplate.pages[0].rows.find(({property})=>property==="page_name").cells.map(({heading})=>heading),["Property","Description","Value"]);
 assert.deepEqual(compiledProject.tables[1].headings.slice(1),compilerSources.matrixContexts.map(({label})=>label));
 assert.match(compiledProject.tables[1].headings.join("|"),/Basket review/);
 assert.equal(new Set(compiledProject.tables[1].rows.flatMap((row)=>row.slice(1))).size>=3,true);
 assert.deepEqual(compiledProject.tables[2].headings,["Property","Required","Description"]);
-assert.deepEqual(compiledProject.tables[2].rows.map(([path])=>path),["/locale","/site_id"]);
+assert.deepEqual(compiledProject.tables[2].rows.map(([path])=>path),["locale","site_id"]);
+assert.equal(compiledProject.tables[1].rows.every(([path])=>!path.startsWith("/")),true,"matrix rows use Documentation property presentation");
+assert.deepEqual(["commerce.order_id","products[x].product_name","groups[x].products[x].product_id"].map((path)=>compiledProject.tables[1].rows.some(([property])=>property===path)),[true,true,true],"matrix row and public property projection preserve dotted and wildcard presentation");
 for(const table of compiledProject.tables.slice(1)){
   const firstPublicRow=table.templateData.rows[0];
   assert.equal(firstPublicRow.property,table.rows[0][0],`${table.title} exposes its property binding`);
@@ -408,7 +420,7 @@ const openedArticleSet=createProjectDocumentationSet({
   ],
 });
 const openedArticleTable=compileProjectDocumentation({state:openedArticleState,set:openedArticleSet,theme:compilerTheme,revision:5,generatedAt:"2026-07-26T00:00:00.000Z"}).tables[0];
-assert.deepEqual(openedArticleTable.rows.map(([path])=>path),["/visitor","/page"],"every selected Site Profile follows Documentation Set concept inclusion and ordering");
+assert.deepEqual(openedArticleTable.rows.map(([path])=>path),["visitor","page"],"every selected Site Profile follows Documentation Set concept inclusion and ordering");
 assert.deepEqual(openedArticleTable.conceptGroups,[{name:"Ungrouped",start:0,count:1},{name:"page",start:1,count:1}],"a non-Sitewide Profile receives configured concept subheadings");
 
 console.log("Project documentation workspace tests passed");

@@ -5,6 +5,7 @@ import {
   configureFlowDocumentationSnapshot,
   configureFlowDocumentationTable,
   flowDocumentationCellDetail,
+  flowDocumentationDisplayPath,
   flowDocumentationPropertyPaths,
   flowDocumentationSnapshotStale,
   flowValueMapTable,
@@ -17,6 +18,17 @@ import {
 const origin=(name,scope="Event")=>({contributorId:`contributor:${name}`,contributorName:name,scope});
 const property=(input)=>({...input,origins:[origin(input.origin??"Profile")],superseded:[]});
 const compiled=(properties,conflicts=[])=>({status:conflicts.length?"blocked":"ready",properties,conflicts,provenance:[],exclusions:[]});
+assert.deepEqual([
+  "/page_name",
+  "/commerce/order_id",
+  "/products/*/product_name",
+  "/groups/*/products/*/product_id",
+].map(flowDocumentationDisplayPath),[
+  "page_name",
+  "commerce.order_id",
+  "products[x].product_name",
+  "groups[x].products[x].product_id",
+]);
 const contexts=[
   {id:"context:cart",kind:"page-instance",pageFrameId:"frame:cart",pageName:"Cart",eventName:"page_view",stepLabel:"1",effectiveRevision:4,compiled:compiled({
     "/page_name":property({expectedValue:"cart",presence:"required"}),
@@ -79,12 +91,25 @@ assert.equal(matrix.legend,"M Mandatory · O Optional · C Conditional · N Not 
 const configuredSnapshot=configureFlowDocumentationSnapshot(snapshot,{contextOrder:["context:cart","context:payment","context:shipping"],stepLabels:{"context:payment":"Payment choice","context:shipping":"Delivery choice"}});
 assert.deepEqual(configuredSnapshot.contexts.map(({id,stepLabel})=>[id,stepLabel]),[["context:cart","1"],["context:payment","Payment choice"],["context:shipping","Delivery choice"]]);
 assert.deepEqual(snapshot.contexts.map(({id,stepLabel})=>[id,stepLabel]),[["context:cart","1"],["context:shipping","2a"],["context:payment","2b"]]);
-const configuredTable=configureFlowDocumentationTable(configuredSnapshot,"values",{selectedPaths:["/form_name","/page_name"],metadata:["type","allowedValues"],pathDisplay:"canonical",headingParts:{step:false,page:true,event:true}});
+const configuredTable=configureFlowDocumentationTable(configuredSnapshot,"values",{selectedPaths:["/form_name","/page_name"],metadata:["type","allowedValues"],headingParts:{step:false,page:true,event:true}});
 assert.deepEqual(configuredTable.headings.slice(0,3),["Checkout journey","Type","Allowed values"]);
-assert.deepEqual(configuredTable.rows.map(([path])=>path),["/form_name","/page_name"]);
+assert.deepEqual(configuredTable.rows.map(([path])=>path),["form_name","page_name"]);
 assert.equal(configuredTable.rows[0][3],"guest or logged_in");
 assert.equal(configuredTable.headings[3],"Cart / page_view");
 assert.deepEqual(flowDocumentationPropertyPaths(snapshot).slice(0,2),["/page_name","/form_name"]);
+const collisionSnapshot=compileFlowDocumentationSnapshot({projectId:"project:collision",projectName:"Collision",flowId:"flow:collision",flowName:"Collision flow",graphRevision:1,sourceState:"draft",generatedAt:"2026-07-20T00:00:00.000Z",contexts:[{
+  id:"context:collision",kind:"page-instance",pageFrameId:"frame:collision",pageName:"Collision",eventName:"page_view",stepLabel:"1",effectiveRevision:1,
+  compiled:compiled({
+    "/commerce/order_id":property({expectedValue:"nested-value",documentation:"Nested metadata",concept:"Nested concept",presence:"required"}),
+    "/commerce.order_id":property({expectedValue:"literal-dot-value",documentation:"Literal dot metadata",concept:"Literal dot concept",presence:"required"}),
+  }),
+}]});
+const collisionRows=configureFlowDocumentationTable(collisionSnapshot,"values",{selectedPaths:["/commerce/order_id","/commerce.order_id"],metadata:["description"]}).rows;
+assert.deepEqual(collisionRows,[
+  ["commerce.order_id","Nested metadata","nested-value"],
+  ["commerce.order_id","Literal dot metadata","literal-dot-value"],
+],"display collisions retain each selected canonical property's metadata and value");
+assert.deepEqual(configureFlowDocumentationTable(collisionSnapshot,"values",{selectedPaths:["/commerce.order_id","/commerce/order_id"],metadata:["description"]}).rows,[collisionRows[1],collisionRows[0]],"canonical selection order remains authoritative when display paths collide");
 const conditionalDetail=flowDocumentationCellDetail(snapshot,"context:shipping","/error_message");
 assert.match(conditionalDetail.summary,/Shipping \/ add_shipping_info.*error_message/);
 assert.match(conditionalDetail.rule,/Required when form_status Equals failed/);

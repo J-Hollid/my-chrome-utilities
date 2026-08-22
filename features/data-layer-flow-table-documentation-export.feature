@@ -187,3 +187,19 @@ Feature: Data layer Flow table documentation export
     Examples:
       | instance_count | source_page           | first_name       | second_name | third_name | fourth_name  |
       | 4              | Generic checkout page | Customer details | Payment     | Summary    | Confirmation |
+
+  # Data layer Flow table documentation export 016
+  Scenario Outline: Data layer Flow table documentation export 016
+    Given a selected Documentation property is stored at canonical path <canonical_path>
+    When its property row is previewed and exported
+    Then the visible row heading and public row.property value are <exported_property>
+    And Spreadsheet, rich HTML and plain fallback, Built-in workbook, assigned Excel template, and Rich Page output use <exported_property>
+    And selection, ordering, schema lookup, metadata, concept, value, diagnostics, provenance, and repair routing retain <canonical_path>
+    And no export changes the canonical schema or stored Documentation configuration
+
+    Examples:
+      | canonical_path                        | exported_property                    |
+      | /page_name                            | page_name                            |
+      | /commerce/order_id                    | commerce.order_id                    |
+      | /products/*/product_name              | products[x].product_name             |
+      | /groups/*/products/*/product_id       | groups[x].products[x].product_id     |

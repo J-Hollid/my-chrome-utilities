@@ -25,12 +25,12 @@ const defaultPorts = () => ({
 });
 export function installFlowDocumentationExportUi(options) {
     const ports = options.ports ?? defaultPorts();
-    let open = false, snapshot, view = "values", includeHeadings = true, style = "plain", confirmedIncomplete = false, pathDisplay = "display", search = "", feedbackText = "";
+    let open = false, snapshot, view = "values", includeHeadings = true, style = "plain", confirmedIncomplete = false, search = "", feedbackText = "";
     let propertyOrder = [], selectedPaths = new Set(), contextOrder = [], selectedContexts = new Set(), stepLabels = {}, metadata = [], headingParts = { step: true, page: true, event: true };
     const current = () => { const value = options.context(); return { ...value, flow: value.flowId && value.state?.project.collections.flows.find(({ id }) => id === value.flowId) }; };
     const fresh = (state, flowId, revision) => { snapshot = flowDocumentationSnapshotFromState(state, flowId, new Date().toISOString(), revision); propertyOrder = [...flowDocumentationPropertyPaths(snapshot)]; selectedPaths = new Set(propertyOrder); contextOrder = snapshot.contexts.map(({ id }) => id); selectedContexts = new Set(contextOrder); stepLabels = Object.fromEntries(snapshot.contexts.map(({ id, stepLabel }) => [id, stepLabel])); metadata = []; confirmedIncomplete = false; feedbackText = ""; };
     const configuredSnapshot = () => configureFlowDocumentationSnapshot(snapshot, { contextOrder: contextOrder.filter((id) => selectedContexts.has(id)), stepLabels });
-    const configuredTable = (kind = view) => configureFlowDocumentationTable(configuredSnapshot(), kind, { selectedPaths: propertyOrder.filter((path) => selectedPaths.has(path)), metadata, pathDisplay, headingParts });
+    const configuredTable = (kind = view) => configureFlowDocumentationTable(configuredSnapshot(), kind, { selectedPaths: propertyOrder.filter((path) => selectedPaths.has(path)), metadata, headingParts });
     const staleState = (state, flowId, revision) => { const live = flowDocumentationSnapshotFromState(state, flowId, snapshot.generatedAt, revision); return flowDocumentationSnapshotStale(snapshot, { graphRevision: live.graphRevision, contextRevisions: Object.fromEntries(live.contexts.map(({ id, effectiveRevision }) => [id, effectiveRevision])) }); };
     function renderTable(host, value, detail) {
         const tableElement = document.createElement("table"), head = document.createElement("thead"), headRow = document.createElement("tr"), body = document.createElement("tbody"), metadataCount = metadata.length, currentSnapshot = configuredSnapshot();
@@ -61,7 +61,7 @@ export function installFlowDocumentationExportUi(options) {
             fresh(state, flowId, revision);
         const base = snapshot, stale = staleState(state, flowId, revision), configured = configuredSnapshot(), value = configuredTable(), blocked = stale.stale || (base.incomplete && !confirmedIncomplete);
         host.replaceChildren();
-        const section = document.createElement("section"), heading = document.createElement("h2"), identity = document.createElement("p"), controls = document.createElement("section"), common = document.createElement("fieldset"), viewSelect = document.createElement("select"), headingControl = document.createElement("input"), styleSelect = document.createElement("select"), pathSelect = document.createElement("select"), propertySearch = document.createElement("input"), propertyList = document.createElement("ol"), metadataList = document.createElement("ol"), contextList = document.createElement("ol"), preview = document.createElement("section"), detail = document.createElement("section"), diagnostics = document.createElement("ul"), feedback = document.createElement("output"), actions = document.createElement("div");
+        const section = document.createElement("section"), heading = document.createElement("h2"), identity = document.createElement("p"), controls = document.createElement("section"), common = document.createElement("fieldset"), viewSelect = document.createElement("select"), headingControl = document.createElement("input"), styleSelect = document.createElement("select"), propertySearch = document.createElement("input"), propertyList = document.createElement("ol"), metadataList = document.createElement("ol"), contextList = document.createElement("ol"), preview = document.createElement("section"), detail = document.createElement("section"), diagnostics = document.createElement("ul"), feedback = document.createElement("output"), actions = document.createElement("div");
         section.setAttribute("aria-label", "Selected Flow documentation export");
         heading.textContent = "Selected Flow documentation export";
         heading.tabIndex = -1;
@@ -84,11 +84,7 @@ export function installFlowDocumentationExportUi(options) {
             styleSelect.append(new Option(label, optionValue));
         styleSelect.value = style;
         styleSelect.addEventListener("change", () => { style = styleSelect.value; renderWorkspace(); });
-        pathSelect.setAttribute("aria-label", "Property row labels");
-        pathSelect.append(new Option("Display name", "display"), new Option("Canonical path", "canonical"));
-        pathSelect.value = pathDisplay;
-        pathSelect.addEventListener("change", () => { pathDisplay = pathSelect.value === "canonical" ? "canonical" : "display"; renderWorkspace(); });
-        common.append(Object.assign(document.createElement("legend"), { textContent: "Shared table configuration" }), labelled("View", viewSelect), labelled("Include headings", headingControl), labelled("Style", styleSelect), labelled("Row labels", pathSelect));
+        common.append(Object.assign(document.createElement("legend"), { textContent: "Shared table configuration" }), labelled("View", viewSelect), labelled("Include headings", headingControl), labelled("Style", styleSelect));
         const propertyFieldset = document.createElement("fieldset");
         propertyFieldset.append(Object.assign(document.createElement("legend"), { textContent: "Searchable property selection" }));
         propertySearch.type = "search";

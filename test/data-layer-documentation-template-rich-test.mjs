@@ -50,13 +50,13 @@ const grouped={...template,kind:"profile",blocks:[
   {id:"groups",type:"concept-group",source:"profile.concepts"},
 ]};
 const groupedOutput=renderRichDocumentationTemplate(grouped,{profile:{concepts:[
-  {name:"Commerce",rows:[{property:"/cart",cells:[{value:"Cart identifier"}]}]},
+  {name:"Commerce",rows:[{property:"commerce.order_id",cells:[{value:"Cart identifier"}]}]},
   {name:"Empty",rows:[]},
 ]},table:{columns:[{heading:"Property"},{heading:"Description"}]}});
 assert.match(groupedOutput.html,/<section[^>]*data-concept-group="Commerce"/u);
 assert.match(groupedOutput.html,/Cart identifier/u);
 assert.doesNotMatch(groupedOutput.html,/Empty/u);
-assert.equal(groupedOutput.plain,"Commerce\n/cart\tCart identifier");
+assert.equal(groupedOutput.plain,"Commerce\ncommerce.order_id\tCart identifier");
 
 const invalid={...template,blocks:[{id:"bad",type:"paragraph",content:[{binding:"page.pageName"}]}]};
 assert.match(validateRichDocumentationTemplate(invalid).findings[0].message,/page\.pageName/u);

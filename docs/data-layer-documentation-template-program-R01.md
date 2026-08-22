@@ -91,6 +91,11 @@ Flow and context rows expose `property`, configured metadata values, and literal
 transposed value-map form; each Flow row has ordered `cells` aligned with the
 configured Flow columns.
 
+Public `property` values use the Documentation presentation form: no leading
+slash, dots between object members, and `[x]` for each wildcard array member.
+The canonical path remains internal to selection, lookup, diagnostics,
+provenance, and repair routing and is not exposed through `row.property`.
+
 Matrix rows expose `property`, `concept`, and ordered `cells` aligned with the
 configured matrix columns. Matrix cells expose the existing Mandatory, Optional,
 Conditional, Not expected, Not defined, or Blocked presentation. Profile rows

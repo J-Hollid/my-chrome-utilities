@@ -260,6 +260,7 @@ feature.
 | E12 | Incomplete Drafts remain useful and unmistakable | Export 012 | Blocked/Incomplete cells, confirmation, watermark, diagnostics | Compiler diagnostics and output headers | All output labels and repair links | A, C | No incomplete output appears complete |
 | E13 | Outputs must use one coherent revision snapshot | Export 013 | Page, occurrence, Page-relationship, and schema staleness with disabled actions and refresh | Revision subscriptions and snapshot compiler | Before/after revisions and identical outputs | A | Mixed graph/schema revisions cannot export |
 | E14 | Terminal branched-flow proof | Export 014 | Both previews, four copies, one workbook | Built extension and all adapters | Five captured outputs and unchanged canonical bytes | D | Every format agrees and makes no execution claim |
+| E16 | Property rows use a JavaScript-like public name | Export 016 | Root names, dotted object members, and `[x]` array members | Documentation row projection and safe template context | Preview, clipboard, Rich, Built-in workbook, assigned Excel, and canonical-state conservation | A, C | Public rows are readable without changing their canonical property identity |
 
 ## Terminal acceptance
 
@@ -270,3 +271,59 @@ consumes that same build. The pack may share registered build dependencies with
 installed evidence must include a Page with no interaction Event, Page-derived primary columns,
 nested occurrence columns, one reusable Event with distinct Page-specific
 expectations, and Page-relationship-only branch ordering.
+
+## Documentation property-row presentation correction
+
+Documentation property rows expose a presentation name, not the canonical path
+used by schemas and stored configuration. A root path such as `/page_name`
+exports as `page_name`. Object boundaries use dots, so
+`/commerce/order_id` exports as `commerce.order_id`. Each wildcard array-member
+segment attaches `[x]` to its array property: `/products/*/product_name` exports
+as `products[x].product_name`, and nested arrays repeat that marker. `[x]` is a
+display marker for a variable member; it is never a stored index or schema path.
+
+The same value appears in visible preview rows and the public `row.property`
+template binding across Flow value maps, data capture matrices, Site Profiles,
+Spreadsheet copy, rich HTML and plain fallback, Built-in workbooks, assigned
+Excel templates, and Rich Page output. Canonical paths remain authoritative for
+property selection and order, effective-schema and metadata lookup, concepts,
+values, diagnostics, provenance, and repair targets. This correction does not
+rename schema properties, change the stable template binding surface, or mutate
+Documentation configuration.
+
+**Development focus:** begin with the property-row formatter in
+`src/data-layer-flow-table-documentation-export.ts` and the public row projection
+in `src/data-layer-project-documentation-compiler.ts`. Characterize root,
+nested-object, single-array, and nested-array paths in
+`test/data-layer-flow-table-documentation-export-test.mjs` and
+`test/data-layer-project-documentation-workspace-test.mjs`. Prove the assigned
+template boundary with the existing Excel and Rich template tests, and add the
+installed output observation to
+`test/browser-packs/flow-table-documentation-export.mjs`.
+
+**QA impact:** both likely production paths are existing `flow_export` sources
+and introduce no new shared integration boundary. The direct unit, property,
+template, runtime acceptance, browser, and package checks all remain owned by
+parent pack `flow_export`; no new verification slice, source prefix, or consumer
+is proposed. The coder must run read-only ownership intent from the approved QA
+base before product coding, including both likely paths. Exact changed-path
+preflight is authoritative. The expected review-ready checkpoint is:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_export \
+  --property \
+  --changed-since <approved-specification-commit> \
+  --prepare-evidence documentation-property-display-path
+node scripts/package.mjs
+```
+
+The stable task name is `documentation-property-display-path`. The
+implementation-and-review elapsed effort ceiling is 90 minutes. At 45 minutes,
+report the four path projections, public `row.property` parity across output
+types, canonical-state conservation, current exact packs and tasks, failures,
+remaining work, confidence, and forecast. Continue bounded work while this
+remains a presentation-only correction with conserved canonical identity. A
+changed product requirement, unavailable ownership, or genuinely global plan
+stops for current direction. No all-runnable-pack feature checkpoint is
+authorized.

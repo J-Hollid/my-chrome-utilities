@@ -159,3 +159,19 @@ Feature: Data layer Flow table documentation export runtime
     And the downloaded workbook satisfies the required four-sheet contract
     And project, graph, schema, documentation, assignment, and per-Event validation bytes remain identical
     And no installed output claims successful Flow execution
+
+  # Data layer Flow table documentation export runtime 016
+  Scenario Outline: Data layer Flow table documentation export runtime 016
+    Given production Documentation selects canonical property <canonical_path>
+    When actual controls preview and export its property row
+    Then rendered row text and the public row.property binding equal <exported_property>
+    And captured clipboard text and HTML, parsed Built-in workbook, assigned Excel output, and Rich Page output equal <exported_property>
+    And production selection, lookup, metadata, concept, diagnostics, provenance, and repair targets retain <canonical_path>
+    And persisted schema and Documentation configuration bytes remain unchanged
+
+    Examples:
+      | canonical_path                        | exported_property                    |
+      | /page_name                            | page_name                            |
+      | /commerce/order_id                    | commerce.order_id                    |
+      | /products/*/product_name              | products[x].product_name             |
+      | /groups/*/products/*/product_id       | groups[x].products[x].product_id     |
