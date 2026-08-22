@@ -12,6 +12,7 @@ import {FLOW_ITEM_DRAG_THRESHOLD,advanceFlowItemPointerGesture,completeFlowItemP
 import {attachFlowConceptVisual,flowConceptVisualAssets,removeFlowConceptVisual} from "../dist/flow-graph/concept-visuals.js";
 import {FLOW_CONCEPT_VISUAL_MAX_VIEWER_SCALE,flowConceptVisualFitScale,flowConceptVisualPan,flowConceptVisualZoomAt} from "../dist/flow-graph/concept-visual-viewer-state.js";
 import {setAtPath,valueAtPath} from "../dist/flow-graph/example-values.js";
+import {resolveFlowVisualThumbnailAfterSave} from "../dist/flow-visual-thumbnail.js";
 import {boundedDiagnostic,observeBrowserReadiness} from "./support/browser-observation-control.mjs";
 import {createFlowExamplesPhaseTimer,flowExamplesPhaseNames} from "./support/flow-examples-timing.mjs";
 import {decodeDevtoolsTextFrame,encodeDevtoolsTextFrame} from "./support/flow-workspace-r02-runtime.mjs";
@@ -20,6 +21,11 @@ const sides=["left","right","top","bottom"],expected=new Map([["right:left","exp
 const randomInteger=()=>Math.floor(random()*0x100000000)>>>0;
 const scalar=()=>{const ranges=[[0x20,0x7e],[0xa0,0x7ff],[0x800,0xd7ff],[0xe000,0xffff],[0x10000,0x10ffff]],[minimum,maximum]=ranges[randomInteger()%ranges.length];return String.fromCodePoint(minimum+(randomInteger()%(maximum-minimum+1)));};
 const payloadWithByteLength=(length)=>{let payload="",bytes=0;for(let index=0;index<16;index+=1){const next=scalar(),nextLength=Buffer.byteLength(next);if(bytes+nextLength>length)break;payload+=next;bytes+=nextLength;}return payload+"x".repeat(length-bytes);};
+for(let sample=0;sample<128;sample+=1){
+  const source=Uint8Array.from({length:1+(randomInteger()%256)},()=>randomInteger()&255),calls=[],thumbnail=new Blob([`thumbnail:${sample}`],{type:"image/webp"});let releaseSave;
+  const save=new Promise(resolve=>{releaseSave=resolve;}),pending=resolveFlowVisualThumbnailAfterSave({projectId:`project:${sample}`,asset:{id:`asset:${sample}`,digest:`sha256:${sample}`,mediaType:"image/png",bytes:`data:image/png;base64,${Buffer.from(source).toString("base64")}`},waitForSave:()=>save,matchesCurrentAsset:()=>true,loadThumbnail:async()=>{calls.push("load-thumbnail");},loadOriginal:async()=>{calls.push("load-original");throw new Error("staged bytes must prevent an original-body read");},createThumbnail:async body=>{calls.push("create");assert.deepEqual(new Uint8Array(await body.arrayBuffer()),source,"every generated staged body reaches thumbnail creation byte-for-byte");return thumbnail;},storeThumbnail:async(projectId,assetId,body)=>{calls.push("store");assert.equal(projectId,`project:${sample}`);assert.equal(assetId,`asset:${sample}`);assert.equal(body,thumbnail);}});
+  await Promise.resolve();assert.deepEqual(calls,[],"generated staged thumbnails perform no durable work before save settlement");releaseSave();assert.equal(await pending,thumbnail);assert.deepEqual(calls,["load-thumbnail","create","store"],"generated staged thumbnails retain the settlement operation order");
+}
 for(let sample=0;sample<256;sample+=1){
   const depth=1+(randomInteger()%5),siblingCount=2+(randomInteger()%5),prefix=Array.from({length:depth},(_,index)=>`items_${sample}_${index}/*`),entries=Array.from({length:siblingCount},(_,index)=>({path:`/${[...prefix,`value_${index}`].join("/")}`,value:{sample,index,text:`value:${randomInteger()}`}})),project=(orderedEntries)=>{const payload={};for(const {path,value} of orderedEntries)setAtPath(payload,path,value);return payload;},forward=project(entries),reverse=project([...entries].reverse()),beforeRepeat=JSON.stringify(forward);
   assert.deepEqual(forward,reverse,"generated sibling order cannot change wildcard example projection");

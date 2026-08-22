@@ -58,7 +58,7 @@ import {
 } from "../dist/flow-graph/workspace-item-menu.js";
 import {FLOW_PORT_SNAP_RADIUS,flowPointerSnapTarget,flowPortSnapTarget} from "../dist/flow-graph/relationship-port-snap.js";
 import {createDurablePersistenceReadiness} from "../dist/durable-project/persistence-readiness.js";
-import {resolveFlowVisualThumbnailAfterSave} from "../dist/data-layer-flow-graph-ui.js";
+import {resolveFlowVisualThumbnailAfterSave} from "../dist/flow-visual-thumbnail.js";
 
 const persistenceStatuses=[];
 let releaseSettlement;

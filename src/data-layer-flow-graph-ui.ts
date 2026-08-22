@@ -37,7 +37,7 @@ import {type FlowCamera} from "./flow-graph/workspace.js";
 import {flowItemActivationRequest,flowItemMenuRequest,type FlowItemMenuKind,type FlowItemMenuRequest} from "./flow-graph/workspace-item-menu.js";
 import {advanceFlowItemPointerGesture,completeFlowItemPointerGesture,startFlowItemPointerGesture,type FlowItemPointerGesture} from "./flow-graph/workspace-item-pointer.js";
 import {upgradeFlowWorkspace,type FlowItemMenuOpenRequest} from "./flow-graph/workspace-ui.js";
-import {createFlowVisualThumbnail} from "./flow-visual-thumbnail.js";
+import {createFlowVisualThumbnail,resolveFlowVisualThumbnailAfterSave} from "./flow-visual-thumbnail.js";
 import {flowSelectionContains,primaryFlowSelection,selectionAfterActivation,selectionAfterRemoval,selectionFromStoredView,storedViewWithSelection,type FlowSelection,type StoredFlowSelectionView} from "./flow-graph/workspace-selection.js";
 import {createFlowExampleDetailsRenderer} from "./flow-graph/example-details-ui.js";
 import type {FlowSectionCommand,FlowSectionRemovalImpact} from "./flow-graph/workspace-section-ui.js";
@@ -47,37 +47,6 @@ export interface FlowGraphBuilderContext {state?:ProjectState;flowId?:string;rev
 export function contextSettingPageLabel(pageName:string):string{return `${pageName} · Context-setting Page`;}
 export interface FlowGraphBuilderIntegration {render():void;renderSelectors():void}
 interface IntegrationOptions {context:()=>FlowGraphBuilderContext;persist:(state:ProjectState)=>void;settled:()=>Promise<void>;id:IdFactory;repository:DurableProjectRepository;openOccurrenceSchema?:(occurrenceId:string,path?:string,originFocus?:HTMLElement)=>boolean}
-
-interface FlowVisualThumbnailSettlementOptions{
-  projectId:string;
-  asset:Omit<FlowConceptVisualAsset,"bytes">&{bytes?:string};
-  waitForSave:()=>Promise<void>;
-  matchesCurrentAsset:()=>boolean;
-  loadThumbnail:()=>Promise<Blob|undefined>;
-  loadOriginal:()=>Promise<Blob>;
-  createThumbnail:(body:Blob)=>Promise<Blob>;
-  storeThumbnail:(projectId:string,assetId:string,body:Blob)=>Promise<void>;
-}
-
-const stagedFlowVisualBody=(asset:FlowVisualThumbnailSettlementOptions["asset"]):Blob|undefined=>{
-  if(!asset.bytes)return undefined;
-  const match=new RegExp(`^data:${asset.mediaType};base64,(.+)$`).exec(asset.bytes);
-  if(!match)throw new DOMException(`Visual ${asset.id} has unreadable staged bytes.`,"DataError");
-  const raw=atob(match[1]!);
-  return new Blob([Uint8Array.from(raw,character=>character.charCodeAt(0))],{type:asset.mediaType});
-};
-
-export async function resolveFlowVisualThumbnailAfterSave(options:FlowVisualThumbnailSettlementOptions):Promise<Blob>{
-  const staged=stagedFlowVisualBody(options.asset);
-  if(staged)await options.waitForSave();
-  if(!options.matchesCurrentAsset())throw new DOMException(`Visual asset ${options.asset.id} changed before thumbnail settlement.`,"AbortError");
-  const cached=await options.loadThumbnail();
-  if(cached)return cached;
-  const thumbnail=await options.createThumbnail(staged??await options.loadOriginal());
-  await options.storeThumbnail(options.projectId,options.asset.id,thumbnail);
-  return thumbnail;
-}
-
 
 export {ownsPointerDrag,restorePointerCancellationFocus,flowEdgeGeometry};
 type SessionFlowView=StoredFlowSelectionView&{viewport?:FlowCamera;minimap?:boolean;visualDisplayMode?:FlowVisualDisplayMode};

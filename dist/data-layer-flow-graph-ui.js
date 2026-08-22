@@ -9,32 +9,10 @@ import { flowConceptVisualAssets, flowConceptVisualAttachment } from "./flow-gra
 import { flowItemActivationRequest, flowItemMenuRequest } from "./flow-graph/workspace-item-menu.js";
 import { advanceFlowItemPointerGesture, completeFlowItemPointerGesture, startFlowItemPointerGesture } from "./flow-graph/workspace-item-pointer.js";
 import { upgradeFlowWorkspace } from "./flow-graph/workspace-ui.js";
-import { createFlowVisualThumbnail } from "./flow-visual-thumbnail.js";
+import { createFlowVisualThumbnail, resolveFlowVisualThumbnailAfterSave } from "./flow-visual-thumbnail.js";
 import { flowSelectionContains, primaryFlowSelection, selectionAfterActivation, selectionAfterRemoval, selectionFromStoredView, storedViewWithSelection } from "./flow-graph/workspace-selection.js";
 import { createFlowExampleDetailsRenderer } from "./flow-graph/example-details-ui.js";
 export function contextSettingPageLabel(pageName) { return `${pageName} · Context-setting Page`; }
-const stagedFlowVisualBody = (asset) => {
-    if (!asset.bytes)
-        return undefined;
-    const match = new RegExp(`^data:${asset.mediaType};base64,(.+)$`).exec(asset.bytes);
-    if (!match)
-        throw new DOMException(`Visual ${asset.id} has unreadable staged bytes.`, "DataError");
-    const raw = atob(match[1]);
-    return new Blob([Uint8Array.from(raw, character => character.charCodeAt(0))], { type: asset.mediaType });
-};
-export async function resolveFlowVisualThumbnailAfterSave(options) {
-    const staged = stagedFlowVisualBody(options.asset);
-    if (staged)
-        await options.waitForSave();
-    if (!options.matchesCurrentAsset())
-        throw new DOMException(`Visual asset ${options.asset.id} changed before thumbnail settlement.`, "AbortError");
-    const cached = await options.loadThumbnail();
-    if (cached)
-        return cached;
-    const thumbnail = await options.createThumbnail(staged ?? await options.loadOriginal());
-    await options.storeThumbnail(options.projectId, options.asset.id, thumbnail);
-    return thumbnail;
-}
 export { ownsPointerDrag, restorePointerCancellationFocus, flowEdgeGeometry };
 export function flowViewAfterRelationshipDeletion(view, relationshipId) { const selection = selectionFromStoredView(view); if (!selection.some(({ kind, id }) => kind === "relationship" && id === relationshipId))
     return view; if (!view.selectedItems) {
