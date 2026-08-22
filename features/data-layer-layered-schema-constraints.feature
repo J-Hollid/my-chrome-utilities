@@ -499,3 +499,39 @@ Feature: Data layer layered schema constraints
       | Allowed values | active and pending    | active, pending, and paused | closed and archived |
       | Presence       | Optional              | Required                   | Forbidden           |
       | Description    | Parent description    | Revised parent description | Checkout description |
+
+  # Data layer layered schema constraints 032
+  Scenario: Data layer layered schema constraints 032
+    Given the Alternative shipping Page-instance effective stack contains ordinary leaf /customer_status from Sitewide, Checkout, and Shipping
+    And no Event branch contributes /customer_status independently
+    And /customer_status has no protected invariant or surviving rule dependency
+    When the operator opens /customer_status property actions in the Alternative shipping schema contribution
+    Then Exclude inherited property is available without first using Override here
+    And its guidance says the exclusion affects Alternative shipping and downstream contexts that inherit its Page branch, not any source contributor
+    When the operator activates Exclude inherited property
+    Then review identifies /customer_status, affected contexts, stale outputs, and one Undo action before any Draft change
+    When the reviewed local exclusion is committed
+    Then /customer_status is absent from the effective Alternative shipping Page instance and its contained Purchase occurrence
+    And one sparse exclusion is stored against the inherited property's stable identity without copying its parent definition
+    And the three source documents, another Shipping Page instance, and Published bytes are identical to their pre-review values
+    And reloading preserves the exclusion while Undo restores the current inherited definition
+    And a protected invariant or surviving required dependency remains non-excludable with its source and repair route identified
+
+  # Data layer layered schema constraints 033
+  Scenario Outline: Data layer layered schema constraints 033
+    Given Alternative shipping has effective string property /colour with Allowed values red and blue
+    And its Example uses <example_method> with value blue
+    When the operator replaces Allowed values with red before editing Example
+    Then the Allowed values change commits before any separate Example edit
+    And the resulting Example <example_result>
+    And Example feedback <example_feedback>
+    And review or direct-save feedback identifies both the Allowed values change and its Example consequence
+    When the operator commits the change
+    Then one property-scoped Draft command stores <stored_change> at Alternative shipping
+    And Sitewide, siblings, unrelated Checkout facets, and Published state remain unchanged
+    And one Undo <undo_result>
+
+    Examples:
+      | example_method         | example_result                    | example_feedback                                      | stored_change                              | undo_result                                                        |
+      | selected allowed value | becomes selected allowed value red | shows no mismatch warning                             | Allowed values red and selected Example red | restores Allowed values red and blue with selected Example blue    |
+      | custom value           | remains custom value blue          | shows a non-blocking Allowed values mismatch warning | only Allowed values red                    | restores Allowed values red and blue while retaining custom blue   |
