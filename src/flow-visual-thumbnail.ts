@@ -1,10 +1,9 @@
-import type {FlowConceptVisualAsset} from "./flow-graph/concept-visuals.js";
-
 export const FLOW_VISUAL_THUMBNAIL_SIZE={width:320,height:200,maxBytes:256*1024} as const;
 
+interface FlowVisualThumbnailAsset{id:string;digest:string;mediaType:string;bytes?:string}
 interface FlowVisualThumbnailSettlementOptions{
   projectId:string;
-  asset:Omit<FlowConceptVisualAsset,"bytes">&{bytes?:string};
+  asset:FlowVisualThumbnailAsset;
   waitForSave:()=>Promise<void>;
   matchesCurrentAsset:()=>boolean;
   loadThumbnail:()=>Promise<Blob|undefined>;
