@@ -34,6 +34,7 @@ import {flowPanClickSuppression,flowPanStartAllowed,flowPanToPinch} from "../dis
 import {flowWheelZoomFactor} from "../dist/flow-graph/workspace-wheel-zoom.js";
 import {
   FLOW_CONCEPT_VISUAL_ASPECT_RATIO,
+  flowConceptVisualThumbnailBounds,
   flowConceptVisualThumbnailViewport,
 } from "../dist/flow-graph/concept-visual-workspace.js";
 import {
@@ -142,6 +143,9 @@ for(const itemWidth of [214,170]){
   assert.equal(viewport.width/viewport.height,16/10,"Page and Event previews use the same fixed 16:10 viewport");
   assert.equal(viewport.x*2+viewport.width,itemWidth,"the fixed-ratio viewport remains centered in its Flow item");
 }
+const eventThumbnailBounds=flowConceptVisualThumbnailBounds(170,94+104);
+assert.equal(eventThumbnailBounds.y,102,"the Event thumbnail begins after the ordinary 94-pixel Event content");
+assert.ok(eventThumbnailBounds.y>=94&&eventThumbnailBounds.y+eventThumbnailBounds.height<=94+104,"the complete preview occupies only the Event's thumbnail-specific height increment");
 
 assert.equal(FLOW_CONCEPT_VISUAL_MAX_VIEWER_SCALE,4,"the viewer stops at 400 percent actual scale");
 assert.equal(flowConceptVisualFitScale({width:4096,height:1600},{width:320,height:560}),.078125,"Fit contains a wide image without enlarging it");

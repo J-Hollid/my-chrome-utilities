@@ -1,6 +1,6 @@
 import { orderedPageGroupIds } from "./utilities/data-layer/page-group-membership.js";
 export { addFreePageFrame, addUngroupedPageFrame, inspectFreePageEdgeMove, inspectOccurrenceContainmentMove, inspectOccurrencePageChange, inspectUngroupedPageDrop, moveFreePageFrame, reassignFlowOccurrencePage } from "./flow-graph/containment.js";
-export { flowOutline, flowRelationshipText, inspectFlowGraph, projectFlowGraph } from "./flow-graph/projection.js";
+export { flowGraphPresentationHeights, flowOutline, flowRelationshipText, inspectFlowGraph, projectFlowGraph } from "./flow-graph/projection.js";
 export { deriveFlowOccurrenceExample, deriveFlowPageFrameExample, setFlowOccurrenceExample, flowOccurrenceExampleEditorRows } from "./flow-graph/examples.js";
 export { migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, removeFlowRelationship, reviewLegacyFlowContextMigration, saveGraphRelationship } from "./flow-graph/examples.js";
 export { addEventOccurrenceToPage, addGraphOccurrence, addInteractionOccurrenceToPage, duplicateGraphOccurrence, moveGraphOccurrence, removeGraphOccurrence, reorderGraphOccurrence, updateGraphOccurrence } from "./flow-graph/occurrences.js";

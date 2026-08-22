@@ -25,6 +25,9 @@ export function flowConceptVisualThumbnailViewport(itemWidth) {
     const height = FLOW_CONCEPT_VISUAL_THUMBNAIL_HEIGHT, width = height * FLOW_CONCEPT_VISUAL_ASPECT_RATIO;
     return { x: (itemWidth - width) / 2, width, height };
 }
+export function flowConceptVisualThumbnailBounds(itemWidth, itemHeight) {
+    return { ...flowConceptVisualThumbnailViewport(itemWidth), y: itemHeight - 96 };
+}
 export function openFlowConceptVisualForTarget(options) {
     const visual = flowConceptVisual(options.project, options.flowId, options.target);
     if (!visual)
@@ -60,12 +63,12 @@ export function renderFlowConceptVisual(options) {
         options.group.append(badge);
         return;
     }
-    const thumbnail = options.thumbnailBytes?.(visual.asset.id), foreign = svg("foreignObject"), viewport = flowConceptVisualThumbnailViewport(options.width);
+    const thumbnail = options.thumbnailBytes?.(visual.asset.id), foreign = svg("foreignObject"), viewport = flowConceptVisualThumbnailBounds(options.width, options.height);
     foreign.dataset.flowVisualThumbnail = options.target.id;
     foreign.dataset.flowVisualAssetId = visual.asset.id;
     foreign.setAttribute("aria-label", `View visual: ${visual.attachment.description}`);
     foreign.setAttribute("x", String(viewport.x));
-    foreign.setAttribute("y", String(options.height - 96));
+    foreign.setAttribute("y", String(viewport.y));
     foreign.setAttribute("width", String(viewport.width));
     foreign.setAttribute("height", String(viewport.height));
     activateVisualIndicator(foreign, () => void open(foreign));

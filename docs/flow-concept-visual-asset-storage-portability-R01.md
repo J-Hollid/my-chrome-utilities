@@ -286,3 +286,78 @@ installed evidence, runtime 034/035 conservation, benchmark status, any forecast
 variance, remaining work, confidence, and completion forecast. Continue while
 product requirements and safety remain unchanged and a bounded completion path
 exists.
+
+## Flow nested-Event thumbnail containment correction
+
+The user reported that a concept-visual thumbnail on an Event occurrence nested
+inside a Page frame covers the Event's existing content instead of enlarging its
+container. The current presentation path gives thumbnail height to Page-frame
+relationship endpoints only. Event occurrences retain their compact fixed height,
+so the thumbnail is positioned into the title, interaction detail, and Derived
+JSON example disclosure. The Page frame is also projected from that compact child
+height and cannot contain a correctly expanded Event card.
+
+Directional Flow scenario 051 and its runtime partner make the nested geometry
+explicit. At near semantic detail in Thumbnails mode, the Event card places its
+complete 16-to-10 preview after its ordinary content without intersection. The
+containing Page frame grows around the complete Event card with its existing
+child padding; relationship anchors derive from the expanded Page frame and the
+canvas presentation bounds contain it. Returning to Badges removes only the
+thumbnail-specific Event and Page height increments. Stored coordinates,
+topology, project bytes, Draft revision, and Undo history remain unchanged.
+
+This correction does not change image validation, save settlement, asset-body or
+thumbnail-cache storage, attachment metadata, viewer behavior, visual-display
+mode persistence, Tidy, or canonical item placement. It preserves scenarios 034,
+035, and 049, including complete-image containment and the pending-preview path.
+
+**Development focus:** begin with the presentation geometry shared by
+`src/flow-graph/projection.ts`, `src/data-layer-flow-graph-ui.ts`, and
+`src/flow-graph/concept-visual-workspace.ts`. Give Event occurrences one
+authoritative rendered height, propagate a contained Event's rendered footprint
+into its Page frame before Page anchors and canvas bounds are derived, and keep
+the stored position and containment model untouched. Add deterministic direct
+coverage in `test/data-layer-flow-graph-test.mjs` and
+`test/data-layer-flow-workspace-test.mjs`. Extend the installed
+`FLOW_WORKSPACE_AUTHORING_TARGET` proof in
+`test/support/flow-workspace-r02-runtime.mjs` with runtime 051, measuring
+non-intersecting content and thumbnail rectangles, two-level containment, anchor
+placement, compact-mode restoration, and serialized-state conservation.
+
+**QA impact:** the likely existing shared integration surfaces are parent pack
+`flow_graph` boundary `flow_graph_semantic_model` for
+`src/flow-graph/projection.ts` and `src/data-layer-flow-graph-ui.ts`, and parent
+pack `flow_graph` boundary `flow_workspace_surface_composition` for
+`src/flow-graph/concept-visual-workspace.ts`. The former propagates to the
+existing `flow_export`, `live_flow_testing`, and
+`property_set_flow_sections` consumers; the latter remains local to
+`flow_graph`. No new source prefix is proposed, and no stopped coherent candidate
+contributes integration paths. The coder must run read-only ownership intent
+before product coding; the exact changed-path plan remains authoritative, and a
+`coarse-boundary` result requires independently reviewed ownership preparation.
+This geometry-only task does not rerun the 300-image storage benchmark.
+
+For the settled candidate, run focused review evidence and package proof with:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_graph \
+  --pack flow_export \
+  --pack live_flow_testing \
+  --pack property_set_flow_sections \
+  --property \
+  --changed-since <approved-specification-commit> \
+  --prepare-evidence flow-nested-event-thumbnail-containment
+node scripts/package.mjs
+```
+
+The canonical task name is `flow-nested-event-thumbnail-containment`. This
+feature-mode slice does not authorize the all-runnable-pack gate. Routine
+RepoWise scouting remains stopped and is not part of the handoff.
+
+The implementation-and-review elapsed effort ceiling is 90 minutes from coder
+receipt to an architect `qa-ready` candidate. At 45 minutes, report direct and
+installed Event-content separation, Event-in-Page containment, relationship and
+canvas geometry, compact-mode restoration, current exact packs and tasks,
+failures, remaining work, confidence, and forecast. Continue bounded work under
+the QA pilot unless product scope, safety, or authority changes.

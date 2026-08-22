@@ -37,6 +37,10 @@ export function flowConceptVisualThumbnailViewport(itemWidth:number):{x:number;w
   return{x:(itemWidth-width)/2,width,height};
 }
 
+export function flowConceptVisualThumbnailBounds(itemWidth:number,itemHeight:number):{x:number;y:number;width:number;height:number}{
+  return{...flowConceptVisualThumbnailViewport(itemWidth),y:itemHeight-96};
+}
+
 type FlowConceptVisualInvoker=HTMLElement|SVGElement;
 export function openFlowConceptVisualForTarget(options:{project:SpecificationProject;flowId:string;target:FlowConceptVisualTarget;invoker:FlowConceptVisualInvoker;fallbackInvoker?:FlowConceptVisualInvoker;assetBytes?:(assetId:string)=>string|undefined}):boolean{
   const visual=flowConceptVisual(options.project,options.flowId,options.target);if(!visual)return false;
@@ -55,7 +59,7 @@ export function renderFlowConceptVisual(options:{group:SVGGElement;project:Speci
   const visual=flowConceptVisual(options.project,options.flowId,options.target);if(!visual||options.mode==="Hidden")return;
   const bytes=visual.asset.bytes??options.assetBytes?.(visual.asset.id),open=async(invoker:SVGElement)=>{if(!bytes)await options.hydrate?.(visual.asset.id);openFlowConceptVisualForTarget({project:options.project,flowId:options.flowId,target:options.target,invoker,fallbackInvoker:options.group,...(options.assetBytes?{assetBytes:options.assetBytes}:{})});},badge=svg("text");badge.dataset.flowVisualBadge=options.target.id;badge.setAttribute("x","10");badge.setAttribute("y","44");badge.textContent="▧ Visual";badge.setAttribute("aria-label",`View visual: ${visual.attachment.description}`);activateVisualIndicator(badge,()=>void open(badge));
   if(options.mode!=="Thumbnails"||!options.thumbnailPixels){options.group.append(badge);return;}
-  const thumbnail=options.thumbnailBytes?.(visual.asset.id),foreign=svg("foreignObject"),viewport=flowConceptVisualThumbnailViewport(options.width);foreign.dataset.flowVisualThumbnail=options.target.id;foreign.dataset.flowVisualAssetId=visual.asset.id;foreign.setAttribute("aria-label",`View visual: ${visual.attachment.description}`);foreign.setAttribute("x",String(viewport.x));foreign.setAttribute("y",String(options.height-96));foreign.setAttribute("width",String(viewport.width));foreign.setAttribute("height",String(viewport.height));activateVisualIndicator(foreign,()=>void open(foreign));
+  const thumbnail=options.thumbnailBytes?.(visual.asset.id),foreign=svg("foreignObject"),viewport=flowConceptVisualThumbnailBounds(options.width,options.height);foreign.dataset.flowVisualThumbnail=options.target.id;foreign.dataset.flowVisualAssetId=visual.asset.id;foreign.setAttribute("aria-label",`View visual: ${visual.attachment.description}`);foreign.setAttribute("x",String(viewport.x));foreign.setAttribute("y",String(viewport.y));foreign.setAttribute("width",String(viewport.width));foreign.setAttribute("height",String(viewport.height));activateVisualIndicator(foreign,()=>void open(foreign));
   if(thumbnail){const image=document.createElement("img");image.src=thumbnail;image.alt=visual.attachment.description;Object.assign(image.style,{width:"100%",height:"100%",objectFit:"contain"});foreign.append(image);badge.dataset.flowVisualFallback="true";badge.style.display="none";}else{foreign.dataset.flowVisualPending="true";foreign.append(document.createTextNode("Preparing preview…"));badge.dataset.flowVisualFallback="true";}
   foreign.style.setProperty("display","block","important");options.group.append(foreign,badge);
 }
