@@ -22,10 +22,10 @@ const publicRows = (table) => { const concepts = new Map(table.conceptGroups?.fl
 const tableTemplateData = (table) => ({ columns: table.headings.slice(1).map(heading => ({ key: heading, heading })), rows: publicRows(table), concepts: (table.conceptGroups ?? []).map(({ name, start, count }) => ({ name, rows: publicRows(table).slice(start, start + count) })), legend: table.legend ?? "" });
 const metadataHeading = { description: "Description", type: "Type", allowedValues: "Allowed values", example: "Documented example", comments: "Comments", provenance: "Provenance" };
 const flowTemplateData = (snapshot, table, metadata, canonicalPaths) => {
-    const canonicalByDisplay = new Map(canonicalPaths.map((path) => [flowDocumentationDisplayPath(path), path]));
+    const availablePaths = new Set(flowDocumentationPropertyPaths(snapshot)), tableCanonicalPaths = canonicalPaths.filter((path) => availablePaths.has(path));
     const pages = [], pageByFrame = new Map();
-    const rows = (context, contextIndex) => table.rows.map(row => {
-        const property = flowDocumentationDisplayPath(String(row[0] ?? "")), canonicalPath = canonicalByDisplay.get(property) ?? String(row[0] ?? ""), metadataValues = metadata.map((column, index) => [column, String(row[index + 1] ?? "")]), value = String(row[metadata.length + contextIndex + 1] ?? ""), cells = [{ columnKey: "property", heading: "Property", value: property }, ...metadataValues.map(([column, item]) => ({ columnKey: column, heading: metadataHeading[column], value: item })), { columnKey: "value", heading: "Value", value }];
+    const rows = (context, contextIndex) => table.rows.map((row, rowIndex) => {
+        const property = String(row[0] ?? ""), canonicalPath = tableCanonicalPaths[rowIndex] ?? "", metadataValues = metadata.map((column, index) => [column, String(row[index + 1] ?? "")]), value = String(row[metadata.length + contextIndex + 1] ?? ""), cells = [{ columnKey: "property", heading: "Property", value: property }, ...metadataValues.map(([column, item]) => ({ columnKey: column, heading: metadataHeading[column], value: item })), { columnKey: "value", heading: "Value", value }];
         return { property, concept: context.compiled.properties[canonicalPath]?.concept ?? "", ...Object.fromEntries(metadataValues), value, cells };
     });
     for (const [contextIndex, context] of snapshot.contexts.entries())

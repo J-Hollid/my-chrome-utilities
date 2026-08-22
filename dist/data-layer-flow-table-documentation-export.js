@@ -91,8 +91,8 @@ function metadataValue(snapshot, path, metadata) {
     return String(property.comments ?? "");
 }
 export function configureFlowDocumentationTable(snapshot, kind, configuration = {}) {
-    const source = kind === "values" ? flowValueMapTable(snapshot) : captureMatrixTable(snapshot), selected = configuration.selectedPaths ?? paths(snapshot), rowsByPath = new Map(source.rows.map((row) => [row[0], row])), metadata = configuration.metadata ?? [];
-    const rows = selected.flatMap((path) => { const sourceRow = rowsByPath.get(flowDocumentationDisplayPath(path)); if (!sourceRow)
+    const source = kind === "values" ? flowValueMapTable(snapshot) : captureMatrixTable(snapshot), canonicalPaths = paths(snapshot), selected = configuration.selectedPaths ?? canonicalPaths, rowsByCanonicalPath = new Map(canonicalPaths.map((path, index) => [path, source.rows[index]])), metadata = configuration.metadata ?? [];
+    const rows = selected.flatMap((path) => { const sourceRow = rowsByCanonicalPath.get(path); if (!sourceRow)
         return []; return [[sourceRow[0], ...metadata.map((column) => metadataValue(snapshot, path, column)), ...sourceRow.slice(1)]]; });
     const contextHeadings = configuration.headingParts ? snapshot.contexts.map((context) => { const pageEvent = [configuration.headingParts.page ? context.pageName : "", configuration.headingParts.event ? context.eventName : ""].filter(Boolean).join(" / "), parts = [...(configuration.headingParts.step ? [`Step ${context.stepLabel}`] : []), ...(pageEvent ? [pageEvent] : [])]; return parts.join(" ") || "Context"; }) : source.headings.slice(1);
     return { ...source, headings: [source.headings[0], ...metadata.map((column) => metadataLabels[column]), ...contextHeadings], rows };
