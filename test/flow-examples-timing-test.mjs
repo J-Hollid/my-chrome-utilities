@@ -862,8 +862,8 @@ assert.equal(repeatedInstanceProgram.match(/await openInstanceSchema\(/gu)?.leng
 assert.equal(repeatedInstanceProgram.match(/await actionableControl\(/gu)?.length,8,
   "runtime024 must stabilize every toolbar, property, review, and reset control before clicking");
 assert.match(repeatedInstanceProgram,
-  /actionableControl\(\(\)=>q\('\[aria-label\^="Property actions"\]',q\('\[data-flow-instance-effective-path="\/currency"\]',workspace\)\)/u,
-  "runtime024 must re-read the asynchronously hydrated property row during action readiness");
+  /actionableControl\(\(\)=>\{workspace=q\(workspaceSelector\);return q\('\[aria-label\^="Property actions"\]',q\('\[data-flow-instance-effective-path="\/currency"\]',workspace\)\);\}/u,
+  "runtime024 must reacquire the replaced workspace and hydrated property row during readiness");
 assert.doesNotMatch(repeatedInstanceProgram,
   /q\('\[data-flow-schema-contribution="true"\]'[^;]+\)\.click\(\)/u,
   "runtime024 must not click a transient inline action without a readiness boundary");
