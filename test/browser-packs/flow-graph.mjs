@@ -702,7 +702,7 @@ try {
         : "";
     const failureDetail=styleFailureDetail||snapFailureDetail||pagePlacementFailureDetail||contextualActionFailureDetail||wheelZoomFailureDetail||visualFailureDetail||pointerOwnershipFailureDetail;
     assert.deepEqual(shardFailures, [], `Flow browser ${browserShard} evidence contains a false value${failureDetail ? `\n${failureDetail}` : ""}`);
-    const controlRuntimeKeys = new Set(["runtime001", "runtime016", "runtime018", "runtime020", "runtime027", "runtime033", "runtime043", "runtime044", "runtime045", "runtime046", "runtime047", "runtime048"]);
+    const controlRuntimeKeys = new Set(["runtime001", "runtime016", "runtime018", "runtime020", "runtime027", "runtime033", "runtime043", "runtime044", "runtime045", "runtime046", "runtime047", "runtime048", "runtime050"]);
     flowGraph = targetId === "FLOW_STYLESHEET_EXTRACTION_TARGET"
         ? {styles:runtime.styles}
         : targetId === "FLOW_WORKSPACE_CONTROLS_TARGET"

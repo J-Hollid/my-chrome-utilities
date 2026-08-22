@@ -59,6 +59,24 @@ import {
 import {FLOW_PORT_SNAP_RADIUS,flowPointerSnapTarget,flowPortSnapTarget} from "../dist/flow-graph/relationship-port-snap.js";
 import {createDurablePersistenceReadiness} from "../dist/durable-project/persistence-readiness.js";
 import {resolveFlowVisualThumbnailAfterSave} from "../dist/flow-visual-thumbnail.js";
+import {compactFlowPageIdentity} from "../dist/flow-graph/workspace-card-ui.js";
+
+assert.deepEqual(
+  compactFlowPageIdentity({sourceName:"Cart",status:"Incomplete"}),
+  {
+    visibleName:"Cart",
+    accessibleName:"Cart. Context-setting Page. Source Page Cart. Incomplete. Drag or use Arrow keys to move.",
+  },
+  "an unrenamed Page card presents its current source name exactly once while retaining assistive context",
+);
+assert.deepEqual(
+  compactFlowPageIdentity({sourceName:"Cart",nameInFlow:"  Basket  ",status:"Incomplete"}),
+  {
+    visibleName:"Basket",
+    accessibleName:"Basket. Context-setting Page. Source Page Cart. Incomplete. Drag or use Arrow keys to move.",
+  },
+  "a stored Flow-specific name is the sole visible identity without losing its source Page semantics",
+);
 
 const persistenceStatuses=[];
 let releaseSettlement;

@@ -3630,6 +3630,13 @@
           "flowGraph.runtime049.boundedStorage",
           "flowGraph.runtime049.viewStateOnly",
           "flowGraph.runtime049.reloadStable",
+          "flowGraph.runtime050.defaultSingleIdentity",
+          "flowGraph.runtime050.overrideSingleIdentity",
+          "flowGraph.runtime050.noSecondVisibleName",
+          "flowGraph.runtime050.noVisibleContext",
+          "flowGraph.runtime050.accessibleSemantics",
+          "flowGraph.runtime050.repositoryConserved",
+          "flowGraph.runtime050.actionsAndPorts",
           "flowGraph.installedBoundary",
           "flowGraph.runtime017.humanReview",
           "flowGraph.runtime017.primaryContextAbsorbed",
@@ -3966,7 +3973,14 @@
               "flowGraph.runtime048.noWildcardMember",
               "flowGraph.runtime048.complete",
               "flowGraph.runtime048.readOnly",
-              "flowGraph.runtime048.noStoredPayload"
+              "flowGraph.runtime048.noStoredPayload",
+              "flowGraph.runtime050.defaultSingleIdentity",
+              "flowGraph.runtime050.overrideSingleIdentity",
+              "flowGraph.runtime050.noSecondVisibleName",
+              "flowGraph.runtime050.noVisibleContext",
+              "flowGraph.runtime050.accessibleSemantics",
+              "flowGraph.runtime050.repositoryConserved",
+              "flowGraph.runtime050.actionsAndPorts"
             ]
           },
           {
