@@ -178,7 +178,7 @@ export function renderReorderControl<T extends ReorderableItem>(options:ReorderC
   const currentDragScope=()=>options.dragScopeId??options.orderedContainer??options.dropTarget?.parentElement??undefined;
   handle.draggable=model.canDrag&&Boolean(options.dragScopeId??options.orderedContainer??options.dropTarget);
   styles(handle,{boxSizing:"border-box",display:"inline-flex",alignItems:"center",justifyContent:"center",width:"44px",height:"44px",minWidth:"44px",minHeight:"44px",padding:"0px",margin:"0px",background:"transparent",border:"0px",boxShadow:"none",whiteSpace:"nowrap",overflow:"visible",touchAction:"manipulation",cursor:handle.draggable?"grab":"default"});
-  handle.addEventListener("pointerenter",()=>{handle.dataset.reorderHover="true";styles(handle,{background:"color-mix(in srgb, currentColor 14%, transparent)"});});
+  handle.addEventListener("pointerenter",()=>{handle.dataset.reorderHover="true";styles(handle,{background:"color-mix(in srgb, currentColor 14%, Canvas 86%)"});});
   handle.addEventListener("pointerleave",()=>{delete handle.dataset.reorderHover;styles(handle,{background:"transparent"});});
   menu.id=menu.id||menuId;if(ownedMenu){menu.setAttribute("role","menu");menu.hidden=true;menu.className="reorderable-editor-menu";
     styles(menu,{position:"absolute",zIndex:"20",maxWidth:"calc(100vw - 16px)",insetInlineStart:"0",top:"100%"});}

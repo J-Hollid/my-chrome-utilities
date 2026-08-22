@@ -2556,8 +2556,11 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       assert.deepEqual(reproductionStepActionRows.reorderEvidence.presentation.rest.border,["0px","0px","0px","0px"]);
       assert.equal(reproductionStepActionRows.reorderEvidence.presentation.rest.shadow,"none");
       assert.equal(reproductionStepActionRows.reorderEvidence.presentation.rest.whiteSpace,"nowrap");
-      assert.notEqual(reproductionStepActionRows.reorderEvidence.presentation.states.hoverBackground,reproductionStepActionRows.reorderEvidence.presentation.rest.background);
-      assert.doesNotMatch(reproductionStepActionRows.reorderEvidence.presentation.states.hoverBackground,/(?:transparent|\/\s*0\s*\)|rgba\([^)]*,\s*0\s*\))/u);
+      assert.doesNotMatch(reproductionStepActionRows.reorderEvidence.presentation.rest.color,/(?:transparent|\/\s*0\s*\)|rgba\([^)]*,\s*0\s*\))/u,"the installed grip color must remain visible");
+      assert.equal(reproductionStepActionRows.reorderEvidence.presentation.states.hoverActive,true);
+      assert.match(reproductionStepActionRows.reorderEvidence.presentation.states.hoverInline,/color-mix/u);
+      assert.notEqual(reproductionStepActionRows.reorderEvidence.presentation.states.hoverBackground,reproductionStepActionRows.reorderEvidence.presentation.rest.background,JSON.stringify(reproductionStepActionRows.reorderEvidence.presentation.states));
+      assert.doesNotMatch(reproductionStepActionRows.reorderEvidence.presentation.states.hoverBackground,/(?:transparent|\/\s*0\s*\)|rgba\([^)]*,\s*0\s*\))/u,"the installed hover surface must remain visible");
       assert.notEqual(reproductionStepActionRows.reorderEvidence.presentation.states.focusOutline.style,"none");
       assert.equal(reproductionStepActionRows.reorderEvidence.presentation.states.restCursor,"grab");
       assert.equal(reproductionStepActionRows.reorderEvidence.presentation.states.dragCursor,"grabbing");
