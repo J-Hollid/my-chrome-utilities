@@ -45,11 +45,19 @@ export function renderNavigatorRows(tree, context) {
         choose.setAttribute("aria-current", String((context.activePropertyId ?? document.selectedPropertyId) === row.id));
         article.dataset.propertyRow = "true";
         article.dataset.propertyId = row.id;
-        const actions = button(dom, "Property actions", () => { context.setMenuPropertyId(row.id); context.openProperty(row.node, actions); });
+        const actions = button(dom, "Property actions", () => { context.setMenuPropertyId(row.id); context.openProperty(row.node, actions); }), propertyMenu = context.menuPropertyId === row.id ? context.renderMenu(row.node) : dom.createElement("div");
         actions.setAttribute("aria-label", `Property actions for ${row.path}`);
         actions.dataset.propertyActionsPath = row.path;
-        const siblings = orderedChildren(context, row.node.parentId), reorder = renderReorderControl({ focusScopeId: `canonical-navigator-tree:${document.id}`, itemId: row.node.id, itemLabel: row.node.name, completeOrder: siblings.map(({ id, name }) => ({ id, label: name })), legalDestinationIds: focusedStructureOwned(row.node) ? siblings.filter(focusedStructureOwned).map(({ id }) => id) : [], moveDestinations: focusedStructureOwned(row.node) ? canonicalMoveDestinations(document, row.node) : [], filterActive, dropTarget: article, orderedContainer: tree, onMove: (request) => reorderProperty(context, row.node, request) });
-        article.append(choose, actions, reorder);
+        const siblings = orderedChildren(context, row.node.parentId), reorder = renderReorderControl({
+            focusScopeId: `canonical-navigator-tree:${document.id}`, itemId: row.node.id, itemLabel: row.node.name,
+            completeOrder: siblings.map(({ id, name }) => ({ id, label: name })),
+            legalDestinationIds: focusedStructureOwned(row.node) ? siblings.filter(focusedStructureOwned).map(({ id }) => id) : [],
+            moveDestinations: focusedStructureOwned(row.node) ? canonicalMoveDestinations(document, row.node) : [],
+            filterActive, dropTarget: article, orderedContainer: tree,
+            existingActionsMenu: { trigger: actions, menu: propertyMenu, expanded: context.menuPropertyId === row.id },
+            onMove: (request) => reorderProperty(context, row.node, request),
+        });
+        article.append(reorder, choose, actions);
         tree.append(article);
         if (row.node.type === "array") {
             let item = row.node.itemSchema ?? (row.node.itemType ? { id: `item:${row.node.id}`, type: row.node.itemType } : undefined), level = row.depth + 1;
@@ -66,7 +74,7 @@ export function renderNavigatorRows(tree, context) {
             }
         }
         if (context.menuPropertyId === row.id) {
-            const layers = [context.renderMenu(row.node)];
+            const layers = [propertyMenu];
             if (context.focusedPropertyId === row.id) {
                 layers.push(context.renderFocusedEditor(context.document, row.node));
                 if (context.review)

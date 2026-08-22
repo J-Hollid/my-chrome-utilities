@@ -1246,7 +1246,7 @@ Feature: Modular verification packs
     When VTD-009 validates its statically resolvable transitive import graph
     Then its exact consumers are <consumer_scope>
     And changing the helper selects exactly those consumers once
-    And all 20 retained support helpers and shared-harness have one declaration
+    And all 22 retained support helpers and shared-harness have one declaration
 
     Examples:
       | helper                                                       | consumer_scope                                                        |
@@ -1260,6 +1260,7 @@ Feature: Modular verification packs
       | test/support/headless-chrome.mjs                             | every runnable pack                                                   |
       | test/support/browser-target-session.mjs                      | branding_polish, durable_project_repository, layered_schema, shell    |
       | test/support/durable-project-targets.mjs                     | durable_project_repository                                           |
+      | test/support/layered-schema-overlay-focusability.mjs         | layered_schema and shell                                             |
       | test/support/layered-schema-targets.mjs                      | layered_schema                                                        |
       | test/support/layered-schema-workflows.mjs                    | layered_schema                                                        |
       | test/support/journal-free-installed-runtime-probe.mjs        | layered_schema                                                        |
@@ -1294,7 +1295,7 @@ Feature: Modular verification packs
     When VTD-009 removes it
     Then its intended evidence remains supplied by <active_evidence>
     And no active assertion leaf or task identity is removed
-    And after both removals the 20 tracked support helpers are all declared
+    And after both removals the 21 tracked support helpers are all declared
 
     Examples:
       | helper                                                   | active_evidence                                   |

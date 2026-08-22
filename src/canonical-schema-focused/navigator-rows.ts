@@ -31,7 +31,32 @@ export function canonicalNavigatorRows(context:Pick<CanonicalSchemaRenderContext
 
 export function renderNavigatorRows(tree:HTMLElement,context:CanonicalSchemaRenderContext):void {
   const {dom,document}=context,filterActive=Boolean(context.query.trim())||context.propertyFilter!=="all";
-  for(const row of canonicalNavigatorRows(context)){const article=dom.createElement("article"),choose=button(dom,`${"› ".repeat(row.depth)}${row.node.name} · ${row.path} · ${row.node.type}`,()=>context.openProperty(row.node,choose));choose.dataset.propertyId=row.id;choose.setAttribute("aria-current",String((context.activePropertyId??document.selectedPropertyId)===row.id));article.dataset.propertyRow="true";article.dataset.propertyId=row.id;const actions=button(dom,"Property actions",()=>{context.setMenuPropertyId(row.id);context.openProperty(row.node,actions);});actions.setAttribute("aria-label",`Property actions for ${row.path}`);actions.dataset.propertyActionsPath=row.path;const siblings=orderedChildren(context,row.node.parentId),reorder=renderReorderControl({focusScopeId:`canonical-navigator-tree:${document.id}`,itemId:row.node.id,itemLabel:row.node.name,completeOrder:siblings.map(({id,name})=>({id,label:name})),legalDestinationIds:focusedStructureOwned(row.node)?siblings.filter(focusedStructureOwned).map(({id})=>id):[],moveDestinations:focusedStructureOwned(row.node)?canonicalMoveDestinations(document,row.node):[],filterActive,dropTarget:article,orderedContainer:tree,onMove:(request)=>reorderProperty(context,row.node,request)});article.append(choose,actions,reorder);tree.append(article);if(row.node.type==="array"){let item=row.node.itemSchema??(row.node.itemType?{id:`item:${row.node.id}`,type:row.node.itemType}:undefined),level=row.depth+1;while(item?.type){const boundary=dom.createElement("article");boundary.dataset.itemBoundary="true";boundary.setAttribute("role","treeitem");boundary.textContent=`${"› ".repeat(level)}Each item · ${item.type[0]!.toUpperCase()+item.type.slice(1)}`;tree.append(boundary);if(item.type!=="array")break;item=item.items;level+=1;}}if(context.menuPropertyId===row.id){const layers=[context.renderMenu(row.node)];if(context.focusedPropertyId===row.id){layers.push(context.renderFocusedEditor(context.document,row.node));if(context.review)layers.push(context.review);}mountSchemaTableOverlay(context.options.host,actions,row.path,layers,context.dismissOverlay);}}
+  for(const row of canonicalNavigatorRows(context)){
+    const article=dom.createElement("article"),choose=button(dom,`${"› ".repeat(row.depth)}${row.node.name} · ${row.path} · ${row.node.type}`,()=>context.openProperty(row.node,choose));
+    choose.dataset.propertyId=row.id;choose.setAttribute("aria-current",String((context.activePropertyId??document.selectedPropertyId)===row.id));
+    article.dataset.propertyRow="true";article.dataset.propertyId=row.id;
+    const actions=button(dom,"Property actions",()=>{context.setMenuPropertyId(row.id);context.openProperty(row.node,actions);}),propertyMenu=context.menuPropertyId===row.id?context.renderMenu(row.node):dom.createElement("div");
+    actions.setAttribute("aria-label",`Property actions for ${row.path}`);actions.dataset.propertyActionsPath=row.path;
+    const siblings=orderedChildren(context,row.node.parentId),reorder=renderReorderControl({
+      focusScopeId:`canonical-navigator-tree:${document.id}`,itemId:row.node.id,itemLabel:row.node.name,
+      completeOrder:siblings.map(({id,name})=>({id,label:name})),
+      legalDestinationIds:focusedStructureOwned(row.node)?siblings.filter(focusedStructureOwned).map(({id})=>id):[],
+      moveDestinations:focusedStructureOwned(row.node)?canonicalMoveDestinations(document,row.node):[],
+      filterActive,dropTarget:article,orderedContainer:tree,
+      existingActionsMenu:{trigger:actions,menu:propertyMenu,expanded:context.menuPropertyId===row.id},
+      onMove:(request)=>reorderProperty(context,row.node,request),
+    });
+    article.append(reorder,choose,actions);tree.append(article);
+    if(row.node.type==="array"){
+      let item=row.node.itemSchema??(row.node.itemType?{id:`item:${row.node.id}`,type:row.node.itemType}:undefined),level=row.depth+1;
+      while(item?.type){const boundary=dom.createElement("article");boundary.dataset.itemBoundary="true";boundary.setAttribute("role","treeitem");boundary.textContent=`${"› ".repeat(level)}Each item · ${item.type[0]!.toUpperCase()+item.type.slice(1)}`;tree.append(boundary);if(item.type!=="array")break;item=item.items;level+=1;}
+    }
+    if(context.menuPropertyId===row.id){
+      const layers=[propertyMenu];
+      if(context.focusedPropertyId===row.id){layers.push(context.renderFocusedEditor(context.document,row.node));if(context.review)layers.push(context.review);}
+      mountSchemaTableOverlay(context.options.host,actions,row.path,layers,context.dismissOverlay);
+    }
+  }
 }
 
 const bindEditable=<T extends HTMLInputElement|HTMLSelectElement>(context:CanonicalSchemaRenderContext,node:ReturnType<typeof canonicalNavigatorRows>[number]["node"],facet:SchemaTableEditableFacet,value:string,control:T):T=>{const path=canonicalPropertyPath(context.document,node.id);control.value=value;control.dataset.inlineSchemaFacet=facet;control.dataset.inlineSchemaPath=path;control.setAttribute("aria-label",`${facet} for ${path}`);bindSchemaTableQuickEdit(control,{root:context.quickEditRoot,scope:context.quickEditScope,path,facet,savedValue:value,commit:(next)=>context.commitInline(node,facet,next),cancel:context.cancelInline,diagnostic:context.inlineDiagnostic});return control;};
