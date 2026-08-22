@@ -41,6 +41,7 @@ The settled-candidate verification workflow is integrated at
 | VTD-015 settled-candidate final verification | Complete; first payback mixed | VTD-017 kept coder and refactorer on focused checks, but one architect all-20 pass was invalidated by a later validator correction. |
 | VTD-008 side-panel composition-root decomposition | Active incremental program; the combined Project Library transport isolation and Flow visual-asset portability delivery is QA-integrated at `1b192105a8` | Preserve that settled transport, content-addressed visual-body, and version-3 archive behavior. No additional VTD-008 controller slice is active. |
 | Documentation template library | Guided Excel template authoring is QA-integrated at `a8ee95869b`; documentation-template recovery is QA-integrated at `08cbfe8fef` after exact 7-pack/210-task review evidence | Preserve recovery for invalid stored Excel records, strict fail-closed validation of new state, operator-facing problem routing, nonencrypting Purview-label compatibility, the unchanged Rich contract, and all terminal-deferred incidents. Cumulative promotion to `master` remains a separate user decision. |
+| Flow Documentation template instance content | User-approved for coder handoff on 2026-08-23 | Under `docs/data-layer-documentation-template-program-R01.md`, make Page and Event Example cells context-specific, expose configured `page.concepts` and `event.concepts` groups, and render each existing Page-instance visual through scoped Excel and Rich image constructs without changing visual cardinality, storage, canonical definitions, or publication state. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Deferred and inactive | The existing two-worker order is within about six seconds of balanced after lock wait is removed; scheduling needed for a possible third worker is bounded inside VTD-017. |
 | VTD-012 registry and planner modularization | Deferred and inactive | Reconsider after broad final-gate and receipt-persistence costs are reduced. |
@@ -586,6 +587,7 @@ historical rename/delete handling.
 | Canvas-first Flow workspace | `--pack flow_graph --pack layered_schema` |
 | Project Documentation | `--pack flow_export` |
 | Documentation templates | `--pack flow_export --pack project_management --pack durable_project_repository` |
+| Flow Documentation template instance content | `--pack flow_export --pack shell` |
 | Guided Live Flow testing | `--pack live_flow_testing` |
 | Canonical and layered schema | `--pack layered_schema` |
 | Project management and portability | `--pack project_management` |
