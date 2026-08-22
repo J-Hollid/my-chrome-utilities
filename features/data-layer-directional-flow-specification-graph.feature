@@ -821,3 +821,19 @@ Feature: Data layer directional Flow specification graph
       | target                                   | downward_input                      | upward_input                      |
       | Cart Page instance                       | repeated downward mouse-wheel input | repeated upward mouse-wheel input |
       | add_payment_info Event contained by Cart | repeated Page Down keys              | repeated Page Up keys             |
+
+  # Data layer directional Flow specification graph 048
+  Scenario Outline: Data layer directional Flow specification graph 048
+    Given <target> effective schema requires string properties <first_path> and <second_path>
+    And configured examples set <first_value> at <first_path> and <second_value> at <second_path>
+    When the operator expands <target> Derived JSON example disclosure in contextual Details
+    Then the read-only payload is structurally equal to <expected_json>
+    And validation resolves the examples at <first_concrete_path> and <second_concrete_path> with Complete readiness
+    And each wildcard item segment produces one array whose example item retains both sibling values
+    And no derived object contains a property named *
+    And the Flow stores no copied JSON payload
+
+    Examples:
+      | target                                   | first_path                           | second_path                        | first_value | second_value | first_concrete_path                    | second_concrete_path                | expected_json                                                        |
+      | Cart Page instance                       | /products/*/product_name             | /products/*/product_id             | test        | SKU-42       | /products/0/product_name               | /products/0/product_id              | {"products":[{"product_name":"test","product_id":"SKU-42"}]} |
+      | add_payment_info Event contained by Cart | /groups/*/products/*/product_name    | /groups/*/products/*/product_id    | nested test | SKU-99       | /groups/0/products/0/product_name      | /groups/0/products/0/product_id     | {"groups":[{"products":[{"product_name":"nested test","product_id":"SKU-99"}]}]} |
