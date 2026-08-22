@@ -1,7 +1,7 @@
 import { canonicalConstraints, canonicalRequirements } from "./data-layer-canonical-schema.js";
 import { compileLayeredSchema } from "./data-layer-layered-schema.js";
 import { layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
-import { configureFlowDocumentationSnapshot, configureFlowDocumentationTable, flowDocumentationPropertyPaths } from "./data-layer-flow-table-documentation-export.js";
+import { configureFlowDocumentationSnapshot, configureFlowDocumentationTable, flowDocumentationDisplayPath, flowDocumentationPropertyPaths } from "./data-layer-flow-table-documentation-export.js";
 import { flowDocumentationSnapshotFromState } from "./data-layer-flow-documentation-snapshot.js";
 import { compileProjectDocumentationSnapshot, themeFingerprint } from "./data-layer-project-documentation-workspace.js";
 import { documentationTemplateUnavailableInvariant, snapshotTemplateDigests } from "./documentation-templates/template-library.js";
@@ -17,15 +17,16 @@ const matrixState = (context, path) => { if (context.compiled.conflicts.some((co
     return "Not expected"; if (property.condition)
     return "Conditional"; return property.presence === "required" ? "Mandatory" : "Optional"; };
 const defaultProfileColumns = ["Property", "Description", "Required", "Allowed values", "Example", "Comments"];
-const profileValue = (column, item) => column === "Property" ? item.path : column === "Description" ? item.description ?? "" : column === "Required" ? item.forbidden ? "Not expected" : item.required ? "Yes" : "No" : column === "Allowed values" ? item.allowedValues?.map(String).join(", ") ?? "" : column === "Example" ? item.examples?.map(String).join(", ") ?? "" : String(item.comments ?? "");
-const publicRows = (table) => { const concepts = new Map(table.conceptGroups?.flatMap(group => Array.from({ length: group.count }, (_, offset) => [group.start + offset, group.name])) ?? []); return table.rows.map((row, index) => ({ property: row[0] ?? "", concept: concepts.get(index) ?? "", cells: row.slice(1).map((value, column) => ({ columnKey: table.headings[column + 1] ?? `column-${column + 2}`, heading: table.headings[column + 1] ?? "", value })) })); };
+const profileValue = (column, item) => column === "Property" ? flowDocumentationDisplayPath(item.path) : column === "Description" ? item.description ?? "" : column === "Required" ? item.forbidden ? "Not expected" : item.required ? "Yes" : "No" : column === "Allowed values" ? item.allowedValues?.map(String).join(", ") ?? "" : column === "Example" ? item.examples?.map(String).join(", ") ?? "" : String(item.comments ?? "");
+const publicRows = (table) => { const concepts = new Map(table.conceptGroups?.flatMap(group => Array.from({ length: group.count }, (_, offset) => [group.start + offset, group.name])) ?? []); return table.rows.map((row, index) => ({ property: flowDocumentationDisplayPath(row[0] ?? ""), concept: concepts.get(index) ?? "", cells: row.slice(1).map((value, column) => ({ columnKey: table.headings[column + 1] ?? `column-${column + 2}`, heading: table.headings[column + 1] ?? "", value })) })); };
 const tableTemplateData = (table) => ({ columns: table.headings.slice(1).map(heading => ({ key: heading, heading })), rows: publicRows(table), concepts: (table.conceptGroups ?? []).map(({ name, start, count }) => ({ name, rows: publicRows(table).slice(start, start + count) })), legend: table.legend ?? "" });
 const metadataHeading = { description: "Description", type: "Type", allowedValues: "Allowed values", example: "Documented example", comments: "Comments", provenance: "Provenance" };
-const flowTemplateData = (snapshot, table, metadata) => {
+const flowTemplateData = (snapshot, table, metadata, canonicalPaths) => {
+    const canonicalByDisplay = new Map(canonicalPaths.map((path) => [flowDocumentationDisplayPath(path), path]));
     const pages = [], pageByFrame = new Map();
     const rows = (context, contextIndex) => table.rows.map(row => {
-        const property = String(row[0] ?? ""), metadataValues = metadata.map((column, index) => [column, String(row[index + 1] ?? "")]), value = String(row[metadata.length + contextIndex + 1] ?? ""), cells = [{ columnKey: "property", heading: "Property", value: property }, ...metadataValues.map(([column, item]) => ({ columnKey: column, heading: metadataHeading[column], value: item })), { columnKey: "value", heading: "Value", value }];
-        return { property, concept: context.compiled.properties[property]?.concept ?? "", ...Object.fromEntries(metadataValues), value, cells };
+        const property = flowDocumentationDisplayPath(String(row[0] ?? "")), canonicalPath = canonicalByDisplay.get(property) ?? String(row[0] ?? ""), metadataValues = metadata.map((column, index) => [column, String(row[index + 1] ?? "")]), value = String(row[metadata.length + contextIndex + 1] ?? ""), cells = [{ columnKey: "property", heading: "Property", value: property }, ...metadataValues.map(([column, item]) => ({ columnKey: column, heading: metadataHeading[column], value: item })), { columnKey: "value", heading: "Value", value }];
+        return { property, concept: context.compiled.properties[canonicalPath]?.concept ?? "", ...Object.fromEntries(metadataValues), value, cells };
     });
     for (const [contextIndex, context] of snapshot.contexts.entries())
         if (context.kind === "page-instance") {
@@ -88,8 +89,8 @@ export function compileProjectDocumentation(input) {
             }
             const configured = configureFlowDocumentationSnapshot(source.snapshot, { ...(section.configuration?.contextIds ? { contextOrder: section.configuration.contextIds } : {}), ...(section.configuration?.labels ? { stepLabels: section.configuration.labels } : {}) }), paths = section.configuration?.paths ?? flowDocumentationPropertyPaths(configured), metadata = (section.configuration?.columns ?? []).filter((column) => ["description", "type", "allowedValues", "example", "comments"].includes(column));
             revisions[source.entity.id] = flowSourceRevision(configured);
-            const table = { ...configureFlowDocumentationTable(configured, "values", { selectedPaths: paths, metadata, pathDisplay: "canonical" }), id: section.id, title: section.name, themeFingerprint: themeFingerprint(theme) };
-            tables.push({ ...table, templateData: flowTemplateData(configured, table, metadata) });
+            const table = { ...configureFlowDocumentationTable(configured, "values", { selectedPaths: paths, metadata }), id: section.id, title: section.name, themeFingerprint: themeFingerprint(theme) };
+            tables.push({ ...table, templateData: flowTemplateData(configured, table, metadata, paths) });
             diagnostics.push(...configured.diagnostics.map((item) => ({ sectionId: section.id, message: `${item.contextName}: ${item.issue}`, repair: item.repair, repairTarget: { kind: "flows", id: source.entity.id, path: item.path } })));
             continue;
         }
@@ -109,7 +110,7 @@ export function compileProjectDocumentation(input) {
             for (const conflict of context.compiled.conflicts)
                 diagnostics.push({ sectionId: section.id, message: `${context.label}: ${conflict.message}`, repair: `Open ${context.label} effective property ${conflict.path}`, repairTarget: repairTarget(context, conflict.path) });
         }
-        const grouped = groupProjectDocumentationConceptRows(set, paths.map((path) => ({ path, concept: selected.map(({ compiled }) => compiled.properties[path]?.concept).find((value) => Boolean(value)), cells: [path, ...selected.map((context) => matrixState(context, path))] })));
+        const grouped = groupProjectDocumentationConceptRows(set, paths.map((path) => ({ path, concept: selected.map(({ compiled }) => compiled.properties[path]?.concept).find((value) => Boolean(value)), cells: [flowDocumentationDisplayPath(path), ...selected.map((context) => matrixState(context, path))] })));
         tables.push({ id: section.id, title: section.name, headings: ["Property", ...selected.map(({ label }) => label)], rows: grouped.rows, ...(set.includeConceptSubheadings ? { conceptGroups: grouped.groups } : {}), legend: "Mandatory · Optional · Conditional · Not expected · Not defined · Blocked", themeFingerprint: themeFingerprint(theme) });
     }
     for (const table of tables)

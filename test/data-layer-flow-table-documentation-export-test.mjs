@@ -5,6 +5,7 @@ import {
   configureFlowDocumentationSnapshot,
   configureFlowDocumentationTable,
   flowDocumentationCellDetail,
+  flowDocumentationDisplayPath,
   flowDocumentationPropertyPaths,
   flowDocumentationSnapshotStale,
   flowValueMapTable,
@@ -17,6 +18,17 @@ import {
 const origin=(name,scope="Event")=>({contributorId:`contributor:${name}`,contributorName:name,scope});
 const property=(input)=>({...input,origins:[origin(input.origin??"Profile")],superseded:[]});
 const compiled=(properties,conflicts=[])=>({status:conflicts.length?"blocked":"ready",properties,conflicts,provenance:[],exclusions:[]});
+assert.deepEqual([
+  "/page_name",
+  "/commerce/order_id",
+  "/products/*/product_name",
+  "/groups/*/products/*/product_id",
+].map(flowDocumentationDisplayPath),[
+  "page_name",
+  "commerce.order_id",
+  "products[x].product_name",
+  "groups[x].products[x].product_id",
+]);
 const contexts=[
   {id:"context:cart",kind:"page-instance",pageFrameId:"frame:cart",pageName:"Cart",eventName:"page_view",stepLabel:"1",effectiveRevision:4,compiled:compiled({
     "/page_name":property({expectedValue:"cart",presence:"required"}),
@@ -79,9 +91,9 @@ assert.equal(matrix.legend,"M Mandatory · O Optional · C Conditional · N Not 
 const configuredSnapshot=configureFlowDocumentationSnapshot(snapshot,{contextOrder:["context:cart","context:payment","context:shipping"],stepLabels:{"context:payment":"Payment choice","context:shipping":"Delivery choice"}});
 assert.deepEqual(configuredSnapshot.contexts.map(({id,stepLabel})=>[id,stepLabel]),[["context:cart","1"],["context:payment","Payment choice"],["context:shipping","Delivery choice"]]);
 assert.deepEqual(snapshot.contexts.map(({id,stepLabel})=>[id,stepLabel]),[["context:cart","1"],["context:shipping","2a"],["context:payment","2b"]]);
-const configuredTable=configureFlowDocumentationTable(configuredSnapshot,"values",{selectedPaths:["/form_name","/page_name"],metadata:["type","allowedValues"],pathDisplay:"canonical",headingParts:{step:false,page:true,event:true}});
+const configuredTable=configureFlowDocumentationTable(configuredSnapshot,"values",{selectedPaths:["/form_name","/page_name"],metadata:["type","allowedValues"],headingParts:{step:false,page:true,event:true}});
 assert.deepEqual(configuredTable.headings.slice(0,3),["Checkout journey","Type","Allowed values"]);
-assert.deepEqual(configuredTable.rows.map(([path])=>path),["/form_name","/page_name"]);
+assert.deepEqual(configuredTable.rows.map(([path])=>path),["form_name","page_name"]);
 assert.equal(configuredTable.rows[0][3],"guest or logged_in");
 assert.equal(configuredTable.headings[3],"Cart / page_view");
 assert.deepEqual(flowDocumentationPropertyPaths(snapshot).slice(0,2),["/page_name","/form_name"]);

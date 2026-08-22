@@ -5,7 +5,7 @@ const deepFreeze = (value) => { if (value && typeof value === "object" && !Objec
 } return value; };
 const contextName = (context) => `${context.pageName} / ${context.eventName}`;
 const contextProvenance = (context) => [`effective revision ${context.effectiveRevision}`, ...(context.sourcePageName ? [`Source Page ${context.sourcePageName}`] : []), ...context.compiled.provenance.map(({ contributorName }) => contributorName)].join("; ");
-const displayPath = (path) => path.split("/").filter(Boolean).join(".").replaceAll(".*", "[]");
+export const flowDocumentationDisplayPath = (path) => path.split("/").filter(Boolean).reduce((display, segment) => segment === "*" ? `${display}[x]` : display ? `${display}.${segment}` : segment, "");
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 export function compileFlowDocumentationSnapshot(input) {
     const copy = structuredClone(input), diagnostics = copy.contexts.flatMap((context) => [...(context.unresolved ?? []).map(({ path, issue, repair }) => ({ contextId: context.id, contextName: contextName(context), path, issue, repair })), ...context.compiled.conflicts.map((conflict) => ({ contextId: context.id, contextName: contextName(context), path: conflict.path, issue: conflict.message, repair: `Open effective property ${conflict.path} for ${contextName(context)}` }))]);
@@ -31,7 +31,7 @@ const paths = (snapshot) => [...new Set(snapshot.contexts.flatMap((context) => [
 export const flowDocumentationPropertyPaths = (snapshot) => paths(snapshot);
 const headings = (snapshot) => [snapshot.flowName, ...snapshot.contexts.map((context) => `Step ${context.stepLabel} ${contextName(context)}`)];
 export function flowValueMapTable(snapshot) {
-    return { title: snapshot.title, headings: headings(snapshot), rows: paths(snapshot).map((path) => [displayPath(path), ...snapshot.contexts.map((context) => conflictAt(context, path) ? "Blocked conflicting definitions" : context.compiled.properties[path] ? expectedText(context.compiled.properties[path]) : context.unresolved?.some((item) => item.path === path) ? "Incomplete" : "")]) };
+    return { title: snapshot.title, headings: headings(snapshot), rows: paths(snapshot).map((path) => [flowDocumentationDisplayPath(path), ...snapshot.contexts.map((context) => conflictAt(context, path) ? "Blocked conflicting definitions" : context.compiled.properties[path] ? expectedText(context.compiled.properties[path]) : context.unresolved?.some((item) => item.path === path) ? "Incomplete" : "")]) };
 }
 function matrixMark(context, path) {
     if (conflictAt(context, path))
@@ -50,7 +50,7 @@ function matrixMark(context, path) {
     return "O";
 }
 export function captureMatrixTable(snapshot) {
-    return { title: snapshot.title, headings: headings(snapshot), rows: paths(snapshot).map((path) => [displayPath(path), ...snapshot.contexts.map((context) => matrixMark(context, path))]), legend: "M Mandatory · O Optional · C Conditional · N Not expected · — Not defined · ! Blocked" };
+    return { title: snapshot.title, headings: headings(snapshot), rows: paths(snapshot).map((path) => [flowDocumentationDisplayPath(path), ...snapshot.contexts.map((context) => matrixMark(context, path))]), legend: "M Mandatory · O Optional · C Conditional · N Not expected · — Not defined · ! Blocked" };
 }
 export function configureFlowDocumentationSnapshot(snapshot, configuration) {
     const byId = new Map(snapshot.contexts.map((context) => [context.id, context])), ordered = configuration.contextOrder ? configuration.contextOrder.flatMap((id) => byId.has(id) ? [byId.get(id)] : []) : snapshot.contexts;
@@ -92,8 +92,8 @@ function metadataValue(snapshot, path, metadata) {
 }
 export function configureFlowDocumentationTable(snapshot, kind, configuration = {}) {
     const source = kind === "values" ? flowValueMapTable(snapshot) : captureMatrixTable(snapshot), selected = configuration.selectedPaths ?? paths(snapshot), rowsByPath = new Map(source.rows.map((row) => [row[0], row])), metadata = configuration.metadata ?? [];
-    const rows = selected.flatMap((path) => { const sourceRow = rowsByPath.get(displayPath(path)); if (!sourceRow)
-        return []; return [[configuration.pathDisplay === "canonical" ? path : sourceRow[0], ...metadata.map((column) => metadataValue(snapshot, path, column)), ...sourceRow.slice(1)]]; });
+    const rows = selected.flatMap((path) => { const sourceRow = rowsByPath.get(flowDocumentationDisplayPath(path)); if (!sourceRow)
+        return []; return [[sourceRow[0], ...metadata.map((column) => metadataValue(snapshot, path, column)), ...sourceRow.slice(1)]]; });
     const contextHeadings = configuration.headingParts ? snapshot.contexts.map((context) => { const pageEvent = [configuration.headingParts.page ? context.pageName : "", configuration.headingParts.event ? context.eventName : ""].filter(Boolean).join(" / "), parts = [...(configuration.headingParts.step ? [`Step ${context.stepLabel}`] : []), ...(pageEvent ? [pageEvent] : [])]; return parts.join(" ") || "Context"; }) : source.headings.slice(1);
     return { ...source, headings: [source.headings[0], ...metadata.map((column) => metadataLabels[column]), ...contextHeadings], rows };
 }
@@ -103,7 +103,7 @@ export function flowDocumentationCellDetail(snapshot, contextId, path) {
         throw new Error(`Unknown documentation context ${contextId}`);
     const property = context.compiled.properties[path], conflict = conflictAt(context, path), unresolved = context.unresolved?.find((item) => item.path === path), origins = property?.origins ?? [];
     const propertyRule = property?.presence === "required" && property.expectedValue === undefined && !property.allowedValues?.length && !property.condition ? `${expectedText(property)} — missing documentation value` : property?.presence === "forbidden" ? `${expectedText(property)} — forbidden rule` : property ? expectedText(property) : undefined;
-    return { summary: `${contextName(context)} · ${displayPath(path)}`, rule: conflict ? `Blocked — ${conflict.message}` : unresolved ? `Incomplete — ${unresolved.issue}` : propertyRule ?? "Incomplete — property is not resolved for this context", revision: `Effective revision ${context.effectiveRevision}`, provenance: conflict ? conflict.contributors.join("; ") : origins.map(({ contributorName, scope }) => `${contributorName} (${scope})`).join("; ") || "No contributing definition", repairs: conflict ? [`Open effective property ${path}`, ...conflict.contributors.map((name) => `Open contributing schema ${name}`)] : unresolved ? [unresolved.repair, `Open effective property ${path}`] : [`Open effective property ${path}`, ...origins.map(({ contributorName }) => `Open contributing schema ${contributorName}`)] };
+    return { summary: `${contextName(context)} · ${flowDocumentationDisplayPath(path)}`, rule: conflict ? `Blocked — ${conflict.message}` : unresolved ? `Incomplete — ${unresolved.issue}` : propertyRule ?? "Incomplete — property is not resolved for this context", revision: `Effective revision ${context.effectiveRevision}`, provenance: conflict ? conflict.contributors.join("; ") : origins.map(({ contributorName, scope }) => `${contributorName} (${scope})`).join("; ") || "No contributing definition", repairs: conflict ? [`Open effective property ${path}`, ...conflict.contributors.map((name) => `Open contributing schema ${name}`)] : unresolved ? [unresolved.repair, `Open effective property ${path}`] : [`Open effective property ${path}`, ...origins.map(({ contributorName }) => `Open contributing schema ${contributorName}`)] };
 }
 const escapeHtml = (value) => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("\n", "<br>");
 const plainCell = (value) => { const safe = String(value ?? "").replace(/[\t\r\n]+/gu, " "); return /^[=+\-@]/u.test(safe) ? `'${safe}` : safe; };
