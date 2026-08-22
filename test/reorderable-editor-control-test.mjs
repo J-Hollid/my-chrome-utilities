@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {focusableOverlayControls,overlayFocusabilityRepairProtocol} from "./support/layered-schema-overlay-focusability.mjs";
 
 class FakeElement {
   constructor(tagName,ownerDocument) {
@@ -246,5 +247,16 @@ announceReorderCompletion(undoDocument,{focusScopeId:"undo",itemId:"bravo",itemL
 assert.equal(undoDocument.querySelector("[data-reorder-status]").textContent,"Bravo moved from position 2 to position 3");
 await new Promise(resolve=>queueMicrotask(resolve));
 assert.equal(undoDocument.activeElement,undoControl.querySelector("[data-reorder-trigger]"),"a deferred consequential completion restores the stable trigger");
+
+const overlayBoundaryControls=[
+  {label:"Definition",disabled:false},
+  {label:"Move one position later",disabled:true},
+  {label:"Move to last",disabled:true},
+];
+assert.deepEqual(focusableOverlayControls(overlayBoundaryControls).map(({label})=>label),["Definition"],
+  "disabled boundary movement commands are not included in an overlay focusability probe");
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION)console.log(JSON.stringify({
+  swarmforgeTimeoutRepairRegression:overlayFocusabilityRepairProtocol(overlayBoundaryControls),
+}));
 
 console.log("reorderable editor control tests passed");
