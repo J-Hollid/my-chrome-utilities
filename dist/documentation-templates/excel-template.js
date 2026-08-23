@@ -67,6 +67,18 @@ export function validateExcelTemplatePrototype(prototype) {
         if (!available.includes(item.area.source))
             findings.push({ area: item.area.name, message: `${item.area.name} cannot repeat that data here.`, repair: `Choose a collection shown as available in the ${prototype.kind === "flow" ? "Flow" : prototype.kind} guide.` });
     }
+    for (const area of prototype.areas.filter((item) => item.type === "image")) {
+        let bounds;
+        try {
+            bounds = rectangle(area.range);
+        }
+        catch {
+            findings.push({ area: area.name, message: `Image area ${area.name} cannot be found.`, repair: `Select the intended Template cells and define the named area ${area.name}.` });
+            continue;
+        }
+        if (area.source === "page.visual.image" && (prototype.kind !== "flow" || !repeats.some((item) => item.area.source === "flow.pages" && contains(item.rectangle, bounds))))
+            findings.push({ area: area.name, message: `${area.name} using page.visual.image must be wholly inside a repeat of flow.pages.`, repair: "Move the image area inside its owning Flow Page repeat." });
+    }
     for (const merge of prototype.merges) {
         try {
             const bounds = rectangle(merge);

@@ -22,6 +22,8 @@ assert.deepEqual(
 );
 assert.equal(richTemplateHelpBindingsFor("profile").includes("concept.name"),true);
 assert.equal(richTemplateHelpBindingsFor("profile").includes("page.pageName"),false);
+assert.deepEqual(["page.concepts","event.concepts","page.visual.description","page.visual.caption","page.visual.sourceReference"].map(binding=>richTemplateHelpBindingsFor("flow").includes(binding)),[true,true,true,true,true],"Flow help exposes scoped concept groups and presentation-safe visual metadata");
+assert.equal(richTemplateHelpBindingsFor("flow").includes("page.visual.image"),false,"image bytes are never offered as a text binding");
 
 const template={id:"template:flow",name:"Acme flow page",format:"rich",kind:"flow",contractVersion:1,digest:"rich:first",blocks:[
   {id:"heading",type:"heading",level:1,content:[{text:"Journey "},{binding:"section.name"}]},
@@ -41,6 +43,11 @@ assert.doesNotMatch(rendered.html,/<script>/u);
 assert.doesNotMatch(rendered.html,/template:flow/u,"generated HTML does not expose project-owned template identity");
 assert.match(rendered.html,/data-documentation-template="rich"/u);
 assert.equal(rendered.plain,"Journey Checkout\n<Cart>\n<script>bad()</script>\nPayment");
+
+const visualImage="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+XkZ8WQAAAABJRU5ErkJggg==",semanticFlow={...template,blocks:[{id:"pages",type:"repeat",items:"flow.pages",variable:"page",children:[{id:"groups",type:"concept-group",source:"page.concepts"},{id:"visual",type:"page-visual",source:"page.visual"}]}]},semanticContext={table:{columns:[{heading:"Example"}]},flow:{pages:[{concepts:[{name:"Identity",rows:[{property:"user_id",cells:[{value:"one"}]}]}],visual:{image:visualImage,description:"Cart after address",caption:"Checkout review",sourceReference:"https://example.test/inert"}},{concepts:[],events:[]}]}};
+assert.equal(validateRichDocumentationTemplate(semanticFlow).valid,true,"a Page repeat may contain scoped concept and semantic visual blocks");
+const semanticOutput=renderRichDocumentationTemplate(semanticFlow,semanticContext);assert.match(semanticOutput.html,/<section[^>]*data-concept-group="Identity"/u);assert.match(semanticOutput.html,/<figure[^>]*data-page-visual/u);assert.match(semanticOutput.html,/alt="Cart after address"/u);assert.match(semanticOutput.html,/<figcaption>Checkout review<\/figcaption>/u);assert.match(semanticOutput.html,/data-visual-source[^>]*>https:\/\/example\.test\/inert/u);assert.equal(semanticOutput.plain,"Identity\nuser_id\tone\nCart after address\nCheckout review\nhttps://example.test/inert");assert.doesNotMatch(semanticOutput.plain,/data:image|base64/u,"plain fallback never contains image bytes");
+assert.match(validateRichDocumentationTemplate({...template,blocks:[{id:"visual",type:"page-visual",source:"page.visual"}]}).findings.map(({message})=>message).join("\n"),/outside this block scope/u,"a Page visual block cannot escape its Page repeat");
 
 const renamed={...template,blocks:[{id:"pages",type:"repeat",items:"flow.pages",variable:"entry",children:[{id:"page",type:"paragraph",content:[{text:"Page ",emphasis:"emphasis"},{binding:"entry.pageName",emphasis:"strong"}]},{id:"events",type:"repeat",items:"entry.events",variable:"occurrence",children:[{id:"event",type:"paragraph",content:[{binding:"occurrence.eventName"}]}]}]}]};
 assert.equal(validateRichDocumentationTemplate(renamed).valid,true,"renamed repeat variables own their child bindings and collections");
