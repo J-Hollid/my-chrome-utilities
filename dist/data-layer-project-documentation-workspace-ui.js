@@ -2,7 +2,7 @@ import { compileProjectDocumentation, ProjectDocumentationVisualUnavailableError
 import { createProjectDocumentationSet, } from "./data-layer-project-documentation-records.js";
 import { projectDocumentationSnapshotStale, selectProjectDocumentationTables, themeFingerprint, } from "./data-layer-project-documentation-workspace.js";
 import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
-import { renderReorderControl } from "./reorderable-editor/control.js";
+import { renderReorderControl, renderReorderableItemRow } from "./reorderable-editor/control.js";
 import { reorderValues } from "./reorderable-editor/model.js";
 import { documentationButton as button, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled, documentationLogoArea as logoArea, renderDocumentationTable as renderTable, } from "./project-documentation/workspace-ui-elements.js";
 import { consumeDocumentationIncompleteConfirmation, documentationExportPresentation, documentationExportSelection, renderDocumentationExport, } from "./project-documentation/workspace-export-ui.js";
@@ -143,7 +143,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
             const item = document.createElement("li"), select = button(`${section.name} · ${section.kind}`, () => { selectedSectionId = section.id; previewSectionId = section.id; mobileBuildSurface = "configuration"; render(host); }), reorder = renderReorderControl({ itemId: section.id, itemLabel: section.name, completeOrder: selectedSections.map(({ id, name }) => ({ id, label: name })), dropTarget: item, orderedContainer: outline, focusScope: host, focusScopeId: `documentation-outline:${set.id}`, onMove: ({ itemId, toIndex }) => { const moved = reorderValues(selectedSections, itemId, toIndex, value => value.id); let selectedIndex = 0; const sections = set.sections.map(value => value.selected ? moved[selectedIndex++] : value); saveSet(createProjectDocumentationSet({ ...set, sections }), `Reorder ${section.name}`); return true; } });
             select.setAttribute("aria-current", String(section.id === selectedSectionId));
             item.dataset.sectionKind = section.kind;
-            item.append(reorder, select);
+            item.append(renderReorderableItemRow({ control: reorder, primaryContent: select }));
             outline.append(item);
         }
         const editTheme = button(`Edit theme · ${theme.name}`, () => { themeOpen = !themeOpen; render(host); });

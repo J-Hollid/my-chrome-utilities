@@ -3,7 +3,7 @@ import { applySchemaTablePathAllocation, bindSchemaTableQuickEdit, mountSchemaTa
 import { button } from "./dom.js";
 import { canonicalFacetText } from "../data-layer-canonical-schema-facets.js";
 import { canonicalMoveDestinations } from "./structure.js";
-import { renderReorderControl } from "../reorderable-editor/control.js";
+import { renderReorderControl, renderReorderableItemRow } from "../reorderable-editor/control.js";
 import { reorderValues } from "../reorderable-editor/model.js";
 import { focusedStructureOwned } from "../data-layer-canonical-schema-focused-drafts.js";
 const orderedChildren = (context, parentId) => Object.values(context.document.nodes).filter(node => node.parentId === parentId).sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
@@ -57,7 +57,7 @@ export function renderNavigatorRows(tree, context) {
             existingActionsMenu: { trigger: actions, menu: propertyMenu, expanded: context.menuPropertyId === row.id },
             onMove: (request) => reorderProperty(context, row.node, request),
         });
-        article.append(reorder, choose, actions);
+        article.append(renderReorderableItemRow({ control: reorder, primaryContent: choose, trailingContent: actions }));
         tree.append(article);
         if (row.node.type === "array") {
             let item = row.node.itemSchema ?? (row.node.itemType ? { id: `item:${row.node.id}`, type: row.node.itemType } : undefined), level = row.depth + 1;

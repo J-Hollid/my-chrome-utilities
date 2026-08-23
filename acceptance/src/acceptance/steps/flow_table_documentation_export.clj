@@ -100,6 +100,7 @@
             ["360 pixels" "the Build outline and selected configuration open one at a time"]
             ["1280 pixels" "Build outline and selected configuration are simultaneously visible"]
             ["360 pixels" "Build outline and selected configuration are exposed as separate surfaces"]}}
+   {:keys ["viewport_width"] :rows #{["1280 pixels"] ["360 pixels"]}}
    {:keys ["profile" "property_total" "selected_concept" "concept_total" "concept_included" "other_profile"]
     :rows #{["Sitewide" "312" "Commerce" "53" "47" "Opened Article"]
             ["Opened Article" "428" "Identity" "71" "64" "Sitewide"]}}
@@ -115,6 +116,12 @@
    {:keys ["kind" "visible_content"] :rows #{["Overview" "Name, Purpose, and Website fields in configured order"] ["Flow" "configured Flow columns, property rows, metadata, and literal values"] ["Data capture matrix" "configured contexts, concepts, property rows, presence marks, and legend"] ["Site Profile" "configured concepts, property rows, and selected Profile columns"]}}
    {:keys ["invalid_metadata"] :rows #{["a missing valid validation state"] ["a body digest different from its record digest"] ["a nonpositive body byte length"] ["an unsupported Excel contract version"]}}
    {:keys ["page_instance" "documented_example"] :rows #{["Cart" "cart"] ["Confirmation" "confirmation"]}}
+   {:keys ["page_instance" "property" "example_source" "allowed_values" "rendered_example"]
+    :rows #{["Cart" "page_name" "a direct documented example" "cart or category" "cart-page"]
+            ["Cart" "ecommerce_order_id" "an inherited documented example" "draft or paid" "ORDER-100"]
+            ["Cart" "currency" "a mixed inherited and local documented example" "EUR or USD" "Euro checkout"]
+            ["Confirmation" "page_type" "an overridden documented example" "cart or confirmation" "confirmation-example"]
+            ["Cart" "coupon_code" "no effective documented example" "WELCOME or SAVE10" "empty text"]}}
    {:keys ["viewport_width" "editor_layout"] :rows #{["1280 pixels" "outline and selected block detail appear together"] ["360 pixels" "outline and selected block detail open one at a time"]}}])
 
 (defn validate-example! [_mode example]
@@ -187,5 +194,5 @@
    observe-browser! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-23T07:17:04.424114129+02:00", :module-hash "1535257073", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1461823964"} {:id "def/feature-files", :kind "def", :line 5, :end-line 15, :hash "330814488"} {:id "def/entry-modes", :kind "def", :line 16, :end-line 25, :hash "1763540367"} {:id "form/3/defonce", :kind "defonce", :line 26, :end-line 26, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 27, :end-line 27, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 29, :end-line 33, :hash "882590967"} {:id "defn-/observe-browser!", :kind "defn-", :line 35, :end-line 41, :hash "1774642844"} {:id "def/flow-export-example-relations", :kind "def", :line 43, :end-line 118, :hash "-16759145"} {:id "defn/validate-example!", :kind "defn", :line 120, :end-line 123, :hash "1985321309"} {:id "def/runtime-paths", :kind "def", :line 125, :end-line 166, :hash "545666776"} {:id "defn-/assert-runtime!", :kind "defn-", :line 168, :end-line 180, :hash "676773790"} {:id "def/handlers", :kind "def", :line 182, :end-line 186, :hash "-915256383"}]}
+;; {:version 1, :tested-at "2026-08-23T14:09:46.315842346+02:00", :module-hash "-462225730", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1461823964"} {:id "def/feature-files", :kind "def", :line 5, :end-line 15, :hash "330814488"} {:id "def/entry-modes", :kind "def", :line 16, :end-line 25, :hash "1763540367"} {:id "form/3/defonce", :kind "defonce", :line 26, :end-line 26, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 27, :end-line 27, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 29, :end-line 33, :hash "882590967"} {:id "defn-/observe-browser!", :kind "defn-", :line 35, :end-line 41, :hash "1774642844"} {:id "def/flow-export-example-relations", :kind "def", :line 43, :end-line 124, :hash "-247631654"} {:id "defn/validate-example!", :kind "defn", :line 126, :end-line 129, :hash "1985321309"} {:id "def/runtime-paths", :kind "def", :line 131, :end-line 173, :hash "-134190358"} {:id "defn-/assert-runtime!", :kind "defn-", :line 175, :end-line 187, :hash "676773790"} {:id "def/handlers", :kind "def", :line 189, :end-line 193, :hash "-915256383"}]}
 ;; clj-mutate-manifest-end

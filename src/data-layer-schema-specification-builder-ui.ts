@@ -17,7 +17,7 @@ import {
 } from "./data-layer-schema-specification-builder.js";
 import type { SchemaDefinition } from "./data-layer-schema-verification.js";
 import {declareStudioChoice} from "./data-layer-studio-choice-controls.js";
-import {renderLocalDraftReorderControl as renderReorderControl} from "./reorderable-editor/control.js";
+import {renderLocalDraftReorderControl as renderReorderControl,renderReorderableItemRow} from "./reorderable-editor/control.js";
 import {reorderValues} from "./reorderable-editor/model.js";
 
 export interface SpecificationClipboardPort {
@@ -167,8 +167,8 @@ export function renderSchemaSpecificationBuilder(
     headRow.replaceChildren(...columns.map((column) => {
       const cell = document.createElement("th");
       cell.dataset.specificationColumn = column;
-      cell.append(Object.assign(document.createElement("span"), { textContent:specificationColumnLabels[column] }));
-      cell.prepend(renderReorderControl({focusScopeId:"schema-specification-columns",itemId:column,itemLabel:specificationColumnLabels[column],completeOrder:columns.map(id=>({id,label:specificationColumnLabels[id]})),dropTarget:cell,preserveTargetSemantics:true,onMove:({itemId,toIndex})=>{columns=reorderValues(columns,itemId,toIndex,value=>value);renderPreview();return true;}}));
+      const identity=Object.assign(document.createElement("span"),{textContent:specificationColumnLabels[column]}),control=renderReorderControl({focusScopeId:"schema-specification-columns",itemId:column,itemLabel:specificationColumnLabels[column],completeOrder:columns.map(id=>({id,label:specificationColumnLabels[id]})),dropTarget:cell,preserveTargetSemantics:true,onMove:({itemId,toIndex})=>{columns=reorderValues(columns,itemId,toIndex,value=>value);renderPreview();return true;}});
+      cell.append(renderReorderableItemRow({control,primaryContent:identity}));
       return cell;
     }));
     body.replaceChildren(...rows.map((row) => {

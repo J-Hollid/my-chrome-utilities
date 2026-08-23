@@ -4,7 +4,7 @@ import {applySchemaTablePathAllocation,bindSchemaTableQuickEdit,mountSchemaTable
 import {button} from "./dom.js";
 import {canonicalFacetText} from "../data-layer-canonical-schema-facets.js";
 import {canonicalMoveDestinations} from "./structure.js";
-import {renderReorderControl,type ReorderRequest} from "../reorderable-editor/control.js";
+import {renderReorderControl,renderReorderableItemRow,type ReorderRequest} from "../reorderable-editor/control.js";
 import {reorderValues} from "../reorderable-editor/model.js";
 import {focusedStructureOwned} from "../data-layer-canonical-schema-focused-drafts.js";
 
@@ -46,7 +46,7 @@ export function renderNavigatorRows(tree:HTMLElement,context:CanonicalSchemaRend
       existingActionsMenu:{trigger:actions,menu:propertyMenu,expanded:context.menuPropertyId===row.id},
       onMove:(request)=>reorderProperty(context,row.node,request),
     });
-    article.append(reorder,choose,actions);tree.append(article);
+    article.append(renderReorderableItemRow({control:reorder,primaryContent:choose,trailingContent:actions}));tree.append(article);
     if(row.node.type==="array"){
       let item=row.node.itemSchema??(row.node.itemType?{id:`item:${row.node.id}`,type:row.node.itemType}:undefined),level=row.depth+1;
       while(item?.type){const boundary=dom.createElement("article");boundary.dataset.itemBoundary="true";boundary.setAttribute("role","treeitem");boundary.textContent=`${"› ".repeat(level)}Each item · ${item.type[0]!.toUpperCase()+item.type.slice(1)}`;tree.append(boundary);if(item.type!=="array")break;item=item.items;level+=1;}

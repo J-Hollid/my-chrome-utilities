@@ -199,3 +199,24 @@ Feature: Data layer compact reorderable editor controls
       | actions_menu_state               | handle_contract                                                      | movement_menu_contract                                                  |
       | has no existing actions menu     | the native button and sole drag handle                                | opened by the grip button                                                 |
       | already has an actions menu      | a non-button drag affordance with no additional focus stop             | the one existing actions menu containing the movement actions             |
+
+  # Data layer compact reorderable editor controls 015
+  Scenario Outline: Data layer compact reorderable editor controls 015
+    Given a migrated <host_family> contains an actionable item with <primary_content>
+    When responsive layout presents the host at the wide and constrained reference widths
+    Then its visible ordinal when present, six-dot grip, and <primary_content> share one primary visual row
+    And the grip never occupies a standalone full-width row above the content it orders
+    And primary text wraps within a flexible content column beside the fixed 44-pixel grip column
+    And existing secondary fields, nested content, and trailing actions retain their alignment and behavior
+    And the host introduces no horizontal page scrolling
+
+    Examples:
+      | host_family                                | primary_content                    |
+      | Documentation ordered-choice row           | checkbox and choice label           |
+      | Documentation flat export row              | first choice or editable identity   |
+      | Documentation outline or Rich block        | section or block identity           |
+      | schema structure or allowed-value row      | property or value identity          |
+      | Property Set application or Page Group row | application or membership identity |
+      | predicate or guided-array row              | first labelled field                |
+      | configured specification heading           | heading text                        |
+      | defect reproduction row                    | reproduction-step text              |

@@ -68,8 +68,7 @@ export function orderFlowDocumentationOccurrenceIds(
 }
 
 const metadataLabels:Record<FlowDocumentationMetadata,string>={description:"Description",type:"Type",allowedValues:"Allowed values",example:"Documented example",comments:"Comments",provenance:"Provenance"};
-function metadataValue(snapshot:FlowDocumentationSnapshot,path:string,metadata:FlowDocumentationMetadata):string{
-  const property=snapshot.contexts.map((context)=>context.compiled.properties[path]).find(Boolean);
+export function flowDocumentationPropertyMetadata(property:EffectiveProperty|undefined,metadata:FlowDocumentationMetadata):string{
   if(!property)return"";
   if(metadata==="type")return property.type??"";
   if(metadata==="allowedValues")return property.allowedValues?.map(String).join(" or ")??"";
@@ -78,6 +77,7 @@ function metadataValue(snapshot:FlowDocumentationSnapshot,path:string,metadata:F
   if(metadata==="description")return property.documentation??"";
   return String((property as EffectiveProperty&{comments?:unknown}).comments??"");
 }
+function metadataValue(snapshot:FlowDocumentationSnapshot,path:string,metadata:FlowDocumentationMetadata):string{return flowDocumentationPropertyMetadata(snapshot.contexts.map((context)=>context.compiled.properties[path]).find(Boolean),metadata);}
 export function configureFlowDocumentationTable(snapshot:FlowDocumentationSnapshot,kind:"values"|"matrix",configuration:FlowDocumentationTableConfiguration={}):FlowDocumentationTable{
   const source=kind==="values"?flowValueMapTable(snapshot):captureMatrixTable(snapshot),canonicalPaths=paths(snapshot),selected=configuration.selectedPaths??canonicalPaths,rowsByCanonicalPath=new Map(canonicalPaths.map((path,index)=>[path,source.rows[index]!])),metadata=configuration.metadata??[];
   const rows=selected.flatMap((path)=>{const sourceRow=rowsByCanonicalPath.get(path);if(!sourceRow)return[];return[[sourceRow[0]!,...metadata.map((column)=>metadataValue(snapshot,path,column)),...sourceRow.slice(1)]];});

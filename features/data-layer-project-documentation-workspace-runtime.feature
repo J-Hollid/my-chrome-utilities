@@ -443,3 +443,20 @@ Feature: Data layer project documentation workspace runtime
     And the installed Set selector activates Partner handoff and offers both Set names
     And Partner handoff contains selected Overview and exactly one Data capture matrix
     And the original Client specification and Acme bytes and publication bytes remain unchanged
+
+  # Data layer project documentation workspace runtime 035
+  Scenario Outline: Data layer project documentation workspace runtime 035
+    Given production Data capture matrix has selected Page and Event contexts with short and wrapping labels
+    When actual controls open Selected matrix column order at <viewport_width>
+    Then each list item's ordinal, installed grip target, checkbox, and enhanced choice label occupy one primary row band
+    And grip-target and choice-label rectangles overlap on the block axis rather than forming consecutive rows
+    And each grip remains 44 by 44 CSS pixels while label wrapping stays inside the flexible content column
+    And the ordered list's right edge remains within the <viewport_width> document width
+    When actual controls move one selected context and uncheck another
+    Then repository inspection finds only the exact staged matrix order and inclusion changes
+    And durable source, theme, preview, publication, and unrelated section bytes remain unchanged
+
+    Examples:
+      | viewport_width |
+      | 1280 pixels    |
+      | 360 pixels     |

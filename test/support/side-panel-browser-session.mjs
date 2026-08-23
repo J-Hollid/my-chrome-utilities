@@ -124,7 +124,9 @@ export async function runSidePanelBrowserSession({
         configuration:definition.configuration,
         environment:frozenEnvironment,
         phaseTimer:timer,
-        viewport:structuredClone(definition.viewport),
+        viewport:environment.SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH
+          ? [Number(environment.SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH)]
+          : structuredClone(definition.viewport),
         process:processContext,
         page:null,
         socket:null,
@@ -536,10 +538,10 @@ async function prepareInstalledTarget({ context }) {
     return fixtureSocket;
   };
   const first = await openAtWidth(context.viewport[0]);
-  context.acquireInstalledSocket = async (width) => opened.length === 1 &&
+  context.acquireInstalledSocket = async (requestedWidth) => {const forcedWidth=Number(context.environment.SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH),width=Number.isFinite(forcedWidth)?forcedWidth:requestedWidth;return opened.length === 1 &&
       opened[0].fixtureSocket === first && !opened[0].claimed && width === context.viewport[0]
     ? (opened[0].claimed = true, first)
-    : openAtWidth(width);
+    : openAtWidth(width);};
   return { extensionId, page:opened[0].page, socket:first, installedPages:opened };
 }
 

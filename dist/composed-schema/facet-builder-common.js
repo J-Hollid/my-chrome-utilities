@@ -1,6 +1,6 @@
 import { addComposedAllowedValue, reconcileComposedAllowedValues, removeComposedAllowedValue, typedComposedValue } from "../data-layer-composed-schema-builders.js";
 import { button, clone, labeled, option } from "./facet-builder-context.js";
-import { renderLocalDraftReorderControl as renderReorderControl } from "../reorderable-editor/control.js";
+import { renderLocalDraftReorderControl as renderReorderControl, renderReorderableItemRow } from "../reorderable-editor/control.js";
 import { reorderValues } from "../reorderable-editor/model.js";
 export function renderCommonFacets(context) {
     const { options, draft, setDraft, setFeedback, render } = context, common = document.createElement("fieldset"), legend = document.createElement("legend"), type = document.createElement("select"), presence = document.createElement("select"), expected = document.createElement("input"), documentation = document.createElement("textarea");
@@ -44,7 +44,7 @@ export function renderAllowedValues(context) {
             setFeedback(error instanceof Error ? error.message : String(error));
             render();
         } });
-        row.append(reorder, labeled(`Value ${index + 1}`, value), button("Remove", () => { allowedValueIdentities.remove(index); const next = removeComposedAllowedValue(draft(), index); setDraft(reconcileComposedAllowedValues(next, next.allowedValues, next.allowedValueIds)); render(); }));
+        row.append(renderReorderableItemRow({ control: reorder, primaryContent: labeled(`Value ${index + 1}`, value), trailingContent: button("Remove", () => { allowedValueIdentities.remove(index); const next = removeComposedAllowedValue(draft(), index); setDraft(reconcileComposedAllowedValues(next, next.allowedValues, next.allowedValueIds)); render(); }) }));
         rows.append(row);
     });
     allowed.append(legend, rows, button("Add allowed value", () => { const type = options.effective.type, defaultValue = type === "number" || type === "integer" ? 0 : type === "boolean" ? false : type === "null" ? null : ""; allowedValueIdentities.append(); setDraft(addComposedAllowedValue(draft(), defaultValue)); render(); }));

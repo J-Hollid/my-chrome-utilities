@@ -37,7 +37,7 @@
 (defn- assert-runtime! [observed]
   (let [runtime-keys #{:runtime001 :runtime002 :runtime003 :runtime004 :runtime005
                        :runtime006 :runtime007 :runtime008 :runtime009 :runtime010
-                       :runtime011 :runtime012 :runtime013 :runtime014}]
+                       :runtime011 :runtime012 :runtime013 :runtime014 :runtime015}]
     (support/assert!
      (and (= (conj runtime-keys :installedBoundary) (set (keys observed)))
           (true? (:installedBoundary observed))

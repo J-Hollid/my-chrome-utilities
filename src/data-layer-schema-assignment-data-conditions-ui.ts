@@ -13,7 +13,7 @@ import {
   type AssignmentDataConditionGroup,
   type AssignmentDataPredicate,
 } from "./data-layer-schema-assignment-data-conditions.js";
-import {renderLocalDraftReorderControl as renderReorderControl} from "./reorderable-editor/control.js";
+import {renderLocalDraftReorderControl as renderReorderControl,renderReorderableItemRow} from "./reorderable-editor/control.js";
 import {reorderValues} from "./reorderable-editor/model.js";
 import {StableIdentitySequence} from "./reorderable-editor/stable-identities.js";
 
@@ -139,7 +139,8 @@ export function renderAssignmentDataConditionEditor(
       dropTarget:row,orderedContainer:list,onMove:({itemId,toIndex})=>{const currentIds=predicateIdentities.values(),currentIdentity=(_candidate:AssignmentDataPredicate,candidateIndex:number)=>currentIds[candidateIndex]!,fromIndex=currentIds.indexOf(itemId),predicates=reorderValues(state.group!.predicates,itemId,toIndex,currentIdentity);predicateIdentities.move(fromIndex,toIndex);update({...state,group:{...(state.group as AssignmentDataConditionGroup),predicates}});return true;}});
     const remove = element("button", "Remove condition"); remove.type = "button";
     remove.addEventListener("click", () => { predicateIdentities.remove(index); update({ ...state, group:{ ...(state.group as AssignmentDataConditionGroup), predicates:state.group?.predicates.filter((_, candidate) => candidate !== index) ?? [] } }); });
-    row.append(reorder,labelledControl("Property path", path), labelledControl("Detected type", type), labelledControl("Operator", predicateOperator), labelledControl("Configured value", comparison), remove);
+    row.append(renderReorderableItemRow({control:reorder,primaryContent:labelledControl("Property path",path),
+      secondaryContent:[labelledControl("Detected type",type),labelledControl("Operator",predicateOperator),labelledControl("Configured value",comparison)],trailingContent:remove}));
     list.append(row);
   }
   const add = element("button", "Add condition"); add.type = "button"; add.id = "add-schema-assignment-condition"; add.dataset.assignmentConditionControl = "add-predicate";

@@ -1,6 +1,6 @@
 import { comparisonValueFromInput, operatorsForConditionType, } from "./data-layer-conditional-validation-rules.js";
 import { assignmentDataConditionSummary, validateAssignmentDataConditions, } from "./data-layer-schema-assignment-data-conditions.js";
-import { renderLocalDraftReorderControl as renderReorderControl } from "./reorderable-editor/control.js";
+import { renderLocalDraftReorderControl as renderReorderControl, renderReorderableItemRow } from "./reorderable-editor/control.js";
 import { reorderValues } from "./reorderable-editor/model.js";
 import { StableIdentitySequence } from "./reorderable-editor/stable-identities.js";
 const predicateIdentitySequences = new WeakMap();
@@ -134,7 +134,8 @@ export function renderAssignmentDataConditionEditor(root, state, changed) {
         const remove = element("button", "Remove condition");
         remove.type = "button";
         remove.addEventListener("click", () => { predicateIdentities.remove(index); update({ ...state, group: { ...state.group, predicates: state.group?.predicates.filter((_, candidate) => candidate !== index) ?? [] } }); });
-        row.append(reorder, labelledControl("Property path", path), labelledControl("Detected type", type), labelledControl("Operator", predicateOperator), labelledControl("Configured value", comparison), remove);
+        row.append(renderReorderableItemRow({ control: reorder, primaryContent: labelledControl("Property path", path),
+            secondaryContent: [labelledControl("Detected type", type), labelledControl("Operator", predicateOperator), labelledControl("Configured value", comparison)], trailingContent: remove }));
         list.append(row);
     }
     const add = element("button", "Add condition");

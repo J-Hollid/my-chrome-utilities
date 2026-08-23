@@ -6,7 +6,7 @@ import { DOCUMENTATION_TEMPLATE_XLSX_TYPE } from "../documentation-templates/tem
 import { validateExcelTemplateWorkbook } from "../documentation-templates/excel-workbook.js";
 import { renderExcelTemplateFindings, renderExcelTemplateGuide } from "./workspace-excel-template-guidance-ui.js";
 import { documentationButton as button, documentationHeading as heading, documentationLabelled as labelled } from "./workspace-ui-elements.js";
-import { renderReorderControl } from "../reorderable-editor/control.js";
+import { renderReorderControl, renderReorderableItemRow } from "../reorderable-editor/control.js";
 import { reorderValues } from "../reorderable-editor/model.js";
 const formats = ["excel", "rich"], kinds = ["overview", "flow", "matrix", "profile"];
 const kindName = (kind) => kind === "profile" ? "Site Profile" : kind === "matrix" ? "Data capture matrix" : kind[0].toUpperCase() + kind.slice(1);
@@ -128,7 +128,7 @@ function richEditor(detail, selected, templates, options) {
         select.setAttribute("aria-current", String(block.id === selectedBlock?.id));
         select.addEventListener("keydown", event => { const current = ids.indexOf(block.id), target = event.key === "ArrowDown" ? Math.min(ids.length - 1, current + 1) : event.key === "ArrowUp" ? Math.max(0, current - 1) : event.key === "Home" ? 0 : event.key === "End" ? ids.length - 1 : -1; if (target < 0)
             return; event.preventDefault(); choose(ids[target], false); });
-        item.append(reorder, select);
+        item.append(renderReorderableItemRow({ control: reorder, primaryContent: select }));
         if (block.type === "repeat") {
             const children = document.createElement("ol");
             children.setAttribute("aria-label", `${block.items} child blocks`);

@@ -12,7 +12,7 @@ import {
 } from "./workspace-ui-elements.js";
 import {createDocumentationProfileConceptRenderer} from "./workspace-profile-concepts-ui.js";
 import {projectDocumentationProfileConceptProperties} from "./profile-concept-properties.js";
-import {renderReorderControl} from "../reorderable-editor/control.js";
+import {renderReorderControl,renderReorderableItemRow} from "../reorderable-editor/control.js";
 import {reorderValues} from "../reorderable-editor/model.js";
 
 type MutateSection=(set:ProjectDocumentationSet,sectionId:string,update:(section:ProjectDocumentationSection)=>ProjectDocumentationSection,label:string)=>void;
@@ -29,12 +29,13 @@ export function createDocumentationSectionConfigurationRenderer(mutateSection:Mu
       declareStudioChoice(check,input.choiceKey);
       check.checked=selected.has(item.id);
       check.addEventListener("change",()=>input.onChange(setChecked(input.selected,item.id,check.checked)));
-      row.append(labelled(item.label,check));
+      const primary=labelled(item.label,check);
       if(check.checked){
-        row.prepend(renderReorderControl({focusScopeId:`documentation-choices:${input.name}`,itemId:item.id,itemLabel:item.label,
+        const control=renderReorderControl({focusScopeId:`documentation-choices:${input.name}`,itemId:item.id,itemLabel:item.label,
           completeOrder:input.selected.map(id=>({id,label:input.all.find(candidate=>candidate.id===id)?.label??id})),
-          dropTarget:row,orderedContainer:list,onMove:({itemId,toIndex})=>{input.onChange(reorderValues(input.selected,itemId,toIndex,value=>value));return true;}}));
-      }
+          dropTarget:row,orderedContainer:list,onMove:({itemId,toIndex})=>{input.onChange(reorderValues(input.selected,itemId,toIndex,value=>value));return true;}});
+        row.append(renderReorderableItemRow({control,primaryContent:primary}));
+      }else row.append(primary);
       list.append(row);
     }
     host.append(list);

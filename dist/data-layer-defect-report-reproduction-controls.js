@@ -1,5 +1,5 @@
 import { addManualReproductionStep, adjustManualReproductionStep, generatePathnameSkeleton, moveManualReproductionStep, removeManualReproductionStep, reproductionStepPreview, } from "./data-layer-defect-report.js";
-import { renderLocalDraftReorderControl as renderReorderControl } from "./reorderable-editor/control.js";
+import { renderLocalDraftReorderControl as renderReorderControl, renderReorderableItemRow } from "./reorderable-editor/control.js";
 function copyTemplate(template) {
     return { ...template };
 }
@@ -9,9 +9,15 @@ function appendStepPresentation(item, text, controls, guidance) {
         typeof control.className === "string" && control.className.split(/\s+/u).includes("reorderable-editor-control")), actions = document.createElement("div");
     actions.className = "defect-reproduction-step-actions";
     actions.append(...controls.filter((control) => control !== reorder && !control.hidden));
-    if (guidance)
+    if (actions.style)
+        actions.style.flexBasis = "100%";
+    if (guidance) {
         guidance.className = "defect-reproduction-step-guidance";
-    item.append(...[reorder, text, actions, guidance].filter((element) => Boolean(element)));
+        if (guidance.style)
+            guidance.style.flexBasis = "100%";
+    }
+    const secondary = [actions, guidance].filter((element) => Boolean(element));
+    item.append(renderReorderableItemRow({ ...(reorder ? { control: reorder } : {}), primaryContent: text, secondaryContent: secondary }));
 }
 export function appendReproductionControls(controls, steps, context, state, options = {}) {
     let selectedVisitId;

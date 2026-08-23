@@ -7480,6 +7480,13 @@ const approvedDocumentationGlobalRules = stylesheetRuleInventory(studioBaseStyle
     !flowBaseGlobalRuleIdentities.has(flowStyleRuleIdentity(rule)));
 assert.equal(approvedDocumentationGlobalRules.length, 63,
   "approved Documentation workspace global rules occur exactly once");
+const approvedReorderableResponsiveGlobalRules = stylesheetRuleInventory(studioBaseStylesheet,
+  "specification-builder.css").filter((rule) =>
+    rule.context === "@media(max-width:480px)" &&
+    rule.selector.startsWith("[data-reorder-item-row=\"true\"]") &&
+    !flowBaseGlobalRuleIdentities.has(flowStyleRuleIdentity(rule)));
+assert.equal(approvedReorderableResponsiveGlobalRules.length, 2,
+  "approved responsive reorderable-row global rules occur exactly once");
 const flowStylesheetConservation = verifyFlowStylesheetConservation({
   baseGlobalSources:flowBaseGlobalSources,
   candidateGlobalSources:[
@@ -7488,7 +7495,8 @@ const flowStylesheetConservation = verifyFlowStylesheetConservation({
   ],
   localSource:conservedFlowLocalStylesheet,
   bridgeSource:flowShellStylesheet,
-  approvedCandidateGlobalRules:[...approvedFlowViewerGlobalRules, ...approvedDocumentationGlobalRules],
+  approvedCandidateGlobalRules:[...approvedFlowViewerGlobalRules, ...approvedDocumentationGlobalRules,
+    ...approvedReorderableResponsiveGlobalRules],
 });
 const flowStylesheetDeclarations = [
   stylesheetDeclarationFor(packs, "src/flow-graph/flow-workspace.css"),
@@ -11562,6 +11570,27 @@ function reorderVerificationOwnerEvidenceRegression(context) {
     preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
     repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
 }
+function reorderResponsiveStylesheetConservationRegression(context) {
+  const expectedPreRepairFailure = {approvedResponsiveRuleCount:0,
+    conservationAccepted:false};
+  const expectedRepairResult = {approvedResponsiveRuleCount:2,
+    conservationAccepted:true};
+  const repairResult = {
+    approvedResponsiveRuleCount:approvedReorderableResponsiveGlobalRules.length,
+    conservationAccepted:flowStylesheetConservation.conservedExactlyOnce,
+  };
+  assert.deepEqual(repairResult, expectedRepairResult,
+    "responsive reorderable-row rules are explicit conserved global additions");
+  const fixture = {id:"reorder-responsive-stylesheet-conservation-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{stylesheet:"specification-builder.css",viewportMaxWidth:480},
+    expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest = verificationDigest(fixture);
+  return {version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
+}
 function registryOwnershipCompatibilityRegression(context) {
   const expectedPreRepairFailure = {syntheticProductionSourceDeclared:false,
     archivedCheckpointPlanningAccepted:false,historicalSuccessionPlanningAccepted:false};
@@ -11614,6 +11643,27 @@ function cardinalityAcceptanceReceiptRegistrationRegression(context) {
     preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
     repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
 }
+async function flowExportRuntimeEvidenceFixtureRegression(context) {
+  const source = await readFile(new URL(
+    "./acceptance/flow_table_documentation_export_steps_test.clj", import.meta.url), "utf8");
+  const expectedPreRepairFailure = {requiredProjectionEvidence:false};
+  const expectedRepairResult = {requiredProjectionEvidence:true};
+  const repairResult = {
+    requiredProjectionEvidence:/:flowTemplateEffectivePageProjection true/u.test(source),
+  };
+  assert.deepEqual(repairResult, expectedRepairResult,
+    "the Flow export Clojure fixture covers every required runtime evidence key");
+  const fixture = {id:"flow-export-runtime-evidence-fixture-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{fixture:"test/acceptance/flow_table_documentation_export_steps_test.clj",
+      requiredKey:"flowTemplateEffectivePageProjection"},
+    expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest = verificationDigest(fixture);
+  return {version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
@@ -11657,6 +11707,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           ? reorderBrowserEvidencePartitionRegression(regressionContext)
         : regressionContext.causalCategory === "other:reorder verification owner evidence"
           ? reorderVerificationOwnerEvidenceRegression(regressionContext)
+        : regressionContext.causalCategory === "other:reorder responsive stylesheet conservation"
+          ? reorderResponsiveStylesheetConservationRegression(regressionContext)
         : regressionContext.causalCategory === "other:repair-focused prerequisite closure"
           ? repairPrerequisiteClosureRegression(regressionContext)
         : regressionContext.causalCategory === "other:confirmed-flaky acceptance evidence routing"
@@ -11665,6 +11717,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           ? registryOwnershipCompatibilityRegression(regressionContext)
         : regressionContext.causalCategory === "other:cardinality acceptance receipt registration"
           ? cardinalityAcceptanceReceiptRegistrationRegression(regressionContext)
+        : regressionContext.causalCategory === "other:acceptance fixture completeness"
+          ? await flowExportRuntimeEvidenceFixtureRegression(regressionContext)
           : artifactLockTimeoutRepairRegression(regressionContext),
   }));
 }

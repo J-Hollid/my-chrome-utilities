@@ -2,7 +2,7 @@ import { reconcileProjectDocumentationConcepts } from "../data-layer-project-doc
 import { projectCanonicalConcepts } from "../data-layer-layered-schema-project.js";
 import { createProjectDocumentationSet } from "../data-layer-project-documentation-records.js";
 import { documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled } from "./workspace-ui-elements.js";
-import { renderReorderControl } from "../reorderable-editor/control.js";
+import { renderReorderControl, renderReorderableItemRow } from "../reorderable-editor/control.js";
 import { reorderValues } from "../reorderable-editor/model.js";
 export function renderDocumentationContent(host, set, available, saveSet, focusScope = host) {
     const flowSearch = controlInput("flowSearch", "", "search"), profileSearch = controlInput("profileSearch", "", "search");
@@ -46,7 +46,7 @@ export function renderDocumentationContent(host, set, available, saveSet, focusS
         include.checked = section.kind === "overview" ? section.selected : true;
         include.addEventListener("change", () => { const sections = section.kind === "overview" ? set.sections.map(candidate => candidate.id === section.id ? { ...candidate, selected: include.checked } : candidate) : set.sections.filter(({ id }) => id !== section.id); saveSet(createProjectDocumentationSet({ ...set, sections }), `${include.checked ? "Select" : "Remove"} ${section.name}`); });
         item.dataset.documentationContentChoice = section.id;
-        item.append(reorder, labelled(section.name, include));
+        item.append(renderReorderableItemRow({ control: reorder, primaryContent: labelled(section.name, include) }));
         ordered.append(item);
     }
     host.append(projectChoices, flowSearch, flowChoices, profileSearch, profileChoices, ordered);
@@ -62,7 +62,7 @@ export function renderDocumentationConceptConfiguration(set, state, saveSet) {
         include.checked = concept.included;
         include.addEventListener("change", () => saveSet(createProjectDocumentationSet({ ...set, concepts: concepts.map((candidate) => candidate.name === concept.name ? { ...candidate, included: include.checked } : candidate) }), `${include.checked ? "Include" : "Exclude"} concept ${concept.name}`));
         item.dataset.documentationConcept = concept.name;
-        item.append(reorder, labelled(concept.name, include));
+        item.append(renderReorderableItemRow({ control: reorder, primaryContent: labelled(concept.name, include) }));
         list.append(item);
     }
     headings.type = "checkbox";

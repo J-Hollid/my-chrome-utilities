@@ -53,8 +53,30 @@ class FakeDocument {
 const document=new FakeDocument();
 globalThis.document=document;
 
-const {announceReorderCompletion,renderReorderControl}=await import("../dist/reorderable-editor/control.js");
+const {announceReorderCompletion,renderReorderControl,renderReorderableItemRow}=await import("../dist/reorderable-editor/control.js");
 const order=[{id:"alpha",label:"Alpha"},{id:"bravo",label:"Bravo"},{id:"charlie",label:"Charlie"}];
+const compositionDocument=new FakeDocument(),compositionControl=compositionDocument.createElement("span"),
+  compositionPrimary=compositionDocument.createElement("label"),compositionSecondary=compositionDocument.createElement("p"),
+  compositionAction=compositionDocument.createElement("button");
+const composition=renderReorderableItemRow({control:compositionControl,primaryContent:compositionPrimary,
+  secondaryContent:[compositionSecondary],trailingContent:compositionAction});
+assert.equal(composition.dataset.reorderItemRow,"true");
+assert.equal(composition.dataset.reorderActionable,"true");
+assert.equal(composition.style.display,"grid");
+assert.equal(composition.style.gridTemplateColumns,"44px minmax(0, 1fr) max-content");
+assert.equal(composition.style.alignItems,"center");
+assert.equal(composition.style.maxWidth,"100%");
+assert.equal(compositionControl.style.gridColumn,"1");
+assert.equal(compositionPrimary.style.gridColumn,"2");
+assert.equal(compositionPrimary.style.minWidth,"0px","wrapping stays inside the flexible identity column");
+assert.equal(compositionPrimary.style.marginBlock,"0px","global label margins cannot offset the visible centerline");
+assert.equal(compositionAction.dataset.reorderTrailing,"true","constrained styles can move only the trailing action band below the primary row");
+const compositionSecondaryBand=composition.children[3];
+assert.equal(compositionSecondaryBand.style.gridColumn,"2 / -1","secondary content aligns below the identity column");
+assert.equal(compositionSecondaryBand.style.flexWrap,"wrap","secondary controls wrap as one coherent band");
+assert.equal(compositionAction.style.gridColumn,"3","an intrinsic trailing action remains in the primary row");
+assert.deepEqual(composition.children,[compositionControl,compositionPrimary,compositionAction,compositionSecondaryBand]);
+assert.deepEqual(compositionSecondaryBand.children,[compositionSecondary]);
 const singletonRow=document.createElement("li");
 document.body.append(singletonRow);
 const singletonControl=renderReorderControl({

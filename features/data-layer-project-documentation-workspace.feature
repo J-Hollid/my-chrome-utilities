@@ -453,3 +453,20 @@ Feature: Data layer project documentation workspace
     Then Partner handoff becomes the selected Documentation Set with Overview and one Data capture matrix
     And the Documentation Set selector offers Client specification and Partner handoff
     And Client specification and Acme remain unchanged
+
+  # Data layer project documentation workspace 036
+  Scenario Outline: Data layer project documentation workspace 036
+    Given the Data capture matrix has selected Page and Event contexts with short and wrapping labels
+    When the operator opens Selected matrix column order at <viewport_width>
+    Then every visible ordinal, six-dot Reorder grip, checkbox, and context label form one compact item row
+    And no ordinal and grip occupy a standalone row above the field they order
+    And long labels wrap only inside the flexible content area while the 44-pixel target remains alongside them
+    And the ordered list stays within the visible Documentation viewport
+    When the operator reorders one selected context and deselects another
+    Then the existing staged matrix column order and selection contain exactly those two changes
+    And unrelated Documentation Set, source, theme, preview, and publication data remain unchanged
+
+    Examples:
+      | viewport_width |
+      | 1280 pixels    |
+      | 360 pixels     |

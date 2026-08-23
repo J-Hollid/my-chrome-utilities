@@ -47,7 +47,7 @@ const installedConsumerPrograms=[
 
 function runProgram(program,environment=process.env){
   return new Promise((resolve,reject)=>{
-    const [executable,...args]=program.command,child=spawn(executable,args,{cwd:process.cwd(),env:environment,stdio:["ignore","pipe","pipe"]});
+    const [executable,...args]=program.command,childEnvironment={...environment};if(program.id==="defects")delete childEnvironment.SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH;const child=spawn(executable,args,{cwd:process.cwd(),env:childEnvironment,stdio:["ignore","pipe","pipe"]});
     let stdout="",stderr="";
     child.stdout.on("data",chunk=>{stdout+=chunk;process.stderr.write(chunk);});
     child.stderr.on("data",chunk=>{stderr+=chunk;process.stderr.write(chunk);});
@@ -86,8 +86,9 @@ function passedTarget(stdout,targetId){
 
 export async function runReorderableEditorControlsBrowser(environment=process.env){
   assert.equal(environment.REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER,"1",`${TARGET} must be selected explicitly`);
-  const results=await runPrograms(installedConsumerPrograms,environment);
-  const output=Object.fromEntries(results.map(({id,stdout})=>[id,stdout]));
+  const atWidth=width=>runPrograms(installedConsumerPrograms,{...environment,SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH:String(width)});
+  const [wideResults,narrowResults]=await Promise.all([atWidth(1280),atWidth(360)]);
+  const output=Object.fromEntries(wideResults.map(({id,stdout})=>[id,stdout])),narrowOutput=Object.fromEntries(narrowResults.map(({id,stdout})=>[id,stdout]));
   const defects=observation(output.defects,"reproductionStepActionRows");
   const flow=observation(output.flow_export,"flowExport");
   const flowReorder=observation(output.flow_export,"flowReorder");
@@ -96,10 +97,40 @@ export async function runReorderableEditorControlsBrowser(environment=process.en
   const assignments=observation(output.schemas,"schemaAssignmentDataConditions");
   const guided=observation(output.guided_arrays,"guidedArrayReorder");
   const specification=observation(output.schemas,"schemaSpecificationBuilderCustomization");
+  const narrowDefects=observation(narrowOutput.defects,"reproductionStepActionRows"),narrowFlowReorder=observation(narrowOutput.flow_export,"flowReorder"),narrowLayered={...observation(narrowOutput.layered_schema_editor,"layeredSchema"),...observation(narrowOutput.layered_schema_page_group,"layeredSchema")},narrowAssignments=observation(narrowOutput.schemas,"schemaAssignmentDataConditions"),narrowGuided=observation(narrowOutput.guided_arrays,"guidedArrayReorder"),narrowSpecification=observation(narrowOutput.schemas,"schemaSpecificationBuilderCustomization");
   const defectSemantics=defects[0].reorderEvidence.closedSemantics,defectKeyboard=defects[0].reorderEvidence.keyboard,defectGeometry=Object.fromEntries(defects.map(item=>[item.width,item.reorderEvidence.geometry]));
   const membership=layered.membershipReorderEvidence,applications=layered.propertySetApplicationReorderEvidence,applicationSingleton=layered.propertySetApplicationSingletonEvidence,hierarchy=layered.hierarchyEvidence;
   const presentations=defects.map(({reorderEvidence})=>reorderEvidence.presentation),canonicalMenu=hierarchy.canonical.menuOwnership;
+  const firstGeometry=values=>values?.find(Boolean)??null,geometryRecords=({defects:observedDefects,flowReorder:observedFlowReorder,layered:observedLayered,assignments:observedAssignments,guided:observedGuided,specification:observedSpecification},width)=>{
+    const observedHierarchy=observedLayered.hierarchyEvidence,observedMembership=observedLayered.membershipReorderEvidence,observedApplications=observedLayered.propertySetApplicationReorderEvidence;
+    return{
+      "manual reproduction steps":observedDefects.find(item=>item.width===width)?.reorderEvidence.presentation.rowGeometry,
+      "Flow documentation properties":firstGeometry(observedFlowReorder.properties.inventory.map(({rowGeometry})=>rowGeometry)),
+      "Flow documentation metadata":firstGeometry(observedFlowReorder.metadata.inventory.map(({rowGeometry})=>rowGeometry)),
+      "Flow documentation contexts":firstGeometry(observedFlowReorder.contexts.inventory.map(({rowGeometry})=>rowGeometry)),
+      "selected Flow contexts":firstGeometry(observedFlowReorder.documentationChoices.flowContexts),
+      "Flow property rows":firstGeometry(observedFlowReorder.documentationChoices.flowProperties),
+      "Selected matrix column order":firstGeometry(observedFlowReorder.matrixRowComposition?.[width===1280?"wide":"narrow"]?.records),
+      "Site Profile columns":firstGeometry(observedFlowReorder.documentationChoices.profileColumns),
+      "Documentation Set content choices":firstGeometry(observedFlowReorder.contentChoices.inventory.map(({rowGeometry})=>rowGeometry)),
+      "Documentation concepts":firstGeometry(observedFlowReorder.concepts.inventory.map(({rowGeometry})=>rowGeometry)),
+      "Documentation section outline":firstGeometry(observedFlowReorder.outline.inventory.map(({rowGeometry})=>rowGeometry)),
+      "Rich template block tree":firstGeometry(observedFlowReorder.rich.inventory.map(({rowGeometry})=>rowGeometry)),
+      "canonical property tree":firstGeometry(observedHierarchy.canonical.inventory.map(({rowGeometry})=>rowGeometry)),
+      "composed property tree":observedHierarchy.composed.focusedRowGeometry,
+      "composed allowed values":observedHierarchy.composed.allowedValueRowGeometry,
+      "Page Group memberships":firstGeometry(observedMembership.rowGeometry),
+      "Page Property Set applications":firstGeometry(observedApplications.rowGeometry),
+      "assignment data conditions":firstGeometry(observedAssignments.reorderEvidence?.rowGeometry),
+      "guided array items":firstGeometry(observedGuided.rowComposition?.[width===1280?"wide":"narrow"]),
+      "specification table columns":firstGeometry(observedSpecification.extended?.reorderEvidence?.rowGeometry),
+    };
+  },rowCompositionRecords={
+    wide:geometryRecords({defects,flowReorder,layered,assignments,guided,specification},1280),
+    narrow:geometryRecords({defects:narrowDefects,flowReorder:narrowFlowReorder,layered:narrowLayered,assignments:narrowAssignments,guided:narrowGuided,specification:narrowSpecification},360),
+  };
   const allLayeredAssertionsPassed=Object.values(layered).every(Boolean);
+  const rowCompositionContract=(record,width)=>{if(!record?.host||!record.gripTarget||!record.primaryContent||!record.row)return{complete:false};const{host,gripTarget,primaryContent,row}=record,overlap=Math.min(gripTarget.bottom,primaryContent.bottom)>Math.max(gripTarget.top,primaryContent.top),centerline=Math.abs((gripTarget.top+gripTarget.bottom-primaryContent.top-primaryContent.bottom)/2)<=1,primaryBandNonAdditive=Math.max(gripTarget.bottom,primaryContent.bottom)-Math.min(gripTarget.top,primaryContent.top)<=Math.max(gripTarget.height,primaryContent.height)+1,flexibleColumn=primaryContent.left>=gripTarget.right-1&&primaryContent.right<=row.right+1,horizontallyContained=gripTarget.left>=host.left-1&&primaryContent.left>=host.left-1&&gripTarget.right<=host.right+1&&primaryContent.right<=host.right+1,target44=Math.abs(gripTarget.width-44)<=1&&Math.abs(gripTarget.height-44)<=1,sourceValid=record.valid===true||(record.overlap&&record.centerline&&record.compact&&record.target44);return{complete:Boolean(sourceValid&&overlap&&centerline&&primaryBandNonAdditive&&flexibleColumn&&horizontallyContained&&target44),sourceValid,overlap,centerline,primaryBandNonAdditive,flexibleColumn,horizontallyContained,target44,viewportWidth:width};},invalidRowComposition=[...[1280,360].flatMap((width,index)=>Object.entries(index===0?rowCompositionRecords.wide:rowCompositionRecords.narrow).map(([consumer,record])=>({width,consumer,...rowCompositionContract(record,width)})).filter(({complete})=>!complete))];
   const runtime001={
     "manual reproduction steps":defects.length===4&&defects.every(({completeControls,reorderEvidence})=>completeControls&&reorderEvidence.closedSemantics.accessibleName==="Reorder Click Bravo, position 2 of 3"&&reorderEvidence.closedSemantics.triggerDraggable&&!reorderEvidence.closedSemantics.rowDraggable),
     "Flow documentation properties":flowReorder.properties.inventory.length>=3&&flowReorder.properties.inventory.every(({triggers,checkboxes,legacy})=>triggers===1&&checkboxes===1&&!legacy)&&flowReorder.properties.moved.join("|")!==flowReorder.properties.before.join("|")&&flowReorder.properties.restored.join("|")===flowReorder.properties.before.join("|"),
@@ -119,7 +150,7 @@ export async function runReorderableEditorControlsBrowser(environment=process.en
     "specification table columns":specification.extended?.reorderEvidence?.inventoryTriggerCounts==="1|1|1|1|1|1|1"&&specification.extended.reorderEvidence.inventoryLegacyPairs==="false|false|false|false|false|false|false"&&specification.extended.reorderEvidence.beforeOrder==="Property name|Description|Type|Mandatory|Example value|Allowed values|Comments"&&specification.extended.reorderEvidence.indicator.before&&specification.extended.reorderEvidence.movedOrder==="Property name|Description|Mandatory|Type|Example value|Allowed values|Comments"&&specification.extended.reorderEvidence.stableId==="mandatory",
   };
   const evidence={
-    installedBoundary:results.length===installedConsumerPrograms.length,
+    installedBoundary:wideResults.length===installedConsumerPrograms.length&&narrowResults.length===installedConsumerPrograms.length,
     runtime001,
     runtime002:{semantics:defectSemantics.type==="button"&&defectSemantics.accessibleName==="Reorder Click Bravo, position 2 of 3"&&defectSemantics.hasPopup==="menu"&&defectSemantics.expanded==="false"&&/^reorder-menu-/.test(defectSemantics.controls)&&defectSemantics.menuRole==="menu"&&defectSemantics.itemRole==="listitem"&&defectSemantics.itemLabel==="Click Bravo"&&defectSemantics.position==="2"&&defectSemantics.setSize==="3"&&!defectSemantics.ariaGrabbed&&defectSemantics.triggerDraggable&&!defectSemantics.rowDraggable},
     runtime003:{indicator:flowReorder.drag.indicator,dragResult:flowReorder.drag.sequenceAfter===flowReorder.drag.sequenceBefore+1&&flowReorder.drag.moved.join("|")!==flowReorder.drag.before.join("|")&&flowReorder.drag.stableValues,undone:flowReorder.drag.undone.join("|")===flowReorder.drag.before.join("|"),dragOwnership:flowReorder.drag.nonHandleOwned&&flowReorder.drag.status.includes("moved from position")},
@@ -134,9 +165,11 @@ export async function runReorderableEditorControlsBrowser(environment=process.en
     runtime012:{singletonSuppressed:applicationSingleton?.suppressed===true,restored:applicationSingleton?.restored===true},
     runtime013:{inlineGrip:presentations.every(({inlineSvg,dots,ariaHidden,fill,visibleText})=>inlineSvg&&dots===6&&ariaHidden==="true"&&fill==="currentColor"&&visibleText===""),geometry:presentations.every(({grip,target,gripCenter,hostCenter})=>grip.width===16&&grip.height===16&&target.width===44&&target.height===44&&gripCenter.x<=1&&gripCenter.y<=1&&hostCenter<=1),rest:presentations.every(({rest})=>rest.background==="rgba(0, 0, 0, 0)"&&rest.border.every(value=>value==="0px")&&rest.shadow==="none"&&rest.whiteSpace==="nowrap"),states:presentations.every(({states,rest,themeReady,forcedColorReady})=>states.hoverBackground!==rest.background&&!/(?:transparent|\/\s*0\s*\)|rgba\([^)]*,\s*0\s*\))/u.test(states.hoverBackground)&&states.focusOutline.style!=="none"&&Number.parseFloat(states.focusOutline.width)>=2&&states.restCursor==="grab"&&states.dragCursor==="grabbing"&&themeReady&&forcedColorReady),responsive:defects.every(({noHorizontalOverflow,reorderEvidence})=>noHorizontalOverflow&&!reorderEvidence.geometry.documentOverflow)},
     runtime014:{nativeHandle:defectSemantics.type==="button"&&defectSemantics.hasPopup==="menu"&&presentations.every(({visibleText})=>visibleText===""),existingMenuHandle:canonicalMenu.handleTag==="SPAN"&&canonicalMenu.handleTabIndex===-1&&canonicalMenu.menuButtons===1,oneMenuButton:hierarchy.canonical.inventory.every(({menuButtons})=>menuButtons===1)&&canonicalMenu.movementActions===5,menuOwnership:canonicalMenu.ownerLabel.startsWith("Property actions for ")&&hierarchy.canonical.filteredMenuAvailable,dragOwnership:hierarchy.canonical.dragStable},
+    runtime015:{perConsumerGeometry:Object.keys(rowCompositionRecords.wide).length===20&&Object.keys(rowCompositionRecords.narrow).length===20&&invalidRowComposition.length===0,everyConsumerWideAndNarrow:Object.keys(rowCompositionRecords.wide).every(consumer=>rowCompositionRecords.wide[consumer]&&rowCompositionRecords.narrow[consumer]),wideNarrowMatrix:[flowReorder.matrixRowComposition?.wide,narrowFlowReorder.matrixRowComposition?.narrow].every(snapshot=>snapshot?.valid===true&&snapshot.records?.length>=3&&snapshot.records.every(({host,gripTarget,primaryContent})=>host&&gripTarget&&primaryContent)),wideNarrowGuided:[guided.rowComposition?.wide,narrowGuided.rowComposition?.narrow].every(records=>records?.length===3&&records.every(({valid,host,gripTarget,primaryContent})=>valid&&host&&gripTarget&&primaryContent)),semanticsAndBehaviorPreserved:Object.values(runtime001).every(Boolean)&&flowReorder.drag.stableValues&&flowReorder.matrixRowComposition?.wide?.isolated&&narrowFlowReorder.drag.stableValues&&narrowFlowReorder.matrixRowComposition?.wide?.isolated},
   };
   assert.equal(Object.keys(runtime001).length,16,"installed-consumer inventory must exercise every migrated surface exactly once");
-  for(const [scenario,values] of Object.entries(evidence).filter(([key])=>key.startsWith("runtime")))assert.equal(Object.values(values).every(Boolean),true,scenario);
+  if(invalidRowComposition.length)console.error(`runtime015 row-composition diagnostics ${JSON.stringify(invalidRowComposition)}`);
+  for(const [scenario,values] of Object.entries(evidence).filter(([key])=>key.startsWith("runtime")))assert.equal(Object.values(values).every(Boolean),true,`${scenario}: ${Object.entries(values).filter(([,value])=>!value).map(([key])=>key).join(", ")}`);
   return{reorderableEditorControls:evidence};
 }
 
