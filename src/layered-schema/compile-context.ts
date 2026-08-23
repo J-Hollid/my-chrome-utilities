@@ -2,6 +2,7 @@ import type {LayerConstraint,LayerContext,LayerContributor,LayerScope} from "../
 
 export const clone=<T>(value:T):T=>structuredClone(value);
 export const same=(left:unknown,right:unknown):boolean=>JSON.stringify(left)===JSON.stringify(right);
+export const recordReferencesProperty=(value:unknown,propertyId:string):boolean=>Boolean(value&&typeof value==="object"&&Object.entries(value as Record<string,unknown>).some(([key,nested])=>((key==="propertyId"||key==="dependencyPropertyId")&&nested===propertyId)||recordReferencesProperty(nested,propertyId)));
 export const included=(target:string|undefined,context:LayerContext):boolean=>!target||target==="all"||target===context.eventRole||target===context.eventId||target===context.occurrenceId;
 export const origin=(contributor:LayerContributor)=>({contributorId:contributor.id,contributorName:contributor.name,scope:contributor.scope,...(contributor.inheritanceRoutes?.length?{inheritanceRoutes:[...contributor.inheritanceRoutes]}:{})});
 export const branch=(scope:LayerScope):"page"|"event"|"shared"|"occurrence"=>scope==="Event"?"event":scope==="Property Set"||scope==="Page"||scope==="Flow Page-instance"?"page":scope==="Event-occurrence"?"occurrence":"shared";

@@ -1,11 +1,10 @@
-import { branch, clone, constraintWithStructuredRules, included, origin, parallelMismatch, same } from "./compile-context.js";
+import { branch, clone, constraintWithStructuredRules, included, origin, parallelMismatch, recordReferencesProperty, same } from "./compile-context.js";
 import { mergeLayeredProperty } from "./compile-merge.js";
 import { constraintWithPeerRules, peerConstraintForCompile, peerMismatch, peerSetMismatch } from "./peer-constraints.js";
 const peerRule = (constraint, kind) => (constraint.rules ?? []).find((rule) => String(rule.kind ?? "") === kind);
 const peerRules = (constraint, kind) => (constraint.rules ?? []).filter((rule) => String(rule.kind ?? "") === kind);
 const ruleKindForFacet = (facet) => facet === "patterns" ? "pattern" : facet === "minimum" || facet === "maximum" ? "range" : facet === "minItems" || facet === "maxItems" ? "cardinality" : facet === "expectedValue" ? "value" : undefined;
 const protectedFacet = (constraint, facet) => Boolean((facet === "type" || facet === "presence") && constraint.protectedFacets?.includes(facet));
-const recordReferencesProperty = (value, propertyId) => Boolean(value && typeof value === "object" && Object.entries(value).some(([key, nested]) => ((key === "propertyId" || key === "dependencyPropertyId") && nested === propertyId) || recordReferencesProperty(nested, propertyId)));
 const invariantFacet = (constraint, facet, rule) => constraint.enforcement === "invariant" || Boolean(rule ? rule.enforcement === "invariant" : ruleKindForFacet(facet) && peerRule(constraint, ruleKindForFacet(facet))?.enforcement === "invariant");
 const authorityConstraint = (entry) => entry.authorityConstraint ?? entry.constraint;
 const valueMatchesType = (value, type) => type === "array" ? Array.isArray(value) : type === "null" ? value === null : type === "integer" ? Number.isInteger(value) : type === "object" ? Boolean(value) && typeof value === "object" && !Array.isArray(value) : typeof value === type;
@@ -155,16 +154,21 @@ export function compileLayeredSchema(contributors, context) {
                 conflict(page.constraint.path, "parallel Page and Event branches conflict; add an explicit contextual resolution", [page.contributor.name, event.contributor.name]);
             }
         }
-    const contributorById = new Map(activeContributors.map((contributor) => [contributor.id, contributor]));
+    const contributorById = new Map(activeContributors.map((contributor) => [contributor.id, contributor])), contributorOrder = new Map(activeContributors.map((contributor, index) => [contributor.id, index]));
     for (const contributor of activeContributors) {
         for (const propertyId of contributor.excludedPropertyIds ?? []) {
             const root = Object.values(properties).find(({ definitionId }) => definitionId === propertyId);
             if (!root)
                 continue;
-            const paths = Object.keys(properties).filter((path) => path === root.path || path.startsWith(`${root.path}/`)), protectedProperty = paths.map((path) => properties[path]).find((property) => property.enforcement === "invariant" || (property.rules ?? []).some((rule) => rule.enforcement === "invariant")), dependency = Object.values(properties).flatMap((property) => (property.rules ?? []).map((rule) => ({ property, rule }))).find(({ rule }) => recordReferencesProperty(rule, propertyId));
-            if (protectedProperty || dependency) {
-                const blocker = protectedProperty ?? dependency.property;
-                conflict(blocker.path, `${contributor.name} cannot exclude ${root.path}; a surviving required rule depends on its stable identity`, [...blocker.origins.map(({ contributorName }) => contributorName), contributor.name], { facet: "Conditional rule dependency", section: "Rules", sourceValue: `requires ${propertyId}`, localValue: `exclude ${propertyId}` });
+            const paths = Object.keys(properties).filter((path) => path === root.path || path.startsWith(`${root.path}/`)), removedPaths = new Set(paths), protectedProperty = paths.map((path) => properties[path]).find((property) => property.enforcement === "invariant" || (property.rules ?? []).some((rule) => rule.enforcement === "invariant")), currentDependency = Object.values(properties).filter(({ path }) => !removedPaths.has(path)).flatMap((property) => (property.rules ?? []).map((rule) => ({ path: property.path, contributorId: property.origins.at(-1)?.contributorId, contributorName: property.origins.at(-1)?.contributorName ?? "A surviving rule", rule }))).find(({ rule }) => recordReferencesProperty(rule, propertyId)), currentOrder = contributorOrder.get(contributor.id), futureConstraints = active.filter((entry) => (contributorOrder.get(entry.contributor.id) ?? -1) >= currentOrder && !blockedParallel.has(entry.constraint.path) && !blockedPeers.has(entry.constraint.path)), futureDependency = futureConstraints.flatMap(({ contributor: futureContributor, constraint }) => (constraint.rules ?? []).map((rule) => ({ path: constraint.path, contributorId: futureContributor.id, contributorName: futureContributor.name, rule }))).find(({ rule }) => recordReferencesProperty(rule, propertyId)), dependency = currentDependency ?? futureDependency, dependencySatisfied = Object.values(properties).some((property) => !removedPaths.has(property.path) && property.definitionId === propertyId) || futureConstraints.some(({ constraint }) => constraint.definitionId === propertyId);
+            if (protectedProperty) {
+                const source = protectedProperty.origins.at(-1), sourceName = source?.contributorName ?? "Protected source";
+                conflict(protectedProperty.path, `${contributor.name} cannot exclude ${root.path}; ${sourceName} protects its stable identity`, [sourceName, contributor.name], { facet: "Conditional rule dependency", section: "Rules", sourceContributor: sourceName, ...(source?.contributorId ? { sourceContributorId: source.contributorId } : {}), sourceValue: `protects ${propertyId}`, localContributor: contributor.name, localContributorId: contributor.id, localValue: `exclude ${propertyId}` });
+                continue;
+            }
+            if (dependency && !dependencySatisfied) {
+                const ruleId = dependency.rule.id === undefined ? undefined : String(dependency.rule.id);
+                conflict(dependency.path, `${contributor.name} cannot exclude ${root.path}; ${dependency.contributorName}${ruleId ? ` rule ${ruleId}` : ""} requires its stable identity`, [dependency.contributorName, contributor.name], { facet: "Conditional rule dependency", section: "Rules", sourceContributor: dependency.contributorName, ...(dependency.contributorId ? { sourceContributorId: dependency.contributorId } : {}), sourceValue: `requires ${propertyId}`, ...(ruleId ? { sourceRuleId: ruleId } : {}), localContributor: contributor.name, localContributorId: contributor.id, localValue: `exclude ${propertyId}` });
                 continue;
             }
             for (const path of paths) {

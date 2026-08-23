@@ -4,6 +4,7 @@ import {orderedPageGroupIds} from "./data-layer-page-group-membership.js";
 import {transactProject,type Condition,type ProjectEntity,type ProjectState} from "./data-layer-specification-project.js";
 import {selectiveProfileContribution,type ProfileInheritanceRecipe} from "./data-layer-selective-profile-inheritance.js";
 import {applyLayerConstraintStructures,structureDeletesPath,type FlowPageInstanceStructureCommand} from "./flow-graph/page-instance-structure.js";
+import {recordReferencesProperty} from "./layered-schema/compile-context.js";
 
 export interface LayeredContributorPath {profileId?:string;profileIds?:string[];eventId?:string;pageGroupId?:string;pageGroupIds?:string[];pageId?:string;flowId?:string;pageFrameId?:string;occurrenceId?:string;}
 export type AssignmentContributorKind="Shared Profile"|"Property Set"|"Page"|"Event"|"Flow Page instance";
@@ -83,14 +84,13 @@ export function saveFlowPageInstanceLocalFacets(state:ProjectState,flowId:string
 }
 
 export type ContextualPropertyExclusionAssessment={allowed:true;propertyId:string;descendantPaths:string[];affectedPaths:string[]}|{allowed:false;propertyId?:string;blocker:string;repairRoute:string};
-const recordReferencesProperty=(value:unknown,propertyId:string):boolean=>Boolean(value&&typeof value==="object"&&Object.entries(value as Record<string,unknown>).some(([key,nested])=>(key==="propertyId"||key==="dependencyPropertyId")&&nested===propertyId||recordReferencesProperty(nested,propertyId)));
 export function contextualPropertyExclusionAssessment(compiled:CompiledLayeredSchema,path:string):ContextualPropertyExclusionAssessment{
   const property=compiled.properties[path],propertyId=property?.definitionId;if(!property||!propertyId)return{allowed:false,blocker:`${path} has no stable inherited property identity.`,repairRoute:"Repair the source definition before excluding it."};
-  const source=property.origins.at(-1)?.contributorName??"The source contributor",invariant=property.enforcement==="invariant"||(property.rules??[]).some((rule)=>rule.enforcement==="invariant");
+  const descendantPaths=Object.keys(compiled.properties).filter((candidate)=>candidate.startsWith(`${path}/`)).sort(),excludedPaths=new Set([path,...descendantPaths]),source=property.origins.at(-1)?.contributorName??"The source contributor",invariant=property.enforcement==="invariant"||(property.rules??[]).some((rule)=>rule.enforcement==="invariant");
   if(invariant)return{allowed:false,propertyId,blocker:`${source} protects ${path} as an invariant.`,repairRoute:`Open ${source} and repair the invariant at its source.`};
-  const dependency=Object.values(compiled.properties).flatMap((candidate)=>(candidate.rules??[]).map((rule)=>({candidate,rule}))).find(({rule})=>recordReferencesProperty(rule,propertyId));
+  const dependency=Object.values(compiled.properties).filter((candidate)=>!excludedPaths.has(candidate.path)).flatMap((candidate)=>(candidate.rules??[]).map((rule)=>({candidate,rule}))).find(({rule})=>recordReferencesProperty(rule,propertyId));
   if(dependency){const dependencySource=dependency.candidate.origins.at(-1)?.contributorName??"A surviving rule";return{allowed:false,propertyId,blocker:`${dependencySource} depends on ${path}.`,repairRoute:`Open ${dependencySource} and repair the required dependency.`};}
-  const descendantPaths=Object.keys(compiled.properties).filter((candidate)=>candidate.startsWith(`${path}/`)).sort();return{allowed:true,propertyId,descendantPaths,affectedPaths:[path,...descendantPaths]};
+  return{allowed:true,propertyId,descendantPaths,affectedPaths:[path,...descendantPaths]};
 }
 export function excludeFlowPageInstanceInheritedProperty(state:ProjectState,flowId:string,pageFrameId:string,propertyId:string):ProjectState{
   const graph=(state.project.documentationFlowGraphs as Record<string,{pageFrames?:ProjectEntity[]}>)[flowId],frame=graph?.pageFrames?.find(({id})=>id===pageFrameId);if(!frame)throw new Error(`Flow Page instance ${pageFrameId} is unavailable.`);
