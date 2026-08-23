@@ -11614,6 +11614,27 @@ function cardinalityAcceptanceReceiptRegistrationRegression(context) {
     preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
     repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
 }
+async function flowExportRuntimeEvidenceFixtureRegression(context) {
+  const source = await readFile(new URL(
+    "./acceptance/flow_table_documentation_export_steps_test.clj", import.meta.url), "utf8");
+  const expectedPreRepairFailure = {requiredProjectionEvidence:false};
+  const expectedRepairResult = {requiredProjectionEvidence:true};
+  const repairResult = {
+    requiredProjectionEvidence:/:flowTemplateEffectivePageProjection true/u.test(source),
+  };
+  assert.deepEqual(repairResult, expectedRepairResult,
+    "the Flow export Clojure fixture covers every required runtime evidence key");
+  const fixture = {id:"flow-export-runtime-evidence-fixture-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{fixture:"test/acceptance/flow_table_documentation_export_steps_test.clj",
+      requiredKey:"flowTemplateEffectivePageProjection"},
+    expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest = verificationDigest(fixture);
+  return {version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
+}
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
@@ -11665,6 +11686,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           ? registryOwnershipCompatibilityRegression(regressionContext)
         : regressionContext.causalCategory === "other:cardinality acceptance receipt registration"
           ? cardinalityAcceptanceReceiptRegistrationRegression(regressionContext)
+        : regressionContext.causalCategory === "other:acceptance fixture completeness"
+          ? await flowExportRuntimeEvidenceFixtureRegression(regressionContext)
           : artifactLockTimeoutRepairRegression(regressionContext),
   }));
 }
