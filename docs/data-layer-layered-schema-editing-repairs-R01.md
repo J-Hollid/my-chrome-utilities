@@ -101,10 +101,12 @@ Stopped candidate `51aa431eb1` is a patch reference only. A reconstruction must
 replay read-only intent classification for its actual integration paths, including
 `src/layered-schema/compile*.ts`, `src/data-layer-layered-schema*.ts`,
 `src/composed-schema/`, and the canonical focused Definition and mount surfaces.
-The candidate's acceptance paths also reached
+The candidate improperly reached the independent acceptance paths
 `acceptance/src/acceptance/steps/layered_schema.clj` and
-`test/support/layered-schema-{targets,workflows}.mjs`; those paths do not enlarge
-the product behavior or excuse a narrower runtime proof.
+`test/support/layered-schema-{targets,workflows}.mjs`. The product reconstruction
+must consume their repaired behavior from its QA base rather than change those
+paths again; they do not enlarge the product behavior or excuse a narrower
+runtime proof.
 
 Before fresh review evidence, the reconstruction must prove all of these named
 gates:
@@ -117,11 +119,13 @@ gates:
 - runtime 033 crosses the durable project-command boundary and proves one atomic
   Undo for Allowed values and Example;
 - affected property coverage exercises exclusion/dependency conservation and
-  selected/custom Example reconciliation; and
-- the inherited Page-group Documentation matrix asserts public no-leading-slash
-  names exactly, while canonical identities remain slash-qualified. Satisfying
-  this last gate with fresh bound evidence subsumes, rather than replays, repair
-  patch `912437c5ec`.
+  selected/custom Example reconciliation.
+
+Before this product reconstruction resumes, independent task
+`verification-repair-layered-page-group-display-paths` must reach QA with the
+exact public no-leading-slash matrix assertions from patch reference
+`912437c5ec`, fresh bound evidence, and every canonical identity still
+slash-qualified. The product task does not own or replay that repair.
 
 The coder must run the governed read-only intent classification from the exact
 current QA head before product coding. A `coarse-boundary` result routes the
