@@ -28,6 +28,7 @@ import { typedLiteralFocusedEditorExpression } from "./typed-literal-focused-edi
 import { runProfileInheritanceControlsRuntimeProbe } from "./profile-inheritance-controls-runtime-probe.mjs";
 import { runJournalFreeInstalledRuntimeProbe } from "./journal-free-installed-runtime-probe.mjs";
 import { focusableOverlayControlExpression } from "./layered-schema-overlay-focusability.mjs";
+import {layeredSchemaEditingRepairsExpression} from "./layered-schema-editing-repairs-probe.mjs";
 
 const editorInitialLayeredInstalledExpression=
   reliableLayeredEntityCreationProgram(initialLayeredInstalledExpression).replace(
@@ -120,7 +121,7 @@ const runEditorProducer=async(workflow,keys,{targetId,evaluate,socket},{canonica
     flatRuleMainProjectionLifecycleExpression,flatRulePanelProjectionDiagnosticExpression,flatRulePopupGeometryExpression,
     flatRuleResponsiveFinishExpression,flatRuleResponsiveSetupExpression,flatRuleResponsiveSnapshotExpression,
     typedLiteralFocusedEditorExpression,runProfileInheritanceControlsRuntimeProbe,runJournalFreeInstalledRuntimeProbe,
-  });if(targetId==="LAYERED_SCHEMA_EDITOR_POLICY_TARGET"){const expression=globalThis.__swarmforgeLayeredSchemaEditingRepairsExpression;if(typeof expression!=="string")throw new Error("Layered schema editing-repairs probe is unavailable");Object.assign(result.evidence,await originalEvaluate(liveSocket,expression));}let hierarchyEvidence;if(targetId==="LAYERED_SCHEMA_EDITOR_TARGET"){const rowCompositionViewport=Number(process.env.SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH);if(Number.isFinite(rowCompositionViewport))await liveSocket.call("Emulation.setDeviceMetricsOverride",{width:rowCompositionViewport,height:900,deviceScaleFactor:1,mobile:rowCompositionViewport<=360});hierarchyEvidence=await originalEvaluate(liveSocket,correctedHierarchyReorderExpression);}const owned={};
+  });if(targetId==="LAYERED_SCHEMA_EDITOR_POLICY_TARGET")Object.assign(result.evidence,await originalEvaluate(liveSocket,layeredSchemaEditingRepairsExpression));let hierarchyEvidence;if(targetId==="LAYERED_SCHEMA_EDITOR_TARGET"){const rowCompositionViewport=Number(process.env.SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH);if(Number.isFinite(rowCompositionViewport))await liveSocket.call("Emulation.setDeviceMetricsOverride",{width:rowCompositionViewport,height:900,deviceScaleFactor:1,mobile:rowCompositionViewport<=360});hierarchyEvidence=await originalEvaluate(liveSocket,correctedHierarchyReorderExpression);}const owned={};
   for(const key of keys)owned[key]=result.evidence[key];
   if(canonical){const facet=result.canonicalFacetEvidence,persistence={canonicalPresence:facet.presenceSaved,canonicalValues:facet.valuesSaved,canonicalConditions:facet.conditionsSaved,canonicalRules:facet.rulesSaved,canonicalExample:facet.exampleSaved,canonicalPersisted:facet.persisted};for(const key of canonicalEditorKeys)owned[key]=persistence[key];}
   if(hierarchyEvidence)owned.hierarchyEvidence=hierarchyEvidence;
