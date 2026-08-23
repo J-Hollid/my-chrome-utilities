@@ -2,7 +2,7 @@
 
 Status: schema projection, no-op, and compact-handle presentation corrections
 QA-integrated through `4d5c420f`; reorderable item row-composition correction
-proposed for approval on 2026-08-23
+approved on 2026-08-23
 
 Prepared: 2026-08-19
 
@@ -319,7 +319,7 @@ focused failures, forecast variance, remaining work, confidence, and completion
 forecast. Continue by default while these approved boundaries remain unchanged
 and a credible bounded path exists.
 
-## Proposed reorderable item row-composition correction
+## Approved reorderable item row-composition correction
 
 Stable task name: `reorderable-item-row-composition-correction`.
 
@@ -448,8 +448,8 @@ The correction implementation-and-review effort ceiling is eight active hours.
 At four active hours, report the shared row contract, the four ordered-choice
 results, the remaining consumer audit, per-consumer installed geometry, exact
 planned packs, focused failures, forecast variance, remaining work, confidence,
-and completion forecast. Continue by default while these proposed boundaries,
-once approved, remain unchanged and a credible bounded path exists.
+and completion forecast. Continue by default while these approved boundaries
+remain unchanged and a credible bounded path exists.
 
 ## Exclusions
 
