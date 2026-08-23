@@ -11570,6 +11570,27 @@ function reorderVerificationOwnerEvidenceRegression(context) {
     preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
     repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
 }
+function reorderResponsiveStylesheetConservationRegression(context) {
+  const expectedPreRepairFailure = {approvedResponsiveRuleCount:0,
+    conservationAccepted:false};
+  const expectedRepairResult = {approvedResponsiveRuleCount:2,
+    conservationAccepted:true};
+  const repairResult = {
+    approvedResponsiveRuleCount:approvedReorderableResponsiveGlobalRules.length,
+    conservationAccepted:flowStylesheetConservation.conservedExactlyOnce,
+  };
+  assert.deepEqual(repairResult, expectedRepairResult,
+    "responsive reorderable-row rules are explicit conserved global additions");
+  const fixture = {id:"reorder-responsive-stylesheet-conservation-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{stylesheet:"specification-builder.css",viewportMaxWidth:480},
+    expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest = verificationDigest(fixture);
+  return {version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
+}
 function registryOwnershipCompatibilityRegression(context) {
   const expectedPreRepairFailure = {syntheticProductionSourceDeclared:false,
     archivedCheckpointPlanningAccepted:false,historicalSuccessionPlanningAccepted:false};
@@ -11686,6 +11707,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           ? reorderBrowserEvidencePartitionRegression(regressionContext)
         : regressionContext.causalCategory === "other:reorder verification owner evidence"
           ? reorderVerificationOwnerEvidenceRegression(regressionContext)
+        : regressionContext.causalCategory === "other:reorder responsive stylesheet conservation"
+          ? reorderResponsiveStylesheetConservationRegression(regressionContext)
         : regressionContext.causalCategory === "other:repair-focused prerequisite closure"
           ? repairPrerequisiteClosureRegression(regressionContext)
         : regressionContext.causalCategory === "other:confirmed-flaky acceptance evidence routing"
