@@ -1179,7 +1179,7 @@ Feature: Modular verification packs
     When their behavior targets are planned
     Then selected logical targets are <selected_targets>
     And they execute in <browser_sessions> Layered editor browser session
-    And all 20 Layered Schema unit files, 13 property files, and the exact shared-profile feature and handler evidence remain selected
+    And all 21 Layered Schema unit files, 13 property files, and the exact shared-profile feature and handler evidence remain selected
 
     Examples:
       | changed_paths                                                                                                                       | selected_targets                                                                          | browser_sessions |
@@ -1196,7 +1196,7 @@ Feature: Modular verification packs
     Given the Layered editor partition contains 22 general, 19 rule, 23 canonical, and 16 policy assertion leaves
     When exact layered_schema verification and terminal-full planning are compared before and after VTD-005
     Then all 80 editor assertion leaves execute exactly once
-    And the 53-task exact owner plan retains one build, 20 unit tasks, 13 property tasks, four browser sessions containing all eight logical targets, seven parses, seven generators, and one acceptance session
+    And the 54-task exact owner plan retains one build, 21 unit tasks, 13 property tasks, four browser sessions containing all eight logical targets, seven parses, seven generators, and one acceptance session
     And terminal-full planning retains the same eight Layered Schema target identities and four compatible browser sessions
     And product behavior, saved canonical bytes, feature and handler evidence, task order, worker limits, and terminal shards are unchanged
 
