@@ -486,8 +486,9 @@ checkpoint is authorized.
 
 ## Flow candidate-preview effective-example projection correction
 
-Status: user-approved for coder handoff on 2026-08-23 from the reported blank
-`page.rows` Example output
+Status: QA-integrated at `ff11b5a7bf` on 2026-08-23 after exact
+`flow_export`/33-task review evidence from the reported blank `page.rows`
+Example output
 
 Stable task name: `flow-template-effective-example-projection`.
 
