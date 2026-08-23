@@ -281,8 +281,8 @@ const templateComposerFocus = element(inlineComposer, ({ textContent }) => textC
 assert.deepEqual(templateComposerFocus, { preventScroll: true });
 const composerDisplayedInline = descendants(pathnameRow("visit-1")).includes(inlineComposer);
 const reproductionRowText = (item) => item.dataset.reproductionStepKind === "manual"
-  ? item.children.find(({ className }) => className === "defect-reproduction-step-text").textContent
-  : item.children[0].value;
+  ? descendants(item).find(({ className }) => className === "defect-reproduction-step-text").textContent
+  : descendants(item).find(({ value }) => Boolean(value))?.value;
 assert.equal(reproduction.children.length, 2);
 element(root, ({ textContent }) => textContent === "Click component").dispatch("click");
 let componentName = element(root, ({ dataset }) => dataset.reproductionField === "componentName");
@@ -307,9 +307,10 @@ assert.ok(manualActions.includes("Adjust") && manualActions.includes("Remove"));
 assert.ok(!manualActions.includes("Move earlier") && !manualActions.includes("Move later"));
 const manualActionRow = element(manualClick, ({ className }) => className === "defect-reproduction-step-actions");
 assert.deepEqual(manualActionRow.children.map(({ textContent }) => textContent), ["+", "Adjust", "Remove"]);
-assert.equal(manualClick.children[0].className, "defect-reproduction-step-text");
-assert.equal(manualClick.children[1], manualActionRow);
-assert.equal(manualClick.children[2].className, "defect-reproduction-step-guidance");
+const manualComposition=manualClick.children[0],manualCompositionChildren=descendants(manualComposition),manualText=element(manualComposition,({className})=>className==="defect-reproduction-step-text"),manualGuidance=element(manualComposition,({className})=>className==="defect-reproduction-step-guidance");
+assert.equal(manualComposition.dataset.reorderItemRow,"true");
+assert.ok(manualCompositionChildren.indexOf(manualText)<manualCompositionChildren.indexOf(manualActionRow));
+assert.ok(manualCompositionChildren.indexOf(manualActionRow)<manualCompositionChildren.indexOf(manualGuidance));
 
 element(manualClick, ({ textContent }) => textContent === "Adjust").dispatch("click");
 componentName = element(root, ({ dataset }) => dataset.reproductionField === "componentName");

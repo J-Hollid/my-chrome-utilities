@@ -35,7 +35,7 @@ function appendStepPresentation(
   const reorder=controls.find((control)=>control.classList?.contains?.("reorderable-editor-control")||
     typeof control.className==="string"&&control.className.split(/\s+/u).includes("reorderable-editor-control")),actions = document.createElement("div");
   actions.className = "defect-reproduction-step-actions"; actions.append(...controls.filter((control)=>control!==reorder&&!control.hidden));
-  actions.style.flexBasis="100%";if (guidance){guidance.className = "defect-reproduction-step-guidance";guidance.style.flexBasis="100%";}
+  if(actions.style)actions.style.flexBasis="100%";if (guidance){guidance.className = "defect-reproduction-step-guidance";if(guidance.style)guidance.style.flexBasis="100%";}
   const secondary=[actions,guidance].filter((element):element is HTMLElement=>Boolean(element));
   item.append(renderReorderableItemRow({...(reorder?{control:reorder}:{}),primaryContent:text,secondaryContent:secondary}));
 }

@@ -95,7 +95,8 @@ export interface ReorderableItemRowOptions {
 }
 
 export function renderReorderableItemRow(options:ReorderableItemRowOptions):HTMLElement {
-  const row=options.primaryContent.ownerDocument.createElement("div"),actionable=Boolean(options.control&&!options.control.hidden);
+  const dom=options.primaryContent.ownerDocument??options.control?.ownerDocument??document,
+    row=dom.createElement("div"),actionable=Boolean(options.control&&!options.control.hidden);
   row.dataset.reorderItemRow="true";
   row.setAttribute("data-reorder-item-row","true");
   styles(row,{boxSizing:"border-box",display:"grid",
@@ -112,7 +113,7 @@ export function renderReorderableItemRow(options:ReorderableItemRowOptions):HTML
     row.append(options.trailingContent);
   }
   if(options.secondaryContent?.length){
-    const secondary=row.ownerDocument.createElement("div");
+    const secondary=dom.createElement("div");
     styles(secondary,{gridColumn:actionable?"2 / -1":"1 / -1",gridRow:"2",display:"flex",flexWrap:"wrap",
       alignItems:"center",gap:"8px",minWidth:"0px",maxWidth:"100%",overflowWrap:"anywhere"});
     secondary.append(...options.secondaryContent);row.append(secondary);
