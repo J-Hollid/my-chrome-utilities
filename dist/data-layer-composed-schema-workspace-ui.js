@@ -1,4 +1,4 @@
-import { composedFacetDraft, composedFacetDraftWithoutRemovedItems, sparseComposedFacets } from "./data-layer-composed-schema-builders.js";
+import { composedFacetDraft, composedFacetDraftWithoutRemovedItems, reconcileComposedAllowedValues, sparseComposedFacets } from "./data-layer-composed-schema-builders.js";
 import { composedSchemaRowOwnershipInput } from "./data-layer-composed-schema-ownership.js";
 import { activateFocusedOwnershipSection, focusedOwnershipState } from "./data-layer-focused-schema-property-ui.js";
 import { renderComposedRows } from "./data-layer-composed-schema-workspace-rows.js";
@@ -30,7 +30,8 @@ export function composedTableQuickEditFacets(row, facet, value) {
         next.exampleValue = value ? typedCanonicalValue((next.type ?? row.effective.type), value) : undefined;
     }
     else {
-        next.allowedValues = schemaTableStageAllowedValues(next.allowedValues, value, (next.type ?? row.effective.type));
+        const values = schemaTableStageAllowedValues(next.allowedValues, value, (next.type ?? row.effective.type)), reconciled = reconcileComposedAllowedValues(next, values);
+        Object.assign(next, reconciled);
         delete next.expectedValue;
         delete next.allowedValueIds;
         delete next.allowedValueProvenance;
@@ -208,7 +209,7 @@ export function mountComposedSchemaWorkspace(options) {
         return;
     } const row = options.model.rows.find(({ path }) => path === command.path); if (!row)
         return; options.onSave(row, sparseComposedFacets(composedFacetDraft(row.local, row.effective), row.inherited ?? { path: row.path }), [command]); };
-    const rerender = () => renderComposedRows(rows, { dom: document, overlayHost: section, model: visibleModel(), completeRows: options.model.rows, filterActive: Boolean(query.trim()) || decisionsOnly, effectiveText: options.effectiveText, conceptSuggestions: options.conceptSuggestions, ...(options.onRepair ? { onRepair: (repair) => { saveView(); options.onRepair?.(repair); } } : {}), ...(options.onStructure ? { onStructure: stageStructure } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), activePath, overlayOpen, focusedOpen, reviewOpen, saveIssue, activeSection, draft, removed, confirmedAction, removedRuleIds, removedValueIds, restoredRuleIds, restoredValueIds, stagedLocalValueIds, overriddenRuleIds, overrideRule, pendingAction, pendingStructure, ownershipSession, activateOwnership: (action) => { ownershipSession = activateFocusedOwnershipSection(ownershipSession, activeSection, action); rerender(); }, beginAction, cancelAction, confirmAction, open, commitInline, resetInline, cancelInline: () => { }, inlineDiagnostic: (message) => { quickEditFeedback.textContent = message; }, quickEditRoot: () => options.host, quickEditScope: `composed:${options.schemaContributorId ?? options.model.heading}`, close, closeChild, beginReview, cancelReview, save, render: rerender, selectSection: (value) => { activeSection = value; focusedOpen = true; reviewOpen = false; saveIssue = undefined; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); rerender(); queueMicrotask(focusDecisionTarget); } });
+    const rerender = () => renderComposedRows(rows, { dom: document, overlayHost: section, model: visibleModel(), completeRows: options.model.rows, filterActive: Boolean(query.trim()) || decisionsOnly, effectiveText: options.effectiveText, conceptSuggestions: options.conceptSuggestions, ...(options.onRepair ? { onRepair: (repair) => { saveView(); options.onRepair?.(repair); } } : {}), ...(options.onStructure ? { onStructure: stageStructure } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), activePath, overlayOpen, focusedOpen, reviewOpen, saveIssue, activeSection, draft, removed, confirmedAction, removedRuleIds, removedValueIds, restoredRuleIds, restoredValueIds, stagedLocalValueIds, overriddenRuleIds, overrideRule, pendingAction, pendingStructure, ownershipSession, activateOwnership: (action) => { ownershipSession = activateFocusedOwnershipSection(ownershipSession, activeSection, action); rerender(); }, beginAction, beginExclusion, cancelAction, confirmAction, open, commitInline, resetInline, cancelInline: () => { }, inlineDiagnostic: (message) => { quickEditFeedback.textContent = message; }, quickEditRoot: () => options.host, quickEditScope: `composed:${options.schemaContributorId ?? options.model.heading}`, close, closeChild, beginReview, cancelReview, save, render: rerender, selectSection: (value) => { activeSection = value; focusedOpen = true; reviewOpen = false; saveIssue = undefined; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); rerender(); queueMicrotask(focusDecisionTarget); } });
     const overrideRule = (sourceId) => { if (!draft)
         return; const source = options.model.rows.find(({ path }) => path === activePath)?.effective.rules?.find((rule) => String(rule.id ?? "") === sourceId); if (!source || source.enforcement === "invariant")
         return; const id = `rule:${crypto.randomUUID()}`, replacement = { ...structuredClone(source), id, replacesRuleId: sourceId, provenance: { source: "created", state: "overridden", sourceId } }; draft = { ...draft, rules: [...draft.rules, replacement] }; overriddenRuleIds.add(id); rerender(); };
@@ -289,12 +290,19 @@ export function mountComposedSchemaWorkspace(options) {
     const beginReview = () => { reviewOpen = true; saveIssue = undefined; overlayState = schemaTableOverlayTransition(overlayState, { kind: "review" }); rerender(); };
     const cancelReview = () => { reviewOpen = false; overlayState = activePath ? { phase: "focused", path: activePath } : { phase: "closed" }; rerender(); };
     const beginAction = (row, focus) => { open(row, focus); focusedOpen = true; pendingAction = row.action === "reset" ? "reset" : "remove"; rerender(); };
+    const beginExclusion = (row, action, focus) => { open(row, focus); focusedOpen = true; pendingAction = action; rerender(); };
     const cancelAction = () => { pendingAction = undefined; removed = false; confirmedAction = undefined; rerender(); };
     const confirmAction = (_row) => { confirmedAction = pendingAction; pendingAction = undefined; removed = true; rerender(); };
     const save = (row) => { if (!draft)
         return; try {
         if (removed) {
-            options.onReset(row);
+            const propertyId = row.inherited?.definitionId;
+            if (confirmedAction === "exclude" && propertyId)
+                options.onExclude?.(row, propertyId);
+            else if (confirmedAction === "restore" && propertyId)
+                options.onRestoreExclusion?.(row, propertyId);
+            else
+                options.onReset(row);
             close();
             return;
         }
