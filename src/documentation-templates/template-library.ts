@@ -72,8 +72,8 @@ export function assignDocumentationTemplate(documentation:ProjectDocumentationDr
   let found=false;const sets=documentation.sets.map(set=>{if(set.id!==setId)return clone(set);found=true;return{...clone(set),templateAssignments:{...(set.templateAssignments??{}),[assignmentKey(format,kind)]:templateId}};});if(!found)throw new Error(`Unknown Documentation Set ${setId}.`);return{...clone(documentation),sets};
 }
 
-export function replaceDocumentationTemplate(documentation:ProjectDocumentationDraft,templateId:string,body:NonNullable<ProjectDocumentationTemplate["body"]>):ProjectDocumentationDraft{
-  let found=false;const templates=(documentation.templates??[]).map(template=>{if(template.id!==templateId)return clone(template);found=true;if(template.format!=="excel")throw new Error("Only an Excel template has a replaceable workbook body.");return{...clone(template),body:clone(body),digest:body.digest};});if(!found)throw new Error(`Unknown documentation template ${templateId}.`);return{...clone(documentation),templates};
+export function replaceDocumentationTemplate(documentation:ProjectDocumentationDraft,templateId:string,body:Blob,validation:ProjectDocumentationTemplate["validation"],bodyDigest:string):ProjectDocumentationDraft{
+  return repairDocumentationTemplateMetadata(documentation,templateId,body,validation,bodyDigest);
 }
 
 export function removeDocumentationTemplate(documentation:ProjectDocumentationDraft,templateId:string):ProjectDocumentationDraft{

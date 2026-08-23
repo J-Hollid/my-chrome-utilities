@@ -154,14 +154,8 @@ export function assignDocumentationTemplate(documentation, setId, format, kind, 
         throw new Error(`Unknown Documentation Set ${setId}.`);
     return { ...clone(documentation), sets };
 }
-export function replaceDocumentationTemplate(documentation, templateId, body) {
-    let found = false;
-    const templates = (documentation.templates ?? []).map(template => { if (template.id !== templateId)
-        return clone(template); found = true; if (template.format !== "excel")
-        throw new Error("Only an Excel template has a replaceable workbook body."); return { ...clone(template), body: clone(body), digest: body.digest }; });
-    if (!found)
-        throw new Error(`Unknown documentation template ${templateId}.`);
-    return { ...clone(documentation), templates };
+export function replaceDocumentationTemplate(documentation, templateId, body, validation, bodyDigest) {
+    return repairDocumentationTemplateMetadata(documentation, templateId, body, validation, bodyDigest);
 }
 export function removeDocumentationTemplate(documentation, templateId) {
     const template = documentation.templates?.find(({ id }) => id === templateId);
