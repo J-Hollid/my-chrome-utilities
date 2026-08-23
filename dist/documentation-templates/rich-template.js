@@ -32,7 +32,7 @@ export function richTemplateBlockScopes(kind, blocks) { const result = {}; const
 export function validateRichDocumentationTemplate(template) {
     const findings = [], ids = new Set(), root = new Set(templateBindingsFor(template.kind)), tableSources = new Set(["table", template.kind === "overview" ? "overview.fields" : template.kind === "flow" ? "flow.rows" : template.kind === "matrix" ? "matrix.rows" : "profile.rows"]), conceptSources = new Set(["table.concepts", "matrix.concepts", "profile.concepts", "page.concepts", "event.concepts"]), knownTypes = new Set(["heading", "paragraph", "divider", "theme-logo", "page-visual", "data-table", "concept-group", "repeat"]);
     const report = (blockId, message) => findings.push({ blockId: typeof blockId === "string" && blockId ? blockId : "(unknown block)", message });
-    const visit = (rawBlocks, bindings, availableCollections) => {
+    const visit = (rawBlocks, bindings, availableCollections, rootScope) => {
         if (!Array.isArray(rawBlocks)) {
             report("(template)", "Rich template blocks must be an ordered collection.");
             return;
@@ -78,8 +78,8 @@ export function validateRichDocumentationTemplate(template) {
             if (block.type === "data-table" && !tableSources.has(String(block.source)))
                 report(id, `Data table ${String(block.source ?? "")} is outside this template kind.`);
             if (block.type === "concept-group") {
-                const source = String(block.source ?? ""), canonical = availableCollections.get(source) ?? source;
-                if (!conceptSources.has(canonical))
+                const source = String(block.source ?? ""), canonical = availableCollections.get(source), rootTableConcepts = rootScope && source === "table.concepts";
+                if (!rootTableConcepts && (!canonical || !conceptSources.has(canonical)))
                     report(id, `Concept collection ${source} is outside this block scope.`);
             }
             if (block.type === "page-visual") {
@@ -94,14 +94,14 @@ export function validateRichDocumentationTemplate(template) {
                 if (typeof block.variable !== "string" || !/^[a-z][a-zA-Z0-9]*$/u.test(block.variable))
                     report(id, "Repeat item name must be a safe binding name.");
                 const variable = typeof block.variable === "string" && block.variable ? block.variable : "item", nestedBindings = canonical ? new Set([...bindings, ...scoped(childBindings[canonical] ?? [], canonical, variable)]) : new Set(bindings), nestedCollections = canonical ? childCollectionMap(canonical, variable) : new Map();
-                visit(block.children, nestedBindings, nestedCollections);
+                visit(block.children, nestedBindings, nestedCollections, false);
             }
         }
     };
     if (!Object.hasOwn(collections, template.kind))
         report("(template)", `Unsupported documentation kind ${String(template.kind)}.`);
     else
-        visit(template.blocks, root, rootCollectionMap(template.kind));
+        visit(template.blocks, root, rootCollectionMap(template.kind), true);
     return { valid: findings.length === 0, findings };
 }
 export function builtInRichTemplate(kind, id, name) {
@@ -115,8 +115,8 @@ const inlineText = (items, context) => items.map(item => inlineValue(item, conte
 const inlineHtml = (items, context) => items.map(item => { const value = htmlEscape(inlineValue(item, context)); return item.emphasis === "strong" ? `<strong>${value}</strong>` : item.emphasis === "emphasis" ? `<em>${value}</em>` : value; }).join("");
 const tableRows = (value) => { if (!value || typeof value !== "object")
     return { headings: [], rows: [] }; if (Array.isArray(value))
-    return { headings: [], rows: value.map(item => [scalar(item)]) }; const table = value, columns = Array.isArray(table.columns) ? table.columns.map(column => scalar(column.heading)) : [], records = Array.isArray(table.rows) ? table.rows : [], fields = records.length > 0 && records.every(record => record.label !== undefined), properties = records.some(record => record.property !== undefined), headings = fields ? ["Field", "Value"] : properties ? ["Property", ...columns] : columns, rows = records.map(record => { if (fields)
-    return [scalar(record.label), scalar(record.value)]; const cells = Array.isArray(record.cells) ? record.cells.map(cell => scalar(cell.value)) : []; return properties ? [scalar(record.property), ...cells] : cells; }); return { headings, rows }; };
+    return { headings: [], rows: value.map(item => [scalar(item)]) }; const table = value, columns = Array.isArray(table.columns) ? table.columns.map(column => scalar(column.heading)) : [], records = Array.isArray(table.rows) ? table.rows : [], fields = records.length > 0 && records.every(record => record.label !== undefined), properties = records.some(record => record.property !== undefined), firstCells = records.length > 0 && Array.isArray(records[0].cells) ? records[0].cells : [], propertyInCells = properties && firstCells[0]?.columnKey === "property", headings = fields ? ["Field", "Value"] : propertyInCells ? firstCells.map(cell => scalar(cell.heading)) : properties ? ["Property", ...columns] : columns, rows = records.map(record => { if (fields)
+    return [scalar(record.label), scalar(record.value)]; const cellRecords = Array.isArray(record.cells) ? record.cells : [], cells = cellRecords.map(cell => scalar(cell.value)), ownsProperty = record.property !== undefined && cellRecords[0]?.columnKey === "property"; return properties && !ownsProperty ? [scalar(record.property), ...cells] : cells; }); return { headings, rows }; };
 export function renderRichDocumentationTemplate(template, context) {
     const validation = validateRichDocumentationTemplate(template);
     if (!validation.valid)
