@@ -22,7 +22,16 @@
    "Shop has configured Overview, Flow, Data capture matrix, and Site Profile documentation sections" :model
    "the built extension is running with the production project repository, documentation compiler, template asset store, portable archive, clipboard, and download adapters" :runtime
    "the built extension is running with the production Documentation workspace, template parser, OOXML renderer, project asset store, and download adapter" :runtime
-   "the built extension is running with the production Documentation workspace, rich template editor, renderer, clipboard, and project repository" :runtime})
+   "the built extension is running with the production Documentation workspace, rich template editor, renderer, clipboard, and project repository" :runtime
+   "a valid Contract 2 workbook has the exact TemplateAreas columns Area, Type, Source, and Direction" :model
+   "a Contract 3 Image area is 100 pixels wide and 60 pixels high" :model
+   "PageStep A1:B1 repeats flow.pages Across with Properties separator-area: PageSeparator" :model
+   "a Repeat area's separator is its complete <trailing_edge>" :model
+   "a Contract 3 candidate contains <problem>" :model
+   "an actual valid Contract 2 workbook has the exact four-column TemplateAreas table" :runtime
+   "an actual Contract 3 workbook has a 100 by 60 pixel generated-image area and a 40 by 20 pixel saved image" :runtime
+   "an actual Contract 3 Flow workbook defines PageStep A1:B1 repeating flow.pages Across" :runtime
+   "an actual Contract 3 candidate contains <invalid_properties>" :runtime})
 (defonce model-verified? (atom false))
 (defonce browser-observation (atom nil))
 
@@ -112,6 +121,30 @@
    {:keys ["package_boundary" "diagnostic"] :rows #{["a source larger than 10 MiB" "The Excel template is too large"] ["more than 2000 ZIP entries" "The workbook has too many parts"] ["more than 50 MiB declared unpacked content" "The workbook expands beyond 50 MiB"] ["an unsafe or duplicate ZIP entry path" "The workbook package is unsafe"] ["encrypted or invalid OOXML content" "Choose a valid unencrypted .xlsx"] ["a broken or unsupported relationship" "Identify the unsupported workbook part"] ["a formula or external workbook connection" "Remove active or external workbook content"] ["an unrecognized or active binary part" "Use inert macro-free workbook content"]}}
    {:keys ["invalid_boundary" "finding_location"] :rows #{["an unknown binding" "its Template worksheet and cell"] ["a binding outside its required repeat" "its Template worksheet, cell, and required repeat"] ["a missing or crossing named repeat area" "every affected named area"] ["a formula and external workbook link" "the formula cell and relationship part"] ["an unsafe package entry and size overflow" "the package and violated limit"] ["encrypted or malformed OOXML" "the selected workbook"] ["an unrecognized or active binary part" "its binary package part"]}}
    {:keys ["worksheet" "printer_settings_part"] :rows #{["Template" "xl/printerSettings/printerSettings1.bin"] ["Template Guide" "xl/printerSettings/printerSettings2.bin"]}}
+   {:keys ["natural_size" "properties" "rendered_size" "offset"]
+    :rows #{["40 by 20" "fit: scale-down; position: center; padding: 8px" "40 by 20" "30, 20"]
+            ["20 by 20" "fit: contain; position: right bottom; padding: 4px 8px 12px 16px" "44 by 44" "48, 4"]
+            ["40 by 20" "fit: scale-down; position: 25% 75%; padding: 0px" "40 by 20" "15, 30"]}}
+   {:keys ["direction" "trailing_edge" "source_count" "separator_count"]
+    :rows #{["Across" "full-height rightmost column" "0" "0"]
+            ["Across" "full-height rightmost column" "1" "0"]
+            ["Across" "full-height rightmost column" "3" "2"]
+            ["Down" "full-width bottom row" "3" "2"]}}
+   {:keys ["area" "problem" "finding" "repair"]
+    :rows #{["ThemeLogo" "Image Properties fit: cover" "ThemeLogo has unsupported image fit cover" "Use scale-down or contain"]
+            ["ThemeLogo" "Image Properties padding: 8px; padding: 4px" "ThemeLogo declares padding more than once" "Keep one padding declaration"]
+            ["ThemeLogo" "Image Properties margin: 8px" "ThemeLogo has unsupported image property margin" "Use padding for space inside the image area"]
+            ["ThemeLogo" "Image Properties separator-area: LogoGap" "separator-area cannot be used for an Image" "Use fit, position, or padding"]
+            ["ThemeLogo" "padding that leaves no usable width or height" "ThemeLogo padding leaves no room for its image" "Reduce padding or enlarge ThemeLogo"]
+            ["PageStep" "Repeat Properties position: center" "position cannot be used for a Repeat" "Use separator-area or leave Properties blank"]
+            ["PageStep" "separator-area naming no workbook-defined range" "separator area PageSeparator cannot be found" "Define PageSeparator or correct the Properties value"]
+            ["PageStep" "Across separator that is not the complete trailing edge" "PageSeparator must be the complete right edge of PageStep" "Resize PageSeparator to the full-height rightmost columns"]
+            ["PageStep" "separator containing a binding, image, or nested repeat" "PageSeparator contains unsupported template behavior" "Keep only literal cells and presentation in the separator"]}}
+   {:keys ["area" "invalid_properties" "reason"]
+    :rows #{["ThemeLogo" "unsupported fit: cover" "names scale-down and contain as valid fits"]
+            ["ThemeLogo" "duplicate padding declarations" "identifies the duplicate property"]
+            ["PageStep" "separator-area referring to a missing named range" "identifies PageSeparator as missing"]
+            ["PageStep" "an Across separator outside the complete right edge" "identifies the required trailing geometry"]}}
    {:keys ["kind"] :rows #{["Overview"] ["Flow"] ["Data capture matrix"] ["Site Profile"]}}
    {:keys ["kind" "visible_content"] :rows #{["Overview" "Name, Purpose, and Website fields in configured order"] ["Flow" "configured Flow columns, property rows, metadata, and literal values"] ["Data capture matrix" "configured contexts, concepts, property rows, presence marks, and legend"] ["Site Profile" "configured concepts, property rows, and selected Profile columns"]}}
    {:keys ["invalid_metadata"] :rows #{["a missing valid validation state"] ["a body digest different from its record digest"] ["a nonpositive body byte length"] ["an unsupported Excel contract version"]}}
@@ -167,6 +200,10 @@
                 :documentationTemplateActiveContentFinding
                 :documentationTemplatePurview
                 :documentationTemplatePrinterSettings
+                :documentationTemplateContractCompatibility
+                :documentationTemplateAreaImageProperties
+                :documentationTemplateRepeatSeparator
+                :documentationTemplatePropertyFindings
                 :documentationTemplateRecoveryFailure
                 :documentationTemplateInvalidTransitions
                 :documentationTemplateRecovery

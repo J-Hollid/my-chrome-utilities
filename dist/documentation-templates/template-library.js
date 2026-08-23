@@ -6,7 +6,7 @@ const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 const assignmentKey = (format, kind) => `${format}:${kind}`;
 const display = (format, kind) => `${format === "excel" ? "Excel" : "Rich page"} ${kind === "profile" ? "Site Profile" : kind[0].toUpperCase() + kind.slice(1)}`;
 export function createDocumentationTemplate(input) {
-    const value = { ...clone(input), id: projectDocumentationSafeText(input.id), name: projectDocumentationSafeText(input.name), contractVersion: (input.format === "excel" ? 2 : 1), digest: input.body?.digest ?? templateDigest("rich", input.richBlocks ?? []) };
+    const value = { ...clone(input), id: projectDocumentationSafeText(input.id), name: projectDocumentationSafeText(input.name), contractVersion: (input.format === "excel" ? (input.validation.contractVersion ?? 2) : 1), digest: input.body?.digest ?? templateDigest("rich", input.richBlocks ?? []) };
     if (!value.id)
         throw new Error("Documentation template needs a stable identity.");
     if (!value.name)
@@ -27,7 +27,7 @@ function invalidTemplateRecord(template) {
     if (!["overview", "flow", "matrix", "profile"].includes(template.kind))
         return `Documentation template ${template.id} uses an unsupported contract.`;
     if (template.format === "excel") {
-        if (template.contractVersion !== 2)
+        if (template.contractVersion !== 2 && template.contractVersion !== 3)
             return `Excel documentation template ${template.id} uses unsupported contract ${template.contractVersion}.`;
         if (!template.body)
             return `Excel documentation template ${template.id} has no saved body reference.`;
@@ -69,7 +69,7 @@ export function repairDocumentationTemplateMetadata(documentation, templateId, b
     let found = false;
     const templates = (documentation.templates ?? []).map(template => { if (template.id !== templateId)
         return clone(template); found = true; if (template.format !== "excel" || !template.body)
-        throw new Error("Only a saved Excel workbook body can be revalidated."); return { ...clone(template), contractVersion: 2, digest: bodyDigest, body: { ...clone(template.body), digest: bodyDigest, byteLength: body.size }, validation: clone(validation) }; });
+        throw new Error("Only a saved Excel workbook body can be revalidated."); return { ...clone(template), contractVersion: validation.contractVersion ?? 2, digest: bodyDigest, body: { ...clone(template.body), digest: bodyDigest, byteLength: body.size }, validation: clone(validation) }; });
     if (!found)
         throw new Error(`Unknown documentation template ${templateId}.`);
     return { ...clone(documentation), templates };

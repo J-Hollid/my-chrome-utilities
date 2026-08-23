@@ -22,12 +22,18 @@ export interface ExcelTemplateCell {
   note?:unknown;
   sourceAddress?:string;
 }
+export interface ExcelImageAreaProperties {
+  fit:"scale-down"|"contain";
+  position:{horizontal:"left"|"center"|"right"|`${number}%`;vertical:"top"|"center"|"bottom"|`${number}%`};
+  padding:{top:number;right:number;bottom:number;left:number};
+}
+export interface ExcelRepeatAreaProperties {separatorArea?:{name:string;range:string}}
 export type ExcelTemplateArea=
-  |{name:string;type:"repeat";source:string;direction:"across"|"down";range:string}
-  |{name:string;type:"image";source:"theme.logo"|"page.visual.image";range:string};
+  |{name:string;type:"repeat";source:string;direction:"across"|"down";range:string;properties?:ExcelRepeatAreaProperties}
+  |{name:string;type:"image";source:"theme.logo"|"page.visual.image";range:string;properties?:ExcelImageAreaProperties};
 export interface ExcelTemplatePrototype {
   kind:DocumentationTemplateKind;
-  contractVersion:2;
+  contractVersion:2|3;
   worksheetName:"Template"|string;
   cells:readonly ExcelTemplateCell[];
   areas:readonly ExcelTemplateArea[];
@@ -37,6 +43,7 @@ export interface ExcelTemplateFinding {cell?:string;area?:string;message:string;
 
 interface Point {row:number;column:number}
 interface Rectangle {top:number;left:number;bottom:number;right:number}
+interface PixelSize {width:number;height:number}
 const cellPattern=/^\$?([A-Z]+)\$?([1-9]\d*)$/u;
 const coordinate=(raw:string):Point=>{
   const value=raw.includes("!")?raw.slice(raw.lastIndexOf("!")+1):raw;
@@ -56,6 +63,31 @@ const pointInside=(point:Point,bounds:Rectangle)=>point.row>=bounds.top&&point.r
 const areaSize=(value:Rectangle)=>(value.bottom-value.top+1)*(value.right-value.left+1);
 const placeholderPaths=(value:string)=>[...value.matchAll(/\{\{\s*([a-z][a-zA-Z0-9.]*)\s*\}\}/gu)].map(([,path])=>path!);
 
+const defaultImageProperties=():ExcelImageAreaProperties=>({fit:"scale-down",position:{horizontal:"left",vertical:"top"},padding:{top:0,right:0,bottom:0,left:0}});
+const percentage=(value:string):`${number}%`|undefined=>{const match=/^(?:100(?:\.0+)?|\d{1,2}(?:\.\d+)?)%$/u.exec(value);return match?value as `${number}%`:undefined;};
+const paddingValues=(value:string):number[]|undefined=>{const parts=value.trim().split(/\s+/u);if(parts.length<1||parts.length>4)return undefined;const values=parts.map(part=>/^(?:0|\d+(?:\.\d+)?)px$/u.test(part)?Number(part.slice(0,-2)):Number.NaN);return values.every(Number.isFinite)?values:undefined;};
+
+export function parseExcelAreaProperties(type:"image",raw:string):ExcelImageAreaProperties;
+export function parseExcelAreaProperties(type:"repeat",raw:string):{separatorAreaName?:string};
+export function parseExcelAreaProperties(type:"image"|"repeat",raw:string):ExcelImageAreaProperties|{separatorAreaName?:string}{
+  const declarations=new Map<string,string>(),trimmed=raw.trim();
+  if(trimmed){const parts=trimmed.split(";");if(parts.at(-1)?.trim()==="")parts.pop();for(const part of parts){const match=/^\s*([a-z-]+)\s*:\s*(.*?)\s*$/iu.exec(part);if(!match||!match[2])throw new Error("Properties contains a malformed declaration. Use property: value.");const name=match[1]!.toLowerCase(),value=match[2]!.trim();if(declarations.has(name))throw new Error(`${name} is declared more than once.`);declarations.set(name,value);}}
+  const supported=type==="image"?new Set(["fit","position","padding"]):new Set(["separator-area"]);
+  for(const name of declarations.keys())if(!supported.has(name)){if(type==="image"&&name==="separator-area")throw new Error("separator-area cannot be used for an Image. Use fit, position, or padding.");if(type==="repeat"&&["fit","position","padding"].includes(name))throw new Error(`${name} cannot be used for a Repeat. Use separator-area or leave Properties blank.`);throw new Error(`unsupported ${type} property ${name}.`);}
+  if(type==="repeat")return declarations.has("separator-area")?{separatorAreaName:declarations.get("separator-area")!}:{};
+  const result=defaultImageProperties(),fit=declarations.get("fit");if(fit){const normalized=fit.toLowerCase();if(normalized!=="scale-down"&&normalized!=="contain")throw new Error(`unsupported image fit ${fit}. Use scale-down or contain.`);result.fit=normalized;}
+  const position=declarations.get("position");if(position){const values=position.toLowerCase().trim().split(/\s+/u);if(values.length===1&&values[0]==="center")result.position={horizontal:"center",vertical:"center"};else if(values.length===2){const horizontal=["left","center","right"].includes(values[0]!)?values[0] as "left"|"center"|"right":percentage(values[0]!);const vertical=["top","center","bottom"].includes(values[1]!)?values[1] as "top"|"center"|"bottom":percentage(values[1]!);if(!horizontal||!vertical)throw new Error(`Unsupported image position ${position}.`);result.position={horizontal,vertical};}else throw new Error(`Unsupported image position ${position}.`);}
+  const padding=declarations.get("padding");if(padding){const values=paddingValues(padding);if(!values)throw new Error(`Unsupported image padding ${padding}. Use one to four nonnegative px values.`);const[top,right=top,bottom=top,left=right]=values;result.padding={top:top!,right:right!,bottom:bottom!,left:left!};}
+  return result;
+}
+
+const positionFraction=(value:string,leading:string,trailing:string)=>value===leading?0:value==="center"?0.5:value===trailing?1:Number(value.slice(0,-1))/100;
+export function imageLayoutInArea(area:PixelSize,natural:PixelSize,properties:ExcelImageAreaProperties=defaultImageProperties()):{width:number;height:number;left:number;top:number}{
+  const usableWidth=area.width-properties.padding.left-properties.padding.right,usableHeight=area.height-properties.padding.top-properties.padding.bottom;if(!(usableWidth>0&&usableHeight>0))throw new Error("Padding leaves no room for the image.");
+  const scale=Math.min(usableWidth/natural.width,usableHeight/natural.height,properties.fit==="scale-down"?1:Number.POSITIVE_INFINITY),width=natural.width*scale,height=natural.height*scale;
+  return{width,height,left:properties.padding.left+(usableWidth-width)*positionFraction(properties.position.horizontal,"left","right"),top:properties.padding.top+(usableHeight-height)*positionFraction(properties.position.vertical,"top","bottom")};
+}
+
 interface RepeatArea {area:Extract<ExcelTemplateArea,{type:"repeat"}>;rectangle:Rectangle;parent?:RepeatArea}
 function repeatAreas(prototype:ExcelTemplatePrototype,findings:ExcelTemplateFinding[]):RepeatArea[]{
   const result:RepeatArea[]=[];
@@ -73,11 +105,12 @@ function repeatAreas(prototype:ExcelTemplatePrototype,findings:ExcelTemplateFind
 
 export function validateExcelTemplatePrototype(prototype:ExcelTemplatePrototype):{valid:boolean;findings:ExcelTemplateFinding[]}{
   const findings:ExcelTemplateFinding[]=[];
-  if(prototype.contractVersion!==2)findings.push({message:"Use guided Excel template contract 2.",repair:"Download guided starter."});
+  if(prototype.contractVersion!==2&&prototype.contractVersion!==3)findings.push({message:"Use guided Excel template contract 2 or 3.",repair:"Download guided starter."});
   const repeats=repeatAreas(prototype,findings);
   for(const item of repeats){
     const available=item.parent?nestedCollections[item.parent.area.source]??[]:rootCollections[prototype.kind];
     if(!available.includes(item.area.source))findings.push({area:item.area.name,message:`${item.area.name} cannot repeat that data here.`,repair:`Choose a collection shown as available in the ${prototype.kind==="flow"?"Flow":prototype.kind} guide.`});
+    const separator=item.area.properties?.separatorArea;if(separator){let separatorBounds:Rectangle;try{separatorBounds=rectangle(separator.range);}catch{findings.push({area:item.area.name,message:`Separator area ${separator.name} cannot be found.`,repair:`Define ${separator.name} or correct the Properties value.`});continue;}const bounds=item.rectangle,across=item.area.direction==="across",onEdge=contains(bounds,separatorBounds)&&(across?separatorBounds.top===bounds.top&&separatorBounds.bottom===bounds.bottom&&separatorBounds.right===bounds.right&&separatorBounds.left>bounds.left:separatorBounds.left===bounds.left&&separatorBounds.right===bounds.right&&separatorBounds.bottom===bounds.bottom&&separatorBounds.top>bounds.top);if(!onEdge)findings.push({area:item.area.name,message:`${separator.name} must be the complete ${across?"right":"bottom"} edge of ${item.area.name}.`,repair:`Resize ${separator.name} to the full-${across?"height rightmost columns":"width bottom rows"}.`});for(const cell of prototype.cells)if(pointInside(coordinate(cell.address),separatorBounds)&&placeholderPaths(String(cell.value)).length)findings.push({area:item.area.name,message:`${separator.name} contains unsupported template behavior.`,repair:"Keep only literal cells and presentation in the separator."});for(const other of prototype.areas)if(other.name!==item.area.name&&overlaps(rectangle(other.range),separatorBounds))findings.push({area:item.area.name,message:`${separator.name} contains unsupported template behavior.`,repair:"Keep bindings, images, and nested repeats in the item area."});for(const merge of prototype.merges){const merged=rectangle(merge);if(overlaps(merged,separatorBounds)&&!contains(separatorBounds,merged))findings.push({area:item.area.name,message:`Merged range ${merge} crosses the item/separator boundary.`,repair:"Keep separator merges wholly inside its named area."});}}
   }
   for(const area of prototype.areas.filter((item):item is Extract<ExcelTemplateArea,{type:"image"}>=>item.type==="image")){
     let bounds:Rectangle;try{bounds=rectangle(area.range);}catch{findings.push({area:area.name,message:`Image area ${area.name} cannot be found.`,repair:`Select the intended Template cells and define the named area ${area.name}.`});continue;}
@@ -114,11 +147,12 @@ function renderContainer(prototype:ExcelTemplatePrototype,bounds:Rectangle,child
   const originalHeight=bounds.bottom-bounds.top+1,originalWidth=bounds.right-bounds.left+1,height=originalHeight+childOutputs.filter(({region})=>region.item.area.direction==="down").reduce((sum,{region,rendered})=>sum+rendered.height-(region.item.rectangle.bottom-region.item.rectangle.top+1),0),width=originalWidth+childOutputs.filter(({region})=>region.item.area.direction==="across").reduce((sum,{region,rendered})=>sum+rendered.width-(region.item.rectangle.right-region.item.rectangle.left+1),0);
   return{cells,height,width};
 }
+const repeatItemRectangle=(area:Extract<ExcelTemplateArea,{type:"repeat"}>,bounds:Rectangle):Rectangle=>{const separator=area.properties?.separatorArea;if(!separator)return bounds;const separated=rectangle(separator.range);return area.direction==="across"?{...bounds,right:separated.left-1}:{...bounds,bottom:separated.top-1};};
 function renderRepeat(prototype:ExcelTemplatePrototype,region:RenderRegion,scope:TemplateContextObject):RenderedRegion{
   const items=templateValueAt(scope,region.item.area.source);if(!Array.isArray(items))throw new Error(`Repeat area ${region.item.area.name} cannot use ${region.item.area.source} here.`);
-  const prefix=itemRoot(region.item.area.source),copies=items.map(item=>renderContainer(prototype,region.item.rectangle,region.children,{...scope,[prefix]:item as TemplateContextValue})),baseHeight=Math.max(0,...copies.map(({height})=>height)),baseWidth=Math.max(0,...copies.map(({width})=>width)),height=region.item.area.direction==="down"?copies.reduce((sum,copy)=>sum+copy.height,0):baseHeight,width=region.item.area.direction==="across"?copies.reduce((sum,copy)=>sum+copy.width,0):baseWidth;
+  const prefix=itemRoot(region.item.area.source),itemBounds=repeatItemRectangle(region.item.area,region.item.rectangle),copies=items.map(item=>renderContainer(prototype,itemBounds,region.children,{...scope,[prefix]:item as TemplateContextValue})),separatorBounds=region.item.area.properties?.separatorArea?rectangle(region.item.area.properties.separatorArea.range):undefined,separator=separatorBounds?renderContainer(prototype,separatorBounds,[],scope):undefined,separatorCount=Math.max(items.length-1,0),baseHeight=Math.max(0,...copies.map(({height})=>height),separator?.height??0),baseWidth=Math.max(0,...copies.map(({width})=>width),separator?.width??0),height=region.item.area.direction==="down"?copies.reduce((sum,copy)=>sum+copy.height,0)+(separator?.height??0)*separatorCount:baseHeight,width=region.item.area.direction==="across"?copies.reduce((sum,copy)=>sum+copy.width,0)+(separator?.width??0)*separatorCount:baseWidth;
   if(height>1_048_576||width>16_384)throw new Error(`Repeat area ${region.item.area.name} requests ${items.length} copies and exceeds the Excel worksheet limit.`);
-  const cells:ExcelTemplateCell[]=[];let rowOffset=0,columnOffset=0;for(const copy of copies){for(const cell of copy.cells){const point=coordinate(cell.address);cells.push({...cell,address:address({row:point.row+rowOffset,column:point.column+columnOffset})});}if(region.item.area.direction==="down")rowOffset+=copy.height;else columnOffset+=copy.width;}return{cells,height,width};
+  const cells:ExcelTemplateCell[]=[];let rowOffset=0,columnOffset=0;for(const [index,copy] of copies.entries()){for(const cell of copy.cells){const point=coordinate(cell.address);cells.push({...cell,address:address({row:point.row+rowOffset,column:point.column+columnOffset})});}if(region.item.area.direction==="down")rowOffset+=copy.height;else columnOffset+=copy.width;if(separator&&index<copies.length-1){for(const cell of separator.cells){const point=coordinate(cell.address);cells.push({...cell,address:address({row:point.row+rowOffset,column:point.column+columnOffset})});}if(region.item.area.direction==="down")rowOffset+=separator.height;else columnOffset+=separator.width;}}return{cells,height,width};
 }
 
 export function renderExcelTemplateGrid(prototype:ExcelTemplatePrototype,context:TemplateContextObject):{worksheetName:string;cells:ExcelTemplateCell[];merges:string[]}{

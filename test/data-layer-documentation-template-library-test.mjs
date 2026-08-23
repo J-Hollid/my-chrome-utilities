@@ -26,6 +26,7 @@ assert.deepEqual(flowGuide.collections.find(({path})=>path==="flow.pages"),{path
 assert.ok(flowGuide.collections.some(({path,nestedCollections})=>path==="page.events"&&nestedCollections.includes("event.rows")));
 assert.deepEqual(flowGuide.areaExamples,[{area:"PageCard",type:"Repeat",source:"flow.pages",direction:"Across",range:"A3:D8"},{area:"EventRow",type:"Repeat",source:"page.events",direction:"Down",range:"A5:B5",parent:"PageCard"},{area:"PageVisual",type:"Image",source:"page.visual.image",direction:"",range:"C5:D7",parent:"PageCard"},{area:"ThemeLogo",type:"Image",source:"theme.logo",direction:"",range:"C1:D2"}],"Flow guidance exposes workbook-aligned copyable area rows");
 const template=createDocumentationTemplate({id:"template:flow",name:"Acme flow workbook",format:"excel",kind:"flow",body:{assetId:"body:first",digest:"sha256:first",byteLength:12},validation:{valid:true,findings:[]}});
+const contract3Template=createDocumentationTemplate({id:"template:flow-3",name:"Area properties",format:"excel",kind:"flow",body:{assetId:"body:third",digest:"sha256:third",byteLength:13},validation:{valid:true,findings:[],contractVersion:3}});assert.equal(contract3Template.contractVersion,3,"a validated Contract 3 workbook retains its version in project metadata");
 documentation={...documentation,templates:[template]};
 documentation=assignDocumentationTemplate(documentation,"set:client","excel","flow",template.id);
 assert.equal(documentationTemplateAssignment(documentation.sets[0],"excel","flow"),template.id);

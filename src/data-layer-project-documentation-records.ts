@@ -52,9 +52,9 @@ export interface ProjectDocumentationTemplate {
   name:string;
   format:"excel"|"rich";
   kind:ProjectDocumentationSectionKind;
-  contractVersion:1|2;
+  contractVersion:1|2|3;
   digest:string;
-  validation:{valid:boolean;findings:readonly ProjectDocumentationTemplateFinding[]};
+  validation:{valid:boolean;findings:readonly ProjectDocumentationTemplateFinding[];contractVersion?:2|3};
   body?:{assetId:string;digest:string;byteLength:number};
   richBlocks?:readonly Record<string,unknown>[];
 }
