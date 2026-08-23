@@ -129,18 +129,33 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     normalize=value=>Array.isArray(value)?value.map(normalize):value&&typeof value==="object"
       ?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right))
         .map(([key,nested])=>[key,normalize(nested)])):value,
-    digest=value=>createHash("sha256").update(JSON.stringify(normalize(value))).digest("hex"),
-    expectedPreRepairFailure={receiptBoundShardSelected:false,retryScopeConserved:false},
-    expectedRepairResult={receiptBoundShardSelected:true,retryScopeConserved:true},
-    selected=canonicalRepairTaskIdentities(twoPackRegistry,{
+    digest=value=>createHash("sha256").update(JSON.stringify(normalize(value))).digest("hex");
+  let expectedPreRepairFailure,expectedRepairResult,repairResult,fixture;
+  if(context.causalCategory==="other:layered owner evidence cardinality"){
+    const registry=JSON.parse(await readFile(new URL("../verification/packs.json",import.meta.url),"utf8")),
+      plan=planVerification(registry,{packIds:["layered_schema"],includeProperties:true});
+    expectedPreRepairFailure={unitTasks:20,totalTasks:53};
+    expectedRepairResult={unitTasks:21,totalTasks:54};
+    repairResult={unitTasks:plan.unitTasks.length,totalTasks:plan.tasks.length};
+    fixture={id:"layered-owner-evidence-cardinality-v1",causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{registeredProbeTest:"test/layered-schema-policy-probe-contract-test.mjs"},
+      expectedPreRepairFailure,expectedRepairResult};
+  }else{
+    expectedPreRepairFailure={receiptBoundShardSelected:false,retryScopeConserved:false};
+    expectedRepairResult={receiptBoundShardSelected:true,retryScopeConserved:true};
+    const selected=canonicalRepairTaskIdentities(twoPackRegistry,{
       planVerification:()=>({tasks:[canonicalAcceptanceIdentity]}),verificationTaskIdentity:value=>value,
       incident:shardIncident,
-    })[0],repairResult={receiptBoundShardSelected:selected.target===failedAcceptanceShard.target,
-      retryScopeConserved:JSON.stringify(selected.args)===JSON.stringify(shardIncident.failure.retryScope.executionArgs)},
+    })[0];
+    repairResult={receiptBoundShardSelected:selected.target===failedAcceptanceShard.target,
+      retryScopeConserved:JSON.stringify(selected.args)===JSON.stringify(shardIncident.failure.retryScope.executionArgs)};
     fixture={id:"acceptance-session-receipt-shard-identity-v1",causalCategory:context.causalCategory,
       diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{canonicalTarget:canonicalAcceptanceIdentity.target,failedTarget:failedAcceptanceShard.target},
-      expectedPreRepairFailure,expectedRepairResult},fixtureDigest=digest(fixture);
+      expectedPreRepairFailure,expectedRepairResult};
+  }
+  const fixtureDigest=digest(fixture);
   assert.deepEqual(repairResult,expectedRepairResult);
   console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
     incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
