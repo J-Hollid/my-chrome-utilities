@@ -212,3 +212,31 @@ Feature: Data layer Excel documentation templates
       | worksheet      | printer_settings_part                                |
       | Template       | xl/printerSettings/printerSettings1.bin              |
       | Template Guide | xl/printerSettings/printerSettings2.bin              |
+
+  # Data layer Excel documentation templates 018
+  Scenario: Data layer Excel documentation templates 018
+    Given the Flow Template contains PageCard
+    And Template Guide maps PageCard to flow.pages Across
+    And ConceptPattern inside PageCard repeats page.concepts Down
+    And RowPattern is contained by ConceptPattern and repeats concept.rows
+    And a CellPattern named area is wholly inside RowPattern and repeats row.cells Across
+    And Checkout configures Example metadata with Ecommerce before Funnel
+    When the workbook renders Cart and Confirmation Page instances
+    Then each PageCard contains one Ecommerce heading followed by its Ecommerce rows and one Funnel heading followed by its Funnel rows
+    And every row remains in configured property order beneath its concept
+    And each example cell contains that Page instance's effective documented example rather than its allowed-values list or another Page's example
+    And existing page.rows, row.allowedValues, and allowedValues cells remain available unchanged
+    And empty or excluded concepts produce no heading or row copy
+
+  # Data layer Excel documentation templates 019
+  Scenario: Data layer Excel documentation templates 019
+    Given PageCard repeats flow.pages and contains named image area PageVisual
+    And Template Guide maps PageVisual to image source page.visual.image within PageCard
+    And PageCard cells bind page.visual description, caption, and sourceReference
+    And two Page instances of canonical Cart have different saved visuals while Payment has none
+    When the operator downloads populated output
+    Then each Cart PageCard embeds only its own saved visual bytes in PageVisual
+    And each image preserves aspect ratio, is not enlarged, and stays inside its named area
+    And each Cart PageCard contains its own literal description, caption, and source reference
+    And Payment leaves PageVisual and its visual metadata cells empty without changing the remaining layout
+    And no image uses an external relationship or another Page instance's attachment

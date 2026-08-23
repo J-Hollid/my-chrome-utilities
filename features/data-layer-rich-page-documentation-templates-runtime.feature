@@ -70,3 +70,14 @@ Feature: Data layer rich page documentation templates runtime
       | viewport_width | rendered_layout                                       |
       | 1280 pixels    | outline and selected block detail are both visible    |
       | 360 pixels     | outline and selected block detail are exclusive views |
+
+  # Data layer rich page documentation templates runtime 009
+  Scenario: Data layer rich page documentation templates runtime 009
+    Given actual Rich page controls add Page concept groups and a Page visual block inside flow.pages
+    And production Checkout has Page-specific examples, ordered Ecommerce and Funnel rows, distinct Cart-instance visuals, and one Page without a visual
+    When installed Rich output is generated for that configured Flow Page pattern
+    Then parsed semantic HTML contains each concept heading once with its own ordered rows and Page-specific Example cells
+    And each rendered image uses its matching saved Page-instance visual and accessible description without exposing its bytes as text
+    And the Page without a visual emits no image or placeholder
+    And the plain fallback contains equivalent headings, rows, descriptions, captions, and order
+    And serialized visual attachments, graph topology, schema definitions, Documentation configuration, Draft sequence, and publication bytes equal their pre-render values

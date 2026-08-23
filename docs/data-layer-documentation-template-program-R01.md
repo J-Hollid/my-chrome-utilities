@@ -84,8 +84,10 @@ Kind-specific roots add:
 | Profile | `profile.name`, ordered `profile.rows`, and ordered `profile.concepts` |
 
 Each `flow.pages` entry exposes `stepLabel`, `pageName`, `sourcePageName`,
-`eventName`, `heading`, its Page-context `rows`, and ordered contained `events`.
-Each contained Event exposes `eventName`, `heading`, and its context `rows`.
+`eventName`, `heading`, its Page-context `rows`, ordered non-empty `concepts`, an
+optional Flow-instance `visual`, and ordered contained `events`. Each contained
+Event exposes `eventName`, `heading`, its context `rows`, and ordered non-empty
+`concepts`.
 Flow and context rows expose `property`, configured metadata values, and literal
 `value` for that context. `flow.columns` and `flow.rows` expose the existing
 transposed value-map form; each Flow row has ordered `cells` aligned with the
@@ -354,3 +356,119 @@ all four starters, custom Excel and Rich output, rejection boundaries, durable
 retry and route lifecycle, project portability, and the complete registered
 consumer closure. No all-20 feature checkpoint ran. This program is complete on
 QA; promotion to `master` remains a separate cumulative release decision.
+
+## Flow instance examples, concept groups, and attached visuals
+
+Status: user-approved for coder handoff on 2026-08-23.
+
+Stable task name: `flow-template-instance-content`.
+
+Flow templates need context-specific developer examples rather than a metadata
+value borrowed from the first context in a Flow. When a Flow section includes
+the existing Example metadata column, every `page.rows` and `event.rows` entry
+derives `row.example` from the effective property in that exact Page instance or
+contained Event occurrence. The matching `row.cells` entry has `columnKey`
+`example`, heading `Documented example`, and the same literal value. A context
+without an effective documented example exposes empty text. It never falls back
+to another
+context's example or to the property's allowed-values facet. Existing
+`row.allowedValues`, the `allowedValues` cell, `row.value`, flat `page.rows` and
+`event.rows`, and the transposed `flow.rows` contract remain available.
+
+When concept subheadings are enabled for the Documentation Set, each Page
+context exposes `page.concepts` and each contained Event context exposes
+`event.concepts`. Each entry has `name` and `rows`. Included non-empty concepts
+occur once in configured concept order, and their selected property rows remain
+in configured property order. Excluded or empty concepts emit no group, and
+unselected properties cannot be recovered through the collection. Flat context
+rows retain their `concept` values for existing templates. When concept
+subheadings are disabled, these grouping collections are empty; the template
+cannot regroup data independently of Documentation configuration.
+
+Each `flow.pages` item also exposes the current Flow Page-instance concept visual
+as optional `page.visual`. This reflects the existing one-attachment-per-instance
+model; it does not add multiple visual authoring. The object provides an
+image-only `image` source plus presentation-safe `description`, `caption`, and
+`sourceReference` text. Two Flow instances of the same canonical Page retain
+their own attachments. A Page without an attachment exposes no image or visual
+metadata, and a template must leave the requested image region empty without
+borrowing another Page's visual. Contained Event-occurrence visuals are outside
+this correction.
+
+The image source is valid only in an image-capable template construct. It cannot
+be emitted through an ordinary text binding. Attachment and asset identities,
+digests, repository keys, storage locations, Blob URLs, and canonical Page data
+remain private. Description, caption, and source reference render as inert
+literal text; a source reference triggers no network request. The immutable
+snapshot contains the exact visual body needed by its renderer. Replacement or
+removal changes Flow snapshot identity and makes an existing preview stale until
+Refresh preview; rendering does not re-read live project state.
+
+For guided Excel contract 2, the Flow guide adds `page.concepts` with nested
+`concept.rows`, and adds contextual image source `page.visual.image`. A named
+Image area using that source must be wholly inside a repeat of `flow.pages`.
+Each Page copy embeds only its own saved image bytes, fitted inside the named
+area with preserved aspect ratio and no enlargement. An absent visual leaves
+the area empty. Contextual visual images create no external relationship and
+cannot escape their owning Page repeat.
+
+For Rich contract 1, a Flow Page repeat may add a concept-group block sourced
+from `page.concepts` and a semantic Page visual block. The image uses the saved
+Page-instance visual and accessible description; an optional caption is emitted
+only when present. A Page without a visual emits neither an image nor a visual
+placeholder. Rich HTML and its plain fallback retain equivalent concept
+headings, row values, descriptions, captions, and order, while image bytes never
+appear as plain text. Existing stored Rich templates remain valid without a
+contract-version migration.
+
+This is a presentation-only expansion of the existing immutable Flow
+Documentation snapshot. It adds no Documentation kind, schema facet, Page
+definition, Flow topology, visual attachment cardinality, asset store, archive
+entry, external fetch, template expression, or publication write. Built-in and
+custom output continue to respect configured sections, contexts, rows, columns,
+metadata, concepts, incomplete-Draft state, and literal-value safety.
+
+**Development focus:** start with context identity in
+`src/data-layer-flow-documentation-snapshot.ts` and
+`src/data-layer-project-documentation-compiler.ts`. Characterize Page and Event
+example isolation, configured group projection, repeated canonical Page
+instances, missing visuals, privacy, and stale identity in
+`test/data-layer-project-documentation-workspace-test.mjs`. Then extend the
+existing template catalogue, validation, Excel image rendering, Rich semantic
+blocks, searchable guidance, and their direct tests under
+`src/documentation-templates/`. Finish with the installed Flow Documentation
+browser target using actual saved Page-instance visuals and independently parsed
+Excel, rich HTML, and plain output.
+
+**QA impact:** every likely compiler and renderer path is already owned by
+parent pack `flow_export`. Changes under `src/documentation-templates/` use its
+existing `documentation_template_workspace` slice and declared
+`shell/documentation_workspace_consumer`; no new source prefix, verification
+slice, or consumer is proposed. The existing Flow semantic visual API is an
+input, not a product-change target. No stopped coherent candidate exists for
+this feature. The coder must run governed read-only intent from the approved QA
+base before product coding, naming all likely paths above; exact changed-path
+preflight is authoritative, and a `coarse-boundary` result requires independent
+ownership preparation.
+
+The expected focused checkpoint is:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_export \
+  --pack shell \
+  --property \
+  --changed-since <approved-specification-commit> \
+  --prepare-evidence flow-template-instance-content
+node scripts/package.mjs
+```
+
+The implementation-and-review elapsed effort ceiling is eight active hours. At
+four hours, report context-specific Example cells, Page and Event concept-group
+order, Excel and Rich visual rendering, privacy and stale-snapshot proof, exact
+paths, packs and tasks, failures, remaining work, confidence, and forecast.
+Continue while the work remains a presentation-only consumer of the existing
+single Page-instance attachment. Multiple attachments, Event visual output,
+visual authoring/storage changes, weaker privacy, unavailable ownership, or a
+genuinely global plan stops for current direction. No all-runnable-pack feature
+checkpoint is authorized.

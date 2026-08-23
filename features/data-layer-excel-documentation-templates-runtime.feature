@@ -139,3 +139,23 @@ Feature: Data layer Excel documentation templates runtime
       | worksheet      | printer_settings_part                                |
       | Template       | xl/printerSettings/printerSettings1.bin              |
       | Template Guide | xl/printerSettings/printerSettings2.bin              |
+
+  # Data layer Excel documentation templates runtime 014
+  Scenario: Data layer Excel documentation templates runtime 014
+    Given an actual Flow workbook nests page.concepts, concept.rows, and row.cells inside flow.pages
+    And its Example cells distinguish Cart from Confirmation while both schemas share the same allowed values
+    When production rendering generates populated output
+    Then independent workbook parsing finds Ecommerce and Funnel headings once per Page with only their configured ordered rows
+    And parsed Example cells contain each Page instance's documented example without a repeated allowed-values list
+    And parser traces prove every nested collection and cell resolved within its own Page scope
+
+  # Data layer Excel documentation templates runtime 015
+  Scenario: Data layer Excel documentation templates runtime 015
+    Given an actual Flow workbook places contextual image area PageVisual and visual metadata cells inside PageCard
+    And production Checkout contains two canonical-Cart instances with different saved visuals and one Page without a visual
+    When installed preview and assigned Excel export render the workbook
+    Then independent OOXML parsing finds each visual's exact saved bytes only in its own PageCard
+    And parsed image anchors preserve aspect ratio within PageVisual with no external image relationship
+    And parsed cells contain the matching literal description, caption, and source reference
+    And the Page without a visual has an empty image area and metadata cells without layout loss
+    And repository inspection finds Flow visuals, graph, schemas, Documentation configuration, Draft revision, and publication bytes unchanged
