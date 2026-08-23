@@ -235,21 +235,27 @@ export async function resolveIncidentTaskSuccession({incident,currentIdentities,
 
 export async function validateUnresolvedIncidentTaskSuccession({incidents,currentIdentities,currentPacks,
   graph=undefined,loadHistoricalPacks=gitShowJson,loadSourceReceipt=sourcePlannerReceipt}){
-  const currentDigests=new Set(currentIdentities.map(verificationTaskDigest)),mappings=[];
+  const identitiesForIncident=typeof currentIdentities==="function"
+    ?currentIdentities:()=>currentIdentities;
+  const mappings=[];
   for(const incident of incidents){
     if(incident.state!=="unresolved"||incident.closureAudit?.blocking===false)continue;
     if(incident.failure?.failureClass==="execution-contract-failure"&&
         incident.failure?.task?.stage==="promotion")continue;
+    const incidentIdentities=await identitiesForIncident(incident);
+    if(!Array.isArray(incidentIdentities))
+      throw new Error("Task succession requires canonical identities for each incident");
+    const currentDigests=new Set(incidentIdentities.map(verificationTaskDigest));
     if(currentDigests.has(verificationTaskDigest(incident.failure.task)))continue;
     const diagnosedTargets=incident.failure.retryScope?.logicalTargetIds??[];
     try {
       mappings.push({incidentId:incident.id,mapping:await resolveIncidentTaskSuccession({incident,
-        currentIdentities,currentPacks,graph,loadHistoricalPacks,loadSourceReceipt})});
+        currentIdentities:incidentIdentities,currentPacks,graph,loadHistoricalPacks,loadSourceReceipt})});
     } catch(error) {
       if(error?.message==="Same-target planner projection requires one diagnosed target"&&
-          await monotonicDeferredAcceptanceSessionExpansion({incident,currentIdentities,currentPacks,
+          await monotonicDeferredAcceptanceSessionExpansion({incident,currentIdentities:incidentIdentities,currentPacks,
             loadHistoricalPacks,loadSourceReceipt}))continue;
-      const selectedTargetSuccessors=currentIdentities.filter(identity=>diagnosedTargets.length===1&&
+      const selectedTargetSuccessors=incidentIdentities.filter(identity=>diagnosedTargets.length===1&&
         identity.logicalTargetIds?.includes(diagnosedTargets[0]));
       const boundaryExpanded=error?.message==="Task succession edge does not preserve its conserved boundary"||
         error?.message==="Task succession current registry boundary differs from its declaration"||
