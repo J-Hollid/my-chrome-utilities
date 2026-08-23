@@ -192,3 +192,17 @@ Feature: Data layer compact reorderable editor controls runtime
       | actions_menu_state               | installed_handle_contract                                                   | installed_menu_contract                                                       |
       | has no existing actions menu     | a native Reorder menu button using the grip target and complete accessible name    | owned by the grip with expanded state and the controlled movement menu             |
       | already has an actions menu      | the non-button grip target with no additional tab stop                           | owned by the one existing actions menu with no second menu button                  |
+
+  # Data layer compact reorderable editor controls runtime 015
+  Scenario: Data layer compact reorderable editor controls runtime 015
+    Given every migrated installed surface contains an actionable item with primary identity content
+    When per-consumer DOM and computed geometry inspect each host at 1280 and 360 CSS pixels wide
+    Then every consumer records its own host, grip-target, and primary-content rectangles
+    And every grip target overlaps its primary content on the block axis and shares the primary row centerline
+    And no host height is the additive height of a standalone grip row and its primary-content row
+    And wrapping remains in the flexible content column without horizontal document overflow
+    And list, listitem, heading, field, label, and group semantics remain unchanged
+    And the aggregate includes all Documentation, schema, composition, predicate, guided-array, configured-heading, and defect-reproduction consumers
+    And aggregate success cannot be inferred from defect-reproduction presentation samples for another consumer
+    When actual controls exercise movement, inclusion, menu, drag, focus, persistence, impact review where applicable, and Undo
+    Then each consumer retains its existing domain behavior and unrelated repository bytes remain unchanged

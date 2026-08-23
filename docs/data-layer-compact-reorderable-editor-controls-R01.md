@@ -1,7 +1,8 @@
 # Data layer compact reorderable editor controls R01
 
-Status: QA-integrated at `43c019bb`; schema projection, no-op, and compact-handle
-presentation corrections approved on 2026-08-21
+Status: schema projection, no-op, and compact-handle presentation corrections
+QA-integrated through `4d5c420f`; reorderable item row-composition correction
+proposed for approval on 2026-08-23
 
 Prepared: 2026-08-19
 
@@ -317,6 +318,138 @@ and Studio host alignment, existing-menu integration, exact planned packs,
 focused failures, forecast variance, remaining work, confidence, and completion
 forecast. Continue by default while these approved boundaries remain unchanged
 and a credible bounded path exists.
+
+## Proposed reorderable item row-composition correction
+
+Stable task name: `reorderable-item-row-composition-correction`.
+
+The Selected matrix column order exposes a shared composition defect rather than
+a matrix-specific control defect. Its ordered-list marker and 44-pixel grip form
+one visual line while the enhanced checkbox label forms a second line. The same
+`renderOrderedChoices` adapter builds selected Flow contexts, Flow property rows,
+matrix columns, and Site Profile columns, so all four consumers inherit the same
+failure mode. Other migrated reorder consumers combine the shared control with
+block labels, paragraphs, nested fields, action groups, or responsive grid
+changes and therefore require the same explicit host-layout audit.
+
+Current frontend guidance supports a single-item row with a leading handle,
+flexible primary content, and optional trailing action rather than a standalone
+handle band:
+
+- [Atlassian drag-and-drop design
+  guidance](https://atlassian.design/components/pragmatic-drag-and-drop/design-guidelines/)
+  keeps an always-visible leading handle beside the item's content and models a
+  list item as fixed leading content, flexible identity, and trailing action.
+- [Primer drag-and-drop
+  guidance](https://primer.style/accessibility/patterns/drag-and-drop/)
+  treats one-dimensional reordering as a sortable list with a conventional
+  six-dot grab affordance and equivalent input methods.
+- [Apple lists and tables
+  guidance](https://developer.apple.com/design/human-interface-guidelines/lists-and-tables)
+  treats text choices and reordering as row-based list behavior.
+- [WCAG technique
+  G219](https://www.w3.org/WAI/WCAG22/Techniques/general/G219.html) and
+  [Understanding target size
+  minimum](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html)
+  preserve a non-drag movement path and at least a 24-pixel target. The existing
+  44 by 44 target and menu remain the stronger product contract.
+
+### Row-composition contract
+
+One logical reorder item has one primary visual row. When an ordered list shows a
+visible ordinal, that ordinal, the 44 by 44 grip target, and the item's primary
+identity or choice control occupy the same row band. The host reserves a fixed
+44-pixel leading control column, a flexible `minmax(0, 1fr)`-equivalent content
+column, and an optional intrinsic trailing-action column. The implementation may
+use an equivalent host primitive rather than literal grid declarations, but the
+measured result must be the same.
+
+Long identity text, checkbox labels, and field content wrap inside the flexible
+content column. Secondary fields, descriptions, nested children, and action
+groups may continue below the primary row when their existing design requires
+it, but subsequent content aligns to the content column and cannot strand the
+grip or ordinal in a standalone full-width row. At 1280 and 360 CSS pixels, the
+grip and primary identity have overlapping block-axis geometry, the host height
+is not the additive height of a handle row plus a content row, and the document
+has no horizontal overflow.
+
+List, listitem, heading, field, label, and group semantics remain native or
+equivalent. The visible ordinal is not removed merely to hide the defect. The
+existing grip SVG, 44-pixel target, menu ownership, drag ownership, focus and
+announcement behavior, legal destinations, inclusion, values, ordering scope,
+persistence, impact review, and Undo remain unchanged. The whole item body does
+not become draggable and the pointer target does not shrink.
+
+This must be a shared host-composition contract or a small set of shape-specific
+host contracts. A selector that repairs only Matrix columns, an absolute
+positioning offset, or a presentation-only test fixture is insufficient.
+
+### Broad consumer audit
+
+The correction covers every consumer in the original migration inventory. The
+following source-level audit identifies the required evidence and the known
+risk, without presuming that every already-conforming host needs a product-code
+change:
+
+| Consumer family | Included hosts | Required row evidence |
+|---|---|---|
+| Shared Documentation ordered choices | selected Flow contexts, Flow property rows, Selected matrix column order, and Site Profile columns | Repair the confirmed shared adapter defect; marker when present, grip, checkbox, and label share the primary row |
+| Other Documentation flat rows | Flow export property, metadata, and context columns; Documentation Set content choices and concepts | Grip and first choice or editable identity share the primary row; wrapping stays in the content column |
+| Documentation hierarchical and responsive rows | Documentation outline and Rich template block tree | Responsive rules cannot collapse the grip into its own track; nested children remain aligned and hierarchy semantics remain intact |
+| Schema and composition rows | canonical and composed structure, composed allowed values, Page Property Set applications, Page Group memberships, assignment predicates, guided arrays, and configured specification headings | Grip shares the first row with the item identity or first primary control while existing secondary fields and actions retain their layout |
+| Defect reproduction rows | manual reproduction steps | Preserve the existing explicit 44-pixel-plus-flexible-content layout as the reference host and regression control |
+
+The installed aggregate must enumerate each migrated consumer and record its own
+host and primary-content geometry. It cannot reuse only the defect-reproduction
+presentation samples as evidence for “every migrated installed surface.” An
+already-conforming consumer may produce evidence without a source edit; a
+nonconforming consumer must use the shared or shape-specific row contract.
+
+The primary regression opens Selected matrix column order with multiple selected
+Page and Event contexts at both 1280 and 360 CSS pixels. Geometry proves the
+ordinal, grip target, checkbox, and label form one compact item row; specifically,
+the grip and enhanced choice label overlap on the block axis and the grip does not
+end before the label begins. Reordering one column and deselecting another must
+still update only the existing staged order and inclusion state, with unrelated
+Documentation Set, source, theme, preview, and publication bytes unchanged.
+
+### Row-composition development focus and QA impact
+
+The coder must first run governed read-only ownership intent classification from
+the current QA head. A `coarse-boundary` result requires independently reviewed
+ownership preparation. `granularity-assessment-required` and
+`coarse-within-pack` require recorded judgment and do not automatically start
+preparation. No data-model, repository, or new source-prefix change is proposed.
+
+Likely existing integration surfaces and proposed verification topology are:
+
+| Existing source path or prefix | Proposed parent pack | Proposed subordinate slice | Exact consumers |
+|---|---|---|---|
+| `src/reorderable-editor/` and shared host styles | `shell` | `shared_reorderable_editor_controls` | reusable row composition, without changing the handle or interaction contract |
+| `src/project-documentation/` and `src/data-layer-flow-table-documentation-export-ui.ts` | `flow_export` | `documentation_reorder_adapters` | every Documentation ordered-choice, flat-row, outline, and Rich-block consumer |
+| `src/canonical-schema-focused/`, `src/composed-schema/`, and composed-workspace renderers | `layered_schema` | `schema_authoring_reorder_adapters` | structural rows and allowed-value rows |
+| `src/data-layer-property-set-flow-section-ui.ts` | `property_set_flow_sections` | `property_set_application_reorder_adapter` | application rows and existing impact review |
+| `src/data-layer-page-group-membership.ts`, schema-assignment renderers, and specification builders | `schemas` and `layered_schema` as planned by ownership | existing reorder-adapter slices | memberships, predicates, guided arrays, and configured headings |
+| `src/data-layer-defect-report-reproduction-controls.ts` | `defects` | `defect_reproduction_reorder_adapter` | existing conforming reference geometry |
+
+Direct development checks begin with the shared row primitive and the four
+`renderOrderedChoices` consumers, then exercise every audited consumer's actual
+host at wide and constrained widths. Evidence covers block-axis overlap,
+centerline alignment, content-column wrapping, host height, overflow, target size,
+semantics, movement and inclusion isolation, menu and drag operation, focus,
+announcement, persistence, impact review where applicable, and Undo.
+
+The QA impact forecast is `shell`, `defects`, `flow_export`, `layered_schema`,
+`property_set_flow_sections`, and `schemas`, plus properties, package proof, and
+every selected shared-component and consumer expansion. The exact changed-path
+plan is authoritative; feature mode does not run the all-20 gate.
+
+The correction implementation-and-review effort ceiling is eight active hours.
+At four active hours, report the shared row contract, the four ordered-choice
+results, the remaining consumer audit, per-consumer installed geometry, exact
+planned packs, focused failures, forecast variance, remaining work, confidence,
+and completion forecast. Continue by default while these proposed boundaries,
+once approved, remain unchanged and a credible bounded path exists.
 
 ## Exclusions
 
