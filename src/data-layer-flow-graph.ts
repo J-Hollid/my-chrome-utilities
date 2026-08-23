@@ -2,7 +2,8 @@ import {orderedPageGroupIds,requiresPageGroupMembershipMigration} from "./utilit
 import {canonicalSchemaWithConstraint,compileLayeredSchema,createCanonicalSchema,layeredContributorPath,layeredContributorsForPath,migrateLegacyProfile,transactProject,validateLayeredObservation,type CanonicalSchemaDocument,type IdFactory,type LayerConstraint,type ProjectEntity,type ProjectState,type SpecificationProject} from "./utilities/data-layer/schemas.js";
 import {duplicatePageFrameRecord} from "./data-layer-flow-graph-structural.js";
 export {addFreePageFrame,addUngroupedPageFrame,inspectFreePageEdgeMove,inspectOccurrenceContainmentMove,inspectOccurrencePageChange,inspectUngroupedPageDrop,moveFreePageFrame,reassignFlowOccurrencePage} from "./flow-graph/containment.js";
-export {flowOutline,flowRelationshipText,inspectFlowGraph,projectFlowGraph} from "./flow-graph/projection.js";
+export {flowGraphPresentationHeights,flowOutline,flowRelationshipText,inspectFlowGraph,projectFlowGraph} from "./flow-graph/projection.js";
+export type {FlowGraphPresentationHeights} from "./flow-graph/projection.js";
 export {deriveFlowOccurrenceExample,deriveFlowPageFrameExample,setFlowOccurrenceExample,flowOccurrenceExampleEditorRows} from "./flow-graph/examples.js";
 export type {FlowExampleIssue,FlowOccurrenceExample,FlowOccurrenceExampleEditorRow} from "./flow-graph/examples.js";
 export {migrateLegacyFlowContextBindings,migrateLegacyFlowRelationshipKinds,removeFlowRelationship,reviewLegacyFlowContextMigration,saveGraphRelationship} from "./flow-graph/examples.js";

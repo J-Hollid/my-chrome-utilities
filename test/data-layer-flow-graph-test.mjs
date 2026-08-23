@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {FLOW_GRAPH_GEOMETRY,addGraphOccurrence,documentaryFlowGraph,flowOutline,flowRelationshipText,inferFlowRelationshipKind,projectFlowGraph,saveGraphRelationship,moveGraphOccurrence,removeFlowRelationship,renameFlowPageFrame,resetFlowPageFrameName} from "../dist/data-layer-flow-graph.js";
+import {FLOW_GRAPH_GEOMETRY,addGraphOccurrence,documentaryFlowGraph,flowGraphPresentationHeights,flowOutline,flowRelationshipText,inferFlowRelationshipKind,projectFlowGraph,saveGraphRelationship,moveGraphOccurrence,removeFlowRelationship,renameFlowPageFrame,resetFlowPageFrameName} from "../dist/data-layer-flow-graph.js";
 import {addFlowPageFrameToSection,createFlowSection} from "../dist/data-layer-property-set-flow-section.js";
 import {addProjectEntity,createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 
@@ -16,6 +16,10 @@ state=addGraphOccurrence(state,flow.id,{name:"Purchase",pageFrameId:source.id,pa
 graph=documentaryFlowGraph(state.project,flow.id);const occurrence=graph.occurrences[0];assert.equal(projectFlowGraph(state.project,flow.id).graph.nodes[0].pageFrameId,source.id);
 state=saveGraphRelationship(state,flow.id,source.id,{toStepId:target.id,sourcePort:"right",targetPort:"left",group:"checkout",documentationCondition:"open",expectation:"continue"},id);
 const projection=projectFlowGraph(state.project,flow.id),relationship=projection.graph.relationships[0];
+const compactHeights=flowGraphPresentationHeights(projection.graph),thumbnailHeights=flowGraphPresentationHeights(projection.graph,{occurrenceHeightExtensions:{[occurrence.id]:104}});
+assert.equal(compactHeights.occurrences[occurrence.id],FLOW_GRAPH_GEOMETRY.eventHeight);
+assert.equal(thumbnailHeights.occurrences[occurrence.id],FLOW_GRAPH_GEOMETRY.eventHeight+104,"a visual-bearing Event has one authoritative expanded rendered height");
+assert.equal(thumbnailHeights.pageFrames[source.id],compactHeights.pageFrames[source.id]+104,"the containing Page frame grows by the nested Event thumbnail footprint before anchors and bounds are derived");
 assert.equal(relationship.kind,"expected_next");assert.match(flowRelationshipText(projection.graph,relationship),/Checkout.*expected_next.*Confirmation/);assert.deepEqual(flowOutline(projection.graph).map(({nodeId})=>nodeId),[occurrence.id]);
 assert.equal(moveGraphOccurrence(state,flow.id,occurrence.id,{x:40,y:70}),state);state=moveGraphOccurrence(state,flow.id,occurrence.id,{x:60,y:90});assert.deepEqual(documentaryFlowGraph(state.project,flow.id).occurrences[0].position,{x:60,y:90});
 const beforeDelete=state;state=removeFlowRelationship(state,flow.id,relationship.id);assert.equal(documentaryFlowGraph(state.project,flow.id).relationships.length,0);assert.deepEqual(undoProjectTransaction(state).project,beforeDelete.project);

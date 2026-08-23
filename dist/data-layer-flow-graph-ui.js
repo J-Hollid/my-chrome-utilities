@@ -1,4 +1,4 @@
-import { addEventOccurrenceToPage, documentaryFlowGraph, duplicateGraphOccurrence, duplicateFlowPageFrame, effectiveFlowPageFrameName, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectOccurrencePageChange, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveGraphOccurrence, projectFlowGraph, reassignFlowOccurrencePage, reviewLegacyFlowContextMigration, removeFlowPageFrame, renameFlowPageFrame, resetFlowPageFrameName, removeFlowRelationship, removeGraphOccurrence, saveGraphRelationship, } from "./data-layer-flow-graph.js";
+import { addEventOccurrenceToPage, documentaryFlowGraph, duplicateGraphOccurrence, duplicateFlowPageFrame, effectiveFlowPageFrameName, FLOW_GRAPH_GEOMETRY, flowGraphPresentationHeights, flowRelationshipText, inspectOccurrencePageChange, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveGraphOccurrence, projectFlowGraph, reassignFlowOccurrencePage, reviewLegacyFlowContextMigration, removeFlowPageFrame, renameFlowPageFrame, resetFlowPageFrameName, removeFlowRelationship, removeGraphOccurrence, saveGraphRelationship, } from "./data-layer-flow-graph.js";
 import { appendFlowPageFrameCardControls } from "./data-layer-flow-graph-ui-page-frame.js";
 import { addFlowPageFrameAndRelationship, addFlowPageFrameAtPosition, addFlowPageFrameToSection, connectFlowPageFrames, createFlowSection, createFlowSectionAroundFrames, inspectSectionRemovalWithContents, moveFlowPageFramePresentation, moveFlowSection, movePageFrameToSection, removeFlowSection, removeFlowSectionWithContents, renameAndResizeFlowSection, tidyFlowPageFrames } from "./utilities/data-layer/property-set-flow-section.js";
 import { button, elementByData, entityName, flowEdgeGeometry, flowPortPoint, nodeHeight, nodeWidth, ownsPointerDrag, q, restorePointerCancellationFocus, svg } from "./flow-graph/ui-primitives.js";
@@ -472,11 +472,9 @@ export function installFlowGraphBuilder(options) {
         const projection = projectFlowGraph(state.project, flow.id), visualMode = (transientView.visualDisplayMode ?? "Badges"), thumbnailVisuals = visualMode === "Thumbnails" && Number(transientView.viewport?.zoom ?? 1) >= .5, enteredThumbnailVisuals = thumbnailDisplayWorkspace === workspaceKey && !thumbnailDisplayActive && thumbnailVisuals;
         thumbnailDisplayWorkspace = workspaceKey;
         thumbnailDisplayActive = thumbnailVisuals;
-        if (thumbnailVisuals)
-            for (const endpoint of projection.graph.connectionEndpoints) {
-                const target = { kind: endpoint.kind === "page-frame" ? "page-frame" : "occurrence", id: endpoint.id };
-                endpoint.height += flowConceptVisualHeightExtension(state.project, flow.id, target, visualMode, Number(transientView.viewport?.zoom ?? 1));
-            }
+        const visualZoom = Number(transientView.viewport?.zoom ?? 1), presentationHeights = flowGraphPresentationHeights(projection.graph, { occurrenceHeightExtensions: Object.fromEntries(projection.graph.nodes.map(({ id }) => [id, flowConceptVisualHeightExtension(state.project, flow.id, { kind: "occurrence", id }, visualMode, visualZoom)])), pageFrameHeightExtensions: Object.fromEntries(projection.graph.connectionEndpoints.map(({ id }) => [id, flowConceptVisualHeightExtension(state.project, flow.id, { kind: "page-frame", id }, visualMode, visualZoom)])) });
+        for (const endpoint of projection.graph.connectionEndpoints)
+            endpoint.height = presentationHeights.pageFrames[endpoint.id];
         const section = document.createElement("section"), heading = document.createElement("h3"), boundary = document.createElement("p"), toolbar = document.createElement("section"), laneControls = document.createElement("section"), status = document.createElement("p"), frames = document.createElement("section"), views = document.createElement("div"), canvasScroll = document.createElement("div"), canvas = svg("svg"), outline = document.createElement("ol"), popover = document.createElement("section"), actions = document.createElement("section");
         const decorateVisual = (group, target, width, height) => renderFlowConceptVisual({ group, project: state.project, flowId: flow.id, target, mode: visualMode, thumbnailPixels: thumbnailVisuals, width, height, assetBytes: (assetId) => visualBytes.get(assetId), hydrate: hydrateVisual, thumbnailBytes: (assetId) => thumbnailBytes.get(assetId) });
         const namedRight = Math.max(940, ...projection.laneBands.map(({ x, width }) => x + width), ...projection.graph.connectionEndpoints.map((endpoint) => endpoint.layout.x + endpoint.width + 60)), viewWidth = Math.max(960, namedRight + 100), viewHeight = Math.max(780, ...projection.laneBands.map(({ y, height }) => y + height + 80), ...projection.graph.connectionEndpoints.map((endpoint) => endpoint.layout.y + endpoint.height + 100));
@@ -678,7 +676,7 @@ export function installFlowGraphBuilder(options) {
         for (const nodeData of projection.graph.nodes) {
             if (!nodeData.layout)
                 continue;
-            const group = svg("g"), box = svg("rect"), title = svg("text"), detail = svg("text"), layout = nodeData.layout, visualEndpoint = projection.graph.connectionEndpoints.find(({ id }) => id === nodeData.id), renderedNodeHeight = visualEndpoint?.height ?? nodeHeight;
+            const group = svg("g"), box = svg("rect"), title = svg("text"), detail = svg("text"), layout = nodeData.layout, renderedNodeHeight = presentationHeights.occurrences[nodeData.id] ?? nodeHeight;
             group.classList.add("flow-node");
             group.dataset.occurrenceId = nodeData.id;
             group.setAttribute("transform", `translate(${layout.x} ${layout.y})`);
