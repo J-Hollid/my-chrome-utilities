@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
 import {
@@ -123,6 +124,29 @@ assert.deepEqual(canonicalRepairTaskIdentities(twoPackRegistry, {
     retryScope:shardIncident.failure.retryScope}},
 }),[canonicalAcceptanceIdentity],
 "an unregistered or retry-mismatched acceptance shard cannot replace the canonical identity");
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
+    normalize=value=>Array.isArray(value)?value.map(normalize):value&&typeof value==="object"
+      ?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right))
+        .map(([key,nested])=>[key,normalize(nested)])):value,
+    digest=value=>createHash("sha256").update(JSON.stringify(normalize(value))).digest("hex"),
+    expectedPreRepairFailure={receiptBoundShardSelected:false,retryScopeConserved:false},
+    expectedRepairResult={receiptBoundShardSelected:true,retryScopeConserved:true},
+    selected=canonicalRepairTaskIdentities(twoPackRegistry,{
+      planVerification:()=>({tasks:[canonicalAcceptanceIdentity]}),verificationTaskIdentity:value=>value,
+      incident:shardIncident,
+    })[0],repairResult={receiptBoundShardSelected:selected.target===failedAcceptanceShard.target,
+      retryScopeConserved:JSON.stringify(selected.args)===JSON.stringify(shardIncident.failure.retryScope.executionArgs)},
+    fixture={id:"acceptance-session-receipt-shard-identity-v1",causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{canonicalTarget:canonicalAcceptanceIdentity.target,failedTarget:failedAcceptanceShard.target},
+      expectedPreRepairFailure,expectedRepairResult},fixtureDigest=digest(fixture);
+  assert.deepEqual(repairResult,expectedRepairResult);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}}}));
+}
 
 const expandedPackIds = planVerification([
   ...twoPackRegistry,
