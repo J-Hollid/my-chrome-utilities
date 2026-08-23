@@ -369,6 +369,9 @@ the QA pilot unless product scope, safety, or authority changes.
 
 ## Flow nested-Event thumbnail evidence-contract repair stage
 
+Status: QA-integrated at `f831dfc239` after fresh exact `flow_graph` and `shell`
+review-ready evidence; the conserved product remainder is not yet integrated.
+
 The first coherent product lineage for
 `flow-nested-event-thumbnail-containment` reached candidate `c5cacaf242` from
 approved QA base `ce7cc6083c`; stopped coherent reference `698d68d2` adds the
