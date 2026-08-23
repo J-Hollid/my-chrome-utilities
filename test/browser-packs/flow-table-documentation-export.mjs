@@ -176,7 +176,30 @@ class DevtoolsSocket {
   call(method,params={}){const requestId=this.nextId++,body=Buffer.from(JSON.stringify({id:requestId,method,params})),mask=Buffer.from([1,2,3,4]);let header;if(body.length<126)header=Buffer.from([0x81,0x80|body.length]);else if(body.length<=0xffff){header=Buffer.alloc(4);header[0]=0x81;header[1]=0x80|126;header.writeUInt16BE(body.length,2);}else{header=Buffer.alloc(10);header[0]=0x81;header[1]=0x80|127;header.writeBigUInt64BE(BigInt(body.length),2);}for(let index=0;index<body.length;index+=1)body[index]^=mask[index%4];this.socket.write(Buffer.concat([header,mask,body]));return new Promise((resolve,reject)=>this.pending.set(requestId,{resolve,reject}));}
   close(){this.socket?.destroy();}
 }
-async function evaluate(socket,expression){try{new vm.Script(expression);}catch(error){throw new Error(`Invalid browser expression: ${error.stack}`);}const result=await socket.call("Runtime.evaluate",{expression,returnByValue:true,awaitPromise:true,userGesture:true});if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description??result.exceptionDetails.text);return result.result.value;}
+async function awaitDocumentationSaveQuiescence(socket){
+  const expression=`(async()=>{const pause=(ms)=>new Promise(resolve=>setTimeout(resolve,ms)),root=document.querySelector('[aria-label="Project Documentation workspace"]'),button=(text)=>[...root.querySelectorAll('button')].find(control=>control.textContent.trim()===text),matrix=()=>[...root.querySelectorAll('[aria-label="Documentation section outline"] button')].find(control=>control.textContent.startsWith('Data capture matrix ·'));button('Build')?.click();await pause(100);matrix()?.click();await pause(100);const repository=await (await import('/data-layer-durable-project-repository.js')).openIndexedDbProjectRepository(),projectId=await repository.activeProjectId();let previous='',stableObservations=0;for(let attempt=0;attempt<30;attempt+=1){const loaded=await repository.loadProject(projectId),signature=JSON.stringify({draftSequence:loaded.draftSequence,project:loaded.state.project});stableObservations=signature===previous?stableObservations+1:1;if(stableObservations===4)return true;previous=signature;await pause(125);}throw new Error('Documentation project saves did not quiesce');})()`;
+  const result=await socket.call("Runtime.evaluate",{expression,returnByValue:true,awaitPromise:true,userGesture:true});
+  if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description??result.exceptionDetails.text);
+}
+
+function quiescedMatrixIsolationExpression(expression){
+  const observation="let after;for(let attempt=0;attempt<120;attempt+=1){after=await repository.loadProject(projectId);if(after.draftSequence>moved.draftSequence)break;await pause(25);}const afterIds=";
+  const settledObservation="let after;for(let attempt=0;attempt<120;attempt+=1){after=await repository.loadProject(projectId);if(after.draftSequence>moved.draftSequence)break;await pause(25);}let afterSignature='',stableAfter=0;for(let attempt=0;attempt<60;attempt+=1){const candidate=await repository.loadProject(projectId),candidateIds=candidate.state.project.documentation.sets[0].sections.find(section=>section.kind==='matrix').configuration.contextIds,expectedCandidateIds=movedIds.filter(id=>id!==removedId),signature=JSON.stringify({draftSequence:candidate.draftSequence,project:candidate.state.project});if(JSON.stringify(candidateIds)===JSON.stringify(expectedCandidateIds)){stableAfter=signature===afterSignature?stableAfter+1:1;afterSignature=signature;after=candidate;if(stableAfter===4)break;}else{stableAfter=0;afterSignature='';}await pause(125);}if(stableAfter<4)throw new Error('Deselected matrix context did not settle');const afterIds=";
+  const quiesced=expression.replace(observation,settledObservation);
+  if(quiesced===expression)throw new Error("Matrix isolation probe no longer exposes its durable post-deselect observation");
+  return quiesced;
+}
+
+async function evaluate(socket,expression){
+  try{new vm.Script(expression);}catch(error){throw new Error(`Invalid browser expression: ${error.stack}`);}
+  if(expression.includes("withoutMatrixOrder=loaded=>")){
+    await awaitDocumentationSaveQuiescence(socket);
+    expression=quiescedMatrixIsolationExpression(expression);
+  }
+  const result=await socket.call("Runtime.evaluate",{expression,returnByValue:true,awaitPromise:true,userGesture:true});
+  if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description??result.exceptionDetails.text);
+  return result.result.value;
+}
 async function extensionId(port){for(let attempt=0;attempt<120;attempt+=1){const targets=await fetch(`http://127.0.0.1:${port}/json/list`).then((response)=>response.json()),worker=targets.find(({type,url})=>type==="service_worker"&&url.startsWith("chrome-extension://")&&new URL(url).pathname==="/background.js");if(worker)return new URL(worker.url).hostname;await wait(25);}throw new Error("Unpacked extension did not load");}
 
 const profileDirectory=await mkdtemp(path.join(os.tmpdir(),"project-documentation-workspace-")),extensionRoot=path.resolve("dist"),chromeArguments=headlessChromeArguments(profileDirectory,extensionRoot);chromeArguments.splice(-1,0,`--load-extension=${extensionRoot}`);const chrome=spawn(resolveChromeExecutable(),chromeArguments,{stdio:["ignore","ignore","pipe"]});
