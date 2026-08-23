@@ -114,3 +114,17 @@ Feature: Data layer rich page documentation templates
       | viewport_width | editor_layout                                      |
       | 1280 pixels    | outline and selected block detail appear together  |
       | 360 pixels     | outline and selected block detail open one at a time |
+
+  # Data layer rich page documentation templates 012
+  Scenario: Data layer rich page documentation templates 012
+    Given Acme flow page repeats a Page block over flow.pages
+    And the Page block contains a concept-group block for page.concepts and a Page visual block
+    And Checkout configures Example metadata with Ecommerce before Funnel
+    And two Page instances of canonical Cart have different saved visuals while Payment has none
+    When the operator previews Checkout journey
+    And the operator copies the previewed output
+    Then each Page block presents Ecommerce and Funnel headings once with only their configured ordered rows
+    And each Example cell contains that Page instance's effective documented example rather than its allowed-values list or another Page's example
+    And each Cart block presents only its own visual with its description and optional caption
+    And Payment emits no image or visual placeholder
+    And rich HTML and plain fallback contain equivalent headings, rows, descriptions, captions, and order without exposing image bytes as text

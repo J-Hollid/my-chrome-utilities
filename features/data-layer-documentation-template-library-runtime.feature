@@ -115,3 +115,13 @@ Feature: Data layer documentation template library runtime
     When actual controls activate Revalidate saved workbook
     Then visible workbook findings and Assign Built-in remain available
     And repository inspection finds no metadata, body, assignment, preview, or revision change
+
+  # Data layer documentation template library runtime 014
+  Scenario: Data layer documentation template library runtime 014
+    Given production Checkout has Page-instance-specific examples, Ecommerce and Funnel concepts, two distinct Cart-instance visuals, and one Page without a visual
+    When actual controls refresh its Documentation preview through the production compiler
+    Then captured Page and contained Event rows expose their own Example cells rather than another context's allowed values or example
+    And captured Page and Event concept collections contain only configured non-empty groups and their ordered rows
+    And captured Cart image sources and presentation metadata remain bound to their own Flow Page instances while the Page without a visual remains empty
+    And changing one attachment makes the installed preview stale until Refresh preview
+    And context inspection finds no private visual identity, digest, repository key, Blob URL, canonical mutation, or publication write

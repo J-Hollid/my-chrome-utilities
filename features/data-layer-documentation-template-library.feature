@@ -174,3 +174,43 @@ Feature: Data layer documentation template library
     When the operator activates Revalidate saved workbook
     Then no template metadata, body, assignment, preview, or project revision changes
     And the current workbook findings and Assign Built-in action remain available
+
+  # Data layer documentation template library 018
+  Scenario Outline: Data layer documentation template library 018
+    Given Checkout Flow selects Example metadata
+    And its shared page_type property allows cart or confirmation
+    And Page instance <page_instance> has effective documented example <documented_example> for page_type
+    When the Flow template context prepares <page_instance> rows
+    Then page_type row.example is <documented_example>
+    And its row.cells entry with columnKey example has heading Documented example and value <documented_example>
+    And neither binding substitutes cart or confirmation from the allowed-values facet
+    And a Page property without an effective documented example has an empty example value
+
+    Examples:
+      | page_instance | documented_example |
+      | Cart          | cart               |
+      | Confirmation  | confirmation       |
+
+  # Data layer documentation template library 019
+  Scenario: Data layer documentation template library 019
+    Given Checkout Flow enables concept subheadings in Ecommerce then Funnel order
+    And Cart has selected Ecommerce and Funnel property rows
+    When the template groups Cart's prepared rows by configured concept
+    Then page.concepts contains Ecommerce followed by Funnel exactly once
+    And each concept exposes only its own selected rows in configured property order
+    And page.rows retains the same selected rows and their concept values for existing templates
+    And empty, excluded, and unselected concepts or rows are absent
+    And contained Event contexts expose event.concepts by the same rules
+
+  # Data layer documentation template library 020
+  Scenario: Data layer documentation template library 020
+    Given two Checkout Flow Page instances reference the same canonical Cart Page
+    And the two instances store different visual attachments with description, caption, and source reference
+    And Payment Page instance has no saved concept visual
+    When the Flow template context is prepared from the current immutable snapshot
+    Then each Cart instance exposes only its own page.visual image source, description, caption, and sourceReference
+    And Payment exposes no page.visual image source or metadata
+    And image bytes are available only to a scoped image area or semantic image block
+    And no attachment identity, asset identity, digest, repository key, Blob URL, or canonical Page visual is exposed
+    When one Cart instance visual is replaced or removed
+    Then the existing preview becomes stale until refreshed from the changed Flow snapshot
