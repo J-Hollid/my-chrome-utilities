@@ -1,5 +1,5 @@
 import {transactProject,type ProjectEntity,type ProjectState,type SpecificationProject} from "./data-layer-specification-project.js";
-import {announceReorderCompletion,renderReorderControl,type ReorderRequest} from "./reorderable-editor/control.js";
+import {announceReorderCompletion,renderReorderControl,renderReorderableItemRow,type ReorderRequest} from "./reorderable-editor/control.js";
 
 export interface PageGroupMembershipMigration {
   pageId:string;
@@ -136,7 +136,8 @@ export function mountPageGroupMembershipEditor(host:HTMLElement,options:PageGrou
         itemId:row.id,itemLabel:row.label,completeOrder:rows.map(({id,label})=>({id,label})),dropTarget:item,orderedContainer:list,
         onMove:(request)=>{pending={request,delta:request.toIndex-request.fromIndex};render();return false;},
       });
-      item.dataset.pageGroupMembershipId=row.id;item.append(reorder,doc.createTextNode(row.label),open,remove);list.append(item);
+      const identity=Object.assign(doc.createElement("span"),{textContent:row.label}),actions=doc.createElement("span");actions.append(open,remove);
+      item.dataset.pageGroupMembershipId=row.id;item.append(renderReorderableItemRow({control:reorder,primaryContent:identity,trailingContent:actions}));list.append(item);
     }
     if(pending){
       const review=inspectPageGroupMembershipMove(state.project,options.pageId,pending.request.itemId,pending.delta),dialog=doc.createElement("dialog"),summary=doc.createElement("p"),order=doc.createElement("p");

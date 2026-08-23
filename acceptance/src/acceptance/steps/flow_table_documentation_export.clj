@@ -100,6 +100,7 @@
             ["360 pixels" "the Build outline and selected configuration open one at a time"]
             ["1280 pixels" "Build outline and selected configuration are simultaneously visible"]
             ["360 pixels" "Build outline and selected configuration are exposed as separate surfaces"]}}
+   {:keys ["viewport_width"] :rows #{["1280 pixels"] ["360 pixels"]}}
    {:keys ["profile" "property_total" "selected_concept" "concept_total" "concept_included" "other_profile"]
     :rows #{["Sitewide" "312" "Commerce" "53" "47" "Opened Article"]
             ["Opened Article" "428" "Identity" "71" "64" "Sitewide"]}}

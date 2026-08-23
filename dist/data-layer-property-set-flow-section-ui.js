@@ -1,5 +1,5 @@
 import { addFlowEventOccurrence, addFlowPageFrameToSection, addPropertySetApplication, connectFlowPageFrames, createFlowSection, inspectSectionRemovalWithContents, moveFlowPageFramePresentation, moveFlowSection, movePageFrameToSection, orderedPropertySetApplications, removeFlowSection, removeFlowSectionWithContents, removePropertySetApplication, renameAndResizeFlowSection, reorderPropertySetApplication, setPropertySetApplicationApplicability } from "./data-layer-property-set-flow-section.js";
-import { announceReorderCompletion, renderReorderControl } from "./reorderable-editor/control.js";
+import { announceReorderCompletion, renderReorderControl, renderReorderableItemRow } from "./reorderable-editor/control.js";
 const number = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
 const graphFor = (state, flowId) => (state.project.documentationFlowGraphs?.[flowId] ?? {});
 export function mountPropertyCompositionWorkspace({ host, state, pageId, id, onSave, onOpen }) {
@@ -40,7 +40,9 @@ export function mountPropertyCompositionWorkspace({ host, state, pageId, id, onS
         remove.textContent = "Remove application";
         open.addEventListener("click", () => onOpen?.(application.propertySetId));
         remove.addEventListener("click", () => onSave(removePropertySetApplication(state, page.id, application.propertySetId)));
-        row.append(reorder, summary, applicability, open, remove);
+        const actions = document.createElement("span");
+        actions.append(open, remove);
+        row.append(renderReorderableItemRow({ control: reorder, primaryContent: summary, trailingContent: actions, secondaryContent: [applicability] }));
         list.append(row);
     }
     workspace.append(heading, guidance, search, newApplicability, results, review, list);

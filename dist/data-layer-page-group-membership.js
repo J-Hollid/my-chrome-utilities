@@ -1,5 +1,5 @@
 import { transactProject } from "./data-layer-specification-project.js";
-import { announceReorderCompletion, renderReorderControl } from "./reorderable-editor/control.js";
+import { announceReorderCompletion, renderReorderControl, renderReorderableItemRow } from "./reorderable-editor/control.js";
 const storedIds = (page) => Array.isArray(page.pageGroupIds) ? page.pageGroupIds.map(String) : undefined;
 const unique = (values) => [...new Set(values)];
 const legacyIds = (project, pageId) => project.collections.propertySets.filter((group) => (group.pageIds ?? []).includes(pageId)).map(({ id }) => id);
@@ -137,8 +137,10 @@ export function mountPageGroupMembershipEditor(host, options) {
                 itemId: row.id, itemLabel: row.label, completeOrder: rows.map(({ id, label }) => ({ id, label })), dropTarget: item, orderedContainer: list,
                 onMove: (request) => { pending = { request, delta: request.toIndex - request.fromIndex }; render(); return false; },
             });
+            const identity = Object.assign(doc.createElement("span"), { textContent: row.label }), actions = doc.createElement("span");
+            actions.append(open, remove);
             item.dataset.pageGroupMembershipId = row.id;
-            item.append(reorder, doc.createTextNode(row.label), open, remove);
+            item.append(renderReorderableItemRow({ control: reorder, primaryContent: identity, trailingContent: actions }));
             list.append(item);
         }
         if (pending) {

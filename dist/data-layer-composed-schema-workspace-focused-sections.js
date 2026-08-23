@@ -3,7 +3,7 @@ import { focusedDefinitionFacetOwnershipActions } from "./data-layer-focused-sch
 import { schemaTableAllowedValues, schemaTableExampleControl, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
 import { renderComposedFocusedCondition } from "./data-layer-composed-schema-workspace-focused-conditions.js";
 import { renderComposedFocusedRules } from "./data-layer-composed-schema-workspace-focused-rules.js";
-import { renderReorderControl } from "./reorderable-editor/control.js";
+import { renderReorderControl, renderReorderableItemRow } from "./reorderable-editor/control.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const valueText = (value) => value === undefined ? "unset" : typeof value === "string" ? value : JSON.stringify(value);
@@ -239,7 +239,8 @@ export function renderComposedFocusedSection(host, context) {
                     return true;
                 } const kind = toIndex < fromIndex ? "move-earlier" : "move-later"; for (let count = Math.abs(toIndex - fromIndex); count > 0; count -= 1)
                     invoke(kind); return true; } });
-            host.append(labeled(dom, "Property name", name), labeled(dom, "New local property name", newName), button(dom, "Add child", () => create("add-child")), button(dom, "Add sibling", () => create("add-sibling")), button(dom, "Rename", () => invoke("rename")), reorder, button(dom, "Move to root", () => invoke("move-to-root")), button(dom, "Duplicate", () => invoke("duplicate")), button(dom, "Delete property", () => invoke("delete")));
+            const rename = button(dom, "Rename", () => invoke("rename")), secondary = [labeled(dom, "New local property name", newName), button(dom, "Add child", () => create("add-child")), button(dom, "Add sibling", () => create("add-sibling")), button(dom, "Move to root", () => invoke("move-to-root")), button(dom, "Duplicate", () => invoke("duplicate")), button(dom, "Delete property", () => invoke("delete"))];
+            host.append(renderReorderableItemRow({ control: reorder, primaryContent: labeled(dom, "Property name", name), trailingContent: rename, secondaryContent: secondary }));
             if (related.length) {
                 const inventory = dom.createElement("section");
                 inventory.setAttribute("aria-label", "Local related properties");

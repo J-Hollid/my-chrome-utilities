@@ -41,6 +41,33 @@ const styles = (element, values) => {
         return;
     Object.assign(element.style, values);
 };
+export function renderReorderableItemRow(options) {
+    const row = options.primaryContent.ownerDocument.createElement("div"), actionable = Boolean(options.control && !options.control.hidden);
+    row.dataset.reorderItemRow = "true";
+    row.setAttribute("data-reorder-item-row", "true");
+    styles(row, { boxSizing: "border-box", display: "grid",
+        gridTemplateColumns: actionable
+            ? `44px minmax(0, 1fr)${options.trailingContent ? " max-content" : ""}`
+            : `minmax(0, 1fr)${options.trailingContent ? " max-content" : ""}`,
+        alignItems: "center", columnGap: "8px", width: "100%", maxWidth: "100%", minWidth: "0px" });
+    if (options.control)
+        styles(options.control, { gridColumn: actionable ? "1" : "", gridRow: "1", alignSelf: "center" });
+    styles(options.primaryContent, { gridColumn: actionable ? "2" : "1", gridRow: "1", minWidth: "0px",
+        maxWidth: "100%", overflowWrap: "anywhere" });
+    row.append(...[options.control, options.primaryContent].filter((element) => Boolean(element)));
+    if (options.trailingContent) {
+        styles(options.trailingContent, { gridColumn: actionable ? "3" : "2", gridRow: "1", minWidth: "0px" });
+        row.append(options.trailingContent);
+    }
+    if (options.secondaryContent?.length) {
+        const secondary = row.ownerDocument.createElement("div");
+        styles(secondary, { gridColumn: actionable ? "2 / -1" : "1 / -1", gridRow: "2", display: "flex", flexWrap: "wrap",
+            alignItems: "center", gap: "8px", minWidth: "0px", maxWidth: "100%", overflowWrap: "anywhere" });
+        secondary.append(...options.secondaryContent);
+        row.append(secondary);
+    }
+    return row;
+}
 function liveRegion(doc) {
     const existing = liveRegions.get(doc);
     if (existing)

@@ -10,7 +10,7 @@ import {
 } from "./data-layer-defect-report.js";
 import type { DefectReportContext } from "./data-layer-defect-report-browser.js";
 import type { ComposableDefectReport, DefectReportBuilderState } from "./data-layer-defect-report-ui-controls.js";
-import {renderLocalDraftReorderControl as renderReorderControl} from "./reorderable-editor/control.js";
+import {renderLocalDraftReorderControl as renderReorderControl,renderReorderableItemRow} from "./reorderable-editor/control.js";
 
 type ComposerStage = "idle" | "templates" | "configure";
 
@@ -35,8 +35,9 @@ function appendStepPresentation(
   const reorder=controls.find((control)=>control.classList?.contains?.("reorderable-editor-control")||
     typeof control.className==="string"&&control.className.split(/\s+/u).includes("reorderable-editor-control")),actions = document.createElement("div");
   actions.className = "defect-reproduction-step-actions"; actions.append(...controls.filter((control)=>control!==reorder&&!control.hidden));
-  if (guidance) guidance.className = "defect-reproduction-step-guidance";
-  item.append(...[reorder,text,actions,guidance].filter((element): element is HTMLElement => Boolean(element)));
+  actions.style.flexBasis="100%";if (guidance){guidance.className = "defect-reproduction-step-guidance";guidance.style.flexBasis="100%";}
+  const secondary=[actions,guidance].filter((element):element is HTMLElement=>Boolean(element));
+  item.append(renderReorderableItemRow({...(reorder?{control:reorder}:{}),primaryContent:text,secondaryContent:secondary}));
 }
 
 export function appendReproductionControls<Report extends ComposableDefectReport>(
