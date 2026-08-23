@@ -194,7 +194,7 @@ const workbookPrototype = (workbook, expectedKind) => {
     const prototype = { kind, contractVersion: Number(contract), worksheetName: "Template", cells, areas, merges: [...(template.model?.merges ?? [])] }, geometry = validateExcelTemplatePrototype(prototype);
     for (const finding of geometry.findings)
         findings.push({ location: finding.cell ? `Template ${finding.cell}` : `TemplateAreas ${finding.area ?? "setup"} Properties`, message: finding.message, rule: "Bindings, merges, named areas, and Properties must remain within a compatible template scope.", ...(finding.repair ? { repair: finding.repair } : {}), technical: JSON.stringify(finding) });
-    const imageBounds = (point) => ({ row: Math.floor(point.nativeRow ?? point.row ?? 0) + 1, column: Math.floor(point.nativeCol ?? point.col ?? 0) + 1 });
+    const imageStart = (point) => ({ row: Math.floor(point.nativeRow ?? point.row ?? 0) + 1, column: Math.floor(point.nativeCol ?? point.col ?? 0) + 1 }), exclusiveEnd = (native, offset, fallback) => native === undefined ? Math.max(1, Math.ceil(fallback ?? 0)) : Math.max(1, native + ((offset ?? 0) > 0 ? 1 : 0)), imageEnd = (point) => ({ row: exclusiveEnd(point.nativeRow, point.nativeRowOff, point.row), column: exclusiveEnd(point.nativeCol, point.nativeColOff, point.col) });
     for (const area of areas) {
         if (area.type === "image" && area.properties) {
             const range = bounds(area.range);
@@ -211,7 +211,7 @@ const workbookPrototype = (workbook, expectedKind) => {
             }
         }
         if (area.type === "repeat" && area.properties?.separatorArea) {
-            const separator = bounds(area.properties.separatorArea.range), containsDrawing = (template.getImages?.() ?? []).some(({ range }) => { const start = imageBounds(range.tl), end = imageBounds(range.br ?? range.tl); return start.row <= separator.bottom && end.row >= separator.top && start.column <= separator.right && end.column >= separator.left; });
+            const separator = bounds(area.properties.separatorArea.range), containsDrawing = (template.getImages?.() ?? []).some(({ range }) => { const start = imageStart(range.tl), end = range.br ? imageEnd(range.br) : start; return start.row <= separator.bottom && end.row >= separator.top && start.column <= separator.right && end.column >= separator.left; });
             if (containsDrawing)
                 findings.push({ location: `TemplateAreas ${area.name} Properties`, message: `${area.properties.separatorArea.name} contains unsupported template behavior.`, repair: "Keep only literal cells and presentation in the separator." });
         }

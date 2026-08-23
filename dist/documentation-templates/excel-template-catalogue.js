@@ -36,9 +36,15 @@ export const excelTemplateAreaPropertiesGuide = [
     "Down separator example: separator-area: RowSeparator, where RowSeparator is the complete full-width bottom edge and is emitted only between items.",
     "Contract 2 defaults remain compatible without a Properties column or workbook migration.",
 ];
-const contract3AreaExamples = [
+const contract3AcrossExamples = {
+    overview: { area: "FieldStep", source: "overview.fields" },
+    flow: { area: "PageStep", source: "flow.pages" },
+    matrix: { area: "MatrixStep", source: "matrix.rows" },
+    profile: { area: "ProfileStep", source: "profile.rows" },
+};
+const contract3AreaExamples = (kind) => [
     { area: "ImageArea", type: "Image", source: "theme.logo", direction: "", properties: "fit: scale-down; position: center; padding: 8px", range: "A1:B2" },
-    { area: "PageStep", type: "Repeat", source: "flow.pages", direction: "Across", properties: "separator-area: PageSeparator", range: "A1:B1" },
+    { ...contract3AcrossExamples[kind], type: "Repeat", direction: "Across", properties: "separator-area: PageSeparator", range: "A1:B1" },
     { area: "RowStep", type: "Repeat", source: "table.rows", direction: "Down", properties: "separator-area: RowSeparator", range: "A1:B2" },
 ];
 const scalarRoots = ["document.title", "document.incomplete", "document.generatedAt", "project.name", "project.purpose", "project.website", "set.name", "section.name", "section.kind", "theme.name", "theme.clientName", "theme.headerText", "theme.footerText", "theme.logo", "table.legend"];
@@ -69,6 +75,6 @@ export function excelTemplateGuideFor(kind) {
                 valuePaths.add(field);
     const rootValues = new Set([...scalarRoots, ...kindScalars[kind]]), values = [...valuePaths].sort().map(path => { const providers = collectionPaths.filter(collection => (excelTemplateItemPaths[collection] ?? []).includes(path)); return { path, placeholder: `{{${path}}}`, meaning: description(path), example: examples[path] ?? description(path), available: rootValues.has(path) ? "Template root and every repeat area" : `Inside repeats of ${providers.join(", ")}` }; });
     const examplesForKind = areaExamples[kind], collections = collectionPaths.map(path => { const area = examplesForKind.find(item => item.source === path), name = area?.area ?? generatedAreaName(path), direction = area?.direction || "Down", range = area?.range ?? "A3:D3"; return { path, meaning: path === "flow.pages" ? "Flow Page contexts" : `${description(path)} collection`, itemPrefix: excelTemplateItemRoot(path), fields: [...(excelTemplateItemPaths[path] ?? [])], nestedCollections: [...(excelTemplateNestedCollections[path] ?? [])], directions: ["Across", "Down"], emptyResult: "No copy", copyBehavior: "The complete named repeat area is copied for every item.", example: `${name} | Repeat | ${path} | ${direction} | named range ${range}` }; });
-    return { values, collections, areaExamples: examplesForKind.map(item => ({ ...item })), propertyGuidance: [...excelTemplateAreaPropertiesGuide], propertyExamples: contract3AreaExamples.map(item => ({ ...item })) };
+    return { values, collections, areaExamples: examplesForKind.map(item => ({ ...item })), propertyGuidance: [...excelTemplateAreaPropertiesGuide], propertyExamples: contract3AreaExamples(kind) };
 }
 //# sourceMappingURL=excel-template-catalogue.js.map
