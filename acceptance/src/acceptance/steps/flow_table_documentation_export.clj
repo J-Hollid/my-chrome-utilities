@@ -162,7 +162,8 @@
                 :documentationTemplatePrinterSettings
                 :documentationTemplateRecoveryFailure
                 :documentationTemplateInvalidTransitions
-                :documentationTemplateRecovery]
+                :documentationTemplateRecovery
+                :flowTemplateEffectivePageProjection]
                (map #(keyword (str "export" (format "%03d" %))) (range 1 35)))))
 
 (defn- assert-runtime! [evidence]
