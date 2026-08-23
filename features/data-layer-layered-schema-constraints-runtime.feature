@@ -494,3 +494,40 @@ Feature: Data layer layered schema constraints runtime
       | Allowed values | active and pending    | active, pending, and paused | closed and archived  |
       | Presence       | Optional              | Required                   | Forbidden            |
       | Description    | Parent description    | Revised parent description | Checkout description |
+
+  # Data layer layered schema constraints runtime 032
+  Scenario: Data layer layered schema constraints runtime 032
+    Given the production Alternative shipping Page-instance effective stack contains ordinary leaf /customer_status from Sitewide, Checkout, and Shipping
+    And no production Event branch contributes /customer_status independently
+    And /customer_status has no protected invariant or surviving rule dependency
+    When actual controls open /customer_status property actions in the installed Alternative shipping schema contribution
+    Then the action list includes enabled Exclude inherited property before structural ownership is established
+    And its accessible description scopes the exclusion to Alternative shipping and downstream Page-branch inheritance
+    When actual controls activate Exclude inherited property
+    Then installed review names /customer_status, affected compiled contexts, stale outputs, and Undo while repository hashes remain unchanged
+    When the reviewed local exclusion is committed through actual controls
+    Then production compilation omits /customer_status from Alternative shipping and its contained Purchase occurrence
+    And repository state contains one sparse stable-identity exclusion on the Page instance without copied parent property bytes
+    And production hashes for the three source documents, a sibling Shipping instance, and Published bytes equal their pre-review values
+    When reload proves the exclusion durable and project Undo runs
+    Then the exclusion survives reload before Undo and the current inherited /customer_status definition is restored after Undo
+    And an invariant or required-dependency fixture exposes no exclusion command and renders its named blocker and repair route
+
+  # Data layer layered schema constraints runtime 033
+  Scenario Outline: Data layer layered schema constraints runtime 033
+    Given production Alternative shipping has effective string property /colour with Allowed values red and blue
+    And its persisted Example uses <example_method> with value blue
+    When the installed Allowed values control commits red before the Example control is edited
+    Then production accepts the Allowed values command before any separate Example command
+    And the persisted Example <example_result>
+    And installed Example feedback <example_feedback>
+    And installed review or direct-save feedback identifies the Allowed values and Example effects
+    And one durable property command and one Undo entry are recorded
+    And hashes for Sitewide, siblings, unrelated Checkout facets, and Published state remain unchanged
+    When project Undo reverts that command
+    Then repository state <undo_result>
+
+    Examples:
+      | example_method         | example_result                    | example_feedback                                         | undo_result                                                         |
+      | selected allowed value | becomes selected allowed value red | renders no mismatch diagnostic                           | restores Allowed values red and blue with selected Example blue     |
+      | custom value           | remains custom value blue          | renders a non-blocking Allowed values mismatch diagnostic | restores Allowed values red and blue while retaining custom blue    |
