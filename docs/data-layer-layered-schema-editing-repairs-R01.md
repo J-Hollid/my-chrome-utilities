@@ -20,6 +20,13 @@ QA integration: exact candidate `ad9b9276c2` passed the authoritative
 tree also makes exclusion atomic with any same-contributor sparse facets and
 does not expose exclusion controls in unsupported Event-occurrence workspaces.
 
+The proposed follow-up in
+`docs/data-layer-page-flow-inherited-property-selection-R01.md` supersedes only
+the property-action placement below and the presentation of excluded effective
+rows. Its first-class Page and Flow Page-instance selector retains this program's
+sparse identity, composition, safety, persistence, downstream-scope, and Undo
+semantics; Layering 033 remains unchanged.
+
 ## Contextual inherited-property exclusion
 
 An ordinary inherited effective property exposes `Exclude inherited property`
