@@ -69,6 +69,19 @@
              :runtime
              {"worksheet" "Template Guide"
               "printer_settings_part" "xl/printerSettings/printerSettings2.bin"})))
+  (doseq [invalid-metadata ["a missing valid validation state"
+                            "a body digest different from its record digest"
+                            "a nonpositive body byte length"
+                            "an unsupported Excel contract version"]]
+    (is (map? (flow-export/validate-example!
+               :model
+               {"invalid_metadata" invalid-metadata}))))
+  (doseq [[page-instance documented-example] [["Cart" "cart"]
+                                               ["Confirmation" "confirmation"]]]
+    (is (map? (flow-export/validate-example!
+               :model
+               {"page_instance" page-instance
+                "documented_example" documented-example}))))
   (let [example {"instance_count" "4"
                  "source_page" "Generic checkout page"
                  "first_name" "Customer details"
@@ -96,7 +109,20 @@
        (flow-export/validate-example!
         :model
         {"headings" "off"
-         "heading_result" "rendered once before each non-empty concept"}))))
+         "heading_result" "rendered once before each non-empty concept"})))
+  (is (thrown-with-msg?
+       clojure.lang.ExceptionInfo
+       #"invalid result"
+       (flow-export/validate-example!
+        :model
+        {"invalid_metadata" "a missing validation state"})))
+  (is (thrown-with-msg?
+       clojure.lang.ExceptionInfo
+       #"invalid result"
+       (flow-export/validate-example!
+        :model
+        {"page_instance" "Cart"
+         "documented_example" "confirmation"}))))
 
 (deftest flow-export-runtime-evidence-includes-documentation-concept-corrections
   (let [evidence (into {:installedBoundary true
@@ -170,5 +196,5 @@
     (is (nil? (#'flow-export/assert-runtime! evidence)))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-19T10:24:00.910249692+02:00", :module-hash "-58664197", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1511126195"} {:id "defn-/applicable-handler?", :kind "defn-", :line 5, :end-line 10, :hash "-1188712919"} {:id "form/2/deftest", :kind "deftest", :line 12, :end-line 18, :hash "497408386"} {:id "form/3/deftest", :kind "deftest", :line 20, :end-line 91, :hash "1285331522"} {:id "form/4/deftest", :kind "deftest", :line 93, :end-line 144, :hash "-650837646"}]}
+;; {:version 1, :tested-at "2026-08-23T07:17:22.499236657+02:00", :module-hash "-1330773768", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1511126195"} {:id "defn-/applicable-handler?", :kind "defn-", :line 5, :end-line 10, :hash "-1188712919"} {:id "form/2/deftest", :kind "deftest", :line 12, :end-line 18, :hash "497408386"} {:id "form/3/deftest", :kind "deftest", :line 20, :end-line 125, :hash "-1459277528"} {:id "form/4/deftest", :kind "deftest", :line 127, :end-line 196, :hash "-1561823474"}]}
 ;; clj-mutate-manifest-end

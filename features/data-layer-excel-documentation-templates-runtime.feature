@@ -1,6 +1,6 @@
-# mutation-stamp: sha256=80e3d98f4b5d3f3459d338cfe79edc124eabef998f3289bc28acc89c1170bbd7
+# mutation-stamp: sha256=d7efd47dae66a576f01a89f931c10b13a056802084b23c19f1d54c1d2c7bec6e
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-08-21T14:26:53.318177614Z","feature_name":"Data layer Excel documentation templates runtime","feature_path":"features/data-layer-excel-documentation-templates-runtime.feature","background_hash":"68be27a331ddecf95846570243727332aca14d9fa4d430f9dc5c3635a7d1fac7","implementation_hash":"sha256:a40b4de99cabcada4d387a29a545e76e39df40ec5e926e80af72450fa06a2743","scenarios":[{"index":5,"name":"Data layer Excel documentation templates runtime 006","scenario_hash":"0a3fc75970bb55b405ffd1291c74615e9480a65ca9ff8a8419bc671d8831906c","mutation_count":14,"result":{"Total":14,"Killed":14,"Survived":0,"Errors":0},"tested_at":"2026-08-21T14:26:16.768772951Z"},{"index":12,"name":"Data layer Excel documentation templates runtime 013","scenario_hash":"5327a208ae250eeb89ecf2216138e693aed3ed7578e5d84b9c700f72ee2ed51f","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-08-21T14:26:16.768772951Z"}]}
+# {"version":1,"tested_at":"2026-08-23T05:12:36.424522087Z","feature_name":"Data layer Excel documentation templates runtime","feature_path":"features/data-layer-excel-documentation-templates-runtime.feature","background_hash":"68be27a331ddecf95846570243727332aca14d9fa4d430f9dc5c3635a7d1fac7","implementation_hash":"sha256:a40b4de99cabcada4d387a29a545e76e39df40ec5e926e80af72450fa06a2743","scenarios":[{"index":5,"name":"Data layer Excel documentation templates runtime 006","scenario_hash":"0a3fc75970bb55b405ffd1291c74615e9480a65ca9ff8a8419bc671d8831906c","mutation_count":14,"result":{"Total":14,"Killed":14,"Survived":0,"Errors":0},"tested_at":"2026-08-21T14:26:16.768772951Z"},{"index":12,"name":"Data layer Excel documentation templates runtime 013","scenario_hash":"5327a208ae250eeb89ecf2216138e693aed3ed7578e5d84b9c700f72ee2ed51f","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-08-21T14:26:16.768772951Z"}]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer Excel documentation templates runtime
@@ -152,9 +152,10 @@ Feature: Data layer Excel documentation templates runtime
   # Data layer Excel documentation templates runtime 015
   Scenario: Data layer Excel documentation templates runtime 015
     Given an actual Flow workbook places contextual image area PageVisual and visual metadata cells inside PageCard
-    And production Checkout contains two canonical-Cart instances with different saved visuals and one Page without a visual
+    And production Checkout contains an actual durably saved WebP Page-instance visual and one Page without a visual
     When installed preview and assigned Excel export render the workbook
-    Then independent OOXML parsing finds each visual's exact saved bytes only in its own PageCard
+    Then independent OOXML parsing finds a compatible PNG conversion of the WebP only in its owning PageCard
+    And durable repository inspection finds the exact original WebP body and attachment unchanged
     And parsed image anchors preserve aspect ratio within PageVisual with no external image relationship
     And parsed cells contain the matching literal description, caption, and source reference
     And the Page without a visual has an empty image area and metadata cells without layout loss

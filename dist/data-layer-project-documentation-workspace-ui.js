@@ -1,4 +1,4 @@
-import { compileProjectDocumentation, projectDocumentationSources } from "./data-layer-project-documentation-compiler.js";
+import { compileProjectDocumentation, ProjectDocumentationVisualUnavailableError, projectDocumentationSources } from "./data-layer-project-documentation-compiler.js";
 import { createProjectDocumentationSet, } from "./data-layer-project-documentation-records.js";
 import { projectDocumentationSnapshotStale, selectProjectDocumentationTables, themeFingerprint, } from "./data-layer-project-documentation-workspace.js";
 import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
@@ -17,6 +17,36 @@ import { renderProjectDocumentationRichWithTemplates } from "./documentation-tem
 import { documentationTemplateAssignment, documentationTemplateProblems } from "./documentation-templates/template-library.js";
 import { documentationPreviewSelection, documentationTabAfterKey, } from "./project-documentation/workspace-navigation.js";
 export { consumeDocumentationIncompleteConfirmation, documentationExportPresentation, documentationExportSelection, documentationPreviewSelection, documentationTabAfterKey, };
+const visualBodyKey = (projectId, digest) => `${projectId}\u0000${digest}`;
+const visualBodyFailureMessage = (error) => error instanceof DOMException && error.name === "NotFoundError" ? "The saved visual body is unavailable." : "The saved visual body could not be read.";
+const visualBodyDataUrl = async (body, mediaType) => { const bytes = new Uint8Array(await body.arrayBuffer()); let binary = ""; for (let offset = 0; offset < bytes.length; offset += 32768)
+    binary += String.fromCharCode(...bytes.slice(offset, offset + 32768)); return `data:${mediaType};base64,${btoa(binary)}`; };
+export function projectDocumentationVisualBodyRequirements(state, set) { if (!set)
+    return []; const flowIds = new Set(set.sections.filter(({ selected, kind }) => selected && kind === "flow").map(({ targetId }) => String(targetId ?? ""))), assetIds = new Set(), graphs = state.project.documentationFlowGraphs ?? {}; for (const flowId of flowIds)
+    for (const frame of graphs[flowId]?.pageFrames ?? []) {
+        const assetId = String(frame.conceptVisual?.assetId ?? "");
+        if (assetId)
+            assetIds.add(assetId);
+    } const assets = state.project.conceptVisualAssets ?? [], byId = new Map(assets.map(asset => [asset.id, asset])); return [...assetIds].flatMap(assetId => { const asset = byId.get(assetId); return asset && ["image/png", "image/jpeg", "image/webp"].includes(asset.mediaType) ? [{ digest: asset.digest, mediaType: asset.mediaType }] : []; }).filter((item, index, items) => items.findIndex(candidate => candidate.digest === item.digest) === index); }
+export function createProjectDocumentationVisualBodyHydrator(load) { const bodies = new Map(), failures = new Map(), inFlight = new Map(); const hydrateOne = (projectId, requirement, retryFailed) => { const key = visualBodyKey(projectId, requirement.digest); if (bodies.has(key) || (!retryFailed && failures.has(key)))
+    return Promise.resolve(); const active = inFlight.get(key); if (active)
+    return active; const task = (async () => { failures.delete(key); try {
+    const body = await load(projectId, requirement.digest);
+    if (!body)
+        throw new DOMException("The saved visual body is unavailable.", "NotFoundError");
+    bodies.set(key, await visualBodyDataUrl(body, requirement.mediaType));
+}
+catch (error) {
+    failures.set(key, { digest: requirement.digest, message: visualBodyFailureMessage(error) });
+}
+finally {
+    inFlight.delete(key);
+} })(); inFlight.set(key, task); return task; }; const settle = async (projectId, requirements, settings = {}) => { await Promise.all(requirements.map(requirement => hydrateOne(projectId, requirement, settings.retryFailed === true))); return requirements.flatMap(requirement => { const failure = failures.get(visualBodyKey(projectId, requirement.digest)); return failure ? [failure] : []; }); }; const status = (projectId, requirements) => { if (!requirements.length || requirements.every(({ digest }) => bodies.has(visualBodyKey(projectId, digest))))
+    return "ready"; if (requirements.some(({ digest }) => inFlight.has(visualBodyKey(projectId, digest))))
+    return "loading"; if (requirements.some(({ digest }) => failures.has(visualBodyKey(projectId, digest))))
+    return "failed"; return "idle"; }; const prime = (state) => { const assets = state.project.conceptVisualAssets ?? []; for (const asset of assets)
+    if (typeof asset.bytes === "string" && /^data:image\/(?:png|jpeg|webp);base64,/iu.test(asset.bytes))
+        bodies.set(visualBodyKey(state.project.id, asset.digest), asset.bytes); }; const apply = (state) => { const project = state.project; return { ...state, project: { ...project, conceptVisualAssets: project.conceptVisualAssets?.map(asset => { const bytes = bodies.get(visualBodyKey(project.id, asset.digest)); return bytes ? { ...asset, bytes } : asset; }) } }; }; return { apply, prime, settle, status }; }
 const defaultPorts = () => ({
     writePlain: async (value) => navigator.clipboard.writeText(value),
     writeRich: async (html, plain) => {
@@ -33,7 +63,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
                 throw new Error("Open a project before exporting a template."); const body = await options.loadTemplateBody(projectId, digest); if (!body)
                 throw new Error("The assigned Excel template body is missing from this project."); return body; } } : {}) };
     let selectedSetId = "", selectedSectionId = "", selectedTemplateId = "", selectedRichBlockId = "", selectedExportIds = new Set(), snapshot, feedback = "", confirmedIncomplete = false, exportScope = "current", primaryTab = "build", previewSectionId = "", addContentOpen = false, themeOpen = false, templatesOpen = false, templateMobileDetail = false, richEditorMobileDetail = false, setCreationOpen = false, mobileBuildSurface = "outline", documentSettingsOpen = false, pendingExportAction, visualHydration;
-    const visualBodies = new Map(), visualAttempts = new Set();
+    const visualBodyHydrator = options.loadVisualAssetBody ? createProjectDocumentationVisualBodyHydrator(options.loadVisualAssetBody) : undefined;
     const documentation = () => options.state()?.project.documentation ?? { sets: [], themes: [] };
     const active = () => { const records = documentation(), set = records.sets.find(({ id }) => id === selectedSetId) ?? records.sets[0], theme = set ? records.themes.find(({ id }) => id === set.themeId) : undefined; return { records, set, theme }; };
     const persist = (records, label) => options.save(records, label);
@@ -41,31 +71,30 @@ export function installProjectDocumentationWorkspaceUi(options) {
     const saveTheme = (next, label) => { const records = documentation(); persist({ ...records, themes: records.themes.some(({ id }) => id === next.id) ? records.themes.map((item) => item.id === next.id ? next : item) : [...records.themes, next] }, label); };
     const mutateSection = (set, sectionId, update, label) => saveSet(createProjectDocumentationSet({ ...set, sections: set.sections.map((section) => section.id === sectionId ? update(section) : section) }), label);
     const sources = (state) => projectDocumentationSources(state, new Date().toISOString(), options.revision());
-    const stateWithVisualBodies = () => { const state = options.state(); if (!state || !visualBodies.size)
-        return state; const project = state.project; return { ...state, project: { ...project, conceptVisualAssets: project.conceptVisualAssets?.map(asset => visualBodies.has(asset.digest) ? { ...asset, bytes: visualBodies.get(asset.digest) } : asset) } }; };
-    const compile = () => { const state = stateWithVisualBodies(), { set, theme } = active(); return state && set && theme ? compileProjectDocumentation({ state, set, theme, revision: options.revision(), generatedAt: new Date().toISOString() }) : undefined; };
-    const hydrateVisualBodies = async () => { const state = options.state(); if (!state || !options.loadVisualAssetBody)
-        return; const project = state.project; for (const asset of project.conceptVisualAssets ?? []) {
-        if (visualBodies.has(asset.digest) || visualAttempts.has(asset.digest))
-            continue;
-        visualAttempts.add(asset.digest);
-        const body = await options.loadVisualAssetBody(state.project.id, asset.digest).catch(() => undefined);
-        if (!body)
-            continue;
-        const bytes = new Uint8Array(await body.arrayBuffer());
-        let binary = "";
-        for (let offset = 0; offset < bytes.length; offset += 32768)
-            binary += String.fromCharCode(...bytes.slice(offset, offset + 32768));
-        visualBodies.set(asset.digest, `data:${asset.mediaType};base64,${btoa(binary)}`);
+    const visualContext = () => { const state = options.state(), { set } = active(); if (!state)
+        return { state, requirements: [] }; visualBodyHydrator?.prime(state); return { state, requirements: projectDocumentationVisualBodyRequirements(state, set) }; };
+    const stateWithVisualBodies = () => { const state = options.state(); if (!state)
+        return state; visualBodyHydrator?.prime(state); return visualBodyHydrator?.apply(state) ?? state; };
+    const compile = () => { const state = stateWithVisualBodies(), { set, theme } = active(); if (!state || !set || !theme)
+        return undefined; try {
+        return compileProjectDocumentation({ state, set, theme, revision: options.revision(), generatedAt: new Date().toISOString() });
+    }
+    catch (error) {
+        if (error instanceof ProjectDocumentationVisualUnavailableError)
+            return undefined;
+        throw error;
     } };
+    const settleVisualBodies = async (retryFailed) => { const { state, requirements } = visualContext(); if (!state || !visualBodyHydrator)
+        return; const failures = await visualBodyHydrator.settle(state.project.id, requirements, { retryFailed }); if (failures.length)
+        throw new Error(`A saved Page visual could not be loaded: ${failures[0].message} Retry loading visuals, then refresh preview.`); };
     const stale = () => { if (!snapshot)
         return { stale: false, changedSources: [] }; const current = compile(), sources = projectDocumentationSnapshotStale(snapshot, current?.sourceRevisions ?? {}), templatesChanged = Boolean(current && current.snapshotHash !== snapshot.snapshotHash && !sources.stale); return { stale: sources.stale || templatesChanged, changedSources: [...sources.changedSources, ...(templatesChanged ? ["Templates"] : [])] }; };
     const selection = () => { const { set } = active(); return documentationExportSelection({ scope: exportScope, currentSectionId: selectedSectionId, selectedSectionIds: [...selectedExportIds], fallbackSectionId: set?.sections[0]?.id }); };
     const renderSectionConfiguration = createDocumentationSectionConfigurationRenderer(mutateSection);
     function render(host) {
-        const visualProject = options.state()?.project;
-        if (options.loadVisualAssetBody && !visualHydration && visualProject?.conceptVisualAssets?.some(({ digest }) => !visualAttempts.has(digest))) {
-            visualHydration = hydrateVisualBodies().finally(() => { visualHydration = undefined; render(host); });
+        const currentVisuals = visualContext(), visualStatus = currentVisuals.state && visualBodyHydrator ? visualBodyHydrator.status(currentVisuals.state.project.id, currentVisuals.requirements) : "ready";
+        if (visualStatus === "idle" && !visualHydration) {
+            visualHydration = settleVisualBodies(false).catch(() => undefined).finally(() => { visualHydration = undefined; render(host); });
         }
         const state = options.state(), { records, set, theme } = active();
         host.replaceChildren();
@@ -131,6 +160,16 @@ export function installProjectDocumentationWorkspaceUi(options) {
         addContent.setAttribute("aria-expanded", String(addContentOpen));
         documentSettings.setAttribute("aria-expanded", String(documentSettingsOpen));
         setRegion.append(heading(2, "Document outline"), outline, addContent, documentSettings);
+        if (visualStatus !== "ready") {
+            const status = document.createElement("section"), message = document.createElement("p");
+            status.dataset.documentationVisualStatus = visualStatus;
+            status.setAttribute("aria-live", "polite");
+            message.textContent = visualStatus === "failed" ? "A saved Page visual is unavailable. Retry loading it before refreshing preview or exporting." : "Loading saved Page visuals before preview and export.";
+            status.append(message);
+            if (visualStatus === "failed")
+                status.append(button("Retry loading visuals", () => { feedback = "Retrying saved Page visuals."; visualHydration = settleVisualBodies(true).catch(error => { feedback = error instanceof Error ? error.message : String(error); }).finally(() => { visualHydration = undefined; render(host); }); render(host); }));
+            contextHeader.append(status);
+        }
         const templateProblem = documentationTemplateProblems(records)[0];
         if (templateProblem) {
             const issue = document.createElement("section"), summary = document.createElement("p"), technical = document.createElement("details"), go = button("Go to problem", () => { templatesOpen = true; selectedTemplateId = templateProblem.templateId; templateMobileDetail = true; render(host); queueMicrotask(() => host.querySelector('[data-template-repair-primary="true"]')?.focus()); });
@@ -152,13 +191,14 @@ export function installProjectDocumentationWorkspaceUi(options) {
         templateRegion.id = "documentation-template-panel";
         templateRegion.hidden = !templatesOpen;
         if (templatesOpen)
-            renderDocumentationTemplateLibrary(templateRegion, { records, set, projectId: state.project.id, mobileDetail: templateMobileDetail, selectedTemplateId, selectedRichBlockId, richEditorMobileDetail, persist, ...(options.storeTemplateBody ? { storeBody: options.storeTemplateBody } : {}), ...(options.discardTemplateBody ? { discardBody: options.discardTemplateBody } : {}), ...(options.loadTemplateBody ? { loadBody: options.loadTemplateBody } : {}), download: ports.download, sampleExcel: async (template) => { const current = compile(); if (!current || !options.loadTemplateBody || !template.body)
+            renderDocumentationTemplateLibrary(templateRegion, { records, set, projectId: state.project.id, mobileDetail: templateMobileDetail, selectedTemplateId, selectedRichBlockId, richEditorMobileDetail, persist, ...(options.storeTemplateBody ? { storeBody: options.storeTemplateBody } : {}), ...(options.discardTemplateBody ? { discardBody: options.discardTemplateBody } : {}), ...(options.loadTemplateBody ? { loadBody: options.loadTemplateBody } : {}), download: ports.download, sampleExcel: async (template) => { await settleVisualBodies(true); const current = compile(); if (!current || !options.loadTemplateBody || !template.body)
                     throw new Error("The current immutable documentation snapshot or template body is unavailable."); const section = current.set.sections.find(item => item.selected && item.kind === template.kind); if (!section)
                     throw new Error(`Select a ${template.kind} section before generating a sample.`); const assignedSet = { ...current, set: { ...current.set, templateAssignments: { ...(current.set.templateAssignments ?? {}), [`excel:${template.kind}`]: template.id } }, templates: records.templates ?? [] }; return writeProjectDocumentationWorkbookWithTemplates(assignedSet, { scope: "current", currentSectionId: section.id, confirmIncomplete: true }, async (bodyDigest) => { const body = await options.loadTemplateBody(state.project.id, bodyDigest); if (!body)
-                    throw new Error("The selected Excel template body is unavailable."); return body; }); }, previewCandidateExcel: async (file, kind) => { const current = compile(); if (!current)
+                    throw new Error("The selected Excel template body is unavailable."); return body; }); }, previewCandidateExcel: async (file, kind) => { await settleVisualBodies(true); const current = compile(); if (!current)
                     throw new Error("Refresh the current immutable documentation snapshot before previewing this candidate."); const section = current.set.sections.find(item => item.selected && item.kind === kind); if (!section)
                     throw new Error(`Select a ${kind} section before generating populated output.`); const digest = `sha256:${Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer())), byte => byte.toString(16).padStart(2, "0")).join("")}`, candidate = { id: "unsaved-excel-candidate", name: "Unsaved candidate", format: "excel", kind, contractVersion: 2, digest, body: { assetId: "unsaved-excel-candidate-body", digest, byteLength: file.size }, validation: { valid: true, findings: [] } }, assigned = { ...current, set: { ...current.set, templateAssignments: { ...(current.set.templateAssignments ?? {}), [`excel:${kind}`]: candidate.id } }, templates: [...(current.templates ?? []), candidate] }; return writeProjectDocumentationWorkbookWithTemplates(assigned, { scope: "current", currentSectionId: section.id, confirmIncomplete: true }, async () => file); }, rerender: () => render(host), setMobileDetail: value => { templateMobileDetail = value; }, selectTemplate: id => { selectedTemplateId = id; selectedRichBlockId = ""; richEditorMobileDetail = false; }, selectRichBlock: id => { selectedRichBlockId = id; }, setRichEditorMobileDetail: value => { richEditorMobileDetail = value; } });
-        const refresh = button("Refresh preview", () => { snapshot = compile(); feedback = snapshot ? `Preview refreshed · immutable snapshot ${snapshot.snapshotHash}` : "Preview unavailable"; render(host); }), previewNavigator = document.createElement("select"), previewStatus = document.createElement("output"), previewToolbar = document.createElement("div"), previewSurface = document.createElement("div");
+        const refresh = button("Refresh preview", () => { feedback = "Loading saved Page visuals."; visualHydration = settleVisualBodies(true).then(() => { snapshot = compile(); if (!snapshot)
+            throw new Error("A saved Page visual is unavailable. Retry loading visuals before refreshing preview."); feedback = `Preview refreshed · immutable snapshot ${snapshot.snapshotHash}`; }).catch(error => { feedback = error instanceof Error ? error.message : String(error); }).finally(() => { visualHydration = undefined; render(host); }); render(host); }), previewNavigator = document.createElement("select"), previewStatus = document.createElement("output"), previewToolbar = document.createElement("div"), previewSurface = document.createElement("div");
         previewNavigator.setAttribute("aria-label", "Documentation preview section");
         for (const section of selectedSections)
             previewNavigator.append(new Option(section.name, section.id));

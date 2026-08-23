@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=69e3e80ee64ab4ff06db2fd14338afcd8396315c7e22a8702baa57c22e9eb3bd
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-08-23T05:12:19.291598234Z","feature_name":"Data layer documentation template library","feature_path":"features/data-layer-documentation-template-library.feature","background_hash":"95e3af67521ae8b8842b995db426d7d9d861cb2c52c3bcbda319a64f296793b7","implementation_hash":"sha256:d2af2dd1d3de51ace2eef58c55f6e4045fbbec8aef0e1ef300fa0399d4edc78f","scenarios":[{"index":11,"name":"Data layer documentation template library 012","scenario_hash":"0767f948a7f5026314f5dde00aaaabbf9ca12ae1cde61d8dedb26959e9c1c1bf","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-08-23T05:12:19.291598234Z"},{"index":17,"name":"Data layer documentation template library 018","scenario_hash":"bf890d44a99ec2df99ffd4e3570a977cd1404297d05108c699f04a0251c3b0ee","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-08-23T05:12:19.291598234Z"},{"index":2,"name":"Data layer documentation template library 003","scenario_hash":"ae1691e4d830ff044832269f5eb015e3318699e362643d210fe3024ecff06aac","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-08-23T05:10:59.350740876Z"},{"index":10,"name":"Data layer documentation template library 011","scenario_hash":"d1745655d44589dcd356d9fa813e7e2eff370f37080e65634c79b66c7996bb2a","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-08-23T05:10:59.350740876Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer documentation template library
 
   Background:
@@ -210,6 +215,8 @@ Feature: Data layer documentation template library
     When the Flow template context is prepared from the current immutable snapshot
     Then each Cart instance exposes only its own page.visual image source, description, caption, and sourceReference
     And Payment exposes no page.visual image source or metadata
+    And a saved PNG, JPEG, or WebP attachment remains present while its exact immutable body is loading
+    And an unavailable attached body blocks refresh with a retry action rather than looking like Payment's absent attachment
     And image bytes are available only to a scoped image area or semantic image block
     And no attachment identity, asset identity, digest, repository key, Blob URL, or canonical Page visual is exposed
     When one Cart instance visual is replaced or removed

@@ -21,6 +21,9 @@ const profileValue = (column, item) => column === "Property" ? flowDocumentation
 const publicRows = (table) => { const concepts = new Map(table.conceptGroups?.flatMap(group => Array.from({ length: group.count }, (_, offset) => [group.start + offset, group.name])) ?? []); return table.rows.map((row, index) => ({ property: flowDocumentationDisplayPath(row[0] ?? ""), concept: concepts.get(index) ?? "", cells: row.slice(1).map((value, column) => ({ columnKey: table.headings[column + 1] ?? `column-${column + 2}`, heading: table.headings[column + 1] ?? "", value })) })); };
 const tableTemplateData = (table) => ({ columns: table.headings.slice(1).map(heading => ({ key: heading, heading })), rows: publicRows(table), concepts: (table.conceptGroups ?? []).map(({ name, start, count }) => ({ name, rows: publicRows(table).slice(start, start + count) })), legend: table.legend ?? "" });
 const metadataHeading = { description: "Description", type: "Type", allowedValues: "Allowed values", example: "Documented example", comments: "Comments", provenance: "Provenance" };
+export class ProjectDocumentationVisualUnavailableError extends Error {
+    name = "ProjectDocumentationVisualUnavailableError";
+}
 const flowTemplateData = (snapshot, table, metadata, canonicalPaths, set) => {
     const availablePaths = new Set(flowDocumentationPropertyPaths(snapshot)), tableCanonicalPaths = canonicalPaths.filter((path) => availablePaths.has(path));
     const pages = [], pageByFrame = new Map();
@@ -33,7 +36,9 @@ const flowTemplateData = (snapshot, table, metadata, canonicalPaths, set) => {
         return []; const grouped = effectiveItems.filter(({ concept }) => conceptKey(concept) === name.toLocaleLowerCase()); return grouped.length ? [{ name, rows: grouped }] : []; }); };
     for (const [contextIndex, context] of snapshot.contexts.entries())
         if (context.kind === "page-instance") {
-            const pageRows = rows(context, contextIndex), page = { stepLabel: context.stepLabel, pageName: context.pageName, sourcePageName: context.sourcePageName ?? context.pageName, eventName: context.eventName, heading: `Step ${context.stepLabel} ${context.pageName}`, rows: pageRows, concepts: concepts(pageRows, context), events: [], ...(context.visual ? { visual: { image: context.visual.image, description: context.visual.description, caption: context.visual.caption, sourceReference: context.visual.sourceReference } } : {}) };
+            if (context.visual && !context.visual.image)
+                throw new ProjectDocumentationVisualUnavailableError(`The saved visual for Page ${context.pageName} is unavailable. Retry loading the visual before refreshing preview or exporting.`);
+            const pageRows = rows(context, contextIndex), page = { stepLabel: context.stepLabel, pageName: context.pageName, sourcePageName: context.sourcePageName ?? context.pageName, eventName: context.eventName, heading: `Step ${context.stepLabel} ${context.pageName}`, rows: pageRows, concepts: concepts(pageRows, context), events: [], ...(context.visual?.image ? { visual: { image: context.visual.image, description: context.visual.description, caption: context.visual.caption, sourceReference: context.visual.sourceReference } } : {}) };
             pages.push(page);
             pageByFrame.set(context.pageFrameId, page);
         }
