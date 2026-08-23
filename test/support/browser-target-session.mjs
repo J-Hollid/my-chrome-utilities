@@ -212,6 +212,7 @@ export async function runBrowserTargetSession({
   extensionRoot = path.resolve("dist"),
 }) {
   const selected = selectedBrowserTargetConfigurations(environment, Object.keys(definitions));
+  const rowCompositionViewport=Number(environment.SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH);
   const profile = await mkdtemp(path.join(os.tmpdir(), "browser-target-batch-"));
   const args = headlessChromeArguments(profile, extensionRoot);
   args.splice(-1, 0, `--load-extension=${extensionRoot}`);
@@ -239,6 +240,7 @@ export async function runBrowserTargetSession({
         const protocolCallLimitMilliseconds=()=>Math.max(1,Math.min(120_000,remainingMilliseconds()-50));
         socket = await freshTargetSocket(port, origin, definition.pagePath, target.id,
           protocolCallLimitMilliseconds);
+        if(definition.rowCompositionViewport&&Number.isFinite(rowCompositionViewport))await socket.call("Emulation.setDeviceMetricsOverride",{width:rowCompositionViewport,height:900,deviceScaleFactor:1,mobile:rowCompositionViewport<=360});
         const waitForDefinitionReadiness=async(phase)=>{
           const readiness=definition.readiness??{};
           const source=readiness.expression??"({ready:document.readyState==='complete',documentReadyState:document.readyState,href:location.href})";
@@ -264,6 +266,7 @@ export async function runBrowserTargetSession({
               socket.close();
               socket = await reconnectTargetSocket(port, origin, definition.pagePath, target.id,
                 protocolCallLimitMilliseconds);
+              if(definition.rowCompositionViewport&&Number.isFinite(rowCompositionViewport))await socket.call("Emulation.setDeviceMetricsOverride",{width:rowCompositionViewport,height:900,deviceScaleFactor:1,mobile:rowCompositionViewport<=360});
               await waitForDefinitionReadiness("reconnected navigation");
               timer.transition(resumePhase);
             }

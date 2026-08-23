@@ -524,3 +524,4 @@ pre { max-inline-size:100%; max-block-size:20rem; margin:0; overflow:auto; white
 .durable-recovery-scroll dd { margin:0; overflow-wrap:anywhere; }
 .durable-recovery-scroll button,.durable-recovery-scroll output { display:block; margin-block-start:.5rem; }
 @media (max-width:400px) { .durable-recovery-scroll { block-size:min(28rem,calc(100vh - 1rem)); } }
+@media(max-width:480px){[data-reorder-item-row="true"][data-reorder-actionable="true"]:has(>[data-reorder-trailing="true"]){grid-template-columns:44px minmax(0,1fr)!important}[data-reorder-item-row="true"]>[data-reorder-trailing="true"]{grid-column:2!important;grid-row:2!important;display:flex;flex-wrap:wrap;gap:.4rem;max-width:100%}}

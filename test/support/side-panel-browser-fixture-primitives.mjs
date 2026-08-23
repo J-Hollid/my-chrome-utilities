@@ -1419,7 +1419,9 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
     let browserTargetStoragePrepared=false;
     let failedAtPhase;
     const targetDefinition = targetDefinitions.get(browserTargetId);
-    if (targetDefinition) componentWidths = [...targetDefinition.viewport];
+    if (targetDefinition) componentWidths = plannerEnvironment.SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH
+      ? [Number(plannerEnvironment.SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH)]
+      : [...targetDefinition.viewport];
     const targetContext = suppliedTargetContext ?? { id:browserTargetId,
       configuration:targetDefinition?.configuration ?? activeBrowserTargetEnvironment,
       fixturePrograms, activeFixtureModule:null };

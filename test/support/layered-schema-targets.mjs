@@ -120,7 +120,7 @@ const runEditorProducer=async(workflow,keys,{targetId,evaluate,socket},{canonica
     flatRuleMainProjectionLifecycleExpression,flatRulePanelProjectionDiagnosticExpression,flatRulePopupGeometryExpression,
     flatRuleResponsiveFinishExpression,flatRuleResponsiveSetupExpression,flatRuleResponsiveSnapshotExpression,
     typedLiteralFocusedEditorExpression,runProfileInheritanceControlsRuntimeProbe,runJournalFreeInstalledRuntimeProbe,
-  });let hierarchyEvidence;if(targetId==="LAYERED_SCHEMA_EDITOR_TARGET")hierarchyEvidence=await originalEvaluate(liveSocket,correctedHierarchyReorderExpression);const owned={};
+  });let hierarchyEvidence;if(targetId==="LAYERED_SCHEMA_EDITOR_TARGET"){const rowCompositionViewport=Number(process.env.SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH);if(Number.isFinite(rowCompositionViewport))await liveSocket.call("Emulation.setDeviceMetricsOverride",{width:rowCompositionViewport,height:900,deviceScaleFactor:1,mobile:rowCompositionViewport<=360});hierarchyEvidence=await originalEvaluate(liveSocket,correctedHierarchyReorderExpression);}const owned={};
   for(const key of keys)owned[key]=result.evidence[key];
   if(canonical){const facet=result.canonicalFacetEvidence,persistence={canonicalPresence:facet.presenceSaved,canonicalValues:facet.valuesSaved,canonicalConditions:facet.conditionsSaved,canonicalRules:facet.rulesSaved,canonicalExample:facet.exampleSaved,canonicalPersisted:facet.persisted};for(const key of canonicalEditorKeys)owned[key]=persistence[key];}
   if(hierarchyEvidence)owned.hierarchyEvidence=hierarchyEvidence;
@@ -160,7 +160,7 @@ const definitions = {
         flowStructural003:flowFacetEvidence.pageFrameRemoved}};`,
   },
   LAYERED_SCHEMA_PAGE_GROUP_TARGET:{
-    pagePath:"specification-builder.html",navigationRetries:4,
+    pagePath:"specification-builder.html",navigationRetries:4,rowCompositionViewport:true,
     beforeExpression:()=>`
       await (${editorInitialLayeredInstalledExpression});
       const pageGroupStructuralSeed=await (${pageGroupMembershipSeedExpression});

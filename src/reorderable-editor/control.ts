@@ -99,6 +99,7 @@ export function renderReorderableItemRow(options:ReorderableItemRowOptions):HTML
     row=dom.createElement("div"),actionable=Boolean(options.control&&!options.control.hidden);
   row.dataset.reorderItemRow="true";
   row.setAttribute("data-reorder-item-row","true");
+  if(actionable)row.dataset.reorderActionable="true";
   styles(row,{boxSizing:"border-box",display:"grid",
     gridTemplateColumns:actionable
       ?`44px minmax(0, 1fr)${options.trailingContent?" max-content":""}`
@@ -106,9 +107,10 @@ export function renderReorderableItemRow(options:ReorderableItemRowOptions):HTML
     alignItems:"center",columnGap:"8px",width:"100%",maxWidth:"100%",minWidth:"0px"});
   if(options.control)styles(options.control,{gridColumn:actionable?"1":"",gridRow:"1",alignSelf:"center"});
   styles(options.primaryContent,{gridColumn:actionable?"2":"1",gridRow:"1",minWidth:"0px",
-    maxWidth:"100%",overflowWrap:"anywhere"});
+    maxWidth:"100%",marginBlock:"0px",overflowWrap:"anywhere"});
   row.append(...[options.control,options.primaryContent].filter((element):element is HTMLElement=>Boolean(element)));
   if(options.trailingContent){
+    options.trailingContent.dataset.reorderTrailing="true";
     styles(options.trailingContent,{gridColumn:actionable?"3":"2",gridRow:"1",minWidth:"0px"});
     row.append(options.trailingContent);
   }
