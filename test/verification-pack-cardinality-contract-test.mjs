@@ -101,6 +101,29 @@ assert.deepEqual(new Set(canonicalRepairTaskIdentities(twoPackRegistry, {
 }).map(({ packId }) => packId).filter(Boolean)), new Set(twoPackIds),
 "the reliability adapter receives the exact synthetic runnable identities");
 
+const canonicalAcceptanceIdentity={
+  key:"acceptance-session:alpha",stage:"acceptance-session",packId:"alpha",executable:"bb",
+  args:["acceptance-pack-runner","alpha","generated/a.clj","ir/a.json","generated/b.clj","ir/b.json"],
+  target:"features/a.feature,features/b.feature",environment:null,requiredCapabilities:[],
+};
+const failedAcceptanceShard={...canonicalAcceptanceIdentity,
+  args:["acceptance-pack-runner","alpha","generated/b.clj","ir/b.json"],
+  target:"features/b.feature",
+};
+const shardIncident={failure:{task:failedAcceptanceShard,retryScope:{kind:"task",
+  taskKey:failedAcceptanceShard.key,executionArgs:[...failedAcceptanceShard.args]}}};
+assert.deepEqual(canonicalRepairTaskIdentities(twoPackRegistry, {
+  planVerification:()=>({tasks:[canonicalAcceptanceIdentity]}),verificationTaskIdentity:value=>value,
+  incident:shardIncident,
+}),[failedAcceptanceShard],
+"a receipt-bound acceptance shard remains the governed repair identity");
+assert.deepEqual(canonicalRepairTaskIdentities(twoPackRegistry, {
+  planVerification:()=>({tasks:[canonicalAcceptanceIdentity]}),verificationTaskIdentity:value=>value,
+  incident:{failure:{task:{...failedAcceptanceShard,args:["acceptance-pack-runner","alpha","other.clj","other.json"]},
+    retryScope:shardIncident.failure.retryScope}},
+}),[canonicalAcceptanceIdentity],
+"an unregistered or retry-mismatched acceptance shard cannot replace the canonical identity");
+
 const expandedPackIds = planVerification([
   ...twoPackRegistry,
   runnablePack("gamma"),

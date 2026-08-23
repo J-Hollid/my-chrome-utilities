@@ -78,6 +78,8 @@ import {
 } from "./report-verification-throughput.mjs";
 import { createVerificationPackCardinalityAdapter } from
   "./verification-pack-cardinality/contract.mjs";
+import { canonicalRepairTaskIdentities } from
+  "./verification-pack-cardinality/reliability-adapter.mjs";
 import {
   registryCardinalityEvidenceTaskKeys,
   registryCardinalityFocusedPlanMode,
@@ -1107,7 +1109,9 @@ export async function runTimeoutRepairFocused(id, {
   const plan = canonicalPlan ?? planVerification(packs, {
     packIds:exactRunnablePackIds, includeProperties:true,
   });
-  const canonicalIdentities = plan.tasks.map(verificationTaskIdentity);
+  const canonicalIdentities = canonicalRepairTaskIdentities(packs, {
+    planVerification:canonicalPlan?()=>canonicalPlan:planVerification,verificationTaskIdentity,incident,
+  });
   const unresolvedIncidents = await store.blocking({ commit:candidate.commit });
   await validateUnresolvedIncidentTaskSuccession({ incidents:unresolvedIncidents,
     currentIdentities:canonicalIdentities, currentPacks:packs });
