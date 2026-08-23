@@ -229,3 +229,21 @@ Feature: Data layer Excel documentation templates runtime
       | /labels         | array of strings | typed array ["item1", "item2", "item3"]            | ["item1", "item2", "item3"]             | array       |
       | /quantities     | array of numbers | typed array [1, 2, 3]                              | [1, 2, 3]                                | array       |
       | /item           | object           | typed object {"id": 12, "label": "12"}              | {"id": 12, "label": "12"}               | object      |
+
+  # Data layer Excel documentation templates runtime 021
+  Scenario: Data layer Excel documentation templates runtime 021
+    Given an actual Contract 3 Flow workbook defines FlowColumnHeader C2:D6 repeating flow.pages Across
+    And PageSeparator D2:D6 is its separator-area and D4 contains literal >>
+    And PropertyRow B6 repeats flow.rows Down, PropertyValue C6 repeats page.rows Down, and PageVisual is C3
+    And multiple production Pages have differing row counts that expand PropertyValue below row 6
+    And a tight finite OutputCanvas contains the prototype and declared margins with background-fill: #FFFFFF
+    And no arbitrary A1:Z100 fill is present in the Template
+    When installed controls generate unsaved populated preview and assigned Excel output
+    Then independent XLSX parsing finds the aligned white separator presentation beside every generated Page property row including rows corresponding to D7:D9
+    And it finds one >> between adjacent Pages with no final separator-width insertion or trailing >>
+    And a generated Down fixture proves the symmetric expanded-width separator presentation
+    And every otherwise unfilled cell in the exact final OutputCanvas and its margins has solid white fill
+    And explicit authored fills remain unchanged and cells immediately outside OutputCanvas have no generated background fill
+    And the number of background target cells equals the finite projected rectangle and does not exceed 250000
+    And OOXML inspection finds one deduplicated background fill definition and no per-cell style-record growth
+    And production tracing proves binding resolution, image anchors, snapshot values, repository state, and publication bytes are unchanged

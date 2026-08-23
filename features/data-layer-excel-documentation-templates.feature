@@ -368,3 +368,40 @@ Feature: Data layer Excel documentation templates
       | /labels           | array of strings | typed array ["item1", "item2", "item3"]            | ["item1", "item2", "item3"]             |
       | /quantities       | array of numbers | typed array [1, 2, 3]                              | [1, 2, 3]                                |
       | /item             | object           | typed object {"id": 12, "label": "12"}              | {"id": 12, "label": "12"}               |
+
+  # Data layer Excel documentation templates 027
+  Scenario: Data layer Excel documentation templates 027
+    Given a Contract 3 Flow workbook defines FlowColumnHeader C2:D6 repeating flow.pages Across
+    And its Properties cell contains separator-area: PageSeparator for PageSeparator D2:D6
+    And D4 contains literal >> while PropertyValue C6 repeats page.rows Down
+    And the configured Pages have differing non-empty page.rows collections that expand below row 6
+    And OutputCanvas is one finite root named area containing the prototype and intentional blank margins
+    And its Output row has blank Source and Direction and Properties background-fill: #FFFFFF
+    And the Template does not paint an arbitrary broad rectangle for its background
+    When populated output renders the workbook
+    Then each inter-Page separator keeps its authored width and projects presentation through every nested generated row of the preceding Page
+    And cells aligned with the expanded PropertyValue rows receive separator presentation without repeated literal content
+    And literal >> appears once between adjacent Pages with no separator slot or empty separator column after the final Page
+    And a Down separator symmetrically projects presentation through nested Across columns of its preceding item
+    And the final OutputCanvas bounds include every root, nested, Across, Down, and separator geometry delta plus the declared margins
+    And every otherwise unfilled cell inside those bounds has solid white fill while explicit authored cell fills take precedence
+    And no cell outside the final OutputCanvas receives the generated background
+    And Contract 2 and Contract 3 workbooks without an Output row retain their established presentation
+    And bindings, image layout, collection order, immutable snapshot data, template bytes, assignments, Draft state, and Published state remain unchanged
+
+  # Data layer Excel documentation templates 028
+  Scenario Outline: Data layer Excel documentation templates 028
+    Given a Contract 3 candidate declares <output_problem>
+    When guided validation or bounded render preflight evaluates it
+    Then the primary finding identifies <location>
+    And it says <finding>
+    And it recommends <repair>
+    And no workbook generation, download, template save, assignment, project revision, or publication write occurs
+
+    Examples:
+      | output_problem                                             | location                                  | finding                                                  | repair                                                        |
+      | OutputCanvas background-fill: white                       | TemplateAreas OutputCanvas Properties     | background-fill must be six-digit #RRGGBB                | Use a value such as #FFFFFF                                   |
+      | two Output rows                                            | TemplateAreas OutputCanvas Properties     | Contract 3 allows at most one Output area                 | Keep one finite Output area                                   |
+      | OutputCanvas that omits PageVisual                         | TemplateAreas OutputCanvas Properties     | OutputCanvas does not contain all generated output       | Resize OutputCanvas to contain PageVisual                     |
+      | an Output row with nonblank Source or Direction            | TemplateAreas OutputCanvas                | Output Source and Direction must be blank                 | Clear Source and Direction                                    |
+      | an OutputCanvas projected to 250001 background cells       | generated OutputCanvas                    | the generated background exceeds the 250000-cell budget  | Reduce the Output area or the number of generated repeat items |
