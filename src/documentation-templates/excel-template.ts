@@ -65,7 +65,7 @@ const placeholderPaths=(value:string)=>[...value.matchAll(/\{\{\s*([a-z][a-zA-Z0
 
 const defaultImageProperties=():ExcelImageAreaProperties=>({fit:"scale-down",position:{horizontal:"left",vertical:"top"},padding:{top:0,right:0,bottom:0,left:0}});
 const percentage=(value:string):`${number}%`|undefined=>{const match=/^(?:100(?:\.0+)?|\d{1,2}(?:\.\d+)?)%$/u.exec(value);return match?value as `${number}%`:undefined;};
-const paddingValues=(value:string):number[]|undefined=>{const parts=value.trim().split(/\s+/u);if(parts.length<1||parts.length>4)return undefined;const values=parts.map(part=>/^(?:0|\d+(?:\.\d+)?)px$/u.test(part)?Number(part.slice(0,-2)):Number.NaN);return values.every(Number.isFinite)?values:undefined;};
+const paddingValues=(value:string):number[]|undefined=>{const parts=value.trim().split(/\s+/u);if(parts.length<1||parts.length>4)return undefined;const values=parts.map(part=>/^(?:0|\d+(?:\.\d+)?)px$/iu.test(part)?Number(part.slice(0,-2)):Number.NaN);return values.every(Number.isFinite)?values:undefined;};
 
 export function parseExcelAreaProperties(type:"image",raw:string):ExcelImageAreaProperties;
 export function parseExcelAreaProperties(type:"repeat",raw:string):{separatorAreaName?:string};

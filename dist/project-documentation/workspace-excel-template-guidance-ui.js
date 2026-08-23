@@ -11,9 +11,9 @@ export function renderExcelTemplateGuide(kind) {
         const query = search.value.trim().toLocaleLowerCase(), matches = (value) => !query || value.toLocaleLowerCase().includes(query);
         results.replaceChildren();
         const values = guide.values.filter(entry => matches(`${entry.path} ${entry.meaning} ${entry.example} ${entry.available}`));
-        const collections = guide.collections.filter(entry => matches(`${entry.path} ${entry.meaning} ${entry.itemPrefix} ${entry.fields.join(" ")} ${entry.nestedCollections.join(" ")} ${entry.example}`)), areaExamples = guide.areaExamples.filter(entry => matches(`${entry.area} ${entry.type} ${entry.source} ${entry.direction} ${entry.range} ${entry.parent ?? ""}`));
-        const propertiesHeading = heading(4, "Contract 3 area Properties"), properties = document.createElement("p"), valueHeading = heading(4, "Single values"), valueList = document.createElement("ul"), collectionHeading = heading(4, "Repeatable data"), collectionList = document.createElement("ul"), exampleHeading = heading(4, "Copyable TemplateAreas examples"), exampleTable = document.createElement("table"), exampleHead = document.createElement("thead"), exampleBody = document.createElement("tbody");
-        properties.textContent = "Contract 2 remains compatible with implicit fit: scale-down, position: left top, and padding: 0px. Contract 3 Image Properties support fit scale-down or contain, position keywords or percentages, and one-to-four-value px padding in one semicolon-separated cell. Repeat Properties support separator-area naming a complete trailing edge, emitted only between items. Example: fit: scale-down; position: center; padding: 8px.";
+        const collections = guide.collections.filter(entry => matches(`${entry.path} ${entry.meaning} ${entry.itemPrefix} ${entry.fields.join(" ")} ${entry.nestedCollections.join(" ")} ${entry.example}`)), propertyGuidance = guide.propertyGuidance.filter(matches), areaExamples = [...guide.areaExamples, ...guide.propertyExamples].filter(entry => matches(`${entry.area} ${entry.type} ${entry.source} ${entry.direction} ${entry.properties ?? ""} ${entry.range} ${entry.parent ?? ""}`));
+        const propertiesHeading = heading(4, "Contract 3 area Properties"), properties = document.createElement("ul"), valueHeading = heading(4, "Single values"), valueList = document.createElement("ul"), collectionHeading = heading(4, "Repeatable data"), collectionList = document.createElement("ul"), exampleHeading = heading(4, "Copyable TemplateAreas examples"), exampleTable = document.createElement("table"), exampleHead = document.createElement("thead"), exampleBody = document.createElement("tbody");
+        properties.append(...propertyGuidance.map(value => Object.assign(document.createElement("li"), { textContent: value })));
         valueList.append(...values.map(entry => Object.assign(document.createElement("li"), { textContent: `${entry.placeholder} — ${entry.meaning} — example ${entry.example} — ${entry.available}` })));
         collectionList.append(...collections.map(entry => Object.assign(document.createElement("li"), { textContent: `${entry.path} — ${entry.meaning}; item prefix ${entry.itemPrefix}; fields ${entry.fields.join(", ")}; nested ${entry.nestedCollections.join(", ") || "none"}; Across or Down; ${entry.emptyResult}; ${entry.copyBehavior} Template Guide example: ${entry.example}` })));
         const headRow = document.createElement("tr");
@@ -22,7 +22,7 @@ export function renderExcelTemplateGuide(kind) {
         exampleHead.append(headRow);
         for (const example of areaExamples) {
             const row = document.createElement("tr");
-            for (const value of [example.area, example.type, example.source, example.direction, "", example.range, example.parent ?? ""])
+            for (const value of [example.area, example.type, example.source, example.direction, example.properties ?? "", example.range, example.parent ?? ""])
                 row.append(Object.assign(document.createElement("td"), { textContent: value }));
             exampleBody.append(row);
         }

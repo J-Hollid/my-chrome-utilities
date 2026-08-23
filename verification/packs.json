@@ -4509,7 +4509,8 @@
     ],
     "property": [
       "test/data-layer-flow-table-documentation-export-property-test.mjs",
-      "test/data-layer-project-documentation-profile-concepts-property-test.mjs"
+      "test/data-layer-project-documentation-profile-concepts-property-test.mjs",
+      "test/data-layer-documentation-template-excel-property-test.mjs"
     ],
     "features": [
       "features/data-layer-flow-table-documentation-export.feature",

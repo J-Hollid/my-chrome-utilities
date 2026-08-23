@@ -31,7 +31,7 @@ const placeholderPaths = (value) => [...value.matchAll(/\{\{\s*([a-z][a-zA-Z0-9.
 const defaultImageProperties = () => ({ fit: "scale-down", position: { horizontal: "left", vertical: "top" }, padding: { top: 0, right: 0, bottom: 0, left: 0 } });
 const percentage = (value) => { const match = /^(?:100(?:\.0+)?|\d{1,2}(?:\.\d+)?)%$/u.exec(value); return match ? value : undefined; };
 const paddingValues = (value) => { const parts = value.trim().split(/\s+/u); if (parts.length < 1 || parts.length > 4)
-    return undefined; const values = parts.map(part => /^(?:0|\d+(?:\.\d+)?)px$/u.test(part) ? Number(part.slice(0, -2)) : Number.NaN); return values.every(Number.isFinite) ? values : undefined; };
+    return undefined; const values = parts.map(part => /^(?:0|\d+(?:\.\d+)?)px$/iu.test(part) ? Number(part.slice(0, -2)) : Number.NaN); return values.every(Number.isFinite) ? values : undefined; };
 export function parseExcelAreaProperties(type, raw) {
     const declarations = new Map(), trimmed = raw.trim();
     if (trimmed) {
