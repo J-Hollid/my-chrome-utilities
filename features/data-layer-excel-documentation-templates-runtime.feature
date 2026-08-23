@@ -206,3 +206,26 @@ Feature: Data layer Excel documentation templates runtime
       | ThemeLogo | duplicate padding declarations                     | identifies the duplicate property           |
       | PageStep  | separator-area referring to a missing named range  | identifies PageSeparator as missing          |
       | PageStep  | an Across separator outside the complete right edge | identifies the required trailing geometry    |
+
+  # Data layer Excel documentation templates runtime 020
+  Scenario Outline: Data layer Excel documentation templates runtime 020
+    Given production Checkout has effective <property_type> property <property> with one documented <typed_example>
+    And an actual valid Flow workbook binds one cell exactly to {{row.example}} inside page.rows
+    When installed controls generate unsaved populated preview and assigned Excel output
+    Then independent workbook parsing finds exact inline text <rendered_example> for that property in both outputs
+    And a JSON parser reconstructs the production effective example with parsed type <parsed_type> and no string coercion
+    And compiler tracing finds the same text in row.example and its matching Documented example row.cells entry
+    And a second parsed cell preserves that literal when {{row.example}} is combined with ordinary text and another binding
+    And a production null example renders null while an absent example renders an empty cell
+    And installed Flow template guidance identifies quoted strings, recursive arrays and objects, and unquoted numbers, booleans, and null
+    And repository inspection finds no schema, Documentation configuration, template body, assignment, Draft, or publication write
+
+    Examples:
+      | property        | property_type    | typed_example                                      | rendered_example                         | parsed_type |
+      | /text_code      | string           | typed string 12                                    | "12"                                     | string      |
+      | /quantity       | number           | typed number 12                                    | 12                                       | number      |
+      | /enabled        | boolean          | typed boolean false                                | false                                    | boolean     |
+      | /optional_value | nullable         | typed null                                         | null                                     | null        |
+      | /labels         | array of strings | typed array ["item1", "item2", "item3"]            | ["item1", "item2", "item3"]             | array       |
+      | /quantities     | array of numbers | typed array [1, 2, 3]                              | [1, 2, 3]                                | array       |
+      | /item           | object           | typed object {"id": 12, "label": "12"}              | {"id": 12, "label": "12"}               | object      |

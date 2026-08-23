@@ -130,7 +130,7 @@ Feature: Data layer documentation template library runtime
     And its Page, property, and diagnostic cells bind page.pageName, row.property, row.example, and row.allowedValues
     When actual controls upload the workbook and activate Populated preview — output only
     Then the parsed candidate workbook contains each Page column's exact property, effective example, and allowed values
-    And direct page_name is cart-page, inherited ecommerce_order_id is ORDER-100, mixed currency is Euro checkout, and overridden page_type is confirmation-example
+    And direct page_name is "cart-page", inherited ecommerce_order_id is "ORDER-100", mixed currency is "Euro checkout", and overridden page_type is "confirmation-example"
     And coupon_code has empty example text while its WELCOME or SAVE10 allowed values remain present
     And repository inspection finds no metadata, body, assignment, preview, or revision change
     And schema, Documentation configuration, and publication bytes remain unchanged

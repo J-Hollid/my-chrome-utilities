@@ -230,11 +230,11 @@ Feature: Data layer Excel documentation templates
 
     Examples:
       | page_instance | property               | example_source                                | allowed_values       | rendered_example     |
-      | Cart          | page_name              | a direct documented example                   | cart or category     | cart-page            |
-      | Cart          | ecommerce_order_id     | an inherited documented example               | draft or paid        | ORDER-100            |
-      | Cart          | currency               | a mixed inherited and local documented example | EUR or USD           | Euro checkout        |
-      | Confirmation  | page_type              | an overridden documented example               | cart or confirmation | confirmation-example |
-      | Cart          | coupon_code            | no effective documented example                | WELCOME or SAVE10    | empty text           |
+      | Cart          | page_name              | a direct documented example                   | cart or category     | "cart-page"             |
+      | Cart          | ecommerce_order_id     | an inherited documented example               | draft or paid        | "ORDER-100"             |
+      | Cart          | currency               | a mixed inherited and local documented example | EUR or USD           | "Euro checkout"         |
+      | Confirmation  | page_type              | an overridden documented example               | cart or confirmation | "confirmation-example" |
+      | Cart          | coupon_code            | no effective documented example                | WELCOME or SAVE10    | empty text              |
 
   # Data layer Excel documentation templates 019
   Scenario: Data layer Excel documentation templates 019
@@ -343,3 +343,28 @@ Feature: Data layer Excel documentation templates
       | PageStep   | separator-area naming no workbook-defined range           | separator area PageSeparator cannot be found               | Define PageSeparator or correct the Properties value     |
       | PageStep   | Across separator that is not the complete trailing edge   | PageSeparator must be the complete right edge of PageStep  | Resize PageSeparator to the full-height rightmost columns |
       | PageStep   | separator containing a binding, image, or nested repeat   | PageSeparator contains unsupported template behavior       | Keep only literal cells and presentation in the separator |
+
+  # Data layer Excel documentation templates 026
+  Scenario Outline: Data layer Excel documentation templates 026
+    Given Checkout Page instance has effective <property_type> property <property> with one documented <typed_example>
+    And a valid Flow workbook binds one cell exactly to {{row.example}} inside page.rows
+    When the operator generates unsaved populated preview and assigned Excel output
+    Then row.example contains the readable single-line JSON value <rendered_example> in both outputs
+    And parsing <rendered_example> as JSON reconstructs the effective example with every scalar, member, and container type unchanged
+    And the matching Documented example entry in row.cells contains the same literal text
+    And strings and object keys use JSON double quoting and escaping while structural commas and colons are followed by one space
+    And the same literal is substituted without loss when {{row.example}} appears beside ordinary text or another binding
+    And no type is inferred from how an example's text looks
+    And another selected property with no effective documented example exposes empty text rather than the JSON null literal
+    And the Flow template guide describes row.example as a type-faithful JSON value and shows quoted-string and array examples
+    And schemas, Documentation configuration, template bytes, Draft state, and Published state remain unchanged
+
+    Examples:
+      | property          | property_type    | typed_example                                      | rendered_example                         |
+      | /text_code        | string           | typed string 12                                    | "12"                                     |
+      | /quantity         | number           | typed number 12                                    | 12                                       |
+      | /enabled          | boolean          | typed boolean false                                | false                                    |
+      | /optional_value   | nullable         | typed null                                         | null                                     |
+      | /labels           | array of strings | typed array ["item1", "item2", "item3"]            | ["item1", "item2", "item3"]             |
+      | /quantities       | array of numbers | typed array [1, 2, 3]                              | [1, 2, 3]                                |
+      | /item             | object           | typed object {"id": 12, "label": "12"}              | {"id": 12, "label": "12"}               |

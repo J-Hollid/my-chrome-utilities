@@ -575,3 +575,115 @@ Acceptance mapping:
 - Documentation template library runtime 014 proves the installed unsaved
   candidate preview, parsed workbook values, and output-only state conservation
   alongside the settled concept, visual, and stale-snapshot behavior.
+
+## Flow `row.example` typed JSON-literal correction
+
+Status: approved for coder handoff on 2026-08-24
+
+Stable task name: `flow-template-typed-example-literals`
+
+Flow contextual `row.example` represents the one effective documented example
+as readable, single-line JSON value text. It no longer uses general string
+coercion. A string is surrounded by JSON double quotes, while a number, Boolean,
+or explicit null uses its unquoted JSON literal. Arrays retain brackets and
+recursively typed members; objects retain braces, quoted keys, and recursively
+typed values. JSON escaping applies to quotes, backslashes, and control
+characters. Structural commas and colons are followed by one space, with no
+pretty-print newline. For example:
+
+| Effective typed example | `row.example` text |
+|---|---|
+| string `12` | `"12"` |
+| number `12` | `12` |
+| Boolean `false` | `false` |
+| explicit null | `null` |
+| string array | `["item1", "item2", "item3"]` |
+| number array | `[1, 2, 3]` |
+| object | `{"id": 12, "label": "12"}` |
+
+Parsing non-empty `row.example` text as JSON reconstructs the effective example
+without changing any scalar, member, or container type. The exporter consumes
+the already typed effective example established by schema authoring and layered
+resolution; it does not infer a type from whether text looks numeric, Boolean,
+or null, and it does not reparse or coerce stored example text. An explicit null
+therefore renders `null`, while the absence of an effective documented example
+continues to render empty text.
+
+The matching `row.cells` entry with heading `Documented example` contains the
+same literal text. A cell containing only `{{row.example}}` and a cell combining
+that binding with ordinary text or another binding preserve the same JSON
+notation. This equality keeps direct Flow bindings, nested concept rows, shared
+table rendering, unsaved candidate populated output, sample-filled saved
+workbooks, and assigned Excel output consistent. The renderer treats generated
+content as literal text and never as a formula or template instruction.
+
+The Flow Template Guide and searchable Library guide describe `row.example` as
+one type-faithful JSON value and show at least quoted-string and array examples.
+This is a presentation correction, not a new binding or template contract
+version. Contract 2 and Contract 3 workbooks remain valid. `row.allowedValues`,
+`row.value`, property selection and order, effective ownership, Example
+authoring, schema typing, nested-repeat scope, template-area behavior, Rich block
+capabilities, source template bytes, persistence, publication, and project state
+do not change.
+
+**Development focus:** begin with the Example formatter in
+`src/data-layer-flow-table-documentation-export.ts` and its contextual projection
+in `src/data-layer-project-documentation-compiler.ts`. Direct checks cover
+string, number, Boolean, explicit null, string-array, number-array, object, JSON
+escaping, and absent examples. They prove exact equality between `row.example`
+and its `Documented example` cell. Excel checks cover a whole-cell binding and a
+binding embedded beside literal text, on both unsaved candidate preview and
+assigned output. The installed browser check parses the generated workbooks and
+confirms that JSON parsing reconstructs the effective typed examples while
+repository state is unchanged.
+
+**QA impact:** forecast parent pack `flow_export` with properties and package
+proof. Exact changed-path planning remains authoritative, and feature mode does
+not authorize an all-runnable-pack checkpoint.
+
+Likely existing shared integration surfaces and proposed ownership are:
+
+| Source prefix or exact path | Proposed parent pack | Proposed subordinate verification slice | Exact consumers |
+|---|---|---|---|
+| `src/data-layer-flow-table-documentation-export.ts` | `flow_export` | `flow_documentation_example_literals` | effective Example formatting consumed by contextual `row.example` and matching Example cells; existing Allowed values, expected-value, provenance, clipboard, and workbook safety boundaries |
+| `src/data-layer-project-documentation-compiler.ts` | `flow_export` | `flow_template_contextual_facets` | immutable Flow Page/Event rows, concept rows, unsaved candidate preview, saved samples, assigned Excel output, and shared row-cell consumers |
+| `src/documentation-templates/excel-template.ts` and `src/documentation-templates/excel-renderer.ts` | `flow_export` | `documentation_template_workspace` | whole-cell and embedded bindings, nested repeats, candidate workbook population, saved samples, and assigned output |
+| `src/documentation-templates/excel-template-catalogue.ts` and `src/project-documentation/workspace-excel-template-guidance-ui.ts` | `flow_export` | `documentation_template_workspace` | downloaded Template Guide and installed searchable binding guidance |
+
+There is no stopped coherent implementation candidate. Before product coding,
+the coder must run governed read-only intent classification from the exact
+approved QA base for every likely changed path. A `coarse-boundary` result routes
+mandatory independently reviewed ownership preparation. Bounded
+`granularity-assessment-required` or `coarse-within-pack` results use the
+documented judgment route and do not automatically start preparation.
+
+The expected review-ready checkpoint is:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_export \
+  --property \
+  --changed-since <approved-specification-commit> \
+  --prepare-evidence flow-template-typed-example-literals
+node scripts/package.mjs
+```
+
+The implementation-and-review elapsed effort ceiling is three active hours. At
+90 active minutes, report typed-literal coverage, null-versus-absent behavior,
+candidate and assigned workbook observations, exact source paths, intent
+classification, packs and tasks, failures, remaining work, confidence, and
+forecast. Continue while the correction remains a state-preserving presentation
+change with a bounded completion path. A changed template language, stored
+example migration, schema-type coercion, unavailable ownership, or genuinely
+global plan stops for current direction.
+
+Acceptance mapping:
+
+- Excel 018 updates the existing direct, inherited, mixed, overridden, and
+  absent string examples to their quoted JSON-literal presentation.
+- Excel 026 proves recursive typed JSON notation, null-versus-absent behavior,
+  cell-binding parity, guidance, and state conservation.
+- Excel runtime 020 proves the installed candidate and assigned output through
+  independently parsed workbooks and JSON type reconstruction.
+- Documentation template library runtime 014 retains the installed unsaved
+  candidate route with the corrected quoted string values.
