@@ -694,8 +694,8 @@ try {
     const wheelZoomFailureDetail = shardFailures.some(({path}) => path.startsWith("runtime033."))
         ? JSON.stringify({runtime033:runtime.runtime033?.measurements},null,2)
         : "";
-    const visualFailureDetail = shardFailures.some(({path}) => /^(?:runtime03[4-7]|runtime049)\./.test(path))
-        ? JSON.stringify({runtime034:runtime.runtime034?.measurements,runtime035:runtime.runtime035?.measurements,runtime037:runtime.runtime037?.measurements,runtime049:runtime.runtime049?.measurements},null,2)
+    const visualFailureDetail = shardFailures.some(({path}) => /^(?:runtime03[4-7]|runtime049|runtime051)\./.test(path))
+        ? JSON.stringify({runtime034:runtime.runtime034?.measurements,runtime035:runtime.runtime035?.measurements,runtime037:runtime.runtime037?.measurements,runtime049:runtime.runtime049?.measurements,runtime051:runtime.runtime051?.measurements},null,2)
         : "";
     const pointerOwnershipFailureDetail = shardFailures.some(({path}) => /^runtime04[3-8]\./.test(path))
         ? JSON.stringify({runtime043:runtime.runtime043?.measurements,runtime044:runtime.runtime044?.measurements,runtime045:runtime.runtime045?.measurements,runtime046:runtime.runtime046?.measurements,runtime047:runtime.runtime047?.measurements,runtime048:runtime.runtime048?.measurements},null,2)
