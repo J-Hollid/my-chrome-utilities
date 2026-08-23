@@ -384,4 +384,18 @@ assert.deepEqual(
   "project-plan compilation conserves nested presence, event-specific targets, and the most-specific defined-fields policy",
 );
 
+for(let iteration=0;iteration<120;iteration+=1){
+  const propertyId=`definition:excluded:${iteration}`,root=`/root_${iteration}`,child=`${root}/child`,dependent=`/dependent_${iteration}`,context={eventId:`event:${iteration}`,eventRole:"interaction"},source={id:`profile:source:${iteration}`,name:`Source ${iteration}`,scope:"Shared Profile",constraints:[{path:root,type:"object",definitionId:propertyId},{path:child,type:"string",definitionId:`${propertyId}:child`}]},ordinaryParent={id:`group:ordinary:${iteration}`,name:`Ordinary ${iteration}`,scope:"Property Set",constraints:[{path:`/ordinary_${iteration}`,type:"string"}]},excluder={id:`page:exclude:${iteration}`,name:`Page ${iteration}`,scope:"Page",excludedPropertyIds:[propertyId],constraints:[]};
+  const ready=compileLayeredSchema([source,ordinaryParent,excluder],context);
+  assert.equal(ready.status,"ready","generated unreferenced exclusions compile ready");
+  assert.equal(ready.properties[root],undefined,"generated exclusions remove the identified root");
+  assert.equal(ready.properties[child],undefined,"generated exclusions remove every descendant");
+  assert.ok(ready.properties[`/ordinary_${iteration}`],"generated exclusions conserve unrelated parent properties");
+  const dependency={id:`group:dependency:${iteration}`,name:`Required parent ${iteration}`,scope:"Property Set",constraints:[{path:dependent,type:"string",rules:[{id:`rule:dependency:${iteration}`,kind:"dependency",dependencyPropertyId:propertyId,required:true}]}]},blocked=compileLayeredSchema([source,dependency,excluder],context),roundTrip=compileLayeredSchema(JSON.parse(JSON.stringify([source,dependency,excluder])),context);
+  assert.equal(blocked.status,"blocked","a generated later parent dependency fails a persisted exclusion closed");
+  assert.ok(blocked.properties[root],"fail-closed compilation retains the required stable identity");
+  assert.ok(blocked.conflicts.some(({facet})=>facet==="Conditional rule dependency"),"generated dependency blockers retain actionable evidence");
+  assert.deepEqual(roundTrip.conflicts,blocked.conflicts,"dependency exclusion evidence survives save/load round trips");
+}
+
 console.log("data-layer layered schema property tests passed");

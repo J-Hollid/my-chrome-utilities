@@ -1,4 +1,4 @@
-import { addComposedAllowedValue, removeComposedAllowedValue, typedComposedValue } from "../data-layer-composed-schema-builders.js";
+import { addComposedAllowedValue, reconcileComposedAllowedValues, removeComposedAllowedValue, typedComposedValue } from "../data-layer-composed-schema-builders.js";
 import { button, clone, labeled, option } from "./facet-builder-context.js";
 import { renderLocalDraftReorderControl as renderReorderControl } from "../reorderable-editor/control.js";
 import { reorderValues } from "../reorderable-editor/model.js";
@@ -37,14 +37,14 @@ export function renderAllowedValues(context) {
         value.addEventListener("change", () => { try {
             const next = clone(draft().allowedValues);
             next[index] = typedComposedValue(options.effective.type, value.value);
-            setDraft({ ...draft(), allowedValues: next });
+            setDraft(reconcileComposedAllowedValues(draft(), next, draft().allowedValueIds));
             setFeedback("");
         }
         catch (error) {
             setFeedback(error instanceof Error ? error.message : String(error));
             render();
         } });
-        row.append(reorder, labeled(`Value ${index + 1}`, value), button("Remove", () => { allowedValueIdentities.remove(index); setDraft(removeComposedAllowedValue(draft(), index)); render(); }));
+        row.append(reorder, labeled(`Value ${index + 1}`, value), button("Remove", () => { allowedValueIdentities.remove(index); const next = removeComposedAllowedValue(draft(), index); setDraft(reconcileComposedAllowedValues(next, next.allowedValues, next.allowedValueIds)); render(); }));
         rows.append(row);
     });
     allowed.append(legend, rows, button("Add allowed value", () => { const type = options.effective.type, defaultValue = type === "number" || type === "integer" ? 0 : type === "boolean" ? false : type === "null" ? null : ""; allowedValueIdentities.append(); setDraft(addComposedAllowedValue(draft(), defaultValue)); render(); }));

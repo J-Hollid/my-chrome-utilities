@@ -5,6 +5,7 @@ const peerRule = (constraint, kind) => (constraint.rules ?? []).find((rule) => S
 const peerRules = (constraint, kind) => (constraint.rules ?? []).filter((rule) => String(rule.kind ?? "") === kind);
 const ruleKindForFacet = (facet) => facet === "patterns" ? "pattern" : facet === "minimum" || facet === "maximum" ? "range" : facet === "minItems" || facet === "maxItems" ? "cardinality" : facet === "expectedValue" ? "value" : undefined;
 const protectedFacet = (constraint, facet) => Boolean((facet === "type" || facet === "presence") && constraint.protectedFacets?.includes(facet));
+const recordReferencesProperty = (value, propertyId) => Boolean(value && typeof value === "object" && Object.entries(value).some(([key, nested]) => ((key === "propertyId" || key === "dependencyPropertyId") && nested === propertyId) || recordReferencesProperty(nested, propertyId)));
 const invariantFacet = (constraint, facet, rule) => constraint.enforcement === "invariant" || Boolean(rule ? rule.enforcement === "invariant" : ruleKindForFacet(facet) && peerRule(constraint, ruleKindForFacet(facet))?.enforcement === "invariant");
 const authorityConstraint = (entry) => entry.authorityConstraint ?? entry.constraint;
 const valueMatchesType = (value, type) => type === "array" ? Array.isArray(value) : type === "null" ? value === null : type === "integer" ? Number.isInteger(value) : type === "object" ? Boolean(value) && typeof value === "object" && !Array.isArray(value) : typeof value === type;
@@ -155,7 +156,22 @@ export function compileLayeredSchema(contributors, context) {
             }
         }
     const contributorById = new Map(activeContributors.map((contributor) => [contributor.id, contributor]));
-    for (const contributor of activeContributors)
+    for (const contributor of activeContributors) {
+        for (const propertyId of contributor.excludedPropertyIds ?? []) {
+            const root = Object.values(properties).find(({ definitionId }) => definitionId === propertyId);
+            if (!root)
+                continue;
+            const paths = Object.keys(properties).filter((path) => path === root.path || path.startsWith(`${root.path}/`)), protectedProperty = paths.map((path) => properties[path]).find((property) => property.enforcement === "invariant" || (property.rules ?? []).some((rule) => rule.enforcement === "invariant")), dependency = Object.values(properties).flatMap((property) => (property.rules ?? []).map((rule) => ({ property, rule }))).find(({ rule }) => recordReferencesProperty(rule, propertyId));
+            if (protectedProperty || dependency) {
+                const blocker = protectedProperty ?? dependency.property;
+                conflict(blocker.path, `${contributor.name} cannot exclude ${root.path}; a surviving required rule depends on its stable identity`, [...blocker.origins.map(({ contributorName }) => contributorName), contributor.name], { facet: "Conditional rule dependency", section: "Rules", sourceValue: `requires ${propertyId}`, localValue: `exclude ${propertyId}` });
+                continue;
+            }
+            for (const path of paths) {
+                delete properties[path];
+                exclusions.push({ contributorId: contributor.id, contributorName: contributor.name, path, target: `stable property ${propertyId}` });
+            }
+        }
         for (const rawConstraint of contributor.constraints) {
             let prepared = contributor.peerGroup ? constraintWithPeerRules(rawConstraint) : constraintWithStructuredRules(rawConstraint);
             for (const resolution of acceptedPeerResolutions)
@@ -175,6 +191,7 @@ export function compileLayeredSchema(contributors, context) {
                 merged.downstreamContributions = [...(prior.downstreamContributions ?? []), { contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope, ...(contributor.inheritanceRoutes?.length ? { inheritanceRoutes: [...contributor.inheritanceRoutes] } : {}), ...(parallelPair ? { parallelPair: true } : {}), constraint: clone(rawConstraint) }];
             properties[constraint.path] = merged;
         }
+    }
     const onlyDefinedFields = conflictingPolicyGroups.size ? undefined : [...activeContributors].reverse().find((contributor) => contributor.onlyDefinedFields !== undefined)?.onlyDefinedFields;
     return { status: conflicts.length ? "blocked" : "ready", properties, conflicts, provenance, exclusions, ...(onlyDefinedFields !== undefined ? { onlyDefinedFields } : {}) };
 }

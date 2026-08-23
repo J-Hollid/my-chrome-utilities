@@ -4,13 +4,16 @@ import {
   composedCanonicalSchema,
   composedSchemaScopeForKind,
   composedSchemaWorkspace,
+  excludeComposedSchemaInheritedProperty,
   overrideComposedSchemaLocalRule,
   resetComposedSchemaLocalFacet,
   resetComposedSchemaLocalProperty,
   resetComposedSchemaLocalRule,
+  restoreComposedSchemaInheritedProperty,
   saveComposedCanonicalDocument,
   saveComposedSchemaLocalFacets,
 } from "../dist/data-layer-composed-schema-workspace.js";
+import {reconcileComposedAllowedValues} from "../dist/data-layer-composed-schema-builders.js";
 import {applyCanonicalCommand,canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
 import {createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 
@@ -161,6 +164,23 @@ for(let example=0;example<150;example+=1){
   if(!invariant){const effective=composedSchemaWorkspace(ruleRepaired,ruleRepairedGroup,"Property Set").rows.find(({path:rowPath})=>rowPath===rulePath).effective;assert.deepEqual(effective.rules.map(({id})=>id),[genericRuleId,localRuleId],"generated multiple-same-kind repair replaces only the actually conflicting identity");assert.deepEqual(effective.patterns,["^.{1,20}$","^[0-9]+$"],"generated Pattern facet remains aligned with retained rule identities");}
   assert.deepEqual(ruleRepairedGroup.localSchemaContributions.find(({path:storedPath})=>storedPath===unrelatedPath),{path:unrelatedPath,type:"boolean"},"generated named-rule repair conserves unrelated properties");
   assert.equal(ruleRepaired.history.undo.length,ruleState.history.undo.length+1,"a generated named-rule repair adds one Undo action");
+}
+
+for(let example=0;example<100;example+=1){
+  const propertyId=`definition:excluded:${example}`,path=`/excluded_${example}`,childPath=`${path}/child`,unrelatedPath=`/unrelated_${example}`,state=createSpecificationProject({name:`Exclusion ${example}`,site:"shop.example",id:(kind)=>`${kind}:exclusion:${example}`});
+  state.project.collections.profiles.push({id:`profile:exclusion:${example}`,name:`Source ${example}`,schemaConstraints:[{path,type:"object",definitionId:propertyId},{path:childPath,type:"string",definitionId:`${propertyId}:child`},{path:unrelatedPath,type:"string",definitionId:`definition:unrelated:${example}`}]});
+  state.project.collections.pages.push({id:`page:exclusion:${example}`,name:`Page ${example}`,profileId:`profile:exclusion:${example}`});
+  const excluded=excludeComposedSchemaInheritedProperty(state,"pages",`page:exclusion:${example}`,propertyId),page=excluded.project.collections.pages[0],workspace=composedSchemaWorkspace(excluded,page,"Page");
+  assert.equal(workspace.rows.find((row)=>row.path===path).excluded,true,"generated stable identities are excluded durably");
+  assert.equal(workspace.rows.find((row)=>row.path===unrelatedPath).excluded,undefined,"generated exclusions conserve unrelated identities");
+  const restored=restoreComposedSchemaInheritedProperty(excluded,"pages",page.id,propertyId),restoredWorkspace=composedSchemaWorkspace(restored,restored.project.collections.pages[0],"Page");
+  assert.equal(restoredWorkspace.rows.find((row)=>row.path===path).excluded,undefined,"generated restoration reveals the full inherited subtree");
+  assert.equal(restored.history.undo.length,excluded.history.undo.length+1,"generated restoration is one project command");
+
+  const first=`first-${example}`,second=`second-${example}`,custom=`custom-${example}`,selected=reconcileComposedAllowedValues({path,type:"string",allowedValues:[first,second],exampleMethod:"allowed-value",exampleValue:second},[first]),blank=reconcileComposedAllowedValues(selected,[]),customResult=reconcileComposedAllowedValues({path,type:"string",allowedValues:[first],exampleMethod:"custom",exampleValue:custom},[second]);
+  assert.deepEqual({method:selected.exampleMethod,value:selected.exampleValue},{method:"allowed-value",value:first},"generated selected examples reconcile to the first surviving value");
+  assert.deepEqual({method:blank.exampleMethod,value:blank.exampleValue},{method:"blank",value:undefined},"generated empty universes reconcile selected examples to Blank");
+  assert.deepEqual({method:customResult.exampleMethod,value:customResult.exampleValue},{method:"custom",value:custom},"generated custom examples remain custom for validation feedback");
 }
 
 console.log("data-layer composed schema workspace property tests passed");

@@ -33,9 +33,11 @@ export function canonicalTableQuickEditPatch(original, facet, value, id) {
     else if (facet === "example")
         next.documentation = { ...next.documentation, example: value === "" ? { method: "blank" } : { method: "custom", value: typedCanonicalValue(next.type, value, next.itemSchema) } };
     else {
-        const values = schemaTableStageAllowedValues(next.allowedValues.map(({ value: allowed }) => allowed), value, next.type);
+        const values = schemaTableStageAllowedValues(next.allowedValues.map(({ value: allowed }) => allowed), value, next.type), selected = next.documentation.example.method === "allowed-value";
         delete next.expectedValue;
         next.allowedValues = values.map((allowed, index) => ({ ...next.allowedValues[index] ?? { id: id("allowed-value") }, value: allowed }));
+        if (selected && !values.some((allowed) => JSON.stringify(allowed) === JSON.stringify(next.documentation.example.value)))
+            next.documentation = { ...next.documentation, example: values.length ? { method: "allowed-value", value: values[0] } : { method: "blank" } };
     }
     return focusedPropertyPatch(next, original, new Set(), new Set());
 }
