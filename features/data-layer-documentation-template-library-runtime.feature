@@ -118,7 +118,17 @@ Feature: Data layer documentation template library runtime
 
   # Data layer documentation template library runtime 014
   Scenario: Data layer documentation template library runtime 014
-    Given production Checkout has Page-instance-specific examples, Ecommerce and Funnel concepts, two distinct Cart-instance visuals, and one Page without a visual
+    Given production Checkout has exactly one selected Flow documentation section with Example and Allowed values metadata
+    And its selected Page properties have direct, inherited, mixed, overridden, and absent effective examples with distinct allowed values
+    And Checkout has Ecommerce and Funnel concepts, two distinct Cart-instance visuals, and one Page without a visual
+    And an unsaved valid Flow workbook repeats flow.pages Across in C4:D6, flow.rows Down in B6, and page.rows Down in C6:D6 within the Page repeat
+    And its Page, property, and diagnostic cells bind page.pageName, row.property, row.example, and row.allowedValues
+    When actual controls upload the workbook and activate Populated preview — output only
+    Then the parsed candidate workbook contains each Page column's exact property, effective example, and allowed values
+    And direct page_name is cart-page, inherited ecommerce_order_id is ORDER-100, mixed currency is Euro checkout, and overridden page_type is confirmation-example
+    And coupon_code has empty example text while its WELCOME or SAVE10 allowed values remain present
+    And repository inspection finds no metadata, body, assignment, preview, or revision change
+    And schema, Documentation configuration, and publication bytes remain unchanged
     When actual controls refresh its Documentation preview through the production compiler
     Then captured Page and contained Event rows expose their own Example cells rather than another context's allowed values or example
     And captured Page and Event concept collections contain only configured non-empty groups and their ordered rows

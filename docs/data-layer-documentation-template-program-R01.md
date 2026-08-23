@@ -483,3 +483,94 @@ single Page-instance attachment. Multiple attachments, Event visual output,
 visual authoring/storage changes, weaker privacy, unavailable ownership, or a
 genuinely global plan stops for current direction. No all-runnable-pack feature
 checkpoint is authorized.
+
+## Flow candidate-preview effective-example projection correction
+
+Status: user-approved for coder handoff on 2026-08-23 from the reported blank
+`page.rows` Example output
+
+Stable task name: `flow-template-effective-example-projection`.
+
+A valid unsaved Flow workbook can render `row.property` inside `page.rows` while
+currently rendering both `row.example` and `row.allowedValues` as empty. The
+reported workbook has exactly one selected Flow section, so same-kind section
+choice is not the defect. Its named areas are also valid and remain unchanged:
+`FlowColumnHeader` repeats `flow.pages` Across in `C4:D6`, `PropertyRow` repeats
+`flow.rows` Down in `B6`, and `PropertyValue` repeats `page.rows` Down in
+`C6:D6` within `FlowColumnHeader`.
+
+Each contextual row retains the canonical identity of the property that produced
+its public `row.property` label. For that same property and exact Page instance,
+`row.example` exposes the effective documented example and `row.allowedValues`
+exposes the effective allowed-values text when the corresponding metadata is
+selected. Direct, inherited, mixed, and overridden ownership all follow this
+rule. The two facets remain independent: allowed values never supply an example,
+and an absent example alone renders empty even when allowed values exist.
+
+The correction applies equally to unsaved candidate populated output,
+sample-filled saved workbooks, assigned Excel output, and the existing immutable
+template context. It does not change template-area validation, nested-repeat
+scoping, named ranges, public property display paths, property selection or
+order, Example authoring, allowed-value semantics, Flow topology, concept or
+visual behavior, persistence, publication, or the rule that the candidate
+preview is output-only.
+
+**Development focus:** begin with contextual row projection in
+`src/data-layer-project-documentation-compiler.ts`. Add direct checks whose Page
+properties obtain examples through direct, inherited, mixed, overridden, and
+absent effective ownership, with distinct allowed values. Prove the actual
+unsaved candidate-preview route by uploading the valid workbook through the
+installed Documentation Template Library, invoking `Populated preview — output
+only`, parsing the downloaded workbook, and confirming no candidate or project
+state was stored. Synthetic template-context checks alone are insufficient.
+
+**QA impact:** the forecast is parent pack `flow_export` with properties and
+package proof. The relevant compiler, Excel renderer, template-library UI,
+product/runtime feature files, direct tests, and installed browser target are
+already owned by that pack. Exact changed-path planning remains authoritative;
+feature mode authorizes no all-runnable-pack checkpoint.
+
+Likely existing shared integration surfaces and proposed ownership are:
+
+| Source prefix or exact path | Proposed parent pack | Proposed subordinate verification slice | Exact consumers |
+|---|---|---|---|
+| `src/data-layer-project-documentation-compiler.ts` | `flow_export` | `flow_template_contextual_facets` | immutable Flow table context, unsaved candidate preview, saved sample, assigned Excel output, and Rich `page.rows` consumers |
+| `src/documentation-templates/excel-template.ts` and `src/documentation-templates/excel-renderer.ts` | `flow_export` | `flow_template_candidate_preview` | guided nested repeats, candidate workbook population, saved samples, and assigned Excel output |
+| `src/data-layer-project-documentation-workspace-ui.ts` and `src/project-documentation/workspace-template-library-ui.ts` | `flow_export` | `flow_template_candidate_preview` | installed candidate upload, output-only preview selection, download, and state-conservation observation |
+
+There is no stopped coherent implementation candidate; the reported workbook is
+diagnostic input, not implementation lineage. Before product coding, the coder
+must run governed read-only intent classification from the exact approved QA
+base for all likely paths above. A `coarse-boundary` result routes mandatory
+independently reviewed ownership preparation. Bounded
+`granularity-assessment-required` or `coarse-within-pack` results use the
+documented judgment route and do not automatically start preparation.
+
+The expected review-ready checkpoint is:
+
+```sh
+node scripts/run-focused-acceptance.mjs \
+  --pack flow_export \
+  --property \
+  --changed-since <approved-specification-commit> \
+  --prepare-evidence flow-template-effective-example-projection
+node scripts/package.mjs
+```
+
+The implementation-and-review elapsed effort ceiling is 90 active minutes. At
+45 minutes, report the four effective ownership cases, absent-example behavior,
+candidate-preview workbook observation, exact source paths, intent
+classification, packs and tasks, failures, remaining work, confidence, and
+forecast. Continue while the correction remains a state-preserving Flow template
+projection repair with a bounded completion path. A changed product requirement,
+template-contract change, unavailable ownership, or genuinely global plan stops
+for current direction.
+
+Acceptance mapping:
+
+- Excel 018 proves the unchanged valid workbook shape and exact Page-instance
+  `row.example` and `row.allowedValues` projection for every ownership case.
+- Excel 020 preserves the existing nested concept-group workbook contract.
+- Documentation template library runtime 014 proves the installed unsaved
+  candidate preview, parsed workbook values, and output-only state conservation
+  alongside the settled concept, visual, and stale-snapshot behavior.

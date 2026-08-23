@@ -214,19 +214,26 @@ Feature: Data layer Excel documentation templates
       | Template Guide | xl/printerSettings/printerSettings2.bin              |
 
   # Data layer Excel documentation templates 018
-  Scenario: Data layer Excel documentation templates 018
-    Given the Flow Template contains PageCard
-    And Template Guide maps PageCard to flow.pages Across
-    And ConceptPattern inside PageCard repeats page.concepts Down
-    And RowPattern is contained by ConceptPattern and repeats concept.rows
-    And a CellPattern named area is wholly inside RowPattern and repeats row.cells Across
-    And Checkout configures Example metadata with Ecommerce before Funnel
-    When the workbook renders Cart and Confirmation Page instances
-    Then each PageCard contains one Ecommerce heading followed by its Ecommerce rows and one Funnel heading followed by its Funnel rows
-    And every row remains in configured property order beneath its concept
-    And each example cell contains that Page instance's effective documented example rather than its allowed-values list or another Page's example
-    And existing page.rows, row.allowedValues, and allowedValues cells remain available unchanged
-    And empty or excluded concepts produce no heading or row copy
+  Scenario Outline: Data layer Excel documentation templates 018
+    Given Checkout has exactly one selected Flow documentation section
+    And that section selects Example and Allowed values metadata
+    And Page instance <page_instance> has property <property> with <example_source> and effective allowed values <allowed_values>
+    And FlowColumnHeader repeats flow.pages Across in C4:D6 with no parent
+    And PropertyRow repeats flow.rows Down in B6 with no parent
+    And PropertyValue repeats page.rows Down in C6:D6 within FlowColumnHeader
+    And C4 binds page.pageName, B6 binds row.property, and C6 binds row.property, row.example, and row.allowedValues
+    When the operator generates Populated preview output for the unsaved candidate
+    Then the <page_instance> Page column contains <property> with row.example <rendered_example>
+    And row.allowedValues contains <allowed_values> independently of row.example
+    And neither binding substitutes an allowed value, another Page's example, or empty text for an available effective example
+
+    Examples:
+      | page_instance | property               | example_source                                | allowed_values       | rendered_example     |
+      | Cart          | page_name              | a direct documented example                   | cart or category     | cart-page            |
+      | Cart          | ecommerce_order_id     | an inherited documented example               | draft or paid        | ORDER-100            |
+      | Cart          | currency               | a mixed inherited and local documented example | EUR or USD           | Euro checkout        |
+      | Confirmation  | page_type              | an overridden documented example               | cart or confirmation | confirmation-example |
+      | Cart          | coupon_code            | no effective documented example                | WELCOME or SAVE10    | empty text           |
 
   # Data layer Excel documentation templates 019
   Scenario: Data layer Excel documentation templates 019
@@ -241,3 +248,18 @@ Feature: Data layer Excel documentation templates
     And each Cart PageCard contains its own literal description, caption, and source reference
     And Payment leaves PageVisual and its visual metadata cells empty without changing the remaining layout
     And no image uses an external relationship or another Page instance's attachment
+
+  # Data layer Excel documentation templates 020
+  Scenario: Data layer Excel documentation templates 020
+    Given the Flow Template contains PageCard
+    And Template Guide maps PageCard to flow.pages Across
+    And ConceptPattern inside PageCard repeats page.concepts Down
+    And RowPattern is contained by ConceptPattern and repeats concept.rows
+    And a CellPattern named area is wholly inside RowPattern and repeats row.cells Across
+    And Checkout configures Example metadata with Ecommerce before Funnel
+    When the workbook renders Cart and Confirmation Page instances
+    Then each PageCard contains one Ecommerce heading followed by its Ecommerce rows and one Funnel heading followed by its Funnel rows
+    And every row remains in configured property order beneath its concept
+    And each example cell contains that Page instance's effective documented example rather than its allowed-values list or another Page's example
+    And existing page.rows, row.allowedValues, and allowedValues cells remain available unchanged
+    And empty or excluded concepts produce no heading or row copy
