@@ -67,7 +67,7 @@
         (reset! flow-graph/browser-observation nil)))))
 
 (def complete-evidence
-  (assoc (into {} (map (fn [number] [(keyword (format "runtime%03d" number)) {:exact true}]) (range 1 51)))
+  (assoc (into {} (map (fn [number] [(keyword (format "runtime%03d" number)) {:exact true}]) (range 1 52)))
          :installedBoundary true))
 
 (deftest evidence-maps-cannot-pass-vacuously
@@ -88,6 +88,8 @@
   (is (false? (boolean (flow-graph/complete-browser-evidence? (assoc-in complete-evidence [:runtime021 :exact] false)))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :runtime050)))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? (assoc-in complete-evidence [:runtime050 :exact] false)))))
+  (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :runtime051)))))
+  (is (false? (boolean (flow-graph/complete-browser-evidence? (assoc-in complete-evidence [:runtime051 :exact] false)))))
   (is (true? (boolean (flow-graph/complete-browser-evidence? complete-evidence)))))
 
 (deftest flow005-examples-require-exact-mode-specific-values
