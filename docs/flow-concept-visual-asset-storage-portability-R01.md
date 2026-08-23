@@ -289,6 +289,9 @@ exists.
 
 ## Flow nested-Event thumbnail containment correction
 
+Status: QA-integrated at `fa88b18992` after exact `flow_graph`, `flow_export`,
+`live_flow_testing`, and `property_set_flow_sections` review-ready evidence.
+
 The user reported that a concept-visual thumbnail on an Event occurrence nested
 inside a Page frame covers the Event's existing content instead of enlarging its
 container. The current presentation path gives thumbnail height to Page-frame
@@ -370,7 +373,8 @@ the QA pilot unless product scope, safety, or authority changes.
 ## Flow nested-Event thumbnail evidence-contract repair stage
 
 Status: QA-integrated at `f831dfc239` after fresh exact `flow_graph` and `shell`
-review-ready evidence; the conserved product remainder is not yet integrated.
+review-ready evidence; the conserved product remainder was subsequently
+QA-integrated at `fa88b18992`.
 
 The first coherent product lineage for
 `flow-nested-event-thumbnail-containment` reached candidate `c5cacaf242` from
