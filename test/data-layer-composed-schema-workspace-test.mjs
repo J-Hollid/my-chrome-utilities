@@ -30,7 +30,7 @@ import {composedReviewFacetDelta,composedReviewLifecycleInventory} from "../dist
 import {composedExampleFeedback,composedFacetDraft,reconcileComposedAllowedValues,sparseComposedFacets} from "../dist/data-layer-composed-schema-builders.js";
 import {saveFlowPageInstanceLocalFacetsAndStructures} from "../dist/data-layer-layered-schema-project.js";
 import {composedTableQuickEditFacets,composedTableResetFacet} from "../dist/data-layer-composed-schema-workspace-ui.js";
-import {inheritedPropertySelectionHierarchy,inheritedPropertySelectionNodeState} from "../dist/composed-schema/inherited-property-selection/ui.js";
+import {inheritedPropertySelectionHierarchy,inheritedPropertySelectionNodeState,inheritedPropertySelectionTreePage,inheritedPropertySelectionTreeTarget} from "../dist/composed-schema/inherited-property-selection/ui.js";
 import {resetComposedDefinitionFacet} from "../dist/data-layer-composed-schema-workspace-focused-sections.js";
 import {focusedStructureOwned} from "../dist/data-layer-canonical-schema-focused-drafts.js";
 
@@ -138,6 +138,12 @@ assert.deepEqual(propertyNodes.map(({propertyId})=>propertyId).sort(),nestedSele
 assert.deepEqual({rootLevel:shippingRoot.level,addressLevel:addressBranch.level,postcodeLevel:addressBranch.children[0].level},{rootLevel:2,addressLevel:3,postcodeLevel:4},"nested paths retain their complete structural depth instead of flattening at aria-level 3");
 assert.equal(inheritedPropertySelectionNodeState(shippingRoot,new Set(["property:shipping","property:shipping-method"])),"mixed","a structural parent reports mixed state when only part of its property subtree is selected");
 assert.equal(checkoutConcept.children.some(({label})=>label==="/customer_status"),false,"a root scalar appears only as its property node under its own concept");
+const collapsedTreePage=inheritedPropertySelectionTreePage(nestedHierarchy,new Set(),0,100);
+assert.deepEqual(collapsedTreePage.nodes.map(({key})=>key),nestedHierarchy.map(({key})=>key),"the contextual inheritance card starts with the same paged collapsed disclosure tree as the established card");
+const expandedTreePage=inheritedPropertySelectionTreePage(nestedHierarchy,new Set([checkoutConcept.key,shippingRoot.key,addressBranch.key]),0,100);
+assert.ok(expandedTreePage.nodes.some(({propertyId})=>propertyId==="property:shipping-postcode"),"expanded contextual inheritance-card branches disclose deeply nested properties");
+assert.deepEqual(inheritedPropertySelectionTreeTarget(expandedTreePage.nodes,shippingRoot.key,"ArrowRight",new Set([checkoutConcept.key])),{key:shippingRoot.key,expand:shippingRoot.key},"ArrowRight expands a contextual inheritance-card branch before entering its first child");
+assert.deepEqual(inheritedPropertySelectionTreeTarget(expandedTreePage.nodes,addressBranch.children[0].key,"ArrowLeft",new Set([checkoutConcept.key,shippingRoot.key,addressBranch.key])),{key:addressBranch.key},"ArrowLeft from a contextual inheritance-card leaf targets its parent");
 const genericBefore=JSON.stringify(genericExclusionState.project.collections.profiles[0]),genericLocalBefore=structuredClone(genericPage.localSchemaContributions),genericExcluded=applyComposedSchemaInheritedPropertySelection(genericExclusionState,"pages",genericPage.id,[]),excludedPage=genericExcluded.project.collections.pages[0],excludedWorkspace=composedSchemaWorkspace(genericExcluded,excludedPage,"Page");
 assert.deepEqual(excludedPage.excludedPropertyIds,[genericPropertyId],"a non-Flow contributor stores the same sparse stable-identity exclusion");
 assert.equal(excludedPage.localSchemaContributions.some(({path})=>path==="/page_name"),false,"the generic exclusion removes its sparse local facet in the same command");
