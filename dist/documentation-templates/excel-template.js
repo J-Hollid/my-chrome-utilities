@@ -78,8 +78,9 @@ export function validateExcelTemplatePrototype(prototype) {
         }
         if (area.source === "page.visual.image") {
             const nearest = repeats.filter((item) => contains(item.rectangle, bounds)).sort((left, right) => areaSize(left.rectangle) - areaSize(right.rectangle))[0];
-            if (prototype.kind !== "flow" || nearest?.area.source !== "flow.pages")
-                findings.push({ area: area.name, message: `${area.name}'s nearest repeat owner must be flow.pages when using page.visual.image.`, repair: "Move the image area directly inside its owning Flow Page repeat, outside nested Event, concept, row, or cell repeats." });
+            const nestedOverlap = repeats.find((item) => item !== nearest && overlaps(item.rectangle, bounds));
+            if (prototype.kind !== "flow" || nearest?.area.source !== "flow.pages" || nestedOverlap)
+                findings.push({ area: area.name, message: `${area.name}'s nearest repeat owner must be flow.pages when using page.visual.image, with no nested repeat crossing or enclosed by the image area.`, repair: "Move the image area directly inside its owning Flow Page repeat, outside nested Event, concept, row, or cell repeats." });
         }
     }
     for (const merge of prototype.merges) {
