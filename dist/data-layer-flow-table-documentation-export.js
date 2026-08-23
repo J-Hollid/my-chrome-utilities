@@ -74,8 +74,7 @@ export function orderFlowDocumentationOccurrenceIds(occurrences, relationships, 
     return { ids: [...fork, ...remaining], labels: { [source]: "1", [orderedBranches[0]]: "2a", [orderedBranches[1]]: "2b", [target]: "3" } };
 }
 const metadataLabels = { description: "Description", type: "Type", allowedValues: "Allowed values", example: "Documented example", comments: "Comments", provenance: "Provenance" };
-function metadataValue(snapshot, path, metadata) {
-    const property = snapshot.contexts.map((context) => context.compiled.properties[path]).find(Boolean);
+export function flowDocumentationPropertyMetadata(property, metadata) {
     if (!property)
         return "";
     if (metadata === "type")
@@ -90,6 +89,7 @@ function metadataValue(snapshot, path, metadata) {
         return property.documentation ?? "";
     return String(property.comments ?? "");
 }
+function metadataValue(snapshot, path, metadata) { return flowDocumentationPropertyMetadata(snapshot.contexts.map((context) => context.compiled.properties[path]).find(Boolean), metadata); }
 export function configureFlowDocumentationTable(snapshot, kind, configuration = {}) {
     const source = kind === "values" ? flowValueMapTable(snapshot) : captureMatrixTable(snapshot), canonicalPaths = paths(snapshot), selected = configuration.selectedPaths ?? canonicalPaths, rowsByCanonicalPath = new Map(canonicalPaths.map((path, index) => [path, source.rows[index]])), metadata = configuration.metadata ?? [];
     const rows = selected.flatMap((path) => { const sourceRow = rowsByCanonicalPath.get(path); if (!sourceRow)
