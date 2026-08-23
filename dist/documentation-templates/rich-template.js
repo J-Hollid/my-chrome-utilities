@@ -1,7 +1,7 @@
 import { templateBindingsFor, templateDigest, templateValueAt } from "./template-contract.js";
 const collections = { overview: ["overview.fields"], flow: ["flow.pages", "table.rows", "flow.rows"], matrix: ["matrix.rows", "matrix.concepts", "table.rows"], profile: ["profile.rows", "profile.concepts", "table.rows"] };
-const childBindings = { "overview.fields": ["field.label", "field.value"], "flow.pages": ["page.stepLabel", "page.pageName", "page.sourcePageName", "page.eventName", "page.heading", "page.rows", "page.events"], "page.events": ["event.eventName", "event.heading", "event.rows"], "page.rows": ["row.property", "row.concept", "row.cells"], "event.rows": ["row.property", "row.concept", "row.cells"], "table.rows": ["row.concept", "row.cells"], "flow.rows": ["row.property", "row.cells"], "matrix.rows": ["row.property", "row.concept", "row.cells"], "profile.rows": ["row.property", "row.concept", "row.cells"], "matrix.concepts": ["concept.name", "concept.rows"], "profile.concepts": ["concept.name", "concept.rows"], "concept.rows": ["row.property", "row.concept", "row.cells"], "row.cells": ["cell.columnKey", "cell.heading", "cell.value"] };
-const childCollections = { "flow.pages": ["page.events", "page.rows"], "page.events": ["event.rows"], "page.rows": ["row.cells"], "event.rows": ["row.cells"], "table.rows": ["row.cells"], "flow.rows": ["row.cells"], "matrix.rows": ["row.cells"], "profile.rows": ["row.cells"], "matrix.concepts": ["concept.rows"], "profile.concepts": ["concept.rows"], "concept.rows": ["row.cells"] };
+const childBindings = { "overview.fields": ["field.label", "field.value"], "flow.pages": ["page.stepLabel", "page.pageName", "page.sourcePageName", "page.eventName", "page.heading", "page.visual.description", "page.visual.caption", "page.visual.sourceReference", "page.rows", "page.concepts", "page.events"], "page.events": ["event.eventName", "event.heading", "event.rows", "event.concepts"], "page.rows": ["row.property", "row.concept", "row.cells"], "event.rows": ["row.property", "row.concept", "row.cells"], "table.rows": ["row.concept", "row.cells"], "flow.rows": ["row.property", "row.cells"], "matrix.rows": ["row.property", "row.concept", "row.cells"], "profile.rows": ["row.property", "row.concept", "row.cells"], "matrix.concepts": ["concept.name", "concept.rows"], "profile.concepts": ["concept.name", "concept.rows"], "page.concepts": ["concept.name", "concept.rows"], "event.concepts": ["concept.name", "concept.rows"], "concept.rows": ["row.property", "row.concept", "row.cells"], "row.cells": ["cell.columnKey", "cell.heading", "cell.value"] };
+const childCollections = { "flow.pages": ["page.events", "page.rows", "page.concepts"], "page.events": ["event.rows", "event.concepts"], "page.rows": ["row.cells"], "event.rows": ["row.cells"], "table.rows": ["row.cells"], "flow.rows": ["row.cells"], "matrix.rows": ["row.cells"], "profile.rows": ["row.cells"], "matrix.concepts": ["concept.rows"], "profile.concepts": ["concept.rows"], "page.concepts": ["concept.rows"], "event.concepts": ["concept.rows"], "concept.rows": ["row.cells"] };
 const itemRoot = (collection) => collection.endsWith(".pages") ? "page" : collection.endsWith(".events") ? "event" : collection.endsWith(".cells") ? "cell" : collection.endsWith(".concepts") ? "concept" : collection.endsWith(".fields") ? "field" : "row";
 const scoped = (paths, canonical, variable) => paths.map(path => path.replace(new RegExp(`^${itemRoot(canonical)}\\.`, "u"), `${variable}.`));
 const rootCollectionMap = (kind) => new Map((collections[kind] ?? []).map(path => [path, path]));
@@ -30,9 +30,9 @@ export function richTemplateBlockScopes(kind, blocks) { const result = {}; const
         visit(repeat.children, nestedBindings, nestedCollections);
 } }; visit(blocks, templateBindingsFor(kind), rootCollectionMap(kind)); return result; }
 export function validateRichDocumentationTemplate(template) {
-    const findings = [], ids = new Set(), root = new Set(templateBindingsFor(template.kind)), tableSources = new Set(["table", template.kind === "overview" ? "overview.fields" : template.kind === "flow" ? "flow.rows" : template.kind === "matrix" ? "matrix.rows" : "profile.rows"]), conceptSources = new Set(["table.concepts", ...(template.kind === "matrix" ? ["matrix.concepts"] : template.kind === "profile" ? ["profile.concepts"] : [])]), knownTypes = new Set(["heading", "paragraph", "divider", "theme-logo", "data-table", "concept-group", "repeat"]);
+    const findings = [], ids = new Set(), root = new Set(templateBindingsFor(template.kind)), tableSources = new Set(["table", template.kind === "overview" ? "overview.fields" : template.kind === "flow" ? "flow.rows" : template.kind === "matrix" ? "matrix.rows" : "profile.rows"]), conceptSources = new Set(["table.concepts", "matrix.concepts", "profile.concepts", "page.concepts", "event.concepts"]), knownTypes = new Set(["heading", "paragraph", "divider", "theme-logo", "page-visual", "data-table", "concept-group", "repeat"]);
     const report = (blockId, message) => findings.push({ blockId: typeof blockId === "string" && blockId ? blockId : "(unknown block)", message });
-    const visit = (rawBlocks, bindings, availableCollections) => {
+    const visit = (rawBlocks, bindings, availableCollections, rootScope) => {
         if (!Array.isArray(rawBlocks)) {
             report("(template)", "Rich template blocks must be an ordered collection.");
             return;
@@ -77,8 +77,16 @@ export function validateRichDocumentationTemplate(template) {
             }
             if (block.type === "data-table" && !tableSources.has(String(block.source)))
                 report(id, `Data table ${String(block.source ?? "")} is outside this template kind.`);
-            if (block.type === "concept-group" && !conceptSources.has(String(block.source)))
-                report(id, `Concept collection ${String(block.source ?? "")} is outside this template kind.`);
+            if (block.type === "concept-group") {
+                const source = String(block.source ?? ""), canonical = availableCollections.get(source), rootTableConcepts = rootScope && source === "table.concepts";
+                if (!rootTableConcepts && (!canonical || !conceptSources.has(canonical)))
+                    report(id, `Concept collection ${source} is outside this block scope.`);
+            }
+            if (block.type === "page-visual") {
+                const source = String(block.source ?? "");
+                if (!bindings.has(`${source}.description`))
+                    report(id, `Page visual ${source} is outside this block scope.`);
+            }
             if (block.type === "repeat") {
                 const canonical = availableCollections.get(String(block.items));
                 if (!canonical)
@@ -86,14 +94,14 @@ export function validateRichDocumentationTemplate(template) {
                 if (typeof block.variable !== "string" || !/^[a-z][a-zA-Z0-9]*$/u.test(block.variable))
                     report(id, "Repeat item name must be a safe binding name.");
                 const variable = typeof block.variable === "string" && block.variable ? block.variable : "item", nestedBindings = canonical ? new Set([...bindings, ...scoped(childBindings[canonical] ?? [], canonical, variable)]) : new Set(bindings), nestedCollections = canonical ? childCollectionMap(canonical, variable) : new Map();
-                visit(block.children, nestedBindings, nestedCollections);
+                visit(block.children, nestedBindings, nestedCollections, false);
             }
         }
     };
     if (!Object.hasOwn(collections, template.kind))
         report("(template)", `Unsupported documentation kind ${String(template.kind)}.`);
     else
-        visit(template.blocks, root, rootCollectionMap(template.kind));
+        visit(template.blocks, root, rootCollectionMap(template.kind), true);
     return { valid: findings.length === 0, findings };
 }
 export function builtInRichTemplate(kind, id, name) {
@@ -107,8 +115,8 @@ const inlineText = (items, context) => items.map(item => inlineValue(item, conte
 const inlineHtml = (items, context) => items.map(item => { const value = htmlEscape(inlineValue(item, context)); return item.emphasis === "strong" ? `<strong>${value}</strong>` : item.emphasis === "emphasis" ? `<em>${value}</em>` : value; }).join("");
 const tableRows = (value) => { if (!value || typeof value !== "object")
     return { headings: [], rows: [] }; if (Array.isArray(value))
-    return { headings: [], rows: value.map(item => [scalar(item)]) }; const table = value, columns = Array.isArray(table.columns) ? table.columns.map(column => scalar(column.heading)) : [], records = Array.isArray(table.rows) ? table.rows : [], fields = records.length > 0 && records.every(record => record.label !== undefined), properties = records.some(record => record.property !== undefined), headings = fields ? ["Field", "Value"] : properties ? ["Property", ...columns] : columns, rows = records.map(record => { if (fields)
-    return [scalar(record.label), scalar(record.value)]; const cells = Array.isArray(record.cells) ? record.cells.map(cell => scalar(cell.value)) : []; return properties ? [scalar(record.property), ...cells] : cells; }); return { headings, rows }; };
+    return { headings: [], rows: value.map(item => [scalar(item)]) }; const table = value, columns = Array.isArray(table.columns) ? table.columns.map(column => scalar(column.heading)) : [], records = Array.isArray(table.rows) ? table.rows : [], fields = records.length > 0 && records.every(record => record.label !== undefined), properties = records.some(record => record.property !== undefined), firstCells = records.length > 0 && Array.isArray(records[0].cells) ? records[0].cells : [], propertyInCells = properties && firstCells[0]?.columnKey === "property", headings = fields ? ["Field", "Value"] : propertyInCells ? firstCells.map(cell => scalar(cell.heading)) : properties ? ["Property", ...columns] : columns, rows = records.map(record => { if (fields)
+    return [scalar(record.label), scalar(record.value)]; const cellRecords = Array.isArray(record.cells) ? record.cells : [], cells = cellRecords.map(cell => scalar(cell.value)), ownsProperty = record.property !== undefined && cellRecords[0]?.columnKey === "property"; return properties && !ownsProperty ? [scalar(record.property), ...cells] : cells; }); return { headings, rows }; };
 export function renderRichDocumentationTemplate(template, context) {
     const validation = validateRichDocumentationTemplate(template);
     if (!validation.valid)
@@ -131,6 +139,17 @@ export function renderRichDocumentationTemplate(template, context) {
                 const logo = scalar(templateValueAt(scope, "theme.logo"));
                 if (logo)
                     html += `<img src="${htmlEscape(logo)}" alt="">`;
+                continue;
+            }
+            if (block.type === "page-visual") {
+                const value = templateValueAt(scope, block.source);
+                if (!value || typeof value !== "object" || Array.isArray(value))
+                    continue;
+                const visual = value, image = scalar(visual.image), description = scalar(visual.description), caption = scalar(visual.caption), sourceReference = scalar(visual.sourceReference);
+                if (!image)
+                    continue;
+                html += `<figure data-page-visual="true"><img src="${htmlEscape(image)}" alt="${htmlEscape(description)}">${caption ? `<figcaption>${htmlEscape(caption)}</figcaption>` : ""}${sourceReference ? `<p data-visual-source="true">${htmlEscape(sourceReference)}</p>` : ""}</figure>`;
+                plain.push(description, ...(caption ? [caption] : []), ...(sourceReference ? [sourceReference] : []));
                 continue;
             }
             if (block.type === "repeat") {

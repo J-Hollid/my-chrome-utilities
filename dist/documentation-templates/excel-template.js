@@ -67,6 +67,21 @@ export function validateExcelTemplatePrototype(prototype) {
         if (!available.includes(item.area.source))
             findings.push({ area: item.area.name, message: `${item.area.name} cannot repeat that data here.`, repair: `Choose a collection shown as available in the ${prototype.kind === "flow" ? "Flow" : prototype.kind} guide.` });
     }
+    for (const area of prototype.areas.filter((item) => item.type === "image")) {
+        let bounds;
+        try {
+            bounds = rectangle(area.range);
+        }
+        catch {
+            findings.push({ area: area.name, message: `Image area ${area.name} cannot be found.`, repair: `Select the intended Template cells and define the named area ${area.name}.` });
+            continue;
+        }
+        if (area.source === "page.visual.image") {
+            const nearest = repeats.filter((item) => contains(item.rectangle, bounds)).sort((left, right) => areaSize(left.rectangle) - areaSize(right.rectangle))[0];
+            if (prototype.kind !== "flow" || nearest?.area.source !== "flow.pages")
+                findings.push({ area: area.name, message: `${area.name}'s nearest repeat owner must be flow.pages when using page.visual.image.`, repair: "Move the image area directly inside its owning Flow Page repeat, outside nested Event, concept, row, or cell repeats." });
+        }
+    }
     for (const merge of prototype.merges) {
         try {
             const bounds = rectangle(merge);

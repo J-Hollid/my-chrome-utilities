@@ -32,7 +32,8 @@ export function installProjectDocumentationWorkspaceUi(options) {
     const basePorts = options.ports ?? defaultPorts(), ports = { ...basePorts, ...(options.loadTemplateBody ? { readTemplateBody: async (digest) => { const projectId = options.state()?.project.id; if (!projectId)
                 throw new Error("Open a project before exporting a template."); const body = await options.loadTemplateBody(projectId, digest); if (!body)
                 throw new Error("The assigned Excel template body is missing from this project."); return body; } } : {}) };
-    let selectedSetId = "", selectedSectionId = "", selectedTemplateId = "", selectedRichBlockId = "", selectedExportIds = new Set(), snapshot, feedback = "", confirmedIncomplete = false, exportScope = "current", primaryTab = "build", previewSectionId = "", addContentOpen = false, themeOpen = false, templatesOpen = false, templateMobileDetail = false, richEditorMobileDetail = false, setCreationOpen = false, mobileBuildSurface = "outline", documentSettingsOpen = false, pendingExportAction;
+    let selectedSetId = "", selectedSectionId = "", selectedTemplateId = "", selectedRichBlockId = "", selectedExportIds = new Set(), snapshot, feedback = "", confirmedIncomplete = false, exportScope = "current", primaryTab = "build", previewSectionId = "", addContentOpen = false, themeOpen = false, templatesOpen = false, templateMobileDetail = false, richEditorMobileDetail = false, setCreationOpen = false, mobileBuildSurface = "outline", documentSettingsOpen = false, pendingExportAction, visualHydration;
+    const visualBodies = new Map(), visualAttempts = new Set();
     const documentation = () => options.state()?.project.documentation ?? { sets: [], themes: [] };
     const active = () => { const records = documentation(), set = records.sets.find(({ id }) => id === selectedSetId) ?? records.sets[0], theme = set ? records.themes.find(({ id }) => id === set.themeId) : undefined; return { records, set, theme }; };
     const persist = (records, label) => options.save(records, label);
@@ -40,12 +41,32 @@ export function installProjectDocumentationWorkspaceUi(options) {
     const saveTheme = (next, label) => { const records = documentation(); persist({ ...records, themes: records.themes.some(({ id }) => id === next.id) ? records.themes.map((item) => item.id === next.id ? next : item) : [...records.themes, next] }, label); };
     const mutateSection = (set, sectionId, update, label) => saveSet(createProjectDocumentationSet({ ...set, sections: set.sections.map((section) => section.id === sectionId ? update(section) : section) }), label);
     const sources = (state) => projectDocumentationSources(state, new Date().toISOString(), options.revision());
-    const compile = () => { const state = options.state(), { set, theme } = active(); return state && set && theme ? compileProjectDocumentation({ state, set, theme, revision: options.revision(), generatedAt: new Date().toISOString() }) : undefined; };
+    const stateWithVisualBodies = () => { const state = options.state(); if (!state || !visualBodies.size)
+        return state; const project = state.project; return { ...state, project: { ...project, conceptVisualAssets: project.conceptVisualAssets?.map(asset => visualBodies.has(asset.digest) ? { ...asset, bytes: visualBodies.get(asset.digest) } : asset) } }; };
+    const compile = () => { const state = stateWithVisualBodies(), { set, theme } = active(); return state && set && theme ? compileProjectDocumentation({ state, set, theme, revision: options.revision(), generatedAt: new Date().toISOString() }) : undefined; };
+    const hydrateVisualBodies = async () => { const state = options.state(); if (!state || !options.loadVisualAssetBody)
+        return; const project = state.project; for (const asset of project.conceptVisualAssets ?? []) {
+        if (visualBodies.has(asset.digest) || visualAttempts.has(asset.digest))
+            continue;
+        visualAttempts.add(asset.digest);
+        const body = await options.loadVisualAssetBody(state.project.id, asset.digest).catch(() => undefined);
+        if (!body)
+            continue;
+        const bytes = new Uint8Array(await body.arrayBuffer());
+        let binary = "";
+        for (let offset = 0; offset < bytes.length; offset += 32768)
+            binary += String.fromCharCode(...bytes.slice(offset, offset + 32768));
+        visualBodies.set(asset.digest, `data:${asset.mediaType};base64,${btoa(binary)}`);
+    } };
     const stale = () => { if (!snapshot)
         return { stale: false, changedSources: [] }; const current = compile(), sources = projectDocumentationSnapshotStale(snapshot, current?.sourceRevisions ?? {}), templatesChanged = Boolean(current && current.snapshotHash !== snapshot.snapshotHash && !sources.stale); return { stale: sources.stale || templatesChanged, changedSources: [...sources.changedSources, ...(templatesChanged ? ["Templates"] : [])] }; };
     const selection = () => { const { set } = active(); return documentationExportSelection({ scope: exportScope, currentSectionId: selectedSectionId, selectedSectionIds: [...selectedExportIds], fallbackSectionId: set?.sections[0]?.id }); };
     const renderSectionConfiguration = createDocumentationSectionConfigurationRenderer(mutateSection);
     function render(host) {
+        const visualProject = options.state()?.project;
+        if (options.loadVisualAssetBody && !visualHydration && visualProject?.conceptVisualAssets?.some(({ digest }) => !visualAttempts.has(digest))) {
+            visualHydration = hydrateVisualBodies().finally(() => { visualHydration = undefined; render(host); });
+        }
         const state = options.state(), { records, set, theme } = active();
         host.replaceChildren();
         const root = document.createElement("section");

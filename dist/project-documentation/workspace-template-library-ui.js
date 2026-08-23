@@ -53,7 +53,9 @@ const renameRepeatVariable = (blocks, from, to) => blocks.map(block => {
     const rename = (value) => value === from ? to : value.startsWith(`${from}.`) ? `${to}${value.slice(from.length)}` : value;
     if (block.type === "heading" || block.type === "paragraph")
         return { ...block, content: block.content.map(inline => "binding" in inline ? { ...inline, binding: rename(inline.binding) } : inline) };
-    return block.type === "repeat" ? { ...block, items: rename(block.items), children: renameRepeatVariable(block.children, from, to) } : block;
+    if (block.type === "repeat")
+        return { ...block, items: rename(block.items), children: renameRepeatVariable(block.children, from, to) };
+    return block.type === "page-visual" || block.type === "concept-group" ? { ...block, source: rename(block.source) } : block;
 });
 const replaceRichText = (content, value) => { const result = []; let replaced = false; for (const inline of content) {
     if (!("text" in inline)) {
@@ -73,9 +75,12 @@ const collectionVariable = (collection) => collection.endsWith(".pages") ? "page
 const newBlock = (type, kind, collections = []) => { const id = `block:${crypto.randomUUID()}`; if (type === "heading")
     return { id, type, level: 2, content: [{ text: "Heading" }] }; if (type === "paragraph")
     return { id, type, content: [{ text: "Text" }] }; if (type === "divider" || type === "theme-logo")
-    return { id, type }; if (type === "data-table")
+    return { id, type }; if (type === "page-visual") {
+    const conceptCollection = collections.find(value => value.endsWith(".concepts"));
+    return { id, type, source: conceptCollection ? conceptCollection.replace(/\.concepts$/u, ".visual") : "page.visual" };
+} if (type === "data-table")
     return { id, type, source: dataSource(kind) }; if (type === "concept-group")
-    return { id, type, source: conceptSource(kind) }; const items = collections[0] ?? (kind === "flow" ? "flow.pages" : "table.rows"); return { id, type, items, variable: collectionVariable(items), children: [] }; };
+    return { id, type, source: collections.find(value => value.endsWith(".concepts")) ?? conceptSource(kind) }; const items = collections[0] ?? (kind === "flow" ? "flow.pages" : "table.rows"); return { id, type, items, variable: collectionVariable(items), children: [] }; };
 async function persistBody(options, bodyDigest, file, records, label) { const alreadyStored = (options.records.templates ?? []).some(template => template.body?.digest === bodyDigest); await options.storeBody?.(options.projectId, bodyDigest, file); try {
     await options.persist(records, label);
 }
@@ -167,6 +172,10 @@ function richEditor(detail, selected, templates, options) {
             variable.addEventListener("change", () => { const next = variable.value.trim() || "item"; commit(replaceBlock(blocks, selectedBlock.id, current => ({ ...current, variable: next, children: renameRepeatVariable(current.children, selectedBlock.variable, next) })), "Rename repeat item"); });
             const addChild = (type) => { const added = newBlock(type, selected.kind, scope?.childCollections); commit(replaceBlock(blocks, selectedBlock.id, current => ({ ...current, children: [...current.children, added] })), "Add child", added.id); };
             detailSurface.append(labelled("Collection", collection), labelled("Item name", variable), button("Add child heading", () => addChild("heading")), button("Add child paragraph", () => addChild("paragraph")), button("Add child data table", () => addChild("data-table")));
+            if (scope?.childCollections.some(value => value.endsWith(".concepts")))
+                detailSurface.append(button("Add child concept-group", () => addChild("concept-group")));
+            if (scope?.childBindings.some(value => value.endsWith(".visual.description")))
+                detailSurface.append(button("Add child page-visual", () => addChild("page-visual")));
             if (scope?.childCollections.length)
                 detailSurface.append(button("Add nested repeat", () => addChild("repeat")));
         }
