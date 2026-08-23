@@ -4813,6 +4813,7 @@
       "test/data-layer-layered-schema-test.mjs",
       "test/data-layer-layered-schema-persistence-test.mjs",
       "test/data-layer-layered-schema-adoption-test.mjs",
+      "test/layered-schema-policy-probe-contract-test.mjs",
       "test/data-layer-selective-profile-inheritance-test.mjs"
     ],
     "property": [
@@ -6338,6 +6339,12 @@
         "consumers": [
           "layered_schema",
           "shell"
+        ]
+      },
+      {
+        "path": "test/support/layered-schema-editing-repairs-probe.mjs",
+        "consumers": [
+          "layered_schema"
         ]
       },
       {
