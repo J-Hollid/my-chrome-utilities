@@ -5,6 +5,7 @@ import { composedCanonicalSchema, hasStandaloneCanonicalSchema, resetCanonicalRo
 import { applyLayerConstraintStructures, structureDeletesPath } from "./flow-graph/page-instance-structure.js";
 import { includeProfileInheritanceParentAdditions } from "./data-layer-selective-profile-inheritance.js";
 import { entityWithInheritedPropertyExcluded } from "./composed-schema/property-exclusion.js";
+import { entityWithInheritedPropertySelection } from "./composed-schema/inherited-property-selection/model.js";
 export { composedSchemaWorkspace, composedCanonicalSchema };
 export const schemaContributorUsesEffectiveWorkspace = (scope) => scope !== "Shared Profile";
 const clone = (value) => structuredClone(value);
@@ -59,6 +60,13 @@ export function resetComposedSchemaLocalProperty(state, kind, entityId, path) { 
 export function excludeComposedSchemaInheritedProperty(state, kind, entityId, propertyId, path) { return updateEntity(state, kind, entityId, `Exclude inherited property ${propertyId}`, (entity) => entityWithInheritedPropertyExcluded(entity, propertyId, path)); }
 export function restoreComposedSchemaInheritedProperty(state, kind, entityId, propertyId) { return updateEntity(state, kind, entityId, `Restore inherited property ${propertyId}`, (entity) => { const next = { ...entity, excludedPropertyIds: (entity.excludedPropertyIds ?? []).filter((id) => id !== propertyId), compiledTargetsStale: true }; if (!next.excludedPropertyIds.length)
     delete next.excludedPropertyIds; return next; }); }
+export function applyComposedSchemaInheritedPropertySelection(state, kind, entityId, selectedPropertyIds) {
+    const entity = state.project.collections[kind].find(({ id }) => id === entityId);
+    if (!entity)
+        throw new Error(`Page ${entityId} is unavailable.`);
+    const selection = composedSchemaWorkspace(state, entity, "Page").inheritedPropertySelection;
+    return updateEntity(state, kind, entityId, `Apply inherited properties for ${entity.name}`, (current) => entityWithInheritedPropertySelection(current, selection, selectedPropertyIds));
+}
 const recordCanonicalReset = (document, _propertyIds) => { delete document.changes; return document; };
 const canonicalNodeAt = (document, path) => { const id = canonicalTableRows(document).find((row) => row.path === path)?.id; return id ? document.nodes[id] : undefined; };
 const restoreCanonicalDerivedFacet = (node, facet) => { const locallyOwned = (rule) => ["local", "overridden", "effective"].includes(String(rule.provenance?.state ?? "")), removeSynthetic = (kind, identity) => { node.rules = node.rules.filter((rule) => rule.kind !== kind || !locallyOwned(rule) || !identity(rule.id)); }; if (facet === "patterns") {

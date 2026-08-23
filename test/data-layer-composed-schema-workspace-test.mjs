@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  applyComposedSchemaInheritedPropertySelection,
   composedCanonicalSchema,
   composedSchemaWorkspace,
   excludeComposedSchemaInheritedProperty,
@@ -29,6 +30,7 @@ import {composedReviewFacetDelta,composedReviewLifecycleInventory} from "../dist
 import {composedExampleFeedback,composedFacetDraft,reconcileComposedAllowedValues,sparseComposedFacets} from "../dist/data-layer-composed-schema-builders.js";
 import {saveFlowPageInstanceLocalFacetsAndStructures} from "../dist/data-layer-layered-schema-project.js";
 import {composedTableQuickEditFacets,composedTableResetFacet} from "../dist/data-layer-composed-schema-workspace-ui.js";
+import {inheritedPropertySelectionHierarchy,inheritedPropertySelectionNodeState} from "../dist/composed-schema/inherited-property-selection/ui.js";
 import {resetComposedDefinitionFacet} from "../dist/data-layer-composed-schema-workspace-focused-sections.js";
 import {focusedStructureOwned} from "../dist/data-layer-canonical-schema-focused-drafts.js";
 
@@ -124,10 +126,23 @@ assert.deepEqual(composedTableResetFacet({...quickStep,local:{path:"/page_name",
 assert.deepEqual(composedTableResetFacet({...quickStep,local:{path:"/page_name",type:"number",presence:"required",condition:{kind:"predicate"}}},"presence"),{type:"number",condition:{kind:"predicate"}},"adjacent Presence reset leaves Type and conditional Presence rules independent");
 const genericExclusionState=structuredClone(state),genericPropertyId="property:page-name";genericExclusionState.project.collections.profiles[0].schemaConstraints.find(({path})=>path==="/page_name").definitionId=genericPropertyId;
 const genericPage=genericExclusionState.project.collections.pages[0];genericPage.localSchemaContributions=[{path:"/page_name",documentation:"Cart-only name"}];
-const genericBefore=JSON.stringify(genericExclusionState.project.collections.profiles[0]),genericLocalBefore=structuredClone(genericPage.localSchemaContributions),genericExcluded=excludeComposedSchemaInheritedProperty(genericExclusionState,"pages",genericPage.id,genericPropertyId,"/page_name"),excludedPage=genericExcluded.project.collections.pages[0],excludedRow=composedSchemaWorkspace(genericExcluded,excludedPage,"Page").rows.find(({path})=>path==="/page_name");
+const genericSelection=composedSchemaWorkspace(genericExclusionState,genericPage,"Page").inheritedPropertySelection;
+assert.deepEqual(genericSelection.items.map(({propertyId,path,selected})=>({propertyId,path,selected})),[{propertyId:genericPropertyId,path:"/page_name",selected:true}],"the Page workspace composes one stable inherited-property choice before its effective rows");
+const nestedSelectionItems=[
+  {propertyId:"property:customer-status",path:"/customer_status",concept:"Customer",type:"string",presence:"optional",selected:true,source:"Sitewide",descendantPaths:[],affectedPaths:["/customer_status"],blocked:false},
+  {propertyId:"property:shipping",path:"/shipping",concept:"Checkout",type:"object",presence:"required",selected:true,source:"Checkout",descendantPaths:["/shipping/address/postcode","/shipping/method"],affectedPaths:["/shipping","/shipping/address/postcode","/shipping/method"],blocked:false},
+  {propertyId:"property:shipping-postcode",path:"/shipping/address/postcode",concept:"Checkout",type:"string",presence:"optional",selected:true,source:"Checkout",descendantPaths:[],affectedPaths:["/shipping/address/postcode"],blocked:false},
+  {propertyId:"property:shipping-method",path:"/shipping/method",concept:"Checkout",type:"string",presence:"optional",selected:true,source:"Checkout",descendantPaths:[],affectedPaths:["/shipping/method"],blocked:false},
+],nestedHierarchy=inheritedPropertySelectionHierarchy(nestedSelectionItems),checkoutConcept=nestedHierarchy.find(({label})=>label==="Checkout"),shippingRoot=checkoutConcept.children.find(({label})=>label==="/shipping"),addressBranch=shippingRoot.children.find(({label})=>label==="/shipping/address"),propertyNodes=nestedHierarchy.flatMap(function collect(node){return[...(node.propertyId?[node]:[]),...node.children.flatMap(collect)];});
+assert.deepEqual(propertyNodes.map(({propertyId})=>propertyId).sort(),nestedSelectionItems.map(({propertyId})=>propertyId).sort(),"the structural selection hierarchy renders every stable property exactly once");
+assert.deepEqual({rootLevel:shippingRoot.level,addressLevel:addressBranch.level,postcodeLevel:addressBranch.children[0].level},{rootLevel:2,addressLevel:3,postcodeLevel:4},"nested paths retain their complete structural depth instead of flattening at aria-level 3");
+assert.equal(inheritedPropertySelectionNodeState(shippingRoot,new Set(["property:shipping","property:shipping-method"])),"mixed","a structural parent reports mixed state when only part of its property subtree is selected");
+assert.equal(checkoutConcept.children.some(({label})=>label==="/customer_status"),false,"a root scalar appears only as its property node under its own concept");
+const genericBefore=JSON.stringify(genericExclusionState.project.collections.profiles[0]),genericLocalBefore=structuredClone(genericPage.localSchemaContributions),genericExcluded=applyComposedSchemaInheritedPropertySelection(genericExclusionState,"pages",genericPage.id,[]),excludedPage=genericExcluded.project.collections.pages[0],excludedWorkspace=composedSchemaWorkspace(genericExcluded,excludedPage,"Page");
 assert.deepEqual(excludedPage.excludedPropertyIds,[genericPropertyId],"a non-Flow contributor stores the same sparse stable-identity exclusion");
 assert.equal(excludedPage.localSchemaContributions.some(({path})=>path==="/page_name"),false,"the generic exclusion removes its sparse local facet in the same command");
-assert.equal(excludedRow.excluded,true,"the effective workspace presents the durable contextual exclusion");
+assert.equal(excludedWorkspace.rows.some(({path})=>path==="/page_name"),false,"the effective Table and Tree omit a durable contextual exclusion");
+assert.equal(excludedWorkspace.inheritedPropertySelection.items.find(({propertyId})=>propertyId===genericPropertyId).selected,false,"the excluded property remains discoverable only in inherited-property selection");
 assert.equal(JSON.stringify(genericExcluded.project.collections.profiles[0]),genericBefore,"generic exclusion does not mutate its source contributor");
 const genericReloaded=JSON.parse(JSON.stringify(genericExcluded)),reloadedPage=genericReloaded.project.collections.pages[0];
 assert.deepEqual(reloadedPage.excludedPropertyIds,[genericPropertyId],"the exclusion survives a JSON persistence boundary");
@@ -135,6 +150,12 @@ assert.equal(reloadedPage.localSchemaContributions.some(({path})=>path==="/page_
 assert.deepEqual(undoProjectTransaction(genericExcluded).project.collections.pages[0].localSchemaContributions,genericLocalBefore,"one Undo restores the exact pre-exclusion local facet");
 const genericRestored=restoreComposedSchemaInheritedProperty(genericExcluded,"pages",genericPage.id,genericPropertyId);
 assert.equal(composedSchemaWorkspace(genericRestored,genericRestored.project.collections.pages[0],"Page").rows.find(({path})=>path==="/page_name").excluded,undefined,"restoring an exclusion recompiles the current parent property");
+const grownParent=structuredClone(genericExcluded),grownProfile=grownParent.project.collections.profiles[0],grownDefinition=grownProfile.schemaConstraints.find(({path})=>path==="/page_name");grownDefinition.documentation="Current parent name";grownProfile.schemaConstraints.push({path:"/loyalty_tier",definitionId:"property:loyalty-tier",type:"string"});
+const grownWorkspace=composedSchemaWorkspace(grownParent,grownParent.project.collections.pages[0],"Page");
+assert.deepEqual(grownWorkspace.inheritedPropertySelection.items.map(({path,selected})=>({path,selected})),[{path:"/loyalty_tier",selected:true},{path:"/page_name",selected:false}],"later parent additions remain dynamically selected while an explicit exclusion stays discoverable");
+const restoredCurrent=applyComposedSchemaInheritedPropertySelection(grownParent,"pages",genericPage.id,[genericPropertyId,"property:loyalty-tier"]),restoredCurrentWorkspace=composedSchemaWorkspace(restoredCurrent,restoredCurrent.project.collections.pages[0],"Page");
+assert.equal(restoredCurrentWorkspace.rows.find(({path})=>path==="/page_name").effective.documentation,"Current parent name","reselection restores the current parent definition without a copied snapshot");
+assert.deepEqual(undoProjectTransaction(restoredCurrent).project,grownParent.project,"one selection command and Undo restore the preceding exclusion without reverting the later parent edit");
 assert.equal(workspace.heading,"Effective schema at Cart");
 assert.equal(workspace.status,"ready");
 assert.deepEqual(workspace.rows.map(({path})=>path),["/funnel_name","/funnel_step","/page_name","/page_type"]);

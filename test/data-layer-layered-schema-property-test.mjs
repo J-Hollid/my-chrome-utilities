@@ -406,7 +406,7 @@ for(let iteration=0;iteration<120;iteration+=1){
   assert.ok(downstreamBlocked.properties[root],"a downstream dependency retains the excluded Page-branch definition");
   assert.equal(downstreamBlocked.conflicts.find(({sourceRuleId})=>sourceRuleId===`rule:downstream-dependency:${iteration}`)?.sourceContributor,downstreamDependency.name,"the downstream blocker names its exact rule and source");
   assert.deepEqual(reloadedDownstreamBlocked.conflicts,downstreamBlocked.conflicts,"a later downstream dependency remains fail-closed after exclusion reload");
-  const independentEventRoot={...downstreamDependency,constraints:[{path:root,type:"string",definitionId:propertyId},{...downstreamDependency.constraints[0]}]},independentReady=compileLayeredSchema([source,ordinaryParent,excluder,independentEventRoot],context);
+  const independentEventRoot={...downstreamDependency,scope:"Event",constraints:[{path:root,type:"string",definitionId:propertyId},{...downstreamDependency.constraints[0]}]},independentReady=compileLayeredSchema([source,ordinaryParent,excluder,independentEventRoot],context);
   assert.equal(independentReady.status,"ready","an independent downstream Event definition satisfies its own dependency");
   assert.equal(independentReady.properties[root].origins.at(-1).contributorId,independentEventRoot.id,"the Page exclusion does not erase an independently contributed Event-branch property");
 }

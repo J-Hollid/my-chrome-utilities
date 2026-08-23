@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import {documentaryFlowGraph,projectFlowGraph,renameFlowPageFrame,resetFlowPageFrameName,saveGraphRelationship} from "../dist/data-layer-flow-graph.js";
 import {addFlowPageFrameToSection,createFlowSection} from "../dist/data-layer-property-set-flow-section.js";
 import {flowDocumentationSnapshotFromState} from "../dist/data-layer-flow-table-documentation-export-ui.js";
-import {contextualPropertyExclusionAssessment,excludeFlowPageInstanceInheritedProperty,flowPageFrameContributor,layeredContributorPath,layeredContributorsForPath,resetFlowPageInstanceLocalProperty,saveFlowPageInstanceLocalFacets} from "../dist/data-layer-layered-schema-project.js";
+import {applyFlowPageInstanceInheritedPropertySelection,contextualPropertyExclusionAssessment,flowPageFrameContributor,layeredContributorPath,layeredContributorsForPath,resetFlowPageInstanceLocalProperty,saveFlowPageInstanceLocalFacets} from "../dist/data-layer-layered-schema-project.js";
+import {applyComposedSchemaInheritedPropertySelection,composedSchemaWorkspace} from "../dist/data-layer-composed-schema-workspace.js";
 import {compileLayeredSchema} from "../dist/data-layer-layered-schema.js";
 import {addProjectEntity,createSpecificationProject,transactProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 
@@ -69,11 +70,24 @@ const sourceHashes=JSON.stringify({profile:state.project.collections.profiles.fi
 assert.equal(effective(exclusionFrame).compiled.properties["/customer_status"].documentation,"Instance-only customer note","the exclusion fixture starts with an effective sparse local facet");
 const exclusionAssessment=contextualPropertyExclusionAssessment(effective(exclusionFrame).compiled,"/customer_status");
 assert.deepEqual(exclusionAssessment,{allowed:true,propertyId:exclusionPropertyId,descendantPaths:[],affectedPaths:["/customer_status"]},"an ordinary inherited stable property is directly excludable without structural ownership");
-state=excludeFlowPageInstanceInheritedProperty(state,flow.id,exclusionFrame.id,exclusionAssessment.propertyId,"/customer_status");
+const pageSelection=composedSchemaWorkspace(state,state.project.collections.pages.find(({id})=>id===confirmation.id),"Page").inheritedPropertySelection,pageScoped=applyComposedSchemaInheritedPropertySelection(state,"pages",confirmation.id,pageSelection.items.filter(({propertyId})=>propertyId!==exclusionPropertyId).map(({propertyId})=>propertyId)),pageScopedFrame=flowPageFrameContributor(pageScoped,flow.id,exclusionFrame.id),pageScopedCompiled=compileLayeredSchema(layeredContributorsForPath(pageScoped,layeredContributorPath(pageScoped,pageScopedFrame,"Flow Page-instance",flow.id)),{eventId:exclusionFrame.id,eventRole:"interaction",occurrenceId:exclusionFrame.id});
+assert.equal(pageScopedCompiled.properties["/customer_status"],undefined,"a Page selection excludes the property throughout downstream Flow Page-instance branches even when an instance had a sparse facet");
+const independentEventCompiled=compileLayeredSchema([
+  {id:"page:excluded-branch",name:"Excluded Page",scope:"Page",constraints:[{path:"/customer_status",definitionId:"property:page-status",type:"string"}],excludedPropertyIds:["property:page-status"]},
+  {id:"frame:excluded-branch",name:"Excluded frame",scope:"Flow Page-instance",constraints:[{path:"/customer_status",documentation:"Page-branch facet"}]},
+  {id:"event:independent-branch",name:"Independent Event",scope:"Event",constraints:[{path:"/customer_status",definitionId:"property:event-status",type:"string",documentation:"Event branch"}]},
+],{eventId:"event:independent-branch",eventRole:"interaction"});
+assert.equal(independentEventCompiled.properties["/customer_status"].definitionId,"property:event-status","a Page exclusion suppresses later Page-branch facets without erasing an independently contributed Event-branch property");
+const selectionBefore=composedSchemaWorkspace(state,flowPageFrameContributor(state,flow.id,exclusionFrame.id),"Flow Page-instance",undefined,flow.id).inheritedPropertySelection;
+assert.equal(selectionBefore.items.find(({propertyId})=>propertyId===exclusionPropertyId).selected,true,"a Flow Page-instance exposes its complete inherited selection before the effective rows");
+state=applyFlowPageInstanceInheritedPropertySelection(state,flow.id,exclusionFrame.id,selectionBefore.items.filter(({propertyId})=>propertyId!==exclusionPropertyId).map(({propertyId})=>propertyId));
 const excludedFrame=documentaryFlowGraph(state.project,flow.id).pageFrames.find(({id})=>id===exclusionFrame.id);
 assert.deepEqual(excludedFrame.excludedPropertyIds,[exclusionPropertyId],"the Page instance stores one sparse stable-identity exclusion");
 assert.equal(excludedFrame.localSchemaContributions?.some(({path})=>path==="/customer_status"),false,"the exclusion stores no copied parent definition");
 assert.equal(effective(exclusionFrame).compiled.properties["/customer_status"],undefined,"the exclusion applies after the complete Page parent stack composes");
+const excludedSelectionWorkspace=composedSchemaWorkspace(state,excludedFrame,"Flow Page-instance",undefined,flow.id);
+assert.equal(excludedSelectionWorkspace.rows.some(({path})=>path==="/customer_status"),false,"the Flow Page-instance effective Table and Tree omit the excluded property");
+assert.equal(excludedSelectionWorkspace.inheritedPropertySelection.items.find(({propertyId})=>propertyId===exclusionPropertyId).selected,false,"the Flow exclusion remains available for restoration in inherited-property selection");
 assert.ok(effective(instances[1]).compiled.properties["/customer_status"],"a sibling Page instance retains the inherited property");
 assert.equal(JSON.stringify({profile:state.project.collections.profiles.find(({id})=>id===profile.id),group:state.project.collections.propertySets.find(({id})=>id===checkout.id),page:state.project.collections.pages.find(({id})=>id===confirmation.id),sibling:documentaryFlowGraph(state.project,flow.id).pageFrames.find(({id})=>id===instances[1].id)}),sourceHashes,"exclusion leaves every source and sibling byte unchanged");
 state=undoProjectTransaction(state);

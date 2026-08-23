@@ -154,7 +154,7 @@ export function compileLayeredSchema(contributors, context) {
                 conflict(page.constraint.path, "parallel Page and Event branches conflict; add an explicit contextual resolution", [page.contributor.name, event.contributor.name]);
             }
         }
-    const contributorById = new Map(activeContributors.map((contributor) => [contributor.id, contributor])), contributorOrder = new Map(activeContributors.map((contributor, index) => [contributor.id, index]));
+    const contributorById = new Map(activeContributors.map((contributor) => [contributor.id, contributor])), contributorOrder = new Map(activeContributors.map((contributor, index) => [contributor.id, index])), pageBranchExclusions = [];
     const applyContributorExclusions = (contributor) => {
         for (const propertyId of contributor.excludedPropertyIds ?? []) {
             const root = Object.values(properties).find(({ definitionId }) => definitionId === propertyId);
@@ -175,6 +175,8 @@ export function compileLayeredSchema(contributors, context) {
                 delete properties[path];
                 exclusions.push({ contributorId: contributor.id, contributorName: contributor.name, path, target: `stable property ${propertyId}` });
             }
+            if (branch(contributor.scope) === "page")
+                pageBranchExclusions.push({ path: root.path, propertyId, contributor });
         }
     };
     for (const contributor of activeContributors) {
@@ -190,6 +192,11 @@ export function compileLayeredSchema(contributors, context) {
             }
             if (blockedParallel.has(constraint.path) || blockedPeers.has(constraint.path))
                 continue;
+            const contributorBranch = branch(contributor.scope), pageExclusion = pageBranchExclusions.find(({ path }) => constraint.path === path || constraint.path.startsWith(`${path}/`)), eventBranchEffective = Object.values(properties).some((property) => property.path === constraint.path && branch(property.origins.at(-1)?.scope ?? "Shared Profile") === "event");
+            if (pageExclusion && (contributorBranch === "page" || contributorBranch === "occurrence" && !eventBranchEffective)) {
+                exclusions.push({ contributorId: pageExclusion.contributor.id, contributorName: pageExclusion.contributor.name, path: constraint.path, target: `downstream Page branch stable property ${pageExclusion.propertyId}` });
+                continue;
+            }
             const prior = properties[constraint.path], priorContributor = prior ? contributorById.get(prior.origins.at(-1).contributorId) : undefined, parallelPair = Boolean(prior && resolvedParallel.has(constraint.path) && new Set([branch(prior.origins.at(-1).scope), branch(contributor.scope)]).has("page") && new Set([branch(prior.origins.at(-1).scope), branch(contributor.scope)]).has("event")), parallelPeer = Boolean(priorContributor?.peerGroup && priorContributor.peerGroup === contributor.peerGroup), merged = mergeLayeredProperty(prior, constraint, contributor, parallelPair, parallelPeer, conflict);
             if (contributor.peerGroup)
                 merged.peerContributions = [...(prior?.peerContributions ?? []), { contributorId: contributor.id, contributorName: contributor.name, constraint: clone(rawConstraint) }];

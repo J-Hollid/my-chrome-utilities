@@ -7685,7 +7685,7 @@ for (const [packId, logicalObservations, program] of [
 }
 const layeredSourceInventory = (await verificationInventory()).source
   .filter((sourcePath) => verificationOwner(packs, sourcePath) === "layered_schema");
-assert.equal(layeredSourceInventory.length,88);
+assert.equal(layeredSourceInventory.length,90);
 for (const sourcePath of layeredSourceInventory) {
   assert.ok(planVerification(packs, { changedPaths:[sourcePath] }).changedBoundaries[sourcePath],
     `${sourcePath} has one declared layered-schema impact boundary`);
