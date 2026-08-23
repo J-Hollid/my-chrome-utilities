@@ -7716,7 +7716,7 @@ assert.deepEqual({tasks:exactLayeredPlan.tasks.length,unit:exactLayeredPlan.unit
   property:exactLayeredPlan.propertyTasks.length,observations:exactLayeredPlan.observationTasks.length,
   parses:exactLayeredPlan.parserTasks.length,generators:exactLayeredPlan.generatorTasks.length,
   sessions:exactLayeredPlan.sessionTasks.length},
-{tasks:53,unit:20,property:13,observations:4,parses:7,generators:7,sessions:1});
+{tasks:54,unit:21,property:13,observations:4,parses:7,generators:7,sessions:1});
 assert.deepEqual(terminalIdentities(exactLayeredPlan),expectedTerminalIdentities(baseExactLayeredPlan),
   "VTD-005 changes routing without changing exact owner task identities");
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,
