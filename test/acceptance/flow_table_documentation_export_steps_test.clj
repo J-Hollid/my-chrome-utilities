@@ -177,6 +177,7 @@
                         :documentationTemplateRecoveryFailure true
                         :documentationTemplateInvalidTransitions true
                         :documentationTemplateRecovery true
+                        :flowTemplateEffectivePageProjection true
                         :export021 true
                         :export022 true
                         :export023 true
@@ -196,5 +197,5 @@
     (is (nil? (#'flow-export/assert-runtime! evidence)))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-23T07:17:22.499236657+02:00", :module-hash "-1330773768", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1511126195"} {:id "defn-/applicable-handler?", :kind "defn-", :line 5, :end-line 10, :hash "-1188712919"} {:id "form/2/deftest", :kind "deftest", :line 12, :end-line 18, :hash "497408386"} {:id "form/3/deftest", :kind "deftest", :line 20, :end-line 125, :hash "-1459277528"} {:id "form/4/deftest", :kind "deftest", :line 127, :end-line 196, :hash "-1561823474"}]}
+;; {:version 1, :tested-at "2026-08-23T16:04:44.870047226+02:00", :module-hash "1915682873", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1511126195"} {:id "defn-/applicable-handler?", :kind "defn-", :line 5, :end-line 10, :hash "-1188712919"} {:id "form/2/deftest", :kind "deftest", :line 12, :end-line 18, :hash "497408386"} {:id "form/3/deftest", :kind "deftest", :line 20, :end-line 125, :hash "-1459277528"} {:id "form/4/deftest", :kind "deftest", :line 127, :end-line 197, :hash "871270606"}]}
 ;; clj-mutate-manifest-end
