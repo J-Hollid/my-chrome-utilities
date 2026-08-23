@@ -5,6 +5,7 @@ import { transactProject } from "./data-layer-specification-project.js";
 import { selectiveProfileContribution } from "./data-layer-selective-profile-inheritance.js";
 import { applyLayerConstraintStructures, structureDeletesPath } from "./flow-graph/page-instance-structure.js";
 import { recordReferencesProperty } from "./layered-schema/compile-context.js";
+import { entityWithInheritedPropertyExcluded } from "./composed-schema/property-exclusion.js";
 export function projectCanonicalConcepts(state) {
     const entities = [...Object.values(state.project.collections).flat(), ...Object.values(state.project.documentationFlowGraphs ?? {}).flatMap((graph) => [...(graph.pageFrames ?? []), ...(graph.occurrences ?? [])])], documents = entities.flatMap(({ canonicalSchema }) => canonicalSchema ? [canonicalSchema] : []), constraintConcepts = entities.flatMap((entity) => [...(entity.schemaConstraints ?? []), ...(entity.localSchemaContributions ?? [])].map(({ concept }) => concept).filter((value) => typeof value === "string"));
     return canonicalConceptIndex([...documents, ...(constraintConcepts.length ? [{ nodes: Object.fromEntries(constraintConcepts.map((concept, index) => [String(index), { concept }])) }] : [])]);
@@ -141,11 +142,11 @@ export function contextualPropertyExclusionAssessment(compiled, path) {
     }
     return { allowed: true, propertyId, descendantPaths, affectedPaths: [path, ...descendantPaths] };
 }
-export function excludeFlowPageInstanceInheritedProperty(state, flowId, pageFrameId, propertyId) {
+export function excludeFlowPageInstanceInheritedProperty(state, flowId, pageFrameId, propertyId, path) {
     const graph = state.project.documentationFlowGraphs[flowId], frame = graph?.pageFrames?.find(({ id }) => id === pageFrameId);
     if (!frame)
         throw new Error(`Flow Page instance ${pageFrameId} is unavailable.`);
-    return transactProject(state, `Exclude inherited property ${propertyId} at Flow Page instance`, (project) => { const graphs = project.documentationFlowGraphs; return { ...project, documentationFlowGraphs: { ...graphs, [flowId]: { ...graphs[flowId], pageFrames: graphs[flowId].pageFrames.map((candidate) => candidate.id === pageFrameId ? { ...candidate, excludedPropertyIds: [...new Set([...(candidate.excludedPropertyIds ?? []), propertyId])], compiledTargetsStale: true } : candidate) } } }; });
+    return transactProject(state, `Exclude inherited property ${propertyId} at Flow Page instance`, (project) => { const graphs = project.documentationFlowGraphs; return { ...project, documentationFlowGraphs: { ...graphs, [flowId]: { ...graphs[flowId], pageFrames: graphs[flowId].pageFrames.map((candidate) => candidate.id === pageFrameId ? entityWithInheritedPropertyExcluded(candidate, propertyId, path) : candidate) } } }; });
 }
 export function restoreFlowPageInstanceInheritedProperty(state, flowId, pageFrameId, propertyId) {
     const graph = state.project.documentationFlowGraphs[flowId], frame = graph?.pageFrames?.find(({ id }) => id === pageFrameId);

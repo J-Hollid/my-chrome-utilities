@@ -63,10 +63,13 @@ state=transactProject(state,"Add inherited exclusion fixture",(project)=>({...pr
   propertySets:project.collections.propertySets.map((candidate)=>candidate.id===checkout.id?{...candidate,schemaConstraints:[...candidate.schemaConstraints,{path:"/customer_status",definitionId:exclusionPropertyId,documentation:"Checkout customer"}]}:candidate),
   pages:project.collections.pages.map((candidate)=>candidate.id===confirmation.id?{...candidate,schemaConstraints:[...candidate.schemaConstraints,{path:"/customer_status",definitionId:exclusionPropertyId,examples:["shipping"]}]}:candidate),
 }}));
-const exclusionFrame=instances[0],sourceHashes=JSON.stringify({profile:state.project.collections.profiles.find(({id})=>id===profile.id),group:state.project.collections.propertySets.find(({id})=>id===checkout.id),page:state.project.collections.pages.find(({id})=>id===confirmation.id),sibling:documentaryFlowGraph(state.project,flow.id).pageFrames.find(({id})=>id===instances[1].id)}),exclusionBefore=state;
+const exclusionFrame=instances[0];
+state=saveFlowPageInstanceLocalFacets(state,flow.id,exclusionFrame.id,"/customer_status",{documentation:"Instance-only customer note"});
+const sourceHashes=JSON.stringify({profile:state.project.collections.profiles.find(({id})=>id===profile.id),group:state.project.collections.propertySets.find(({id})=>id===checkout.id),page:state.project.collections.pages.find(({id})=>id===confirmation.id),sibling:documentaryFlowGraph(state.project,flow.id).pageFrames.find(({id})=>id===instances[1].id)}),exclusionBefore=state;
+assert.equal(effective(exclusionFrame).compiled.properties["/customer_status"].documentation,"Instance-only customer note","the exclusion fixture starts with an effective sparse local facet");
 const exclusionAssessment=contextualPropertyExclusionAssessment(effective(exclusionFrame).compiled,"/customer_status");
 assert.deepEqual(exclusionAssessment,{allowed:true,propertyId:exclusionPropertyId,descendantPaths:[],affectedPaths:["/customer_status"]},"an ordinary inherited stable property is directly excludable without structural ownership");
-state=excludeFlowPageInstanceInheritedProperty(state,flow.id,exclusionFrame.id,exclusionAssessment.propertyId);
+state=excludeFlowPageInstanceInheritedProperty(state,flow.id,exclusionFrame.id,exclusionAssessment.propertyId,"/customer_status");
 const excludedFrame=documentaryFlowGraph(state.project,flow.id).pageFrames.find(({id})=>id===exclusionFrame.id);
 assert.deepEqual(excludedFrame.excludedPropertyIds,[exclusionPropertyId],"the Page instance stores one sparse stable-identity exclusion");
 assert.equal(excludedFrame.localSchemaContributions?.some(({path})=>path==="/customer_status"),false,"the exclusion stores no copied parent definition");
@@ -74,7 +77,7 @@ assert.equal(effective(exclusionFrame).compiled.properties["/customer_status"],u
 assert.ok(effective(instances[1]).compiled.properties["/customer_status"],"a sibling Page instance retains the inherited property");
 assert.equal(JSON.stringify({profile:state.project.collections.profiles.find(({id})=>id===profile.id),group:state.project.collections.propertySets.find(({id})=>id===checkout.id),page:state.project.collections.pages.find(({id})=>id===confirmation.id),sibling:documentaryFlowGraph(state.project,flow.id).pageFrames.find(({id})=>id===instances[1].id)}),sourceHashes,"exclusion leaves every source and sibling byte unchanged");
 state=undoProjectTransaction(state);
-assert.deepEqual(state.project,exclusionBefore.project,"one Undo removes the exclusion and restores the live inherited definition");
+assert.deepEqual(state.project,exclusionBefore.project,"one Undo removes the exclusion and restores the exact local facet plus live inherited definition");
 const protectedCompiled=compileLayeredSchema([{id:"profile:protected",name:"Protected",scope:"Shared Profile",constraints:[{path:"/protected",definitionId:"property:protected",type:"string",enforcement:"invariant"}]}],{eventId:"pageview",eventRole:"context"});
 assert.deepEqual(contextualPropertyExclusionAssessment(protectedCompiled,"/protected"),{allowed:false,propertyId:"property:protected",blocker:"Protected protects /protected as an invariant.",repairRoute:"Open Protected and repair the invariant at its source."},"an invariant exposes its named source blocker and repair route instead of an exclusion command");
 const dependencyCompiled=compileLayeredSchema([{id:"profile:dependency",name:"Dependency source",scope:"Shared Profile",constraints:[{path:"/required",definitionId:"property:required",type:"string"},{path:"/consumer",definitionId:"property:consumer",type:"string",rules:[{id:"rule:requires-property",kind:"conditional",dependencyPropertyId:"property:required"}]}]}],{eventId:"pageview",eventRole:"context"});

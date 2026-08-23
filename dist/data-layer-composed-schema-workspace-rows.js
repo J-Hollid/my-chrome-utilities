@@ -116,9 +116,9 @@ function focused(row, context) {
         gateFocusedOwnershipSection(host, context.ownershipSession, context.activeSection);
     }
     if (context.pendingAction) {
-        const verb = context.pendingAction === "reset" ? "Reset" : context.pendingAction === "remove" ? "Remove" : context.pendingAction === "exclude" ? "Exclude" : "Restore", impact = dom.createElement("p");
+        const verb = context.pendingAction === "reset" ? "Reset" : context.pendingAction === "remove" ? "Remove" : context.pendingAction === "exclude" ? "Exclude" : "Restore", impact = dom.createElement("p"), localPaths = (context.completeRows ?? context.model.rows).filter((candidate) => candidate.path === row.path || candidate.path.startsWith(`${row.path}/`)).filter((candidate) => Object.keys(candidate.local).some((key) => key !== "path")).map(({ path }) => path);
         impact.setAttribute("aria-label", "Property impact review");
-        impact.textContent = `${verb} preview · ${row.path}${row.exclusion?.allowed && row.exclusion.descendantPaths.length ? ` and descendants ${row.exclusion.descendantPaths.join(", ")}` : ""} · target ${row.effective.definitionId ?? row.path} · affected compiled contexts recompile · outputs become stale · runtime validation changes · one Undo action remains available.`;
+        impact.textContent = `${verb} preview · ${row.path}${row.exclusion?.allowed && row.exclusion.descendantPaths.length ? ` and descendants ${row.exclusion.descendantPaths.join(", ")}` : ""} · target ${row.effective.definitionId ?? row.path}${context.pendingAction === "exclude" && localPaths.length ? ` · local facets at ${localPaths.join(", ")} are removed atomically` : ""} · affected compiled contexts recompile · outputs become stale · runtime validation changes · one Undo action remains available.`;
         actions.append(impact, button(dom, `Cancel ${verb.toLowerCase()}`, context.cancelAction), button(dom, `Confirm ${verb.toLowerCase()}`, () => context.confirmAction(row)));
     }
     else
@@ -127,14 +127,16 @@ function focused(row, context) {
     return editor;
 }
 function composedReviewLayer(row, context) {
-    const { dom } = context, review = dom.createElement("section"), list = dom.createElement("ul"), baselineRules = (row.local.rules ?? []), effectiveRules = (row.effective.rules ?? []), draftRules = (context.draft?.rules ?? []), draftValues = context.draft?.allowedValues ?? [];
+    const { dom } = context, review = dom.createElement("section"), list = dom.createElement("ul"), baselineRules = (row.local.rules ?? []), effectiveRules = (row.effective.rules ?? []), draftRules = (context.draft?.rules ?? []), draftValues = context.draft?.allowedValues ?? [], localPaths = (context.completeRows ?? context.model.rows).filter((candidate) => candidate.path === row.path || candidate.path.startsWith(`${row.path}/`)).filter((candidate) => Object.keys(candidate.local).some((key) => key !== "path")).map(({ path }) => path);
     review.setAttribute("aria-label", "Review changes");
     review.dataset.schemaOverlayLayer = "review";
     for (const inheritedRule of effectiveRules)
         if (!draftRules.some((candidate) => String(candidate.id ?? "") === String(inheritedRule.id ?? "")))
             list.append(Object.assign(dom.createElement("li"), { textContent: `Inherited rule ${String(inheritedRule.id ?? "(unidentified)")} · prospective result ${JSON.stringify(inheritedRule)} · consumers recompile` }));
     for (const lifecycle of composedReviewLifecycleInventory(context.removed, context.confirmedAction, context.restoredRuleIds, context.restoredValueIds))
-        list.append(Object.assign(dom.createElement("li"), { textContent: `${lifecycle} · prospective effective result ${row.inherited ? context.effectiveText({ ...row, effective: row.inherited }) : "none"} · local lifecycle is explicit and affected consumers recompile` }));
+        list.append(Object.assign(dom.createElement("li"), { textContent: `${lifecycle} · prospective effective result ${context.confirmedAction === "exclude" ? "none" : row.inherited ? context.effectiveText({ ...row, effective: row.inherited }) : "none"} · local lifecycle is explicit and affected consumers recompile` }));
+    if (context.removed && context.confirmedAction === "exclude" && localPaths.length)
+        list.append(Object.assign(dom.createElement("li"), { textContent: `Remove local facets atomically at ${localPaths.join(", ")} · one Undo restores the exact prior local state` }));
     if (!context.removed) {
         for (const change of composedReviewFacetDelta(row, context.draft))
             list.append(Object.assign(dom.createElement("li"), { textContent: `${change.label} · ${change.detail}` }));

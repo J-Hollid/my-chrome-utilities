@@ -5,6 +5,7 @@ import {transactProject,type Condition,type ProjectEntity,type ProjectState} fro
 import {selectiveProfileContribution,type ProfileInheritanceRecipe} from "./data-layer-selective-profile-inheritance.js";
 import {applyLayerConstraintStructures,structureDeletesPath,type FlowPageInstanceStructureCommand} from "./flow-graph/page-instance-structure.js";
 import {recordReferencesProperty} from "./layered-schema/compile-context.js";
+import {entityWithInheritedPropertyExcluded} from "./composed-schema/property-exclusion.js";
 
 export interface LayeredContributorPath {profileId?:string;profileIds?:string[];eventId?:string;pageGroupId?:string;pageGroupIds?:string[];pageId?:string;flowId?:string;pageFrameId?:string;occurrenceId?:string;}
 export type AssignmentContributorKind="Shared Profile"|"Property Set"|"Page"|"Event"|"Flow Page instance";
@@ -92,9 +93,9 @@ export function contextualPropertyExclusionAssessment(compiled:CompiledLayeredSc
   if(dependency){const dependencySource=dependency.candidate.origins.at(-1)?.contributorName??"A surviving rule";return{allowed:false,propertyId,blocker:`${dependencySource} depends on ${path}.`,repairRoute:`Open ${dependencySource} and repair the required dependency.`};}
   return{allowed:true,propertyId,descendantPaths,affectedPaths:[path,...descendantPaths]};
 }
-export function excludeFlowPageInstanceInheritedProperty(state:ProjectState,flowId:string,pageFrameId:string,propertyId:string):ProjectState{
+export function excludeFlowPageInstanceInheritedProperty(state:ProjectState,flowId:string,pageFrameId:string,propertyId:string,path:string):ProjectState{
   const graph=(state.project.documentationFlowGraphs as Record<string,{pageFrames?:ProjectEntity[]}>)[flowId],frame=graph?.pageFrames?.find(({id})=>id===pageFrameId);if(!frame)throw new Error(`Flow Page instance ${pageFrameId} is unavailable.`);
-  return transactProject(state,`Exclude inherited property ${propertyId} at Flow Page instance`,(project)=>{const graphs=project.documentationFlowGraphs as Record<string,{pageFrames?:ProjectEntity[]}>;return{...project,documentationFlowGraphs:{...graphs,[flowId]:{...graphs[flowId],pageFrames:graphs[flowId]!.pageFrames!.map((candidate)=>candidate.id===pageFrameId?{...candidate,excludedPropertyIds:[...new Set([...((candidate.excludedPropertyIds as string[]|undefined)??[]),propertyId])],compiledTargetsStale:true}:candidate)}}};});
+  return transactProject(state,`Exclude inherited property ${propertyId} at Flow Page instance`,(project)=>{const graphs=project.documentationFlowGraphs as Record<string,{pageFrames?:ProjectEntity[]}>;return{...project,documentationFlowGraphs:{...graphs,[flowId]:{...graphs[flowId],pageFrames:graphs[flowId]!.pageFrames!.map((candidate)=>candidate.id===pageFrameId?entityWithInheritedPropertyExcluded(candidate,propertyId,path):candidate)}}};});
 }
 export function restoreFlowPageInstanceInheritedProperty(state:ProjectState,flowId:string,pageFrameId:string,propertyId:string):ProjectState{
   const graph=(state.project.documentationFlowGraphs as Record<string,{pageFrames?:ProjectEntity[]}>)[flowId],frame=graph?.pageFrames?.find(({id})=>id===pageFrameId);if(!frame)throw new Error(`Flow Page instance ${pageFrameId} is unavailable.`);

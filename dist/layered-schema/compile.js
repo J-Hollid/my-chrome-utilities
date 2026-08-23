@@ -155,12 +155,12 @@ export function compileLayeredSchema(contributors, context) {
             }
         }
     const contributorById = new Map(activeContributors.map((contributor) => [contributor.id, contributor])), contributorOrder = new Map(activeContributors.map((contributor, index) => [contributor.id, index]));
-    for (const contributor of activeContributors) {
+    const applyContributorExclusions = (contributor) => {
         for (const propertyId of contributor.excludedPropertyIds ?? []) {
             const root = Object.values(properties).find(({ definitionId }) => definitionId === propertyId);
             if (!root)
                 continue;
-            const paths = Object.keys(properties).filter((path) => path === root.path || path.startsWith(`${root.path}/`)), removedPaths = new Set(paths), protectedProperty = paths.map((path) => properties[path]).find((property) => property.enforcement === "invariant" || (property.rules ?? []).some((rule) => rule.enforcement === "invariant")), currentDependency = Object.values(properties).filter(({ path }) => !removedPaths.has(path)).flatMap((property) => (property.rules ?? []).map((rule) => ({ path: property.path, contributorId: property.origins.at(-1)?.contributorId, contributorName: property.origins.at(-1)?.contributorName ?? "A surviving rule", rule }))).find(({ rule }) => recordReferencesProperty(rule, propertyId)), currentOrder = contributorOrder.get(contributor.id), futureConstraints = active.filter((entry) => (contributorOrder.get(entry.contributor.id) ?? -1) >= currentOrder && !blockedParallel.has(entry.constraint.path) && !blockedPeers.has(entry.constraint.path)), futureDependency = futureConstraints.flatMap(({ contributor: futureContributor, constraint }) => (constraint.rules ?? []).map((rule) => ({ path: constraint.path, contributorId: futureContributor.id, contributorName: futureContributor.name, rule }))).find(({ rule }) => recordReferencesProperty(rule, propertyId)), dependency = currentDependency ?? futureDependency, dependencySatisfied = Object.values(properties).some((property) => !removedPaths.has(property.path) && property.definitionId === propertyId) || futureConstraints.some(({ constraint }) => constraint.definitionId === propertyId);
+            const paths = Object.keys(properties).filter((path) => path === root.path || path.startsWith(`${root.path}/`)), removedPaths = new Set(paths), protectedProperty = paths.map((path) => properties[path]).find((property) => property.enforcement === "invariant" || (property.rules ?? []).some((rule) => rule.enforcement === "invariant")), currentDependency = Object.values(properties).filter(({ path }) => !removedPaths.has(path)).flatMap((property) => (property.rules ?? []).map((rule) => ({ path: property.path, contributorId: property.origins.at(-1)?.contributorId, contributorName: property.origins.at(-1)?.contributorName ?? "A surviving rule", rule }))).find(({ rule }) => recordReferencesProperty(rule, propertyId)), currentOrder = contributorOrder.get(contributor.id), futureConstraints = active.filter((entry) => (contributorOrder.get(entry.contributor.id) ?? -1) > currentOrder && !blockedParallel.has(entry.constraint.path) && !blockedPeers.has(entry.constraint.path)), futureDependency = futureConstraints.flatMap(({ contributor: futureContributor, constraint }) => (constraint.rules ?? []).map((rule) => ({ path: constraint.path, contributorId: futureContributor.id, contributorName: futureContributor.name, rule }))).find(({ rule }) => recordReferencesProperty(rule, propertyId)), dependency = currentDependency ?? futureDependency, dependencySatisfied = Object.values(properties).some((property) => !removedPaths.has(property.path) && property.definitionId === propertyId) || futureConstraints.some(({ constraint }) => constraint.definitionId === propertyId);
             if (protectedProperty) {
                 const source = protectedProperty.origins.at(-1), sourceName = source?.contributorName ?? "Protected source";
                 conflict(protectedProperty.path, `${contributor.name} cannot exclude ${root.path}; ${sourceName} protects its stable identity`, [sourceName, contributor.name], { facet: "Conditional rule dependency", section: "Rules", sourceContributor: sourceName, ...(source?.contributorId ? { sourceContributorId: source.contributorId } : {}), sourceValue: `protects ${propertyId}`, localContributor: contributor.name, localContributorId: contributor.id, localValue: `exclude ${propertyId}` });
@@ -176,6 +176,8 @@ export function compileLayeredSchema(contributors, context) {
                 exclusions.push({ contributorId: contributor.id, contributorName: contributor.name, path, target: `stable property ${propertyId}` });
             }
         }
+    };
+    for (const contributor of activeContributors) {
         for (const rawConstraint of contributor.constraints) {
             let prepared = contributor.peerGroup ? constraintWithPeerRules(rawConstraint) : constraintWithStructuredRules(rawConstraint);
             for (const resolution of acceptedPeerResolutions)
@@ -195,6 +197,7 @@ export function compileLayeredSchema(contributors, context) {
                 merged.downstreamContributions = [...(prior.downstreamContributions ?? []), { contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope, ...(contributor.inheritanceRoutes?.length ? { inheritanceRoutes: [...contributor.inheritanceRoutes] } : {}), ...(parallelPair ? { parallelPair: true } : {}), constraint: clone(rawConstraint) }];
             properties[constraint.path] = merged;
         }
+        applyContributorExclusions(contributor);
     }
     const onlyDefinedFields = conflictingPolicyGroups.size ? undefined : [...activeContributors].reverse().find((contributor) => contributor.onlyDefinedFields !== undefined)?.onlyDefinedFields;
     return { status: conflicts.length ? "blocked" : "ready", properties, conflicts, provenance, exclusions, ...(onlyDefinedFields !== undefined ? { onlyDefinedFields } : {}) };

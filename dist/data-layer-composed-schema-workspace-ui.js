@@ -209,7 +209,7 @@ export function mountComposedSchemaWorkspace(options) {
         return;
     } const row = options.model.rows.find(({ path }) => path === command.path); if (!row)
         return; options.onSave(row, sparseComposedFacets(composedFacetDraft(row.local, row.effective), row.inherited ?? { path: row.path }), [command]); };
-    const rerender = () => renderComposedRows(rows, { dom: document, overlayHost: section, model: visibleModel(), completeRows: options.model.rows, filterActive: Boolean(query.trim()) || decisionsOnly, effectiveText: options.effectiveText, conceptSuggestions: options.conceptSuggestions, ...(options.onRepair ? { onRepair: (repair) => { saveView(); options.onRepair?.(repair); } } : {}), ...(options.onStructure ? { onStructure: stageStructure } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), activePath, overlayOpen, focusedOpen, reviewOpen, saveIssue, activeSection, draft, removed, confirmedAction, removedRuleIds, removedValueIds, restoredRuleIds, restoredValueIds, stagedLocalValueIds, overriddenRuleIds, overrideRule, pendingAction, pendingStructure, ownershipSession, activateOwnership: (action) => { ownershipSession = activateFocusedOwnershipSection(ownershipSession, activeSection, action); rerender(); }, beginAction, beginExclusion, cancelAction, confirmAction, open, commitInline, resetInline, cancelInline: () => { }, inlineDiagnostic: (message) => { quickEditFeedback.textContent = message; }, quickEditRoot: () => options.host, quickEditScope: `composed:${options.schemaContributorId ?? options.model.heading}`, close, closeChild, beginReview, cancelReview, save, render: rerender, selectSection: (value) => { activeSection = value; focusedOpen = true; reviewOpen = false; saveIssue = undefined; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); rerender(); queueMicrotask(focusDecisionTarget); } });
+    const rerender = () => renderComposedRows(rows, { dom: document, overlayHost: section, model: visibleModel(), completeRows: options.model.rows, filterActive: Boolean(query.trim()) || decisionsOnly, effectiveText: options.effectiveText, conceptSuggestions: options.conceptSuggestions, ...(options.onRepair ? { onRepair: (repair) => { saveView(); options.onRepair?.(repair); } } : {}), ...(options.onStructure ? { onStructure: stageStructure } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), canExcludeInherited: Boolean(options.onExclude && options.onRestoreExclusion), activePath, overlayOpen, focusedOpen, reviewOpen, saveIssue, activeSection, draft, removed, confirmedAction, removedRuleIds, removedValueIds, restoredRuleIds, restoredValueIds, stagedLocalValueIds, overriddenRuleIds, overrideRule, pendingAction, pendingStructure, ownershipSession, activateOwnership: (action) => { ownershipSession = activateFocusedOwnershipSection(ownershipSession, activeSection, action); rerender(); }, beginAction, beginExclusion, cancelAction, confirmAction, open, commitInline, resetInline, cancelInline: () => { }, inlineDiagnostic: (message) => { quickEditFeedback.textContent = message; }, quickEditRoot: () => options.host, quickEditScope: `composed:${options.schemaContributorId ?? options.model.heading}`, close, closeChild, beginReview, cancelReview, save, render: rerender, selectSection: (value) => { activeSection = value; focusedOpen = true; reviewOpen = false; saveIssue = undefined; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); rerender(); queueMicrotask(focusDecisionTarget); } });
     const overrideRule = (sourceId) => { if (!draft)
         return; const source = options.model.rows.find(({ path }) => path === activePath)?.effective.rules?.find((rule) => String(rule.id ?? "") === sourceId); if (!source || source.enforcement === "invariant")
         return; const id = `rule:${crypto.randomUUID()}`, replacement = { ...structuredClone(source), id, replacesRuleId: sourceId, provenance: { source: "created", state: "overridden", sourceId } }; draft = { ...draft, rules: [...draft.rules, replacement] }; overriddenRuleIds.add(id); rerender(); };
@@ -297,10 +297,16 @@ export function mountComposedSchemaWorkspace(options) {
         return; try {
         if (removed) {
             const propertyId = row.inherited?.definitionId;
-            if (confirmedAction === "exclude" && propertyId)
-                options.onExclude?.(row, propertyId);
-            else if (confirmedAction === "restore" && propertyId)
-                options.onRestoreExclusion?.(row, propertyId);
+            if (confirmedAction === "exclude") {
+                if (!propertyId || !options.onExclude)
+                    throw new Error("This contributor cannot exclude inherited properties.");
+                options.onExclude(row, propertyId);
+            }
+            else if (confirmedAction === "restore") {
+                if (!propertyId || !options.onRestoreExclusion)
+                    throw new Error("This contributor cannot restore inherited-property exclusions.");
+                options.onRestoreExclusion(row, propertyId);
+            }
             else
                 options.onReset(row);
             close();

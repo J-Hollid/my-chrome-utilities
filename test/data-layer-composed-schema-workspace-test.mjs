@@ -24,7 +24,7 @@ import {
   saveComposedSchemaLocalFacetsAndStructures,
 } from "../dist/data-layer-composed-schema-workspace.js";
 import {applyCanonicalCommand,canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
-import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
+import {createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 import {composedReviewFacetDelta,composedReviewLifecycleInventory} from "../dist/data-layer-composed-schema-workspace-rows.js";
 import {composedExampleFeedback,composedFacetDraft,reconcileComposedAllowedValues,sparseComposedFacets} from "../dist/data-layer-composed-schema-builders.js";
 import {saveFlowPageInstanceLocalFacetsAndStructures} from "../dist/data-layer-layered-schema-project.js";
@@ -123,10 +123,16 @@ assert.deepEqual(composedTableQuickEditFacets(reconciledQuickRow,"expected-or-al
 assert.deepEqual(composedTableResetFacet({...quickStep,local:{path:"/page_name",type:"number",presence:"required",documentation:"keep"}},"type"),{presence:"required",documentation:"keep"},"adjacent Type reset removes only the local Type facet");
 assert.deepEqual(composedTableResetFacet({...quickStep,local:{path:"/page_name",type:"number",presence:"required",condition:{kind:"predicate"}}},"presence"),{type:"number",condition:{kind:"predicate"}},"adjacent Presence reset leaves Type and conditional Presence rules independent");
 const genericExclusionState=structuredClone(state),genericPropertyId="property:page-name";genericExclusionState.project.collections.profiles[0].schemaConstraints.find(({path})=>path==="/page_name").definitionId=genericPropertyId;
-const genericPage=genericExclusionState.project.collections.pages[0],genericBefore=JSON.stringify(genericExclusionState.project.collections.profiles[0]),genericExcluded=excludeComposedSchemaInheritedProperty(genericExclusionState,"pages",genericPage.id,genericPropertyId),excludedPage=genericExcluded.project.collections.pages[0],excludedRow=composedSchemaWorkspace(genericExcluded,excludedPage,"Page").rows.find(({path})=>path==="/page_name");
+const genericPage=genericExclusionState.project.collections.pages[0];genericPage.localSchemaContributions=[{path:"/page_name",documentation:"Cart-only name"}];
+const genericBefore=JSON.stringify(genericExclusionState.project.collections.profiles[0]),genericLocalBefore=structuredClone(genericPage.localSchemaContributions),genericExcluded=excludeComposedSchemaInheritedProperty(genericExclusionState,"pages",genericPage.id,genericPropertyId,"/page_name"),excludedPage=genericExcluded.project.collections.pages[0],excludedRow=composedSchemaWorkspace(genericExcluded,excludedPage,"Page").rows.find(({path})=>path==="/page_name");
 assert.deepEqual(excludedPage.excludedPropertyIds,[genericPropertyId],"a non-Flow contributor stores the same sparse stable-identity exclusion");
+assert.equal(excludedPage.localSchemaContributions.some(({path})=>path==="/page_name"),false,"the generic exclusion removes its sparse local facet in the same command");
 assert.equal(excludedRow.excluded,true,"the effective workspace presents the durable contextual exclusion");
 assert.equal(JSON.stringify(genericExcluded.project.collections.profiles[0]),genericBefore,"generic exclusion does not mutate its source contributor");
+const genericReloaded=JSON.parse(JSON.stringify(genericExcluded)),reloadedPage=genericReloaded.project.collections.pages[0];
+assert.deepEqual(reloadedPage.excludedPropertyIds,[genericPropertyId],"the exclusion survives a JSON persistence boundary");
+assert.equal(reloadedPage.localSchemaContributions.some(({path})=>path==="/page_name"),false,"the removed local facet cannot reappear after reload");
+assert.deepEqual(undoProjectTransaction(genericExcluded).project.collections.pages[0].localSchemaContributions,genericLocalBefore,"one Undo restores the exact pre-exclusion local facet");
 const genericRestored=restoreComposedSchemaInheritedProperty(genericExcluded,"pages",genericPage.id,genericPropertyId);
 assert.equal(composedSchemaWorkspace(genericRestored,genericRestored.project.collections.pages[0],"Page").rows.find(({path})=>path==="/page_name").excluded,undefined,"restoring an exclusion recompiles the current parent property");
 assert.equal(workspace.heading,"Effective schema at Cart");
