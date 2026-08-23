@@ -36,6 +36,8 @@ const layeredSchemaEditingRepairsExpression=`(async()=>{
   host.remove();return{layering032,layering033,layering034,layering035,layering036,editingRepairDetails:{reviewText,finalReviewText,pageSelectionWorks,eventOccurrenceHasSelection,selected,custom,searchFilters,searchRetainsFocus,uniqueProperties,nestedMixed,tableOmitted,treeOmitted,pageTreeRendered:Boolean(pageTree),hostInventory,cardParity}};
 })()`;
 
+globalThis.__swarmforgeLayeredSchemaEditingRepairsExpression=layeredSchemaEditingRepairsExpression;
+
 if (process.env.SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS) {
   await import("../support/layered-schema-targets.mjs");
   process.exit(0);
