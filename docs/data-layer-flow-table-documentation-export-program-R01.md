@@ -365,6 +365,9 @@ properties as its design and evidence pattern.
 
 ### Layered Page-group display-path evidence repair
 
+Status: QA-integrated at `522836f757` after fresh exact `layered_schema`
+review-ready evidence; no all-runnable-pack checkpoint ran.
+
 The governed review of independent task
 `verification-slice-flow-nested-event-thumbnail-containment` at candidate
 `565e217111` selected Shell's installed reorderable-editor aggregate and exposed
