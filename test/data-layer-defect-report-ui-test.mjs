@@ -862,7 +862,12 @@ process.stdout.write(`${JSON.stringify({
       customBlankSubmissionUnavailable,
       manualActions,
       manualActionRow: manualActionRow.children.map(({ textContent }) => textContent),
-      manualRowStructure: manualClick.children.slice(0, 3).map(({ className }) => className),
+      manualRowStructure: {
+        composed: manualComposition.dataset.reorderItemRow === "true",
+        primary: manualComposition.children[0].className,
+        reorderSuppressed: !descendants(manualComposition).some(({ className }) => className === "reorderable-editor-control"),
+        secondaryOrder: manualActionRow.parent.children.map(({ className }) => className),
+      },
       adjustedText: "Click Checkout — primary checkout action",
       adjustedCount: adjustedReproductionCount,
       adjustFocusRestored: adjustFocusRestoredForReproduction,

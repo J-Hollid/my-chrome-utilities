@@ -93,7 +93,13 @@
     (support/assert! (true? (:customBlankSubmissionUnavailable composer)) "Blank custom text could be submitted." composer)
     (support/assert! (= ["Adjust" "Remove"] (:manualActions composer)) "Singleton manual-step actions are incomplete." composer)
     (support/assert! (= ["+" "Adjust" "Remove"] (:manualActionRow composer)) "Singleton manual-step actions are not grouped in display order." composer)
-    (support/assert! (= ["defect-reproduction-step-text" "defect-reproduction-step-actions" "defect-reproduction-step-guidance"] (:manualRowStructure composer)) "Manual-step rows are not structured as text, actions, then guidance." composer)
+    (support/assert! (= {:composed true
+                         :primary "defect-reproduction-step-text"
+                         :reorderSuppressed true
+                         :secondaryOrder ["defect-reproduction-step-actions" "defect-reproduction-step-guidance"]}
+                        (:manualRowStructure composer))
+                     "Manual-step rows are not composed as drag handle and text, then actions and guidance."
+                     composer)
     (support/assert! (= 3 (:afterFirstAddActionCount composer)) "An added manual row did not receive its own adjacent add action." composer)
     (support/assert! (= "Click Checkout — primary checkout action" (:adjustedText composer)) "Adjusted click text differs." composer)
     (support/assert! (= 1 (:adjustedCount composer)) "Adjusting created a duplicate manual step." composer)
