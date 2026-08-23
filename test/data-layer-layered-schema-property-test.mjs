@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {compileLayeredSchema,resolveConditionalLayeredSchema,resolveLayeredTarget,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
-import {flowPageFrameContributor,layeredContributorPath,layeredContributorsForPath} from "../dist/data-layer-layered-schema-project.js";
+import {contextualPropertyExclusionAssessment,flowPageFrameContributor,layeredContributorPath,layeredContributorsForPath} from "../dist/data-layer-layered-schema-project.js";
 import {documentPageGroupStructure,evaluatePageGroupFixture,pageGroupStructuralSchema,resetDepartedPageApplicabilityPreview} from "../dist/data-layer-page-group-structural-authoring.js";
 import {compileSpecificationProject,createCanonicalProjectEnvelope,evaluateSpecificationObservation} from "../dist/data-layer-specification-engine.js";
 import {openFlowSchemaRouteLifecycle,reconcileFlowSchemaRouteLifecycle} from "../dist/layered-schema/flow-route-lifecycle.js";
@@ -385,17 +385,30 @@ assert.deepEqual(
 );
 
 for(let iteration=0;iteration<120;iteration+=1){
-  const propertyId=`definition:excluded:${iteration}`,root=`/root_${iteration}`,child=`${root}/child`,dependent=`/dependent_${iteration}`,context={eventId:`event:${iteration}`,eventRole:"interaction"},source={id:`profile:source:${iteration}`,name:`Source ${iteration}`,scope:"Shared Profile",constraints:[{path:root,type:"object",definitionId:propertyId},{path:child,type:"string",definitionId:`${propertyId}:child`}]},ordinaryParent={id:`group:ordinary:${iteration}`,name:`Ordinary ${iteration}`,scope:"Property Set",constraints:[{path:`/ordinary_${iteration}`,type:"string"}]},excluder={id:`page:exclude:${iteration}`,name:`Page ${iteration}`,scope:"Page",excludedPropertyIds:[propertyId],constraints:[]};
+  const propertyId=`definition:excluded:${iteration}`,root=`/root_${iteration}`,child=`${root}/child`,dependent=`/dependent_${iteration}`,context={eventId:`event:${iteration}`,eventRole:"interaction"},source={id:`profile:source:${iteration}`,name:`Source ${iteration}`,scope:"Shared Profile",constraints:[{path:root,type:"object",definitionId:propertyId},{path:child,type:"string",definitionId:`${propertyId}:child`,rules:[{id:`rule:removed-child:${iteration}`,kind:"dependency",dependencyPropertyId:propertyId,required:true}]}]},ordinaryParent={id:`group:ordinary:${iteration}`,name:`Ordinary ${iteration}`,scope:"Property Set",constraints:[{path:`/ordinary_${iteration}`,type:"string"}]},excluder={id:`page:exclude:${iteration}`,name:`Page ${iteration}`,scope:"Page",excludedPropertyIds:[propertyId],constraints:[]};
+  assert.deepEqual(contextualPropertyExclusionAssessment(compileLayeredSchema([source,ordinaryParent],context),root),{allowed:true,propertyId,descendantPaths:[child],affectedPaths:[root,child]},"a dependency removed with its descendant subtree does not block the container action");
   const ready=compileLayeredSchema([source,ordinaryParent,excluder],context);
   assert.equal(ready.status,"ready","generated unreferenced exclusions compile ready");
   assert.equal(ready.properties[root],undefined,"generated exclusions remove the identified root");
   assert.equal(ready.properties[child],undefined,"generated exclusions remove every descendant");
   assert.ok(ready.properties[`/ordinary_${iteration}`],"generated exclusions conserve unrelated parent properties");
+  const sparseLocalExcluder={...excluder,constraints:[{path:root,documentation:`Local ${iteration}`},{path:child,examples:[`child ${iteration}`]}]},sparseLocalReady=compileLayeredSchema([source,ordinaryParent,sparseLocalExcluder],context);
+  assert.equal(sparseLocalReady.status,"ready","a persisted exclusion and same-contributor sparse facets compile deterministically");
+  assert.equal(sparseLocalReady.properties[root],undefined,"the exclusion wins after its contributor's sparse root facets merge");
+  assert.equal(sparseLocalReady.properties[child],undefined,"the exclusion wins after its contributor's sparse descendant facets merge");
   const dependency={id:`group:dependency:${iteration}`,name:`Required parent ${iteration}`,scope:"Property Set",constraints:[{path:dependent,type:"string",rules:[{id:`rule:dependency:${iteration}`,kind:"dependency",dependencyPropertyId:propertyId,required:true}]}]},blocked=compileLayeredSchema([source,dependency,excluder],context),roundTrip=compileLayeredSchema(JSON.parse(JSON.stringify([source,dependency,excluder])),context);
-  assert.equal(blocked.status,"blocked","a generated later parent dependency fails a persisted exclusion closed");
+  assert.equal(blocked.status,"blocked","a generated earlier parent dependency fails a persisted exclusion closed");
   assert.ok(blocked.properties[root],"fail-closed compilation retains the required stable identity");
   assert.ok(blocked.conflicts.some(({facet})=>facet==="Conditional rule dependency"),"generated dependency blockers retain actionable evidence");
   assert.deepEqual(roundTrip.conflicts,blocked.conflicts,"dependency exclusion evidence survives save/load round trips");
+  const downstreamDependency={id:`occurrence:dependency:${iteration}`,name:`Contained occurrence ${iteration}`,scope:"Event-occurrence",constraints:[{path:dependent,type:"string",rules:[{id:`rule:downstream-dependency:${iteration}`,kind:"dependency",dependencyPropertyId:propertyId,required:true}]}]},downstreamInputs=[source,ordinaryParent,excluder,downstreamDependency],downstreamBlocked=compileLayeredSchema(downstreamInputs,context),reloadedDownstreamBlocked=compileLayeredSchema(JSON.parse(JSON.stringify(downstreamInputs)),context);
+  assert.equal(downstreamBlocked.status,"blocked","a dependency added after the excluding Page branch fails closed");
+  assert.ok(downstreamBlocked.properties[root],"a downstream dependency retains the excluded Page-branch definition");
+  assert.equal(downstreamBlocked.conflicts.find(({sourceRuleId})=>sourceRuleId===`rule:downstream-dependency:${iteration}`)?.sourceContributor,downstreamDependency.name,"the downstream blocker names its exact rule and source");
+  assert.deepEqual(reloadedDownstreamBlocked.conflicts,downstreamBlocked.conflicts,"a later downstream dependency remains fail-closed after exclusion reload");
+  const independentEventRoot={...downstreamDependency,scope:"Event",constraints:[{path:root,type:"string",definitionId:propertyId},{...downstreamDependency.constraints[0]}]},independentReady=compileLayeredSchema([source,ordinaryParent,excluder,independentEventRoot],context);
+  assert.equal(independentReady.status,"ready","an independent downstream Event definition satisfies its own dependency");
+  assert.equal(independentReady.properties[root].origins.at(-1).contributorId,independentEventRoot.id,"the Page exclusion does not erase an independently contributed Event-branch property");
 }
 
 console.log("data-layer layered schema property tests passed");

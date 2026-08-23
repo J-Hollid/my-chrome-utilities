@@ -45,7 +45,7 @@ export function validateRichDocumentationTemplate(template:RichDocumentationTemp
       }
       if(block.type==="data-table"&&!tableSources.has(String(block.source)))report(id,`Data table ${String(block.source??"")} is outside this template kind.`);
       if(block.type==="concept-group"){const source=String(block.source??""),canonical=availableCollections.get(source),rootTableConcepts=rootScope&&source==="table.concepts";if(!rootTableConcepts&&(!canonical||!conceptSources.has(canonical)))report(id,`Concept collection ${source} is outside this block scope.`);}
-      if(block.type==="page-visual"){const source=String(block.source??"");if(!bindings.has(`${source}.description`))report(id,`Page visual ${source} is outside this block scope.`);}
+      if(block.type==="page-visual"){const source=String(block.source??""),conceptCollection=`${source.replace(/\.visual$/u,"")}.concepts`;if(availableCollections.get(conceptCollection)!=="page.concepts")report(id,`Page visual ${source} is outside this block scope.`);}
       if(block.type==="repeat"){
         const canonical=availableCollections.get(String(block.items));if(!canonical)report(id,`Collection ${String(block.items)} is outside this block scope.`);if(typeof block.variable!=="string"||!/^[a-z][a-zA-Z0-9]*$/u.test(block.variable))report(id,"Repeat item name must be a safe binding name.");const variable=typeof block.variable==="string"&&block.variable?block.variable:"item",nestedBindings=canonical?new Set([...bindings,...scoped(childBindings[canonical]??[],canonical,variable)]):new Set(bindings),nestedCollections=canonical?childCollectionMap(canonical,variable):new Map<string,string>();visit(block.children,nestedBindings,nestedCollections,false);
       }

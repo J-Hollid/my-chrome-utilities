@@ -174,7 +174,7 @@ function richEditor(detail, selected, templates, options) {
             detailSurface.append(labelled("Collection", collection), labelled("Item name", variable), button("Add child heading", () => addChild("heading")), button("Add child paragraph", () => addChild("paragraph")), button("Add child data table", () => addChild("data-table")));
             if (scope?.childCollections.some(value => value.endsWith(".concepts")))
                 detailSurface.append(button("Add child concept-group", () => addChild("concept-group")));
-            if (scope?.childBindings.some(value => value.endsWith(".visual.description")))
+            if (selectedBlock.items === "flow.pages")
                 detailSurface.append(button("Add child page-visual", () => addChild("page-visual")));
             if (scope?.childCollections.length)
                 detailSurface.append(button("Add nested repeat", () => addChild("repeat")));

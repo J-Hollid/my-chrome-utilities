@@ -5,6 +5,7 @@ import { renderComposedRows } from "./data-layer-composed-schema-workspace-rows.
 import { typedCanonicalValue } from "./data-layer-canonical-schema-facets.js";
 import { schemaTableOverlayTarget, schemaTableOverlayTransition, schemaTableReplaceExpectedOrAllowed, schemaTableSortComparison, schemaTableSortOptions, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
 import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
+import { mountInheritedPropertySelection } from "./composed-schema/inherited-property-selection/ui.js";
 const button = (text, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const workspaceViews = new Map();
 const workspacePanels = new Map();
@@ -46,7 +47,7 @@ export function composedTableResetFacet(row, facet) {
     return local;
 }
 export function mountComposedSchemaWorkspace(options) {
-    const section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), headerActions = document.createElement("div"), localChangesButton = document.createElement("button"), parentAdditionsButton = document.createElement("button"), panel = document.createElement("aside"), policy = document.createElement("input"), policyLabel = document.createElement("label"), quickEditFeedback = document.createElement("output"), filterControls = document.createElement("div"), filter = document.createElement("input"), sort = document.createElement("select"), addControls = document.createElement("div"), choice = document.createElement("select"), add = document.createElement("button"), rows = document.createElement("div"), viewKey = options.schemaContributorId ?? options.model.heading, savedView = workspaceViews.get(viewKey), hasDecisions = options.model.rows.some(({ validationState }) => validationState === "blocked");
+    const section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), headerActions = document.createElement("div"), inheritedSelectionHost = document.createElement("div"), localChangesButton = document.createElement("button"), parentAdditionsButton = document.createElement("button"), panel = document.createElement("aside"), policy = document.createElement("input"), policyLabel = document.createElement("label"), quickEditFeedback = document.createElement("output"), filterControls = document.createElement("div"), filter = document.createElement("input"), sort = document.createElement("select"), addControls = document.createElement("div"), choice = document.createElement("select"), add = document.createElement("button"), rows = document.createElement("div"), effectiveTree = document.createElement("ol"), viewKey = options.schemaContributorId ?? options.model.heading, savedView = workspaceViews.get(viewKey), hasDecisions = options.model.rows.some(({ validationState }) => validationState === "blocked");
     let activePath, overlayOpen = false, focusedOpen = false, reviewOpen = false, saveIssue, activeSection = "definition", draft, removed = false, confirmedAction, removedRuleIds = new Set(), removedValueIds = new Set(), restoredRuleIds = new Set(), restoredValueIds = new Set(), stagedLocalValueIds = new Set(), overriddenRuleIds = new Set(), pendingStructure = [], pendingAction, originFocus, originPath, query = savedView?.query ?? "", sortMode = savedView?.sortMode ?? "path", decisionsOnly = hasDecisions && (savedView?.decisionsOnly ?? false);
     let overlayState = { phase: "closed" };
     let ownershipSession = { inherited: false, local: true, structureOwned: true, activated: [] };
@@ -62,6 +63,10 @@ export function mountComposedSchemaWorkspace(options) {
     summary.setAttribute("role", "status");
     summary.className = options.model.status === "blocked" ? "error" : "status-text";
     summary.textContent = options.model.status === "blocked" ? `Blocked · ${options.model.conflictSummary}` : `Ready · ${options.model.rows.length} effective properties${options.includeConflictSummary === false ? "" : ` · ${options.model.conflictSummary}`}`;
+    if (options.onApplyInheritedPropertySelection && options.model.inheritedPropertySelection.totalCount) {
+        const entityName = options.model.heading.replace(/^Effective schema at /u, "");
+        mountInheritedPropertySelection({ host: inheritedSelectionHost, model: options.model.inheritedPropertySelection, targetName: options.schemaContributorScope ? `${entityName} ${options.schemaContributorScope}` : entityName, onApply: options.onApplyInheritedPropertySelection });
+    }
     headerActions.className = "composed-schema-inventory-actions";
     localChangesButton.type = parentAdditionsButton.type = "button";
     localChangesButton.textContent = `Local changes ${options.model.localChangeCount}`;
@@ -196,6 +201,36 @@ export function mountComposedSchemaWorkspace(options) {
     localChangesButton.addEventListener("click", () => workspacePanels.get(viewKey) === "local" ? closePanel() : renderPanel("local", localChangesButton));
     parentAdditionsButton.addEventListener("click", () => workspacePanels.get(viewKey) === "parent" ? closePanel() : renderPanel("parent", parentAdditionsButton));
     const visibleModel = () => { const needle = query.trim().toLowerCase(), visible = options.model.rows.filter((row) => (!decisionsOnly || row.validationState === "blocked") && (!needle || row.path.toLowerCase().includes(needle) || String(row.source ?? "").toLowerCase().includes(needle) || options.effectiveText(row).toLowerCase().includes(needle))).sort((left, right) => schemaTableSortComparison({ path: left.path, concept: left.effective.concept, source: left.source }, { path: right.path, concept: right.effective.concept, source: right.source }, sortMode)); return { ...options.model, rows: visible }; };
+    const renderEffectiveTree = () => { const roots = [], byPath = new Map(); for (const row of options.model.rows) {
+        let siblings = roots, path = "";
+        for (const segment of row.path.split("/").filter(Boolean)) {
+            path += `/${segment}`;
+            let node = byPath.get(path);
+            if (!node) {
+                node = { path, children: [] };
+                byPath.set(path, node);
+                siblings.push(node);
+            }
+            siblings = node.children;
+        }
+        const leaf = byPath.get(row.path);
+        if (leaf)
+            leaf.row = row;
+    } const renderNode = (node, level) => { const item = document.createElement("li"), label = document.createElement(node.row ? "button" : "span"); item.setAttribute("role", "treeitem"); item.setAttribute("aria-level", String(level)); if (label instanceof HTMLButtonElement) {
+        label.type = "button";
+        label.dataset.effectiveTreePath = node.path;
+        label.textContent = `${node.path} · ${options.effectiveText(node.row)}`;
+        label.addEventListener("click", () => open(node.row, label));
+    }
+    else
+        label.textContent = node.path; item.append(label); if (node.children.length) {
+        const group = document.createElement("ol");
+        group.setAttribute("role", "group");
+        for (const child of node.children)
+            group.append(renderNode(child, level + 1));
+        item.append(group);
+    } return item; }; effectiveTree.replaceChildren(); effectiveTree.setAttribute("role", "tree"); effectiveTree.setAttribute("aria-label", "Compiled layered property tree"); for (const root of roots)
+        effectiveTree.append(renderNode(root, 1)); };
     const focusDecisionTarget = () => {
         const row = options.model.rows.find(({ path }) => path === activePath), sectionName = activeSection === "definition" ? "Definition" : activeSection === "rules" ? "Rules" : activeSection === "structure" ? "Structure" : undefined, decision = row?.decisions?.find(({ section: decisionSection }) => decisionSection === sectionName);
         if (!decision)
@@ -209,7 +244,7 @@ export function mountComposedSchemaWorkspace(options) {
         return;
     } const row = options.model.rows.find(({ path }) => path === command.path); if (!row)
         return; options.onSave(row, sparseComposedFacets(composedFacetDraft(row.local, row.effective), row.inherited ?? { path: row.path }), [command]); };
-    const rerender = () => renderComposedRows(rows, { dom: document, overlayHost: section, model: visibleModel(), completeRows: options.model.rows, filterActive: Boolean(query.trim()) || decisionsOnly, effectiveText: options.effectiveText, conceptSuggestions: options.conceptSuggestions, ...(options.onRepair ? { onRepair: (repair) => { saveView(); options.onRepair?.(repair); } } : {}), ...(options.onStructure ? { onStructure: stageStructure } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), activePath, overlayOpen, focusedOpen, reviewOpen, saveIssue, activeSection, draft, removed, confirmedAction, removedRuleIds, removedValueIds, restoredRuleIds, restoredValueIds, stagedLocalValueIds, overriddenRuleIds, overrideRule, pendingAction, pendingStructure, ownershipSession, activateOwnership: (action) => { ownershipSession = activateFocusedOwnershipSection(ownershipSession, activeSection, action); rerender(); }, beginAction, beginExclusion, cancelAction, confirmAction, open, commitInline, resetInline, cancelInline: () => { }, inlineDiagnostic: (message) => { quickEditFeedback.textContent = message; }, quickEditRoot: () => options.host, quickEditScope: `composed:${options.schemaContributorId ?? options.model.heading}`, close, closeChild, beginReview, cancelReview, save, render: rerender, selectSection: (value) => { activeSection = value; focusedOpen = true; reviewOpen = false; saveIssue = undefined; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); rerender(); queueMicrotask(focusDecisionTarget); } });
+    const rerender = () => renderComposedRows(rows, { dom: document, overlayHost: section, model: visibleModel(), completeRows: options.model.rows, filterActive: Boolean(query.trim()) || decisionsOnly, effectiveText: options.effectiveText, conceptSuggestions: options.conceptSuggestions, ...(options.onRepair ? { onRepair: (repair) => { saveView(); options.onRepair?.(repair); } } : {}), ...(options.onStructure ? { onStructure: stageStructure } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), canExcludeInherited: Boolean(options.onExclude && options.onRestoreExclusion), activePath, overlayOpen, focusedOpen, reviewOpen, saveIssue, activeSection, draft, removed, confirmedAction, removedRuleIds, removedValueIds, restoredRuleIds, restoredValueIds, stagedLocalValueIds, overriddenRuleIds, overrideRule, pendingAction, pendingStructure, ownershipSession, activateOwnership: (action) => { ownershipSession = activateFocusedOwnershipSection(ownershipSession, activeSection, action); rerender(); }, beginAction, beginExclusion, cancelAction, confirmAction, open, commitInline, resetInline, cancelInline: () => { }, inlineDiagnostic: (message) => { quickEditFeedback.textContent = message; }, quickEditRoot: () => options.host, quickEditScope: `composed:${options.schemaContributorId ?? options.model.heading}`, close, closeChild, beginReview, cancelReview, save, render: rerender, selectSection: (value) => { activeSection = value; focusedOpen = true; reviewOpen = false; saveIssue = undefined; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); rerender(); queueMicrotask(focusDecisionTarget); } });
     const overrideRule = (sourceId) => { if (!draft)
         return; const source = options.model.rows.find(({ path }) => path === activePath)?.effective.rules?.find((rule) => String(rule.id ?? "") === sourceId); if (!source || source.enforcement === "invariant")
         return; const id = `rule:${crypto.randomUUID()}`, replacement = { ...structuredClone(source), id, replacesRuleId: sourceId, provenance: { source: "created", state: "overridden", sourceId } }; draft = { ...draft, rules: [...draft.rules, replacement] }; overriddenRuleIds.add(id); rerender(); };
@@ -297,10 +332,16 @@ export function mountComposedSchemaWorkspace(options) {
         return; try {
         if (removed) {
             const propertyId = row.inherited?.definitionId;
-            if (confirmedAction === "exclude" && propertyId)
-                options.onExclude?.(row, propertyId);
-            else if (confirmedAction === "restore" && propertyId)
-                options.onRestoreExclusion?.(row, propertyId);
+            if (confirmedAction === "exclude") {
+                if (!propertyId || !options.onExclude)
+                    throw new Error("This contributor cannot exclude inherited properties.");
+                options.onExclude(row, propertyId);
+            }
+            else if (confirmedAction === "restore") {
+                if (!propertyId || !options.onRestoreExclusion)
+                    throw new Error("This contributor cannot restore inherited-property exclusions.");
+                options.onRestoreExclusion(row, propertyId);
+            }
             else
                 options.onReset(row);
             close();
@@ -328,7 +369,8 @@ export function mountComposedSchemaWorkspace(options) {
             close("escape");
     } });
     rerender();
-    section.append(heading, summary, headerActions, policyLabel, quickEditFeedback, filterControls, addControls, rows, panel);
+    renderEffectiveTree();
+    section.append(heading, summary, headerActions, inheritedSelectionHost, policyLabel, quickEditFeedback, filterControls, addControls, rows, effectiveTree, panel);
     options.host.append(section);
     if (savedView)
         rows.scrollTop = savedView.scrollTop;

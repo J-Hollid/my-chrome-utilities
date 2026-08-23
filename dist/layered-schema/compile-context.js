@@ -1,5 +1,6 @@
 export const clone = (value) => structuredClone(value);
 export const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+export const recordReferencesProperty = (value, propertyId) => Boolean(value && typeof value === "object" && Object.entries(value).some(([key, nested]) => ((key === "propertyId" || key === "dependencyPropertyId") && nested === propertyId) || recordReferencesProperty(nested, propertyId)));
 export const included = (target, context) => !target || target === "all" || target === context.eventRole || target === context.eventId || target === context.occurrenceId;
 export const origin = (contributor) => ({ contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope, ...(contributor.inheritanceRoutes?.length ? { inheritanceRoutes: [...contributor.inheritanceRoutes] } : {}) });
 export const branch = (scope) => scope === "Event" ? "event" : scope === "Property Set" || scope === "Page" || scope === "Flow Page-instance" ? "page" : scope === "Event-occurrence" ? "occurrence" : "shared";

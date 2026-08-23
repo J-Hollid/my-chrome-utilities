@@ -496,22 +496,29 @@ Feature: Data layer layered schema constraints runtime
       | Description    | Parent description    | Revised parent description | Checkout description |
 
   # Data layer layered schema constraints runtime 032
-  Scenario: Data layer layered schema constraints runtime 032
-    Given the production Alternative shipping Page-instance effective stack contains ordinary leaf /customer_status from Sitewide, Checkout, and Shipping
+  Scenario Outline: Data layer layered schema constraints runtime 032
+    Given production ordinary leaf /customer_status is inherited through Sitewide, Checkout, and Shipping
+    And installed <target> currently selects /customer_status from its complete effective parent stack
     And no production Event branch contributes /customer_status independently
     And /customer_status has no protected invariant or surviving rule dependency
-    When actual controls open /customer_status property actions in the installed Alternative shipping schema contribution
-    Then the action list includes enabled Exclude inherited property before structural ownership is established
-    And its accessible description scopes the exclusion to Alternative shipping and downstream Page-branch inheritance
-    When actual controls activate Exclude inherited property
-    Then installed review names /customer_status, affected compiled contexts, stale outputs, and Undo while repository hashes remain unchanged
-    When the reviewed local exclusion is committed through actual controls
-    Then production compilation omits /customer_status from Alternative shipping and its contained Purchase occurrence
-    And repository state contains one sparse stable-identity exclusion on the Page instance without copied parent property bytes
-    And production hashes for the three source documents, a sibling Shipping instance, and Published bytes equal their pre-review values
-    When reload proves the exclusion durable and project Undo runs
-    Then the exclusion survives reload before Undo and the current inherited /customer_status definition is restored after Undo
-    And an invariant or required-dependency fixture exposes no exclusion command and renders its named blocker and repair route
+    When actual controls open Inherited properties for <target>
+    Then the installed control precedes the effective schema Table and requires no property-row or Definition action
+    And one accessible searchable selection tree renders the Shared Profile inheritance checkbox, grouping, count, review, cancel, and apply conventions
+    And /customer_status renders once as selected with its complete source and route provenance
+    When actual controls deselect /customer_status
+    Then installed review names its descendants, <affected_branch>, stale outputs, runtime effect, and Undo while repository and Table hashes remain unchanged
+    When actual controls apply the selection
+    Then installed effective Table and Tree and production <affected_branch> omit /customer_status
+    And repository state stores one sparse stable-identity exclusion on <target> without copied parent property bytes
+    And production hashes for source contributors, <unaffected_peer>, unrelated local facets, and Published bytes remain unchanged
+    And an invariant or required-dependency fixture keeps its property selected and renders the named source and repair route
+    When repository reload proves the selection durable and actual project Undo runs
+    Then /customer_status returns to the installed effective Table, Tree, and production <affected_branch>
+
+    Examples:
+      | target                                  | affected_branch                                                    | unaffected_peer                |
+      | Shipping Page                           | Shipping and every downstream Shipping Flow Page-instance branch   | Article Page                   |
+      | Alternative shipping Flow Page-instance | Alternative shipping and its contained Purchase occurrence         | another Shipping Page instance |
 
   # Data layer layered schema constraints runtime 033
   Scenario Outline: Data layer layered schema constraints runtime 033
@@ -531,3 +538,21 @@ Feature: Data layer layered schema constraints runtime
       | example_method         | example_result                    | example_feedback                                         | undo_result                                                         |
       | selected allowed value | becomes selected allowed value red | renders no mismatch diagnostic                           | restores Allowed values red and blue with selected Example blue     |
       | custom value           | remains custom value blue          | renders a non-blocking Allowed values mismatch diagnostic | restores Allowed values red and blue while retaining custom blue    |
+
+  # Data layer layered schema constraints runtime 034
+  Scenario Outline: Data layer layered schema constraints runtime 034
+    Given repository state for <target> contains an explicit inherited /customer_status exclusion
+    And a later production Sitewide command revises /customer_status and adds ordinary property /loyalty_tier
+    When actual controls open Inherited properties for <target>
+    Then /customer_status renders there as unselected while the installed effective Table and Tree omit it
+    And /loyalty_tier renders selected and production compilation includes it without another inheritance decision
+    When actual controls reselect /customer_status
+    And actual controls apply the selection
+    Then the current revised /customer_status definition returns to the installed effective Table and Tree
+    And repository state removes its sparse exclusion without storing parent property bytes
+    And one project Undo restores the exclusion without reverting the Sitewide revision or /loyalty_tier
+
+    Examples:
+      | target                                  |
+      | Shipping Page                           |
+      | Alternative shipping Flow Page-instance |

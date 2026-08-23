@@ -75,9 +75,8 @@ const cellAddress = (row, column) => { let letters = "", value = column; while (
     value = Math.floor(value / 26);
 } return `${letters}${row}`; };
 const rangePoint = (value) => ({ row: (value.nativeRow ?? value.row ?? 0) + 1, column: (value.nativeCol ?? value.col ?? 0) + 1 });
-const embeddedImage = (value) => { if (typeof value !== "string")
-    return undefined; const match = /^data:image\/(png|jpeg|gif);base64,/iu.exec(value); return match ? { base64: value, extension: match[1].toLowerCase() } : undefined; };
-const logoDimensions = (logo) => { const encoded = logo.slice(logo.indexOf(",") + 1), bytes = Uint8Array.from(atob(encoded), character => character.charCodeAt(0)); if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes.length >= 24) {
+const dataUrlBytes = (value) => Uint8Array.from(atob(value.slice(value.indexOf(",") + 1)), character => character.charCodeAt(0));
+export const documentationRasterDimensions = (value) => { const bytes = dataUrlBytes(value); if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes.length >= 24) {
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     return { width: view.getUint32(16), height: view.getUint32(20) };
 } if (bytes[0] === 0x47 && bytes.length >= 10) {
@@ -96,11 +95,55 @@ const logoDimensions = (logo) => { const encoded = logo.slice(logo.indexOf(",") 
             break;
         offset += 2 + length;
     }
+} if (bytes.length >= 30 && String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" && String.fromCharCode(...bytes.slice(8, 12)) === "WEBP") {
+    const kind = String.fromCharCode(...bytes.slice(12, 16)), payload = 20;
+    if (kind === "VP8X")
+        return { width: 1 + bytes[payload + 4] + (bytes[payload + 5] << 8) + (bytes[payload + 6] << 16), height: 1 + bytes[payload + 7] + (bytes[payload + 8] << 8) + (bytes[payload + 9] << 16) };
+    if (kind === "VP8L" && bytes[payload] === 0x2f)
+        return { width: 1 + bytes[payload + 1] + ((bytes[payload + 2] & 0x3f) << 8), height: 1 + ((bytes[payload + 2] & 0xc0) >> 6) + (bytes[payload + 3] << 2) + ((bytes[payload + 4] & 0x0f) << 10) };
+    if (kind === "VP8 " && bytes[payload + 3] === 0x9d && bytes[payload + 4] === 0x01 && bytes[payload + 5] === 0x2a)
+        return { width: (bytes[payload + 6] + (bytes[payload + 7] << 8)) & 0x3fff, height: (bytes[payload + 8] + (bytes[payload + 9] << 8)) & 0x3fff };
 } return undefined; };
+const browserWebpToPng = async (value) => { if (typeof createImageBitmap !== "function")
+    throw new Error("WebP conversion is unavailable in this renderer."); const sourceBytes = Uint8Array.from(dataUrlBytes(value)), source = new Blob([sourceBytes.buffer], { type: "image/webp" }), bitmap = await createImageBitmap(source); try {
+    let png;
+    if (typeof OffscreenCanvas !== "undefined") {
+        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height), context = canvas.getContext("2d");
+        if (!context)
+            throw new Error("WebP conversion canvas is unavailable.");
+        context.drawImage(bitmap, 0, 0);
+        png = await canvas.convertToBlob({ type: "image/png" });
+    }
+    else {
+        const canvas = document.createElement("canvas"), context = canvas.getContext("2d");
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        if (!context)
+            throw new Error("WebP conversion canvas is unavailable.");
+        context.drawImage(bitmap, 0, 0);
+        png = await new Promise((resolve, reject) => canvas.toBlob(result => result ? resolve(result) : reject(new Error("WebP conversion could not encode PNG output.")), "image/png"));
+    }
+    const bytes = new Uint8Array(await png.arrayBuffer());
+    let binary = "";
+    for (let offset = 0; offset < bytes.length; offset += 32768)
+        binary += String.fromCharCode(...bytes.slice(offset, offset + 32768));
+    return `data:image/png;base64,${btoa(binary)}`;
+}
+finally {
+    bitmap.close();
+} };
+const embeddedImage = async (value, convertWebpToPng) => { if (typeof value !== "string")
+    return undefined; const match = /^data:image\/(png|jpeg|gif|webp);base64,/iu.exec(value); if (!match)
+    return undefined; const extension = match[1].toLowerCase(); if (extension === "webp") {
+    const converted = await convertWebpToPng(value);
+    if (!/^data:image\/png;base64,/iu.test(converted))
+        throw new Error("WebP conversion did not produce a PNG image.");
+    return { base64: converted, extension: "png" };
+} return { base64: value, extension: extension }; };
 const rectanglePixels = (sheet, start, end) => { let width = 0, height = 0; for (let column = start.column; column <= end.column; column += 1)
     width += (sheet.getColumn(column).width ?? 8.43) * 7; for (let row = start.row; row <= end.row; row += 1)
     height += (sheet.getRow(row).height ?? 15) * 4 / 3; return { width, height }; };
-function copyImages(source, sourceSheet, targetBook, targetSheet, rendered, prototype, context) {
+async function copyImages(source, sourceSheet, targetBook, targetSheet, rendered, prototype, context, convertWebpToPng, imageCache) {
     if (!targetBook.addImage || !targetSheet.addImage)
         return;
     for (const image of sourceSheet.getImages?.() ?? []) {
@@ -120,7 +163,7 @@ function copyImages(source, sourceSheet, targetBook, targetSheet, rendered, prot
             continue;
         const [startText, endText = startText] = area.range.split(":"), start = cellPoint(startText), end = cellPoint(endText), bounds = rectanglePixels(sourceSheet, start, end), targets = rendered.cells.filter(item => item.sourceAddress === startText).map(item => cellPoint(item.address));
         if (area.source === "theme.logo") {
-            const value = context.theme?.logo, image = embeddedImage(value), intrinsic = typeof value === "string" ? logoDimensions(value) : undefined;
+            const value = context.theme?.logo, intrinsic = typeof value === "string" ? documentationRasterDimensions(value) : undefined, image = await embeddedImage(value, convertWebpToPng);
             if (!image || !intrinsic)
                 continue;
             const imageId = targetBook.addImage(image), fitted = fitProjectDocumentationLogo(intrinsic.width, intrinsic.height, bounds.width, bounds.height);
@@ -129,11 +172,24 @@ function copyImages(source, sourceSheet, targetBook, targetSheet, rendered, prot
             continue;
         }
         const pages = context.flow?.pages ?? [];
-        targets.forEach((target, index) => { const value = pages[index]?.visual?.image, image = embeddedImage(value), intrinsic = typeof value === "string" ? logoDimensions(value) : undefined; if (!image || !intrinsic)
-            return; const fitted = fitProjectDocumentationLogo(intrinsic.width, intrinsic.height, bounds.width, bounds.height); targetSheet.addImage(targetBook.addImage(image), { tl: { row: target.row - 1, col: target.column - 1 }, ext: fitted, editAs: "oneCell" }); });
+        for (const [index, target] of targets.entries()) {
+            const value = pages[index]?.visual?.image, intrinsic = typeof value === "string" ? documentationRasterDimensions(value) : undefined;
+            if (typeof value !== "string" || !intrinsic)
+                continue;
+            let pending = imageCache.get(value);
+            if (!pending) {
+                pending = embeddedImage(value, convertWebpToPng);
+                imageCache.set(value, pending);
+            }
+            const image = await pending;
+            if (!image)
+                continue;
+            const fitted = fitProjectDocumentationLogo(intrinsic.width, intrinsic.height, bounds.width, bounds.height);
+            targetSheet.addImage(targetBook.addImage(image), { tl: { row: target.row - 1, col: target.column - 1 }, ext: fitted, editAs: "oneCell" });
+        }
     }
 }
-async function renderCustomInto(output, body, snapshot, table, worksheetName) { const section = snapshot.set.sections.find(({ id }) => id === table.id); const validation = await validateExcelTemplateWorkbook(body, section.kind); if (!validation.valid)
+async function renderCustomInto(output, body, snapshot, table, worksheetName, convertWebpToPng, imageCache) { const section = snapshot.set.sections.find(({ id }) => id === table.id); const validation = await validateExcelTemplateWorkbook(body, section.kind); if (!validation.valid)
     throw new Error(validation.findings.map(({ location, message }) => `${location}: ${message}`).join("\n")); const source = new (excelJs().Workbook)(); await source.xlsx.load(await body.arrayBuffer()); const worksheet = source.getWorksheet?.("Template") ?? source.worksheets.find(({ name }) => name === "Template"), prototype = prototypeFromWorkbook(source, section.kind), context = prepareDocumentationTemplateContext(snapshot, table.id), rendered = renderExcelTemplateGrid(prototype, context), target = output.addWorksheet(worksheetName); for (const cell of rendered.cells) {
     const destination = target.getCell(cell.address), sourcePoint = cellPoint(cell.sourceAddress ?? cell.address), targetPoint = cellPoint(cell.address);
     destination.value = cell.value;
@@ -151,19 +207,19 @@ async function renderCustomInto(output, body, snapshot, table, worksheetName) { 
     if (sourceColumn.outlineLevel !== undefined)
         targetColumn.outlineLevel = sourceColumn.outlineLevel;
 } for (const merge of rendered.merges)
-    target.mergeCells(merge); target.pageSetup = structuredClone(worksheet.pageSetup); target.headerFooter = structuredClone(worksheet.headerFooter); copyImages(source, worksheet, output, target, rendered, prototype, context); }
+    target.mergeCells(merge); target.pageSetup = structuredClone(worksheet.pageSetup); target.headerFooter = structuredClone(worksheet.headerFooter); await copyImages(source, worksheet, output, target, rendered, prototype, context, convertWebpToPng, imageCache); }
 const uniqueWorksheetName = (raw, used) => { const base = safeWorksheetName(raw); let value = base, sequence = 1; while (used.has(value.toLocaleLowerCase())) {
     sequence += 1;
     const suffix = ` (${sequence})`;
     value = `${base.slice(0, 31 - suffix.length)}${suffix}`;
 } used.add(value.toLocaleLowerCase()); return value; };
-export async function writeProjectDocumentationWorkbookWithTemplates(snapshot, selection, readBody) {
+export async function writeProjectDocumentationWorkbookWithTemplates(snapshot, selection, readBody, options = {}) {
     if (snapshot.incomplete && !selection.confirmIncomplete)
         throw new Error("Confirm incomplete documentation before export.");
     const tables = selectProjectDocumentationTables(snapshot, selection);
     if (!tables.length)
         throw new Error("Choose at least one documentation section.");
-    const templates = new Map((snapshot.templates ?? []).map(template => [template.id, template])), output = new (excelJs().Workbook)(), usedNames = new Set();
+    const templates = new Map((snapshot.templates ?? []).map(template => [template.id, template])), output = new (excelJs().Workbook)(), usedNames = new Set(), imageCache = new Map(), convertWebpToPng = options.convertWebpToPng ?? browserWebpToPng;
     for (const table of tables) {
         const section = snapshot.set.sections.find(({ id }) => id === table.id), assigned = documentationTemplateAssignment(snapshot.set, "excel", section.kind), worksheetName = uniqueWorksheetName(section.name, usedNames);
         if (assigned === "builtin") {
@@ -173,7 +229,7 @@ export async function writeProjectDocumentationWorkbookWithTemplates(snapshot, s
         const template = templates.get(assigned);
         if (!template || template.format !== "excel" || template.kind !== section.kind || !template.validation.valid || !template.body)
             throw new Error(`${section.name} Excel template is unavailable or invalid. Open Templates to repair it.`);
-        await renderCustomInto(output, await readBody(template.body.digest), snapshot, table, worksheetName);
+        await renderCustomInto(output, await readBody(template.body.digest), snapshot, table, worksheetName, convertWebpToPng, imageCache);
     }
     return new Uint8Array(await output.xlsx.writeBuffer());
 }

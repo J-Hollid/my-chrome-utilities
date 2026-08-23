@@ -170,11 +170,12 @@ for(let example=0;example<100;example+=1){
   const propertyId=`definition:excluded:${example}`,path=`/excluded_${example}`,childPath=`${path}/child`,unrelatedPath=`/unrelated_${example}`,state=createSpecificationProject({name:`Exclusion ${example}`,site:"shop.example",id:(kind)=>`${kind}:exclusion:${example}`});
   state.project.collections.profiles.push({id:`profile:exclusion:${example}`,name:`Source ${example}`,schemaConstraints:[{path,type:"object",definitionId:propertyId},{path:childPath,type:"string",definitionId:`${propertyId}:child`},{path:unrelatedPath,type:"string",definitionId:`definition:unrelated:${example}`}]});
   state.project.collections.pages.push({id:`page:exclusion:${example}`,name:`Page ${example}`,profileId:`profile:exclusion:${example}`});
-  const excluded=excludeComposedSchemaInheritedProperty(state,"pages",`page:exclusion:${example}`,propertyId),page=excluded.project.collections.pages[0],workspace=composedSchemaWorkspace(excluded,page,"Page");
-  assert.equal(workspace.rows.find((row)=>row.path===path).excluded,true,"generated stable identities are excluded durably");
-  assert.equal(workspace.rows.find((row)=>row.path===unrelatedPath).excluded,undefined,"generated exclusions conserve unrelated identities");
+  const excluded=excludeComposedSchemaInheritedProperty(state,"pages",`page:exclusion:${example}`,propertyId,path),page=excluded.project.collections.pages[0],workspace=composedSchemaWorkspace(excluded,page,"Page");
+  assert.equal(workspace.rows.some((row)=>row.path===path),false,"generated stable identities are absent from the effective Table");
+  assert.equal(workspace.inheritedPropertySelection.items.find((item)=>item.propertyId===propertyId).selected,false,"generated stable identities remain discoverable as unselected inherited properties");
+  assert.equal(workspace.rows.some((row)=>row.path===unrelatedPath),true,"generated exclusions conserve unrelated identities");
   const restored=restoreComposedSchemaInheritedProperty(excluded,"pages",page.id,propertyId),restoredWorkspace=composedSchemaWorkspace(restored,restored.project.collections.pages[0],"Page");
-  assert.equal(restoredWorkspace.rows.find((row)=>row.path===path).excluded,undefined,"generated restoration reveals the full inherited subtree");
+  assert.equal(restoredWorkspace.rows.some((row)=>row.path===path),true,"generated restoration reveals the full inherited subtree");
   assert.equal(restored.history.undo.length,excluded.history.undo.length+1,"generated restoration is one project command");
 
   const first=`first-${example}`,second=`second-${example}`,custom=`custom-${example}`,selected=reconcileComposedAllowedValues({path,type:"string",allowedValues:[first,second],exampleMethod:"allowed-value",exampleValue:second},[first]),blank=reconcileComposedAllowedValues(selected,[]),customResult=reconcileComposedAllowedValues({path,type:"string",allowedValues:[first],exampleMethod:"custom",exampleValue:custom},[second]);

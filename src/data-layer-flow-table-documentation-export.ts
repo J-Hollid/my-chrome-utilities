@@ -2,7 +2,7 @@ import type {CompiledLayeredSchema,EffectiveProperty} from "./data-layer-layered
 
 export type FlowDocumentationContextKind="page-instance"|"interaction";
 export interface FlowDocumentationUnresolvedReference{path:string;issue:string;repair:string}
-export interface FlowDocumentationPageVisual{image:string;description:string;caption:string;sourceReference:string}
+export interface FlowDocumentationPageVisual{image?:string;unavailable?:true;description:string;caption:string;sourceReference:string}
 export interface FlowDocumentationContextInput{id:string;kind:FlowDocumentationContextKind;pageFrameId:string;occurrenceId?:string;pageName:string;sourcePageName?:string;eventName:string;stepLabel:string;effectiveRevision:number;compiled:CompiledLayeredSchema;visual?:FlowDocumentationPageVisual;unresolved?:readonly FlowDocumentationUnresolvedReference[]}
 export interface FlowDocumentationSnapshotInput{projectId:string;projectName:string;flowId:string;flowName:string;graphRevision:number;sourceState:"draft"|"published";generatedAt:string;contexts:readonly FlowDocumentationContextInput[]}
 export interface FlowDocumentationSnapshot extends FlowDocumentationSnapshotInput{title:string;incomplete:boolean;diagnostics:readonly FlowDocumentationDiagnostic[]}

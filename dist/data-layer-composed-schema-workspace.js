@@ -4,6 +4,8 @@ import { composedSchemaWorkspace } from "./composed-schema/workspace-model.js";
 import { composedCanonicalSchema, hasStandaloneCanonicalSchema, resetCanonicalRow } from "./composed-schema/canonical-workspace.js";
 import { applyLayerConstraintStructures, structureDeletesPath } from "./flow-graph/page-instance-structure.js";
 import { includeProfileInheritanceParentAdditions } from "./data-layer-selective-profile-inheritance.js";
+import { entityWithInheritedPropertyExcluded } from "./composed-schema/property-exclusion.js";
+import { entityWithInheritedPropertySelection } from "./composed-schema/inherited-property-selection/model.js";
 export { composedSchemaWorkspace, composedCanonicalSchema };
 export const schemaContributorUsesEffectiveWorkspace = (scope) => scope !== "Shared Profile";
 const clone = (value) => structuredClone(value);
@@ -55,9 +57,16 @@ export function saveFlowContributorSchemaPolicy(state, flowId, field, entityId, 
 export function saveFlowPageInstanceSchemaPolicy(state, flowId, pageFrameId, onlyDefinedFields) { return saveFlowContributorSchemaPolicy(state, flowId, "pageFrames", pageFrameId, onlyDefinedFields); }
 export function saveComposedSchemaLocalFacetsAndStructures(state, kind, entityId, path, facets, commands, id) { const sparse = Object.fromEntries(Object.entries(facets).filter(([, value]) => value !== undefined && value !== "")); return updateEntity(state, kind, entityId, `Save ${commands.length + 1} ${kind === "pages" ? "Page" : kind === "propertySets" ? "Property Set" : "Event"} schema changes`, (entity) => { const existing = entity.localSchemaContributions ?? [], previous = existing.find((constraint) => constraint.path === path), focused = { path, ...clone(sparse), ...(previous?.definitionId && !sparse.definitionId ? { definitionId: previous.definitionId } : {}) }, seeded = commands.length ? [...existing.filter((constraint) => constraint.path !== path), focused] : existing, structured = applyLayerConstraintStructures(seeded, commands, id), next = commands.length ? structured.filter((constraint) => Object.keys(constraint).length > 1) : [...existing.filter((constraint) => constraint.path !== path), ...(Object.keys(sparse).length ? [focused] : [])]; return { ...entity, localSchemaContributions: structureDeletesPath(commands, path) ? next.filter((constraint) => constraint.path !== path) : next, compiledTargetsStale: true }; }); }
 export function resetComposedSchemaLocalProperty(state, kind, entityId, path) { return updateEntity(state, kind, entityId, `Reset ${path} to parents`, (entity) => { const next = { ...entity, localSchemaContributions: (entity.localSchemaContributions ?? []).filter((constraint) => constraint.path !== path), schemaConstraints: (entity.schemaConstraints ?? []).filter((constraint) => constraint.path !== path), compiledTargetsStale: true }; return resetCanonicalRow(entity.canonicalSchema, path, next); }); }
-export function excludeComposedSchemaInheritedProperty(state, kind, entityId, propertyId) { return updateEntity(state, kind, entityId, `Exclude inherited property ${propertyId}`, (entity) => ({ ...entity, excludedPropertyIds: [...new Set([...(entity.excludedPropertyIds ?? []), propertyId])], compiledTargetsStale: true })); }
+export function excludeComposedSchemaInheritedProperty(state, kind, entityId, propertyId, path) { return updateEntity(state, kind, entityId, `Exclude inherited property ${propertyId}`, (entity) => entityWithInheritedPropertyExcluded(entity, propertyId, path)); }
 export function restoreComposedSchemaInheritedProperty(state, kind, entityId, propertyId) { return updateEntity(state, kind, entityId, `Restore inherited property ${propertyId}`, (entity) => { const next = { ...entity, excludedPropertyIds: (entity.excludedPropertyIds ?? []).filter((id) => id !== propertyId), compiledTargetsStale: true }; if (!next.excludedPropertyIds.length)
     delete next.excludedPropertyIds; return next; }); }
+export function applyComposedSchemaInheritedPropertySelection(state, kind, entityId, selectedPropertyIds) {
+    const entity = state.project.collections[kind].find(({ id }) => id === entityId);
+    if (!entity)
+        throw new Error(`Page ${entityId} is unavailable.`);
+    const selection = composedSchemaWorkspace(state, entity, "Page").inheritedPropertySelection;
+    return updateEntity(state, kind, entityId, `Apply inherited properties for ${entity.name}`, (current) => entityWithInheritedPropertySelection(current, selection, selectedPropertyIds));
+}
 const recordCanonicalReset = (document, _propertyIds) => { delete document.changes; return document; };
 const canonicalNodeAt = (document, path) => { const id = canonicalTableRows(document).find((row) => row.path === path)?.id; return id ? document.nodes[id] : undefined; };
 const restoreCanonicalDerivedFacet = (node, facet) => { const locallyOwned = (rule) => ["local", "overridden", "effective"].includes(String(rule.provenance?.state ?? "")), removeSynthetic = (kind, identity) => { node.rules = node.rules.filter((rule) => rule.kind !== kind || !locallyOwned(rule) || !identity(rule.id)); }; if (facet === "patterns") {

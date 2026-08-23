@@ -83,8 +83,8 @@ export function validateRichDocumentationTemplate(template) {
                     report(id, `Concept collection ${source} is outside this block scope.`);
             }
             if (block.type === "page-visual") {
-                const source = String(block.source ?? "");
-                if (!bindings.has(`${source}.description`))
+                const source = String(block.source ?? ""), conceptCollection = `${source.replace(/\.visual$/u, "")}.concepts`;
+                if (availableCollections.get(conceptCollection) !== "page.concepts")
                     report(id, `Page visual ${source} is outside this block scope.`);
             }
             if (block.type === "repeat") {

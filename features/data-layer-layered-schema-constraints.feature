@@ -501,21 +501,29 @@ Feature: Data layer layered schema constraints
       | Description    | Parent description    | Revised parent description | Checkout description |
 
   # Data layer layered schema constraints 032
-  Scenario: Data layer layered schema constraints 032
-    Given the Alternative shipping Page-instance effective stack contains ordinary leaf /customer_status from Sitewide, Checkout, and Shipping
+  Scenario Outline: Data layer layered schema constraints 032
+    Given ordinary leaf /customer_status is inherited through Sitewide, Checkout, and Shipping
+    And <target> currently selects /customer_status from its complete effective parent stack
     And no Event branch contributes /customer_status independently
     And /customer_status has no protected invariant or surviving rule dependency
-    When the operator opens /customer_status property actions in the Alternative shipping schema contribution
-    Then Exclude inherited property is available without first using Override here
-    And its guidance says the exclusion affects Alternative shipping and downstream contexts that inherit its Page branch, not any source contributor
-    When the operator activates Exclude inherited property
-    Then review identifies /customer_status, affected contexts, stale outputs, and one Undo action before any Draft change
-    When the reviewed local exclusion is committed
-    Then /customer_status is absent from the effective Alternative shipping Page instance and its contained Purchase occurrence
-    And one sparse exclusion is stored against the inherited property's stable identity without copying its parent definition
-    And the three source documents, another Shipping Page instance, and Published bytes are identical to their pre-review values
-    And reloading preserves the exclusion while Undo restores the current inherited definition
-    And a protected invariant or surviving required dependency remains non-excludable with its source and repair route identified
+    When the operator opens Inherited properties for <target>
+    Then the control precedes the effective schema Table and requires no property-row or Definition action
+    And one searchable selection tree uses the Shared Profile inheritance checkbox, grouping, count, review, cancel, and apply conventions
+    And /customer_status appears once as selected with its complete source and route provenance
+    When the operator deselects /customer_status
+    Then review identifies its descendants, <affected_branch>, stale outputs, runtime effect, and one Undo action while the Draft and effective Table remain unchanged
+    When the operator applies the selection
+    Then /customer_status is absent from the effective Table and Tree and from <affected_branch>
+    And one sparse exclusion is stored on <target> by stable property identity without copying its parent definition
+    And source contributors, <unaffected_peer>, unrelated local facets, and Published state remain unchanged
+    And a protected invariant or surviving required dependency remains selected with its source and repair route identified
+    When reloading proves the selection durable and the operator uses Undo
+    Then /customer_status returns to the effective Table, Tree, and <affected_branch>
+
+    Examples:
+      | target                                  | affected_branch                                                    | unaffected_peer                |
+      | Shipping Page                           | Shipping and every downstream Shipping Flow Page-instance branch   | Article Page                   |
+      | Alternative shipping Flow Page-instance | Alternative shipping and its contained Purchase occurrence         | another Shipping Page instance |
 
   # Data layer layered schema constraints 033
   Scenario Outline: Data layer layered schema constraints 033
@@ -535,3 +543,21 @@ Feature: Data layer layered schema constraints
       | example_method         | example_result                    | example_feedback                                      | stored_change                              | undo_result                                                        |
       | selected allowed value | becomes selected allowed value red | shows no mismatch warning                             | Allowed values red and selected Example red | restores Allowed values red and blue with selected Example blue    |
       | custom value           | remains custom value blue          | shows a non-blocking Allowed values mismatch warning | only Allowed values red                    | restores Allowed values red and blue while retaining custom blue   |
+
+  # Data layer layered schema constraints 034
+  Scenario Outline: Data layer layered schema constraints 034
+    Given <target> has explicitly deselected inherited /customer_status
+    And Sitewide later revises /customer_status and adds ordinary property /loyalty_tier
+    When the operator opens Inherited properties for <target>
+    Then /customer_status is available there as unselected while remaining absent from the effective Table and Tree
+    And /loyalty_tier is selected and effective without another inheritance decision
+    When the operator reselects /customer_status
+    And the operator applies the selection
+    Then the current revised /customer_status definition returns to the effective Table and Tree
+    And its sparse exclusion is removed without storing parent property bytes
+    And one Undo restores the exclusion without reverting the Sitewide revision or /loyalty_tier
+
+    Examples:
+      | target                                  |
+      | Shipping Page                           |
+      | Alternative shipping Flow Page-instance |
