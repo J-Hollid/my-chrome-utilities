@@ -14,6 +14,12 @@ touching Example without the old allowed-value selection making that edit fail.
 
 Stable task name: `layered-schema-exclusion-example-repair`.
 
+QA integration: exact candidate `ad9b9276c2` passed the authoritative
+`flow_export`, `flow_graph`, `layered_schema`, `live_flow_testing`, and
+`property_set_flow_sections` plan (113 tasks) with package proof. The integrated
+tree also makes exclusion atomic with any same-contributor sparse facets and
+does not expose exclusion controls in unsupported Event-occurrence workspaces.
+
 ## Contextual inherited-property exclusion
 
 An ordinary inherited effective property exposes `Exclude inherited property`
