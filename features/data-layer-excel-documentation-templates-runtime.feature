@@ -13,7 +13,7 @@ Feature: Data layer Excel documentation templates runtime
   Scenario: Data layer Excel documentation templates runtime 001
     When actual controls download each guided starter
     Then independent OOXML parsing finds one Template worksheet and one visible Template Guide worksheet in every starter
-    And it finds Excel tables TemplateSettings and TemplateAreas with Contract 2 and the declared kind
+    And it finds Excel tables TemplateSettings and TemplateAreas with Contract 3, the declared kind, and the exact Area, Type, Source, Direction, and Properties columns
     And it finds the kind-specific binding glossary, repeat examples, and named areas without a functional Note or Comment
     And production validation accepts every starter for its declared kind
     And rendering each starter produces the established Built-in section shape
@@ -160,3 +160,49 @@ Feature: Data layer Excel documentation templates runtime
     And parsed cells contain the matching literal description, caption, and source reference
     And the Page without a visual has an empty image area and metadata cells without layout loss
     And repository inspection finds Flow visuals, graph, schemas, Documentation configuration, Draft revision, and publication bytes unchanged
+
+  # Data layer Excel documentation templates runtime 016
+  Scenario: Data layer Excel documentation templates runtime 016
+    Given an actual valid Contract 2 workbook has the exact four-column TemplateAreas table
+    When production validation, preview, save, assignment, and rendering consume it
+    Then production paths accept it without rewriting or migrating the candidate
+    And repository inspection finds the exact selected workbook bytes after Save template
+    And independent OOXML parsing finds the established scale-down, top-left, and zero-padding image anchors
+    When actual controls open the Flow Excel template guide
+    Then installed searchable guidance distinguishes Contract 2 compatibility from Contract 3 Properties
+    And candidate inspection exposes each Contract 3 area's declarations and each Contract 2 area's implicit defaults
+
+  # Data layer Excel documentation templates runtime 017
+  Scenario: Data layer Excel documentation templates runtime 017
+    Given an actual Contract 3 workbook has a 100 by 60 pixel generated-image area and a 40 by 20 pixel saved image
+    And the Image row's one Properties cell contains fit: scale-down; position: center; padding: 8px
+    When installed preview and assigned Excel export render the workbook
+    Then independent OOXML parsing finds a 40 by 20 pixel image anchor within one renderer pixel
+    And its top-left is 30 pixels right and 20 pixels down from the named area's top-left within one renderer pixel
+    And strict package inspection finds the original aspect ratio, no crop, and no external image relationship
+
+  # Data layer Excel documentation templates runtime 018
+  Scenario: Data layer Excel documentation templates runtime 018
+    Given an actual Contract 3 Flow workbook defines PageStep A1:B1 repeating flow.pages Across
+    And its Properties cell names PageSeparator B1:B1 containing literal >>
+    And A1 binds page.pageName while C1 contains Later content
+    When production rendering consumes Cart, Shipping, and Payment in configured order
+    Then independent workbook parsing finds Cart, >>, Shipping, >>, and Payment in A1:E1
+    And it finds no trailing separator or empty separator column and finds Later content in F1
+    And renderer tracing records three item emissions and two separator emissions
+    And repository inspection finds no documentation, Flow, schema, Draft, or publication write
+
+  # Data layer Excel documentation templates runtime 019
+  Scenario Outline: Data layer Excel documentation templates runtime 019
+    Given an actual Contract 3 candidate contains <invalid_properties>
+    When production validation runs through the installed candidate control
+    Then the visible primary finding identifies TemplateAreas <area> Properties and <reason>
+    And it gives one supported repair while technical details remain collapsed
+    And no renderer, repository write, assignment, or download is invoked
+
+    Examples:
+      | area      | invalid_properties                                  | reason                                      |
+      | ThemeLogo | unsupported fit: cover                             | names scale-down and contain as valid fits  |
+      | ThemeLogo | duplicate padding declarations                     | identifies the duplicate property           |
+      | PageStep  | separator-area referring to a missing named range  | identifies PageSeparator as missing          |
+      | PageStep  | an Across separator outside the complete right edge | identifies the required trailing geometry    |

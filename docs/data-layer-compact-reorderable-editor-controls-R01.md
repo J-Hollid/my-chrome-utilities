@@ -2,7 +2,8 @@
 
 Status: schema projection, no-op, and compact-handle presentation corrections
 QA-integrated through `4d5c420f`; reorderable item row-composition correction
-approved on 2026-08-23
+QA-integrated at `4ba9905815` on 2026-08-23 after exact 14-pack/514-task
+review evidence
 
 Prepared: 2026-08-19
 

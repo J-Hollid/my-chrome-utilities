@@ -35,7 +35,29 @@ export const excelTemplateItemRoot=(collection:string):string=>
 
 export interface ExcelTemplateValueGuide {path:string;placeholder:string;meaning:string;example:string;available:string}
 export interface ExcelTemplateCollectionGuide {path:string;meaning:string;itemPrefix:string;fields:readonly string[];nestedCollections:readonly string[];directions:readonly ["Across","Down"];emptyResult:"No copy";copyBehavior:string;example:string}
-export interface ExcelTemplateAreaGuide {area:string;type:"Repeat"|"Image";source:string;direction:"Across"|"Down"|"";range:string;parent?:string}
+export interface ExcelTemplateAreaGuide {area:string;type:"Repeat"|"Image";source:string;direction:"Across"|"Down"|"";range:string;properties?:string;parent?:string}
+
+export const excelTemplateAreaPropertiesGuide=[
+  "declarations = declaration (\";\" declaration)* [\";\"] and declaration = property-name : value; declaration order, ASCII case, and surrounding whitespace do not change the result.",
+  "Image keys and defaults: fit scale-down or contain (default scale-down); position keywords or 0% through 100% percentages (default left top); padding one to four nonnegative px values (default 0px).",
+  "Combined Image example: fit: scale-down; position: center; padding: 8px",
+  "Percentage and padding-shorthand example: fit: contain; position: 25% 75%; padding: 4px 8px 12px 16px",
+  "Across separator example: separator-area: PageSeparator, where PageSeparator is the complete full-height right edge and is emitted only between items.",
+  "Down separator example: separator-area: RowSeparator, where RowSeparator is the complete full-width bottom edge and is emitted only between items.",
+  "Contract 2 defaults remain compatible without a Properties column or workbook migration.",
+] as const;
+
+const contract3AcrossExamples:Record<DocumentationTemplateKind,Pick<ExcelTemplateAreaGuide,"area"|"source">>={
+  overview:{area:"FieldStep",source:"overview.fields"},
+  flow:{area:"PageStep",source:"flow.pages"},
+  matrix:{area:"MatrixStep",source:"matrix.rows"},
+  profile:{area:"ProfileStep",source:"profile.rows"},
+};
+const contract3AreaExamples=(kind:DocumentationTemplateKind):ExcelTemplateAreaGuide[]=>[
+  {area:"ImageArea",type:"Image",source:"theme.logo",direction:"",properties:"fit: scale-down; position: center; padding: 8px",range:"A1:B2"},
+  {...contract3AcrossExamples[kind],type:"Repeat",direction:"Across",properties:"separator-area: PageSeparator",range:"A1:B1"},
+  {area:"RowStep",type:"Repeat",source:"table.rows",direction:"Down",properties:"separator-area: RowSeparator",range:"A1:B2"},
+];
 
 const scalarRoots=["document.title","document.incomplete","document.generatedAt","project.name","project.purpose","project.website","set.name","section.name","section.kind","theme.name","theme.clientName","theme.headerText","theme.footerText","theme.logo","table.legend"];
 const kindScalars:Record<DocumentationTemplateKind,readonly string[]>={overview:[],flow:["flow.name"],matrix:["matrix.legend"],profile:["profile.name"]};
@@ -49,12 +71,12 @@ const areaExamples:Record<DocumentationTemplateKind,ExcelTemplateAreaGuide[]>={
 };
 const generatedAreaName=(path:string)=>path.split(".").map(part=>part[0]!.toUpperCase()+part.slice(1)).join("")+"Area";
 
-export function excelTemplateGuideFor(kind:DocumentationTemplateKind):{values:ExcelTemplateValueGuide[];collections:ExcelTemplateCollectionGuide[];areaExamples:ExcelTemplateAreaGuide[]}{
+export function excelTemplateGuideFor(kind:DocumentationTemplateKind):{values:ExcelTemplateValueGuide[];collections:ExcelTemplateCollectionGuide[];areaExamples:ExcelTemplateAreaGuide[];propertyGuidance:string[];propertyExamples:ExcelTemplateAreaGuide[]}{
   const collectionPaths:string[]=[],pending=[...excelTemplateRootCollections[kind]],seen=new Set<string>();
   while(pending.length){const path=pending.shift()!;if(seen.has(path))continue;seen.add(path);collectionPaths.push(path);pending.push(...(excelTemplateNestedCollections[path]??[]));}
   const collectionSet=new Set(collectionPaths),valuePaths=new Set([...scalarRoots,...kindScalars[kind]]);
   for(const path of collectionPaths)for(const field of excelTemplateItemPaths[path]??[])if(!collectionSet.has(field)&&!(excelTemplateNestedCollections[path]??[]).includes(field))valuePaths.add(field);
   const rootValues=new Set([...scalarRoots,...kindScalars[kind]]),values=[...valuePaths].sort().map(path=>{const providers=collectionPaths.filter(collection=>(excelTemplateItemPaths[collection]??[]).includes(path));return{path,placeholder:`{{${path}}}`,meaning:description(path),example:examples[path]??description(path),available:rootValues.has(path)?"Template root and every repeat area":`Inside repeats of ${providers.join(", ")}`};});
   const examplesForKind=areaExamples[kind],collections=collectionPaths.map(path=>{const area=examplesForKind.find(item=>item.source===path),name=area?.area??generatedAreaName(path),direction=area?.direction||"Down",range=area?.range??"A3:D3";return{path,meaning:path==="flow.pages"?"Flow Page contexts":`${description(path)} collection`,itemPrefix:excelTemplateItemRoot(path),fields:[...(excelTemplateItemPaths[path]??[])],nestedCollections:[...(excelTemplateNestedCollections[path]??[])],directions:["Across","Down"] as ["Across","Down"],emptyResult:"No copy" as const,copyBehavior:"The complete named repeat area is copied for every item.",example:`${name} | Repeat | ${path} | ${direction} | named range ${range}`};});
-  return{values,collections,areaExamples:examplesForKind.map(item=>({...item}))};
+  return{values,collections,areaExamples:examplesForKind.map(item=>({...item})),propertyGuidance:[...excelTemplateAreaPropertiesGuide],propertyExamples:contract3AreaExamples(kind)};
 }

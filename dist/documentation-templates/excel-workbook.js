@@ -1,5 +1,5 @@
 import { safeFlowVisualArchivePath } from "../flow-visual-zip.js";
-import { validateExcelTemplatePrototype } from "./excel-template.js";
+import { imageLayoutInArea, parseExcelAreaProperties, validateExcelTemplatePrototype } from "./excel-template.js";
 const decoder = new TextDecoder();
 const u16 = (bytes, offset) => new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint16(offset, true);
 const u32 = (bytes, offset) => new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(offset, true);
@@ -147,49 +147,80 @@ const workbookPrototype = (workbook, expectedKind) => {
     catch (error) {
         findings.push({ location: "Template Guide", message: error.message });
     }
+    const values = new Map(settings.map(row => [String(row[0] ?? "").trim(), String(row[1] ?? "").trim()])), contract = values.get("Contract"), kind = values.get("Kind");
+    if (contract !== "2" && contract !== "3")
+        findings.push({ location: "TemplateSettings", message: "Contract must be 2 or 3. Download guided starter." });
     try {
-        areaRows = tableRows(guide, "TemplateAreas", ["Area", "Type", "Source", "Direction"]);
+        areaRows = tableRows(guide, "TemplateAreas", contract === "3" ? ["Area", "Type", "Source", "Direction", "Properties"] : ["Area", "Type", "Source", "Direction"]);
     }
     catch (error) {
         findings.push({ location: "Template Guide", message: error.message });
     }
-    const values = new Map(settings.map(row => [String(row[0] ?? "").trim(), String(row[1] ?? "").trim()])), contract = values.get("Contract"), kind = values.get("Kind");
-    if (contract !== "2")
-        findings.push({ location: "TemplateSettings", message: "Contract must be 2. Download guided starter." });
     if (!kind || !["overview", "flow", "matrix", "profile"].includes(kind))
         findings.push({ location: "TemplateSettings", message: "Kind must be overview, flow, matrix, or profile." });
     if (kind && expectedKind && kind !== expectedKind)
         findings.push({ location: "TemplateSettings", message: `The workbook declares ${kind}, not ${expectedKind}.` });
-    const names = new Map((workbook.definedNames.model ?? []).map(item => [item.name, item.ranges.map(normalizeRange).filter((range) => Boolean(range))]));
+    const names = new Map((workbook.definedNames.model ?? []).map(item => [item.name.toLocaleLowerCase("en-US"), item.ranges.map(normalizeRange).filter((range) => Boolean(range))]));
     const areas = [];
     for (const row of areaRows) {
-        const name = String(row[0] ?? "").trim(), type = String(row[1] ?? "").trim().toLowerCase(), source = String(row[2] ?? "").trim(), direction = String(row[3] ?? "").trim().toLowerCase(), ranges = names.get(name) ?? [];
+        const name = String(row[0] ?? "").trim(), type = String(row[1] ?? "").trim().toLowerCase(), source = String(row[2] ?? "").trim(), direction = String(row[3] ?? "").trim().toLowerCase(), rawProperties = contract === "3" ? String(row[4] ?? "") : "", ranges = names.get(name.toLocaleLowerCase("en-US")) ?? [];
         if (!name)
             continue;
         if (ranges.length !== 1) {
             findings.push({ location: `named area ${name}`, message: `Repeat area ${name} cannot be found. Select the intended Template cells and define the named area ${name}.` });
             continue;
         }
-        if (type === "repeat" && (direction === "across" || direction === "down"))
-            areas.push({ name, type: "repeat", source, direction, range: ranges[0] });
-        else if (type === "image" && (source === "theme.logo" || source === "page.visual.image") && !direction)
-            areas.push({ name, type: "image", source, range: ranges[0] });
-        else
-            findings.push({ location: `TemplateAreas ${name}`, message: type === "repeat" ? `${name} needs Direction Across or Down.` : `${name} must use supported Type Repeat or Image.` });
+        try {
+            if (type === "repeat" && (direction === "across" || direction === "down")) {
+                const parsed = parseExcelAreaProperties("repeat", rawProperties), separatorName = parsed.separatorAreaName, separatorRanges = separatorName ? names.get(separatorName.toLocaleLowerCase("en-US")) ?? [] : [];
+                if (separatorName && separatorRanges.length !== 1)
+                    throw new Error(`separator area ${separatorName} cannot be found. Define ${separatorName} or correct the Properties value.`);
+                areas.push({ name, type: "repeat", source, direction, range: ranges[0], ...(separatorName ? { properties: { separatorArea: { name: separatorName, range: separatorRanges[0] } } } : {}) });
+            }
+            else if (type === "image" && (source === "theme.logo" || source === "page.visual.image") && !direction)
+                areas.push({ name, type: "image", source, range: ranges[0], ...(contract === "3" ? { properties: parseExcelAreaProperties("image", rawProperties) } : {}) });
+            else
+                findings.push({ location: `TemplateAreas ${name}`, message: type === "repeat" ? `${name} needs Direction Across or Down.` : `${name} must use supported Type Repeat or Image.` });
+        }
+        catch (error) {
+            findings.push({ location: `TemplateAreas ${name} Properties`, message: `${name} ${error instanceof Error ? error.message : String(error)}` });
+        }
     }
     const cells = [];
     template.eachRow({ includeEmpty: true }, row => row.eachCell({ includeEmpty: true }, cell => { if (cell.value !== null && cell.value !== undefined || Object.keys(cell.style).length)
         cells.push({ address: cell.address, value: cellValue(cell.value), style: structuredClone(cell.style) }); }));
-    if (!kind)
+    if (!kind || contract !== "2" && contract !== "3")
         return { findings };
-    const prototype = { kind, contractVersion: 2, worksheetName: "Template", cells, areas, merges: [...(template.model?.merges ?? [])] }, geometry = validateExcelTemplatePrototype(prototype);
+    const prototype = { kind, contractVersion: Number(contract), worksheetName: "Template", cells, areas, merges: [...(template.model?.merges ?? [])] }, geometry = validateExcelTemplatePrototype(prototype);
     for (const finding of geometry.findings)
-        findings.push({ location: finding.cell ? `Template ${finding.cell}` : `named area ${finding.area ?? "setup"}`, message: finding.message, rule: "Bindings, merges, and named areas must remain within a compatible template scope.", ...(finding.repair ? { repair: finding.repair } : {}), technical: JSON.stringify(finding) });
+        findings.push({ location: finding.cell ? `Template ${finding.cell}` : `TemplateAreas ${finding.area ?? "setup"} Properties`, message: finding.message, rule: "Bindings, merges, named areas, and Properties must remain within a compatible template scope.", ...(finding.repair ? { repair: finding.repair } : {}), technical: JSON.stringify(finding) });
+    const imageStart = (point) => ({ row: Math.floor(point.nativeRow ?? point.row ?? 0) + 1, column: Math.floor(point.nativeCol ?? point.col ?? 0) + 1 }), exclusiveEnd = (native, offset, fallback) => native === undefined ? Math.max(1, Math.ceil(fallback ?? 0)) : Math.max(1, native + ((offset ?? 0) > 0 ? 1 : 0)), imageEnd = (point) => ({ row: exclusiveEnd(point.nativeRow, point.nativeRowOff, point.row), column: exclusiveEnd(point.nativeCol, point.nativeColOff, point.col) });
+    for (const area of areas) {
+        if (area.type === "image" && area.properties) {
+            const range = bounds(area.range);
+            let width = 0, height = 0;
+            for (let column = range.left; column <= range.right; column += 1)
+                width += (template.getColumn(column).width ?? 8.43) * 7;
+            for (let row = range.top; row <= range.bottom; row += 1)
+                height += (template.getRow(row).height ?? 15) * 4 / 3;
+            try {
+                imageLayoutInArea({ width, height }, { width: 1, height: 1 }, area.properties);
+            }
+            catch {
+                findings.push({ location: `TemplateAreas ${area.name} Properties`, message: `${area.name} padding leaves no room for its image.`, repair: `Reduce padding or enlarge ${area.name}.` });
+            }
+        }
+        if (area.type === "repeat" && area.properties?.separatorArea) {
+            const separator = bounds(area.properties.separatorArea.range), containsDrawing = (template.getImages?.() ?? []).some(({ range }) => { const start = imageStart(range.tl), end = range.br ? imageEnd(range.br) : start; return start.row <= separator.bottom && end.row >= separator.top && start.column <= separator.right && end.column >= separator.left; });
+            if (containsDrawing)
+                findings.push({ location: `TemplateAreas ${area.name} Properties`, message: `${area.properties.separatorArea.name} contains unsupported template behavior.`, repair: "Keep only literal cells and presentation in the separator." });
+        }
+    }
     return { prototype, findings };
 };
 const itemPrefix = (source) => source.endsWith(".pages") ? "page" : source.endsWith(".events") ? "event" : source.endsWith(".cells") ? "cell" : source.endsWith(".concepts") ? "concept" : source.endsWith(".fields") ? "field" : "row";
 const inspection = (prototype) => { if (!prototype)
-    return { bindings: [], areas: [] }; const bindings = prototype.cells.flatMap(cell => [...String(cell.value).matchAll(/\{\{\s*([a-z][a-zA-Z0-9.]*)\s*\}\}/gu)].map(([, path]) => ({ cell: cell.address, path: path }))), areas = prototype.areas.map(area => { const parent = prototype.areas.filter(candidate => candidate.type === "repeat" && candidate.name !== area.name && containsRange(candidate.range, area.range)).sort((left, right) => rangeSize(left.range) - rangeSize(right.range))[0]; return { name: area.name, type: area.type, source: area.source, ...(area.type === "repeat" ? { direction: area.direction, itemPrefix: itemPrefix(area.source) } : {}), range: area.range, ...(parent ? { parent: parent.name } : {}) }; }); return { kind: prototype.kind, contractVersion: 2, bindings, areas }; };
+    return { bindings: [], areas: [] }; const bindings = prototype.cells.flatMap(cell => [...String(cell.value).matchAll(/\{\{\s*([a-z][a-zA-Z0-9.]*)\s*\}\}/gu)].map(([, path]) => ({ cell: cell.address, path: path }))), areas = prototype.areas.map(area => { const parent = prototype.areas.filter(candidate => candidate.type === "repeat" && candidate.name !== area.name && containsRange(candidate.range, area.range)).sort((left, right) => rangeSize(left.range) - rangeSize(right.range))[0], properties = area.type === "image" ? (area.properties ? `fit: ${area.properties.fit}; position: ${area.properties.position.horizontal} ${area.properties.position.vertical}; padding: ${area.properties.padding.top}px ${area.properties.padding.right}px ${area.properties.padding.bottom}px ${area.properties.padding.left}px` : "implicit fit: scale-down; position: left top; padding: 0px") : (area.properties?.separatorArea ? `separator-area: ${area.properties.separatorArea.name}` : prototype.contractVersion === 2 ? "implicit complete repeat area" : ""); return { name: area.name, type: area.type, source: area.source, ...(area.type === "repeat" ? { direction: area.direction, itemPrefix: itemPrefix(area.source) } : {}), range: area.range, properties, ...(parent ? { parent: parent.name } : {}) }; }); return { kind: prototype.kind, contractVersion: prototype.contractVersion, bindings, areas }; };
 const bounds = (range) => { const points = range.split(":").map(value => { const match = /^([A-Z]+)(\d+)$/u.exec(value); let column = 0; for (const letter of match[1])
     column = column * 26 + letter.charCodeAt(0) - 64; return { row: Number(match[2]), column }; }); return { top: points[0].row, left: points[0].column, bottom: (points[1] ?? points[0]).row, right: (points[1] ?? points[0]).column }; };
 const containsRange = (outer, inner) => { const left = bounds(outer), right = bounds(inner); return left.top <= right.top && left.left <= right.left && left.bottom >= right.bottom && left.right >= right.right; };
@@ -264,6 +295,6 @@ export async function validateExcelTemplateWorkbook(source, expectedKind) {
             findings.push({ location: "workbook", message: error instanceof Error ? error.message : String(error) });
         }
     const inspected = inspection(prototype);
-    return { valid: findings.length === 0, ...(inspected.kind ? { kind: inspected.kind, contractVersion: 2 } : {}), findings, entryCount: entries.length, unpackedBytes: entries.reduce((sum, { size }) => sum + size, 0), inspection: inspected };
+    return { valid: findings.length === 0, ...(inspected.kind ? { kind: inspected.kind, contractVersion: inspected.contractVersion } : {}), findings, entryCount: entries.length, unpackedBytes: entries.reduce((sum, { size }) => sum + size, 0), inspection: inspected };
 }
 //# sourceMappingURL=excel-workbook.js.map

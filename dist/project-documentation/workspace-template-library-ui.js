@@ -187,14 +187,14 @@ function richEditor(detail, selected, templates, options) {
         focusAfterRender('[data-rich-block-selected="true"]');
 }
 function candidateDetail(_host, detail, candidate, templates, options) {
-    detail.append(heading(3, `${candidate.file.name} — unsaved candidate`), Object.assign(document.createElement("p"), { textContent: `${kindName(candidate.kind)} · contract 2 · no template metadata or body has been saved` }));
+    detail.append(heading(3, `${candidate.file.name} — unsaved candidate`), Object.assign(document.createElement("p"), { textContent: `${kindName(candidate.kind)} · contract ${candidate.validation.contractVersion} · no template metadata or body has been saved` }));
     const inspection = document.createElement("section");
     inspection.setAttribute("aria-label", "Excel template candidate inspection");
     inspection.append(heading(4, "Candidate inspection"));
     const bindings = document.createElement("ul");
     bindings.append(...candidate.validation.inspection.bindings.map(binding => Object.assign(document.createElement("li"), { textContent: `Binding cell ${binding.cell}: ${binding.path}` })));
     const areas = document.createElement("ul");
-    areas.append(...candidate.validation.inspection.areas.map(area => Object.assign(document.createElement("li"), { textContent: area.type === "repeat" ? `${area.name}: ${area.source}, item prefix ${area.itemPrefix}, ${area.direction}, range ${area.range}, parent ${area.parent ?? "none"}` : `${area.name}: image ${area.source}, range ${area.range}` })));
+    areas.append(...candidate.validation.inspection.areas.map(area => Object.assign(document.createElement("li"), { textContent: area.type === "repeat" ? `${area.name}: ${area.source}, item prefix ${area.itemPrefix}, ${area.direction}, range ${area.range}, Properties ${area.properties}, parent ${area.parent ?? "none"}` : `${area.name}: image ${area.source}, range ${area.range}, Properties ${area.properties}` })));
     inspection.append(bindings, areas);
     detail.append(inspection);
     if (options.previewCandidateExcel)
