@@ -1,7 +1,7 @@
 # Data-layer Page and Flow inherited-property selection R01
 
-Status: proposed from the user-reported inherited-property exclusion defects on
-2026-08-23; awaiting approval for coder handoff
+Status: QA-integrated at `d51e55fa7c` after exact focused review evidence for
+291 tasks; cumulative promotion to `master` remains a separate user decision
 
 Stable task name: `page-flow-inherited-property-selection`
 
