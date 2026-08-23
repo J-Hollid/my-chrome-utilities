@@ -11,8 +11,8 @@ export function projectCanonicalConcepts(state) {
 const contributionFor = (entity, scope) => {
     const canonical = entity.canonicalSchema;
     const requirements = (entity.requirements ?? []).map((requirement) => ({ ...requirement, ...(requirement.required ? { presence: "required" } : requirement.forbidden ? { presence: "forbidden" } : {}) }));
-    const base = canonical ? canonicalConstraints(canonical) : (entity.schemaConstraints ?? requirements), sparse = entity.localSchemaContributions ?? [];
-    return { id: entity.id, name: entity.name, scope, revision: Number(entity.revision ?? entity.version ?? 1), constraints: [...base, ...sparse], ...(scope === "Shared Profile" ? { peerGroup: "shared-profiles" } : {}), ...(canonical?.onlyDefinedFields !== undefined ? { onlyDefinedFields: canonical.onlyDefinedFields } : typeof entity.onlyDefinedFields === "boolean" ? { onlyDefinedFields: entity.onlyDefinedFields } : {}) };
+    const base = canonical ? canonicalConstraints(canonical).map((constraint) => { const exampleMethod = constraint.definitionId ? canonical.nodes[constraint.definitionId]?.documentation.example.method : undefined; return { ...constraint, ...(exampleMethod === "custom" ? { exampleMethod } : {}) }; }) : (entity.schemaConstraints ?? requirements), sparse = entity.localSchemaContributions ?? [];
+    return { id: entity.id, name: entity.name, scope, revision: Number(entity.revision ?? entity.version ?? 1), constraints: [...base, ...sparse], ...(entity.excludedPropertyIds?.length ? { excludedPropertyIds: [...entity.excludedPropertyIds] } : {}), ...(scope === "Shared Profile" ? { peerGroup: "shared-profiles" } : {}), ...(canonical?.onlyDefinedFields !== undefined ? { onlyDefinedFields: canonical.onlyDefinedFields } : typeof entity.onlyDefinedFields === "boolean" ? { onlyDefinedFields: entity.onlyDefinedFields } : {}) };
 };
 const referencedId = (entity, key) => typeof entity[key] === "string" ? String(entity[key]) : undefined;
 const propertySets = (state) => state.project.collections.propertySets;
@@ -125,6 +125,36 @@ export function saveFlowPageInstanceLocalFacets(state, flowId, pageFrameId, path
         throw new Error(`Flow Page instance ${pageFrameId} is unavailable.`);
     const sparse = Object.fromEntries(Object.entries(facets).filter(([, value]) => value !== undefined && value !== ""));
     return transactProject(state, `Override ${path} at Flow Page instance`, (project) => { const graphs = project.documentationFlowGraphs; return { ...project, documentationFlowGraphs: { ...graphs, [flowId]: { ...graphs[flowId], pageFrames: graphs[flowId].pageFrames.map((candidate) => candidate.id === pageFrameId ? { ...candidate, localSchemaContributions: [...(candidate.localSchemaContributions ?? []).filter((constraint) => constraint.path !== path), ...(Object.keys(sparse).length ? [{ path, ...structuredClone(sparse) }] : [])], compiledTargetsStale: true } : candidate) } } }; });
+}
+const recordReferencesProperty = (value, propertyId) => Boolean(value && typeof value === "object" && Object.entries(value).some(([key, nested]) => (key === "propertyId" || key === "dependencyPropertyId") && nested === propertyId || recordReferencesProperty(nested, propertyId)));
+export function contextualPropertyExclusionAssessment(compiled, path) {
+    const property = compiled.properties[path], propertyId = property?.definitionId;
+    if (!property || !propertyId)
+        return { allowed: false, blocker: `${path} has no stable inherited property identity.`, repairRoute: "Repair the source definition before excluding it." };
+    const source = property.origins.at(-1)?.contributorName ?? "The source contributor", invariant = property.enforcement === "invariant" || (property.rules ?? []).some((rule) => rule.enforcement === "invariant");
+    if (invariant)
+        return { allowed: false, propertyId, blocker: `${source} protects ${path} as an invariant.`, repairRoute: `Open ${source} and repair the invariant at its source.` };
+    const dependency = Object.values(compiled.properties).flatMap((candidate) => (candidate.rules ?? []).map((rule) => ({ candidate, rule }))).find(({ rule }) => recordReferencesProperty(rule, propertyId));
+    if (dependency) {
+        const dependencySource = dependency.candidate.origins.at(-1)?.contributorName ?? "A surviving rule";
+        return { allowed: false, propertyId, blocker: `${dependencySource} depends on ${path}.`, repairRoute: `Open ${dependencySource} and repair the required dependency.` };
+    }
+    const descendantPaths = Object.keys(compiled.properties).filter((candidate) => candidate.startsWith(`${path}/`)).sort();
+    return { allowed: true, propertyId, descendantPaths, affectedPaths: [path, ...descendantPaths] };
+}
+export function excludeFlowPageInstanceInheritedProperty(state, flowId, pageFrameId, propertyId) {
+    const graph = state.project.documentationFlowGraphs[flowId], frame = graph?.pageFrames?.find(({ id }) => id === pageFrameId);
+    if (!frame)
+        throw new Error(`Flow Page instance ${pageFrameId} is unavailable.`);
+    return transactProject(state, `Exclude inherited property ${propertyId} at Flow Page instance`, (project) => { const graphs = project.documentationFlowGraphs; return { ...project, documentationFlowGraphs: { ...graphs, [flowId]: { ...graphs[flowId], pageFrames: graphs[flowId].pageFrames.map((candidate) => candidate.id === pageFrameId ? { ...candidate, excludedPropertyIds: [...new Set([...(candidate.excludedPropertyIds ?? []), propertyId])], compiledTargetsStale: true } : candidate) } } }; });
+}
+export function restoreFlowPageInstanceInheritedProperty(state, flowId, pageFrameId, propertyId) {
+    const graph = state.project.documentationFlowGraphs[flowId], frame = graph?.pageFrames?.find(({ id }) => id === pageFrameId);
+    if (!frame)
+        throw new Error(`Flow Page instance ${pageFrameId} is unavailable.`);
+    return transactProject(state, `Restore inherited property ${propertyId} at Flow Page instance`, (project) => { const graphs = project.documentationFlowGraphs; return { ...project, documentationFlowGraphs: { ...graphs, [flowId]: { ...graphs[flowId], pageFrames: graphs[flowId].pageFrames.map((candidate) => { if (candidate.id !== pageFrameId)
+                    return candidate; const next = { ...candidate, excludedPropertyIds: (candidate.excludedPropertyIds ?? []).filter((id) => id !== propertyId), compiledTargetsStale: true }; if (!next.excludedPropertyIds.length)
+                    delete next.excludedPropertyIds; return next; }) } } }; });
 }
 export function saveFlowPageInstanceLocalFacetsAndStructures(state, flowId, pageFrameId, path, facets, commands, id) {
     const graph = state.project.documentationFlowGraphs[flowId], frame = graph?.pageFrames?.find(({ id: frameId }) => frameId === pageFrameId);

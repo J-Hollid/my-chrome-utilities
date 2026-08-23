@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {documentaryFlowGraph,projectFlowGraph,renameFlowPageFrame,resetFlowPageFrameName,saveGraphRelationship} from "../dist/data-layer-flow-graph.js";
 import {addFlowPageFrameToSection,createFlowSection} from "../dist/data-layer-property-set-flow-section.js";
 import {flowDocumentationSnapshotFromState} from "../dist/data-layer-flow-table-documentation-export-ui.js";
-import {flowPageFrameContributor,layeredContributorPath,layeredContributorsForPath,resetFlowPageInstanceLocalProperty,saveFlowPageInstanceLocalFacets} from "../dist/data-layer-layered-schema-project.js";
+import {contextualPropertyExclusionAssessment,excludeFlowPageInstanceInheritedProperty,flowPageFrameContributor,layeredContributorPath,layeredContributorsForPath,resetFlowPageInstanceLocalProperty,saveFlowPageInstanceLocalFacets} from "../dist/data-layer-layered-schema-project.js";
 import {compileLayeredSchema} from "../dist/data-layer-layered-schema.js";
 import {addProjectEntity,createSpecificationProject,transactProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 
@@ -56,6 +56,29 @@ assert.ok(instances.every((instance)=>effective(instance).compiled.properties["/
 state=resetFlowPageInstanceLocalProperty(state,flow.id,instances[1].id,"/confirmation_status");
 assert.deepEqual(instances.map((instance)=>effective(instance).compiled.properties["/confirmation_status"].expectedValue),["approved","pending","declined"],"Reset to parents deletes one local facet without changing siblings");
 assert.deepEqual(documentaryFlowGraph(state.project,flow.id).pageFrames.find(({id})=>id===instances[1].id).localSchemaContributions,[],"reset removes the sparse local property contribution");
+
+const exclusionPropertyId="property:customer-status";
+state=transactProject(state,"Add inherited exclusion fixture",(project)=>({...project,collections:{...project.collections,
+  profiles:project.collections.profiles.map((candidate)=>candidate.id===profile.id?{...candidate,schemaConstraints:[...candidate.schemaConstraints,{path:"/customer_status",definitionId:exclusionPropertyId,type:"string",documentation:"Sitewide customer"}]}:candidate),
+  propertySets:project.collections.propertySets.map((candidate)=>candidate.id===checkout.id?{...candidate,schemaConstraints:[...candidate.schemaConstraints,{path:"/customer_status",definitionId:exclusionPropertyId,documentation:"Checkout customer"}]}:candidate),
+  pages:project.collections.pages.map((candidate)=>candidate.id===confirmation.id?{...candidate,schemaConstraints:[...candidate.schemaConstraints,{path:"/customer_status",definitionId:exclusionPropertyId,examples:["shipping"]}]}:candidate),
+}}));
+const exclusionFrame=instances[0],sourceHashes=JSON.stringify({profile:state.project.collections.profiles.find(({id})=>id===profile.id),group:state.project.collections.propertySets.find(({id})=>id===checkout.id),page:state.project.collections.pages.find(({id})=>id===confirmation.id),sibling:documentaryFlowGraph(state.project,flow.id).pageFrames.find(({id})=>id===instances[1].id)}),exclusionBefore=state;
+const exclusionAssessment=contextualPropertyExclusionAssessment(effective(exclusionFrame).compiled,"/customer_status");
+assert.deepEqual(exclusionAssessment,{allowed:true,propertyId:exclusionPropertyId,descendantPaths:[],affectedPaths:["/customer_status"]},"an ordinary inherited stable property is directly excludable without structural ownership");
+state=excludeFlowPageInstanceInheritedProperty(state,flow.id,exclusionFrame.id,exclusionAssessment.propertyId);
+const excludedFrame=documentaryFlowGraph(state.project,flow.id).pageFrames.find(({id})=>id===exclusionFrame.id);
+assert.deepEqual(excludedFrame.excludedPropertyIds,[exclusionPropertyId],"the Page instance stores one sparse stable-identity exclusion");
+assert.equal(excludedFrame.localSchemaContributions?.some(({path})=>path==="/customer_status"),false,"the exclusion stores no copied parent definition");
+assert.equal(effective(exclusionFrame).compiled.properties["/customer_status"],undefined,"the exclusion applies after the complete Page parent stack composes");
+assert.ok(effective(instances[1]).compiled.properties["/customer_status"],"a sibling Page instance retains the inherited property");
+assert.equal(JSON.stringify({profile:state.project.collections.profiles.find(({id})=>id===profile.id),group:state.project.collections.propertySets.find(({id})=>id===checkout.id),page:state.project.collections.pages.find(({id})=>id===confirmation.id),sibling:documentaryFlowGraph(state.project,flow.id).pageFrames.find(({id})=>id===instances[1].id)}),sourceHashes,"exclusion leaves every source and sibling byte unchanged");
+state=undoProjectTransaction(state);
+assert.deepEqual(state.project,exclusionBefore.project,"one Undo removes the exclusion and restores the live inherited definition");
+const protectedCompiled=compileLayeredSchema([{id:"profile:protected",name:"Protected",scope:"Shared Profile",constraints:[{path:"/protected",definitionId:"property:protected",type:"string",enforcement:"invariant"}]}],{eventId:"pageview",eventRole:"context"});
+assert.deepEqual(contextualPropertyExclusionAssessment(protectedCompiled,"/protected"),{allowed:false,propertyId:"property:protected",blocker:"Protected protects /protected as an invariant.",repairRoute:"Open Protected and repair the invariant at its source."},"an invariant exposes its named source blocker and repair route instead of an exclusion command");
+const dependencyCompiled=compileLayeredSchema([{id:"profile:dependency",name:"Dependency source",scope:"Shared Profile",constraints:[{path:"/required",definitionId:"property:required",type:"string"},{path:"/consumer",definitionId:"property:consumer",type:"string",rules:[{id:"rule:requires-property",kind:"conditional",dependencyPropertyId:"property:required"}]}]}],{eventId:"pageview",eventRole:"context"});
+assert.deepEqual(contextualPropertyExclusionAssessment(dependencyCompiled,"/required"),{allowed:false,propertyId:"property:required",blocker:"Dependency source depends on /required.",repairRoute:"Open Dependency source and repair the required dependency."},"a surviving rule dependency names its source and repair route instead of exposing an exclusion command");
 
 const snapshot=flowDocumentationSnapshotFromState(state,flow.id,"2026-07-22T00:00:00.000Z");
 const confirmationContexts=snapshot.contexts.filter(({sourcePageName})=>sourcePageName==="Reusable confirmation Page");

@@ -103,7 +103,7 @@ export function renderDefinitionSection(host, context, working) {
         delete next.expectedValue;
         next.allowedValues = values.map((value, index) => ({ id: next.allowedValues[index]?.id ?? context.id("allowed-value"), value }));
         if (next.documentation.example.method === "allowed-value" && !values.some((value) => JSON.stringify(value) === JSON.stringify(next.documentation.example.value)))
-            next.documentation = { ...next.documentation, example: { method: "allowed-value", value: values[0] } };
+            next.documentation = { ...next.documentation, example: values.length ? { method: "allowed-value", value: values[0] } : { method: "blank" } };
         renderExample();
     }
     catch (error) {
@@ -128,11 +128,11 @@ export function renderDefinitionSection(host, context, working) {
             current.documentation = { ...current.documentation, example: { method: "allowed-value", value: typedCanonicalValue(current.type, select.value, current.itemSchema) } }; });
         exampleHost.append(select);
         return;
-    } const control = input(dom, "exampleValue", canonicalFacetText(next.documentation.example.value), next.type === "number" || next.type === "integer" ? "number" : "text"), issue = dom.createElement("output"); issue.setAttribute("role", "status"); issue.setAttribute("aria-label", "Custom example diagnostic"); control.addEventListener("input", () => { const current = context.getWorking(); if (!current)
+    } const control = input(dom, "exampleValue", canonicalFacetText(next.documentation.example.value), next.type === "number" || next.type === "integer" ? "number" : "text"), issue = dom.createElement("output"); issue.setAttribute("role", "status"); issue.setAttribute("aria-label", "Custom example diagnostic"); issue.textContent = next.allowedValues.length && !next.allowedValues.some(({ value }) => JSON.stringify(value) === JSON.stringify(next.documentation.example.value)) ? "Custom Example does not satisfy the current Allowed values." : ""; control.addEventListener("input", () => { const current = context.getWorking(); if (!current)
         return; try {
         current.documentation = { ...current.documentation, example: { method: "custom", value: typedCanonicalValue(current.type, control.value, current.itemSchema) } };
         control.setCustomValidity("");
-        issue.textContent = "";
+        issue.textContent = current.allowedValues.length && !current.allowedValues.some(({ value }) => JSON.stringify(value) === JSON.stringify(current.documentation.example.value)) ? "Custom Example does not satisfy the current Allowed values." : "";
     }
     catch (error) {
         const message = error instanceof Error ? error.message : String(error);

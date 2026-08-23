@@ -188,6 +188,8 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
         next.comments = constraint.comments;
     if (constraint.examples)
         next.examples = clone(constraint.examples);
+    if (constraint.exampleMethod)
+        next.exampleMethod = constraint.exampleMethod;
     if (constraint.definitionId)
         next.definitionId = constraint.definitionId;
     if (constraint.overrideReferences)

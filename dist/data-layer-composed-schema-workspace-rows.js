@@ -18,7 +18,7 @@ function applyPersistedItemOwnership(host, row) {
     }
 }
 export function composedReviewLifecycleInventory(removed, confirmedAction, restoredRuleIds, restoredValueIds) { const entries = []; if (removed)
-    entries.push(confirmedAction === "reset" ? "Reset to parents" : "Remove local property"); for (const id of restoredRuleIds)
+    entries.push(confirmedAction === "reset" ? "Reset to parents" : confirmedAction === "exclude" ? "Exclude inherited property" : confirmedAction === "restore" ? "Restore inherited property" : "Remove local property"); for (const id of restoredRuleIds)
     entries.push(`Restored rule ${id}`); for (const id of restoredValueIds)
     entries.push(`Restored value ${id}`); return entries; }
 export const composedSchemaTableColumns = [
@@ -43,7 +43,7 @@ function contextMenu(row, context) {
 }
 function renderComposedSectionOwnership(host, row, context) {
     const visible = focusedSectionOwnershipActions(composedSchemaRowOwnershipInput(row))[context.activeSection], lifecycle = new Set(["Remove local", "Reset to parent"]);
-    if (!visible.length)
+    if (!visible.length && !row.inherited)
         return;
     const target = focusedOwnershipActionTarget(context.activeSection === "structure" ? "Structure" : "Definition", context.activeSection === "structure" ? "property" : "facet", context.activeSection === "structure" ? row.effective.definitionId ?? row.path : `${row.effective.definitionId ?? row.path}:definition`), group = context.dom.createElement("div"), status = context.dom.createElement("p");
     group.dataset.sectionOwnershipActions = "true";
@@ -57,6 +57,25 @@ function renderComposedSectionOwnership(host, row, context) {
         control.dataset.ownershipTarget = target.label;
         control.setAttribute("aria-label", `${action} · ${target.label}`);
         group.append(control);
+    }
+    if (context.canExcludeInherited !== false && context.activeSection === "definition" && row.inherited) {
+        if (row.excluded) {
+            const restore = button(context.dom, "Restore inherited property", () => context.beginExclusion(row, "restore", restore));
+            restore.dataset.ownershipAction = "Restore inherited property";
+            group.append(restore);
+        }
+        else if (row.exclusion?.allowed) {
+            const exclude = button(context.dom, "Exclude inherited property", () => context.beginExclusion(row, "exclude", exclude));
+            exclude.dataset.ownershipAction = "Exclude inherited property";
+            exclude.setAttribute("aria-description", `Exclude ${row.path} at this contributor and downstream contexts that inherit its branch.`);
+            group.append(exclude);
+        }
+        else if (row.exclusion && !row.exclusion.allowed) {
+            const blocker = context.dom.createElement("p");
+            blocker.textContent = `${row.exclusion.blocker} ${row.exclusion.repairRoute}`;
+            blocker.dataset.exclusionBlocker = "true";
+            group.append(blocker);
+        }
     }
     group.append(status);
     host.append(group);
@@ -97,10 +116,10 @@ function focused(row, context) {
         gateFocusedOwnershipSection(host, context.ownershipSession, context.activeSection);
     }
     if (context.pendingAction) {
-        const impact = dom.createElement("p");
+        const verb = context.pendingAction === "reset" ? "Reset" : context.pendingAction === "remove" ? "Remove" : context.pendingAction === "exclude" ? "Exclude" : "Restore", impact = dom.createElement("p");
         impact.setAttribute("aria-label", "Property impact review");
-        impact.textContent = `${context.pendingAction === "reset" ? "Reset" : "Remove"} preview · target ${row.effective.definitionId ?? row.path} · prospective effective result ${row.inherited ? context.effectiveText({ ...row, effective: row.inherited }) : "none"} · staged whole-property lifecycle is included in Review changes · affected Page instances recompile · outputs become stale · one Undo action remains available.`;
-        actions.append(impact, button(dom, context.pendingAction === "reset" ? "Cancel reset" : "Cancel removal", context.cancelAction), button(dom, context.pendingAction === "reset" ? "Confirm reset to parents" : "Confirm remove local property", () => context.confirmAction(row)));
+        impact.textContent = `${verb} preview · ${row.path}${row.exclusion?.allowed && row.exclusion.descendantPaths.length ? ` and descendants ${row.exclusion.descendantPaths.join(", ")}` : ""} · target ${row.effective.definitionId ?? row.path} · affected compiled contexts recompile · outputs become stale · runtime validation changes · one Undo action remains available.`;
+        actions.append(impact, button(dom, `Cancel ${verb.toLowerCase()}`, context.cancelAction), button(dom, `Confirm ${verb.toLowerCase()}`, () => context.confirmAction(row)));
     }
     else
         actions.append(button(dom, "Cancel", context.closeChild), button(dom, "Review changes", context.beginReview));

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   composedCanonicalSchema,
   composedSchemaWorkspace,
+  excludeComposedSchemaInheritedProperty,
   includeComposedSchemaParentAdditionSelections,
   applyComposedSchemaContextualFacet,
   overrideComposedSchemaLocalRule,
@@ -10,6 +11,7 @@ import {
   resetComposedSchemaLocalRule,
   resetComposedSchemaLocalChanges,
   resetFlowComposedSchemaLocalFacet,
+  restoreComposedSchemaInheritedProperty,
   saveComposedCanonicalDocument,
   saveComposedEntitySchemaPolicy,
   saveComposedEventCanonicalDocument,
@@ -24,7 +26,7 @@ import {
 import {applyCanonicalCommand,canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
 import {composedReviewFacetDelta,composedReviewLifecycleInventory} from "../dist/data-layer-composed-schema-workspace-rows.js";
-import {composedFacetDraft,sparseComposedFacets} from "../dist/data-layer-composed-schema-builders.js";
+import {composedExampleFeedback,composedFacetDraft,reconcileComposedAllowedValues,sparseComposedFacets} from "../dist/data-layer-composed-schema-builders.js";
 import {saveFlowPageInstanceLocalFacetsAndStructures} from "../dist/data-layer-layered-schema-project.js";
 import {composedTableQuickEditFacets,composedTableResetFacet} from "../dist/data-layer-composed-schema-workspace-ui.js";
 import {resetComposedDefinitionFacet} from "../dist/data-layer-composed-schema-workspace-focused-sections.js";
@@ -97,8 +99,36 @@ assert.deepEqual(composedTableQuickEditFacets(quickStep,"type","number"),{type:"
 assert.deepEqual(composedTableQuickEditFacets(quickStep,"presence","required"),{presence:"required"},"an inherited composed Presence edit creates only its sparse local facet");
 assert.deepEqual(composedTableQuickEditFacets(quickStep,"expected-or-allowed","cart, guest"),{allowedValues:["cart","guest"]},"an inherited composed Allowed values edit does not copy parent facets");
 assert.deepEqual(composedTableQuickEditFacets(quickStep,"example","cart"),{examples:["cart"]},"an inherited composed Example edit creates only its typed example facet");
+const selectedExampleDraft={...composedFacetDraft({},{path:"/colour",type:"string",allowedValues:["red","blue"],examples:["blue"]}),allowedValueIds:["allowed:red","allowed:blue"]};
+assert.deepEqual(
+  reconcileComposedAllowedValues(selectedExampleDraft,["red"],["allowed:red"]),
+  {...selectedExampleDraft,allowedValues:["red"],allowedValueIds:["allowed:red"],exampleMethod:"allowed-value",exampleValue:"red"},
+  "narrowing Allowed values reconciles a selected allowed-value Example in the same draft",
+);
+assert.deepEqual(
+  reconcileComposedAllowedValues({...selectedExampleDraft,exampleMethod:"allowed-value",exampleValue:"blue"},[],[]),
+  {...selectedExampleDraft,allowedValues:[],allowedValueIds:[],exampleMethod:"blank",exampleValue:undefined},
+  "removing every Allowed value makes a selected Example Blank",
+);
+const customExampleDraft={...selectedExampleDraft,exampleMethod:"custom",exampleValue:"blue"};
+assert.equal(composedFacetDraft({},{path:"/colour",type:"string",allowedValues:["red","blue"],examples:["blue"],exampleMethod:"custom"}).exampleMethod,"custom","persisted custom Example intent remains distinct even when its value is currently allowed");
+assert.deepEqual(
+  reconcileComposedAllowedValues(customExampleDraft,["red"],["allowed:red"]),
+  {...customExampleDraft,allowedValues:["red"],allowedValueIds:["allowed:red"]},
+  "a custom Example remains untouched when Allowed values narrow",
+);
+assert.equal(composedExampleFeedback(reconcileComposedAllowedValues(customExampleDraft,["red"],["allowed:red"])),"Custom Example does not satisfy the current Allowed values.","the preserved custom Example receives the existing non-blocking mismatch warning");
+const reconciledQuickRow={...quickStep,inherited:{...quickStep.inherited,path:"/colour",type:"string",allowedValues:["red","blue"],examples:["blue"]},effective:{...quickStep.effective,path:"/colour",type:"string",allowedValues:["red","blue"],examples:["blue"]},local:{path:"/colour"},path:"/colour"};
+assert.deepEqual(composedTableQuickEditFacets(reconciledQuickRow,"expected-or-allowed","red"),{allowedValues:["red"],examples:["red"]},"Table Allowed values quick-edit persists the reconciled selected Example atomically");
 assert.deepEqual(composedTableResetFacet({...quickStep,local:{path:"/page_name",type:"number",presence:"required",documentation:"keep"}},"type"),{presence:"required",documentation:"keep"},"adjacent Type reset removes only the local Type facet");
 assert.deepEqual(composedTableResetFacet({...quickStep,local:{path:"/page_name",type:"number",presence:"required",condition:{kind:"predicate"}}},"presence"),{type:"number",condition:{kind:"predicate"}},"adjacent Presence reset leaves Type and conditional Presence rules independent");
+const genericExclusionState=structuredClone(state),genericPropertyId="property:page-name";genericExclusionState.project.collections.profiles[0].schemaConstraints.find(({path})=>path==="/page_name").definitionId=genericPropertyId;
+const genericPage=genericExclusionState.project.collections.pages[0],genericBefore=JSON.stringify(genericExclusionState.project.collections.profiles[0]),genericExcluded=excludeComposedSchemaInheritedProperty(genericExclusionState,"pages",genericPage.id,genericPropertyId),excludedPage=genericExcluded.project.collections.pages[0],excludedRow=composedSchemaWorkspace(genericExcluded,excludedPage,"Page").rows.find(({path})=>path==="/page_name");
+assert.deepEqual(excludedPage.excludedPropertyIds,[genericPropertyId],"a non-Flow contributor stores the same sparse stable-identity exclusion");
+assert.equal(excludedRow.excluded,true,"the effective workspace presents the durable contextual exclusion");
+assert.equal(JSON.stringify(genericExcluded.project.collections.profiles[0]),genericBefore,"generic exclusion does not mutate its source contributor");
+const genericRestored=restoreComposedSchemaInheritedProperty(genericExcluded,"pages",genericPage.id,genericPropertyId);
+assert.equal(composedSchemaWorkspace(genericRestored,genericRestored.project.collections.pages[0],"Page").rows.find(({path})=>path==="/page_name").excluded,undefined,"restoring an exclusion recompiles the current parent property");
 assert.equal(workspace.heading,"Effective schema at Cart");
 assert.equal(workspace.status,"ready");
 assert.deepEqual(workspace.rows.map(({path})=>path),["/funnel_name","/funnel_step","/page_name","/page_type"]);
