@@ -7480,6 +7480,13 @@ const approvedDocumentationGlobalRules = stylesheetRuleInventory(studioBaseStyle
     !flowBaseGlobalRuleIdentities.has(flowStyleRuleIdentity(rule)));
 assert.equal(approvedDocumentationGlobalRules.length, 63,
   "approved Documentation workspace global rules occur exactly once");
+const approvedReorderableResponsiveGlobalRules = stylesheetRuleInventory(studioBaseStylesheet,
+  "specification-builder.css").filter((rule) =>
+    rule.context === "@media(max-width:480px)" &&
+    rule.selector.startsWith("[data-reorder-item-row=\"true\"]") &&
+    !flowBaseGlobalRuleIdentities.has(flowStyleRuleIdentity(rule)));
+assert.equal(approvedReorderableResponsiveGlobalRules.length, 2,
+  "approved responsive reorderable-row global rules occur exactly once");
 const flowStylesheetConservation = verifyFlowStylesheetConservation({
   baseGlobalSources:flowBaseGlobalSources,
   candidateGlobalSources:[
@@ -7488,7 +7495,8 @@ const flowStylesheetConservation = verifyFlowStylesheetConservation({
   ],
   localSource:conservedFlowLocalStylesheet,
   bridgeSource:flowShellStylesheet,
-  approvedCandidateGlobalRules:[...approvedFlowViewerGlobalRules, ...approvedDocumentationGlobalRules],
+  approvedCandidateGlobalRules:[...approvedFlowViewerGlobalRules, ...approvedDocumentationGlobalRules,
+    ...approvedReorderableResponsiveGlobalRules],
 });
 const flowStylesheetDeclarations = [
   stylesheetDeclarationFor(packs, "src/flow-graph/flow-workspace.css"),
