@@ -1,15 +1,15 @@
 import type {DocumentationTemplateKind} from "./template-contract.js";
 
 export const excelTemplateItemPaths:Record<string,readonly string[]>={
-  "flow.pages":["page.stepLabel","page.pageName","page.sourcePageName","page.eventName","page.heading","page.rows","page.events"],
-  "page.events":["event.eventName","event.heading","event.rows"],
+  "flow.pages":["page.stepLabel","page.pageName","page.sourcePageName","page.eventName","page.heading","page.visual.description","page.visual.caption","page.visual.sourceReference","page.rows","page.concepts","page.events"],
+  "page.events":["event.eventName","event.heading","event.rows","event.concepts"],
   "table.rows":["row.property","row.concept","row.cells"],"flow.rows":["row.property","row.concept","row.cells"],
   "page.rows":["row.property","row.concept","row.description","row.type","row.allowedValues","row.example","row.comments","row.value","row.cells"],
   "event.rows":["row.property","row.concept","row.description","row.type","row.allowedValues","row.example","row.comments","row.value","row.cells"],
   "table.columns":["column.key","column.heading"],"flow.columns":["column.key","column.heading"],"matrix.columns":["column.key","column.heading"],
   "row.cells":["cell.columnKey","cell.heading","cell.value"],
   "matrix.rows":["row.property","row.concept","row.cells"],"matrix.concepts":["concept.name","concept.rows"],
-  "profile.rows":["row.property","row.concept","row.cells"],"profile.concepts":["concept.name","concept.rows"],
+  "profile.rows":["row.property","row.concept","row.cells"],"profile.concepts":["concept.name","concept.rows"],"page.concepts":["concept.name","concept.rows"],"event.concepts":["concept.name","concept.rows"],
   "table.concepts":["concept.name","concept.rows"],"concept.rows":["row.property","row.concept","row.cells"],"overview.fields":["field.label","field.value"],
 };
 
@@ -21,11 +21,11 @@ export const excelTemplateRootCollections:Record<DocumentationTemplateKind,reado
   profile:[...commonCollections,"profile.rows","profile.concepts"],
 };
 export const excelTemplateNestedCollections:Record<string,readonly string[]>={
-  "flow.pages":["page.events","page.rows"],"page.events":["event.rows"],
+  "flow.pages":["page.events","page.rows","page.concepts"],"page.events":["event.rows","event.concepts"],
   "page.rows":["row.cells"],"event.rows":["row.cells"],"table.rows":["row.cells"],
   "flow.rows":["row.cells"],"matrix.rows":["row.cells"],"profile.rows":["row.cells"],
   "table.concepts":["concept.rows"],"matrix.concepts":["concept.rows"],
-  "profile.concepts":["concept.rows"],"concept.rows":["row.cells"],
+  "profile.concepts":["concept.rows"],"page.concepts":["concept.rows"],"event.concepts":["concept.rows"],"concept.rows":["row.cells"],
 };
 
 export const excelTemplateItemRoot=(collection:string):string=>
@@ -43,7 +43,7 @@ const examples:Record<string,string>={"project.name":"Shop","section.name":"Chec
 const description=(path:string)=>path.split(".").at(-1)!.replace(/([A-Z])/gu," $1").replace(/^./u,value=>value.toUpperCase());
 const areaExamples:Record<DocumentationTemplateKind,ExcelTemplateAreaGuide[]>={
   overview:[{area:"FieldRow",type:"Repeat",source:"overview.fields",direction:"Down",range:"A3:B3"}],
-  flow:[{area:"PageCard",type:"Repeat",source:"flow.pages",direction:"Across",range:"A3:D8"},{area:"EventRow",type:"Repeat",source:"page.events",direction:"Down",range:"A5:B5",parent:"PageCard"},{area:"ThemeLogo",type:"Image",source:"theme.logo",direction:"",range:"C1:D2"}],
+  flow:[{area:"PageCard",type:"Repeat",source:"flow.pages",direction:"Across",range:"A3:D8"},{area:"EventRow",type:"Repeat",source:"page.events",direction:"Down",range:"A5:B5",parent:"PageCard"},{area:"PageVisual",type:"Image",source:"page.visual.image",direction:"",range:"C5:D7",parent:"PageCard"},{area:"ThemeLogo",type:"Image",source:"theme.logo",direction:"",range:"C1:D2"}],
   matrix:[{area:"RowPattern",type:"Repeat",source:"matrix.rows",direction:"Down",range:"A3:C4"},{area:"CellPattern",type:"Repeat",source:"row.cells",direction:"Across",range:"B3:C3",parent:"RowPattern"}],
   profile:[{area:"ConceptPattern",type:"Repeat",source:"profile.concepts",direction:"Down",range:"A3:D6"},{area:"RowPattern",type:"Repeat",source:"concept.rows",direction:"Down",range:"A4:D4",parent:"ConceptPattern"},{area:"CellPattern",type:"Repeat",source:"row.cells",direction:"Across",range:"B4:C4",parent:"RowPattern"}],
 };

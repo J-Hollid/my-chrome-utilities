@@ -12,7 +12,7 @@ const starterPrototype = (kind) => {
     if (kind === "overview")
         return { kind, contractVersion: 2, worksheetName: "Template", cells: [{ address: "A1", value: "{{section.name}}" }, { address: "A3", value: "{{field.label}}" }, { address: "B3", value: "{{field.value}}" }], areas: [{ name: "FieldRow", type: "repeat", source: "overview.fields", direction: "down", range: "A3:B3" }], merges: [] };
     if (kind === "flow")
-        return { kind, contractVersion: 2, worksheetName: "Template", cells: [{ address: "A1", value: "{{section.name}}" }, { address: "A3", value: "{{page.stepLabel}}" }, { address: "B3", value: "{{page.pageName}}" }, { address: "A5", value: "{{event.eventName}}" }], areas: [{ name: "PageCard", type: "repeat", source: "flow.pages", direction: "across", range: "A3:D8" }, { name: "EventRow", type: "repeat", source: "page.events", direction: "down", range: "A5:B5" }, { name: "ThemeLogo", type: "image", source: "theme.logo", range: "C1:D2" }], merges: [] };
+        return { kind, contractVersion: 2, worksheetName: "Template", cells: [{ address: "A1", value: "{{section.name}}" }, { address: "A3", value: "{{page.stepLabel}}" }, { address: "B3", value: "{{page.pageName}}" }, { address: "A5", value: "{{event.eventName}}" }], areas: [{ name: "PageCard", type: "repeat", source: "flow.pages", direction: "across", range: "A3:D8" }, { name: "EventRow", type: "repeat", source: "page.events", direction: "down", range: "A5:B5" }, { name: "PageVisual", type: "image", source: "page.visual.image", range: "C5:D7" }, { name: "ThemeLogo", type: "image", source: "theme.logo", range: "C1:D2" }], merges: [] };
     if (kind === "matrix")
         return { kind, contractVersion: 2, worksheetName: "Template", cells: [{ address: "A1", value: "{{section.name}}" }, { address: "A3", value: "{{row.property}}" }, { address: "B3", value: "{{cell.value}}" }], areas: [{ name: "RowPattern", type: "repeat", source: "matrix.rows", direction: "down", range: "A3:C4" }, { name: "CellPattern", type: "repeat", source: "row.cells", direction: "across", range: "B3:C3" }], merges: [] };
     return { kind, contractVersion: 2, worksheetName: "Template", cells: [{ address: "A1", value: "{{section.name}}" }, { address: "A3", value: "{{concept.name}}" }, { address: "A4", value: "{{row.property}}" }, { address: "B4", value: "{{cell.value}}" }], areas: [{ name: "ConceptPattern", type: "repeat", source: "profile.concepts", direction: "down", range: "A3:D6" }, { name: "RowPattern", type: "repeat", source: "concept.rows", direction: "down", range: "A4:D4" }, { name: "CellPattern", type: "repeat", source: "row.cells", direction: "across", range: "B4:C4" }], merges: [] };
@@ -40,7 +40,7 @@ function prototypeFromWorkbook(workbook, kind) {
         ensure(cellAddress(end.row, end.column));
     }
     const named = new Map(workbook.definedNames.model.map(item => [item.name, item.ranges[0]?.replace(/^'?Template'?!/u, "").replaceAll("$", "")])), table = guide.getTable?.("TemplateAreas").table, ref = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/u.exec(table?.tableRef ?? ""), columnNumber = (letters) => [...letters].reduce((value, letter) => value * 26 + letter.charCodeAt(0) - 64, 0), rows = table?.rows ?? (ref ? Array.from({ length: Number(ref[4]) - Number(ref[2]) }, (_, rowOffset) => Array.from({ length: columnNumber(ref[3]) - columnNumber(ref[1]) + 1 }, (_, columnOffset) => guide.getCell(Number(ref[2]) + 1 + rowOffset, columnNumber(ref[1]) + columnOffset).value)) : []), areas = rows.flatMap(row => { const name = String(row[0] ?? ""), type = String(row[1] ?? "").toLowerCase(), source = String(row[2] ?? ""), direction = String(row[3] ?? "").toLowerCase(), range = named.get(name); if (!range)
-        return []; return type === "repeat" && (direction === "across" || direction === "down") ? [{ name, type: "repeat", source, direction, range }] : type === "image" && source === "theme.logo" ? [{ name, type: "image", source: "theme.logo", range }] : []; });
+        return []; return type === "repeat" && (direction === "across" || direction === "down") ? [{ name, type: "repeat", source, direction, range }] : type === "image" && (source === "theme.logo" || source === "page.visual.image") ? [{ name, type: "image", source, range }] : []; });
     const areaBounds = areas.map(area => { const [start, end = start] = area.range.split(":"), first = cellPoint(start), last = cellPoint(end); return { first, last }; });
     for (const area of areas)
         if (area.type === "image") {
@@ -75,8 +75,8 @@ const cellAddress = (row, column) => { let letters = "", value = column; while (
     value = Math.floor(value / 26);
 } return `${letters}${row}`; };
 const rangePoint = (value) => ({ row: (value.nativeRow ?? value.row ?? 0) + 1, column: (value.nativeCol ?? value.col ?? 0) + 1 });
-const logoImage = (logo) => { if (typeof logo !== "string")
-    return undefined; const match = /^data:image\/(png|jpeg|gif);base64,/iu.exec(logo); return match ? { base64: logo, extension: match[1].toLowerCase() } : undefined; };
+const embeddedImage = (value) => { if (typeof value !== "string")
+    return undefined; const match = /^data:image\/(png|jpeg|gif);base64,/iu.exec(value); return match ? { base64: value, extension: match[1].toLowerCase() } : undefined; };
 const logoDimensions = (logo) => { const encoded = logo.slice(logo.indexOf(",") + 1), bytes = Uint8Array.from(atob(encoded), character => character.charCodeAt(0)); if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes.length >= 24) {
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     return { width: view.getUint32(16), height: view.getUint32(20) };
@@ -115,21 +115,22 @@ function copyImages(source, sourceSheet, targetBook, targetSheet, rendered, prot
         for (const delta of deltas.values())
             targetSheet.addImage(targetBook.addImage(data), { tl: { row: start.row - 1 + delta.row, col: start.column - 1 + delta.column }, br: { row: end.row + delta.row, col: end.column + delta.column }, editAs: "oneCell" });
     }
-    const logoValue = context.theme?.logo, logo = logoImage(logoValue);
-    if (!logo || typeof logoValue !== "string")
-        return;
-    const intrinsic = logoDimensions(logoValue);
-    if (!intrinsic)
-        return;
-    const logoId = targetBook.addImage(logo);
     for (const area of prototype.areas) {
         if (area.type !== "image")
             continue;
-        const [startText, endText = startText] = area.range.split(":"), start = cellPoint(startText), end = cellPoint(endText), bounds = rectanglePixels(sourceSheet, start, end), fitted = fitProjectDocumentationLogo(intrinsic.width, intrinsic.height, bounds.width, bounds.height);
-        for (const cell of rendered.cells.filter(item => item.sourceAddress === startText)) {
-            const target = cellPoint(cell.address);
-            targetSheet.addImage(logoId, { tl: { row: target.row - 1, col: target.column - 1 }, ext: fitted, editAs: "oneCell" });
+        const [startText, endText = startText] = area.range.split(":"), start = cellPoint(startText), end = cellPoint(endText), bounds = rectanglePixels(sourceSheet, start, end), targets = rendered.cells.filter(item => item.sourceAddress === startText).map(item => cellPoint(item.address));
+        if (area.source === "theme.logo") {
+            const value = context.theme?.logo, image = embeddedImage(value), intrinsic = typeof value === "string" ? logoDimensions(value) : undefined;
+            if (!image || !intrinsic)
+                continue;
+            const imageId = targetBook.addImage(image), fitted = fitProjectDocumentationLogo(intrinsic.width, intrinsic.height, bounds.width, bounds.height);
+            for (const target of targets)
+                targetSheet.addImage(imageId, { tl: { row: target.row - 1, col: target.column - 1 }, ext: fitted, editAs: "oneCell" });
+            continue;
         }
+        const pages = context.flow?.pages ?? [];
+        targets.forEach((target, index) => { const value = pages[index]?.visual?.image, image = embeddedImage(value), intrinsic = typeof value === "string" ? logoDimensions(value) : undefined; if (!image || !intrinsic)
+            return; const fitted = fitProjectDocumentationLogo(intrinsic.width, intrinsic.height, bounds.width, bounds.height); targetSheet.addImage(targetBook.addImage(image), { tl: { row: target.row - 1, col: target.column - 1 }, ext: fitted, editAs: "oneCell" }); });
     }
 }
 async function renderCustomInto(output, body, snapshot, table, worksheetName) { const section = snapshot.set.sections.find(({ id }) => id === table.id); const validation = await validateExcelTemplateWorkbook(body, section.kind); if (!validation.valid)

@@ -172,8 +172,8 @@ const workbookPrototype = (workbook, expectedKind) => {
         }
         if (type === "repeat" && (direction === "across" || direction === "down"))
             areas.push({ name, type: "repeat", source, direction, range: ranges[0] });
-        else if (type === "image" && source === "theme.logo" && !direction)
-            areas.push({ name, type: "image", source: "theme.logo", range: ranges[0] });
+        else if (type === "image" && (source === "theme.logo" || source === "page.visual.image") && !direction)
+            areas.push({ name, type: "image", source, range: ranges[0] });
         else
             findings.push({ location: `TemplateAreas ${name}`, message: type === "repeat" ? `${name} needs Direction Across or Down.` : `${name} must use supported Type Repeat or Image.` });
     }

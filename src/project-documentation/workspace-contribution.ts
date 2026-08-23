@@ -2,6 +2,7 @@ import {installProjectDocumentationWorkspaceUi} from "../data-layer-project-docu
 import type {ProjectAssetBodyStore} from "../project-asset-body-contribution.js";
 
 const TEMPLATE_BODY_NAMESPACE="documentation-template";
+const FLOW_VISUAL_BODY_NAMESPACE="flow-visual";
 const STYLE_ID="documentation-template-workspace-style";
 const EXCEL_SCRIPT_ID="documentation-template-exceljs";
 
@@ -35,6 +36,7 @@ export const installProjectDocumentationWorkspaceContribution = (
     ...options,
     storeTemplateBody:(projectId,digest,body)=>assetBodies.storeProjectAssetBody({projectId,namespace:TEMPLATE_BODY_NAMESPACE,digest},body),
     loadTemplateBody:(projectId,digest)=>assetBodies.loadProjectAssetBody({projectId,namespace:TEMPLATE_BODY_NAMESPACE,digest}),
+    loadVisualAssetBody:(projectId,digest)=>assetBodies.loadProjectAssetBody({projectId,namespace:FLOW_VISUAL_BODY_NAMESPACE,digest}),
     ...(assetBodies.deleteProjectAssetBody?{discardTemplateBody:(projectId:string,digest:string)=>assetBodies.deleteProjectAssetBody!({projectId,namespace:TEMPLATE_BODY_NAMESPACE,digest})}:{}),
   });
 };
