@@ -423,11 +423,11 @@ effectiveProfile.requirements.push(
 effectiveGroup.schemaConstraints.push({path:"/currency",type:"string",allowedValues:["EUR","USD"],examples:["Euro inherited"]});
 effectivePage.schemaConstraints.push(
   {path:"/page_name",type:"string",allowedValues:["cart","category"],examples:["cart-page"]},
-  {path:"/page_type",type:"string",allowedValues:["cart"],examples:["cart-example"]},
+  {path:"/page_type",type:"string",allowedValues:["cart"],examples:["cart-example"],documentation:"shared page type"},
 );
 effectiveFrames[0].localSchemaContributions=[{path:"/currency",examples:["Euro checkout"]}];
-effectiveFrames[1].localSchemaContributions=[{path:"/page_type",allowedValues:["cart","confirmation"],examples:["confirmation-example"]}];
-const effectiveExampleSet=createProjectDocumentationSet({id:"set:effective-examples",name:"Effective examples",themeId:compilerTheme.id,sections:[{id:"flow:effective-examples",kind:"flow",name:"Effective examples",targetId:"flow:compiler",selected:true,configuration:{paths:["/page_name","/ecommerce_order_id","/currency","/page_type","/coupon_code"],columns:["example","allowedValues"]}},{id:"matrix:effective-examples",kind:"matrix",name:"Matrix",selected:false,configuration:{contextIds:[]}}]}),effectiveExampleFlow=compileProjectDocumentation({state:effectiveExampleState,set:effectiveExampleSet,theme:compilerTheme,revision:4,generatedAt:"2026-08-23T00:00:00.000Z"}).tables[0].templateData,rowFacets=(page)=>Object.fromEntries(page.rows.map(({property,example,allowedValues})=>[property,{example,allowedValues}]));
+effectiveFrames[1].localSchemaContributions=[{path:"/page_type",allowedValues:["cart","confirmation"],examples:["confirmation-example"],documentation:"confirmation-only description"}];
+const effectiveExampleSet=createProjectDocumentationSet({id:"set:effective-examples",name:"Effective examples",themeId:compilerTheme.id,sections:[{id:"flow:effective-examples",kind:"flow",name:"Effective examples",targetId:"flow:compiler",selected:true,configuration:{paths:["/page_name","/ecommerce_order_id","/currency","/page_type","/coupon_code"],columns:["description","example","allowedValues"]}},{id:"matrix:effective-examples",kind:"matrix",name:"Matrix",selected:false,configuration:{contextIds:[]}}]}),effectiveExampleFlow=compileProjectDocumentation({state:effectiveExampleState,set:effectiveExampleSet,theme:compilerTheme,revision:4,generatedAt:"2026-08-23T00:00:00.000Z"}).tables[0].templateData,rowFacets=(page)=>Object.fromEntries(page.rows.map(({property,example,allowedValues})=>[property,{example,allowedValues}]));
 assert.deepEqual(rowFacets(effectiveExampleFlow.pages[0]),{
   page_name:{example:"cart-page",allowedValues:"cart or category"},
   ecommerce_order_id:{example:"ORDER-100",allowedValues:"draft or paid"},
@@ -436,6 +436,7 @@ assert.deepEqual(rowFacets(effectiveExampleFlow.pages[0]),{
   coupon_code:{example:"",allowedValues:"WELCOME or SAVE10"},
 },"Flow Page rows project direct, inherited, mixed, and absent effective facets from one canonical property identity");
 assert.deepEqual(rowFacets(effectiveExampleFlow.pages[1]).page_type,{example:"confirmation-example",allowedValues:"cart or confirmation"},"a Flow Page-instance override replaces only its exact Page column example");
+assert.deepEqual(effectiveExampleFlow.pages.map(({rows})=>rows.find(({property})=>property==="page_type").description),["shared page type","shared page type"],"metadata outside Example and Allowed values retains the configured table-row projection");
 const publicConcepts=({concepts})=>concepts.map(({name,rows})=>({name,properties:rows.map(({property})=>property)}));
 assert.deepEqual(instanceFlow.pages.map(publicConcepts),[[{name:"Identity",properties:["page_name"]},{name:"Commerce",properties:["instance_only"]}],[{name:"Identity",properties:["page_name"]},{name:"Commerce",properties:["instance_only"]}]],"Page concepts follow configured concept order while retaining selected property order");
 assert.deepEqual(instanceFlow.pages.flatMap(({events})=>events.map(publicConcepts)),[[{name:"Identity",properties:["page_name","purchase_id"]},{name:"Commerce",properties:["instance_only","occurrence_only"]}],[{name:"Identity",properties:["page_name","purchase_id"]},{name:"Commerce",properties:["instance_only","occurrence_only"]}]],"Event concepts retain configured selected-property order while omitting excluded and empty groups");
