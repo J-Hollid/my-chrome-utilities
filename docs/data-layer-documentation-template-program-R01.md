@@ -359,9 +359,20 @@ QA; promotion to `master` remains a separate cumulative release decision.
 
 ## Flow instance examples, concept groups, and attached visuals
 
-Status: user-approved for coder handoff on 2026-08-23.
+Status: QA-integrated at `a5290029c1` on 2026-08-23 after exact
+`flow_export` and `shell` review evidence covering 119 tasks and package proof.
 
 Stable task name: `flow-template-instance-content`.
+
+The integrated correction exposes each Page and contained Event's effective
+Example cells, configured non-empty concept groups, and the existing private
+Page-instance visual in Excel and Rich templates. PNG and JPEG bodies remain
+unchanged; Excel converts valid saved WebP bodies locally to compatible PNG
+without mutating the stored attachment, while Rich output retains WebP. Durable
+visual-body reads settle before refresh or export, distinguish an absent
+attachment from unavailable bytes, and expose a bounded retry. No
+all-runnable-pack feature checkpoint ran; promotion to `master` remains a
+separate cumulative release decision.
 
 Flow templates need context-specific developer examples rather than a metadata
 value borrowed from the first context in a Flow. When a Flow section includes
