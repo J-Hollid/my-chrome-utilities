@@ -13,8 +13,8 @@ Feature: Data layer Excel documentation templates
   Scenario Outline: Data layer Excel documentation templates 001
     When the operator downloads the guided starter for <kind>
     Then one valid macro-free workbook contains one Template worksheet and one visible Template Guide worksheet
-    And Excel table TemplateSettings contains Contract 2 and documentation Kind <kind_key>
-    And Excel table TemplateAreas exposes Area, Type, Source, and Direction
+    And Excel table TemplateSettings contains Contract 3 and documentation Kind <kind_key>
+    And Excel table TemplateAreas exposes Area, Type, Source, Direction, and Properties
     And the Template Guide contains the binding glossary and repeat examples valid for <kind>
     And the Template worksheet recreates the Built-in <kind> structure
 
@@ -171,10 +171,11 @@ Feature: Data layer Excel documentation templates
     And the guide can be searched by binding, collection, or ordinary-language description
     And it demonstrates one Down repeat, one Across repeat, and one nested repeat using the same terms as Template Guide
     And it presents these copyable TemplateAreas examples
-      | Area      | Type   | Source       | Direction |
-      | PageCard  | Repeat | flow.pages   | Across    |
-      | EventRow  | Repeat | page.events  | Down      |
-      | ThemeLogo | Image  | theme.logo   |           |
+      | Area      | Type   | Source       | Direction | Properties                                         |
+      | PageCard  | Repeat | flow.pages   | Across    |                                                    |
+      | PageStep  | Repeat | flow.pages   | Across    | separator-area: PageSeparator                     |
+      | EventRow  | Repeat | page.events  | Down      |                                                    |
+      | ThemeLogo | Image  | theme.logo   |           | fit: scale-down; position: center; padding: 8px   |
 
   # Data layer Excel documentation templates 015
   Scenario: Data layer Excel documentation templates 015
@@ -263,3 +264,82 @@ Feature: Data layer Excel documentation templates
     And each example cell contains that Page instance's effective documented example rather than its allowed-values list or another Page's example
     And existing page.rows, row.allowedValues, and allowedValues cells remain available unchanged
     And empty or excluded concepts produce no heading or row copy
+
+  # Data layer Excel documentation templates 021
+  Scenario: Data layer Excel documentation templates 021
+    Given a valid Contract 2 workbook has the exact TemplateAreas columns Area, Type, Source, and Direction
+    When candidate inspection and the preview, save, assignment, and render paths consume that workbook
+    Then every path accepts it without requiring a Properties column or migration
+    And saving preserves the exact selected workbook bytes
+    And every generated image keeps the legacy scale-down, top-left, and zero-padding behavior
+    When the operator downloads a new guided starter
+    Then Contract 3 exposes one Properties cell per area
+    And that cell accepts one or more semicolon-separated declarations in any order with an optional trailing semicolon
+    And blank Properties preserve the Contract 2 result
+    And the Template Guide and searchable Library guide explain the supported keys, values, defaults, and combined examples
+
+  # Data layer Excel documentation templates 022
+  Scenario Outline: Data layer Excel documentation templates 022
+    Given a Contract 3 Image area is 100 pixels wide and 60 pixels high
+    And its source image has natural size <natural_size>
+    And its one Properties cell contains <properties>
+    When populated output renders the image
+    Then it preserves aspect ratio at size <rendered_size>
+    And its top-left is <offset> pixels from the area's top-left
+    And no image pixel is cropped or leaves the padded usable rectangle
+
+    Examples:
+      | natural_size | properties                                                     | rendered_size | offset |
+      | 40 by 20     | fit: scale-down; position: center; padding: 8px                 | 40 by 20      | 30, 20 |
+      | 20 by 20     | fit: contain; position: right bottom; padding: 4px 8px 12px 16px | 44 by 44      | 48, 4  |
+      | 40 by 20     | fit: scale-down; position: 25% 75%; padding: 0px                | 40 by 20      | 15, 30 |
+
+  # Data layer Excel documentation templates 023
+  Scenario: Data layer Excel documentation templates 023
+    Given PageStep A1:B1 repeats flow.pages Across with Properties separator-area: PageSeparator
+    And PageSeparator is the complete trailing column B1:B1 of PageStep
+    And A1 contains {{page.pageName}}, B1 contains literal >>, and C1 contains Later content
+    And the configured Pages are Cart, Shipping, and Payment in that order
+    When populated output renders the repeat
+    Then A1:E1 contains Cart, >>, Shipping, >>, and Payment in order
+    And no separator or empty separator column follows Payment
+    And Later content shifts to F1 without overlap
+    And the source collection order and project state remain unchanged
+
+  # Data layer Excel documentation templates 024
+  Scenario Outline: Data layer Excel documentation templates 024
+    Given a Repeat area's separator is its complete <trailing_edge>
+    And removing that separator leaves one non-empty rectangular item area
+    When an ordered collection of <source_count> items renders <direction>
+    Then the output contains <source_count> item areas and <separator_count> separator areas
+    And no separator appears before the first item or after the last item
+    And later Template content shifts by the exact combined output size
+
+    Examples:
+      | direction | trailing_edge               | source_count | separator_count |
+      | Across    | full-height rightmost column | 0            | 0               |
+      | Across    | full-height rightmost column | 1            | 0               |
+      | Across    | full-height rightmost column | 3            | 2               |
+      | Down      | full-width bottom row        | 3            | 2               |
+
+  # Data layer Excel documentation templates 025
+  Scenario Outline: Data layer Excel documentation templates 025
+    Given a Contract 3 candidate contains <problem>
+    When guided validation inspects the candidate
+    Then the primary finding identifies TemplateAreas <area> Properties
+    And it says <finding>
+    And it recommends <repair>
+    And the candidate cannot be previewed, saved, assigned, or used for export
+    And the candidate, prior preview, saved template, assignment, and project remain unchanged
+
+    Examples:
+      | area       | problem                                                   | finding                                                    | repair                                                   |
+      | ThemeLogo  | Image Properties fit: cover                              | ThemeLogo has unsupported image fit cover                  | Use scale-down or contain                                |
+      | ThemeLogo  | Image Properties padding: 8px; padding: 4px              | ThemeLogo declares padding more than once                  | Keep one padding declaration                             |
+      | ThemeLogo  | Image Properties margin: 8px                             | ThemeLogo has unsupported image property margin            | Use padding for space inside the image area              |
+      | ThemeLogo  | Image Properties separator-area: LogoGap                 | separator-area cannot be used for an Image                 | Use fit, position, or padding                            |
+      | ThemeLogo  | padding that leaves no usable width or height             | ThemeLogo padding leaves no room for its image              | Reduce padding or enlarge ThemeLogo                      |
+      | PageStep   | Repeat Properties position: center                       | position cannot be used for a Repeat                       | Use separator-area or leave Properties blank             |
+      | PageStep   | separator-area naming no workbook-defined range           | separator area PageSeparator cannot be found               | Define PageSeparator or correct the Properties value     |
+      | PageStep   | Across separator that is not the complete trailing edge   | PageSeparator must be the complete right edge of PageStep  | Resize PageSeparator to the full-height rightmost columns |
+      | PageStep   | separator containing a binding, image, or nested repeat   | PageSeparator contains unsupported template behavior       | Keep only literal cells and presentation in the separator |
