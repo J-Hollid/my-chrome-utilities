@@ -64,11 +64,11 @@ export function mountInheritedPropertySelection(options) {
         filter.setAttribute("aria-label", "Inherited property selection state filter");
         filters.setAttribute("aria-label", "Inherited property filters");
         filters.append(concept, type, presence, filter);
-        search.addEventListener("input", () => { query = search.value; render(); });
-        concept.addEventListener("change", () => { conceptFilter = concept.value; render(); });
-        type.addEventListener("change", () => { typeFilter = type.value; render(); });
-        presence.addEventListener("change", () => { presenceFilter = presence.value; render(); });
-        filter.addEventListener("change", () => { selectionFilter = filter.value; render(); });
+        search.addEventListener("input", () => { query = search.value; rerenderWithFocus("Search inherited properties", search.selectionStart); });
+        concept.addEventListener("change", () => { conceptFilter = concept.value; rerenderWithFocus("Inherited property concept filter"); });
+        type.addEventListener("change", () => { typeFilter = type.value; rerenderWithFocus("Inherited property type filter"); });
+        presence.addEventListener("change", () => { presenceFilter = presence.value; rerenderWithFocus("Inherited property presence filter"); });
+        filter.addEventListener("change", () => { selectionFilter = filter.value; rerenderWithFocus("Inherited property selection state filter"); });
         const needle = query.trim().toLowerCase(), visible = options.model.items.filter((item) => (conceptFilter === "all" || item.concept === conceptFilter) && (typeFilter === "all" || item.type === typeFilter) && (presenceFilter === "all" || item.presence === presenceFilter) && (selectionFilter === "any" || (selectionFilter === "selected") === staged.has(item.propertyId)) && (!needle || `${item.path} ${item.source} ${item.concept}`.toLowerCase().includes(needle)));
         tree.setAttribute("role", "tree");
         tree.setAttribute("aria-label", `Inherited property selection tree, showing ${visible.length} of ${options.model.totalCount} properties`);
@@ -93,11 +93,13 @@ export function mountInheritedPropertySelection(options) {
         apply.addEventListener("click", () => { options.onApply([...staged]); workspace.hidden = true; summary.setAttribute("aria-expanded", "false"); });
         reviewPanel.hidden = !reviewOpen;
         reviewPanel.setAttribute("aria-label", "Reviewed inherited property selection");
-        const deselected = options.model.items.filter(({ propertyId }) => !staged.has(propertyId));
-        reviewPanel.textContent = `Selected ${staged.size} of ${options.model.totalCount}. Deselected properties and descendants: ${deselected.map(({ path, descendantPaths }) => [path, ...descendantPaths].join(", ")).join("; ") || "none"}. Affected compiled contexts recompile, outputs become stale, runtime validation changes, and one Undo action is available. The Draft and effective Table remain unchanged until Apply.`;
+        const deselected = options.model.items.filter(({ propertyId }) => !staged.has(propertyId)), affectedContext = options.targetName.endsWith("Flow Page-instance") ? `${options.targetName} and its contained Event occurrence branches` : options.targetName.endsWith("Page") ? `${options.targetName} and every downstream Flow Page-instance branch` : options.targetName;
+        reviewPanel.textContent = `Selected ${staged.size} of ${options.model.totalCount}. Deselected properties and descendants: ${deselected.map(({ path, descendantPaths }) => [path, ...descendantPaths].join(", ")).join("; ") || "none"}. Affected compiled contexts: ${affectedContext}. Outputs become stale, runtime validation changes, and one Undo action is available. The Draft and effective Table remain unchanged until Apply.`;
         actions.append(review, cancel, apply);
         workspace.append(heading, search, filters, tree, actions, reviewPanel);
     };
+    function rerenderWithFocus(label, caret) { render(); const control = workspace.querySelector(`[aria-label="${label}"]`); control?.focus(); if (control instanceof HTMLInputElement && caret !== undefined)
+        control.setSelectionRange(caret, caret); }
     summary.addEventListener("click", () => { const open = workspace.hidden; workspace.hidden = !open; summary.setAttribute("aria-expanded", String(open)); if (open) {
         reset();
         render();

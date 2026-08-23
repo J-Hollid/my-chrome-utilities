@@ -8,6 +8,7 @@
    "all four Layered editor targets"
    ["LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET" "LAYERED_SCHEMA_EDITOR_POLICY_TARGET"
     "LAYERED_SCHEMA_EDITOR_RULES_TARGET" "LAYERED_SCHEMA_EDITOR_TARGET"]
+   "no Layered editor targets" []
    "every runnable pack" :all})
 
 (defn- values [example-values example captures]
@@ -15,9 +16,12 @@
     (if (seq resolved) resolved captures)))
 
 (defn- expected-targets [description]
-  (or (target-labels description)
-      (->> (re-seq #"LAYERED_SCHEMA_EDITOR_(?:CANONICAL_|POLICY_|RULES_)?TARGET" description)
-           distinct sort vec)))
+  (cond
+    (contains? target-labels description) (target-labels description)
+    (str/includes? description "LAYERED_SCHEMA_EDITOR_")
+    (->> (re-seq #"LAYERED_SCHEMA_EDITOR_(?:CANONICAL_|POLICY_|RULES_)?TARGET" description)
+         distinct sort vec)
+    :else ::unrecognized-target-description))
 
 (defn- assert-vtd005! [world predicate message details]
   (support/assert! predicate message details)
@@ -276,5 +280,5 @@
                (representative-calibration-handlers verify-throughput!))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-23T06:16:33.164499461+02:00", :module-hash "312832079", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1301353899"} {:id "def/target-labels", :kind "def", :line 5, :end-line 11, :hash "-1715132242"} {:id "defn-/values", :kind "defn-", :line 13, :end-line 15, :hash "-170718585"} {:id "defn-/expected-targets", :kind "defn-", :line 17, :end-line 20, :hash "-1792124582"} {:id "defn-/assert-vtd005!", :kind "defn-", :line 22, :end-line 24, :hash "128925372"} {:id "defn-/prepared", :kind "defn-", :line 26, :end-line 27, :hash "-1580254601"} {:id "defn-/path-plan", :kind "defn-", :line 29, :end-line 30, :hash "1272694595"} {:id "defn-/change-paths", :kind "defn-", :line 32, :end-line 33, :hash "-1536394027"} {:id "defn-/seconds", :kind "defn-", :line 35, :end-line 36, :hash "1741773050"} {:id "defn-/merged-plan", :kind "defn-", :line 38, :end-line 45, :hash "1754148101"} {:id "defn-/history-key", :kind "defn-", :line 47, :end-line 53, :hash "-256925796"} {:id "defn-/boundary-handlers", :kind "defn-", :line 55, :end-line 84, :hash "-1901015391"} {:id "defn-/multi-change-handlers", :kind "defn-", :line 86, :end-line 114, :hash "1975158812"} {:id "defn-/conservation-handlers", :kind "defn-", :line 116, :end-line 149, :hash "2063642604"} {:id "defn-/history-handlers", :kind "defn-", :line 151, :end-line 173, :hash "-945026216"} {:id "defn-/sample-calibration-handlers", :kind "defn-", :line 175, :end-line 192, :hash "-1100059800"} {:id "defn-/boundary-budget-handlers", :kind "defn-", :line 194, :end-line 213, :hash "-785351219"} {:id "defn-/calibration-provenance-handlers", :kind "defn-", :line 215, :end-line 225, :hash "1072003465"} {:id "defn-/representative-calibration-handlers", :kind "defn-", :line 227, :end-line 265, :hash "-600491580"} {:id "defn/handlers", :kind "defn", :line 267, :end-line 276, :hash "-1053192435"}]}
+;; {:version 1, :tested-at "2026-08-23T11:21:16.042396899+02:00", :module-hash "1843250204", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1301353899"} {:id "def/target-labels", :kind "def", :line 5, :end-line 12, :hash "386959994"} {:id "defn-/values", :kind "defn-", :line 14, :end-line 16, :hash "-170718585"} {:id "defn-/expected-targets", :kind "defn-", :line 18, :end-line 24, :hash "-1423602854"} {:id "defn-/assert-vtd005!", :kind "defn-", :line 26, :end-line 28, :hash "128925372"} {:id "defn-/prepared", :kind "defn-", :line 30, :end-line 31, :hash "-1580254601"} {:id "defn-/path-plan", :kind "defn-", :line 33, :end-line 34, :hash "1272694595"} {:id "defn-/change-paths", :kind "defn-", :line 36, :end-line 37, :hash "-1536394027"} {:id "defn-/seconds", :kind "defn-", :line 39, :end-line 40, :hash "1741773050"} {:id "defn-/merged-plan", :kind "defn-", :line 42, :end-line 49, :hash "1754148101"} {:id "defn-/history-key", :kind "defn-", :line 51, :end-line 57, :hash "-256925796"} {:id "defn-/boundary-handlers", :kind "defn-", :line 59, :end-line 88, :hash "2129591880"} {:id "defn-/multi-change-handlers", :kind "defn-", :line 90, :end-line 118, :hash "1975158812"} {:id "defn-/conservation-handlers", :kind "defn-", :line 120, :end-line 153, :hash "2063642604"} {:id "defn-/history-handlers", :kind "defn-", :line 155, :end-line 177, :hash "-945026216"} {:id "defn-/sample-calibration-handlers", :kind "defn-", :line 179, :end-line 196, :hash "-1100059800"} {:id "defn-/boundary-budget-handlers", :kind "defn-", :line 198, :end-line 217, :hash "-785351219"} {:id "defn-/calibration-provenance-handlers", :kind "defn-", :line 219, :end-line 229, :hash "1072003465"} {:id "defn-/representative-calibration-handlers", :kind "defn-", :line 231, :end-line 269, :hash "-600491580"} {:id "defn/handlers", :kind "defn", :line 271, :end-line 280, :hash "-1053192435"}]}
 ;; clj-mutate-manifest-end
