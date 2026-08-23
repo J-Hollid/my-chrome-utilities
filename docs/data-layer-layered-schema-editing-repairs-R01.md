@@ -97,6 +97,32 @@ Likely existing shared integration surfaces and proposed ownership are:
 | `src/composed-schema/` and `src/data-layer-composed-schema*` | `layered_schema` | `layered_schema_contextual_property_exclusion` | composed contributor rows and actions, Page-instance persistence, layered compilation, `flow_graph` Page-frame context, `flow_export` selected-context rows, and `live_flow_testing` validation |
 | `src/canonical-schema-focused/definition.ts`, `src/canonical-schema/ui-mount.ts`, and `src/composed-schema/facet-draft.ts` | `layered_schema` | `layered_schema_allowed_example_reconciliation` | Table quick edit, focused Definition review, sparse contributor commands, reload, and `selective_profile_inheritance` parity |
 
+Stopped candidate `51aa431eb1` is a patch reference only. A reconstruction must
+replay read-only intent classification for its actual integration paths, including
+`src/layered-schema/compile*.ts`, `src/data-layer-layered-schema*.ts`,
+`src/composed-schema/`, and the canonical focused Definition and mount surfaces.
+The candidate's acceptance paths also reached
+`acceptance/src/acceptance/steps/layered_schema.clj` and
+`test/support/layered-schema-{targets,workflows}.mjs`; those paths do not enlarge
+the product behavior or excuse a narrower runtime proof.
+
+Before fresh review evidence, the reconstruction must prove all of these named
+gates:
+
+- a persisted stable-identity exclusion remains fail-closed when a surviving
+  required rule depends on the excluded property, including after reload or a
+  later parent change;
+- runtime 032 compiles a real contained Event occurrence and uses an actual
+  repository save/load boundary rather than an in-memory clone;
+- runtime 033 crosses the durable project-command boundary and proves one atomic
+  Undo for Allowed values and Example;
+- affected property coverage exercises exclusion/dependency conservation and
+  selected/custom Example reconciliation; and
+- the inherited Page-group Documentation matrix asserts public no-leading-slash
+  names exactly, while canonical identities remain slash-qualified. Satisfying
+  this last gate with fresh bound evidence subsumes, rather than replays, repair
+  patch `912437c5ec`.
+
 The coder must run the governed read-only intent classification from the exact
 current QA head before product coding. A `coarse-boundary` result routes the
 mandatory independently reviewed ownership-preparation stage. A bounded
