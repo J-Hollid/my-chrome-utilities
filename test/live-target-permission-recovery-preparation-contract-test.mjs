@@ -19,6 +19,14 @@ const consumer = shell.verificationSlices.find(
 );
 const disposition = dispositions.dispositions.find(({ task, path }) =>
   task === "live-target-permission-recovery" && path === "src/side-panel.ts");
+const operatorInterfaceSource = await readFile(
+  "acceptance/src/acceptance/steps/operator_interface_support.clj", "utf8");
+const captureHandlerSource = await readFile(
+  "acceptance/src/acceptance/verification_support/modular_architecture_capture_handlers.clj",
+  "utf8",
+);
+const readinessSource = await readFile(
+  "scripts/verification-ownership-readiness-test.mjs", "utf8");
 
 assert.deepEqual(slice.sourcePrefixes, [
   "src/data-layer-live-target-permission-recovery/",
@@ -49,6 +57,12 @@ assert.deepEqual(disposition, {
   reviewAuthority:"qa-integration",
   reason:disposition.reason,
 });
+assert.match(operatorInterfaceSource,
+  /"origin" #\{"https:\/\/shop\.example\.test"\}/u);
+assert.match(captureHandlerSource, /\[22 12 66 25 1 5 2 172\]/u);
+assert.match(captureHandlerSource,
+  /false\? \(:propagateDependants %\)[\s\S]+"browser presentation"/u);
+assert.match(readinessSource, /dispositions\.dispositions\.length===9/u);
 
 function atSpecification(path) {
   return execFileSync("git", ["show", `${specificationCommit}:${path}`], {
@@ -83,27 +97,56 @@ const evidence = {
   conservativeClosure:true,
   noAllPack:true,
   automaticResumption:true,
+  runtimeExampleDomainConserved:true,
+  captureEvidenceInventoryConserved:true,
 };
 console.log(JSON.stringify({ liveTargetPermissionRecoveryPreparationAcceptance:evidence }));
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   const runtimeSource = await readFile("test/support/side-panel-capture-fixtures.mjs", "utf8");
-  const expectedPreRepairFailure = {
-    positiveBooleanLeaves:false,
-    absenceSemanticsPositive:false,
+  const protocols = {
+    "other:evidence leaf polarity contract":{
+      id:"permission-recovery-positive-evidence-leaves-v1",
+      input:{ observationKey:"liveTargetPermissionRecoveryWiring",
+        requiredLeafType:"positive boolean" },
+      expectedPreRepairFailure:{positiveBooleanLeaves:false,absenceSemanticsPositive:false},
+      expectedRepairResult:{positiveBooleanLeaves:true,absenceSemanticsPositive:true},
+      repairResult:{
+        positiveBooleanLeaves:["moduleLoaded", "inactive", "callbacksSuppressed",
+          "requestAccessAbsent", "startTestingRemainsDisabled", "selectedTargetPresented"]
+          .every((key) => runtimeSource.includes(`${key}:`)),
+        absenceSemanticsPositive:!["callbacks:", "requestAccessVisible:",
+          "startTestingEnabled:", "selectedLabel:"].some((key) => runtimeSource.includes(key)),
+      },
+    },
+    "acceptance example domain":{
+      id:"permission-recovery-origin-example-domain-v1",
+      input:{ exampleKey:"origin", value:"https://shop.example.test" },
+      expectedPreRepairFailure:{originRegistered:false},
+      expectedRepairResult:{originRegistered:true},
+      repairResult:{originRegistered:/"origin" #\{"https:\/\/shop\.example\.test"\}/u
+        .test(operatorInterfaceSource)},
+    },
+    "verification conservation inventory":{
+      id:"permission-recovery-conservation-inventory-v1",
+      input:{ durableDispositionCount:9, captureUnitCount:22, captureTaskCount:172 },
+      expectedPreRepairFailure:{durableDispositions:false,captureInventory:false,
+        typedPresentationBoundary:false},
+      expectedRepairResult:{durableDispositions:true,captureInventory:true,
+        typedPresentationBoundary:true},
+      repairResult:{
+        durableDispositions:/dispositions\.dispositions\.length===9/u.test(readinessSource),
+        captureInventory:/\[22 12 66 25 1 5 2 172\]/u.test(captureHandlerSource),
+        typedPresentationBoundary:
+          /false\? \(:propagateDependants %\)[\s\S]+"browser presentation"/u
+            .test(captureHandlerSource),
+      },
+    },
   };
-  const expectedRepairResult = {
-    positiveBooleanLeaves:true,
-    absenceSemanticsPositive:true,
-  };
-  const repairResult = {
-    positiveBooleanLeaves:["moduleLoaded", "inactive", "callbacksSuppressed",
-      "requestAccessAbsent", "startTestingRemainsDisabled", "selectedTargetPresented"]
-      .every((key) => runtimeSource.includes(`${key}:`)),
-    absenceSemanticsPositive:!["callbacks:", "requestAccessVisible:",
-      "startTestingEnabled:", "selectedLabel:"].some((key) => runtimeSource.includes(key)),
-  };
+  const protocol = protocols[context.causalCategory];
+  assert.ok(protocol, `unsupported causal category ${context.causalCategory}`);
+  const { expectedPreRepairFailure, expectedRepairResult, repairResult } = protocol;
   assert.deepEqual(repairResult, expectedRepairResult);
   const normalized = (value) => Array.isArray(value) ? value.map(normalized)
     : value && typeof value === "object" ? Object.fromEntries(Object.entries(value)
@@ -112,11 +155,10 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const digest = (value) => createHash("sha256")
     .update(JSON.stringify(normalized(value))).digest("hex");
   const fixture = {
-    id:"permission-recovery-positive-evidence-leaves-v1",
+    id:protocol.id,
     causalCategory:context.causalCategory,
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-    input:{ observationKey:"liveTargetPermissionRecoveryWiring",
-      requiredLeafType:"positive boolean" },
+    input:protocol.input,
     expectedPreRepairFailure,
     expectedRepairResult,
   };
