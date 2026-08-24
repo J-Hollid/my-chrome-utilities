@@ -120,7 +120,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           "startTestingEnabled:", "selectedLabel:"].some((key) => runtimeSource.includes(key)),
       },
     },
-    "acceptance example domain":{
+    "other:acceptance example domain":{
       id:"permission-recovery-origin-example-domain-v1",
       input:{ exampleKey:"origin", value:"https://shop.example.test" },
       expectedPreRepairFailure:{originRegistered:false},
@@ -128,7 +128,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       repairResult:{originRegistered:/"origin" #\{"https:\/\/shop\.example\.test"\}/u
         .test(operatorInterfaceSource)},
     },
-    "verification conservation inventory":{
+    "other:verification conservation inventory":{
       id:"permission-recovery-conservation-inventory-v1",
       input:{ durableDispositionCount:9, captureUnitCount:22, captureTaskCount:172 },
       expectedPreRepairFailure:{durableDispositions:false,captureInventory:false,
