@@ -254,6 +254,18 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   const runtimeSource = await readFile("test/support/side-panel-capture-fixtures.mjs", "utf8");
   const protocols = {
+    "readiness or settling":{
+      id:"permission-recovery-path-status-readiness-v1",
+      input:{ historyPath:"", authoritativeStatus:"Waiting for observation path",
+        targetReadCardinality:"one or more" },
+      expectedPreRepairFailure:{authoritativeStatus:false,repeatedReadsAccepted:false},
+      expectedRepairResult:{authoritativeStatus:true,repeatedReadsAccepted:true},
+      repairResult:{
+        authoritativeStatus:runtimeSource.includes(
+          'textContent.trim() === "Waiting for observation path"'),
+        repeatedReadsAccepted:runtimeSource.includes("scriptCalls.length > 0"),
+      },
+    },
     "other:evidence leaf polarity contract":{
       id:"permission-recovery-positive-evidence-leaves-v1",
       input:{ observationKey:"liveTargetPermissionRecoveryWiring",
