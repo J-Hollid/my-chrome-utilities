@@ -2753,3 +2753,34 @@ Feature: Modular verification packs
     And the stale cardinality global-impact entry is removed while the Shell-owned slice, its direct tasks, and its empty registry-consumer set remain
     And the resumed candidate uses only its specification-bound focused evidence route
     And fresh read-only intent and exact candidate preflight enforce the no-touch boundary before product evidence
+
+  # Modular verification packs 199
+  Scenario: Modular verification packs 199
+    Given live-target-permission-recovery is paused at exact QA e54f411a0f because its planned side-panel composition path selects all twenty runnable packs and 799 tasks
+    And each planned observation-target, path-status, active-page, or guided-workflow path without that composition path selects fewer than all runnable packs
+    When standing ownership preparation is issued
+    Then its stable task is verification-slice-live-target-permission-recovery
+    And it starts from exact QA e54f411a0f without a product candidate or another user decision
+    And product scenario 009 and installed runtime scenario 002 remain unchanged and intentionally unimplemented
+    And the preparation cannot execute or authorize an all-runnable-pack feature plan
+
+  # Modular verification packs 200
+  Scenario: Modular verification packs 200
+    Given the Live target permission-recovery preparation needs probe reconciliation, a current-step action, an exact-origin grant, and a same-tab path recheck
+    When its behavior-preserving ownership seam is established
+    Then source prefix src/data-layer-live-target-permission-recovery/ belongs to subordinate Capture slice capture_live_target_permission_recovery
+    And Shell is its exact installed side-panel consumer
+    And the slice names direct model, controller, guided-step, and installed-wiring proof without assigning the whole side-panel composition root to a narrow owner
+    And packs outside Capture and Shell remain preparation regressions only when selected by the conservative current and historical plan and are not inferred as seam consumers
+    And src/side-panel.ts receives an integrated-seam disposition only when the resumed product can leave that broad path unchanged
+    And an unproved consumer, whole-file narrowing, parent fallback that leaves the product all-pack, or all-pack preparation result blocks the seam
+
+  # Modular verification packs 201
+  Scenario: Modular verification packs 201
+    Given the Live target permission-recovery preparation has one bounded exact candidate
+    When its conservation and review evidence are produced
+    Then current valid active-tab access, target selection, picker permission requests, path readiness, session start, and installed Live setup behavior remain unchanged
+    And no Request access action is newly exposed by the preparation and no permission, probe, path check, observation, session, project, or saved state changes meaning
+    And every former assertion, task, prerequisite, pack consumer, package input, and terminal obligation remains represented by the conservative current and historical union
+    And exact changed-path evidence includes properties, the declared direct seam and consumer proof, and package proof
+    And after architect qa-ready integration the original live-target-permission-recovery task is reissued from that exact QA head without another acceptance round-trip
