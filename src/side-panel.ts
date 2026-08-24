@@ -111,10 +111,11 @@ import { createLiveNotificationController } from "./utilities/data-layer/capture
 import {
   createTargetPathStatusController,
   createDormantLiveTargetPermissionRecoveryCoordinator,
-  createLiveTargetPermissionPathApplyBridge,
   targetPathStatusForObservation,
   type TargetPathStatus,
 } from "./utilities/data-layer/capture.js";
+import { createLiveTargetPermissionPathApplyBridge } from
+  "./utilities/data-layer/live-target-permission-path-apply.js";
 import { copyLivePageUrl as copyLivePageUrlAction } from "./utilities/data-layer/capture.js";
 import {
   findLiveSessionSummaryElements,

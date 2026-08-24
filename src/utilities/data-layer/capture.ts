@@ -1,7 +1,6 @@
 export { createLiveNotificationController } from "./layers/core/capture.js";
 export {
   createDormantLiveTargetPermissionRecoveryCoordinator,
-  createLiveTargetPermissionPathApplyBridge,
 } from "../../data-layer-live-target-permission-recovery/index.js";
 export { type SourceAdapter, type SourceEvent, type ValidationState } from "../../data-layer-source.js";
 export { type DataLayerEventEntry } from "../../data-layer-session.js";

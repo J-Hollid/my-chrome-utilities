@@ -73,7 +73,10 @@ assert.deepEqual(slice.consumers, [
 ]);
 assert.deepEqual(pathApplySlice, {
   id:"capture_live_target_permission_path_apply",
-  sourcePaths:["src/data-layer-live-target-permission-recovery/path-apply.ts"],
+  sourcePaths:[
+    "src/data-layer-live-target-permission-recovery/path-apply.ts",
+    "src/utilities/data-layer/live-target-permission-path-apply.ts",
+  ],
   sourcePrefixes:[],
   tasks:["unit:test/data-layer-live-target-permission-recovery-test.mjs"],
   prerequisites:[
@@ -154,6 +157,7 @@ assert.deepEqual(productionChanges, [
   "src/data-layer-live-target-permission-recovery/readiness.ts",
   "src/side-panel.ts",
   "src/utilities/data-layer/capture.ts",
+  "src/utilities/data-layer/live-target-permission-path-apply.ts",
 ]);
 assert.match(modularFeatureSource,
   /only affected packs are Capture, Event Library, Schemas, Defects, and Shell/u);

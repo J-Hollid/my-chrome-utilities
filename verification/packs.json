@@ -994,7 +994,8 @@
       {
         "id": "capture_live_target_permission_path_apply",
         "sourcePaths": [
-          "src/data-layer-live-target-permission-recovery/path-apply.ts"
+          "src/data-layer-live-target-permission-recovery/path-apply.ts",
+          "src/utilities/data-layer/live-target-permission-path-apply.ts"
         ],
         "sourcePrefixes": [],
         "tasks": [
