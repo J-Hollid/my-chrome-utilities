@@ -1625,9 +1625,11 @@ export async function checkpointPreflight({
       environmentInteger("VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES", defaultOutputLimitBytes, {
         maximum:maximumOutputLimitBytes,
       });
+      const permissionRecoveryFocused = isLiveTargetPermissionRecoveryEvidenceTask(evidenceTask) &&
+        validateLiveTargetPermissionRecoveryFocusedPlan(plan, evidenceTask);
       if (evidenceTask && (plan.mode !== "exact" && !registryCardinalityFocusedPlanMode({
         task:evidenceTask, mode:plan.mode,
-      }) || !plan.includeProperties ||
+      }) && !permissionRecoveryFocused || !plan.includeProperties && !permissionRecoveryFocused ||
           !plan.changeSet || !plan.baseCommit || !plan.claimPackIds?.length)) {
         throw new Error("Checkpoint preflight requires an exact canonical evidence plan");
       }
