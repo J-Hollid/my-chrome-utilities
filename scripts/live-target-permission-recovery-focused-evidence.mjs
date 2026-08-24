@@ -3,6 +3,8 @@ import { expandVerificationTaskPrerequisites } from
 
 export const liveTargetPermissionRecoveryEvidenceTask =
   "verification-slice-live-target-permission-recovery";
+export const liveTargetPermissionRecoveryProductEvidenceTask =
+  "live-target-permission-recovery";
 export const liveTargetPermissionPathApplyEvidenceTask =
   "verification-slice-live-target-permission-path-apply";
 
@@ -36,7 +38,8 @@ export function isLiveTargetPermissionRecoveryEvidenceTask(task) {
 }
 
 export function liveTargetPermissionRecoveryFocusedTaskKeysFor(task) {
-  if (task === liveTargetPermissionRecoveryEvidenceTask) {
+  if (task === liveTargetPermissionRecoveryEvidenceTask ||
+      task === liveTargetPermissionRecoveryProductEvidenceTask) {
     return liveTargetPermissionRecoveryFocusedTaskKeys;
   }
   if (task === liveTargetPermissionPathApplyEvidenceTask) {

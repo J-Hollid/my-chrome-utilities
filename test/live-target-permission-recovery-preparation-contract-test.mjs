@@ -6,6 +6,7 @@ import { readFile } from "node:fs/promises";
 import {
   liveTargetPermissionPathApplyEvidenceTask,
   liveTargetPermissionPathApplyFocusedTaskKeys,
+  liveTargetPermissionRecoveryProductEvidenceTask,
   liveTargetPermissionRecoveryEvidenceTask,
   liveTargetPermissionRecoveryFocusedTaskKeys,
   liveTargetPermissionRecoveryPackIds,
@@ -205,6 +206,10 @@ assert.equal(validateLiveTargetPermissionRecoveryFocusedPlan(
   focusedPlanFixture,
   liveTargetPermissionRecoveryEvidenceTask,
 ), true);
+assert.equal(validateLiveTargetPermissionRecoveryFocusedPlan(
+  focusedPlanFixture,
+  liveTargetPermissionRecoveryProductEvidenceTask,
+), true, "the stable product task reuses the exact reviewed recovery proof boundary");
 const pathApplyFocusedPlanFixture = focusedPlanFixtureFor(
   liveTargetPermissionPathApplyFocusedTaskKeys,
 );
