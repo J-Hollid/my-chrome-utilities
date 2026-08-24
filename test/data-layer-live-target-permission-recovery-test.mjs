@@ -74,7 +74,6 @@ const fallback = { ...selected, id:"selected:42", title:"Selected checkout" };
 let attachedTarget = attached;
 const bridged = [];
 let readinessRenders = 0;
-const appliedBridgeObservations = [];
 let reconciliationResult = { status:"inactive", selectedTarget:attached };
 const pathApplyBridge = createLiveTargetPermissionPathApplyBridge({
   attachedTarget:() => attachedTarget,
@@ -84,7 +83,6 @@ const pathApplyBridge = createLiveTargetPermissionPathApplyBridge({
     return reconciliationResult;
   },
   renderReadiness:() => { readinessRenders += 1; },
-  observeApplied:(observation) => appliedBridgeObservations.push(observation),
 });
 const appliedObservation = {
   tabId:42,
@@ -100,10 +98,6 @@ assert.deepEqual(bridged, [{
   pageAccessStatus:"page access available",
 }], "the applied observation reaches the dormant seam with exact causal identity");
 assert.equal(readinessRenders, 0, "inactive preparation never requests a readiness render");
-assert.deepEqual(appliedBridgeObservations, [{
-  request:bridged[0],
-  result:reconciliationResult,
-}], "the installed observation is emitted by the same bridge invocation");
 
 await pathApplyBridge.apply({ ...appliedObservation, tabId:84 });
 assert.equal(bridged.length, 1, "an observation for another tab is excluded");

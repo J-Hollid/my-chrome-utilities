@@ -12,7 +12,6 @@ import {
 import type { TargetPathStatus } from "../data-layer-target-path-status.js";
 import {
   createLiveTargetPermissionPathApplyBridge,
-  type LiveTargetPermissionPathApplyObservation,
   type LiveTargetPermissionPathApplyResult,
 } from "./path-apply.js";
 
@@ -61,7 +60,6 @@ export function createDormantLiveTargetPermissionRecoveryCoordinator(_adapters: 
     attachedTarget: () => ObservationTarget | undefined;
     selectedTarget: () => ObservationTarget | undefined;
     renderReadiness: () => void;
-    observeApplied?: (observation: LiveTargetPermissionPathApplyObservation) => void;
   };
 }): LiveTargetPermissionRecoveryCoordinator {
   const inactive = (

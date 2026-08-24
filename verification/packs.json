@@ -7025,9 +7025,9 @@
           "liveTargetPermissionRecoveryWiring.requestAccessAbsent",
           "liveTargetPermissionRecoveryWiring.startTestingRemainsDisabled",
           "liveTargetPermissionRecoveryWiring.selectedTargetPresented",
-          "liveTargetPermissionRecoveryWiring.applyBridgeObserved",
-          "liveTargetPermissionRecoveryWiring.exactAppliedObservation",
-          "liveTargetPermissionRecoveryWiring.matchingTargetResolved",
+          "liveTargetPermissionRecoveryWiring.targetPathApplyObserved",
+          "liveTargetPermissionRecoveryWiring.appliedPathPreserved",
+          "liveTargetPermissionRecoveryWiring.selectedTargetRetained",
           "schemaViewContainment.containedControls",
           "schemaViewContainment.editorContainsActions",
           "schemaViewContainment.closeReviewContainsActions",
@@ -7057,9 +7057,9 @@
               "liveTargetPermissionRecoveryWiring.requestAccessAbsent",
               "liveTargetPermissionRecoveryWiring.startTestingRemainsDisabled",
               "liveTargetPermissionRecoveryWiring.selectedTargetPresented"
-              ,"liveTargetPermissionRecoveryWiring.applyBridgeObserved"
-              ,"liveTargetPermissionRecoveryWiring.exactAppliedObservation"
-              ,"liveTargetPermissionRecoveryWiring.matchingTargetResolved"
+              ,"liveTargetPermissionRecoveryWiring.targetPathApplyObserved"
+              ,"liveTargetPermissionRecoveryWiring.appliedPathPreserved"
+              ,"liveTargetPermissionRecoveryWiring.selectedTargetRetained"
             ]
           },
           {

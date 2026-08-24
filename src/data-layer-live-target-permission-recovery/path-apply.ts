@@ -13,11 +13,6 @@ export interface LiveTargetPermissionPathApplyBridge {
   ) => Promise<LiveTargetPermissionPathApplyResult | undefined>;
 }
 
-export interface LiveTargetPermissionPathApplyObservation {
-  request: LiveTargetPermissionProbeRequest;
-  result: LiveTargetPermissionPathApplyResult;
-}
-
 export function createLiveTargetPermissionPathApplyBridge(options: {
   attachedTarget: () => ObservationTarget | undefined;
   selectedTarget: () => ObservationTarget | undefined;
@@ -25,7 +20,6 @@ export function createLiveTargetPermissionPathApplyBridge(options: {
     request: LiveTargetPermissionProbeRequest,
   ) => Promise<LiveTargetPermissionPathApplyResult>;
   renderReadiness: () => void;
-  observeApplied?: (observation: LiveTargetPermissionPathApplyObservation) => void;
 }): LiveTargetPermissionPathApplyBridge {
   return {
     async apply(observation) {
@@ -37,7 +31,6 @@ export function createLiveTargetPermissionPathApplyBridge(options: {
         pageAccessStatus:observation.pageAccessStatus,
       };
       const result = await options.reconcileProbe(request);
-      options.observeApplied?.({ request, result });
       if (result.status !== "inactive") options.renderReadiness();
       return result;
     },

@@ -939,7 +939,6 @@ const liveTargetPermissionRecoveryCoordinator = createDormantLiveTargetPermissio
         attachedTarget: () => attachedObservationTarget(observationTargetState),
         selectedTarget: () => selectedObservationTarget(observationTargetState),
         renderReadiness: renderLiveContextActions,
-        observeApplied: (observation) => globalThis.dispatchEvent(new CustomEvent("live-target-permission-path-applied", { detail: observation })),
     },
 });
 let pendingObservationTargetSwitchId;

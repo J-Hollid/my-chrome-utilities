@@ -197,6 +197,12 @@ for (const path of [
   assert.equal(await readFile(path, "utf8"), atSpecification(path), `${path} changed`);
 }
 const sidePanelSource = await readFile("src/side-panel.ts", "utf8");
+const installedFixtureSource = await readFile(
+  "test/support/side-panel-capture-fixtures.mjs", "utf8");
+assert.doesNotMatch(sidePanelSource, /live-target-permission-path-applied/u,
+  "dormant preparation must not publish a production-global observer event");
+assert.doesNotMatch(installedFixtureSource, /live-target-permission-path-applied/u,
+  "installed proof must use stable product effects rather than a global test hook");
 assert.match(sidePanelSource,
   /createDormantLiveTargetPermissionRecoveryCoordinator[\s\S]+from "\.\/utilities\/data-layer\/capture\.js"/u,
   "the production composition root must install the dormant coordinator");
@@ -209,6 +215,9 @@ assert.match(sidePanelSource,
 assert.match(sidePanelSource,
   /liveTargetPermissionRecoveryCoordinator\.requestAccess/u,
   "the installed permission action callback must be reachable");
+assert.match(sidePanelSource,
+  /apply: \(observation\) => \{[\s\S]+liveTargetPermissionRecoveryCoordinator\.applyProbeObservation\(observation\);[\s\S]+\},\n\}\);/u,
+  "the existing target-path apply callback must delegate its exact observation to the dormant coordinator");
 
 const observation = shell.browserObservations.find(
   ({ id }) => id === "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER",

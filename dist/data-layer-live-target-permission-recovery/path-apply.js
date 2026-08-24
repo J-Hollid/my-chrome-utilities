@@ -10,7 +10,6 @@ export function createLiveTargetPermissionPathApplyBridge(options) {
                 pageAccessStatus: observation.pageAccessStatus,
             };
             const result = await options.reconcileProbe(request);
-            options.observeApplied?.({ request, result });
             if (result.status !== "inactive")
                 options.renderReadiness();
             return result;

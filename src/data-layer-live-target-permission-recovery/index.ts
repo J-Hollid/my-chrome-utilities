@@ -13,6 +13,5 @@ export {
 export {
   createLiveTargetPermissionPathApplyBridge,
   type LiveTargetPermissionPathApplyBridge,
-  type LiveTargetPermissionPathApplyObservation,
   type LiveTargetPermissionPathApplyResult,
 } from "./path-apply.js";
