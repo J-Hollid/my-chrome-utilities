@@ -117,7 +117,7 @@
                (assert! world (and (evidence world :dormant :assertionLeavesConserved)
                                    (evidence world :conservation :exactIdentitiesConserved))
                         "Dormant-file removal changed executable evidence." {}))}
-   {:pattern #"^after both removals the 21 tracked support helpers are all declared$"
+   {:pattern #"^after both removals the 22 tracked support helpers are all declared$"
     :handler (fn [world _ _]
                (let [helpers (evidence world :helpers)
                      shared-control (keyword "test/support/browser-observation-control.mjs")
@@ -126,7 +126,7 @@
                                       (str/starts-with? (subs (str path) 1)
                                                         "test/support/side-panel-"))
                                     (keys helpers)))]
-                 (assert! world (and (= 21 (- (evidence world :dormant :retainedHelpers)
+                 (assert! world (and (= 22 (- (evidence world :dormant :retainedHelpers)
                                               1 added-side-panel-helpers))
                                      (some? (get helpers shared-control)))
                           "Retained support-helper inventory is not exact." {})))}])

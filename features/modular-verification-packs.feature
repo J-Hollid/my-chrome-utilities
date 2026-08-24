@@ -1295,7 +1295,7 @@ Feature: Modular verification packs
     When VTD-009 removes it
     Then its intended evidence remains supplied by <active_evidence>
     And no active assertion leaf or task identity is removed
-    And after both removals the 21 tracked support helpers are all declared
+    And after both removals the 22 tracked support helpers are all declared
 
     Examples:
       | helper                                                   | active_evidence                                   |

@@ -134,12 +134,17 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
   if(context.causalCategory==="other:layered owner evidence cardinality"){
     const registry=JSON.parse(await readFile(new URL("../verification/packs.json",import.meta.url),"utf8")),
       plan=planVerification(registry,{packIds:["layered_schema"],includeProperties:true}),
-      retainedHelpers=registry.find(({id})=>id==="shell").verificationHelpers.filter(({path})=>
+      helperPaths=registry.find(({id})=>id==="shell").verificationHelpers.map(({path})=>path),
+      retainedHelpers=helperPaths.filter(path=>
         path==="test/support/browser-observation-control.mjs"||
-        !path.startsWith("test/support/side-panel-")).length-1;
-    expectedPreRepairFailure={unitTasks:20,totalTasks:53,retainedHelpers:22};
-    expectedRepairResult={unitTasks:21,totalTasks:54,retainedHelpers:23};
-    repairResult={unitTasks:plan.unitTasks.length,totalTasks:plan.tasks.length,retainedHelpers};
+        !path.startsWith("test/support/side-panel-")).length-1,
+      trackedSupportHelpers=helperPaths.filter(path=>path.startsWith("test/support/")&&
+        path!=="test/support/browser-observation-control.mjs"&&
+        !path.startsWith("test/support/side-panel-")).length;
+    expectedPreRepairFailure={unitTasks:20,totalTasks:53,retainedHelpers:22,trackedSupportHelpers:21};
+    expectedRepairResult={unitTasks:21,totalTasks:54,retainedHelpers:23,trackedSupportHelpers:22};
+    repairResult={unitTasks:plan.unitTasks.length,totalTasks:plan.tasks.length,
+      retainedHelpers,trackedSupportHelpers};
     fixture={id:"layered-owner-evidence-cardinality-v1",causalCategory:context.causalCategory,
       diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{registeredProbeTest:"test/layered-schema-policy-probe-contract-test.mjs"},
