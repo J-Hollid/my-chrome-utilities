@@ -1,1 +1,0 @@
-{"version":3,"file":"live-target-permission-path-apply.js","sourceRoot":"","sources":["../../../src/utilities/data-layer/live-target-permission-path-apply.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,yCAAyC,EAAE,MAClD,gEAAgE,CAAC","sourcesContent":["export { createLiveTargetPermissionPathApplyBridge } from\n  \"../../data-layer-live-target-permission-recovery/path-apply.js\";\n"]}

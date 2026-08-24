@@ -114,8 +114,6 @@ import {
   targetPathStatusForObservation,
   type TargetPathStatus,
 } from "./utilities/data-layer/capture.js";
-import { createLiveTargetPermissionPathApplyBridge } from
-  "./utilities/data-layer/live-target-permission-path-apply.js";
 import { copyLivePageUrl as copyLivePageUrlAction } from "./utilities/data-layer/capture.js";
 import {
   findLiveSessionSummaryElements,
@@ -1059,6 +1057,15 @@ const liveTargetPermissionRecoveryCoordinator =
       );
       renderObservationTargetPicker();
       renderObservationTargetContext();
+    },
+    pathApply:{
+      attachedTarget:() => attachedObservationTarget(observationTargetState),
+      selectedTarget:() => selectedObservationTarget(observationTargetState),
+      renderReadiness:renderLiveContextActions,
+      observeApplied:(observation) => globalThis.dispatchEvent(new CustomEvent(
+        "live-target-permission-path-applied",
+        { detail:observation },
+      )),
     },
   });
 let pendingObservationTargetSwitchId: string | undefined;
@@ -6194,17 +6201,6 @@ backToEventsButton?.addEventListener("click", () => {
   closeInspectorAndReturnToEvents();
 });
 
-const liveTargetPermissionPathApplyBridge = createLiveTargetPermissionPathApplyBridge({
-  attachedTarget:() => attachedObservationTarget(observationTargetState),
-  selectedTarget:() => selectedObservationTarget(observationTargetState),
-  reconcileProbe:(request) => liveTargetPermissionRecoveryCoordinator.reconcileProbe(request),
-  renderReadiness:renderLiveContextActions,
-  observeApplied:(observation) => globalThis.dispatchEvent(new CustomEvent(
-    "live-target-permission-path-applied",
-    { detail:observation },
-  )),
-});
-
 const targetPathStatusController = createTargetPathStatusController({
   render: (path, fieldValue, status) => {
     currentTargetPathStatus = status;
@@ -6221,7 +6217,7 @@ const targetPathStatusController = createTargetPathStatusController({
     persistAndRenderSessionState();
     restartLiveHistoryCaptureIfActive(observation);
     renderObserverState();
-    void liveTargetPermissionPathApplyBridge.apply(observation);
+    void liveTargetPermissionRecoveryCoordinator.applyProbeObservation(observation);
   },
 });
 

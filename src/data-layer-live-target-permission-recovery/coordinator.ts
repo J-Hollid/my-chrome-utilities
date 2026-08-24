@@ -10,6 +10,11 @@ import {
   type LiveTargetPermissionRecoveryReadiness,
 } from "./readiness.js";
 import type { TargetPathStatus } from "../data-layer-target-path-status.js";
+import {
+  createLiveTargetPermissionPathApplyBridge,
+  type LiveTargetPermissionPathApplyObservation,
+  type LiveTargetPermissionPathApplyResult,
+} from "./path-apply.js";
 
 export interface LiveTargetPermissionRecoveryRequest {
   selectedTarget: ObservationTarget;
@@ -37,6 +42,9 @@ export interface LiveTargetPermissionRecoveryCoordinator {
   requestAccess: (
     request: LiveTargetPermissionRecoveryRequest,
   ) => Promise<DormantLiveTargetPermissionRecoveryResult>;
+  applyProbeObservation: (
+    observation: ActivePageObservationResult,
+  ) => Promise<LiveTargetPermissionPathApplyResult | undefined>;
 }
 
 export function createDormantLiveTargetPermissionRecoveryCoordinator(_adapters: {
@@ -49,6 +57,12 @@ export function createDormantLiveTargetPermissionRecoveryCoordinator(_adapters: 
     targetId: string,
     accessState: ObservationTargetAccessState,
   ) => void;
+  pathApply?: {
+    attachedTarget: () => ObservationTarget | undefined;
+    selectedTarget: () => ObservationTarget | undefined;
+    renderReadiness: () => void;
+    observeApplied?: (observation: LiveTargetPermissionPathApplyObservation) => void;
+  };
 }): LiveTargetPermissionRecoveryCoordinator {
   const inactive = (
     request: LiveTargetPermissionRecoveryRequest,
@@ -57,9 +71,17 @@ export function createDormantLiveTargetPermissionRecoveryCoordinator(_adapters: 
     selectedTarget:request.selectedTarget,
   });
 
-  return {
+  const coordinator: LiveTargetPermissionRecoveryCoordinator = {
     projectReadiness:liveTargetPermissionRecoveryReadiness,
     reconcileProbe:inactive,
     requestAccess:inactive,
+    applyProbeObservation:async () => undefined,
   };
+  if (_adapters.pathApply) {
+    coordinator.applyProbeObservation = createLiveTargetPermissionPathApplyBridge({
+      ..._adapters.pathApply,
+      reconcileProbe:(request) => coordinator.reconcileProbe(request),
+    }).apply;
+  }
+  return coordinator;
 }
