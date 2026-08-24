@@ -4,6 +4,8 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
 import {
+  liveTargetPermissionPathApplyEvidenceTask,
+  liveTargetPermissionPathApplyFocusedTaskKeys,
   liveTargetPermissionRecoveryEvidenceTask,
   liveTargetPermissionRecoveryFocusedTaskKeys,
   liveTargetPermissionRecoveryPackIds,
@@ -177,25 +179,47 @@ for (const drift of [
 ]) {
   assert.ok(modularFeatureSource.includes(`| ${drift} |`), `missing drift guard: ${drift}`);
 }
-const focusedPlanFixture = {
-  mode:"focused-task",
-  includeProperties:false,
-  requestedPackIds:liveTargetPermissionRecoveryPackIds,
-  packIds:liveTargetPermissionRecoveryPackIds,
-  focusedTaskKeys:liveTargetPermissionRecoveryFocusedTaskKeys,
-  tasks:["build:dist", ...liveTargetPermissionRecoveryFocusedTaskKeys].map((key) => ({
-    key,
-    stage:key.split(":", 1)[0],
-    executable:"node",
-    args:[],
-    prerequisiteTaskKeys:key === "build:dist" || key.startsWith("unit:")
-      ? [] : ["build:dist"],
-  })),
-};
+function focusedPlanFixtureFor(focusedTaskKeys) {
+  return {
+    mode:"focused-task",
+    includeProperties:false,
+    requestedPackIds:liveTargetPermissionRecoveryPackIds,
+    packIds:liveTargetPermissionRecoveryPackIds,
+    focusedTaskKeys,
+    tasks:["build:dist", ...focusedTaskKeys].map((key) => ({
+      key,
+      stage:key.split(":", 1)[0],
+      executable:"node",
+      args:[],
+      prerequisiteTaskKeys:key === "build:dist" || key.startsWith("unit:")
+        ? [] : ["build:dist"],
+    })),
+  };
+}
+const focusedPlanFixture = focusedPlanFixtureFor(
+  liveTargetPermissionRecoveryFocusedTaskKeys,
+);
 assert.equal(validateLiveTargetPermissionRecoveryFocusedPlan(
   focusedPlanFixture,
   liveTargetPermissionRecoveryEvidenceTask,
 ), true);
+const pathApplyFocusedPlanFixture = focusedPlanFixtureFor(
+  liveTargetPermissionPathApplyFocusedTaskKeys,
+);
+assert.equal(validateLiveTargetPermissionRecoveryFocusedPlan(
+  pathApplyFocusedPlanFixture,
+  liveTargetPermissionPathApplyEvidenceTask,
+), true);
+assert.throws(() => validateLiveTargetPermissionRecoveryFocusedPlan(
+  pathApplyFocusedPlanFixture,
+  liveTargetPermissionRecoveryEvidenceTask,
+), /exact causal focused bootstrap/u,
+  "the completed preparation retains its settled task set");
+assert.throws(() => validateLiveTargetPermissionRecoveryFocusedPlan(
+  focusedPlanFixture,
+  liveTargetPermissionPathApplyEvidenceTask,
+), /exact causal focused bootstrap/u,
+  "the path-apply preparation requires its direct acceptance task");
 assert.throws(() => validateLiveTargetPermissionRecoveryFocusedPlan(
   { ...focusedPlanFixture, includeProperties:true },
   liveTargetPermissionRecoveryEvidenceTask,

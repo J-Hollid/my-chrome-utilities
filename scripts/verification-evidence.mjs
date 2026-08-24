@@ -44,7 +44,7 @@ import {
 } from "./verification-pack-cardinality/focused-evidence.mjs";
 import {
   isLiveTargetPermissionRecoveryEvidenceTask,
-  liveTargetPermissionRecoveryFocusedTaskKeys,
+  liveTargetPermissionRecoveryFocusedTaskKeysFor,
   liveTargetPermissionRecoveryPackIds,
   validateLiveTargetPermissionRecoveryFocusedPlan,
 } from "./live-target-permission-recovery-focused-evidence.mjs";
@@ -527,7 +527,7 @@ function canonicalRegistryCardinalityPlan(candidatePacks, {
 }
 
 function canonicalLiveTargetPermissionRecoveryPlan(candidatePacks, {
-  changeSet, basePacks, historicalRegistryFallback,
+  changeSet, basePacks, historicalRegistryFallback, evidenceTask,
 }) {
   const bindingPlan = planVerification(candidatePacks, {
     changedPaths:changeSet.paths,
@@ -546,7 +546,11 @@ function canonicalLiveTargetPermissionRecoveryPlan(candidatePacks, {
     includeProperties:false,
   }));
   const candidates = new Map(canonical.tasks.map((task) => [task.key, task]));
-  const requested = liveTargetPermissionRecoveryFocusedTaskKeys.map((key) => {
+  const focusedTaskKeys = liveTargetPermissionRecoveryFocusedTaskKeysFor(evidenceTask);
+  if (!focusedTaskKeys) {
+    throw new Error(`Unknown permission-recovery evidence task: ${evidenceTask}`);
+  }
+  const requested = focusedTaskKeys.map((key) => {
     const task = candidates.get(key);
     if (!task) throw new Error(`Permission-recovery focused task is not registered: ${key}`);
     return task;
@@ -558,7 +562,7 @@ function canonicalLiveTargetPermissionRecoveryPlan(candidatePacks, {
     mode:"focused-task",
     tasks:canonical.tasks.filter(({ key }) => tasks.some((task) => task.key === key)),
     includeProperties:false,
-    focusedTaskKeys:[...liveTargetPermissionRecoveryFocusedTaskKeys],
+    focusedTaskKeys:[...focusedTaskKeys],
   };
 }
 
@@ -590,7 +594,7 @@ async function canonicalPlanDocument({
       })
     : isLiveTargetPermissionRecoveryEvidenceTask(evidenceTask)
       ? canonicalLiveTargetPermissionRecoveryPlan(candidatePacks, {
-        changeSet, basePacks, historicalRegistryFallback,
+        changeSet, basePacks, historicalRegistryFallback, evidenceTask,
       })
     : planVerification(candidatePacks, {
       packIds,

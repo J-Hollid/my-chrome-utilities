@@ -88,7 +88,7 @@ import {
 } from "./verification-pack-cardinality/focused-evidence.mjs";
 import {
   isLiveTargetPermissionRecoveryEvidenceTask,
-  liveTargetPermissionRecoveryFocusedTaskKeys,
+  liveTargetPermissionRecoveryFocusedTaskKeysFor,
   liveTargetPermissionRecoveryPackIds,
   validateLiveTargetPermissionRecoveryFocusedPlan,
 } from "./live-target-permission-recovery-focused-evidence.mjs";
@@ -400,6 +400,8 @@ export function focusedAcceptanceOptions(args) {
   }
   const permissionRecoveryEvidence =
     isLiveTargetPermissionRecoveryEvidenceTask(options.prepareEvidence);
+  const permissionRecoveryFocusedTaskKeys =
+    liveTargetPermissionRecoveryFocusedTaskKeysFor(options.prepareEvidence);
   if (options.focusedTaskKeys.length && ((!permissionRecoveryEvidence && options.packIds.length !== 1) ||
       options.changedPaths.length ||
       options.terminalFull || options.includeProperties || options.withDependencies ||
@@ -420,7 +422,7 @@ export function focusedAcceptanceOptions(args) {
         (JSON.stringify([...options.packIds].sort()) !==
            JSON.stringify([...liveTargetPermissionRecoveryPackIds].sort()) ||
          JSON.stringify([...options.focusedTaskKeys].sort()) !==
-           JSON.stringify([...liveTargetPermissionRecoveryFocusedTaskKeys].sort()))) {
+           JSON.stringify([...permissionRecoveryFocusedTaskKeys].sort()))) {
       throw new Error("Permission-recovery evidence requires its exact causal packs and focused tasks");
     }
     if (options.withDependencies || options.skipBuild || options.shard || options.terminalFull) {
