@@ -14,10 +14,10 @@ const assertionLeavesByTarget = {
   "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER": [
     ["liveTargetPermissionRecoveryWiring","moduleLoaded"],
     ["liveTargetPermissionRecoveryWiring","inactive"],
-    ["liveTargetPermissionRecoveryWiring","callbacks"],
-    ["liveTargetPermissionRecoveryWiring","requestAccessVisible"],
-    ["liveTargetPermissionRecoveryWiring","startTestingEnabled"],
-    ["liveTargetPermissionRecoveryWiring","selectedLabel"],
+    ["liveTargetPermissionRecoveryWiring","callbacksSuppressed"],
+    ["liveTargetPermissionRecoveryWiring","requestAccessAbsent"],
+    ["liveTargetPermissionRecoveryWiring","startTestingRemainsDisabled"],
+    ["liveTargetPermissionRecoveryWiring","selectedTargetPresented"],
   ],
   "FRESH_LIVE_SESSION_BROWSER_ADAPTER": [
     ["freshLiveSession","initial","initial","id"],

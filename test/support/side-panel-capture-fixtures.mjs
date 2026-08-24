@@ -387,7 +387,7 @@ export const liveTargetPermissionRecoveryWiringRuntime = `(async () => {
   const result = await coordinator.requestAccess({ selectedTarget, historyPath:"event.history" });
   const buttons = [...document.querySelectorAll("button")].map(({ textContent }) => textContent.trim());
   if (result.status !== "inactive" || calls.length || buttons.includes("Request access")) throw new Error("Preparation activated permission recovery");
-  return { moduleLoaded:Boolean(seam.liveTargetPermissionRecoveryReadiness), inactive:result.status === "inactive", callbacks:calls.length, requestAccessVisible:buttons.includes("Request access"), startTestingEnabled:!q("#start-data-layer-testing").disabled, selectedLabel:q("#live-setup-target").textContent };
+  return { moduleLoaded:Boolean(seam.liveTargetPermissionRecoveryReadiness), inactive:result.status === "inactive", callbacksSuppressed:calls.length === 0, requestAccessAbsent:!buttons.includes("Request access"), startTestingRemainsDisabled:q("#start-data-layer-testing").disabled, selectedTargetPresented:q("#live-setup-target").textContent.includes("Checkout selected") };
 })()`;
 
 export const fixturePrograms = Object.freeze({ ...projectFixturePrograms, payloadPathFilterPickerRuntime, singleLiveEventFeedRuntime, savedSessionLiveFeedRuntime, savedSessionLiveFeedReloadRuntime, freshLiveSessionRuntime, freshLiveSessionReloadRuntime, savedEventFeedFiltersSeedRuntime, savedEventFeedFiltersRuntime, liveTargetPermissionRecoveryWiringRuntime });

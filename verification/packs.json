@@ -6989,10 +6989,10 @@
         "originalLeaves": [
           "liveTargetPermissionRecoveryWiring.moduleLoaded",
           "liveTargetPermissionRecoveryWiring.inactive",
-          "liveTargetPermissionRecoveryWiring.callbacks",
-          "liveTargetPermissionRecoveryWiring.requestAccessVisible",
-          "liveTargetPermissionRecoveryWiring.startTestingEnabled",
-          "liveTargetPermissionRecoveryWiring.selectedLabel",
+          "liveTargetPermissionRecoveryWiring.callbacksSuppressed",
+          "liveTargetPermissionRecoveryWiring.requestAccessAbsent",
+          "liveTargetPermissionRecoveryWiring.startTestingRemainsDisabled",
+          "liveTargetPermissionRecoveryWiring.selectedTargetPresented",
           "schemaViewContainment.containedControls",
           "schemaViewContainment.editorContainsActions",
           "schemaViewContainment.closeReviewContainsActions",
@@ -7018,10 +7018,10 @@
             "leaves": [
               "liveTargetPermissionRecoveryWiring.moduleLoaded",
               "liveTargetPermissionRecoveryWiring.inactive",
-              "liveTargetPermissionRecoveryWiring.callbacks",
-              "liveTargetPermissionRecoveryWiring.requestAccessVisible",
-              "liveTargetPermissionRecoveryWiring.startTestingEnabled",
-              "liveTargetPermissionRecoveryWiring.selectedLabel"
+              "liveTargetPermissionRecoveryWiring.callbacksSuppressed",
+              "liveTargetPermissionRecoveryWiring.requestAccessAbsent",
+              "liveTargetPermissionRecoveryWiring.startTestingRemainsDisabled",
+              "liveTargetPermissionRecoveryWiring.selectedTargetPresented"
             ]
           },
           {
