@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
 const specificationCommit = "808c15f5c96258a525010d2188ea2c0cde471e31";
@@ -84,3 +85,45 @@ const evidence = {
   automaticResumption:true,
 };
 console.log(JSON.stringify({ liveTargetPermissionRecoveryPreparationAcceptance:evidence }));
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const runtimeSource = await readFile("test/support/side-panel-capture-fixtures.mjs", "utf8");
+  const expectedPreRepairFailure = {
+    positiveBooleanLeaves:false,
+    absenceSemanticsPositive:false,
+  };
+  const expectedRepairResult = {
+    positiveBooleanLeaves:true,
+    absenceSemanticsPositive:true,
+  };
+  const repairResult = {
+    positiveBooleanLeaves:["moduleLoaded", "inactive", "callbacksSuppressed",
+      "requestAccessAbsent", "startTestingRemainsDisabled", "selectedTargetPresented"]
+      .every((key) => runtimeSource.includes(`${key}:`)),
+    absenceSemanticsPositive:!["callbacks:", "requestAccessVisible:",
+      "startTestingEnabled:", "selectedLabel:"].some((key) => runtimeSource.includes(key)),
+  };
+  assert.deepEqual(repairResult, expectedRepairResult);
+  const normalized = (value) => Array.isArray(value) ? value.map(normalized)
+    : value && typeof value === "object" ? Object.fromEntries(Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, nested]) => [key, normalized(nested)])) : value;
+  const digest = (value) => createHash("sha256")
+    .update(JSON.stringify(normalized(value))).digest("hex");
+  const fixture = {
+    id:"permission-recovery-positive-evidence-leaves-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{ observationKey:"liveTargetPermissionRecoveryWiring",
+      requiredLeafType:"positive boolean" },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const fixtureDigest = digest(fixture);
+  console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
+    version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
+  } }));
+}
