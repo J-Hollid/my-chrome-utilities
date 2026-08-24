@@ -1,27 +1,41 @@
 import { execFileSync } from "node:child_process";
+import { mkdirSync } from "node:fs";
 
-const feature = "features/modular-verification-packs.feature";
-const ir = "build/acceptance/ir/modular-verification-packs.json";
-const generated = "build/acceptance/generated";
+const cases = [
+  {
+    feature:"features/data-layer-observation-target-access.feature",
+    scenario:"Data layer observation target access 009",
+  },
+  {
+    feature:"features/data-layer-target-path-status-runtime.feature",
+    scenario:"Data layer target path status runtime 002",
+  },
+];
 
-execFileSync("bb", ["gherkin-parser", feature, ir], { stdio:"inherit" });
-execFileSync("bb", ["acceptance-entrypoint-generator", ir, generated], { stdio:"inherit" });
+mkdirSync("build/acceptance/ir", { recursive:true });
+mkdirSync("build/acceptance/generated", { recursive:true });
 
-const expression = String.raw`
+for (const [index, testCase] of cases.entries()) {
+  const ir = `build/acceptance/ir/live-target-permission-recovery-${index}.json`;
+  execFileSync("bb", ["gherkin-parser", testCase.feature, ir], { stdio:"inherit" });
+  execFileSync("bb", ["acceptance-entrypoint-generator", ir, "build/acceptance/generated"], {
+    stdio:"inherit",
+  });
+  const expression = String.raw`
 (require '[acceptance.runtime :as runtime]
          '[acceptance.pack-runtime :as packs]
          '[aps.json :as aps-json])
-(let [feature (aps-json/read-json-file "build/acceptance/ir/modular-verification-packs.json")
-      wanted (set (map #(format "Modular verification packs %03d" %)
-                       (range 199 207)))
+(let [feature (aps-json/read-json-file ${JSON.stringify(ir)})
       focused (assoc feature :scenarios
-                     (filterv #(contains? wanted (:name %)) (:scenarios feature)))
+                     (filterv #(= ${JSON.stringify(testCase.scenario)} (:name %))
+                              (:scenarios feature)))
       result (runtime/run-feature!
               focused
-              (packs/handlers-for-feature "features/modular-verification-packs.feature"))]
-  (when-not (= {:status :passed :executions 12} result)
-    (throw (ex-info "Unexpected focused permission-recovery acceptance result"
+              (packs/handlers-for-feature ${JSON.stringify(testCase.feature)}))]
+  (when-not (= {:status :passed :executions 1} result)
+    (throw (ex-info "Unexpected focused permission-recovery product result"
                     {:result result}))))`;
+  execFileSync("bb", ["-e", expression], { stdio:"inherit" });
+}
 
-execFileSync("bb", ["-e", expression], { stdio:"inherit" });
-console.log("live target permission recovery acceptance scenarios passed");
+console.log("live target permission recovery product scenarios passed");

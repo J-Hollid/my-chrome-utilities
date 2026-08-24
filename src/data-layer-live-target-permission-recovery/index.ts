@@ -1,10 +1,16 @@
 export {
   createDormantLiveTargetPermissionRecoveryCoordinator,
+  type ActiveLiveTargetPermissionRecoveryResult,
   type DormantLiveTargetPermissionRecoveryResult,
   type LiveTargetPermissionProbeRequest,
   type LiveTargetPermissionRecoveryCoordinator,
   type LiveTargetPermissionRecoveryRequest,
+  type LiveTargetPermissionRecoveryResult,
 } from "./coordinator.js";
+export {
+  createLiveTargetPermissionRecoveryActionHost,
+  type LiveTargetPermissionRecoveryActionHost,
+} from "./action-host.js";
 export {
   liveTargetPermissionRecoveryReadiness,
   type LiveTargetPermissionRecoveryReadiness,

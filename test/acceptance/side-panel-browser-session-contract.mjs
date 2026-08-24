@@ -51,7 +51,7 @@ assert.equal(sidePanelTargetContract.filter(({ module }) => module === "schema-v
 assert.equal(sidePanelTargetContract.filter(({ module }) => module === "schema-documentation").length, 9);
 assert.equal(Object.keys(installedOrderPairs).length, 4);
 assert.deepEqual(sidePanelTargetContract.filter(({ owningPack }) => owningPack === "shell")
-  .map(({ assertionLeaves }) => assertionLeaves.length), [12, 9, 9]);
+  .map(({ assertionLeaves }) => assertionLeaves.length), [11, 9, 9]);
 assert.equal(sidePanelTargetContract.every(({ assertionLeaves }) => assertionLeaves.length > 0), true,
   "every target must map its installed output to reachable assertion leaves");
 assert.notDeepEqual(normalizeInstalledObservation({ stable:"before", count:1 }),

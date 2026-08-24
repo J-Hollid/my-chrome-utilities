@@ -2588,7 +2588,17 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       });
     }
     if (activeBrowserTargetEnvironment.LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER === "1") {
-      liveTargetPermissionRecoveryWiringObservation = await evaluate(socket, liveTargetPermissionRecoveryWiringRuntime);
+      const recoveryProject = await evaluate(
+        socket,
+        guidedTransportProjectSetupRuntime.replaceAll("queue.history", "event.history"),
+      );
+      await reloadPanel(socket);
+      try {
+        liveTargetPermissionRecoveryWiringObservation = await evaluate(socket, liveTargetPermissionRecoveryWiringRuntime);
+      } finally {
+        await evaluate(socket, guidedTransportProjectRestoreRuntime(recoveryProject));
+        await reloadPanel(socket);
+      }
     }
     if (activeBrowserTargetEnvironment.SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter) {
       await reloadPanel(socket);

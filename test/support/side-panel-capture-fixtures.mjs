@@ -368,31 +368,38 @@ const savedEventFeedFiltersRuntime = `(async () => {
 
 export const liveTargetPermissionRecoveryWiringRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
-  const waitFor = async (predicate, label) => { for (let attempt = 0; attempt < 100; attempt += 1) { const result = predicate(); if (result) return result; await new Promise((resolve) => setTimeout(resolve, 10)); } throw new Error("Timed out waiting for " + label); };
+  const waitFor = async (predicate, label) => { for (let attempt = 0; attempt < 100; attempt += 1) { const result = predicate(); if (result) return result; await new Promise((resolve) => setTimeout(resolve, 10)); } throw new Error("Timed out waiting for " + (typeof label === "function" ? label() : label)); };
   const permissionCalls = [];
   const scriptCalls = [];
   globalThis.chrome = {
     tabs:{ query:async () => [{ id:42, windowId:7, url:"https://shop.example.test/checkout", title:"Checkout", active:true }] },
     permissions:{ request:async (...args) => { permissionCalls.push(args); return true; } },
-    scripting:{ executeScript:async (...args) => { scriptCalls.push(args); return [{ result:{ event:{ history:[] } } }]; } },
+    scripting:{ executeScript:async (request) => {
+      scriptCalls.push(request);
+      if (scriptCalls.length === 2 && permissionCalls.length === 0) throw new Error("missing host permission");
+      return [{ result:{ event:{ history:[] } } }];
+    } },
   };
   q("#choose-observation-target").click();
   await waitFor(() => document.querySelector("#observation-target-list [data-target-id]"), "selected target candidate");
   q("#observation-target-list [data-target-id]").click();
-  await waitFor(() => scriptCalls.length > 0 && q("#history-path-status").textContent.trim() === "Waiting for observation path", "applied target path");
-  const buttons = [...document.querySelectorAll("button")].map(({ textContent }) => textContent.trim());
-  const selectedTargetPresented = q("#live-setup-target").textContent.includes("Checkout selected");
-  const startTestingRemainsDisabled = q("#start-data-layer-testing").disabled;
-  const requestAccessAbsent = !buttons.includes("Request access");
-  const inactive = requestAccessAbsent && startTestingRemainsDisabled;
-  const targetPathApplyObserved = scriptCalls.length > 0 && q("#history-path-status").textContent.trim() === "Waiting for observation path";
+  const requestAccess = await waitFor(() => document.querySelector("#live-setup-readiness [data-live-target-permission-recovery]"), () => "current-step Request access; result " + q("#observation-target-result").textContent + "; readiness " + q("#live-setup-readiness").textContent + "; target " + q("#live-setup-target").textContent);
+  const selectedTargetRetained = q("#live-setup-target").textContent.includes("Checkout selected");
+  const requestAccessVisible = requestAccess.textContent === "Request access" && q("#observation-target-picker").hidden;
+  requestAccess.click();
+  await waitFor(() => !q("#start-data-layer-testing").disabled, () => "same-tab permission recovery readiness; permissions " + JSON.stringify(permissionCalls) + "; scripts " + JSON.stringify(scriptCalls.map(({ target, args }) => ({ target, args }))) + "; readiness " + q("#live-setup-readiness").textContent + "; target " + q("#live-setup-target").textContent);
+  const exactOriginRequested = JSON.stringify(permissionCalls) === JSON.stringify([[{ origins:["https://shop.example.test/*"] }]]);
+  const sameTabPathRechecked = scriptCalls.length === 3 && scriptCalls.every(({ target, args }) => target.tabId === 42 && args[0] === "event.history");
+  const readinessReady = q("#live-setup-readiness").textContent.includes("Ready");
+  const startTestingEnabled = !q("#start-data-layer-testing").disabled && q("#start-data-layer-testing").textContent === "Start testing Checkout";
+  const targetPathApplyObserved = scriptCalls.length === 3;
   const appliedPathPreserved = q("#history-path-display").textContent === q("#history-path").value;
-  const selectedTargetRetained = selectedTargetPresented && q("#live-setup-target").textContent.includes("Checkout selected");
   const callbackTargetRendered = q("#live-target-page").textContent.includes("Checkout");
   const callbackPageUrlRendered = q("#live-page-url").textContent === "https://shop.example.test/checkout";
   const callbackCopyEnabled = !q("#copy-live-page-url").disabled;
-  if (permissionCalls.length || !inactive || !selectedTargetPresented || !targetPathApplyObserved || !appliedPathPreserved || !selectedTargetRetained || !callbackTargetRendered || !callbackPageUrlRendered || !callbackCopyEnabled) throw new Error("Preparation activated permission recovery or missed its installed target-path application");
-  return { installedProjection:selectedTargetPresented && startTestingRemainsDisabled, inactive, callbacksSuppressed:permissionCalls.length === 0, requestAccessAbsent, startTestingRemainsDisabled, selectedTargetPresented, targetPathApplyObserved, appliedPathPreserved, selectedTargetRetained, callbackTargetRendered, callbackPageUrlRendered, callbackCopyEnabled };
+  const observation = { selectedTargetRetained, requestAccessVisible, exactOriginRequested, sameTabPathRechecked, readinessReady, startTestingEnabled, targetPathApplyObserved, appliedPathPreserved, callbackTargetRendered, callbackPageUrlRendered, callbackCopyEnabled };
+  if (!Object.values(observation).every(Boolean)) throw new Error("Installed permission recovery did not preserve the selected target and exact same-tab boundary: " + JSON.stringify(observation) + "; permissions " + JSON.stringify(permissionCalls) + "; scripts " + JSON.stringify(scriptCalls.map(({ target, args }) => ({ target, args }))));
+  return observation;
 })()`;
 
 export const fixturePrograms = Object.freeze({ ...projectFixturePrograms, payloadPathFilterPickerRuntime, singleLiveEventFeedRuntime, savedSessionLiveFeedRuntime, savedSessionLiveFeedReloadRuntime, freshLiveSessionRuntime, freshLiveSessionReloadRuntime, savedEventFeedFiltersSeedRuntime, savedEventFeedFiltersRuntime, liveTargetPermissionRecoveryWiringRuntime });

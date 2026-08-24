@@ -97,6 +97,7 @@ assert.deepEqual(pathApplyConsumer.tasks, [
 ]);
 assert.deepEqual(consumer.tasks, [
   "unit:test/live-target-permission-recovery-preparation-contract-test.mjs",
+  "unit:test/live-target-permission-recovery-acceptance-test.mjs",
   "browser-observation:LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER+SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER+WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER",
 ]);
 assert.deepEqual(disposition, {
@@ -140,7 +141,7 @@ assert.equal((modularFeatureSource.match(
 assert.match(sidePanelContractHandlerSource,
   /filterv #\(= 9 %\)[\s\S]+:shellLeaves/u);
 assert.match(sidePanelContractHandlerSource,
-  /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7060/u);
+  /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7059/u);
 assert.match(permissionRecoveryHandlerSource,
   /"202"[\s\S]+only affected packs are Capture, Event Library, Schemas, Defects, and Shell/u);
 assert.match(permissionRecoveryHandlerSource,
@@ -158,6 +159,7 @@ const productionChanges = execFileSync(
   { encoding:"utf8" },
 ).trim().split("\n").filter(Boolean).sort();
 assert.deepEqual(productionChanges, [
+  "src/data-layer-live-target-permission-recovery/action-host.ts",
   "src/data-layer-live-target-permission-recovery/coordinator.ts",
   "src/data-layer-live-target-permission-recovery/index.ts",
   "src/data-layer-live-target-permission-recovery/path-apply-callback.ts",
@@ -278,14 +280,14 @@ assert.deepEqual(observation.observationKeys, ["liveTargetPermissionRecoveryWiri
 const evidence = {
   stableTask:true,
   exactBase:true,
-  productCandidateAbsent:true,
+  productCandidateActivatedThroughReviewedSeam:true,
   productScenariosUnchanged:true,
   captureOwnedPrefix:true,
   shellConsumer:true,
   directProof:true,
   broadSidePanelCompositionOnly:true,
   integratedSeam:true,
-  dormantBehavior:true,
+  productBehaviorBoundedToPreparedSeam:true,
   conservativeClosure:true,
   noAllPack:true,
   automaticResumption:true,
@@ -323,11 +325,11 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       expectedPreRepairFailure:{positiveBooleanLeaves:false,absenceSemanticsPositive:false},
       expectedRepairResult:{positiveBooleanLeaves:true,absenceSemanticsPositive:true},
       repairResult:{
-        positiveBooleanLeaves:["installedProjection", "inactive", "callbacksSuppressed",
-          "requestAccessAbsent", "startTestingRemainsDisabled", "selectedTargetPresented"]
-          .every((key) => runtimeSource.includes(`${key}:`)),
-        absenceSemanticsPositive:!["callbacks:", "requestAccessVisible:",
-          "startTestingEnabled:", "selectedLabel:"].some((key) => runtimeSource.includes(key)),
+        positiveBooleanLeaves:["selectedTargetRetained", "requestAccessVisible",
+          "exactOriginRequested", "sameTabPathRechecked", "readinessReady",
+          "startTestingEnabled"].every((key) => runtimeSource.includes(key)),
+        absenceSemanticsPositive:!["callbacksSuppressed", "requestAccessAbsent",
+          "startTestingRemainsDisabled"].some((key) => runtimeSource.includes(key)),
       },
     },
     "other:acceptance example domain":{
@@ -358,7 +360,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         containmentLeaves:/filterv #\(= 9 %\)[\s\S]+:shellLeaves/u
           .test(sidePanelContractHandlerSource),
         globalBrowserInventory:
-          /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7060/u
+          /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7059/u
             .test(sidePanelContractHandlerSource),
       },
     },

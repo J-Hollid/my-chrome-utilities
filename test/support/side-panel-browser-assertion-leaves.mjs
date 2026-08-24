@@ -12,12 +12,12 @@ const reorderPresentationLeaves=(index)=>[
 ];
 const assertionLeavesByTarget = {
   "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER": [
-    ["liveTargetPermissionRecoveryWiring","installedProjection"],
-    ["liveTargetPermissionRecoveryWiring","inactive"],
-    ["liveTargetPermissionRecoveryWiring","callbacksSuppressed"],
-    ["liveTargetPermissionRecoveryWiring","requestAccessAbsent"],
-    ["liveTargetPermissionRecoveryWiring","startTestingRemainsDisabled"],
-    ["liveTargetPermissionRecoveryWiring","selectedTargetPresented"],
+    ["liveTargetPermissionRecoveryWiring","selectedTargetRetained"],
+    ["liveTargetPermissionRecoveryWiring","requestAccessVisible"],
+    ["liveTargetPermissionRecoveryWiring","exactOriginRequested"],
+    ["liveTargetPermissionRecoveryWiring","sameTabPathRechecked"],
+    ["liveTargetPermissionRecoveryWiring","readinessReady"],
+    ["liveTargetPermissionRecoveryWiring","startTestingEnabled"],
     ["liveTargetPermissionRecoveryWiring","targetPathApplyObserved"],
     ["liveTargetPermissionRecoveryWiring","appliedPathPreserved"],
     ["liveTargetPermissionRecoveryWiring","selectedTargetRetained"],

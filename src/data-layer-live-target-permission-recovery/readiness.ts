@@ -11,7 +11,7 @@ export interface LiveTargetPermissionRecoveryReadiness {
   targetSelected: boolean;
   ready: boolean;
   currentStep: LiveTargetPermissionRecoveryStep;
-  requestAccessVisible: false;
+  requestAccessVisible: boolean;
 }
 
 export function liveTargetPermissionRecoveryReadiness(input: {
@@ -21,11 +21,13 @@ export function liveTargetPermissionRecoveryReadiness(input: {
   const targetSelected = input.selectedTarget !== undefined;
   const ready = input.selectedTarget?.accessState === "Ready"
     && input.pathStatus === "Ready";
+  const requestAccessVisible = input.selectedTarget?.accessState === "Permission required"
+    && input.pathStatus === "Permission required";
 
   return {
     targetSelected,
     ready,
     currentStep: !targetSelected ? "target" : ready ? "session" : "readiness",
-    requestAccessVisible: false,
+    requestAccessVisible,
   };
 }
