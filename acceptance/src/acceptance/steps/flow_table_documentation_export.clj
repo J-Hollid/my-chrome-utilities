@@ -156,10 +156,10 @@
    {:keys ["invalid_metadata"] :rows #{["a missing valid validation state"] ["a body digest different from its record digest"] ["a nonpositive body byte length"] ["an unsupported Excel contract version"]}}
    {:keys ["page_instance" "documented_example"] :rows #{["Cart" "cart"] ["Confirmation" "confirmation"]}}
    {:keys ["page_instance" "property" "example_source" "allowed_values" "rendered_example"]
-    :rows #{["Cart" "page_name" "a direct documented example" "cart or category" "cart-page"]
-            ["Cart" "ecommerce_order_id" "an inherited documented example" "draft or paid" "ORDER-100"]
-            ["Cart" "currency" "a mixed inherited and local documented example" "EUR or USD" "Euro checkout"]
-            ["Confirmation" "page_type" "an overridden documented example" "cart or confirmation" "confirmation-example"]
+    :rows #{["Cart" "page_name" "a direct documented example" "cart or category" "\"cart-page\""]
+            ["Cart" "ecommerce_order_id" "an inherited documented example" "draft or paid" "\"ORDER-100\""]
+            ["Cart" "currency" "a mixed inherited and local documented example" "EUR or USD" "\"Euro checkout\""]
+            ["Confirmation" "page_type" "an overridden documented example" "cart or confirmation" "\"confirmation-example\""]
             ["Cart" "coupon_code" "no effective documented example" "WELCOME or SAVE10" "empty text"]}}
    {:keys ["viewport_width" "editor_layout"] :rows #{["1280 pixels" "outline and selected block detail appear together"] ["360 pixels" "outline and selected block detail open one at a time"]}}])
 
