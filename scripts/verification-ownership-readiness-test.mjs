@@ -313,7 +313,7 @@ console.log(JSON.stringify({verificationOwnershipReadinessAcceptance:{
     prefixes:{declarationOnly:true,proposalValidated:true,currentConflictRejected:true,exactCommittedPaths:true,noSideEffects:true},
     routing:{immediatePreparationNote:true,observationUsesConservativePlan:true,pausedNotCompleted:true,
       reissuedFromQa:true,ordinaryChannel:true,knownCandidateReplay:replayed.plannedPackIds.length===13,
-      durableDispositions:dispositions.dispositions.length===9},
+      durableDispositions:dispositions.dispositions.length===11},
     judgment:{structuredOutcomes:true,semanticScope:true,unrelatedFamilies:true,measuredCost:true,
       failureSurface:true,seamClarity:true,preparationRisk:true,noNumericRule:true,allPackMandatory:true},
     portfolio:{appendOnly:true,duplicateOccurrence:true,identityBound:true,planOnlyNonMutation:true,

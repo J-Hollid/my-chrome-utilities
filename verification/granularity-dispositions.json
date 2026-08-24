@@ -82,7 +82,29 @@
         "src/data-layer-live-target-permission-recovery/readiness.ts"
       ],
       "reviewAuthority": "qa-integration",
-      "reason": "The independently tested Capture coordination seam and installed Shell consumer provide the future probe, action, exact-origin, and same-tab recheck change point while the broad side-panel composition root remains unchanged."
+      "reason": "The independently tested Capture coordination seam and installed Shell consumer provide the future probe, action, exact-origin, and same-tab recheck change point while the broad side-panel composition root retains only behavior-preserving delegation."
+    },
+    {
+      "task": "verification-slice-live-target-permission-recovery",
+      "path": "src/side-panel.ts",
+      "decision": "integrated-seam",
+      "replacementPaths": [
+        "src/data-layer-live-target-permission-recovery/coordinator.ts",
+        "src/data-layer-live-target-permission-recovery/readiness.ts"
+      ],
+      "reviewAuthority": "qa-integration",
+      "reason": "The production composition root now installs and invokes the dormant Capture coordinator for readiness projection, failed-probe reconciliation, and permission action routing while retaining the existing behavior as its inactive fallback."
+    },
+    {
+      "task": "verification-slice-live-target-permission-recovery",
+      "path": "src/utilities/data-layer/capture.ts",
+      "decision": "integrated-seam",
+      "replacementPaths": [
+        "src/data-layer-live-target-permission-recovery/coordinator.ts",
+        "src/data-layer-live-target-permission-recovery/readiness.ts"
+      ],
+      "reviewAuthority": "qa-integration",
+      "reason": "The existing public Capture facade exposes only the dormant coordinator factory to its one installed Shell consumer; recovery behavior remains owned by the independently tested replacement prefix."
     }
   ]
 }
