@@ -43,3 +43,10 @@ export function createInstalledDataLayerLifecycle(
     },
   };
 }
+
+export async function mountInstalledDataLayerRuntime(): Promise<
+  InstalledDataLayerControllerLifecycle
+> {
+  const { installedDataLayerApplication } = await import("./schemas/application.js");
+  return installedDataLayerApplication;
+}
