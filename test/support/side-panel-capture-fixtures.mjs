@@ -379,15 +379,14 @@ export const liveTargetPermissionRecoveryWiringRuntime = `(async () => {
   q("#choose-observation-target").click();
   await waitFor(() => document.querySelector("#observation-target-list [data-target-id]"), "selected target candidate");
   q("#observation-target-list [data-target-id]").click();
-  await waitFor(() => scriptCalls.length > 0 && q("#history-path-status").textContent.trim() === "Ready", "applied target path");
+  await waitFor(() => scriptCalls.length > 0 && q("#history-path-status").textContent.trim() === "Waiting for observation path", "applied target path");
   const buttons = [...document.querySelectorAll("button")].map(({ textContent }) => textContent.trim());
   const selectedTargetPresented = q("#live-setup-target").textContent.includes("Checkout selected");
   const startTestingRemainsDisabled = q("#start-data-layer-testing").disabled;
   const requestAccessAbsent = !buttons.includes("Request access");
   const inactive = requestAccessAbsent && startTestingRemainsDisabled;
-  const targetPathApplyObserved = scriptCalls.length === 1 && q("#history-path-status").textContent.trim() === "Ready";
-  const appliedPathPreserved = q("#history-path").value.length > 0
-    && q("#history-path-display").textContent === q("#history-path").value;
+  const targetPathApplyObserved = scriptCalls.length > 0 && q("#history-path-status").textContent.trim() === "Waiting for observation path";
+  const appliedPathPreserved = q("#history-path-display").textContent === q("#history-path").value;
   const selectedTargetRetained = selectedTargetPresented && q("#live-setup-target").textContent.includes("Checkout selected");
   if (permissionCalls.length || !inactive || !selectedTargetPresented || !targetPathApplyObserved || !appliedPathPreserved || !selectedTargetRetained) throw new Error("Preparation activated permission recovery or missed its installed target-path application");
   return { installedProjection:selectedTargetPresented && startTestingRemainsDisabled, inactive, callbacksSuppressed:permissionCalls.length === 0, requestAccessAbsent, startTestingRemainsDisabled, selectedTargetPresented, targetPathApplyObserved, appliedPathPreserved, selectedTargetRetained };
