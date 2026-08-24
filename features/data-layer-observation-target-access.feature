@@ -112,3 +112,26 @@ Feature: Data layer observation target access
     Examples:
       | project_name         | origin                    |
       | my-chrome-utilities | https://shop.example.test |
+
+  # Data layer observation target access 009
+  Scenario Outline: Data layer observation target access 009
+    Given current active page <page_title> at <page_url> is selected as the observation target
+    And no data layer testing session is active
+    And its exact page probe reports that page access is unavailable
+    And <history_path> is present on that page after access is granted
+    When target readiness is reconciled with that probe
+    Then target <page_title> remains selected with state <access_state>
+    And the current Confirm access and path step exposes Request access without reopening the target picker or secondary Settings
+    When the user chooses Request access for <page_title>
+    Then access is requested only for origin <origin> from that user action
+    When access is granted
+    Then target <page_title> is checked against the configured history path
+    And the check uses <history_path> on the same selected tab without another target-selection cycle
+    And Confirm access and path becomes Ready
+    And Start testing <page_title> becomes enabled
+    And another origin is not granted implicitly
+    And no other tab is selected, probed, or observed implicitly
+
+    Examples:
+      | project_name         | page_title | page_url                           | access_state        | origin                    | history_path  |
+      | my-chrome-utilities | Checkout   | https://shop.example.test/checkout | Permission required | https://shop.example.test | event.history |
