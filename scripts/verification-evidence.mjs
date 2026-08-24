@@ -53,6 +53,8 @@ import {
   isSidePanelSingleCutoverEvidenceTask,
   sidePanelSingleCutoverFocusedTaskKeys,
   sidePanelSingleCutoverPackIds,
+  sidePanelSingleCutoverProductEvidenceTask,
+  sidePanelSingleCutoverProductFocusedTaskKeys,
   validateSidePanelSingleCutoverFocusedPlan,
 } from "./side-panel-single-cutover-focused-evidence.mjs";
 import {
@@ -581,26 +583,33 @@ function canonicalLiveTargetPermissionRecoveryPlan(candidatePacks, {
 }
 
 function canonicalSidePanelSingleCutoverPlan(candidatePacks, {
-  changeSet, basePacks, historicalRegistryFallback,
+  changeSet, basePacks, historicalRegistryFallback, evidenceTask,
 }) {
+  const productEvidence = evidenceTask === sidePanelSingleCutoverProductEvidenceTask;
   const bindingPlan = planVerification(candidatePacks, {
     changedPaths:changeSet.paths,
-    includeProperties:false,
+    includeProperties:productEvidence,
     changeSet,
     basePacks,
     historicalRegistryFallback,
   });
   const executionPlan = bindEvidenceChangeScope(planVerification(candidatePacks, {
     packIds:sidePanelSingleCutoverPackIds,
-    includeProperties:false,
+    includeProperties:productEvidence,
   }), bindingPlan);
   const runnablePackIds = createVerificationPackCardinalityAdapter(candidatePacks).runnablePackIds;
   const canonical = withEvidencePackageTask(planVerification(candidatePacks, {
     packIds:runnablePackIds,
-    includeProperties:false,
+    includeProperties:productEvidence,
   }));
   const candidates = new Map(canonical.tasks.map((task) => [task.key, task]));
-  const requested = sidePanelSingleCutoverFocusedTaskKeys.map((key) => {
+  const focusedTaskKeys = productEvidence
+    ? sidePanelSingleCutoverProductFocusedTaskKeys([
+      ...executionPlan.tasks,
+      ...canonical.tasks.filter(({ key }) => key === "package:extension"),
+    ])
+    : sidePanelSingleCutoverFocusedTaskKeys;
+  const requested = focusedTaskKeys.map((key) => {
     const task = candidates.get(key);
     if (!task) throw new Error(`Side-panel single-cutover task is not registered: ${key}`);
     return task;
@@ -611,8 +620,8 @@ function canonicalSidePanelSingleCutoverPlan(candidatePacks, {
     ...executionPlan,
     mode:"focused-task",
     tasks:canonical.tasks.filter(({ key }) => tasks.some((task) => task.key === key)),
-    includeProperties:false,
-    focusedTaskKeys:[...sidePanelSingleCutoverFocusedTaskKeys],
+    includeProperties:productEvidence,
+    focusedTaskKeys:[...focusedTaskKeys],
   };
 }
 
@@ -648,7 +657,7 @@ async function canonicalPlanDocument({
       })
     : isSidePanelSingleCutoverEvidenceTask(evidenceTask)
       ? canonicalSidePanelSingleCutoverPlan(candidatePacks, {
-        changeSet, basePacks, historicalRegistryFallback,
+        changeSet, basePacks, historicalRegistryFallback, evidenceTask,
       })
     : planVerification(candidatePacks, {
       packIds,

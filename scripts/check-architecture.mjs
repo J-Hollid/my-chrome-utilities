@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import ts from "typescript";
 
 const shellFiles = new Set([
   "src/side-panel.ts",
@@ -31,6 +32,30 @@ function importsOf(source) {
     .filter((dependency) => dependency.startsWith("."));
 }
 
+function installedControllerImportsOf(source, file) {
+  const dependencies = [];
+  const syntax = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true,
+    ts.ScriptKind.TS);
+  const add = (node) => {
+    if (ts.isStringLiteralLike(node) && node.text.startsWith(".")) {
+      dependencies.push(node.text);
+    }
+  };
+  const visit = (node) => {
+    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
+      if (node.moduleSpecifier) add(node.moduleSpecifier);
+    } else if (ts.isImportEqualsDeclaration(node) &&
+        ts.isExternalModuleReference(node.moduleReference)) {
+      add(node.moduleReference.expression);
+    } else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+      add(node.arguments[0]);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(syntax);
+  return dependencies;
+}
+
 function normalized(file, dependency) {
   return path.posix.normalize(path.posix.join(
     path.posix.dirname(file),
@@ -40,6 +65,10 @@ function normalized(file, dependency) {
 
 function utilityOf(file) {
   return file.match(/^src\/utilities\/([^/]+)\//)?.[1];
+}
+
+function installedControllerOf(file) {
+  return file.match(/^src\/data-layer-installed\/([^/]+)\//u)?.[1];
 }
 
 function layerOf(file) {
@@ -71,6 +100,12 @@ function dependencyViolation(file, dependency) {
   }
 
   const target = normalized(file, dependency);
+  const installedController = installedControllerOf(file);
+  const targetInstalledController = installedControllerOf(target);
+  if (installedController && targetInstalledController &&
+      installedController !== targetInstalledController) {
+    return "installed controllers may not import another controller implementation";
+  }
   const owner = utilityOf(file);
   const targetOwner = utilityOf(target);
   if (owner && targetOwner && owner !== targetOwner) {
@@ -132,7 +167,10 @@ export function architectureViolations(files) {
       });
     }
 
-    for (const dependency of importsOf(source)) {
+    const dependencies = installedControllerOf(file)
+      ? installedControllerImportsOf(source, file)
+      : importsOf(source);
+    for (const dependency of dependencies) {
       const reason = dependencyViolation(file, dependency);
       if (reason) violations.push({ file, dependency, reason });
     }

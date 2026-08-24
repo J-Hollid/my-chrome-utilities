@@ -1,8 +1,12 @@
 import { expandVerificationTaskPrerequisites } from
   "./verification-execution-prerequisites.mjs";
+import { sidePanelTargetContract } from
+  "../test/support/side-panel-browser-target-contract.mjs";
 
 export const sidePanelSingleCutoverEvidenceTask =
   "verification-slice-side-panel-single-cutover";
+export const sidePanelSingleCutoverProductEvidenceTask =
+  "side-panel-single-cutover";
 
 export const sidePanelSingleCutoverPackIds = Object.freeze([
   "capture",
@@ -55,34 +59,96 @@ export const sidePanelSingleCutoverFocusedTaskKeys = Object.freeze([
     `unit:test/data-layer-installed/consumers/${id}-consumer-test.mjs`),
   "unit:test/data-layer-event-library-editor-test.mjs",
   "unit:test/modular-utility-architecture-test.mjs",
+  "unit:test/settled-final-verification-workflow-test.mjs",
   "unit:test/side-panel-single-cutover-preparation-test.mjs",
   "unit:test/verification-pack-cardinality-contract-test.mjs",
+  "unit:test/verification-process-contract-test.mjs",
   "package:extension",
 ]);
+
+const productContractTaskKeys = Object.freeze([
+  ...controllerIds.map((id) => `unit:test/data-layer-installed/${id}-controller-test.mjs`),
+  "unit:test/modular-utility-architecture-test.mjs",
+  "unit:test/side-panel-single-cutover-preparation-test.mjs",
+  "package:extension",
+]);
+
+const canonicalTargetIds = Object.freeze(sidePanelTargetContract.map(({ id }) => id));
+
+function productTaskKeys(tasks) {
+  const targetIds = new Set(canonicalTargetIds);
+  const observations = tasks.filter(({ stage, logicalTargetIds = [] }) =>
+    stage === "browser-observation" && logicalTargetIds.length &&
+    logicalTargetIds.some((id) => targetIds.has(id)));
+  const observed = observations.flatMap(({ logicalTargetIds }) =>
+    logicalTargetIds.filter((id) => targetIds.has(id)));
+  if (!sameSet(observed, canonicalTargetIds)) {
+    throw new Error("Side-panel product evidence must bind every canonical installed target once");
+  }
+  const properties = tasks.filter(({ key, packId, stage }) =>
+    stage === "property" && sidePanelSingleCutoverPackIds.includes(packId) &&
+    key.startsWith("property:test/data-layer-"));
+  return [...new Set([
+    ...productContractTaskKeys,
+    ...properties.map(({ key }) => key),
+    ...observations.map(({ key }) => key),
+  ])];
+}
+
+export function sidePanelSingleCutoverProductFocusedTaskKeys(tasks) {
+  const byKey = new Map(tasks.map((task) => [task.key, task]));
+  const keys = productTaskKeys(tasks);
+  for (const key of keys) {
+    if (key !== "package:extension" && !byKey.has(key)) {
+      throw new Error(`Side-panel product evidence task is not registered: ${key}`);
+    }
+  }
+  return Object.freeze(keys);
+}
 
 const sameSet = (left, right) => JSON.stringify([...new Set(left)].sort()) ===
   JSON.stringify([...new Set(right)].sort());
 
 export function isSidePanelSingleCutoverEvidenceTask(task) {
-  return task === sidePanelSingleCutoverEvidenceTask;
+  return task === sidePanelSingleCutoverEvidenceTask ||
+    task === sidePanelSingleCutoverProductEvidenceTask;
+}
+
+function approvedProductChangedPath(file) {
+  return file === "src/side-panel.ts" || file === "src/side-panel-bootstrap.ts" ||
+    file === "src/utilities/data-layer/index.ts" ||
+    file.startsWith("src/data-layer-installed/") ||
+    file === "dist/side-panel.js" || file === "dist/side-panel-bootstrap.js" ||
+    file === "dist/utilities/data-layer/index.js" ||
+    file.startsWith("dist/data-layer-installed/") ||
+    /^test\/data-layer-installed\/[^/]+-controller-test\.mjs$/u.test(file);
 }
 
 export function validateSidePanelSingleCutoverFocusedPlan(plan, evidenceTask) {
   if (!isSidePanelSingleCutoverEvidenceTask(evidenceTask)) return false;
+  const productEvidence = evidenceTask === sidePanelSingleCutoverProductEvidenceTask;
+  const focusedTaskKeys = productEvidence
+    ? sidePanelSingleCutoverProductFocusedTaskKeys(plan.tasks)
+    : sidePanelSingleCutoverFocusedTaskKeys;
   const packIds = plan.packIds ?? plan.claimPackIds ?? plan.requestedPackIds;
   const tasksByKey = new Map(plan.tasks.map((task) => [task.key, task]));
-  const requested = sidePanelSingleCutoverFocusedTaskKeys.map((key) => tasksByKey.get(key));
+  const requested = focusedTaskKeys.map((key) => tasksByKey.get(key));
   const exactKeys = requested.every(Boolean)
     ? expandVerificationTaskPrerequisites(requested, plan.tasks,
       { mode:"ordinary-focused" }).map(({ key }) => key)
     : [];
-  if (plan.mode !== "focused-task" || plan.includeProperties !== false ||
+  if (plan.mode !== "focused-task" || Boolean(plan.includeProperties) !== productEvidence ||
       !sameSet(plan.requestedPackIds, sidePanelSingleCutoverPackIds) ||
       !sameSet(packIds, sidePanelSingleCutoverPackIds) ||
       plan.focusedTaskKeys !== undefined &&
-        !sameSet(plan.focusedTaskKeys, sidePanelSingleCutoverFocusedTaskKeys) ||
+        !sameSet(plan.focusedTaskKeys, focusedTaskKeys) ||
       !sameSet(plan.tasks.map(({ key }) => key), exactKeys)) {
-    throw new Error("Side-panel single-cutover evidence must use its exact preparation bootstrap");
+    throw new Error(`Side-panel single-cutover evidence must use its exact ${
+      productEvidence ? "product" : "preparation"} bootstrap`);
+  }
+  if (productEvidence && (plan.changedPaths ?? []).some((file) =>
+    !approvedProductChangedPath(file))) {
+    throw new Error("Side-panel product evidence rejects a changed path outside the approved cutover scope");
   }
   return true;
 }

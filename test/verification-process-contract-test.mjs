@@ -1016,6 +1016,9 @@ try {
   await copyFile(path.resolve("scripts/live-target-permission-recovery-focused-evidence.mjs"),
     path.join(cliContentionRepository,
       "scripts/live-target-permission-recovery-focused-evidence.mjs"));
+  await copyFile(path.resolve("scripts/side-panel-single-cutover-focused-evidence.mjs"),
+    path.join(cliContentionRepository,
+      "scripts/side-panel-single-cutover-focused-evidence.mjs"));
   await copyFile(path.resolve("scripts/verification-shared-boundaries.mjs"),
     path.join(cliContentionRepository, "scripts/verification-shared-boundaries.mjs"));
   await copyFile(path.resolve("scripts/settled-final-verification-policy.mjs"),
@@ -1123,6 +1126,7 @@ try {
     "scripts/verification-pack-cardinality/contract.mjs",
     "scripts/verification-pack-cardinality/focused-evidence.mjs",
     "scripts/live-target-permission-recovery-focused-evidence.mjs",
+    "scripts/side-panel-single-cutover-focused-evidence.mjs",
     "scripts/verification-shared-boundaries.mjs",
     "test/browser-packs/global-style-smoke.mjs", "test/stylesheet-declarations-property-test.mjs",
     "test/data-layer-flow-visual-asset-portability-property-test.mjs",
@@ -5557,6 +5561,7 @@ assert.deepEqual(projectManagementPack.impactBoundaries.map(({ id, sourceClass, 
   ["project_library_persistence", "persistence migration", true],
   ["project_library_controller", "application controller", true],
   ["project_library_presentation", "browser presentation", false],
+  ["project_library_installed_side_panel_boundary", "application controller", false],
 ], "project-management source classes and propagation are explicit production registry data");
 assert.deepEqual(projectManagementPack.isolatedVerificationHandlers,
   ["acceptance/src/acceptance/steps/project_management.clj"],
@@ -5647,7 +5652,7 @@ for (const changedPath of ["src/data-layer-assignment-routing-ui.ts",
   "src/data-layer-project-library-presentation-ui.ts"]) {
   const plan = planVerification(packs, { changedPaths:[changedPath], includeProperties:true });
   assert.deepEqual(plan.packIds, ["project_management"], `${changedPath} remains owner-only`);
-  assert.equal(plan.unitTasks.length, 6);
+  assert.equal(plan.unitTasks.length, 8);
   assert.equal(plan.propertyTasks.length, 5);
   assert.equal(plan.sessionTasks.length, 1);
   assert.equal(plan.parserTasks.length, 6);
@@ -5701,11 +5706,18 @@ const vtd006RegisteredPrograms = new Set([
   "test/browser-packs/side-panel-defects.mjs",
   "test/browser-packs/side-panel-shell.mjs",
 ]);
+const sidePanelPreparationProgram = (path) =>
+  /^test\/data-layer-installed\/(?:consumers\/)?[^/]+-(?:controller|consumer)-test\.mjs$/u
+    .test(path);
 const conservedEvidenceProfile = (pack) => Object.fromEntries(exactEvidenceKeys.map((key) => [key,
-  pack[key].filter((path) => !vtd006RegisteredPrograms.has(path)),
+  pack[key].filter((path) => !vtd006RegisteredPrograms.has(path) &&
+    !sidePanelPreparationProgram(path)),
 ]));
 const baseProjectManagementPack = vtd004BasePacks.find(({ id }) => id === "project_management");
 const projectEvidenceProfile = conservedEvidenceProfile(projectManagementPack);
+const projectExecutionProfile = Object.fromEntries(exactEvidenceKeys.map((key) => [key,
+  projectManagementPack[key].filter((path) => !vtd006RegisteredPrograms.has(path)),
+]));
 assert.deepEqual(projectEvidenceProfile, {...conservedEvidenceProfile(baseProjectManagementPack),
   unit:[...conservedEvidenceProfile(baseProjectManagementPack).unit.slice(0, 3),
     "test/data-layer-project-library-transport-test.mjs",
@@ -5719,7 +5731,7 @@ const exactProjectPlan = planVerification(packs, {packIds:["project_management"]
 for (const [key, taskKey] of [["unit", "unitTasks"], ["property", "propertyTasks"],
   ["features", "parserTasks"], ["browserAdapters", "browserTasks"]]) {
   assert.deepEqual(exactProjectPlan[taskKey].map(({ target }) => target).sort(),
-    [...projectEvidenceProfile[key]].sort(), `${key} evidence executes exactly once by identity`);
+    [...projectExecutionProfile[key]].sort(), `${key} evidence executes exactly once by identity`);
 }
 assert.deepEqual(exactProjectPlan.sessionTasks.map(({ packId }) => packId), ["project_management"],
   "the one exact owner session consumes the one isolated project-management handler");
@@ -6003,6 +6015,7 @@ assert.deepEqual(durablePack.impactBoundaries.map(({id,sourceClass,propagateDepe
   ["durable_runtime_controller", "application controller", true],
   ["durable_page_history_semantic", "core or semantic", true],
   ["durable_saved_schema_feed_semantic", "core or semantic", true],
+  ["durable_project_installed_side_panel_boundary", "application controller", false],
 ], "durable repository source classes and propagation are explicit registry data");
 const durablePresentationPath = "src/data-layer-durable-project-repository-presentation-ui.ts";
 const durableControllerPath = "src/data-layer-durable-project-repository-ui.ts";
@@ -6112,6 +6125,7 @@ assert.deepEqual(eventLibraryPack.impactBoundaries.map(({id,sourceClass,propagat
   ["event_library_review_presentation", "browser presentation", false],
   ["event_library_target_push_controller", "application controller", true],
   ["event_library_page_push_semantic", "core or semantic", true],
+  ["event_library_installed_side_panel_boundary", "application controller", false],
 ], "Event Library source classes and propagation are explicit registry data");
 const eventReviewPresentationPaths = ["src/data-layer-push-draft-review-ui.ts",
   "src/data-layer-template-change-review-ui.ts"];
@@ -6236,7 +6250,8 @@ assert.deepEqual(eventEvidenceProfile,
 const exactEventPlan = planVerification(packs,{packIds:["event-library"],includeProperties:true});
 const acceptedEventPlan = planVerification(vtd008BasePacks,
   {packIds:["event-library"],includeProperties:true,historicalRegistryFallback:true});
-assert.deepEqual(terminalIdentities(exactEventPlan), terminalIdentities(acceptedEventPlan),
+assert.deepEqual(terminalIdentities({ tasks:exactEventPlan.tasks.filter(({ key }) =>
+  !postBaseAddedRegisteredTaskKeys.has(key)) }), terminalIdentities(acceptedEventPlan),
   "the exact Event Library plan remains identical to the accepted specification base");
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,
   "terminal planning conserves every Event Library task identity and ordering");
@@ -6312,6 +6327,7 @@ const expectedCaptureBoundaries = [
   ["capture_persistence", "persistence migration", true],
   ["capture_event_library_focus_presentation", "browser presentation", true],
   ["capture_live_target_permission_recovery", "application controller", false],
+  ["capture_installed_side_panel_boundary", "application controller", false],
 ];
 assert.deepEqual(capturePack.impactBoundaries.map(({id,sourceClass,propagateDependants}) =>
   [id,sourceClass,propagateDependants]), expectedCaptureBoundaries,
@@ -6414,11 +6430,11 @@ assert.deepEqual(captureEvidenceProfile, {
 },
   "all Capture owner evidence identities remain conserved");
 const exactCapturePlan = planVerification(packs,{packIds:["capture"],includeProperties:true});
-assert.equal(exactCapturePlan.tasks.length,172);
+assert.equal(exactCapturePlan.tasks.length,174);
 assert.deepEqual([exactCapturePlan.unitTasks.length,exactCapturePlan.propertyTasks.length,
   exactCapturePlan.parserTasks.length,capturePack.handlers.length,exactCapturePlan.browserTasks.length,
   exactCapturePlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).length,
-  exactCapturePlan.checkpointTasks.length],[22,12,66,25,1,5,2]);
+  exactCapturePlan.checkpointTasks.length],[24,12,66,25,1,5,2]);
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,
   "terminal planning conserves every Capture task identity and ordering");
 const captureCompletedCalibration = JSON.parse(await exec("git", [
@@ -6488,6 +6504,7 @@ const expectedSchemasBoundaries = [
   ["schemas_public_core_facades", "core or semantic", true],
   ["schemas_public_application_facades", "application controller", true],
   ["schemas_public_browser_facades", "browser presentation", true],
+  ["schemas_installed_side_panel_boundary", "application controller", false],
 ];
 assert.deepEqual(schemasPack.impactBoundaries.map(({id,sourceClass,propagateDependants}) =>
   [id,sourceClass,propagateDependants]), expectedSchemasBoundaries,
@@ -6496,8 +6513,8 @@ for (const changedPath of schemasPresentationPaths) assert.deepEqual(
   planVerification(packs,{changedPaths:[changedPath]}).packIds,["schemas"],
   `${changedPath} selects only complete Schemas evidence`);
 const schemasBoundaryPaths = schemasPack.impactBoundaries.flatMap(({prefixes}) => prefixes);
-assert.equal(schemasBoundaryPaths.length,88,"every Schemas source path has one exact boundary");
-assert.equal(new Set(schemasBoundaryPaths).size,88,"Schemas impact boundaries cannot overlap");
+assert.equal(schemasBoundaryPaths.length,89,"every Schemas source path has one exact boundary");
+assert.equal(new Set(schemasBoundaryPaths).size,89,"Schemas impact boundaries cannot overlap");
 const schemasPropagatingPaths = schemasPack.impactBoundaries
   .filter(({propagateDependants}) => propagateDependants)
   .flatMap(({prefixes}) => prefixes);
@@ -6593,11 +6610,11 @@ assert.deepEqual(schemasEvidenceProfile,
   conservedEvidenceProfile(schemasBasePack),
   "all Schemas owner evidence identities remain conserved");
 const exactSchemasPlan = planVerification(packs,{packIds:["schemas"],includeProperties:true});
-assert.equal(exactSchemasPlan.tasks.length,288);
+assert.equal(exactSchemasPlan.tasks.length,290);
 assert.deepEqual([exactSchemasPlan.unitTasks.length,exactSchemasPlan.propertyTasks.length,
   exactSchemasPlan.parserTasks.length,schemasPack.handlers.length,exactSchemasPlan.browserTasks.length,
   exactSchemasPlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).length,
-  exactSchemasPlan.checkpointTasks.length],[49,29,103,60,1,46,0]);
+  exactSchemasPlan.checkpointTasks.length],[51,29,103,60,1,46,0]);
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,
   "terminal planning conserves every Schemas task identity and ordering");
 const schemasCalibration = vtd004CurrentCalibration.runnablePacks.find(({id}) => id === "schemas");
@@ -6809,6 +6826,9 @@ for (const [helperPath, consumers] of Object.entries(helperConsumerCases)) {
     `${helperPath} selects its declared consumers exactly once`);
 }
 const shellBoundaryCases = {
+  "src/data-layer-installed/runtime.ts":["project_management", "durable_project_repository",
+    "capture", "event-library", "project_event_transport", "schemas", "defects", "replay",
+    "live_flow_testing", "shell"],
   "src/panel-empty-states.ts":["shell"],
   "src/panel-empty-states-ui.ts":["shell"],
   "src/workspace-tabs-ui.ts":["shell"],
@@ -6832,7 +6852,7 @@ for (const [changedPath, expectedPackIds] of Object.entries(shellBoundaryCases))
 }
 const shellSourcePaths = helperValidationInventory.source
   .filter((sourcePath) => verificationOwner(packs, sourcePath) === "shell");
-assert.equal(shellSourcePaths.length, 21,
+assert.equal(shellSourcePaths.length, 22,
   "every Shell-owned TypeScript file participates in one exact boundary");
 for (const platformPath of shellSourcePaths.filter((sourcePath) => !(sourcePath in shellBoundaryCases))) {
   assert.deepEqual(planVerification(packs, {changedPaths:[platformPath]}).packIds,
@@ -7763,7 +7783,7 @@ assert.deepEqual({tasks:exactLayeredPlan.tasks.length,unit:exactLayeredPlan.unit
   property:exactLayeredPlan.propertyTasks.length,observations:exactLayeredPlan.observationTasks.length,
   parses:exactLayeredPlan.parserTasks.length,generators:exactLayeredPlan.generatorTasks.length,
   sessions:exactLayeredPlan.sessionTasks.length},
-{tasks:54,unit:21,property:13,observations:4,parses:7,generators:7,sessions:1});
+{tasks:55,unit:22,property:13,observations:4,parses:7,generators:7,sessions:1});
 assert.deepEqual(terminalIdentities(exactLayeredPlan),expectedTerminalIdentities(baseExactLayeredPlan),
   "VTD-005 changes routing without changing exact owner task identities");
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,

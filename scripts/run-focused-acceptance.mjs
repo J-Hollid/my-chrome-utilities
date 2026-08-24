@@ -97,6 +97,8 @@ import {
   isSidePanelSingleCutoverEvidenceTask,
   sidePanelSingleCutoverFocusedTaskKeys,
   sidePanelSingleCutoverPackIds,
+  sidePanelSingleCutoverProductEvidenceTask,
+  sidePanelSingleCutoverProductFocusedTaskKeys,
   validateSidePanelSingleCutoverFocusedPlan,
 } from "./side-panel-single-cutover-focused-evidence.mjs";
 import {
@@ -413,6 +415,8 @@ export function focusedAcceptanceOptions(args) {
     liveTargetPermissionRecoveryFocusedTaskKeysFor(options.prepareEvidence);
   const sidePanelSingleCutoverEvidence =
     isSidePanelSingleCutoverEvidenceTask(options.prepareEvidence);
+  const sidePanelSingleCutoverProductEvidence =
+    options.prepareEvidence === sidePanelSingleCutoverProductEvidenceTask;
   if (options.focusedTaskKeys.length && ((!permissionRecoveryEvidence &&
       !sidePanelSingleCutoverEvidence && options.packIds.length !== 1) ||
       options.changedPaths.length ||
@@ -444,10 +448,13 @@ export function focusedAcceptanceOptions(args) {
     if (sidePanelSingleCutoverEvidence &&
         (JSON.stringify([...options.packIds].sort()) !==
            JSON.stringify([...sidePanelSingleCutoverPackIds].sort()) ||
-         JSON.stringify([...options.focusedTaskKeys].sort()) !==
-           JSON.stringify([...sidePanelSingleCutoverFocusedTaskKeys].sort()) ||
-         options.includeProperties)) {
-      throw new Error("Side-panel single-cutover evidence requires its exact preparation packs and focused tasks");
+         (sidePanelSingleCutoverProductEvidence
+           ? options.focusedTaskKeys.length > 0 || !options.includeProperties
+           : JSON.stringify([...options.focusedTaskKeys].sort()) !==
+               JSON.stringify([...sidePanelSingleCutoverFocusedTaskKeys].sort()) ||
+             options.includeProperties))) {
+      throw new Error(`Side-panel single-cutover evidence requires its exact ${
+        sidePanelSingleCutoverProductEvidence ? "product" : "preparation"} selectors`);
     }
     if (options.withDependencies || options.skipBuild || options.shard || options.terminalFull) {
       throw new Error("Evidence cannot use dependencies, no-build, sharding, or terminal-full mode");
@@ -1850,7 +1857,13 @@ export async function runFocusedAcceptance(
     packIds:exactRunnablePackIds, includeProperties:plan.includeProperties,
   });
   const focusedTaskKeys = cardinalityReviewEvidence
-    ? registryCardinalityFocusedTaskKeys(plan) : options.focusedTaskKeys;
+    ? registryCardinalityFocusedTaskKeys(plan)
+    : evidenceTask === sidePanelSingleCutoverProductEvidenceTask
+      ? sidePanelSingleCutoverProductFocusedTaskKeys([
+        ...plan.tasks,
+        ...canonicalPlan.tasks.filter(({ key }) => key === "package:extension"),
+      ])
+      : options.focusedTaskKeys;
   if (focusedTaskKeys.length) {
     plan = selectFocusedVerificationTasks(plan, focusedTaskKeys, canonicalPlan);
   } else plan = closeVerificationPlanPrerequisites(plan, canonicalPlan);

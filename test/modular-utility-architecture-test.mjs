@@ -74,6 +74,28 @@ assert.deepEqual(architectureViolations(new Map([["src/side-panel.ts",'import ".
 assert.deepEqual(architectureViolations(new Map([["src/utilities/data-layer/layers/core/demo.ts",'import "../browser/demo.js";']])),[{file:"src/utilities/data-layer/layers/core/demo.ts",dependency:"../browser/demo.js",reason:"core may not depend on browser"}]);
 assert.deepEqual(architectureViolations(new Map([["src/utilities/data-layer/layers/application/demo.ts",'import "../browser/demo.js";']])),[{file:"src/utilities/data-layer/layers/application/demo.ts",dependency:"../browser/demo.js",reason:"application may not depend on browser"}]);
 assert.deepEqual(architectureViolations(new Map([["src/utilities/hotkeys/demo.ts",'import "../command-palette/index.js";']])),[{file:"src/utilities/hotkeys/demo.ts",dependency:"../command-palette/index.js",reason:"utilities may not import another utility"}]);
+const installedControllerIds = ["capture", "event-library", "schemas", "defects", "replay",
+  "projects", "durable-projects", "project-event-transport", "live-flow-testing"];
+for (const id of installedControllerIds) {
+  const dependency = id === "capture" ? "../defects/index.js" : "../capture/index.js";
+  const crossControllerForms = [
+    `import value from "${dependency}";`,
+    `import type { InstalledPorts } from "${dependency}";`,
+    `import "${dependency}";`,
+    `export { installedControllerDefinition } from "${dependency}";`,
+    `export type { InstalledPorts } from "${dependency}";`,
+    `const controller = import("${dependency}");`,
+  ];
+  for (const source of crossControllerForms) {
+    assert.deepEqual(architectureViolations(new Map([
+      [`src/data-layer-installed/${id}/index.ts`, source],
+    ])), [{
+      file:`src/data-layer-installed/${id}/index.ts`,
+      dependency,
+      reason:"installed controllers may not import another controller implementation",
+    }], `${id} rejects every TypeScript cross-controller import form`);
+  }
+}
 assert.deepEqual(architectureViolations(new Map([["src/data-layer-unclassified.ts","export const value=1;"]])),[{file:"src/data-layer-unclassified.ts",dependency:"architecture/data-layer-boundaries.json",reason:"data-layer file must declare its module and layer"}]);
 assert.deepEqual(architectureViolations(new Map([["src/data-layer-schema-canonical-document.ts","export function typeOf(document){return document.type;}"]])),[]);
 assert.deepEqual(architectureViolations(new Map([["src/data-layer-event-library-editor.ts",'import "./data-layer-schema-documentation.js";']])),[{file:"src/data-layer-event-library-editor.ts",dependency:"./data-layer-schema-documentation.js",reason:"cross-module import must use the module public API"}]);

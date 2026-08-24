@@ -13,16 +13,23 @@ import {
   sidePanelSingleCutoverEvidenceTask,
   sidePanelSingleCutoverFocusedTaskKeys,
   sidePanelSingleCutoverPackIds,
+  sidePanelSingleCutoverProductEvidenceTask,
+  sidePanelSingleCutoverProductFocusedTaskKeys,
   validateSidePanelSingleCutoverFocusedPlan,
 } from "../scripts/side-panel-single-cutover-focused-evidence.mjs";
 import { focusedAcceptanceOptions, selectFocusedVerificationTasks } from
   "../scripts/run-focused-acceptance.mjs";
 import { runnablePackIdsFromRegistry } from
   "../scripts/verification-pack-cardinality/contract.mjs";
+import { sidePanelTargetContract } from
+  "./support/side-panel-browser-target-contract.mjs";
 import { loadVerificationPacks, planVerification } from
   "../scripts/verification-packs.mjs";
 
 const base = "96524c803b7970bf85dfbe8e895250691bbc3d08";
+const currentSidePanel = await readFile("src/side-panel.ts");
+const productInstalled = createHash("sha256").update(currentSidePanel).digest("hex") !==
+  "833831df0f3f2fc032a6af432101cc9a2306f7da6e1000e28c83c47bb6e9f7ef";
 const controllers = [
   ["capture", "capture", "capture_installed_side_panel",
     ["event-library", "project_event_transport", "schemas", "live_flow_testing", "shell"]],
@@ -69,7 +76,10 @@ const definitions = await Promise.all(controllers.map(async ([id]) => {
   assert.doesNotMatch(source,
     /data-layer-installed\/(?:capture|event-library|schemas|defects|replay|projects|durable-projects|project-event-transport|live-flow-testing)\//u,
     `${id} does not import another controller implementation`);
-  assert.equal(source.includes("addEventListener("), false, `${id} preparation installs no listener`);
+  if (!productInstalled) {
+    assert.equal(source.includes("addEventListener("), false,
+      `${id} preparation installs no listener`);
+  }
   return module.installedControllerDefinition;
 }));
 assert.deepEqual(definitions.map(({ id }) => id), expectedOrder);
@@ -92,6 +102,46 @@ const focusedEvidencePlan = selectFocusedVerificationTasks(
 assert.equal(validateSidePanelSingleCutoverFocusedPlan(
   focusedEvidencePlan, sidePanelSingleCutoverEvidenceTask,
 ), true);
+const productEvidenceOptions = focusedAcceptanceOptions([
+  ...sidePanelSingleCutoverPackIds.flatMap((packId) => ["--pack", packId]),
+  "--property",
+  "--changed-since", base,
+  "--prepare-evidence", sidePanelSingleCutoverProductEvidenceTask,
+]);
+assert.equal(productEvidenceOptions.includeProperties, true);
+assert.deepEqual(productEvidenceOptions.focusedTaskKeys, [],
+  "the product route binds its stable tasks instead of accepting candidate selectors");
+const productCanonicalPlan = planVerification(packs, {
+  packIds:runnablePackIdsFromRegistry(packs), includeProperties:true,
+});
+const productPackPlan = planVerification(packs, {
+  packIds:sidePanelSingleCutoverPackIds, includeProperties:true,
+});
+const productTaskKeys = sidePanelSingleCutoverProductFocusedTaskKeys(
+  [...productPackPlan.tasks,
+    ...productCanonicalPlan.tasks.filter(({ key }) => key === "package:extension")],
+);
+const productEvidencePlan = selectFocusedVerificationTasks(
+  productPackPlan,
+  productTaskKeys,
+  productCanonicalPlan,
+);
+assert.equal(validateSidePanelSingleCutoverFocusedPlan({
+  ...productEvidencePlan,
+  changedPaths:["src/side-panel.ts", "src/data-layer-installed/capture/index.ts"],
+}, sidePanelSingleCutoverProductEvidenceTask), true);
+assert.equal(productEvidencePlan.tasks.filter(({ stage }) => stage === "property").length > 0,
+  true, "the product route retains every relevant declared Data Layer property");
+const selectedProductTargetIds = new Set(productEvidencePlan.tasks.flatMap(
+  ({ logicalTargetIds = [] }) => logicalTargetIds,
+));
+assert.equal(sidePanelTargetContract.every(({ id }) => selectedProductTargetIds.has(id)), true,
+  "the product route retains every canonical installed assertion target and its session batch");
+assert.throws(() => validateSidePanelSingleCutoverFocusedPlan({
+  ...productEvidencePlan,
+  changedPaths:["scripts/side-panel-single-cutover-focused-evidence.mjs"],
+}, sidePanelSingleCutoverProductEvidenceTask), /outside the approved cutover scope/u,
+"the product candidate cannot add or alter the evidence bypass that admits it");
 for (const [id, packId, sliceId, consumers] of controllers) {
   const pack = packs.find(({ id: candidate }) => candidate === packId);
   const slice = pack.verificationSlices.find(({ id: candidate }) => candidate === sliceId);
@@ -139,9 +189,17 @@ assert.deepEqual(inventory.assertionLeaves[0], {
 function atBase(path) {
   return execFileSync("git", ["show", `${base}:${path}`]);
 }
+const baseSidePanel = atBase("src/side-panel.ts");
+if (!currentSidePanel.equals(baseSidePanel)) {
+  const currentSource = currentSidePanel.toString("utf8");
+  assert.equal(currentSource.split("\n").length - 1 <= 500, true,
+    "the installed cutover leaves a bounded composition root");
+  const publicDataLayerSource = await readFile("src/utilities/data-layer/index.ts", "utf8");
+  assert.match(publicDataLayerSource,
+    /from ["']\.\.\/\.\.\/data-layer-installed\/runtime\.js["']/u,
+    "the Data Layer public entry mounts through the prepared installed runtime");
+}
 for (const path of [
-  "src/side-panel.ts",
-  "src/utilities/data-layer/index.ts",
   "src/utilities/data-layer/capture.ts",
   "src/utilities/data-layer/live-inspection.ts",
   "src/utilities/data-layer/event-library.ts",
@@ -153,5 +211,11 @@ for (const path of [
   assert.equal(createHash("sha256").update(current).digest("hex"),
     createHash("sha256").update(atBase(path)).digest("hex"), `${path} changed during preparation`);
 }
+const currentAssertionSource = await readFile(
+  "test/support/side-panel-browser-assertion-leaves.mjs",
+);
+assert.equal(createHash("sha256").update(currentAssertionSource).digest("hex"),
+  inventory.assertions.sha256,
+  "the product cutover cannot delete or rewrite a canonical installed assertion leaf");
 
 console.log("side-panel single-cutover ownership preparation passed");
