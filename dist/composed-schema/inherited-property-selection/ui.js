@@ -1,10 +1,11 @@
 const nodeOrder = (left, right) => left.label.localeCompare(right.label);
+const selectionNodeKey = (kind, ...identity) => JSON.stringify([kind, ...identity]);
 export function inheritedPropertySelectionHierarchy(items) {
-    const concepts = new Map();
+    const concepts = new Map(), locations = new Map();
     for (const item of items) {
         let concept = concepts.get(item.concept);
         if (!concept) {
-            concept = { kind: "concept", key: `concept:${item.concept}`, label: item.concept, level: 1, propertyIds: [], children: [] };
+            concept = { kind: "concept", key: selectionNodeKey("concept", item.concept), label: item.concept, level: 1, propertyIds: [], children: [] };
             concepts.set(item.concept, concept);
         }
         const segments = item.path.split("/").filter(Boolean);
@@ -12,13 +13,16 @@ export function inheritedPropertySelectionHierarchy(items) {
         for (const [segmentIndex, segment] of segments.entries()) {
             path += `/${segment}`;
             const property = segmentIndex === segments.length - 1;
-            let node = parent.children.find(({ key }) => key === `${item.concept}:${path}`);
+            const location = JSON.stringify([item.concept, path]);
+            let node = locations.get(location);
             if (!node) {
-                node = { kind: property ? "property" : "branch", key: `${item.concept}:${path}`, label: path, level: parent.level + 1, propertyIds: [], children: [] };
+                node = { kind: property ? "property" : "branch", key: property ? selectionNodeKey("property", item.propertyId) : selectionNodeKey("branch", item.concept, path), label: path, level: parent.level + 1, propertyIds: [], children: [] };
                 parent.children.push(node);
+                locations.set(location, node);
             }
             if (property) {
                 node.kind = "property";
+                node.key = selectionNodeKey("property", item.propertyId);
                 node.propertyId = item.propertyId;
                 node.item = item;
             }

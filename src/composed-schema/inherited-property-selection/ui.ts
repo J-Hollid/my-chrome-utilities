@@ -20,18 +20,19 @@ export interface InheritedPropertySelectionNode {
 }
 
 const nodeOrder=(left:InheritedPropertySelectionNode,right:InheritedPropertySelectionNode):number=>left.label.localeCompare(right.label);
+const selectionNodeKey=(kind:InheritedPropertySelectionNode["kind"],...identity:readonly string[]):string=>JSON.stringify([kind,...identity]);
 
 export function inheritedPropertySelectionHierarchy(items:readonly InheritedPropertySelectionItem[]):InheritedPropertySelectionNode[] {
-  const concepts=new Map<string,InheritedPropertySelectionNode>();
+  const concepts=new Map<string,InheritedPropertySelectionNode>(),locations=new Map<string,InheritedPropertySelectionNode>();
   for(const item of items){
     let concept=concepts.get(item.concept);
-    if(!concept){concept={kind:"concept",key:`concept:${item.concept}`,label:item.concept,level:1,propertyIds:[],children:[]};concepts.set(item.concept,concept);}
+    if(!concept){concept={kind:"concept",key:selectionNodeKey("concept",item.concept),label:item.concept,level:1,propertyIds:[],children:[]};concepts.set(item.concept,concept);}
     const segments=item.path.split("/").filter(Boolean);let parent=concept,path="";
     for(const[segmentIndex,segment]of segments.entries()){
       path+=`/${segment}`;const property=segmentIndex===segments.length-1;
-      let node=parent.children.find(({key})=>key===`${item.concept}:${path}`);
-      if(!node){node={kind:property?"property":"branch",key:`${item.concept}:${path}`,label:path,level:parent.level+1,propertyIds:[],children:[]};parent.children.push(node);}
-      if(property){node.kind="property";node.propertyId=item.propertyId;node.item=item;}
+      const location=JSON.stringify([item.concept,path]);let node=locations.get(location);
+      if(!node){node={kind:property?"property":"branch",key:property?selectionNodeKey("property",item.propertyId):selectionNodeKey("branch",item.concept,path),label:path,level:parent.level+1,propertyIds:[],children:[]};parent.children.push(node);locations.set(location,node);}
+      if(property){node.kind="property";node.key=selectionNodeKey("property",item.propertyId);node.propertyId=item.propertyId;node.item=item;}
       parent=node;
     }
   }

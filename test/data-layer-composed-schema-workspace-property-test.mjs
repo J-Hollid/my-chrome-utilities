@@ -21,12 +21,17 @@ import {inheritedPropertySelectionHierarchy,inheritedPropertySelectionTreePage,i
 let seed=0x636f6d70;
 const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/0x100000000);
 const token=(prefix)=>`${prefix}_${Math.floor(random()*1_000_000)}`;
+const identityFragments=["concept:",":/[]","雪","🧭","é","%2F","'\"","\\"];
+const identityFragment=()=>identityFragments[Math.floor(random()*identityFragments.length)];
 
 for(let example=0;example<200;example+=1){
   const count=1+Math.floor(random()*80),items=Array.from({length:count},(_,index)=>{
-    const concept=`Concept ${index%Math.max(1,Math.floor(random()*6)+1)}`,depth=1+Math.floor(random()*4),segments=Array.from({length:depth},(__,part)=>`part_${index}_${part}`);
+    const concept=`Concept ${identityFragment()} ${index%Math.max(1,Math.floor(random()*6)+1)}`,depth=1+Math.floor(random()*4),segments=Array.from({length:depth},(__,part)=>`part:${identityFragment()}:${index}:${part}`);
     return{propertyId:`property:hierarchy:${example}:${index}`,path:`/${segments.join("/")}`,concept,type:index%2?"string":"number",presence:index%3?"optional":"required",selected:index%4!==0,source:`Source ${index}`,descendantPaths:[],affectedPaths:[],blocked:false};
-  }),roots=inheritedPropertySelectionHierarchy(items),allKeys=[];
+  });items.push(
+    {propertyId:`property:collision:${example}:first`,path:`/x:${identityFragment()}`,concept:`A:/b:${example}`,type:"string",presence:"optional",selected:true,source:"Collision first",descendantPaths:[],affectedPaths:[],blocked:false},
+    {propertyId:`property:collision:${example}:second`,path:`/b:${example}`,concept:"concept:A",type:"string",presence:"optional",selected:true,source:"Collision second",descendantPaths:[],affectedPaths:[],blocked:false},
+  );const roots=inheritedPropertySelectionHierarchy(items),allKeys=[];
   const visit=(node)=>{allKeys.push(node.key);for(const child of node.children)visit(child);};for(const root of roots)visit(root);
   assert.equal(new Set(allKeys).size,allKeys.length,"generated hierarchy nodes have stable unique identities");
   assert.deepEqual(roots.flatMap(({propertyIds})=>propertyIds).sort(),items.map(({propertyId})=>propertyId).sort(),"generated hierarchy conserves every property identity exactly once");
@@ -35,9 +40,12 @@ for(let example=0;example<200;example+=1){
   const complete=inheritedPropertySelectionTreePage(roots,new Set(allKeys),0,Number.MAX_SAFE_INTEGER).nodes;
   assert.deepEqual(complete.map(({key})=>key),allKeys,"fully expanded generated hierarchy preserves deterministic depth-first order");
   if(complete.length){
-    const index=Math.floor(random()*complete.length),current=complete[index],down=inheritedPropertySelectionTreeTarget(complete,current.key,"ArrowDown",new Set(allKeys)),up=inheritedPropertySelectionTreeTarget(complete,current.key,"ArrowUp",new Set(allKeys));
-    assert.equal(down.key,complete[Math.min(complete.length-1,index+1)].key,"generated ArrowDown targets the next visible node");
-    assert.equal(up.key,complete[Math.max(0,index-1)].key,"generated ArrowUp targets the previous visible node");
+    for(const [index,current] of complete.entries()){
+      const down=inheritedPropertySelectionTreeTarget(complete,current.key,"ArrowDown",new Set(allKeys)),up=inheritedPropertySelectionTreeTarget(complete,current.key,"ArrowUp",new Set(allKeys));
+      assert.equal(down.key,complete[Math.min(complete.length-1,index+1)].key,"every generated ArrowDown targets the exact next visible node identity");
+      assert.equal(up.key,complete[Math.max(0,index-1)].key,"every generated ArrowUp targets the exact previous visible node identity");
+    }
+    const index=Math.floor(random()*complete.length),current=complete[index];
     if(current.children.length)assert.equal(inheritedPropertySelectionTreeTarget(complete,current.key,"ArrowRight",new Set()).expand,current.key,"generated ArrowRight expands a collapsed parent");
     if(current.level>1)assert.ok(inheritedPropertySelectionTreeTarget(complete,current.key,"ArrowLeft",new Set()).key!==current.key,"generated ArrowLeft targets a visible parent");
   }
