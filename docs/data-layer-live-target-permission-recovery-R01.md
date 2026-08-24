@@ -1,7 +1,7 @@
 # Data Layer Live target permission recovery R01
 
-Status: product behavior approved; ownership preparation resumed under the
-user-approved causal focused-verification boundary of 2026-08-24
+Status: ownership preparation QA-integrated at `9f8a8b037b`; approved product
+implementation resumes from its exact QA descendant
 
 Prepared: 2026-08-24
 
@@ -232,3 +232,20 @@ recovery; a missing task or observation leaf; a weakened assertion; or a changed
 product requirement invalidates this bootstrap before execution. The candidate
 then returns for current scope classification rather than widening automatically.
 The normal user-requested master-promotion terminal gate remains unchanged.
+
+## Settled preparation result
+
+The dormant Capture seam and installed Shell composition are QA-integrated at
+`9f8a8b037b1e6df45f190180168723be8f282b9c`. Review-ready evidence passed the
+exact nine-task focused plan across `capture`, `event-library`, `schemas`,
+`defects`, and `shell`: build, the seam unit, observation-target and target-path
+prerequisites, the preparation and focused-acceptance contracts, the directly
+changed verification-process contract, the combined installed browser
+observation, and package proof. The slice declares no germane property task, so
+none ran. No unrelated pack array or all-runnable-pack checkpoint ran.
+
+Product scenarios 009 and runtime 002 remain unchanged and red. Stable task
+`live-target-permission-recovery` now resumes automatically from the exact QA
+descendant containing this result. Product implementation changes the new seam
+and bounded adapters; changing the broad side-panel composition path requires a
+fresh causal scope decision.
