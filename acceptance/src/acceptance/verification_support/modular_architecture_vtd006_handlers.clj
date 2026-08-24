@@ -73,7 +73,7 @@
    "LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER"
    {:phase "interaction" :remaining "EVENT_LIBRARY_RENDERED_SMOKE_TARGET"}})
 
-(defn handlers [_dependencies]
+(defn- inventory-handlers []
   [{:pattern #"^(.+) owns (.+) registered targets and (.+) top-level outputs in the shared side-panel browser program$"
     :handler (fn [world example captures]
                (let [[pack targets outputs] (values example captures)]
@@ -99,9 +99,10 @@
                           (and (= 1 (get-in world [:vtd006/evidence :process :starts]))
                                (= expected (if (= actual "existing-single-target")
                                              "the existing single target" actual)))
-                          "Side-panel process grouping or launch conservation failed.")))}
+                          "Side-panel process grouping or launch conservation failed.")))}])
 
-   {:pattern #"^focused side-panel target (.+) is the only requested logical target$"
+(defn- focused-target-handlers []
+  [{:pattern #"^focused side-panel target (.+) is the only requested logical target$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd006/target (first (values example captures))))}
    {:pattern #"^its pack entry resolves the declarative target registry$"
@@ -119,9 +120,10 @@
    {:pattern #"^no unselected domain or Schema-family module performs an import-time or runtime fixture side effect$"
     :handler (fn [world _ _]
                (assert! world (= ["capture"] (get-in world [:vtd006/evidence :selectiveLoading :imported]))
-                        "An unselected target module initialized during the selective probe."))}
+                        "An unselected target module initialized during the selective probe."))}])
 
-   {:pattern #"^the side-panel target request contains (.+)$"
+(defn- registry-validation-handlers []
+  [{:pattern #"^the side-panel target request contains (.+)$"
     :handler (fn [world example captures]
                (let [contract (first (values example captures))]
                  (assert! (assoc (prepared world) :vtd006/invalid-contract contract)
@@ -145,9 +147,10 @@
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd006/evidence :registryValidation
                                                      :beforeResourcesStarted]))
-                        "Invalid input crossed the resource boundary."))}
+                        "Invalid input crossed the resource boundary."))}])
 
-   {:pattern #"^each logical side-panel target receives a new frozen target context inside a reusable process context$"
+(defn- target-isolation-handlers []
+  [{:pattern #"^each logical side-panel target receives a new frozen target context inside a reusable process context$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^targets pass, fail, or execute in another compatible order$"
     :handler (fn [world _ _]
@@ -183,9 +186,10 @@
                                (every? #(and (true? (:equal %))
                                              (= (:canonicalDigest %) (:permutedDigest %)))
                                        (vals (:pairEvidence order))))
-                          "Installed representative pair-order values or digests changed.")))}
+                          "Installed representative pair-order values or digests changed.")))}])
 
-   {:pattern #"^exact (.+) verification selects (.+) compatible side-panel targets$"
+(defn- exact-pack-handlers []
+  [{:pattern #"^exact (.+) verification selects (.+) compatible side-panel targets$"
     :handler (fn [world example captures]
                (let [[pack targets] (values example captures)]
                  (assoc (prepared world) :vtd006/pack pack :vtd006/targets (parse-long targets))))}
@@ -231,9 +235,10 @@
    {:pattern #"^process shutdown occurs once after all target results$"
     :handler (fn [world _ _]
                (assert! world (= 1 (get-in world [:vtd006/evidence :process :stops]))
-                        "Process shutdown count changed."))}
+                        "Process shutdown count changed."))}])
 
-   {:pattern #"^an early side-panel target is forced to fail during an active browser phase$"
+(defn- failure-continuation-handlers []
+  [{:pattern #"^an early side-panel target is forced to fail during an active browser phase$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^(.+) fails in its (.+) phase$"
     :handler (fn [world example captures]
@@ -284,9 +289,10 @@
    {:pattern #"^one aggregate failure is thrown only after every requested target has emitted a result$"
     :handler (fn [world _ _]
                (assert! world (= 2 (get-in world [:vtd006/evidence :process :results]))
-                        "Aggregate failure preempted a target result."))}
+                        "Aggregate failure preempted a target result."))}])
 
-   {:pattern #"^the committed VTD-006 target contract maps the old shared browser program to the five new entry programs$"
+(defn- conservation-handlers []
+  [{:pattern #"^the committed VTD-006 target contract maps the old shared browser program to the five new entry programs$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^its current and migrated evidence inventories are compared$"
     :handler (fn [world _ _]
@@ -329,9 +335,10 @@
                (assert! world (= [9 9] (filterv #(= 9 %)
                                                 (get-in world [:vtd006/evidence :contract
                                                                :shellLeaves])))
-                        "Shell containment assertion leaves changed."))}
+                        "Shell containment assertion leaves changed."))}])
 
-   {:pattern #"^changed verification helper (.+) is reached through registered browser-observation programs$"
+(defn- helper-planning-handlers []
+  [{:pattern #"^changed verification helper (.+) is reached through registered browser-observation programs$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd006/helper (first (values example captures))))}
    {:pattern #"^current and historical statically resolvable imports are planned$"
@@ -362,9 +369,10 @@
                                (= 3 (count (:failClosedSelections planning)))
                                (every? #(= runnable (vec %)) (:failClosedSelections planning))
                                (true? (:failClosed planning)))
-                          "Conservative helper history fallback did not select every runnable pack.")))}
+                          "Conservative helper history fallback did not select every runnable pack.")))}])
 
-   {:pattern #"^test/side-panel-component-layout-runtime-test.mjs becomes a thin direct compatibility launcher$"
+(defn- launcher-handlers []
+  [{:pattern #"^test/side-panel-component-layout-runtime-test.mjs becomes a thin direct compatibility launcher$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^VTD-006 completes the target and session extraction$"
     :handler (fn [world _ _]
@@ -405,6 +413,17 @@
                  (assert! prepared
                           (= 5 (count (get-in prepared [:vtd006/evidence :contract :packInventory])))
                           "VTD-006 checkpoint evidence is incomplete.")))}])
+
+(defn handlers [_dependencies]
+  (vec (concat (inventory-handlers)
+               (focused-target-handlers)
+               (registry-validation-handlers)
+               (target-isolation-handlers)
+               (exact-pack-handlers)
+               (failure-continuation-handlers)
+               (conservation-handlers)
+               (helper-planning-handlers)
+               (launcher-handlers))))
 
 ;; clj-mutate-manifest-begin
 ;; {:version 1, :tested-at "2026-08-22T06:47:51.730156997+02:00", :module-hash "-1869681893", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "583796879"} {:id "form/1/defonce", :kind "defonce", :line 6, :end-line 6, :hash "701185655"} {:id "def/module-paths", :kind "def", :line 8, :end-line 16, :hash "415945835"} {:id "defn-/production-evidence!", :kind "defn-", :line 18, :end-line 25, :hash "246714086"} {:id "defn-/prepared", :kind "defn-", :line 27, :end-line 28, :hash "-223598626"} {:id "defn-/values", :kind "defn-", :line 30, :end-line 32, :hash "555847233"} {:id "defn-/assert!", :kind "defn-", :line 34, :end-line 36, :hash "-1884999679"} {:id "defn-/pack-facts", :kind "defn-", :line 38, :end-line 40, :hash "1935968671"} {:id "defn-/consumer-scope", :kind "defn-", :line 42, :end-line 45, :hash "-640295098"} {:id "defn-/helper-planning", :kind "defn-", :line 47, :end-line 49, :hash "3897991"} {:id "def/registry-rejection-contract", :kind "def", :line 51, :end-line 61, :hash "1476805514"} {:id "def/event-library-targets", :kind "def", :line 63, :end-line 64, :hash "-478698114"} {:id "def/event-library-order-contract", :kind "def", :line 66, :end-line 68, :hash "1791955695"} {:id "def/event-library-failure-contract", :kind "def", :line 70, :end-line 74, :hash "1109544827"} {:id "defn/handlers", :kind "defn", :line 76, :end-line 405, :hash "684024186"}]}

@@ -82,12 +82,24 @@ function atSpecification(path) {
   });
 }
 for (const path of [
-  "src/side-panel.ts",
   "features/data-layer-observation-target-access.feature",
   "features/data-layer-target-path-status-runtime.feature",
 ]) {
   assert.equal(await readFile(path, "utf8"), atSpecification(path), `${path} changed`);
 }
+const sidePanelSource = await readFile("src/side-panel.ts", "utf8");
+assert.match(sidePanelSource,
+  /createDormantLiveTargetPermissionRecoveryCoordinator[\s\S]+from "\.\/utilities\/data-layer\/capture\.js"/u,
+  "the production composition root must install the dormant coordinator");
+assert.match(sidePanelSource,
+  /liveTargetPermissionRecoveryCoordinator\.projectReadiness/u,
+  "the installed current-step projection must be consumed");
+assert.match(sidePanelSource,
+  /liveTargetPermissionRecoveryCoordinator\.reconcileProbe/u,
+  "the installed failed-probe callback must be reachable");
+assert.match(sidePanelSource,
+  /liveTargetPermissionRecoveryCoordinator\.requestAccess/u,
+  "the installed permission action callback must be reachable");
 
 const observation = shell.browserObservations.find(
   ({ id }) => id === "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER",
@@ -103,7 +115,7 @@ const evidence = {
   captureOwnedPrefix:true,
   shellConsumer:true,
   directProof:true,
-  broadSidePanelUnchanged:true,
+  broadSidePanelCompositionOnly:true,
   integratedSeam:true,
   dormantBehavior:true,
   conservativeClosure:true,
@@ -125,7 +137,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       expectedPreRepairFailure:{positiveBooleanLeaves:false,absenceSemanticsPositive:false},
       expectedRepairResult:{positiveBooleanLeaves:true,absenceSemanticsPositive:true},
       repairResult:{
-        positiveBooleanLeaves:["moduleLoaded", "inactive", "callbacksSuppressed",
+        positiveBooleanLeaves:["installedProjection", "inactive", "callbacksSuppressed",
           "requestAccessAbsent", "startTestingRemainsDisabled", "selectedTargetPresented"]
           .every((key) => runtimeSource.includes(`${key}:`)),
         absenceSemanticsPositive:!["callbacks:", "requestAccessVisible:",

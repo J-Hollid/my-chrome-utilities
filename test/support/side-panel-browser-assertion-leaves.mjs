@@ -12,7 +12,7 @@ const reorderPresentationLeaves=(index)=>[
 ];
 const assertionLeavesByTarget = {
   "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER": [
-    ["liveTargetPermissionRecoveryWiring","moduleLoaded"],
+    ["liveTargetPermissionRecoveryWiring","installedProjection"],
     ["liveTargetPermissionRecoveryWiring","inactive"],
     ["liveTargetPermissionRecoveryWiring","callbacksSuppressed"],
     ["liveTargetPermissionRecoveryWiring","requestAccessAbsent"],

@@ -5,6 +5,11 @@ import type {
 import type {
   ActivePageObservationResult,
 } from "../active-page-observation.js";
+import {
+  liveTargetPermissionRecoveryReadiness,
+  type LiveTargetPermissionRecoveryReadiness,
+} from "./readiness.js";
+import type { TargetPathStatus } from "../data-layer-target-path-status.js";
 
 export interface LiveTargetPermissionRecoveryRequest {
   selectedTarget: ObservationTarget;
@@ -22,6 +27,10 @@ export interface DormantLiveTargetPermissionRecoveryResult {
 }
 
 export interface LiveTargetPermissionRecoveryCoordinator {
+  projectReadiness: (input: {
+    selectedTarget?: Pick<ObservationTarget, "accessState">;
+    pathStatus: TargetPathStatus;
+  }) => LiveTargetPermissionRecoveryReadiness;
   reconcileProbe: (
     request: LiveTargetPermissionProbeRequest,
   ) => Promise<DormantLiveTargetPermissionRecoveryResult>;
@@ -49,6 +58,7 @@ export function createDormantLiveTargetPermissionRecoveryCoordinator(_adapters: 
   });
 
   return {
+    projectReadiness:liveTargetPermissionRecoveryReadiness,
     reconcileProbe:inactive,
     requestAccess:inactive,
   };

@@ -110,6 +110,7 @@ import {
 import { createLiveNotificationController } from "./utilities/data-layer/capture.js";
 import {
   createTargetPathStatusController,
+  createDormantLiveTargetPermissionRecoveryCoordinator,
   targetPathStatusForObservation,
   type TargetPathStatus,
 } from "./utilities/data-layer/capture.js";
@@ -1036,6 +1037,28 @@ const guidedValidationFlow = createGuidedValidationFlow(guidedValidationRoot, {
 });
 let replaySequences: ReplaySequence[] = [];
 let observationTargetState: ObservationTargetState = restoredObservationTargetState();
+const liveTargetPermissionRecoveryCoordinator =
+  createDormantLiveTargetPermissionRecoveryCoordinator({
+    requestOriginAccess: async (origin) => Boolean(
+      typeof chrome !== "undefined"
+      && chrome.permissions
+      && await chrome.permissions.request({ origins: [`${origin}/*`] })),
+    recheckPath: (target, historyPath) => tabPageObservation(
+      target.tabId,
+      target.pageUrl,
+      historyPath,
+      observationPageLoadId(target.tabId),
+    ),
+    updateTargetAccess: (targetId, accessState) => {
+      observationTargetState = updateObservationTargetAccess(
+        observationTargetState,
+        targetId,
+        accessState,
+      );
+      renderObservationTargetPicker();
+      renderObservationTargetContext();
+    },
+  });
 let pendingObservationTargetSwitchId: string | undefined;
 let nextSessionSequence = 0;
 let currentTargetPathStatus: TargetPathStatus = "Selection required";
@@ -1092,6 +1115,10 @@ function renderObservationTargetContext(): void {
 function renderLiveContextActions(): void {
   const activeSession = dataLayerSessionState.session?.status === "active";
   const selectedTarget = selectedObservationTarget(observationTargetState);
+  const recoveryReadiness = liveTargetPermissionRecoveryCoordinator.projectReadiness({
+    ...(selectedTarget ? { selectedTarget } : {}),
+    pathStatus: currentTargetPathStatus,
+  });
   renderLiveSessionControls(
     {
       startTestingButton,
@@ -1105,8 +1132,8 @@ function renderLiveContextActions(): void {
     liveGuidedWorkflowElements,
     liveGuidedWorkflow({
       activeSession,
-      ...(selectedTarget ? { selectedTarget } : {}),
-      pathStatus: currentTargetPathStatus,
+      ...(recoveryReadiness.targetSelected && selectedTarget ? { selectedTarget } : {}),
+      pathStatus: recoveryReadiness.ready ? "Ready" : currentTargetPathStatus,
     }),
   );
   if (startFreshSessionButton) {
@@ -1206,6 +1233,11 @@ function renderObservationTargetPicker(): void {
 }
 
 async function requestSelectedTargetAccess(target: ObservationTarget): Promise<void> {
+  const recovery = await liveTargetPermissionRecoveryCoordinator.requestAccess({
+    selectedTarget: target,
+    historyPath: currentObservationHistoryPath(),
+  });
+  if (recovery.status !== "inactive") return;
   if (typeof chrome === "undefined" || !chrome.permissions) return;
   const granted = await chrome.permissions.request({ origins: [`${target.origin}/*`] });
   if (!granted) {
@@ -1341,6 +1373,12 @@ async function attachSelectedTarget(): Promise<void> {
     currentObservationHistoryPath(),
     observationPageLoadId(target.tabId),
   );
+  const recovery = await liveTargetPermissionRecoveryCoordinator.reconcileProbe({
+    selectedTarget: target,
+    historyPath: currentObservationHistoryPath(),
+    pageAccessStatus: observation.pageAccessStatus,
+  });
+  if (recovery.status !== "inactive") return;
   if (observation.pageAccessStatus !== "page access available") {
     observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Permission required");
     setObservationTargetResult("Permission required");

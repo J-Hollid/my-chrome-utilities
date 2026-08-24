@@ -48,6 +48,15 @@ const coordinator = createDormantLiveTargetPermissionRecoveryCoordinator({
   recheckPath:async (...args) => { calls.push(["recheck", ...args]); },
   updateTargetAccess:(...args) => calls.push(["update", ...args]),
 });
+assert.deepEqual(coordinator.projectReadiness({
+  selectedTarget:selected,
+  pathStatus:"Waiting for path",
+}), {
+  targetSelected:true,
+  ready:false,
+  currentStep:"readiness",
+  requestAccessVisible:false,
+});
 assert.deepEqual(await coordinator.reconcileProbe({
   selectedTarget:selected,
   historyPath:"event.history",
