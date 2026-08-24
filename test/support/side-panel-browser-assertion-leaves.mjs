@@ -18,6 +18,9 @@ const assertionLeavesByTarget = {
     ["liveTargetPermissionRecoveryWiring","requestAccessAbsent"],
     ["liveTargetPermissionRecoveryWiring","startTestingRemainsDisabled"],
     ["liveTargetPermissionRecoveryWiring","selectedTargetPresented"],
+    ["liveTargetPermissionRecoveryWiring","applyBridgeObserved"],
+    ["liveTargetPermissionRecoveryWiring","exactAppliedObservation"],
+    ["liveTargetPermissionRecoveryWiring","matchingTargetResolved"],
   ],
   "FRESH_LIVE_SESSION_BROWSER_ADAPTER": [
     ["freshLiveSession","initial","initial","id"],

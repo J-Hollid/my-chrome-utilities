@@ -1,5 +1,7 @@
 export const liveTargetPermissionRecoveryEvidenceTask =
   "verification-slice-live-target-permission-recovery";
+export const liveTargetPermissionPathApplyEvidenceTask =
+  "verification-slice-live-target-permission-path-apply";
 
 export const liveTargetPermissionRecoveryPackIds = [
   "capture", "defects", "event-library", "schemas", "shell",
@@ -22,7 +24,8 @@ function sameSet(left, right) {
 }
 
 export function isLiveTargetPermissionRecoveryEvidenceTask(task) {
-  return task === liveTargetPermissionRecoveryEvidenceTask;
+  return [liveTargetPermissionRecoveryEvidenceTask,
+    liveTargetPermissionPathApplyEvidenceTask].includes(task);
 }
 
 export function validateLiveTargetPermissionRecoveryFocusedPlan(plan, evidenceTask) {

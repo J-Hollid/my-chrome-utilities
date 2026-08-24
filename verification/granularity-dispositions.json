@@ -79,10 +79,21 @@
       "decision": "integrated-seam",
       "replacementPaths": [
         "src/data-layer-live-target-permission-recovery/coordinator.ts",
+        "src/data-layer-live-target-permission-recovery/path-apply.ts",
         "src/data-layer-live-target-permission-recovery/readiness.ts"
       ],
       "reviewAuthority": "qa-integration",
-      "reason": "The independently tested Capture coordination seam and installed Shell consumer provide the future probe, action, exact-origin, and same-tab recheck change point while the broad side-panel composition root retains only behavior-preserving delegation."
+      "reason": "The independently tested Capture coordination seam and installed target-path apply bridge provide the future probe, action, exact-origin, same-tab recheck, and exact callback change points while the broad side-panel composition root retains only behavior-preserving delegation."
+    },
+    {
+      "task": "verification-slice-live-target-permission-path-apply",
+      "path": "src/side-panel.ts",
+      "decision": "integrated-seam",
+      "replacementPaths": [
+        "src/data-layer-live-target-permission-recovery/path-apply.ts"
+      ],
+      "reviewAuthority": "qa-integration",
+      "reason": "The broad target-path apply callback delegates the exact applied observation to the independently tested Capture bridge; dormant reconciliation preserves installed behavior and later product work changes the bridge or coordinator without another composition-root edit."
     },
     {
       "task": "verification-slice-live-target-permission-recovery",

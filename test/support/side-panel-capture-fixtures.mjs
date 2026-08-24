@@ -370,6 +370,8 @@ export const liveTargetPermissionRecoveryWiringRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   const waitFor = async (predicate, label) => { for (let attempt = 0; attempt < 100; attempt += 1) { const result = predicate(); if (result) return result; await new Promise((resolve) => setTimeout(resolve, 10)); } throw new Error("Timed out waiting for " + label); };
   const permissionCalls = [];
+  let pathApplyObservation;
+  globalThis.addEventListener("live-target-permission-path-applied", (event) => { pathApplyObservation = event.detail; }, { once:true });
   globalThis.chrome = {
     tabs:{ query:async () => [{ id:42, windowId:7, url:"https://shop.example.test/checkout", title:"Checkout", active:true }] },
     permissions:{ request:async (...args) => { permissionCalls.push(args); return true; } },
@@ -378,13 +380,19 @@ export const liveTargetPermissionRecoveryWiringRuntime = `(async () => {
   q("#choose-observation-target").click();
   await waitFor(() => document.querySelector("#observation-target-list [data-target-id]"), "selected target candidate");
   q("#observation-target-list [data-target-id]").click();
+  await waitFor(() => pathApplyObservation, "permission path apply bridge");
   const buttons = [...document.querySelectorAll("button")].map(({ textContent }) => textContent.trim());
   const selectedTargetPresented = q("#live-setup-target").textContent.includes("Checkout selected");
   const startTestingRemainsDisabled = q("#start-data-layer-testing").disabled;
   const requestAccessAbsent = !buttons.includes("Request access");
   const inactive = requestAccessAbsent && startTestingRemainsDisabled;
-  if (permissionCalls.length || !inactive || !selectedTargetPresented) throw new Error("Preparation activated permission recovery or missed its installed projection");
-  return { installedProjection:selectedTargetPresented && startTestingRemainsDisabled, inactive, callbacksSuppressed:permissionCalls.length === 0, requestAccessAbsent, startTestingRemainsDisabled, selectedTargetPresented };
+  const applyBridgeObserved = pathApplyObservation.result.status === "inactive";
+  const exactAppliedObservation = pathApplyObservation.request.selectedTarget.tabId === 42
+    && pathApplyObservation.request.historyPath === q("#history-path").value
+    && pathApplyObservation.request.pageAccessStatus === "page access available";
+  const matchingTargetResolved = pathApplyObservation.request.selectedTarget.id === "tab:42:window:7";
+  if (permissionCalls.length || !inactive || !selectedTargetPresented || !applyBridgeObserved || !exactAppliedObservation || !matchingTargetResolved) throw new Error("Preparation activated permission recovery or missed its installed path-apply bridge");
+  return { installedProjection:selectedTargetPresented && startTestingRemainsDisabled, inactive, callbacksSuppressed:permissionCalls.length === 0, requestAccessAbsent, startTestingRemainsDisabled, selectedTargetPresented, applyBridgeObserved, exactAppliedObservation, matchingTargetResolved };
 })()`;
 
 export const fixturePrograms = Object.freeze({ ...projectFixturePrograms, payloadPathFilterPickerRuntime, singleLiveEventFeedRuntime, savedSessionLiveFeedRuntime, savedSessionLiveFeedReloadRuntime, freshLiveSessionRuntime, freshLiveSessionReloadRuntime, savedEventFeedFiltersSeedRuntime, savedEventFeedFiltersRuntime, liveTargetPermissionRecoveryWiringRuntime });

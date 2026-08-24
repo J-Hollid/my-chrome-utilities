@@ -64,7 +64,29 @@
    "203" [#"^the Live target permission-recovery preparation has the user-approved focused bootstrap$"
           #"^(.+) is found before evidence execution$"
           #"^the focused bootstrap is invalid$"
-          #"^execution stops for current scope classification instead of widening the plan$"]})
+          #"^execution stops for current scope classification instead of widening the plan$"]
+   "204" [#"^live-target-permission-recovery has coherent candidate 1cf347a22c with an accepted slow-success repair$"
+          #"^its target-path apply callback in the broad side-panel composition selects all twenty runnable packs and 890 tasks$"
+          #"^standing callback ownership preparation is issued from exact QA 59d9089c6d$"
+          #"^its stable task is verification-slice-live-target-permission-path-apply$"
+          #"^the product candidate and tree remain an immutable conserved remainder$"
+          #"^product scenarios 009 and runtime 002 remain unchanged and red during preparation$"
+          #"^no unrelated whole-pack task array or all-runnable-pack checkpoint executes$"]
+   "205" [#"^the target-path controller applies one exact page observation$"
+          #"^its behavior-preserving permission-recovery bridge is installed$"
+          #"^subordinate Capture slice capture_live_target_permission_path_apply owns the bridge$"
+          #"^Shell is its exact installed side-panel consumer$"
+          #"^the bridge receives the applied tab, history path, and page-access result and resolves only the matching attached or selected target$"
+          #"^the broad side-panel callback delegates through the dormant bridge without receiving narrow whole-file ownership$"
+          #"^inactive preparation cannot update access, expose an action, request permission, recheck a path, change readiness, or start a session$"]
+   "206" [#"^the Live target path-apply preparation has one bounded exact candidate$"
+          #"^its conservation and review evidence are produced$"
+          #"^evidence selects only the declared seam, observation-target and target-path prerequisites, preparation, focused-acceptance, directly changed process-contract, installed-browser, build, and package tasks$"
+          #"^shared browser support can add only Capture, Event Library, Schemas, Defects, and Shell as causal owners$"
+          #"^a property task runs only when the settled slice declares it as a direct or prerequisite observation$"
+          #"^target, path, permission, readiness, session, project, saved-state, and installed UI behavior remain unchanged$"
+          #"^any callback drift, behavioral activation, missing observation, weakened assertion, or automatic plan widening blocks before execution$"
+          #"^after architect qa-ready integration the original live-target-permission-recovery task is reissued from that exact QA head without another acceptance round-trip$"]})
 
 (defn handlers []
   (vec (for [[_scenario patterns] scenario-step-patterns

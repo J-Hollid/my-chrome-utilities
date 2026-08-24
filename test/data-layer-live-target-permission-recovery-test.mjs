@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   createDormantLiveTargetPermissionRecoveryCoordinator,
+  createLiveTargetPermissionPathApplyBridge,
   liveTargetPermissionRecoveryReadiness,
 } from "../dist/data-layer-live-target-permission-recovery/index.js";
 
@@ -67,5 +68,61 @@ assert.deepEqual(await coordinator.requestAccess({
   historyPath:"event.history",
 }), { status:"inactive", selectedTarget:selected });
 assert.deepEqual(calls, [], "preparation must not request, recheck, or mutate access");
+
+const attached = { ...selected, id:"attached:42", title:"Attached checkout" };
+const fallback = { ...selected, id:"selected:42", title:"Selected checkout" };
+let attachedTarget = attached;
+const bridged = [];
+let readinessRenders = 0;
+const appliedBridgeObservations = [];
+let reconciliationResult = { status:"inactive", selectedTarget:attached };
+const pathApplyBridge = createLiveTargetPermissionPathApplyBridge({
+  attachedTarget:() => attachedTarget,
+  selectedTarget:() => fallback,
+  reconcileProbe:async (request) => {
+    bridged.push(request);
+    return reconciliationResult;
+  },
+  renderReadiness:() => { readinessRenders += 1; },
+  observeApplied:(observation) => appliedBridgeObservations.push(observation),
+});
+const appliedObservation = {
+  tabId:42,
+  pageUrl:selected.pageUrl,
+  historyPath:"event.history",
+  pageAccessStatus:"page access available",
+  pageObject:{ event:{ history:[] } },
+};
+assert.equal(await pathApplyBridge.apply(appliedObservation), reconciliationResult);
+assert.deepEqual(bridged, [{
+  selectedTarget:attached,
+  historyPath:"event.history",
+  pageAccessStatus:"page access available",
+}], "the applied observation reaches the dormant seam with exact causal identity");
+assert.equal(readinessRenders, 0, "inactive preparation never requests a readiness render");
+assert.deepEqual(appliedBridgeObservations, [{
+  request:bridged[0],
+  result:reconciliationResult,
+}], "the installed observation is emitted by the same bridge invocation");
+
+await pathApplyBridge.apply({ ...appliedObservation, tabId:84 });
+assert.equal(bridged.length, 1, "an observation for another tab is excluded");
+
+attachedTarget = undefined;
+reconciliationResult = {
+  status:"recovery-required",
+  selectedTarget:fallback,
+  pathStatus:"Permission required",
+};
+assert.equal(await pathApplyBridge.apply({
+  ...appliedObservation,
+  pageAccessStatus:"page access unavailable",
+}), reconciliationResult);
+assert.deepEqual(bridged.at(-1), {
+  selectedTarget:fallback,
+  historyPath:"event.history",
+  pageAccessStatus:"page access unavailable",
+}, "the matching selected target is the fallback when no target is attached");
+assert.equal(readinessRenders, 1, "only a relevant seam transition requests readiness rendering");
 
 console.log("live target permission recovery seam tests passed");

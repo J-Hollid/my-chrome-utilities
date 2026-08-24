@@ -10,3 +10,9 @@ export {
   type LiveTargetPermissionRecoveryReadiness,
   type LiveTargetPermissionRecoveryStep,
 } from "./readiness.js";
+export {
+  createLiveTargetPermissionPathApplyBridge,
+  type LiveTargetPermissionPathApplyBridge,
+  type LiveTargetPermissionPathApplyObservation,
+  type LiveTargetPermissionPathApplyResult,
+} from "./path-apply.js";

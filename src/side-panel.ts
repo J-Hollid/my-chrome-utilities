@@ -111,6 +111,7 @@ import { createLiveNotificationController } from "./utilities/data-layer/capture
 import {
   createTargetPathStatusController,
   createDormantLiveTargetPermissionRecoveryCoordinator,
+  createLiveTargetPermissionPathApplyBridge,
   targetPathStatusForObservation,
   type TargetPathStatus,
 } from "./utilities/data-layer/capture.js";
@@ -6192,6 +6193,17 @@ backToEventsButton?.addEventListener("click", () => {
   closeInspectorAndReturnToEvents();
 });
 
+const liveTargetPermissionPathApplyBridge = createLiveTargetPermissionPathApplyBridge({
+  attachedTarget:() => attachedObservationTarget(observationTargetState),
+  selectedTarget:() => selectedObservationTarget(observationTargetState),
+  reconcileProbe:(request) => liveTargetPermissionRecoveryCoordinator.reconcileProbe(request),
+  renderReadiness:renderLiveContextActions,
+  observeApplied:(observation) => globalThis.dispatchEvent(new CustomEvent(
+    "live-target-permission-path-applied",
+    { detail:observation },
+  )),
+});
+
 const targetPathStatusController = createTargetPathStatusController({
   render: (path, fieldValue, status) => {
     currentTargetPathStatus = status;
@@ -6208,6 +6220,7 @@ const targetPathStatusController = createTargetPathStatusController({
     persistAndRenderSessionState();
     restartLiveHistoryCaptureIfActive(observation);
     renderObserverState();
+    void liveTargetPermissionPathApplyBridge.apply(observation);
   },
 });
 

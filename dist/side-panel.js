@@ -26,7 +26,7 @@ import { findLiveGuidedWorkflowElements, renderLiveGuidedWorkflow, } from "./uti
 import { renderLiveSessionControls } from "./utilities/data-layer/capture.js";
 import { canonicalLiveObserverStatus, createLiveSessionSummary, } from "./utilities/data-layer/capture.js";
 import { createLiveNotificationController } from "./utilities/data-layer/capture.js";
-import { createTargetPathStatusController, createDormantLiveTargetPermissionRecoveryCoordinator, targetPathStatusForObservation, } from "./utilities/data-layer/capture.js";
+import { createTargetPathStatusController, createDormantLiveTargetPermissionRecoveryCoordinator, createLiveTargetPermissionPathApplyBridge, targetPathStatusForObservation, } from "./utilities/data-layer/capture.js";
 import { copyLivePageUrl as copyLivePageUrlAction } from "./utilities/data-layer/capture.js";
 import { findLiveSessionSummaryElements, renderLiveSessionSummary, } from "./utilities/data-layer/capture.js";
 import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resumeCapture, setLiveQuery, selectLiveEvent, } from "./utilities/data-layer/live-inspection.js";
@@ -7662,6 +7662,13 @@ confirmSavedSessionDeleteButton?.addEventListener("click", () => {
 backToEventsButton?.addEventListener("click", () => {
     closeInspectorAndReturnToEvents();
 });
+const liveTargetPermissionPathApplyBridge = createLiveTargetPermissionPathApplyBridge({
+    attachedTarget: () => attachedObservationTarget(observationTargetState),
+    selectedTarget: () => selectedObservationTarget(observationTargetState),
+    reconcileProbe: (request) => liveTargetPermissionRecoveryCoordinator.reconcileProbe(request),
+    renderReadiness: renderLiveContextActions,
+    observeApplied: (observation) => globalThis.dispatchEvent(new CustomEvent("live-target-permission-path-applied", { detail: observation })),
+});
 const targetPathStatusController = createTargetPathStatusController({
     render: (path, fieldValue, status) => {
         currentTargetPathStatus = status;
@@ -7675,6 +7682,7 @@ const targetPathStatusController = createTargetPathStatusController({
         persistAndRenderSessionState();
         restartLiveHistoryCaptureIfActive(observation);
         renderObserverState();
+        void liveTargetPermissionPathApplyBridge.apply(observation);
     },
 });
 function refreshSelectedTargetPathStatus() {

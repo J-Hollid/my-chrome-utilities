@@ -21,8 +21,14 @@ const shell = packs.find(({ id }) => id === "shell");
 const slice = capture.verificationSlices.find(
   ({ id }) => id === "capture_live_target_permission_recovery",
 );
+const pathApplySlice = capture.verificationSlices.find(
+  ({ id }) => id === "capture_live_target_permission_path_apply",
+);
 const consumer = shell.verificationSlices.find(
   ({ id }) => id === "live_target_permission_recovery_consumer",
+);
+const pathApplyConsumer = shell.verificationSlices.find(
+  ({ id }) => id === "live_target_permission_path_apply_consumer",
 );
 const disposition = dispositions.dispositions.find(({ task, path }) =>
   task === "verification-slice-live-target-permission-recovery"
@@ -30,6 +36,9 @@ const disposition = dispositions.dispositions.find(({ task, path }) =>
 const publicFacadeDisposition = dispositions.dispositions.find(({ task, path }) =>
   task === "verification-slice-live-target-permission-recovery"
   && path === "src/utilities/data-layer/capture.ts");
+const pathApplyDisposition = dispositions.dispositions.find(({ task, path }) =>
+  task === "verification-slice-live-target-permission-path-apply"
+  && path === "src/side-panel.ts");
 const operatorInterfaceSource = await readFile(
   "acceptance/src/acceptance/steps/operator_interface_support.clj", "utf8");
 const captureHandlerSource = await readFile(
@@ -62,6 +71,19 @@ assert.deepEqual(slice.prerequisites, [
 assert.deepEqual(slice.consumers, [
   { packId:"shell", sliceId:"live_target_permission_recovery_consumer" },
 ]);
+assert.deepEqual(pathApplySlice, {
+  id:"capture_live_target_permission_path_apply",
+  sourcePaths:["src/data-layer-live-target-permission-recovery/path-apply.ts"],
+  sourcePrefixes:[],
+  tasks:["unit:test/data-layer-live-target-permission-recovery-test.mjs"],
+  prerequisites:[
+    "unit:test/data-layer-observation-targets-test.mjs",
+    "unit:test/data-layer-target-path-status-test.mjs",
+  ],
+  consumers:[{ packId:"shell", sliceId:"live_target_permission_path_apply_consumer" }],
+  observableBoundary:pathApplySlice.observableBoundary,
+});
+assert.equal(pathApplyConsumer.consumerOnly, true);
 assert.equal(consumer.consumerOnly, true);
 assert.deepEqual(consumer.tasks, [
   "unit:test/live-target-permission-recovery-preparation-contract-test.mjs",
@@ -89,22 +111,36 @@ assert.deepEqual(publicFacadeDisposition, {
   reviewAuthority:"qa-integration",
   reason:publicFacadeDisposition.reason,
 });
+assert.deepEqual(pathApplyDisposition, {
+  task:"verification-slice-live-target-permission-path-apply",
+  path:"src/side-panel.ts",
+  decision:"integrated-seam",
+  replacementPaths:["src/data-layer-live-target-permission-recovery/path-apply.ts"],
+  reviewAuthority:"qa-integration",
+  reason:pathApplyDisposition.reason,
+});
 assert.match(operatorInterfaceSource,
   /"origin" #\{"https:\/\/shop\.example\.test"\}/u);
 assert.match(captureHandlerSource, /\[22 12 66 25 1 5 2 172\]/u);
 assert.match(captureHandlerSource,
   /false\? \(:propagateDependants %\)[\s\S]+"browser presentation"/u);
-assert.match(readinessSource, /dispositions\.dispositions\.length===11/u);
+assert.match(readinessSource, /dispositions\.dispositions\.length===12/u);
 assert.equal((modularFeatureSource.match(
   /\| shell\s+\| 3\s+\|(?: 3\s+\|)?/gu) ?? []).length, 2);
 assert.match(sidePanelContractHandlerSource,
   /filterv #\(= 9 %\)[\s\S]+:shellLeaves/u);
 assert.match(sidePanelContractHandlerSource,
-  /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7054/u);
+  /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7057/u);
 assert.match(permissionRecoveryHandlerSource,
   /"202"[\s\S]+only affected packs are Capture, Event Library, Schemas, Defects, and Shell/u);
 assert.match(permissionRecoveryHandlerSource,
   /"203"[\s\S]+focused bootstrap is invalid/u);
+assert.match(permissionRecoveryHandlerSource,
+  /"204"[\s\S]+verification-slice-live-target-permission-path-apply/u);
+assert.match(permissionRecoveryHandlerSource,
+  /"205"[\s\S]+capture_live_target_permission_path_apply/u);
+assert.match(permissionRecoveryHandlerSource,
+  /"206"[\s\S]+automatic plan widening blocks before execution/u);
 
 const productionChanges = execFileSync(
   "git",
@@ -114,6 +150,7 @@ const productionChanges = execFileSync(
 assert.deepEqual(productionChanges, [
   "src/data-layer-live-target-permission-recovery/coordinator.ts",
   "src/data-layer-live-target-permission-recovery/index.ts",
+  "src/data-layer-live-target-permission-recovery/path-apply.ts",
   "src/data-layer-live-target-permission-recovery/readiness.ts",
   "src/side-panel.ts",
   "src/utilities/data-layer/capture.ts",
@@ -193,6 +230,9 @@ const evidence = {
   conservativeClosure:true,
   noAllPack:true,
   automaticResumption:true,
+  pathApplyBridge:true,
+  exactAppliedObservation:true,
+  matchingTargetOnly:true,
   runtimeExampleDomainConserved:true,
   captureEvidenceInventoryConserved:true,
   causalBootstrapPackBoundary:true,
@@ -229,7 +269,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     },
     "other:verification conservation inventory":{
       id:"permission-recovery-conservation-inventory-v1",
-      input:{ durableDispositionCount:11, captureUnitCount:22, captureTaskCount:172 },
+      input:{ durableDispositionCount:12, captureUnitCount:22, captureTaskCount:172 },
       expectedPreRepairFailure:{durableDispositions:false,captureInventory:false,
         typedPresentationBoundary:false,sidePanelInventory:false,containmentLeaves:false,
         globalBrowserInventory:false},
@@ -237,7 +277,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         typedPresentationBoundary:true,sidePanelInventory:true,containmentLeaves:true,
         globalBrowserInventory:true},
       repairResult:{
-        durableDispositions:/dispositions\.dispositions\.length===11/u.test(readinessSource),
+        durableDispositions:/dispositions\.dispositions\.length===12/u.test(readinessSource),
         captureInventory:/\[22 12 66 25 1 5 2 172\]/u.test(captureHandlerSource),
         typedPresentationBoundary:
           /false\? \(:propagateDependants %\)[\s\S]+"browser presentation"/u
@@ -247,7 +287,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         containmentLeaves:/filterv #\(= 9 %\)[\s\S]+:shellLeaves/u
           .test(sidePanelContractHandlerSource),
         globalBrowserInventory:
-          /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7054/u
+          /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7057/u
             .test(sidePanelContractHandlerSource),
       },
     },
