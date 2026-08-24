@@ -160,7 +160,10 @@ const productionChanges = execFileSync(
   ["diff", "--name-only", specificationCommit, "HEAD", "--", "src"],
   { encoding:"utf8" },
 ).trim().split("\n").filter(Boolean).sort();
-assert.deepEqual(productionChanges, [
+const permissionRecoveryChanges = productionChanges.filter(
+  (path) => !path.startsWith("src/data-layer-installed/"),
+);
+assert.deepEqual(permissionRecoveryChanges, [
   "src/data-layer-live-target-permission-recovery/action-host.ts",
   "src/data-layer-live-target-permission-recovery/coordinator.ts",
   "src/data-layer-live-target-permission-recovery/index.ts",

@@ -94,6 +94,12 @@ import {
   validateLiveTargetPermissionRecoveryFocusedPlan,
 } from "./live-target-permission-recovery-focused-evidence.mjs";
 import {
+  isSidePanelSingleCutoverEvidenceTask,
+  sidePanelSingleCutoverFocusedTaskKeys,
+  sidePanelSingleCutoverPackIds,
+  validateSidePanelSingleCutoverFocusedPlan,
+} from "./side-panel-single-cutover-focused-evidence.mjs";
+import {
   bindRunIntentBootstrapPlan,
   buildConfirmedFlakyAdmissions,
   buildEligibleRepairAdmissions,
@@ -405,12 +411,16 @@ export function focusedAcceptanceOptions(args) {
     options.prepareEvidence === liveTargetPermissionRecoveryProductEvidenceTask;
   const permissionRecoveryFocusedTaskKeys =
     liveTargetPermissionRecoveryFocusedTaskKeysFor(options.prepareEvidence);
-  if (options.focusedTaskKeys.length && ((!permissionRecoveryEvidence && options.packIds.length !== 1) ||
+  const sidePanelSingleCutoverEvidence =
+    isSidePanelSingleCutoverEvidenceTask(options.prepareEvidence);
+  if (options.focusedTaskKeys.length && ((!permissionRecoveryEvidence &&
+      !sidePanelSingleCutoverEvidence && options.packIds.length !== 1) ||
       options.changedPaths.length ||
       options.terminalFull ||
       (options.includeProperties && !permissionRecoveryProductEvidence) ||
       options.withDependencies ||
-      options.skipBuild || options.shard || options.prepareEvidence && !permissionRecoveryEvidence ||
+      options.skipBuild || options.shard || options.prepareEvidence &&
+        !permissionRecoveryEvidence && !sidePanelSingleCutoverEvidence ||
       options.resumeReceipt ||
       options.browserTargetIds.length || options.timeoutDiagnosticRetry || options.timeoutRepairIncident ||
       options.timeoutRepairFocused)) {
@@ -420,7 +430,7 @@ export function focusedAcceptanceOptions(args) {
     if (!options.packIds.length || !options.changedSince) {
       throw new Error("Evidence requires exact --pack selector(s) and --changed-since <commit>");
     }
-    if (!permissionRecoveryEvidence && !options.includeProperties) {
+    if (!permissionRecoveryEvidence && !sidePanelSingleCutoverEvidence && !options.includeProperties) {
       throw new Error("Evidence requires --property so every registered property leaf is executed");
     }
     if (permissionRecoveryEvidence &&
@@ -430,6 +440,14 @@ export function focusedAcceptanceOptions(args) {
            JSON.stringify([...permissionRecoveryFocusedTaskKeys].sort()) ||
          options.includeProperties !== permissionRecoveryProductEvidence)) {
       throw new Error("Permission-recovery evidence requires its exact causal packs and focused tasks");
+    }
+    if (sidePanelSingleCutoverEvidence &&
+        (JSON.stringify([...options.packIds].sort()) !==
+           JSON.stringify([...sidePanelSingleCutoverPackIds].sort()) ||
+         JSON.stringify([...options.focusedTaskKeys].sort()) !==
+           JSON.stringify([...sidePanelSingleCutoverFocusedTaskKeys].sort()) ||
+         options.includeProperties)) {
+      throw new Error("Side-panel single-cutover evidence requires its exact preparation packs and focused tasks");
     }
     if (options.withDependencies || options.skipBuild || options.shard || options.terminalFull) {
       throw new Error("Evidence cannot use dependencies, no-build, sharding, or terminal-full mode");
@@ -1635,9 +1653,12 @@ export async function checkpointPreflight({
       });
       const permissionRecoveryFocused = isLiveTargetPermissionRecoveryEvidenceTask(evidenceTask) &&
         validateLiveTargetPermissionRecoveryFocusedPlan(plan, evidenceTask);
+      const sidePanelSingleCutoverFocused = isSidePanelSingleCutoverEvidenceTask(evidenceTask) &&
+        validateSidePanelSingleCutoverFocusedPlan(plan, evidenceTask);
       if (evidenceTask && (plan.mode !== "exact" && !registryCardinalityFocusedPlanMode({
         task:evidenceTask, mode:plan.mode,
-      }) && !permissionRecoveryFocused || !plan.includeProperties && !permissionRecoveryFocused ||
+      }) && !permissionRecoveryFocused && !sidePanelSingleCutoverFocused ||
+          !plan.includeProperties && !permissionRecoveryFocused && !sidePanelSingleCutoverFocused ||
           !plan.changeSet || !plan.baseCommit || !plan.claimPackIds?.length)) {
         throw new Error("Checkpoint preflight requires an exact canonical evidence plan");
       }
@@ -1749,6 +1770,8 @@ export async function runFocusedAcceptance(
   const cardinalityReviewEvidence = evidenceTask === "registry-derived-verification-packs";
   const permissionRecoveryReviewEvidence =
     isLiveTargetPermissionRecoveryEvidenceTask(evidenceTask);
+  const sidePanelSingleCutoverReviewEvidence =
+    isSidePanelSingleCutoverEvidenceTask(evidenceTask);
   if (cardinalityReviewEvidence &&
       (options.packIds.length !== 1 || options.packIds[0] !== "shell" ||
        !changedSince || !options.includeProperties || options.terminalFull)) {
@@ -1765,7 +1788,7 @@ export async function runFocusedAcceptance(
     bindingPlan = planVerification(packs, { ...options, packIds:[] });
     const productCandidate = bindingPlan.changedPaths.some(reviewReadyProductCandidatePath);
     if (reviewReadyScopeGuardRequired(productCandidate, options.runIntentBootstrap) &&
-        !permissionRecoveryReviewEvidence) {
+        !permissionRecoveryReviewEvidence && !sidePanelSingleCutoverReviewEvidence) {
       const timingBaseline = JSON.parse(await readFile(
         path.join(repositoryRoot, "verification", "timing-baseline.json"), "utf8"));
       const preflight = reviewReadyScopePreflight({
@@ -1841,6 +1864,9 @@ export async function runFocusedAcceptance(
   }
   if (permissionRecoveryReviewEvidence) {
     validateLiveTargetPermissionRecoveryFocusedPlan(plan, evidenceTask);
+  }
+  if (sidePanelSingleCutoverReviewEvidence) {
+    validateSidePanelSingleCutoverFocusedPlan(plan, evidenceTask);
   }
   const concurrency = environmentInteger("VERIFICATION_CONCURRENCY", 4, { maximum:64 });
   const observationConcurrency = environmentInteger("VERIFICATION_OBSERVATION_CONCURRENCY", 2, { maximum:4 });

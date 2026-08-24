@@ -50,6 +50,12 @@ import {
   validateLiveTargetPermissionRecoveryFocusedPlan,
 } from "./live-target-permission-recovery-focused-evidence.mjs";
 import {
+  isSidePanelSingleCutoverEvidenceTask,
+  sidePanelSingleCutoverFocusedTaskKeys,
+  sidePanelSingleCutoverPackIds,
+  validateSidePanelSingleCutoverFocusedPlan,
+} from "./side-panel-single-cutover-focused-evidence.mjs";
+import {
   canonicalRunIntentBootstrapPlan,
   requireVerificationRunIntent,
   runIntentBootstrapCoverage,
@@ -373,7 +379,11 @@ function planDocument(plan, { evidenceTask, candidateRegistry } = {}) {
   const permissionRecoveryFocused =
     isLiveTargetPermissionRecoveryEvidenceTask(evidenceTask) &&
     validateLiveTargetPermissionRecoveryFocusedPlan(plan, evidenceTask);
-  if ((plan.mode !== "exact" && !cardinalityFocused && !permissionRecoveryFocused) || !packIds.length ||
+  const sidePanelSingleCutoverFocused =
+    isSidePanelSingleCutoverEvidenceTask(evidenceTask) &&
+    validateSidePanelSingleCutoverFocusedPlan(plan, evidenceTask);
+  if ((plan.mode !== "exact" && !cardinalityFocused && !permissionRecoveryFocused &&
+      !sidePanelSingleCutoverFocused) || !packIds.length ||
       !same(packIds, sortedUnique(plan.requestedPackIds ?? []))) {
     throw new Error("Verification evidence requires exact explicit known pack(s)");
   }
@@ -383,7 +393,8 @@ function planDocument(plan, { evidenceTask, candidateRegistry } = {}) {
   if (!same(sortedUnique(plan.selectedPackIds ?? []), packIds)) {
     throw new Error("Evidence pack claims must equal the packs whose stages were executed");
   }
-  if (plan.includeProperties !== true && !permissionRecoveryFocused) {
+  if (plan.includeProperties !== true && !permissionRecoveryFocused &&
+      !sidePanelSingleCutoverFocused) {
     throw new Error("Verification evidence requires every registered property leaf; add --property");
   }
   if (plan.changeSet?.version !== 1 || !plan.baseCommit ||
@@ -569,6 +580,42 @@ function canonicalLiveTargetPermissionRecoveryPlan(candidatePacks, {
   };
 }
 
+function canonicalSidePanelSingleCutoverPlan(candidatePacks, {
+  changeSet, basePacks, historicalRegistryFallback,
+}) {
+  const bindingPlan = planVerification(candidatePacks, {
+    changedPaths:changeSet.paths,
+    includeProperties:false,
+    changeSet,
+    basePacks,
+    historicalRegistryFallback,
+  });
+  const executionPlan = bindEvidenceChangeScope(planVerification(candidatePacks, {
+    packIds:sidePanelSingleCutoverPackIds,
+    includeProperties:false,
+  }), bindingPlan);
+  const runnablePackIds = createVerificationPackCardinalityAdapter(candidatePacks).runnablePackIds;
+  const canonical = withEvidencePackageTask(planVerification(candidatePacks, {
+    packIds:runnablePackIds,
+    includeProperties:false,
+  }));
+  const candidates = new Map(canonical.tasks.map((task) => [task.key, task]));
+  const requested = sidePanelSingleCutoverFocusedTaskKeys.map((key) => {
+    const task = candidates.get(key);
+    if (!task) throw new Error(`Side-panel single-cutover task is not registered: ${key}`);
+    return task;
+  });
+  const tasks = expandVerificationTaskPrerequisites(requested, canonical.tasks,
+    { mode:"ordinary-focused" });
+  return {
+    ...executionPlan,
+    mode:"focused-task",
+    tasks:canonical.tasks.filter(({ key }) => tasks.some((task) => task.key === key)),
+    includeProperties:false,
+    focusedTaskKeys:[...sidePanelSingleCutoverFocusedTaskKeys],
+  };
+}
+
 async function canonicalPlanDocument({
   commit, baseCommit, changeSet, packIds, repositoryRoot, includePackage = true,
   runIntentBootstrap = false, evidenceTask, allowLegacyCandidateOwnership = false,
@@ -599,6 +646,10 @@ async function canonicalPlanDocument({
       ? canonicalLiveTargetPermissionRecoveryPlan(candidatePacks, {
         changeSet, basePacks, historicalRegistryFallback, evidenceTask,
       })
+    : isSidePanelSingleCutoverEvidenceTask(evidenceTask)
+      ? canonicalSidePanelSingleCutoverPlan(candidatePacks, {
+        changeSet, basePacks, historicalRegistryFallback,
+      })
     : planVerification(candidatePacks, {
       packIds,
       changedPaths:changeSet.paths,
@@ -608,7 +659,8 @@ async function canonicalPlanDocument({
       historicalRegistryFallback,
     });
   if (evidenceTask !== "registry-derived-verification-packs" &&
-      !isLiveTargetPermissionRecoveryEvidenceTask(evidenceTask)) {
+      !isLiveTargetPermissionRecoveryEvidenceTask(evidenceTask) &&
+      !isSidePanelSingleCutoverEvidenceTask(evidenceTask)) {
     plan = closeCanonicalEvidencePlanPrerequisites(plan, candidatePacks,
       { allowLegacySourceLess:allowLegacyCandidateOwnership });
     if (includePackage) plan = withEvidencePackageTask(plan);

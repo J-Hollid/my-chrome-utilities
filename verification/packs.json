@@ -3,6 +3,7 @@
     "id": "project_management",
     "representativeChangedPath": "src/data-layer-assignment-routing-ui.ts",
     "source": [
+      "src/data-layer-installed/projects/",
       "src/data-layer-project-entity-lifecycle.ts",
       "src/data-layer-page-authoring.ts",
       "src/data-layer-assignment-routing.ts",
@@ -54,6 +55,27 @@
         "prerequisites": ["property:test/data-layer-flow-visual-asset-portability-property-test.mjs"],
         "consumers": [{"packId": "durable_project_repository", "sliceId": "documentation_template_archive"}],
         "observableBoundary": "Project asset-body persistence and portable archive contribution"
+      },
+      {
+        "id": "project_library_installed_side_panel",
+        "sourcePaths": [],
+        "sourcePrefixes": ["src/data-layer-installed/projects/"],
+        "tasks": ["unit:test/data-layer-installed/projects-controller-test.mjs"],
+        "prerequisites": [],
+        "consumers": [
+          {"packId": "durable_project_repository", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "project_event_transport", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "guided_test_cases", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "shell", "sliceId": "side_panel_installed_controller_consumer"}
+        ],
+        "observableBoundary": "Installed Project Library host, active-project capability, navigation, and project coordination"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [], "sourcePrefixes": [], "consumerOnly": true,
+        "tasks": ["unit:test/data-layer-installed/consumers/project-management-consumer-test.mjs"],
+        "prerequisites": [], "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
       }
     ],
     "impactBoundaries": [
@@ -139,9 +161,17 @@
         ],
         "propagateDependants": false,
         "sourceClass": "browser presentation"
+      },
+      {
+        "id": "project_library_installed_side_panel_boundary",
+        "prefixes": ["src/data-layer-installed/projects/"],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
       }
     ],
     "unit": [
+      "test/data-layer-installed/projects-controller-test.mjs",
+      "test/data-layer-installed/consumers/project-management-consumer-test.mjs",
       "test/data-layer-project-entity-lifecycle-test.mjs",
       "test/data-layer-page-authoring-test.mjs",
       "test/data-layer-assignment-routing-test.mjs",
@@ -199,6 +229,7 @@
     "id": "durable_project_repository",
     "representativeChangedPath": "src/data-layer-durable-project-repository-presentation-ui.ts",
     "source": [
+      "src/data-layer-installed/durable-projects/",
       "src/data-layer-durable-project-repository.ts",
       "src/data-layer-production-model.ts",
       "src/data-layer-production-specification.ts",
@@ -246,9 +277,31 @@
         "prerequisites": ["property:test/data-layer-durable-project-repository-property-test.mjs"],
         "consumers": [],
         "observableBoundary": "Durable asset-body storage and archive round trip"
+      },
+      {
+        "id": "durable_project_installed_side_panel",
+        "sourcePaths": [],
+        "sourcePrefixes": ["src/data-layer-installed/durable-projects/"],
+        "tasks": ["unit:test/data-layer-installed/durable-projects-controller-test.mjs"],
+        "prerequisites": [],
+        "consumers": [
+          {"packId": "flow_graph", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "layered_schema", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "shell", "sliceId": "side_panel_installed_controller_consumer"}
+        ],
+        "observableBoundary": "Installed durable startup, migration, save recovery, and repository UI lifecycle"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [], "sourcePrefixes": [], "consumerOnly": true,
+        "tasks": ["unit:test/data-layer-installed/consumers/durable-project-repository-consumer-test.mjs"],
+        "prerequisites": [], "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
       }
     ],
     "unit": [
+      "test/data-layer-installed/durable-projects-controller-test.mjs",
+      "test/data-layer-installed/consumers/durable-project-repository-consumer-test.mjs",
       "test/data-layer-durable-project-repository-test.mjs",
       "test/data-layer-durable-project-runtime-test.mjs",
       "test/data-layer-durable-project-runtime-canonical-companion-test.mjs",
@@ -345,6 +398,12 @@
         ],
         "propagateDependants": true,
         "sourceClass": "core or semantic"
+      },
+      {
+        "id": "durable_project_installed_side_panel_boundary",
+        "prefixes": ["src/data-layer-installed/durable-projects/"],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
       }
     ],
     "browserEvidencePartitions": [
@@ -798,6 +857,7 @@
     "id": "capture",
     "representativeChangedPath": "src/data-layer-live-inspector-presentation-ui.ts",
     "source": [
+      "src/data-layer-installed/capture/",
       "src/data-layer-event-feed-query-ui.ts",
       "src/data-layer-event-feed-query.ts",
       "src/data-layer-event-feed-summaries.ts",
@@ -987,6 +1047,12 @@
         ],
         "propagateDependants": false,
         "sourceClass": "application controller"
+      },
+      {
+        "id": "capture_installed_side_panel_boundary",
+        "prefixes": ["src/data-layer-installed/capture/"],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
       }
     ],
     "dependencies": [],
@@ -1027,6 +1093,27 @@
           {"packId": "shell", "sliceId": "live_target_permission_recovery_consumer"}
         ],
         "observableBoundary": "Selected-target failed-probe reconciliation, current-step permission action, exact-origin grant, and same-tab configured-path recheck"
+      },
+      {
+        "id": "capture_installed_side_panel",
+        "sourcePaths": [], "sourcePrefixes": ["src/data-layer-installed/capture/"],
+        "tasks": ["unit:test/data-layer-installed/capture-controller-test.mjs"],
+        "prerequisites": [],
+        "consumers": [
+          {"packId": "event-library", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "project_event_transport", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "schemas", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "live_flow_testing", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "shell", "sliceId": "side_panel_installed_controller_consumer"}
+        ],
+        "observableBoundary": "Installed Capture targets, sessions, observation, Live feed, and saves"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [], "sourcePrefixes": [], "consumerOnly": true,
+        "tasks": ["unit:test/data-layer-installed/consumers/capture-consumer-test.mjs"],
+        "prerequisites": [], "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
       }
     ],
     "verificationInputs": [
@@ -1036,6 +1123,8 @@
       "src/data-layer-event-library-editor-ui.ts"
     ],
     "unit": [
+      "test/data-layer-installed/capture-controller-test.mjs",
+      "test/data-layer-installed/consumers/capture-consumer-test.mjs",
       "test/data-layer-event-feed-query-test.mjs",
       "test/data-layer-event-feed-query-ui-test.mjs",
       "test/data-layer-event-feed-summaries-test.mjs",
@@ -1291,6 +1380,7 @@
     "id": "event-library",
     "representativeChangedPath": "src/data-layer-push-draft-review-ui.ts",
     "source": [
+      "src/data-layer-installed/event-library/",
       "src/data-layer-event-library",
       "src/data-layer-event-template",
       "src/data-layer-push-draft-review-ui.ts",
@@ -1376,9 +1466,40 @@
         ],
         "propagateDependants": true,
         "sourceClass": "core or semantic"
+      },
+      {
+        "id": "event_library_installed_side_panel_boundary",
+        "prefixes": ["src/data-layer-installed/event-library/"],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
+      }
+    ],
+    "verificationSlices": [
+      {
+        "id": "event_library_installed_side_panel",
+        "sourcePaths": [], "sourcePrefixes": ["src/data-layer-installed/event-library/"],
+        "tasks": ["unit:test/data-layer-installed/event-library-controller-test.mjs"],
+        "prerequisites": [],
+        "consumers": [
+          {"packId": "project_event_transport", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "defects", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "replay", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "guided_test_cases", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "shell", "sliceId": "side_panel_installed_controller_consumer"}
+        ],
+        "observableBoundary": "Installed Event Library templates, reviews, transfer, deletion, and push"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [], "sourcePrefixes": [], "consumerOnly": true,
+        "tasks": ["unit:test/data-layer-installed/consumers/event-library-consumer-test.mjs"],
+        "prerequisites": [], "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
       }
     ],
     "unit": [
+      "test/data-layer-installed/event-library-controller-test.mjs",
+      "test/data-layer-installed/consumers/event-library-consumer-test.mjs",
       "test/data-layer-event-library-deletion-test.mjs",
       "test/data-layer-event-library-editor-test.mjs",
       "test/data-layer-event-library-transfer-test.mjs",
@@ -1500,14 +1621,52 @@
     "id": "project_event_transport",
     "representativeChangedPath": "src/data-layer-project-event-transport.ts",
     "source": [
+      "src/data-layer-installed/project-event-transport/",
       "src/data-layer-project-event-transport.ts"
+    ],
+    "impactBoundaries": [
+      {
+        "id": "project_event_transport_existing_boundary",
+        "prefixes": ["src/data-layer-project-event-transport.ts"],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "project_event_transport_installed_side_panel_boundary",
+        "prefixes": ["src/data-layer-installed/project-event-transport/"],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
+      }
     ],
     "dependencies": [
       "project_management",
       "capture",
       "event-library"
     ],
+    "verificationSlices": [
+      {
+        "id": "project_event_transport_installed_side_panel",
+        "sourcePaths": [], "sourcePrefixes": ["src/data-layer-installed/project-event-transport/"],
+        "tasks": ["unit:test/data-layer-installed/project-event-transport-controller-test.mjs"],
+        "prerequisites": [],
+        "consumers": [
+          {"packId": "capture", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "event-library", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "shell", "sliceId": "side_panel_installed_controller_consumer"}
+        ],
+        "observableBoundary": "Installed project observation and push paths, settlement, and target refresh"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [], "sourcePrefixes": [], "consumerOnly": true,
+        "tasks": ["unit:test/data-layer-installed/consumers/project-event-transport-consumer-test.mjs"],
+        "prerequisites": [], "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
+      }
+    ],
     "unit": [
+      "test/data-layer-installed/project-event-transport-controller-test.mjs",
+      "test/data-layer-installed/consumers/project-event-transport-consumer-test.mjs",
       "test/data-layer-project-event-transport-test.mjs"
     ],
     "property": [
@@ -1549,10 +1708,31 @@
         "consumerOnly": true,
         "consumers": [],
         "observableBoundary": "Schema builder reorder adapters preserve predicate, column, and guided-array editor semantics"
+      },
+      {
+        "id": "schemas_installed_side_panel",
+        "sourcePaths": [], "sourcePrefixes": ["src/data-layer-installed/schemas/"],
+        "tasks": ["unit:test/data-layer-installed/schemas-controller-test.mjs"],
+        "prerequisites": [],
+        "consumers": [
+          {"packId": "defects", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "project_assurance_severity", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "guided_test_cases", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "shell", "sliceId": "side_panel_installed_controller_consumer"}
+        ],
+        "observableBoundary": "Installed Schema authoring, rules, validation, and guided workflows"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [], "sourcePrefixes": [], "consumerOnly": true,
+        "tasks": ["unit:test/data-layer-installed/consumers/schemas-consumer-test.mjs"],
+        "prerequisites": [], "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
       }
     ],
     "representativeChangedPath": "src/data-layer-allowed-value-expansion-ui.ts",
     "source": [
+      "src/data-layer-installed/schemas/",
       "src/data-layer-allowed-value-expansion-ui.ts",
       "src/data-layer-allowed-value-expansion.ts",
       "src/data-layer-allowed-values-rule.ts",
@@ -1744,12 +1924,20 @@
         ],
         "propagateDependants": true,
         "sourceClass": "browser presentation"
+      },
+      {
+        "id": "schemas_installed_side_panel_boundary",
+        "prefixes": ["src/data-layer-installed/schemas/"],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
       }
     ],
     "dependencies": [
       "capture"
     ],
     "unit": [
+      "test/data-layer-installed/schemas-controller-test.mjs",
+      "test/data-layer-installed/consumers/schemas-consumer-test.mjs",
       "test/data-layer-allowed-value-expansion-test.mjs",
       "test/data-layer-allowed-values-rule-migration-test.mjs",
       "test/data-layer-array-validation-issue-rollup-test.mjs",
@@ -2698,21 +2886,61 @@
         "consumerOnly": true,
         "consumers": [],
         "observableBoundary": "Defect reproduction reorder adapter preserves pathname segments and report editing"
+      },
+      {
+        "id": "defects_installed_side_panel",
+        "sourcePaths": [], "sourcePrefixes": ["src/data-layer-installed/defects/"],
+        "tasks": ["unit:test/data-layer-installed/defects-controller-test.mjs"],
+        "prerequisites": [],
+        "consumers": [
+          {"packId": "live_flow_testing", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "shell", "sliceId": "side_panel_installed_controller_consumer"}
+        ],
+        "observableBoundary": "Installed Defect state, presentation, copy, and export"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [], "sourcePrefixes": [], "consumerOnly": true,
+        "tasks": ["unit:test/data-layer-installed/consumers/defects-consumer-test.mjs"],
+        "prerequisites": [], "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
       }
     ],
     "representativeChangedPath": "src/data-layer-defect-library-ui.ts",
     "source": [
+      "src/data-layer-installed/defects/",
       "src/data-layer-defect",
       "src/data-layer-event-occurrence-defect-report-ui.ts",
       "src/data-layer-event-occurrence-defect-report.ts",
       "src/data-layer-missing-event",
       "src/data-layer-unified-defect"
     ],
+    "impactBoundaries": [
+      {
+        "id": "defects_existing_boundary",
+        "prefixes": [
+          "src/data-layer-defect",
+          "src/data-layer-event-occurrence-defect-report",
+          "src/data-layer-missing-event",
+          "src/data-layer-unified-defect"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "defects_installed_side_panel_boundary",
+        "prefixes": ["src/data-layer-installed/defects/"],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
+      }
+    ],
     "dependencies": [
       "schemas",
       "event-library"
     ],
     "unit": [
+      "test/data-layer-installed/defects-controller-test.mjs",
+      "test/data-layer-installed/consumers/defects-consumer-test.mjs",
       "test/data-layer-defect-library-copy-test.mjs",
       "test/data-layer-defect-library-test.mjs",
       "test/data-layer-defect-report-provenance-presentation-test.mjs",
@@ -2937,12 +3165,46 @@
     "id": "replay",
     "representativeChangedPath": "src/data-layer-sequence-replay-ui.ts",
     "source": [
+      "src/data-layer-installed/replay/",
       "src/data-layer-sequence-replay"
+    ],
+    "impactBoundaries": [
+      {
+        "id": "replay_existing_boundary",
+        "prefixes": ["src/data-layer-sequence-replay"],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "replay_installed_side_panel_boundary",
+        "prefixes": ["src/data-layer-installed/replay/"],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
+      }
     ],
     "dependencies": [
       "event-library"
     ],
+    "verificationSlices": [
+      {
+        "id": "replay_installed_side_panel",
+        "sourcePaths": [], "sourcePrefixes": ["src/data-layer-installed/replay/"],
+        "tasks": ["unit:test/data-layer-installed/replay-controller-test.mjs"],
+        "prerequisites": [],
+        "consumers": [{"packId": "shell", "sliceId": "side_panel_installed_controller_consumer"}],
+        "observableBoundary": "Installed replay sequence state, controls, execution, and lifecycle"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [], "sourcePrefixes": [], "consumerOnly": true,
+        "tasks": ["unit:test/data-layer-installed/consumers/replay-consumer-test.mjs"],
+        "prerequisites": [], "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
+      }
+    ],
     "unit": [
+      "test/data-layer-installed/replay-controller-test.mjs",
+      "test/data-layer-installed/consumers/replay-consumer-test.mjs",
       "test/data-layer-sequence-replay-test.mjs"
     ],
     "property": [],
@@ -3007,6 +3269,13 @@
         "prerequisites": [],
         "consumers": [],
         "observableBoundary": "Installed Flow Page-instance and Event-occurrence schema-editor route lifecycle"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [], "sourcePrefixes": [], "consumerOnly": true,
+        "tasks": ["unit:test/data-layer-installed/consumers/flow-graph-consumer-test.mjs"],
+        "prerequisites": [], "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
       }
     ],
     "impactBoundaries": [
@@ -3089,6 +3358,7 @@
       }
     ],
     "unit": [
+      "test/data-layer-installed/consumers/flow-graph-consumer-test.mjs",
       "test/flow-stylesheet-extraction-test.mjs",
       "test/data-layer-flow-graph-test.mjs",
       "test/data-layer-flow-concept-visual-test.mjs",
@@ -4590,9 +4860,28 @@
     "id": "live_flow_testing",
     "representativeChangedPath": "src/data-layer-live-flow-testing-ui.ts",
     "source": [
+      "src/data-layer-installed/live-flow-testing/",
       "src/data-layer-live-flow-testing.ts",
       "src/data-layer-live-flow-testing-ui.ts",
       "src/data-layer-live-flow-defect-report.ts"
+    ],
+    "impactBoundaries": [
+      {
+        "id": "live_flow_testing_existing_boundary",
+        "prefixes": [
+          "src/data-layer-live-flow-testing.ts",
+          "src/data-layer-live-flow-testing-ui.ts",
+          "src/data-layer-live-flow-defect-report.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "live_flow_testing_installed_side_panel_boundary",
+        "prefixes": ["src/data-layer-installed/live-flow-testing/"],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
+      }
     ],
     "dependencies": [
       "capture",
@@ -4600,7 +4889,31 @@
       "flow_graph",
       "layered_schema"
     ],
+    "verificationSlices": [
+      {
+        "id": "live_flow_testing_installed_side_panel",
+        "sourcePaths": [], "sourcePrefixes": ["src/data-layer-installed/live-flow-testing/"],
+        "tasks": ["unit:test/data-layer-installed/live-flow-testing-controller-test.mjs"],
+        "prerequisites": [],
+        "consumers": [
+          {"packId": "capture", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "defects", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "schemas", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "shell", "sliceId": "side_panel_installed_controller_consumer"}
+        ],
+        "observableBoundary": "Installed Live Flow test lifecycle, result projection, and project actions"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [], "sourcePrefixes": [], "consumerOnly": true,
+        "tasks": ["unit:test/data-layer-installed/consumers/live-flow-testing-consumer-test.mjs"],
+        "prerequisites": [], "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
+      }
+    ],
     "unit": [
+      "test/data-layer-installed/live-flow-testing-controller-test.mjs",
+      "test/data-layer-installed/consumers/live-flow-testing-consumer-test.mjs",
       "test/data-layer-live-flow-testing-test.mjs",
       "test/data-layer-live-flow-defect-report-test.mjs",
       "test/data-layer-live-flow-testing-outline-observation.mjs"
@@ -4840,9 +5153,17 @@
         "prerequisites": ["property:test/data-layer-layered-schema-property-test.mjs"],
         "consumers": [{"packId": "flow_graph", "sliceId": "layered_schema_flow_editor_route_consumer"}],
         "observableBoundary": "Flow-launched layered-schema route presentation and active editor-host lifecycle"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [], "sourcePrefixes": [], "consumerOnly": true,
+        "tasks": ["unit:test/data-layer-installed/consumers/layered-schema-consumer-test.mjs"],
+        "prerequisites": [], "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
       }
     ],
     "unit": [
+      "test/data-layer-installed/consumers/layered-schema-consumer-test.mjs",
       "test/data-layer-string-rule-validation-test.mjs",
       "test/data-layer-canonical-schema-authoring-test.mjs",
       "test/data-layer-journal-free-canonical-schema-test.mjs",
@@ -5542,7 +5863,17 @@
     "dependencies": [
       "schemas"
     ],
+    "verificationSlices": [
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [], "sourcePrefixes": [], "consumerOnly": true,
+        "tasks": ["unit:test/data-layer-installed/consumers/project-assurance-severity-consumer-test.mjs"],
+        "prerequisites": [], "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
+      }
+    ],
     "unit": [
+      "test/data-layer-installed/consumers/project-assurance-severity-consumer-test.mjs",
       "test/data-layer-project-assurance-severity-test.mjs"
     ],
     "property": [
@@ -5927,7 +6258,17 @@
       "project_management",
       "event-library"
     ],
+    "verificationSlices": [
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [], "sourcePrefixes": [], "consumerOnly": true,
+        "tasks": ["unit:test/data-layer-installed/consumers/guided-test-cases-consumer-test.mjs"],
+        "prerequisites": [], "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
+      }
+    ],
     "unit": [
+      "test/data-layer-installed/consumers/guided-test-cases-consumer-test.mjs",
       "test/data-layer-guided-test-cases-test.mjs"
     ],
     "property": [
@@ -6107,6 +6448,32 @@
         "prerequisites": [],
         "consumers": [],
         "observableBoundary": "Installed selected-target permission recovery and exact same-tab configured-path recheck"
+      },
+      {
+        "id": "shell_installed_data_layer_runtime",
+        "sourcePaths": ["src/data-layer-installed/runtime.ts"],
+        "sourcePrefixes": [],
+        "tasks": ["unit:test/side-panel-single-cutover-preparation-test.mjs"],
+        "prerequisites": [],
+        "consumers": [
+          {"packId": "capture", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "event-library", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "schemas", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "defects", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "replay", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "project_management", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "durable_project_repository", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "project_event_transport", "sliceId": "side_panel_installed_controller_consumer"},
+          {"packId": "live_flow_testing", "sliceId": "side_panel_installed_controller_consumer"}
+        ],
+        "observableBoundary": "Installed Data Layer controller order, typed capability wiring, and aggregate lifecycle"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [], "sourcePrefixes": [], "consumerOnly": true,
+        "tasks": ["unit:test/side-panel-single-cutover-preparation-test.mjs"],
+        "prerequisites": [], "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
       }
     ],
     "stylesheets": [
@@ -6277,9 +6644,47 @@
         ],
         "propagateDependants": true,
         "sourceClass": "core or semantic"
+      },
+      {
+        "id": "shell_installed_data_layer_runtime_boundary",
+        "prefixes": ["src/data-layer-installed/runtime.ts"],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
       }
     ],
     "verificationHelpers": [
+      {
+        "path": "test/support/data-layer-installed-controller-contract.mjs",
+        "consumers": [
+          "capture",
+          "defects",
+          "durable_project_repository",
+          "event-library",
+          "live_flow_testing",
+          "project_event_transport",
+          "project_management",
+          "replay",
+          "schemas"
+        ]
+      },
+      {
+        "path": "test/support/data-layer-installed-consumer-contract.mjs",
+        "consumers": [
+          "capture",
+          "defects",
+          "durable_project_repository",
+          "event-library",
+          "flow_graph",
+          "guided_test_cases",
+          "layered_schema",
+          "live_flow_testing",
+          "project_assurance_severity",
+          "project_event_transport",
+          "project_management",
+          "replay",
+          "schemas"
+        ]
+      },
       {
         "path": "test/browser-packs/shared-harness.mjs",
         "consumers": [
@@ -6777,6 +7182,7 @@
       "vendor/acceptance-pipeline-specification/"
     ],
     "source": [
+      "src/data-layer-installed/runtime.ts",
       "src/active-page",
       "src/background",
       "src/panel-",
@@ -6797,6 +7203,7 @@
       "replay"
     ],
     "unit": [
+      "test/side-panel-single-cutover-preparation-test.mjs",
       "test/background-command-test.mjs",
       "test/reorderable-editor-control-test.mjs",
       "test/reorderable-editor-model-test.mjs",

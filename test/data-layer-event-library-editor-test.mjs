@@ -95,7 +95,7 @@ assert.deepEqual(smokeTarget.assertionLeaves, [
   ["eventLibraryRenderedSmoke", "referencesResolve"],
 ]);
 const exactPlan = planVerification(packs, { packIds:["event-library"], includeProperties:true });
-assert.equal(exactPlan.tasks.length, 29);
+assert.equal(exactPlan.tasks.length, 31);
 assert.equal(exactPlan.browserTasks.length, 0);
 assert.equal(exactPlan.observationTasks.length, 1);
 assert.deepEqual(exactPlan.observationTasks[0].logicalTargetIds, [
