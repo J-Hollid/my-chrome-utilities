@@ -137,7 +137,7 @@ const focusedPlanFixture = {
   requestedPackIds:liveTargetPermissionRecoveryPackIds,
   packIds:liveTargetPermissionRecoveryPackIds,
   focusedTaskKeys:liveTargetPermissionRecoveryFocusedTaskKeys,
-  tasks:liveTargetPermissionRecoveryFocusedTaskKeys.map((key) => ({ key })),
+  tasks:["build:dist", ...liveTargetPermissionRecoveryFocusedTaskKeys].map((key) => ({ key })),
 };
 assert.equal(validateLiveTargetPermissionRecoveryFocusedPlan(
   focusedPlanFixture,

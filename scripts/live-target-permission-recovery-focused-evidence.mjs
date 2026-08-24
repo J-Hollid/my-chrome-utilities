@@ -27,13 +27,18 @@ export function isLiveTargetPermissionRecoveryEvidenceTask(task) {
 
 export function validateLiveTargetPermissionRecoveryFocusedPlan(plan, evidenceTask) {
   if (!isLiveTargetPermissionRecoveryEvidenceTask(evidenceTask)) return false;
-  if (plan.mode !== "focused-task" || plan.includeProperties ||
+  const packIds = plan.packIds ?? plan.claimPackIds ?? plan.requestedPackIds;
+  const executedKeys = plan.tasks.map(({ key }) => key);
+  const exactExecutedKeys = ["build:dist", ...liveTargetPermissionRecoveryFocusedTaskKeys];
+  if (plan.mode !== "focused-task" || Boolean(plan.includeProperties) ||
       !sameSet(plan.requestedPackIds, liveTargetPermissionRecoveryPackIds) ||
-      !sameSet(plan.packIds, liveTargetPermissionRecoveryPackIds) ||
-      !sameSet(plan.focusedTaskKeys, liveTargetPermissionRecoveryFocusedTaskKeys)) {
+      !sameSet(packIds, liveTargetPermissionRecoveryPackIds) ||
+      plan.focusedTaskKeys !== undefined &&
+        !sameSet(plan.focusedTaskKeys, liveTargetPermissionRecoveryFocusedTaskKeys) ||
+      !sameSet(executedKeys, exactExecutedKeys)) {
     throw new Error("Permission-recovery evidence must use its exact causal focused bootstrap");
   }
-  const executed = new Set(plan.tasks.map(({ key }) => key));
+  const executed = new Set(executedKeys);
   for (const key of liveTargetPermissionRecoveryFocusedTaskKeys) {
     if (!executed.has(key)) throw new Error(`Permission-recovery evidence omitted ${key}`);
   }
