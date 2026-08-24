@@ -1,4 +1,4 @@
-import { assignDocumentationTemplate, createDocumentationTemplate, documentationTemplateAssignment, documentationTemplateProblems, repairDocumentationTemplateMetadata, removeDocumentationTemplate, replaceDocumentationTemplate } from "../documentation-templates/template-library.js";
+import { assignDocumentationTemplate, createDocumentationTemplate, documentationTemplateAssignment, documentationTemplateProblems, repairDocumentationTemplateMetadata, removeDocumentationTemplate } from "../documentation-templates/template-library.js";
 import { writeDocumentationTemplateStarter } from "../documentation-templates/excel-renderer.js";
 import { builtInRichTemplate, richTemplateBlockScopes, richTemplateHelpBindingsFor, validateRichDocumentationTemplate } from "../documentation-templates/rich-template.js";
 import { templateDigest } from "../documentation-templates/template-contract.js";
@@ -198,7 +198,7 @@ function candidateDetail(_host, detail, candidate, templates, options) {
     inspection.append(bindings, areas);
     detail.append(inspection);
     if (options.previewCandidateExcel)
-        detail.append(button("Populated preview — output only", () => void options.previewCandidateExcel(candidate.file, candidate.kind).then(bytes => options.download?.(`${candidate.file.name.replace(/\.xlsx$/iu, "")}-populated-output.xlsx`, bytes, DOCUMENTATION_TEMPLATE_XLSX_TYPE)).catch(error => detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) })))));
+        detail.append(button("Populated preview — output only", () => void options.previewCandidateExcel(candidate.file, candidate.kind, candidate.validation).then(bytes => options.download?.(`${candidate.file.name.replace(/\.xlsx$/iu, "")}-populated-output.xlsx`, bytes, DOCUMENTATION_TEMPLATE_XLSX_TYPE)).catch(error => detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) })))));
     detail.append(button("Save template", () => void (async () => { const bodyDigest = await digest(candidate.file), template = createDocumentationTemplate({ id: `documentation-template:${crypto.randomUUID()}`, name: candidate.file.name.replace(/\.xlsx$/iu, ""), format: "excel", kind: candidate.kind, body: { assetId: `documentation-template-body:${crypto.randomUUID()}`, digest: bodyDigest, byteLength: candidate.file.size }, validation: candidate.validation }); await persistBody(options, bodyDigest, candidate.file, { ...options.records, templates: [...templates, template] }, `Save Excel template ${template.name}`); excelCandidates.delete(candidateKey(options)); options.selectTemplate(template.id); options.rerender(); })().catch(error => detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) })))));
     detail.append(button("Discard candidate", () => { excelCandidates.delete(candidateKey(options)); options.setMobileDetail(false); options.rerender(); }));
 }
@@ -335,7 +335,7 @@ export function renderDocumentationTemplateLibrary(host, options) {
                 replacement.setAttribute("aria-label", "Replace Excel template body");
                 replacement.addEventListener("change", () => void (async () => { const file = replacement.files?.[0]; if (!file)
                     return; const validation = await validateExcelTemplateWorkbook(file, selected.kind); if (!validation.valid)
-                    throw new Error(validation.findings.map(({ location, message }) => `${location}: ${message}`).join("\n")); const bodyDigest = await digest(file), records = replaceDocumentationTemplate(options.records, selected.id, { assetId: selected.body.assetId, digest: bodyDigest, byteLength: file.size }); await persistBody(options, bodyDigest, file, records, `Replace documentation template ${selected.name}`); options.rerender(); })().catch(error => detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) }))));
+                    throw new Error(validation.findings.map(({ location, message }) => `${location}: ${message}`).join("\n")); const bodyDigest = await digest(file), records = repairDocumentationTemplateMetadata(options.records, selected.id, file, validation, bodyDigest); await persistBody(options, bodyDigest, file, records, `Replace documentation template ${selected.name}`); options.rerender(); })().catch(error => detail.append(Object.assign(document.createElement("p"), { role: "alert", textContent: error instanceof Error ? error.message : String(error) }))));
                 detail.append(replacement);
             }
             else

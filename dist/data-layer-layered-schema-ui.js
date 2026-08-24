@@ -156,25 +156,9 @@ export function installLayeredSchemaUi(options) {
     const storedTargets = (state) => state.project.layeredSchemaTargets ?? [];
     const executableTargets = (state) => storedTargets(state).map((target) => ({ ...target, compiled: compileLayeredSchema(layeredContributorsForPath(state, target), { eventId: target.eventId, eventRole: target.eventRole, ...(target.occurrenceId ? { occurrenceId: target.occurrenceId } : {}) }) }));
     function renderRuntimeControls(state, entity, scope, compiled) {
-        const section = document.createElement("section"), heading = document.createElement("h3"), propertyTree = document.createElement("ol"), targetEvent = document.createElement("select"), activation = document.createElement("select"), priority = document.createElement("input"), applicability = document.createElement("textarea"), saveTarget = document.createElement("button"), observation = document.createElement("textarea"), test = document.createElement("button"), assignmentResult = document.createElement("pre"), manual = document.createElement("select"), payload = document.createElement("textarea"), validate = document.createElement("button"), validationResult = document.createElement("pre"), developerExport = document.createElement("button"), exportResult = document.createElement("pre"), existing = storedTargets(state).find(({ contributorId }) => contributorId === entity.id), path = layeredContributorPath(state, entity, scope, options.context().kind === "flows" ? options.context().entityId : undefined);
-        const effectivePathButton = (propertyPath, text) => { const choose = document.createElement("button"); choose.type = "button"; choose.dataset.propertyId = propertyPath; choose.setAttribute("aria-current", "false"); choose.textContent = text; choose.addEventListener("click", () => { propertyTree.querySelectorAll("[data-property-id]").forEach((candidate) => candidate.setAttribute("aria-current", String(candidate === choose))); choose.focus(); }); return choose; };
+        const section = document.createElement("section"), heading = document.createElement("h3"), targetEvent = document.createElement("select"), activation = document.createElement("select"), priority = document.createElement("input"), applicability = document.createElement("textarea"), saveTarget = document.createElement("button"), observation = document.createElement("textarea"), test = document.createElement("button"), assignmentResult = document.createElement("pre"), manual = document.createElement("select"), payload = document.createElement("textarea"), validate = document.createElement("button"), validationResult = document.createElement("pre"), developerExport = document.createElement("button"), exportResult = document.createElement("pre"), existing = storedTargets(state).find(({ contributorId }) => contributorId === entity.id), path = layeredContributorPath(state, entity, scope, options.context().kind === "flows" ? options.context().entityId : undefined);
         section.setAttribute("aria-label", "Effective schema operations");
-        heading.textContent = "Compiled effective schema and activation";
-        propertyTree.setAttribute("aria-label", "Compiled layered property tree");
-        for (const [propertyPath, property] of Object.entries(compiled.properties)) {
-            const item = document.createElement("li"), effective = effectivePropertySummary(property);
-            item.append(effectivePathButton(propertyPath, `${propertyPath}${effective ? ` · ${effective}` : ""} · ${property.origins.map(({ scope: originScope, contributorName }) => `${originScope}: ${contributorName}`).join(" → ")}${property.superseded.length ? ` · superseded ${property.superseded.map(({ contributorName, value }) => `${contributorName} ${String(value)}`).join(", ")}` : ""}`));
-            propertyTree.append(item);
-        }
-        for (const conflict of compiled.conflicts) {
-            const item = document.createElement("li"), left = document.createElement("button"), right = document.createElement("button");
-            item.className = "error";
-            left.type = right.type = "button";
-            left.textContent = conflict.contributors[0] ?? "Earlier contributor";
-            right.textContent = conflict.contributors[1] ?? entity.name;
-            item.append(effectivePathButton(conflict.path, `${conflict.path}: ${conflict.message}`), " · ", left, " ↔ ", right);
-            propertyTree.append(item);
-        }
+        heading.textContent = "Schema activation and developer tools";
         targetEvent.setAttribute("aria-label", "Layered target Event");
         targetEvent.append(new Option("Choose Event", ""), ...state.project.collections.events.map((event) => new Option(event.name, event.id)));
         targetEvent.value = existing?.eventId ?? path.eventId ?? "";
@@ -211,7 +195,7 @@ export function installLayeredSchemaUi(options) {
         exportResult.setAttribute("aria-label", "Effective schema developer export");
         developerExport.addEventListener("click", () => { const target = storedTargets(current().state).find(({ contributorId }) => contributorId === entity.id); exportResult.textContent = exportLayeredSchema({ targetName: target?.flowName ?? entity.name, pageName: target?.pageName ?? String(entity.pageId ?? "Page"), eventName: target?.eventName ?? String(entity.eventId ?? "Event"), activation: target?.activation ?? "manual", compiled }); });
         const labeled = (text, control) => { const label = document.createElement("label"); label.append(text, control); return label; };
-        section.append(heading, propertyTree, labeled("Target Event", targetEvent), labeled("Activation", activation), labeled("Priority", priority), labeled("Applicability", applicability), saveTarget, labeled("Test observation", observation), test, assignmentResult, labeled("Manual Flow / Page / Event", manual), labeled("Validation payload", payload), validate, validationResult, developerExport, exportResult);
+        section.append(heading, labeled("Target Event", targetEvent), labeled("Activation", activation), labeled("Priority", priority), labeled("Applicability", applicability), saveTarget, labeled("Test observation", observation), test, assignmentResult, labeled("Manual Flow / Page / Event", manual), labeled("Validation payload", payload), validate, validationResult, developerExport, exportResult);
         return section;
     }
     function renderSummary() { const context = options.context(), { state, entity, scope } = current(); summary.replaceChildren(); summary.dataset.contextKind = context.kind; summary.dataset.contextEntityId = context.entityId ?? ""; if (!state || !entity) {

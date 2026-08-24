@@ -5,6 +5,10 @@ import path from "node:path";
 
 import {globalStyleContainmentEvidence} from "./browser-packs/global-style-smoke.mjs";
 
+const globalStyleSmokeSource=await readFile("test/browser-packs/global-style-smoke.mjs","utf8");
+assert.equal((globalStyleSmokeSource.match(/nativeVirtualKeyCode:9/gu)??[]).length,2,
+  "both global style Tab events supply Chrome's native key identity");
+
 assert.deepEqual(globalStyleContainmentEvidence({
   stackedNarrow:true,
   width:360,

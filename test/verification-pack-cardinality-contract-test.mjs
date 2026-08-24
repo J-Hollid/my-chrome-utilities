@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
 import {
@@ -100,6 +101,75 @@ assert.deepEqual(new Set(canonicalRepairTaskIdentities(twoPackRegistry, {
   planVerification, verificationTaskIdentity,
 }).map(({ packId }) => packId).filter(Boolean)), new Set(twoPackIds),
 "the reliability adapter receives the exact synthetic runnable identities");
+
+const canonicalAcceptanceIdentity={
+  key:"acceptance-session:alpha",stage:"acceptance-session",packId:"alpha",executable:"bb",
+  args:["acceptance-pack-runner","alpha","generated/a.clj","ir/a.json","generated/b.clj","ir/b.json"],
+  target:"features/a.feature,features/b.feature",environment:null,requiredCapabilities:[],
+};
+const failedAcceptanceShard={...canonicalAcceptanceIdentity,
+  args:["acceptance-pack-runner","alpha","generated/b.clj","ir/b.json"],
+  target:"features/b.feature",
+};
+const shardIncident={failure:{task:failedAcceptanceShard,retryScope:{kind:"task",
+  taskKey:failedAcceptanceShard.key,executionArgs:[...failedAcceptanceShard.args]}}};
+assert.deepEqual(canonicalRepairTaskIdentities(twoPackRegistry, {
+  planVerification:()=>({tasks:[canonicalAcceptanceIdentity]}),verificationTaskIdentity:value=>value,
+  incident:shardIncident,
+}),[failedAcceptanceShard],
+"a receipt-bound acceptance shard remains the governed repair identity");
+assert.deepEqual(canonicalRepairTaskIdentities(twoPackRegistry, {
+  planVerification:()=>({tasks:[canonicalAcceptanceIdentity]}),verificationTaskIdentity:value=>value,
+  incident:{failure:{task:{...failedAcceptanceShard,args:["acceptance-pack-runner","alpha","other.clj","other.json"]},
+    retryScope:shardIncident.failure.retryScope}},
+}),[canonicalAcceptanceIdentity],
+"an unregistered or retry-mismatched acceptance shard cannot replace the canonical identity");
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
+    normalize=value=>Array.isArray(value)?value.map(normalize):value&&typeof value==="object"
+      ?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right))
+        .map(([key,nested])=>[key,normalize(nested)])):value,
+    digest=value=>createHash("sha256").update(JSON.stringify(normalize(value))).digest("hex");
+  let expectedPreRepairFailure,expectedRepairResult,repairResult,fixture;
+  if(context.causalCategory==="other:layered owner evidence cardinality"){
+    const registry=JSON.parse(await readFile(new URL("../verification/packs.json",import.meta.url),"utf8")),
+      plan=planVerification(registry,{packIds:["layered_schema"],includeProperties:true}),
+      helperPaths=registry.find(({id})=>id==="shell").verificationHelpers.map(({path})=>path),
+      retainedHelpers=helperPaths.filter(path=>
+        path==="test/support/browser-observation-control.mjs"||
+        !path.startsWith("test/support/side-panel-")).length-1,
+      trackedSupportHelpers=helperPaths.filter(path=>path.startsWith("test/support/")&&
+        path!=="test/support/browser-observation-control.mjs"&&
+        !path.startsWith("test/support/side-panel-")).length;
+    expectedPreRepairFailure={unitTasks:20,totalTasks:53,retainedHelpers:22,trackedSupportHelpers:21};
+    expectedRepairResult={unitTasks:21,totalTasks:54,retainedHelpers:23,trackedSupportHelpers:22};
+    repairResult={unitTasks:plan.unitTasks.length,totalTasks:plan.tasks.length,
+      retainedHelpers,trackedSupportHelpers};
+    fixture={id:"layered-owner-evidence-cardinality-v1",causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{registeredProbeTest:"test/layered-schema-policy-probe-contract-test.mjs"},
+      expectedPreRepairFailure,expectedRepairResult};
+  }else{
+    expectedPreRepairFailure={receiptBoundShardSelected:false,retryScopeConserved:false};
+    expectedRepairResult={receiptBoundShardSelected:true,retryScopeConserved:true};
+    const selected=canonicalRepairTaskIdentities(twoPackRegistry,{
+      planVerification:()=>({tasks:[canonicalAcceptanceIdentity]}),verificationTaskIdentity:value=>value,
+      incident:shardIncident,
+    })[0];
+    repairResult={receiptBoundShardSelected:selected.target===failedAcceptanceShard.target,
+      retryScopeConserved:JSON.stringify(selected.args)===JSON.stringify(shardIncident.failure.retryScope.executionArgs)};
+    fixture={id:"acceptance-session-receipt-shard-identity-v1",causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{canonicalTarget:canonicalAcceptanceIdentity.target,failedTarget:failedAcceptanceShard.target},
+      expectedPreRepairFailure,expectedRepairResult};
+  }
+  const fixtureDigest=digest(fixture);
+  assert.deepEqual(repairResult,expectedRepairResult);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}}}));
+}
 
 const expandedPackIds = planVerification([
   ...twoPackRegistry,

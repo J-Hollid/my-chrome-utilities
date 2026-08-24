@@ -33,7 +33,7 @@
    expected-paths))
 (def runtime-paths (set (concat [:installedBoundary :consequential :persistenceReload :sidePanelParity]
                                 (map #(keyword (str "authoring" (format "%03d" %))) (range 1 86))
-                                (map #(keyword (str "layering" (format "%03d" %))) (range 1 32))
+                                (map #(keyword (str "layering" (format "%03d" %))) (range 1 37))
                                 (map #(keyword (str "flowFacet" (format "%03d" %))) (range 1 5))
                                 [:canonicalPresence :canonicalValues :canonicalConditions :canonicalRules :canonicalExample :canonicalPersisted
                                  :flowFacetOwnership001 :flowFacetOwnership002
@@ -69,7 +69,7 @@
                 :canonicalRules :canonicalExample :canonicalPersisted])))
 (def editor-policy-runtime-paths
   (set (concat (map #(keyword (str "authoring" (format "%03d" %))) (range 77 86))
-               (map #(keyword (str "layering" (format "%03d" %))) (range 25 32)))))
+               (map #(keyword (str "layering" (format "%03d" %))) (range 25 37)))))
 (def editor-runtime-paths
   (set/union editor-surface-runtime-paths editor-rules-runtime-paths
              editor-canonical-runtime-paths editor-policy-runtime-paths))

@@ -508,12 +508,12 @@ Feature: Data layer layered schema constraints runtime
     When actual controls deselect /customer_status
     Then installed review names its descendants, <affected_branch>, stale outputs, runtime effect, and Undo while repository and Table hashes remain unchanged
     When actual controls apply the selection
-    Then installed effective Table and Tree and production <affected_branch> omit /customer_status
+    Then the installed effective Table and production <affected_branch> omit /customer_status
     And repository state stores one sparse stable-identity exclusion on <target> without copied parent property bytes
     And production hashes for source contributors, <unaffected_peer>, unrelated local facets, and Published bytes remain unchanged
     And an invariant or required-dependency fixture keeps its property selected and renders the named source and repair route
     When repository reload proves the selection durable and actual project Undo runs
-    Then /customer_status returns to the installed effective Table, Tree, and production <affected_branch>
+    Then /customer_status returns to the installed effective Table and production <affected_branch>
 
     Examples:
       | target                                  | affected_branch                                                    | unaffected_peer                |
@@ -544,13 +544,50 @@ Feature: Data layer layered schema constraints runtime
     Given repository state for <target> contains an explicit inherited /customer_status exclusion
     And a later production Sitewide command revises /customer_status and adds ordinary property /loyalty_tier
     When actual controls open Inherited properties for <target>
-    Then /customer_status renders there as unselected while the installed effective Table and Tree omit it
+    Then /customer_status renders there as unselected while the installed effective Table omits it
     And /loyalty_tier renders selected and production compilation includes it without another inheritance decision
     When actual controls reselect /customer_status
     And actual controls apply the selection
-    Then the current revised /customer_status definition returns to the installed effective Table and Tree
+    Then the current revised /customer_status definition returns to the installed effective Table
     And repository state removes its sparse exclusion without storing parent property bytes
     And one project Undo restores the exclusion without reverting the Sitewide revision or /loyalty_tier
+
+    Examples:
+      | target                                  |
+      | Shipping Page                           |
+      | Alternative shipping Flow Page-instance |
+
+  # Data layer layered schema constraints runtime 035
+  Scenario Outline: Data layer layered schema constraints runtime 035
+    Given production <scope> has nested properties and its applicable inherited, local, and effective presentation
+    When actual controls open its complete layered schema editor
+    Then DOM inspection finds one authoritative editable property Table
+    And it finds no element labelled Compiled layered property tree and no duplicate effective-tree path controls
+    And the Table retains installed filters, sorting, paths, provenance, conflicts, ownership distinctions, and property actions
+    And applicable schema counts, activation, validation, and developer export controls remain operable
+    And repository, compiler, Published, validation, documentation, and export hashes remain unchanged
+
+    Examples:
+      | scope              |
+      | Shared Profile     |
+      | Page               |
+      | Property Set       |
+      | Event              |
+      | Flow Page-instance |
+      | Event-occurrence   |
+
+  # Data layer layered schema constraints runtime 036
+  Scenario Outline: Data layer layered schema constraints runtime 036
+    Given production <target> inherits ordinary, nested, excluded, and blocked properties from its complete effective parent stack
+    When the installed effective schema workspace renders
+    Then DOM inspection finds one compact Inherited properties profile-inheritance-card before the effective Table
+    And the card exposes the established summary, selected and total counts, Edit selection disclosure, and collapsed workspace structure
+    And no alternate inherited-property-selection surface or complete inherited-property table is mounted
+    When actual controls activate Edit selection
+    Then the installed card uses the same searchable filters, paged collapsed tree, checkbox states, counts, property details, provenance, and sticky actions as the Property Set card
+    And keyboard inspection proves the same disclosure, tree focus, arrow, Space, Cancel, Apply, and card-focus restoration behavior
+    And desktop, constrained-width, and 200 percent zoom inspection preserve the same responsive and non-colour selection behavior
+    And Cancel preserves repository bytes while Apply stores one existing sparse exclusion command with one Undo and no copied parent property
 
     Examples:
       | target                                  |

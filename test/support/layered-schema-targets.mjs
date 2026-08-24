@@ -28,6 +28,7 @@ import { typedLiteralFocusedEditorExpression } from "./typed-literal-focused-edi
 import { runProfileInheritanceControlsRuntimeProbe } from "./profile-inheritance-controls-runtime-probe.mjs";
 import { runJournalFreeInstalledRuntimeProbe } from "./journal-free-installed-runtime-probe.mjs";
 import { focusableOverlayControlExpression } from "./layered-schema-overlay-focusability.mjs";
+import {layeredSchemaEditingRepairsExpression} from "./layered-schema-editing-repairs-probe.mjs";
 
 const editorInitialLayeredInstalledExpression=
   reliableLayeredEntityCreationProgram(initialLayeredInstalledExpression).replace(
@@ -89,7 +90,7 @@ const editorRuleKeys=[...Array.from({length:5},(_,index)=>`authoring${String(ind
 const editorCanonicalKeys=[...Array.from({length:11},(_,index)=>`authoring${String(index+31).padStart(3,"0")}`),
   "authoring045","authoring055","authoring056","authoring057","authoring058","authoring068"];
 const editorPolicyKeys=[...Array.from({length:9},(_,index)=>`authoring${String(index+77).padStart(3,"0")}`),
-  ...Array.from({length:7},(_,index)=>`layering${String(index+25).padStart(3,"0")}`)];
+  ...Array.from({length:12},(_,index)=>`layering${String(index+25).padStart(3,"0")}`)];
 const canonicalEditorKeys=["canonicalPresence","canonicalValues","canonicalConditions","canonicalRules","canonicalExample","canonicalPersisted"];
 const hierarchyReorderExpression=`(async()=>{
   const pause=(ms=40)=>new Promise(resolve=>setTimeout(resolve,ms)),waitFor=async(read,label)=>{const deadline=performance.now()+9600;while(performance.now()<deadline){const value=await read();if(value)return value;await pause();}throw new Error('Hierarchy reorder '+label);},buttons=(root=document)=>[...(root?.querySelectorAll('button')??[])],repository=await (await import('/data-layer-durable-project-repository.js')).openIndexedDbProjectRepository(),projectId=await repository.activeProjectId(),load=()=>repository.loadProject(projectId),profileOf=value=>value.state.project.collections.profiles.find(({name})=>name==='Sitewide'),pageOf=value=>value.state.project.collections.pages.find(({name})=>name==='Shipping'),rootOrder=schema=>Object.values(schema.nodes).filter(({parentId})=>!parentId).sort((left,right)=>left.order-right.order).map(({id})=>id),localOrder=page=>page.localSchemaContributions.filter(({path})=>path.startsWith('/shippingRoot/')&&path.split('/').length===3).map(({path})=>path),drag=(source,target)=>{const transfer=new DataTransfer(),rect=target.getBoundingClientRect();source.dispatchEvent(new DragEvent('dragstart',{bubbles:true,cancelable:true,dataTransfer:transfer}));target.dispatchEvent(new DragEvent('dragover',{bubbles:true,cancelable:true,clientY:rect.bottom,dataTransfer:transfer}));const indicator=target.classList.contains('reorder-drop-after')&&getComputedStyle(target).borderBlockEndWidth==='3px';target.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,clientY:rect.bottom,dataTransfer:transfer}));return indicator;};
@@ -120,7 +121,7 @@ const runEditorProducer=async(workflow,keys,{targetId,evaluate,socket},{canonica
     flatRuleMainProjectionLifecycleExpression,flatRulePanelProjectionDiagnosticExpression,flatRulePopupGeometryExpression,
     flatRuleResponsiveFinishExpression,flatRuleResponsiveSetupExpression,flatRuleResponsiveSnapshotExpression,
     typedLiteralFocusedEditorExpression,runProfileInheritanceControlsRuntimeProbe,runJournalFreeInstalledRuntimeProbe,
-  });let hierarchyEvidence;if(targetId==="LAYERED_SCHEMA_EDITOR_TARGET"){const rowCompositionViewport=Number(process.env.SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH);if(Number.isFinite(rowCompositionViewport))await liveSocket.call("Emulation.setDeviceMetricsOverride",{width:rowCompositionViewport,height:900,deviceScaleFactor:1,mobile:rowCompositionViewport<=360});hierarchyEvidence=await originalEvaluate(liveSocket,correctedHierarchyReorderExpression);}const owned={};
+  });if(targetId==="LAYERED_SCHEMA_EDITOR_POLICY_TARGET")Object.assign(result.evidence,await originalEvaluate(liveSocket,layeredSchemaEditingRepairsExpression));let hierarchyEvidence;if(targetId==="LAYERED_SCHEMA_EDITOR_TARGET"){const rowCompositionViewport=Number(process.env.SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH);if(Number.isFinite(rowCompositionViewport))await liveSocket.call("Emulation.setDeviceMetricsOverride",{width:rowCompositionViewport,height:900,deviceScaleFactor:1,mobile:rowCompositionViewport<=360});hierarchyEvidence=await originalEvaluate(liveSocket,correctedHierarchyReorderExpression);}const owned={};
   for(const key of keys)owned[key]=result.evidence[key];
   if(canonical){const facet=result.canonicalFacetEvidence,persistence={canonicalPresence:facet.presenceSaved,canonicalValues:facet.valuesSaved,canonicalConditions:facet.conditionsSaved,canonicalRules:facet.rulesSaved,canonicalExample:facet.exampleSaved,canonicalPersisted:facet.persisted};for(const key of canonicalEditorKeys)owned[key]=persistence[key];}
   if(hierarchyEvidence)owned.hierarchyEvidence=hierarchyEvidence;

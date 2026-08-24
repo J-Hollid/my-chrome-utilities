@@ -1,6 +1,6 @@
 # Data layer guided Excel template authoring R01
 
-Status: QA-integrated at `a8ee95869b` on 2026-08-19; Contract 3 area-properties correction approved by the user on 2026-08-23
+Status: guided authoring QA-integrated at `a8ee95869b` on 2026-08-19; Contract 3 area-properties correction QA-integrated at `03d023b039` on 2026-08-24 after exact `flow_export`/34-task review-ready evidence
 
 Prepared: 2026-08-18
 
@@ -432,3 +432,30 @@ all-20 feature checkpoint is authorized. No new source prefix, durable
 repository, archive, application-composition, or build-delivery boundary is
 expected. Any such intent-classification variance is recorded before coding and
 routed through its existing parent pack or reviewed subordinate slice.
+
+## Area-properties settled QA result
+
+The approved specification handoff was queued at 20:10:32Z on 2026-08-23. The
+first coherent implementation commit arrived 13 minutes 13 seconds later. The
+lineage then corrected Contract 3 validation and guide behavior, excluded
+separator drawings, and preserved exact workbook contract metadata before the
+architect issued the `qa-ready` handoff at 22:02:58Z. QA fast-forwarded to exact
+candidate `03d023b039` at 22:05:26Z, 1 hour 54 minutes 54 seconds after the
+specification handoff and 2 minutes 28 seconds after the architecture handoff.
+Commit timestamps provide the bounded implementation and review intervals where
+separate role claim timestamps are not retained.
+
+One final evidence-producing checkpoint ran from 21:58:19Z through 22:01:24Z,
+about 3 minutes 5 seconds. The authoritative exact plan selected `flow_export`
+alone and passed all 34 tasks, including both revised Excel product/runtime
+features, generated acceptance, the installed browser pack, Contract 2 and 3
+unit coverage, the dedicated area-properties property target, build, properties,
+and package proof. This narrowed the forecast `project_management` and `shell`
+impact through exact changed-path ownership rather than omitting planned work.
+
+No task-local evidence run failed, no focused pass was invalidated, and no
+reliability repair or rerun was required. The pre-evidence revisions were normal
+coder, refactorer, and architect review corrections on the same approved
+behavior. No all-20 checkpoint ran. Recommendation: **continue** the focused QA
+pilot; preserve the exact planner authority and retain cumulative final
+regression and promotion as a separate explicit `master` decision.

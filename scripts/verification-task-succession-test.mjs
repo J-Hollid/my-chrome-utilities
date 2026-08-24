@@ -345,4 +345,22 @@ await assert.rejects(()=>validateExpandedFlowExport(deferredFlowExportIncident,
   [reorderedCompleteFlowExport],expandedFlowExportPacks),/diagnosed target/iu,
 "a complete unordered registry set cannot excuse a reordered planner feature sequence");
 
+const siblingAcceptance=flowExportAcceptance([documentationTemplateFeatures[0]]);
+const projectedIncidents=[
+  {...deferredFlowExportIncident,id:"d723a7c4-1116-4887-b60a-21aded1ab5d8"},
+  {id:"cd60309c-cd27-4800-93a9-cf40a81efac5",state:"unresolved",failure:{
+    task:siblingAcceptance,retryScope:{kind:"task",taskKey:siblingAcceptance.key,
+      executionArgs:siblingAcceptance.args},
+  }},
+];
+const projectedIncidentIds=[];
+assert.deepEqual(await validateUnresolvedIncidentTaskSuccession({incidents:projectedIncidents,
+  currentIdentities:(incident)=>{
+    projectedIncidentIds.push(incident.id);
+    return [structuredClone(incident.failure.task)];
+  },currentPacks:[],graph:emptySuccessionGraph}),[],
+"each unresolved incident is checked against its own canonical repair identity projection");
+assert.deepEqual(projectedIncidentIds,projectedIncidents.map(({id})=>id),
+  "canonical repair identity projection is resolved once for each blocking incident");
+
 console.log("verification task succession tests passed");

@@ -513,12 +513,12 @@ Feature: Data layer layered schema constraints
     When the operator deselects /customer_status
     Then review identifies its descendants, <affected_branch>, stale outputs, runtime effect, and one Undo action while the Draft and effective Table remain unchanged
     When the operator applies the selection
-    Then /customer_status is absent from the effective Table and Tree and from <affected_branch>
+    Then /customer_status is absent from the effective Table and from <affected_branch>
     And one sparse exclusion is stored on <target> by stable property identity without copying its parent definition
     And source contributors, <unaffected_peer>, unrelated local facets, and Published state remain unchanged
     And a protected invariant or surviving required dependency remains selected with its source and repair route identified
     When reloading proves the selection durable and the operator uses Undo
-    Then /customer_status returns to the effective Table, Tree, and <affected_branch>
+    Then /customer_status returns to the effective Table and <affected_branch>
 
     Examples:
       | target                                  | affected_branch                                                    | unaffected_peer                |
@@ -549,13 +549,51 @@ Feature: Data layer layered schema constraints
     Given <target> has explicitly deselected inherited /customer_status
     And Sitewide later revises /customer_status and adds ordinary property /loyalty_tier
     When the operator opens Inherited properties for <target>
-    Then /customer_status is available there as unselected while remaining absent from the effective Table and Tree
+    Then /customer_status is available there as unselected while remaining absent from the effective Table
     And /loyalty_tier is selected and effective without another inheritance decision
     When the operator reselects /customer_status
     And the operator applies the selection
-    Then the current revised /customer_status definition returns to the effective Table and Tree
+    Then the current revised /customer_status definition returns to the effective Table
     And its sparse exclusion is removed without storing parent property bytes
     And one Undo restores the exclusion without reverting the Sitewide revision or /loyalty_tier
+
+    Examples:
+      | target                                  |
+      | Shipping Page                           |
+      | Alternative shipping Flow Page-instance |
+
+  # Data layer layered schema constraints 035
+  Scenario Outline: Data layer layered schema constraints 035
+    Given the <scope> layered schema editor has nested properties and its applicable inherited, local, and effective presentation
+    When the operator opens its complete schema editor
+    Then one authoritative property Table presents the complete editable property rows
+    And no Compiled layered property tree or other read-only duplicate of those property rows is displayed
+    And filtering, sorting, full paths, provenance, conflicts, local and effective distinctions, and property actions remain available from the Table
+    And schema counts, activation, validation, and developer export remain available where applicable
+    And the schema model, compilation, persistence, publication, and output remain unchanged
+
+    Examples:
+      | scope              |
+      | Shared Profile     |
+      | Page               |
+      | Property Set       |
+      | Event              |
+      | Flow Page-instance |
+      | Event-occurrence   |
+
+  # Data layer layered schema constraints 036
+  Scenario Outline: Data layer layered schema constraints 036
+    Given <target> inherits ordinary, nested, excluded, and protected properties from its complete effective parent stack
+    When the operator opens its effective schema workspace
+    Then one compact Inherited properties card precedes the authoritative property Table
+    And its summary, selected and total counts, and Edit selection disclosure use the established Property Set inheritance-card pattern
+    And the selection workspace remains collapsed until Edit selection is activated
+    When the operator activates Edit selection
+    Then the established search and filter toolbar, paged disclosure tree, checkbox states, descendant counts, property details, and provenance are available
+    And the sticky action area exposes selected properties, exclusions, issues, Review selection, Cancel, and Apply inheritance
+    And tree keyboard navigation, focus restoration, responsive layout, and non-colour selection state match the Property Set inheritance-card behavior
+    And no second simplified inherited-property selector or complete inherited-property table is displayed
+    And Cancel changes nothing while Apply retains the existing sparse stable-identity exclusion, current-parent restoration, downstream scope, safety blocker, and Undo semantics
 
     Examples:
       | target                                  |

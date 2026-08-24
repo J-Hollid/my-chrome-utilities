@@ -113,8 +113,12 @@ const surface = (surfaceName, observationKey) => {
         await socket().call("Emulation.setEmulatedMedia", {
           features:[{name:"forced-colors", value:forcedColors ? "active" : "none"}],
         });
-        await socket().call("Input.dispatchKeyEvent", { type:"keyDown", key:"Tab", code:"Tab", windowsVirtualKeyCode:9 });
-        await socket().call("Input.dispatchKeyEvent", { type:"keyUp", key:"Tab", code:"Tab", windowsVirtualKeyCode:9 });
+        await socket().call("Input.dispatchKeyEvent", {
+          type:"keyDown",key:"Tab",code:"Tab",windowsVirtualKeyCode:9,nativeVirtualKeyCode:9,
+        });
+        await socket().call("Input.dispatchKeyEvent", {
+          type:"keyUp",key:"Tab",code:"Tab",windowsVirtualKeyCode:9,nativeVirtualKeyCode:9,
+        });
         const result = await evaluate(socket(), `return (${probeSource.toString()})(${JSON.stringify(definition.sheets)},${JSON.stringify(definition.expectedClass)},${JSON.stringify(definition.regions)},${JSON.stringify(forcedColors)},${JSON.stringify(surfaceName === "studio")},(${globalStyleContainmentEvidence.toString()}))`);
         if (result === undefined) throw new Error("Global style smoke probe returned no observation");
         return result;
