@@ -807,6 +807,7 @@
       "src/data-layer-live-inspector-presentation-ui.ts",
       "src/data-layer-live-inspector-return-ui.ts",
       "src/data-layer-live-inspector-return.ts",
+      "src/data-layer-live-target-permission-recovery",
       "src/data-layer-live-notifications.ts",
       "src/data-layer-live-observation.ts",
       "src/data-layer-live-observer-ui.ts",
@@ -978,9 +979,39 @@
         ],
         "propagateDependants": true,
         "sourceClass": "browser presentation"
+      },
+      {
+        "id": "capture_live_target_permission_recovery",
+        "prefixes": [
+          "src/data-layer-live-target-permission-recovery/"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
       }
     ],
     "dependencies": [],
+    "verificationSlices": [
+      {
+        "id": "capture_live_target_permission_recovery",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "src/data-layer-live-target-permission-recovery/"
+        ],
+        "tasks": [
+          "unit:test/data-layer-live-target-permission-recovery-test.mjs",
+          "unit:test/live-target-permission-recovery-preparation-contract-test.mjs"
+        ],
+        "prerequisites": [
+          "unit:test/data-layer-observation-targets-test.mjs",
+          "unit:test/data-layer-target-path-status-test.mjs",
+          "unit:test/data-layer-live-guided-workflow-test.mjs"
+        ],
+        "consumers": [
+          {"packId": "shell", "sliceId": "live_target_permission_recovery_consumer"}
+        ],
+        "observableBoundary": "Selected-target probe coordination, dormant current-step permission projection, exact-origin capability, and same-tab path recheck wiring"
+      }
+    ],
     "verificationInputs": [
       "src/commands.ts",
       "src/hotkey-editor.ts",
@@ -1001,6 +1032,8 @@
       "test/data-layer-live-session-end-test.mjs",
       "test/data-layer-live-session-summary-test.mjs",
       "test/data-layer-live-session-target-release-test.mjs",
+      "test/data-layer-live-target-permission-recovery-test.mjs",
+      "test/live-target-permission-recovery-preparation-contract-test.mjs",
       "test/data-layer-observation-targets-test.mjs",
       "test/data-layer-recursive-property-tree-test.mjs",
       "test/data-layer-saved-event-feed-filters-test.mjs",
@@ -6030,6 +6063,18 @@
         "prerequisites": [],
         "consumers": [],
         "observableBoundary": "Installed Studio composition smoke observation"
+      },
+      {
+        "id": "live_target_permission_recovery_consumer",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "browser-observation:LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER+SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER+WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed side-panel loading and inactive Live target permission-recovery composition"
       }
     ],
     "stylesheets": [
@@ -6943,6 +6988,12 @@
         "path": "test/browser-packs/side-panel-shell.mjs",
         "sessionBatch": "shell-containment",
         "originalLeaves": [
+          "liveTargetPermissionRecoveryWiring.moduleLoaded",
+          "liveTargetPermissionRecoveryWiring.inactive",
+          "liveTargetPermissionRecoveryWiring.callbacks",
+          "liveTargetPermissionRecoveryWiring.requestAccessVisible",
+          "liveTargetPermissionRecoveryWiring.startTestingEnabled",
+          "liveTargetPermissionRecoveryWiring.selectedLabel",
           "schemaViewContainment.containedControls",
           "schemaViewContainment.editorContainsActions",
           "schemaViewContainment.closeReviewContainsActions",
@@ -6963,6 +7014,17 @@
           "workspacePanelContainment.afterActivation.registeredGroupsVisible"
         ],
         "targets": [
+          {
+            "id": "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER",
+            "leaves": [
+              "liveTargetPermissionRecoveryWiring.moduleLoaded",
+              "liveTargetPermissionRecoveryWiring.inactive",
+              "liveTargetPermissionRecoveryWiring.callbacks",
+              "liveTargetPermissionRecoveryWiring.requestAccessVisible",
+              "liveTargetPermissionRecoveryWiring.startTestingEnabled",
+              "liveTargetPermissionRecoveryWiring.selectedLabel"
+            ]
+          },
           {
             "id": "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER",
             "leaves": [
@@ -6995,6 +7057,20 @@
       }
     ],
     "browserObservations": [
+      {
+        "id": "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-shell.mjs",
+        "environment": {
+          "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER": "1"
+        },
+        "sessionBatch": "shell-containment",
+        "observationKeys": [
+          "liveTargetPermissionRecoveryWiring"
+        ],
+        "features": [
+          "features/modular-browser-runtime-adapters.feature"
+        ]
+      },
       {
         "id": "REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER",
         "path": "test/browser-packs/reorderable-editor-controls.mjs",
@@ -7061,6 +7137,7 @@
         "singleTargetP90Milliseconds": 18000,
         "maximumSingleTargetP90Milliseconds": 10000,
         "targetIds": [
+          "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER",
           "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER",
           "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER"
         ],

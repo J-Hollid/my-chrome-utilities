@@ -48,6 +48,7 @@ if (!processResources) throw new Error("The installed session must provide brows
 const { assetPort, chrome } = processResources;
 
 const { payloadPathFilterPickerRuntime, singleLiveEventFeedRuntime, savedSessionLiveFeedRuntime, savedSessionLiveFeedReloadRuntime, freshLiveSessionRuntime, freshLiveSessionReloadRuntime, savedEventFeedFiltersSeedRuntime, savedEventFeedFiltersRuntime, libraryDirectTemplatePushSeedRuntime, libraryDirectTemplatePushRuntime, schemaPropertyRemovalRuntime, schemaPropertyRemovalReloadRuntime, schemaAssignmentRuntime, schemaRevisionLifecycleRuntime, schemaPropertyRulePickerRuntime, schemaAssignmentDataConditionsRuntime, schemaManualPropertyRuntime, schemaManualPropertyReloadRuntime, schemaContainerChildRuntime, schemaContainerChildReloadRuntime, schemaRenamingDraftRuntime, schemaRenamingPublishRuntime, schemaRenamingRetryReplayRuntime, schemaRenamingRejectRuntime, schemaRenamingInvalidAndDiscardRuntime, schemaNestedPathRuntime, schemaRevisionLifecycleUiRuntime, schemaSourceCreationRuntime, schemaInheritanceRuntime, schemaLibraryTransferRuntime, schemaLiveValidationRuntime, guidedRuntimeWaitHelpers, guidedTransportProjectSetupRuntime, guidedTransportProjectRestoreRuntime, guidedDestinationOptionsRuntime, guidedNestedPropertyMergeRuntime, guidedNestedConstraintRuntime, guidedValidationRuntime, guidedSchemaPickerRuntime, guidedDraftContinuationInitialRuntime, guidedDraftContinuationRuntime, guidedDraftContinuationReloadRuntime, guidedAssignmentCoverageRuntime, liveGuidedConditionalRuleSeedRuntime, liveGuidedConditionalRuleRuntime, schemaPropertyCopyRuntime, schemaPropertyTypeEditingSeedRuntime, schemaPropertyTypeEditingRuntime, schemaPropertyTypeEditingItemRuntime, allowedValuesRuleMigrationCoverageRuntime, liveSchemaPropertyDeclarationSeedRuntime, liveSchemaPropertyDeclarationRuntime, localRulePromotionSeedRuntime, localRulePromotionAvailabilitySeedRuntime, localRulePromotionAvailabilityRuntime, localRulePromotionOpenRuntime, localRuleEditingSeedRuntime, localRuleEditingRuntime, localRuleEditingRenderedRuntime, reusableRuleSyncSeedRuntime, reusableRuleSyncRuntime, requiredRuleTypeIndependenceSeedRuntime, requiredRuleTypeIndependenceRuntime, localRulePromotionReusableOriginRuntime, localRulePromotionOriginCountRuntime, localRulePromotionInheritedSeedRuntime, localRulePromotionInheritedCountRuntime, localRulePromotionReviewRuntime, localRulePromotionPrepareConfirmRuntime, localRulePromotionFailureRuntime, localRulePromotionAfterRuntime, allowedValueExpansionSeedRuntime, allowedValueExpansionRuntime, conditionalValidationRulesRuntime, schemaRulePropertyIdentityRuntime, canonicalDeclaredPropertyValidationRuntime, recursiveDeclaredPropertyValidationRuntime, recursivePropertyValidationRuntime, liveValidationVisualsRuntime, validationPresenceSemanticsRuntime, schemaDocumentationRuntime, schemaPropertyExampleValuesRuntime, schemaSpecificationBuilderSeedRuntime, schemaSpecificationBuilderRuntime, schemaSpecificationBuilderCustomizationRuntime, schemaSpecificationBuilderExtendedRuntime, schemaSpecificationExampleSelectionRuntime, schemaSpecificationPreviewLayoutRuntime, schemaSpecificationPreviewThemeRuntime, schemaPropertyCommentsRuntime, schemaSpecificationContainerDefaultsRuntime, schemaPropertyCommentsLiveRuntime, schemaPropertyCommentsLifecycleRuntime, schemaPropertyCommentsRemovalRuntime, schemaPropertyCommentsSpecificationSeedRuntime, schemaPropertyCommentsSpecificationContractRuntime, reproductionStepActionRowsRuntime, defectReportUndeclaredRemovalRuntime, requiredPropertyDefectSchemaChoicesRuntime, defectReportSemanticDifferencesRuntime, eventOccurrenceDefectReportRuntime, defectReportProvenancePresentationRuntime, missingEventDefectReportRuntime, defectLibrarySeedRuntime, defectLibraryRuntime, schemaViewContainmentRuntime, workspacePanelContainmentRuntime } = fixturePrograms;
+const { liveTargetPermissionRecoveryWiringRuntime } = fixturePrograms;
 const fixturePhasePrograms = new Set(Object.entries(fixturePrograms)
   .filter(([name]) => /(?:Seed|Setup|Initial)Runtime$/u.test(name))
   .map(([, program]) => program));
@@ -63,6 +64,7 @@ let guidedValidationObservation;
 let guidedSchemaPickerObservation;
 let liveValidationVisualsObservation;
 let singleLiveEventFeedObservation;
+let liveTargetPermissionRecoveryWiringObservation;
 let schemaViewContainmentObservation;
 let payloadPathFilterPickerObservation;
 const reproductionStepActionRowsObservations = [];
@@ -2585,6 +2587,9 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
         chooseAnotherAbsent:true,
       });
     }
+    if (activeBrowserTargetEnvironment.LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER === "1") {
+      liveTargetPermissionRecoveryWiringObservation = await evaluate(socket, liveTargetPermissionRecoveryWiringRuntime);
+    }
     if (activeBrowserTargetEnvironment.SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter) {
       await reloadPanel(socket);
       singleLiveEventFeedObservation = await evaluate(socket, singleLiveEventFeedRuntime);
@@ -3535,6 +3540,9 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
   }
   if (activeBrowserTargetEnvironment.SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ singleLiveEventFeed:singleLiveEventFeedObservation }));
+  }
+  if (activeBrowserTargetEnvironment.LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ liveTargetPermissionRecoveryWiring:liveTargetPermissionRecoveryWiringObservation }));
   }
   if (activeBrowserTargetEnvironment.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaViewContainment:schemaViewContainmentObservation }));

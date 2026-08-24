@@ -1,5 +1,6 @@
 import { createExecutableTargetDefinitions } from "./side-panel-browser-target-contract.mjs";
 import { containmentFixturePrograms } from "./side-panel-containment-fixtures.mjs";
+import { liveTargetPermissionRecoveryWiringRuntime } from "./side-panel-capture-fixtures.mjs";
 
 async function executeFixture({ context, fixturePrograms, target }) {
   return context.executeFixture({ fixturePrograms, target });
@@ -50,5 +51,9 @@ const workspacePanelContainmentRuntime = `(() => {
   return observation;
 })()`;
 
-export const fixturePrograms = Object.freeze({ ...containmentFixturePrograms, workspacePanelContainmentRuntime });
+export const fixturePrograms = Object.freeze({
+  ...containmentFixturePrograms,
+  liveTargetPermissionRecoveryWiringRuntime,
+  workspacePanelContainmentRuntime,
+});
 export const definitions = createExecutableTargetDefinitions("shell", fixturePrograms, { observe:executeFixture });

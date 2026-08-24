@@ -11,6 +11,14 @@ const reorderPresentationLeaves=(index)=>[
   ...["restCursor","dragCursor"].map((leaf)=>["reproductionStepActionRows",index,"reorderEvidence","presentation","states",leaf]),
 ];
 const assertionLeavesByTarget = {
+  "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER": [
+    ["liveTargetPermissionRecoveryWiring","moduleLoaded"],
+    ["liveTargetPermissionRecoveryWiring","inactive"],
+    ["liveTargetPermissionRecoveryWiring","callbacks"],
+    ["liveTargetPermissionRecoveryWiring","requestAccessVisible"],
+    ["liveTargetPermissionRecoveryWiring","startTestingEnabled"],
+    ["liveTargetPermissionRecoveryWiring","selectedLabel"],
+  ],
   "FRESH_LIVE_SESSION_BROWSER_ADAPTER": [
     ["freshLiveSession","initial","initial","id"],
     ["freshLiveSession","initial","initial","events"],

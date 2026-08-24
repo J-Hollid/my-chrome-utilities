@@ -27,6 +27,20 @@ const targetViewportOverrides = Object.freeze({
 
 export const sidePanelTargetContract = Object.freeze([
   {
+    "id": "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER",
+    "owningPack": "shell",
+    "oldProgram": "test/side-panel-component-layout-runtime-test.mjs",
+    "newProgram": "test/browser-packs/side-panel-shell.mjs",
+    "processGroup": "shell-containment",
+    "configuration": {
+      "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER": "1"
+    },
+    "viewport": [720],
+    "observationKeys": ["liveTargetPermissionRecoveryWiring"],
+    "assertionLeaves": [],
+    "module": "shell"
+  },
+  {
     "id": "FRESH_LIVE_SESSION_BROWSER_ADAPTER",
     "owningPack": "capture",
     "oldProgram": "test/side-panel-component-layout-runtime-test.mjs",

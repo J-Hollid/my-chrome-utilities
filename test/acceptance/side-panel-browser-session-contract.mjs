@@ -39,11 +39,11 @@ const directFixtureModulePaths = [
   "side-panel-defect-fixtures.mjs",
 ];
 
-assert.equal(sidePanelTargetContract.length, 63);
-assert.equal(sidePanelTargetContract.reduce((count, target) => count + target.observationKeys.length, 0), 67);
+assert.equal(sidePanelTargetContract.length, 64);
+assert.equal(sidePanelTargetContract.reduce((count, target) => count + target.observationKeys.length, 0), 68);
 assert.deepEqual(Object.fromEntries(["capture", "event-library", "schemas", "defects", "shell"]
   .map((pack) => [pack, sidePanelTargetContract.filter(({ owningPack }) => owningPack === pack).length])), {
-  capture:5, "event-library":1, schemas:46, defects:9, shell:2,
+  capture:5, "event-library":1, schemas:46, defects:9, shell:3,
 });
 assert.equal(sidePanelTargetContract.filter(({ module }) => module === "schema-workspace").length, 10);
 assert.equal(sidePanelTargetContract.filter(({ module }) => module === "schema-guided").length, 17);
@@ -51,7 +51,7 @@ assert.equal(sidePanelTargetContract.filter(({ module }) => module === "schema-v
 assert.equal(sidePanelTargetContract.filter(({ module }) => module === "schema-documentation").length, 9);
 assert.equal(Object.keys(installedOrderPairs).length, 4);
 assert.deepEqual(sidePanelTargetContract.filter(({ owningPack }) => owningPack === "shell")
-  .map(({ assertionLeaves }) => assertionLeaves.length), [9, 9]);
+  .map(({ assertionLeaves }) => assertionLeaves.length), [6, 9, 9]);
 assert.equal(sidePanelTargetContract.every(({ assertionLeaves }) => assertionLeaves.length > 0), true,
   "every target must map its installed output to reachable assertion leaves");
 assert.notDeepEqual(normalizeInstalledObservation({ stable:"before", count:1 }),
@@ -358,9 +358,9 @@ const identityOrderRun = async (orderedTargets) => {
 };
 const canonicalIdentityResults = await identityOrderRun(sidePanelTargetContract);
 const permutedIdentityResults = await identityOrderRun([...sidePanelTargetContract].reverse());
-assert.equal(canonicalIdentityResults.length, 67);
+assert.equal(canonicalIdentityResults.length, 68);
 assert.deepEqual(permutedIdentityResults, canonicalIdentityResults,
-  "all 67 target outputs must retain normalized values in a compatible permutation");
+  "all 68 target outputs must retain normalized values in a compatible permutation");
 const exactLeafFailureRecords = [];
 await assert.rejects(runSidePanelBrowserSession({
   definitions:[definition("EXACT_LEAF", {

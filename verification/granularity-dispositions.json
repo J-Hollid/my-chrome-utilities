@@ -72,6 +72,17 @@
       ],
       "reviewAuthority": "qa-integration",
       "reason": "The Flow-launched editor route now delegates workspace/editor-host visibility, ordinary departure cleanup, and Return-to-Flow presentation restoration to the independently tested route-layout seam; general schema composition remains in the broad UI module."
+    },
+    {
+      "task": "live-target-permission-recovery",
+      "path": "src/side-panel.ts",
+      "decision": "integrated-seam",
+      "replacementPaths": [
+        "src/data-layer-live-target-permission-recovery/coordinator.ts",
+        "src/data-layer-live-target-permission-recovery/readiness.ts"
+      ],
+      "reviewAuthority": "qa-integration",
+      "reason": "The independently tested Capture coordination seam and installed Shell consumer provide the future probe, action, exact-origin, and same-tab recheck change point while the broad side-panel composition root remains unchanged."
     }
   ]
 }

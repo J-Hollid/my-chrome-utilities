@@ -5,6 +5,7 @@
             [acceptance.verification-support.modular-architecture-durable-repository-handlers :as durable-repository]
             [acceptance.verification-support.modular-architecture-event-library-handlers :as event-library]
             [acceptance.verification-support.modular-architecture-layered-editor-handlers :as layered-editor]
+            [acceptance.verification-support.modular-architecture-live-target-permission-handlers :as live-target-permission]
             [acceptance.verification-support.modular-architecture-project-management-handlers :as project-management]
             [acceptance.verification-support.modular-architecture-repository-inspection :as repository-inspection]
             [acceptance.verification-support.modular-architecture-schemas-handlers :as schemas]
@@ -782,6 +783,7 @@
                (vtd017/handlers {:example-values example-values})
                (vtd014/handlers {:example-values example-values})
                (vtd015/handlers {:example-values example-values})
+               (live-target-permission/handlers)
                (cardinality/handlers example-values)
                (vtd009/handlers
                 {:example-values example-values
