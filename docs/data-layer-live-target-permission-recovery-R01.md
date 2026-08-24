@@ -1,7 +1,7 @@
 # Data Layer Live target permission recovery R01
 
-Status: both ownership preparations QA-integrated through `80721743c8`;
-approved product implementation resumes from its exact QA descendant
+Status: product behavior QA-integrated at `896e7a4f32` after both ownership
+preparations and exact focused review evidence
 
 Prepared: 2026-08-24
 
@@ -328,3 +328,23 @@ this result. Reconstruct the accepted product behavior and slow-success repair
 from immutable patch reference `1cf347a22c`; do not merge its old lineage. The
 resumed product candidate must leave the now-integrated broad side-panel callback
 unchanged and activate recovery only through the bounded Capture seam.
+
+## Settled product result
+
+Product scenario 009 and installed runtime scenario 002 are QA-integrated at
+`896e7a4f32d7b158e61c9b85e0060cf3bb0a1a31`. Selecting an active tab now keeps
+that target selected when its exact probe lacks access, presents `Request access`
+in the current readiness step, requests only the selected origin, rechecks the
+configured path on the same tab, and enables Start testing when readiness is
+restored. A slow successful `activeTab` probe cancels provisional recovery and
+does not become latched behind an unnecessary permission action.
+
+The product candidate leaves the QA-integrated broad `src/side-panel.ts` callback
+unchanged and activates behavior only inside the bounded Capture seam. Review-
+ready evidence passed eleven focused tasks across `capture`, `event-library`,
+`schemas`, `defects`, and `shell`: build; the seam, observation-target,
+target-path, guided-workflow, preparation, focused-acceptance, and verification-
+process units; one germane observation-target property; the combined installed
+browser observation; and package proof. No unrelated pack array or all-runnable-
+pack checkpoint ran. Promotion of accumulated QA work to `master` remains a
+separate user decision.
