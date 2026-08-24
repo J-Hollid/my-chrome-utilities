@@ -90,6 +90,7 @@ import {
   isLiveTargetPermissionRecoveryEvidenceTask,
   liveTargetPermissionRecoveryFocusedTaskKeysFor,
   liveTargetPermissionRecoveryPackIds,
+  liveTargetPermissionRecoveryProductEvidenceTask,
   validateLiveTargetPermissionRecoveryFocusedPlan,
 } from "./live-target-permission-recovery-focused-evidence.mjs";
 import {
@@ -400,11 +401,15 @@ export function focusedAcceptanceOptions(args) {
   }
   const permissionRecoveryEvidence =
     isLiveTargetPermissionRecoveryEvidenceTask(options.prepareEvidence);
+  const permissionRecoveryProductEvidence =
+    options.prepareEvidence === liveTargetPermissionRecoveryProductEvidenceTask;
   const permissionRecoveryFocusedTaskKeys =
     liveTargetPermissionRecoveryFocusedTaskKeysFor(options.prepareEvidence);
   if (options.focusedTaskKeys.length && ((!permissionRecoveryEvidence && options.packIds.length !== 1) ||
       options.changedPaths.length ||
-      options.terminalFull || options.includeProperties || options.withDependencies ||
+      options.terminalFull ||
+      (options.includeProperties && !permissionRecoveryProductEvidence) ||
+      options.withDependencies ||
       options.skipBuild || options.shard || options.prepareEvidence && !permissionRecoveryEvidence ||
       options.resumeReceipt ||
       options.browserTargetIds.length || options.timeoutDiagnosticRetry || options.timeoutRepairIncident ||
@@ -422,7 +427,8 @@ export function focusedAcceptanceOptions(args) {
         (JSON.stringify([...options.packIds].sort()) !==
            JSON.stringify([...liveTargetPermissionRecoveryPackIds].sort()) ||
          JSON.stringify([...options.focusedTaskKeys].sort()) !==
-           JSON.stringify([...permissionRecoveryFocusedTaskKeys].sort()))) {
+           JSON.stringify([...permissionRecoveryFocusedTaskKeys].sort()) ||
+         options.includeProperties !== permissionRecoveryProductEvidence)) {
       throw new Error("Permission-recovery evidence requires its exact causal packs and focused tasks");
     }
     if (options.withDependencies || options.skipBuild || options.shard || options.terminalFull) {

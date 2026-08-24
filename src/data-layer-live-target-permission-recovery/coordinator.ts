@@ -7,10 +7,7 @@ import {
   targetPathStatusForObservation,
   type TargetPathStatus,
 } from "../data-layer-target-path-status.js";
-import {
-  createLiveTargetPermissionRecoveryActionHost,
-  type LiveTargetPermissionRecoveryActionHost,
-} from "./action-host.js";
+import type { LiveTargetPermissionRecoveryActionHost } from "./action-host.js";
 import {
   createLiveTargetPermissionPathApplyBridge,
   type LiveTargetPermissionPathApplyResult,
@@ -61,7 +58,7 @@ export interface LiveTargetPermissionRecoveryCoordinator {
   ) => Promise<LiveTargetPermissionPathApplyResult | undefined>;
 }
 
-export function createDormantLiveTargetPermissionRecoveryCoordinator(adapters: {
+export interface LiveTargetPermissionRecoveryCoordinatorAdapters {
   requestOriginAccess: (origin: string) => Promise<boolean>;
   recheckPath: (
     target: ObservationTarget,
@@ -71,14 +68,18 @@ export function createDormantLiveTargetPermissionRecoveryCoordinator(adapters: {
     targetId: string,
     accessState: ObservationTargetAccessState,
   ) => void;
-  actionHost?: LiveTargetPermissionRecoveryActionHost;
+  actionHost: LiveTargetPermissionRecoveryActionHost;
   pathApply?: {
     attachedTarget: () => ObservationTarget | undefined;
     selectedTarget: () => ObservationTarget | undefined;
     renderReadiness: () => void;
   };
-}): LiveTargetPermissionRecoveryCoordinator {
-  const actionHost = adapters.actionHost ?? createLiveTargetPermissionRecoveryActionHost();
+}
+
+export function createLiveTargetPermissionRecoveryCoordinator(
+  adapters: LiveTargetPermissionRecoveryCoordinatorAdapters,
+): LiveTargetPermissionRecoveryCoordinator {
+  const { actionHost } = adapters;
   let recoveredTargetId: string | undefined;
   let recoveredPathStatus: TargetPathStatus | undefined;
   let recoveredHistoryPath: string | undefined;

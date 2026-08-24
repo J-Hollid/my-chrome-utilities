@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 
 import {
   createDormantLiveTargetPermissionRecoveryCoordinator,
+  createLiveTargetPermissionRecoveryCoordinator,
   createLiveTargetPermissionPathApplyCallback,
   createLiveTargetPermissionPathApplyBridge,
   liveTargetPermissionRecoveryReadiness,
@@ -56,7 +57,7 @@ assert.deepEqual(liveTargetPermissionRecoveryReadiness({
 
 const calls = [];
 let currentAction;
-const coordinator = createDormantLiveTargetPermissionRecoveryCoordinator({
+const coordinator = createLiveTargetPermissionRecoveryCoordinator({
   requestOriginAccess:async (...args) => { calls.push(["request", ...args]); return true; },
   recheckPath:async (...args) => {
     calls.push(["recheck", ...args]);

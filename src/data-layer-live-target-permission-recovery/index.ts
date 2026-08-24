@@ -1,9 +1,33 @@
+import {
+  createLiveTargetPermissionRecoveryCoordinator,
+  type LiveTargetPermissionRecoveryCoordinatorAdapters,
+} from "./coordinator.js";
+import {
+  createLiveTargetPermissionRecoveryActionHost,
+  type LiveTargetPermissionRecoveryActionHost,
+} from "./action-host.js";
+
+export type LiveTargetPermissionRecoveryCompositionAdapters =
+  Omit<LiveTargetPermissionRecoveryCoordinatorAdapters, "actionHost"> & {
+    actionHost?: LiveTargetPermissionRecoveryActionHost;
+  };
+
+export function createDormantLiveTargetPermissionRecoveryCoordinator(
+  adapters: LiveTargetPermissionRecoveryCompositionAdapters,
+): import("./coordinator.js").LiveTargetPermissionRecoveryCoordinator {
+  return createLiveTargetPermissionRecoveryCoordinator({
+    ...adapters,
+    actionHost:adapters.actionHost ?? createLiveTargetPermissionRecoveryActionHost(),
+  });
+}
+
 export {
-  createDormantLiveTargetPermissionRecoveryCoordinator,
+  createLiveTargetPermissionRecoveryCoordinator,
   type ActiveLiveTargetPermissionRecoveryResult,
   type DormantLiveTargetPermissionRecoveryResult,
   type LiveTargetPermissionProbeRequest,
   type LiveTargetPermissionRecoveryCoordinator,
+  type LiveTargetPermissionRecoveryCoordinatorAdapters,
   type LiveTargetPermissionRecoveryRequest,
   type LiveTargetPermissionRecoveryResult,
 } from "./coordinator.js";

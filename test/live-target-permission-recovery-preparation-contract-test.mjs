@@ -7,6 +7,7 @@ import {
   liveTargetPermissionPathApplyEvidenceTask,
   liveTargetPermissionPathApplyFocusedTaskKeys,
   liveTargetPermissionRecoveryProductEvidenceTask,
+  liveTargetPermissionRecoveryProductFocusedTaskKeys,
   liveTargetPermissionRecoveryEvidenceTask,
   liveTargetPermissionRecoveryFocusedTaskKeys,
   liveTargetPermissionRecoveryPackIds,
@@ -182,10 +183,10 @@ for (const drift of [
 ]) {
   assert.ok(modularFeatureSource.includes(`| ${drift} |`), `missing drift guard: ${drift}`);
 }
-function focusedPlanFixtureFor(focusedTaskKeys) {
+function focusedPlanFixtureFor(focusedTaskKeys, includeProperties = false) {
   return {
     mode:"focused-task",
-    includeProperties:false,
+    includeProperties,
     requestedPackIds:liveTargetPermissionRecoveryPackIds,
     packIds:liveTargetPermissionRecoveryPackIds,
     focusedTaskKeys,
@@ -206,10 +207,24 @@ assert.equal(validateLiveTargetPermissionRecoveryFocusedPlan(
   focusedPlanFixture,
   liveTargetPermissionRecoveryEvidenceTask,
 ), true);
+const productFocusedPlanFixture = focusedPlanFixtureFor(
+  liveTargetPermissionRecoveryProductFocusedTaskKeys,
+  true,
+);
 assert.equal(validateLiveTargetPermissionRecoveryFocusedPlan(
+  productFocusedPlanFixture,
+  liveTargetPermissionRecoveryProductEvidenceTask,
+), true, "the stable product task includes direct presentation and property proof");
+assert.throws(() => validateLiveTargetPermissionRecoveryFocusedPlan(
   focusedPlanFixture,
   liveTargetPermissionRecoveryProductEvidenceTask,
-), true, "the stable product task reuses the exact reviewed recovery proof boundary");
+), /exact causal focused bootstrap/u,
+  "the product task cannot reuse preparation-only evidence");
+assert.throws(() => validateLiveTargetPermissionRecoveryFocusedPlan(
+  productFocusedPlanFixture,
+  liveTargetPermissionRecoveryEvidenceTask,
+), /exact causal focused bootstrap/u,
+  "the preparation task cannot inherit product property authority");
 const pathApplyFocusedPlanFixture = focusedPlanFixtureFor(
   liveTargetPermissionPathApplyFocusedTaskKeys,
 );

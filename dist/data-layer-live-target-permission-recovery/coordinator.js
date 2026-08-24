@@ -1,9 +1,8 @@
 import { targetPathStatusForObservation, } from "../data-layer-target-path-status.js";
-import { createLiveTargetPermissionRecoveryActionHost, } from "./action-host.js";
 import { createLiveTargetPermissionPathApplyBridge, } from "./path-apply.js";
 import { liveTargetPermissionRecoveryReadiness, } from "./readiness.js";
-export function createDormantLiveTargetPermissionRecoveryCoordinator(adapters) {
-    const actionHost = adapters.actionHost ?? createLiveTargetPermissionRecoveryActionHost();
+export function createLiveTargetPermissionRecoveryCoordinator(adapters) {
+    const { actionHost } = adapters;
     let recoveredTargetId;
     let recoveredPathStatus;
     let recoveredHistoryPath;

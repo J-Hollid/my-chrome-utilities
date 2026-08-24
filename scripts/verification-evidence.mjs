@@ -46,6 +46,7 @@ import {
   isLiveTargetPermissionRecoveryEvidenceTask,
   liveTargetPermissionRecoveryFocusedTaskKeysFor,
   liveTargetPermissionRecoveryPackIds,
+  liveTargetPermissionRecoveryProductEvidenceTask,
   validateLiveTargetPermissionRecoveryFocusedPlan,
 } from "./live-target-permission-recovery-focused-evidence.mjs";
 import {
@@ -529,6 +530,8 @@ function canonicalRegistryCardinalityPlan(candidatePacks, {
 function canonicalLiveTargetPermissionRecoveryPlan(candidatePacks, {
   changeSet, basePacks, historicalRegistryFallback, evidenceTask,
 }) {
+  const includeProperties =
+    evidenceTask === liveTargetPermissionRecoveryProductEvidenceTask;
   const bindingPlan = planVerification(candidatePacks, {
     changedPaths:changeSet.paths,
     includeProperties:false,
@@ -538,12 +541,12 @@ function canonicalLiveTargetPermissionRecoveryPlan(candidatePacks, {
   });
   const executionPlan = bindEvidenceChangeScope(planVerification(candidatePacks, {
     packIds:liveTargetPermissionRecoveryPackIds,
-    includeProperties:false,
+    includeProperties,
   }), bindingPlan);
   const runnablePackIds = createVerificationPackCardinalityAdapter(candidatePacks).runnablePackIds;
   const canonical = withEvidencePackageTask(planVerification(candidatePacks, {
     packIds:runnablePackIds,
-    includeProperties:false,
+    includeProperties,
   }));
   const candidates = new Map(canonical.tasks.map((task) => [task.key, task]));
   const focusedTaskKeys = liveTargetPermissionRecoveryFocusedTaskKeysFor(evidenceTask);
@@ -561,7 +564,7 @@ function canonicalLiveTargetPermissionRecoveryPlan(candidatePacks, {
     ...executionPlan,
     mode:"focused-task",
     tasks:canonical.tasks.filter(({ key }) => tasks.some((task) => task.key === key)),
-    includeProperties:false,
+    includeProperties,
     focusedTaskKeys:[...focusedTaskKeys],
   };
 }

@@ -28,6 +28,12 @@ export const liveTargetPermissionPathApplyFocusedTaskKeys = [
   "unit:test/live-target-permission-path-apply-acceptance-test.mjs",
 ];
 
+export const liveTargetPermissionRecoveryProductFocusedTaskKeys = [
+  ...liveTargetPermissionRecoveryFocusedTaskKeys,
+  "unit:test/data-layer-live-guided-workflow-test.mjs",
+  "property:test/data-layer-observation-targets-property-test.mjs",
+];
+
 function sameSet(left, right) {
   return JSON.stringify([...new Set(left)].sort()) ===
     JSON.stringify([...new Set(right)].sort());
@@ -38,9 +44,11 @@ export function isLiveTargetPermissionRecoveryEvidenceTask(task) {
 }
 
 export function liveTargetPermissionRecoveryFocusedTaskKeysFor(task) {
-  if (task === liveTargetPermissionRecoveryEvidenceTask ||
-      task === liveTargetPermissionRecoveryProductEvidenceTask) {
+  if (task === liveTargetPermissionRecoveryEvidenceTask) {
     return liveTargetPermissionRecoveryFocusedTaskKeys;
+  }
+  if (task === liveTargetPermissionRecoveryProductEvidenceTask) {
+    return liveTargetPermissionRecoveryProductFocusedTaskKeys;
   }
   if (task === liveTargetPermissionPathApplyEvidenceTask) {
     return liveTargetPermissionPathApplyFocusedTaskKeys;
@@ -60,7 +68,8 @@ export function validateLiveTargetPermissionRecoveryFocusedPlan(plan, evidenceTa
     ? expandVerificationTaskPrerequisites(requestedTasks, plan.tasks,
       { mode:"ordinary-focused" }).map(({ key }) => key)
     : [];
-  if (plan.mode !== "focused-task" || Boolean(plan.includeProperties) ||
+  const productEvidence = evidenceTask === liveTargetPermissionRecoveryProductEvidenceTask;
+  if (plan.mode !== "focused-task" || Boolean(plan.includeProperties) !== productEvidence ||
       !sameSet(plan.requestedPackIds, liveTargetPermissionRecoveryPackIds) ||
       !sameSet(packIds, liveTargetPermissionRecoveryPackIds) ||
       plan.focusedTaskKeys !== undefined &&
@@ -72,7 +81,7 @@ export function validateLiveTargetPermissionRecoveryFocusedPlan(plan, evidenceTa
   for (const key of focusedTaskKeys) {
     if (!executed.has(key)) throw new Error(`Permission-recovery evidence omitted ${key}`);
   }
-  if ([...executed].some((key) => key.startsWith("property:"))) {
+  if (!productEvidence && [...executed].some((key) => key.startsWith("property:"))) {
     throw new Error("Permission-recovery evidence cannot infer an undeclared property task");
   }
   return true;
