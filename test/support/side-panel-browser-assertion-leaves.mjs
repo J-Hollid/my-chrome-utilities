@@ -21,6 +21,9 @@ const assertionLeavesByTarget = {
     ["liveTargetPermissionRecoveryWiring","targetPathApplyObserved"],
     ["liveTargetPermissionRecoveryWiring","appliedPathPreserved"],
     ["liveTargetPermissionRecoveryWiring","selectedTargetRetained"],
+    ["liveTargetPermissionRecoveryWiring","callbackTargetRendered"],
+    ["liveTargetPermissionRecoveryWiring","callbackPageUrlRendered"],
+    ["liveTargetPermissionRecoveryWiring","callbackCopyEnabled"],
   ],
   "FRESH_LIVE_SESSION_BROWSER_ADAPTER": [
     ["freshLiveSession","initial","initial","id"],

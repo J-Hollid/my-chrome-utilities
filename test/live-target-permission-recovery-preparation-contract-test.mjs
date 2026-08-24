@@ -73,7 +73,10 @@ assert.deepEqual(slice.consumers, [
 ]);
 assert.deepEqual(pathApplySlice, {
   id:"capture_live_target_permission_path_apply",
-  sourcePaths:["src/data-layer-live-target-permission-recovery/path-apply.ts"],
+  sourcePaths:[
+    "src/data-layer-live-target-permission-recovery/path-apply.ts",
+    "src/data-layer-live-target-permission-recovery/path-apply-callback.ts",
+  ],
   sourcePrefixes:[],
   tasks:["unit:test/data-layer-live-target-permission-recovery-test.mjs"],
   prerequisites:[
@@ -85,6 +88,11 @@ assert.deepEqual(pathApplySlice, {
 });
 assert.equal(pathApplyConsumer.consumerOnly, true);
 assert.equal(consumer.consumerOnly, true);
+assert.deepEqual(pathApplyConsumer.tasks, [
+  "unit:test/live-target-permission-recovery-preparation-contract-test.mjs",
+  "unit:test/live-target-permission-path-apply-acceptance-test.mjs",
+  "browser-observation:LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER+SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER+WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER",
+]);
 assert.deepEqual(consumer.tasks, [
   "unit:test/live-target-permission-recovery-preparation-contract-test.mjs",
   "browser-observation:LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER+SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER+WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER",
@@ -130,7 +138,7 @@ assert.equal((modularFeatureSource.match(
 assert.match(sidePanelContractHandlerSource,
   /filterv #\(= 9 %\)[\s\S]+:shellLeaves/u);
 assert.match(sidePanelContractHandlerSource,
-  /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7057/u);
+  /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7060/u);
 assert.match(permissionRecoveryHandlerSource,
   /"202"[\s\S]+only affected packs are Capture, Event Library, Schemas, Defects, and Shell/u);
 assert.match(permissionRecoveryHandlerSource,
@@ -150,6 +158,7 @@ const productionChanges = execFileSync(
 assert.deepEqual(productionChanges, [
   "src/data-layer-live-target-permission-recovery/coordinator.ts",
   "src/data-layer-live-target-permission-recovery/index.ts",
+  "src/data-layer-live-target-permission-recovery/path-apply-callback.ts",
   "src/data-layer-live-target-permission-recovery/path-apply.ts",
   "src/data-layer-live-target-permission-recovery/readiness.ts",
   "src/side-panel.ts",
@@ -174,7 +183,14 @@ const focusedPlanFixture = {
   requestedPackIds:liveTargetPermissionRecoveryPackIds,
   packIds:liveTargetPermissionRecoveryPackIds,
   focusedTaskKeys:liveTargetPermissionRecoveryFocusedTaskKeys,
-  tasks:["build:dist", ...liveTargetPermissionRecoveryFocusedTaskKeys].map((key) => ({ key })),
+  tasks:["build:dist", ...liveTargetPermissionRecoveryFocusedTaskKeys].map((key) => ({
+    key,
+    stage:key.split(":", 1)[0],
+    executable:"node",
+    args:[],
+    prerequisiteTaskKeys:key === "build:dist" || key.startsWith("unit:")
+      ? [] : ["build:dist"],
+  })),
 };
 assert.equal(validateLiveTargetPermissionRecoveryFocusedPlan(
   focusedPlanFixture,
@@ -182,6 +198,13 @@ assert.equal(validateLiveTargetPermissionRecoveryFocusedPlan(
 ), true);
 assert.throws(() => validateLiveTargetPermissionRecoveryFocusedPlan(
   { ...focusedPlanFixture, includeProperties:true },
+  liveTargetPermissionRecoveryEvidenceTask,
+), /exact causal focused bootstrap/u);
+assert.throws(() => validateLiveTargetPermissionRecoveryFocusedPlan(
+  { ...focusedPlanFixture, tasks:[...focusedPlanFixture.tasks, {
+    key:"unit:test/unrelated-test.mjs", stage:"unit", executable:"node", args:[],
+    prerequisiteTaskKeys:[],
+  }] },
   liveTargetPermissionRecoveryEvidenceTask,
 ), /exact causal focused bootstrap/u);
 
@@ -216,8 +239,11 @@ assert.match(sidePanelSource,
   /liveTargetPermissionRecoveryCoordinator\.requestAccess/u,
   "the installed permission action callback must be reachable");
 assert.match(sidePanelSource,
-  /apply: \(observation\) => \{[\s\S]+liveTargetPermissionRecoveryCoordinator\.applyProbeObservation\(observation\);[\s\S]+\},\n\}\);/u,
-  "the existing target-path apply callback must delegate its exact observation to the dormant coordinator");
+  /createLiveTargetPermissionPathApplyCallback\(\{[\s\S]+coordinator:liveTargetPermissionRecoveryCoordinator,[\s\S]+applyObservationEffects:\(observation\)/u,
+  "the existing target-path effects and dormant coordinator must share the deterministic callback adapter");
+assert.match(sidePanelSource,
+  /apply:applyLiveTargetPathObservation/u,
+  "the installed target-path controller must execute the deterministic callback adapter");
 
 const observation = shell.browserObservations.find(
   ({ id }) => id === "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER",
@@ -308,7 +334,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         containmentLeaves:/filterv #\(= 9 %\)[\s\S]+:shellLeaves/u
           .test(sidePanelContractHandlerSource),
         globalBrowserInventory:
-          /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7057/u
+          /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7060/u
             .test(sidePanelContractHandlerSource),
       },
     },

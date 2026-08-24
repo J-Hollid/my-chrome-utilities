@@ -111,6 +111,7 @@ import { createLiveNotificationController } from "./utilities/data-layer/capture
 import {
   createTargetPathStatusController,
   createDormantLiveTargetPermissionRecoveryCoordinator,
+  createLiveTargetPermissionPathApplyCallback,
   targetPathStatusForObservation,
   type TargetPathStatus,
 } from "./utilities/data-layer/capture.js";
@@ -6197,14 +6198,9 @@ backToEventsButton?.addEventListener("click", () => {
   closeInspectorAndReturnToEvents();
 });
 
-const targetPathStatusController = createTargetPathStatusController({
-  render: (path, fieldValue, status) => {
-    currentTargetPathStatus = status;
-    renderHistoryPath(path, fieldValue, status);
-    renderLiveContextActions();
-  },
-  read: currentTargetObservation,
-  apply: (observation) => {
+const applyLiveTargetPathObservation = createLiveTargetPermissionPathApplyCallback({
+  coordinator:liveTargetPermissionRecoveryCoordinator,
+  applyObservationEffects:(observation) => {
     dataLayerObserverState = attachHistoryArrayObserver(
       { ...dataLayerObserverState, sessionState:dataLayerSessionState },
       observation,
@@ -6213,8 +6209,17 @@ const targetPathStatusController = createTargetPathStatusController({
     persistAndRenderSessionState();
     restartLiveHistoryCaptureIfActive(observation);
     renderObserverState();
-    void liveTargetPermissionRecoveryCoordinator.applyProbeObservation(observation);
   },
+});
+
+const targetPathStatusController = createTargetPathStatusController({
+  render: (path, fieldValue, status) => {
+    currentTargetPathStatus = status;
+    renderHistoryPath(path, fieldValue, status);
+    renderLiveContextActions();
+  },
+  read: currentTargetObservation,
+  apply:applyLiveTargetPathObservation,
 });
 
 function refreshSelectedTargetPathStatus(): void {

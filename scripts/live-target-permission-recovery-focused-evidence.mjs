@@ -1,3 +1,6 @@
+import { expandVerificationTaskPrerequisites } from
+  "./verification-execution-prerequisites.mjs";
+
 export const liveTargetPermissionRecoveryEvidenceTask =
   "verification-slice-live-target-permission-recovery";
 export const liveTargetPermissionPathApplyEvidenceTask =
@@ -14,6 +17,7 @@ export const liveTargetPermissionRecoveryFocusedTaskKeys = [
   "unit:test/live-target-permission-recovery-preparation-contract-test.mjs",
   "unit:test/live-target-permission-recovery-acceptance-test.mjs",
   "unit:test/verification-process-contract-test.mjs",
+  "unit:test/live-target-permission-path-apply-acceptance-test.mjs",
   "browser-observation:LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER+SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER+WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER",
   "package:extension",
 ];
@@ -32,7 +36,13 @@ export function validateLiveTargetPermissionRecoveryFocusedPlan(plan, evidenceTa
   if (!isLiveTargetPermissionRecoveryEvidenceTask(evidenceTask)) return false;
   const packIds = plan.packIds ?? plan.claimPackIds ?? plan.requestedPackIds;
   const executedKeys = plan.tasks.map(({ key }) => key);
-  const exactExecutedKeys = ["build:dist", ...liveTargetPermissionRecoveryFocusedTaskKeys];
+  const tasksByKey = new Map(plan.tasks.map((task) => [task.key, task]));
+  const requestedTasks = liveTargetPermissionRecoveryFocusedTaskKeys
+    .map((key) => tasksByKey.get(key));
+  const exactExecutedKeys = requestedTasks.every(Boolean)
+    ? expandVerificationTaskPrerequisites(requestedTasks, plan.tasks,
+      { mode:"ordinary-focused" }).map(({ key }) => key)
+    : [];
   if (plan.mode !== "focused-task" || Boolean(plan.includeProperties) ||
       !sameSet(plan.requestedPackIds, liveTargetPermissionRecoveryPackIds) ||
       !sameSet(packIds, liveTargetPermissionRecoveryPackIds) ||

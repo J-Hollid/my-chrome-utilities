@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   createDormantLiveTargetPermissionRecoveryCoordinator,
+  createLiveTargetPermissionPathApplyCallback,
   createLiveTargetPermissionPathApplyBridge,
   liveTargetPermissionRecoveryReadiness,
 } from "../dist/data-layer-live-target-permission-recovery/index.js";
@@ -118,5 +119,22 @@ assert.deepEqual(bridged.at(-1), {
   pageAccessStatus:"page access unavailable",
 }, "the matching selected target is the fallback when no target is attached");
 assert.equal(readinessRenders, 1, "only a relevant seam transition requests readiness rendering");
+
+const callbackCalls = [];
+const pathApplyCallback = createLiveTargetPermissionPathApplyCallback({
+  applyObservationEffects:(observation) => callbackCalls.push(["effects", observation]),
+  coordinator:{
+    applyProbeObservation:async (observation) => {
+      callbackCalls.push(["permission", observation]);
+      return undefined;
+    },
+  },
+});
+pathApplyCallback(appliedObservation);
+await Promise.resolve();
+assert.deepEqual(callbackCalls, [
+  ["effects", appliedObservation],
+  ["permission", appliedObservation],
+], "the installed callback adapter preserves existing effects and delegates the exact observation");
 
 console.log("live target permission recovery seam tests passed");

@@ -15,3 +15,7 @@ export {
   type LiveTargetPermissionPathApplyBridge,
   type LiveTargetPermissionPathApplyResult,
 } from "./path-apply.js";
+export {
+  createLiveTargetPermissionPathApplyCallback,
+  type LiveTargetPermissionPathApplyCoordinator,
+} from "./path-apply-callback.js";

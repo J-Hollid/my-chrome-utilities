@@ -388,8 +388,11 @@ export const liveTargetPermissionRecoveryWiringRuntime = `(async () => {
   const targetPathApplyObserved = scriptCalls.length > 0 && q("#history-path-status").textContent.trim() === "Waiting for observation path";
   const appliedPathPreserved = q("#history-path-display").textContent === q("#history-path").value;
   const selectedTargetRetained = selectedTargetPresented && q("#live-setup-target").textContent.includes("Checkout selected");
-  if (permissionCalls.length || !inactive || !selectedTargetPresented || !targetPathApplyObserved || !appliedPathPreserved || !selectedTargetRetained) throw new Error("Preparation activated permission recovery or missed its installed target-path application");
-  return { installedProjection:selectedTargetPresented && startTestingRemainsDisabled, inactive, callbacksSuppressed:permissionCalls.length === 0, requestAccessAbsent, startTestingRemainsDisabled, selectedTargetPresented, targetPathApplyObserved, appliedPathPreserved, selectedTargetRetained };
+  const callbackTargetRendered = q("#live-target-page").textContent.includes("Checkout");
+  const callbackPageUrlRendered = q("#live-page-url").textContent === "https://shop.example.test/checkout";
+  const callbackCopyEnabled = !q("#copy-live-page-url").disabled;
+  if (permissionCalls.length || !inactive || !selectedTargetPresented || !targetPathApplyObserved || !appliedPathPreserved || !selectedTargetRetained || !callbackTargetRendered || !callbackPageUrlRendered || !callbackCopyEnabled) throw new Error("Preparation activated permission recovery or missed its installed target-path application");
+  return { installedProjection:selectedTargetPresented && startTestingRemainsDisabled, inactive, callbacksSuppressed:permissionCalls.length === 0, requestAccessAbsent, startTestingRemainsDisabled, selectedTargetPresented, targetPathApplyObserved, appliedPathPreserved, selectedTargetRetained, callbackTargetRendered, callbackPageUrlRendered, callbackCopyEnabled };
 })()`;
 
 export const fixturePrograms = Object.freeze({ ...projectFixturePrograms, payloadPathFilterPickerRuntime, singleLiveEventFeedRuntime, savedSessionLiveFeedRuntime, savedSessionLiveFeedReloadRuntime, freshLiveSessionRuntime, freshLiveSessionReloadRuntime, savedEventFeedFiltersSeedRuntime, savedEventFeedFiltersRuntime, liveTargetPermissionRecoveryWiringRuntime });

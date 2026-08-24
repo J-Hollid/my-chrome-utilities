@@ -309,7 +309,7 @@
                (let [inventory (get-in world [:vtd006/evidence :assertionLeafInventory])]
                  (assert! world
                           (and (= 64 (:targetCount inventory))
-                               (= 7057 (:mappedLeafCount inventory))
+                               (= 7060 (:mappedLeafCount inventory))
                                (true? (:everyTargetMapped inventory))
                                (true? (:rootsReachable inventory))
                                (true? (:wildcardFree inventory))
