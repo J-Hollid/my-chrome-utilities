@@ -2773,7 +2773,7 @@ Feature: Modular verification packs
     And the slice names direct model, controller, guided-step, and installed-wiring proof without assigning the whole side-panel composition root to a narrow owner
     And packs outside Capture and Shell remain preparation regressions only when selected by the conservative current and historical plan and are not inferred as seam consumers
     And src/side-panel.ts receives an integrated-seam disposition only when the resumed product can leave that broad path unchanged
-    And an unproved consumer, whole-file narrowing, parent fallback that leaves the product all-pack, or all-pack preparation result blocks the seam
+    And an unproved consumer, whole-file narrowing, parent fallback that leaves the product all-pack, or attempted all-pack feature evidence blocks the seam
 
   # Modular verification packs 201
   Scenario: Modular verification packs 201
@@ -2782,5 +2782,31 @@ Feature: Modular verification packs
     Then current valid active-tab access, target selection, picker permission requests, path readiness, session start, and installed Live setup behavior remain unchanged
     And no Request access action is newly exposed by the preparation and no permission, probe, path check, observation, session, project, or saved state changes meaning
     And every former assertion, task, prerequisite, pack consumer, package input, and terminal obligation remains represented by the conservative current and historical union
-    And exact changed-path evidence includes properties, the declared direct seam and consumer proof, and package proof
+    And exact changed-path evidence includes any slice-declared properties, the declared direct seam and consumer proof, and package proof
     And after architect qa-ready integration the original live-target-permission-recovery task is reissued from that exact QA head without another acceptance round-trip
+
+  # Modular verification packs 202
+  Scenario: Modular verification packs 202
+    Given the installed Live target permission-recovery seam is dormant and independently reviewed
+    And whole-file ownership still expands its side-panel and Capture-facade paths to all runnable packs
+    When the user-approved causal focused-verification bootstrap plans preparation evidence
+    Then its only affected packs are Capture, Event Library, Schemas, Defects, and Shell
+    And it selects only the declared seam, prerequisite, preparation-contract, installed-browser, directly changed process-contract, and acceptance tasks plus package proof
+    And a property task runs only when the settled slice declares it as a direct or prerequisite observation
+    And candidate-authored generic ownership cannot narrow another change set
+    And no unrelated whole-pack task array or all-runnable-pack checkpoint executes
+
+  # Modular verification packs 203
+  Scenario Outline: Modular verification packs 203
+    Given the Live target permission-recovery preparation has the user-approved focused bootstrap
+    When <candidate_drift> is found before evidence execution
+    Then the focused bootstrap is invalid
+    And execution stops for current scope classification instead of widening the plan
+
+    Examples:
+      | candidate_drift |
+      | a production hunk outside the reviewed seam, facade export, and dormant Shell composition |
+      | a newly affected owner outside the five causal packs |
+      | active permission-recovery product behavior |
+      | a missing task or installed observation leaf |
+      | a weakened assertion or changed product requirement |
