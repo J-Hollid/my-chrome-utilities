@@ -295,13 +295,12 @@ function projectedOutput(prototype, rendered, sourceBottom, sourceRight) {
     const outputArea = prototype.areas.find((area) => (area.type === "output"));
     if (!outputArea)
         return undefined;
-    const source = rectangle(outputArea.range), bottom = source.bottom + rendered.height - sourceBottom, right = source.right + rendered.width - sourceRight;
+    const source = rectangle(outputArea.range), bottom = source.bottom + rendered.height - sourceBottom, right = source.right + rendered.width - sourceRight, rowCount = bottom - source.top + 1, columnCount = right - source.left + 1, cellCount = rowCount * columnCount, range = `${address({ row: source.top, column: source.left })}:${address({ row: bottom, column: right })}`;
     if (bottom > 1_048_576 || right > 16_384)
-        throw new Error(`Generated ${outputArea.name} exceeds the Excel worksheet limit. Reduce the Output area or the number of generated repeat items.`);
-    const cellCount = (bottom - source.top + 1) * (right - source.left + 1);
+        throw new Error(`Generated ${outputArea.name} ${range} projects to ${rowCount} rows by ${columnCount} columns (${cellCount} cells); this exceeds the Excel worksheet limit. Reduce the Output area or the number of generated repeat items.`);
     if (cellCount > 250_000)
-        throw new Error(`Generated ${outputArea.name} ${address({ row: source.top, column: source.left })}:${address({ row: bottom, column: right })} contains ${cellCount} cells; the generated background exceeds the 250000-cell budget. Reduce the Output area or the number of generated repeat items.`);
-    return { range: `${address({ row: source.top, column: source.left })}:${address({ row: bottom, column: right })}`, backgroundFill: outputArea.properties.backgroundFill, cellCount };
+        throw new Error(`Generated ${outputArea.name} ${range} projects to ${rowCount} rows by ${columnCount} columns (${cellCount} cells); the generated background exceeds the 250000-cell budget. Reduce the Output area or the number of generated repeat items.`);
+    return { range, backgroundFill: outputArea.properties.backgroundFill, cellCount };
 }
 function renderRepeat(prototype, region, scope) {
     const items = templateValueAt(scope, region.item.area.source);
@@ -339,14 +338,14 @@ export function renderExcelTemplateGrid(prototype, context) {
     const validation = validateExcelTemplatePrototype(prototype);
     if (!validation.valid)
         throw new Error(validation.findings.map(({ message }) => message).join("\n"));
-    const repeats = repeatAreas(prototype, []), roots = repeatTree(repeats), sourceCells = prototype.cells.map(cell => ({ ...cell, sourceAddress: cell.sourceAddress ?? cell.address })), renderable = { ...prototype, cells: sourceCells }, points = sourceCells.map(({ address: cellAddress }) => coordinate(cellAddress)), bottom = Math.max(1, ...points.map(({ row }) => row), ...roots.map(({ item }) => item.rectangle.bottom)), right = Math.max(1, ...points.map(({ column }) => column), ...roots.map(({ item }) => item.rectangle.right)), rendered = renderContainer(renderable, { top: 1, left: 1, bottom, right }, roots, context);
-    if (rendered.height > 1_048_576 || rendered.width > 16_384)
-        throw new Error("Template expansion exceeds the Excel worksheet limit.");
+    const repeats = repeatAreas(prototype, []), roots = repeatTree(repeats), outputArea = prototype.areas.find((area) => area.type === "output"), outputBounds = outputArea ? rectangle(outputArea.range) : undefined, sourceCells = prototype.cells.filter(cell => !outputBounds || pointInside(coordinate(cell.address), outputBounds)).map(cell => ({ ...cell, sourceAddress: cell.sourceAddress ?? cell.address })), renderable = { ...prototype, cells: sourceCells }, points = sourceCells.map(({ address: cellAddress }) => coordinate(cellAddress)), bottom = Math.max(1, ...points.map(({ row }) => row), ...roots.map(({ item }) => item.rectangle.bottom)), right = Math.max(1, ...points.map(({ column }) => column), ...roots.map(({ item }) => item.rectangle.right)), rendered = renderContainer(renderable, { top: 1, left: 1, bottom, right }, roots, context);
     const merges = prototype.merges.flatMap(merge => { const bounds = rectangle(merge), members = rendered.cells.filter(cell => pointInside(coordinate(cell.sourceAddress ?? cell.address), bounds)), deltas = new Map(); for (const cell of members) {
         const target = coordinate(cell.address), source = coordinate(cell.sourceAddress ?? cell.address), delta = { row: target.row - source.row, column: target.column - source.column };
         deltas.set(`${delta.row}:${delta.column}`, delta);
     } return [...deltas.values()].map(delta => `${address({ row: bounds.top + delta.row, column: bounds.left + delta.column })}:${address({ row: bounds.bottom + delta.row, column: bounds.right + delta.column })}`); });
     const output = projectedOutput(prototype, rendered, bottom, right);
+    if (!output && (rendered.height > 1_048_576 || rendered.width > 16_384))
+        throw new Error("Template expansion exceeds the Excel worksheet limit.");
     return { worksheetName: safeWorksheetName(String(templateValueAt(context, "section.name") ?? prototype.worksheetName)), cells: rendered.cells.sort((left, right) => coordinate(left.address).row - coordinate(right.address).row || coordinate(left.address).column - coordinate(right.address).column), merges, ...(output ? { output } : {}) };
 }
 //# sourceMappingURL=excel-template.js.map
