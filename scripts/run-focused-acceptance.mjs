@@ -254,6 +254,21 @@ export function bindVerificationChangeScope(executionPlan, bindingPlan) {
   };
 }
 
+export function changedSinceFocusedExecutionPlan(packs, options, bindingPlan, {
+  changedSince, evidenceTask,
+}) {
+  if (!changedSince || (!options.focusedTaskKeys.length &&
+      evidenceTask !== sidePanelSingleCutoverProductEvidenceTask)) return;
+  const executionPlan = planVerification(packs, {
+    ...options,
+    changedPaths:[],
+    changeSet:null,
+    basePacks:undefined,
+    historicalRegistryFallback:false,
+  });
+  return bindVerificationChangeScope(executionPlan, bindingPlan);
+}
+
 export function focusedAcceptanceOptions(args) {
   const options = {
     packIds:[], changedPaths:[], terminalFull:false, includeProperties:false,
@@ -1822,6 +1837,9 @@ export async function runFocusedAcceptance(
       }
     }
   }
+  const changedSinceFocusedPlan = changedSinceFocusedExecutionPlan(
+    packs, options, bindingPlan, { changedSince, evidenceTask },
+  );
   if (cardinalityReviewEvidence) {
     bindingPlan ??= planVerification(packs, { ...options, packIds:[] });
     const executionPlan = planVerification(packs, {
@@ -1842,16 +1860,8 @@ export async function runFocusedAcceptance(
       historicalRegistryFallback:false,
     });
     plan = bindRunIntentBootstrapPlan(executionPlan, bindingPlan, packs);
-  } else if (options.focusedTaskKeys.length && changedSince) {
-    bindingPlan ??= planVerification(packs, { ...options, packIds:[] });
-    const executionPlan = planVerification(packs, {
-      ...options,
-      changedPaths:[],
-      changeSet:null,
-      basePacks:undefined,
-      historicalRegistryFallback:false,
-    });
-    plan = bindVerificationChangeScope(executionPlan, bindingPlan);
+  } else if (changedSinceFocusedPlan) {
+    plan = changedSinceFocusedPlan;
   } else plan = planVerification(packs, options);
   const canonicalPlan = planVerification(packs, {
     packIds:exactRunnablePackIds, includeProperties:plan.includeProperties,

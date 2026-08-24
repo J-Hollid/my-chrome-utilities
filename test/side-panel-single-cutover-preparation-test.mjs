@@ -17,7 +17,11 @@ import {
   sidePanelSingleCutoverProductFocusedTaskKeys,
   validateSidePanelSingleCutoverFocusedPlan,
 } from "../scripts/side-panel-single-cutover-focused-evidence.mjs";
-import { focusedAcceptanceOptions, selectFocusedVerificationTasks } from
+import {
+  changedSinceFocusedExecutionPlan,
+  focusedAcceptanceOptions,
+  selectFocusedVerificationTasks,
+} from
   "../scripts/run-focused-acceptance.mjs";
 import { runnablePackIdsFromRegistry } from
   "../scripts/verification-pack-cardinality/contract.mjs";
@@ -114,6 +118,20 @@ assert.deepEqual(productEvidenceOptions.focusedTaskKeys, [],
 const productCanonicalPlan = planVerification(packs, {
   packIds:runnablePackIdsFromRegistry(packs), includeProperties:true,
 });
+const productBindingPlan = planVerification(packs, {
+  changedPaths:["src/side-panel.ts"], includeProperties:true,
+});
+const productExecutionPlan = changedSinceFocusedExecutionPlan(
+  packs,
+  { ...productEvidenceOptions, changedPaths:["src/side-panel.ts"] },
+  productBindingPlan,
+  { changedSince:base, evidenceTask:sidePanelSingleCutoverProductEvidenceTask },
+);
+assert.deepEqual(new Set(productExecutionPlan.packIds),
+  new Set(sidePanelSingleCutoverPackIds),
+  "the product bootstrap isolates execution before binding the still-global root change");
+assert.deepEqual(productExecutionPlan.changedPaths, ["src/side-panel.ts"],
+  "the independently reviewed product bootstrap retains the canonical change binding");
 const productPackPlan = planVerification(packs, {
   packIds:sidePanelSingleCutoverPackIds, includeProperties:true,
 });
