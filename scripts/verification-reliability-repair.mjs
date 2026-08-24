@@ -33,7 +33,6 @@ function validateCausalExplanation(value) {
 
 export function timeoutRepairDiagnosedBoundary(incident) {
   validateIncident(incident);
-  if (incident.trustedRepairBoundary) return structuredClone(incident.trustedRepairBoundary);
   if (incident.failure.retryScope) return structuredClone(incident.failure.retryScope);
   const { failure } = incident;
   if (failure.failureClass === "execution-contract-failure" &&
@@ -57,43 +56,6 @@ export function timeoutRepairDiagnosedBoundary(incident) {
   }
   return { kind:"target", logicalTargetIds:[logicalTargetId],
     executionArgs:["scripts/run-browser-observation.mjs", logicalTargetId] };
-}
-
-export function trustedCompletedBrowserTaskBoundary(incident, sourceDocument) {
-  validateIncident(incident);
-  const invalid = () => new Error(`Reliability incident ${incident.id} has no trusted completed browser task boundary`);
-  const { failure } = incident;
-  const task = failure.task;
-  const receipt = sourceDocument?.receipt;
-  const recorded = receipt?.tasks?.[task?.key];
-  const targetIds = task?.logicalTargetIds;
-  const recordedIds = Object.keys(recorded?.logicalResults ?? {}).sort();
-  const expectedIds = Array.isArray(targetIds) ? [...targetIds].sort() : [];
-  if (failure.failureClass !== "nonzero-exit" || task?.stage !== "browser-observation" ||
-      !Array.isArray(task.args) || task.args[0] !== "scripts/run-browser-observation.mjs" ||
-      !targetIds?.length || new Set(targetIds).size !== targetIds.length ||
-      sourceDocument?.path !== failure.sourceReceipt ||
-      receipt?.candidate?.commit !== failure.lineage?.commit ||
-      receipt?.candidate?.tree !== failure.lineage?.tree ||
-      JSON.stringify(normalized(recorded?.identity)) !== JSON.stringify(normalized(task)) ||
-      recorded?.status !== "failed" || recorded.failureClass !== "nonzero-exit" ||
-      !Number.isInteger(recorded.exitCode) || recorded.exitCode === 0 ||
-      recorded.reliabilityIncidentId !== incident.id ||
-      recorded.reliabilityFailureDigest !== incident.failureDigest ||
-      !Array.isArray(failure.progressDiagnostics) || failure.progressDiagnostics.length !== 0 ||
-      failure.failedBoundary?.boundary !== "cleanup" ||
-      failure.failedBoundary?.phase !== "process-shutdown" ||
-      failure.failedBoundary?.completed !== true ||
-      failure.failedBoundary?.state?.status !== "complete" ||
-      JSON.stringify(recordedIds) !== JSON.stringify(expectedIds) ||
-      expectedIds.some((id) => recorded.logicalResults[id]?.id !== id ||
-        recorded.logicalResults[id]?.status !== "passed")) throw invalid();
-  return { kind:"task", taskKey:task.key, executionArgs:[...task.args] };
-}
-
-export function withTrustedCompletedBrowserTaskBoundary(incident, sourceDocument) {
-  return { ...structuredClone(incident),
-    trustedRepairBoundary:trustedCompletedBrowserTaskBoundary(incident, sourceDocument) };
 }
 
 export function timeoutRepairCandidate(incident) {

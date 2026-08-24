@@ -134,7 +134,6 @@ import {
   timeoutIncidentDigest,
   timeoutRepairCausalCategory,
   timeoutRepairDiagnosedBoundary,
-  trustedCompletedBrowserTaskBoundary,
   timeoutRepairFocusedExecutionTaskPlan,
   timeoutRepairPackageTaskIdentity,
   timeoutRepairPackIds,
@@ -2797,56 +2796,6 @@ try {
   assert.doesNotThrow(() => timeoutRepairFocusedTaskPlan(legacyBoundaryIncident,
     ["scripts/run-focused-acceptance.mjs"], "unit:test/verification-process-contract-test.mjs",
     [...timeoutCanonicalIdentities, browserTask]));
-  const completedBrowserTask = verificationTaskIdentity({
-    key:"browser-observation:A+B+C", stage:"browser-observation", packId:"shell",
-    executable:"node", args:["scripts/run-browser-observation.mjs", "A", "B", "C"],
-    logicalTargetIds:["A", "B", "C"],
-  });
-  const completedBrowserFailure = {
-    ...first.failure, failureClass:"nonzero-exit", task:completedBrowserTask,
-    progressDiagnostics:[],
-    failedBoundary:{ boundary:"cleanup", phase:"process-shutdown", completed:true,
-      state:{ status:"complete" } },
-  };
-  delete completedBrowserFailure.retryScope;
-  const completedBrowserIncident = { ...first, failure:completedBrowserFailure,
-    failureDigest:timeoutIncidentDigest(completedBrowserFailure) };
-  const completedBrowserReceipt = {
-    path:completedBrowserFailure.sourceReceipt,
-    receipt:{ candidate:{ commit:completedBrowserFailure.lineage.commit,
-      tree:completedBrowserFailure.lineage.tree }, tasks:{
-      [completedBrowserTask.key]:{ identity:completedBrowserTask, status:"failed",
-        failureClass:"nonzero-exit", exitCode:1,
-        reliabilityIncidentId:completedBrowserIncident.id,
-        reliabilityFailureDigest:completedBrowserIncident.failureDigest,
-        logicalResults:Object.fromEntries(
-          completedBrowserTask.logicalTargetIds.map((id) => [id, { id, status:"passed" }])) },
-    } },
-    sha256:"a".repeat(64),
-  };
-  assert.deepEqual(trustedCompletedBrowserTaskBoundary(
-    completedBrowserIncident, completedBrowserReceipt), {
-    kind:"task", taskKey:completedBrowserTask.key,
-    executionArgs:[...completedBrowserTask.args],
-  }, "a completed browser batch with an exact all-passed logical result set authorizes its whole task boundary");
-  for (const mutate of [
-    (value) => { value.failure.progressDiagnostics = [{ message:"partial" }]; },
-    (value) => { value.failure.failedBoundary.completed = false; },
-    (value, receipt) => { receipt.receipt.candidate.commit = "stale"; },
-    (value, receipt) => { receipt.receipt.tasks[completedBrowserTask.key].identity.args.push("EXTRA"); },
-    (value, receipt) => { delete receipt.receipt.tasks[completedBrowserTask.key].logicalResults.B; },
-    (value, receipt) => { receipt.receipt.tasks[completedBrowserTask.key].logicalResults.EXTRA =
-      { id:"EXTRA", status:"passed" }; },
-    (value, receipt) => { receipt.receipt.tasks[completedBrowserTask.key].logicalResults.B.status = "failed"; },
-  ]) {
-    const candidate = structuredClone(completedBrowserIncident);
-    const receipt = structuredClone(completedBrowserReceipt);
-    mutate(candidate, receipt);
-    candidate.failureDigest = timeoutIncidentDigest(candidate.failure);
-    receipt.receipt.tasks[completedBrowserTask.key].reliabilityFailureDigest = candidate.failureDigest;
-    assert.throws(() => trustedCompletedBrowserTaskBoundary(candidate, receipt),
-      /trusted completed browser task boundary/u);
-  }
   const receiptDirectory = path.join(incidentFixtureRoot, "tmp", "verification-receipts");
   await mkdir(receiptDirectory, { recursive:true });
   const writeRunnerReceipt = async(name, receipt) => {
