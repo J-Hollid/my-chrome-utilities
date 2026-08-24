@@ -1,7 +1,7 @@
 # Data Layer Live target permission recovery R01
 
-Status: ownership preparation QA-integrated at `9f8a8b037b`; approved product
-implementation resumes from its exact QA descendant
+Status: product implementation stopped at coherent candidate `1cf347a22c` for
+standing-authorized target-path apply-callback ownership preparation
 
 Prepared: 2026-08-24
 
@@ -249,3 +249,63 @@ Product scenarios 009 and runtime 002 remain unchanged and red. Stable task
 descendant containing this result. Product implementation changes the new seam
 and bounded adapters; changing the broad side-panel composition path requires a
 fresh causal scope decision.
+
+## Target-path apply-callback ownership preparation
+
+Status: standing-authorized task
+`verification-slice-live-target-permission-path-apply` starts from exact QA
+`59d9089c6d`. Stable product task `live-target-permission-recovery` is paused at
+coherent candidate `1cf347a22cf9325d5406055ab4d400667acab952`, tree
+`80ae4784309a7b0641639a3857e46786778b5044`, based on the preparation QA
+`9f8a8b037b1e6df45f190180168723be8f282b9c`.
+
+The product candidate is accepted as the conserved product remainder, including
+its slow-success causal repair. Do not merge it into the preparation or alter its
+product behavior while ownership is reviewed. Reconstruct it after preparation
+from that immutable patch reference, omitting only byte-identical overlap already
+integrated into QA.
+
+Exact product planning selects all twenty packs and 890 tasks because the target-
+path controller's production `apply` callback in `src/side-panel.ts` newly calls
+permission-probe reconciliation. The prior dormant-seam bootstrap did not cover
+that later behavior-bearing callback and cannot be reused as product evidence.
+This is a second independent ownership preparation, not authority for an all-pack
+feature run.
+
+The preparation installs the exact target-path apply bridge while recovery remains
+dormant. The bridge receives the applied observation's exact tab, history path,
+and page-access result; resolves only the matching attached or selected target;
+delegates through the Capture-owned permission-recovery seam; and requests a Live
+readiness render only when that seam reports a relevant state transition. During
+preparation the seam returns inactive, so the bridge cannot update target access,
+show `Request access`, request permission, recheck a path, change readiness, or
+start a session.
+
+Any extracted source remains under
+`src/data-layer-live-target-permission-recovery/`. Its proposed parent is
+`capture`, its stable subordinate slice is
+`capture_live_target_permission_path_apply`, and `shell` is its one exact
+installed consumer. The preparation may install the reviewed bridge call in the
+broad side-panel callback, but it must not assign all of `src/side-panel.ts` to a
+Live slice. Direct installed proof must show both that the callback reaches the
+dormant bridge with the exact applied observation and that current UI, target,
+path, session, and permission behavior are unchanged.
+
+The causal evidence boundary is task-focused inside `capture`, `event-library`,
+`schemas`, `defects`, and `shell` only when shared installed-browser support makes
+those owners unavoidable. It includes build, the permission-recovery seam unit,
+the observation-target and target-path prerequisites, the preparation and
+focused-acceptance contracts, the directly changed verification-process contract,
+the existing combined Shell browser observation, and package proof. No unrelated
+whole-pack task array runs.
+A property task runs only if the new slice declares it as a germane direct or
+prerequisite observation; otherwise none runs. No all-runnable-pack checkpoint is
+authorized.
+
+An unproved target identity, callback outside the reviewed apply boundary,
+behavioral activation, changed product requirement, weakened assertion, missing
+installed observation, inability to leave the broad callback unchanged during
+the resumed product task, or evidence expansion beyond this causal task set
+blocks before execution. After architect `qa-ready` integration, automatically
+reissue `live-target-permission-recovery` from that exact QA head and reapply the
+conserved candidate remainder without another product decision.

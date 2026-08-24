@@ -2810,3 +2810,34 @@ Feature: Modular verification packs
       | active permission-recovery product behavior |
       | a missing task or installed observation leaf |
       | a weakened assertion or changed product requirement |
+
+  # Modular verification packs 204
+  Scenario: Modular verification packs 204
+    Given live-target-permission-recovery has coherent candidate 1cf347a22c with an accepted slow-success repair
+    And its target-path apply callback in the broad side-panel composition selects all twenty runnable packs and 890 tasks
+    When standing callback ownership preparation is issued from exact QA 59d9089c6d
+    Then its stable task is verification-slice-live-target-permission-path-apply
+    And the product candidate and tree remain an immutable conserved remainder
+    And product scenarios 009 and runtime 002 remain unchanged and red during preparation
+    And no unrelated whole-pack task array or all-runnable-pack checkpoint executes
+
+  # Modular verification packs 205
+  Scenario: Modular verification packs 205
+    Given the target-path controller applies one exact page observation
+    When its behavior-preserving permission-recovery bridge is installed
+    Then subordinate Capture slice capture_live_target_permission_path_apply owns the bridge
+    And Shell is its exact installed side-panel consumer
+    And the bridge receives the applied tab, history path, and page-access result and resolves only the matching attached or selected target
+    And the broad side-panel callback delegates through the dormant bridge without receiving narrow whole-file ownership
+    And inactive preparation cannot update access, expose an action, request permission, recheck a path, change readiness, or start a session
+
+  # Modular verification packs 206
+  Scenario: Modular verification packs 206
+    Given the Live target path-apply preparation has one bounded exact candidate
+    When its conservation and review evidence are produced
+    Then evidence selects only the declared seam, observation-target and target-path prerequisites, preparation, focused-acceptance, directly changed process-contract, installed-browser, build, and package tasks
+    And shared browser support can add only Capture, Event Library, Schemas, Defects, and Shell as causal owners
+    And a property task runs only when the settled slice declares it as a direct or prerequisite observation
+    And target, path, permission, readiness, session, project, saved-state, and installed UI behavior remain unchanged
+    And any callback drift, behavioral activation, missing observation, weakened assertion, or automatic plan widening blocks before execution
+    And after architect qa-ready integration the original live-target-permission-recovery task is reissued from that exact QA head without another acceptance round-trip
