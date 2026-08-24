@@ -412,8 +412,8 @@ instanceGraph.pageFrames[0].conceptVisual={id:"attachment:first",assetId:"asset:
 instanceGraph.pageFrames[1].conceptVisual={id:"attachment:second",assetId:"asset:second",description:"Second cart state"};
 instanceContentState.project.conceptVisualAssets=[{id:"asset:first",mediaType:"image/png",width:1,height:1,byteLength:pixelA.length,bytes:pixelA,digest:"sha256:first"},{id:"asset:second",mediaType:"image/png",width:2,height:1,byteLength:pixelB.length,bytes:pixelB,digest:"sha256:second"}];
 const instanceContentSet=createProjectDocumentationSet({id:"set:instance-content",name:"Instance content",themeId:compilerTheme.id,includeConceptSubheadings:true,concepts:[{name:"Identity",included:true},{name:"Excluded",included:false},{name:"Commerce",included:true}],sections:[{id:"flow:instance-content",kind:"flow",name:"Instance content",targetId:"flow:compiler",selected:true,configuration:{paths:["/instance_only","/page_name","/occurrence_only","/purchase_id"],columns:["example"]}},{id:"matrix:instance-content",kind:"matrix",name:"Matrix",selected:false,configuration:{contextIds:[]}}]}),instanceContent=compileProjectDocumentation({state:instanceContentState,set:instanceContentSet,theme:compilerTheme,revision:4,generatedAt:"2026-08-23T00:00:00.000Z"}),instanceFlow=instanceContent.tables[0].templateData;
-assert.deepEqual(instanceFlow.pages.map(({rows})=>rows.map(({example})=>example)),[["first-instance","first-page","",""],["","second-page","",""]],"Page examples come from the exact Page instance and never another context or allowed values");
-assert.deepEqual(instanceFlow.pages.flatMap(({events})=>events.map(({rows})=>rows.map(({example})=>example))),[["first-instance","first-page","event-detail","first-event"],["","second-page","","second-event"]],"Event examples come from the exact contained occurrence and its own Page ancestry");
+assert.deepEqual(instanceFlow.pages.map(({rows})=>rows.map(({example})=>example)),[['"first-instance"','"first-page"',"",""] ,["",'"second-page"',"",""]],"Page examples come from the exact Page instance and never another context or allowed values");
+assert.deepEqual(instanceFlow.pages.flatMap(({events})=>events.map(({rows})=>rows.map(({example})=>example))),[['"first-instance"','"first-page"','"event-detail"','"first-event"'],["",'"second-page"',"",'"second-event"']],"Event examples come from the exact contained occurrence and its own Page ancestry");
 for(const page of instanceFlow.pages)for(const context of [page,...page.events])for(const row of context.rows){const cell=row.cells.find(({columnKey})=>columnKey==="example");assert.deepEqual(cell,{columnKey:"example",heading:"Documented example",value:row.example});}
 const effectiveExampleState=structuredClone(repeatedPageState),effectiveProfile=effectiveExampleState.project.collections.profiles[0],effectiveGroup=effectiveExampleState.project.collections.propertySets[0],effectivePage=effectiveExampleState.project.collections.pages[0],effectiveFrames=effectiveExampleState.project.documentationFlowGraphs["flow:compiler"].pageFrames;
 effectiveProfile.requirements.push(
@@ -422,21 +422,34 @@ effectiveProfile.requirements.push(
 );
 effectiveGroup.schemaConstraints.push({path:"/currency",type:"string",allowedValues:["EUR","USD"],examples:["Euro inherited"]});
 effectivePage.schemaConstraints.push(
-  {path:"/page_name",type:"string",allowedValues:["cart","category"],examples:["cart-page"]},
+  {path:"/page_name",type:"string",allowedValues:["cart","category"],examples:["cart-page","legacy-second-example"]},
   {path:"/page_type",type:"string",allowedValues:["cart"],examples:["cart-example"],documentation:"shared page type"},
 );
 effectiveFrames[0].localSchemaContributions=[{path:"/currency",examples:["Euro checkout"]}];
 effectiveFrames[1].localSchemaContributions=[{path:"/page_type",allowedValues:["cart","confirmation"],examples:["confirmation-example"],documentation:"confirmation-only description"}];
 const effectiveExampleSet=createProjectDocumentationSet({id:"set:effective-examples",name:"Effective examples",themeId:compilerTheme.id,sections:[{id:"flow:effective-examples",kind:"flow",name:"Effective examples",targetId:"flow:compiler",selected:true,configuration:{paths:["/page_name","/ecommerce_order_id","/currency","/page_type","/coupon_code"],columns:["description","example","allowedValues"]}},{id:"matrix:effective-examples",kind:"matrix",name:"Matrix",selected:false,configuration:{contextIds:[]}}]}),effectiveExampleFlow=compileProjectDocumentation({state:effectiveExampleState,set:effectiveExampleSet,theme:compilerTheme,revision:4,generatedAt:"2026-08-23T00:00:00.000Z"}).tables[0].templateData,rowFacets=(page)=>Object.fromEntries(page.rows.map(({property,example,allowedValues})=>[property,{example,allowedValues}]));
 assert.deepEqual(rowFacets(effectiveExampleFlow.pages[0]),{
-  page_name:{example:"cart-page",allowedValues:"cart or category"},
-  ecommerce_order_id:{example:"ORDER-100",allowedValues:"draft or paid"},
-  currency:{example:"Euro checkout",allowedValues:"EUR or USD"},
-  page_type:{example:"cart-example",allowedValues:"cart"},
+  page_name:{example:'"cart-page"',allowedValues:"cart or category"},
+  ecommerce_order_id:{example:'"ORDER-100"',allowedValues:"draft or paid"},
+  currency:{example:'"Euro checkout"',allowedValues:"EUR or USD"},
+  page_type:{example:'"cart-example"',allowedValues:"cart"},
   coupon_code:{example:"",allowedValues:"WELCOME or SAVE10"},
 },"Flow Page rows project direct, inherited, mixed, and absent effective facets from one canonical property identity");
-assert.deepEqual(rowFacets(effectiveExampleFlow.pages[1]).page_type,{example:"confirmation-example",allowedValues:"cart or confirmation"},"a Flow Page-instance override replaces only its exact Page column example");
+assert.deepEqual(rowFacets(effectiveExampleFlow.pages[1]).page_type,{example:'"confirmation-example"',allowedValues:"cart or confirmation"},"a Flow Page-instance override replaces only its exact Page column example");
 assert.deepEqual(effectiveExampleFlow.pages.map(({rows})=>rows.find(({property})=>property==="page_type").description),["shared page type","shared page type"],"metadata outside Example and Allowed values retains the configured table-row projection");
+const typedExamples=[
+  ["/text_code","string","12"],
+  ["/quantity","number",12],
+  ["/enabled","boolean",false],
+  ["/optional_value","string",null],
+  ["/labels","array",["item1","item2","item3"]],
+  ["/quantities","array",[1,2,3]],
+  ["/item","object",{id:12,label:"12",nested:{active:false,values:[null,"line\nvalue"]}}],
+];
+effectivePage.schemaConstraints.push(...typedExamples.map(([path,type,example])=>({path,type,examples:[example]})));
+const typedExampleSet=createProjectDocumentationSet({id:"set:typed-examples",name:"Typed examples",themeId:compilerTheme.id,sections:[{id:"flow:typed-examples",kind:"flow",name:"Typed examples",targetId:"flow:compiler",selected:true,configuration:{paths:[...typedExamples.map(([path])=>path),"/coupon_code"],columns:["example"]}},{id:"matrix:typed-examples",kind:"matrix",name:"Matrix",selected:false,configuration:{contextIds:[]}}]}),typedExampleFlow=compileProjectDocumentation({state:effectiveExampleState,set:typedExampleSet,theme:compilerTheme,revision:4,generatedAt:"2026-08-23T00:00:00.000Z"}).tables[0].templateData,typedRows=Object.fromEntries(typedExampleFlow.pages[0].rows.map(row=>[row.property,row]));
+for(const [path,,example] of typedExamples){const property=path.slice(1),row=typedRows[property],cell=row.cells.find(({heading})=>heading==="Documented example");assert.deepEqual(JSON.parse(row.example),example,`${path} retains its recursive JSON type`);assert.equal(cell.value,row.example,`${path} keeps row.example and its matching cell identical`);}
+assert.equal(typedRows.coupon_code.example,"","an absent example remains empty instead of becoming the JSON null literal");
 const publicConcepts=({concepts})=>concepts.map(({name,rows})=>({name,properties:rows.map(({property})=>property)}));
 assert.deepEqual(instanceFlow.pages.map(publicConcepts),[[{name:"Identity",properties:["page_name"]},{name:"Commerce",properties:["instance_only"]}],[{name:"Identity",properties:["page_name"]},{name:"Commerce",properties:["instance_only"]}]],"Page concepts follow configured concept order while retaining selected property order");
 assert.deepEqual(instanceFlow.pages.flatMap(({events})=>events.map(publicConcepts)),[[{name:"Identity",properties:["page_name","purchase_id"]},{name:"Commerce",properties:["instance_only","occurrence_only"]}],[{name:"Identity",properties:["page_name","purchase_id"]},{name:"Commerce",properties:["instance_only","occurrence_only"]}]],"Event concepts retain configured selected-property order while omitting excluded and empty groups");

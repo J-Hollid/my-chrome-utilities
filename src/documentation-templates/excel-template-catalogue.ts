@@ -65,8 +65,9 @@ const contract3AreaExamples=(kind:DocumentationTemplateKind):ExcelTemplateAreaGu
 
 const scalarRoots=["document.title","document.incomplete","document.generatedAt","project.name","project.purpose","project.website","set.name","section.name","section.kind","theme.name","theme.clientName","theme.headerText","theme.footerText","theme.logo","table.legend"];
 const kindScalars:Record<DocumentationTemplateKind,readonly string[]>={overview:[],flow:["flow.name"],matrix:["matrix.legend"],profile:["profile.name"]};
-const examples:Record<string,string>={"project.name":"Shop","section.name":"Checkout journey","page.pageName":"Cart","event.eventName":"purchase","row.property":"/order/id","cell.value":"Mandatory","concept.name":"Order","field.label":"Website","field.value":"shop.example"};
-const description=(path:string)=>path.split(".").at(-1)!.replace(/([A-Z])/gu," $1").replace(/^./u,value=>value.toUpperCase());
+const examples:Record<string,string>={"project.name":"Shop","section.name":"Checkout journey","page.pageName":"Cart","event.eventName":"purchase","row.property":"/order/id","row.example":'"12" or ["item1", "item2"]',"cell.value":"Mandatory","concept.name":"Order","field.label":"Website","field.value":"shop.example"};
+const descriptions:Record<string,string>={"row.example":"One type-faithful JSON value: quoted strings and recursive arrays or objects; numbers, booleans, and null stay unquoted"};
+const description=(path:string)=>descriptions[path]??path.split(".").at(-1)!.replace(/([A-Z])/gu," $1").replace(/^./u,value=>value.toUpperCase());
 const areaExamples:Record<DocumentationTemplateKind,ExcelTemplateAreaGuide[]>={
   overview:[{area:"FieldRow",type:"Repeat",source:"overview.fields",direction:"Down",range:"A3:B3"}],
   flow:[{area:"PageCard",type:"Repeat",source:"flow.pages",direction:"Across",range:"A3:D8"},{area:"EventRow",type:"Repeat",source:"page.events",direction:"Down",range:"A5:B5",parent:"PageCard"},{area:"PageVisual",type:"Image",source:"page.visual.image",direction:"",range:"C5:D7",parent:"PageCard"},{area:"ThemeLogo",type:"Image",source:"theme.logo",direction:"",range:"C1:D2"}],
