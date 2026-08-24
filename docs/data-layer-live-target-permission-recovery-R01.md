@@ -1,7 +1,7 @@
 # Data Layer Live target permission recovery R01
 
-Status: product behavior approved; implementation paused for standing-authorized
-ownership preparation on 2026-08-24
+Status: product behavior approved; ownership preparation resumed under the
+user-approved causal focused-verification boundary of 2026-08-24
 
 Prepared: 2026-08-24
 
@@ -163,9 +163,11 @@ obligations.
 The conservative preparation forecast is `capture`, `event-library`,
 `project_event_transport`, `schemas`, `defects`, `replay`, `live_flow_testing`,
 `project_assurance_severity`, `guided_test_cases`, and `shell`, with exact
-read-only intent and exact changed-path planning authoritative. The preparation
-must remain smaller than all runnable packs, run its exact plan with properties
-and package proof, and cannot run an all-runnable-pack feature checkpoint.
+read-only intent and exact changed-path planning initially authoritative. Before
+installed-seam proof, the preparation must remain smaller than all runnable
+packs, run its exact plan with properties and package proof, and cannot run an
+all-runnable-pack feature checkpoint. The independently reviewed installed-seam
+result and subsequent user decision are governed by the causal focus below.
 
 The preparation implementation-and-review effort ceiling is two hours from
 coder receipt to architect `qa-ready`. At one hour report the extracted source
@@ -176,3 +178,57 @@ still selects all runnable packs, coverage would weaken, or the seam would
 change product or safety requirements. After QA integration, automatically
 reissue `live-target-permission-recovery` from that exact QA head without another
 user decision; fresh product intent and exact preflight remain authoritative.
+
+## User-approved causal focus after installed-seam proof
+
+The stopped preparation candidate proved the dormant coordinator through the
+public Capture facade and the installed side panel, but exact path planning still
+reported all twenty packs and 889 tasks. That result is not a causal verification
+requirement. It is the conservative combination of whole-file ownership for
+`src/side-panel.ts` and `src/utilities/data-layer/capture.ts` with the rule that a
+candidate cannot use its own new disposition to narrow the same canonical change
+set. The user rejected an exceptional all-pack run and approved only QA-necessary
+focused testing on 2026-08-24.
+
+This approval is a one-time, fail-closed bootstrap for
+`verification-slice-live-target-permission-recovery`. It does not narrow either
+broad production file for another task. It is valid only while independent diff
+review confirms all of the following:
+
+- the new `src/data-layer-live-target-permission-recovery/` prefix and compiled
+  mirror remain dormant and behavior-preserving;
+- `src/side-panel.ts` changes only import, construct, project through, and delegate
+  to that dormant coordinator, retaining the previous behavior whenever the
+  coordinator is inactive;
+- `src/utilities/data-layer/capture.ts` changes only export the new public Capture
+  facade, with the compiled mirror equivalent;
+- browser fixtures, assertion leaves, target contracts, verification registry,
+  dispositions, process contracts, and acceptance handlers change only to prove
+  that exact seam and its existing installed composition; and
+- product scenarios 009 and runtime 002 remain unchanged and red.
+
+The exact causal pack boundary is `capture`, `event-library`, `schemas`,
+`defects`, and `shell`. Capture owns the seam unit plus the existing
+observation-target and target-path prerequisites. Shell owns the preparation
+contract and the installed `LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER`;
+its already-composed containment batch may retain the Schema View and Workspace
+Panel targets. Event Library, Schemas, and Defects are included only because the
+candidate changes their shared installed-browser assertion and fixture support.
+No task from the other fifteen packs may run merely because the two broad
+production paths expand through the registry graph.
+
+Evidence execution must be task-focused inside that five-pack boundary. It runs
+the declared Capture seam task and prerequisites, the Shell preparation contract,
+the installed combined browser task with all six new wiring leaves, the directly
+changed ownership/process-contract checks, the acceptance scenarios for this
+preparation, and package proof. A property task runs only when the settled slice
+declares it as a germane direct or prerequisite observation. It does not expand to
+the ordinary whole-pack task arrays, unrelated properties, or the all-runnable-
+pack checkpoint.
+
+Any production hunk outside the reviewed seam, facade export, and dormant Shell
+composition; any newly affected browser-support owner; activation of permission
+recovery; a missing task or observation leaf; a weakened assertion; or a changed
+product requirement invalidates this bootstrap before execution. The candidate
+then returns for current scope classification rather than widening automatically.
+The normal user-requested master-promotion terminal gate remains unchanged.
