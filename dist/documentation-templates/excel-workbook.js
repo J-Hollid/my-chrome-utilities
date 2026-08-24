@@ -167,7 +167,7 @@ const workbookPrototype = (workbook, expectedKind) => {
         if (!name)
             continue;
         if (ranges.length !== 1) {
-            findings.push({ location: `named area ${name}`, message: `Repeat area ${name} cannot be found. Select the intended Template cells and define the named area ${name}.` });
+            findings.push({ location: `named area ${name}`, message: `${type === "output" ? "Output" : "Repeat"} area ${name} cannot be found. Select the intended Template cells and define the named area ${name}.` });
             continue;
         }
         try {
@@ -179,11 +179,16 @@ const workbookPrototype = (workbook, expectedKind) => {
             }
             else if (type === "image" && (source === "theme.logo" || source === "page.visual.image") && !direction)
                 areas.push({ name, type: "image", source, range: ranges[0], ...(contract === "3" ? { properties: parseExcelAreaProperties("image", rawProperties) } : {}) });
+            else if (type === "output" && contract === "3") {
+                if (source || direction)
+                    throw new Error("Output Source and Direction must be blank. Clear Source and Direction.");
+                areas.push({ name, type: "output", source: "", range: ranges[0], properties: parseExcelAreaProperties("output", rawProperties) });
+            }
             else
-                findings.push({ location: `TemplateAreas ${name}`, message: type === "repeat" ? `${name} needs Direction Across or Down.` : `${name} must use supported Type Repeat or Image.` });
+                findings.push({ location: `TemplateAreas ${name}`, message: type === "repeat" ? `${name} needs Direction Across or Down.` : `${name} must use supported Type Repeat, Image, or Output.` });
         }
         catch (error) {
-            findings.push({ location: `TemplateAreas ${name} Properties`, message: `${name} ${error instanceof Error ? error.message : String(error)}` });
+            findings.push({ location: type === "output" && /Source and Direction/u.test(String(error)) ? `TemplateAreas ${name}` : `TemplateAreas ${name} Properties`, message: `${name} ${error instanceof Error ? error.message : String(error)}` });
         }
     }
     const cells = [];
@@ -194,7 +199,12 @@ const workbookPrototype = (workbook, expectedKind) => {
     const prototype = { kind, contractVersion: Number(contract), worksheetName: "Template", cells, areas, merges: [...(template.model?.merges ?? [])] }, geometry = validateExcelTemplatePrototype(prototype);
     for (const finding of geometry.findings)
         findings.push({ location: finding.cell ? `Template ${finding.cell}` : `TemplateAreas ${finding.area ?? "setup"} Properties`, message: finding.message, rule: "Bindings, merges, named areas, and Properties must remain within a compatible template scope.", ...(finding.repair ? { repair: finding.repair } : {}), technical: JSON.stringify(finding) });
-    const imageStart = (point) => ({ row: Math.floor(point.nativeRow ?? point.row ?? 0) + 1, column: Math.floor(point.nativeCol ?? point.col ?? 0) + 1 }), exclusiveEnd = (native, offset, fallback) => native === undefined ? Math.max(1, Math.ceil(fallback ?? 0)) : Math.max(1, native + ((offset ?? 0) > 0 ? 1 : 0)), imageEnd = (point) => ({ row: exclusiveEnd(point.nativeRow, point.nativeRowOff, point.row), column: exclusiveEnd(point.nativeCol, point.nativeColOff, point.col) });
+    const imageStart = (point) => ({ row: Math.floor(point.nativeRow ?? point.row ?? 0) + 1, column: Math.floor(point.nativeCol ?? point.col ?? 0) + 1 }), exclusiveEnd = (native, offset, fallback) => native === undefined ? Math.max(1, Math.ceil(fallback ?? 0)) : Math.max(1, native + ((offset ?? 0) > 0 ? 1 : 0)), imageEnd = (point) => ({ row: exclusiveEnd(point.nativeRow, point.nativeRowOff, point.row), column: exclusiveEnd(point.nativeCol, point.nativeColOff, point.col) }), output = areas.find((area) => area.type === "output"), outputBounds = output ? bounds(output.range) : undefined;
+    for (const image of template.getImages?.() ?? []) {
+        const start = imageStart(image.range.tl), end = image.range.br ? imageEnd(image.range.br) : start;
+        if (output && outputBounds && !(start.row >= outputBounds.top && start.column >= outputBounds.left && end.row <= outputBounds.bottom && end.column <= outputBounds.right))
+            findings.push({ location: `TemplateAreas ${output.name} Properties`, message: `${output.name} does not contain all generated output.`, repair: `Resize ${output.name} to contain the Template drawing.` });
+    }
     for (const area of areas) {
         if (area.type === "image" && area.properties) {
             const range = bounds(area.range);
@@ -220,7 +230,7 @@ const workbookPrototype = (workbook, expectedKind) => {
 };
 const itemPrefix = (source) => source.endsWith(".pages") ? "page" : source.endsWith(".events") ? "event" : source.endsWith(".cells") ? "cell" : source.endsWith(".concepts") ? "concept" : source.endsWith(".fields") ? "field" : "row";
 const inspection = (prototype) => { if (!prototype)
-    return { bindings: [], areas: [] }; const bindings = prototype.cells.flatMap(cell => [...String(cell.value).matchAll(/\{\{\s*([a-z][a-zA-Z0-9.]*)\s*\}\}/gu)].map(([, path]) => ({ cell: cell.address, path: path }))), areas = prototype.areas.map(area => { const parent = prototype.areas.filter(candidate => candidate.type === "repeat" && candidate.name !== area.name && containsRange(candidate.range, area.range)).sort((left, right) => rangeSize(left.range) - rangeSize(right.range))[0], properties = area.type === "image" ? (area.properties ? `fit: ${area.properties.fit}; position: ${area.properties.position.horizontal} ${area.properties.position.vertical}; padding: ${area.properties.padding.top}px ${area.properties.padding.right}px ${area.properties.padding.bottom}px ${area.properties.padding.left}px` : "implicit fit: scale-down; position: left top; padding: 0px") : (area.properties?.separatorArea ? `separator-area: ${area.properties.separatorArea.name}` : prototype.contractVersion === 2 ? "implicit complete repeat area" : ""); return { name: area.name, type: area.type, source: area.source, ...(area.type === "repeat" ? { direction: area.direction, itemPrefix: itemPrefix(area.source) } : {}), range: area.range, properties, ...(parent ? { parent: parent.name } : {}) }; }); return { kind: prototype.kind, contractVersion: prototype.contractVersion, bindings, areas }; };
+    return { bindings: [], areas: [] }; const bindings = prototype.cells.flatMap(cell => [...String(cell.value).matchAll(/\{\{\s*([a-z][a-zA-Z0-9.]*)\s*\}\}/gu)].map(([, path]) => ({ cell: cell.address, path: path }))), areas = prototype.areas.map(area => { const parent = prototype.areas.filter(candidate => candidate.type === "repeat" && candidate.name !== area.name && containsRange(candidate.range, area.range)).sort((left, right) => rangeSize(left.range) - rangeSize(right.range))[0], properties = area.type === "image" ? (area.properties ? `fit: ${area.properties.fit}; position: ${area.properties.position.horizontal} ${area.properties.position.vertical}; padding: ${area.properties.padding.top}px ${area.properties.padding.right}px ${area.properties.padding.bottom}px ${area.properties.padding.left}px` : "implicit fit: scale-down; position: left top; padding: 0px") : area.type === "output" ? `background-fill: ${area.properties.backgroundFill}` : (area.properties?.separatorArea ? `separator-area: ${area.properties.separatorArea.name}` : prototype.contractVersion === 2 ? "implicit complete repeat area" : ""); return { name: area.name, type: area.type, source: area.source, ...(area.type === "repeat" ? { direction: area.direction, itemPrefix: itemPrefix(area.source) } : {}), range: area.range, properties, ...(parent ? { parent: parent.name } : {}) }; }); return { kind: prototype.kind, contractVersion: prototype.contractVersion, bindings, areas }; };
 const bounds = (range) => { const points = range.split(":").map(value => { const match = /^([A-Z]+)(\d+)$/u.exec(value); let column = 0; for (const letter of match[1])
     column = column * 26 + letter.charCodeAt(0) - 64; return { row: Number(match[2]), column }; }); return { top: points[0].row, left: points[0].column, bottom: (points[1] ?? points[0]).row, right: (points[1] ?? points[0]).column }; };
 const containsRange = (outer, inner) => { const left = bounds(outer), right = bounds(inner); return left.top <= right.top && left.left <= right.left && left.bottom >= right.bottom && left.right >= right.right; };

@@ -174,6 +174,11 @@
                         :documentationTemplateActiveContentFinding true
                         :documentationTemplatePurview true
                         :documentationTemplatePrinterSettings true
+                        :documentationTemplateContractCompatibility true
+                        :documentationTemplateAreaImageProperties true
+                        :documentationTemplateRepeatSeparator true
+                        :documentationTemplatePropertyFindings true
+                        :documentationTemplateGeneratedPresentation true
                         :documentationTemplateRecoveryFailure true
                         :documentationTemplateInvalidTransitions true
                         :documentationTemplateRecovery true

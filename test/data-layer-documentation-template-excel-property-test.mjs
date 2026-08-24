@@ -27,4 +27,13 @@ for(const direction of ["across","down"])for(let count=0;count<=20;count+=1){
   assert.deepEqual(prototype,before,"repeat rendering leaves authored definitions immutable");
 }
 
-console.log("Excel Contract 3 parser, image layout, and separator properties passed.");
+let outputSeed=0x51a9e7d3;const outputRandom=()=>{outputSeed=(Math.imul(outputSeed,1664525)+1013904223)>>>0;return outputSeed;};
+for(let sample=0;sample<120;sample+=1){
+  const pageCount=1+outputRandom()%9,rowCounts=Array.from({length:pageCount},()=>1+outputRandom()%7),pages=rowCounts.map((rowCount,pageIndex)=>({pageName:`Page ${pageIndex+1}`,rows:Array.from({length:rowCount},(_,rowIndex)=>({property:`/${pageIndex}/${rowIndex}`}))})),prototype={kind:"flow",contractVersion:3,worksheetName:"Template",cells:[{address:"A1",value:"{{page.pageName}}"},{address:"A3",value:"{{row.property}}"},{address:"B1",value:""},{address:"B2",value:">>"},{address:"B3",value:""}],areas:[{name:"PageStep",type:"repeat",source:"flow.pages",direction:"across",range:"A1:B3",properties:{separatorArea:{name:"PageSeparator",range:"B1:B3"}}},{name:"PropertyValue",type:"repeat",source:"page.rows",direction:"down",range:"A3:A3"},{name:"OutputCanvas",type:"output",source:"",range:"A1:C4",properties:parseExcelAreaProperties("output",sample%2?" BACKGROUND-FILL : #fFfFfF ; ":"background-fill:#FFFFFF")}],merges:[]},before=structuredClone(prototype),rendered=renderExcelTemplateGrid(prototype,{section:{name:"Flow",kind:"flow"},flow:{pages}}),maximumRows=Math.max(...rowCounts),expectedRight=pageCount*2,expectedBottom=3+maximumRows,projectedSeparatorCells=rendered.cells.filter(({sourceAddress})=>/^B[1-3]$/u.test(sourceAddress??""));
+  assert.deepEqual(rendered.output,{range:`A1:${column(expectedRight)}${expectedBottom}`,backgroundFill:"#FFFFFF",cellCount:expectedRight*expectedBottom},"Output bounds conserve every randomized nested delta and authored margin");
+  assert.equal(projectedSeparatorCells.length,rowCounts.slice(0,-1).reduce((sum,count)=>sum+2+count,0),"every separator presentation projects through the preceding randomized nested height");
+  assert.equal(projectedSeparatorCells.filter(({value})=>value===">>").length,pageCount-1,"separator literals remain one-per-gap under randomized nested expansion");
+  assert.deepEqual(prototype,before,"generated presentation rendering does not mutate Output or repeat definitions");
+}
+
+console.log("Excel Contract 3 parser, image layout, separator, and Output properties passed.");
