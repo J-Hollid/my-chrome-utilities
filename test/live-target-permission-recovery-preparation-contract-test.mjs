@@ -73,6 +73,8 @@ assert.equal((modularFeatureSource.match(
   /\| shell\s+\| 3\s+\|(?: 3\s+\|)?/gu) ?? []).length, 2);
 assert.match(sidePanelContractHandlerSource,
   /filterv #\(= 9 %\)[\s\S]+:shellLeaves/u);
+assert.match(sidePanelContractHandlerSource,
+  /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7054/u);
 
 function atSpecification(path) {
   return execFileSync("git", ["show", `${specificationCommit}:${path}`], {
@@ -142,9 +144,11 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       id:"permission-recovery-conservation-inventory-v1",
       input:{ durableDispositionCount:9, captureUnitCount:22, captureTaskCount:172 },
       expectedPreRepairFailure:{durableDispositions:false,captureInventory:false,
-        typedPresentationBoundary:false,sidePanelInventory:false,containmentLeaves:false},
+        typedPresentationBoundary:false,sidePanelInventory:false,containmentLeaves:false,
+        globalBrowserInventory:false},
       expectedRepairResult:{durableDispositions:true,captureInventory:true,
-        typedPresentationBoundary:true,sidePanelInventory:true,containmentLeaves:true},
+        typedPresentationBoundary:true,sidePanelInventory:true,containmentLeaves:true,
+        globalBrowserInventory:true},
       repairResult:{
         durableDispositions:/dispositions\.dispositions\.length===9/u.test(readinessSource),
         captureInventory:/\[22 12 66 25 1 5 2 172\]/u.test(captureHandlerSource),
@@ -155,6 +159,9 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           /\| shell\s+\| 3\s+\|(?: 3\s+\|)?/gu) ?? []).length === 2,
         containmentLeaves:/filterv #\(= 9 %\)[\s\S]+:shellLeaves/u
           .test(sidePanelContractHandlerSource),
+        globalBrowserInventory:
+          /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7054/u
+            .test(sidePanelContractHandlerSource),
       },
     },
   };

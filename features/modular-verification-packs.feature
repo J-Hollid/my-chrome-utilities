@@ -1537,7 +1537,7 @@ Feature: Modular verification packs
   Scenario: Modular verification packs 101
     Given the committed VTD-006 target contract maps the old shared browser program to the five new entry programs
     When its current and migrated evidence inventories are compared
-    Then all 63 target ids and 67 top-level observation keys map exactly once
+    Then all 64 target ids and 68 top-level observation keys map exactly once
     And all deep assertion leaves consumed by feature handlers remain reachable without constants, renames, duplicates, or relaxed branches
     And the three Schema workspace configurations, two Guided Validation outputs, two Schema Manual Property outputs, and three combined missing-event Defects outputs remain distinct as before
     And the two Shell containment targets retain their existing nine assertion leaves each

@@ -170,7 +170,7 @@
                         "The installed fixture mutates process.env between targets."))}
    {:pattern #"^canonical and permuted fake-resource runs produce identical normalized results for every target identity$"
     :handler (fn [world _ _]
-               (assert! world (= {:outputCount 67 :exactValues true}
+               (assert! world (= {:outputCount 68 :exactValues true}
                                  (get-in world [:vtd006/evidence :identityOrder]))
                         "Fake-resource target order did not conserve all exact output values."))}
    {:pattern #"^representative Capture, Schemas, Defects, and Shell target pairs produce identical installed-browser results in both orders$"
@@ -200,7 +200,7 @@
                         "The process group did not reuse one lifecycle."))}
    {:pattern #"^every target receives fresh target state, its own result, timing, and declared outputs$"
     :handler (fn [world _ _]
-               (assert! world (and (= 67 (get-in world [:vtd006/evidence :contract :outputCount]))
+               (assert! world (and (= 68 (get-in world [:vtd006/evidence :contract :outputCount]))
                                    (true? (get-in world [:vtd006/evidence :isolation :freshSecondContext])))
                         "Target state, result, timing, or output ownership is incomplete."))}
    {:pattern #"^the Event Library installed session requests targets in order (.+)$"
@@ -293,17 +293,17 @@
                (assert! world (= 5 (count (get-in world [:vtd006/evidence :contract
                                                          :registeredPrograms])))
                         "The five migrated programs are not registered."))}
-   {:pattern #"^all 63 target ids and 67 top-level observation keys map exactly once$"
+   {:pattern #"^all 64 target ids and 68 top-level observation keys map exactly once$"
     :handler (fn [world _ _]
-               (assert! world (= [63 67] [(get-in world [:vtd006/evidence :contract :targetCount])
+               (assert! world (= [64 68] [(get-in world [:vtd006/evidence :contract :targetCount])
                                           (get-in world [:vtd006/evidence :contract :outputCount])])
                         "Target or output conservation failed."))}
    {:pattern #"^all deep assertion leaves consumed by feature handlers remain reachable without constants, renames, duplicates, or relaxed branches$"
     :handler (fn [world _ _]
                (let [inventory (get-in world [:vtd006/evidence :assertionLeafInventory])]
                  (assert! world
-                          (and (= 63 (:targetCount inventory))
-                               (= 7048 (:mappedLeafCount inventory))
+                          (and (= 64 (:targetCount inventory))
+                               (= 7054 (:mappedLeafCount inventory))
                                (true? (:everyTargetMapped inventory))
                                (true? (:rootsReachable inventory))
                                (true? (:wildcardFree inventory))
@@ -391,11 +391,11 @@
     :applies? (fn [world] (and (contains? world :vtd006/evidence)
                                (nil? (:vtd014/evidence world))))
     :handler (fn [world _ _]
-               (assert! world (= 63 (get-in world [:vtd006/evidence :contract :targetCount]))
+               (assert! world (= 64 (get-in world [:vtd006/evidence :contract :targetCount]))
                         "The infrastructure-only contract changed product topology."))}
    {:pattern #"^exact-pack and terminal-full plans map every old program task to one new program task with every logical target and evidence leaf once$"
     :handler (fn [world _ _]
-               (assert! world (= [63 67] [(get-in world [:vtd006/evidence :contract :targetCount])
+               (assert! world (= [64 68] [(get-in world [:vtd006/evidence :contract :targetCount])
                                           (get-in world [:vtd006/evidence :contract :outputCount])])
                         "Old/new program task conservation failed."))}
    {:pattern #"^the one-time delivery checkpoint runs all 20 runnable packs in canonical order followed by node scripts/package.mjs$"
