@@ -1,6 +1,6 @@
-# mutation-stamp: sha256=efdc534ea657a7983b6382e3608deb604063abde446f05ac479c23a6a8c7e7fe
+# mutation-stamp: sha256=f0725da32e3f17da85230d53c1577f9675d1c1292b1a55ed0073bd996c02a49e
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-08-23T12:10:56.324058054Z","feature_name":"Data layer documentation template library runtime","feature_path":"features/data-layer-documentation-template-library-runtime.feature","background_hash":"d28c2c079e14cdbd9cc406703e3395f1a7f17ec34ec737fb6d15bf22cf70bdd4","implementation_hash":"sha256:c7a6950d88df0e22ea6fd3b9fccdb546d57d9a260731f7a2c22df1d86ee3aada","scenarios":[{"index":7,"name":"Data layer documentation template library runtime 008","scenario_hash":"5ae4f0b58175e60ed34fd4e658346ef698f864c0097197495eb04fa4707b77a5","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-08-23T12:10:56.324058054Z"}]}
+# {"version":1,"tested_at":"2026-08-24T05:52:15.708168174Z","feature_name":"Data layer documentation template library runtime","feature_path":"features/data-layer-documentation-template-library-runtime.feature","background_hash":"d28c2c079e14cdbd9cc406703e3395f1a7f17ec34ec737fb6d15bf22cf70bdd4","implementation_hash":"sha256:f554e1fee5bcb4ff2cec7886a3273a3c3c69365c29f17f8fe765ed78fa1daeb2","scenarios":[{"index":7,"name":"Data layer documentation template library runtime 008","scenario_hash":"5ae4f0b58175e60ed34fd4e658346ef698f864c0097197495eb04fa4707b77a5","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-08-23T12:10:56.324058054Z"}]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer documentation template library runtime

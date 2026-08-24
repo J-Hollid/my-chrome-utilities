@@ -145,6 +145,22 @@
             ["ThemeLogo" "duplicate padding declarations" "identifies the duplicate property"]
             ["PageStep" "separator-area referring to a missing named range" "identifies PageSeparator as missing"]
             ["PageStep" "an Across separator outside the complete right edge" "identifies the required trailing geometry"]}}
+   {:keys ["property" "property_type" "typed_example" "rendered_example"]
+    :rows #{["/text_code" "string" "typed string 12" "\"12\""]
+            ["/quantity" "number" "typed number 12" "12"]
+            ["/enabled" "boolean" "typed boolean false" "false"]
+            ["/optional_value" "nullable" "typed null" "null"]
+            ["/labels" "array of strings" "typed array [\"item1\", \"item2\", \"item3\"]" "[\"item1\", \"item2\", \"item3\"]"]
+            ["/quantities" "array of numbers" "typed array [1, 2, 3]" "[1, 2, 3]"]
+            ["/item" "object" "typed object {\"id\": 12, \"label\": \"12\"}" "{\"id\": 12, \"label\": \"12\"}"]}}
+   {:keys ["property" "property_type" "typed_example" "rendered_example" "parsed_type"]
+    :rows #{["/text_code" "string" "typed string 12" "\"12\"" "string"]
+            ["/quantity" "number" "typed number 12" "12" "number"]
+            ["/enabled" "boolean" "typed boolean false" "false" "boolean"]
+            ["/optional_value" "nullable" "typed null" "null" "null"]
+            ["/labels" "array of strings" "typed array [\"item1\", \"item2\", \"item3\"]" "[\"item1\", \"item2\", \"item3\"]" "array"]
+            ["/quantities" "array of numbers" "typed array [1, 2, 3]" "[1, 2, 3]" "array"]
+            ["/item" "object" "typed object {\"id\": 12, \"label\": \"12\"}" "{\"id\": 12, \"label\": \"12\"}" "object"]}}
    {:keys ["output_problem" "location" "finding" "repair"]
     :rows #{["OutputCanvas background-fill: white" "TemplateAreas OutputCanvas Properties" "background-fill must be six-digit #RRGGBB" "Use a value such as #FFFFFF"]
             ["two Output rows" "TemplateAreas OutputCanvas Properties" "Contract 3 allows at most one Output area" "Keep one finite Output area"]
@@ -238,5 +254,5 @@
    observe-browser! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-23T23:56:27.184613853+02:00", :module-hash "1884084650", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1461823964"} {:id "def/feature-files", :kind "def", :line 5, :end-line 15, :hash "330814488"} {:id "def/entry-modes", :kind "def", :line 16, :end-line 34, :hash "-2015144058"} {:id "form/3/defonce", :kind "defonce", :line 35, :end-line 35, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 36, :end-line 36, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 38, :end-line 42, :hash "882590967"} {:id "defn-/observe-browser!", :kind "defn-", :line 44, :end-line 50, :hash "1774642844"} {:id "def/flow-export-example-relations", :kind "def", :line 52, :end-line 158, :hash "-1341625663"} {:id "defn/validate-example!", :kind "defn", :line 160, :end-line 163, :hash "1985321309"} {:id "def/runtime-paths", :kind "def", :line 165, :end-line 211, :hash "-702857304"} {:id "defn-/assert-runtime!", :kind "defn-", :line 213, :end-line 225, :hash "676773790"} {:id "def/handlers", :kind "def", :line 227, :end-line 231, :hash "-915256383"}]}
+;; {:version 1, :tested-at "2026-08-24T07:53:41.735008137+02:00", :module-hash "-2125560879", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1461823964"} {:id "def/feature-files", :kind "def", :line 5, :end-line 15, :hash "330814488"} {:id "def/entry-modes", :kind "def", :line 16, :end-line 34, :hash "-2015144058"} {:id "form/3/defonce", :kind "defonce", :line 35, :end-line 35, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 36, :end-line 36, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 38, :end-line 42, :hash "882590967"} {:id "defn-/observe-browser!", :kind "defn-", :line 44, :end-line 50, :hash "1774642844"} {:id "def/flow-export-example-relations", :kind "def", :line 52, :end-line 180, :hash "186759306"} {:id "defn/validate-example!", :kind "defn", :line 182, :end-line 185, :hash "1985321309"} {:id "def/runtime-paths", :kind "def", :line 187, :end-line 234, :hash "-2057553392"} {:id "defn-/assert-runtime!", :kind "defn-", :line 236, :end-line 248, :hash "676773790"} {:id "def/handlers", :kind "def", :line 250, :end-line 254, :hash "-915256383"}]}
 ;; clj-mutate-manifest-end
