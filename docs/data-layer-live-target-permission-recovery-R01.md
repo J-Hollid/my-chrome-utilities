@@ -1,7 +1,7 @@
 # Data Layer Live target permission recovery R01
 
-Status: product implementation stopped at coherent candidate `1cf347a22c` for
-standing-authorized target-path apply-callback ownership preparation
+Status: both ownership preparations QA-integrated through `80721743c8`;
+approved product implementation resumes from its exact QA descendant
 
 Prepared: 2026-08-24
 
@@ -309,3 +309,22 @@ the resumed product task, or evidence expansion beyond this causal task set
 blocks before execution. After architect `qa-ready` integration, automatically
 reissue `live-target-permission-recovery` from that exact QA head and reapply the
 conserved candidate remainder without another product decision.
+
+## Settled target-path apply result
+
+The dormant callback bridge and its exact installed Shell composition are
+QA-integrated at `80721743c847d771f0dcd4e8063a309697561aa7`. Review-ready
+evidence passed ten named focused tasks across `capture`, `event-library`,
+`schemas`, `defects`, and `shell`: build; the seam unit; observation-target and
+target-path prerequisites; path-apply, preparation, and existing focused-
+acceptance contracts; the directly changed verification-process contract; the
+combined installed browser observation; and package proof. No property task,
+unrelated pack array, or all-runnable-pack checkpoint ran.
+
+The slice was not quarantined, so no quarantine-repair record applies. Product
+scenarios 009 and runtime 002 remain unchanged and red. Stable task
+`live-target-permission-recovery` resumes from the exact QA descendant containing
+this result. Reconstruct the accepted product behavior and slow-success repair
+from immutable patch reference `1cf347a22c`; do not merge its old lineage. The
+resumed product candidate must leave the now-integrated broad side-panel callback
+unchanged and activate recovery only through the bounded Capture seam.
