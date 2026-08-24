@@ -37,6 +37,10 @@ const sidePanelContractHandlerSource = await readFile(
   "acceptance/src/acceptance/verification_support/modular_architecture_vtd006_handlers.clj",
   "utf8",
 );
+const permissionRecoveryHandlerSource = await readFile(
+  "acceptance/src/acceptance/verification_support/modular_architecture_live_target_permission_handlers.clj",
+  "utf8",
+);
 
 assert.deepEqual(slice.sourcePrefixes, [
   "src/data-layer-live-target-permission-recovery/",
@@ -90,6 +94,36 @@ assert.match(sidePanelContractHandlerSource,
   /filterv #\(= 9 %\)[\s\S]+:shellLeaves/u);
 assert.match(sidePanelContractHandlerSource,
   /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7054/u);
+assert.match(permissionRecoveryHandlerSource,
+  /"202"[\s\S]+only affected packs are Capture, Event Library, Schemas, Defects, and Shell/u);
+assert.match(permissionRecoveryHandlerSource,
+  /"203"[\s\S]+focused bootstrap is invalid/u);
+
+const productionChanges = execFileSync(
+  "git",
+  ["diff", "--name-only", specificationCommit, "HEAD", "--", "src"],
+  { encoding:"utf8" },
+).trim().split("\n").filter(Boolean).sort();
+assert.deepEqual(productionChanges, [
+  "src/data-layer-live-target-permission-recovery/coordinator.ts",
+  "src/data-layer-live-target-permission-recovery/index.ts",
+  "src/data-layer-live-target-permission-recovery/readiness.ts",
+  "src/side-panel.ts",
+  "src/utilities/data-layer/capture.ts",
+]);
+assert.match(modularFeatureSource,
+  /only affected packs are Capture, Event Library, Schemas, Defects, and Shell/u);
+assert.match(modularFeatureSource,
+  /no unrelated whole-pack task array or all-runnable-pack checkpoint executes/u);
+for (const drift of [
+  "a production hunk outside the reviewed seam, facade export, and dormant Shell composition",
+  "a newly affected owner outside the five causal packs",
+  "active permission-recovery product behavior",
+  "a missing task or installed observation leaf",
+  "a weakened assertion or changed product requirement",
+]) {
+  assert.ok(modularFeatureSource.includes(`| ${drift} |`), `missing drift guard: ${drift}`);
+}
 
 function atSpecification(path) {
   return execFileSync("git", ["show", `${specificationCommit}:${path}`], {
@@ -138,6 +172,9 @@ const evidence = {
   automaticResumption:true,
   runtimeExampleDomainConserved:true,
   captureEvidenceInventoryConserved:true,
+  causalBootstrapPackBoundary:true,
+  causalBootstrapTaskBoundary:true,
+  causalBootstrapFailClosed:true,
 };
 console.log(JSON.stringify({ liveTargetPermissionRecoveryPreparationAcceptance:evidence }));
 
