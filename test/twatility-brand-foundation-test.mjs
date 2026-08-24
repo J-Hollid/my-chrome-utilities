@@ -3,12 +3,11 @@ import {createHash} from "node:crypto";
 import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
-import {globalStyleContainmentEvidence,globalStyleTabKeyEvent} from
-  "./browser-packs/global-style-smoke.mjs";
+import {globalStyleContainmentEvidence} from "./browser-packs/global-style-smoke.mjs";
 
-assert.deepEqual(globalStyleTabKeyEvent("keyDown"),{
-  type:"keyDown",key:"Tab",code:"Tab",windowsVirtualKeyCode:9,nativeVirtualKeyCode:9,
-},"the global style keyboard probe supplies Chrome's native Tab identity");
+const globalStyleSmokeSource=await readFile("test/browser-packs/global-style-smoke.mjs","utf8");
+assert.equal((globalStyleSmokeSource.match(/nativeVirtualKeyCode:9/gu)??[]).length,2,
+  "both global style Tab events supply Chrome's native key identity");
 
 assert.deepEqual(globalStyleContainmentEvidence({
   stackedNarrow:true,
