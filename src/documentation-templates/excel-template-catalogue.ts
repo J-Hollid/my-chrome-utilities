@@ -35,7 +35,7 @@ export const excelTemplateItemRoot=(collection:string):string=>
 
 export interface ExcelTemplateValueGuide {path:string;placeholder:string;meaning:string;example:string;available:string}
 export interface ExcelTemplateCollectionGuide {path:string;meaning:string;itemPrefix:string;fields:readonly string[];nestedCollections:readonly string[];directions:readonly ["Across","Down"];emptyResult:"No copy";copyBehavior:string;example:string}
-export interface ExcelTemplateAreaGuide {area:string;type:"Repeat"|"Image";source:string;direction:"Across"|"Down"|"";range:string;properties?:string;parent?:string}
+export interface ExcelTemplateAreaGuide {area:string;type:"Repeat"|"Image"|"Output";source:string;direction:"Across"|"Down"|"";range:string;properties?:string;parent?:string}
 
 export const excelTemplateAreaPropertiesGuide=[
   "declarations = declaration (\";\" declaration)* [\";\"] and declaration = property-name : value; declaration order, ASCII case, and surrounding whitespace do not change the result.",
@@ -44,6 +44,9 @@ export const excelTemplateAreaPropertiesGuide=[
   "Percentage and padding-shorthand example: fit: contain; position: 25% 75%; padding: 4px 8px 12px 16px",
   "Across separator example: separator-area: PageSeparator, where PageSeparator is the complete full-height right edge and is emitted only between items.",
   "Down separator example: separator-area: RowSeparator, where RowSeparator is the complete full-width bottom edge and is emitted only between items.",
+  "Output accepts only background-fill: #RRGGBB. Source and Direction stay blank, the color is normalized to uppercase, and explicit authored fills take precedence.",
+  "Use at most one finite root Output area. It must contain every generated cell, merge, named area, and drawing plus intentional margins; its bounds project through all repeat and separator expansion.",
+  "Generated Output background is limited to 250000 cells and Excel worksheet limits. Reduce the Output area or repeat item counts when the projected rectangle exceeds either limit.",
   "Contract 2 defaults remain compatible without a Properties column or workbook migration.",
 ] as const;
 
@@ -57,12 +60,14 @@ const contract3AreaExamples=(kind:DocumentationTemplateKind):ExcelTemplateAreaGu
   {area:"ImageArea",type:"Image",source:"theme.logo",direction:"",properties:"fit: scale-down; position: center; padding: 8px",range:"A1:B2"},
   {...contract3AcrossExamples[kind],type:"Repeat",direction:"Across",properties:"separator-area: PageSeparator",range:"A1:B1"},
   {area:"RowStep",type:"Repeat",source:"table.rows",direction:"Down",properties:"separator-area: RowSeparator",range:"A1:B2"},
+  {area:"OutputCanvas",type:"Output",source:"",direction:"",properties:"background-fill: #FFFFFF",range:"A1:D8"},
 ];
 
 const scalarRoots=["document.title","document.incomplete","document.generatedAt","project.name","project.purpose","project.website","set.name","section.name","section.kind","theme.name","theme.clientName","theme.headerText","theme.footerText","theme.logo","table.legend"];
 const kindScalars:Record<DocumentationTemplateKind,readonly string[]>={overview:[],flow:["flow.name"],matrix:["matrix.legend"],profile:["profile.name"]};
-const examples:Record<string,string>={"project.name":"Shop","section.name":"Checkout journey","page.pageName":"Cart","event.eventName":"purchase","row.property":"/order/id","cell.value":"Mandatory","concept.name":"Order","field.label":"Website","field.value":"shop.example"};
-const description=(path:string)=>path.split(".").at(-1)!.replace(/([A-Z])/gu," $1").replace(/^./u,value=>value.toUpperCase());
+const examples:Record<string,string>={"project.name":"Shop","section.name":"Checkout journey","page.pageName":"Cart","event.eventName":"purchase","row.property":"/order/id","row.example":'"12" or ["item1", "item2"]',"cell.value":"Mandatory","concept.name":"Order","field.label":"Website","field.value":"shop.example"};
+const descriptions:Record<string,string>={"row.example":"One type-faithful JSON value: quoted strings and recursive arrays or objects; numbers, booleans, and null stay unquoted"};
+const description=(path:string)=>descriptions[path]??path.split(".").at(-1)!.replace(/([A-Z])/gu," $1").replace(/^./u,value=>value.toUpperCase());
 const areaExamples:Record<DocumentationTemplateKind,ExcelTemplateAreaGuide[]>={
   overview:[{area:"FieldRow",type:"Repeat",source:"overview.fields",direction:"Down",range:"A3:B3"}],
   flow:[{area:"PageCard",type:"Repeat",source:"flow.pages",direction:"Across",range:"A3:D8"},{area:"EventRow",type:"Repeat",source:"page.events",direction:"Down",range:"A5:B5",parent:"PageCard"},{area:"PageVisual",type:"Image",source:"page.visual.image",direction:"",range:"C5:D7",parent:"PageCard"},{area:"ThemeLogo",type:"Image",source:"theme.logo",direction:"",range:"C1:D2"}],

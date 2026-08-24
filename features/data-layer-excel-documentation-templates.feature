@@ -230,11 +230,11 @@ Feature: Data layer Excel documentation templates
 
     Examples:
       | page_instance | property               | example_source                                | allowed_values       | rendered_example     |
-      | Cart          | page_name              | a direct documented example                   | cart or category     | cart-page            |
-      | Cart          | ecommerce_order_id     | an inherited documented example               | draft or paid        | ORDER-100            |
-      | Cart          | currency               | a mixed inherited and local documented example | EUR or USD           | Euro checkout        |
-      | Confirmation  | page_type              | an overridden documented example               | cart or confirmation | confirmation-example |
-      | Cart          | coupon_code            | no effective documented example                | WELCOME or SAVE10    | empty text           |
+      | Cart          | page_name              | a direct documented example                   | cart or category     | "cart-page"             |
+      | Cart          | ecommerce_order_id     | an inherited documented example               | draft or paid        | "ORDER-100"             |
+      | Cart          | currency               | a mixed inherited and local documented example | EUR or USD           | "Euro checkout"         |
+      | Confirmation  | page_type              | an overridden documented example               | cart or confirmation | "confirmation-example" |
+      | Cart          | coupon_code            | no effective documented example                | WELCOME or SAVE10    | empty text              |
 
   # Data layer Excel documentation templates 019
   Scenario: Data layer Excel documentation templates 019
@@ -343,3 +343,65 @@ Feature: Data layer Excel documentation templates
       | PageStep   | separator-area naming no workbook-defined range           | separator area PageSeparator cannot be found               | Define PageSeparator or correct the Properties value     |
       | PageStep   | Across separator that is not the complete trailing edge   | PageSeparator must be the complete right edge of PageStep  | Resize PageSeparator to the full-height rightmost columns |
       | PageStep   | separator containing a binding, image, or nested repeat   | PageSeparator contains unsupported template behavior       | Keep only literal cells and presentation in the separator |
+
+  # Data layer Excel documentation templates 026
+  Scenario Outline: Data layer Excel documentation templates 026
+    Given Checkout Page instance has effective <property_type> property <property> with one documented <typed_example>
+    And a valid Flow workbook binds one cell exactly to {{row.example}} inside page.rows
+    When the operator generates unsaved populated preview and assigned Excel output
+    Then row.example contains the readable single-line JSON value <rendered_example> in both outputs
+    And parsing <rendered_example> as JSON reconstructs the effective example with every scalar, member, and container type unchanged
+    And the matching Documented example entry in row.cells contains the same literal text
+    And strings and object keys use JSON double quoting and escaping while structural commas and colons are followed by one space
+    And the same literal is substituted without loss when {{row.example}} appears beside ordinary text or another binding
+    And no type is inferred from how an example's text looks
+    And another selected property with no effective documented example exposes empty text rather than the JSON null literal
+    And the Flow template guide describes row.example as a type-faithful JSON value and shows quoted-string and array examples
+    And schemas, Documentation configuration, template bytes, Draft state, and Published state remain unchanged
+
+    Examples:
+      | property          | property_type    | typed_example                                      | rendered_example                         |
+      | /text_code        | string           | typed string 12                                    | "12"                                     |
+      | /quantity         | number           | typed number 12                                    | 12                                       |
+      | /enabled          | boolean          | typed boolean false                                | false                                    |
+      | /optional_value   | nullable         | typed null                                         | null                                     |
+      | /labels           | array of strings | typed array ["item1", "item2", "item3"]            | ["item1", "item2", "item3"]             |
+      | /quantities       | array of numbers | typed array [1, 2, 3]                              | [1, 2, 3]                                |
+      | /item             | object           | typed object {"id": 12, "label": "12"}              | {"id": 12, "label": "12"}               |
+
+  # Data layer Excel documentation templates 027
+  Scenario: Data layer Excel documentation templates 027
+    Given a Contract 3 Flow workbook defines FlowColumnHeader C2:D6 repeating flow.pages Across
+    And its Properties cell contains separator-area: PageSeparator for PageSeparator D2:D6
+    And D4 contains literal >> while PropertyValue C6 repeats page.rows Down
+    And the configured Pages have differing non-empty page.rows collections that expand below row 6
+    And OutputCanvas is one finite root named area containing the prototype and intentional blank margins
+    And its Output row has blank Source and Direction and Properties background-fill: #FFFFFF
+    And the Template does not paint an arbitrary broad rectangle for its background
+    When populated output renders the workbook
+    Then each inter-Page separator keeps its authored width and projects presentation through every nested generated row of the preceding Page
+    And cells aligned with the expanded PropertyValue rows receive separator presentation without repeated literal content
+    And literal >> appears once between adjacent Pages with no separator slot or empty separator column after the final Page
+    And a Down separator symmetrically projects presentation through nested Across columns of its preceding item
+    And the final OutputCanvas bounds include every root, nested, Across, Down, and separator geometry delta plus the declared margins
+    And every otherwise unfilled cell inside those bounds has solid white fill while explicit authored cell fills take precedence
+    And no cell outside the final OutputCanvas receives the generated background
+    And Contract 2 and Contract 3 workbooks without an Output row retain their established presentation
+    And bindings, image layout, collection order, immutable snapshot data, template bytes, assignments, Draft state, and Published state remain unchanged
+
+  # Data layer Excel documentation templates 028
+  Scenario Outline: Data layer Excel documentation templates 028
+    Given a Contract 3 candidate declares <output_problem>
+    When guided validation or bounded render preflight evaluates it
+    Then the primary finding identifies <location>
+    And it says <finding>
+    And it recommends <repair>
+    And no workbook generation, download, template save, assignment, project revision, or publication write occurs
+
+    Examples:
+      | output_problem                                             | location                                  | finding                                                  | repair                                                        |
+      | OutputCanvas background-fill: white                       | TemplateAreas OutputCanvas Properties     | background-fill must be six-digit #RRGGBB                | Use a value such as #FFFFFF                                   |
+      | two Output rows                                            | TemplateAreas OutputCanvas Properties     | Contract 3 allows at most one Output area                 | Keep one finite Output area                                   |
+      | OutputCanvas that omits PageVisual                         | TemplateAreas OutputCanvas Properties     | OutputCanvas does not contain all generated output       | Resize OutputCanvas to contain PageVisual                     |
+      | an Output row with nonblank Source or Direction            | TemplateAreas OutputCanvas                | Output Source and Direction must be blank                 | Clear Source and Direction                                    |
+      | an OutputCanvas projected to 250001 background cells       | generated OutputCanvas                    | the generated background exceeds the 250000-cell budget  | Reduce the Output area or the number of generated repeat items |

@@ -145,15 +145,21 @@
             ["ThemeLogo" "duplicate padding declarations" "identifies the duplicate property"]
             ["PageStep" "separator-area referring to a missing named range" "identifies PageSeparator as missing"]
             ["PageStep" "an Across separator outside the complete right edge" "identifies the required trailing geometry"]}}
+   {:keys ["output_problem" "location" "finding" "repair"]
+    :rows #{["OutputCanvas background-fill: white" "TemplateAreas OutputCanvas Properties" "background-fill must be six-digit #RRGGBB" "Use a value such as #FFFFFF"]
+            ["two Output rows" "TemplateAreas OutputCanvas Properties" "Contract 3 allows at most one Output area" "Keep one finite Output area"]
+            ["OutputCanvas that omits PageVisual" "TemplateAreas OutputCanvas Properties" "OutputCanvas does not contain all generated output" "Resize OutputCanvas to contain PageVisual"]
+            ["an Output row with nonblank Source or Direction" "TemplateAreas OutputCanvas" "Output Source and Direction must be blank" "Clear Source and Direction"]
+            ["an OutputCanvas projected to 250001 background cells" "generated OutputCanvas" "the generated background exceeds the 250000-cell budget" "Reduce the Output area or the number of generated repeat items"]}}
    {:keys ["kind"] :rows #{["Overview"] ["Flow"] ["Data capture matrix"] ["Site Profile"]}}
    {:keys ["kind" "visible_content"] :rows #{["Overview" "Name, Purpose, and Website fields in configured order"] ["Flow" "configured Flow columns, property rows, metadata, and literal values"] ["Data capture matrix" "configured contexts, concepts, property rows, presence marks, and legend"] ["Site Profile" "configured concepts, property rows, and selected Profile columns"]}}
    {:keys ["invalid_metadata"] :rows #{["a missing valid validation state"] ["a body digest different from its record digest"] ["a nonpositive body byte length"] ["an unsupported Excel contract version"]}}
    {:keys ["page_instance" "documented_example"] :rows #{["Cart" "cart"] ["Confirmation" "confirmation"]}}
    {:keys ["page_instance" "property" "example_source" "allowed_values" "rendered_example"]
-    :rows #{["Cart" "page_name" "a direct documented example" "cart or category" "cart-page"]
-            ["Cart" "ecommerce_order_id" "an inherited documented example" "draft or paid" "ORDER-100"]
-            ["Cart" "currency" "a mixed inherited and local documented example" "EUR or USD" "Euro checkout"]
-            ["Confirmation" "page_type" "an overridden documented example" "cart or confirmation" "confirmation-example"]
+    :rows #{["Cart" "page_name" "a direct documented example" "cart or category" "\"cart-page\""]
+            ["Cart" "ecommerce_order_id" "an inherited documented example" "draft or paid" "\"ORDER-100\""]
+            ["Cart" "currency" "a mixed inherited and local documented example" "EUR or USD" "\"Euro checkout\""]
+            ["Confirmation" "page_type" "an overridden documented example" "cart or confirmation" "\"confirmation-example\""]
             ["Cart" "coupon_code" "no effective documented example" "WELCOME or SAVE10" "empty text"]}}
    {:keys ["viewport_width" "editor_layout"] :rows #{["1280 pixels" "outline and selected block detail appear together"] ["360 pixels" "outline and selected block detail open one at a time"]}}])
 
@@ -204,6 +210,7 @@
                 :documentationTemplateAreaImageProperties
                 :documentationTemplateRepeatSeparator
                 :documentationTemplatePropertyFindings
+                :documentationTemplateGeneratedPresentation
                 :documentationTemplateRecoveryFailure
                 :documentationTemplateInvalidTransitions
                 :documentationTemplateRecovery

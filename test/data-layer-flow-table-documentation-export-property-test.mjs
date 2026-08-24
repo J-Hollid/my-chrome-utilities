@@ -5,6 +5,8 @@ import {
   configureFlowDocumentationSnapshot,
   configureFlowDocumentationTable,
   documentationWorksheet,
+  flowDocumentationExampleLiteral,
+  flowDocumentationPropertyMetadata,
   orderFlowDocumentationOccurrenceIds,
   renderFlowDocumentationClipboard,
   writeFlowDocumentationWorkbook,
@@ -40,6 +42,20 @@ globalThis.ExcelJS=ExcelJS;
 const permutations=(values)=>values.length<2?[values]:values.flatMap((value,index)=>permutations(values.filter((_,candidate)=>candidate!==index)).map((rest)=>[value,...rest]));
 
 let templateSeed=0x7e6d51a3;const templateRandom=()=>{templateSeed=(Math.imul(templateSeed,1664525)+1013904223)>>>0;return templateSeed;};
+const jsonCharacters=["a","Z","0"," ",'"',"\\","\n","\r","\t","\b","\f","\u0000","\u001f","é","中"];
+const generatedJsonString=()=>Array.from({length:templateRandom()%12},()=>jsonCharacters[templateRandom()%jsonCharacters.length]).join("");
+const generatedJsonValue=(depth=0)=>{const scalar=()=>[null,Boolean(templateRandom()%2),(templateRandom()%200000-100000)/100,generatedJsonString()][templateRandom()%4];if(depth>=3)return scalar();const kind=templateRandom()%6;if(kind<4)return scalar();if(kind===4)return Array.from({length:templateRandom()%5},()=>generatedJsonValue(depth+1));const entries=Array.from({length:templateRandom()%5},()=>[generatedJsonString(),generatedJsonValue(depth+1)]);return Object.fromEntries(entries);};
+const spacedJson=(value)=>{const compact=JSON.stringify(value);let result="",quoted=false,escaped=false;for(const character of compact){result+=character;if(quoted){if(escaped)escaped=false;else if(character==="\\")escaped=true;else if(character==='"')quoted=false;}else if(character==='"')quoted=true;else if(character===","||character===":")result+=" ";}return result;};
+for(let sample=0;sample<400;sample+=1){
+  const value=generatedJsonValue(),literal=flowDocumentationExampleLiteral(value),second=generatedJsonValue(),property={examples:[value,second],origins:[]};
+  assert.deepEqual(JSON.parse(literal),value,"typed example literals reconstruct arbitrary recursive JSON values");
+  assert.equal(literal,spacedJson(value),"typed example literals use exact single-line JSON spacing and escaping");
+  assert.doesNotMatch(literal,/[\n\r\t]/u,"typed example literals contain no literal control whitespace");
+  assert.equal(flowDocumentationPropertyMetadata(property,"example"),literal,"legacy multiple examples project exactly the first effective example");
+}
+assert.equal(flowDocumentationExampleLiteral(undefined),"","absence stays distinct from an explicit null example");
+assert.equal(flowDocumentationPropertyMetadata({examples:[null,"later"],origins:[]},"example"),"null","an explicit first null example is retained across the legacy multiple-example boundary");
+assert.equal(flowDocumentationPropertyMetadata({examples:[],origins:[]},"example"),"","an empty examples collection projects absence");
 for(let sample=0;sample<160;sample+=1){const rowCount=templateRandom()%8,cellCount=templateRandom()%7,literal=["=SUM(1,2)","+1","-2","@name","{{cell.value}}","<script>\nline"][templateRandom()%6],rows=Array.from({length:rowCount},(_,row)=>({property:`/${row}`,cells:Array.from({length:cellCount},(_,column)=>({value:`${literal}:${row}:${column}`}))})),prototype={kind:"matrix",contractVersion:2,worksheetName:"Template",cells:[{address:"A2",value:"{{row.property}}"},{address:"B2",value:"{{cell.value}}"},{address:"A5",value:"tail"}],areas:[{name:"RowPattern",type:"repeat",source:"matrix.rows",direction:"down",range:"A2:C3"},{name:"CellPattern",type:"repeat",source:"row.cells",direction:"across",range:"B2:C2"}],merges:[]},rendered=renderExcelTemplateGrid(prototype,{section:{name:"Matrix"},matrix:{rows}}),values=rendered.cells.map(({value})=>value);assert.equal(values.filter(value=>String(value).startsWith("/")).length,rowCount,"nested row repetition conserves item count");assert.equal(values.filter(value=>String(value).startsWith(literal)).length,rowCount*cellCount,"nested cell repetition conserves the Cartesian item count");if(rowCount*cellCount&&literal==="<script>\nline")assert.equal(values.some(value=>String(value).includes("<script>")),true,"literal markup remains data");}
 for(let sample=0;sample<180;sample+=1){const count=templateRandom()%9,start=2+templateRandom()%40,range=`A${start}:C${start+1}`,prototype={kind:"matrix",contractVersion:2,worksheetName:"Template",cells:[{address:`A${start}`,value:"{{row.property}}"},{address:`B${start}`,value:"{{cell.value}}"},{address:`D${start+3}`,value:"tail"}],areas:[{name:"RowPattern",type:"repeat",source:"matrix.rows",direction:"down",range},{name:"CellPattern",type:"repeat",source:"row.cells",direction:"across",range:`B${start}:C${start}`}],merges:[]},before=structuredClone(prototype),rows=Array.from({length:count},(_,row)=>({property:`/${sample}/${row}`,cells:Array.from({length:templateRandom()%6},(_,column)=>({value:`${row}:${column}`}))})),rendered=renderExcelTemplateGrid(prototype,{section:{name:"Matrix"},matrix:{rows}});assert.deepEqual(prototype,before,"rendering conserves moved and nested named-area definitions");assert.equal(rendered.cells.filter(({value})=>String(value).startsWith(`/${sample}/`)).length,count,"moved repeat areas round-trip every outer item");assert.equal(rendered.cells.filter(({value})=>value==="tail").length,1,"static cells remain singular");assert.equal(rendered.cells.find(({value})=>value==="tail")?.address,`D${start+1+count*2}`,"static cells shift by the repeated area's exact growth, including empty collections");}
 const columnLetters=(number)=>{let value="";for(let current=number;current;current=Math.floor((current-1)/26))value=String.fromCharCode(65+(current-1)%26)+value;return value;};

@@ -74,6 +74,28 @@ export function orderFlowDocumentationOccurrenceIds(occurrences, relationships, 
     return { ids: [...fork, ...remaining], labels: { [source]: "1", [orderedBranches[0]]: "2a", [orderedBranches[1]]: "2b", [target]: "3" } };
 }
 const metadataLabels = { description: "Description", type: "Type", allowedValues: "Allowed values", example: "Documented example", comments: "Comments", provenance: "Provenance" };
+export function flowDocumentationExampleLiteral(value) {
+    const compact = JSON.stringify(value);
+    if (compact === undefined)
+        return "";
+    let literal = "", quoted = false, escaped = false;
+    for (const character of compact) {
+        literal += character;
+        if (quoted) {
+            if (escaped)
+                escaped = false;
+            else if (character === "\\")
+                escaped = true;
+            else if (character === '"')
+                quoted = false;
+        }
+        else if (character === '"')
+            quoted = true;
+        else if (character === "," || character === ":")
+            literal += " ";
+    }
+    return literal;
+}
 export function flowDocumentationPropertyMetadata(property, metadata) {
     if (!property)
         return "";
@@ -82,7 +104,7 @@ export function flowDocumentationPropertyMetadata(property, metadata) {
     if (metadata === "allowedValues")
         return property.allowedValues?.map(String).join(" or ") ?? "";
     if (metadata === "example")
-        return property.examples?.map(String).join(" or ") ?? "";
+        return property.examples?.length ? flowDocumentationExampleLiteral(property.examples[0]) : "";
     if (metadata === "provenance")
         return property.origins.map(({ contributorName, scope }) => `${contributorName} (${scope})`).join("; ");
     if (metadata === "description")

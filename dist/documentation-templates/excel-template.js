@@ -48,7 +48,7 @@ export function parseExcelAreaProperties(type, raw) {
             declarations.set(name, value);
         }
     }
-    const supported = type === "image" ? new Set(["fit", "position", "padding"]) : new Set(["separator-area"]);
+    const supported = type === "image" ? new Set(["fit", "position", "padding"]) : type === "repeat" ? new Set(["separator-area"]) : new Set(["background-fill"]);
     for (const name of declarations.keys())
         if (!supported.has(name)) {
             if (type === "image" && name === "separator-area")
@@ -59,6 +59,12 @@ export function parseExcelAreaProperties(type, raw) {
         }
     if (type === "repeat")
         return declarations.has("separator-area") ? { separatorAreaName: declarations.get("separator-area") } : {};
+    if (type === "output") {
+        const color = declarations.get("background-fill");
+        if (!color || !/^#[0-9a-f]{6}$/iu.test(color))
+            throw new Error("background-fill must be six-digit #RRGGBB. Use a value such as #FFFFFF.");
+        return { backgroundFill: color.toUpperCase() };
+    }
     const result = defaultImageProperties(), fit = declarations.get("fit");
     if (fit) {
         const normalized = fit.toLowerCase();
@@ -133,6 +139,29 @@ export function validateExcelTemplatePrototype(prototype) {
     if (prototype.contractVersion !== 2 && prototype.contractVersion !== 3)
         findings.push({ message: "Use guided Excel template contract 2 or 3.", repair: "Download guided starter." });
     const repeats = repeatAreas(prototype, findings);
+    const outputs = prototype.areas.filter((area) => area.type === "output");
+    if (outputs.length > 1)
+        for (const output of outputs)
+            findings.push({ area: output.name, message: "Contract 3 allows at most one Output area.", repair: "Keep one finite Output area." });
+    for (const output of outputs) {
+        let outputBounds;
+        try {
+            outputBounds = rectangle(output.range);
+        }
+        catch {
+            findings.push({ area: output.name, message: `Output area ${output.name} cannot be found.`, repair: `Select one finite Template range and define ${output.name}.` });
+            continue;
+        }
+        for (const area of prototype.areas)
+            if (area !== output && !contains(outputBounds, rectangle(area.range)))
+                findings.push({ area: output.name, message: `${output.name} does not contain all generated output.`, repair: `Resize ${output.name} to contain ${area.name}.` });
+        for (const cell of prototype.cells)
+            if ((cell.value !== "" && cell.value !== null && cell.value !== undefined) && !pointInside(coordinate(cell.address), outputBounds))
+                findings.push({ area: output.name, message: `${output.name} does not contain all generated output.`, repair: `Resize ${output.name} to contain Template ${cell.address}.` });
+        for (const merge of prototype.merges)
+            if (!contains(outputBounds, rectangle(merge)))
+                findings.push({ area: output.name, message: `${output.name} does not contain all generated output.`, repair: `Resize ${output.name} to contain merged range ${merge}.` });
+    }
     for (const item of repeats) {
         const available = item.parent ? nestedCollections[item.parent.area.source] ?? [] : rootCollections[prototype.kind];
         if (!available.includes(item.area.source))
@@ -154,7 +183,7 @@ export function validateExcelTemplatePrototype(prototype) {
                 if (pointInside(coordinate(cell.address), separatorBounds) && placeholderPaths(String(cell.value)).length)
                     findings.push({ area: item.area.name, message: `${separator.name} contains unsupported template behavior.`, repair: "Keep only literal cells and presentation in the separator." });
             for (const other of prototype.areas)
-                if (other.name !== item.area.name && overlaps(rectangle(other.range), separatorBounds))
+                if (other.type !== "output" && other.name !== item.area.name && overlaps(rectangle(other.range), separatorBounds))
                     findings.push({ area: item.area.name, message: `${separator.name} contains unsupported template behavior.`, repair: "Keep bindings, images, and nested repeats in the item area." });
             for (const merge of prototype.merges) {
                 const merged = rectangle(merge);
@@ -236,11 +265,46 @@ function renderContainer(prototype, bounds, children, scope) {
             cells.push({ ...cell, address: address({ row: origin.row - bounds.top + point.row, column: origin.column - bounds.left + point.column }) });
         }
     }
-    const originalHeight = bounds.bottom - bounds.top + 1, originalWidth = bounds.right - bounds.left + 1, height = originalHeight + childOutputs.filter(({ region }) => region.item.area.direction === "down").reduce((sum, { region, rendered }) => sum + rendered.height - (region.item.rectangle.bottom - region.item.rectangle.top + 1), 0), width = originalWidth + childOutputs.filter(({ region }) => region.item.area.direction === "across").reduce((sum, { region, rendered }) => sum + rendered.width - (region.item.rectangle.right - region.item.rectangle.left + 1), 0);
+    const originalHeight = bounds.bottom - bounds.top + 1, originalWidth = bounds.right - bounds.left + 1, primaryHeight = originalHeight + childOutputs.filter(({ region }) => region.item.area.direction === "down").reduce((sum, { region, rendered }) => sum + rendered.height - (region.item.rectangle.bottom - region.item.rectangle.top + 1), 0), primaryWidth = originalWidth + childOutputs.filter(({ region }) => region.item.area.direction === "across").reduce((sum, { region, rendered }) => sum + rendered.width - (region.item.rectangle.right - region.item.rectangle.left + 1), 0), height = Math.max(primaryHeight, ...childOutputs.map(({ region, rendered }) => shiftedPoint({ row: region.item.rectangle.top, column: region.item.rectangle.left }, childOutputs.filter(item => item.region !== region)).row - bounds.top + rendered.height)), width = Math.max(primaryWidth, ...childOutputs.map(({ region, rendered }) => shiftedPoint({ row: region.item.rectangle.top, column: region.item.rectangle.left }, childOutputs.filter(item => item.region !== region)).column - bounds.left + rendered.width));
     return { cells, height, width };
 }
 const repeatItemRectangle = (area, bounds) => { const separator = area.properties?.separatorArea; if (!separator)
     return bounds; const separated = rectangle(separator.range); return area.direction === "across" ? { ...bounds, right: separated.left - 1 } : { ...bounds, bottom: separated.top - 1 }; };
+function projectedSeparator(separator, copy, direction) {
+    const orthogonalSize = direction === "across" ? copy.height : copy.width, sourceByTarget = new Map();
+    for (const cell of copy.cells) {
+        const target = coordinate(cell.address), source = coordinate(cell.sourceAddress ?? cell.address), targetAxis = direction === "across" ? target.row : target.column, sourceAxis = direction === "across" ? source.row : source.column;
+        if (!sourceByTarget.has(targetAxis))
+            sourceByTarget.set(targetAxis, sourceAxis);
+    }
+    const sourceAxes = separator.cells.map(cell => { const point = coordinate(cell.sourceAddress ?? cell.address); return direction === "across" ? point.row : point.column; }), minimum = Math.min(...sourceAxes), maximum = Math.max(...sourceAxes), seenValues = new Set(), cells = [];
+    for (let targetAxis = 1; targetAxis <= orthogonalSize; targetAxis += 1) {
+        const sourceAxis = Math.min(maximum, Math.max(minimum, sourceByTarget.get(targetAxis) ?? minimum + Math.min(targetAxis - 1, maximum - minimum)));
+        for (const cell of separator.cells) {
+            const source = coordinate(cell.sourceAddress ?? cell.address), axis = direction === "across" ? source.row : source.column;
+            if (axis !== sourceAxis)
+                continue;
+            const point = coordinate(cell.address), key = cell.sourceAddress ?? cell.address, retainValue = !seenValues.has(key);
+            seenValues.add(key);
+            cells.push({ ...cell, address: address(direction === "across" ? { row: targetAxis, column: point.column } : { row: point.row, column: targetAxis }), ...(retainValue ? {} : { value: "", note: undefined }) });
+        }
+    }
+    return { cells, height: direction === "across" ? orthogonalSize : separator.height, width: direction === "down" ? orthogonalSize : separator.width };
+}
+function projectedOutput(prototype, rendered, sourceBottom, sourceRight) {
+    const outputArea = prototype.areas.find((area) => (area.type === "output"));
+    if (!outputArea)
+        return undefined;
+    const source = rectangle(outputArea.range), bottom = source.bottom + rendered.height - sourceBottom, right = source.right + rendered.width - sourceRight, rowCount = Math.max(0, bottom - source.top + 1), columnCount = Math.max(0, right - source.left + 1), cellCount = rowCount * columnCount;
+    if (cellCount === 0)
+        return { backgroundFill: outputArea.properties.backgroundFill, cellCount };
+    const range = `${address({ row: source.top, column: source.left })}:${address({ row: bottom, column: right })}`;
+    if (bottom > 1_048_576 || right > 16_384)
+        throw new Error(`Generated ${outputArea.name} ${range} projects to ${rowCount} rows by ${columnCount} columns (${cellCount} cells); this exceeds the Excel worksheet limit. Reduce the Output area or the number of generated repeat items.`);
+    if (cellCount > 250_000)
+        throw new Error(`Generated ${outputArea.name} ${range} projects to ${rowCount} rows by ${columnCount} columns (${cellCount} cells); the generated background exceeds the 250000-cell budget. Reduce the Output area or the number of generated repeat items.`);
+    return { range, backgroundFill: outputArea.properties.backgroundFill, cellCount };
+}
 function renderRepeat(prototype, region, scope) {
     const items = templateValueAt(scope, region.item.area.source);
     if (!Array.isArray(items))
@@ -260,7 +324,8 @@ function renderRepeat(prototype, region, scope) {
         else
             columnOffset += copy.width;
         if (separator && index < copies.length - 1) {
-            for (const cell of separator.cells) {
+            const emitted = projectedSeparator(separator, copy, region.item.area.direction);
+            for (const cell of emitted.cells) {
                 const point = coordinate(cell.address);
                 cells.push({ ...cell, address: address({ row: point.row + rowOffset, column: point.column + columnOffset }) });
             }
@@ -276,13 +341,14 @@ export function renderExcelTemplateGrid(prototype, context) {
     const validation = validateExcelTemplatePrototype(prototype);
     if (!validation.valid)
         throw new Error(validation.findings.map(({ message }) => message).join("\n"));
-    const repeats = repeatAreas(prototype, []), roots = repeatTree(repeats), sourceCells = prototype.cells.map(cell => ({ ...cell, sourceAddress: cell.sourceAddress ?? cell.address })), renderable = { ...prototype, cells: sourceCells }, points = sourceCells.map(({ address: cellAddress }) => coordinate(cellAddress)), bottom = Math.max(1, ...points.map(({ row }) => row), ...roots.map(({ item }) => item.rectangle.bottom)), right = Math.max(1, ...points.map(({ column }) => column), ...roots.map(({ item }) => item.rectangle.right)), rendered = renderContainer(renderable, { top: 1, left: 1, bottom, right }, roots, context);
-    if (rendered.height > 1_048_576 || rendered.width > 16_384)
-        throw new Error("Template expansion exceeds the Excel worksheet limit.");
+    const repeats = repeatAreas(prototype, []), roots = repeatTree(repeats), outputArea = prototype.areas.find((area) => area.type === "output"), outputBounds = outputArea ? rectangle(outputArea.range) : undefined, sourceCells = prototype.cells.filter(cell => !outputBounds || pointInside(coordinate(cell.address), outputBounds)).map(cell => ({ ...cell, sourceAddress: cell.sourceAddress ?? cell.address })), renderable = { ...prototype, cells: sourceCells }, points = sourceCells.map(({ address: cellAddress }) => coordinate(cellAddress)), bottom = Math.max(1, ...points.map(({ row }) => row), ...roots.map(({ item }) => item.rectangle.bottom)), right = Math.max(1, ...points.map(({ column }) => column), ...roots.map(({ item }) => item.rectangle.right)), rendered = renderContainer(renderable, { top: 1, left: 1, bottom, right }, roots, context);
     const merges = prototype.merges.flatMap(merge => { const bounds = rectangle(merge), members = rendered.cells.filter(cell => pointInside(coordinate(cell.sourceAddress ?? cell.address), bounds)), deltas = new Map(); for (const cell of members) {
         const target = coordinate(cell.address), source = coordinate(cell.sourceAddress ?? cell.address), delta = { row: target.row - source.row, column: target.column - source.column };
         deltas.set(`${delta.row}:${delta.column}`, delta);
     } return [...deltas.values()].map(delta => `${address({ row: bounds.top + delta.row, column: bounds.left + delta.column })}:${address({ row: bounds.bottom + delta.row, column: bounds.right + delta.column })}`); });
-    return { worksheetName: safeWorksheetName(String(templateValueAt(context, "section.name") ?? prototype.worksheetName)), cells: rendered.cells.sort((left, right) => coordinate(left.address).row - coordinate(right.address).row || coordinate(left.address).column - coordinate(right.address).column), merges };
+    const output = projectedOutput(prototype, rendered, bottom, right);
+    if (!output && (rendered.height > 1_048_576 || rendered.width > 16_384))
+        throw new Error("Template expansion exceeds the Excel worksheet limit.");
+    return { worksheetName: safeWorksheetName(String(templateValueAt(context, "section.name") ?? prototype.worksheetName)), cells: rendered.cells.sort((left, right) => coordinate(left.address).row - coordinate(right.address).row || coordinate(left.address).column - coordinate(right.address).column), merges, ...(output ? { output } : {}) };
 }
 //# sourceMappingURL=excel-template.js.map

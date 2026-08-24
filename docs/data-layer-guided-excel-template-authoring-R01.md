@@ -1,6 +1,6 @@
 # Data layer guided Excel template authoring R01
 
-Status: guided authoring QA-integrated at `a8ee95869b` on 2026-08-19; Contract 3 area-properties correction QA-integrated at `03d023b039` on 2026-08-24 after exact `flow_export`/34-task review-ready evidence
+Status: guided authoring QA-integrated at `a8ee95869b` on 2026-08-19; Contract 3 area-properties correction QA-integrated at `03d023b039` on 2026-08-24 after exact `flow_export`/34-task review-ready evidence; generated separator-presentation and output-background correction approved for coder handoff on 2026-08-24
 
 Prepared: 2026-08-18
 
@@ -459,3 +459,169 @@ coder, refactorer, and architect review corrections on the same approved
 behavior. No all-20 checkpoint ran. Recommendation: **continue** the focused QA
 pilot; preserve the exact planner authority and retain cumulative final
 regression and promotion as a separate explicit `master` decision.
+
+## Generated separator presentation and output background correction
+
+Status: approved for coder handoff on 2026-08-24
+
+Stable task name: `excel-template-generated-presentation`
+
+### Outcome and authoring contract
+
+Contract 3 keeps the existing `Properties` declaration grammar and adds one
+optional `Output` row type. It does not add a worksheet-wide style, executable
+expression, or another configuration table. A workbook that wants a generated
+background defines one finite workbook-named range around its prototype output,
+including the blank edge rows or columns it wants as margins, and adds this row:
+
+| Area | Type | Source | Direction | Properties |
+|---|---|---|---|---|
+| `OutputCanvas` | `Output` | blank | blank | `background-fill: #FFFFFF` |
+
+`Output` accepts only `background-fill`. Its value is one opaque six-digit sRGB
+hex color in `#RRGGBB` form; matching is ASCII case-insensitive and inspection
+normalizes it to uppercase. At most one Output row is allowed. Its `Area` must
+resolve to one rectangular range on `Template`, must not be nested in a repeat,
+and must completely contain every Repeat, separator, Image, non-empty Template
+cell, merge, and drawing that can contribute to output. `Source` and `Direction`
+must be blank. Functional content outside the Output range is invalid rather
+than silently clipped. Blank presentation cells outside it do not enlarge the
+declared output and are not copied when an Output row is present.
+
+The Output range is an envelope, not a copied item. Its source bounds express
+the finite prototype document and intentional margins without requiring an
+author to paint `A1:Z100`. Rendering projects its right and bottom edges through
+every root and nested Across or Down delta, including separator expansion and
+empty-repeat contraction. The final projected rectangle therefore contains all
+generated cells and retains the blank rows and columns authored inside the
+source envelope as margins. The renderer applies the declared solid fill to
+every otherwise unfilled cell in that final rectangle after geometry is known.
+An explicit Template or separator cell fill remains higher priority; the output
+background never overwrites an authored fill, border, number format, font, or
+alignment. No value, binding, merge, image, row height, or column width is
+created by the background itself.
+
+An omitted Output row means no generated background and preserves the exact
+current Contract 3 behavior. Contract 2 remains accepted with its exact
+four-column `TemplateAreas` table and has no Output row or generated background.
+Existing Contract 3 workbooks are not migrated or rewritten.
+
+### Separator presentation follows generated item geometry
+
+The established separator cardinality and content rules do not change. For `N`
+items the renderer still emits `N` item copies and `max(N - 1, 0)` separators,
+with no separator slot, content, or empty trailing row or column after the final
+item.
+
+Each emitted separator now receives the orthogonal source-to-output projection
+of the item immediately before it:
+
+- for an `Across` repeat, the separator keeps its authored column width and its
+  presentation expands or contracts through the preceding item copy's nested
+  `Down` row transformations so it spans that generated item height; and
+- for a `Down` repeat, the separator keeps its authored row height and its
+  presentation expands or contracts through the preceding item copy's nested
+  `Across` column transformations so it spans that generated item width.
+
+When one source row or column maps to multiple generated coordinates, the
+corresponding separator cell's supported presentation is projected to every
+coordinate. Newly introduced cells receive presentation only. A separator's
+literal value, note, and wholly contained merge are emitted once at their mapped
+source position per inter-item separator and are never duplicated merely
+because presentation expanded. This makes `D7:D9` inherit the presentation of
+the aligned source separator row when a nested `page.rows` repeat expands from
+row 6, while a literal `>>` at `D4` still appears only once between Page items.
+
+### Finite generation and validation
+
+Before materializing a declared background, rendering computes its exact final
+rectangle. It must remain inside Excel's row and column limits and may cover at
+most 250,000 cells per generated worksheet. Exceeding either boundary fails the
+preview or export before workbook creation, reports the projected dimensions
+and cell count, and recommends reducing the Output range or generated items. No
+download, assignment, template, project, Draft, or publication state changes.
+
+The OOXML uses one deduplicated solid-fill definition for the declared color.
+It must not create a fill or style definition per generated cell; combinations
+with existing authored styles are deduplicated by style value. Candidate
+validation fails closed for an unknown or duplicate Output property, malformed
+color, multiple Output rows, missing or non-rectangular named range, populated
+Source or Direction, nesting, partial containment, or functional content outside
+the declared envelope. Findings identify `TemplateAreas <Area> Properties` and
+offer a concrete range, color, or row repair.
+
+### Required regression and preserved boundaries
+
+The primary regression uses an actual Contract 3 Flow workbook with
+`FlowColumnHeader` repeating `flow.pages` Across in `C2:D6`, Properties
+`separator-area: PageSeparator`, `PageSeparator` in `D2:D6`, literal `>>` in
+`D4`, `PropertyRow` repeating `flow.rows` Down at `B6`, `PropertyValue`
+repeating `page.rows` Down at `C6`, and `PageVisual` at `C3`. It removes the
+old broad `A1:Z100` white fill and declares a tight `OutputCanvas` containing
+the prototype plus intentional margins with `background-fill: #FFFFFF`.
+Multiple Pages have differing non-empty `page.rows` collections that expand
+below row 6.
+
+Independent parsing of generated preview and assigned XLSX must prove:
+
+- every emitted separator column carries the aligned source presentation beside
+  every generated property row, including coordinates corresponding to
+  `D7:D9`, and the symmetric Down/expanded-width fixture behaves identically;
+- `>>` occurs once between adjacent Pages, with no value, styled separator slot,
+  or empty separator column after the final Page;
+- every otherwise unfilled cell in the projected OutputCanvas, including
+  generated gaps and declared margins, has solid white fill, while explicit
+  authored fills win and cells outside the final envelope are not backgrounded;
+- the background target count equals the finite projected rectangle, stays at
+  or below 250,000, and OOXML fill/style records remain deduplicated rather than
+  growing per cell; and
+- bindings, Page-instance image layout, immutable snapshot values, workbook
+  template bytes, assignments, schemas, Draft state, and Published state remain
+  unchanged.
+
+This correction changes only generated worksheet presentation and finite
+geometry bookkeeping. Image `fit`, `position`, and `padding`; separator naming
+and no-final-separator behavior; collection order; binding scope; drawing safety;
+and Contract 2/3 behavior without an Output declaration remain unchanged. It
+does not add cropping, formulas, conditions, lookahead, arbitrary CSS, full-row
+or full-column styling, worksheet background pictures, multiple output sheets,
+or a general template language.
+
+### Development focus and QA impact
+
+Begin with `test/data-layer-documentation-template-excel-test.mjs`: drive the
+exact Contract 3 workbook through nested geometry, separator presentation-only
+projection, output-area validation, color normalization, fill precedence, and
+the 250,000-cell preflight. Cover the symmetric Down/Across case and unchanged
+Contract 2 and undeclared Contract 3 fixtures. Then update the downloaded and
+searchable guides, candidate inspection, installed unsaved preview, assigned
+output, independent OOXML parsing, and package proof.
+
+Likely implementation surfaces remain inside the established
+`documentation_template_workspace` slice:
+
+| Proposed source prefix | Proposed parent pack | Exact consumers |
+|---|---|---|
+| `src/documentation-templates/excel-template.ts` | `flow_export` | Contract 3 Output parsing, geometry validation, repeat and separator projections, generated-cell budget |
+| `src/documentation-templates/excel-workbook.ts` and `excel-renderer.ts` | `flow_export` | workbook named ranges, style copying, background materialization, preview and assigned XLSX |
+| `src/documentation-templates/excel-template-catalogue.ts` | `flow_export` | downloaded Template Guide examples and validation language |
+| `src/project-documentation/workspace-excel-template-guidance-ui.ts` and `workspace-template-library-ui.ts` | `flow_export` | searchable guidance, candidate inspection, and operator-facing repair |
+
+The exact changed-path plan is authoritative. Forecast `flow_export` with
+properties and package proof; this does not authorize an all-runnable-pack
+checkpoint. Before product coding, run the governed read-only intent
+classification from the approved specification commit. A `coarse-boundary`
+result requires independently reviewed ownership preparation; bounded
+`granularity-assessment-required` or `coarse-within-pack` results follow their
+documented judgment route.
+
+The implementation-and-review elapsed effort ceiling is six active hours. At
+three hours report the exact generated rectangle and cell counts; Across and
+Down separator projection; literal cardinality; fill precedence and OOXML style
+counts; Contract 2 and undeclared Contract 3 compatibility; installed workbook
+results; intent classification; selected tasks; failures; remaining work;
+confidence; and forecast. Continue while the behavior remains a bounded,
+state-preserving presentation correction. A different template language,
+background outside the declared finite envelope, relaxed cell budget, changed
+binding/image semantics, unavailable ownership, or genuinely global plan stops
+for current direction.

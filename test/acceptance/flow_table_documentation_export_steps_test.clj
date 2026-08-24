@@ -178,6 +178,7 @@
                         :documentationTemplateAreaImageProperties true
                         :documentationTemplateRepeatSeparator true
                         :documentationTemplatePropertyFindings true
+                        :documentationTemplateGeneratedPresentation true
                         :documentationTemplateRecoveryFailure true
                         :documentationTemplateInvalidTransitions true
                         :documentationTemplateRecovery true
