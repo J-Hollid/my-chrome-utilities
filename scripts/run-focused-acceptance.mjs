@@ -42,6 +42,7 @@ import {
   timeoutRepairPackIds,
   terminalConfirmedFlakyIncident,
   terminalCheckpointCandidate,
+  withTrustedCompletedBrowserTaskBoundary,
 } from "./verification-reliability-incidents.mjs";
 import {
   classifyExecutionRestriction, consumeVerificationLaunchAuthorization,
@@ -1086,6 +1087,7 @@ export async function runTimeoutRepairFocused(id, {
   verificationPacksValidator = validateVerificationPacks,
   receiptContextFactory = createVerificationReceiptContext,
   commandRunnerFactory = createVerificationCommandRunner,
+  trustedBoundaryDocument,
 } = {}) {
   timeoutRepairCausalCategory(causalCategory);
   if (typeof causalExplanation !== "string" || causalExplanation !== causalExplanation.trim() ||
@@ -1098,7 +1100,10 @@ export async function runTimeoutRepairFocused(id, {
   }
   await strictToolchainValidator();
   await candidateCleanValidator();
-  const incident = await store.read(id);
+  const storedIncident = await store.read(id);
+  const incident = trustedBoundaryDocument
+    ? withTrustedCompletedBrowserTaskBoundary(storedIncident, trustedBoundaryDocument)
+    : storedIncident;
   const [candidate, artifact, changeSet, packs, incidentChangedPaths] = await Promise.all([
     candidateIdentity(), artifactIdentity(),
     changeSetLoader(baseCommit), verificationPacksLoader(),
@@ -1158,6 +1163,7 @@ export async function runTimeoutRepairFocused(id, {
   await context.write();
   const repaired = await store.proposeRepair(id, { causalCategory, causalExplanation, regressionKey,
     regressionReceiptPath:context.receiptPath, focusedReceiptPath:context.receiptPath,
+    trustedBoundaryDocument,
     allowEligibleRevalidation:Boolean(await bootstrapReviewIncidentProof({
       root:repositoryRoot, incident, evidenceTask,
     })) });

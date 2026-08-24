@@ -19,6 +19,7 @@ import {
 import {
   timeoutResolutionEvidence, validateRepairReceiptSemantics, validateTimeoutRepairProposal,
   terminalCheckpointCandidate, terminalConfirmedFlakyIncident, timeoutRepairCandidate,
+  withTrustedCompletedBrowserTaskBoundary,
 } from "./verification-reliability-repair.mjs";
 import {
   classifyLegacyIncidentRunIntent, governedRepairAttemptAssociation,
@@ -151,8 +152,11 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
   changedPaths, canonicalCheckpointValidator, canonicalRepairTaskIdentities }) {
   return {
     async proposeRepair(id, { causalCategory, causalExplanation, regressionKey, regressionReceiptPath,
-      focusedReceiptPath, allowEligibleRevalidation = false } = {}) {
-      const current = await read(id);
+      focusedReceiptPath, allowEligibleRevalidation = false, trustedBoundaryDocument } = {}) {
+      const stored = await read(id);
+      const current = trustedBoundaryDocument
+        ? withTrustedCompletedBrowserTaskBoundary(stored, trustedBoundaryDocument)
+        : stored;
       if (current.retry?.status === "claimed") {
         throw new Error(`Reliability incident ${id} has an incomplete diagnostic retry`);
       }
