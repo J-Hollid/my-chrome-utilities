@@ -20,7 +20,6 @@ const assertionLeavesByTarget = {
     ["liveTargetPermissionRecoveryWiring","startTestingEnabled"],
     ["liveTargetPermissionRecoveryWiring","targetPathApplyObserved"],
     ["liveTargetPermissionRecoveryWiring","appliedPathPreserved"],
-    ["liveTargetPermissionRecoveryWiring","selectedTargetRetained"],
     ["liveTargetPermissionRecoveryWiring","callbackTargetRendered"],
     ["liveTargetPermissionRecoveryWiring","callbackPageUrlRendered"],
     ["liveTargetPermissionRecoveryWiring","callbackCopyEnabled"],
