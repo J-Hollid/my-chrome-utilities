@@ -879,7 +879,7 @@ Feature: Modular verification packs
   Scenario: Modular verification packs 066
     Given every Capture boundary maps to the complete owner evidence profile
     When exact capture verification and terminal-full planning are compared before and after VTD-004
-    Then all 21 unit files, 12 property files, 66 feature files, 25 handlers, one shared browser adapter, five registered browser targets, and two runtime checkpoints execute once in the 171-task exact owner plan
+    Then all 22 unit files, 12 property files, 66 feature files, 25 handlers, one shared browser adapter, five registered browser targets, and two runtime checkpoints execute once in the 172-task exact owner plan
     And the existing Capture browser batch gains direct inspector-presentation capture-and-restore proof without another browser process or plan task
     And terminal-full planning executes every conserved assertion leaf, checkpoint, and package check exactly once
     And browser batching, task order, worker limits, terminal shards, capture behavior, stored bytes, visible output, accessibility, and operator results are unchanged

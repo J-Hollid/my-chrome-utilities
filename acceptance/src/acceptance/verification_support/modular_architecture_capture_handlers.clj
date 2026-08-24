@@ -92,7 +92,9 @@
     :handler (fn [world _ _]
                (assert-capture! world
                                 (= 6 (count (mapcat :prefixes
-                                                   (filter (comp false? :propagateDependants)
+                                                   (filter #(and (false? (:propagateDependants %))
+                                                                 (= "browser presentation"
+                                                                    (:sourceClass %)))
                                                            (get-in world [:vtd004/pack
                                                                           :impactBoundaries])))))
                                 "Capture local presentation boundaries are incomplete." {}))}
@@ -111,7 +113,7 @@
                                 "Capture presentation crossed an effect or semantic boundary." {}))}
    {:pattern #"^existing unit evidence directly asserts query, session-control, session-summary, and target-picker presentation$"
     :handler (fn [world _ _]
-               (assert-capture! world (= 21 (get-in world [:vtd004/evidence :conservation :unitCount]))
+               (assert-capture! world (= 22 (get-in world [:vtd004/evidence :conservation :unitCount]))
                                 "Capture unit evidence was not conserved." {}))}
    {:pattern #"^an existing Capture browser observation directly asserts inspector return and newly asserts inspector presentation capture and restore without another browser process or plan task$"
     :handler (fn [world _ _]
@@ -215,7 +217,7 @@
                (let [prepared (capture-world world dependencies)
                      evidence (get-in prepared [:vtd004/evidence :conservation])]
                  (assert-capture! (assoc prepared :vtd004/conserved? true)
-                                  (= [21 12 66 25 1 5 2 171]
+                                  (= [22 12 66 25 1 5 2 172]
                                      ((juxt :unitCount :propertyCount :featureCount :handlerCount
                                             :adapterCount :targetCount :checkpointCount :exactTaskCount)
                                       evidence))
@@ -224,11 +226,11 @@
     :handler (fn [world _ _]
                (assert-capture! world (:vtd004/conserved? world)
                                 "Capture exact/terminal comparison did not complete." {}))}
-   {:pattern #"^all 21 unit files, 12 property files, 66 feature files, 25 handlers, one shared browser adapter, five registered browser targets, and two runtime checkpoints execute once in the 171-task exact owner plan$"
+   {:pattern #"^all 22 unit files, 12 property files, 66 feature files, 25 handlers, one shared browser adapter, five registered browser targets, and two runtime checkpoints execute once in the 172-task exact owner plan$"
     :handler (fn [world _ _]
-               (assert-capture! world (= 171 (get-in world [:vtd004/evidence :conservation
+               (assert-capture! world (= 172 (get-in world [:vtd004/evidence :conservation
                                                             :exactTaskCount]))
-                                "Capture exact plan is not 171 tasks." {}))}
+                                "Capture exact plan is not 172 tasks." {}))}
    {:pattern #"^the existing Capture browser batch gains direct inspector-presentation capture-and-restore proof without another browser process or plan task$"
     :handler (fn [world _ _]
                (assert-capture! world
