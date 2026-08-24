@@ -206,3 +206,44 @@ Feature: Data layer Excel documentation templates runtime
       | ThemeLogo | duplicate padding declarations                     | identifies the duplicate property           |
       | PageStep  | separator-area referring to a missing named range  | identifies PageSeparator as missing          |
       | PageStep  | an Across separator outside the complete right edge | identifies the required trailing geometry    |
+
+  # Data layer Excel documentation templates runtime 020
+  Scenario Outline: Data layer Excel documentation templates runtime 020
+    Given production Checkout has effective <property_type> property <property> with one documented <typed_example>
+    And an actual valid Flow workbook binds one cell exactly to {{row.example}} inside page.rows
+    When installed controls generate unsaved populated preview and assigned Excel output
+    Then independent workbook parsing finds exact inline text <rendered_example> for that property in both outputs
+    And a JSON parser reconstructs the production effective example with parsed type <parsed_type> and no string coercion
+    And compiler tracing finds the same text in row.example and its matching Documented example row.cells entry
+    And a second parsed cell preserves that literal when {{row.example}} is combined with ordinary text and another binding
+    And a production null example renders null while an absent example renders an empty cell
+    And installed Flow template guidance identifies quoted strings, recursive arrays and objects, and unquoted numbers, booleans, and null
+    And repository inspection finds no schema, Documentation configuration, template body, assignment, Draft, or publication write
+
+    Examples:
+      | property        | property_type    | typed_example                                      | rendered_example                         | parsed_type |
+      | /text_code      | string           | typed string 12                                    | "12"                                     | string      |
+      | /quantity       | number           | typed number 12                                    | 12                                       | number      |
+      | /enabled        | boolean          | typed boolean false                                | false                                    | boolean     |
+      | /optional_value | nullable         | typed null                                         | null                                     | null        |
+      | /labels         | array of strings | typed array ["item1", "item2", "item3"]            | ["item1", "item2", "item3"]             | array       |
+      | /quantities     | array of numbers | typed array [1, 2, 3]                              | [1, 2, 3]                                | array       |
+      | /item           | object           | typed object {"id": 12, "label": "12"}              | {"id": 12, "label": "12"}               | object      |
+
+  # Data layer Excel documentation templates runtime 021
+  Scenario: Data layer Excel documentation templates runtime 021
+    Given an actual Contract 3 Flow workbook defines FlowColumnHeader C2:D6 repeating flow.pages Across
+    And PageSeparator D2:D6 is its separator-area and D4 contains literal >>
+    And PropertyRow B6 repeats flow.rows Down, PropertyValue C6 repeats page.rows Down, and PageVisual is C3
+    And multiple production Pages have differing row counts that expand PropertyValue below row 6
+    And a tight finite OutputCanvas contains the prototype and declared margins with background-fill: #FFFFFF
+    And no arbitrary A1:Z100 fill is present in the Template
+    When installed controls generate unsaved populated preview and assigned Excel output
+    Then independent XLSX parsing finds the aligned white separator presentation beside every generated Page property row including rows corresponding to D7:D9
+    And it finds one >> between adjacent Pages with no final separator-width insertion or trailing >>
+    And a generated Down fixture proves the symmetric expanded-width separator presentation
+    And every otherwise unfilled cell in the exact final OutputCanvas and its margins has solid white fill
+    And explicit authored fills remain unchanged and cells immediately outside OutputCanvas have no generated background fill
+    And the number of background target cells equals the finite projected rectangle and does not exceed 250000
+    And OOXML inspection finds one deduplicated background fill definition and no per-cell style-record growth
+    And production tracing proves binding resolution, image anchors, snapshot values, repository state, and publication bytes are unchanged
