@@ -43,6 +43,12 @@ import {
   validateRegistryCardinalityFocusedEvidence,
 } from "./verification-pack-cardinality/focused-evidence.mjs";
 import {
+  isLiveTargetPermissionRecoveryEvidenceTask,
+  liveTargetPermissionRecoveryFocusedTaskKeys,
+  liveTargetPermissionRecoveryPackIds,
+  validateLiveTargetPermissionRecoveryFocusedPlan,
+} from "./live-target-permission-recovery-focused-evidence.mjs";
+import {
   canonicalRunIntentBootstrapPlan,
   requireVerificationRunIntent,
   runIntentBootstrapCoverage,
@@ -363,7 +369,10 @@ function planDocument(plan, { evidenceTask, candidateRegistry } = {}) {
   const packIds = sortedUnique(plan.claimPackIds ?? plan.packIds ?? []);
   const cardinalityFocused = evidenceTask === "registry-derived-verification-packs" &&
     plan.mode === "focused-task";
-  if ((plan.mode !== "exact" && !cardinalityFocused) || !packIds.length ||
+  const permissionRecoveryFocused =
+    isLiveTargetPermissionRecoveryEvidenceTask(evidenceTask) &&
+    validateLiveTargetPermissionRecoveryFocusedPlan(plan, evidenceTask);
+  if ((plan.mode !== "exact" && !cardinalityFocused && !permissionRecoveryFocused) || !packIds.length ||
       !same(packIds, sortedUnique(plan.requestedPackIds ?? []))) {
     throw new Error("Verification evidence requires exact explicit known pack(s)");
   }
@@ -373,7 +382,7 @@ function planDocument(plan, { evidenceTask, candidateRegistry } = {}) {
   if (!same(sortedUnique(plan.selectedPackIds ?? []), packIds)) {
     throw new Error("Evidence pack claims must equal the packs whose stages were executed");
   }
-  if (plan.includeProperties !== true) {
+  if (plan.includeProperties !== true && !permissionRecoveryFocused) {
     throw new Error("Verification evidence requires every registered property leaf; add --property");
   }
   if (plan.changeSet?.version !== 1 || !plan.baseCommit ||
@@ -398,7 +407,7 @@ function planDocument(plan, { evidenceTask, candidateRegistry } = {}) {
   if (!identities.length || new Set(keys).size !== keys.length) {
     throw new Error("Verification evidence requires a non-empty plan with unique task identities");
   }
-  for (const packId of packIds) {
+  for (const packId of permissionRecoveryFocused ? [] : packIds) {
     if (!identities.some((identity) => identity.packId === packId)) {
       throw new Error(`Claimed pack has no executed verification stage: ${packId}`);
     }
@@ -517,6 +526,42 @@ function canonicalRegistryCardinalityPlan(candidatePacks, {
   };
 }
 
+function canonicalLiveTargetPermissionRecoveryPlan(candidatePacks, {
+  changeSet, basePacks, historicalRegistryFallback,
+}) {
+  const bindingPlan = planVerification(candidatePacks, {
+    changedPaths:changeSet.paths,
+    includeProperties:false,
+    changeSet,
+    basePacks,
+    historicalRegistryFallback,
+  });
+  const executionPlan = bindEvidenceChangeScope(planVerification(candidatePacks, {
+    packIds:liveTargetPermissionRecoveryPackIds,
+    includeProperties:false,
+  }), bindingPlan);
+  const runnablePackIds = createVerificationPackCardinalityAdapter(candidatePacks).runnablePackIds;
+  const canonical = withEvidencePackageTask(planVerification(candidatePacks, {
+    packIds:runnablePackIds,
+    includeProperties:false,
+  }));
+  const candidates = new Map(canonical.tasks.map((task) => [task.key, task]));
+  const requested = liveTargetPermissionRecoveryFocusedTaskKeys.map((key) => {
+    const task = candidates.get(key);
+    if (!task) throw new Error(`Permission-recovery focused task is not registered: ${key}`);
+    return task;
+  });
+  const tasks = expandVerificationTaskPrerequisites(requested, canonical.tasks,
+    { mode:"ordinary-focused" });
+  return {
+    ...executionPlan,
+    mode:"focused-task",
+    tasks:canonical.tasks.filter(({ key }) => tasks.some((task) => task.key === key)),
+    includeProperties:false,
+    focusedTaskKeys:[...liveTargetPermissionRecoveryFocusedTaskKeys],
+  };
+}
+
 async function canonicalPlanDocument({
   commit, baseCommit, changeSet, packIds, repositoryRoot, includePackage = true,
   runIntentBootstrap = false, evidenceTask, allowLegacyCandidateOwnership = false,
@@ -543,6 +588,10 @@ async function canonicalPlanDocument({
       ? canonicalRegistryCardinalityPlan(candidatePacks, {
         packIds, changeSet, basePacks, historicalRegistryFallback,
       })
+    : isLiveTargetPermissionRecoveryEvidenceTask(evidenceTask)
+      ? canonicalLiveTargetPermissionRecoveryPlan(candidatePacks, {
+        changeSet, basePacks, historicalRegistryFallback,
+      })
     : planVerification(candidatePacks, {
       packIds,
       changedPaths:changeSet.paths,
@@ -551,7 +600,8 @@ async function canonicalPlanDocument({
       basePacks,
       historicalRegistryFallback,
     });
-  if (evidenceTask !== "registry-derived-verification-packs") {
+  if (evidenceTask !== "registry-derived-verification-packs" &&
+      !isLiveTargetPermissionRecoveryEvidenceTask(evidenceTask)) {
     plan = closeCanonicalEvidencePlanPrerequisites(plan, candidatePacks,
       { allowLegacySourceLess:allowLegacyCandidateOwnership });
     if (includePackage) plan = withEvidencePackageTask(plan);

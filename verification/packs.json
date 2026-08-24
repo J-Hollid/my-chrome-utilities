@@ -6770,6 +6770,7 @@
       "test/information-architecture-runtime-test.mjs",
       "test/modular-utility-architecture-test.mjs",
       "test/live-target-permission-recovery-preparation-contract-test.mjs",
+      "test/live-target-permission-recovery-acceptance-test.mjs",
       "test/package-clean-checkout-contract-test.mjs",
       "test/settled-final-verification-workflow-test.mjs",
       "test/swarmforge-process-contract-test.mjs",

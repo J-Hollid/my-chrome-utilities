@@ -87,6 +87,12 @@ import {
   validateRegistryCardinalityFocusedEvidence,
 } from "./verification-pack-cardinality/focused-evidence.mjs";
 import {
+  isLiveTargetPermissionRecoveryEvidenceTask,
+  liveTargetPermissionRecoveryFocusedTaskKeys,
+  liveTargetPermissionRecoveryPackIds,
+  validateLiveTargetPermissionRecoveryFocusedPlan,
+} from "./live-target-permission-recovery-focused-evidence.mjs";
+import {
   bindRunIntentBootstrapPlan,
   buildConfirmedFlakyAdmissions,
   buildEligibleRepairAdmissions,
@@ -392,9 +398,13 @@ export function focusedAcceptanceOptions(args) {
       options.skipBuild || options.shard || options.prepareEvidence)) {
     throw new Error("Use --browser-target with one --pack and no other verification mode options");
   }
-  if (options.focusedTaskKeys.length && (options.packIds.length !== 1 || options.changedPaths.length ||
+  const permissionRecoveryEvidence =
+    isLiveTargetPermissionRecoveryEvidenceTask(options.prepareEvidence);
+  if (options.focusedTaskKeys.length && ((!permissionRecoveryEvidence && options.packIds.length !== 1) ||
+      options.changedPaths.length ||
       options.terminalFull || options.includeProperties || options.withDependencies ||
-      options.skipBuild || options.shard || options.prepareEvidence || options.resumeReceipt ||
+      options.skipBuild || options.shard || options.prepareEvidence && !permissionRecoveryEvidence ||
+      options.resumeReceipt ||
       options.browserTargetIds.length || options.timeoutDiagnosticRetry || options.timeoutRepairIncident ||
       options.timeoutRepairFocused)) {
     throw new Error("Use --focused-task with one owning --pack, optional --changed-since, and no broad or evidence selectors");
@@ -403,8 +413,15 @@ export function focusedAcceptanceOptions(args) {
     if (!options.packIds.length || !options.changedSince) {
       throw new Error("Evidence requires exact --pack selector(s) and --changed-since <commit>");
     }
-    if (!options.includeProperties) {
+    if (!permissionRecoveryEvidence && !options.includeProperties) {
       throw new Error("Evidence requires --property so every registered property leaf is executed");
+    }
+    if (permissionRecoveryEvidence &&
+        (JSON.stringify([...options.packIds].sort()) !==
+           JSON.stringify([...liveTargetPermissionRecoveryPackIds].sort()) ||
+         JSON.stringify([...options.focusedTaskKeys].sort()) !==
+           JSON.stringify([...liveTargetPermissionRecoveryFocusedTaskKeys].sort()))) {
+      throw new Error("Permission-recovery evidence requires its exact causal packs and focused tasks");
     }
     if (options.withDependencies || options.skipBuild || options.shard || options.terminalFull) {
       throw new Error("Evidence cannot use dependencies, no-build, sharding, or terminal-full mode");
@@ -1720,6 +1737,8 @@ export async function runFocusedAcceptance(
   await validateVerificationPacks(packs);
   const exactRunnablePackIds = createVerificationPackCardinalityAdapter(packs).runnablePackIds;
   const cardinalityReviewEvidence = evidenceTask === "registry-derived-verification-packs";
+  const permissionRecoveryReviewEvidence =
+    isLiveTargetPermissionRecoveryEvidenceTask(evidenceTask);
   if (cardinalityReviewEvidence &&
       (options.packIds.length !== 1 || options.packIds[0] !== "shell" ||
        !changedSince || !options.includeProperties || options.terminalFull)) {
@@ -1735,7 +1754,8 @@ export async function runFocusedAcceptance(
   if (changedSince && options.packIds.length) {
     bindingPlan = planVerification(packs, { ...options, packIds:[] });
     const productCandidate = bindingPlan.changedPaths.some(reviewReadyProductCandidatePath);
-    if (reviewReadyScopeGuardRequired(productCandidate, options.runIntentBootstrap)) {
+    if (reviewReadyScopeGuardRequired(productCandidate, options.runIntentBootstrap) &&
+        !permissionRecoveryReviewEvidence) {
       const timingBaseline = JSON.parse(await readFile(
         path.join(repositoryRoot, "verification", "timing-baseline.json"), "utf8"));
       const preflight = reviewReadyScopePreflight({
@@ -1808,6 +1828,9 @@ export async function runFocusedAcceptance(
     validateRegistryCardinalityReviewPreflight({
       packs, evidenceTask, plan, terminalFull:options.terminalFull,
     });
+  }
+  if (permissionRecoveryReviewEvidence) {
+    validateLiveTargetPermissionRecoveryFocusedPlan(plan, evidenceTask);
   }
   const concurrency = environmentInteger("VERIFICATION_CONCURRENCY", 4, { maximum:64 });
   const observationConcurrency = environmentInteger("VERIFICATION_OBSERVATION_CONCURRENCY", 2, { maximum:4 });

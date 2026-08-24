@@ -3,6 +3,13 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
+import {
+  liveTargetPermissionRecoveryEvidenceTask,
+  liveTargetPermissionRecoveryFocusedTaskKeys,
+  liveTargetPermissionRecoveryPackIds,
+  validateLiveTargetPermissionRecoveryFocusedPlan,
+} from "../scripts/live-target-permission-recovery-focused-evidence.mjs";
+
 const specificationCommit = "808c15f5c96258a525010d2188ea2c0cde471e31";
 const packs = JSON.parse(await readFile("verification/packs.json", "utf8"));
 const dispositions = JSON.parse(await readFile(
@@ -124,6 +131,22 @@ for (const drift of [
 ]) {
   assert.ok(modularFeatureSource.includes(`| ${drift} |`), `missing drift guard: ${drift}`);
 }
+const focusedPlanFixture = {
+  mode:"focused-task",
+  includeProperties:false,
+  requestedPackIds:liveTargetPermissionRecoveryPackIds,
+  packIds:liveTargetPermissionRecoveryPackIds,
+  focusedTaskKeys:liveTargetPermissionRecoveryFocusedTaskKeys,
+  tasks:liveTargetPermissionRecoveryFocusedTaskKeys.map((key) => ({ key })),
+};
+assert.equal(validateLiveTargetPermissionRecoveryFocusedPlan(
+  focusedPlanFixture,
+  liveTargetPermissionRecoveryEvidenceTask,
+), true);
+assert.throws(() => validateLiveTargetPermissionRecoveryFocusedPlan(
+  { ...focusedPlanFixture, includeProperties:true },
+  liveTargetPermissionRecoveryEvidenceTask,
+), /exact causal focused bootstrap/u);
 
 function atSpecification(path) {
   return execFileSync("git", ["show", `${specificationCommit}:${path}`], {

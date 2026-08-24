@@ -1013,6 +1013,9 @@ try {
     path.join(cliContentionRepository, "scripts/verification-pack-cardinality/contract.mjs"));
   await copyFile(path.resolve("scripts/verification-pack-cardinality/focused-evidence.mjs"),
     path.join(cliContentionRepository, "scripts/verification-pack-cardinality/focused-evidence.mjs"));
+  await copyFile(path.resolve("scripts/live-target-permission-recovery-focused-evidence.mjs"),
+    path.join(cliContentionRepository,
+      "scripts/live-target-permission-recovery-focused-evidence.mjs"));
   await copyFile(path.resolve("scripts/verification-shared-boundaries.mjs"),
     path.join(cliContentionRepository, "scripts/verification-shared-boundaries.mjs"));
   await copyFile(path.resolve("scripts/settled-final-verification-policy.mjs"),
@@ -1036,6 +1039,9 @@ try {
   await copyFile(path.resolve("test/browser-packs/global-style-smoke.mjs"),
     path.join(cliContentionRepository, "test/browser-packs/global-style-smoke.mjs"));
   await mkdir(path.join(cliContentionRepository, "test"), { recursive:true });
+  await copyFile(path.resolve("test/live-target-permission-recovery-acceptance-test.mjs"),
+    path.join(cliContentionRepository,
+      "test/live-target-permission-recovery-acceptance-test.mjs"));
   await copyFile(path.resolve("test/stylesheet-declarations-property-test.mjs"),
     path.join(cliContentionRepository, "test/stylesheet-declarations-property-test.mjs"));
   await copyFile(path.resolve("test/data-layer-flow-visual-asset-portability-property-test.mjs"),
@@ -1116,6 +1122,7 @@ try {
     "scripts/verification-styles.mjs", "scripts/verification-packs.mjs",
     "scripts/verification-pack-cardinality/contract.mjs",
     "scripts/verification-pack-cardinality/focused-evidence.mjs",
+    "scripts/live-target-permission-recovery-focused-evidence.mjs",
     "scripts/verification-shared-boundaries.mjs",
     "test/browser-packs/global-style-smoke.mjs", "test/stylesheet-declarations-property-test.mjs",
     "test/data-layer-flow-visual-asset-portability-property-test.mjs",
@@ -1124,6 +1131,7 @@ try {
     "test/data-layer-documentation-template-excel-test.mjs",
     "test/data-layer-documentation-template-library-test.mjs",
     "test/data-layer-documentation-template-rich-test.mjs",
+    "test/live-target-permission-recovery-acceptance-test.mjs",
     "src/documentation-templates/excel-renderer.ts",
     "src/documentation-templates/excel-template.ts",
     "src/documentation-templates/excel-workbook.ts",
