@@ -641,22 +641,26 @@ handoff at 06:12:57Z, and QA fast-forwarded to exact candidate `119c25ef7a` at
 intervals from the layered-schema and typed-example handoffs were 7 hours
 53 minutes 17 seconds and 7 hours 30 minutes 14 seconds.
 
-The one evidence-producing checkpoint ran from 05:56:26Z through 06:11:16Z,
+The first evidence-producing checkpoint ran from 05:56:26Z through 06:11:16Z,
 about 14 minutes 51 seconds. Its authoritative exact plan selected
 `flow_export`, `flow_graph`, `layered_schema`, `live_flow_testing`,
 `property_set_flow_sections`, and `shell`, and passed all 200 focused tasks with
 properties and package proof. It bound the exact candidate tree and the complete
-combined change set. No all-runnable-pack checkpoint ran, and no final regression
-claim was made.
+combined change set. A second same-tree checkpoint, required to bind the
+layered-schema task and its exact `ea912eae22` base independently, ran from
+06:35:47Z through 06:50:33Z, about 14 minutes 46 seconds, and passed the same
+six-pack/200-task plan. It changed no product bytes and did not advance QA. No
+all-runnable-pack checkpoint ran, and no final regression claim was made.
 
 One bounded verification-tooling blocker required acceptance-identity and task-
 cardinality repairs before evidence. The first architect handoff for the layered
 schema portion, `b26f25a70c`, had passing focused evidence but could not be
 fast-forwarded because QA had since received the two later approved
 specifications; it was rejected for lineage only and reissued on exact current QA
-as the combined candidate. No final evidence task failed and no evidence rerun
-was required after `119c25ef7a` was created. Recommendation: **continue with an
-adjustment**—retain focused exact-plan verification, and require stacked
-candidates to be reconstructed from current QA before the architect issues a
-`qa-ready` handoff. Cumulative final regression and promotion remain a separate
-explicit `master` decision.
+as the combined candidate. No task failed in either final evidence run; the
+second run was an evidence-identity refresh rather than a product-failure rerun.
+Recommendation: **continue with an adjustment**—retain focused exact-plan
+verification, require stacked candidates to be reconstructed from current QA
+before the architect issues a `qa-ready` handoff, and bind every independently
+forwarded stable task before its handoff. Cumulative final regression and
+promotion remain a separate explicit `master` decision.

@@ -3,8 +3,9 @@
 Status: QA-integrated at `d51e55fa7c` after exact focused review evidence for
 291 tasks; layered schema projection and inheritance-card consistency correction
 QA-integrated in combined candidate `119c25ef7a` on 2026-08-24 after exact
-six-pack/200-task review-ready evidence; cumulative promotion to `master` remains
-a separate user decision
+six-pack/200-task review-ready evidence; its exact task identity was independently
+confirmed on the same tree by a second six-pack/200-task review-ready record;
+cumulative promotion to `master` remains a separate user decision
 
 Stable task name: `page-flow-inherited-property-selection`
 
