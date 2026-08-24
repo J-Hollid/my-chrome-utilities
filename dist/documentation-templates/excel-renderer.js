@@ -213,7 +213,7 @@ async function renderCustomInto(output, body, snapshot, table, worksheetName, co
         targetColumn.hidden = sourceColumn.hidden;
     if (sourceColumn.outlineLevel !== undefined)
         targetColumn.outlineLevel = sourceColumn.outlineLevel;
-} if (rendered.output) {
+} if (rendered.output?.range) {
     const [start, end] = rendered.output.range.split(":"), first = cellPoint(start), last = cellPoint(end), fill = { type: "pattern", pattern: "solid", fgColor: { argb: `FF${rendered.output.backgroundFill.slice(1)}` } };
     for (let row = first.row; row <= last.row; row += 1)
         for (let column = first.column; column <= last.column; column += 1) {

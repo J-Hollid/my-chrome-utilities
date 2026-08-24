@@ -295,7 +295,10 @@ function projectedOutput(prototype, rendered, sourceBottom, sourceRight) {
     const outputArea = prototype.areas.find((area) => (area.type === "output"));
     if (!outputArea)
         return undefined;
-    const source = rectangle(outputArea.range), bottom = source.bottom + rendered.height - sourceBottom, right = source.right + rendered.width - sourceRight, rowCount = bottom - source.top + 1, columnCount = right - source.left + 1, cellCount = rowCount * columnCount, range = `${address({ row: source.top, column: source.left })}:${address({ row: bottom, column: right })}`;
+    const source = rectangle(outputArea.range), bottom = source.bottom + rendered.height - sourceBottom, right = source.right + rendered.width - sourceRight, rowCount = Math.max(0, bottom - source.top + 1), columnCount = Math.max(0, right - source.left + 1), cellCount = rowCount * columnCount;
+    if (cellCount === 0)
+        return { backgroundFill: outputArea.properties.backgroundFill, cellCount };
+    const range = `${address({ row: source.top, column: source.left })}:${address({ row: bottom, column: right })}`;
     if (bottom > 1_048_576 || right > 16_384)
         throw new Error(`Generated ${outputArea.name} ${range} projects to ${rowCount} rows by ${columnCount} columns (${cellCount} cells); this exceeds the Excel worksheet limit. Reduce the Output area or the number of generated repeat items.`);
     if (cellCount > 250_000)
