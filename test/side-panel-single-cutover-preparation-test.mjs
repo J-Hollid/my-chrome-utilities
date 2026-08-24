@@ -123,10 +123,18 @@ assert.equal(inventory.source.sha256,
   "833831df0f3f2fc032a6af432101cc9a2306f7da6e1000e28c83c47bb6e9f7ef");
 assert.equal(inventory.imports.length, 112);
 assert.equal(inventory.functions.length > 200, true);
+assert.equal(inventory.stateOwners.some(({ name }) => name === "chooseObservationTargetButton"), true,
+  "destructured top-level state owners remain individually inventoried");
 assert.equal(inventory.listeners.length >= 275, true);
 assert.equal(inventory.timers.length >= 2, true);
 assert.equal(inventory.commands.length > 0, true);
-assert.equal(inventory.assertionLeaves.length > 0, true);
+assert.equal(inventory.assertions.sha256,
+  "7d8beb9903566264daebe7bd1b01734d0d925e4ca65231507cca5d1b03d7f5c8");
+assert.equal(inventory.assertionLeaves.length, 7088);
+assert.deepEqual(inventory.assertionLeaves[0], {
+  targetId:"LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER",
+  path:["liveTargetPermissionRecoveryWiring", "selectedTargetRetained"],
+});
 
 function atBase(path) {
   return execFileSync("git", ["show", `${base}:${path}`]);
