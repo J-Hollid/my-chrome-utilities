@@ -1246,7 +1246,7 @@ Feature: Modular verification packs
     When VTD-009 validates its statically resolvable transitive import graph
     Then its exact consumers are <consumer_scope>
     And changing the helper selects exactly those consumers once
-    And all 22 retained support helpers and shared-harness have one declaration
+    And all 23 retained support helpers and shared-harness have one declaration
 
     Examples:
       | helper                                                       | consumer_scope                                                        |

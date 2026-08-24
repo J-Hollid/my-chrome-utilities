@@ -53,7 +53,7 @@
                (let [helper (evidence world :helpers (keyword (:vtd009/helper world)))]
                  (assert! world (= (set (:consumers helper)) (set (:selected helper)))
                           "Changed-helper planning does not conserve exact consumers." {:helper helper}))) }
-   {:pattern #"^all 22 retained support helpers and shared-harness have one declaration$"
+   {:pattern #"^all 23 retained support helpers and shared-harness have one declaration$"
     :handler (fn [world _ _]
                (let [helpers (evidence world :helpers)
                      shared-control (keyword "test/support/browser-observation-control.mjs")
@@ -61,7 +61,7 @@
                                                  (str/starts-with? (subs (str path) 1)
                                                                    "test/support/side-panel-"))
                                                helpers))]
-                 (assert! world (and (= 22 (count (dissoc retained shared-control)))
+                 (assert! world (and (= 23 (count (dissoc retained shared-control)))
                                      (some? (get retained shared-control)))
                           "Retained helper declaration inventory is incomplete." {})))}])
 
