@@ -1462,7 +1462,7 @@ Feature: Modular verification packs
       | event-library | 1           | 1            | test/browser-packs/side-panel-event-library.mjs      | the existing single target   |
       | schemas      | 46           | 48           | test/browser-packs/side-panel-schemas.mjs            | schemas-side-panel           |
       | defects      | 9            | 11           | test/browser-packs/side-panel-defects.mjs            | defects-side-panel           |
-      | shell        | 2            | 2            | test/browser-packs/side-panel-shell.mjs              | shell-containment            |
+      | shell        | 3            | 3            | test/browser-packs/side-panel-shell.mjs              | shell-containment            |
 
   # Modular verification packs 096
   Scenario Outline: Modular verification packs 096
@@ -1522,7 +1522,7 @@ Feature: Modular verification packs
       | event-library | 1            |
       | schemas       | 46           |
       | defects       | 9            |
-      | shell         | 2            |
+      | shell         | 3            |
 
   # Modular verification packs 100
   Scenario: Modular verification packs 100

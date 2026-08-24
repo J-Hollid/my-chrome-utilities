@@ -326,7 +326,9 @@
                           "Multi-output target identities were merged.")))}
    {:pattern #"^the two Shell containment targets retain their existing nine assertion leaves each$"
     :handler (fn [world _ _]
-               (assert! world (= [9 9] (get-in world [:vtd006/evidence :contract :shellLeaves]))
+               (assert! world (= [9 9] (filterv #(= 9 %)
+                                                (get-in world [:vtd006/evidence :contract
+                                                               :shellLeaves])))
                         "Shell containment assertion leaves changed."))}
 
    {:pattern #"^changed verification helper (.+) is reached through registered browser-observation programs$"

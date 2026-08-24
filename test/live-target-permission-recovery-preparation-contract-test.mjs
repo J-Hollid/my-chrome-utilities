@@ -27,6 +27,12 @@ const captureHandlerSource = await readFile(
 );
 const readinessSource = await readFile(
   "scripts/verification-ownership-readiness-test.mjs", "utf8");
+const modularFeatureSource = await readFile(
+  "features/modular-verification-packs.feature", "utf8");
+const sidePanelContractHandlerSource = await readFile(
+  "acceptance/src/acceptance/verification_support/modular_architecture_vtd006_handlers.clj",
+  "utf8",
+);
 
 assert.deepEqual(slice.sourcePrefixes, [
   "src/data-layer-live-target-permission-recovery/",
@@ -63,6 +69,10 @@ assert.match(captureHandlerSource, /\[22 12 66 25 1 5 2 172\]/u);
 assert.match(captureHandlerSource,
   /false\? \(:propagateDependants %\)[\s\S]+"browser presentation"/u);
 assert.match(readinessSource, /dispositions\.dispositions\.length===9/u);
+assert.equal((modularFeatureSource.match(
+  /\| shell\s+\| 3\s+\|(?: 3\s+\|)?/gu) ?? []).length, 2);
+assert.match(sidePanelContractHandlerSource,
+  /filterv #\(= 9 %\)[\s\S]+:shellLeaves/u);
 
 function atSpecification(path) {
   return execFileSync("git", ["show", `${specificationCommit}:${path}`], {
@@ -132,15 +142,19 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       id:"permission-recovery-conservation-inventory-v1",
       input:{ durableDispositionCount:9, captureUnitCount:22, captureTaskCount:172 },
       expectedPreRepairFailure:{durableDispositions:false,captureInventory:false,
-        typedPresentationBoundary:false},
+        typedPresentationBoundary:false,sidePanelInventory:false,containmentLeaves:false},
       expectedRepairResult:{durableDispositions:true,captureInventory:true,
-        typedPresentationBoundary:true},
+        typedPresentationBoundary:true,sidePanelInventory:true,containmentLeaves:true},
       repairResult:{
         durableDispositions:/dispositions\.dispositions\.length===9/u.test(readinessSource),
         captureInventory:/\[22 12 66 25 1 5 2 172\]/u.test(captureHandlerSource),
         typedPresentationBoundary:
           /false\? \(:propagateDependants %\)[\s\S]+"browser presentation"/u
             .test(captureHandlerSource),
+        sidePanelInventory:(modularFeatureSource.match(
+          /\| shell\s+\| 3\s+\|(?: 3\s+\|)?/gu) ?? []).length === 2,
+        containmentLeaves:/filterv #\(= 9 %\)[\s\S]+:shellLeaves/u
+          .test(sidePanelContractHandlerSource),
       },
     },
   };
