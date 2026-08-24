@@ -29,7 +29,6 @@ assert.deepEqual(slice.tasks, [
 assert.deepEqual(slice.prerequisites, [
   "unit:test/data-layer-observation-targets-test.mjs",
   "unit:test/data-layer-target-path-status-test.mjs",
-  "unit:test/data-layer-live-guided-workflow-test.mjs",
 ]);
 assert.deepEqual(slice.consumers, [
   { packId:"shell", sliceId:"live_target_permission_recovery_consumer" },
