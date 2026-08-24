@@ -1,6 +1,6 @@
 # Data layer guided Excel template authoring R01
 
-Status: guided authoring QA-integrated at `a8ee95869b` on 2026-08-19; Contract 3 area-properties correction QA-integrated at `03d023b039` on 2026-08-24 after exact `flow_export`/34-task review-ready evidence; generated separator-presentation and output-background correction approved for coder handoff on 2026-08-24
+Status: guided authoring QA-integrated at `a8ee95869b` on 2026-08-19; Contract 3 area-properties correction QA-integrated at `03d023b039` on 2026-08-24 after exact `flow_export`/34-task review-ready evidence; generated separator-presentation and output-background correction QA-integrated in combined candidate `119c25ef7a` on 2026-08-24 after exact six-pack/200-task review-ready evidence
 
 Prepared: 2026-08-18
 
@@ -462,7 +462,8 @@ regression and promotion as a separate explicit `master` decision.
 
 ## Generated separator presentation and output background correction
 
-Status: approved for coder handoff on 2026-08-24
+Status: QA-integrated in combined candidate `119c25ef7a` on 2026-08-24 after
+exact six-pack/200-task review-ready evidence
 
 Stable task name: `excel-template-generated-presentation`
 
@@ -625,3 +626,37 @@ state-preserving presentation correction. A different template language,
 background outside the declared finite envelope, relaxed cell budget, changed
 binding/image semantics, unavailable ownership, or genuinely global plan stops
 for current direction.
+
+## Combined-candidate settled QA result
+
+The final candidate combined this correction with the separately approved
+layered-schema inheritance-card consistency and Flow typed-example corrections.
+Their specification handoffs were queued at 22:23:33Z, 22:46:36Z, and 23:00:50Z
+on 2026-08-23 respectively. The first coherent generated-presentation
+implementation arrived at 02:18:52Z on 2026-08-24, 3 hours 18 minutes 2 seconds
+after this correction's handoff. The architect issued the final `qa-ready`
+handoff at 06:12:57Z, and QA fast-forwarded to exact candidate `119c25ef7a` at
+06:16:50Z: 7 hours 16 minutes from this correction's handoff and 3 minutes
+53 seconds after the final architecture handoff. The corresponding end-to-end
+intervals from the layered-schema and typed-example handoffs were 7 hours
+53 minutes 17 seconds and 7 hours 30 minutes 14 seconds.
+
+The one evidence-producing checkpoint ran from 05:56:26Z through 06:11:16Z,
+about 14 minutes 51 seconds. Its authoritative exact plan selected
+`flow_export`, `flow_graph`, `layered_schema`, `live_flow_testing`,
+`property_set_flow_sections`, and `shell`, and passed all 200 focused tasks with
+properties and package proof. It bound the exact candidate tree and the complete
+combined change set. No all-runnable-pack checkpoint ran, and no final regression
+claim was made.
+
+One bounded verification-tooling blocker required acceptance-identity and task-
+cardinality repairs before evidence. The first architect handoff for the layered
+schema portion, `b26f25a70c`, had passing focused evidence but could not be
+fast-forwarded because QA had since received the two later approved
+specifications; it was rejected for lineage only and reissued on exact current QA
+as the combined candidate. No final evidence task failed and no evidence rerun
+was required after `119c25ef7a` was created. Recommendation: **continue with an
+adjustment**—retain focused exact-plan verification, and require stacked
+candidates to be reconstructed from current QA before the architect issues a
+`qa-ready` handoff. Cumulative final regression and promotion remain a separate
+explicit `master` decision.

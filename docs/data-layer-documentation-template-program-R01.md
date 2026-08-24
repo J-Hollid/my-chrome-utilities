@@ -578,7 +578,8 @@ Acceptance mapping:
 
 ## Flow `row.example` typed JSON-literal correction
 
-Status: approved for coder handoff on 2026-08-24
+Status: QA-integrated in combined candidate `119c25ef7a` on 2026-08-24 after
+exact six-pack/200-task review-ready evidence
 
 Stable task name: `flow-template-typed-example-literals`
 
