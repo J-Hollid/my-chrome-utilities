@@ -29,8 +29,4 @@ export function createInstalledDataLayerLifecycle(controllers) {
         },
     };
 }
-export async function mountInstalledDataLayerRuntime() {
-    const { installedDataLayerApplication } = await import("./schemas/application.js");
-    return installedDataLayerApplication;
-}
 //# sourceMappingURL=runtime.js.map
