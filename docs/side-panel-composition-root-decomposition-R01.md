@@ -8,9 +8,11 @@ sequence of installed controller extractions. The user also requested an
 unattended overnight execution path that does not pause for routine choices or
 repeat expensive verification after every extraction.
 
-This document specifies stable product task `side-panel-single-cutover`. It
-authorizes the specifier to finish the contract, but it is not an implementation
-handoff until the user explicitly approves coder handoff. It is QA feature
+This document specifies stable product task `side-panel-single-cutover`. After
+reviewing the completed contract, the user explicitly approved coder handoff on
+2026-08-24. The role chain is authorized to execute the unattended preparation,
+automatic resumption, single installed cutover, focused review, and QA integration
+defined below without another routine user decision. This is QA feature
 integration, not a promotion of accumulated QA work to `master`.
 
 ## Diagnosed bottleneck
