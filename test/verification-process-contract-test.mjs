@@ -3818,6 +3818,7 @@ console.log("repairTmp=" + process.env.TMPDIR);
     "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
     "FLOW_STYLESHEET_EXTRACTION_TARGET",
     "REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER",
+    "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER",
   ]);
   const packContract = (packs) => packs.filter(({ id }) => allPackIds.includes(id))
     .map(({ id, dependencies, browserObservations,
@@ -4023,6 +4024,19 @@ console.log("repairTmp=" + process.env.TMPDIR);
     });
   const normalizedCurrentVtd014TaskIdentity = (task) => {
     const identity = verificationTaskIdentity(task);
+    if (identity.stage === "browser-observation" &&
+        identity.logicalTargetIds?.includes("LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER")) {
+      const targetId = "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER";
+      identity.key = identity.key.replace(`${targetId}+`, "");
+      identity.args = identity.args.filter((value) => value !== targetId);
+      identity.target = identity.target.split(",")
+        .filter((value) => value !== targetId).join(",");
+      delete identity.environment[targetId];
+      identity.logicalTargetIds = identity.logicalTargetIds
+        .filter((value) => value !== targetId);
+      identity.aliasCommands = identity.aliasCommands.filter((command) =>
+        !command.includes(targetId));
+    }
     if (identity.stage === "browser-observation" &&
         identity.logicalTargetIds?.includes("FLOW_STYLESHEET_EXTRACTION_TARGET")) {
       identity.key = identity.key.replace("+FLOW_STYLESHEET_EXTRACTION_TARGET", "");
@@ -5760,6 +5774,19 @@ const normalizedVtd006Identity = (task) => {
   for (const [current, previous] of vtd006ProgramMigration) encoded = encoded.replaceAll(current, previous);
   const identity = JSON.parse(encoded);
   if (identity.stage === "browser-observation" &&
+      identity.logicalTargetIds?.includes("LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER")) {
+    const targetId = "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER";
+    identity.key = identity.key.replace(`${targetId}+`, "");
+    identity.args = identity.args.filter((value) => value !== targetId);
+    identity.target = identity.target.split(",")
+      .filter((value) => value !== targetId).join(",");
+    delete identity.environment[targetId];
+    identity.logicalTargetIds = identity.logicalTargetIds
+      .filter((value) => value !== targetId);
+    identity.aliasCommands = identity.aliasCommands.filter((command) =>
+      !command.includes(targetId));
+  }
+  if (identity.stage === "browser-observation" &&
       identity.logicalTargetIds?.includes("FLOW_STYLESHEET_EXTRACTION_TARGET")) {
     identity.key = identity.key.replace("+FLOW_STYLESHEET_EXTRACTION_TARGET", "");
     identity.args = identity.args.filter((value) => value !== "FLOW_STYLESHEET_EXTRACTION_TARGET");
@@ -6276,6 +6303,7 @@ const expectedCaptureBoundaries = [
   ["capture_shared_semantic_models", "core or semantic", true],
   ["capture_persistence", "persistence migration", true],
   ["capture_event_library_focus_presentation", "browser presentation", true],
+  ["capture_live_target_permission_recovery", "application controller", false],
 ];
 assert.deepEqual(capturePack.impactBoundaries.map(({id,sourceClass,propagateDependants}) =>
   [id,sourceClass,propagateDependants]), expectedCaptureBoundaries,
@@ -6365,15 +6393,24 @@ for (const key of ["renameSharedPresentation","renameSemantic","renamePersistenc
 assert.deepEqual(captureHistoryPlans.unreadable,planVerification(packs,{terminalFull:true}).packIds);
 const captureEvidenceProfile = conservedEvidenceProfile(capturePack);
 const captureBasePack = captureBasePacks.find(({id}) => id === "capture");
-assert.deepEqual(captureEvidenceProfile,
-  conservedEvidenceProfile(captureBasePack),
+const captureBaseEvidenceProfile = conservedEvidenceProfile(captureBasePack);
+const captureLiveSessionReleaseIndex = captureBaseEvidenceProfile.unit
+  .indexOf("test/data-layer-live-session-target-release-test.mjs") + 1;
+assert.deepEqual(captureEvidenceProfile, {
+  ...captureBaseEvidenceProfile,
+  unit:[
+    ...captureBaseEvidenceProfile.unit.slice(0, captureLiveSessionReleaseIndex),
+    "test/data-layer-live-target-permission-recovery-test.mjs",
+    ...captureBaseEvidenceProfile.unit.slice(captureLiveSessionReleaseIndex),
+  ],
+},
   "all Capture owner evidence identities remain conserved");
 const exactCapturePlan = planVerification(packs,{packIds:["capture"],includeProperties:true});
-assert.equal(exactCapturePlan.tasks.length,171);
+assert.equal(exactCapturePlan.tasks.length,172);
 assert.deepEqual([exactCapturePlan.unitTasks.length,exactCapturePlan.propertyTasks.length,
   exactCapturePlan.parserTasks.length,capturePack.handlers.length,exactCapturePlan.browserTasks.length,
   exactCapturePlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).length,
-  exactCapturePlan.checkpointTasks.length],[21,12,66,25,1,5,2]);
+  exactCapturePlan.checkpointTasks.length],[22,12,66,25,1,5,2]);
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,
   "terminal planning conserves every Capture task identity and ordering");
 const captureCompletedCalibration = JSON.parse(await exec("git", [
@@ -6973,7 +7010,8 @@ assert.deepEqual(shellBrowserBatch.browserAdapterPerformance, [{
   path:"test/browser-packs/side-panel-shell.mjs",
   singleTargetP90Milliseconds:18000,
   maximumSingleTargetP90Milliseconds:10000,
-  targetIds:["SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER",
+  targetIds:["LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER",
+    "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER",
     "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER"],
   sessionBatch:"shell-containment",
 }], "the Shell browser programs declare independently selectable batched targets");
@@ -8336,8 +8374,8 @@ assert.deepEqual(timingModel.ledger.rejectedByReason, {
   "runtime-mismatch":1,
 });
 assert.equal(timingModel.ledger.selections[0].selectedPackIds.includes("shell"), true);
-assert.equal(timingModel.browserTargets.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER.p90Ms, 700);
-assert.equal(timingModel.browserTargets.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER.p90Ms, 800,
+assert.equal(timingModel.browserTargets.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER.p90Ms, 800);
+assert.equal(timingModel.browserTargets.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER.p90Ms, 900,
   "batched receipts retain independent logical-target measurements");
 const canonicalReceiptRoot = await mkdtemp(path.join(os.tmpdir(), "canonical-timing-root-"));
 const canonicalReceiptWorktree = await mkdtemp(path.join(os.tmpdir(), "canonical-timing-worktree-"));
@@ -8687,17 +8725,18 @@ assert.equal(legacyAggregateModel.browserTargets.WORKSPACE_PANEL_CONTAINMENT_BRO
 const legacySingleTargetReceipt = structuredClone(legacyAggregateReceipt);
 for (const result of Object.values(legacySingleTargetReceipt.tasks)) {
   if (result.identity.stage !== "browser-observation") continue;
-  result.identity.logicalTargetIds = result.identity.logicalTargetIds.slice(0, 1);
+  result.identity.logicalTargetIds = result.identity.logicalTargetIds
+    .filter((id) => id === "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER");
   result.output = result.output.split("\n").filter((line) =>
     line.includes(`\"id\":\"${result.identity.logicalTargetIds[0]}\"`)).join("\n");
 }
 const legacySingleTargetModel = measuredTimingModel([legacySingleTargetReceipt], reportBaseline);
-assert.equal(legacySingleTargetModel.browserTargets.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER.p90Ms, 700,
+assert.equal(legacySingleTargetModel.browserTargets.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER.p90Ms, 800,
   "a legacy timing-only task remains a valid sample when it owns exactly one target");
 const partialExplicitReceipt = structuredClone(reportReceipt);
 for (const result of Object.values(partialExplicitReceipt.tasks)) {
   if (result.identity.stage !== "browser-observation" || result.identity.logicalTargetIds.length < 2) continue;
-  const omitted = result.identity.logicalTargetIds[1];
+  const omitted = result.identity.logicalTargetIds.at(-1);
   result.output = result.output.split("\n")
     .filter((line) => !line.includes(`\"id\":\"${omitted}\",\"status\"`))
     .join("\n");
@@ -9257,6 +9296,7 @@ const acceptedPostCalibrationBrowserTargets = [...new Set(packs.flatMap((pack) =
 assert.deepEqual(acceptedPostCalibrationBrowserTargets, [
   "EVENT_LIBRARY_RENDERED_SMOKE_TARGET",
   "FLOW_STYLESHEET_EXTRACTION_TARGET",
+  "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER",
   "REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER",
   "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
   "STUDIO_GLOBAL_STYLE_SMOKE_TARGET",

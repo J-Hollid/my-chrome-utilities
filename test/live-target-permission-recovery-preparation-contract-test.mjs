@@ -24,7 +24,6 @@ assert.deepEqual(slice.sourcePrefixes, [
 ]);
 assert.deepEqual(slice.tasks, [
   "unit:test/data-layer-live-target-permission-recovery-test.mjs",
-  "unit:test/live-target-permission-recovery-preparation-contract-test.mjs",
 ]);
 assert.deepEqual(slice.prerequisites, [
   "unit:test/data-layer-observation-targets-test.mjs",
@@ -35,6 +34,7 @@ assert.deepEqual(slice.consumers, [
 ]);
 assert.equal(consumer.consumerOnly, true);
 assert.deepEqual(consumer.tasks, [
+  "unit:test/live-target-permission-recovery-preparation-contract-test.mjs",
   "browser-observation:LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER+SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER+WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER",
 ]);
 assert.deepEqual(disposition, {
