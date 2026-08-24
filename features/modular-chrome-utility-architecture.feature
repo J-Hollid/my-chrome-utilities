@@ -328,3 +328,114 @@ Feature: Modular Chrome utility architecture
     And the selected scope is the bounded project-management, durable-project, declared consumer, and shell closure rather than all 20 packs
     And one focused unit leaf proves injection, installed-port preference, compatibility fallback, cardinality, cancellation, failure, and resource release
     And package proof follows the exact property-enabled focused plan
+
+  # Modular Chrome utility architecture 028
+  Scenario: Modular Chrome utility architecture 028
+    Given the installed side panel composes Data Layer behavior from one globally owned source file
+    When the behavior-preserving single cutover is complete
+    Then src/side-panel.ts owns only platform and storage adapter construction, utility mounting, registered command routing, shell arbitration, and lifecycle disposal
+    And no Data Layer mutable state, rendering, persistence, listener, subscription, timer, or domain editing behavior remains in src/side-panel.ts
+    And direct changes to src/side-panel.ts retain every-runnable-pack impact
+
+  # Modular Chrome utility architecture 029
+  Scenario Outline: Modular Chrome utility architecture 029
+    Given installed controller <controller> owns <responsibility>
+    When module and changed-path ownership are inspected
+    Then its source is owned by parent pack <parent_pack> through subordinate slice <slice>
+    And other installed controllers receive its behavior only through explicit typed capabilities
+    And a controller-only change selects its reviewed slice and exact consumers without parent fallback
+
+    Examples:
+      | controller              | responsibility                                      | parent_pack                | slice                                          |
+      | Capture                 | targets, sessions, observation, Live feed, and saves | capture                    | capture_installed_side_panel                   |
+      | Event Library           | templates, reviews, transfer, deletion, and push    | event-library              | event_library_installed_side_panel             |
+      | Schemas                 | authoring, rules, validation, and guided workflows  | schemas                    | schemas_installed_side_panel                   |
+      | Defects                 | defect state, presentation, copy, and export         | defects                    | defects_installed_side_panel                   |
+      | Replay                  | sequence state, controls, and execution               | replay                     | replay_installed_side_panel                    |
+      | Projects                | library host, active project, and navigation          | project_management         | project_library_installed_side_panel           |
+      | Durable Projects        | startup, migration, failure recovery, and repository UI | durable_project_repository | durable_project_installed_side_panel           |
+      | Project Event Transport | observation paths, push paths, and settlement         | project_event_transport    | project_event_transport_installed_side_panel   |
+      | Live Flow Testing       | test lifecycle, result projection, and project actions | live_flow_testing          | live_flow_testing_installed_side_panel         |
+
+  # Modular Chrome utility architecture 030
+  Scenario Outline: Modular Chrome utility architecture 030
+    Given an installed Data Layer controller lifecycle begins in state <initial_state>
+    When lifecycle operation <operation> occurs
+    Then its lifecycle result is <result>
+    And one delivered DOM event or runtime notification produces at most one installed action
+
+    Examples:
+      | initial_state | operation     | result                                                                                  |
+      | new           | mount         | one listener and subscription set, owned state capsule, and initial render are active   |
+      | mounted       | mount again   | no listener, subscription, state restoration, timer, or render is duplicated            |
+      | mounted       | dispose       | every owned listener, subscription, timer, and pending asynchronous action is cancelled |
+      | disposed      | dispose again | disposal is an idempotent no-op                                                         |
+      | disposed      | mount again   | one fresh lifecycle restores the same persisted state and visible result                |
+
+  # Modular Chrome utility architecture 031
+  Scenario: Modular Chrome utility architecture 031
+    Given Capture, Event Library, Schemas, Defects, Replay, Projects, Durable Projects, Project Event Transport, and Live Flow Testing interact in the installed side panel
+    When one controller needs data or an action owned by another controller
+    Then the installed Data Layer runtime injects a typed query, command, or subscription capability
+    And the receiving controller cannot import the provider controller implementation or mutate its state object
+    And capability construction, command projection, controller order, and aggregate disposal contain no domain state
+
+  # Modular Chrome utility architecture 032
+  Scenario Outline: Modular Chrome utility architecture 032
+    Given the single-cutover candidate is in stage <stage>
+    When verification is requested
+    Then the permitted evidence is <evidence>
+    And the installed compatibility checkpoint is <installed_checkpoint>
+    And an all-runnable-pack feature checkpoint is prohibited
+
+    Examples:
+      | stage                   | evidence                                                                    | installed_checkpoint                              |
+      | controller construction | build and the changed controller's direct lifecycle and dependency tests    | deferred                                          |
+      | pre-cutover settlement  | all controller tests, architecture, ownership, and static conservation tests | deferred                                          |
+      | installed stabilization | build, all controller tests, and the complete direct side-panel assertion map | run once after one coherent installed cutover     |
+      | exact candidate         | reviewed causal tasks, relevant properties, installed target batches, and package proof | run once for the exact settled candidate |
+
+  # Modular Chrome utility architecture 033
+  Scenario Outline: Modular Chrome utility architecture 033
+    Given unattended execution encounters <failure>
+    When the failure is classified
+    Then autonomous action is <action>
+    And expensive verification is <verification_result>
+
+    Examples:
+      | failure                                      | action                                                                 | verification_result                                      |
+      | a controller-local failure before cutover    | repair the owning leaf and rerun its direct check                      | not started                                              |
+      | a direct compatibility failure before exact evidence | repair the causal controller and resettle direct compatibility | exact evidence remains deferred                          |
+      | the first causal exact-candidate failure     | discard candidate-bound evidence, repair and resettle, then replace the exact run once | restarted once for the replacement candidate |
+      | the same causal boundary fails the replacement | stop fail-closed with the stable task and evidence preserved          | not looped or weakened                                   |
+      | behavior, permission, data, or consumer scope expands | stop fail-closed without implementing the expansion                    | not broadened                                            |
+
+  # Modular Chrome utility architecture 034
+  Scenario: Modular Chrome utility architecture 034
+    Given the current manifest, side-panel entry, DOM identities, storage and project bytes, commands, permissions, focus behavior, and verification inventory are bound to the cutover base
+    When the decomposed side panel is exercised through every registered installed assertion leaf
+    Then its visible behavior, accessibility, runtime actions, persistence, migrations, and published schema semantics remain unchanged
+    And every former assertion, task, prerequisite, consumer, package input, and terminal obligation remains represented exactly once
+    And no behavior change or master promotion is claimed by the decomposition
+
+  # Modular Chrome utility architecture 035
+  Scenario Outline: Modular Chrome utility architecture 035
+    Given the cutover is integrated and only <changed_source> changes later
+    When changed-path planning is performed
+    Then the selected ownership is <selected_ownership>
+    And unrelated runnable packs are excluded
+
+    Examples:
+      | changed_source                                       | selected_ownership                                      |
+      | one pack-owned installed controller                  | its subordinate slice and reviewed exact consumers      |
+      | the installed Data Layer composition runtime         | its bounded nine-controller-owner and Shell closure     |
+      | a Schema subcontroller behind the installed boundary | its reviewed Schema slice and exact consumers            |
+
+  # Modular Chrome utility architecture 036
+  Scenario: Modular Chrome utility architecture 036
+    Given the user approved unattended execution of stable task side-panel-single-cutover
+    When read-only intent classifies its unavoidable src/side-panel.ts cutover as coarse-boundary
+    Then the product task is preserved while structured task verification-slice-side-panel-single-cutover prepares the controller paths and evidence ownership from current QA
+    And the preparation leaves src/side-panel.ts, public facade imports, and installed product behavior unchanged
+    And only exact bounded preparation evidence may run before architect qa-ready integration
+    And the stable product task resumes automatically from that exact QA descendant without another user decision
