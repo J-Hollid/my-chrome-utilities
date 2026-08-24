@@ -90,6 +90,7 @@
    "issue_count" #{"2"}
    "issue_summary" #{"2 schema issues" "JSON error" "Valid"}
    "history_path" #{"event.history" "queue.history"}
+   "origin" #{"https://shop.example.test"}
    "push_path" #{"dataLayer" "analytics.queue"}
    "first_push_path" #{"dataLayer"}
    "second_push_path" #{"analytics.queue"}
