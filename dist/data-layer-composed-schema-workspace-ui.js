@@ -65,7 +65,7 @@ export function mountComposedSchemaWorkspace(options) {
     summary.textContent = options.model.status === "blocked" ? `Blocked · ${options.model.conflictSummary}` : `Ready · ${options.model.rows.length} effective properties${options.includeConflictSummary === false ? "" : ` · ${options.model.conflictSummary}`}`;
     if (options.onApplyInheritedPropertySelection && options.model.inheritedPropertySelection.totalCount) {
         const entityName = options.model.heading.replace(/^Effective schema at /u, "");
-        mountInheritedPropertySelection({ host: inheritedSelectionHost, model: options.model.inheritedPropertySelection, targetName: options.schemaContributorScope ? `${entityName} ${options.schemaContributorScope}` : entityName, onApply: options.onApplyInheritedPropertySelection });
+        mountInheritedPropertySelection({ host: inheritedSelectionHost, focusOwner: options.host, model: options.model.inheritedPropertySelection, targetName: options.schemaContributorScope ? `${entityName} ${options.schemaContributorScope}` : entityName, onApply: options.onApplyInheritedPropertySelection });
     }
     headerActions.className = "composed-schema-inventory-actions";
     localChangesButton.type = parentAdditionsButton.type = "button";

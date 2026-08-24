@@ -16,10 +16,32 @@ import {
 import {reconcileComposedAllowedValues} from "../dist/data-layer-composed-schema-builders.js";
 import {applyCanonicalCommand,canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
 import {createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
+import {inheritedPropertySelectionHierarchy,inheritedPropertySelectionTreePage,inheritedPropertySelectionTreeTarget} from "../dist/composed-schema/inherited-property-selection/ui.js";
 
 let seed=0x636f6d70;
 const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/0x100000000);
 const token=(prefix)=>`${prefix}_${Math.floor(random()*1_000_000)}`;
+
+for(let example=0;example<200;example+=1){
+  const count=1+Math.floor(random()*80),items=Array.from({length:count},(_,index)=>{
+    const concept=`Concept ${index%Math.max(1,Math.floor(random()*6)+1)}`,depth=1+Math.floor(random()*4),segments=Array.from({length:depth},(__,part)=>`part_${index}_${part}`);
+    return{propertyId:`property:hierarchy:${example}:${index}`,path:`/${segments.join("/")}`,concept,type:index%2?"string":"number",presence:index%3?"optional":"required",selected:index%4!==0,source:`Source ${index}`,descendantPaths:[],affectedPaths:[],blocked:false};
+  }),roots=inheritedPropertySelectionHierarchy(items),allKeys=[];
+  const visit=(node)=>{allKeys.push(node.key);for(const child of node.children)visit(child);};for(const root of roots)visit(root);
+  assert.equal(new Set(allKeys).size,allKeys.length,"generated hierarchy nodes have stable unique identities");
+  assert.deepEqual(roots.flatMap(({propertyIds})=>propertyIds).sort(),items.map(({propertyId})=>propertyId).sort(),"generated hierarchy conserves every property identity exactly once");
+  const expanded=new Set(allKeys.filter(()=>random()>=0.35)),offset=Math.floor(random()*(allKeys.length+20)),pageSize=1+Math.floor(random()*20),page=inheritedPropertySelectionTreePage(roots,expanded,offset,pageSize);
+  assert.ok(page.offset>=0&&page.offset<=Math.max(0,page.total-1)&&page.nodes.length<=pageSize,"generated page windows stay bounded");
+  const complete=inheritedPropertySelectionTreePage(roots,new Set(allKeys),0,Number.MAX_SAFE_INTEGER).nodes;
+  assert.deepEqual(complete.map(({key})=>key),allKeys,"fully expanded generated hierarchy preserves deterministic depth-first order");
+  if(complete.length){
+    const index=Math.floor(random()*complete.length),current=complete[index],down=inheritedPropertySelectionTreeTarget(complete,current.key,"ArrowDown",new Set(allKeys)),up=inheritedPropertySelectionTreeTarget(complete,current.key,"ArrowUp",new Set(allKeys));
+    assert.equal(down.key,complete[Math.min(complete.length-1,index+1)].key,"generated ArrowDown targets the next visible node");
+    assert.equal(up.key,complete[Math.max(0,index-1)].key,"generated ArrowUp targets the previous visible node");
+    if(current.children.length)assert.equal(inheritedPropertySelectionTreeTarget(complete,current.key,"ArrowRight",new Set()).expand,current.key,"generated ArrowRight expands a collapsed parent");
+    if(current.level>1)assert.ok(inheritedPropertySelectionTreeTarget(complete,current.key,"ArrowLeft",new Set()).key!==current.key,"generated ArrowLeft targets a visible parent");
+  }
+}
 
 for(let example=0;example<150;example+=1){
   const path=`/${token("property")}`,unrelatedPath=`/${token("unrelated")}`,parentValue=token("parent"),localValue=token("local"),state=createSpecificationProject({name:`Composition ${example}`,site:"shop.example",id:(kind)=>`${kind}:${example}`});

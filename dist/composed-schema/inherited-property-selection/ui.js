@@ -69,7 +69,7 @@ export function inheritedPropertySelectionTreeTarget(nodes, currentKey, key, exp
     return { key: current.key };
 }
 export function mountInheritedPropertySelection(options) {
-    const document = options.host.ownerDocument, card = document.createElement("section"), heading = document.createElement("h3"), summary = document.createElement("p"), edit = document.createElement("button"), workspace = document.createElement("section");
+    const document = options.host.ownerDocument, focusOwner = options.focusOwner ?? options.host, card = document.createElement("section"), heading = document.createElement("h3"), summary = document.createElement("p"), edit = document.createElement("button"), workspace = document.createElement("section");
     let staged = new Set(options.model.items.filter(({ selected }) => selected).map(({ propertyId }) => propertyId)), query = "", conceptFilter = "all", typeFilter = "all", presenceFilter = "all", selectionFilter = "any", reviewOpen = false, expanded = new Set(), activeKey, detailKey, treeOffset = 0;
     card.className = "profile-inheritance-card contextual-profile-inheritance-card";
     card.dataset.profileInheritanceCard = "contextual";
@@ -205,7 +205,7 @@ export function mountInheritedPropertySelection(options) {
         cancel.textContent = "Cancel";
         cancel.addEventListener("click", () => { reset(); workspace.hidden = true; edit.setAttribute("aria-expanded", "false"); render(); edit.focus({ preventScroll: true }); });
         apply.textContent = "Apply inheritance";
-        apply.addEventListener("click", () => { options.onApply([...staged]); workspace.hidden = true; edit.setAttribute("aria-expanded", "false"); edit.focus({ preventScroll: true }); });
+        apply.addEventListener("click", () => { focusOwner.dataset.inheritedSelectionPendingFocus = "contextual"; options.onApply([...staged]); workspace.hidden = true; edit.setAttribute("aria-expanded", "false"); });
         reviewPanel.hidden = !reviewOpen;
         reviewPanel.setAttribute("aria-label", "Reviewed inheritance selection");
         const affectedContext = options.targetName.endsWith("Flow Page-instance") ? `${options.targetName} and its contained Event occurrence branches` : options.targetName.endsWith("Page") ? `${options.targetName} and every downstream Flow Page-instance branch` : options.targetName;
@@ -223,6 +223,13 @@ export function mountInheritedPropertySelection(options) {
     render();
     card.append(heading, summary, edit, workspace);
     options.host.append(card);
+    if (focusOwner.dataset.inheritedSelectionPendingFocus === "contextual") {
+        delete focusOwner.dataset.inheritedSelectionPendingFocus;
+        queueMicrotask(() => {
+            card.focus({ preventScroll: true });
+            card.dataset.applyFocusRestored = String(document.activeElement === card);
+        });
+    }
     return card;
 }
 //# sourceMappingURL=ui.js.map
