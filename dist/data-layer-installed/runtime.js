@@ -30,7 +30,29 @@ export function createInstalledDataLayerLifecycle(controllers) {
     };
 }
 export async function mountInstalledDataLayerRuntime() {
-    const { installedDataLayerApplication } = await import("./schemas/application.js");
-    return installedDataLayerApplication;
+    const { mountInstalledApplication } = await import("./schemas/application.js");
+    let mounted = false;
+    let disposeApplication;
+    return {
+        mount() {
+            if (mounted)
+                return;
+            mounted = true;
+            void mountInstalledApplication({ replay: createReplayInstalledController }).then((dispose) => {
+                if (mounted)
+                    disposeApplication = dispose;
+                else
+                    dispose();
+            });
+        },
+        dispose() {
+            if (!mounted)
+                return;
+            mounted = false;
+            disposeApplication?.();
+            disposeApplication = undefined;
+        },
+    };
 }
+import { createReplayInstalledController } from "./replay/index.js";
 //# sourceMappingURL=runtime.js.map

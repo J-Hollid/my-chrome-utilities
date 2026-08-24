@@ -305,12 +305,6 @@ import { renderAssignmentDataConditionEditor, type AssignmentDataConditionEditor
 import { canonicalDocumentationPath, resolveEffectiveSchemaDocumentation, setPropertyDocumentation, setSchemaDescription, type SchemaPropertyDocumentation, type SchemaPropertyExample } from "../../utilities/data-layer/schemas.js";
 import { exampleValueFromInput, schemaPropertyExampleChoices, schemaPropertyExampleConflicts, schemaPropertyExampleInputType } from "../../utilities/data-layer/schemas.js";
 import { comparisonValueFromInput, conditionGroupAppliesToValue, conditionalRuleSummary, operatorsForConditionType, typedComparisonValue, type ConditionPropertyType, type ConditionalRulePredicate } from "../../utilities/data-layer/schemas.js";
-import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "../../utilities/data-layer/replay.js";
-import {
-  findSequenceReplayElements,
-  renderSequenceReplay,
-  setSequenceReplayResult,
-} from "../../utilities/data-layer/replay.js";
 import {
   findEventLibraryEditorElements,
   focusTemplateEditAction,
@@ -375,6 +369,45 @@ import {
   restoreCanonicalProjectEnvelope,
   restoreCanonicalProjectState,
 } from "../../utilities/data-layer/schemas.js";
+
+interface InstalledReplayController {
+  mount(): void;
+  dispose(): void;
+  createFromSession(id: string, name: string, eventIds: readonly string[]): unknown;
+}
+
+interface InstalledApplicationControllers {
+  replay(ports: {
+    root: ParentNode;
+    listTemplates(): readonly Readonly<{
+      id: string; name: string; version: number; sourceId: string; destination: string; payload: unknown;
+    }>[];
+    listSources(): readonly Readonly<{ id: string; name: string; status: string }>[];
+    pageUrl(): string;
+  }): InstalledReplayController;
+}
+
+export async function mountInstalledApplication(
+  controllers: InstalledApplicationControllers,
+): Promise<() => void> {
+const listenerRecords: Array<{
+  target: EventTarget;
+  type: string;
+  listener: EventListenerOrEventListenerObject;
+  options?: boolean | AddEventListenerOptions;
+}> = [];
+const eventTargetPrototype = globalThis.EventTarget?.prototype;
+const nativeAddEventListener = eventTargetPrototype?.addEventListener;
+if (eventTargetPrototype && nativeAddEventListener) {
+  eventTargetPrototype.addEventListener = function(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions,
+  ): void {
+    if (listener) listenerRecords.push({ target:this, type, listener, ...(options === undefined ? {} : { options }) });
+    nativeAddEventListener.call(this, type, listener, options);
+  };
+}
 
 const app = document.querySelector<HTMLElement>("#app");
 const panelRoot = document.querySelector<HTMLElement>("#side-panel-root");
@@ -842,7 +875,6 @@ const schemaExportReview = document.createElement("dialog"); schemaExportReview.
 let schemaExportTrigger: HTMLButtonElement | undefined;
 let pendingStandardSchemaExport: { scope:"library" | "schema"; schema?: SchemaDefinition; review:JsonSchemaCompatibilityReview } | undefined;
 const guidedValidationRoot = document.querySelector<HTMLElement>("#guided-validation-flow");
-const sequenceReplayElements = findSequenceReplayElements();
 const allCommands = [...commandsForUtilityShell(listCommands(), extensionShell.commands)];
 let dataLayerSessionState: DataLayerSessionState = restoreSession(dataLayerStorage);
 let savedEventFeedFilterLibrary: SavedEventFeedFilterLibrary = restoreSavedEventFeedFilterLibrary(dataLayerStorage.getItem(SAVED_EVENT_FEED_FILTER_STORAGE_KEY));
@@ -896,6 +928,19 @@ let startFreshAfterSessionSave = false;
 const SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY = "my-chrome-utilities.saved-through-event-count.v1";
 let savedThroughEventCount = Math.max(0, Number(dataLayerStorage.getItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY)) || 0);
 let eventTemplates: EditableEventTemplate[] = restoreEventTemplateLibrary(dataLayerStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
+const replayController = controllers.replay({
+  root:document,
+  listTemplates:() => eventTemplates.map((template) => ({
+    id:template.id,
+    name:template.name,
+    version:template.version,
+    sourceId:template.sourceId,
+    destination:template.destination,
+    payload:template.payload,
+  })),
+  listSources:() => liveObserverState.sources,
+  pageUrl:() => liveObserverState.pageUrl,
+});
 let propertyEditorState: PropertyEditorState | undefined;
 let pushPathReadiness: {
   key: string;
@@ -1036,7 +1081,6 @@ const guidedValidationFlow = createGuidedValidationFlow(guidedValidationRoot, {
   close: () => { showDataLayerView("Live"); renderLiveObserver(); restoreGuidedPropertyReturn(); },
   saved: finishGuidedValidationSave,
 });
-let replaySequences: ReplaySequence[] = [];
 let observationTargetState: ObservationTargetState = restoredObservationTargetState();
 const liveTargetPermissionRecoveryCoordinator =
   createDormantLiveTargetPermissionRecoveryCoordinator({
@@ -4655,48 +4699,6 @@ function commitEventLibraryDeletion(): void {
   if (!pending.id) addNewButton?.focus({ preventScroll: true });
 }
 
-function renderSequences(): void {
-  if (sequenceEmptyState) sequenceEmptyState.hidden = replaySequences.length > 0;
-  renderSequenceReplay(sequenceReplayElements, replaySequences, (sequence) => {
-    const templates: ReplayTemplate[] = eventTemplates.map((template) => ({
-      id: template.id,
-      name: template.name,
-      version: template.version,
-      sourceId: template.sourceId,
-      destination: template.destination,
-      payload: template.payload,
-    }));
-    const adapters = liveObserverState.sources.map((source) => ({
-      id: source.id,
-      name: source.name,
-      kind: "Data Layer",
-      destination: "event.history",
-      enabled: true,
-      status: source.status,
-      capabilities: ["push"] as const,
-    }));
-    const ready = readiness(sequence, templates, adapters);
-    if (!ready.runnable) {
-      setSequenceReplayResult(
-        sequenceReplayElements,
-        `Not runnable: ${ready.blocked.join(", ")}`,
-      );
-      return;
-    }
-    const record = runSequence(
-      sequence,
-      templates,
-      adapters,
-      liveObserverState.pageUrl,
-      "Run all",
-    );
-    setSequenceReplayResult(
-      sequenceReplayElements,
-      `${record.result}: ${record.steps.length} steps.`,
-    );
-  });
-}
-
 function resetTemplateEditorDisclosures(): void {
   document.querySelectorAll<HTMLDetailsElement>("#event-property-editor details").forEach((disclosure) => {
     disclosure.open = false;
@@ -5054,9 +5056,11 @@ function renderSavedSessions(): void {
       createSequenceButton.type = "button";
       createSequenceButton.textContent = "Create sequence";
       createSequenceButton.addEventListener("click", () => {
-        const templates: ReplayTemplate[] = eventTemplates.filter((template) => session.events.some((event) => `template:${event.id}` === template.id)).map((template) => ({ id: template.id, name: template.name, version: template.version, sourceId: template.sourceId, destination: template.destination, payload: template.payload }));
-        replaySequences = [...replaySequences, createSequence(`sequence:${session.id}`, `${session.name} sequence`, session.id, templates)];
-        renderSequences();
+        replayController.createFromSession(
+          session.id,
+          session.name,
+          session.events.map(({ id }) => id),
+        );
         if (savedSessionConfirmation) savedSessionConfirmation.textContent = `Created sequence from ${session.name}; saved session remains unchanged.`;
       });
       remove.type = "button";
@@ -6357,7 +6361,7 @@ if (typeof chrome !== "undefined" && chrome.permissions?.onRemoved) {
   });
 }
 
-durableProjectRuntime.subscribe(({active})=>{
+const unsubscribeDurableProjectRuntime = durableProjectRuntime.subscribe(({active})=>{
   const next=active?.state??restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));
   renderProjectEventTransport();if(!next)return;
   renderSchemas();renderSchemaWorkflowRows();if(compactCanonicalEditor)renderCompactCanonicalEditor();sidePanelLayeredProfileEditor?.render();
@@ -6377,7 +6381,7 @@ renderEventTemplateLibrary();
 renderSchemas();
 renderSchemaWorkflowRows();
 renderSchemaValidationRecords();
-renderSequences();
+replayController.mount();
 hotkeyController.focus();
 isolateUtilityDomFromSearch(document, globalThis.location.search);
 if (panelRoot) {
@@ -6387,14 +6391,16 @@ if (panelRoot) {
   panelRoot.dataset.utilityShellReady = "true";
 }
 
-export {
-  DATA_LAYER_SESSION_STORAGE_KEY,
-  HOTKEY_KEYMAP_STORAGE_KEY,
-  navigateSession,
-  sessionScope,
+return () => {
+  if (eventTargetPrototype && nativeAddEventListener) {
+    eventTargetPrototype.addEventListener = nativeAddEventListener;
+  }
+  for (const { target, type, listener, options } of [...listenerRecords].reverse()) {
+    target.removeEventListener(type, listener, options);
+  }
+  clearScheduledObservationRefresh();
+  stopLiveHistoryCapture();
+  replayController.dispose();
+  unsubscribeDurableProjectRuntime();
 };
-
-export const installedDataLayerApplication = {
-  mount(): void {},
-  dispose(): void {},
-};
+}

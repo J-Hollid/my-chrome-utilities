@@ -47,6 +47,24 @@ export function createInstalledDataLayerLifecycle(
 export async function mountInstalledDataLayerRuntime(): Promise<
   InstalledDataLayerControllerLifecycle
 > {
-  const { installedDataLayerApplication } = await import("./schemas/application.js");
-  return installedDataLayerApplication;
+  const { mountInstalledApplication } = await import("./schemas/application.js");
+  let mounted = false;
+  let disposeApplication: (() => void) | undefined;
+  return {
+    mount(): void {
+      if (mounted) return;
+      mounted = true;
+      void mountInstalledApplication({ replay:createReplayInstalledController }).then((dispose) => {
+        if (mounted) disposeApplication = dispose;
+        else dispose();
+      });
+    },
+    dispose(): void {
+      if (!mounted) return;
+      mounted = false;
+      disposeApplication?.();
+      disposeApplication = undefined;
+    },
+  };
 }
+import { createReplayInstalledController } from "./replay/index.js";
