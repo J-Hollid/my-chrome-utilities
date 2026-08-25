@@ -62,14 +62,25 @@ const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "
   "#cancel-schema-manual-property", "#schema-property-rule-picker", "#create-schema-rule", "#schema-rule-editor",
   "#schema-rule-name", "#schema-rule-parameters", "#schema-rule-types", "#schema-rule-operator",
   "#schema-rule-severity", "#schema-rule-message", "#schema-rule-examples", "#save-schema-rule",
-  "#schema-rule-list", "#schema-rule-search", "#schema-rule-attachments", "#update-schema-rule-attachments"];
+  "#schema-rule-list", "#schema-rule-search", "#schema-rule-attachments", "#update-schema-rule-attachments",
+  "#schema-rule-upgrade-review", "#schema-rule-upgrade-review-summary", "#confirm-schema-rule-upgrade",
+  "#cancel-schema-rule-upgrade", "#schema-rule-revision-review", "#schema-rule-revision-review-summary",
+  "#confirm-schema-rule-revision", "#cancel-schema-rule-revision", "#schema-rule-sync-review",
+  "#schema-rule-sync-review-summary", "#confirm-schema-rule-sync", "#cancel-schema-rule-sync",
+  "#export-schema-rules", "#schema-rule-delete-review", "#schema-rule-delete-review-summary",
+  "#confirm-schema-rule-delete", "#cancel-schema-rule-delete"];
 const elements = new Map(selectors.map((selector) => [selector, element()]));
 elements.set("#side-panel-layered-profile-editor", element()); elements.set("#live-event-query", element());
 const schemaMasterTab = Object.assign(element(), { textContent:"Schemas", dataset:{ schemaSubview:"schema-master" } });
 const schemaRulesTab = Object.assign(element(), { textContent:"Rules", dataset:{ schemaSubview:"schema-rule-library" } });
 const schemaMasterPanel = Object.assign(element(), { id:"schema-master" });
 const schemaRulesPanel = Object.assign(element(), { id:"schema-rule-library" });
-const uiValues = new Map([["my-chrome-utilities.schema-library.v1", JSON.stringify([schema])]]);
+const uiValues = new Map([
+  ["my-chrome-utilities.schema-library.v1", JSON.stringify([schema])],
+  ["my-chrome-utilities.schema-rule-library.v1", JSON.stringify([
+    { id:"rule:retired", name:"Retired rule", kind:"Required", version:1, enabled:true, attachments:[] },
+  ])],
+]);
 let selectedSpecificIndex;
 const rulePickerChanges = [];
 const uiController = createSchemasInstalledController({
@@ -154,17 +165,46 @@ assert.equal(elements.get("#schema-property-rule-picker").open, true);
 assert.equal(uiController.rulePickerState().configuration.propertyType, "string");
 elements.get("#schema-property-rule-picker").dispatch("cancel");
 assert.deepEqual(rulePickerChanges, ["items.*.sku:true", "items.*.sku:false"]);
+uiController.publish();
 elements.get("#create-schema-rule").click();
 elements.get("#schema-rule-name").value = "Checkout required";
 elements.get("#schema-rule-types").value = "string"; elements.get("#schema-rule-operator").value = "required";
 elements.get("#schema-rule-severity").value = "error"; elements.get("#schema-rule-message").value = "Checkout is required";
 elements.get("#schema-rule-attachments").selectedOptions = [{ value:uiController.state().activeSchemaId }];
 elements.get("#save-schema-rule").click();
-assert.equal(uiController.rules()[0].name, "Checkout required");
+assert.equal(uiController.rules().find(({ id }) => id === "rule:checkout").name, "Checkout required");
 assert.equal(uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId)
   .attachedRules.some(({ id }) => id === "rule:checkout"), true);
 elements.get("#schema-rule-search").value = "checkout"; elements.get("#schema-rule-search").dispatch("input");
 assert.match(elements.get("#schema-rule-list").textContent, /Checkout required/);
+assert.equal(uiController.requestRuleRevision("rule:checkout", { name:"Checkout present", message:"Checkout must be present" }), true);
+assert.equal(elements.get("#schema-rule-revision-review").open, true);
+elements.get("#cancel-schema-rule-revision").click();
+assert.equal(uiController.rules().find(({ id }) => id === "rule:checkout").version, 1, "cancel leaves a rule revision untouched");
+uiController.requestRuleRevision("rule:checkout", { name:"Checkout present", message:"Checkout must be present" });
+elements.get("#confirm-schema-rule-revision").click();
+assert.equal(uiController.rules().find(({ id }) => id === "rule:checkout").version, 2);
+assert.equal(uiController.rules().find(({ id }) => id === "rule:checkout").revisionHistory[0].name, "Checkout required");
+assert.equal(uiController.requestRuleSync("rule:checkout"), true);
+assert.match(elements.get("#schema-rule-sync-review-summary").textContent, /1 schemas and 1 attachments/);
+const versionBeforeSync = uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId).version;
+uiController.confirmRuleSync();
+const syncedSchema = uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId);
+assert.equal(syncedSchema.version, versionBeforeSync + 1, "sync publishes exactly one reviewed schema revision");
+assert.equal(syncedSchema.attachedRules.find(({ id }) => id === "rule:checkout").version, 2);
+uiController.requestRuleRevision("rule:checkout", { severity:"warning" });
+elements.get("#confirm-schema-rule-revision").click();
+uiController.requestRuleUpgrade("rule:checkout", [uiController.state().activeSchemaId]);
+assert.equal(elements.get("#schema-rule-upgrade-review").open, true);
+elements.get("#confirm-schema-rule-upgrade").click();
+assert.equal(uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId)
+  .attachedRules.find(({ id }) => id === "rule:checkout").version, 3, "upgrade changes the selected pinned attachment without publishing");
+assert.equal(uiController.requestRuleDeletion("rule:checkout"), false, "attached rules cannot be deleted");
+assert.equal(uiController.requestRuleDeletion("rule:retired"), true);
+elements.get("#cancel-schema-rule-delete").click();
+assert.equal(uiController.rules().some(({ id }) => id === "rule:retired"), true);
+uiController.requestRuleDeletion("rule:retired"); elements.get("#confirm-schema-rule-delete").click();
+assert.equal(uiController.rules().some(({ id }) => id === "rule:retired"), false);
 uiController.dispose();
 assert.equal([...elements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
   "Schemas removes every editor and revision listener it owns");
