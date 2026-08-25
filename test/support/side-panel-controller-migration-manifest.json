@@ -13,7 +13,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::app:70"
+        "target": "src/data-layer-installed/runtime.ts::app:142"
       }
     },
     {
@@ -26,7 +26,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::panelRoot:71"
+        "target": "src/data-layer-installed/runtime.ts::panelRoot:143"
       }
     },
     {
@@ -39,7 +39,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::utilityDirectory:72"
+        "target": "src/data-layer-installed/runtime.ts::utilityDirectory:144"
       }
     },
     {
@@ -52,7 +52,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::durableProjectRuntime:81"
+        "target": "src/data-layer-installed/runtime.ts::durableProjectRuntime:153"
       }
     },
     {
@@ -65,7 +65,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::projectStorage:85"
+        "target": "src/data-layer-installed/runtime.ts::projectStorage:157"
       }
     },
     {
@@ -78,7 +78,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::scopedDataLayerStorage:86"
+        "target": "src/data-layer-installed/runtime.ts::scopedDataLayerStorage:158"
       }
     },
     {
@@ -91,7 +91,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::dataLayerStorage:87"
+        "target": "src/data-layer-installed/runtime.ts::dataLayerStorage:159"
       }
     },
     {
@@ -104,7 +104,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::hotkeyStorage:95"
+        "target": "src/data-layer-installed/runtime.ts::hotkeyStorage:167"
       }
     },
     {
@@ -117,7 +117,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::shellStorage:96"
+        "target": "src/data-layer-installed/runtime.ts::shellStorage:168"
       }
     },
     {
@@ -130,7 +130,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::sidePanelContent:98"
+        "target": "src/data-layer-installed/runtime.ts::sidePanelContent:170"
       }
     },
     {
@@ -143,7 +143,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::commandLog:99"
+        "target": "src/data-layer-installed/runtime.ts::commandLog:171"
       }
     },
     {
@@ -156,7 +156,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::openPaletteButton:100"
+        "target": "src/data-layer-installed/runtime.ts::openPaletteButton:172"
       }
     },
     {
@@ -169,7 +169,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::palette:101"
+        "target": "src/data-layer-installed/runtime.ts::palette:173"
       }
     },
     {
@@ -182,7 +182,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::paletteFilter:102"
+        "target": "src/data-layer-installed/runtime.ts::paletteFilter:174"
       }
     },
     {
@@ -195,7 +195,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::paletteResults:103"
+        "target": "src/data-layer-installed/runtime.ts::paletteResults:175"
       }
     },
     {
@@ -481,7 +481,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::createKeymapButton:104"
+        "target": "src/data-layer-installed/runtime.ts::createKeymapButton:176"
       }
     },
     {
@@ -494,7 +494,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::updateKeymapButton:105"
+        "target": "src/data-layer-installed/runtime.ts::updateKeymapButton:177"
       }
     },
     {
@@ -507,7 +507,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::loadKeymapButton:106"
+        "target": "src/data-layer-installed/runtime.ts::loadKeymapButton:178"
       }
     },
     {
@@ -520,7 +520,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::keymapFileInput:107"
+        "target": "src/data-layer-installed/runtime.ts::keymapFileInput:179"
       }
     },
     {
@@ -533,7 +533,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::keymapStatus:108"
+        "target": "src/data-layer-installed/runtime.ts::keymapStatus:180"
       }
     },
     {
@@ -546,7 +546,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::keymapWarning:109"
+        "target": "src/data-layer-installed/runtime.ts::keymapWarning:181"
       }
     },
     {
@@ -559,7 +559,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::workspaceTabList:110"
+        "target": "src/data-layer-installed/runtime.ts::workspaceTabList:182"
       }
     },
     {
@@ -572,7 +572,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::hotkeyEditorFilter:111"
+        "target": "src/data-layer-installed/runtime.ts::hotkeyEditorFilter:183"
       }
     },
     {
@@ -585,7 +585,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::hotkeyEditorCommands:112"
+        "target": "src/data-layer-installed/runtime.ts::hotkeyEditorCommands:184"
       }
     },
     {
@@ -5710,7 +5710,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::commandRunContext:71"
       }
     },
     {
@@ -5722,7 +5723,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::paletteController:53"
       }
     },
     {
@@ -5734,7 +5736,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::workspaceTabsController:54"
       }
     },
     {
@@ -5746,7 +5749,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::hotkeyController:55"
       }
     },
     {
@@ -5797,7 +5801,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/runtime.ts::utilityStorageContract:73"
+        "target": "src/data-layer-installed/runtime.ts::utilityStorageContract:145"
       }
     },
     {
@@ -8993,7 +8997,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::recordDataLayerCommandRun:57"
       }
     },
     {
@@ -9006,7 +9011,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::recordCommandRun:64"
       }
     },
     {
@@ -9019,7 +9025,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::showWorkspace:68"
       }
     },
     {
@@ -11237,11 +11244,12 @@
       "frozen": {
         "expression": "chrome.runtime.onMessage.addListener",
         "line": 5473,
-        "column": 62,
-        "invocation": "chrome.runtime.onMessage.addListener(listener)"
+        "column": 62
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::runtimeMessages.addListener",
+        "reviewed": true
       }
     },
     {
@@ -11278,11 +11286,12 @@
       "frozen": {
         "expression": "window.addEventListener",
         "line": 5520,
-        "column": 1,
-        "invocation": "window.addEventListener(\"pagehide\", () => paletteController.dispose(), { once:true })"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::ports.pageLifecycle.addEventListener",
+        "reviewed": true
       }
     },
     {

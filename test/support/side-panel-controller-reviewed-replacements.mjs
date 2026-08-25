@@ -19,6 +19,8 @@ export const reviewedControllerReplacements = [
   { identity:"listeners:284:historyPathInput?.addEventListener@6230:1", kind:"call", path:"src/data-layer-installed/project-event-transport/index.ts", symbol:"historyPathInput?.addEventListener", line:83 },
   { identity:"listeners:285:historyPathInput?.addEventListener@6234:1", kind:"call", path:"src/data-layer-installed/project-event-transport/index.ts", symbol:"historyPathInput?.addEventListener", line:84 },
   { identity:"listeners:286:defaultPushPathInput?.addEventListener@6235:1", kind:"call", path:"src/data-layer-installed/project-event-transport/index.ts", symbol:"defaultPushPathInput?.addEventListener", line:85 },
+  { identity:"listeners:160:chrome.runtime.onMessage.addListener@5473:62", kind:"call", path:"src/data-layer-installed/runtime.ts", symbol:"runtimeMessages.addListener" },
+  { identity:"listeners:163:window.addEventListener@5520:1", kind:"call", path:"src/data-layer-installed/runtime.ts", symbol:"ports.pageLifecycle.addEventListener" },
   { identity:"listeners:287:restartObservationButton?.addEventListener@6237:1", kind:"call", path:"src/data-layer-installed/capture/index.ts", symbol:"restartObservationButton?.addEventListener" },
   { identity:"listeners:288:chooseObservationTargetButton?.addEventListener@6252:1", kind:"call", path:"src/data-layer-installed/capture/index.ts", symbol:"chooseObservationTargetButton?.addEventListener" },
   { identity:"listeners:289:browseObservationTargetsButton?.addEventListener@6256:1", kind:"call", path:"src/data-layer-installed/capture/index.ts", symbol:"browseObservationTargetsButton?.addEventListener" },
