@@ -47,6 +47,7 @@ export interface EventLibraryInstalledPorts {
   validateDraft(schemaId: string): void;
   backToCapturedEvent(): void;
   pushTarget(): PushDraftReview["target"] | undefined;
+  checkPushPath(target:PushDraftReview["target"], destination:string):Promise<{ success:boolean; message:string }>;
   renderPushReview(root: ParentNode, review: PushDraftReview): void;
   renderRevisionReview(root: ParentNode, review: TemplateChangeReview): void;
 }
@@ -132,6 +133,8 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
   let pendingRevisionChangeReview: { editor:PropertyEditorState; review:TemplateChangeReview } | undefined;
   let templateEditorReturnTemplateId: string | undefined;
   let savedInspectorTemplateId: string | undefined;
+  let pushPathReadiness:{ key:string; status:"checking" | "ready" | "blocked"; message:string } | undefined;
+  let pushPathReadinessRequest = 0;
   const createId = ports.createId ?? (() => `template:${crypto.randomUUID()}`);
   const persistEventTemplateLibrary = (): void => {
     ports.storage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
@@ -286,6 +289,7 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
     if (templateEmptyStateElements.state) templateEmptyStateElements.state.hidden = visible.length > 0;
     if (templateEmptyRecovery) { templateEmptyRecovery.hidden = visible.length > 0;
       templateEmptyRecovery.textContent = eventTemplateSearch?.value.trim() ? "Clear template search" : "Return to Live events"; }
+    refreshPushPathReadiness();
     if (!eventLibraryEditorElements.list) return;
     renderEventLibraryEditor(eventLibraryEditorElements, visible, propertyEditorState, {
       edit:(template) => { openTemplateEditor(template.id); renderEventTemplateLibrary(); },
@@ -297,8 +301,23 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
       ...(ports.createTestCase ? { createTestCase:ports.createTestCase } : {}),
     });
   };
+  function refreshPushPathReadiness():void {
+    const editor = propertyEditorState, target = ports.pushTarget();
+    if (!editor || !target || target.accessState !== "Ready") { pushPathReadiness = undefined; pushPathReadinessRequest += 1;
+      if (pushTemplateDraftButton) { pushTemplateDraftButton.disabled = true; pushTemplateDraftButton.setAttribute("aria-disabled", "true"); } return; }
+    const destination = editor.template.destination.trim(), key = `${target.id}:${destination}`;
+    if (pushPathReadiness?.key === key) { const ready = pushPathReadiness.status === "ready";
+      if (pushTemplateDraftButton) { pushTemplateDraftButton.disabled = !ready; pushTemplateDraftButton.setAttribute("aria-disabled", String(!ready)); }
+      const reason = ports.root.querySelector<HTMLElement>("#push-template-draft-reason"); if (reason) reason.textContent = pushPathReadiness.message; return; }
+    const request = ++pushPathReadinessRequest; pushPathReadiness = { key, status:"checking", message:"Checking selected-page push path." };
+    if (pushTemplateDraftButton) { pushTemplateDraftButton.disabled = true; pushTemplateDraftButton.setAttribute("aria-disabled", "true"); }
+    void ports.checkPushPath(target, destination).then((result) => { if (!mounted || request !== pushPathReadinessRequest) return;
+      pushPathReadiness = result.success ? { key, status:"ready", message:result.message } : { key, status:"blocked", message:result.message };
+      renderEventTemplateLibrary(); }, () => { if (!mounted || request !== pushPathReadinessRequest) return;
+      pushPathReadiness = { key, status:"blocked", message:"Push path is not push-capable" }; renderEventTemplateLibrary(); });
+  }
   function openTemplateEditor(id:string):void { const template = find(id); templateEditorReturnTemplateId = selectedId; selectedId = id;
-    propertyEditorState = openPropertyEditor(template); savedInspectorTemplateId = id; resetTemplateEditorDisclosures(); }
+    propertyEditorState = openPropertyEditor(template); savedInspectorTemplateId = id; resetTemplateEditorDisclosures(); refreshPushPathReadiness(); }
   const openNewEventEditor = (): void => { selectedId = undefined;
     propertyEditorState = createNewEventEditor(ports.defaultPushPath()); renderEventTemplateLibrary(); };
   const updateTemplateName = (): void => { if (!propertyEditorState) return;
@@ -436,6 +455,7 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
       saveAndCloseTemplateButton?.removeEventListener("click", saveAndCloseTemplate);
       discardAndCloseTemplateButton?.removeEventListener("click", discardAndCloseTemplate);
       closeEditor(); pendingEventLibraryImport = undefined; pendingEventLibraryDeletion = undefined; replaceEventLibraryArmed = false;
+      pushPathReadiness = undefined; pushPathReadinessRequest += 1;
       pendingPushDraftReview = undefined; pendingRevisionChangeReview = undefined;
       hideDialog(pushDraftReview); hideDialog(revisionChangeReview);
     },
@@ -483,6 +503,7 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
       ...(pendingEventLibraryImport ? { pendingImport:pendingEventLibraryImport } : {}),
       ...(pendingEventLibraryDeletion ? { pendingDeletion:pendingEventLibraryDeletion } : {}),
       replaceArmed:replaceEventLibraryArmed, templates:eventTemplates,
+      ...(pushPathReadiness ? { pushPathReadiness } : {}),
       ...(templateEditorReturnTemplateId ? { templateEditorReturnTemplateId } : {}), ...(savedInspectorTemplateId ? { savedInspectorTemplateId } : {}) }),
     mounted:() => mounted,
   };

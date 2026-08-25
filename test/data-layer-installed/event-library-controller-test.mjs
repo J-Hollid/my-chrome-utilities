@@ -6,6 +6,7 @@ const template = { id:"template:1", name:"Page view", eventName:"page_view", sou
 const values = new Map([["my-chrome-utilities.event-template-library.v1", JSON.stringify([template])]]);
 let changed = 0, pushed;
 const noOpTransfer = { downloadExport() {}, readImportFile:async () => "", validateDraft() {}, backToCapturedEvent() {},
+  checkPushPath:async () => ({ success:true, message:"Selected-page push path is ready." }),
   pushTarget:() => ({ id:"target:1", tabId:1, windowId:1, title:"Checkout", pageUrl:"https://shop.example/checkout",
     origin:"https://shop.example", accessState:"Ready" }), renderPushReview() {}, renderRevisionReview() {} };
 const controller = createEventLibraryInstalledController({
@@ -57,6 +58,7 @@ const transferController = createEventLibraryInstalledController({
   downloadExport:(exported) => transferCalls.push(`export:${JSON.stringify(exported).includes("event-library")}`),
   readImportFile:async () => JSON.stringify({ format:"my-chrome-utilities.event-library", version:1, templates:[template] }),
   validateDraft:(schemaId) => transferCalls.push(`validate:${schemaId}`), backToCapturedEvent:() => transferCalls.push("live"),
+  pushTarget:() => undefined, checkPushPath:async () => ({ success:true, message:"ready" }),
 });
 transferController.mount();
 elements.get("#library-draft-schema-selector").value = "schema:checkout";
@@ -95,7 +97,9 @@ const editorController = createEventLibraryInstalledController({
   push:async (draft) => { editorPush = draft.name; }, changed() {}, createId:() => "template:copy", ...noOpTransfer,
   backToCapturedEvent:() => { returned += 1; },
 });
-editorController.mount(); editorController.beginDraft("template:1");
+editorController.mount(); editorController.beginDraft("template:1"); await new Promise((resolve) => setTimeout(resolve, 0));
+assert.equal(editorController.state().pushPathReadiness.status, "ready", "Event Library owns selected-page push readiness");
+assert.equal(editorElements.get("#push-template-draft").disabled, false);
 editorElements.get("#event-template-name").value = "Checkout"; editorElements.get("#event-template-name").dispatch("input");
 editorElements.get("#push-destination-path").value = "checkout.events";
 editorElements.get("#push-destination-path").dispatch("input");
@@ -135,3 +139,22 @@ assert.equal(editorController.state().editor, undefined, "discard closes without
 editorController.dispose();
 assert.equal([...editorElements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
   "Event Library removes template-editor listeners on disposal");
+
+const readinessElements = new Map(["#push-destination-path", "#push-template-draft", "#push-template-draft-reason"]
+  .map((selector) => [selector, element()]));
+const readinessSettlements = [];
+const readinessController = createEventLibraryInstalledController({
+  root:{ querySelector:(selector) => readinessElements.get(selector) ?? null }, storage:{ getItem:() => JSON.stringify([template]), setItem() {} },
+  defaultPushPath:() => "event.history", push:async () => {}, changed() {}, createId:() => "template:readiness", ...noOpTransfer,
+  checkPushPath:() => new Promise((resolve) => readinessSettlements.push(resolve)),
+});
+readinessController.mount(); readinessController.beginDraft("template:1");
+readinessElements.get("#push-destination-path").value = "checkout.events"; readinessElements.get("#push-destination-path").dispatch("input");
+readinessSettlements[0]({ success:true, message:"stale ready" }); await new Promise((resolve) => setTimeout(resolve, 0));
+assert.equal(readinessController.state().pushPathReadiness.status, "checking", "stale path readiness cannot replace the latest request");
+readinessSettlements[1]({ success:false, message:"blocked current path" }); await new Promise((resolve) => setTimeout(resolve, 0));
+assert.equal(readinessController.state().pushPathReadiness.message, "blocked current path");
+readinessElements.get("#push-destination-path").value = "disposed.events"; readinessElements.get("#push-destination-path").dispatch("input");
+readinessController.dispose(); readinessSettlements[2]({ success:true, message:"disposed ready" }); await new Promise((resolve) => setTimeout(resolve, 0));
+assert.equal(readinessController.state().pushPathReadiness, undefined, "disposed readiness settlement cannot repopulate controller state");
+assert.equal([...readinessElements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0);

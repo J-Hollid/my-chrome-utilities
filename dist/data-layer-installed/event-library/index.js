@@ -62,6 +62,8 @@ export function createEventLibraryInstalledController(ports) {
     let pendingRevisionChangeReview;
     let templateEditorReturnTemplateId;
     let savedInspectorTemplateId;
+    let pushPathReadiness;
+    let pushPathReadinessRequest = 0;
     const createId = ports.createId ?? (() => `template:${crypto.randomUUID()}`);
     const persistEventTemplateLibrary = () => {
         ports.storage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
@@ -330,6 +332,7 @@ export function createEventLibraryInstalledController(ports) {
             templateEmptyRecovery.hidden = visible.length > 0;
             templateEmptyRecovery.textContent = eventTemplateSearch?.value.trim() ? "Clear template search" : "Return to Live events";
         }
+        refreshPushPathReadiness();
         if (!eventLibraryEditorElements.list)
             return;
         renderEventLibraryEditor(eventLibraryEditorElements, visible, propertyEditorState, {
@@ -342,6 +345,47 @@ export function createEventLibraryInstalledController(ports) {
             ...(ports.createTestCase ? { createTestCase: ports.createTestCase } : {}),
         });
     };
+    function refreshPushPathReadiness() {
+        const editor = propertyEditorState, target = ports.pushTarget();
+        if (!editor || !target || target.accessState !== "Ready") {
+            pushPathReadiness = undefined;
+            pushPathReadinessRequest += 1;
+            if (pushTemplateDraftButton) {
+                pushTemplateDraftButton.disabled = true;
+                pushTemplateDraftButton.setAttribute("aria-disabled", "true");
+            }
+            return;
+        }
+        const destination = editor.template.destination.trim(), key = `${target.id}:${destination}`;
+        if (pushPathReadiness?.key === key) {
+            const ready = pushPathReadiness.status === "ready";
+            if (pushTemplateDraftButton) {
+                pushTemplateDraftButton.disabled = !ready;
+                pushTemplateDraftButton.setAttribute("aria-disabled", String(!ready));
+            }
+            const reason = ports.root.querySelector("#push-template-draft-reason");
+            if (reason)
+                reason.textContent = pushPathReadiness.message;
+            return;
+        }
+        const request = ++pushPathReadinessRequest;
+        pushPathReadiness = { key, status: "checking", message: "Checking selected-page push path." };
+        if (pushTemplateDraftButton) {
+            pushTemplateDraftButton.disabled = true;
+            pushTemplateDraftButton.setAttribute("aria-disabled", "true");
+        }
+        void ports.checkPushPath(target, destination).then((result) => {
+            if (!mounted || request !== pushPathReadinessRequest)
+                return;
+            pushPathReadiness = result.success ? { key, status: "ready", message: result.message } : { key, status: "blocked", message: result.message };
+            renderEventTemplateLibrary();
+        }, () => {
+            if (!mounted || request !== pushPathReadinessRequest)
+                return;
+            pushPathReadiness = { key, status: "blocked", message: "Push path is not push-capable" };
+            renderEventTemplateLibrary();
+        });
+    }
     function openTemplateEditor(id) {
         const template = find(id);
         templateEditorReturnTemplateId = selectedId;
@@ -349,6 +393,7 @@ export function createEventLibraryInstalledController(ports) {
         propertyEditorState = openPropertyEditor(template);
         savedInspectorTemplateId = id;
         resetTemplateEditorDisclosures();
+        refreshPushPathReadiness();
     }
     const openNewEventEditor = () => {
         selectedId = undefined;
@@ -547,6 +592,8 @@ export function createEventLibraryInstalledController(ports) {
             pendingEventLibraryImport = undefined;
             pendingEventLibraryDeletion = undefined;
             replaceEventLibraryArmed = false;
+            pushPathReadiness = undefined;
+            pushPathReadinessRequest += 1;
             pendingPushDraftReview = undefined;
             pendingRevisionChangeReview = undefined;
             hideDialog(pushDraftReview);
@@ -611,6 +658,7 @@ export function createEventLibraryInstalledController(ports) {
             ...(pendingEventLibraryImport ? { pendingImport: pendingEventLibraryImport } : {}),
             ...(pendingEventLibraryDeletion ? { pendingDeletion: pendingEventLibraryDeletion } : {}),
             replaceArmed: replaceEventLibraryArmed, templates: eventTemplates,
+            ...(pushPathReadiness ? { pushPathReadiness } : {}),
             ...(templateEditorReturnTemplateId ? { templateEditorReturnTemplateId } : {}), ...(savedInspectorTemplateId ? { savedInspectorTemplateId } : {}) }),
         mounted: () => mounted,
     };
