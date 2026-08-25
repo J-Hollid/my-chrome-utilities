@@ -154,6 +154,7 @@ let canonicalSettlementMode = "resolve", releaseCanonicalSettlement;
 let layeredProfileMounts = 0, layeredProfileDisposals = 0;
 let liveRevalidations = 0, continuationPreparation, continuationCommit, continuationFailure;
 let publicationFeedbackRetainedAfterRelationshipTreeRerender = false;
+let durableAcknowledgementReleasedPolicyPresentation = false;
 let canonicalTableMounts = 0, canonicalTableRenders = 0, canonicalTableOptions;
 let schemaStorageWrites = 0;
 const uiRoot = { ownerDocument:fakeDocument,
@@ -793,7 +794,8 @@ elements.get("#schema-only-declared-properties").dispatch("change");
 assert.equal(uiController.canonicalState().settlementPending, true,
   "a saved-schema policy edit remains busy until its durable acknowledgement");
 persistenceListener({ type:"saved", schemaId:persistenceSchemaId });
-assert.equal(uiController.canonicalState().settlementPending, false,
+durableAcknowledgementReleasedPolicyPresentation = !uiController.canonicalState().settlementPending;
+assert.equal(durableAcknowledgementReleasedPolicyPresentation, true,
   "the matching saved acknowledgement releases policy presentation before the broader queue drains");
 releaseCanonicalSettlement(); await Promise.resolve(); canonicalSettlementMode = "resolve";
 const canonicalBefore = uiController.canonicalDocument();
@@ -977,32 +979,44 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const digest = (value) => createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex");
   const projectionCause = "other:installed schema unchanged projection persistence";
   const orderingCause = "other:installed schema canonical persistence ordering";
+  const acknowledgementCause = "other:installed schema durable acknowledgement settlement";
   const projectionScenario = context.causalCategory === projectionCause;
   const orderingScenario = context.causalCategory === orderingCause;
-  const expectedPreRepairFailure = orderingScenario
+  const acknowledgementScenario = context.causalCategory === acknowledgementCause;
+  const expectedPreRepairFailure = acknowledgementScenario
+    ? { durableAcknowledgementReleasedPolicyPresentation:false }
+    : orderingScenario
     ? { canonicalProjectionSettlementReady:false, untouchedSchemaProjectionPreserved:false }
     : projectionScenario
       ? { untouchedSchemaProjectionPreserved:false }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:false };
-  const expectedRepairResult = orderingScenario
+  const expectedRepairResult = acknowledgementScenario
+    ? { durableAcknowledgementReleasedPolicyPresentation:true }
+    : orderingScenario
     ? { canonicalProjectionSettlementReady:true, untouchedSchemaProjectionPreserved:true }
     : projectionScenario
       ? { untouchedSchemaProjectionPreserved:true }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:true };
-  const observed = orderingScenario
+  const observed = acknowledgementScenario
+    ? { durableAcknowledgementReleasedPolicyPresentation }
+    : orderingScenario
     ? { canonicalProjectionSettlementReady, untouchedSchemaProjectionPreserved }
     : projectionScenario
       ? { untouchedSchemaProjectionPreserved }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender };
   assert.deepEqual(observed, expectedRepairResult);
   const fixture = {
-    id:projectionScenario ? "installed-schema-unchanged-projection-persistence-v1"
+    id:acknowledgementScenario ? "installed-schema-durable-acknowledgement-settlement-v1"
+      : projectionScenario ? "installed-schema-unchanged-projection-persistence-v1"
       : orderingScenario ? "installed-schema-canonical-persistence-ordering-v1"
         : "installed-schema-publication-feedback-retention-v1",
-    causalCategory:projectionScenario ? projectionCause : orderingScenario ? orderingCause
+    causalCategory:acknowledgementScenario ? acknowledgementCause
+      : projectionScenario ? projectionCause : orderingScenario ? orderingCause
       : "other:installed schema publication feedback retention",
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-    input:projectionScenario
+    input:acknowledgementScenario
+      ? { operation:"saved-schema policy edit", acknowledgement:"matching durable saved event", presentation:"canonical editor busy state" }
+      : projectionScenario
       ? { operation:"reusable rule publication", failure:"durable batch rejection", untouched:"settled schema projection" }
       : orderingScenario
         ? { operation:"successful schema library write", changed:"edited schema projection", untouched:"migration-only schema projection" }
