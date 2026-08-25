@@ -18,6 +18,82 @@ export interface InstalledDataLayerControllerLifecycle {
   dispose(): void;
 }
 
+export interface InstalledSidePanelRuntimeFoundation {
+  app: HTMLElement | null;
+  sidePanelContent: HTMLElement | null;
+  commandLog: HTMLElement | null;
+  openPaletteButton: HTMLButtonElement | null;
+  palette: HTMLElement | null;
+  paletteFilter: HTMLInputElement | null;
+  paletteResults: HTMLElement | null;
+  createKeymapButton: HTMLButtonElement | null;
+  updateKeymapButton: HTMLButtonElement | null;
+  loadKeymapButton: HTMLButtonElement | null;
+  keymapFileInput: HTMLInputElement | null;
+  keymapStatus: HTMLElement | null;
+  keymapWarning: HTMLElement | null;
+  workspaceTabList: HTMLElement | null;
+  hotkeyEditorFilter: HTMLInputElement | null;
+  hotkeyEditorCommands: HTMLElement | null;
+  dataLayerStorage: Storage;
+  hotkeyStorage: Storage;
+  shellStorage: Storage;
+  durableProjectRuntime: Awaited<ReturnType<typeof openDurableProjectRuntime>>;
+}
+
+export async function createInstalledSidePanelRuntimeFoundation(
+  root: Document = document,
+  storage: Storage = globalThis.localStorage,
+): Promise<InstalledSidePanelRuntimeFoundation> {
+  const app = root.querySelector<HTMLElement>("#app");
+  const panelRoot = root.querySelector<HTMLElement>("#side-panel-root");
+  const utilityDirectory = root.querySelector<HTMLElement>("#utility-directory");
+  const utilityStorageContract = (id: string) => {
+    const contract = utilityRegistry.find((utility) => utility.id === id)?.storage;
+    if (!contract) throw new Error(`Missing utility storage contract: ${id}`);
+    return contract;
+  };
+  if (panelRoot) mountUtilityShell(extensionShell, panelRoot, window);
+  if (utilityDirectory) renderUtilityDirectory(utilityRegistry, utilityDirectory);
+  bindUtilityPanels(utilityRegistry, root);
+  const durableProjectRuntime = await openDurableProjectRuntime(storage).catch((error) => {
+    installDurableRepositoryStartupFailure(root, error);
+    return new Promise<never>(() => {});
+  });
+  const projectStorage = durableProjectRuntime.storage;
+  const scopedDataLayerStorage = createUtilityStorage(storage, utilityStorageContract("data-layer"));
+  const dataLayerStorage: Storage = {
+    get length() { return scopedDataLayerStorage.length; },
+    clear() { scopedDataLayerStorage.clear(); projectStorage.removeItem(SCHEMA_LIBRARY_STORAGE_KEY); },
+    key:(index) => scopedDataLayerStorage.key(index),
+    getItem:(key) => key === SCHEMA_LIBRARY_STORAGE_KEY ? projectStorage.getItem(key) : scopedDataLayerStorage.getItem(key),
+    setItem(key, value) { if (key === SCHEMA_LIBRARY_STORAGE_KEY) projectStorage.setItem(key, value); else scopedDataLayerStorage.setItem(key, value); },
+    removeItem(key) { if (key === SCHEMA_LIBRARY_STORAGE_KEY) projectStorage.removeItem(key); else scopedDataLayerStorage.removeItem(key); },
+  };
+  const hotkeyStorage = createUtilityStorage(storage, utilityStorageContract("hotkeys"));
+  const shellStorage = createUtilityStorage(storage, { namespace:"my-chrome-utilities.shell", version:1,
+    legacyKeys:["my-chrome-utilities.workspace-tab.v1"] });
+  const sidePanelContent = root.querySelector<HTMLElement>("#side-panel-content");
+  const commandLog = root.querySelector<HTMLElement>("#command-log");
+  const openPaletteButton = root.querySelector<HTMLButtonElement>("#open-palette");
+  const palette = root.querySelector<HTMLElement>("#palette");
+  const paletteFilter = root.querySelector<HTMLInputElement>("#palette-filter");
+  const paletteResults = root.querySelector<HTMLElement>("#palette-results");
+  const createKeymapButton = root.querySelector<HTMLButtonElement>("#create-keymap");
+  const updateKeymapButton = root.querySelector<HTMLButtonElement>("#update-keymap");
+  const loadKeymapButton = root.querySelector<HTMLButtonElement>("#load-keymap");
+  const keymapFileInput = root.querySelector<HTMLInputElement>("#keymap-file");
+  const keymapStatus = root.querySelector<HTMLElement>("#keymap-status");
+  const keymapWarning = root.querySelector<HTMLElement>("#keymap-warning");
+  const workspaceTabList = root.querySelector<HTMLElement>("#workspace-tabs");
+  const hotkeyEditorFilter = root.querySelector<HTMLInputElement>("#hotkey-editor-filter");
+  const hotkeyEditorCommands = root.querySelector<HTMLElement>("#hotkey-editor-commands");
+  return { app, sidePanelContent, commandLog, openPaletteButton, palette, paletteFilter, paletteResults,
+    createKeymapButton, updateKeymapButton, loadKeymapButton, keymapFileInput, keymapStatus, keymapWarning,
+    workspaceTabList, hotkeyEditorFilter, hotkeyEditorCommands,
+    dataLayerStorage, hotkeyStorage, shellStorage, durableProjectRuntime };
+}
+
 export type InstalledDataLayerControllers = Readonly<Record<
   InstalledDataLayerControllerId,
   InstalledDataLayerControllerLifecycle
@@ -43,3 +119,8 @@ export function createInstalledDataLayerLifecycle(
     },
   };
 }
+import { extensionShell, utilityRegistry } from "../utility-registry.js";
+import { bindUtilityPanels, mountUtilityShell, renderUtilityDirectory } from "../platform/utility-shell-dom.js";
+import { createUtilityStorage } from "../platform/utility-storage.js";
+import { installDurableRepositoryStartupFailure, openDurableProjectRuntime,
+  SCHEMA_LIBRARY_STORAGE_KEY } from "../utilities/data-layer/schemas.js";

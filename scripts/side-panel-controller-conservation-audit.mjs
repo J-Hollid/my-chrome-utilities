@@ -8,21 +8,52 @@ import { reviewedControllerReplacements } from "../test/support/side-panel-contr
 const base = "7f74443923";
 const controllerPaths = ["capture", "event-library", "schemas", "defects", "replay", "projects",
   "durable-projects", "project-event-transport", "live-flow-testing"]
-  .map((owner) => `src/data-layer-installed/${owner}/index.ts`);
+  .map((owner) => `src/data-layer-installed/${owner}/index.ts`).concat("src/data-layer-installed/runtime.ts");
 const declarations = new Map(), calls = new Map();
 const add = (map, key, value) => map.set(key, [...(map.get(key) ?? []), value]);
+function declaredBindings(name) {
+  if (ts.isIdentifier(name)) return [name];
+  return name.elements.flatMap((element) => ts.isOmittedExpression(element) ? [] : declaredBindings(element.name));
+}
 for (const file of controllerPaths) {
   const source = await readFile(file, "utf8");
   const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const position = (node) => ast.getLineAndCharacterOfPosition(node.getStart()).line + 1;
+  const localDeclarations = [];
   function visit(node) {
-    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) add(declarations, node.name.text, { path:file, symbol:node.name.text, line:position(node) });
-    if ((ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node)) && node.name && ts.isIdentifier(node.name)) add(declarations, node.name.text, { path:file, symbol:node.name.text, line:position(node) });
+    if (ts.isVariableDeclaration(node)) for (const binding of declaredBindings(node.name)) {
+      const declaration = { path:file, symbol:binding.text, line:position(binding), live:false };
+      localDeclarations.push(declaration); add(declarations, binding.text, declaration);
+    }
+    if ((ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node)) && node.name && ts.isIdentifier(node.name)) {
+      const declaration = { path:file, symbol:node.name.text, line:position(node), live:false };
+      localDeclarations.push(declaration); add(declarations, node.name.text, declaration);
+    }
     if (ts.isCallExpression(node)) add(calls, node.getText(ast), { path:file,
       symbol:node.expression.getText(ast), invocation:node.getText(ast), line:position(node) });
     ts.forEachChild(node, visit);
   }
   visit(ast);
+  const liveNames = new Set();
+  const insideVoidPlaceholder = (node) => {
+    for (let current = node.parent; current && !ts.isStatement(current); current = current.parent) {
+      if (ts.isVoidExpression(current)) return true;
+    }
+    return false;
+  };
+  const isDeclarationName = (node) => (ts.isVariableDeclaration(node.parent) && node.parent.name === node)
+    || ((ts.isFunctionDeclaration(node.parent) || ts.isMethodDeclaration(node.parent)) && node.parent.name === node);
+  const isNonReferenceName = (node) => (ts.isPropertyAccessExpression(node.parent) && node.parent.name === node)
+    || ((ts.isPropertyAssignment(node.parent) || ts.isMethodDeclaration(node.parent)) && node.parent.name === node)
+    || ts.isImportSpecifier(node.parent) || ts.isImportClause(node.parent);
+  function visitUses(node) {
+    if (ts.isIdentifier(node) && !isDeclarationName(node) && !isNonReferenceName(node) && !insideVoidPlaceholder(node)) {
+      liveNames.add(node.text);
+    }
+    ts.forEachChild(node, visitUses);
+  }
+  visitUses(ast);
+  for (const declaration of localDeclarations) declaration.live = liveNames.has(declaration.symbol);
 }
 const replacementMap = new Map();
 for (const replacement of reviewedControllerReplacements) {
@@ -31,7 +62,8 @@ for (const replacement of reviewedControllerReplacements) {
   const targets = replacement.kind === "call"
     ? [...calls.values()].flat().filter(({ symbol }) => symbol === replacement.symbol)
     : declarations.get(replacement.symbol) ?? [];
-  const exactTargets = targets.filter(({ path:targetPath }) => targetPath === replacement.path);
+  const exactTargets = targets.filter(({ path:targetPath, live }) => targetPath === replacement.path
+    && (replacement.kind === "call" || live));
   const lineTargets = replacement.line ? exactTargets.filter(({ line }) => line === replacement.line) : exactTargets;
   if (lineTargets.length !== 1) {
     throw new Error(`Reviewed replacement target is absent: ${replacement.path}::${replacement.symbol}`);
@@ -58,7 +90,8 @@ for (const kind of ["stateOwners", "functions", "listeners", "subscriptions", "t
     const identity = `${kind}:${index}:${label}@${record.line}:${record.column}`;
     const reviewed = replacementMap.get(identity);
     const invocation = kind === "stateOwners" || kind === "functions" ? undefined : frozenCalls.get(`${record.line}:${record.column}`);
-    const candidates = kind === "stateOwners" || kind === "functions" ? declarations.get(label) ?? [] : calls.get(invocation) ?? [];
+    const candidates = kind === "stateOwners" || kind === "functions"
+      ? (declarations.get(label) ?? []).filter(({ live }) => live) : calls.get(invocation) ?? [];
     if (reviewed) {
       const target = `${reviewed.path}::${reviewed.symbol}${reviewed.line ? `:${reviewed.line}` : ""}`;
       resolved.push({ identity, target, reviewed:true }); entries.push({ identity, kind, frozen:record, binding:{ status:"resolved", target, reviewed:true } });

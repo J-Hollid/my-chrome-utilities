@@ -12,7 +12,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::app:48"
       }
     },
     {
@@ -24,7 +25,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::panelRoot:49"
       }
     },
     {
@@ -36,7 +38,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::utilityDirectory:50"
       }
     },
     {
@@ -48,7 +51,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::durableProjectRuntime:59"
       }
     },
     {
@@ -60,7 +64,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::projectStorage:63"
       }
     },
     {
@@ -72,7 +77,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::scopedDataLayerStorage:64"
       }
     },
     {
@@ -84,7 +90,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::dataLayerStorage:65"
       }
     },
     {
@@ -96,7 +103,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::hotkeyStorage:73"
       }
     },
     {
@@ -108,7 +116,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::shellStorage:74"
       }
     },
     {
@@ -120,7 +129,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::sidePanelContent:76"
       }
     },
     {
@@ -132,7 +142,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::commandLog:77"
       }
     },
     {
@@ -144,7 +155,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::openPaletteButton:78"
       }
     },
     {
@@ -156,7 +168,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::palette:79"
       }
     },
     {
@@ -168,7 +181,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::paletteFilter:80"
       }
     },
     {
@@ -180,7 +194,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::paletteResults:81"
       }
     },
     {
@@ -216,7 +231,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/project-event-transport/index.ts::historyPathInput:10"
       }
     },
     {
@@ -252,7 +268,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/project-event-transport/index.ts::defaultPushPathInput:11"
       }
     },
     {
@@ -444,7 +461,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::createKeymapButton:82"
       }
     },
     {
@@ -456,7 +474,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::updateKeymapButton:83"
       }
     },
     {
@@ -468,7 +487,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::loadKeymapButton:84"
       }
     },
     {
@@ -480,7 +500,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::keymapFileInput:85"
       }
     },
     {
@@ -492,7 +513,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::keymapStatus:86"
       }
     },
     {
@@ -504,7 +526,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::keymapWarning:87"
       }
     },
     {
@@ -516,7 +539,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::workspaceTabList:88"
       }
     },
     {
@@ -528,7 +552,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::hotkeyEditorFilter:89"
       }
     },
     {
@@ -540,7 +565,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::hotkeyEditorCommands:90"
       }
     },
     {
@@ -5415,7 +5441,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/runtime.ts::utilityStorageContract:51"
       }
     },
     {

@@ -1,13 +1,13 @@
 export function createProjectEventTransportInstalledController(ports) {
-    const observation = ports.root.querySelector("#history-path");
-    const push = ports.root.querySelector("#default-push-path");
+    const historyPathInput = ports.root.querySelector("#history-path");
+    const defaultPushPathInput = ports.root.querySelector("#default-push-path");
     let mounted = false;
     let paths = { ...ports.loadPaths() };
     let phase = "idle";
     let generation = 0;
     const input = () => {
-        paths = { observationPath: observation?.value ?? paths.observationPath,
-            pushPath: push?.value ?? paths.pushPath };
+        paths = { observationPath: historyPathInput?.value ?? paths.observationPath,
+            pushPath: defaultPushPathInput?.value ?? paths.pushPath };
         phase = "dirty";
     };
     const change = () => {
@@ -25,14 +25,14 @@ export function createProjectEventTransportInstalledController(ports) {
                 return;
             mounted = true;
             generation += 1;
-            if (observation)
-                observation.value = paths.observationPath;
-            if (push)
-                push.value = paths.pushPath;
-            observation?.addEventListener("input", input);
-            observation?.addEventListener("change", change);
-            push?.addEventListener("input", input);
-            push?.addEventListener("change", change);
+            if (historyPathInput)
+                historyPathInput.value = paths.observationPath;
+            if (defaultPushPathInput)
+                defaultPushPathInput.value = paths.pushPath;
+            historyPathInput?.addEventListener("input", input);
+            historyPathInput?.addEventListener("change", change);
+            defaultPushPathInput?.addEventListener("input", input);
+            defaultPushPathInput?.addEventListener("change", change);
         },
         dispose() {
             if (!mounted)
@@ -40,10 +40,10 @@ export function createProjectEventTransportInstalledController(ports) {
             mounted = false;
             generation += 1;
             phase = "idle";
-            observation?.removeEventListener("input", input);
-            observation?.removeEventListener("change", change);
-            push?.removeEventListener("input", input);
-            push?.removeEventListener("change", change);
+            historyPathInput?.removeEventListener("input", input);
+            historyPathInput?.removeEventListener("change", change);
+            defaultPushPathInput?.removeEventListener("input", input);
+            defaultPushPathInput?.removeEventListener("change", change);
         },
         state: () => ({ ...paths, phase }),
     };
