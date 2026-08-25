@@ -212,7 +212,7 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       !path.startsWith("test/support/side-panel-")&&path!=="test/support/browser-observation-control.mjs").length,
     expectedPreRepairFailure={declared:false,consumers:[],declarationInventory:21},
     expectedRepairResult={declared:Boolean(helper),consumers:helper?.consumers??[],declarationInventory};
-  assert.deepEqual(expectedRepairResult,{declared:true,consumers:["layered_schema","shell"],declarationInventory:22});
+  assert.deepEqual(expectedRepairResult,{declared:true,consumers:["layered_schema","shell"],declarationInventory:25});
   const fixture={id:"verification-helper-inventory-contract-v1",causalCategory:context.causalCategory,
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
     input:{helperPath:"test/support/layered-schema-overlay-focusability.mjs"},
