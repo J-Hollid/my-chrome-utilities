@@ -1,10 +1,17 @@
-import { beginDataLayerTestingSession, createLiveNotificationController, observationRefreshDelay, persistSession, restoreSession, } from "../../utilities/data-layer/capture.js";
+import { beginDataLayerTestingSession, createLiveNotificationController, findObservationTargetElements, observationRefreshDelay, persistSession, restoreSession, } from "../../utilities/data-layer/capture.js";
 import { createLiveObserverState, findLiveObserverElements, pauseCapture, recordLiveEvent, renderLiveObserverState, resumeCapture, } from "../../utilities/data-layer/live-inspection.js";
 import { endDataLayerTestingSession } from "../../data-layer-session.js";
 export function createCaptureInstalledController(ports) {
     const startTestingButton = ports.root.querySelector("#start-data-layer-testing");
     const endTestingButton = ports.root.querySelector("#end-data-layer-testing");
     const liveObserverElements = findLiveObserverElements(ports.root);
+    const historyPathDisplay = ports.root.querySelector("#history-path-display");
+    const historyPathStatus = ports.root.querySelector("#history-path-status");
+    const sessionHistoryPath = ports.root.querySelector("#session-history-path");
+    const sessionWarning = ports.root.querySelector("#session-warning");
+    const restartObservationButton = ports.root.querySelector("#restart-observation");
+    const observationTargetElements = findObservationTargetElements(ports.root);
+    const { chooseButton: chooseObservationTargetButton, browseButton: browseObservationTargetsButton, closePickerButton: closeObservationTargetPickerButton, picker: observationTargetPicker, search: observationTargetSearch, list: observationTargetList, cancelDetachButton: cancelDetachTargetButton, confirmDetachButton: confirmDetachTargetButton, } = observationTargetElements;
     const pauseCaptureButton = liveObserverElements.pauseCaptureButton;
     const resumeCaptureButton = liveObserverElements.resumeCaptureButton;
     const liveNotificationController = createLiveNotificationController((message) => ports.setLiveSessionMessage(message), (clear, delayMs) => { globalThis.setTimeout(clear, delayMs); });
@@ -13,6 +20,33 @@ export function createCaptureInstalledController(ports) {
     let dataLayerSessionState = restoreSession(ports.storage);
     let liveObserverState = createLiveObserverState({ pageUrl: ports.initialPageUrl(), sources: ports.initialSources() });
     let observationRefreshTimeoutId;
+    function renderHistoryPath(path, fieldValue = path, status = "Selection required") {
+        if (historyPathDisplay)
+            historyPathDisplay.textContent = path;
+        if (historyPathStatus)
+            historyPathStatus.textContent = status === "Waiting for path"
+                ? "Waiting for observation path" : status;
+        if (sessionHistoryPath)
+            sessionHistoryPath.textContent = fieldValue;
+        if (sessionWarning)
+            sessionWarning.hidden = status !== "Unavailable";
+    }
+    const renderObservationTargetContext = () => {
+        const context = ports.ui.historyPath();
+        renderHistoryPath(context.path, context.fieldValue, context.status);
+        observationTargetList?.setAttribute("aria-live", "polite");
+    };
+    const restartObservation = () => ports.ui.restartObservation();
+    const chooseObservationTarget = () => ports.ui.chooseObservationTarget();
+    const browseObservationTargets = () => ports.ui.browseObservationTargets();
+    const closeObservationTargetPicker = () => {
+        if (observationTargetPicker)
+            observationTargetPicker.hidden = true;
+        ports.ui.closeObservationTargetPicker();
+    };
+    const searchObservationTargets = () => ports.ui.searchObservationTargets(observationTargetSearch?.value ?? "");
+    const cancelDetachTarget = () => ports.ui.cancelDetachTarget();
+    const confirmDetachTarget = () => ports.ui.confirmDetachTarget();
     const renderLiveObserver = () => {
         if (mounted)
             renderLiveObserverState(liveObserverElements, liveObserverState, () => { });
@@ -70,6 +104,14 @@ export function createCaptureInstalledController(ports) {
             endTestingButton?.addEventListener("click", endTesting);
             pauseCaptureButton?.addEventListener("click", pauseInstalledCapture);
             resumeCaptureButton?.addEventListener("click", resumeInstalledCapture);
+            restartObservationButton?.addEventListener("click", restartObservation);
+            chooseObservationTargetButton?.addEventListener("click", chooseObservationTarget);
+            browseObservationTargetsButton?.addEventListener("click", browseObservationTargets);
+            closeObservationTargetPickerButton?.addEventListener("click", closeObservationTargetPicker);
+            observationTargetSearch?.addEventListener("input", searchObservationTargets);
+            cancelDetachTargetButton?.addEventListener("click", cancelDetachTarget);
+            confirmDetachTargetButton?.addEventListener("click", confirmDetachTarget);
+            renderObservationTargetContext();
             ports.changed(dataLayerSessionState, liveObserverState);
             renderLiveObserver();
         },
@@ -83,6 +125,14 @@ export function createCaptureInstalledController(ports) {
             endTestingButton?.removeEventListener("click", endTesting);
             pauseCaptureButton?.removeEventListener("click", pauseInstalledCapture);
             resumeCaptureButton?.removeEventListener("click", resumeInstalledCapture);
+            restartObservationButton?.removeEventListener("click", restartObservation);
+            chooseObservationTargetButton?.removeEventListener("click", chooseObservationTarget);
+            browseObservationTargetsButton?.removeEventListener("click", browseObservationTargets);
+            closeObservationTargetPickerButton?.removeEventListener("click", closeObservationTargetPicker);
+            observationTargetSearch?.removeEventListener("input", searchObservationTargets);
+            cancelDetachTargetButton?.removeEventListener("click", cancelDetachTarget);
+            confirmDetachTargetButton?.removeEventListener("click", confirmDetachTarget);
+            observationTargetList?.removeAttribute("aria-live");
             clearScheduledObservationRefresh();
         },
         async begin() {
