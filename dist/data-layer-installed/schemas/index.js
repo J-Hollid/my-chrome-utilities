@@ -1,4 +1,4 @@
-import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, inspectJsonSchemaExport, importSchema, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaPropertyRows, schemaRevisionChoices, schemaPropertyCopySource, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentDraftAfterGuidedSave, assignmentConditionSuggestions, configuredRuleDetails, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, assignmentDataConditionSummary, contextualManualPropertyDefinition, createRuleConfiguration, createExtensionSchemaPackage, createSchemaLibraryExport, duplicateSchemaAssignment, guidedAttachedRule, guidedPropertyDocument, manualPropertyPreview, mergeGuidedDocument, restoreSchemaLibrary, serializeSchemaLibrary, exportJsonSchemaBundle, exportJsonSchemaResource, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateAssignmentDataConditions, validateEvent, typedComparisonValue, GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, filterSchemaRelationshipTree, restoreSchemaRelationshipTreeView, saveSchemaRelationshipTreeView, applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, compactCanonicalCommandPolicy, compactSchemaProjection, savedSchemaCanonicalDocument, beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, completeCompactCanonicalHistoryTransition, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition, } from "../../utilities/data-layer/schemas.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, inspectJsonSchemaExport, importSchema, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaPropertyRows, schemaRevisionChoices, schemaPropertyCopySource, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentDraftAfterGuidedSave, assignmentConditionSuggestions, configuredRuleDetails, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, reusableRulesForProperty, reusableRuleMetadata, assignmentDataConditionSummary, contextualManualPropertyDefinition, createRuleConfiguration, createExtensionSchemaPackage, createSchemaLibraryExport, duplicateSchemaAssignment, guidedAttachedRule, guidedPropertyDocument, manualPropertyPreview, mergeGuidedDocument, restoreSchemaLibrary, serializeSchemaLibrary, exportJsonSchemaBundle, exportJsonSchemaResource, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateAssignmentDataConditions, validateEvent, typedComparisonValue, GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, filterSchemaRelationshipTree, restoreSchemaRelationshipTreeView, saveSchemaRelationshipTreeView, applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, compactCanonicalCommandPolicy, compactSchemaProjection, savedSchemaCanonicalDocument, beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, completeCompactCanonicalHistoryTransition, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition, } from "../../utilities/data-layer/schemas.js";
 import { applySchemaPropertyCopy, planSchemaPropertyCopy } from "../../data-layer-schema-property-copy.js";
 import { persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, } from "../../data-layer-local-rule-promotion.js";
 import { publishReusableRuleSync, reviewReusableRuleSync, } from "../../data-layer-reusable-rule-sync.js";
@@ -548,7 +548,7 @@ export function createSchemasInstalledController(ports) {
     let schemaRulePickerPath;
     let schemaRulePickerTrigger;
     let schemaPropertyInteractionReturn;
-    let schemaPropertyRenderSequence = 0;
+    let schemaPropertyRenderSequence = 0, schemaRulePickerSearch = "";
     let schemaRuleConfiguration;
     let editingAttachedLocalRule;
     const normalizeReusableSchemaRule = (value) => value && typeof value === "object"
@@ -1743,13 +1743,57 @@ export function createSchemasInstalledController(ports) {
         renderSchemaLocalRuleConfiguration(); };
     const renderSchemaPropertyRulePicker = () => {
         schemaPropertyRenderSequence += 1;
-        if (!schemaPropertyRulePicker || !schemaRulePickerPath || !schemaRuleConfiguration)
+        if (!schemaPropertyRulePicker || !schemaRulePickerPath)
             return;
         for (const dispose of schemaRulePickerDisposers.splice(0))
             dispose();
-        const configuration = schemaRuleConfiguration, path = schemaRulePickerPath, document = schemaPropertyRulePicker.ownerDocument;
+        const path = schemaRulePickerPath, document = schemaPropertyRulePicker.ownerDocument;
         if (!document)
             return;
+        if (!schemaRuleConfiguration) {
+            const heading = document.createElement("h4"), search = document.createElement("input"), results = document.createElement("section"), cancel = document.createElement("button");
+            heading.textContent = `Add rule for ${path}`;
+            search.id = "schema-property-rule-search";
+            search.value = schemaRulePickerSearch;
+            cancel.type = "button";
+            cancel.textContent = "Cancel";
+            const propertyType = schemaRuleTypeForAttachment(active(), path), attachedIds = new Set((active().workingDraft?.attachedRules ?? active().attachedRules ?? []).map(({ id }) => id));
+            const rules = [...builtInRulesForProperty(propertyType), ...reusableRulesForProperty(reusableSchemaRules, propertyType, schemaRulePickerSearch, attachedIds)];
+            for (const rule of rules.filter((candidate) => !schemaRulePickerSearch || `${candidate.name} ${candidate.kind}`.toLowerCase().includes(schemaRulePickerSearch.toLowerCase()))) {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.textContent = `${rule.name} · ${reusableRuleMetadata(rule, propertyType)}`;
+                const action = () => {
+                    if (rule.id.startsWith("built-in:")) {
+                        schemaRuleConfiguration = createRuleConfiguration(rule.name, propertyType);
+                        renderSchemaPropertyRulePicker();
+                    }
+                    else {
+                        attachReusableRule(active().id, rule.id, path);
+                        closeSchemaPropertyRulePickerForCommit();
+                    }
+                };
+                button.addEventListener("click", action);
+                schemaRulePickerDisposers.push(() => button.removeEventListener("click", action));
+                results.append(button);
+            }
+            if (!results.children.length) {
+                const clear = document.createElement("button");
+                clear.type = "button";
+                clear.textContent = "Clear search";
+                const clearSearch = () => { schemaRulePickerSearch = ""; renderSchemaPropertyRulePicker(); };
+                clear.addEventListener("click", clearSearch);
+                schemaRulePickerDisposers.push(() => clear.removeEventListener("click", clearSearch));
+                results.append(clear);
+            }
+            const cancelPicker = () => closeSchemaPropertyRulePicker(), searchRules = () => { schemaRulePickerSearch = search.value; renderSchemaPropertyRulePicker(); };
+            cancel.addEventListener("click", cancelPicker);
+            search.addEventListener("input", searchRules);
+            schemaRulePickerDisposers.push(() => cancel.removeEventListener("click", cancelPicker), () => search.removeEventListener("input", searchRules));
+            schemaPropertyRulePicker.replaceChildren(heading, search, results, cancel);
+            return;
+        }
+        const configuration = schemaRuleConfiguration;
         const editLabel = editingAttachedLocalRule ? `Edit ${editingAttachedLocalRule.name ?? editingAttachedLocalRule.id}` : "Create local rule";
         const form = document.createElement("form"), heading = document.createElement("h4"), status = document.createElement("output");
         heading.textContent = `${editLabel} for ${path}`;
@@ -1847,11 +1891,8 @@ export function createSchemasInstalledController(ports) {
                 remove.textContent = `Remove condition ${index + 1}`;
                 const changeProperty = () => {
                     const schemaPath = property.value.slice(1).replaceAll("/", "."), sample = valueAtSchemaPath(currentConditionPayload(), schemaPath);
-                    const comparable = sample === null || ["string", "number", "boolean"].includes(typeof sample), detectedType = sample === null ? "null"
-                        : typeof sample === "string" ? "string" : typeof sample === "number" ? "number" : typeof sample === "boolean" ? "boolean" : undefined;
-                    configuration.conditions[index] = { propertyPath: property.value,
-                        operator: comparable ? "Equals" : "Exists", ...(comparable ? { comparison: typedComparisonValue(sample),
-                            ...(detectedType ? { detectedType } : {}) } : {}) };
+                    const comparable = sample === null || ["string", "number", "boolean"].includes(typeof sample), detectedType = sample === null ? "null" : typeof sample === "string" ? "string" : typeof sample === "number" ? "number" : typeof sample === "boolean" ? "boolean" : undefined;
+                    configuration.conditions[index] = { propertyPath: property.value, operator: comparable ? "Equals" : "Exists", ...(comparable ? { comparison: typedComparisonValue(sample), ...(detectedType ? { detectedType } : {}) } : {}) };
                     renderSchemaPropertyRulePicker();
                 };
                 const changeOperator = () => { predicate.operator = operator.value; if (predicate.operator === "Exists" || predicate.operator === "Does not exist")
@@ -1895,7 +1936,7 @@ export function createSchemasInstalledController(ports) {
         back.textContent = "Back";
         cancel.textContent = "Cancel";
         create.textContent = "Create rule";
-        const goBack = () => { schemaRuleConfiguration = undefined; closeSchemaPropertyRulePicker(); }, cancelEdit = () => closeSchemaPropertyRulePicker();
+        const goBack = () => { schemaRuleConfiguration = undefined; renderSchemaPropertyRulePicker(); }, cancelEdit = () => closeSchemaPropertyRulePicker();
         const submit = (event) => { event.preventDefault(); if (validateRuleConfiguration(configuration).ready)
             createConfiguredSchemaRule(); };
         back.addEventListener("click", goBack);
@@ -1932,6 +1973,7 @@ export function createSchemasInstalledController(ports) {
         schemaRulePickerPath = undefined;
         schemaRulePickerTrigger = undefined;
         schemaRuleConfiguration = undefined;
+        schemaRulePickerSearch = "";
         editingAttachedLocalRule = undefined;
         schemaPropertyInteractionReturn = undefined;
         if (path)

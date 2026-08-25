@@ -20,7 +20,7 @@ import {
   schemaInheritanceError,
   addManualProperty,
   assignmentDraftAfterGuidedSave,
-  assignmentConditionSuggestions, configuredRuleDetails, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput,
+  assignmentConditionSuggestions, configuredRuleDetails, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, reusableRulesForProperty, reusableRuleMetadata,
   assignmentDataConditionSummary,
   contextualManualPropertyDefinition,
   createRuleConfiguration,
@@ -536,7 +536,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   let schemaRulePickerTrigger: HTMLButtonElement | undefined;
   let schemaPropertyInteractionReturn: { schemaId:string; path:string; triggerLabel:string;
     editorScroll:number; treeScroll:number; detailScroll:number } | undefined;
-  let schemaPropertyRenderSequence = 0;
+  let schemaPropertyRenderSequence = 0, schemaRulePickerSearch = "";
   let schemaRuleConfiguration: RuleConfiguration | undefined;
   let editingAttachedLocalRule: NonNullable<SchemaDefinition["attachedRules"]>[number] | undefined;
   const normalizeReusableSchemaRule = (value:unknown):ReusableSchemaRule | undefined => value && typeof value === "object"
@@ -1251,10 +1251,29 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const updateConfiguredRulePreview = ():void => { if (schemaRulePickerPath) renderSchemaLocalRuleConfiguration(); };
   const renderSchemaPropertyRulePicker = (): void => {
     schemaPropertyRenderSequence += 1;
-    if (!schemaPropertyRulePicker || !schemaRulePickerPath || !schemaRuleConfiguration) return;
+    if (!schemaPropertyRulePicker || !schemaRulePickerPath) return;
     for (const dispose of schemaRulePickerDisposers.splice(0)) dispose();
-    const configuration = schemaRuleConfiguration, path = schemaRulePickerPath, document = schemaPropertyRulePicker.ownerDocument;
+    const path = schemaRulePickerPath, document = schemaPropertyRulePicker.ownerDocument;
     if (!document) return;
+    if (!schemaRuleConfiguration) {
+      const heading = document.createElement("h4"), search = document.createElement("input"), results = document.createElement("section"), cancel = document.createElement("button");
+      heading.textContent = `Add rule for ${path}`; search.id = "schema-property-rule-search"; search.value = schemaRulePickerSearch; cancel.type = "button"; cancel.textContent = "Cancel";
+      const propertyType = schemaRuleTypeForAttachment(active(), path), attachedIds = new Set((active().workingDraft?.attachedRules ?? active().attachedRules ?? []).map(({ id }) => id));
+      const rules = [...builtInRulesForProperty(propertyType), ...reusableRulesForProperty(reusableSchemaRules, propertyType, schemaRulePickerSearch, attachedIds)];
+      for (const rule of rules.filter((candidate) => !schemaRulePickerSearch || `${candidate.name} ${candidate.kind}`.toLowerCase().includes(schemaRulePickerSearch.toLowerCase()))) {
+        const button = document.createElement("button"); button.type = "button"; button.textContent = `${rule.name} · ${reusableRuleMetadata(rule, propertyType)}`;
+        const action = ():void => { if (rule.id.startsWith("built-in:")) { schemaRuleConfiguration = createRuleConfiguration(rule.name as RuleConfiguration["ruleType"], propertyType); renderSchemaPropertyRulePicker(); }
+          else { attachReusableRule(active().id, rule.id, path); closeSchemaPropertyRulePickerForCommit(); } };
+        button.addEventListener("click", action); schemaRulePickerDisposers.push(() => button.removeEventListener("click", action)); results.append(button);
+      }
+      if (!results.children.length) { const clear = document.createElement("button"); clear.type = "button"; clear.textContent = "Clear search";
+        const clearSearch = ():void => { schemaRulePickerSearch = ""; renderSchemaPropertyRulePicker(); }; clear.addEventListener("click", clearSearch);
+        schemaRulePickerDisposers.push(() => clear.removeEventListener("click", clearSearch)); results.append(clear); }
+      const cancelPicker = ():void => closeSchemaPropertyRulePicker(), searchRules = ():void => { schemaRulePickerSearch = search.value; renderSchemaPropertyRulePicker(); };
+      cancel.addEventListener("click", cancelPicker); search.addEventListener("input", searchRules); schemaRulePickerDisposers.push(() => cancel.removeEventListener("click", cancelPicker), () => search.removeEventListener("input", searchRules));
+      schemaPropertyRulePicker.replaceChildren(heading, search, results, cancel); return;
+    }
+    const configuration = schemaRuleConfiguration;
     const editLabel = editingAttachedLocalRule ? `Edit ${editingAttachedLocalRule.name ?? editingAttachedLocalRule.id}` : "Create local rule";
     const form = document.createElement("form"), heading = document.createElement("h4"), status = document.createElement("output");
     heading.textContent = `${editLabel} for ${path}`; status.id = "schema-local-rule-assistance";
@@ -1314,7 +1333,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       description.id = "schema-local-rule-description"; description.value = configuration.description; const changeName = ():void => { configuration.reusableName = name.value; refreshValidation(); }, changeDescription = ():void => { configuration.description = description.value; };
       name.addEventListener("input", changeName); description.addEventListener("input", changeDescription); schemaRulePickerDisposers.push(() => name.removeEventListener("input", changeName), () => description.removeEventListener("input", changeDescription)); form.append(name, description); }
     const back = document.createElement("button"), cancel = document.createElement("button"), create = document.createElement("button"); back.type = cancel.type = "button"; create.type = "submit";
-    back.textContent = "Back"; cancel.textContent = "Cancel"; create.textContent = "Create rule"; const goBack = ():void => { schemaRuleConfiguration = undefined; closeSchemaPropertyRulePicker(); }, cancelEdit = ():void => closeSchemaPropertyRulePicker();
+    back.textContent = "Back"; cancel.textContent = "Cancel"; create.textContent = "Create rule"; const goBack = ():void => { schemaRuleConfiguration = undefined; renderSchemaPropertyRulePicker(); }, cancelEdit = ():void => closeSchemaPropertyRulePicker();
     const submit = (event:Event):void => { event.preventDefault(); if (validateRuleConfiguration(configuration).ready) createConfiguredSchemaRule(); };
     back.addEventListener("click", goBack); cancel.addEventListener("click", cancelEdit); form.addEventListener("submit", submit);
     schemaRulePickerDisposers.push(() => back.removeEventListener("click", goBack), () => cancel.removeEventListener("click", cancelEdit), () => form.removeEventListener("submit", submit));
@@ -1335,7 +1354,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   }
   function closeSchemaPropertyRulePicker(): void {
     const path = schemaRulePickerPath; schemaPropertyRulePicker?.close(); schemaRulePickerTrigger?.focus();
-    schemaRulePickerPath = undefined; schemaRulePickerTrigger = undefined; schemaRuleConfiguration = undefined;
+    schemaRulePickerPath = undefined; schemaRulePickerTrigger = undefined; schemaRuleConfiguration = undefined; schemaRulePickerSearch = "";
     editingAttachedLocalRule = undefined; schemaPropertyInteractionReturn = undefined;
     if (path) ports.rulePickerChanged(path, false);
   }
