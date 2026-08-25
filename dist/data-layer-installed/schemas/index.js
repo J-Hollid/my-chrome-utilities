@@ -1,4 +1,4 @@
-import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaPropertyRows, schemaPropertyCopySource, restoreSchemaLibrary, searchSchemas, serializeSchemaLibrary, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateEvent, } from "../../utilities/data-layer/schemas.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaPropertyRows, schemaPropertyCopySource, restoreSchemaLibrary, searchSchemas, serializeSchemaLibrary, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateEvent, } from "../../utilities/data-layer/schemas.js";
 import { applySchemaPropertyCopy, planSchemaPropertyCopy } from "../../data-layer-schema-property-copy.js";
 export function createSchemasInstalledController(ports) {
     const schemaSearch = ports.root.querySelector("#schema-search");
@@ -69,6 +69,14 @@ export function createSchemasInstalledController(ports) {
     const schemaDocumentationRemovalSummary = ownedElement("#schema-documentation-removal-summary", "p");
     const confirmSchemaDocumentationRemoval = ownedElement("#confirm-schema-documentation-removal", "button");
     const cancelSchemaDocumentationRemoval = ownedElement("#cancel-schema-documentation-removal", "button");
+    const schemaSpecificIndexDialog = ownedElement("#schema-specific-index-dialog", "dialog");
+    const schemaSpecificIndexForm = ownedElement("#schema-specific-index-form", "form");
+    const schemaSpecificIndexHeading = ownedElement("#schema-specific-index-heading", "h4");
+    const schemaSpecificIndexLabel = ownedElement("#schema-specific-index-label", "label");
+    const schemaSpecificIndex = ownedElement("#schema-specific-index", "input");
+    const schemaSpecificIndexAssistance = ownedElement("#schema-specific-index-assistance", "output");
+    const confirmSchemaSpecificIndex = ownedElement("#confirm-schema-specific-index", "button");
+    const cancelSchemaSpecificIndex = ownedElement("#cancel-schema-specific-index", "button");
     if (schemaPropertyViewControls && !schemaPropertyViewControls.isConnected) {
         schemaPropertyViewControls.id = "schema-property-view-controls";
         if (schemaPropertyFilterLabel) {
@@ -172,6 +180,44 @@ export function createSchemasInstalledController(ports) {
         }
         schemaOwnerDocument?.body.append(schemaDocumentationRemovalDialog);
     }
+    if (schemaSpecificIndexDialog && schemaSpecificIndexForm && !schemaSpecificIndexDialog.isConnected) {
+        schemaSpecificIndexDialog.id = "schema-specific-index-dialog";
+        schemaSpecificIndexForm.id = "schema-specific-index-form";
+        if (schemaSpecificIndexHeading) {
+            schemaSpecificIndexHeading.id = "schema-specific-index-heading";
+            schemaSpecificIndexHeading.textContent = "Add specific index rule";
+            schemaSpecificIndexForm.append(schemaSpecificIndexHeading);
+        }
+        if (schemaSpecificIndexLabel) {
+            schemaSpecificIndexLabel.id = "schema-specific-index-label";
+            schemaSpecificIndexLabel.htmlFor = "schema-specific-index";
+            schemaSpecificIndexLabel.textContent = "Zero-based array index";
+            schemaSpecificIndexForm.append(schemaSpecificIndexLabel);
+        }
+        if (schemaSpecificIndex) {
+            schemaSpecificIndex.id = "schema-specific-index";
+            schemaSpecificIndex.type = "number";
+            schemaSpecificIndex.min = "0";
+            schemaSpecificIndex.step = "1";
+            schemaSpecificIndexForm.append(schemaSpecificIndex);
+        }
+        if (schemaSpecificIndexAssistance)
+            schemaSpecificIndexForm.append(schemaSpecificIndexAssistance);
+        if (confirmSchemaSpecificIndex) {
+            confirmSchemaSpecificIndex.id = "confirm-schema-specific-index";
+            confirmSchemaSpecificIndex.type = "submit";
+            confirmSchemaSpecificIndex.textContent = "Choose rule";
+            schemaSpecificIndexForm.append(confirmSchemaSpecificIndex);
+        }
+        if (cancelSchemaSpecificIndex) {
+            cancelSchemaSpecificIndex.id = "cancel-schema-specific-index";
+            cancelSchemaSpecificIndex.type = "button";
+            cancelSchemaSpecificIndex.textContent = "Cancel";
+            schemaSpecificIndexForm.append(cancelSchemaSpecificIndex);
+        }
+        schemaSpecificIndexDialog.append(schemaSpecificIndexForm);
+        schemaOwnerDocument?.body.append(schemaSpecificIndexDialog);
+    }
     let mounted = false;
     let unsubscribe;
     const storedSchemaLibrary = ports.storage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
@@ -185,6 +231,8 @@ export function createSchemasInstalledController(ports) {
     let lastSchemaPropertyCopy;
     let pendingSchemaPropertyCopy;
     let pendingSchemaDocumentationRemoval;
+    let specificIndexArrayPath;
+    let specificIndexTrigger;
     const activeIndex = () => schemas.findIndex(({ id }) => id === activeSchemaId);
     const active = () => {
         const schema = schemas[activeIndex()];
@@ -523,6 +571,45 @@ export function createSchemasInstalledController(ports) {
         persistSchemaLibrary();
         renderSchemas();
     };
+    const renderSpecificIndexInspection = () => {
+        if (!specificIndexArrayPath || !active().workingDraft)
+            return;
+        const inspection = inspectSpecificIndexRuleTarget(active().workingDraft.document, specificIndexArrayPath, schemaSpecificIndex?.value ?? "");
+        if (confirmSchemaSpecificIndex)
+            confirmSchemaSpecificIndex.disabled = inspection.result !== "accepted";
+        if (schemaSpecificIndexAssistance)
+            schemaSpecificIndexAssistance.textContent = inspection.assistance;
+    };
+    const openSpecificIndexDialog = (arrayPath, trigger) => {
+        specificIndexArrayPath = arrayPath;
+        specificIndexTrigger = trigger;
+        if (schemaSpecificIndex)
+            schemaSpecificIndex.value = "";
+        if (confirmSchemaSpecificIndex)
+            confirmSchemaSpecificIndex.disabled = true;
+        if (schemaSpecificIndexAssistance)
+            schemaSpecificIndexAssistance.textContent = "Enter a non-negative zero-based index";
+        schemaSpecificIndexDialog?.showModal();
+        schemaSpecificIndex?.focus();
+    };
+    const submitSpecificIndex = (event) => {
+        event.preventDefault();
+        const draft = active().workingDraft;
+        if (!draft || !specificIndexArrayPath)
+            return;
+        const inspection = inspectSpecificIndexRuleTarget(draft.document, specificIndexArrayPath, schemaSpecificIndex?.value ?? "");
+        if (inspection.result !== "accepted")
+            return;
+        schemaSpecificIndexDialog?.close();
+        ports.specificIndexSelected(inspection.canonicalPath.slice(1).replaceAll("/", "."));
+    };
+    const closeSpecificIndexDialog = () => {
+        schemaSpecificIndexDialog?.close();
+        specificIndexTrigger?.focus();
+        specificIndexArrayPath = undefined;
+        specificIndexTrigger = undefined;
+    };
+    const cancelSpecificIndexDialog = (event) => { event.preventDefault(); closeSpecificIndexDialog(); };
     return {
         mount() {
             if (mounted)
@@ -558,6 +645,10 @@ export function createSchemasInstalledController(ports) {
             cancelSchemaDocumentationRemoval?.addEventListener("click", cancelSchemaDocumentationRemovalAction);
             schemaDocumentationRemovalDialog?.addEventListener("cancel", cancelSchemaDocumentationRemovalFromDialog);
             undoSchemaPropertyCopyButton?.addEventListener("click", undoLastSchemaPropertyCopy);
+            schemaSpecificIndex?.addEventListener("input", renderSpecificIndexInspection);
+            schemaSpecificIndexForm?.addEventListener("submit", submitSpecificIndex);
+            cancelSchemaSpecificIndex?.addEventListener("click", closeSpecificIndexDialog);
+            schemaSpecificIndexDialog?.addEventListener("cancel", cancelSpecificIndexDialog);
             unsubscribe = ports.subscribe(renderSchemas);
             renderSchemas();
         },
@@ -595,11 +686,17 @@ export function createSchemasInstalledController(ports) {
             cancelSchemaDocumentationRemoval?.removeEventListener("click", cancelSchemaDocumentationRemovalAction);
             schemaDocumentationRemovalDialog?.removeEventListener("cancel", cancelSchemaDocumentationRemovalFromDialog);
             undoSchemaPropertyCopyButton?.removeEventListener("click", undoLastSchemaPropertyCopy);
+            schemaSpecificIndex?.removeEventListener("input", renderSpecificIndexInspection);
+            schemaSpecificIndexForm?.removeEventListener("submit", submitSpecificIndex);
+            cancelSchemaSpecificIndex?.removeEventListener("click", closeSpecificIndexDialog);
+            schemaSpecificIndexDialog?.removeEventListener("cancel", cancelSpecificIndexDialog);
             pendingSchemaPropertyRemoval = undefined;
             pendingSchemaDocumentationRemoval = undefined;
             lastSchemaPropertyRemoval = undefined;
             pendingSchemaPropertyCopy = undefined;
             lastSchemaPropertyCopy = undefined;
+            specificIndexArrayPath = undefined;
+            specificIndexTrigger = undefined;
             unsubscribe?.();
             unsubscribe = undefined;
             schemaList?.replaceChildren();
@@ -630,6 +727,7 @@ export function createSchemasInstalledController(ports) {
         requestDocumentationRemoval: requestSchemaDocumentationRemoval,
         requestPropertyCopy: openSchemaPropertyCopyReview,
         confirmPropertyCopy: confirmSchemaPropertyCopy,
+        openSpecificIndex: openSpecificIndexDialog,
         schemas: () => structuredClone(schemas),
         state: () => ({ ...(activeSchemaId ? { activeSchemaId } : {}), draftDirty: Boolean(activeSchemaId && active().workingDraft),
             schemaCount: schemas.length, mounted }),

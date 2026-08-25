@@ -8,7 +8,7 @@ const controller = createSchemasInstalledController({
   root:{ querySelector:() => null, querySelectorAll:() => [] },
   storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value) },
   changed:() => { changed += 1; }, runGuidedValidation:async (id) => { guided = id; },
-  subscribe:() => () => {},
+  subscribe:() => () => {}, specificIndexSelected() {},
 });
 controller.mount(); controller.open("schema:page"); controller.beginDraft();
 controller.updateDraft({ document:{ type:"object", required:["title"], properties:{ title:{ type:"string" } } } }, "Require title");
@@ -50,7 +50,10 @@ const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "
   "#schema-property-removal-heading", "#schema-property-removal-summary", "#confirm-schema-property-removal",
   "#cancel-schema-property-removal", "#schema-documentation-removal-dialog", "#schema-documentation-removal-heading",
   "#schema-documentation-removal-summary", "#confirm-schema-documentation-removal", "#cancel-schema-documentation-removal",
-  "#schema-property-copy-feedback", "#undo-schema-property-copy", "#schema-property-copy-dialog"];
+  "#schema-property-copy-feedback", "#undo-schema-property-copy", "#schema-property-copy-dialog",
+  "#schema-specific-index-dialog", "#schema-specific-index-form", "#schema-specific-index-heading",
+  "#schema-specific-index-label", "#schema-specific-index", "#schema-specific-index-assistance",
+  "#confirm-schema-specific-index", "#cancel-schema-specific-index"];
 const elements = new Map(selectors.map((selector) => [selector, element()]));
 elements.set("#side-panel-layered-profile-editor", element()); elements.set("#live-event-query", element());
 const schemaMasterTab = Object.assign(element(), { textContent:"Schemas", dataset:{ schemaSubview:"schema-master" } });
@@ -58,11 +61,13 @@ const schemaRulesTab = Object.assign(element(), { textContent:"Rules", dataset:{
 const schemaMasterPanel = Object.assign(element(), { id:"schema-master" });
 const schemaRulesPanel = Object.assign(element(), { id:"schema-rule-library" });
 const uiValues = new Map([["my-chrome-utilities.schema-library.v1", JSON.stringify([schema])]]);
+let selectedSpecificIndex;
 const uiController = createSchemasInstalledController({
   root:{ querySelector:(selector) => elements.get(selector) ?? null,
     querySelectorAll:(selector) => selector.includes("role=tab") ? [schemaMasterTab, schemaRulesTab] : [schemaMasterPanel, schemaRulesPanel] },
   storage:{ getItem:(key) => uiValues.get(key) ?? null, setItem:(key, value) => uiValues.set(key, value) },
   changed() {}, runGuidedValidation:async () => {}, subscribe:() => () => {},
+  specificIndexSelected:(path) => { selectedSpecificIndex = path; },
 });
 uiController.mount(); uiController.open("schema:page"); uiController.beginDraft();
 elements.get("#schema-editor-name").value = "Page checkout"; elements.get("#schema-editor-name").dispatch("input");
@@ -110,6 +115,13 @@ assert.equal(uiController.schemas().find(({ id }) => id === destinationId).worki
 elements.get("#undo-schema-property-copy").click();
 assert.equal(uiController.schemas().find(({ id }) => id === destinationId).workingDraft, undefined,
   "property-copy undo restores the complete destination schema state");
+uiController.updateDraft({ document:{ type:"object", properties:{ items:{ type:"array", items:{ type:"object",
+  properties:{ name:{ type:"string" } } } } } } });
+uiController.openSpecificIndex("/items");
+elements.get("#schema-specific-index").value = "2"; elements.get("#schema-specific-index").dispatch("input");
+assert.equal(elements.get("#confirm-schema-specific-index").disabled, false);
+elements.get("#schema-specific-index-form").dispatch("submit");
+assert.equal(selectedSpecificIndex, "items.2");
 uiController.dispose();
 assert.equal([...elements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
   "Schemas removes every editor and revision listener it owns");

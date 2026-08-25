@@ -82,4 +82,8 @@ export const reviewedControllerReplacements = [
   { identity:"listeners:87:schemaPropertyRemovalDialog.addEventListener@3407:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"schemaPropertyRemovalDialog?.addEventListener" },
   { identity:"listeners:88:undoSchemaPropertyRemovalButton.addEventListener@3408:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"undoSchemaPropertyRemovalButton?.addEventListener" },
   { identity:"listeners:81:undoSchemaPropertyCopyButton.addEventListener@3325:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"undoSchemaPropertyCopyButton?.addEventListener" },
+  { identity:"listeners:134:schemaSpecificIndex.addEventListener@4306:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"schemaSpecificIndex?.addEventListener" },
+  { identity:"listeners:135:schemaSpecificIndexForm.addEventListener@4312:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"schemaSpecificIndexForm?.addEventListener" },
+  { identity:"listeners:136:cancelSchemaSpecificIndex.addEventListener@4321:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"cancelSchemaSpecificIndex?.addEventListener" },
+  { identity:"listeners:137:schemaSpecificIndexDialog.addEventListener@4322:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"schemaSpecificIndexDialog?.addEventListener" },
 ];
