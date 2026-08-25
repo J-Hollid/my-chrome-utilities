@@ -123,6 +123,10 @@ const compatibilityRepairPlan = selectFocusedVerificationTasks(
   sidePanelSingleCutoverCompatibilityRepairFocusedTaskKeys,
   planVerification(packs, { packIds:runnablePackIdsFromRegistry(packs) }),
 );
+const verificationEvidenceSource = await readFile("scripts/verification-evidence.mjs", "utf8");
+assert.match(verificationEvidenceSource,
+  /permissionRecoveryFocused \|\| sidePanelCompatibilityRepairFocused/u,
+  "the exact preparation bootstrap may claim its reviewed packs without inventing pack-owned tasks");
 assert.equal(validateSidePanelSingleCutoverFocusedPlan({
   ...compatibilityRepairPlan,
   changedPaths:[

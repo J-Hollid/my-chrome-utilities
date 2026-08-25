@@ -51,6 +51,7 @@ import {
 } from "./live-target-permission-recovery-focused-evidence.mjs";
 import {
   isSidePanelSingleCutoverEvidenceTask,
+  sidePanelSingleCutoverCompatibilityRepairEvidenceTask,
   sidePanelSingleCutoverFocusedTaskKeys,
   sidePanelSingleCutoverPackIds,
   sidePanelSingleCutoverProductEvidenceTask,
@@ -384,6 +385,8 @@ function planDocument(plan, { evidenceTask, candidateRegistry } = {}) {
   const sidePanelSingleCutoverFocused =
     isSidePanelSingleCutoverEvidenceTask(evidenceTask) &&
     validateSidePanelSingleCutoverFocusedPlan(plan, evidenceTask);
+  const sidePanelCompatibilityRepairFocused = sidePanelSingleCutoverFocused &&
+    evidenceTask === sidePanelSingleCutoverCompatibilityRepairEvidenceTask;
   if ((plan.mode !== "exact" && !cardinalityFocused && !permissionRecoveryFocused &&
       !sidePanelSingleCutoverFocused) || !packIds.length ||
       !same(packIds, sortedUnique(plan.requestedPackIds ?? []))) {
@@ -421,7 +424,8 @@ function planDocument(plan, { evidenceTask, candidateRegistry } = {}) {
   if (!identities.length || new Set(keys).size !== keys.length) {
     throw new Error("Verification evidence requires a non-empty plan with unique task identities");
   }
-  for (const packId of permissionRecoveryFocused ? [] : packIds) {
+  for (const packId of permissionRecoveryFocused || sidePanelCompatibilityRepairFocused
+    ? [] : packIds) {
     if (!identities.some((identity) => identity.packId === packId)) {
       throw new Error(`Claimed pack has no executed verification stage: ${packId}`);
     }
