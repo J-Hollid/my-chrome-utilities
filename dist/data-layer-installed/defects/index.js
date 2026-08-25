@@ -7,16 +7,16 @@ export function createDefectsInstalledController(ports) {
     const event = ports.root.querySelector("#defect-library-event");
     const schema = ports.root.querySelector("#defect-library-schema");
     const path = ports.root.querySelector("#defect-library-path");
-    let library = restoreDefectLibrary(ports.storage.getItem(DEFECT_LIBRARY_STORAGE_KEY));
-    let selectedId;
-    let returnPosition;
-    let listScrollTop = 0;
+    let defectLibrary = restoreDefectLibrary(ports.storage.getItem(DEFECT_LIBRARY_STORAGE_KEY));
+    let selectedDefectId;
+    let defectReturn;
+    let defectListScrollTop = 0;
     let mounted = false;
     const now = ports.now ?? (() => new Date().toISOString());
-    const persist = () => {
-        ports.storage.setItem(DEFECT_LIBRARY_STORAGE_KEY, serializeDefectLibrary(library));
+    const persistDefectLibrary = () => {
+        ports.storage.setItem(DEFECT_LIBRARY_STORAGE_KEY, serializeDefectLibrary(defectLibrary));
     };
-    const visible = () => searchDefects(library, {
+    const filteredDefectLibrary = () => searchDefects(defectLibrary, {
         query: search?.value ?? "",
         status: (status?.value || "All"),
         type: (type?.value || "All"),
@@ -24,7 +24,7 @@ export function createDefectsInstalledController(ports) {
         schema: schema?.value ?? "",
         path: path?.value ?? "",
     });
-    const matchingEvent = (defect) => {
+    const matchingEventForDefect = (defect) => {
         const events = ports.liveEvents();
         if (defect.occurrenceMatch) {
             const capturedId = String(defect.report?.actual?.id ?? "");
@@ -33,57 +33,59 @@ export function createDefectsInstalledController(ports) {
         }
         return events.find((candidate) => eventContainsDefectIssue(candidate, defect));
     };
-    const open = (id, options = {}) => {
-        selectedId = id;
+    const openDefect = (id, options = {}) => {
+        selectedDefectId = id;
         if (options.returnPosition)
-            returnPosition = { ...options.returnPosition };
-        if (!returnPosition) {
-            listScrollTop = ports.root.querySelector("#defect-library-master")?.scrollTop ?? 0;
+            defectReturn = { ...options.returnPosition };
+        if (!defectReturn) {
+            defectListScrollTop = ports.root.querySelector("#defect-library-master")?.scrollTop ?? 0;
         }
         ports.showDefectsView();
-        render();
+        renderDefects();
         if (options.trigger)
             options.trigger.dataset.openedDefect = id;
     };
-    const close = () => {
-        const returning = returnPosition;
-        selectedId = undefined;
-        returnPosition = undefined;
+    const closeDefect = () => {
+        const returning = defectReturn;
+        selectedDefectId = undefined;
+        defectReturn = undefined;
         if (returning) {
             ports.returnToLive(returning);
             return;
         }
-        render();
+        renderDefects();
         const master = ports.root.querySelector("#defect-library-master");
         if (master)
-            master.scrollTop = listScrollTop;
+            master.scrollTop = defectListScrollTop;
     };
-    function render() {
+    const triagedEvent = (candidate) => ({ ...candidate,
+        defectTriage: presentedEventTriage(candidate, defectLibrary) });
+    const recopyDefect = async (id) => {
+        const defect = defectLibrary.defects.find((candidate) => candidate.id === id);
+        return defect ? ports.recopy(defect) : "Defect unavailable";
+    };
+    function renderDefects() {
         if (!mounted)
             return;
-        const filtered = visible();
-        const selected = selectedId ? library.defects.find(({ id }) => id === selectedId) : undefined;
+        const filtered = filteredDefectLibrary();
+        const selected = selectedDefectId ? defectLibrary.defects.find(({ id }) => id === selectedDefectId) : undefined;
         const presented = selected && !filtered.some(({ id }) => id === selected.id) ? [...filtered, selected] : filtered;
-        renderDefectLibrary(elements, presented, selectedId, library.deletionConfirmationId, {
-            open: (id, trigger) => open(id, { trigger }),
-            close,
-            save: (id, report, notes) => { library = editDefect(library, id, { report, notes }, now()); persist(); render(); },
-            recopy: (id) => {
-                const defect = library.defects.find((candidate) => candidate.id === id);
-                return defect ? ports.recopy(defect) : "Defect unavailable";
-            },
-            updateStatus: (id, next) => { library = updateDefectStatus(library, id, next, now()); persist(); render(); ports.renderLive(); },
+        renderDefectLibrary(elements, presented, selectedDefectId, defectLibrary.deletionConfirmationId, {
+            open: (id, trigger) => openDefect(id, { trigger }), close: closeDefect,
+            save: (id, report, notes) => { defectLibrary = editDefect(defectLibrary, id, { report, notes }, now()); persistDefectLibrary(); renderDefects(); },
+            recopy: recopyDefect,
+            updateStatus: (id, next) => { defectLibrary = updateDefectStatus(defectLibrary, id, next, now()); persistDefectLibrary(); renderDefects(); ports.renderLive(); },
             attachCurrentSession: ports.attachCurrentSession,
             openLinkedSession: ports.openLinkedSession,
-            requestDelete: (id) => { library = requestDefectDeletion(library, id); render(); },
-            cancelDelete: () => { library = cancelDefectDeletion(library); render(); },
+            requestDelete: (id) => { defectLibrary = requestDefectDeletion(defectLibrary, id); renderDefects(); },
+            cancelDelete: () => { defectLibrary = cancelDefectDeletion(defectLibrary); renderDefects(); },
             confirmDelete: () => {
-                const deleted = library.deletionConfirmationId;
-                library = confirmDefectDeletion(library);
-                if (selectedId === deleted)
-                    selectedId = undefined;
-                persist();
-                render();
+                const deleted = defectLibrary.deletionConfirmationId;
+                defectLibrary = confirmDefectDeletion(defectLibrary);
+                if (selectedDefectId === deleted)
+                    selectedDefectId = undefined;
+                persistDefectLibrary();
+                renderDefects();
                 ports.renderLive();
             },
         });
@@ -95,42 +97,39 @@ export function createDefectsInstalledController(ports) {
                 return;
             mounted = true;
             for (const control of controls) {
-                control.addEventListener("input", render);
-                control.addEventListener("change", render);
+                control.addEventListener("input", renderDefects);
+                control.addEventListener("change", renderDefects);
             }
-            render();
+            renderDefects();
         },
         dispose() {
             if (!mounted)
                 return;
             mounted = false;
             for (const control of controls) {
-                control.removeEventListener("input", render);
-                control.removeEventListener("change", render);
+                control.removeEventListener("input", renderDefects);
+                control.removeEventListener("change", renderDefects);
             }
             elements.list?.replaceChildren();
             elements.detail?.replaceChildren();
             elements.confirmation?.replaceChildren();
         },
-        library: () => structuredClone(library),
-        replace(next) { library = structuredClone(next); persist(); render(); },
+        library: () => structuredClone(defectLibrary),
+        replace(next) { defectLibrary = structuredClone(next); persistDefectLibrary(); renderDefects(); },
         add(defect, saveSeparately = false) {
-            const result = addDefect(library, defect, saveSeparately);
+            const result = addDefect(defectLibrary, defect, saveSeparately);
             if (result.added) {
-                library = result.library;
-                persist();
-                render();
+                defectLibrary = result.library;
+                persistDefectLibrary();
+                renderDefects();
                 ports.renderLive();
             }
             return result;
         },
-        edit(id, changes) { library = editDefect(library, id, changes, now()); persist(); render(); },
-        open,
-        close,
-        render,
-        triage: (candidate) => ({ ...candidate, defectTriage: presentedEventTriage(candidate, library) }),
-        matchingEvent,
-        selectedId: () => selectedId,
+        edit(id, changes) { defectLibrary = editDefect(defectLibrary, id, changes, now()); persistDefectLibrary(); renderDefects(); },
+        open: openDefect, close: closeDefect, render: renderDefects, triage: triagedEvent,
+        matchingEvent: matchingEventForDefect,
+        selectedId: () => selectedDefectId,
     };
 }
 export const installedControllerDefinition = Object.freeze({
