@@ -585,7 +585,17 @@ export function createSchemasInstalledController(ports) {
         target.addEventListener(type, listener);
         schemaPropertyRowDisposers.push(() => target.removeEventListener(type, listener));
     };
-    let schemas = restoreSchemaLibrary(ports.storage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));
+    const storedSchemaLibrary = ports.storage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
+    const storedSchemaProjection = (() => {
+        try {
+            const parsed = JSON.parse(storedSchemaLibrary ?? "[]");
+            return Array.isArray(parsed) ? parsed : [];
+        }
+        catch {
+            return [];
+        }
+    })();
+    let schemas = restoreSchemaLibrary(storedSchemaLibrary);
     let activeSchemaId;
     let schemaDraft;
     let selectedSchemaPropertyPath = "example";
@@ -1232,8 +1242,16 @@ export function createSchemasInstalledController(ports) {
             throw new Error("Open a schema before editing its draft");
         return schema;
     };
+    const serializeChangedSchemaLibrary = (nextSchemas) => {
+        const storedById = new Map(storedSchemaProjection.map((schema) => [schema.id, schema]));
+        return JSON.stringify(nextSchemas.map((schema) => {
+            const canonical = JSON.parse(serializeSchemaLibrary([schema]))[0];
+            const stored = storedById.get(schema.id);
+            return stored && serializeSchemaLibrary([stored]) === JSON.stringify([canonical]) ? stored : canonical;
+        }));
+    };
     const persistSchemaLibrary = () => {
-        ports.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(schemas));
+        ports.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeChangedSchemaLibrary(schemas));
         ports.changed(schemas);
     };
     const queueSchemaLibraryPersistence = (schemaId) => {
@@ -1257,7 +1275,7 @@ export function createSchemasInstalledController(ports) {
                     compactCanonicalSettlementPending = true;
                     compactCanonicalSettlementSchemaId = activeRequest.schemaId;
                     schemaEditor?.setAttribute("aria-busy", "true");
-                    ports.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(activeRequest.schemas));
+                    ports.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeChangedSchemaLibrary(activeRequest.schemas));
                     ports.changed(activeRequest.schemas);
                     await ports.settleCanonical(activeRequest.schemaId);
                     activeRequest = undefined;

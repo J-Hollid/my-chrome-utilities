@@ -5,9 +5,12 @@ await verifyPreparedInstalledController("schemas");
 const { createSchemasInstalledController } = await import("../../dist/data-layer-installed/schemas/index.js");
 const schema = { id:"schema:page", name:"Page", version:1, document:{ type:"object", properties:{ title:{ type:"string" } } },
   assignments:[], published:true };
+const untouchedSchema = { id:"schema:untouched", name:"Untouched", version:1,
+  document:{ type:"object", properties:{ title:{ type:"string" } } }, assignments:[], published:true,
+  attachedRules:[{ id:"rule:untouched", version:1, operator:"required", propertyPath:"/title" }] };
 const parentSchema = { id:"schema:parent", name:"Parent", version:2, document:{ type:"object", properties:{ title:{ type:"string" } } },
   assignments:[], attachedRules:[{ id:"rule:parent", version:1, propertyPath:"/title", enabled:true }], published:true };
-const values = new Map([["my-chrome-utilities.schema-library.v1", JSON.stringify([schema])]]);
+const values = new Map([["my-chrome-utilities.schema-library.v1", JSON.stringify([schema, untouchedSchema])]]);
 let changed = 0;
 const controller = createSchemasInstalledController({
   root:{ querySelector:() => null, querySelectorAll:() => [] },
@@ -32,6 +35,8 @@ assert.equal(evaluation.state, "Not checked", "unassigned events retain the exac
 const published = controller.publish();
 assert.equal(published.version, 2, "Schemas exclusively owns draft publication");
 assert.equal(published.document.required[0], "title");
+assert.equal(JSON.stringify(JSON.parse(values.get("my-chrome-utilities.schema-library.v1"))[1]), JSON.stringify(untouchedSchema),
+  "schema persistence does not migrate an untouched settled projection during another schema write");
 await controller.runGuidedValidation();
 assert.ok(changed >= 3);
 controller.dispose(); controller.mount();

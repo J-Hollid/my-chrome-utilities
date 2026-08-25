@@ -609,7 +609,12 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const listenProperty = (target:HTMLElement, type:string, listener:EventListener):void => {
     target.addEventListener(type, listener); schemaPropertyRowDisposers.push(() => target.removeEventListener(type, listener));
   };
-  let schemas = restoreSchemaLibrary(ports.storage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));
+  const storedSchemaLibrary = ports.storage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
+  const storedSchemaProjection = (() => { try {
+    const parsed = JSON.parse(storedSchemaLibrary ?? "[]") as unknown;
+    return Array.isArray(parsed) ? parsed as SchemaDefinition[] : [];
+  } catch { return []; } })();
+  let schemas = restoreSchemaLibrary(storedSchemaLibrary);
   let activeSchemaId: string | undefined;
   let schemaDraft: SchemaDefinition | undefined;
   let selectedSchemaPropertyPath = "example";
@@ -1031,8 +1036,16 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (!schema) throw new Error("Open a schema before editing its draft");
     return schema;
   };
+  const serializeChangedSchemaLibrary = (nextSchemas:readonly SchemaDefinition[]):string => {
+    const storedById = new Map(storedSchemaProjection.map((schema) => [schema.id, schema]));
+    return JSON.stringify(nextSchemas.map((schema) => {
+      const canonical = JSON.parse(serializeSchemaLibrary([schema]))[0] as SchemaDefinition;
+      const stored = storedById.get(schema.id);
+      return stored && serializeSchemaLibrary([stored]) === JSON.stringify([canonical]) ? stored : canonical;
+    }));
+  };
   const persistSchemaLibrary = (): void => {
-    ports.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(schemas));
+    ports.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeChangedSchemaLibrary(schemas));
     ports.changed(schemas);
   };
   const queueSchemaLibraryPersistence = (schemaId:string):void => {
@@ -1048,7 +1061,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
           const request = queuedSchemaLibraryPersistence; activeRequest = request; queuedSchemaLibraryPersistence = undefined;
           compactCanonicalSettlementPending = true; compactCanonicalSettlementSchemaId = activeRequest.schemaId;
           schemaEditor?.setAttribute("aria-busy", "true");
-          ports.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(activeRequest.schemas)); ports.changed(activeRequest.schemas);
+          ports.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeChangedSchemaLibrary(activeRequest.schemas)); ports.changed(activeRequest.schemas);
           await ports.settleCanonical!(activeRequest.schemaId); activeRequest = undefined;
         }
       } catch {
