@@ -1,6 +1,8 @@
 import { defineUtility, type DataLayerModuleEntry } from "../../platform/utility-contract.js";
 import { createDomUtilityLifecycle } from "../../platform/utility-lifecycle-dom.js";
 import { mountDataLayerNavigation } from "./layers/browser/navigation.js";
+export { createInstalledDataLayerControllers, createInstalledDataLayerLifecycle,
+  createInstalledSidePanelRuntimeFoundation, mountInstalledDataLayerRuntime } from "../../data-layer-installed/runtime.js";
 export * as capture from "./capture.js";
 export * as liveInspection from "./live-inspection.js";
 export * as eventLibrary from "./event-library.js";

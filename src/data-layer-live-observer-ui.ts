@@ -79,7 +79,21 @@ export function renderDataLayerView(
       button.tabIndex = selected ? 0 : -1;
       if (focus && selected) button.focus();
     }
-    if (panel) panel.hidden = !selected;
+    if (panel) {
+      panel.hidden = !selected;
+      panel.inert = !selected;
+      for (const control of Array.from(panel.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+        "button, input, select, textarea",
+      ))) {
+        if (selected && control.dataset.disabledByDataLayerView === "true") {
+          control.disabled = false;
+          delete control.dataset.disabledByDataLayerView;
+        } else if (!selected && candidate !== "Live" && !control.disabled) {
+          control.disabled = true;
+          control.dataset.disabledByDataLayerView = "true";
+        }
+      }
+    }
   }
 }
 

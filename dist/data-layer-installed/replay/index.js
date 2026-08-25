@@ -1,3 +1,50 @@
+import { createSequence, findSequenceReplayElements, readiness, renderSequenceReplay, runSequence, setSequenceReplayResult, } from "../../utilities/data-layer/replay.js";
+export function createReplayInstalledController(ports) {
+    const sequenceReplayElements = findSequenceReplayElements(ports.root);
+    const sequenceEmptyState = ports.root.querySelector("#sequence-empty-state");
+    let mounted = false;
+    let replaySequences = [];
+    const renderSequences = () => {
+        if (!mounted)
+            return;
+        if (sequenceEmptyState)
+            sequenceEmptyState.hidden = replaySequences.length > 0;
+        renderSequenceReplay(sequenceReplayElements, replaySequences, (sequence) => {
+            const templates = ports.listTemplates();
+            const adapters = ports.listSources().map((source) => ({ ...source, kind: "Data Layer",
+                destination: "event.history", enabled: true, capabilities: ["push"] }));
+            const ready = readiness(sequence, templates, adapters);
+            if (!ready.runnable) {
+                setSequenceReplayResult(sequenceReplayElements, `Not runnable: ${ready.blocked.join(", ")}`);
+                return;
+            }
+            const record = runSequence(sequence, templates, adapters, ports.pageUrl(), "Run all");
+            setSequenceReplayResult(sequenceReplayElements, `${record.result}: ${record.steps.length} steps.`);
+        });
+    };
+    return {
+        mount() { if (!mounted) {
+            mounted = true;
+            renderSequences();
+        } },
+        dispose() {
+            if (!mounted)
+                return;
+            mounted = false;
+            sequenceReplayElements.list?.replaceChildren();
+            setSequenceReplayResult(sequenceReplayElements, "");
+        },
+        createFromSession(id, name, eventIds) {
+            const ids = new Set(eventIds);
+            const templates = ports.listTemplates().filter(({ id: templateId }) => ids.has(templateId.replace(/^template:/u, "")));
+            const sequence = createSequence(`sequence:${id}`, `${name} sequence`, id, templates);
+            replaySequences = [...replaySequences, sequence];
+            renderSequences();
+            return sequence;
+        },
+        sequences: () => replaySequences,
+    };
+}
 export const installedControllerDefinition = Object.freeze({
     id: "replay",
     capabilities: ["sequences", "controls", "execution", "lifecycle"],
