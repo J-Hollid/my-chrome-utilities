@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { verifyPreparedInstalledController } from "../support/data-layer-installed-controller-contract.mjs";
+await verifyPreparedInstalledController("project-event-transport");
 const { createProjectEventTransportInstalledController } = await import("../../dist/data-layer-installed/project-event-transport/index.js");
 const listeners = new Map();
 const input = {value:"",addEventListener:(type,listener)=>listeners.set(type,listener),

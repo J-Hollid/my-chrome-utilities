@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { verifyPreparedInstalledController } from "../support/data-layer-installed-controller-contract.mjs";
+await verifyPreparedInstalledController("durable-projects");
 const { createDurableProjectsInstalledController } = await import("../../dist/data-layer-installed/durable-projects/index.js");
 
 class Element {

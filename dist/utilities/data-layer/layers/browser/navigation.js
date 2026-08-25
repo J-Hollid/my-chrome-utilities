@@ -6,8 +6,10 @@ export function mountDataLayerNavigation(root) {
             tab.setAttribute("aria-selected", String(active));
             tab.tabIndex = active ? 0 : -1;
             const panel = root.querySelector(`#${tab.getAttribute("aria-controls")}`);
-            if (panel)
+            if (panel) {
                 panel.hidden = !active;
+                panel.inert = !active;
+            }
         }
     };
     const onClick = (event) => {

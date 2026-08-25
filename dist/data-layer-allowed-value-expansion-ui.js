@@ -65,15 +65,26 @@ export function openAllowedValueExpansionDialog(input) {
     const cancel = document.createElement("button");
     cancel.type = "button";
     cancel.textContent = "Cancel";
+    const disposers = [];
+    const listen = (control, type, listener) => {
+        control.addEventListener(type, listener);
+        disposers.push(() => control.removeEventListener(type, listener));
+    };
     const close = (restoreFocus = true) => {
+        for (const dispose of disposers.splice(0))
+            dispose();
         if (dialog.open)
             dialog.close();
         dialog.remove();
-        if (restoreFocus)
-            trigger.focus({ preventScroll: true });
+        if (restoreFocus) {
+            const replacement = trigger.isConnected ? trigger
+                : inspector.querySelector(`.live-allowed-value-expansion[data-rule-id="${CSS.escape(trigger.dataset.ruleId ?? "")}"]`);
+            replacement?.focus({ preventScroll: true });
+            queueMicrotask(() => replacement?.focus({ preventScroll: true }));
+        }
     };
     const selectedDestination = () => dialog.querySelector('input[name="allowed-value-expansion-destination"]:checked')?.value;
-    confirm.addEventListener("click", () => {
+    listen(confirm, "click", () => {
         const destination = selectedDestination();
         if (!destination)
             return;
@@ -86,15 +97,15 @@ export function openAllowedValueExpansionDialog(input) {
             feedback.textContent = error instanceof Error ? error.message : "The allowed value could not be added.";
         }
     });
-    openDraft.addEventListener("click", () => {
+    listen(openDraft, "click", () => {
         const destination = selectedDestination();
         if (!destination)
             return;
         close(false);
         input.openDraft(destination);
     });
-    cancel.addEventListener("click", () => close());
-    dialog.addEventListener("cancel", (event) => {
+    listen(cancel, "click", () => close());
+    listen(dialog, "cancel", (event) => {
         event.preventDefault();
         close();
     });
@@ -102,5 +113,6 @@ export function openAllowedValueExpansionDialog(input) {
     inspector.append(dialog);
     dialog.showModal();
     heading.focus({ preventScroll: true });
+    return () => close(false);
 }
 //# sourceMappingURL=data-layer-allowed-value-expansion-ui.js.map

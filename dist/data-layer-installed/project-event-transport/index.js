@@ -38,7 +38,22 @@ export function createProjectEventTransportInstalledController(ports) {
     };
     function refreshSelectedTargetPathStatus() {
         const path = currentObservationHistoryPath();
+        if (!path.trim()) {
+            currentTargetPathStatus = "Waiting for path";
+            renderTargetPath(path, historyPathInput?.value ?? path, currentTargetPathStatus);
+            ports.renderTargetReadiness();
+            return;
+        }
         void targetPathStatusController.configure(path, historyPathInput?.value ?? path);
+    }
+    function synchronizeProjectPaths() {
+        paths = { ...ports.loadPaths() };
+        if (historyPathInput)
+            historyPathInput.value = paths.observationPath;
+        if (defaultPushPathInput)
+            defaultPushPathInput.value = paths.pushPath;
+        renderProjectEventTransport();
+        refreshSelectedTargetPathStatus();
     }
     const syncPaths = () => {
         paths = { observationPath: historyPathInput?.value ?? paths.observationPath,
@@ -103,6 +118,7 @@ export function createProjectEventTransportInstalledController(ports) {
                 return;
             mounted = true;
             generation += 1;
+            paths = { ...ports.loadPaths() };
             if (historyPathInput)
                 historyPathInput.value = paths.observationPath;
             if (defaultPushPathInput)
@@ -126,6 +142,7 @@ export function createProjectEventTransportInstalledController(ports) {
         currentObservationHistoryPath,
         configureTargetPath: targetPathStatusController.configure,
         refreshTargetPath: refreshSelectedTargetPathStatus,
+        synchronizeProjectPaths,
         render: renderProjectEventTransport,
         save: saveProjectEventTransport,
         state: () => ({ ...paths, phase, currentTargetPathStatus }),

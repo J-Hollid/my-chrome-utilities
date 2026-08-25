@@ -1,5 +1,6 @@
 import {
   appendObservedHistoryEntry,
+  attachHistoryArrayObserver,
   attachHistoryArraySnapshot,
   beginDataLayerTestingSession,
   beginObservedPageLoad,
@@ -39,9 +40,11 @@ import {
   observerAttachmentStatus,
   persistSession,
   restartObservation as restartHistoryObservation,
+  restoreFreshSessionLiveObserver,
   restoreSession,
   samplePageObject,
   shouldRetryObservationRefresh,
+  startFreshLiveSession,
   stopHistoryArrayObserver,
   renderLiveGuidedWorkflow,
   renderLiveSessionControls,
@@ -113,6 +116,35 @@ import {
   type SavedEventFeedFilterLibrary,
   type SessionSaveDraft,
 } from "../../utilities/data-layer/live-inspection.js";
+
+export interface InstalledSavedSessionListActions {
+  open(id:string):void; rename(id:string, name:string):void; export(id:string):void;
+  resume(id:string):void; createSequence(id:string):void; requestDelete(id:string):void;
+}
+
+export function renderInstalledSavedSessionList(
+  list: HTMLElement | null,
+  sessions: readonly SavedSession[],
+  actions: InstalledSavedSessionListActions,
+): void {
+  if (!list) return;
+  list.replaceChildren(...sessions.map((session) => {
+    const item = document.createElement("li");
+    item.append(Object.assign(document.createElement("strong"), { textContent:session.name }));
+    const controls = [
+      ["Open in Live feed", () => actions.open(session.id)],
+      ["Rename", () => { const name=globalThis.prompt("Saved session name",session.name);if(name!==null)actions.rename(session.id,name); }],
+      ["Export", () => actions.export(session.id)],
+      ["Start linked capture", () => actions.resume(session.id)],
+      ["Create sequence", () => actions.createSequence(session.id)],
+      ["Delete", () => actions.requestDelete(session.id)],
+    ] as const;
+    for (const [label, activate] of controls) {
+      const button=document.createElement("button");button.type="button";button.textContent=label;button.addEventListener("click",activate);item.append(button);
+    }
+    return item;
+  }));
+}
 import { endDataLayerTestingSession } from "../../data-layer-session.js";
 import type { SavedSession } from "../../data-layer-saved-sessions.js";
 import type { SavedSessionValidationResult } from "../../data-layer-saved-session-live-feed.js";
@@ -172,6 +204,7 @@ export interface CaptureInstalledPorts {
   changed(session: DataLayerSessionState, observer: LiveObserverState): void;
   runCommand(id: "data-layer.start-testing" | "data-layer.end-testing"): void;
   setLiveSessionMessage(message: string): void;
+  presentEvent?(event:LiveEvent):LiveEvent;
   observerRuntime: CaptureObserverRuntimePorts;
   observation: {
     discover(scope:"current" | "all"): Promise<readonly CaptureTargetTab[]>;
@@ -214,6 +247,7 @@ export interface CaptureInstalledPorts {
     searchObservationTargets(query: string): void;
     cancelDetachTarget(): void;
     confirmDetachTarget(): void;
+    selectedTargetChanged?(): void;
     showDataLayerView(view: string): void;
     copyPageUrl(): void;
     reportMissingEvent(): void;
@@ -288,6 +322,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
   let mounted = false;
   let dataLayerSessionState = restoreSession(ports.storage);
   let liveObserverState = createLiveObserverState({ pageUrl:ports.initialPageUrl(), sources:ports.initialSources() });
+  liveObserverState = restoreFreshSessionLiveObserver(liveObserverState, dataLayerSessionState);
   let dataLayerObserverState: DataLayerHistoryObserverState = {
     pageObject:samplePageObject(), observedEntries:[], sourceEvents:[],
   };
@@ -383,7 +418,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     const generation = ++targetDiscoveryGeneration; const tabs = await ports.observation.discover("current");
     if (!mounted || generation !== targetDiscoveryGeneration) return; registerTargetTabs(tabs);
     const target = tabs[0] ? targetFromTab(tabs[0]) : undefined;
-    if (target) { observationTargetState = selectObservationTarget(observationTargetState, target.id); setObservationTargetResult(`Selected ${target.title}`); }
+    if (target) { observationTargetState = selectObservationTarget(observationTargetState, target.id); setObservationTargetResult(`Selected ${target.title}`); ports.ui.selectedTargetChanged?.(); }
     else setObservationTargetResult("Selection required"); renderObservationTargetPicker();
   }
   const chooseObservationTarget = (): void => { void discoverCurrentObservationTarget(); };
@@ -401,7 +436,8 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
   function renderObservationTargetPicker(): void {
     const targets = findObservationTargets(observationTargetState, observationTargetSearch?.value ?? "");
     ports.observation.render(targets, { select:(id) => { observationTargetState = selectObservationTarget(observationTargetState, id);
-      setObservationTargetResult(`Selected ${selectedObservationTarget(observationTargetState)?.title ?? id}`); renderObservationTargetPicker(); },
+      setObservationTargetResult(`Selected ${selectedObservationTarget(observationTargetState)?.title ?? id}`); renderObservationTargetPicker();
+      renderObservationTargetContext(); closeObservationTargetPicker(); ports.ui.selectedTargetChanged?.(); },
     requestAccess:(id) => { const target = observationTargetState.targets.find((candidate) => candidate.id === id); if (target) void requestSelectedTargetAccess(target); } });
   }
   const searchObservationTargets = (): void => renderObservationTargetPicker();
@@ -422,6 +458,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     const granted = await liveTargetPermissionRecoveryCoordinator.requestAccess(target); if (!mounted) return;
     if (!granted) { setObservationTargetResult("Permission required"); return; }
     setObservationTargetResult(`Access granted for ${target.origin}`); renderObservationTargetPicker();
+    renderObservationTargetContext(); ports.ui.selectedTargetChanged?.();
   }
   async function attachSelectedTarget(): Promise<void> {
     const decision = attachSelectedObservationTarget(observationTargetState);
@@ -701,7 +738,8 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     liveObserverState = selectLiveEvent(liveObserverState, eventId, ports.inspector.splitView() ? "split" : "stacked");
     synchronizeSavedSessionFeedView();
     const event = liveObserverState.events.find(({ id }) => id === eventId);
-    if (event) ports.inspector.render(event);
+    if (event) ports.inspector.render(ports.presentEvent?.(event) ?? event);
+    renderLiveObserver();
     ports.inspector.restorePresentation(liveInspectorPresentation.get(eventId));
   }
   const backToEvents = (): void => closeInspectorAndReturnToEvents();
@@ -737,17 +775,18 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     if (savedSessionLiveFeed) return;
     const previous = dataLayerSessionState.session;
     if (!previous || previous.status !== "active") return;
-    dataLayerSessionState = { session:{ id:newDataLayerSessionId(previous.tabId), status:"active", freshBoundary:true,
-      tabId:previous.tabId, historyPath:previous.historyPath, startUrl:previous.currentUrl, currentUrl:previous.currentUrl,
-      ...(previous.windowId === undefined ? {} : { windowId:previous.windowId }),
-      ...(previous.targetTitle === undefined ? {} : { targetTitle:previous.targetTitle }),
-      ...(previous.targetOrigin === undefined ? {} : { targetOrigin:previous.targetOrigin }), timeline:[] } };
-    liveObserverState = resetLiveObserverForSession(liveObserverState);
+    const fresh = startFreshLiveSession(dataLayerSessionState, liveObserverState, dataLayerObserverState,
+      newDataLayerSessionId(previous.tabId));
+    if (!fresh.started) return;
+    dataLayerSessionState = fresh.sessionState;
+    liveObserverState = fresh.liveObserverState;
+    dataLayerObserverState = fresh.observerState;
+    presentedSourceEventCount = 0;
     archivedSavedSession = undefined; savedThroughEventCount = 0;
     ports.storage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
     ports.savedSessions.resetFlowTesting();
     installDefaultSavedEventFeedFilterForNewSession();
-    publish();
+    persistAndRenderObservationState();
     if (liveObserverElements.eventList) liveObserverElements.eventList.scrollTop = 0;
     ports.setLiveSessionMessage("Fresh session started with 0 captured events.");
     startFreshSessionButton?.focus({ preventScroll:true });
@@ -816,7 +855,9 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     if (cancelSavedSessionDeleteButton) cancelSavedSessionDeleteButton.hidden = true;
     if (confirmSavedSessionDeleteButton) confirmSavedSessionDeleteButton.hidden = true; renderSavedSessions(); };
   const renderLiveObserver = (): void => {
-    if (mounted) renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
+    if (mounted) renderLiveSessionSummary(liveSessionSummaryElements, currentLiveSessionSummary());
+    if (mounted) renderLiveObserverState(liveObserverElements, { ...liveObserverState,
+      events:liveObserverState.events.map((event)=>ports.presentEvent?.(event)??event) }, openLiveInspector);
     if (mounted) ports.savedFilters.render(liveObserverState.events, liveObserverState.query ?? { conditions:[] },
       savedEventFeedFilterControls(), (query) => {
         liveObserverState = setLiveQuery(liveObserverState, query);
@@ -857,7 +898,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     return `tab-${tabId}-session-${unique}`;
   }
   function renderSessionState(): void { renderObservationTargetContext(); }
-  function renderObserverState(): void { renderLiveSessionSummary(liveSessionSummaryElements, currentLiveSessionSummary()); renderLiveObserver(); }
+  function renderObserverState(): void { renderLiveObserver(); }
   function syncCapturedEventsToLive(): void {
     dataLayerSessionState = dataLayerObserverState.sessionState ?? dataLayerSessionState;
     const events = dataLayerObserverState.sourceEvents ?? [];
@@ -1147,8 +1188,21 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
       clearScheduledObservationRefresh(); stopLiveHistoryCapture();
     },
     async begin(): Promise<void> {
-      const started = beginDataLayerTestingSession(dataLayerSessionState, liveObserverState, await ports.sessionStart());
-      dataLayerSessionState = started.sessionState; liveObserverState = started.liveObserverState; publish();
+      const session = await ports.sessionStart();
+      const observation = await ports.observerRuntime.read({ tabId:session.tabId, pageUrl:session.url,
+        historyPath:session.historyPath, pageLoadId:observationPageLoadId(session.tabId) });
+      if (observation.pageAccessStatus !== "page access available") throw new Error("The selected target is not available for capture.");
+      const attachment = attachSelectedObservationTarget(observationTargetState);
+      if (attachment.result === "Attached") observationTargetState = attachment.state;
+      const started = beginDataLayerTestingSession(dataLayerSessionState, liveObserverState, session);
+      dataLayerSessionState = started.sessionState;
+      liveObserverState = started.liveObserverState;
+      ports.savedSessions.resetFlowTesting(); installDefaultSavedEventFeedFilterForNewSession();
+      dataLayerObserverState = attachHistoryArrayObserver({ pageObject:dataLayerObserverState.pageObject,
+        sessionState:dataLayerSessionState, observedEntries:[], sourceEvents:[] }, observation);
+      presentedSourceEventCount = 0; updateSessionFromObserverState(); await startLiveHistoryCapture(observation);
+      savedThroughEventCount = 0; ports.storage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
+      persistAndRenderObservationState(); setObservationTargetResult(""); ports.setLiveSessionMessage("Testing started");
     },
     end(): void { dataLayerSessionState = endDataLayerTestingSession(dataLayerSessionState);
       ports.setLiveSessionMessage(testingEndedMessage()); publish(); },
@@ -1165,8 +1219,17 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     confirmDetachTarget:confirmDetachSelectedTarget,
     openInspector:openLiveInspector,
     closeInspector:closeInspectorAndReturnToEvents,
+    updateEvent(id:string, patch:Partial<LiveEvent>):boolean {
+      const index=liveObserverState.events.findIndex((event)=>event.id===id);if(index<0)return false;
+      liveObserverState={...liveObserverState,events:liveObserverState.events.map((event,candidateIndex)=>candidateIndex===index?{...event,...structuredClone(patch)}:event)};
+      updateSessionFromObserverState();persistAndRenderObservationState();return true;
+    },
+    replaceObserverState(next:LiveObserverState):void {
+      liveObserverState=structuredClone(next);updateSessionFromObserverState();persistAndRenderObservationState();
+      if(liveObserverState.inspectorEventId)openLiveInspector(liveObserverState.inspectorEventId,true);
+    },
     scheduleObservationRefresh,
-    refreshPresentation(): void { renderLiveObserver(); renderSavedSessionLiveBanner(); },
+    refreshPresentation(): void { renderLiveContextActions(); renderLiveObserver(); renderSavedSessionLiveBanner(); },
     currentSessionDraft:() => structuredClone(currentSessionSaveDraft()),
     savedSessions:() => structuredClone(savedSessionLibrary),
     replaceSavedSessions(next:SavedSessionLibrary):void { savedSessionLibrary=structuredClone(next); persistSavedSessionLibrary(); renderSavedSessions(); },

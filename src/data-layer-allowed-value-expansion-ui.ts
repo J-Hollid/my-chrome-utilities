@@ -27,7 +27,7 @@ function destinationLabel(destination: AllowedValueExpansionDestination): string
   } as const)[destination];
 }
 
-export function openAllowedValueExpansionDialog(input: AllowedValueExpansionDialogInput): void {
+export function openAllowedValueExpansionDialog(input: AllowedValueExpansionDialogInput): () => void {
   const { inspector, review, trigger } = input;
   inspector.querySelector("#allowed-value-expansion-review")?.remove();
 
@@ -80,15 +80,25 @@ export function openAllowedValueExpansionDialog(input: AllowedValueExpansionDial
   const cancel = document.createElement("button");
   cancel.type = "button";
   cancel.textContent = "Cancel";
+  const disposers: (() => void)[] = [];
+  const listen = (control:HTMLElement, type:string, listener:EventListener):void => {
+    control.addEventListener(type, listener); disposers.push(() => control.removeEventListener(type, listener));
+  };
   const close = (restoreFocus = true) => {
+    for (const dispose of disposers.splice(0)) dispose();
     if (dialog.open) dialog.close();
     dialog.remove();
-    if (restoreFocus) trigger.focus({ preventScroll:true });
+    if (restoreFocus) {
+      const replacement = trigger.isConnected ? trigger
+        : inspector.querySelector<HTMLButtonElement>(`.live-allowed-value-expansion[data-rule-id="${CSS.escape(trigger.dataset.ruleId ?? "")}"]`);
+      replacement?.focus({ preventScroll:true });
+      queueMicrotask(() => replacement?.focus({ preventScroll:true }));
+    }
   };
   const selectedDestination = () => dialog.querySelector<HTMLInputElement>(
     'input[name="allowed-value-expansion-destination"]:checked',
   )?.value as AllowedValueExpansionDestination | undefined;
-  confirm.addEventListener("click", () => {
+  listen(confirm, "click", () => {
     const destination = selectedDestination();
     if (!destination) return;
     try {
@@ -99,14 +109,14 @@ export function openAllowedValueExpansionDialog(input: AllowedValueExpansionDial
       feedback.textContent = error instanceof Error ? error.message : "The allowed value could not be added.";
     }
   });
-  openDraft.addEventListener("click", () => {
+  listen(openDraft, "click", () => {
     const destination = selectedDestination();
     if (!destination) return;
     close(false);
     input.openDraft(destination);
   });
-  cancel.addEventListener("click", () => close());
-  dialog.addEventListener("cancel", (event) => {
+  listen(cancel, "click", () => close());
+  listen(dialog, "cancel", (event) => {
     event.preventDefault();
     close();
   });
@@ -114,4 +124,5 @@ export function openAllowedValueExpansionDialog(input: AllowedValueExpansionDial
   inspector.append(dialog);
   dialog.showModal();
   heading.focus({ preventScroll:true });
+  return () => close(false);
 }

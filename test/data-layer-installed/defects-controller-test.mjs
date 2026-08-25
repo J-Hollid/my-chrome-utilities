@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { verifyPreparedInstalledController } from "../support/data-layer-installed-controller-contract.mjs";
+await verifyPreparedInstalledController("defects");
 
 const { createDefectsInstalledController, installedControllerDefinition } = await import(
   "../../dist/data-layer-installed/defects/index.js"

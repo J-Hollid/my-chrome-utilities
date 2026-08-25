@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { verifyPreparedInstalledController } from "../support/data-layer-installed-controller-contract.mjs";
+await verifyPreparedInstalledController("event-library");
 const { createEventLibraryInstalledController } = await import("../../dist/data-layer-installed/event-library/index.js");
 const template = { id:"template:1", name:"Page view", eventName:"page_view", sourceId:"history",
   sourceName:"History", destination:"event.history", tags:[], validation:"Not checked", payload:{ page:"/" },
@@ -78,6 +80,7 @@ assert.equal(minimalNodes.has("#library-draft-schema-selector"), false);
 assert.equal(minimalNodes.has("#refresh-library-draft-validation"), false,
   "Event Library removes its created validation controls during symmetric disposal");
 const selectors = ["#event-template-search", "#event-template-empty-state", "#event-template-empty-recovery",
+  "#event-template-validation",
   "#library-draft-schema-selector", "#refresh-library-draft-validation", "#export-event-library",
   "#import-event-library", "#event-library-file", "#event-library-transfer-result", "#clear-event-library",
   "#event-library-delete-review", "#event-library-delete-review-heading", "#event-library-delete-review-summary",
@@ -100,6 +103,8 @@ const transferController = createEventLibraryInstalledController({
 transferController.mount(); transferController.store(template); transferController.beginDraft("template:1");
 elements.get("#library-draft-schema-selector").value = "schema:checkout";
 elements.get("#refresh-library-draft-validation").click(); elements.get("#export-event-library").click();
+assert.equal(elements.get("#event-template-validation").textContent, "Library draft validation: Valid · Checkout v2.",
+  "refresh preserves the validation result after rerendering the Library draft");
 elements.get("#import-event-library").click(); await new Promise((resolve) => setTimeout(resolve, 0));
 assert.deepEqual(transferCalls, ["validate:schema:checkout:page_view:/", "export:true"],
   "draft validation crosses the port with the real edited event payload");
@@ -142,6 +147,12 @@ editorElements.get("#event-template-source").dispatch("input");
 assert.equal(editorController.state().editor.template.sourceId, "gtm");
 assert.equal(editorController.state().editor.template.sourceName, "Google Tag Manager",
   "Event Library source input updates the new draft through the exact installed event type");
+editorElements.get("#event-template-name").value = "Order complete"; editorElements.get("#event-template-name").dispatch("input");
+editorElements.get("#event-template-event-name").value = "order_complete"; editorElements.get("#event-template-event-name").dispatch("input");
+editorElements.get("#event-template-json").value = '{"order_id":"O-1"}'; editorElements.get("#event-template-json").dispatch("input");
+editorElements.get("#save-template-revision").click();
+assert.ok(editorController.templates().some(({ name }) => name === "Order complete"),
+  "saving a valid new Library event appends it before later revision-review saves");
 editorController.beginDraft("template:1"); await new Promise((resolve) => setTimeout(resolve, 0));
 assert.equal(editorController.state().pushPathReadiness.status, "ready", "Event Library owns selected-page push readiness");
 assert.equal(editorElements.get("#push-template-draft").disabled, false);

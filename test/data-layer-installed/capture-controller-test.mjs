@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { verifyPreparedInstalledController } from "../support/data-layer-installed-controller-contract.mjs";
+await verifyPreparedInstalledController("capture");
 const { createCaptureInstalledController } = await import("../../dist/data-layer-installed/capture/index.js");
 let changes = 0;
 const values = new Map();
@@ -64,6 +66,23 @@ assert.ok(changes >= 6);
 controller.dispose(); controller.dispose();
 controller.mount();
 assert.equal(controller.state().observer.events.length, 1, "owned state survives one fresh lifecycle");
+controller.dispose();
+const persistedFreshSession = JSON.parse(values.get("dataLayerTestingSession"));
+persistedFreshSession.session.freshBoundary = true;
+values.set("dataLayerTestingSession", JSON.stringify(persistedFreshSession));
+const restoredController = createCaptureInstalledController({
+  root:{ querySelector:() => null },
+  storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value) },
+  initialPageUrl:() => "https://shop.example/", initialSources:() => [{ id:"history", name:"History", status:"Connected" }],
+  sessionStart:async () => ({ id:"unused", tabId:4, url:"https://shop.example/", historyPath:"event.history" }),
+  changed() {}, runCommand() {}, setLiveSessionMessage() {}, observerRuntime:noOpObserverRuntime,
+  observation:noOpObservation, savedSessions:noOpSavedSessions, savedFilters:noOpSavedFilters,
+  inspector:noOpInspector, ui:noOpCaptureUi,
+});
+restoredController.mount();
+assert.equal(restoredController.state().observer.events.length, 1,
+  "Capture restores a persisted fresh-session timeline into a newly constructed Live observer");
+restoredController.dispose();
 
 function interactiveElement() {
   const listeners = new Map();
@@ -173,12 +192,14 @@ const observerController = createCaptureInstalledController({
   savedSessions:noOpSavedSessions, savedFilters:noOpSavedFilters, inspector:noOpInspector, ui:noOpCaptureUi,
 });
 observerController.mount(); await observerController.begin(); await observerController.discoverTargets();
+const initialPushActions = pushActions;
+assert.ok(initialPushActions, "starting a ready session activates production push capture immediately");
 tabUpdated(9, { status:"loading", url:"https://shop.example/stale" }, { url:"https://shop.example/stale", title:"Stale" });
 tabUpdated(9, { status:"complete" }, { url:"https://shop.example/stale", title:"Stale" });
 await new Promise((resolve) => setTimeout(resolve, 0));
 tabUpdated(9, { status:"loading", url:"https://shop.example/current" }, { url:"https://shop.example/current", title:"Current" });
 resolveStaleRead(); await new Promise((resolve) => setTimeout(resolve, 0));
-assert.equal(pushActions, undefined, "a superseded page read cannot activate stale capture");
+assert.equal(pushActions, initialPushActions, "a superseded page read cannot replace capture with stale activation");
 tabUpdated(9, { status:"complete" }, { url:"https://shop.example/current", title:"Current" });
 await new Promise((resolve) => setTimeout(resolve, 0));
 assert.ok(pushActions, "the current completed page activates observer push capture");

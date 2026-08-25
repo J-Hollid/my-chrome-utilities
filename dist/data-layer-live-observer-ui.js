@@ -31,8 +31,20 @@ export function renderDataLayerView(elements, view, focus = false) {
             if (focus && selected)
                 button.focus();
         }
-        if (panel)
+        if (panel) {
             panel.hidden = !selected;
+            panel.inert = !selected;
+            for (const control of Array.from(panel.querySelectorAll("button, input, select, textarea"))) {
+                if (selected && control.dataset.disabledByDataLayerView === "true") {
+                    control.disabled = false;
+                    delete control.dataset.disabledByDataLayerView;
+                }
+                else if (!selected && candidate !== "Live" && !control.disabled) {
+                    control.disabled = true;
+                    control.dataset.disabledByDataLayerView = "true";
+                }
+            }
+        }
     }
 }
 function eventRow(event, selected, openEvent) {

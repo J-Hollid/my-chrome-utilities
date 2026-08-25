@@ -1,4 +1,5 @@
-import { createCaptureInstalledController, type CaptureInstalledPorts } from "./capture/index.js";
+import { createCaptureInstalledController, renderInstalledSavedSessionList, type CaptureInstalledPorts, type CaptureObserverRuntimePorts,
+  type CaptureTargetTab } from "./capture/index.js";
 import { createDefectsInstalledController, type DefectsInstalledPorts } from "./defects/index.js";
 import { createDurableProjectsInstalledController, type DurableProjectsInstalledPorts } from "./durable-projects/index.js";
 import { createEventLibraryInstalledController, type EventLibraryInstalledPorts,
@@ -17,6 +18,9 @@ import { applyCapturedValidationToProfile, capturedValidationDestinationChoices,
   createFixtureFromCapturedValidation, transactProject, type ProjectState } from "../utilities/data-layer/schemas.js";
 import type { CapturedValidationResult } from "../data-layer-specification-project.js";
 import { createGuidedTestCase } from "../data-layer-guided-test-cases.js";
+import type { DataLayerView, LiveEvent } from "../utilities/data-layer/live-inspection.js";
+import type { CompletedLiveFlowTest } from "../data-layer-live-flow-testing.js";
+import { tabPageObservation } from "../active-page-observation.js";
 
 export const installedDataLayerControllerOrder = [
   "capture",
@@ -44,6 +48,7 @@ interface InstalledWorkspaceTabsLifecycle extends InstalledDataLayerControllerLi
 }
 
 export interface InstalledSidePanelShellPorts {
+  commands:ReturnType<typeof commandsForUtilityShell>;
   pageLifecycle: Pick<Window, "addEventListener" | "removeEventListener">;
   commandLog: Pick<HTMLElement, "textContent"> | null;
   palette: InstalledPaletteLifecycle;
@@ -70,7 +75,7 @@ export function createChromeRuntimeMessagePort(runtimeMessages: {
 }
 
 export function createInstalledSidePanelShellController(ports: InstalledSidePanelShellPorts) {
-  const allCommands = [...commandsForUtilityShell(listCommands(), extensionShell.commands)];
+  const allCommands = [...ports.commands];
   const paletteController = ports.palette;
   const workspaceTabsController = ports.workspaceTabs;
   const hotkeyController = ports.hotkeys;
@@ -163,6 +168,7 @@ export async function createInstalledSidePanelRuntimeFoundation(
   root: Document = document,
   storage: Storage = globalThis.localStorage,
 ): Promise<InstalledSidePanelRuntimeFoundation> {
+  const { extensionShell, utilityRegistry } = await import("../utility-registry.js");
   const app = root.querySelector<HTMLElement>("#app");
   const panelRoot = root.querySelector<HTMLElement>("#side-panel-root");
   const utilityDirectory = root.querySelector<HTMLElement>("#utility-directory");
@@ -178,6 +184,7 @@ export async function createInstalledSidePanelRuntimeFoundation(
     installDurableRepositoryStartupFailure(root, error);
     return new Promise<never>(() => {});
   });
+  await mountDurableProjectRepositoryUi(root, globalThis.indexedDB, durableProjectRuntime.repository);
   const projectStorage = durableProjectRuntime.storage;
   const scopedDataLayerStorage = createUtilityStorage(storage, utilityStorageContract("data-layer"));
   const dataLayerStorage: Storage = {
@@ -409,11 +416,211 @@ export function createInstalledDataLayerLifecycle(
     },
   };
 }
-import { extensionShell, utilityRegistry } from "../utility-registry.js";
+
+export async function mountInstalledDataLayerRuntime(
+  root:Document = document,
+  storage:Storage = globalThis.localStorage,
+):Promise<InstalledDataLayerControllerLifecycle> {
+  const [paletteApi, hotkeyApi, tabApi, captureApi, liveApi, eventApi, schemaApi, defectApi, replayApi, registryApi] = await Promise.all([
+    import("../utilities/command-palette/index.js"), import("../utilities/hotkeys/index.js"),
+    import("../workspace-tabs-ui.js"), import("../utilities/data-layer/capture.js"),
+    import("../utilities/data-layer/live-inspection.js"), import("../utilities/data-layer/event-library.js"),
+    import("../utilities/data-layer/schemas.js"), import("../utilities/data-layer/defect-reporting.js"),
+    import("../utilities/data-layer/replay.js"), import("../utility-registry.js"),
+  ]);
+  const foundation=await createInstalledSidePanelRuntimeFoundation(root,storage), durable=foundation.durableProjectRuntime;
+  const chromeApi=():typeof globalThis.chrome=>globalThis.chrome;
+  const dataStorage=foundation.dataLayerStorage, projectStorage=durable.storage;
+  const download=(filename:string,contents:BlobPart,type="application/json"):void=>{const url=URL.createObjectURL(new Blob([contents],{type}));
+    const link=root.createElement("a");link.href=url;link.download=filename;link.click();URL.revokeObjectURL(url);};
+  const currentProject=():ProjectState|undefined=>schemaApi.restoreCanonicalProjectState(projectStorage.getItem("my-chrome-utilities.specification-project.v1"));
+  let controllers:ReturnType<typeof createInstalledDataLayerControllers>["controllers"];
+  let currentView:DataLayerView=(dataStorage.getItem("my-chrome-utilities.data-layer-view.v1") as DataLayerView|null)??"Live";
+  const liveElements=liveApi.findLiveObserverElements(root);
+  const showDataLayerView=(view:string,focus=false):void=>{if(!liveApi.dataLayerViews.includes(view as DataLayerView))return;
+    currentView=view as DataLayerView;dataStorage.setItem("my-chrome-utilities.data-layer-view.v1",currentView);
+    liveApi.renderDataLayerView(liveElements,currentView,focus);if(currentView==="Defects")controllers?.defects.render();
+    if(currentView==="Schemas")void controllers?.schemas.hydrateActiveProjectForSchemas();};
+  const projectLibraryUi=schemaApi.mountProjectLibraryUi({root,storage:projectStorage,
+    prepareProject:durable.ensureProject,settled:durable.settled,undoProject:durable.undo,
+    subscribe:(listener)=>durable.subscribe(({library})=>listener(library)),blocked:()=>Boolean(durable.failedSave()),
+    exportProject:async(projectId)=>JSON.stringify(await durable.repository.exportProject(projectId)),
+    importProject:async(serialized,input)=>{await durable.repository.importProject(JSON.parse(serialized) as Record<string,unknown>,input);},
+    projectStorageKey:"my-chrome-utilities.specification-project.v1",navigationStorageKey:"my-chrome-utilities.specification-project-navigation.v1",
+    openStudio:(url)=>{globalThis.open(url,"_blank");},onChange:()=>{controllers?.["project-event-transport"].render();},});
+  const projectRecords=()=>Object.values(projectLibraryUi.library().projects).map(({state})=>({id:state.project.id,name:state.project.name}));
+  const activeProjectId=()=>projectLibraryUi.library().activeProjectId;
+  const commitProject=(next:ProjectState,expectedRevision:number,label:string):{status:"saved"|"conflict";revision:number}=>{
+    const base=currentProject(),result=schemaApi.commitCanonicalProjectState(projectStorage,next,{expectedRevision,pendingLabel:label,...(base?{base}:{})});
+    return result.status==="conflict"?{status:"conflict",revision:result.revision}:{status:"saved",revision:result.revision};};
+  const eventSchemas=createEventLibrarySchemaCoordination({schemas:{schemas:()=>controllers.schemas.schemas(),
+    validateAgainstSchema:(event,schemaId)=>controllers.schemas.validateAgainstSchema(event,schemaId),
+    openSchemaFromSource:(source)=>controllers.schemas.openSchemaFromSource(source)}});
+  const reviewEventLibraryTestCase=createEventLibraryTestCaseCoordination({projects:projectRecords,activeProjectId,
+    ensureProject:durable.ensureProject,settle:durable.settled,
+    load:async(projectId)=>{await durable.ensureProject(projectId);const loaded=await durable.repository.loadProject(projectId);return{state:loaded.state,revision:loaded.draftSequence};},
+    commit:commitProject,
+    capture:(next,revision)=>projectLibraryUi.captureActiveProject(next,revision),
+    route:(projectId,id)=>{const routed=schemaApi.recordProjectNavigation(projectLibraryUi.library(),projectId,{kind:"fixtures",id});projectStorage.setItem(schemaApi.PROJECT_LIBRARY_STORAGE_KEY,schemaApi.serializeProjectLibrary(routed));},
+    openStudio:(projectId,id)=>{globalThis.open(`specification-builder.html?project=${encodeURIComponent(projectId)}&kind=fixtures&entity=${encodeURIComponent(id)}&source=event-library`,"_blank");},
+    repair:(projectId,kind)=>{globalThis.open(`specification-builder.html?project=${encodeURIComponent(projectId)}&kind=${kind}&route=add&source=event-library`,"_blank");},
+    createId:(kind)=>`${kind}:${crypto.randomUUID()}`});
+  const tabSubscriptions=<T extends (...args:never[])=>void>(event:{addListener(listener:T):void;removeListener(listener:T):void}|undefined,listener:T):(()=>void)=>{
+    event?.addListener(listener);return()=>event?.removeListener(listener);};
+  const targetFromTab=(tab:chrome.tabs.Tab):CaptureTargetTab|undefined=>tab.id===undefined||tab.windowId===undefined||!tab.url?undefined:{tabId:tab.id,windowId:tab.windowId,
+    pageUrl:tab.url,title:tab.title??tab.url,activeTab:tab.active,currentWindow:tab.highlighted};
+  const captureObserverRuntime:CaptureObserverRuntimePorts={
+    read:({tabId,pageUrl,historyPath,pageLoadId})=>tabPageObservation(tabId,pageUrl,historyPath,pageLoadId),
+    startPush:({tabId,historyPath,onSnapshot,onEntry})=>captureApi.startLiveHistoryPushCapture({...(tabId===undefined?{}:{tabId}),historyPath,onSnapshot,onEntry}),
+    present:(event,destination)=>{const source=controllers.capture.state().observer.sources.find(({id})=>id===event.sourceId),validation=controllers.schemas.validate({sourceId:event.sourceId,eventName:event.name,payload:event.payload,rawInput:event.rawInput});
+      return{...event,validation:validation.state,validationDetails:{issues:validation.issues,evaluations:validation.evaluations??[],...(validation.schema?{schema:validation.schema}:{}),...(validation.documentation?{documentation:validation.documentation}:{}),...(validation.assignment?{assignment:validation.assignment}:{})},sourceName:source?.name??event.sourceId,...(destination?{destination}:{})};},
+    recordCapture:({sessionId,pageUrl,sourceId,rawValue})=>schemaApi.recordSpecificationCapture(dataStorage,{sessionId,pageUrl,sourceId,rawValue}),
+    recordNavigation:({sessionId,pageUrl})=>schemaApi.recordSpecificationNavigation(dataStorage,{sessionId,pageUrl}),
+    subscribeTabUpdated:(listener)=>tabSubscriptions(chromeApi()?.tabs?.onUpdated,((tabId:number,change:chrome.tabs.TabChangeInfo,tab:chrome.tabs.Tab)=>listener(tabId,{...(["loading","complete"].includes(change.status??"")?{status:change.status as "loading"|"complete"}:{}),...(change.url?{url:change.url}:{})},{...(tab.url?{url:tab.url}:{}),...(tab.title?{title:tab.title}:{})})) as never),
+    subscribeTabRemoved:(listener)=>tabSubscriptions(chromeApi()?.tabs?.onRemoved,listener as never),
+    subscribePermissionsRemoved:(listener)=>tabSubscriptions(chromeApi()?.permissions?.onRemoved,((permissions:chrome.permissions.Permissions)=>listener(permissions.origins??[])) as never),
+  };
+  const controllerPorts:InstalledDataLayerControllerPorts={
+    capture:{root,storage:dataStorage,initialPageUrl:()=>globalThis.location.href,initialSources:()=>[{id:"history",name:"History array",status:"Disconnected"}],
+      presentEvent:(event)=>controllers.defects.triage(event),
+      sessionStart:async()=>{const [tab]=await chromeApi().tabs.query({active:true,currentWindow:true});if(!tab){throw new Error("Open a page before starting Data Layer testing.");}
+        const target=targetFromTab(tab);if(!target)throw new Error("The active page cannot be observed.");const path=controllers["project-event-transport"].currentObservationHistoryPath();
+        return{id:`tab-${target.tabId}-session-${crypto.randomUUID()}`,tabId:target.tabId,url:target.pageUrl,historyPath:path,windowId:target.windowId,targetTitle:target.title,targetOrigin:new URL(target.pageUrl).origin};},
+      changed:()=>{},runCommand:(id)=>{void shell.runDataLayerCommand({commandId:id,message:`${id} ran`}).catch((error:unknown)=>{
+        const message=root.querySelector<HTMLElement>("#live-session-message");
+        if(message)message.textContent=error instanceof Error?error.message:String(error);
+      });},
+      setLiveSessionMessage:(message)=>{const node=root.querySelector<HTMLElement>("#live-session-message");if(node)node.textContent=message;},
+      observerRuntime:captureObserverRuntime,
+      observation:{discover:async(scope)=>{const tabs=await chromeApi().tabs.query(scope==="current"?{active:true,currentWindow:true}:{});return tabs.flatMap((tab)=>{const value=targetFromTab(tab);return value?[value]:[];});},
+        requestTabsAccess:async()=>chromeApi().permissions?await chromeApi().permissions.request({permissions:["tabs"]}):false,
+        requestOriginAccess:async(origin)=>chromeApi().permissions?await chromeApi().permissions.request({origins:[`${origin}/*`]}):false,
+        probe:(target,path,pageLoadId)=>captureObserverRuntime.read({tabId:target.tabId,pageUrl:target.pageUrl,historyPath:path,pageLoadId}),
+        render:(targets,actions)=>{const elements=captureApi.findObservationTargetElements(root);captureApi.renderObservationTargetPicker(elements,targets,{
+          select:(target)=>actions.select(target.id),requestAccess:(target)=>actions.requestAccess(target.id)});}},
+      savedSessions:{now:()=>new Date().toISOString(),readImportFile:async()=>root.querySelector<HTMLInputElement>("#saved-session-file")?.files?.[0]?.text(),
+        download:(name,serialized)=>download(`${name}.json`,serialized),validate:(event)=>{const result=controllers.schemas.validate({sourceId:event.sourceId,eventName:event.name,payload:event.payload,rawInput:event.rawInput});return{state:result.state,...(result.schema?{schema:{name:result.schema.name,version:result.schema.version}}:{})};},
+        render:(sessions,actions)=>renderInstalledSavedSessionList(root.querySelector<HTMLElement>("#saved-session-list"),sessions,actions),flowTests:()=>controllers["live-flow-testing"].state().completed as unknown as CompletedLiveFlowTest[],resetFlowTesting:()=>controllers["live-flow-testing"].reset(),
+        createReplaySequence:(session)=>{controllers.replay.createFromSession(session.id,session.name,session.events.map(({id})=>id));}},
+      savedFilters:{createId:()=>`filter:${crypto.randomUUID()}`,render:(events,query,controls,update)=>{const host=root.querySelector<HTMLElement>("#live-event-query");
+        if(host)liveApi.renderEventFeedQueryBuilder(host,events,query,update,controls);},dispose:()=>{}},
+      inspector:{splitView:()=>globalThis.innerWidth>=700,capturePresentation:()=>liveApi.captureLiveInspectorPresentation(liveElements.eventInspector),
+        restorePresentation:(snapshot)=>liveApi.restoreLiveInspectorPresentation(liveElements.eventInspector,snapshot),
+        restoreReturn:(snapshot)=>liveApi.restoreInspectorReturnUi(liveElements,snapshot),render:(event)=>liveApi.renderLiveInspector(liveElements,event,
+          liveApi.createLiveInspectorActions({currentPageUrl:()=>controllers.capture.state().observer.pageUrl,
+            writeClipboard:async(text)=>navigator.clipboard.writeText(text),storeTemplate:(template)=>controllers["event-library"].store(template),
+            defaultDestination:()=>controllers["project-event-transport"].state().pushPath,
+            expandAllowedValue:(selected,evaluation,trigger)=>{
+              const assignedSchemaId=selected.validationDetails?.schema?.id??evaluation.schemaId;
+              if(assignedSchemaId)controllers.schemas.openAllowedValueExpansionReview(selected.id,assignedSchemaId,evaluation,trigger);
+            },
+            openReportedDefect:(defectId,selected,issueIndex)=>controllers.defects.open(defectId,{returnPosition:{eventId:selected.id,issueIndex,
+              listScrollTop:liveElements.eventList?.scrollTop??0}}),
+            validationState:(candidate)=>controllers.schemas.validate({sourceId:candidate.sourceId,eventName:candidate.name,payload:candidate.payload,rawInput:candidate.rawInput}).state,
+            updateValidation:(eventId)=>{const candidate=controllers.capture.state().observer.events.find(({id})=>id===eventId);if(!candidate)return;
+              const validation=controllers.schemas.validate({sourceId:candidate.sourceId,eventName:candidate.name,payload:candidate.payload,rawInput:candidate.rawInput});
+              controllers.capture.updateEvent(eventId,{validation:validation.state,validationDetails:{issues:validation.issues,evaluations:validation.evaluations??[],
+                ...(validation.schema?{schema:validation.schema}:{}),...(validation.documentation?{documentation:validation.documentation}:{}),...(validation.assignment?{assignment:validation.assignment}:{})}});},
+            manualSchemaChoices:()=>controllers.schemas.schemas().map(({id,name,version})=>({id,label:`${name} version ${version}`})),
+            selectManualSchema:()=>{}}))},
+      ui:{historyPath:()=>{const state=controllers["project-event-transport"].state(),status=["Selection required","Waiting for path","Ready","Unavailable"].includes(state.currentTargetPathStatus)?state.currentTargetPathStatus:"Unavailable";return{path:state.observationPath,fieldValue:state.observationPath,status:status as "Selection required"|"Waiting for path"|"Ready"|"Unavailable"};},
+        chooseObservationTarget:()=>root.querySelector<HTMLButtonElement>("#choose-observation-target")?.click(),browseObservationTargets:()=>root.querySelector<HTMLButtonElement>("#browse-observation-targets")?.click(),
+        closeObservationTargetPicker:()=>captureApi.closeObservationTargetPicker(captureApi.findObservationTargetElements(root)),searchObservationTargets:()=>{},cancelDetachTarget:()=>{},confirmDetachTarget:()=>{},
+        selectedTargetChanged:()=>{controllers["project-event-transport"].refreshTargetPath();if(currentView==="Schemas")showDataLayerView("Live");},
+        showDataLayerView,copyPageUrl:()=>{const url=controllers.capture.state().observer.pageUrl;void captureApi.copyLivePageUrl(url,navigator.clipboard?.writeText?.bind(navigator.clipboard));},
+        reportMissingEvent:()=>controllers.defects.openMissingEventBuilder("Live")}},
+    "event-library":{root,storage:dataStorage,defaultPushPath:()=>controllers["project-event-transport"].state().pushPath,
+      push:async(template)=>{const targetState=controllers.capture.state().targets,target=targetState.targets.find(({id})=>id===targetState.selectedTargetId);if(!target)throw new Error("Select a target before pushing.");
+        const result=await eventApi.pushSavedTemplateToSelectedTarget(template,target,async(request)=>{const [injection]=await chromeApi().scripting.executeScript({target:{tabId:request.tabId},world:"MAIN",args:[request.destination,request.eventName,request.payload],func:eventApi.pushPayloadInPage});if(!injection?.result?.success)throw new Error(injection?.result?.result??"Push failed");});
+        if(!result.success)throw new Error(result.result);const feedback=root.querySelector<HTMLElement>("#event-template-result");if(feedback)feedback.textContent=result.summary;},
+      changed:()=>{},createSchema:eventSchemas.createSchema,createTestCase:reviewEventLibraryTestCase,
+      appendInspectorAction:(label,activate)=>{const action=root.createElement("button");action.type="button";action.textContent=label;action.addEventListener("click",activate);liveElements.eventInspector?.append(action);return()=>action.remove();},
+      openLibrary:()=>showDataLayerView("Library"),announce:(message)=>{const node=root.querySelector<HTMLElement>("#live-session-message");if(node)node.textContent=message;},
+      createId:()=>`template:${crypto.randomUUID()}`,downloadExport:(value)=>download("event-library.json",`${JSON.stringify(value,null,2)}\n`),
+      readImportFile:async()=>await root.querySelector<HTMLInputElement>("#event-library-file")?.files?.[0]?.text()??"",
+      schemas:eventSchemas.schemas,validateDraft:eventSchemas.validateDraft,backToCapturedEvent:()=>showDataLayerView("Live"),
+      pushTarget:()=>{const state=controllers.capture.state().targets,target=state.targets.find(({id})=>id===state.selectedTargetId);return target?{id:target.id,tabId:target.tabId,windowId:target.windowId,title:target.title,pageUrl:target.pageUrl,origin:target.origin,accessState:target.accessState}:undefined;},
+      checkPushPath:async(target,destination)=>{const [result]=await chromeApi().scripting.executeScript({target:{tabId:target.tabId},world:"MAIN",args:[destination],func:eventApi.pushPathCapabilityInPage});return result?.result?.success?{success:true,message:"Selected-page push path is ready."}:{success:false,message:result?.result?.result??"Push path is not push-capable"};},
+      renderPushReview:(host,review)=>eventApi.renderPushDraftReview(host,review),
+      renderRevisionReview:(host,review)=>{const dialog=host.querySelector<HTMLDialogElement>("#revision-change-review");if(dialog)eventApi.renderTemplateChangeReview(dialog,review);}},
+    schemas:{root,storage:dataStorage,relationshipViewStorage:dataStorage,changed:()=>{},subscribe:(listener)=>durable.subscribe(()=>listener()),
+      createRuleId:()=>`rule:${crypto.randomUUID()}`,capturedAssignmentValue:()=>undefined,renderAssignmentConditions:schemaApi.renderAssignmentDataConditionEditor,
+      localRulePromotionDialog:schemaApi.createLocalRulePromotionDialog(),subscribeSchemaPersistence:()=>()=>{},
+      downloadSchema:(value,filename)=>download(filename,`${JSON.stringify(value,null,2)}\n`),
+      relationshipTree:(schemas)=>({projectId:activeProjectId()??"",nodes:schemaApi.projectSchemaRelationshipTree(currentProject(),schemas)}),
+      openProjectLibrary:()=>showDataLayerView("Projects"),openContributor:()=>{},openContributorInStudio:(key)=>globalThis.open(`specification-builder.html?contributor=${encodeURIComponent(key)}`,"_blank"),
+      adoptSavedSchema:()=>{},renderSchemaSpecification:(host,schema,schemas,surface,close)=>schemaApi.renderSchemaSpecificationBuilder(host,schema,schemas,surface,close,{
+        writePlain:async(plain:string)=>navigator.clipboard.writeText(plain),
+        writeRich:async(_html:string,plain:string)=>navigator.clipboard.writeText(plain),
+      }),reportMissingSchemaEvent:()=>controllers.defects.openMissingEventBuilder("Schemas"),
+      showSchemasView:()=>showDataLayerView("Schemas"),scheduleFrame:(callback)=>requestAnimationFrame(callback),restoreGuidedCapture:(id,path)=>{
+        controllers.capture.openInspector(id,true);const property=path?root.querySelector<HTMLElement>(`[data-property-path="${CSS.escape(path)}"]`):undefined;
+        (property?.querySelector<HTMLElement>(".live-allowed-value-expansion")??property)?.focus({preventScroll:true});},
+      activeProjectId,ensureProjectSchemaContributors:async(projectId)=>{await durable.ensureProject(projectId);return{name:(await durable.repository.loadProject(projectId)).state.project.name};},
+      settleCanonical:async()=>{await durable.settled("schema");},mountLayeredProfileEditor:()=>undefined,canonicalConceptSuggestions:()=>schemaApi.projectCanonicalConcepts(currentProject()!),
+      revalidateCurrentLive:(schemas,overrides)=>{const refresh=schemaApi.revalidateCurrentLiveSession(controllers.capture.state().observer,schemas,overrides);
+        controllers.capture.replaceObserverState({...refresh.state,events:refresh.state.events.map((event)=>controllers.defects.triage(event))});
+        return refresh.revalidatedEventIds.length;},
+      prepareCapturedValidationContinuation:createCapturedValidationContinuationCoordination({load:async(record)=>{const projectId=activeProjectId();if(!projectId)return{revision:0};await durable.ensureProject(projectId);const loaded=await durable.repository.loadProject(projectId),captured=controllers.capture.state().observer.events.find(({id})=>id===record.eventId);return{state:loaded.state,revision:loaded.draftSequence,...(captured?{captured:{id:captured.id,sourceId:captured.sourceId,payload:captured.payload}}:{})};},
+        settle:durable.settled,ensureProject:durable.ensureProject,loadCurrent:async(projectId)=>{const loaded=await durable.repository.loadProject(projectId);return{state:loaded.state,revision:loaded.draftSequence};},
+        commit:commitProject,capture:(next,revision)=>projectLibraryUi.captureActiveProject(next,revision),
+        route:(projectId,kind,id)=>{const routed=schemaApi.recordProjectNavigation(projectLibraryUi.library(),projectId,{kind,id});projectStorage.setItem(schemaApi.PROJECT_LIBRARY_STORAGE_KEY,schemaApi.serializeProjectLibrary(routed));},
+        openStudio:(projectId,kind,id)=>globalThis.open(`specification-builder.html?project=${encodeURIComponent(projectId)}&kind=${kind}&entity=${encodeURIComponent(id)}`,"_blank"),createId:(kind)=>`${kind}:${crypto.randomUUID()}`})},
+    defects:{root,storage:dataStorage,recopy:(defect)=>defectApi.copyStoredDefectForJira(defect,defectApi.browserDefectReportClipboard()).then(({feedback})=>feedback),
+      attachCurrentSession:(id)=>coordination.attachCurrentSession(id),openLinkedSession:(id)=>{coordination.openLinkedSession(id);},liveEvents:()=>controllers.capture.state().observer.events,
+      showDefectsView:()=>showDataLayerView("Defects"),returnToLive:(position)=>{showDataLayerView("Live");controllers.capture.openInspector(position.eventId);
+        if(liveElements.eventList)liveElements.eventList.scrollTop=position.listScrollTop;
+        liveElements.eventInspector?.querySelector<HTMLElement>(`.live-reported-defect-link[data-issue-index="${position.issueIndex}"]`)?.focus({preventScroll:true});},
+      renderLive:()=>controllers.capture.refreshPresentation(),
+      missingEventContext:()=>({events:controllers.capture.state().observer.events,pageUrl:controllers.capture.state().observer.pageUrl}),mountMissingEventBuilder:()=>({close(){}})},
+    replay:{root,listTemplates:()=>controllers["event-library"].templates().map(({id,name,payload,version,sourceId,destination})=>({id,name,payload,version,sourceId,destination})),listSources:()=>controllers.capture.state().observer.sources,
+      pageUrl:()=>controllers.capture.state().observer.pageUrl},
+    projects:{activeProjectId,loadProjects:projectRecords,subscribe:(listener)=>durable.subscribe(()=>listener()),openProject:async(id)=>{projectLibraryUi.activate(id);await durable.settled();},
+      navigateToProjectArea:(area)=>{showDataLayerView("Projects");if(area==="create")root.querySelector<HTMLButtonElement>("#create-library-project")?.click();},
+      adoptSavedSchema:async()=>{},projectStorage,settleProjectCommand:async()=>{await durable.settled();},captureProject:(state,revision)=>projectLibraryUi.captureActiveProject(state,revision)},
+    "durable-projects":{root,startRepository:async()=>durable.subscribe(()=>{}),migration:()=>durable.migration.status==="migrated"
+      ? {status:"none"} : durable.migration as ReturnType<DurableProjectsInstalledPorts["migration"]>,resolveMigration:durable.resolveMigration,
+      readLegacySource:(key)=>storage.getItem(key),downloadMigrationSources:(name,value)=>download(name,value),reload:()=>globalThis.location.reload(),reviewMigration:async()=>{},
+      retryFailedSave:durable.retryFailedSave,rejectFailedSave:()=>durable.resolveFailedSave("reject"),storageRecoveryClosed:()=>{},subscribeSaveFailed:()=>()=>{},saveFailed:()=>{}},
+    "project-event-transport":{root,loadPaths:()=>{const state=currentProject();const settings=state?schemaApi.projectEventTransport(state.project):undefined;return{observationPath:settings?.observationHistoryPath??"",pushPath:settings?.defaultPushPath??""};},
+      savePaths:async(paths)=>{const state=currentProject(),serialized=projectStorage.getItem("my-chrome-utilities.specification-project.v1"),envelope=schemaApi.restoreCanonicalProjectEnvelope(serialized);if(!state||!envelope)return;
+        const next=schemaApi.configureProjectEventTransport(state,{observationHistoryPath:paths.observationPath,defaultPushPath:paths.pushPath}),result=schemaApi.commitCanonicalProjectState(projectStorage,next,{expectedRevision:envelope.revision,pendingLabel:"Save project event transport settings",base:state});if(result.status==="conflict")throw new Error("Project transport settings changed in a newer Draft.");projectLibraryUi.captureActiveProject(next,result.revision);},
+      settleTransport:durable.settled,readTargetObservation:async(path)=>{const state=controllers.capture.state().targets,target=state.targets.find(({id})=>id===(state.attachedTargetId??state.selectedTargetId));return target?captureObserverRuntime.read({tabId:target.tabId,pageUrl:target.pageUrl,historyPath:path,pageLoadId:`tab:${target.tabId}:transport`}):undefined;},
+      applyLiveTargetPathObservation:async()=>{},renderTargetReadiness:()=>controllers.capture.refreshPresentation(),projectName:()=>currentProject()?.project.name},
+    "live-flow-testing":{root,activeProject:async()=>{const id=activeProjectId();if(!id)return;await durable.ensureProject(id);return(await durable.repository.loadProject(id)).state;},
+      events:()=>controllers?.capture.state().observer.events??[],saveSummary:()=>{},savedSummary:()=>{const library=liveApi.restoreSavedSessionLibrary(dataStorage.getItem(liveApi.SAVED_SESSION_LIBRARY_STORAGE_KEY));
+        return liveApi.restoreSavedSessionLiveFeed(dataStorage.getItem(liveApi.SAVED_SESSION_LIVE_FEED_STORAGE_KEY),library)?.session.flowTests?.at(-1);},onResult:()=>{},
+      openProject:()=>showDataLayerView("Projects"),createProject:()=>{showDataLayerView("Projects");root.querySelector<HTMLButtonElement>("#create-library-project")?.click();},
+      id:()=>`live-flow:${crypto.randomUUID()}`,now:()=>new Date().toISOString(),subscribe:(listener)=>durable.subscribe(()=>listener())},
+  };
+  const bundle=createInstalledDataLayerControllers(controllerPorts);controllers=bundle.controllers;
+  const coordination=createDefectCaptureCoordination({capture:controllers.capture,defects:controllers.defects});
+  const allCommands=[...paletteApi.commandsForUtilityShell(paletteApi.listCommands(),registryApi.extensionShell.commands)];
+  let shell!:ReturnType<typeof createInstalledSidePanelShellController>;
+  const workspaceTabs=tabApi.createWorkspaceTabsController({storage:foundation.shellStorage,tabList:foundation.workspaceTabList,root,pageLifecycle:globalThis});
+  const palette=paletteApi.createPaletteController({commands:allCommands,executeCommand:(command)=>paletteApi.runCommandById(command.id,shell.commandContext),
+    elements:{root:root.querySelector<HTMLElement>("#side-panel-root"),launcher:foundation.openPaletteButton,palette:foundation.palette,filter:foundation.paletteFilter,results:foundation.paletteResults,sidePanelContent:foundation.sidePanelContent},ownerDocument:root});
+  const hotkeys=hotkeyApi.createInstalledHotkeyController({commands:allCommands,storage:foundation.hotkeyStorage,
+    elements:{root:root.querySelector<HTMLElement>("#side-panel-root"),createButton:foundation.createKeymapButton,updateButton:foundation.updateKeymapButton,loadButton:foundation.loadKeymapButton,fileInput:foundation.keymapFileInput,status:foundation.keymapStatus,warning:foundation.keymapWarning,editorContainer:foundation.hotkeyEditorCommands,editorFilter:foundation.hotkeyEditorFilter},
+    documentEvents:root,pageLifecycle:globalThis,download:({filename,contents,type})=>{download(filename,contents,type);return()=>{};},
+    executeCommand:(id)=>paletteApi.runCommandById(id,shell.commandContext),shellClaimsKey:()=>false,
+    ignoresTarget:(target)=>target instanceof HTMLInputElement||target instanceof HTMLTextAreaElement||target instanceof HTMLSelectElement||(target instanceof HTMLElement&&target.isContentEditable)});
+  shell=createInstalledSidePanelShellController({commands:allCommands,pageLifecycle:globalThis,commandLog:foundation.commandLog,palette,workspaceTabs,hotkeys,
+    captureCommands:{startTesting:controllers.capture.begin,endTesting:async()=>controllers.capture.end(),chooseObservationTarget:controllers.capture.discoverTargets,
+      attachSelectedTarget:controllers.capture.attachTarget,detachObservationTarget:controllers.capture.beginDetachTarget},showDataLayerView:(view)=>showDataLayerView(view)});
+  const lifecycle=createInstalledDataLayerLifecycle({...controllers});
+  let runtimeMounted=false, stopDurableCoordination:(()=>void)|undefined;
+  return{mount(){if(runtimeMounted)return;runtimeMounted=true;shell.mount();lifecycle.mount();
+      stopDurableCoordination=durable.subscribe(()=>controllers["project-event-transport"].synchronizeProjectPaths());
+      void durable.settled().then(()=>{if(runtimeMounted)controllers["project-event-transport"].synchronizeProjectPaths();});
+      showDataLayerView(currentView);foundation.app?.setAttribute("aria-label","TWAtility Belt");
+      const panel=root.querySelector<HTMLElement>("#side-panel-root");if(panel){panel.dataset.chromeApiCapabilities="installed-runtime";panel.dataset.utilityShellReady="true";}},
+    dispose(){if(!runtimeMounted)return;runtimeMounted=false;stopDurableCoordination?.();stopDurableCoordination=undefined;lifecycle.dispose();shell.dispose();}};
+}
 import { commandsForUtilityShell, listCommands } from "../utilities/command-palette/index.js";
 import { bindUtilityPanels, mountUtilityShell, renderUtilityDirectory } from "../platform/utility-shell-dom.js";
 import { createUtilityStorage } from "../platform/utility-storage.js";
-import { installDurableRepositoryStartupFailure, openDurableProjectRuntime,
+import { installDurableRepositoryStartupFailure, mountDurableProjectRepositoryUi, openDurableProjectRuntime,
   SCHEMA_LIBRARY_STORAGE_KEY } from "../utilities/data-layer/schemas.js";
 import type { CommandRunContext, CommandRunRecord } from "../commands.js";
 import type { WorkspaceTabId } from "../workspace-tabs.js";

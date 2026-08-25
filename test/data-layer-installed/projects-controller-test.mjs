@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { verifyPreparedInstalledController } from "../support/data-layer-installed-controller-contract.mjs";
+await verifyPreparedInstalledController("projects");
 const { createProjectsInstalledController } = await import("../../dist/data-layer-installed/projects/index.js");
 let subscribed = 0, disposed = 0;
 const adoptions = [];

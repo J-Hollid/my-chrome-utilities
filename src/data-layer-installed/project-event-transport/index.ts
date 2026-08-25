@@ -45,7 +45,20 @@ export function createProjectEventTransportInstalledController(ports: ProjectEve
   };
   function refreshSelectedTargetPathStatus(): void {
     const path = currentObservationHistoryPath();
+    if (!path.trim()) {
+      currentTargetPathStatus = "Waiting for path";
+      renderTargetPath(path, historyPathInput?.value ?? path, currentTargetPathStatus);
+      ports.renderTargetReadiness();
+      return;
+    }
     void targetPathStatusController.configure(path, historyPathInput?.value ?? path);
+  }
+  function synchronizeProjectPaths(): void {
+    paths = { ...ports.loadPaths() };
+    if (historyPathInput) historyPathInput.value = paths.observationPath;
+    if (defaultPushPathInput) defaultPushPathInput.value = paths.pushPath;
+    renderProjectEventTransport();
+    refreshSelectedTargetPathStatus();
   }
   const syncPaths = (): void => { paths = { observationPath:historyPathInput?.value ?? paths.observationPath,
     pushPath:defaultPushPathInput?.value ?? paths.pushPath }; phase = "dirty"; };
@@ -78,6 +91,7 @@ export function createProjectEventTransportInstalledController(ports: ProjectEve
   return {
     mount(): void {
       if (mounted) return; mounted = true; generation += 1;
+      paths = { ...ports.loadPaths() };
       if (historyPathInput) historyPathInput.value = paths.observationPath;
       if (defaultPushPathInput) defaultPushPathInput.value = paths.pushPath;
       historyPathInput?.addEventListener("input", input);
@@ -95,6 +109,7 @@ export function createProjectEventTransportInstalledController(ports: ProjectEve
     currentObservationHistoryPath,
     configureTargetPath:targetPathStatusController.configure,
     refreshTargetPath:refreshSelectedTargetPathStatus,
+    synchronizeProjectPaths,
     render:renderProjectEventTransport,
     save:saveProjectEventTransport,
     state:() => ({ ...paths, phase, currentTargetPathStatus }),

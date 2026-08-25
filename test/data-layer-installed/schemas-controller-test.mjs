@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { verifyPreparedInstalledController } from "../support/data-layer-installed-controller-contract.mjs";
+await verifyPreparedInstalledController("schemas");
 const { createSchemasInstalledController } = await import("../../dist/data-layer-installed/schemas/index.js");
 const schema = { id:"schema:page", name:"Page", version:1, document:{ type:"object", properties:{ title:{ type:"string" } } },
   assignments:[], published:true };
@@ -50,7 +52,10 @@ function element() {
     prepend(...children) { for (const child of children) if (child && typeof child === "object") { child.isConnected = true; child.parentElement = this; } this.children.unshift(...children); },
     insertBefore(child) { child.isConnected = true; child.parentElement = this; this.children.push(child); }, before() {}, after() {},
     remove() { this.removed = true; this.isConnected = false; if (this.parentElement) this.parentElement.children = this.parentElement.children.filter((child) => child !== this); }, contains() { return false; }, closest() { return null; },
-    querySelector(selector) { const id = selector.startsWith("#") ? selector.slice(1) : undefined;
+    querySelector(selector) { if (selector === 'input[name="allowed-value-expansion-destination"]:checked') {
+        const visitInput = (children) => children.find((child) => child.name === "allowed-value-expansion-destination" && child.checked)
+          ?? children.map((child) => visitInput(child.children ?? [])).find(Boolean); return visitInput(this.children); }
+      const id = selector.startsWith("#") ? selector.slice(1) : undefined;
       const visit = (children) => children.find((child) => id && child.id === id) ?? children.map((child) => visit(child.children ?? [])).find(Boolean);
       return visit(this.children); },
     querySelectorAll() { return this.children.flatMap((child) => child.children?.[0] ? [child.children[0]] : []); },
@@ -65,7 +70,7 @@ fakeDocument = { createElement:() => Object.assign(element(), { isConnected:fals
 globalThis.document = fakeDocument;
 const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "#schema-editor-name",
   "#schema-search", "#schema-category-filter", "#schema-count", "#schema-list", "#schema-empty-state", "#schema-result",
-  "#create-schema", "#recheck-schema-validation", "#schema-validation-issues", "#schema-validation-record-list", "#guided-validation-flow",
+  "#create-schema", "#recheck-schema-validation", "#schema-validation-issues", "#schema-validation-record-list", "#guided-validation-flow", "#live-event-inspector",
   "#workspace-panel-data-layer", "#data-layer-panel-schemas",
   "#schema-editor-parent", "#schema-only-declared-properties", "#schema-inheritance-provenance",
   "#schema-rule-overrides", "#schema-rule-override-list", "#schema-inherited-rule-groups", "#schema-effective-rule-preview",
@@ -116,8 +121,8 @@ const elements = new Map(selectors.map((selector) => [selector, element()]));
 for (const selector of ["#schema-rule-revision-review", "#schema-rule-revision-review-summary",
   "#confirm-schema-rule-revision-review", "#cancel-schema-rule-revision"]) elements.delete(selector);
 elements.set("#side-panel-layered-profile-editor", element()); elements.set("#live-event-query", element());
-const schemaMasterTab = Object.assign(element(), { textContent:"Schemas", dataset:{ schemaSubview:"schema-master" } });
-const schemaRulesTab = Object.assign(element(), { textContent:"Rules", dataset:{ schemaSubview:"schema-rule-library" } });
+const schemaMasterTab = Object.assign(element(), { textContent:"Schemas", dataset:{}, "aria-controls":"schema-master" });
+const schemaRulesTab = Object.assign(element(), { textContent:"Rules", dataset:{}, "aria-controls":"schema-rule-library" });
 const schemaMasterPanel = Object.assign(element(), { id:"schema-master" });
 const schemaRulesPanel = Object.assign(element(), { id:"schema-rule-library" });
 const uiValues = new Map([
@@ -220,6 +225,10 @@ assert.equal(uiController.guidedState().selectedSchemaPropertyPath, "total");
 assert.equal(elements.get("#schema-result").textContent, "Library template fields loaded into a new schema draft.");
 assert.equal(elements.get("#schema-editor-name").focused, true);
 assert.equal(relationshipActions.at(-1), "view:Schemas");
+assert.deepEqual(elements.get("#schema-property-tree").children.map(({ dataset }) => dataset.schemaPropertyCanonicalPath),
+  ["/total", "/coupon"], "source-created properties retain the canonical property-row browser contract");
+assert.deepEqual(elements.get("#schema-property-tree").children.map(({ children }) => children[0].textContent),
+  ["total", "coupon"], "source-created property rows expose their canonical labels as headings");
 elements.get("#schema-editor-target").value = "raw input"; elements.get("#schema-editor-target").dispatch("input");
 assert.equal(uiController.state().transientDraft.workingDraft.assignments[0].target, "raw input",
   "schema target input updates the transient draft through the exact installed event type");
@@ -518,9 +527,14 @@ assert.equal(uiController.ruleState().approvedRuleAttachmentUpdateId, "rule:chec
 assert.equal(uiController.editReusableRule("rule:retired"), true); elements.get("#schema-rule-name").value = "Retired rule reviewed";
 elements.get("#schema-rule-attachments").selectedOptions = []; elements.get("#save-schema-rule").click();
 assert.equal(elements.get("#schema-rule-revision-review").open, true, "editing a reusable rule requires revision review");
+assert.match(elements.get("#schema-rule-revision-review-summary").textContent, /; examples .* → .*\.$/u,
+  "reusable-rule revision review preserves the examples comparison");
 elements.get("#confirm-schema-rule-revision-review").click();
 assert.equal(uiController.rules().find(({ id }) => id === "rule:retired").version, 2);
 assert.deepEqual(uiController.ruleState().pendingRuleSnapshotMetadata, { id:"rule:retired", version:1, attachments:[] });
+elements.get("#create-schema-rule").click();
+assert.equal(uiController.ruleState().editingReusableSchemaRuleId, undefined,
+  "Create rule clears the identity of the previously edited reusable rule");
 assert.equal(uiController.requestRuleDeletion("rule:checkout"), false, "attached rules cannot be deleted");
 assert.equal(uiController.requestRuleDeletion("rule:retired"), true);
 elements.get("#cancel-schema-rule-delete").click();
@@ -759,6 +773,11 @@ assert.equal(uiController.canonicalState().reviewVisible, true, "Compare exposes
 elements.get("#compact-canonical-context").children.find(({ textContent }) => textContent === "Reject local edit").click();
 assert.equal(uiController.canonicalState().pending, false, "Reject clears the preserved compact canonical command");
 assert.equal(uiController.openSavedCanonical(persistenceSchemaId), true); uiController.openCanonicalPropertyActions(canonicalPropertyId);
+assert.equal(uiController.openCanonicalRuleEditor(canonicalPropertyId), true,
+  "the saved canonical property resolves into its staged rule editor");
+assert.ok(findByText(elements.get("#schema-property-rule-picker"), "Add rule"),
+  "the canonical rule editor starts with the staged rule-adder used by the installed schema workspace");
+elements.get("#schema-property-rule-picker").dispatch("cancel");
 const compactDocumentationControl = elements.get("#compact-canonical-context").children.find(({ textContent }) => textContent === "Save documentation");
 assert.ok(compactDocumentationControl?.listenerCount() > 0, "compact property actions are live disposable controls");
 assert.equal(await uiController.compactPropertyAction(canonicalPropertyId, "documentation", "Checkout property"), true);
@@ -785,13 +804,13 @@ const expansionEvidence = { propertyPath:"/page_type", status:"warning", message
   schemaId:expansionSchema.id, schemaName:expansionSchema.name, schemaVersion:2 };
 const expansionTrigger = element();
 assert.equal(uiController.openAllowedValueExpansionReview(guidedCapture.id, expansionSchema.id, expansionEvidence, expansionTrigger), true);
-let expansionConfirm = elements.get("#guided-validation-flow").children[0].children[4]; expansionConfirm.click();
+let expansionConfirm = findByText(elements.get("#live-event-inspector"), "Confirm addition"); expansionConfirm.click();
 assert.deepEqual(uiController.schemas().find(({ id }) => id === expansionSchema.id).workingDraft.attachedRules[0].allowedValues,
   ["product", "content", "checkout"], "allowed-value expansion persists the exact observed scalar in the Schema-owned working draft");
 assert.deepEqual(restoredGuidedCaptures.at(-1), [guidedCapture.id, "/page_type"], "allowed-value completion returns through the Capture port");
 assert.equal(expansionConfirm.listenerCount(), 0, "allowed-value confirmation disposes its dialog listeners symmetrically");
 uiController.openAllowedValueExpansionReview(guidedCapture.id, expansionSchema.id, expansionEvidence, expansionTrigger);
-expansionConfirm = elements.get("#guided-validation-flow").children[0].children[4];
+expansionConfirm = findByText(elements.get("#live-event-inspector"), "Keep existing pending value");
 const disposedCompletion = uiController.persistGuidedValidation(guidedResult("rule:guided-dispose", "checkout.postcode"));
 const disposedRejection = disposedCompletion.then(() => undefined, (error) => error);
 assert.equal(uiController.openSavedCanonical(persistenceSchemaId), true);

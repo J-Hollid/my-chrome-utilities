@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { verifyPreparedInstalledController } from "../support/data-layer-installed-controller-contract.mjs";
+await verifyPreparedInstalledController("live-flow-testing");
 const { createLiveFlowTestingInstalledController } = await import("../../dist/data-layer-installed/live-flow-testing/index.js");
 let removed = 0;
 let reset = 0, opened = 0;
