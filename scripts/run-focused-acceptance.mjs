@@ -95,8 +95,8 @@ import {
 } from "./live-target-permission-recovery-focused-evidence.mjs";
 import {
   isSidePanelSingleCutoverEvidenceTask,
-  sidePanelSingleCutoverFocusedTaskKeys,
-  sidePanelSingleCutoverPackIds,
+  sidePanelSingleCutoverEvidenceFocusedTaskKeysFor,
+  sidePanelSingleCutoverEvidencePackIdsFor,
   sidePanelSingleCutoverProductEvidenceTask,
   sidePanelSingleCutoverProductFocusedTaskKeys,
   validateSidePanelSingleCutoverFocusedPlan,
@@ -432,6 +432,10 @@ export function focusedAcceptanceOptions(args) {
     isSidePanelSingleCutoverEvidenceTask(options.prepareEvidence);
   const sidePanelSingleCutoverProductEvidence =
     options.prepareEvidence === sidePanelSingleCutoverProductEvidenceTask;
+  const sidePanelEvidencePackIds =
+    sidePanelSingleCutoverEvidencePackIdsFor(options.prepareEvidence);
+  const sidePanelEvidenceFocusedTaskKeys =
+    sidePanelSingleCutoverEvidenceFocusedTaskKeysFor(options.prepareEvidence);
   if (options.focusedTaskKeys.length && ((!permissionRecoveryEvidence &&
       !sidePanelSingleCutoverEvidence && options.packIds.length !== 1) ||
       options.changedPaths.length ||
@@ -462,11 +466,11 @@ export function focusedAcceptanceOptions(args) {
     }
     if (sidePanelSingleCutoverEvidence &&
         (JSON.stringify([...options.packIds].sort()) !==
-           JSON.stringify([...sidePanelSingleCutoverPackIds].sort()) ||
+           JSON.stringify([...sidePanelEvidencePackIds].sort()) ||
          (sidePanelSingleCutoverProductEvidence
            ? options.focusedTaskKeys.length > 0 || !options.includeProperties
            : JSON.stringify([...options.focusedTaskKeys].sort()) !==
-               JSON.stringify([...sidePanelSingleCutoverFocusedTaskKeys].sort()) ||
+               JSON.stringify([...sidePanelEvidenceFocusedTaskKeys].sort()) ||
              options.includeProperties))) {
       throw new Error(`Side-panel single-cutover evidence requires its exact ${
         sidePanelSingleCutoverProductEvidence ? "product" : "preparation"} selectors`);

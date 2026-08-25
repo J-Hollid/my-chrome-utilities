@@ -7,6 +7,19 @@ export const sidePanelSingleCutoverEvidenceTask =
   "verification-slice-side-panel-single-cutover";
 export const sidePanelSingleCutoverProductEvidenceTask =
   "side-panel-single-cutover";
+export const sidePanelSingleCutoverCompatibilityRepairEvidenceTask =
+  "verification-slice-side-panel-single-cutover-compatibility-repair";
+
+export const sidePanelSingleCutoverCompatibilityRepairPackIds = Object.freeze([
+  "schemas",
+  "shell",
+]);
+
+export const sidePanelSingleCutoverCompatibilityRepairFocusedTaskKeys = Object.freeze([
+  "unit:test/side-panel-single-cutover-preparation-test.mjs",
+  "unit:test/verification-process-contract-test.mjs",
+  "package:extension",
+]);
 
 export const sidePanelSingleCutoverPackIds = Object.freeze([
   "capture",
@@ -111,7 +124,20 @@ const sameSet = (left, right) => JSON.stringify([...new Set(left)].sort()) ===
 
 export function isSidePanelSingleCutoverEvidenceTask(task) {
   return task === sidePanelSingleCutoverEvidenceTask ||
-    task === sidePanelSingleCutoverProductEvidenceTask;
+    task === sidePanelSingleCutoverProductEvidenceTask ||
+    task === sidePanelSingleCutoverCompatibilityRepairEvidenceTask;
+}
+
+export function sidePanelSingleCutoverEvidencePackIdsFor(task) {
+  return task === sidePanelSingleCutoverCompatibilityRepairEvidenceTask
+    ? sidePanelSingleCutoverCompatibilityRepairPackIds
+    : sidePanelSingleCutoverPackIds;
+}
+
+export function sidePanelSingleCutoverEvidenceFocusedTaskKeysFor(task) {
+  return task === sidePanelSingleCutoverCompatibilityRepairEvidenceTask
+    ? sidePanelSingleCutoverCompatibilityRepairFocusedTaskKeys
+    : sidePanelSingleCutoverFocusedTaskKeys;
 }
 
 function approvedProductChangedPath(file) {
@@ -124,12 +150,31 @@ function approvedProductChangedPath(file) {
     /^test\/data-layer-installed\/[^/]+-controller-test\.mjs$/u.test(file);
 }
 
+function approvedCompatibilityRepairChangedPath(file) {
+  return [
+    "scripts/run-focused-acceptance.mjs",
+    "scripts/side-panel-single-cutover-focused-evidence.mjs",
+    "test/acceptance/side-panel-browser-session-contract.mjs",
+    "test/side-panel-component-layout-runtime-test.mjs",
+    "test/side-panel-single-cutover-preparation-test.mjs",
+    "test/support/side-panel-browser-direct-assertion-map.mjs",
+    "test/support/side-panel-browser-direct-compatibility.mjs",
+    "test/support/side-panel-schema-fixture-primitives.mjs",
+    "test/support/side-panel-schema-guided-lifecycle-fixtures.mjs",
+    "test/support/side-panel-schema-guided-targets.mjs",
+    "test/support/side-panel-schema-validation-targets.mjs",
+  ].includes(file);
+}
+
 export function validateSidePanelSingleCutoverFocusedPlan(plan, evidenceTask) {
   if (!isSidePanelSingleCutoverEvidenceTask(evidenceTask)) return false;
   const productEvidence = evidenceTask === sidePanelSingleCutoverProductEvidenceTask;
+  const compatibilityRepair =
+    evidenceTask === sidePanelSingleCutoverCompatibilityRepairEvidenceTask;
   const focusedTaskKeys = productEvidence
     ? sidePanelSingleCutoverProductFocusedTaskKeys(plan.tasks)
-    : sidePanelSingleCutoverFocusedTaskKeys;
+    : sidePanelSingleCutoverEvidenceFocusedTaskKeysFor(evidenceTask);
+  const expectedPackIds = sidePanelSingleCutoverEvidencePackIdsFor(evidenceTask);
   const packIds = plan.packIds ?? plan.claimPackIds ?? plan.requestedPackIds;
   const tasksByKey = new Map(plan.tasks.map((task) => [task.key, task]));
   const requested = focusedTaskKeys.map((key) => tasksByKey.get(key));
@@ -138,8 +183,8 @@ export function validateSidePanelSingleCutoverFocusedPlan(plan, evidenceTask) {
       { mode:"ordinary-focused" }).map(({ key }) => key)
     : [];
   if (plan.mode !== "focused-task" || Boolean(plan.includeProperties) !== productEvidence ||
-      !sameSet(plan.requestedPackIds, sidePanelSingleCutoverPackIds) ||
-      !sameSet(packIds, sidePanelSingleCutoverPackIds) ||
+      !sameSet(plan.requestedPackIds, expectedPackIds) ||
+      !sameSet(packIds, expectedPackIds) ||
       plan.focusedTaskKeys !== undefined &&
         !sameSet(plan.focusedTaskKeys, focusedTaskKeys) ||
       !sameSet(plan.tasks.map(({ key }) => key), exactKeys)) {
@@ -149,6 +194,10 @@ export function validateSidePanelSingleCutoverFocusedPlan(plan, evidenceTask) {
   if (productEvidence && (plan.changedPaths ?? []).some((file) =>
     !approvedProductChangedPath(file))) {
     throw new Error("Side-panel product evidence rejects a changed path outside the approved cutover scope");
+  }
+  if (compatibilityRepair && (plan.changedPaths ?? []).some((file) =>
+    !approvedCompatibilityRepairChangedPath(file))) {
+    throw new Error("Side-panel preparation evidence rejects a changed path outside the approved compatibility-repair scope");
   }
   return true;
 }

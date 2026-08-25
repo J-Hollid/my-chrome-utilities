@@ -325,7 +325,7 @@ const directContract = await runDirectSidePanelCompatibility({
   }),
   emit:(record) => directRecords.push(record),
 });
-assert.equal(directCompatibilityAssertionLeaves.length, 247,
+assert.equal(directCompatibilityAssertionLeaves.length, 372,
   "the explicit no-target assertion map must retain every executed original assertion leaf");
 assert.deepEqual(directCompatibilityViewportWidths, [320, 360, 520, 720],
   "the direct compatibility map must retain the original four viewports");

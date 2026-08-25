@@ -15,6 +15,9 @@ import {
   sidePanelSingleCutoverPackIds,
   sidePanelSingleCutoverProductEvidenceTask,
   sidePanelSingleCutoverProductFocusedTaskKeys,
+  sidePanelSingleCutoverCompatibilityRepairEvidenceTask,
+  sidePanelSingleCutoverCompatibilityRepairFocusedTaskKeys,
+  sidePanelSingleCutoverCompatibilityRepairPackIds,
   validateSidePanelSingleCutoverFocusedPlan,
 } from "../scripts/side-panel-single-cutover-focused-evidence.mjs";
 import {
@@ -106,6 +109,33 @@ const focusedEvidencePlan = selectFocusedVerificationTasks(
 assert.equal(validateSidePanelSingleCutoverFocusedPlan(
   focusedEvidencePlan, sidePanelSingleCutoverEvidenceTask,
 ), true);
+const compatibilityRepairOptions = focusedAcceptanceOptions([
+  ...sidePanelSingleCutoverCompatibilityRepairPackIds.flatMap((packId) => ["--pack", packId]),
+  ...sidePanelSingleCutoverCompatibilityRepairFocusedTaskKeys.flatMap((key) => ["--focused-task", key]),
+  "--changed-since", base,
+  "--prepare-evidence", sidePanelSingleCutoverCompatibilityRepairEvidenceTask,
+]);
+assert.equal(compatibilityRepairOptions.includeProperties, false);
+assert.deepEqual(compatibilityRepairOptions.packIds,
+  sidePanelSingleCutoverCompatibilityRepairPackIds);
+const compatibilityRepairPlan = selectFocusedVerificationTasks(
+  planVerification(packs, { packIds:sidePanelSingleCutoverCompatibilityRepairPackIds }),
+  sidePanelSingleCutoverCompatibilityRepairFocusedTaskKeys,
+  planVerification(packs, { packIds:runnablePackIdsFromRegistry(packs) }),
+);
+assert.equal(validateSidePanelSingleCutoverFocusedPlan({
+  ...compatibilityRepairPlan,
+  changedPaths:[
+    "scripts/side-panel-single-cutover-focused-evidence.mjs",
+    "test/side-panel-component-layout-runtime-test.mjs",
+    "test/support/side-panel-browser-direct-assertion-map.mjs",
+  ],
+}, sidePanelSingleCutoverCompatibilityRepairEvidenceTask), true,
+"the preparation correction binds only its exact two-pack evidence and protected verification paths");
+assert.throws(() => validateSidePanelSingleCutoverFocusedPlan({
+  ...compatibilityRepairPlan,
+  changedPaths:["src/side-panel.ts"],
+}, sidePanelSingleCutoverCompatibilityRepairEvidenceTask), /outside the approved compatibility-repair scope/u);
 const productEvidenceOptions = focusedAcceptanceOptions([
   ...sidePanelSingleCutoverPackIds.flatMap((packId) => ["--pack", packId]),
   "--property",
