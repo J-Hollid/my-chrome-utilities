@@ -1936,6 +1936,7 @@
       "capture"
     ],
     "unit": [
+      "test/side-panel-direct-compatibility-capture-test.mjs",
       "test/data-layer-installed/schemas-controller-test.mjs",
       "test/data-layer-installed/consumers/schemas-consumer-test.mjs",
       "test/data-layer-allowed-value-expansion-test.mjs",
@@ -2866,6 +2867,15 @@
         "features": [
           "features/data-layer-schema-publication-live-revalidation-runtime.feature",
           "features/data-layer-non-applicable-property-visibility-runtime.feature"
+        ]
+      }
+    ],
+    "checkpointCommands": [
+      {
+        "id": "side-panel-direct-compatibility-capture",
+        "executable": "node",
+        "args": [
+          "test/side-panel-direct-compatibility-capture-test.mjs"
         ]
       }
     ]
@@ -6898,12 +6908,14 @@
       {
         "path": "test/support/side-panel-browser-direct-compatibility.mjs",
         "consumers": [
+          "schemas",
           "shell"
         ]
       },
       {
         "path": "test/support/side-panel-browser-direct-assertion-map.mjs",
         "consumers": [
+          "schemas",
           "shell"
         ]
       },
@@ -7006,6 +7018,7 @@
         "path": "test/support/side-panel-capture-fixtures.mjs",
         "consumers": [
           "capture",
+          "schemas",
           "shell"
         ]
       },
@@ -7019,6 +7032,7 @@
         "path": "test/support/side-panel-event-library-fixtures.mjs",
         "consumers": [
           "event-library",
+          "schemas",
           "shell"
         ]
       },
@@ -7060,12 +7074,14 @@
         "path": "test/support/side-panel-defect-fixtures.mjs",
         "consumers": [
           "defects",
+          "schemas",
           "shell"
         ]
       },
       {
         "path": "test/support/side-panel-shell-targets.mjs",
         "consumers": [
+          "schemas",
           "shell"
         ]
       }
@@ -7638,6 +7654,13 @@
         ],
         "features": [
           "features/portable-build-package-flow.feature"
+        ]
+      },
+      {
+        "id": "side-panel-direct-compatibility-validation",
+        "executable": "node",
+        "args": [
+          "test/side-panel-component-layout-runtime-test.mjs"
         ]
       }
     ]

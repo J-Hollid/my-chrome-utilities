@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { mkdir, mkdtemp, readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
@@ -35,9 +35,11 @@ function primitiveLeafPaths(value, prefix = []) {
   return value === undefined ? [] : [prefix];
 }
 
-async function startInstalledBrowserProcess() {
+async function startInstalledBrowserProcess({ nativePermissionUi = false } = {}) {
   const temporaryRoot = path.resolve("tmp");
+  const chromeTemporaryRoot = process.env.SWARMFORGE_CHROME_TMPDIR ?? "/tmp/sf-chrome";
   await mkdir(temporaryRoot, { recursive:true });
+  await mkdir(chromeTemporaryRoot, { recursive:true });
   const chromeProfile = await mkdtemp(path.join(temporaryRoot, "side-panel-layout-"));
   const distributionRoot = path.resolve("dist");
   const assetServer = createServer(async (request, response) => {
@@ -65,13 +67,28 @@ async function startInstalledBrowserProcess() {
   });
   await new Promise((resolve) => assetServer.listen(0, "127.0.0.1", resolve));
   const assetPort = assetServer.address().port;
+  const chromeArguments = headlessChromeArguments(chromeProfile, distributionRoot);
+  if (nativePermissionUi) chromeArguments.splice(chromeArguments.indexOf("--headless=new"), 1);
   const chrome = spawn(
     resolveChromeExecutable(),
-    headlessChromeArguments(chromeProfile, distributionRoot),
+    chromeArguments,
     { stdio:["ignore", "ignore", "pipe"], env:{ ...process.env,
-      TMPDIR:process.env.SWARMFORGE_CHROME_TMPDIR ?? process.env.TMPDIR } },
+      ...(nativePermissionUi ? { DISPLAY:process.env.DISPLAY ?? ":0" } : {}),
+      TMPDIR:chromeTemporaryRoot } },
   );
-  return { assetPort, assetServer, chrome, chromeProfile };
+  const processResources = { assetPort, assetServer, chrome, chromeProfile };
+  processResources.acceptNativePermissionPrompt = async (permissionSocket) => {
+    const helper = "/tmp/swarmforge-x11-accept-chrome-permission-prompt";
+    execFileSync("gcc", [
+      path.resolve("test/fixtures/x11-accept-chrome-permission-prompt.c"),
+      "-lX11", "-l:libXtst.so.6", "-o", helper,
+    ]);
+    execFileSync(helper, [String(chrome.pid)], {
+      env:{ ...process.env, DISPLAY:process.env.DISPLAY ?? ":0" },
+    });
+    await permissionSocket.call("Page.bringToFront");
+  };
+  return processResources;
 }
 
 async function stopInstalledBrowserProcess(resources, targetId) {
@@ -332,7 +349,7 @@ export async function runInstalledSidePanelCompatibility({
   stopProcess = stopInstalledBrowserProcess,
   executeCompatibility = runSidePanelBrowserFixture,
 } = {}) {
-  const processResources = await startProcess();
+  const processResources = await startProcess({ nativePermissionUi:true });
   const assertionLeaves = [];
   const viewportWidths = [];
   try {

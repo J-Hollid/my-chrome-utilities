@@ -114,7 +114,7 @@
    source
    [["activateHotkeyFocus" "panelRoot.focus()" "dataset.hotkeyFocus"
      "focus-app-hotkeys" "chrome.runtime.onMessage"]
-    ["hotkeyController.focus()" "elements.root.focus()" "dataset.hotkeyFocus"
+    ["elements.root.focus()" "dataset.hotkeyFocus"
      "focus-app-hotkeys" "runtimeMessages"]]))
 
 (defn stored-keymap-wired? [source]

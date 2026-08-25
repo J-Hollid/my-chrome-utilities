@@ -258,9 +258,10 @@ const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mill
 
 async function debuggingPort() {
   if (processResources.debuggingPort) return processResources.debuggingPort;
-  return waitForChromeDebuggingPort({
+  processResources.debuggingPort = await waitForChromeDebuggingPort({
     chrome, targetId:"side-panel-session", limitMs:30_000, maximumStderrCharacters:2_000,
   });
+  return processResources.debuggingPort;
 }
 
 async function loadedExtensionId(port) {
@@ -424,16 +425,42 @@ async function waitForPageReadiness(socket, predicateDescription, expression) {
   });
 }
 
-async function openPanel(port, width, height = 900) {
-  const panelUrl = `http://127.0.0.1:${assetPort}/side-panel.html`;
+async function openPanel(port, width, height = 900, panelUrl = `http://127.0.0.1:${assetPort}/side-panel.html`) {
   const page = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(panelUrl)}`, { method: "PUT" }).then((response) => response.json());
   const socket = new DevtoolsSocket(page.webSocketDebuggerUrl);
+  socket.pageId = page.id;
   await socket.connect();
   registerInstalledHandle(page, socket);
   await socket.call("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
   await socket.call("Runtime.enable");
   await waitForPageReadiness(socket, "the side-panel utility shell",
     "document.readyState === 'complete' && document.querySelector('#side-panel-root')?.dataset.utilityShellReady === 'true' && document.querySelector('#save-and-close-schema') !== null");
+  if (panelUrl.startsWith("chrome-extension://")) {
+    const permissionSeed = await socket.call("Runtime.evaluate", {
+      expression:`(async () => {
+        const installedPermissions = globalThis.chrome?.permissions;
+        Object.defineProperty(globalThis, "__swarmforgeInstalledPermissions", {
+          configurable:true,
+          value:installedPermissions,
+        });
+        Object.defineProperty(globalThis, "__swarmforgeInstalledChrome", {
+          configurable:true,
+          value:globalThis.chrome,
+        });
+        const request = { origins:[${JSON.stringify(`http://127.0.0.1:${assetPort}/*`)}] };
+        const before = installedPermissions?.contains
+          ? await installedPermissions.contains(request) : false;
+        const removed = false;
+        const after = installedPermissions?.contains
+          ? await installedPermissions.contains(request) : false;
+        globalThis.__swarmforgePermissionSeedEvidence = { before, removed, after };
+        return globalThis.__swarmforgePermissionSeedEvidence;
+      })()`,
+      awaitPromise:true,
+      returnByValue:true,
+    });
+    emit({ swarmforgePermissionRecoverySeed:permissionSeed.result.value });
+  }
   return socket;
 }
 
@@ -462,6 +489,8 @@ async function reloadSpecificationBuilder(socket) {
 }
 
 async function evaluate(socket, expression) {
+  const fixtureProgramName = Object.entries(fixturePrograms)
+    .find(([, program]) => program === expression)?.[0] ?? "inline fixture";
   const fixtureProgram = fixturePhasePrograms.has(expression) || expression.includes("localStorage.clear()");
   const operationPhase = suppliedTargetContext?.browserOperationPhase ??
     (fixtureProgram ? "fixture" : "interaction");
@@ -469,20 +498,200 @@ async function evaluate(socket, expression) {
     suppliedTargetContext.nextReloadPhase = "fixture";
   }
   return runInstalledPhase(operationPhase, async () => {
-    const retainedExpression = `globalThis.__swarmforgeRetainedEvaluation = (${expression})`;
-    const result = await transmitDevtoolsProgram({
+    const permissionGestureRequired = expression.includes("await waitForStartableSelectedTarget()");
+    const retainedExpression = permissionGestureRequired
+      ? `(globalThis.__swarmforgeEvaluationSettled = false,
+          globalThis.__swarmforgePermissionRecoveryCoordinates = undefined,
+          globalThis.__swarmforgeRetainedEvaluation = Promise.resolve(${expression}).finally(() => {
+            globalThis.__swarmforgeEvaluationSettled = true;
+          }))`
+      : `globalThis.__swarmforgeRetainedEvaluation = (${expression})`;
+    let result = await transmitDevtoolsProgram({
       targetId:socket.targetId,
       phase:operationPhase,
       source:retainedExpression,
       shape:"expression",
       call:socket.call.bind(socket),
-      parameters:{ returnByValue:true, awaitPromise:true, userGesture:true },
+      parameters:{ returnByValue:!permissionGestureRequired,
+        awaitPromise:!permissionGestureRequired, userGesture:true },
+    }).catch((error) => {
+      error.message += `; fixture ${fixtureProgramName}: ${expression.slice(0, 160)}`;
+      throw error;
     });
+    if (permissionGestureRequired) {
+      await drivePermissionRecoveryUserGesture(socket);
+      result = await transmitDevtoolsProgram({
+        targetId:socket.targetId,
+        phase:operationPhase,
+        source:"globalThis.__swarmforgeRetainedEvaluation",
+        shape:"expression",
+        call:socket.call.bind(socket),
+        parameters:{ returnByValue:true, awaitPromise:true },
+      }).catch((error) => {
+        error.message += `; retained fixture ${fixtureProgramName}: ${expression.slice(0, 160)}`;
+        throw error;
+      });
+    }
     if (result.exceptionDetails) {
       throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text);
     }
     return result.result.value;
   });
+}
+
+async function drivePermissionRecoveryUserGesture(socket) {
+  const gestureSocket = new DevtoolsSocket(socket.url, socket.targetId);
+  await gestureSocket.connect();
+  let coordinates, lastSignal, panelBroughtToFront = false;
+  for (let attempt = 0; attempt < 150; attempt += 1) {
+    const signal = await gestureSocket.call("Runtime.evaluate", {
+      expression:`({
+        coordinates:globalThis.__swarmforgePermissionRecoveryCoordinates,
+        settled:globalThis.__swarmforgeEvaluationSettled === true,
+        startDisabled:document.querySelector("#start-data-layer-testing")?.disabled,
+        targetResult:document.querySelector("#observation-target-result")?.textContent,
+        targetList:document.querySelector("#observation-target-list")?.textContent,
+        readiness:document.querySelector("#live-setup-readiness")?.textContent,
+      })`,
+      returnByValue:true,
+    });
+    lastSignal = signal.result.value;
+    coordinates = signal.result.value.coordinates;
+    if (coordinates) break;
+    if (!panelBroughtToFront && signal.result.value.readiness?.includes("Request access")) {
+      await gestureSocket.call("Page.bringToFront");
+      panelBroughtToFront = true;
+    }
+    if (signal.result.value.settled) {
+      gestureSocket.close();
+      return;
+    }
+    await wait(20);
+  }
+  if (!coordinates) {
+    gestureSocket.close();
+    throw new Error(`Permission recovery action did not become visible; ${JSON.stringify(lastSignal)}`);
+  }
+  const { x, y } = coordinates;
+  await gestureSocket.call("Page.bringToFront");
+  emit({ swarmforgePermissionRecoveryGesture:{ state:"request-visible",
+    targetId:socket.targetId } });
+  try {
+    await gestureSocket.call("Input.dispatchMouseEvent", { type:"mouseMoved", x, y });
+    await gestureSocket.call("Input.dispatchMouseEvent", {
+      type:"mousePressed", x, y, button:"left", buttons:1, clickCount:1,
+    });
+    await gestureSocket.call("Input.dispatchMouseEvent", {
+      type:"mouseReleased", x, y, button:"left", buttons:0, clickCount:1,
+    });
+    await observeBrowserReadiness({
+      targetId:"side-panel-permission-recovery", phase:"interaction",
+      predicateDescription:"the native exact-origin request to become pending",
+      timeoutMs:3_000, pollIntervalMs:20, maximumSnapshotCharacters:600,
+      observe:async () => (await gestureSocket.call("Runtime.evaluate", {
+        expression:"globalThis.__swarmforgePermissionRequestObservation",
+        returnByValue:true,
+      })).result.value,
+      ready:(value) => value?.requested === true,
+      snapshot:(value) => value,
+    });
+    await wait(250);
+    await processResources.acceptNativePermissionPrompt?.(gestureSocket);
+    let nativeGranted = false;
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      const state = await gestureSocket.call("Runtime.evaluate", {
+        expression:"globalThis.__swarmforgePermissionRequestObservation",
+        returnByValue:true,
+      });
+      if (state.result.value?.granted === true) { nativeGranted = true; break; }
+      await wait(20);
+    }
+    if (!nativeGranted) throw new Error("Chrome did not accept the native exact-origin permission prompt");
+  } finally {
+    gestureSocket.close();
+  }
+  emit({ swarmforgePermissionRecoveryGesture:{ state:"dispatched",
+    targetId:socket.targetId } });
+}
+
+async function verifyExactOriginPermissionRecovery(port, extensionId) {
+  const targetUrl = `http://127.0.0.1:${assetPort}/observation-target.html`;
+  const targetPage = await fetch(
+    `http://127.0.0.1:${port}/json/new?${encodeURIComponent(targetUrl)}`,
+    { method:"PUT" },
+  ).then((response) => response.json());
+  const targetSocket = new DevtoolsSocket(targetPage.webSocketDebuggerUrl);
+  await targetSocket.connect();
+  await targetSocket.call("Runtime.enable");
+  await waitForPageReadiness(targetSocket, "the exact-origin observation target",
+    "document.readyState === 'complete' && Array.isArray(globalThis.dataLayer)");
+  const socket = await openPanel(port, 720, 900,
+    `chrome-extension://${extensionId}/side-panel.html`);
+  await targetSocket.call("Page.bringToFront");
+  try {
+    const observation = await evaluate(socket, `(async () => {
+      ${guidedRuntimeWaitHelpers}
+      const q = (selector) => {
+        const value = document.querySelector(selector);
+        if (!value) throw new Error("Missing " + selector);
+        return value;
+      };
+      const installedPermissions = globalThis.__swarmforgeInstalledPermissions;
+      const installedChrome = globalThis.__swarmforgeInstalledChrome;
+      const permissionRequests = [];
+      const scriptCalls = [];
+      globalThis.__swarmforgePermissionScriptCalls = scriptCalls;
+      const nativeTabsQuery = installedChrome.tabs.query.bind(installedChrome.tabs);
+      installedChrome.tabs.query = async (request) => (await nativeTabsQuery(request)).map((tab) =>
+        tab.active ? { ...tab, url:${JSON.stringify(targetUrl)}, title:"Retail confirmation" } : tab);
+      const nativePermissionRequest = installedPermissions.request.bind(installedPermissions);
+      installedPermissions.request = async (request) => {
+        permissionRequests.push(request);
+        globalThis.__swarmforgePermissionRequestObservation = { requested:true };
+        const granted = await nativePermissionRequest(request);
+        globalThis.__swarmforgePermissionRequestObservation = { requested:true, granted };
+        return granted;
+      };
+      const nativeExecuteScript = installedChrome.scripting.executeScript.bind(installedChrome.scripting);
+      installedChrome.scripting.executeScript = async (request) => {
+        scriptCalls.push({ tabId:request.target?.tabId, args:request.args });
+        return nativeExecuteScript(request);
+      };
+      const historyPath = q("#history-path");
+      historyPath.value = "dataLayer";
+      historyPath.dispatchEvent(new Event("input", { bubbles:true }));
+      q("#choose-observation-target").click();
+      await waitForElement("#observation-target-list [data-target-id]");
+      q("#close-observation-target-picker").click();
+      const requestAccess = await waitForElement(
+        "#live-setup-readiness [data-live-target-permission-recovery]");
+      const selectedBefore = q("#live-setup-target").textContent.includes("Retail confirmation selected");
+      const start = await waitForStartableSelectedTarget();
+      return {
+        gesture:globalThis.__swarmforgePermissionRecoveryObservation,
+        nativeRequest:globalThis.__swarmforgePermissionRequestObservation,
+        permissionRequests,
+        requestVisible:requestAccess.textContent === "Request access",
+        sameTabRechecked:scriptCalls.length === 2 &&
+          scriptCalls.every(({ tabId }) => tabId === scriptCalls[0]?.tabId) &&
+          scriptCalls.every(({ args }) => args?.[0] === "dataLayer"),
+        selectedBefore,
+        startEnabled:!start.disabled,
+      };
+    })()`);
+    assert.deepEqual(observation, {
+      gesture:{ trusted:true, userActivation:true },
+      nativeRequest:{ requested:true, granted:true },
+      permissionRequests:[{ origins:[`${new URL(targetUrl).origin}/*`] }],
+      requestVisible:true,
+      sameTabRechecked:true,
+      selectedBefore:true,
+      startEnabled:true,
+    }, "Installed exact-origin permission recovery did not cross the native request/recheck boundary");
+  } finally {
+    socket.close();
+    targetSocket.close();
+  }
 }
 
 async function installDurableSchemaObservationProjection(socket) {
@@ -688,20 +897,35 @@ async function reloadPanel(socket) {
     await evaluate(socket, `(async () => { if (typeof globalThis.__flushDurableSchemaObservation === "function") await globalThis.__flushDurableSchemaObservation(); return true; })()`);
     const reloadToken = `reload-${Date.now()}-${Math.random()}`;
     await evaluate(socket, `document.documentElement.dataset.componentReloadToken = ${JSON.stringify(reloadToken)}`);
-    await socket.call("Page.reload");
+    await socket.call("Page.reload", { ignoreCache:true });
     for (let attempt = 0; attempt < panelReadyAttempts; attempt += 1) {
       const ready = await evaluate(socket, `(() => {
         if (document.readyState !== "complete" || !document.querySelector("#side-panel-root") || document.documentElement.dataset.componentReloadToken === ${JSON.stringify(reloadToken)}) return false;
         return document.querySelector("#side-panel-root")?.dataset.utilityShellReady === "true" && document.querySelector("#schema-count")?.textContent !== "";
       })()`);
       if (ready) {
+        if (String(await evaluate(socket, "location.href")).startsWith("chrome-extension://")) {
+          await socket.call("Runtime.evaluate", {
+            expression:`Object.defineProperty(globalThis, "__swarmforgeInstalledPermissions", {
+              configurable:true,
+              value:globalThis.chrome?.permissions,
+            })`,
+          });
+        }
         await installDurableSchemaObservationProjection(socket);
         return;
       }
       await wait(50);
     }
   }
-  throw new Error("Side panel did not finish reloading.");
+  const reloadState = await evaluate(socket, `({
+    href:location.href,
+    documentReadyState:document.readyState,
+    shellReady:document.querySelector("#side-panel-root")?.dataset.utilityShellReady,
+    schemaCount:document.querySelector("#schema-count")?.textContent,
+    reloadToken:document.documentElement.dataset.componentReloadToken,
+  })`);
+  throw new Error(`Side panel did not finish reloading; ${JSON.stringify(reloadState)}`);
   } finally {
     if (suppliedTargetContext) suppliedTargetContext.browserOperationPhase = undefined;
   }
@@ -1409,6 +1633,9 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
 {
   const port = await debuggingPort();
   const extensionId=await loadedExtensionId(port);
+  if (!suppliedTargetContext && browserTargetIds.length === 0) {
+    await verifyExactOriginPermissionRecovery(port, extensionId);
+  }
   const browserTargetFailures=[];
   for (const browserTargetId of browserTargetIds.length ? browserTargetIds : [null]) {
     if (browserTargetId) activateBrowserTarget(browserTargetId);
@@ -2526,7 +2753,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
     if ([320, 360, 520, 1280].includes(width) &&
         (activeBrowserTargetEnvironment.REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER === "1" ||
          !requestedBrowserAdapter)) {
-      const reproductionStepActionRows = await evaluate(socket, reproductionStepActionRowsRuntime);
+      await socket.call("Input.dispatchKeyEvent",{type:"keyDown",key:"Tab",code:"Tab",windowsVirtualKeyCode:9,nativeVirtualKeyCode:9});await socket.call("Input.dispatchKeyEvent",{type:"keyUp",key:"Tab",code:"Tab",windowsVirtualKeyCode:9,nativeVirtualKeyCode:9});const reproductionStepActionRows = await evaluate(socket, reproductionStepActionRowsRuntime);
       reproductionStepActionRowsObservations.push(reproductionStepActionRows);
       assert.equal(reproductionStepActionRows.width, width);
       assert.equal(reproductionStepActionRows.text, "3. Click Bravo");

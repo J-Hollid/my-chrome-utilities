@@ -93,6 +93,22 @@ assert.deepEqual(definitions.map(({ id }) => id), expectedOrder);
 assert.equal(definitions.every(({ capabilities }) => capabilities.length > 0), true);
 
 const packs = await loadVerificationPacks();
+const schemasPack = packs.find(({ id }) => id === "schemas");
+const shellPack = packs.find(({ id }) => id === "shell");
+assert.deepEqual(schemasPack.checkpointCommands.find(({ id }) =>
+  id === "side-panel-direct-compatibility-capture"), {
+  id:"side-panel-direct-compatibility-capture",
+  executable:"node",
+  args:["test/side-panel-direct-compatibility-capture-test.mjs"],
+}, "Schemas owns the explicit direct compatibility capture execution");
+assert.equal(schemasPack.unit.includes("test/side-panel-direct-compatibility-capture-test.mjs"), true,
+  "Schemas assigns the direct compatibility capture test path exactly once");
+assert.deepEqual(shellPack.checkpointCommands.find(({ id }) =>
+  id === "side-panel-direct-compatibility-validation"), {
+  id:"side-panel-direct-compatibility-validation",
+  executable:"node",
+  args:["test/side-panel-component-layout-runtime-test.mjs"],
+}, "Shell owns the independent committed-map validation execution");
 const focusedEvidenceOptions = focusedAcceptanceOptions([
   ...sidePanelSingleCutoverPackIds.flatMap((packId) => ["--pack", packId]),
   ...sidePanelSingleCutoverFocusedTaskKeys.flatMap((key) => ["--focused-task", key]),
@@ -124,16 +140,27 @@ const compatibilityRepairPlan = selectFocusedVerificationTasks(
   planVerification(packs, { packIds:runnablePackIdsFromRegistry(packs) }),
 );
 const verificationEvidenceSource = await readFile("scripts/verification-evidence.mjs", "utf8");
-assert.match(verificationEvidenceSource,
-  /permissionRecoveryFocused \|\| sidePanelCompatibilityRepairFocused/u,
-  "the exact preparation bootstrap may claim its reviewed packs without inventing pack-owned tasks");
+assert.doesNotMatch(verificationEvidenceSource,
+  /sidePanelCompatibilityRepairFocused/u,
+  "the repair evidence must execute a task owned by every claimed pack");
 assert.equal(validateSidePanelSingleCutoverFocusedPlan({
   ...compatibilityRepairPlan,
   changedPaths:[
+    "acceptance/src/acceptance/steps/data_layer_observer.clj",
+    "acceptance/src/acceptance/steps/data_layer_page_context.clj",
+    "acceptance/src/acceptance/steps/data_layer_timeline.clj",
+    "acceptance/src/acceptance/steps/hotkey_keymap.clj",
     "scripts/side-panel-single-cutover-focused-evidence.mjs",
     "scripts/verification-evidence.mjs",
     "test/side-panel-component-layout-runtime-test.mjs",
+    "test/acceptance/data_layer_observer_steps_test.clj",
+    "test/acceptance/data_layer_page_context_steps_test.clj",
+    "test/acceptance/data_layer_timeline_steps_test.clj",
     "test/support/side-panel-browser-direct-assertion-map.mjs",
+    "test/support/side-panel-browser-fixture-primitives.mjs",
+    "test/support/side-panel-browser-session.mjs",
+    "test/support/side-panel-defect-fixtures.mjs",
+    "test/verification-process-contract-test.mjs",
   ],
 }, sidePanelSingleCutoverCompatibilityRepairEvidenceTask), true,
 "the preparation correction binds only its exact two-pack evidence and protected verification paths");

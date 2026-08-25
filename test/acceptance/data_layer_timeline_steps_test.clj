@@ -170,6 +170,7 @@
          {"src/data-layer-observer.ts" (slurp "src/data-layer-observer.ts")
           "src/data-layer-event-presentation.ts" (slurp "src/data-layer-event-presentation.ts")
           "src/data-layer-live-observer-ui.ts" (slurp "src/data-layer-live-observer-ui.ts")
+          "src/data-layer-installed/capture/index.ts" (slurp "src/data-layer-installed/capture/index.ts")
         "src/side-panel.ts" (slurp "src/side-panel.ts")})))
 
 (deftest preserves-expanded-pageload-when-event-is-recorded
