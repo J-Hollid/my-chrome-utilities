@@ -366,8 +366,20 @@ assert.equal(uiController.schemaPropertyType(definedDocument, "/sample"), "strin
 uiController.setManualSchemaOverride(guidedCapture.id, persistenceSchemaId);
 await uiController.openGuidedProperty(guidedCapture, persistenceSchema, "checkout.email");
 assert.equal(elements.get("#guided-validation-flow").dataset.eventId, guidedCapture.id);
+assert.equal(uiController.guidedDraft().schemaId, persistenceSchemaId, "the Schema-owned guided flow exposes its live draft");
+assert.match(uiValues.get("my-chrome-utilities.guided-validation-continuations.v1"), /schema:page/,
+  "guided continuation selection is persisted by the Schema owner");
 assert.equal(uiController.guidedContinuation(guidedCapture).schemaId, persistenceSchemaId,
   "guided continuation remains bound to the selected working draft");
+const guidedContinuation = uiController.guidedContinuation(guidedCapture);
+guidedContinuation.review(); assert.equal(uiController.state().activeSchemaId, persistenceSchemaId);
+guidedContinuation.useDifferent();
+const guidedPicker = elements.get("#guided-validation-flow").children[0];
+const guidedChoice = guidedPicker.children[1].children[0];
+assert.ok(guidedChoice.listenerCount() > 0, "the continuation picker owns its live choice listener");
+guidedPicker.children[2].click();
+assert.equal(elements.get("#guided-validation-flow").children.length, 0, "cancelling removes the guided continuation picker");
+await uiController.openGuidedProperty(guidedCapture, persistenceSchema, "checkout.email");
 const validationRecords = uiController.recheckCaptured([guidedCapture]);
 assert.equal(validationRecords.length, 1); assert.equal(elements.get("#schema-validation-record-list").children.length, 1);
 uiController.updateDraft({ attachedRules:[...(persistenceSchema.workingDraft?.attachedRules ?? persistenceSchema.attachedRules ?? []),
@@ -392,6 +404,8 @@ persistenceListener({ type:"failed", schemaId:persistenceSchemaId, error:new Err
 assert.equal(uiController.rules().some(({ id }) => id === "rule:guided-retry"), false, "guided failure pauses optimistic Rule Library state");
 persistenceListener({ type:"retried", schemaId:persistenceSchemaId }); await retryCompletion;
 assert.equal(uiController.rules().some(({ id }) => id === "rule:guided-retry"), true, "retry reapplies the reviewed snapshot exactly once");
+assert.equal(uiController.guidedState().selectedSchemaPropertyPath, "checkout.email",
+  "guided completion restores the exact controller-owned property return");
 persistenceListener({ type:"rejected", schemaId:persistenceSchemaId, error:new Error("stale rejection") });
 assert.equal(uiController.rules().some(({ id }) => id === "rule:guided-retry"), true, "settled transactions ignore stale durable events");
 const rejectedCompletion = uiController.persistGuidedValidation(guidedResult("rule:guided-reject", "checkout.country"));
@@ -436,5 +450,6 @@ assert.notEqual(elements.get("#schema-result").textContent, "Loaded schema contr
   "a durable hydration settling after disposal cannot render stale project state");
 assert.match(String(await disposedRejection), /disposed before durable persistence settled/);
 assert.equal(persistenceListener, undefined, "disposal detaches the durable persistence port");
+assert.equal(guidedChoice.listenerCount(), 0, "disposal removes the guided continuation choice listener");
 assert.equal([...elements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
   "Schemas removes every editor and revision listener it owns");
