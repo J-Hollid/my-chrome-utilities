@@ -57,6 +57,9 @@ export function createSchemasInstalledController(ports) {
     const ownedElement = (selector, tag) => ports.root.querySelector(selector) ?? schemaOwnerDocument?.createElement(tag) ?? null;
     const schemaInheritedRuleGroups = ownedElement("#schema-inherited-rule-groups", "section");
     const schemaEffectiveRulePreview = ownedElement("#schema-effective-rule-preview", "section");
+    const schemaSpecificationBuilder = ownedElement("#schema-specification-builder", "section");
+    const buildSpecificationButton = ownedElement("#build-specification", "button");
+    const buildHistoricalSpecificationButton = ownedElement("#build-historical-specification", "button");
     if (schemaInheritedRuleGroups) {
         schemaInheritedRuleGroups.id = "schema-inherited-rule-groups";
         schemaInheritedRuleGroups.setAttribute("aria-label", "Inherited rule states");
@@ -67,6 +70,23 @@ export function createSchemasInstalledController(ports) {
     }
     if (schemaRuleOverrides && schemaInheritedRuleGroups && schemaEffectiveRulePreview) {
         schemaRuleOverrides.after(schemaInheritedRuleGroups, schemaEffectiveRulePreview);
+    }
+    if (schemaSpecificationBuilder) {
+        schemaSpecificationBuilder.id = "schema-specification-builder";
+        schemaSpecificationBuilder.hidden = true;
+        schemaDetail?.append(schemaSpecificationBuilder);
+    }
+    if (buildSpecificationButton) {
+        buildSpecificationButton.id = "build-specification";
+        buildSpecificationButton.type = "button";
+        buildSpecificationButton.textContent = "Build specification";
+        schemaEditor?.prepend(buildSpecificationButton);
+    }
+    if (buildHistoricalSpecificationButton) {
+        buildHistoricalSpecificationButton.id = "build-historical-specification";
+        buildHistoricalSpecificationButton.type = "button";
+        buildHistoricalSpecificationButton.textContent = "Build specification";
+        restoreSchemaRevisionButton?.after(buildHistoricalSpecificationButton);
     }
     const schemaPropertyViewControls = ownedElement("#schema-property-view-controls", "div");
     const schemaPropertyFilterLabel = ownedElement("#schema-property-filter-label", "label");
@@ -632,6 +652,16 @@ export function createSchemasInstalledController(ports) {
         if (presented)
             renderSchemaInheritancePresentation(presented);
         const pendingChanges = draft?.pendingChanges ?? [];
+        if (buildSpecificationButton) {
+            buildSpecificationButton.hidden = !draft;
+            buildSpecificationButton.onclick = schema && draft ? () => openSchemaSpecification(schema, "working-draft", buildSpecificationButton) : null;
+        }
+        const historyVersions = schema ? schemaRevisionChoices(schema) : [];
+        if (buildHistoricalSpecificationButton) {
+            buildHistoricalSpecificationButton.disabled = historyVersions.length === 0;
+            buildHistoricalSpecificationButton.onclick = schema && historyVersions.length
+                ? () => openSchemaSpecification(schema, `historical:${revisionVersion()}`, buildHistoricalSpecificationButton) : null;
+        }
         if (saveSchemaReason)
             saveSchemaReason.textContent = pendingChanges.join("; ");
         if (schemaRevisionReviewSummary)
@@ -2190,6 +2220,14 @@ export function createSchemasInstalledController(ports) {
             schemaExportReview?.close();
             schemaExportChoices?.replaceChildren();
             schemaExportReview?.replaceChildren();
+            if (buildSpecificationButton)
+                buildSpecificationButton.onclick = null;
+            if (buildHistoricalSpecificationButton)
+                buildHistoricalSpecificationButton.onclick = null;
+            if (schemaSpecificationBuilder) {
+                schemaSpecificationBuilder.hidden = true;
+                schemaSpecificationBuilder.replaceChildren();
+            }
             const disposed = new Error("Schemas controller disposed before durable persistence settled");
             pendingLocalRulePromotionPersistence?.reject(disposed);
             pendingGuidedValidationPersistence?.reject(disposed);
@@ -2265,7 +2303,18 @@ export function createSchemasInstalledController(ports) {
         ports.adoptSavedSchema(structuredClone(schema), trigger);
     }
     function openSchemaSpecification(schema, surface, trigger) {
-        ports.buildSchemaSpecification(structuredClone(schema), surface, trigger);
+        if (!schemaSpecificationBuilder)
+            return;
+        schemaSpecificationBuilder.hidden = false;
+        if (schemaEditor)
+            schemaEditor.hidden = true;
+        if (schemaDetailEmpty)
+            schemaDetailEmpty.hidden = true;
+        ports.renderSchemaSpecification(schemaSpecificationBuilder, structuredClone(schema), structuredClone(schemas), surface, () => {
+            schemaSpecificationBuilder.hidden = true;
+            renderSchemaDraft();
+            trigger.focus({ preventScroll: true });
+        });
     }
     function openContributorInUnifiedEditor(key) { ports.openContributor(key); }
     function schemaEditorDraft(schema) {

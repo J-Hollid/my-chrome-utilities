@@ -16,7 +16,7 @@ const controller = createSchemasInstalledController({
   localRulePromotionDialog:{ open() {}, close() {} }, subscribeSchemaPersistence:() => () => {},
   downloadSchema() {},
   relationshipTree:()=>({ projectId:"no-project", nodes:[] }), openProjectLibrary() {}, openContributor() {},
-  openContributorInStudio() {}, adoptSavedSchema() {}, buildSchemaSpecification() {}, reportMissingSchemaEvent() {},
+  openContributorInStudio() {}, adoptSavedSchema() {}, renderSchemaSpecification() {}, reportMissingSchemaEvent() {},
   scheduleFrame:(callback)=>callback(),
   activeProjectId:()=>undefined, ensureProjectSchemaContributors:async()=>({ name:"" }),
 });
@@ -40,7 +40,8 @@ function element() {
   return { id:"", value:"", textContent:"", hidden:false, disabled:false, open:false, isConnected:true, dataset:{}, children:[], ownerDocument:fakeDocument, scrollTop:0,
     addEventListener(type, listener) { listeners.set(type, listener); },
     removeEventListener(type, listener) { if (listeners.get(type) === listener) listeners.delete(type); },
-    dispatch(type, event = {}) { listeners.get(type)?.({ preventDefault() {}, target:this, currentTarget:this, ...event }); }, click() { this.dispatch("click"); },
+    dispatch(type, event = {}) { listeners.get(type)?.({ preventDefault() {}, target:this, currentTarget:this, ...event }); },
+    click() { this.onclick?.(); this.dispatch("click"); },
     showModal() { this.open = true; }, close() { this.open = false; }, focus() { this.focused = true; },
     setAttribute(name, value) { this[name] = value; }, removeAttribute(name) { delete this[name]; },
     getAttribute(name) { return this[name] ?? null; }, replaceChildren(...children) { this.children = children; },
@@ -56,6 +57,7 @@ const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "
   "#workspace-panel-data-layer", "#data-layer-panel-schemas",
   "#schema-editor-parent", "#schema-only-declared-properties", "#schema-inheritance-provenance",
   "#schema-rule-overrides", "#schema-rule-override-list", "#schema-inherited-rule-groups", "#schema-effective-rule-preview",
+  "#schema-specification-builder", "#build-specification", "#build-historical-specification",
   "#schema-editor-name-assistance", "#schema-editor-description", "#save-schema-description", "#schema-description-origin",
   "#schema-editor-target", "#save-schema", "#save-schema-reason", "#schema-revision-review",
   "#schema-revision-review-summary", "#confirm-schema-revision", "#cancel-schema-revision",
@@ -115,6 +117,7 @@ let promotionDialogInput, persistenceListener, promotionRuleSequence = 0;
 const schemaDownloads = [];
 const relationshipActions = [];
 let deferHydration = false, releaseHydration;
+let closeSpecification;
 const uiController = createSchemasInstalledController({
   root:{ ownerDocument:fakeDocument, querySelector:(selector) => elements.get(selector) ?? null,
     querySelectorAll:(selector) => selector.includes("role=tab") ? [schemaMasterTab, schemaRulesTab] : [schemaMasterPanel, schemaRulesPanel] },
@@ -139,7 +142,9 @@ const uiController = createSchemasInstalledController({
   openContributor:(key) => relationshipActions.push(`open:${key}`),
   openContributorInStudio:(key) => relationshipActions.push(`studio:${key}`),
   adoptSavedSchema:(candidate) => relationshipActions.push(`adopt:${candidate.id}`),
-  buildSchemaSpecification:(candidate, surface) => relationshipActions.push(`build:${candidate.id}:${surface}`),
+  renderSchemaSpecification:(_root, candidate, _schemas, surface, close) => {
+    relationshipActions.push(`build:${candidate.id}:${surface}`); closeSpecification = close;
+  },
   reportMissingSchemaEvent:(id) => relationshipActions.push(`missing:${id}`), scheduleFrame:(callback)=>callback(),
   activeProjectId:()=>"project:one", ensureProjectSchemaContributors:()=>deferHydration
     ? new Promise((resolve)=>{ releaseHydration=resolve; }) : Promise.resolve({ name:"Project One" }),
@@ -151,6 +156,8 @@ const initialSavedRow = elements.get("#schema-list").children.find(({ dataset })
 assert.ok(initialSavedRow, "the Schema owner renders saved relationship-tree rows");
 initialSavedRow.children[2].click(); initialSavedRow.children[3].click(); initialSavedRow.children[5].click();
 assert.deepEqual(relationshipActions, ["adopt:schema:page", "build:schema:page:published:1", "missing:schema:page"]);
+assert.equal(elements.get("#schema-specification-builder").hidden, false);
+closeSpecification(); assert.equal(elements.get("#schema-specification-builder").hidden, true);
 const contributorRow = elements.get("#schema-list").children.find(({ dataset }) => dataset.schemaEntryKey === "pages:checkout");
 contributorRow.children[0].click(); contributorRow.children[1].click();
 assert.deepEqual(relationshipActions.slice(-2), ["open:pages:checkout", "studio:pages:checkout"]);
@@ -161,6 +168,8 @@ const treeControls = elements.get("#schema-list").querySelectorAll();
 elements.get("#schema-list").dispatch("keydown", { target:treeControls[0], key:"End" });
 assert.equal(treeControls.at(-1).focused, true, "tree keyboard navigation remains controller-owned");
 uiController.open("schema:page"); uiController.beginDraft();
+elements.get("#build-specification").click();
+assert.equal(relationshipActions.at(-1), "build:schema:page:working-draft"); closeSpecification();
 elements.get("#schema-editor-parent").value = "schema:parent"; elements.get("#schema-editor-parent").dispatch("change");
 assert.equal(uiController.schemas().find(({ id }) => id === "schema:page").workingDraft.parentSchemaId, "schema:parent");
 assert.match(elements.get("#schema-inheritance-provenance").textContent, /Parent v2/);
@@ -176,6 +185,8 @@ elements.get("#confirm-schema-revision").click();
 assert.equal(uiController.schemas()[0].version, 2);
 assert.equal(uiController.schemas()[0].name, "Page checkout");
 assert.equal(uiController.schemas()[0].documentation.description, "Checkout payload");
+elements.get("#schema-revision-selector").value = "1"; elements.get("#build-historical-specification").click();
+assert.equal(relationshipActions.at(-1), "build:schema:page:historical:1"); closeSpecification();
 elements.get("#schema-revision-selector").value = "1"; elements.get("#duplicate-schema-revision").click();
 assert.equal(uiController.schemas().length, 3, "revision duplication remains schema-controller behavior");
 assert.equal(elements.get("#schema-property-result-status").textContent, "1 of 1 properties");

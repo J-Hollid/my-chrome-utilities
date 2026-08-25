@@ -101,7 +101,8 @@ export interface SchemasInstalledPorts {
   openContributor(key: string): void;
   openContributorInStudio(key: string): void;
   adoptSavedSchema(schema: SchemaDefinition, trigger: HTMLButtonElement): void;
-  buildSchemaSpecification(schema: SchemaDefinition, surface: `published:${number}` | `historical:${number}` | "working-draft", trigger: HTMLButtonElement): void;
+  renderSchemaSpecification(root: HTMLElement, schema: SchemaDefinition, schemas: readonly SchemaDefinition[],
+    surface: `published:${number}` | `historical:${number}` | "working-draft", close: () => void): void;
   reportMissingSchemaEvent(schemaId: string): void;
   scheduleFrame(callback: () => void): void;
   activeProjectId(): string | undefined;
@@ -185,6 +186,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     ports.root.querySelector<HTMLElementTagNameMap[K]>(selector) ?? schemaOwnerDocument?.createElement(tag) ?? null;
   const schemaInheritedRuleGroups = ownedElement("#schema-inherited-rule-groups", "section");
   const schemaEffectiveRulePreview = ownedElement("#schema-effective-rule-preview", "section");
+  const schemaSpecificationBuilder = ownedElement("#schema-specification-builder", "section");
+  const buildSpecificationButton = ownedElement("#build-specification", "button");
+  const buildHistoricalSpecificationButton = ownedElement("#build-historical-specification", "button");
   if (schemaInheritedRuleGroups) { schemaInheritedRuleGroups.id = "schema-inherited-rule-groups";
     schemaInheritedRuleGroups.setAttribute("aria-label", "Inherited rule states"); }
   if (schemaEffectiveRulePreview) { schemaEffectiveRulePreview.id = "schema-effective-rule-preview";
@@ -192,6 +196,13 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   if (schemaRuleOverrides && schemaInheritedRuleGroups && schemaEffectiveRulePreview) {
     schemaRuleOverrides.after(schemaInheritedRuleGroups, schemaEffectiveRulePreview);
   }
+  if (schemaSpecificationBuilder) { schemaSpecificationBuilder.id = "schema-specification-builder";
+    schemaSpecificationBuilder.hidden = true; schemaDetail?.append(schemaSpecificationBuilder); }
+  if (buildSpecificationButton) { buildSpecificationButton.id = "build-specification"; buildSpecificationButton.type = "button";
+    buildSpecificationButton.textContent = "Build specification"; schemaEditor?.prepend(buildSpecificationButton); }
+  if (buildHistoricalSpecificationButton) { buildHistoricalSpecificationButton.id = "build-historical-specification";
+    buildHistoricalSpecificationButton.type = "button"; buildHistoricalSpecificationButton.textContent = "Build specification";
+    restoreSchemaRevisionButton?.after(buildHistoricalSpecificationButton); }
   const schemaPropertyViewControls = ownedElement("#schema-property-view-controls", "div");
   const schemaPropertyFilterLabel = ownedElement("#schema-property-filter-label", "label");
   const schemaPropertyFilter = ownedElement("#schema-property-filter", "input");
@@ -571,6 +582,12 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     }));
     if (presented) renderSchemaInheritancePresentation(presented);
     const pendingChanges = draft?.pendingChanges ?? [];
+    if (buildSpecificationButton) { buildSpecificationButton.hidden = !draft;
+      buildSpecificationButton.onclick = schema && draft ? () => openSchemaSpecification(schema, "working-draft", buildSpecificationButton) : null; }
+    const historyVersions = schema ? schemaRevisionChoices(schema) : [];
+    if (buildHistoricalSpecificationButton) { buildHistoricalSpecificationButton.disabled = historyVersions.length === 0;
+      buildHistoricalSpecificationButton.onclick = schema && historyVersions.length
+        ? () => openSchemaSpecification(schema, `historical:${revisionVersion()}`, buildHistoricalSpecificationButton) : null; }
     if (saveSchemaReason) saveSchemaReason.textContent = pendingChanges.join("; ");
     if (schemaRevisionReviewSummary) schemaRevisionReviewSummary.textContent = pendingChanges.length
       ? pendingChanges.join("; ") : "No pending changes";
@@ -1546,6 +1563,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       pendingSchemaImport = undefined; pendingSchemaDeletion = undefined;
       pendingStandardSchemaExport = undefined; schemaExportTrigger = undefined;
       schemaExportChoices?.close(); schemaExportReview?.close(); schemaExportChoices?.replaceChildren(); schemaExportReview?.replaceChildren();
+      if (buildSpecificationButton) buildSpecificationButton.onclick = null;
+      if (buildHistoricalSpecificationButton) buildHistoricalSpecificationButton.onclick = null;
+      if (schemaSpecificationBuilder) { schemaSpecificationBuilder.hidden = true; schemaSpecificationBuilder.replaceChildren(); }
       const disposed = new Error("Schemas controller disposed before durable persistence settled");
       pendingLocalRulePromotionPersistence?.reject(disposed); pendingGuidedValidationPersistence?.reject(disposed);
       pendingLocalRulePromotion = undefined; localRulePromotionDialog.close();
@@ -1605,7 +1625,11 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   }
   function openSchemaSpecification(schema: SchemaDefinition,
     surface: `published:${number}` | `historical:${number}` | "working-draft", trigger: HTMLButtonElement): void {
-    ports.buildSchemaSpecification(structuredClone(schema), surface, trigger);
+    if (!schemaSpecificationBuilder) return; schemaSpecificationBuilder.hidden = false;
+    if (schemaEditor) schemaEditor.hidden = true; if (schemaDetailEmpty) schemaDetailEmpty.hidden = true;
+    ports.renderSchemaSpecification(schemaSpecificationBuilder, structuredClone(schema), structuredClone(schemas), surface, () => {
+      schemaSpecificationBuilder.hidden = true; renderSchemaDraft(); trigger.focus({ preventScroll:true });
+    });
   }
   function openContributorInUnifiedEditor(key: string): void { ports.openContributor(key); }
   function schemaEditorDraft(schema: SchemaDefinition): SchemaDefinition {
