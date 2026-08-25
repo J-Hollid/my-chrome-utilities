@@ -70,12 +70,13 @@
 
 (defn side-panel-uses-active-tab-page-context? [files]
   (let [side-panel-source (get files "src/side-panel.ts" "")
+        capture-source (get files "src/data-layer-installed/capture/index.ts" side-panel-source)
         active-page-source (get files "src/active-page-observation.ts" "")]
-    (and (str/includes? side-panel-source "currentTargetObservation")
-         (str/includes? side-panel-source "selectedObservationTarget")
+    (and (str/includes? capture-source "currentTargetObservation")
+         (str/includes? capture-source "selectedObservationTarget")
          (str/includes? active-page-source "tabPageObservation")
          (str/includes? active-page-source "pageUrl")
-         (not (str/includes? side-panel-source "url: globalThis.location.href")))))
+         (not (str/includes? capture-source "url: globalThis.location.href")))))
 
 (def handlers
   [{:pattern #"^the side panel is open at <([A-Za-z0-9_]+)>$"

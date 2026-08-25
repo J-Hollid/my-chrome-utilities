@@ -85,6 +85,8 @@
 (deftest side-panel-source-uses-active-page-window-observation
   (is (observer/active-page-window-observation-wired?
        {"src/side-panel.ts" (slurp "src/side-panel.ts")
+        "src/data-layer-installed/capture/index.ts" (slurp "src/data-layer-installed/capture/index.ts")
+        "src/data-layer-installed/runtime.ts" (slurp "src/data-layer-installed/runtime.ts")
         "src/active-page-observation.ts" (slurp "src/active-page-observation.ts")
         "manifest.json" (slurp "manifest.json")})))
 
@@ -163,6 +165,8 @@
 (deftest side-panel-source-uses-live-history-push-capture
   (is (observer/live-history-push-capture-wired?
        {"src/side-panel.ts" (slurp "src/side-panel.ts")
+        "src/data-layer-installed/capture/index.ts" (slurp "src/data-layer-installed/capture/index.ts")
+        "src/data-layer-installed/runtime.ts" (slurp "src/data-layer-installed/runtime.ts")
         "src/data-layer-observer.ts" (slurp "src/data-layer-observer.ts")
         "src/data-layer-live-observation.ts" (slurp "src/data-layer-live-observation.ts")})))
 
@@ -247,6 +251,8 @@
 (deftest side-panel-source-refreshes-observation-after-pageload
   (is (observer/pageload-observation-refresh-wired?
        {"src/side-panel.ts" (slurp "src/side-panel.ts")
+        "src/data-layer-installed/capture/index.ts" (slurp "src/data-layer-installed/capture/index.ts")
+        "src/data-layer-installed/runtime.ts" (slurp "src/data-layer-installed/runtime.ts")
         "src/active-page-observation.ts" (slurp "src/active-page-observation.ts")
         "src/data-layer-observation-refresh.ts" (slurp "src/data-layer-observation-refresh.ts")
         "src/data-layer-live-observation.ts" (slurp "src/data-layer-live-observation.ts")})))

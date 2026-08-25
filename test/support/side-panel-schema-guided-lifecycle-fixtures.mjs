@@ -207,7 +207,13 @@ export const guidedValidationRuntime = `(async () => {
   await waitForCondition(() => q("#durable-recovery-result").textContent.includes("committed to the Saved Schema Library"), "durable Saved Schema retry result");
   saveFailure.retryCommitted = true;
   q("#close-storage-recovery").click();
-  await waitForCondition(() => !visible(flow) && document.activeElement?.dataset.action === "add-property-validation", "guided retry completion and originating property focus");
+  await waitForCondition(() => !visible(flow) && document.activeElement?.dataset.action === "add-property-validation", () => "guided retry completion and originating property focus; " + JSON.stringify({
+    flowVisible:visible(flow),
+    activeTag:document.activeElement?.tagName,
+    activeText:document.activeElement?.textContent,
+    activeAction:document.activeElement?.dataset.action,
+    recoveryOpen:q("#durable-storage-recovery").open,
+  }));
   const storedRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]");
   const newSchemaDraft = storedSchemas.at(-1);
   const verification = await import("/data-layer-schema-verification.js");

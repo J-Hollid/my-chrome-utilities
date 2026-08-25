@@ -18,6 +18,8 @@ export const sidePanelSingleCutoverCompatibilityRepairPackIds = Object.freeze([
 export const sidePanelSingleCutoverCompatibilityRepairFocusedTaskKeys = Object.freeze([
   "unit:test/side-panel-single-cutover-preparation-test.mjs",
   "unit:test/verification-process-contract-test.mjs",
+  "checkpoint:schemas:side-panel-direct-compatibility-capture",
+  "checkpoint:shell:side-panel-direct-compatibility-validation",
   "package:extension",
 ]);
 
@@ -152,18 +154,32 @@ function approvedProductChangedPath(file) {
 
 function approvedCompatibilityRepairChangedPath(file) {
   return [
+    "acceptance/src/acceptance/steps/data_layer_observer.clj",
+    "acceptance/src/acceptance/steps/data_layer_page_context.clj",
+    "acceptance/src/acceptance/steps/data_layer_timeline.clj",
+    "acceptance/src/acceptance/steps/hotkey_keymap.clj",
     "scripts/run-focused-acceptance.mjs",
     "scripts/side-panel-single-cutover-focused-evidence.mjs",
     "scripts/verification-evidence.mjs",
+    "test/side-panel-direct-compatibility-capture-test.mjs",
     "test/acceptance/side-panel-browser-session-contract.mjs",
+    "test/acceptance/data_layer_observer_steps_test.clj",
+    "test/acceptance/data_layer_page_context_steps_test.clj",
+    "test/acceptance/data_layer_timeline_steps_test.clj",
     "test/side-panel-component-layout-runtime-test.mjs",
     "test/side-panel-single-cutover-preparation-test.mjs",
     "test/support/side-panel-browser-direct-assertion-map.mjs",
     "test/support/side-panel-browser-direct-compatibility.mjs",
+    "test/support/side-panel-browser-fixture-primitives.mjs",
+    "test/support/side-panel-browser-session.mjs",
+    "test/support/side-panel-defect-fixtures.mjs",
     "test/support/side-panel-schema-fixture-primitives.mjs",
     "test/support/side-panel-schema-guided-lifecycle-fixtures.mjs",
     "test/support/side-panel-schema-guided-targets.mjs",
     "test/support/side-panel-schema-validation-targets.mjs",
+    "test/fixtures/x11-accept-chrome-permission-prompt.c",
+    "test/verification-process-contract-test.mjs",
+    "verification/packs.json",
   ].includes(file);
 }
 

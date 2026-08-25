@@ -5,7 +5,8 @@ export const guidedRuntimeWaitHelpers = `
       if (value) return value;
       await new Promise((resolve) => setTimeout(resolve, interval));
     }
-    throw new Error("Timed out waiting for " + description + "; " + JSON.stringify({
+    throw new Error("Timed out waiting for " +
+      (typeof description === "function" ? description() : description) + "; " + JSON.stringify({
       startDisabled:document.querySelector("#start-data-layer-testing")?.disabled,
       startHidden:document.querySelector("#start-data-layer-testing")?.hidden,
       endHidden:document.querySelector("#end-data-layer-testing")?.hidden,
@@ -16,21 +17,41 @@ export const guidedRuntimeWaitHelpers = `
       readiness:document.querySelector("#live-setup-readiness")?.textContent,
       targetList:document.querySelector("#observation-target-list")?.textContent,
       sessionMessage:document.querySelector("#live-session-message")?.textContent,
+      permissionGestureSignal:globalThis.__swarmforgePermissionRecoveryCoordinates,
+      permissionGestureObservation:globalThis.__swarmforgePermissionRecoveryObservation,
+      permissionRequestObservation:globalThis.__swarmforgePermissionRequestObservation,
+      permissionScriptCalls:globalThis.__swarmforgePermissionScriptCalls,
     }));
   };
   const waitForElement = (selector, attempts, interval) => waitForCondition(() => document.querySelector(selector), selector, attempts, interval);
   const waitForStartableSelectedTarget = async () => {
-    let permissionRequested = false;
+    let permissionGestureRequested = false;
     return waitForCondition(() => {
       const start = document.querySelector("#start-data-layer-testing:not(:disabled)");
       if (start) return start;
       const requestAccess = document.querySelector("#live-setup-readiness [data-live-target-permission-recovery]");
-      if (requestAccess && !permissionRequested) {
-        permissionRequested = true;
-        requestAccess.click();
+      if (requestAccess && !permissionGestureRequested) {
+        permissionGestureRequested = true;
+        requestAccess.scrollIntoView({ block:"center", inline:"center" });
+        requestAccess.focus({ preventScroll:true });
+        requestAccess.addEventListener("click", (event) => {
+          globalThis.__swarmforgePermissionRecoveryObservation = {
+            trusted:event.isTrusted,
+            userActivation:navigator.userActivation.isActive,
+          };
+        }, { once:true });
+        requestAnimationFrame(() => {
+          const rect = requestAccess.getBoundingClientRect();
+          globalThis.__swarmforgePermissionRecoveryCoordinates = {
+            x:rect.left + rect.width / 2,
+            y:rect.top + rect.height / 2,
+            hit:document.elementFromPoint(rect.left + rect.width / 2,
+              rect.top + rect.height / 2)?.outerHTML.slice(0, 240),
+          };
+        });
       }
       return undefined;
-    }, "selected target permission recovery and start readiness");
+    }, "host-driven selected target permission recovery and start readiness");
   };
   const endActiveSession = async () => {
     const end = document.querySelector("#end-data-layer-testing");

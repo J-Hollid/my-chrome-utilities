@@ -3832,11 +3832,21 @@ console.log("repairTmp=" + process.env.TMPDIR);
     "REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER",
     "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER",
   ]);
+  const approvedPostBaselineCheckpointIds = new Set([
+    "side-panel-direct-compatibility-capture",
+    "side-panel-direct-compatibility-validation",
+  ]);
+  const approvedPostBaselineCheckpointTaskKeys = new Set([
+    "checkpoint:schemas:side-panel-direct-compatibility-capture",
+    "checkpoint:shell:side-panel-direct-compatibility-validation",
+  ]);
   const packContract = (packs) => packs.filter(({ id }) => allPackIds.includes(id))
     .map(({ id, dependencies, browserObservations,
       checkpointCommands }) => ({ id, dependencies,
       browserObservations:(browserObservations ?? []).filter(({ id: targetId }) =>
-        !approvedPostBaselineBrowserTargetIds.has(targetId)), checkpointCommands }));
+        !approvedPostBaselineBrowserTargetIds.has(targetId)),
+      checkpointCommands:(checkpointCommands ?? []).filter(({ id: checkpointId }) =>
+        !approvedPostBaselineCheckpointIds.has(checkpointId)) }));
   const currentCalibration = JSON.parse(await readFile(
     new URL("../verification/performance-calibration.json", import.meta.url), "utf8"));
   const acceptedBaseCalibration = JSON.parse(await new Promise((resolve, reject) => execFile("git",
@@ -4166,7 +4176,8 @@ console.log("repairTmp=" + process.env.TMPDIR);
       featureChangedFiles:postTerminalChangedFiles
         .filter((file) => file.startsWith("features/")),
       currentTaskDigest:verificationDigest(currentConservationPlan.tasks.filter(({key})=>
-        !postBaseAddedRegisteredTaskKeys.has(key) && ![
+        !postBaseAddedRegisteredTaskKeys.has(key) &&
+        !approvedPostBaselineCheckpointTaskKeys.has(key) && ![
         "unit:test/settled-final-verification-workflow-test.mjs",
         "unit:test/package-clean-checkout-contract-test.mjs",
         "unit:test/verification-evidence-production-path-test.mjs",
@@ -5708,7 +5719,7 @@ const vtd006RegisteredPrograms = new Set([
 ]);
 const sidePanelPreparationProgram = (path) =>
   /^test\/data-layer-installed\/(?:consumers\/)?[^/]+-(?:controller|consumer)-test\.mjs$/u
-    .test(path);
+    .test(path) || path === "test/side-panel-direct-compatibility-capture-test.mjs";
 const conservedEvidenceProfile = (pack) => Object.fromEntries(exactEvidenceKeys.map((key) => [key,
   pack[key].filter((path) => !vtd006RegisteredPrograms.has(path) &&
     !sidePanelPreparationProgram(path)),
@@ -5894,6 +5905,10 @@ const approvedStyleVerificationTaskKeys = new Set([
 const approvedFlowStyleExtractionTaskKeys = new Set([
   "unit:test/flow-stylesheet-extraction-test.mjs",
 ]);
+const approvedSidePanelCompatibilityCheckpointTaskKeys = new Set([
+  "checkpoint:schemas:side-panel-direct-compatibility-capture",
+  "checkpoint:shell:side-panel-direct-compatibility-validation",
+]);
 const approvedVerificationTaskKeys = new Set([
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
@@ -5903,6 +5918,7 @@ const approvedVerificationTaskKeys = new Set([
   ...approvedStyleSmokeTaskKeys,
   ...approvedStyleVerificationTaskKeys,
   ...approvedFlowStyleExtractionTaskKeys,
+  ...approvedSidePanelCompatibilityCheckpointTaskKeys,
 ]);
 const currentTerminalIdentitiesWithoutApprovedAdditions = currentTerminalPlan.tasks.filter(({ key }) =>
   !postBaseAddedRegisteredTaskKeys.has(key) && !approvedVerificationTaskKeys.has(key)).map(normalizedVtd006Identity);
@@ -6143,8 +6159,14 @@ for (const presentationPath of eventReviewPresentationPaths) {
   assert.match(source, /root: ParentNode/u, `${presentationPath} receives its DOM root from the caller`);
 }
 const sidePanelSource = await readFile(new URL("../src/side-panel.ts", import.meta.url), "utf8");
-assert.match(sidePanelSource, /renderPushDraftReview\(pushDraftReview \?\? document, pendingPushDraftReview\)/u);
-assert.match(sidePanelSource, /renderTemplateChangeReview\(revisionChangeReview \?\? document, pendingRevisionChangeReview\.review\)/u);
+assert.doesNotMatch(sidePanelSource, /renderPushDraftReview|renderTemplateChangeReview/u,
+  "the composition root does not retain Event Library review rendering");
+const installedRuntimeSource = await readFile(
+  new URL("../src/data-layer-installed/runtime.ts", import.meta.url), "utf8");
+assert.match(installedRuntimeSource,
+  /renderPushReview:\(host,review\)=>eventApi\.renderPushDraftReview\(host,review\)/u);
+assert.match(installedRuntimeSource,
+  /renderRevisionReview:\(host,review\)=>eventApi\.renderTemplateChangeReview\(host,review\)/u);
 const eventClosure = ["event-library", "project_event_transport", "defects", "replay",
   "live_flow_testing", "guided_test_cases", "shell"];
 const eventEditorClosure = ["capture", ...eventClosure];
@@ -6610,11 +6632,11 @@ assert.deepEqual(schemasEvidenceProfile,
   conservedEvidenceProfile(schemasBasePack),
   "all Schemas owner evidence identities remain conserved");
 const exactSchemasPlan = planVerification(packs,{packIds:["schemas"],includeProperties:true});
-assert.equal(exactSchemasPlan.tasks.length,290);
+assert.equal(exactSchemasPlan.tasks.length,292);
 assert.deepEqual([exactSchemasPlan.unitTasks.length,exactSchemasPlan.propertyTasks.length,
   exactSchemasPlan.parserTasks.length,schemasPack.handlers.length,exactSchemasPlan.browserTasks.length,
   exactSchemasPlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).length,
-  exactSchemasPlan.checkpointTasks.length],[51,29,103,60,1,46,0]);
+  exactSchemasPlan.checkpointTasks.length],[52,29,103,60,1,46,1]);
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,
   "terminal planning conserves every Schemas task identity and ordering");
 const schemasCalibration = vtd004CurrentCalibration.runnablePacks.find(({id}) => id === "schemas");
@@ -6871,7 +6893,7 @@ assert.equal(localShellPlan.browserTasks.length, 3);
 assert.equal(localShellPlan.observationTasks.length, 2);
 assert.equal(localShellPlan.parserTasks.length, localShellPlan.features.length);
 assert.equal(localShellPlan.generatorTasks.length, localShellPlan.features.length);
-assert.equal(localShellPlan.checkpointTasks.length, 3);
+assert.equal(localShellPlan.checkpointTasks.length, 4);
 assert.equal(localShellPlan.sessionTasks.length, 1);
 const vtd009BasePacks = JSON.parse(await exec("git", [
   "show", "407383e0f6:verification/packs.json",

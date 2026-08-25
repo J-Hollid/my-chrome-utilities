@@ -310,7 +310,8 @@
   (let [observer-source (get files "src/data-layer-observer.ts" "")
         presentation-source (get files "src/data-layer-event-presentation.ts" "")
         live-observer-source (get files "src/data-layer-live-observer-ui.ts" "")
-        side-panel-source (get files "src/side-panel.ts" "")]
+        side-panel-source (get files "src/side-panel.ts" "")
+        capture-source (get files "src/data-layer-installed/capture/index.ts" side-panel-source)]
     (and (str/includes? observer-source "canonicalCapturedEvent")
          (str/includes? observer-source "captureSourceEvent")
          (str/includes? presentation-source "inputPayload")
@@ -318,8 +319,8 @@
          (str/includes? live-observer-source "renderLiveObserverState")
          (str/includes? live-observer-source "renderLiveInspector")
          (str/includes? live-observer-source "Raw JSON")
-         (str/includes? side-panel-source "recordLiveEvent")
-         (str/includes? side-panel-source "renderLiveObserverState"))))
+         (str/includes? capture-source "recordLiveEvent")
+         (str/includes? capture-source "renderLiveObserverState"))))
 
 (defn timeline-expanded-state-wired? [files]
   (let [live-observer-source (get files "src/data-layer-live-observer-ui.ts" "")]

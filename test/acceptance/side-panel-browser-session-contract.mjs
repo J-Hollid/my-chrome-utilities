@@ -325,7 +325,7 @@ const directContract = await runDirectSidePanelCompatibility({
   }),
   emit:(record) => directRecords.push(record),
 });
-assert.equal(directCompatibilityAssertionLeaves.length, 372,
+assert.equal(directCompatibilityAssertionLeaves.length, 373,
   "the explicit no-target assertion map must retain every executed original assertion leaf");
 assert.deepEqual(directCompatibilityViewportWidths, [320, 360, 520, 720],
   "the direct compatibility map must retain the original four viewports");
@@ -334,8 +334,14 @@ assert.equal(validateDirectCompatibilityAssertionSites(
 ).assertionLeafCount, directCompatibilityAssertionLeaves.length,
 "every committed direct identity must resolve to a current assertion call");
 assert.match(schemaFixturePrimitiveSource,
-  /data-live-target-permission-recovery[\s\S]+click\(\)[\s\S]+start-data-layer-testing:not\(:disabled\)/u,
-  "the direct fixture must drive visible permission recovery before observing Start testing readiness");
+  /data-live-target-permission-recovery[\s\S]+start-data-layer-testing:not\(:disabled\)/u,
+  "the direct fixture must wait for visible permission recovery before observing Start testing readiness");
+assert.doesNotMatch(schemaFixturePrimitiveSource,
+  /data-live-target-permission-recovery[\s\S]{0,300}click\(\)/u,
+  "the page evaluation must not synthesize the permission-recovery gesture");
+assert.match(fixtureSource,
+  /drivePermissionRecoveryUserGesture[\s\S]+Input\.dispatchMouseEvent[\s\S]+mousePressed[\s\S]+mouseReleased/u,
+  "the host fixture must drive permission recovery through a trusted CDP mouse gesture");
 const assertionSource = ["", "      assert.equal(true, true);", ""].join("\n");
 assert.deepEqual(validateDirectCompatibilityAssertionSites(["equal@2:14"], assertionSource), {
   assertionLeafCount:1, uniqueAssertionSiteCount:1,
@@ -464,7 +470,7 @@ const helperPlanningRows = [
   { helperClass:"the Defects target module", paths:["test/support/side-panel-defect-targets.mjs"],
     expected:["defects"], renameDestination:"test/support/side-panel-schema-workspace-targets.mjs" },
   { helperClass:"the Shell target module", paths:["test/support/side-panel-shell-targets.mjs"],
-    expected:["shell"], renameDestination:"test/support/side-panel-capture-targets.mjs" },
+    expected:["schemas", "shell"], renameDestination:"test/support/side-panel-capture-targets.mjs" },
 ];
 const syntheticChangeSet = (entries) => ({
   version:1,
