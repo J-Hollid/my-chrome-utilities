@@ -9,6 +9,7 @@ const controller = createSchemasInstalledController({
   storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value) },
   changed:() => { changed += 1; }, runGuidedValidation:async (id) => { guided = id; },
   subscribe:() => () => {}, specificIndexSelected() {}, rulePickerChanged() {}, createRuleId:() => "rule:first",
+  capturedAssignmentValue:() => undefined, renderAssignmentConditions() {},
 });
 controller.mount(); controller.open("schema:page"); controller.beginDraft();
 controller.updateDraft({ document:{ type:"object", required:["title"], properties:{ title:{ type:"string" } } } }, "Require title");
@@ -24,18 +25,22 @@ controller.dispose(); controller.mount();
 assert.equal(controller.state().activeSchemaId, "schema:page");
 assert.equal(controller.state().draftDirty, false);
 
+let fakeDocument;
 function element() {
   const listeners = new Map();
-  return { id:"", value:"", textContent:"", hidden:false, disabled:false, open:false, isConnected:true, dataset:{},
+  return { id:"", value:"", textContent:"", hidden:false, disabled:false, open:false, isConnected:true, dataset:{}, children:[], ownerDocument:fakeDocument,
     addEventListener(type, listener) { listeners.set(type, listener); },
     removeEventListener(type, listener) { if (listeners.get(type) === listener) listeners.delete(type); },
     dispatch(type) { listeners.get(type)?.({ preventDefault() {}, target:this, currentTarget:this }); }, click() { this.dispatch("click"); },
     showModal() { this.open = true; }, close() { this.open = false; }, focus() {},
     setAttribute(name, value) { this[name] = value; }, removeAttribute(name) { delete this[name]; },
-    getAttribute(name) { return this[name] ?? null; }, replaceChildren() {}, prepend() {}, contains() { return false; },
+    getAttribute(name) { return this[name] ?? null; }, replaceChildren(...children) { this.children = children; },
+    append(...children) { this.children.push(...children); }, prepend(...children) { this.children.unshift(...children); },
+    insertBefore(child) { this.children.push(child); }, before() {}, after() {}, contains() { return false; },
     listenerCount:() => listeners.size,
   };
 }
+fakeDocument = { createElement:() => element(), body:element() };
 const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "#schema-editor-name",
   "#schema-editor-name-assistance", "#schema-editor-description", "#save-schema-description", "#schema-description-origin",
   "#schema-editor-target", "#save-schema", "#save-schema-reason", "#schema-revision-review",
@@ -69,6 +74,11 @@ const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "
   "#schema-rule-sync-review-summary", "#confirm-schema-rule-sync", "#cancel-schema-rule-sync",
   "#export-schema-rules", "#schema-rule-delete-review", "#schema-rule-delete-review-summary",
   "#confirm-schema-rule-delete", "#cancel-schema-rule-delete"];
+selectors.push("#create-schema-assignment", "#schema-assignment-editor", "#schema-assignment-source",
+  "#schema-assignment-event", "#schema-assignment-priority", "#save-schema-assignment", "#schema-assignment-target",
+  "#schema-assignment-domain", "#schema-assignment-pathname", "#schema-assignment-version-policy",
+  "#schema-assignment-enabled", "#schema-assignment-list", "#schema-assignment-conflicts",
+  "#schema-assignment-schema", "#schema-assignment-data-conditions");
 const elements = new Map(selectors.map((selector) => [selector, element()]));
 elements.set("#side-panel-layered-profile-editor", element()); elements.set("#live-event-query", element());
 const schemaMasterTab = Object.assign(element(), { textContent:"Schemas", dataset:{ schemaSubview:"schema-master" } });
@@ -91,6 +101,8 @@ const uiController = createSchemasInstalledController({
   specificIndexSelected:(path) => { selectedSpecificIndex = path; },
   rulePickerChanged:(path, open) => rulePickerChanges.push(`${path}:${open}`),
   createRuleId:() => "rule:checkout",
+  capturedAssignmentValue:(target) => target === "payload" ? { checkout:{ total:12 } } : { raw:true },
+  renderAssignmentConditions:(root, state) => { root.textContent = `${state.target}:${state.group?.predicates.length ?? 0}`; },
 });
 uiController.mount(); uiController.open("schema:page"); uiController.beginDraft();
 elements.get("#schema-editor-name").value = "Page checkout"; elements.get("#schema-editor-name").dispatch("input");
@@ -205,6 +217,23 @@ elements.get("#cancel-schema-rule-delete").click();
 assert.equal(uiController.rules().some(({ id }) => id === "rule:retired"), true);
 uiController.requestRuleDeletion("rule:retired"); elements.get("#confirm-schema-rule-delete").click();
 assert.equal(uiController.rules().some(({ id }) => id === "rule:retired"), false);
+elements.get("#schema-assignment-schema").value = uiController.state().activeSchemaId;
+elements.get("#create-schema-assignment").click();
+elements.get("#schema-assignment-source").value = "gtm"; elements.get("#schema-assignment-event").value = "checkout";
+elements.get("#schema-assignment-priority").value = "20"; elements.get("#schema-assignment-target").value = "payload";
+elements.get("#schema-assignment-domain").value = "shop.example"; elements.get("#schema-assignment-pathname").value = "/checkout";
+elements.get("#schema-assignment-version-policy").value = "follow latest"; elements.get("#schema-assignment-enabled").checked = true;
+elements.get("#save-schema-assignment").click();
+const assignedSchema = uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId);
+assert.equal(assignedSchema.assignments[0].eventName, "checkout");
+assert.equal(assignedSchema.assignments[0].versionPolicy, "follow latest");
+assert.match(elements.get("#schema-assignment-list").children[0].children[0].textContent, /gtm\/checkout/);
+elements.get("#schema-assignment-list").children[0].children[2].click();
+assert.equal(uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId).assignments.length, 2,
+  "assignment duplication preserves the complete assignment contract");
+assert.match(elements.get("#schema-assignment-conflicts").textContent, /Assignment conflict/);
+elements.get("#schema-assignment-list").children[1].children[3].click();
+assert.equal(elements.get("#schema-assignment-conflicts").textContent, "", "disabled duplicates no longer conflict");
 uiController.dispose();
 assert.equal([...elements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
   "Schemas removes every editor and revision listener it owns");

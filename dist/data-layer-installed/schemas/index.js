@@ -1,4 +1,4 @@
-import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaPropertyRows, schemaPropertyCopySource, addManualProperty, contextualManualPropertyDefinition, createRuleConfiguration, manualPropertyPreview, restoreSchemaLibrary, searchSchemas, serializeSchemaLibrary, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateEvent, } from "../../utilities/data-layer/schemas.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaPropertyRows, schemaPropertyCopySource, addManualProperty, assignmentConditionSuggestions, assignmentDataConditionSummary, contextualManualPropertyDefinition, createRuleConfiguration, duplicateSchemaAssignment, manualPropertyPreview, restoreSchemaLibrary, searchSchemas, serializeSchemaLibrary, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateAssignmentDataConditions, validateEvent, } from "../../utilities/data-layer/schemas.js";
 import { applySchemaPropertyCopy, planSchemaPropertyCopy } from "../../data-layer-schema-property-copy.js";
 import { publishReusableRuleSync, reviewReusableRuleSync, } from "../../data-layer-reusable-rule-sync.js";
 const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
@@ -97,6 +97,7 @@ export function createSchemasInstalledController(ports) {
     const confirmSchemaManualPropertyButton = ownedElement("#confirm-schema-manual-property", "button");
     const cancelSchemaManualPropertyButton = ownedElement("#cancel-schema-manual-property", "button");
     const schemaPropertyRulePicker = ownedElement("#schema-property-rule-picker", "dialog");
+    const createSchemaAssignmentButton = ports.root.querySelector("#create-schema-assignment");
     const createSchemaRuleButton = ports.root.querySelector("#create-schema-rule");
     const schemaRuleEditor = ports.root.querySelector("#schema-rule-editor");
     const schemaRuleName = ports.root.querySelector("#schema-rule-name");
@@ -128,6 +129,20 @@ export function createSchemasInstalledController(ports) {
     const schemaRuleDeleteReviewSummary = ownedElement("#schema-rule-delete-review-summary", "output");
     const confirmSchemaRuleDeleteButton = ownedElement("#confirm-schema-rule-delete", "button");
     const cancelSchemaRuleDeleteButton = ownedElement("#cancel-schema-rule-delete", "button");
+    const schemaAssignmentEditor = ports.root.querySelector("#schema-assignment-editor");
+    const schemaAssignmentSource = ports.root.querySelector("#schema-assignment-source");
+    const schemaAssignmentEvent = ports.root.querySelector("#schema-assignment-event");
+    const schemaAssignmentPriority = ports.root.querySelector("#schema-assignment-priority");
+    const saveSchemaAssignmentButton = ports.root.querySelector("#save-schema-assignment");
+    const schemaAssignmentTarget = ports.root.querySelector("#schema-assignment-target");
+    const schemaAssignmentDomain = ports.root.querySelector("#schema-assignment-domain");
+    const schemaAssignmentPathname = ports.root.querySelector("#schema-assignment-pathname");
+    const schemaAssignmentVersionPolicy = ports.root.querySelector("#schema-assignment-version-policy");
+    const schemaAssignmentEnabled = ports.root.querySelector("#schema-assignment-enabled");
+    const schemaAssignmentList = ports.root.querySelector("#schema-assignment-list");
+    const schemaAssignmentConflicts = ports.root.querySelector("#schema-assignment-conflicts");
+    const schemaAssignmentSchema = ports.root.querySelector("#schema-assignment-schema");
+    const schemaAssignmentDataConditions = ownedElement("#schema-assignment-data-conditions", "section");
     if (schemaPropertyViewControls && !schemaPropertyViewControls.isConnected) {
         schemaPropertyViewControls.id = "schema-property-view-controls";
         if (schemaPropertyFilterLabel) {
@@ -386,6 +401,11 @@ export function createSchemasInstalledController(ports) {
     installRuleReviewDialog(schemaRuleUpgradeReview, "schema-rule-upgrade-review", "Update pinned rule attachments", schemaRuleUpgradeReviewSummary, confirmSchemaRuleUpgradeButton, cancelSchemaRuleUpgradeButton);
     installRuleReviewDialog(schemaRuleSyncReview, "schema-rule-sync-review", "Sync attached schemas and publish revisions", schemaRuleSyncReviewSummary, confirmSchemaRuleSyncButton, cancelSchemaRuleSyncButton);
     installRuleReviewDialog(schemaRuleDeleteReview, "schema-rule-delete-review", "Delete reusable rule", schemaRuleDeleteReviewSummary, confirmSchemaRuleDeleteButton, cancelSchemaRuleDeleteButton);
+    if (schemaAssignmentDataConditions && !schemaAssignmentDataConditions.isConnected) {
+        schemaAssignmentDataConditions.id = "schema-assignment-data-conditions";
+        schemaAssignmentDataConditions.setAttribute("aria-label", "Data layer conditions");
+        schemaAssignmentEditor?.insertBefore(schemaAssignmentDataConditions, saveSchemaAssignmentButton);
+    }
     let mounted = false;
     let unsubscribe;
     const storedSchemaLibrary = ports.storage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
@@ -421,6 +441,8 @@ export function createSchemasInstalledController(ports) {
     let pendingSchemaRuleUpgrade;
     let pendingSchemaRuleSync;
     let pendingReusableSchemaRuleDeletionId;
+    let editingSchemaAssignment;
+    let schemaAssignmentConditionState = { target: "payload", suggestions: [] };
     const activeIndex = () => schemas.findIndex(({ id }) => id === activeSchemaId);
     const active = () => {
         const schema = schemas[activeIndex()];
@@ -523,6 +545,7 @@ export function createSchemasInstalledController(ports) {
         if (schemaResult)
             schemaResult.textContent = activeSchemaId ? `Selected ${activeSchemaId}` : "";
         renderSchemaDraft();
+        renderSchemaAssignments();
     };
     const persistSchemaEditorDraft = () => {
         if (!activeSchemaId)
@@ -960,6 +983,160 @@ export function createSchemasInstalledController(ports) {
         }
     };
     const persistReusableSchemaRules = () => { ports.storage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); };
+    function assignmentConditionCapturedValue(target) {
+        return ports.capturedAssignmentValue(target);
+    }
+    function assignmentConditionEditorState(target, group) {
+        return { target, ...(group ? { group: structuredClone(group) } : {}),
+            suggestions: assignmentConditionSuggestions(assignmentConditionCapturedValue(target)) };
+    }
+    function renderSchemaAssignmentConditionEditor() {
+        if (!schemaAssignmentDataConditions)
+            return;
+        ports.renderAssignmentConditions(schemaAssignmentDataConditions, schemaAssignmentConditionState, (next) => {
+            schemaAssignmentConditionState = { ...structuredClone(next),
+                suggestions: assignmentConditionSuggestions(assignmentConditionCapturedValue(next.target)) };
+            renderSchemaAssignmentConditionEditor();
+        });
+        const validation = validateAssignmentDataConditions(schemaAssignmentConditionState.group);
+        if (saveSchemaAssignmentButton) {
+            saveSchemaAssignmentButton.disabled = !validation.ready;
+            saveSchemaAssignmentButton.title = validation.ready ? "" : validation.assistance;
+        }
+    }
+    const editSchemaAssignment = (schemaId, assignment) => {
+        editingSchemaAssignment = assignment.id ? { schemaId, assignmentId: assignment.id } : { schemaId };
+        if (schemaAssignmentSchema)
+            schemaAssignmentSchema.value = schemaId;
+        if (schemaAssignmentSource)
+            schemaAssignmentSource.value = assignment.sourceId;
+        if (schemaAssignmentEvent)
+            schemaAssignmentEvent.value = assignment.eventName;
+        if (schemaAssignmentTarget)
+            schemaAssignmentTarget.value = assignment.target;
+        if (schemaAssignmentDomain)
+            schemaAssignmentDomain.value = assignment.domainCondition ?? "";
+        if (schemaAssignmentPathname)
+            schemaAssignmentPathname.value = assignment.pathnameCondition ?? "";
+        if (schemaAssignmentPriority)
+            schemaAssignmentPriority.value = String(assignment.priority ?? 0);
+        if (schemaAssignmentVersionPolicy)
+            schemaAssignmentVersionPolicy.value = assignment.versionPolicy ?? "pinned";
+        if (schemaAssignmentEnabled)
+            schemaAssignmentEnabled.checked = assignment.enabled !== false;
+        schemaAssignmentConditionState = assignmentConditionEditorState(assignment.conditionTarget ?? assignment.target, assignment.dataConditionGroup);
+        renderSchemaAssignmentConditionEditor();
+        if (schemaAssignmentEditor)
+            schemaAssignmentEditor.hidden = false;
+    };
+    const mutateSchemaAssignment = (schemaId, assignmentId, mutate) => {
+        schemas = schemas.map((schema) => schema.id !== schemaId ? schema : { ...schema,
+            assignments: schema.assignments.flatMap((assignment) => assignment.id !== assignmentId ? [assignment] : (() => {
+                const changed = mutate(assignment);
+                return changed ? [changed] : [];
+            })()),
+        });
+        persistSchemaLibrary();
+        renderSchemas();
+    };
+    const renderSchemaAssignments = () => {
+        const assignments = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment })));
+        if (schemaAssignmentSchema?.ownerDocument)
+            schemaAssignmentSchema.replaceChildren(...schemas.map((schema) => {
+                const option = schemaAssignmentSchema.ownerDocument.createElement("option");
+                option.value = schema.id;
+                option.textContent = `${schema.name} version ${schema.version}`;
+                return option;
+            }));
+        if (schemaAssignmentList?.ownerDocument)
+            schemaAssignmentList.replaceChildren(...assignments.map(({ schema, assignment }) => {
+                const item = schemaAssignmentList.ownerDocument.createElement("li");
+                const summary = schemaAssignmentList.ownerDocument.createElement("span");
+                summary.textContent = `${assignment.name ?? assignment.id ?? "Assignment"} · ${assignment.sourceId}/${assignment.eventName} · ${assignment.target} · ${assignmentDataConditionSummary(assignment)} · priority ${assignment.priority ?? 0} · ${assignment.enabled === false ? "disabled" : "enabled"} · ${schema.name}`;
+                const edit = schemaAssignmentList.ownerDocument.createElement("button");
+                const duplicate = schemaAssignmentList.ownerDocument.createElement("button");
+                const disable = schemaAssignmentList.ownerDocument.createElement("button");
+                const remove = schemaAssignmentList.ownerDocument.createElement("button");
+                edit.type = duplicate.type = disable.type = remove.type = "button";
+                edit.textContent = "Edit";
+                duplicate.textContent = "Duplicate";
+                disable.textContent = assignment.enabled === false ? "Enable" : "Disable";
+                remove.textContent = "Delete";
+                edit.addEventListener("click", () => editSchemaAssignment(schema.id, assignment));
+                duplicate.addEventListener("click", () => {
+                    schemas = schemas.map((candidate) => candidate.id !== schema.id ? candidate : { ...candidate,
+                        assignments: [...candidate.assignments, duplicateSchemaAssignment(assignment, `${assignment.id ?? "assignment"}:copy`, `${assignment.name ?? "Assignment"} copy`)] });
+                    persistSchemaLibrary();
+                    renderSchemas();
+                });
+                disable.addEventListener("click", () => mutateSchemaAssignment(schema.id, assignment.id, (item) => ({ ...item, enabled: item.enabled === false })));
+                remove.addEventListener("click", () => mutateSchemaAssignment(schema.id, assignment.id, () => undefined));
+                item.append(summary, edit, duplicate, disable, remove);
+                return item;
+            }));
+        const collisions = new Map();
+        for (const { schema, assignment } of assignments.filter(({ assignment }) => assignment.enabled !== false)) {
+            const key = [assignment.sourceId, assignment.eventName, assignment.target, assignment.priority ?? 0,
+                assignment.domainCondition ?? "any", assignment.pathnameCondition ?? "any", assignmentDataConditionSummary(assignment)].join("|");
+            collisions.set(key, [...(collisions.get(key) ?? []), `${schema.name}/${assignment.name ?? assignment.id ?? "unnamed"}`]);
+        }
+        const conflicts = [...collisions.values()].filter((matches) => matches.length > 1);
+        if (schemaAssignmentConflicts)
+            schemaAssignmentConflicts.textContent = conflicts.length
+                ? `Assignment conflict: ${conflicts.map((matches) => matches.join(", ")).join("; ")}. Edit priorities before validation.` : "";
+    };
+    const changeSchemaAssignmentTarget = () => {
+        if (!schemaAssignmentConditionState.group) {
+            schemaAssignmentConditionState = assignmentConditionEditorState(schemaAssignmentTarget?.value === "raw input" ? "raw input" : "payload");
+            renderSchemaAssignmentConditionEditor();
+        }
+    };
+    const openNewSchemaAssignmentEditor = () => {
+        editingSchemaAssignment = undefined;
+        const target = schemaAssignmentTarget?.value === "raw input" ? "raw input" : "payload";
+        schemaAssignmentConditionState = assignmentConditionEditorState(target);
+        renderSchemaAssignmentConditionEditor();
+        if (schemaAssignmentEditor)
+            schemaAssignmentEditor.hidden = false;
+        schemaAssignmentSource?.focus();
+    };
+    const saveSchemaAssignment = () => {
+        const schema = schemas.find((candidate) => candidate.id === schemaAssignmentSchema?.value) ?? schemas[0];
+        if (!schema)
+            return;
+        const conditionValidation = validateAssignmentDataConditions(schemaAssignmentConditionState.group);
+        if (!conditionValidation.ready) {
+            if (schemaResult)
+                schemaResult.textContent = conditionValidation.assistance;
+            renderSchemaAssignmentConditionEditor();
+            return;
+        }
+        const sourceId = schemaAssignmentSource?.value.trim() || "event-history";
+        const eventName = schemaAssignmentEvent?.value.trim() || "page_view";
+        const target = schemaAssignmentTarget?.value === "raw input" ? "raw input" : "payload";
+        const existing = editingSchemaAssignment?.schemaId === schema.id
+            ? schema.assignments.find(({ id }) => id === editingSchemaAssignment?.assignmentId) : undefined;
+        const next = { id: editingSchemaAssignment?.assignmentId ?? `assignment:${schema.id}:${eventName}`,
+            name: existing?.name ?? `${schema.name} automatic`, sourceId, eventName, target,
+            priority: Number(schemaAssignmentPriority?.value || 10),
+            ...(schemaAssignmentDomain?.value.trim() ? { domainCondition: schemaAssignmentDomain.value.trim() } : {}),
+            ...(schemaAssignmentPathname?.value.trim() ? { pathnameCondition: schemaAssignmentPathname.value.trim() } : {}),
+            ...(schemaAssignmentConditionState.group ? { conditionTarget: schemaAssignmentConditionState.target,
+                dataConditionGroup: structuredClone(schemaAssignmentConditionState.group) } : {}),
+            versionPolicy: schemaAssignmentVersionPolicy?.value === "follow latest" ? "follow latest" : "pinned",
+            enabled: schemaAssignmentEnabled?.checked ?? true };
+        schemas = schemas.map((candidate) => candidate.id !== schema.id ? candidate : { ...candidate,
+            assignments: editingSchemaAssignment?.schemaId === schema.id
+                ? candidate.assignments.map((assignment) => assignment.id === editingSchemaAssignment?.assignmentId ? next : assignment)
+                : [...candidate.assignments.filter(({ id }) => id !== next.id), next] });
+        editingSchemaAssignment = undefined;
+        persistSchemaLibrary();
+        renderSchemas();
+        if (schemaAssignmentEditor)
+            schemaAssignmentEditor.hidden = true;
+        if (schemaResult)
+            schemaResult.textContent = `Saved ${next.name} with ${assignmentDataConditionSummary(next)}.`;
+    };
     const renderSchemaRuleLibrary = () => {
         const query = schemaRuleSearch?.value.trim().toLowerCase() ?? "";
         const visible = reusableSchemaRules.filter((rule) => `${rule.name} ${rule.kind}`.toLowerCase().includes(query));
@@ -1232,6 +1409,9 @@ export function createSchemasInstalledController(ports) {
             confirmSchemaRuleDeleteButton?.addEventListener("click", confirmReusableSchemaRuleDeletion);
             cancelSchemaRuleDeleteButton?.addEventListener("click", cancelReusableSchemaRuleDeletion);
             exportSchemaRulesButton?.addEventListener("click", exportReusableSchemaRules);
+            schemaAssignmentTarget?.addEventListener("change", changeSchemaAssignmentTarget);
+            createSchemaAssignmentButton?.addEventListener("click", openNewSchemaAssignmentEditor);
+            saveSchemaAssignmentButton?.addEventListener("click", saveSchemaAssignment);
             unsubscribe = ports.subscribe(renderSchemas);
             renderSchemas();
         },
@@ -1296,6 +1476,9 @@ export function createSchemasInstalledController(ports) {
             confirmSchemaRuleDeleteButton?.removeEventListener("click", confirmReusableSchemaRuleDeletion);
             cancelSchemaRuleDeleteButton?.removeEventListener("click", cancelReusableSchemaRuleDeletion);
             exportSchemaRulesButton?.removeEventListener("click", exportReusableSchemaRules);
+            schemaAssignmentTarget?.removeEventListener("change", changeSchemaAssignmentTarget);
+            createSchemaAssignmentButton?.removeEventListener("click", openNewSchemaAssignmentEditor);
+            saveSchemaAssignmentButton?.removeEventListener("click", saveSchemaAssignment);
             pendingSchemaPropertyRemoval = undefined;
             pendingSchemaDocumentationRemoval = undefined;
             lastSchemaPropertyRemoval = undefined;
@@ -1313,9 +1496,13 @@ export function createSchemasInstalledController(ports) {
             pendingSchemaRuleUpgrade = undefined;
             pendingSchemaRuleSync = undefined;
             pendingReusableSchemaRuleDeletionId = undefined;
+            editingSchemaAssignment = undefined;
+            schemaAssignmentConditionState = { target: "payload", suggestions: [] };
             unsubscribe?.();
             unsubscribe = undefined;
             schemaList?.replaceChildren();
+            schemaAssignmentList?.replaceChildren();
+            schemaAssignmentDataConditions?.replaceChildren();
         },
         open(id) {
             if (!schemas.some((schema) => schema.id === id))
@@ -1351,6 +1538,7 @@ export function createSchemasInstalledController(ports) {
         requestRuleSync: requestSchemaRuleSync,
         confirmRuleSync: confirmReusableSchemaRuleSync,
         requestRuleDeletion: requestSchemaRuleDeletion,
+        editAssignment: editSchemaAssignment,
         rulePickerState: () => ({ path: schemaRulePickerPath, renderSequence: schemaPropertyRenderSequence,
             ...(schemaRuleConfiguration ? { configuration: structuredClone(schemaRuleConfiguration) } : {}) }),
         rules: () => structuredClone(reusableSchemaRules),
