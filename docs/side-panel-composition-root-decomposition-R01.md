@@ -290,6 +290,82 @@ fresh preflight, and its already approved exact evidence route. Any product-tree
 change, permission expansion, assertion loss, failure to reproduce the map in a
 second execution, or weakening of the strict allowlist stops fail-closed.
 
+## Native-grant causal product repair
+
+The correction's production-faithful installed-browser boundary proves a
+cutover regression in candidate `caeb4f09d4`, not a verification-fixture
+limitation. A trusted user activation reaches the untouched
+`chrome.permissions.request` API and Chrome grants the selected target's exact
+origin. Instrumentation then observes only the failed pre-grant MAIN-world page
+probe. The extracted Capture controller marks the target Ready from the grant
+and fires a non-settling target-changed notification, but it does not await or
+consume a post-grant same-tab path observation. The UI therefore remains at
+Permission required with Start testing disabled.
+
+This does not reopen product behavior. Data layer observation target access 009
+and Data layer target path status runtime 002 already require the exact result:
+the grant settles before one same-tab recheck of the configured path, readiness
+comes from that observation, and Start testing becomes enabled without another
+selection cycle. Adding another acceptance scenario would duplicate those
+authoritative scenarios rather than clarify them.
+
+The stable product task `side-panel-single-cutover` owns the causal repair under
+the overnight failure policy. Preserve the ready verification-only correction
+as a separate commit and preserve the rest of candidate `caeb4f09d4` unchanged.
+The product repair is confined to the extracted installed owners and their
+typed composition adapters:
+
+- primary prefix `src/data-layer-installed/capture/`, owned by pack `capture`,
+  slice `capture_installed_side_panel`, with the already registered exact
+  consumers `event-library`, `project_event_transport`, `schemas`,
+  `live_flow_testing`, and `shell`;
+- `src/data-layer-installed/project-event-transport/` only if its existing
+  target-refresh capability must settle or accept the observed path result,
+  owned by pack `project_event_transport`, slice
+  `project_event_transport_installed_side_panel`, with consumers `capture`,
+  `event-library`, and `shell`; and
+- `src/data-layer-installed/runtime.ts` only for typed wiring between those
+  owners, with its existing installed-runtime slice and consumers.
+
+Generated counterparts and direct tests may follow those source changes.
+`src/side-panel.ts`, shared permission semantics, the verification-only capture
+and frozen map, unrelated controllers, durable data, and the granted origin are
+not repair surfaces. No new ownership preparation is required because all three
+possible source paths already have reviewed exact slices and consumers.
+
+The repair must preserve this settlement sequence:
+
+1. retain the failed probe's selected target, configured history path, and
+   request generation;
+2. request only that target's exact origin from the trusted visible action;
+3. after a granted result, and only while the controller is mounted and the
+   same target, path, and request generation remain current, run one awaited
+   MAIN-world recheck against the same tab and configured path;
+4. derive target access, path status, Confirm access and path readiness, and
+   Start testing availability from the recheck result rather than from the
+   permission boolean; and
+5. ignore stale or unmounted settlements, retain Permission required after a
+   declined or unavailable result, and retain Ready access but disable Start
+   testing when the page is accessible and the configured path is absent.
+
+The focused red regression must demonstrate that a granted permission callback
+without the post-grant probe cannot pass. Direct controller proof then covers
+the granted, declined, unavailable, missing-path, stale-target, stale-path, and
+disposed settlements. The production-faithful installed check must observe one
+pre-grant probe, the exact-origin native grant, exactly one post-grant probe on
+the same tab and path, Ready, and enabled Start testing; it must not force a
+button state, mock the native permission result, reopen the picker, select a
+different tab, or broaden the origin. Only after those focused checks pass may
+the verification-only correction freeze and validate the direct compatibility
+map, after which the normal product evidence sequence resumes.
+
+This repair removes the discovered schedule bottleneck instead of adding a new
+phase. Implementation and focused proof have a 120-minute active-effort ceiling,
+with a causal controller test and typed settlement route expected within the
+first 60 minutes. Missing that checkpoint requires a short finding naming the
+unresolved owner or browser boundary; it does not authorize broader verification
+or another architectural decomposition.
+
 ## Completion evidence
 
 The program is complete on QA only when:
