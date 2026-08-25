@@ -99,7 +99,7 @@ assert.deepEqual(schemasPack.checkpointCommands.find(({ id }) =>
   id === "side-panel-direct-compatibility-capture"), {
   id:"side-panel-direct-compatibility-capture",
   executable:"node",
-  args:["test/side-panel-direct-compatibility-capture-test.mjs"],
+  args:["test/side-panel-direct-compatibility-capture-test.mjs", "--checkpoint"],
 }, "Schemas owns the explicit direct compatibility capture execution");
 assert.equal(schemasPack.unit.includes("test/side-panel-direct-compatibility-capture-test.mjs"), true,
   "Schemas assigns the direct compatibility capture test path exactly once");
