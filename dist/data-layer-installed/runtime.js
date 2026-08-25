@@ -543,8 +543,21 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
                     if (host)
                         liveApi.renderEventFeedQueryBuilder(host, events, query, update, controls);
                 }, dispose: () => { } },
-            inspector: { splitView: () => globalThis.innerWidth >= 700, capturePresentation: () => liveApi.captureLiveInspectorPresentation(liveElements.eventInspector),
-                restorePresentation: (snapshot) => liveApi.restoreLiveInspectorPresentation(liveElements.eventInspector, snapshot),
+            inspector: { splitView: () => globalThis.innerWidth >= 700, capturePresentation: () => {
+                    const snapshot = liveApi.captureLiveInspectorPresentation(liveElements.eventInspector), focused = root.activeElement;
+                    if (focused instanceof HTMLElement && liveElements.eventInspector?.contains(focused))
+                        return snapshot;
+                    const { focusedId: _focusedId, focusedPropertyPath: _focusedPropertyPath, ...withoutExternalFocus } = snapshot;
+                    return withoutExternalFocus;
+                },
+                restorePresentation: (snapshot) => {
+                    if (snapshot) {
+                        const properties = liveElements.eventInspector?.querySelector('[aria-label="Properties"]');
+                        if ((properties?.dataset.showNonApplicableProperties === "true") !== snapshot.showNonApplicableProperties)
+                            liveElements.eventInspector?.querySelector("#live-non-applicable-properties")?.click();
+                    }
+                    liveApi.restoreLiveInspectorPresentation(liveElements.eventInspector, snapshot);
+                },
                 restoreReturn: (snapshot) => liveApi.restoreInspectorReturnUi(liveElements, snapshot), render: (event) => liveApi.renderLiveInspector(liveElements, event, liveApi.createLiveInspectorActions(createInstalledLiveInspectorCoordination({ currentPageUrl: () => controllers.capture.state().observer.pageUrl,
                     writeClipboard: async (text) => navigator.clipboard.writeText(text), storeTemplate: (template) => controllers["event-library"].store(template),
                     defaultDestination: () => controllers["project-event-transport"].state().pushPath,

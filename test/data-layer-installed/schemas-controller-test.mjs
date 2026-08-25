@@ -49,6 +49,9 @@ function element() {
     showModal() { this.open = true; }, close() { this.open = false; }, focus(options) { this.focused = true; this.focusOptions = options; },
     setAttribute(name, value) { this[name] = value; }, removeAttribute(name) { delete this[name]; },
     getAttribute(name) { return this[name] ?? null; }, replaceChildren(...children) { this.children = children; },
+    cloneNode() { return Object.assign(element(), { id:this.id, isConnected:this.isConnected }); },
+    replaceWith(next) { listeners.clear(); this.isConnected = false; next.isConnected = true;
+      for (const [selector, current] of elements) if (current === this) elements.set(selector, next); },
     append(...children) { for (const child of children) if (child && typeof child === "object") { child.isConnected = true; child.parentElement = this; } this.children.push(...children); },
     prepend(...children) { for (const child of children) if (child && typeof child === "object") { child.isConnected = true; child.parentElement = this; } this.children.unshift(...children); },
     insertBefore(child) { child.isConnected = true; child.parentElement = this; this.children.push(child); }, before() {}, after() {},
@@ -898,8 +901,8 @@ assert.equal(persistenceListener, undefined, "disposal detaches the durable pers
 assert.equal(layeredProfileDisposals, 1, "Schemas disposes the layered Profile editor with its owner lifecycle");
 assert.equal(guidedChoice.listenerCount(), 0, "disposal removes the guided continuation choice listener");
 assert.equal(expansionConfirm.listenerCount(), 0, "disposal removes the open allowed-value dialog listeners");
-assert.equal([...elements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
-  "Schemas removes every editor and revision listener it owns");
+const retainedSchemaListeners = [...elements].filter(([, item]) => item.listenerCount()).map(([selector, item]) => [selector, item.listenerCount()]);
+assert.deepEqual(retainedSchemaListeners, [], "Schemas removes every editor and revision listener it owns");
 
 {
   const { createDurableSchemaPersistenceCoordination } = await import("../../dist/data-layer-installed/runtime.js");

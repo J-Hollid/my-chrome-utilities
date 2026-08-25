@@ -319,7 +319,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const undoSchemaPropertyRemovalButton = ownedElement("#undo-schema-property-removal", "button");
   const schemaPropertyCopyFeedback = ownedElement("#schema-property-copy-feedback", "output");
   const undoSchemaPropertyCopyButton = ownedElement("#undo-schema-property-copy", "button");
-  const schemaPropertyCopyDialog = ownedElement("#schema-property-copy-dialog", "dialog");
+  let schemaPropertyCopyDialog = ownedElement("#schema-property-copy-dialog", "dialog");
   const schemaPropertyRemovalDialog = ownedElement("#schema-property-removal-dialog", "dialog");
   const schemaPropertyRemovalHeading = ownedElement("#schema-property-removal-heading", "h4");
   const schemaPropertyRemovalSummary = ownedElement("#schema-property-removal-summary", "output");
@@ -974,11 +974,17 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   };
   const closeCompactCanonicalEditor = ():void => { if (compactCanonicalEditor && schemaDetail) compactCanonicalScrollByKey.set(compactCanonicalEditor.key, schemaDetail.scrollTop);
     discardCompactCanonicalProjectionPersistence(compactCanonicalEditor); compactCanonicalEditor = undefined; removeCompactCanonicalTableEditor(); compactCanonicalContext && (compactCanonicalContext.hidden = true); };
+  const proposeInstalledSchemaWorkingDraftName = (schema:SchemaDefinition, proposed:string):SchemaDefinition => {
+    const updated = proposeSchemaWorkingDraftName(schema, proposed), draft = updated.workingDraft;
+    if (!draft?.canonicalSchema || !proposed) return updated;
+    return { ...updated, workingDraft:{ ...draft,
+      canonicalSchema:{ ...draft.canonicalSchema, contributorName:proposed } } };
+  };
   const persistSavedCanonicalResult = (schemaId:string, canonical:CanonicalSchemaDocument, change:string):void => {
     const stored = schemas.find(({ id }) => id === schemaId); if (!stored) throw new Error("The saved schema is unavailable.");
     const projectionSource = schemaDraft?.id === schemaId ? schemaDraft : schemaEditorDraft(stored);
     const projection = savedSchemaFromCanonical(projectionSource, canonical);
-    const updated = updateSchemaWorkingDraft(proposeSchemaWorkingDraftName(stored, projection.name), {
+    const updated = updateSchemaWorkingDraft(proposeInstalledSchemaWorkingDraftName(stored, projection.name), {
       document:projection.document, assignments:projection.assignments, attachedRules:projection.attachedRules,
       parentSchemaId:projection.parentSchemaId, inheritedRuleOverrides:projection.inheritedRuleOverrides,
       documentation:projection.documentation, canonicalSchema:canonical }, change);
@@ -986,7 +992,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   };
   const persistSavedProjectionMetadata = (schemaId:string, projection:SchemaDefinition, change?:string):boolean => {
     const stored = schemas.find(({ id }) => id === schemaId); if (!stored) throw new Error("The saved schema is unavailable.");
-    const canonical = savedCanonicalDocument; const updated = updateSchemaWorkingDraft(proposeSchemaWorkingDraftName(stored, projection.name), {
+    const canonical = savedCanonicalDocument; const updated = updateSchemaWorkingDraft(proposeInstalledSchemaWorkingDraftName(stored, projection.name), {
       document:projection.document, assignments:projection.assignments, attachedRules:projection.attachedRules,
       parentSchemaId:projection.parentSchemaId, inheritedRuleOverrides:projection.inheritedRuleOverrides,
       documentation:projection.documentation, ...(canonical ? { canonicalSchema:{ ...canonical, contributorName:projection.name } } : {}) },
@@ -1547,7 +1553,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const persistSchemaEditorDraft = (): void => {
     if (!schemaDraft && !activeSchemaId) return;
     const schema = active();
-    replaceActive(proposeSchemaWorkingDraftName(schema, schemaEditorName?.value ?? schema.name));
+    replaceActive(proposeInstalledSchemaWorkingDraftName(schema, schemaEditorName?.value ?? schema.name));
     persistEditedSchemaIfStored();
     const presented = schemaEditorDraft(active()), candidate = schemas.find(({ id }) => id === presented.id) ?? presented,
       rename = inspectSchemaRename(candidate, schemas, presented.name), hasProperties = Object.keys(presented.document.properties ?? {}).length > 0,
@@ -1765,6 +1771,14 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   };
   const cancelSchemaDocumentationRemovalAction = (): void => closeSchemaDocumentationRemoval();
   const cancelSchemaDocumentationRemovalFromDialog = (event: Event): void => { event.preventDefault(); closeSchemaDocumentationRemoval(); };
+  const resetSchemaPropertyCopyDialog = ():void => {
+    const cleanCopyDialog = typeof schemaPropertyCopyDialog?.cloneNode === "function"
+      ? schemaPropertyCopyDialog.cloneNode(false) as HTMLDialogElement : undefined;
+    if (schemaPropertyCopyDialog && cleanCopyDialog) {
+      cleanCopyDialog.id = schemaPropertyCopyDialog.id; schemaPropertyCopyDialog.replaceWith(cleanCopyDialog);
+      schemaPropertyCopyDialog = cleanCopyDialog;
+    }
+  };
   function openSchemaPropertyCopyReview(path: string, triggerOrDestination: HTMLButtonElement | string): void {
     const sourceSchema = active(), source = schemaPropertyCopySource(sourceSchema,
       { surface:sourceSchema.workingDraft ? "working draft" : "current" }),
@@ -1772,7 +1786,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     const trigger = typeof triggerOrDestination === "string" ? undefined : triggerOrDestination;
     const sources = [source, ...(sourceSchema.workingDraft ? [schemaPropertyCopySource(sourceSchema, { surface:"current" })] : []),
       ...schemaRevisionChoices(sourceSchema).map((version) => schemaPropertyCopySource(sourceSchema, { surface:"historical", version }))];
-    pendingSchemaPropertyCopyReview?.close();
+    pendingSchemaPropertyCopyReview?.close(); resetSchemaPropertyCopyDialog();
     const reviewController = renderSchemaPropertyCopyReview(schemaPropertyCopyDialog!, { source, sources, selectedPath:path,
       destinations:schemas.filter(({ id }) => id !== sourceSchema.id), schemas, reusableRuleIds:reusableSchemaRules.map(({ id }) => id),
       ...(trigger ? { trigger } : {}),
@@ -1802,6 +1816,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (!pendingSchemaPropertyCopy) return; const transaction = applySchemaPropertyCopy(pendingSchemaPropertyCopy);
     schemas = schemas.map((schema) => schema.id === transaction.schema.id ? transaction.schema : schema);
     lastSchemaPropertyCopy = transaction; pendingSchemaPropertyCopy = undefined; pendingSchemaPropertyCopyReview?.close(); pendingSchemaPropertyCopyReview = undefined;
+    resetSchemaPropertyCopyDialog();
     if (schemaPropertyCopyFeedback) schemaPropertyCopyFeedback.textContent = `Copied ${transaction.plan.selectedPath} from ${transaction.plan.source.label} to ${transaction.schema.name}. Published revisions are unchanged.`;
     if (undoSchemaPropertyCopyButton) undoSchemaPropertyCopyButton.hidden = false;
     persistSchemaLibrary(); renderSchemas();
@@ -3170,7 +3185,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       cancelSchemaDeleteButton?.removeEventListener("click", cancelSchemaDeletion);
       exportSchemaButton?.removeEventListener("click", requestSchemaLibraryExport);
       pendingSchemaPropertyRemoval = undefined; pendingSchemaDocumentationRemoval = undefined; lastSchemaPropertyRemoval = undefined;
-      pendingSchemaPropertyCopyReview?.close(); pendingSchemaPropertyCopyReview = undefined;
+      pendingSchemaPropertyCopyReview?.close(); pendingSchemaPropertyCopyReview = undefined; resetSchemaPropertyCopyDialog();
       pendingSchemaPropertyCopy = undefined; lastSchemaPropertyCopy = undefined;
       specificIndexArrayPath = undefined; specificIndexTrigger = undefined;
       pendingManualPropertyContext = undefined; pendingManualPropertyCanonicalBase = undefined; pendingSchemaRestoration = undefined;

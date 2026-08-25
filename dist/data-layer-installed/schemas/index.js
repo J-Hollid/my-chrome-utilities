@@ -124,7 +124,7 @@ export function createSchemasInstalledController(ports) {
     const undoSchemaPropertyRemovalButton = ownedElement("#undo-schema-property-removal", "button");
     const schemaPropertyCopyFeedback = ownedElement("#schema-property-copy-feedback", "output");
     const undoSchemaPropertyCopyButton = ownedElement("#undo-schema-property-copy", "button");
-    const schemaPropertyCopyDialog = ownedElement("#schema-property-copy-dialog", "dialog");
+    let schemaPropertyCopyDialog = ownedElement("#schema-property-copy-dialog", "dialog");
     const schemaPropertyRemovalDialog = ownedElement("#schema-property-removal-dialog", "dialog");
     const schemaPropertyRemovalHeading = ownedElement("#schema-property-removal-heading", "h4");
     const schemaPropertyRemovalSummary = ownedElement("#schema-property-removal-summary", "output");
@@ -1149,13 +1149,20 @@ export function createSchemasInstalledController(ports) {
         removeCompactCanonicalTableEditor();
         compactCanonicalContext && (compactCanonicalContext.hidden = true);
     };
+    const proposeInstalledSchemaWorkingDraftName = (schema, proposed) => {
+        const updated = proposeSchemaWorkingDraftName(schema, proposed), draft = updated.workingDraft;
+        if (!draft?.canonicalSchema || !proposed)
+            return updated;
+        return { ...updated, workingDraft: { ...draft,
+                canonicalSchema: { ...draft.canonicalSchema, contributorName: proposed } } };
+    };
     const persistSavedCanonicalResult = (schemaId, canonical, change) => {
         const stored = schemas.find(({ id }) => id === schemaId);
         if (!stored)
             throw new Error("The saved schema is unavailable.");
         const projectionSource = schemaDraft?.id === schemaId ? schemaDraft : schemaEditorDraft(stored);
         const projection = savedSchemaFromCanonical(projectionSource, canonical);
-        const updated = updateSchemaWorkingDraft(proposeSchemaWorkingDraftName(stored, projection.name), {
+        const updated = updateSchemaWorkingDraft(proposeInstalledSchemaWorkingDraftName(stored, projection.name), {
             document: projection.document, assignments: projection.assignments, attachedRules: projection.attachedRules,
             parentSchemaId: projection.parentSchemaId, inheritedRuleOverrides: projection.inheritedRuleOverrides,
             documentation: projection.documentation, canonicalSchema: canonical
@@ -1169,7 +1176,7 @@ export function createSchemasInstalledController(ports) {
         if (!stored)
             throw new Error("The saved schema is unavailable.");
         const canonical = savedCanonicalDocument;
-        const updated = updateSchemaWorkingDraft(proposeSchemaWorkingDraftName(stored, projection.name), {
+        const updated = updateSchemaWorkingDraft(proposeInstalledSchemaWorkingDraftName(stored, projection.name), {
             document: projection.document, assignments: projection.assignments, attachedRules: projection.attachedRules,
             parentSchemaId: projection.parentSchemaId, inheritedRuleOverrides: projection.inheritedRuleOverrides,
             documentation: projection.documentation, ...(canonical ? { canonicalSchema: { ...canonical, contributorName: projection.name } } : {})
@@ -2093,7 +2100,7 @@ export function createSchemasInstalledController(ports) {
         if (!schemaDraft && !activeSchemaId)
             return;
         const schema = active();
-        replaceActive(proposeSchemaWorkingDraftName(schema, schemaEditorName?.value ?? schema.name));
+        replaceActive(proposeInstalledSchemaWorkingDraftName(schema, schemaEditorName?.value ?? schema.name));
         persistEditedSchemaIfStored();
         const presented = schemaEditorDraft(active()), candidate = schemas.find(({ id }) => id === presented.id) ?? presented, rename = inspectSchemaRename(candidate, schemas, presented.name), hasProperties = Object.keys(presented.document.properties ?? {}).length > 0, inheritanceError = schemaInheritanceError(presented, schemas) ?? schemaInheritanceConflict(presented, schemas);
         if (schemaEditorNameAssistance)
@@ -2476,12 +2483,22 @@ export function createSchemasInstalledController(ports) {
     };
     const cancelSchemaDocumentationRemovalAction = () => closeSchemaDocumentationRemoval();
     const cancelSchemaDocumentationRemovalFromDialog = (event) => { event.preventDefault(); closeSchemaDocumentationRemoval(); };
+    const resetSchemaPropertyCopyDialog = () => {
+        const cleanCopyDialog = typeof schemaPropertyCopyDialog?.cloneNode === "function"
+            ? schemaPropertyCopyDialog.cloneNode(false) : undefined;
+        if (schemaPropertyCopyDialog && cleanCopyDialog) {
+            cleanCopyDialog.id = schemaPropertyCopyDialog.id;
+            schemaPropertyCopyDialog.replaceWith(cleanCopyDialog);
+            schemaPropertyCopyDialog = cleanCopyDialog;
+        }
+    };
     function openSchemaPropertyCopyReview(path, triggerOrDestination) {
         const sourceSchema = active(), source = schemaPropertyCopySource(sourceSchema, { surface: sourceSchema.workingDraft ? "working draft" : "current" }), editorScroll = schemaEditor?.scrollTop ?? 0, treeScroll = schemaPropertyTree?.scrollTop ?? 0;
         const trigger = typeof triggerOrDestination === "string" ? undefined : triggerOrDestination;
         const sources = [source, ...(sourceSchema.workingDraft ? [schemaPropertyCopySource(sourceSchema, { surface: "current" })] : []),
             ...schemaRevisionChoices(sourceSchema).map((version) => schemaPropertyCopySource(sourceSchema, { surface: "historical", version }))];
         pendingSchemaPropertyCopyReview?.close();
+        resetSchemaPropertyCopyDialog();
         const reviewController = renderSchemaPropertyCopyReview(schemaPropertyCopyDialog, { source, sources, selectedPath: path,
             destinations: schemas.filter(({ id }) => id !== sourceSchema.id), schemas, reusableRuleIds: reusableSchemaRules.map(({ id }) => id),
             ...(trigger ? { trigger } : {}),
@@ -2532,6 +2549,7 @@ export function createSchemasInstalledController(ports) {
         pendingSchemaPropertyCopy = undefined;
         pendingSchemaPropertyCopyReview?.close();
         pendingSchemaPropertyCopyReview = undefined;
+        resetSchemaPropertyCopyDialog();
         if (schemaPropertyCopyFeedback)
             schemaPropertyCopyFeedback.textContent = `Copied ${transaction.plan.selectedPath} from ${transaction.plan.source.label} to ${transaction.schema.name}. Published revisions are unchanged.`;
         if (undoSchemaPropertyCopyButton)
@@ -4699,6 +4717,7 @@ export function createSchemasInstalledController(ports) {
             lastSchemaPropertyRemoval = undefined;
             pendingSchemaPropertyCopyReview?.close();
             pendingSchemaPropertyCopyReview = undefined;
+            resetSchemaPropertyCopyDialog();
             pendingSchemaPropertyCopy = undefined;
             lastSchemaPropertyCopy = undefined;
             specificIndexArrayPath = undefined;
