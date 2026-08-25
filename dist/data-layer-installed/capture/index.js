@@ -1246,6 +1246,16 @@ export function createCaptureInstalledController(ports) {
         closeInspector: closeInspectorAndReturnToEvents,
         scheduleObservationRefresh,
         refreshPresentation() { renderLiveObserver(); renderSavedSessionLiveBanner(); },
+        currentSessionDraft: () => structuredClone(currentSessionSaveDraft()),
+        savedSessions: () => structuredClone(savedSessionLibrary),
+        replaceSavedSessions(next) { savedSessionLibrary = structuredClone(next); persistSavedSessionLibrary(); renderSavedSessions(); },
+        openSavedSession(id) {
+            const session = savedSessionLibrary.sessions.find((candidate) => candidate.id === id);
+            if (!session)
+                return false;
+            openSessionInLiveFeed(session);
+            return true;
+        },
         state: () => ({ session: structuredClone(dataLayerSessionState), observer: structuredClone(liveObserverState),
             targets: structuredClone(observationTargetState), savedSessions: structuredClone(savedSessionLibrary),
             savedFeed: structuredClone(savedSessionLiveFeed), archivedSavedSession: structuredClone(archivedSavedSession),

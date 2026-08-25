@@ -43,6 +43,8 @@ import {
   updateSchemaWorkingDraft,
   validateAssignmentDataConditions,
   validateEvent,
+  validateWithSchema,
+  mountCanonicalSchemaEditor,
   typedComparisonValue, GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation,
   createGuidedValidationFlow,
   filterSchemaRelationshipTree,
@@ -134,6 +136,8 @@ export interface SchemasInstalledPorts {
   ensureProjectSchemaContributors(projectId: string, route: Readonly<{ collectionKinds:readonly string[]; includeFlowGraphs:boolean }>): Promise<{ name:string }>;
   settleCanonical?(schemaId:string):Promise<void>;
   mountLayeredProfileEditor():{ dispose():void } | undefined;
+  canonicalConceptSuggestions():readonly string[];
+  createCanonicalTableEditor?(options:Parameters<typeof mountCanonicalSchemaEditor>[0]):ReturnType<typeof mountCanonicalSchemaEditor>;
   revalidateCurrentLive?(schemas:readonly SchemaDefinition[], manualOverrides:Readonly<Record<string,string>>):number;
   prepareCapturedValidationContinuation?(record:SchemaValidationRecord):Promise<CapturedValidationContinuation>;
 }
@@ -338,7 +342,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const cancelSchemaRuleUpgradeButton = ownedElement("#cancel-schema-rule-upgrade", "button");
   const schemaRuleRevisionReview = ownedElement("#schema-rule-revision-review", "dialog");
   const schemaRuleRevisionReviewSummary = ownedElement("#schema-rule-revision-review-summary", "output");
-  const confirmSchemaRuleRevisionButton = ownedElement("#confirm-schema-rule-revision", "button");
+  const confirmSchemaRuleRevisionButton = ownedElement("#confirm-schema-rule-revision-review", "button");
   const cancelSchemaRuleRevisionButton = ownedElement("#cancel-schema-rule-revision", "button");
   const schemaRuleSyncReview = ownedElement("#schema-rule-sync-review", "dialog");
   const schemaRuleSyncReviewSummary = ownedElement("#schema-rule-sync-review-summary", "output");
@@ -479,17 +483,19 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     schemaOwnerDocument?.body.append(schemaPropertyRulePicker);
   }
   const installRuleReviewDialog = (dialog: HTMLDialogElement | null, id: string, heading: string,
-    summary: HTMLOutputElement | null, confirm: HTMLButtonElement | null, cancel: HTMLButtonElement | null): void => {
+    summary: HTMLOutputElement | null, confirm: HTMLButtonElement | null, cancel: HTMLButtonElement | null,
+    confirmId = `confirm-${id.replace("-review", "")}`): void => {
     if (!dialog || dialog.isConnected) return;
     dialog.id = id;
     const title = schemaOwnerDocument?.createElement("h4"); if (title) { title.textContent = heading; dialog.append(title); }
     if (summary) { summary.id = `${id}-summary`; dialog.append(summary); }
-    if (confirm) { confirm.id = `confirm-${id.replace("-review", "")}`; confirm.type = "button"; confirm.textContent = "Confirm"; dialog.append(confirm); }
+    if (confirm) { confirm.id = confirmId; confirm.type = "button"; confirm.textContent = "Confirm"; dialog.append(confirm); }
     if (cancel) { cancel.id = `cancel-${id.replace("-review", "")}`; cancel.type = "button"; cancel.textContent = "Cancel"; dialog.append(cancel); }
     schemaOwnerDocument?.body.append(dialog);
   };
   installRuleReviewDialog(schemaRuleRevisionReview, "schema-rule-revision-review", "Review rule revision",
-    schemaRuleRevisionReviewSummary, confirmSchemaRuleRevisionButton, cancelSchemaRuleRevisionButton);
+    schemaRuleRevisionReviewSummary, confirmSchemaRuleRevisionButton, cancelSchemaRuleRevisionButton,
+    "confirm-schema-rule-revision-review");
   installRuleReviewDialog(schemaRuleUpgradeReview, "schema-rule-upgrade-review", "Update pinned rule attachments",
     schemaRuleUpgradeReviewSummary, confirmSchemaRuleUpgradeButton, cancelSchemaRuleUpgradeButton);
   installRuleReviewDialog(schemaRuleSyncReview, "schema-rule-sync-review", "Sync attached schemas and publish revisions",
@@ -620,6 +626,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   let compactCanonicalPresenceDraft: { propertyId:string; baseRevision:number; mode:string } | undefined;
   let compactCanonicalContextDisposers:(() => void)[] = [];
   let compactCanonicalPropertyMenuId:string | undefined;
+  let compactCanonicalTableHost:HTMLElement | undefined;
+  let compactCanonicalTableEditor:ReturnType<typeof mountCanonicalSchemaEditor> | undefined;
+  let compactCanonicalTableKey:string | undefined;
   const compactCanonicalProjection = (adapter:CompactCanonicalEditorAdapter, canonical=adapter.load()):SchemaDefinition =>
     adapter.projection?.(canonical) ?? compactSchemaProjection(canonical, { id:canonical.contributorId, name:canonical.contributorName, version:canonical.revision });
   const compactCanonicalFacetText = (canonical:CanonicalSchemaDocument, node:CanonicalSchemaDocument["nodes"][string]):string => {
@@ -714,7 +723,30 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       own(compare, compareLatest); own(retry, retryCompactCanonicalCommand); own(reject, rejectCompactCanonicalCommand); compactCanonicalContext.append(compare, retry, reject);
     }
   };
-  function renderCompactCanonicalEditor():void { renderCompactCanonicalContext(); }
+  function removeCompactCanonicalTableEditor():void {
+    compactCanonicalTableHost?.replaceChildren(); compactCanonicalTableHost?.remove();
+    compactCanonicalTableHost = undefined; compactCanonicalTableEditor = undefined; compactCanonicalTableKey = undefined;
+  }
+  function renderCompactCanonicalEditor():void {
+    renderCompactCanonicalContext();
+    const adapter = compactCanonicalEditor;
+    if (!adapter || !schemaEditor || !schemaOwnerDocument) { removeCompactCanonicalTableEditor(); return; }
+    if (!compactCanonicalTableHost?.isConnected) {
+      compactCanonicalTableHost = schemaOwnerDocument.createElement("section");
+      compactCanonicalTableHost.id = "compact-canonical-table-editor"; schemaEditor.append(compactCanonicalTableHost);
+      compactCanonicalTableEditor = undefined; compactCanonicalTableKey = undefined;
+    }
+    if (!compactCanonicalTableEditor || compactCanonicalTableKey !== adapter.key) {
+      compactCanonicalTableHost.replaceChildren(); compactCanonicalTableKey = adapter.key;
+      const createEditor = ports.createCanonicalTableEditor ?? mountCanonicalSchemaEditor;
+      compactCanonicalTableEditor = createEditor({ host:compactCanonicalTableHost, surface:"Side panel",
+        conceptSuggestions:ports.canonicalConceptSuggestions, load:adapter.load, id:(kind) => `${kind}:${crypto.randomUUID()}`,
+        dispatch:(command) => beginCompactCanonicalCommand(command)?.result
+          ?? blockedCompactCanonicalCommand(adapter, command, "The canonical editor is no longer available."),
+        ...(adapter.onUndo ? { onUndo:adapter.onUndo } : {}), ...(adapter.onRedo ? { onRedo:adapter.onRedo } : {}) });
+    } else compactCanonicalTableEditor.render();
+    compactCanonicalTableHost.hidden = adapter.load().view !== "table";
+  }
   const blockedCompactCanonicalCommand = (adapter:CompactCanonicalEditorAdapter, command:CompactCanonicalCommand, message:string):CompactCanonicalCommandResult =>
     ({ status:"conflict", document:adapter.load(), ...(command.kind !== "policy" && "propertyId" in command ? { propertyId:command.propertyId } : {}), message });
   const beginCompactCanonicalCommand = (command:CompactCanonicalCommand, owned?:CompactCanonicalProjectionPersistenceRequest):{ accepted:boolean; result:CompactCanonicalCommandResult; completion:Promise<boolean> } | undefined => {
@@ -811,10 +843,10 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const openCompactCanonicalEditor = (adapter:CompactCanonicalEditorAdapter):void => {
     compactCanonicalEditor = adapter; compactCanonicalReopenSelection = adapter.key; compactCanonicalCommandFeedback = undefined;
     compactCanonicalRevisionSnapshots.clear(); compactCanonicalRevisionSnapshots.set(adapter.load().revision, structuredClone(adapter.load()));
-    if (schemaDetail) schemaDetail.scrollTop = compactCanonicalScrollByKey.get(adapter.key) ?? 0; renderCompactCanonicalContext();
+    if (schemaDetail) schemaDetail.scrollTop = compactCanonicalScrollByKey.get(adapter.key) ?? 0; renderCompactCanonicalEditor();
   };
   const closeCompactCanonicalEditor = ():void => { if (compactCanonicalEditor && schemaDetail) compactCanonicalScrollByKey.set(compactCanonicalEditor.key, schemaDetail.scrollTop);
-    discardCompactCanonicalProjectionPersistence(compactCanonicalEditor); compactCanonicalEditor = undefined; compactCanonicalContext && (compactCanonicalContext.hidden = true); };
+    discardCompactCanonicalProjectionPersistence(compactCanonicalEditor); compactCanonicalEditor = undefined; removeCompactCanonicalTableEditor(); compactCanonicalContext && (compactCanonicalContext.hidden = true); };
   const persistSavedCanonicalResult = (schemaId:string, canonical:CanonicalSchemaDocument, change:string):void => {
     const stored = schemas.find(({ id }) => id === schemaId); if (!stored) throw new Error("The saved schema is unavailable.");
     const draft = schemaEditorDraft(stored), projection = savedCompactCanonicalProjection(schemaId, canonical);
@@ -1357,7 +1389,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (!document) return;
     if (!schemaRuleConfiguration) {
       const heading = document.createElement("h4"), search = document.createElement("input"), results = document.createElement("section"), cancel = document.createElement("button");
-      heading.textContent = `Add rule for ${path}`; search.id = "schema-property-rule-search"; search.value = schemaRulePickerSearch; cancel.type = "button"; cancel.textContent = "Cancel";
+      heading.id = "schema-property-rule-picker-heading"; heading.textContent = `Add rule for ${path}`;
+      results.id = "schema-property-rule-results"; search.id = "schema-property-rule-search"; search.value = schemaRulePickerSearch;
+      schemaPropertyRulePicker.setAttribute("aria-labelledby", heading.id); cancel.type = "button"; cancel.textContent = "Cancel";
       const propertyType = schemaRuleTypeForAttachment(active(), path), attachedIds = new Set((active().workingDraft?.attachedRules ?? active().attachedRules ?? []).map(({ id }) => id));
       const rules = [...builtInRulesForProperty(propertyType), ...reusableRulesForProperty(reusableSchemaRules, propertyType, schemaRulePickerSearch, attachedIds)];
       for (const rule of rules.filter((candidate) => !schemaRulePickerSearch || `${candidate.name} ${candidate.kind}`.toLowerCase().includes(schemaRulePickerSearch.toLowerCase()))) {
@@ -1375,8 +1409,11 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     }
     const configuration = schemaRuleConfiguration;
     const editLabel = editingAttachedLocalRule ? `Edit ${editingAttachedLocalRule.name ?? editingAttachedLocalRule.id}` : "Create local rule";
-    const form = document.createElement("form"), heading = document.createElement("h4"), status = document.createElement("output");
-    heading.textContent = `${editLabel} for ${path}`; status.id = "schema-local-rule-assistance";
+    const form = document.createElement("form"), heading = document.createElement("h4"), status = document.createElement("output"),
+      parameters = document.createElement("fieldset");
+    form.id = "schema-local-rule-configuration"; heading.id = "schema-property-rule-picker-heading";
+    parameters.id = "schema-local-rule-parameters"; heading.textContent = `${editLabel} for ${path}`; status.id = "schema-local-rule-assistance";
+    schemaPropertyRulePicker.setAttribute("aria-labelledby", heading.id);
     const refreshValidation = ():void => { const validation = validateRuleConfiguration(configuration); status.textContent = validation.assistance;
       form.dataset.ready = String(validation.ready); schemaPropertyRulePicker.dataset.conditionPreview = JSON.stringify({ operator:configuration.conditionGroupOperator,
         predicates:configuration.conditions }); };
@@ -1384,17 +1421,19 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       if (control.repeatable) continue; const input = control.inputType === "select" ? document.createElement("select") : document.createElement("input");
       input.id = `schema-local-rule-${control.key}`; input.value = String(configuration[control.key]);
       const update = ():void => { (configuration as unknown as Record<string, unknown>)[control.key] = input.value; refreshValidation(); };
-      input.addEventListener(control.inputType === "select" ? "change" : "input", update); schemaRulePickerDisposers.push(() => input.removeEventListener(control.inputType === "select" ? "change" : "input", update)); form.append(input);
+      input.addEventListener(control.inputType === "select" ? "change" : "input", update); schemaRulePickerDisposers.push(() => input.removeEventListener(control.inputType === "select" ? "change" : "input", update)); parameters.append(input);
     }
-    if (configuration.ruleType === "Allowed values") configuration.allowedValues.forEach((value, index) => { const input = document.createElement("input"), remove = document.createElement("button");
+    const allowedValues = configuration.ruleType === "Allowed values" ? document.createElement("fieldset") : undefined;
+    if (allowedValues) allowedValues.id = "schema-local-rule-allowed-values";
+    if (allowedValues) configuration.allowedValues.forEach((value, index) => { const input = document.createElement("input"), remove = document.createElement("button");
       input.id = `schema-local-rule-allowed-value-${index + 1}`; input.value = value; remove.type = "button"; remove.textContent = `Remove value ${index + 1}`;
       const update = ():void => { configuration.allowedValues[index] = input.value; refreshValidation(); };
       const removeValue = ():void => { configuration.allowedValues.splice(index, 1); renderSchemaPropertyRulePicker(); };
       input.addEventListener("input", update); remove.addEventListener("click", removeValue);
-      schemaRulePickerDisposers.push(() => input.removeEventListener("input", update), () => remove.removeEventListener("click", removeValue)); form.append(input, remove); });
+      schemaRulePickerDisposers.push(() => input.removeEventListener("input", update), () => remove.removeEventListener("click", removeValue)); allowedValues.append(input, remove); });
     if (configuration.ruleType === "Allowed values") { const add = document.createElement("button"); add.type = "button"; add.textContent = "Add another value";
       const addValue = ():void => { configuration.allowedValues.push(""); renderSchemaPropertyRulePicker(); }; add.addEventListener("click", addValue);
-      schemaRulePickerDisposers.push(() => add.removeEventListener("click", addValue)); form.append(add); }
+      schemaRulePickerDisposers.push(() => add.removeEventListener("click", addValue)); allowedValues?.append(add); parameters.append(allowedValues!); }
     const severity = document.createElement("select"), message = document.createElement("input"), enabled = document.createElement("input");
     severity.id = "schema-local-rule-severity"; severity.value = configuration.severity; message.id = "schema-local-rule-message"; message.value = configuration.message;
     enabled.id = "schema-local-rule-enabled"; enabled.type = "checkbox"; enabled.checked = configuration.enabled;
@@ -1409,11 +1448,12 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     const changeReusable = ():void => { configuration.saveReusable = reusable.checked; renderSchemaPropertyRulePicker(); };
     conditional.addEventListener("change", changeConditional); reusable.addEventListener("change", changeReusable);
     schemaRulePickerDisposers.push(() => conditional.removeEventListener("change", changeConditional), () => reusable.removeEventListener("change", changeReusable));
-    form.append(heading, severity, message, enabled, conditional, reusable);
+    form.append(heading, parameters, severity, message, enabled, conditional, reusable);
     if (configuration.applyOnlyWhen) {
-      const group = document.createElement("select"); group.id = "schema-local-rule-condition-group"; group.value = configuration.conditionGroupOperator;
+      const conditions = document.createElement("fieldset"), group = document.createElement("select");
+      conditions.id = "schema-local-rule-conditions"; group.id = "schema-local-rule-condition-group"; group.value = configuration.conditionGroupOperator;
       const changeGroup = ():void => { configuration.conditionGroupOperator = group.value === "Any" ? "Any" : "All"; refreshValidation(); };
-      group.addEventListener("change", changeGroup); schemaRulePickerDisposers.push(() => group.removeEventListener("change", changeGroup)); form.append(group);
+      group.addEventListener("change", changeGroup); schemaRulePickerDisposers.push(() => group.removeEventListener("change", changeGroup)); conditions.append(group);
       configuration.conditions.forEach((predicate, index) => { const property = document.createElement("select"), operator = document.createElement("select"), comparison = document.createElement("input"), remove = document.createElement("button");
         property.id = `schema-local-rule-condition-property-${index}`; property.value = predicate.propertyPath; operator.id = `schema-local-rule-condition-operator-${index}`; operator.value = predicate.operator;
         comparison.id = `schema-local-rule-condition-value-${index}`; comparison.value = predicate.comparison ? String(predicate.comparison.value ?? "") : ""; remove.id = `schema-local-rule-condition-remove-${index}`; remove.type = "button"; remove.textContent = `Remove condition ${index + 1}`;
@@ -1425,13 +1465,15 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
         const removeCondition = ():void => { configuration.conditions.splice(index, 1); renderSchemaPropertyRulePicker(); };
         property.addEventListener("change", changeProperty); operator.addEventListener("change", changeOperator); comparison.addEventListener("input", changeComparison); remove.addEventListener("click", removeCondition);
         schemaRulePickerDisposers.push(() => property.removeEventListener("change", changeProperty), () => operator.removeEventListener("change", changeOperator),
-          () => comparison.removeEventListener("input", changeComparison), () => remove.removeEventListener("click", removeCondition)); form.append(property, operator, comparison, remove); });
+          () => comparison.removeEventListener("input", changeComparison), () => remove.removeEventListener("click", removeCondition)); conditions.append(property, operator, comparison, remove); });
       const add = document.createElement("button"); add.id = "schema-local-rule-condition-add"; add.type = "button"; add.textContent = "Add condition"; const addCondition = ():void => { configuration.conditions.push(initialConditionPredicate(path).predicates[0]!); renderSchemaPropertyRulePicker(); };
-      add.addEventListener("click", addCondition); schemaRulePickerDisposers.push(() => add.removeEventListener("click", addCondition)); form.append(add);
+      const preview = document.createElement("output"); preview.id = "schema-local-rule-current-preview";
+      add.addEventListener("click", addCondition); schemaRulePickerDisposers.push(() => add.removeEventListener("click", addCondition)); conditions.append(add, preview); form.append(conditions);
     }
-    if (configuration.saveReusable) { const name = document.createElement("input"), description = document.createElement("textarea"); name.id = "schema-local-rule-name"; name.value = configuration.reusableName;
+    if (configuration.saveReusable) { const explanation = document.createElement("p"), name = document.createElement("input"), description = document.createElement("textarea");
+      explanation.id = "schema-local-rule-reusable-explanation"; explanation.textContent = "This reusable rule will be available to other schemas."; name.id = "schema-local-rule-name"; name.value = configuration.reusableName;
       description.id = "schema-local-rule-description"; description.value = configuration.description; const changeName = ():void => { configuration.reusableName = name.value; refreshValidation(); }, changeDescription = ():void => { configuration.description = description.value; };
-      name.addEventListener("input", changeName); description.addEventListener("input", changeDescription); schemaRulePickerDisposers.push(() => name.removeEventListener("input", changeName), () => description.removeEventListener("input", changeDescription)); form.append(name, description); }
+      name.addEventListener("input", changeName); description.addEventListener("input", changeDescription); schemaRulePickerDisposers.push(() => name.removeEventListener("input", changeName), () => description.removeEventListener("input", changeDescription)); form.append(explanation, name, description); }
     const back = document.createElement("button"), cancel = document.createElement("button"), create = document.createElement("button"); back.type = cancel.type = "button"; create.type = "submit";
     back.textContent = "Back"; cancel.textContent = "Cancel"; create.textContent = "Create rule"; const goBack = ():void => { schemaRuleConfiguration = undefined; renderSchemaPropertyRulePicker(); }, cancelEdit = ():void => closeSchemaPropertyRulePicker();
     const submit = (event:Event):void => { event.preventDefault(); if (validateRuleConfiguration(configuration).ready) createConfiguredSchemaRule(); };
@@ -2319,6 +2361,12 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     add(schema: SchemaDefinition): void { schemas = [...schemas, structuredClone(schema)]; activeSchemaId = schema.id; schemaDraft = structuredClone(schema); persistSchemaLibrary(); renderSchemas(); },
     replace(next: readonly SchemaDefinition[]): void { schemas = structuredClone([...next]); if (!schemas.some(({ id }) => id === activeSchemaId)) { activeSchemaId = undefined; schemaDraft = undefined; } persistSchemaLibrary(); renderSchemas(); },
     validate:(event: Parameters<typeof validateEvent>[0]) => validateEvent(event, schemas),
+    validateAgainstSchema:(event: Parameters<typeof validateEvent>[0], schemaId:string) => {
+      const schema = schemas.find((candidate) => candidate.id === schemaId);
+      if (!schema) return { message:"Select a schema to refresh Library draft validation." };
+      const result = validateWithSchema(event, schema, schemas);
+      return { message:`Library draft validation: ${result.state} · ${schema.name} v${schema.version}.`, result };
+    },
     runGuidedValidation:async () => { const event = guidedValidationRoot?.dataset.eventId;
       if (event) { const captured={ id:event, sourceId:"", name:"", pageUrl:"", payload:{}, rawInput:{} };
         guidedValidationFlow.open(guidedUiEvent(captured), activeSchemaId ? guidedUiCandidate(active()) : undefined); } },
@@ -2437,7 +2485,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (!guidedValidationRoot || !schemaOwnerDocument) return;
     for (const dispose of guidedDialogDisposers.splice(0)) dispose(); guidedValidationRoot.replaceChildren();
     const dialog = schemaOwnerDocument.createElement("dialog"), heading = schemaOwnerDocument.createElement("h5"), choices = schemaOwnerDocument.createElement("div");
-    dialog.id = "guided-continuation-schema-picker"; heading.textContent = "Choose schema destination";
+    dialog.id = "guided-continuation-schema-picker"; dialog.setAttribute("aria-labelledby", "guided-continuation-schema-picker-heading");
+    heading.id = "guided-continuation-schema-picker-heading"; heading.textContent = "Choose schema destination";
+    choices.setAttribute("aria-label", "Schemas with working drafts");
     for (const schema of schemas.filter(({ workingDraft }) => Boolean(workingDraft))) {
       const choose = schemaOwnerDocument.createElement("button"); choose.type = "button";
       choose.textContent = `${schema.name} revision ${schema.version} · ${schema.workingDraft?.pendingChanges.length ?? 0} pending changes`;

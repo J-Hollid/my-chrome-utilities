@@ -54,6 +54,12 @@ assert.equal(controller.state().observer.events.length, 1, "paused capture conse
 controller.resume(); controller.end();
 assert.equal(controller.state().session.session.status, "ended");
 assert.ok(values.has("dataLayerTestingSession"), "Capture owns session persistence");
+assert.equal(controller.currentSessionDraft().completed.events[0].id, "event:1",
+  "Capture exposes an immutable completed-session port for cross-owner evidence attachment");
+const replacementSessions = { sessions:[] };
+controller.replaceSavedSessions(replacementSessions);
+assert.deepEqual(controller.savedSessions(), replacementSessions,
+  "Capture owns replacement persistence for a reviewed cross-owner saved-session transaction");
 assert.ok(changes >= 6);
 controller.dispose(); controller.dispose();
 controller.mount();

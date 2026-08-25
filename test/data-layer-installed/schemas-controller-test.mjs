@@ -17,6 +17,7 @@ const controller = createSchemasInstalledController({
   relationshipTree:()=>({ projectId:"no-project", nodes:[] }), openProjectLibrary() {}, openContributor() {},
   openContributorInStudio() {}, adoptSavedSchema() {}, renderSchemaSpecification() {}, reportMissingSchemaEvent() {},
   scheduleFrame:(callback)=>callback(), restoreGuidedCapture() {}, mountLayeredProfileEditor:() => undefined,
+  canonicalConceptSuggestions:() => [],
   activeProjectId:()=>undefined, ensureProjectSchemaContributors:async()=>({ name:"" }),
 });
 controller.mount(); controller.open("schema:page"); controller.beginDraft();
@@ -44,8 +45,10 @@ function element() {
     showModal() { this.open = true; }, close() { this.open = false; }, focus() { this.focused = true; },
     setAttribute(name, value) { this[name] = value; }, removeAttribute(name) { delete this[name]; },
     getAttribute(name) { return this[name] ?? null; }, replaceChildren(...children) { this.children = children; },
-    append(...children) { this.children.push(...children); }, prepend(...children) { this.children.unshift(...children); },
-    insertBefore(child) { this.children.push(child); }, before() {}, after() {}, remove() { this.removed = true; }, contains() { return false; }, closest() { return null; },
+    append(...children) { for (const child of children) if (child && typeof child === "object") { child.isConnected = true; child.parentElement = this; } this.children.push(...children); },
+    prepend(...children) { for (const child of children) if (child && typeof child === "object") { child.isConnected = true; child.parentElement = this; } this.children.unshift(...children); },
+    insertBefore(child) { child.isConnected = true; child.parentElement = this; this.children.push(child); }, before() {}, after() {},
+    remove() { this.removed = true; this.isConnected = false; if (this.parentElement) this.parentElement.children = this.parentElement.children.filter((child) => child !== this); }, contains() { return false; }, closest() { return null; },
     querySelector(selector) { const id = selector.startsWith("#") ? selector.slice(1) : undefined;
       const visit = (children) => children.find((child) => id && child.id === id) ?? children.map((child) => visit(child.children ?? [])).find(Boolean);
       return visit(this.children); },
@@ -53,7 +56,11 @@ function element() {
     listenerCount:() => listeners.size,
   };
 }
-fakeDocument = { createElement:() => element(), body:element() };
+function findByText(root, text) {
+  if (root?.textContent === text) return root;
+  for (const child of root?.children ?? []) { const found = findByText(child, text); if (found) return found; }
+}
+fakeDocument = { createElement:() => Object.assign(element(), { isConnected:false }), body:element() };
 globalThis.document = fakeDocument;
 const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "#schema-editor-name",
   "#schema-search", "#schema-category-filter", "#schema-count", "#schema-list", "#schema-empty-state", "#schema-result",
@@ -91,7 +98,7 @@ const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "
   "#schema-rule-list", "#schema-rule-search", "#schema-rule-attachments", "#update-schema-rule-attachments",
   "#schema-rule-upgrade-review", "#schema-rule-upgrade-review-summary", "#confirm-schema-rule-upgrade",
   "#cancel-schema-rule-upgrade", "#schema-rule-revision-review", "#schema-rule-revision-review-summary",
-  "#confirm-schema-rule-revision", "#cancel-schema-rule-revision", "#schema-rule-sync-review",
+  "#confirm-schema-rule-revision-review", "#cancel-schema-rule-revision", "#schema-rule-sync-review",
   "#schema-rule-sync-review-summary", "#confirm-schema-rule-sync", "#cancel-schema-rule-sync",
   "#export-schema-rules", "#schema-rule-delete-review", "#schema-rule-delete-review-summary",
   "#confirm-schema-rule-delete", "#cancel-schema-rule-delete"];
@@ -105,6 +112,8 @@ selectors.push("#create-schema-assignment", "#schema-assignment-editor", "#schem
   "#cancel-schema-delete");
 selectors.push("#export-schema", "#schema-export-choices", "#schema-export-compatibility-review");
 const elements = new Map(selectors.map((selector) => [selector, element()]));
+for (const selector of ["#schema-rule-revision-review", "#schema-rule-revision-review-summary",
+  "#confirm-schema-rule-revision-review", "#cancel-schema-rule-revision"]) elements.delete(selector);
 elements.set("#side-panel-layered-profile-editor", element()); elements.set("#live-event-query", element());
 const schemaMasterTab = Object.assign(element(), { textContent:"Schemas", dataset:{ schemaSubview:"schema-master" } });
 const schemaRulesTab = Object.assign(element(), { textContent:"Rules", dataset:{ schemaSubview:"schema-rule-library" } });
@@ -125,12 +134,18 @@ const restoredGuidedCaptures = [];
 let canonicalSettlementMode = "resolve", releaseCanonicalSettlement;
 let layeredProfileMounts = 0, layeredProfileDisposals = 0;
 let liveRevalidations = 0, continuationPreparation, continuationCommit;
+let canonicalTableMounts = 0, canonicalTableRenders = 0, canonicalTableOptions;
+const uiRoot = { ownerDocument:fakeDocument,
+  querySelector:(selector) => elements.get(selector) ?? fakeDocument.body.querySelector(selector) ?? null,
+  querySelectorAll:(selector) => selector.includes("role=tab") ? [schemaMasterTab, schemaRulesTab] : [schemaMasterPanel, schemaRulesPanel] };
 const uiController = createSchemasInstalledController({
-  root:{ ownerDocument:fakeDocument, querySelector:(selector) => elements.get(selector) ?? null,
-    querySelectorAll:(selector) => selector.includes("role=tab") ? [schemaMasterTab, schemaRulesTab] : [schemaMasterPanel, schemaRulesPanel] },
+  root:uiRoot,
   storage:{ getItem:(key) => uiValues.get(key) ?? null, setItem:(key, value) => uiValues.set(key, value), removeItem:(key) => uiValues.delete(key) },
   relationshipViewStorage:{ getItem:(key) => uiValues.get(`view:${key}`) ?? null, setItem:(key, value) => uiValues.set(`view:${key}`, value) },
   changed() {}, subscribe:() => () => {},
+  canonicalConceptSuggestions:() => ["Checkout concept"],
+  createCanonicalTableEditor:(options) => { canonicalTableMounts += 1; canonicalTableOptions = options;
+    return { render:() => { canonicalTableRenders += 1; } }; },
   createRuleId:() => ["rule:conditional", "rule:checkout", "rule:promoted"][promotionRuleSequence++] ?? `rule:${promotionRuleSequence}`,
   capturedAssignmentValue:(target) => target === "payload" ? { checkout:{ total:12 } } : { raw:true },
   renderAssignmentConditions:(root, state) => { root.textContent = `${state.target}:${state.group?.predicates.length ?? 0}`; },
@@ -162,6 +177,13 @@ const uiController = createSchemasInstalledController({
     destinations:[{ id:"fixture", label:"Event validation Test case" }, { id:"profile", label:"Profile requirements" }],
     commit:async (destination) => { continuationCommit = destination; } }; },
 });
+for (const selector of ["#schema-rule-revision-review", "#schema-rule-revision-review-summary",
+  "#confirm-schema-rule-revision-review", "#cancel-schema-rule-revision"]) {
+  const created = fakeDocument.body.querySelector(selector); assert.ok(created, `Schemas creates ${selector} from a minimal dialog host`);
+  elements.set(selector, created);
+}
+assert.equal(elements.get("#confirm-schema-rule-revision-review").id, "confirm-schema-rule-revision-review",
+  "Schemas preserves the installed browser contract for rule revision confirmation");
 uiController.mount();
 assert.equal(layeredProfileMounts, 1, "Schemas mounts the layered Profile editor exactly once");
 await uiController.hydrateActiveProjectForSchemas();
@@ -281,6 +303,11 @@ elements.get("#schema-property-rule-picker").dispatch("cancel");
 assert.equal(uiController.rulePickerState().path, undefined,
   "rule-picker close owns its state transition after removal of the notification-only port");
 uiController.openRulePicker("checkout.total");
+for (const id of ["schema-local-rule-configuration", "schema-property-rule-picker-heading", "schema-local-rule-parameters",
+  "schema-local-rule-assistance", "schema-local-rule-severity", "schema-local-rule-message", "schema-local-rule-enabled",
+  "schema-local-rule-conditional", "schema-local-rule-reusable"]) {
+  assert.ok(elements.get("#schema-property-rule-picker").querySelector(`#${id}`), `Schemas creates dynamic rule control #${id}`);
+}
 const conditionalControl = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-conditional");
 conditionalControl.checked = true; conditionalControl.dispatch("change");
 assert.deepEqual(uiController.rulePickerState().configuration.conditions[0].comparison, { type:"number", value:12 },
@@ -324,14 +351,17 @@ elements.get("#schema-property-rule-picker").children[0].children.at(-1).click()
 uiController.openRulePicker("checkout.total"); uiController.configureRule("Allowed values");
 let allowedValue = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-allowed-value-1");
 allowedValue.value = "12"; allowedValue.dispatch("input");
-elements.get("#schema-property-rule-picker").children[0].children.find(({ textContent }) => textContent === "Add another value").click();
+findByText(elements.get("#schema-property-rule-picker"), "Add another value").click();
 allowedValue = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-allowed-value-2"); allowedValue.value = "13"; allowedValue.dispatch("input");
 assert.deepEqual(uiController.rulePickerState().configuration.allowedValues, ["12", "13"]);
-elements.get("#schema-property-rule-picker").children[0].children.find(({ textContent }) => textContent === "Remove value 1").click();
+findByText(elements.get("#schema-property-rule-picker"), "Remove value 1").click();
 assert.deepEqual(uiController.rulePickerState().configuration.allowedValues, ["13"]);
 elements.get("#schema-property-rule-picker").children[0].children.at(-1).click();
 uiController.openRulePicker("checkout.total");
 elements.get("#schema-property-rule-picker").children[0].children.at(-2).click();
+assert.ok(elements.get("#schema-property-rule-picker").querySelector("#schema-property-rule-picker-heading"));
+assert.ok(elements.get("#schema-property-rule-picker").querySelector("#schema-property-rule-results"),
+  "Schemas preserves the dynamic legacy rule-results ID when returning to rule choices");
 const pickerSearch = elements.get("#schema-property-rule-picker").querySelector("#schema-property-rule-search"); pickerSearch.value = "missing"; pickerSearch.dispatch("input");
 assert.equal(elements.get("#schema-property-rule-picker").children[2].children[0].textContent, "Clear search");
 elements.get("#schema-property-rule-picker").children[2].children[0].click();
@@ -361,7 +391,7 @@ assert.equal(elements.get("#schema-rule-revision-review").open, true);
 elements.get("#cancel-schema-rule-revision").click();
 assert.equal(uiController.rules().find(({ id }) => id === "rule:checkout").version, 1, "cancel leaves a rule revision untouched");
 uiController.requestRuleRevision("rule:checkout", { name:"Checkout present", message:"Checkout must be present" });
-elements.get("#confirm-schema-rule-revision").click();
+elements.get("#confirm-schema-rule-revision-review").click();
 assert.equal(uiController.rules().find(({ id }) => id === "rule:checkout").version, 2);
 assert.equal(uiController.rules().find(({ id }) => id === "rule:checkout").revisionHistory[0].name, "Checkout required");
 assert.equal(uiController.requestRuleSync("rule:checkout"), true);
@@ -372,7 +402,7 @@ const syncedSchema = uiController.schemas().find(({ id }) => id === uiController
 assert.equal(syncedSchema.version, versionBeforeSync + 1, "sync publishes exactly one reviewed schema revision");
 assert.equal(syncedSchema.attachedRules.find(({ id }) => id === "rule:checkout").version, 2);
 uiController.requestRuleRevision("rule:checkout", { severity:"warning" });
-elements.get("#confirm-schema-rule-revision").click();
+elements.get("#confirm-schema-rule-revision-review").click();
 uiController.requestRuleUpgrade("rule:checkout", [uiController.state().activeSchemaId]);
 assert.equal(elements.get("#schema-rule-upgrade-review").open, true);
 elements.get("#confirm-schema-rule-upgrade").click();
@@ -383,7 +413,7 @@ assert.equal(uiController.ruleState().approvedRuleAttachmentUpdateId, "rule:chec
 assert.equal(uiController.editReusableRule("rule:retired"), true); elements.get("#schema-rule-name").value = "Retired rule reviewed";
 elements.get("#schema-rule-attachments").selectedOptions = []; elements.get("#save-schema-rule").click();
 assert.equal(elements.get("#schema-rule-revision-review").open, true, "editing a reusable rule requires revision review");
-elements.get("#confirm-schema-rule-revision").click();
+elements.get("#confirm-schema-rule-revision-review").click();
 assert.equal(uiController.rules().find(({ id }) => id === "rule:retired").version, 2);
 assert.deepEqual(uiController.ruleState().pendingRuleSnapshotMetadata, { id:"rule:retired", version:1, attachments:[] });
 assert.equal(uiController.requestRuleDeletion("rule:checkout"), false, "attached rules cannot be deleted");
@@ -453,6 +483,10 @@ const guidedContinuation = uiController.guidedContinuation(guidedCapture);
 guidedContinuation.review(); assert.equal(uiController.state().activeSchemaId, persistenceSchemaId);
 guidedContinuation.useDifferent();
 const guidedPicker = elements.get("#guided-validation-flow").children[0];
+assert.equal(guidedPicker.id, "guided-continuation-schema-picker");
+assert.equal(guidedPicker.children[0].id, "guided-continuation-schema-picker-heading");
+assert.equal(guidedPicker["aria-labelledby"], "guided-continuation-schema-picker-heading",
+  "the controller-owned guided picker preserves its exact legacy accessible identity");
 const guidedChoice = guidedPicker.children[1].children[0];
 assert.ok(guidedChoice.listenerCount() > 0, "the continuation picker owns its live choice listener");
 guidedPicker.children[2].click();
@@ -520,6 +554,10 @@ persistenceListener({ type:"rejected", schemaId:persistenceSchemaId, error:new E
 assert.match(String(await observedRejection), /rejected by operator/);
 assert.equal(uiController.rules().some(({ id }) => id === "rule:guided-reject"), false, "rejection restores the pre-transaction libraries");
 assert.equal(uiController.openSavedCanonical(persistenceSchemaId), true);
+const ownedCanonicalTableHost = elements.get("#schema-editor").querySelector("#compact-canonical-table-editor");
+assert.ok(ownedCanonicalTableHost, "Schemas creates the compact canonical table host on demand with the legacy ID");
+assert.equal(canonicalTableMounts, 1); assert.equal(canonicalTableOptions.host, ownedCanonicalTableHost);
+assert.deepEqual(canonicalTableOptions.conceptSuggestions(), ["Checkout concept"]);
 const canonicalBefore = uiController.canonicalDocument();
 const canonicalPropertyId = Object.keys(canonicalBefore.nodes)[0];
 assert.match(uiController.canonicalFacet(canonicalPropertyId), /Canonical facets/);
@@ -624,6 +662,8 @@ const staleCanonicalSettlement = uiController.dispatchCanonical({ kind:"rename",
   propertyId:canonicalPropertyId, name:"Settles after disposal" });
 deferHydration = true; const staleHydration = uiController.hydrateActiveProjectForSchemas();
 uiController.dispose();
+assert.equal(elements.get("#schema-editor").querySelector("#compact-canonical-table-editor"), undefined,
+  "Schemas removes its on-demand canonical table host during disposal");
 releaseCanonicalSettlement(); await staleCanonicalSettlement;
 assert.equal(elements.get("#compact-canonical-context").hidden, true, "a settlement completing after disposal cannot reopen stale canonical UI");
 releaseHydration({ name:"Stale Project" }); await staleHydration;

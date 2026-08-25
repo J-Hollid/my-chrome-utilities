@@ -5,7 +5,7 @@ const template = { id:"template:1", name:"Page view", eventName:"page_view", sou
   version:1, provenance:"captured" };
 const values = new Map([["my-chrome-utilities.event-template-library.v1", JSON.stringify([template])]]);
 let changed = 0, pushed;
-const noOpTransfer = { downloadExport() {}, readImportFile:async () => "", validateDraft() {}, backToCapturedEvent() {},
+const noOpTransfer = { downloadExport() {}, readImportFile:async () => "", schemas:() => [], validateDraft:() => ({ message:"Not checked" }), backToCapturedEvent() {},
   checkPushPath:async () => ({ success:true, message:"Selected-page push path is ready." }),
   pushTarget:() => ({ id:"target:1", tabId:1, windowId:1, title:"Checkout", pageUrl:"https://shop.example/checkout",
     origin:"https://shop.example", accessState:"Ready" }), renderPushReview() {}, renderRevisionReview() {} };
@@ -20,6 +20,9 @@ controller.mount(); controller.select("template:1"); controller.beginDraft("temp
 assert.equal(controller.state().editor.template.id, "template:1");
 controller.saveRevision();
 assert.equal(controller.templates()[0].version, 2, "Event Library owns revision mutation and persistence");
+controller.store({ ...controller.templates()[0], name:"Stored from Live inspector" });
+assert.equal(controller.templates()[0].name, "Stored from Live inspector",
+  "the typed inspector port stores a real template through Event Library ownership");
 await controller.pushSelected(); assert.equal(pushed, "template:1");
 controller.reviewImport(JSON.stringify({ format:"my-chrome-utilities.event-library", version:1,
   templates:[{ ...template, id:"template:imported", name:"Imported" }] }));
@@ -27,15 +30,15 @@ controller.commitImport("append");
 assert.equal(controller.templates().length, 2, "Event Library owns reviewed import settlement");
 controller.requestDelete("template:imported"); controller.confirmDelete();
 assert.deepEqual(controller.templates().map(({ id }) => id), ["template:1"]);
-assert.equal(changed, 3);
+assert.equal(changed, 4);
 controller.dispose(); controller.dispose(); controller.mount();
 assert.equal(controller.state().editor, undefined, "dispose clears transient editor ownership");
 assert.equal(controller.templates()[0].version, 2, "durable template ownership survives remount");
 
 function element() {
   const listeners = new Map();
-  return { value:"", textContent:"", hidden:false, dataset:{},
-    setAttribute(name, value) { this[name] = value; }, removeAttribute(name) { delete this[name]; }, replaceChildren() {},
+  return { value:"", textContent:"", hidden:false, dataset:{}, children:[],
+    setAttribute(name, value) { this[name] = value; }, removeAttribute(name) { delete this[name]; }, replaceChildren(...children) { this.children = children; },
     setCustomValidity(value) { this.validationMessage = value; }, focus() {},
     addEventListener(type, listener) { listeners.set(type, listener); },
     removeEventListener(type, listener) { if (listeners.get(type) === listener) listeners.delete(type); },
@@ -43,6 +46,35 @@ function element() {
     showModal() { this.open = true; }, close() { this.open = false; }, listenerCount:() => listeners.size,
   };
 }
+
+const minimalNodes = new Map();
+const minimalDocument = { createElement(tagName) { const node = element(); node.tagName = tagName.toUpperCase();
+  node.ownerDocument = minimalDocument; node.remove = () => minimalNodes.delete(`#${node.id}`); return node; } };
+const minimalValidation = element(); minimalValidation.ownerDocument = minimalDocument;
+minimalValidation.after = (...nodes) => { for (const node of nodes) minimalNodes.set(`#${node.id}`, node); };
+minimalNodes.set("#event-template-validation", minimalValidation);
+let minimalValidated;
+const minimalController = createEventLibraryInstalledController({
+  root:{ querySelector:(selector) => minimalNodes.get(selector) ?? null },
+  storage:{ getItem:() => JSON.stringify([template]), setItem() {} }, defaultPushPath:() => "event.history",
+  push:async () => {}, changed() {}, createId:() => "template:minimal", ...noOpTransfer,
+  schemas:() => [{ id:"schema:checkout", name:"Checkout", version:2 }],
+  validateDraft:(draft) => { minimalValidated = draft; return { message:"Library draft validation: Valid · Checkout v2." }; },
+});
+minimalController.mount(); minimalController.beginDraft("template:1");
+const ownedSchemaSelector = minimalNodes.get("#library-draft-schema-selector");
+const ownedRefreshValidation = minimalNodes.get("#refresh-library-draft-validation");
+assert.ok(ownedSchemaSelector && ownedRefreshValidation, "Event Library creates validation controls from only its base validation host");
+assert.deepEqual(ownedSchemaSelector.children.map(({ value }) => value), ["", "schema:checkout"]);
+ownedSchemaSelector.value = "schema:checkout"; ownedSchemaSelector.dispatch("change");
+assert.equal(minimalController.state().editor.template.schemaId, "schema:checkout",
+  "controller-owned selection attaches the schema to the real editor draft");
+ownedRefreshValidation.click(); assert.deepEqual(minimalValidated,
+  { schemaId:"schema:checkout", sourceId:"history", eventName:"page_view", payload:{ page:"/" } });
+minimalController.dispose();
+assert.equal(minimalNodes.has("#library-draft-schema-selector"), false);
+assert.equal(minimalNodes.has("#refresh-library-draft-validation"), false,
+  "Event Library removes its created validation controls during symmetric disposal");
 const selectors = ["#event-template-search", "#event-template-empty-state", "#event-template-empty-recovery",
   "#library-draft-schema-selector", "#refresh-library-draft-validation", "#export-event-library",
   "#import-event-library", "#event-library-file", "#event-library-transfer-result", "#clear-event-library",
@@ -51,22 +83,26 @@ const selectors = ["#event-template-search", "#event-template-empty-state", "#ev
   "#event-library-import-review-heading", "#event-library-import-review-summary", "#replace-event-library",
   "#append-event-library", "#cancel-event-library-import"];
 const elements = new Map(selectors.map((selector) => [selector, element()]));
+for (const node of elements.values()) node.ownerDocument = minimalDocument;
 const transferCalls = [];
 const transferController = createEventLibraryInstalledController({
   root:{ querySelector:(selector) => elements.get(selector) ?? null }, storage:{ getItem:() => null, setItem() {} },
   defaultPushPath:() => "event.history", push:async () => {}, changed() {}, createId:() => "template:transfer",
   downloadExport:(exported) => transferCalls.push(`export:${JSON.stringify(exported).includes("event-library")}`),
   readImportFile:async () => JSON.stringify({ format:"my-chrome-utilities.event-library", version:1, templates:[template] }),
-  validateDraft:(schemaId) => transferCalls.push(`validate:${schemaId}`), backToCapturedEvent:() => transferCalls.push("live"),
+  schemas:() => [{ id:"schema:checkout", name:"Checkout", version:2 }],
+  validateDraft:(draft) => { transferCalls.push(`validate:${draft.schemaId}:${draft.eventName}:${draft.payload.page}`);
+    return { message:"Library draft validation: Valid · Checkout v2." }; }, backToCapturedEvent:() => transferCalls.push("live"),
   pushTarget:() => undefined, checkPushPath:async () => ({ success:true, message:"ready" }),
 });
-transferController.mount();
+transferController.mount(); transferController.store(template); transferController.beginDraft("template:1");
 elements.get("#library-draft-schema-selector").value = "schema:checkout";
 elements.get("#refresh-library-draft-validation").click(); elements.get("#export-event-library").click();
 elements.get("#import-event-library").click(); await new Promise((resolve) => setTimeout(resolve, 0));
-assert.deepEqual(transferCalls, ["validate:schema:checkout", "export:true"]);
+assert.deepEqual(transferCalls, ["validate:schema:checkout:page_view:/", "export:true"],
+  "draft validation crosses the port with the real edited event payload");
 assert.ok(transferController.state().pendingImport, "file selection opens controller-owned import review");
-elements.get("#append-event-library").click(); assert.equal(transferController.templates().length, 1);
+elements.get("#append-event-library").click(); assert.equal(transferController.templates().length, 2);
 elements.get("#event-template-search").value = "missing"; elements.get("#event-template-search").dispatch("input");
 assert.equal(elements.get("#event-template-empty-state").hidden, false);
 elements.get("#event-template-empty-recovery").click(); assert.equal(elements.get("#event-template-search").value, "");
