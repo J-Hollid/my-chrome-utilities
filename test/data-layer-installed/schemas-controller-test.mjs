@@ -359,7 +359,9 @@ assert.equal(elements.get("#schema-property-empty").hidden, false);
 assert.equal(elements.get("#schema-property-empty-message").textContent, "No properties match missing");
 elements.get("#clear-schema-property-filter").click();
 assert.equal(elements.get("#schema-property-filter").value, "");
-const propertyToggle = elements.get("#schema-property-tree").children[0].children[7]; propertyToggle.click();
+const propertyToggle = elements.get("#schema-property-tree").children[0].children
+  .find(({ textContent }) => textContent === "Show rules");
+propertyToggle.click();
 assert.equal(propertyToggle.listenerCount(), 0, "property action rerender disposes the replaced row listeners");
 schemaRulesTab.click();
 assert.equal(schemaMasterPanel.hidden, true); assert.equal(schemaRulesPanel.hidden, false);
@@ -420,7 +422,11 @@ elements.get("#schema-manual-property-child-name").dispatch("input");
 elements.get("#schema-manual-property-form").dispatch("submit");
 assert.equal(uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId)
   .workingDraft.document.properties.items.items.properties.sku.type, "string");
-uiController.openRulePicker("items.*.sku");
+const openConfiguredRulePicker = (path) => {
+  uiController.openRulePicker(path);
+  findByText(elements.get("#schema-property-rule-picker"), "Required").click();
+};
+openConfiguredRulePicker("items.*.sku");
 assert.equal(elements.get("#schema-property-rule-picker").open, true);
 assert.equal(uiController.rulePickerState().configuration.propertyType, "string");
 assert.match(elements.get("#schema-property-rule-picker").dataset.conditionPreview, /items\/\*\/sku/);
@@ -430,7 +436,7 @@ assert.deepEqual(uiController.conditionPredicate("checkout.total"), { operator:"
 elements.get("#schema-property-rule-picker").dispatch("cancel");
 assert.equal(uiController.rulePickerState().path, undefined,
   "rule-picker close owns its state transition after removal of the notification-only port");
-uiController.openRulePicker("checkout.total");
+openConfiguredRulePicker("checkout.total");
 for (const id of ["schema-local-rule-configuration", "schema-property-rule-picker-heading", "schema-local-rule-parameters",
   "schema-local-rule-assistance", "schema-local-rule-severity", "schema-local-rule-message", "schema-local-rule-enabled",
   "schema-local-rule-conditional", "schema-local-rule-reusable"]) {
@@ -438,18 +444,19 @@ for (const id of ["schema-local-rule-configuration", "schema-property-rule-picke
 }
 const conditionalControl = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-conditional");
 conditionalControl.checked = true; conditionalControl.dispatch("change");
-assert.deepEqual(uiController.rulePickerState().configuration.conditions[0].comparison, { type:"number", value:12 },
-  "the live conditional editor seeds its predicate from the sampled typed value");
+assert.deepEqual(uiController.rulePickerState().configuration.conditions[0], {
+  propertyPath:"/title", operator:"Exists", detectedType:"string",
+}, "the live conditional editor defaults to another schema property rather than its own consequence");
 const reusableControl = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-reusable");
 reusableControl.checked = true; reusableControl.dispatch("change");
 const conditionGroup = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-condition-group");
 conditionGroup.value = "Any"; conditionGroup.dispatch("change");
 assert.equal(uiController.rulePickerState().configuration.conditionGroupOperator, "Any");
 const conditionProperty = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-condition-property-0");
-conditionProperty.value = "/checkout/total"; conditionProperty.dispatch("change");
+conditionProperty.value = "/title"; conditionProperty.dispatch("change");
 const conditionComparison = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-condition-value-0");
 conditionComparison.value = "13"; conditionComparison.dispatch("input");
-assert.deepEqual(uiController.rulePickerState().configuration.conditions[0].comparison, { type:"number", value:13 });
+assert.deepEqual(uiController.rulePickerState().configuration.conditions[0].comparison, { type:"string", value:"13" });
 elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-condition-add").click();
 assert.equal(uiController.rulePickerState().configuration.conditions.length, 2, "the live editor adds conditional predicates");
 elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-condition-remove-1").click();
@@ -471,12 +478,12 @@ elements.get("#schema-property-rule-picker").children[0].dispatch("submit");
 assert.equal(uiController.rules().some(({ name }) => name === "Sampled checkout total"), true,
   "the live rule form commits its validated reusable rule through Schema ownership");
 assert.equal(uiController.rules().find(({ name }) => name === "Sampled checkout total").severity, "warning");
-uiController.openRulePicker("checkout.total"); uiController.configureRule("Exact value");
+openConfiguredRulePicker("checkout.total"); uiController.configureRule("Exact value");
 const exactValueControl = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-exactValue");
 exactValueControl.value = "12"; exactValueControl.dispatch("input");
 assert.equal(uiController.rulePickerState().configuration.exactValue, "12", "parameter controls update the live rule configuration");
 elements.get("#schema-property-rule-picker").children[0].children.at(-1).click();
-uiController.openRulePicker("checkout.total"); uiController.configureRule("Allowed values");
+openConfiguredRulePicker("checkout.total"); uiController.configureRule("Allowed values");
 let allowedValue = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-allowed-value-1");
 allowedValue.value = "12"; allowedValue.dispatch("input");
 findByText(elements.get("#schema-property-rule-picker"), "Add another value").click();
@@ -485,7 +492,7 @@ assert.deepEqual(uiController.rulePickerState().configuration.allowedValues, ["1
 findByText(elements.get("#schema-property-rule-picker"), "Remove value 1").click();
 assert.deepEqual(uiController.rulePickerState().configuration.allowedValues, ["13"]);
 elements.get("#schema-property-rule-picker").children[0].children.at(-1).click();
-uiController.openRulePicker("checkout.total");
+openConfiguredRulePicker("checkout.total");
 elements.get("#schema-property-rule-picker").children[0].children.at(-2).click();
 assert.ok(elements.get("#schema-property-rule-picker").querySelector("#schema-property-rule-picker-heading"));
 assert.ok(elements.get("#schema-property-rule-picker").querySelector("#schema-property-rule-results"),
@@ -697,12 +704,14 @@ assert.equal(elements.get("#schema-result").textContent,"Create or open a Specif
   "guarded continuation failure is rendered by the Schema owner without opening stale review UI");continuationFailure=undefined;
 uiController.updateDraft({ attachedRules:[...(persistenceSchema.workingDraft?.attachedRules ?? persistenceSchema.attachedRules ?? []),
   { id:"local:email", name:"Email required", version:1, propertyPath:"/checkout/email", operator:"required", enabled:true }] });
+promotionRuleSequence = 2;
 assert.equal(uiController.requestLocalRulePromotion("/checkout/email", "local:email"), true);
 const promotionCompletion = Promise.resolve(promotionDialogInput.confirm({ action:"create", name:"Reusable email" }));
-assert.equal(uiController.rules().some(({ id }) => id === "rule:promoted"), true, "promotion writes its optimistic rule snapshot");
+const promotedRuleId = uiController.rules().find(({ name }) => name === "Reusable email")?.id;
+assert.match(promotedRuleId, /^reusable-/, "promotion writes its optimistic rule snapshot");
 persistenceListener({ type:"saved", schemaId:persistenceSchemaId }); await promotionCompletion;
 assert.equal(uiController.schemas().find(({ id }) => id === persistenceSchemaId).workingDraft.attachedRules
-  .some(({ id }) => id === "rule:promoted"), true, "durable success retains the promoted replacement");
+  .some(({ id }) => id === promotedRuleId), true, "durable success retains the promoted replacement");
 const guidedResult = (id, path) => ({
   schema:{ id:persistenceSchemaId, name:"Page guided", version:1, pending:true,
     rules:[{ path, expectedType:"String", requirement:"Must be present", values:[], reusableRuleId:id }] },

@@ -745,6 +745,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
   }
   function renderSavedSessionLiveBanner(): void {
     const feed = savedSessionLiveFeed;
+    if (liveObserverElements.livePanel) liveObserverElements.livePanel.dataset.feedMode = feed ? "saved-session" : "current";
     if (savedSessionLiveBanner) savedSessionLiveBanner.hidden = !feed;
     if (feed) {
       const summary = savedSessionSummary(feed.session);
@@ -1180,6 +1181,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
       if (attachedObservationTarget(observationTargetState)) recoverAttachedObservationTarget().catch(() => {});
       renderSavedSessions(); renderSavedSessionLiveBanner();
       ports.changed(dataLayerSessionState, liveObserverState); renderLiveObserver();
+      if (liveObserverState.inspectorEventId) openLiveInspector(liveObserverState.inspectorEventId, true);
     },
     dispose(): void {
       if (!mounted) return;

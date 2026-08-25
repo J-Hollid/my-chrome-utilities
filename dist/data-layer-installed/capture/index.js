@@ -649,6 +649,8 @@ export function createCaptureInstalledController(ports) {
     }
     function renderSavedSessionLiveBanner() {
         const feed = savedSessionLiveFeed;
+        if (liveObserverElements.livePanel)
+            liveObserverElements.livePanel.dataset.feedMode = feed ? "saved-session" : "current";
         if (savedSessionLiveBanner)
             savedSessionLiveBanner.hidden = !feed;
         if (feed) {
@@ -1252,6 +1254,8 @@ export function createCaptureInstalledController(ports) {
             renderSavedSessionLiveBanner();
             ports.changed(dataLayerSessionState, liveObserverState);
             renderLiveObserver();
+            if (liveObserverState.inspectorEventId)
+                openLiveInspector(liveObserverState.inspectorEventId, true);
         },
         dispose() {
             if (!mounted)

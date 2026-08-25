@@ -617,8 +617,11 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
             checkPushPath: async (target, destination) => { const [result] = await chromeApi().scripting.executeScript({ target: { tabId: target.tabId }, world: "MAIN", args: [destination], func: eventApi.pushPathCapabilityInPage }); return result?.result?.success ? { success: true, message: "Selected-page push path is ready." } : { success: false, message: result?.result?.result ?? "Push path is not push-capable" }; },
             renderPushReview: (host, review) => eventApi.renderPushDraftReview(host, review),
             renderRevisionReview: (host, review) => eventApi.renderTemplateChangeReview(host, review) },
-        schemas: { root, storage: dataStorage, relationshipViewStorage: dataStorage, changed: () => { }, subscribe: (listener) => durable.subscribe(() => listener()),
-            createRuleId: () => `rule:${crypto.randomUUID()}`, capturedAssignmentValue: () => undefined, renderAssignmentConditions: schemaApi.renderAssignmentDataConditionEditor,
+        schemas: { root, storage: dataStorage, relationshipViewStorage: dataStorage, changed: () => { }, subscribe: (listener) => durable.subscribe(() => listener()), blocked: () => Boolean(durable.failedSchemaSave()),
+            createRuleId: () => `rule:${crypto.randomUUID()}`, capturedAssignmentValue: (target) => {
+                const state = controllers.capture.state().observer, event = state.events.find(({ id }) => id === state.inspectorEventId) ?? state.events.at(-1);
+                return target === "raw input" ? event?.rawInput : event?.payload;
+            }, renderAssignmentConditions: schemaApi.renderAssignmentDataConditionEditor,
             localRulePromotionDialog: schemaApi.createLocalRulePromotionDialog(), subscribeSchemaPersistence: schemaPersistence.subscribe,
             downloadSchema: (value, filename) => download(filename, `${JSON.stringify(value, null, 2)}\n`),
             relationshipTree: (schemas) => ({ projectId: activeProjectId() ?? "", nodes: schemaApi.projectSchemaRelationshipTree(currentProject(), schemas) }),
@@ -661,7 +664,7 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
             guidedSaved: (message) => { const status = root.querySelector("#live-session-message"); if (status)
                 status.textContent = message; },
             activeProjectId, ensureProjectSchemaContributors: async (projectId) => { await durable.ensureProject(projectId); return { name: (await durable.repository.loadProject(projectId)).state.project.name }; },
-            settleCanonical: async () => { await durable.settled("schema"); }, mountLayeredProfileEditor: () => undefined, canonicalConceptSuggestions: () => schemaApi.projectCanonicalConcepts(currentProject()),
+            settleCanonical: async () => { await durable.settled("schema"); }, mountLayeredProfileEditor: () => undefined, canonicalConceptSuggestions: () => { const project = currentProject(); return project ? schemaApi.projectCanonicalConcepts(project) : []; },
             revalidateCurrentLive: (schemas, overrides) => {
                 const refresh = schemaApi.revalidateCurrentLiveSession(controllers.capture.state().observer, schemas, overrides);
                 controllers.capture.replaceObserverState({ ...refresh.state, events: refresh.state.events.map((event) => controllers.defects.triage(event)) });
