@@ -54,10 +54,12 @@ function element() {
 fakeDocument = { createElement:() => element(), body:element() };
 const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "#schema-editor-name",
   "#schema-search", "#schema-category-filter", "#schema-count", "#schema-list", "#schema-empty-state", "#schema-result",
+  "#create-schema", "#recheck-schema-validation", "#schema-validation-issues", "#schema-validation-record-list", "#guided-validation-flow",
   "#workspace-panel-data-layer", "#data-layer-panel-schemas",
   "#schema-editor-parent", "#schema-only-declared-properties", "#schema-inheritance-provenance",
   "#schema-rule-overrides", "#schema-rule-override-list", "#schema-inherited-rule-groups", "#schema-effective-rule-preview",
   "#schema-specification-builder", "#build-specification", "#build-historical-specification",
+  "#compact-canonical-context",
   "#schema-editor-name-assistance", "#schema-editor-description", "#save-schema-description", "#schema-description-origin",
   "#schema-editor-target", "#save-schema", "#save-schema-reason", "#schema-revision-review",
   "#schema-revision-review-summary", "#confirm-schema-revision", "#cancel-schema-revision",
@@ -118,6 +120,7 @@ const schemaDownloads = [];
 const relationshipActions = [];
 let deferHydration = false, releaseHydration;
 let closeSpecification;
+let canonicalSettlementMode = "resolve", releaseCanonicalSettlement;
 const uiController = createSchemasInstalledController({
   root:{ ownerDocument:fakeDocument, querySelector:(selector) => elements.get(selector) ?? null,
     querySelectorAll:(selector) => selector.includes("role=tab") ? [schemaMasterTab, schemaRulesTab] : [schemaMasterPanel, schemaRulesPanel] },
@@ -148,6 +151,8 @@ const uiController = createSchemasInstalledController({
   reportMissingSchemaEvent:(id) => relationshipActions.push(`missing:${id}`), scheduleFrame:(callback)=>callback(),
   activeProjectId:()=>"project:one", ensureProjectSchemaContributors:()=>deferHydration
     ? new Promise((resolve)=>{ releaseHydration=resolve; }) : Promise.resolve({ name:"Project One" }),
+  settleCanonical:() => canonicalSettlementMode === "reject" ? Promise.reject(new Error("canonical conflict"))
+    : canonicalSettlementMode === "defer" ? new Promise((resolve) => { releaseCanonicalSettlement = resolve; }) : Promise.resolve(),
 });
 uiController.mount();
 await uiController.hydrateActiveProjectForSchemas();
@@ -331,7 +336,15 @@ assert.equal(elements.get("#schema-export-compatibility-review").open, true);
 elements.get("#schema-export-compatibility-review").children[1].click();
 assert.match(schemaDownloads[0], /schema.*\.json/, "confirmed standard export crosses the typed download port");
 const persistenceSchemaId = uiController.state().activeSchemaId;
+uiController.beginDraft();
 const persistenceSchema = uiController.schemas().find(({ id }) => id === persistenceSchemaId);
+const guidedCapture = { id:"capture:checkout", sourceId:"gtm", name:"checkout", payload:{ checkout:{} }, rawInput:{} };
+await uiController.openGuidedProperty(guidedCapture, persistenceSchema, "checkout.email");
+assert.equal(elements.get("#guided-validation-flow").dataset.eventId, guidedCapture.id);
+assert.equal(uiController.guidedContinuation(guidedCapture).schemaId, persistenceSchemaId,
+  "guided continuation remains bound to the selected working draft");
+const validationRecords = uiController.recheckCaptured([guidedCapture]);
+assert.equal(validationRecords.length, 1); assert.equal(elements.get("#schema-validation-record-list").children.length, 1);
 uiController.updateDraft({ attachedRules:[...(persistenceSchema.workingDraft?.attachedRules ?? persistenceSchema.attachedRules ?? []),
   { id:"local:email", name:"Email required", version:1, propertyPath:"/checkout/email", operator:"required", enabled:true }] });
 assert.equal(uiController.requestLocalRulePromotion("/checkout/email", "local:email"), true);
@@ -362,10 +375,37 @@ persistenceListener({ type:"failed", schemaId:persistenceSchemaId, error:new Err
 persistenceListener({ type:"rejected", schemaId:persistenceSchemaId, error:new Error("rejected by operator") });
 assert.match(String(await observedRejection), /rejected by operator/);
 assert.equal(uiController.rules().some(({ id }) => id === "rule:guided-reject"), false, "rejection restores the pre-transaction libraries");
+assert.equal(uiController.openSavedCanonical(persistenceSchemaId), true);
+const canonicalBefore = uiController.canonicalDocument();
+const canonicalPropertyId = Object.keys(canonicalBefore.nodes)[0];
+assert.match(uiController.canonicalFacet(canonicalPropertyId), /Canonical facets/);
+assert.equal(uiController.canonicalCommandScope({ kind:"rename", baseRevision:canonicalBefore.revision,
+  propertyId:canonicalPropertyId, name:"Renamed canonical property" }), canonicalBefore.nodes[canonicalPropertyId].name);
+assert.equal(await uiController.dispatchCanonical({ kind:"rename", baseRevision:canonicalBefore.revision,
+  propertyId:canonicalPropertyId, name:"Renamed canonical property" }), true, "canonical commands settle through the Schema durable port");
+const canonicalAfter = uiController.canonicalDocument();
+const historyIdentity = uiController.beginCanonicalHistory("project:one", "Rename canonical property", canonicalBefore, canonicalAfter);
+assert.equal(uiController.pendingCanonicalHistory("project:one", "Rename canonical property").operationId, historyIdentity.operationId);
+uiController.completeCanonicalHistory(historyIdentity);
+assert.equal(uiController.canonicalState().historyPending, false, "durably acknowledged history becomes available atomically");
+canonicalSettlementMode = "reject";
+assert.equal(await uiController.dispatchCanonical({ kind:"rename", baseRevision:canonicalAfter.revision,
+  propertyId:canonicalPropertyId, name:"Rejected canonical property" }), false);
+assert.equal(uiController.canonicalState().pending, true, "a rejected durable settlement preserves the exact command for recovery");
+canonicalSettlementMode = "resolve"; uiController.retryCanonical(); await Promise.resolve(); await Promise.resolve();
+assert.equal(uiController.canonicalState().pending, false, "Retry rebases only the preserved command onto current canonical state");
+const projectedCanonical = uiController.canonicalProjection(); projectedCanonical.name = "Canonical metadata name";
+assert.equal(await uiController.persistCanonicalProjection(projectedCanonical, "schema name"), true);
+assert.equal(uiController.canonicalProjection().name, "Canonical metadata name", "projection metadata uses the same serialized settlement queue");
 const disposedCompletion = uiController.persistGuidedValidation(guidedResult("rule:guided-dispose", "checkout.postcode"));
 const disposedRejection = disposedCompletion.then(() => undefined, (error) => error);
+canonicalSettlementMode = "defer"; const beforeDisposeCanonical = uiController.canonicalDocument();
+const staleCanonicalSettlement = uiController.dispatchCanonical({ kind:"rename", baseRevision:beforeDisposeCanonical.revision,
+  propertyId:canonicalPropertyId, name:"Settles after disposal" });
 deferHydration = true; const staleHydration = uiController.hydrateActiveProjectForSchemas();
 uiController.dispose();
+releaseCanonicalSettlement(); await staleCanonicalSettlement;
+assert.equal(elements.get("#compact-canonical-context").hidden, true, "a settlement completing after disposal cannot reopen stale canonical UI");
 releaseHydration({ name:"Stale Project" }); await staleHydration;
 assert.notEqual(elements.get("#schema-result").textContent, "Loaded schema contributors for Stale Project.",
   "a durable hydration settling after disposal cannot render stale project state");
