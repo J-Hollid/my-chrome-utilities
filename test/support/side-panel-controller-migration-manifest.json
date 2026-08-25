@@ -1196,7 +1196,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryEditorElements:52"
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryEditorElements:57"
       }
     },
     {
@@ -1209,7 +1209,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::libraryDraftSchemaSelector:54"
+        "target": "src/data-layer-installed/event-library/index.ts::libraryDraftSchemaSelector:65"
       }
     },
     {
@@ -1222,7 +1222,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::refreshLibraryDraftValidationButton:55"
+        "target": "src/data-layer-installed/event-library/index.ts::refreshLibraryDraftValidationButton:66"
       }
     },
     {
@@ -1283,7 +1283,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::exportEventLibraryButton:56"
+        "target": "src/data-layer-installed/event-library/index.ts::exportEventLibraryButton:67"
       }
     },
     {
@@ -1296,7 +1296,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::importEventLibraryButton:57"
+        "target": "src/data-layer-installed/event-library/index.ts::importEventLibraryButton:68"
       }
     },
     {
@@ -1309,7 +1309,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryFile:58"
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryFile:69"
       }
     },
     {
@@ -1322,7 +1322,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryTransferResult:59"
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryTransferResult:70"
       }
     },
     {
@@ -1335,7 +1335,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::clearEventLibraryButton:60"
+        "target": "src/data-layer-installed/event-library/index.ts::clearEventLibraryButton:71"
       }
     },
     {
@@ -1348,7 +1348,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryDeleteReview:61"
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryDeleteReview:72"
       }
     },
     {
@@ -1361,7 +1361,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryDeleteReviewHeading:62"
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryDeleteReviewHeading:73"
       }
     },
     {
@@ -1374,7 +1374,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryDeleteReviewSummary:63"
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryDeleteReviewSummary:74"
       }
     },
     {
@@ -1387,7 +1387,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::confirmEventLibraryDeleteButton:64"
+        "target": "src/data-layer-installed/event-library/index.ts::confirmEventLibraryDeleteButton:75"
       }
     },
     {
@@ -1400,7 +1400,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::cancelEventLibraryDeleteButton:65"
+        "target": "src/data-layer-installed/event-library/index.ts::cancelEventLibraryDeleteButton:76"
       }
     },
     {
@@ -1413,7 +1413,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryImportReview:66"
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryImportReview:77"
       }
     },
     {
@@ -1426,7 +1426,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryImportReviewHeading:67"
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryImportReviewHeading:78"
       }
     },
     {
@@ -1439,7 +1439,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryImportReviewSummary:68"
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryImportReviewSummary:79"
       }
     },
     {
@@ -1452,7 +1452,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::replaceEventLibraryButton:69"
+        "target": "src/data-layer-installed/event-library/index.ts::replaceEventLibraryButton:80"
       }
     },
     {
@@ -1465,7 +1465,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::appendEventLibraryButton:70"
+        "target": "src/data-layer-installed/event-library/index.ts::appendEventLibraryButton:81"
       }
     },
     {
@@ -1478,7 +1478,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::cancelEventLibraryImportButton:71"
+        "target": "src/data-layer-installed/event-library/index.ts::cancelEventLibraryImportButton:82"
       }
     },
     {
@@ -1528,7 +1528,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::eventTemplateSearch:53"
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplateSearch:58"
       }
     },
     {
@@ -1541,7 +1541,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::addNewButton:53"
+        "target": "src/data-layer-installed/event-library/index.ts::addNewButton:58"
       }
     },
     {
@@ -1553,7 +1553,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplateName:59"
       }
     },
     {
@@ -1565,7 +1566,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplateEventName:59"
       }
     },
     {
@@ -1577,7 +1579,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplateSource:59"
       }
     },
     {
@@ -1589,7 +1592,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplateJson:60"
       }
     },
     {
@@ -1601,7 +1605,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplatePushDestination:60"
       }
     },
     {
@@ -1613,7 +1618,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::saveTemplateRevisionButton:61"
       }
     },
     {
@@ -1625,7 +1631,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::saveTemplateCopyButton:61"
       }
     },
     {
@@ -1637,7 +1644,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::pushTemplateDraftButton:62"
       }
     },
     {
@@ -1649,7 +1657,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::discardTemplateDraftButton:62"
       }
     },
     {
@@ -1661,7 +1670,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::closeTemplateEditorButton:63"
       }
     },
     {
@@ -1673,7 +1683,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::backToCapturedEventButton:63"
       }
     },
     {
@@ -4593,7 +4604,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::eventTemplates:73"
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplates:84"
       }
     },
     {
@@ -4606,7 +4617,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::propertyEditorState:75"
+        "target": "src/data-layer-installed/event-library/index.ts::propertyEditorState:86"
       }
     },
     {
@@ -4667,7 +4678,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::pendingTemplateRename:76"
+        "target": "src/data-layer-installed/event-library/index.ts::pendingTemplateRename:87"
       }
     },
     {
@@ -4680,7 +4691,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::pendingEventLibraryImport:77"
+        "target": "src/data-layer-installed/event-library/index.ts::pendingEventLibraryImport:88"
       }
     },
     {
@@ -4693,7 +4704,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::replaceEventLibraryArmed:79"
+        "target": "src/data-layer-installed/event-library/index.ts::replaceEventLibraryArmed:90"
       }
     },
     {
@@ -4706,7 +4717,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::pendingEventLibraryDeletion:78"
+        "target": "src/data-layer-installed/event-library/index.ts::pendingEventLibraryDeletion:89"
       }
     },
     {
@@ -6307,7 +6318,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::renderEventTemplateLibrary:128"
+        "target": "src/data-layer-installed/event-library/index.ts::renderEventTemplateLibrary:139"
       }
     },
     {
@@ -6334,7 +6345,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::refreshLibraryDraftValidation:143"
+        "target": "src/data-layer-installed/event-library/index.ts::refreshLibraryDraftValidation:182"
       }
     },
     {
@@ -7910,7 +7921,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::persistEventTemplateLibrary:81"
+        "target": "src/data-layer-installed/event-library/index.ts::persistEventTemplateLibrary:92"
       }
     },
     {
@@ -7924,7 +7935,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::downloadEventLibrary:144"
+        "target": "src/data-layer-installed/event-library/index.ts::downloadEventLibrary:183"
       }
     },
     {
@@ -7938,7 +7949,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::reviewEventLibraryImport:103"
+        "target": "src/data-layer-installed/event-library/index.ts::reviewEventLibraryImport:114"
       }
     },
     {
@@ -7952,7 +7963,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::commitEventLibraryImport:107"
+        "target": "src/data-layer-installed/event-library/index.ts::commitEventLibraryImport:118"
       }
     },
     {
@@ -7966,7 +7977,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::requestEventTemplateDeletion:116"
+        "target": "src/data-layer-installed/event-library/index.ts::requestEventTemplateDeletion:127"
       }
     },
     {
@@ -7980,7 +7991,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::requestClearEventLibrary:146"
+        "target": "src/data-layer-installed/event-library/index.ts::requestClearEventLibrary:185"
       }
     },
     {
@@ -7994,7 +8005,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::commitEventLibraryDeletion:120"
+        "target": "src/data-layer-installed/event-library/index.ts::commitEventLibraryDeletion:131"
       }
     },
     {
@@ -8048,7 +8059,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::openNewEventEditor:141"
+        "target": "src/data-layer-installed/event-library/index.ts::openNewEventEditor:152"
       }
     },
     {
@@ -8061,7 +8072,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::closeTemplateEditor:180"
       }
     },
     {
@@ -11209,7 +11221,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::eventTemplateSearch?.addEventListener:157"
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplateSearch?.addEventListener:196"
       }
     },
     {
@@ -11912,7 +11924,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::addNewButton?.addEventListener:158"
+        "target": "src/data-layer-installed/event-library/index.ts::addNewButton?.addEventListener:197"
       }
     },
     {
@@ -11926,7 +11938,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::exportEventLibraryButton?.addEventListener:160"
+        "target": "src/data-layer-installed/event-library/index.ts::exportEventLibraryButton?.addEventListener:199"
       }
     },
     {
@@ -12010,7 +12022,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::clearEventLibraryButton?.addEventListener:163"
+        "target": "src/data-layer-installed/event-library/index.ts::clearEventLibraryButton?.addEventListener:202"
       }
     },
     {
@@ -12024,7 +12036,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::confirmEventLibraryDeleteButton?.addEventListener:164"
+        "target": "src/data-layer-installed/event-library/index.ts::confirmEventLibraryDeleteButton?.addEventListener:203"
       }
     },
     {
@@ -12060,11 +12072,12 @@
       "frozen": {
         "expression": "eventTemplateName?.addEventListener",
         "line": 6000,
-        "column": 1,
-        "invocation": "eventTemplateName?.addEventListener(\"input\", () => {\n  if (propertyEditorState) {\n    propertyEditorState = propertyEditorState.isNew\n      ? setNewEventField(propertyEditorState, \"name\", eventTemplateName.value)\n      : setTemplateIdentity(propertyEditorState, \"name\", eventTemplateName.value);\n    renderEventTemplateLibrary();\n  }\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplateName?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -12073,11 +12086,12 @@
       "frozen": {
         "expression": "eventTemplateEventName?.addEventListener",
         "line": 6008,
-        "column": 1,
-        "invocation": "eventTemplateEventName?.addEventListener(\"input\", () => {\n  if (propertyEditorState) {\n    propertyEditorState = propertyEditorState.isNew\n      ? setNewEventField(propertyEditorState, \"eventName\", eventTemplateEventName.value)\n      : setTemplateIdentity(propertyEditorState, \"eventName\", eventTemplateEventName.value);\n    renderEventTemplateLibrary();\n  }\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplateEventName?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -12086,11 +12100,12 @@
       "frozen": {
         "expression": "eventTemplateSource?.addEventListener",
         "line": 6016,
-        "column": 1,
-        "invocation": "eventTemplateSource?.addEventListener(\"input\", () => {\n  if (propertyEditorState?.isNew) {\n    propertyEditorState = setNewEventField(propertyEditorState, \"source\", {\n      id: eventTemplateSource.value,\n      name: eventTemplateSource.selectedOptions[0]?.textContent ?? \"\",\n    });\n    renderEventTemplateLibrary();\n  }\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplateSource?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -12099,11 +12114,12 @@
       "frozen": {
         "expression": "eventTemplateJson?.addEventListener",
         "line": 6026,
-        "column": 1,
-        "invocation": "eventTemplateJson?.addEventListener(\"input\", () => {\n  if (!propertyEditorState) return;\n  setEventLibraryResult(eventLibraryEditorElements, \"\");\n  propertyEditorState = updateDraftJson(propertyEditorState, eventTemplateJson.value);\n  renderEventTemplateLibrary();\n  refreshLibraryDraftValidation();\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplateJson?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -12112,11 +12128,12 @@
       "frozen": {
         "expression": "eventTemplatePushDestination?.addEventListener",
         "line": 6034,
-        "column": 1,
-        "invocation": "eventTemplatePushDestination?.addEventListener(\"input\", () => {\n  if (!propertyEditorState) return;\n  setEventLibraryResult(eventLibraryEditorElements, \"\");\n  propertyEditorState = setPushDestination(\n    propertyEditorState,\n    eventTemplatePushDestination.value,\n  );\n  setPushDestinationValidation(eventLibraryEditorElements, \"\");\n  renderEventTemplateLibrary();\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplatePushDestination?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -12229,11 +12246,12 @@
       "frozen": {
         "expression": "saveTemplateRevisionButton?.addEventListener",
         "line": 6074,
-        "column": 1,
-        "invocation": "saveTemplateRevisionButton?.addEventListener(\"click\", () => {\n  if (!propertyEditorState) return;\n  try {\n    if (propertyEditorState.isNew) {\n      const template = saveNewEvent(propertyEditorState, () => `template:library:${crypto.randomUUID()}`);\n      eventTemplates = [...eventTemplates, template];\n      propertyEditorState = openPropertyEditor(template);\n      templateEditorReturnTemplateId = template.id;\n      persistEventTemplateLibrary();\n      setEventLibraryResult(eventLibraryEditorElements, `Saved ${template.name} as version 1.`);\n      renderEventTemplateLibrary();\n      return;\n    }\n    openRevisionChangeReview();\n  } catch (error) {\n    setEventLibraryValidation(eventLibraryEditorElements,\n                              error instanceof Error ? error.message : \"Draft is invalid.\");\n  }\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::saveTemplateRevisionButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -12242,11 +12260,12 @@
       "frozen": {
         "expression": "saveTemplateCopyButton?.addEventListener",
         "line": 6094,
-        "column": 1,
-        "invocation": "saveTemplateCopyButton?.addEventListener(\"click\", () => {\n  if (!propertyEditorState) return;\n  try {\n    const copy = saveAsTemplateCopy(propertyEditorState, `${propertyEditorState.template.name} copy`);\n    eventTemplates = [...eventTemplates, copy];\n    persistEventTemplateLibrary();\n    setEventLibraryResult(eventLibraryEditorElements,\n                          `Saved ${copy.name} as a distinct template.`);\n    renderEventTemplateLibrary();\n  } catch (error) {\n    setEventLibraryValidation(eventLibraryEditorElements,\n                              error instanceof Error ? error.message : \"Draft is invalid.\");\n  }\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::saveTemplateCopyButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -12255,11 +12274,12 @@
       "frozen": {
         "expression": "pushTemplateDraftButton?.addEventListener",
         "line": 6109,
-        "column": 1,
-        "invocation": "pushTemplateDraftButton?.addEventListener(\"click\", () => {\n  openPushDraftReview();\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::pushTemplateDraftButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -12346,11 +12366,12 @@
       "frozen": {
         "expression": "discardTemplateDraftButton?.addEventListener",
         "line": 6133,
-        "column": 1,
-        "invocation": "discardTemplateDraftButton?.addEventListener(\"click\", () => {\n  if (!propertyEditorState) return;\n  propertyEditorState = discardDraft(propertyEditorState);\n  setEventLibraryResult(eventLibraryEditorElements, \"Draft discarded.\");\n  renderEventTemplateLibrary();\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::discardTemplateDraftButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -12359,11 +12380,12 @@
       "frozen": {
         "expression": "closeTemplateEditorButton?.addEventListener",
         "line": 6139,
-        "column": 1,
-        "invocation": "closeTemplateEditorButton?.addEventListener(\"click\", () => {\n  if (!propertyEditorState?.dirty) { closeTemplateEditor(); return; }\n  if (propertyEditorState.isNew) {\n    if (saveAndCloseTemplateButton) saveAndCloseTemplateButton.textContent = \"Save new event\";\n    if (discardAndCloseTemplateButton) discardAndCloseTemplateButton.textContent = \"Discard new event\";\n  }\n  if (closeTemplateEditorSummary) closeTemplateEditorSummary.textContent = `Unsaved changes: ${Object.keys(propertyEditorState.draft as Record<string, unknown>).join(\", \")}.`;\n  if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = false;\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::closeTemplateEditorButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -12411,11 +12433,12 @@
       "frozen": {
         "expression": "backToCapturedEventButton?.addEventListener",
         "line": 6163,
-        "column": 1,
-        "invocation": "backToCapturedEventButton?.addEventListener(\"click\", () => {\n  const eventId = propertyEditorState?.template.originatingEventId;\n  if (!eventId) return;\n  const returnSnapshot = inspectorReturnSnapshot;\n  showDataLayerView(\"Live\");\n  openLiveInspector(eventId);\n  if (returnSnapshot) {\n    restoreInspectorReturnUi(liveObserverElements, restoreInspectorReturn(returnSnapshot));\n    inspectorReturnSnapshot = returnSnapshot;\n  }\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::backToCapturedEventButton?.addEventListener",
+        "reviewed": true
       }
     },
     {

@@ -5,7 +5,7 @@ const template = { id:"template:1", name:"Page view", eventName:"page_view", sou
   version:1, provenance:"captured" };
 const values = new Map([["my-chrome-utilities.event-template-library.v1", JSON.stringify([template])]]);
 let changed = 0, pushed;
-const noOpTransfer = { downloadExport() {}, readImportFile:async () => "", validateDraft() {} };
+const noOpTransfer = { downloadExport() {}, readImportFile:async () => "", validateDraft() {}, backToCapturedEvent() {} };
 const controller = createEventLibraryInstalledController({
   root:{ querySelector:() => null },
   storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value) },
@@ -32,6 +32,7 @@ assert.equal(controller.templates()[0].version, 2, "durable template ownership s
 function element() {
   const listeners = new Map();
   return { value:"", textContent:"", hidden:false, dataset:{},
+    setAttribute() {}, removeAttribute() {}, replaceChildren() {},
     addEventListener(type, listener) { listeners.set(type, listener); },
     removeEventListener(type, listener) { if (listeners.get(type) === listener) listeners.delete(type); },
     dispatch(type) { listeners.get(type)?.({ preventDefault() {}, target:this }); }, click() { this.dispatch("click"); },
@@ -65,3 +66,27 @@ elements.get("#cancel-event-library-delete").click(); assert.equal(transferContr
 transferController.dispose();
 assert.equal([...elements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
   "Event Library removes transfer and review listeners on disposal");
+
+const editorSelectors = ["#event-template-name", "#event-template-event-name", "#event-template-source",
+  "#event-template-json", "#push-destination-path", "#save-template-revision", "#save-template-copy",
+  "#push-template-draft", "#discard-template-draft", "#close-template-editor", "#back-to-captured-event"];
+const editorElements = new Map(editorSelectors.map((selector) => [selector, element()]));
+let editorPush, returned = 0;
+const editorController = createEventLibraryInstalledController({
+  root:{ querySelector:(selector) => editorElements.get(selector) ?? null },
+  storage:{ getItem:() => JSON.stringify([template]), setItem() {} }, defaultPushPath:() => "event.history",
+  push:async (draft) => { editorPush = draft.name; }, changed() {}, createId:() => "template:copy", ...noOpTransfer,
+  backToCapturedEvent:() => { returned += 1; },
+});
+editorController.mount(); editorController.beginDraft("template:1");
+editorElements.get("#event-template-name").value = "Checkout"; editorElements.get("#event-template-name").dispatch("input");
+editorElements.get("#push-destination-path").value = "checkout.events";
+editorElements.get("#push-destination-path").dispatch("input");
+editorElements.get("#save-template-revision").click();
+assert.equal(editorController.templates()[0].name, "Checkout");
+editorElements.get("#push-template-draft").click(); await new Promise((resolve) => setTimeout(resolve, 0));
+assert.equal(editorPush, "Checkout");
+editorElements.get("#back-to-captured-event").click(); assert.equal(returned, 1);
+editorController.dispose();
+assert.equal([...editorElements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
+  "Event Library removes template-editor listeners on disposal");
