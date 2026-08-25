@@ -25,14 +25,20 @@ import {
 } from "../../utilities/data-layer/capture.js";
 import { detachObservationTarget, endAndAttachObservationTarget } from "../../data-layer-observation-targets.js";
 import {
+  SAVED_EVENT_FEED_FILTER_STORAGE_KEY,
+  SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY,
   SAVED_SESSION_LIBRARY_STORAGE_KEY,
   SAVED_SESSION_LIVE_FEED_STORAGE_KEY,
+  applySavedEventFeedFilter,
   cancelSavedSessionDeletion,
+  commitSavedEventFeedFilterLibrary,
   confirmSavedSessionDeletion,
   confirmSessionSave,
+  createSavedEventFeedFilter,
   createSessionSaveDraft,
   createLiveObserverState,
   exportSavedSession,
+  deleteSavedEventFeedFilter,
   findLiveObserverElements,
   importSavedSession,
   openSavedSession,
@@ -41,9 +47,12 @@ import {
   recordBackgroundLiveEvent,
   recordLiveEvent,
   resetLiveObserverForSession,
+  renameSavedEventFeedFilter,
   renameSavedSession,
   renderLiveObserverState,
   requestSavedSessionDeletion,
+  restoreSavedEventFeedFilterLibrary,
+  restoreSavedEventFeedWorkingView,
   restoreSavedSessionLibrary,
   restoreSavedSessionLiveFeed,
   resumeSavedSession,
@@ -54,12 +63,18 @@ import {
   searchSavedSessions,
   serializeSavedSessionLibrary,
   serializeSavedSessionLiveFeed,
+  serializeSavedEventFeedWorkingView,
+  setDefaultSavedEventFeedFilter,
+  setLiveQuery,
+  updateSavedEventFeedFilter,
   updateSavedSessionLiveFeedView,
   type CompletedSession,
+  type EventFeedQuery,
   type LiveEvent,
   type LiveObserverState,
   type SavedSessionLibrary,
   type SavedSessionLiveFeed,
+  type SavedEventFeedFilterLibrary,
   type SessionSaveDraft,
 } from "../../utilities/data-layer/live-inspection.js";
 import { endDataLayerTestingSession } from "../../data-layer-session.js";
@@ -77,6 +92,19 @@ export interface CaptureSessionStart {
 }
 
 export interface CaptureTargetTab { tabId:number; windowId:number; pageUrl:string; title:string; activeTab?:boolean; currentWindow?:boolean }
+
+export interface CaptureSavedFilterControls {
+  library: SavedEventFeedFilterLibrary;
+  activeFilterId?: string;
+  feedback: string;
+  select(id:string | undefined):void;
+  create(name:string):void;
+  update():boolean;
+  revert():void;
+  rename(name:string):void;
+  delete():void;
+  setDefault(id:string | undefined):void;
+}
 
 export interface CaptureInstalledPorts {
   root: ParentNode;
@@ -110,6 +138,12 @@ export interface CaptureInstalledPorts {
     flowTests?(): CompletedSession["flowTests"];
     resetFlowTesting(): void;
     createReplaySequence(session:SavedSession): void;
+  };
+  savedFilters: {
+    createId(): string;
+    render(events:readonly LiveEvent[], query:EventFeedQuery, controls:CaptureSavedFilterControls,
+      update:(query:EventFeedQuery) => void): void;
+    dispose(): void;
   };
   ui: {
     historyPath(): { path:string; fieldValue:string; status:"Selection required" | "Waiting for path" | "Ready" | "Unavailable" };
@@ -196,6 +230,25 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
   let unsubscribe: (() => void) | undefined;
   let dataLayerSessionState = restoreSession(ports.storage);
   let liveObserverState = createLiveObserverState({ pageUrl:ports.initialPageUrl(), sources:ports.initialSources() });
+  let savedEventFeedFilterLibrary: SavedEventFeedFilterLibrary = restoreSavedEventFeedFilterLibrary(
+    ports.storage.getItem(SAVED_EVENT_FEED_FILTER_STORAGE_KEY),
+  );
+  let savedEventFeedFilterFeedback = "";
+  let restoredSavedEventFeedWorkingView = false;
+  const restoredSavedEventFeedView = restoreSavedEventFeedWorkingView(
+    ports.storage.getItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY),
+    dataLayerSessionState.session?.id, savedEventFeedFilterLibrary,
+  );
+  if (restoredSavedEventFeedView) {
+    liveObserverState = { ...liveObserverState, query:restoredSavedEventFeedView.query,
+      ...(restoredSavedEventFeedView.activeFilterId ? { savedFilterId:restoredSavedEventFeedView.activeFilterId } : {}) };
+    restoredSavedEventFeedWorkingView = true;
+  }
+  if (!restoredSavedEventFeedWorkingView && savedEventFeedFilterLibrary.defaultFilterId) {
+    const defaultFilter = savedEventFeedFilterLibrary.filters.find(({ id }) => id === savedEventFeedFilterLibrary.defaultFilterId);
+    if (defaultFilter) liveObserverState = { ...liveObserverState,
+      query:applySavedEventFeedFilter({ conditions:[] }, defaultFilter), savedFilterId:defaultFilter.id };
+  }
   let savedSessionLibrary: SavedSessionLibrary = restoreSavedSessionLibrary(
     ports.storage.getItem(SAVED_SESSION_LIBRARY_STORAGE_KEY),
   );
@@ -305,6 +358,86 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     const button = (event.target as Element | null)?.closest<HTMLButtonElement>("[role=tab]");
     if (button?.textContent) showDataLayerView(button.textContent);
   };
+  function persistSavedEventFeedWorkingView(): void {
+    if (savedSessionLiveFeed) { synchronizeSavedSessionFeedView(); return; }
+    const sessionId = dataLayerSessionState.session?.id;
+    if (!sessionId) {
+      if (ports.storage.removeItem) ports.storage.removeItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY);
+      else ports.storage.setItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, "");
+      return;
+    }
+    ports.storage.setItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, serializeSavedEventFeedWorkingView(
+      sessionId, liveObserverState.query ?? { conditions:[] }, liveObserverState.savedFilterId,
+    ));
+  }
+  function installSavedEventFeedWorkingQuery(query: EventFeedQuery, activeFilterId?: string): void {
+    const { savedFilterId:_previous, ...state } = setLiveQuery(liveObserverState, query);
+    liveObserverState = { ...state, ...(activeFilterId ? { savedFilterId:activeFilterId } : {}) };
+    persistSavedEventFeedWorkingView();
+  }
+  function installDefaultSavedEventFeedFilterForNewSession(): void {
+    const filter = savedEventFeedFilterLibrary.filters.find(({ id }) => id === savedEventFeedFilterLibrary.defaultFilterId);
+    installSavedEventFeedWorkingQuery(filter ? applySavedEventFeedFilter({ conditions:[] }, filter) : { conditions:[] }, filter?.id);
+  }
+  function commitSavedEventFeedFilters(proposed: SavedEventFeedFilterLibrary, failureFeedback: string): boolean {
+    const result = commitSavedEventFeedFilterLibrary(savedEventFeedFilterLibrary, proposed,
+      (serialized) => ports.storage.setItem(SAVED_EVENT_FEED_FILTER_STORAGE_KEY, serialized), failureFeedback);
+    savedEventFeedFilterLibrary = result.library; savedEventFeedFilterFeedback = result.feedback;
+    return result.committed;
+  }
+  function applyConfiguredSavedEventFeedFilter(filterId: string | undefined): void {
+    const filter = savedEventFeedFilterLibrary.filters.find(({ id }) => id === filterId);
+    installSavedEventFeedWorkingQuery(filter
+      ? applySavedEventFeedFilter(liveObserverState.query ?? { conditions:[] }, filter) : { conditions:[] }, filter?.id);
+    savedEventFeedFilterFeedback = filter ? `${filter.name} applied` : "All events applied";
+    renderLiveObserver();
+  }
+  function renderSavedEventFeedFilterResult(): void { renderLiveObserver(); }
+  function savedEventFeedFilterControls(): CaptureSavedFilterControls {
+    return { library:savedEventFeedFilterLibrary,
+      ...(liveObserverState.savedFilterId ? { activeFilterId:liveObserverState.savedFilterId } : {}),
+      feedback:savedEventFeedFilterFeedback,
+      select:applyConfiguredSavedEventFeedFilter,
+      create:(name) => { try {
+        const created = createSavedEventFeedFilter(savedEventFeedFilterLibrary, name,
+          liveObserverState.query ?? { conditions:[] }, ports.savedFilters.createId());
+        if (commitSavedEventFeedFilters(created.library, "Saving saved filter failed")) {
+          installSavedEventFeedWorkingQuery(applySavedEventFeedFilter({ conditions:[] }, created.filter), created.filter.id);
+          savedEventFeedFilterFeedback = `Saved ${created.filter.name}`;
+        }
+      } catch (error) { savedEventFeedFilterFeedback = error instanceof Error ? error.message : "Saving saved filter failed"; }
+      renderSavedEventFeedFilterResult(); },
+      update:() => { if (!liveObserverState.savedFilterId) return false; let committed = false;
+        try { const updated = updateSavedEventFeedFilter(savedEventFeedFilterLibrary, liveObserverState.savedFilterId,
+          liveObserverState.query ?? { conditions:[] });
+          if (commitSavedEventFeedFilters(updated.library, "Updating saved filter failed")) {
+            installSavedEventFeedWorkingQuery(applySavedEventFeedFilter({ conditions:[] }, updated.filter), updated.filter.id);
+            savedEventFeedFilterFeedback = `Updated ${updated.filter.name}`; committed = true;
+          }
+        } catch { savedEventFeedFilterFeedback = "Updating saved filter failed"; }
+        renderSavedEventFeedFilterResult(); return committed; },
+      revert:() => { const filter = savedEventFeedFilterLibrary.filters.find(({ id }) => id === liveObserverState.savedFilterId);
+        if (filter) { installSavedEventFeedWorkingQuery(applySavedEventFeedFilter({ conditions:[] }, filter), filter.id);
+          savedEventFeedFilterFeedback = `Reverted ${filter.name}`; }
+        renderSavedEventFeedFilterResult(); },
+      rename:(name) => { if (!liveObserverState.savedFilterId) return;
+        try { const renamed = renameSavedEventFeedFilter(savedEventFeedFilterLibrary, liveObserverState.savedFilterId, name);
+          if (commitSavedEventFeedFilters(renamed.library, "Renaming saved filter failed")) savedEventFeedFilterFeedback = `Renamed to ${renamed.filter.name}`;
+        } catch (error) { savedEventFeedFilterFeedback = error instanceof Error ? error.message : "Renaming saved filter failed"; }
+        renderSavedEventFeedFilterResult(); },
+      delete:() => { if (!liveObserverState.savedFilterId) return;
+        const deleted = deleteSavedEventFeedFilter(savedEventFeedFilterLibrary, liveObserverState.savedFilterId,
+          liveObserverState.query ?? { conditions:[] });
+        if (commitSavedEventFeedFilters(deleted.library, "Deleting saved filter failed")) {
+          installSavedEventFeedWorkingQuery(deleted.workingQuery); savedEventFeedFilterFeedback = "Saved filter deleted; working conditions retained";
+        }
+        renderSavedEventFeedFilterResult(); },
+      setDefault:(filterId) => { try { const proposed = setDefaultSavedEventFeedFilter(savedEventFeedFilterLibrary, filterId).library;
+          if (commitSavedEventFeedFilters(proposed, "Setting default failed")) savedEventFeedFilterFeedback = filterId ? "Default saved filter set" : "Default saved filter removed";
+        } catch { savedEventFeedFilterFeedback = "Setting default failed"; }
+        renderSavedEventFeedFilterResult(); },
+    };
+  }
   function persistSavedSessionLibrary(): void {
     ports.storage.setItem(SAVED_SESSION_LIBRARY_STORAGE_KEY, serializeSavedSessionLibrary(savedSessionLibrary));
   }
@@ -365,6 +498,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
       targetTitle:previousSession?.targetTitle ?? resumed.activeSession.pageUrl,
       parentSavedSessionId:resumed.activeSession.parentSavedSessionId, timeline:[] } };
     ports.savedSessions.resetFlowTesting();
+    installDefaultSavedEventFeedFilterForNewSession();
     publish();
     ports.setLiveSessionMessage(`Linked capture started from ${session.name}; 0 events in the new session.`);
     showDataLayerView("Live");
@@ -465,7 +599,9 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     liveObserverState = resetLiveObserverForSession(liveObserverState);
     archivedSavedSession = undefined; savedThroughEventCount = 0;
     ports.storage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
-    ports.savedSessions.resetFlowTesting(); publish();
+    ports.savedSessions.resetFlowTesting();
+    installDefaultSavedEventFeedFilterForNewSession();
+    publish();
     if (liveObserverElements.eventList) liveObserverElements.eventList.scrollTop = 0;
     ports.setLiveSessionMessage("Fresh session started with 0 captured events.");
     startFreshSessionButton?.focus({ preventScroll:true });
@@ -535,6 +671,11 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     if (confirmSavedSessionDeleteButton) confirmSavedSessionDeleteButton.hidden = true; renderSavedSessions(); };
   const renderLiveObserver = (): void => {
     if (mounted) renderLiveObserverState(liveObserverElements, liveObserverState, () => {});
+    if (mounted) ports.savedFilters.render(liveObserverState.events, liveObserverState.query ?? { conditions:[] },
+      savedEventFeedFilterControls(), (query) => {
+        liveObserverState = setLiveQuery(liveObserverState, query);
+        persistSavedEventFeedWorkingView(); renderLiveObserver();
+      });
     if (liveEventsEmptyState) liveEventsEmptyState.hidden = liveObserverState.events.length > 0;
     if (liveSourceErrorState) liveSourceErrorState.hidden = Boolean(savedSessionLiveFeed)
       || !liveObserverState.sources.some(({ status }) => status !== "Connected");
@@ -663,6 +804,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
       savedSessionList?.removeAttribute("aria-live");
       liveGuidedWorkflowElements.setupSteps?.removeAttribute("data-session-owner");
       observationTargetList?.removeAttribute("aria-live");
+      ports.savedFilters.dispose();
       targetDiscoveryGeneration += 1; importGeneration += 1; pendingObservationTargetSwitchId = undefined;
       clearScheduledObservationRefresh();
     },
@@ -688,6 +830,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     state:() => ({ session:structuredClone(dataLayerSessionState), observer:structuredClone(liveObserverState),
       targets:structuredClone(observationTargetState), savedSessions:structuredClone(savedSessionLibrary),
       savedFeed:structuredClone(savedSessionLiveFeed), archivedSavedSession:structuredClone(archivedSavedSession),
+      savedFilters:structuredClone(savedEventFeedFilterLibrary), savedEventFeedFilterFeedback,
       savedThroughEventCount, pendingObservationTargetSwitchId }),
   };
 }

@@ -16,6 +16,7 @@ const noOpSavedSessions = {
   readImportFile:async () => undefined, download() {}, validate:() => ({ state:"Not checked" }),
   render() {}, resetFlowTesting() {}, createReplaySequence() {},
 };
+const noOpSavedFilters = { createId:() => "saved-filter:1", render() {}, dispose() {} };
 const controller = createCaptureInstalledController({
   root:{ querySelector:() => null },
   storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value) },
@@ -26,6 +27,7 @@ const controller = createCaptureInstalledController({
   runCommand() {}, setLiveSessionMessage() {}, runObservationRefresh() {},
   observation:noOpObservation,
   savedSessions:noOpSavedSessions,
+  savedFilters:noOpSavedFilters,
   ui:noOpCaptureUi,
 });
 controller.mount(); controller.mount(); assert.equal(subscriptions, 1);
@@ -98,6 +100,7 @@ const uiController = createCaptureInstalledController({
     cancelDetachTarget:() => uiCalls.push("cancel"), confirmDetachTarget:() => uiCalls.push("confirm"),
   },
   savedSessions:noOpSavedSessions,
+  savedFilters:noOpSavedFilters,
 });
 uiController.mount();
 assert.equal(elements.get("#history-path-status").textContent, "Waiting for observation path");
@@ -156,6 +159,7 @@ const sessionController = createCaptureInstalledController({
   changed() {}, runCommand() {}, setLiveSessionMessage:(message) => sessionCalls.push(`message:${message}`), runObservationRefresh() {}, ui:noOpCaptureUi,
   observation:noOpObservation,
   savedSessions:sessionPorts,
+  savedFilters:noOpSavedFilters,
 });
 sessionController.mount();
 await sessionController.begin();
@@ -220,3 +224,38 @@ await new Promise((resolve) => setTimeout(resolve, 0));
 assert.equal(renderedSessions.some(({ id }) => id === "saved:stale"), false, "disposed controller rejects stale import settlement");
 assert.equal([...sessionElements.values()].reduce((count, element) => count + element.listenerCount(), 0), 0,
   "Capture removes every live-session and saved-library listener it owns");
+
+const filterStorage = new Map();
+let rejectFilterWrite = false, filterControls, updateWorkingFilter, filterDisposals = 0;
+const filterController = createCaptureInstalledController({
+  root:{ querySelector:() => null },
+  storage:{ getItem:(key) => filterStorage.get(key) ?? null,
+    setItem:(key, value) => { if (rejectFilterWrite && key === "my-chrome-utilities.saved-event-feed-filters.v1") throw new Error("quota");
+      filterStorage.set(key, value); }, removeItem:(key) => filterStorage.delete(key) },
+  initialPageUrl:() => "https://shop.example/", initialSources:() => [],
+  sessionStart:async () => ({ id:"filter-session", tabId:3, url:"https://shop.example/", historyPath:"dataLayer" }),
+  subscribeToLiveFeed:() => () => {}, changed() {}, runCommand() {}, setLiveSessionMessage() {}, runObservationRefresh() {},
+  observation:noOpObservation, savedSessions:noOpSavedSessions, ui:noOpCaptureUi,
+  savedFilters:{ createId:() => "saved-filter:checkout",
+    render:(_events, _query, controls, update) => { filterControls = controls; updateWorkingFilter = update; },
+    dispose:() => { filterDisposals += 1; } },
+});
+filterController.mount(); await filterController.begin();
+updateWorkingFilter({ conditions:[{ id:"condition:1", field:"Name", operator:"contains", values:["checkout"] }] });
+filterControls.create("Checkout events");
+assert.equal(filterController.state().savedFilters.filters[0].name, "Checkout events");
+assert.equal(filterController.state().observer.savedFilterId, "saved-filter:checkout");
+filterControls.setDefault("saved-filter:checkout");
+assert.equal(filterController.state().savedFilters.defaultFilterId, "saved-filter:checkout");
+filterControls.rename("Checkout funnel");
+assert.equal(filterController.state().savedFilters.filters[0].name, "Checkout funnel");
+updateWorkingFilter({ conditions:[{ id:"condition:2", field:"Name", operator:"contains", values:["purchase"] }] });
+assert.equal(filterControls.update(), true, "working-query updates commit through Capture persistence");
+rejectFilterWrite = true; filterControls.rename("Rejected rename");
+assert.equal(filterController.state().savedFilters.filters[0].name, "Checkout funnel", "rejected persistence retains the prior library");
+assert.equal(filterController.state().savedEventFeedFilterFeedback, "Renaming saved filter failed");
+rejectFilterWrite = false; filterControls.revert(); filterControls.delete();
+assert.equal(filterController.state().savedFilters.filters.length, 0);
+assert.equal(filterController.state().observer.savedFilterId, undefined);
+filterController.dispose(); filterController.dispose();
+assert.equal(filterDisposals, 1, "Capture symmetrically disposes saved-filter rendering");

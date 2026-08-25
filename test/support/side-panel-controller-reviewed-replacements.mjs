@@ -10,7 +10,7 @@ export const reviewedControllerReplacements = [
   { identity:"subscriptions:1:durableProjectRuntime.subscribe@980:1", kind:"call", path:"src/data-layer-installed/live-flow-testing/index.ts", symbol:"ports.subscribe" },
   { identity:"subscriptions:2:durableProjectRuntime.subscribe@988:367", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"ports.subscribe" },
   { identity:"subscriptions:3:durableProjectRuntime.subscribe@6360:1", kind:"call", path:"src/data-layer-installed/runtime.ts", symbol:"durableProjectRuntime.subscribe" },
-  { identity:"timers:1:globalThis.setTimeout@5304:33", kind:"call", path:"src/data-layer-installed/capture/index.ts", symbol:"globalThis.setTimeout", line:576 },
+  { identity:"timers:1:globalThis.setTimeout@5304:33", kind:"call", path:"src/data-layer-installed/capture/index.ts", symbol:"globalThis.setTimeout", line:717 },
   { identity:"listeners:3:document.querySelector<HTMLDialogElement>(\"#durable-storage-recovery\")?.addEventListener@711:1", kind:"call", path:"src/data-layer-installed/durable-projects/index.ts", symbol:"durableStorageRecovery?.addEventListener" },
   { identity:"listeners:287:restartObservationButton?.addEventListener@6237:1", kind:"call", path:"src/data-layer-installed/capture/index.ts", symbol:"restartObservationButton?.addEventListener" },
   { identity:"listeners:288:chooseObservationTargetButton?.addEventListener@6252:1", kind:"call", path:"src/data-layer-installed/capture/index.ts", symbol:"chooseObservationTargetButton?.addEventListener" },
