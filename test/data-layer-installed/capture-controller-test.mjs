@@ -16,6 +16,8 @@ const noOpCaptureUi = {
   revalidateSavedSession() {}, searchSavedSessions() {}, importSavedSession() {}, selectSavedSession() {},
   cancelSavedSessionDelete() {}, confirmSavedSessionDelete() {},
 };
+const noOpObservation = { discover:async () => [], requestTabsAccess:async () => true,
+  requestOriginAccess:async () => true, attach:async () => true, detach:async () => {}, render() {} };
 const controller = createCaptureInstalledController({
   root:{ querySelector:() => null },
   storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value) },
@@ -24,6 +26,7 @@ const controller = createCaptureInstalledController({
   subscribeToLiveFeed:(next) => { subscriptions += 1; listener = next; return () => { removals += 1; listener = undefined; }; },
   changed:() => { changes += 1; },
   runCommand() {}, setLiveSessionMessage() {}, runObservationRefresh() {},
+  observation:noOpObservation,
   ui:noOpCaptureUi,
 });
 controller.mount(); controller.mount(); assert.equal(subscriptions, 1);
@@ -57,6 +60,7 @@ function interactiveElement() {
   };
 }
 const elements = new Map([
+  ["#observation-target-result", interactiveElement()],
   ["#history-path-display", interactiveElement()], ["#history-path-status", interactiveElement()],
   ["#session-history-path", interactiveElement()], ["#session-warning", interactiveElement()],
   ["#restart-observation", interactiveElement()], ["#choose-observation-target", interactiveElement()],
@@ -66,12 +70,21 @@ const elements = new Map([
   ["#confirm-detach-observation-target", interactiveElement()],
 ]);
 const uiCalls = [];
+let renderedTargets = [], renderedTargetActions;
+const currentTarget = { tabId:7, windowId:2, pageUrl:"https://shop.example/", title:"Shop", activeTab:true, currentWindow:true };
+const checkoutTarget = { tabId:8, windowId:2, pageUrl:"https://shop.example/checkout", title:"Checkout", currentWindow:true };
 const uiController = createCaptureInstalledController({
   root:{ querySelector:(selector) => elements.get(selector) ?? null },
   storage:{ getItem:() => null, setItem() {} }, initialPageUrl:() => "https://shop.example/",
   initialSources:() => [], sessionStart:async () => ({ id:"unused", tabId:1, url:"", historyPath:"" }),
   subscribeToLiveFeed:() => () => {}, changed() {}, runCommand() {}, setLiveSessionMessage() {},
-  runObservationRefresh() {}, ui:{
+  runObservationRefresh() {}, observation:{
+    discover:async (scope) => scope === "current" ? [currentTarget] : [currentTarget, checkoutTarget],
+    requestTabsAccess:async () => true, requestOriginAccess:async () => false,
+    attach:async (target) => { uiCalls.push(`attach:${target.tabId}`); return true; },
+    detach:async (target) => { uiCalls.push(`detach:${target.tabId}`); },
+    render:(targets, actions) => { renderedTargets = targets; renderedTargetActions = actions; },
+  }, ui:{
     historyPath:() => ({ path:"dataLayer", fieldValue:"dataLayer", status:"Waiting for path" }),
     restartObservation:() => uiCalls.push("restart"), chooseObservationTarget:() => uiCalls.push("choose"),
     browseObservationTargets:() => uiCalls.push("browse"), closeObservationTargetPicker:() => uiCalls.push("close"),
@@ -88,14 +101,23 @@ const uiController = createCaptureInstalledController({
 uiController.mount();
 assert.equal(elements.get("#history-path-status").textContent, "Waiting for observation path");
 elements.get("#restart-observation").dispatch("click");
-elements.get("#choose-observation-target").dispatch("click");
-elements.get("#browse-observation-targets").dispatch("click");
+await uiController.discoverTargets();
+assert.equal(renderedTargets[0].title, "Shop");
+await uiController.attachTarget();
+await uiController.browseTargets();
+assert.equal(renderedTargets.length, 2);
+uiController.selectTarget("tab:8:window:2");
+await uiController.attachTarget();
+assert.equal(uiController.state().pendingObservationTargetSwitchId, "tab:8:window:2", "switching cannot replace an attached target without review");
+await uiController.confirmDetachTarget();
+assert.equal(uiController.state().targets.attachedTargetId, "tab:8:window:2");
+await uiController.requestTargetAccess("tab:8:window:2");
+assert.equal(elements.get("#observation-target-result").textContent, "Permission required");
 elements.get("#close-observation-target-picker").dispatch("click");
 elements.get("#observation-target-search").value = "checkout";
 elements.get("#observation-target-search").dispatch("input");
-elements.get("#cancel-detach-observation-target").dispatch("click");
-elements.get("#confirm-detach-observation-target").dispatch("click");
-assert.deepEqual(uiCalls, ["restart", "choose", "browse", "close", "search:checkout", "cancel", "confirm"]);
+assert.deepEqual(renderedTargets.map(({ title }) => title), ["Checkout"]);
+assert.deepEqual(uiCalls, ["restart", "attach:7", "detach:7", "attach:8", "close"]);
 uiController.dispose();
 assert.equal([...elements.values()].reduce((count, element) => count + element.listenerCount(), 0), 0,
   "Capture removes every observation-target listener it owns");
@@ -133,6 +155,7 @@ const sessionController = createCaptureInstalledController({
   initialPageUrl:() => "https://shop.example/", initialSources:() => [],
   sessionStart:async () => ({ id:"unused", tabId:1, url:"", historyPath:"" }), subscribeToLiveFeed:() => () => {},
   changed() {}, runCommand() {}, setLiveSessionMessage() {}, runObservationRefresh() {}, ui:sessionUi,
+  observation:noOpObservation,
 });
 sessionController.mount();
 assert.equal(sessionElements.get("#save-live-session-heading").textContent, "Save checkout");

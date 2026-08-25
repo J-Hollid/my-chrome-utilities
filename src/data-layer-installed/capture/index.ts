@@ -4,12 +4,26 @@ import {
   findLiveGuidedWorkflowElements,
   findLiveSessionSummaryElements,
   findObservationTargetElements,
+  findObservationTargets,
+  createObservationTarget,
+  createObservationTargetState,
+  restoreAttachedObservationTarget,
+  registerObservationTarget,
+  refreshDiscoveredObservationTargets,
+  selectObservationTarget,
+  selectedObservationTarget,
+  attachedObservationTarget,
+  attachSelectedObservationTarget,
+  updateObservationTargetAccess,
   observationRefreshDelay,
   persistSession,
   restoreSession,
   type DataLayerSessionState,
   type ObservationRefreshRequest,
+  type ObservationTarget,
+  type ObservationTargetState,
 } from "../../utilities/data-layer/capture.js";
+import { detachObservationTarget, endAndAttachObservationTarget } from "../../data-layer-observation-targets.js";
 import {
   createLiveObserverState,
   findLiveObserverElements,
@@ -32,6 +46,8 @@ export interface CaptureSessionStart {
   targetOrigin?: string;
 }
 
+export interface CaptureTargetTab { tabId:number; windowId:number; pageUrl:string; title:string; activeTab?:boolean; currentWindow?:boolean }
+
 export interface CaptureInstalledPorts {
   root: ParentNode;
   storage: Pick<Storage, "getItem" | "setItem">;
@@ -43,6 +59,14 @@ export interface CaptureInstalledPorts {
   runCommand(id: "data-layer.start-testing" | "data-layer.end-testing"): void;
   setLiveSessionMessage(message: string): void;
   runObservationRefresh(request: ObservationRefreshRequest): Promise<void> | void;
+  observation: {
+    discover(scope:"current" | "all"): Promise<readonly CaptureTargetTab[]>;
+    requestTabsAccess(): Promise<boolean>;
+    requestOriginAccess(origin:string): Promise<boolean>;
+    attach(target:ObservationTarget): Promise<boolean>;
+    detach(target:ObservationTarget): Promise<void>;
+    render(targets:readonly ObservationTarget[], actions:{ select(id:string):void; requestAccess(id:string):void }): void;
+  };
   ui: {
     historyPath(): { path:string; fieldValue:string; status:"Selection required" | "Waiting for path" | "Ready" | "Unavailable" };
     restartObservation(): void;
@@ -141,6 +165,17 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
   let dataLayerSessionState = restoreSession(ports.storage);
   let liveObserverState = createLiveObserverState({ pageUrl:ports.initialPageUrl(), sources:ports.initialSources() });
   let observationRefreshTimeoutId: number | undefined;
+  function restoredObservationTargetState(): ObservationTargetState {
+    const session = dataLayerSessionState.session;
+    return session?.status === "active" && session.windowId !== undefined
+      ? restoreAttachedObservationTarget(createObservationTarget({ tabId:session.tabId, windowId:session.windowId,
+        pageUrl:session.currentUrl, title:session.targetTitle ?? session.currentUrl,
+        ...(session.targetOrigin ? { origin:session.targetOrigin } : {}), priorSession:true }))
+      : createObservationTargetState();
+  }
+  let observationTargetState = restoredObservationTargetState();
+  let pendingObservationTargetSwitchId: string | undefined;
+  let targetDiscoveryGeneration = 0;
   function renderHistoryPath(path: string, fieldValue = path,
     status: "Selection required" | "Waiting for path" | "Ready" | "Unavailable" = "Selection required"): void {
     if (historyPathDisplay) historyPathDisplay.textContent = path;
@@ -149,21 +184,76 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     if (sessionHistoryPath) sessionHistoryPath.textContent = fieldValue;
     if (sessionWarning) sessionWarning.hidden = status !== "Unavailable";
   }
+  const setObservationTargetResult = (result: string): void => { if (observationTargetElements.result) observationTargetElements.result.textContent = result; };
   const renderObservationTargetContext = (): void => {
     const context = ports.ui.historyPath();
     renderHistoryPath(context.path, context.fieldValue, context.status);
     observationTargetList?.setAttribute("aria-live", "polite");
   };
   const restartObservation = (): void => ports.ui.restartObservation();
-  const chooseObservationTarget = (): void => ports.ui.chooseObservationTarget();
-  const browseObservationTargets = (): void => ports.ui.browseObservationTargets();
+  function targetFromTab(tab: CaptureTargetTab): ObservationTarget {
+    return createObservationTarget({ tabId:tab.tabId, windowId:tab.windowId, pageUrl:tab.pageUrl, title:tab.title,
+      ...(tab.activeTab !== undefined ? { activeTab:tab.activeTab } : {}), ...(tab.currentWindow !== undefined ? { currentWindow:tab.currentWindow } : {}) });
+  }
+  function registerTargetTabs(tabs: readonly CaptureTargetTab[], replaceDiscovery = false): void {
+    const targets = tabs.map(targetFromTab); observationTargetState = replaceDiscovery
+      ? refreshDiscoveredObservationTargets(observationTargetState, targets)
+      : targets.reduce(registerObservationTarget, observationTargetState); renderObservationTargetPicker();
+  }
+  async function discoverCurrentObservationTarget(): Promise<void> {
+    const generation = ++targetDiscoveryGeneration; const tabs = await ports.observation.discover("current");
+    if (!mounted || generation !== targetDiscoveryGeneration) return; registerTargetTabs(tabs);
+    const target = tabs[0] ? targetFromTab(tabs[0]) : undefined;
+    if (target) { observationTargetState = selectObservationTarget(observationTargetState, target.id); setObservationTargetResult(`Selected ${target.title}`); }
+    else setObservationTargetResult("Selection required"); renderObservationTargetPicker();
+  }
+  const chooseObservationTarget = (): void => { void discoverCurrentObservationTarget(); };
+  async function browseObservationTargets(): Promise<void> {
+    const generation = ++targetDiscoveryGeneration;
+    if (!await ports.observation.requestTabsAccess()) { if (generation === targetDiscoveryGeneration) setObservationTargetResult("Registered targets remain available"); return; }
+    const tabs = await ports.observation.discover("all"); if (!mounted || generation !== targetDiscoveryGeneration) return;
+    registerTargetTabs(tabs, true); setObservationTargetResult(`${observationTargetState.targets.length} eligible targets`);
+    if (observationTargetPicker) observationTargetPicker.hidden = false;
+  }
   const closeObservationTargetPicker = (): void => {
     if (observationTargetPicker) observationTargetPicker.hidden = true;
     ports.ui.closeObservationTargetPicker();
   };
-  const searchObservationTargets = (): void => ports.ui.searchObservationTargets(observationTargetSearch?.value ?? "");
-  const cancelDetachTarget = (): void => ports.ui.cancelDetachTarget();
-  const confirmDetachTarget = (): void => ports.ui.confirmDetachTarget();
+  function renderObservationTargetPicker(): void {
+    const targets = findObservationTargets(observationTargetState, observationTargetSearch?.value ?? "");
+    ports.observation.render(targets, { select:(id) => { observationTargetState = selectObservationTarget(observationTargetState, id);
+      setObservationTargetResult(`Selected ${selectedObservationTarget(observationTargetState)?.title ?? id}`); renderObservationTargetPicker(); },
+    requestAccess:(id) => { const target = observationTargetState.targets.find((candidate) => candidate.id === id); if (target) void requestSelectedTargetAccess(target); } });
+  }
+  const searchObservationTargets = (): void => renderObservationTargetPicker();
+  async function requestSelectedTargetAccess(target: ObservationTarget): Promise<void> {
+    const granted = await ports.observation.requestOriginAccess(target.origin); if (!mounted) return;
+    if (!granted) { setObservationTargetResult("Permission required"); return; }
+    observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Ready");
+    setObservationTargetResult(`Access granted for ${target.origin}`); renderObservationTargetPicker();
+  }
+  async function attachSelectedTarget(): Promise<void> {
+    const decision = attachSelectedObservationTarget(observationTargetState);
+    if (decision.result === "End current session before attaching selected target") {
+      pendingObservationTargetSwitchId = decision.state.selectedTargetId; setObservationTargetResult(decision.result); return;
+    }
+    const target = selectedObservationTarget(decision.state); if (decision.result !== "Attached" || !target) { setObservationTargetResult(decision.result); return; }
+    if (!await ports.observation.attach(target)) { observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Permission required");
+      setObservationTargetResult("Permission required"); return; }
+    observationTargetState = decision.state; setObservationTargetResult("Attached"); renderObservationTargetPicker();
+  }
+  function beginDetachSelectedTarget(): void { pendingObservationTargetSwitchId = undefined;
+    setObservationTargetResult(attachedObservationTarget(observationTargetState) ? "Confirm detach target" : "No target is attached"); }
+  async function confirmDetachSelectedTarget(): Promise<void> {
+    const attached = attachedObservationTarget(observationTargetState); if (attached) await ports.observation.detach(attached);
+    const switchId = pendingObservationTargetSwitchId; pendingObservationTargetSwitchId = undefined;
+    observationTargetState = detachObservationTarget(observationTargetState);
+    if (switchId) { const decision = endAndAttachObservationTarget(observationTargetState, switchId); observationTargetState = decision.state;
+      const target = attachedObservationTarget(observationTargetState); if (target && !await ports.observation.attach(target)) observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Permission required"); }
+    setObservationTargetResult( switchId ? "Attached" : "Detached"); renderObservationTargetPicker();
+  }
+  const cancelDetachTarget = (): void => { pendingObservationTargetSwitchId = undefined; setObservationTargetResult("Detach cancelled"); };
+  const confirmDetachTarget = (): void => { void confirmDetachSelectedTarget(); };
   function showDataLayerView(view: string): void { ports.ui.showDataLayerView(view); }
   const selectDataLayerView = (event: Event): void => {
     const button = (event.target as Element | null)?.closest<HTMLButtonElement>("[role=tab]");
@@ -282,6 +372,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
       cancelSavedSessionDeleteButton?.addEventListener("click", cancelSavedSessionDelete);
       confirmSavedSessionDeleteButton?.addEventListener("click", confirmSavedSessionDelete);
       renderObservationTargetContext();
+      renderObservationTargetPicker();
       renderSavedSessionLiveBanner();
       ports.changed(dataLayerSessionState, liveObserverState); renderLiveObserver();
     },
@@ -322,6 +413,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
       savedSessionList?.removeAttribute("aria-live");
       liveGuidedWorkflowElements.setupSteps?.removeAttribute("data-session-owner");
       observationTargetList?.removeAttribute("aria-live");
+      targetDiscoveryGeneration += 1; pendingObservationTargetSwitchId = undefined;
       clearScheduledObservationRefresh();
     },
     async begin(): Promise<void> {
@@ -332,8 +424,17 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     pause:pauseInstalledCapture,
     resume:resumeInstalledCapture,
     capture:syncCapturedEventsToLive,
+    discoverTargets:discoverCurrentObservationTarget,
+    browseTargets:browseObservationTargets,
+    selectTarget(id:string): void { observationTargetState = selectObservationTarget(observationTargetState, id); renderObservationTargetPicker(); },
+    requestTargetAccess(id:string): Promise<void> { const target = observationTargetState.targets.find((candidate) => candidate.id === id);
+      return target ? requestSelectedTargetAccess(target) : Promise.reject(new Error(`Unknown target ${id}`)); },
+    attachTarget:attachSelectedTarget,
+    beginDetachTarget:beginDetachSelectedTarget,
+    confirmDetachTarget:confirmDetachSelectedTarget,
     scheduleObservationRefresh,
-    state:() => ({ session:structuredClone(dataLayerSessionState), observer:structuredClone(liveObserverState) }),
+    state:() => ({ session:structuredClone(dataLayerSessionState), observer:structuredClone(liveObserverState),
+      targets:structuredClone(observationTargetState), pendingObservationTargetSwitchId }),
   };
 }
 

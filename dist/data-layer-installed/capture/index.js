@@ -1,4 +1,5 @@
-import { beginDataLayerTestingSession, createLiveNotificationController, findLiveGuidedWorkflowElements, findLiveSessionSummaryElements, findObservationTargetElements, observationRefreshDelay, persistSession, restoreSession, } from "../../utilities/data-layer/capture.js";
+import { beginDataLayerTestingSession, createLiveNotificationController, findLiveGuidedWorkflowElements, findLiveSessionSummaryElements, findObservationTargetElements, findObservationTargets, createObservationTarget, createObservationTargetState, restoreAttachedObservationTarget, registerObservationTarget, refreshDiscoveredObservationTargets, selectObservationTarget, selectedObservationTarget, attachedObservationTarget, attachSelectedObservationTarget, updateObservationTargetAccess, observationRefreshDelay, persistSession, restoreSession, } from "../../utilities/data-layer/capture.js";
+import { detachObservationTarget, endAndAttachObservationTarget } from "../../data-layer-observation-targets.js";
 import { createLiveObserverState, findLiveObserverElements, pauseCapture, recordLiveEvent, renderLiveObserverState, resumeCapture, } from "../../utilities/data-layer/live-inspection.js";
 import { endDataLayerTestingSession } from "../../data-layer-session.js";
 export function createCaptureInstalledController(ports) {
@@ -55,6 +56,17 @@ export function createCaptureInstalledController(ports) {
     let dataLayerSessionState = restoreSession(ports.storage);
     let liveObserverState = createLiveObserverState({ pageUrl: ports.initialPageUrl(), sources: ports.initialSources() });
     let observationRefreshTimeoutId;
+    function restoredObservationTargetState() {
+        const session = dataLayerSessionState.session;
+        return session?.status === "active" && session.windowId !== undefined
+            ? restoreAttachedObservationTarget(createObservationTarget({ tabId: session.tabId, windowId: session.windowId,
+                pageUrl: session.currentUrl, title: session.targetTitle ?? session.currentUrl,
+                ...(session.targetOrigin ? { origin: session.targetOrigin } : {}), priorSession: true }))
+            : createObservationTargetState();
+    }
+    let observationTargetState = restoredObservationTargetState();
+    let pendingObservationTargetSwitchId;
+    let targetDiscoveryGeneration = 0;
     function renderHistoryPath(path, fieldValue = path, status = "Selection required") {
         if (historyPathDisplay)
             historyPathDisplay.textContent = path;
@@ -66,22 +78,128 @@ export function createCaptureInstalledController(ports) {
         if (sessionWarning)
             sessionWarning.hidden = status !== "Unavailable";
     }
+    const setObservationTargetResult = (result) => { if (observationTargetElements.result)
+        observationTargetElements.result.textContent = result; };
     const renderObservationTargetContext = () => {
         const context = ports.ui.historyPath();
         renderHistoryPath(context.path, context.fieldValue, context.status);
         observationTargetList?.setAttribute("aria-live", "polite");
     };
     const restartObservation = () => ports.ui.restartObservation();
-    const chooseObservationTarget = () => ports.ui.chooseObservationTarget();
-    const browseObservationTargets = () => ports.ui.browseObservationTargets();
+    function targetFromTab(tab) {
+        return createObservationTarget({ tabId: tab.tabId, windowId: tab.windowId, pageUrl: tab.pageUrl, title: tab.title,
+            ...(tab.activeTab !== undefined ? { activeTab: tab.activeTab } : {}), ...(tab.currentWindow !== undefined ? { currentWindow: tab.currentWindow } : {}) });
+    }
+    function registerTargetTabs(tabs, replaceDiscovery = false) {
+        const targets = tabs.map(targetFromTab);
+        observationTargetState = replaceDiscovery
+            ? refreshDiscoveredObservationTargets(observationTargetState, targets)
+            : targets.reduce(registerObservationTarget, observationTargetState);
+        renderObservationTargetPicker();
+    }
+    async function discoverCurrentObservationTarget() {
+        const generation = ++targetDiscoveryGeneration;
+        const tabs = await ports.observation.discover("current");
+        if (!mounted || generation !== targetDiscoveryGeneration)
+            return;
+        registerTargetTabs(tabs);
+        const target = tabs[0] ? targetFromTab(tabs[0]) : undefined;
+        if (target) {
+            observationTargetState = selectObservationTarget(observationTargetState, target.id);
+            setObservationTargetResult(`Selected ${target.title}`);
+        }
+        else
+            setObservationTargetResult("Selection required");
+        renderObservationTargetPicker();
+    }
+    const chooseObservationTarget = () => { void discoverCurrentObservationTarget(); };
+    async function browseObservationTargets() {
+        const generation = ++targetDiscoveryGeneration;
+        if (!await ports.observation.requestTabsAccess()) {
+            if (generation === targetDiscoveryGeneration)
+                setObservationTargetResult("Registered targets remain available");
+            return;
+        }
+        const tabs = await ports.observation.discover("all");
+        if (!mounted || generation !== targetDiscoveryGeneration)
+            return;
+        registerTargetTabs(tabs, true);
+        setObservationTargetResult(`${observationTargetState.targets.length} eligible targets`);
+        if (observationTargetPicker)
+            observationTargetPicker.hidden = false;
+    }
     const closeObservationTargetPicker = () => {
         if (observationTargetPicker)
             observationTargetPicker.hidden = true;
         ports.ui.closeObservationTargetPicker();
     };
-    const searchObservationTargets = () => ports.ui.searchObservationTargets(observationTargetSearch?.value ?? "");
-    const cancelDetachTarget = () => ports.ui.cancelDetachTarget();
-    const confirmDetachTarget = () => ports.ui.confirmDetachTarget();
+    function renderObservationTargetPicker() {
+        const targets = findObservationTargets(observationTargetState, observationTargetSearch?.value ?? "");
+        ports.observation.render(targets, { select: (id) => {
+                observationTargetState = selectObservationTarget(observationTargetState, id);
+                setObservationTargetResult(`Selected ${selectedObservationTarget(observationTargetState)?.title ?? id}`);
+                renderObservationTargetPicker();
+            },
+            requestAccess: (id) => { const target = observationTargetState.targets.find((candidate) => candidate.id === id); if (target)
+                void requestSelectedTargetAccess(target); } });
+    }
+    const searchObservationTargets = () => renderObservationTargetPicker();
+    async function requestSelectedTargetAccess(target) {
+        const granted = await ports.observation.requestOriginAccess(target.origin);
+        if (!mounted)
+            return;
+        if (!granted) {
+            setObservationTargetResult("Permission required");
+            return;
+        }
+        observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Ready");
+        setObservationTargetResult(`Access granted for ${target.origin}`);
+        renderObservationTargetPicker();
+    }
+    async function attachSelectedTarget() {
+        const decision = attachSelectedObservationTarget(observationTargetState);
+        if (decision.result === "End current session before attaching selected target") {
+            pendingObservationTargetSwitchId = decision.state.selectedTargetId;
+            setObservationTargetResult(decision.result);
+            return;
+        }
+        const target = selectedObservationTarget(decision.state);
+        if (decision.result !== "Attached" || !target) {
+            setObservationTargetResult(decision.result);
+            return;
+        }
+        if (!await ports.observation.attach(target)) {
+            observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Permission required");
+            setObservationTargetResult("Permission required");
+            return;
+        }
+        observationTargetState = decision.state;
+        setObservationTargetResult("Attached");
+        renderObservationTargetPicker();
+    }
+    function beginDetachSelectedTarget() {
+        pendingObservationTargetSwitchId = undefined;
+        setObservationTargetResult(attachedObservationTarget(observationTargetState) ? "Confirm detach target" : "No target is attached");
+    }
+    async function confirmDetachSelectedTarget() {
+        const attached = attachedObservationTarget(observationTargetState);
+        if (attached)
+            await ports.observation.detach(attached);
+        const switchId = pendingObservationTargetSwitchId;
+        pendingObservationTargetSwitchId = undefined;
+        observationTargetState = detachObservationTarget(observationTargetState);
+        if (switchId) {
+            const decision = endAndAttachObservationTarget(observationTargetState, switchId);
+            observationTargetState = decision.state;
+            const target = attachedObservationTarget(observationTargetState);
+            if (target && !await ports.observation.attach(target))
+                observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Permission required");
+        }
+        setObservationTargetResult(switchId ? "Attached" : "Detached");
+        renderObservationTargetPicker();
+    }
+    const cancelDetachTarget = () => { pendingObservationTargetSwitchId = undefined; setObservationTargetResult("Detach cancelled"); };
+    const confirmDetachTarget = () => { void confirmDetachSelectedTarget(); };
     function showDataLayerView(view) { ports.ui.showDataLayerView(view); }
     const selectDataLayerView = (event) => {
         const button = event.target?.closest("[role=tab]");
@@ -228,6 +346,7 @@ export function createCaptureInstalledController(ports) {
             cancelSavedSessionDeleteButton?.addEventListener("click", cancelSavedSessionDelete);
             confirmSavedSessionDeleteButton?.addEventListener("click", confirmSavedSessionDelete);
             renderObservationTargetContext();
+            renderObservationTargetPicker();
             renderSavedSessionLiveBanner();
             ports.changed(dataLayerSessionState, liveObserverState);
             renderLiveObserver();
@@ -271,6 +390,8 @@ export function createCaptureInstalledController(ports) {
             savedSessionList?.removeAttribute("aria-live");
             liveGuidedWorkflowElements.setupSteps?.removeAttribute("data-session-owner");
             observationTargetList?.removeAttribute("aria-live");
+            targetDiscoveryGeneration += 1;
+            pendingObservationTargetSwitchId = undefined;
             clearScheduledObservationRefresh();
         },
         async begin() {
@@ -283,8 +404,19 @@ export function createCaptureInstalledController(ports) {
         pause: pauseInstalledCapture,
         resume: resumeInstalledCapture,
         capture: syncCapturedEventsToLive,
+        discoverTargets: discoverCurrentObservationTarget,
+        browseTargets: browseObservationTargets,
+        selectTarget(id) { observationTargetState = selectObservationTarget(observationTargetState, id); renderObservationTargetPicker(); },
+        requestTargetAccess(id) {
+            const target = observationTargetState.targets.find((candidate) => candidate.id === id);
+            return target ? requestSelectedTargetAccess(target) : Promise.reject(new Error(`Unknown target ${id}`));
+        },
+        attachTarget: attachSelectedTarget,
+        beginDetachTarget: beginDetachSelectedTarget,
+        confirmDetachTarget: confirmDetachSelectedTarget,
         scheduleObservationRefresh,
-        state: () => ({ session: structuredClone(dataLayerSessionState), observer: structuredClone(liveObserverState) }),
+        state: () => ({ session: structuredClone(dataLayerSessionState), observer: structuredClone(liveObserverState),
+            targets: structuredClone(observationTargetState), pendingObservationTargetSwitchId }),
     };
 }
 export const installedControllerDefinition = Object.freeze({
