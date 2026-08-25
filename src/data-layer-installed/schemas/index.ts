@@ -928,7 +928,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
           compactCanonicalProjectionRequest = activeRequest;
         compactCanonicalCommandFeedback = `Projection not saved; Retry or Reject. ${error instanceof Error ? error.message : String(error)}`; return false;
       } finally { if (compactCanonicalProjectionWorker === worker) { compactCanonicalProjectionWorker = undefined;
-        clearCompactCanonicalSettlement(compactCanonicalSavedSchemaId(adapter)); renderCompactCanonicalEditor(); } }
+        clearCompactCanonicalSettlement(compactCanonicalSavedSchemaId(adapter)); renderSchemas(); renderCompactCanonicalEditor(); } }
     })(); return worker.promise;
   };
   const persistCompactCanonicalProjection = async (adapter:CompactCanonicalEditorAdapter, projection:SchemaDefinition, change?:string):Promise<boolean> => {

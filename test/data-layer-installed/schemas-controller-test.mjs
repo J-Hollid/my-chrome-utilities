@@ -807,6 +807,9 @@ canonicalSettlementMode = "resolve"; uiController.retryCanonical(); await Promis
 assert.equal(uiController.canonicalState().pending, false, "Retry rebases only the preserved command onto current canonical state");
 const projectedCanonical = uiController.canonicalProjection(); projectedCanonical.name = "Canonical metadata name";
 assert.equal(await uiController.persistCanonicalProjection(projectedCanonical, "schema name"), true);
+const canonicalProjectionSettlementReady = !elements.get("#save-schema").disabled;
+assert.equal(canonicalProjectionSettlementReady, true,
+  "settling a canonical projection refreshes publication readiness in the installed schema editor");
 assert.equal(uiController.canonicalProjection().name, "Canonical metadata name", "projection metadata uses the same serialized settlement queue");
 assert.equal(await uiController.resumeCanonicalProjection(), true, "an already-settled canonical projection resumes idempotently");
 let customCanonical = structuredClone(uiController.canonicalDocument()), undoCount = 0, redoCount = 0, contextActionCount = 0, renderedContextCount = 0;
@@ -961,14 +964,20 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const orderingCause = "other:installed schema canonical persistence ordering";
   const projectionScenario = context.causalCategory === projectionCause;
   const orderingScenario = context.causalCategory === orderingCause;
-  const expectedPreRepairFailure = projectionScenario || orderingScenario
-    ? { untouchedSchemaProjectionPreserved:false }
+  const expectedPreRepairFailure = orderingScenario
+    ? { canonicalProjectionSettlementReady:false, untouchedSchemaProjectionPreserved:false }
+    : projectionScenario
+      ? { untouchedSchemaProjectionPreserved:false }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:false };
-  const expectedRepairResult = projectionScenario || orderingScenario
-    ? { untouchedSchemaProjectionPreserved:true }
+  const expectedRepairResult = orderingScenario
+    ? { canonicalProjectionSettlementReady:true, untouchedSchemaProjectionPreserved:true }
+    : projectionScenario
+      ? { untouchedSchemaProjectionPreserved:true }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:true };
-  const observed = projectionScenario || orderingScenario
-    ? { untouchedSchemaProjectionPreserved }
+  const observed = orderingScenario
+    ? { canonicalProjectionSettlementReady, untouchedSchemaProjectionPreserved }
+    : projectionScenario
+      ? { untouchedSchemaProjectionPreserved }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender };
   assert.deepEqual(observed, expectedRepairResult);
   const fixture = {

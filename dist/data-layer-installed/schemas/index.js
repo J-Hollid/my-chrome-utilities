@@ -1063,6 +1063,7 @@ export function createSchemasInstalledController(ports) {
                 if (compactCanonicalProjectionWorker === worker) {
                     compactCanonicalProjectionWorker = undefined;
                     clearCompactCanonicalSettlement(compactCanonicalSavedSchemaId(adapter));
+                    renderSchemas();
                     renderCompactCanonicalEditor();
                 }
             }
