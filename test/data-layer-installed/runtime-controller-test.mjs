@@ -31,8 +31,10 @@ controller.commandContext.record({ commandId:"data-layer.start-testing", message
 controller.commandContext.record({ commandId:"data-layer.detach-observation-target", message:"Detached" });
 controller.commandContext.showWorkspace("data-layer");
 controller.commandContext.showDataLayerView("Projects");
+assert.ok(controller.commands().some(({ id }) => id === "data-layer.show-projects"));
 await Promise.resolve(); await Promise.resolve();
 assert.equal(commandLog.textContent, "Detached");
+controller.runCommand("data-layer.show-projects"); assert.equal(commandLog.textContent, "data-layer.show-projects ran");
 assert.ok(calls.includes("command:start")); assert.ok(calls.includes("command:detach"));
 assert.ok(calls.includes("show:data-layer:false")); assert.ok(calls.includes("view:Projects"));
 events.get("pagehide")(); assert.ok(calls.includes("dispose:palette"));

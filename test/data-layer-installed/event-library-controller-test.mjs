@@ -157,4 +157,7 @@ assert.equal(readinessController.state().pushPathReadiness.message, "blocked cur
 readinessElements.get("#push-destination-path").value = "disposed.events"; readinessElements.get("#push-destination-path").dispatch("input");
 readinessController.dispose(); readinessSettlements[2]({ success:true, message:"disposed ready" }); await new Promise((resolve) => setTimeout(resolve, 0));
 assert.equal(readinessController.state().pushPathReadiness, undefined, "disposed readiness settlement cannot repopulate controller state");
+assert.equal(readinessElements.get("#push-template-draft").disabled, true, "disposed readiness cannot re-enable its former action");
+assert.notEqual(readinessElements.get("#push-template-draft-reason").textContent, "disposed ready",
+  "disposed readiness cannot repaint its former status surface");
 assert.equal([...readinessElements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0);

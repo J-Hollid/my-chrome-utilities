@@ -2,6 +2,7 @@ import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaR
 import { applySchemaPropertyCopy, planSchemaPropertyCopy } from "../../data-layer-schema-property-copy.js";
 import { persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, } from "../../data-layer-local-rule-promotion.js";
 import { publishReusableRuleSync, reviewReusableRuleSync, } from "../../data-layer-reusable-rule-sync.js";
+import { addLiveSchemaPropertyDeclaration, createLiveSchemaPropertyDeclaration, } from "../../data-layer-live-schema-property-declaration.js";
 const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 export function createSchemasInstalledController(ports) {
     const schemaSearch = ports.root.querySelector("#schema-search");
@@ -2922,6 +2923,7 @@ export function createSchemasInstalledController(ports) {
             compactCanonicalScrollByKey.set(compactCanonicalEditor.key, schemaDetail.scrollTop);
     };
     let guidedDialogDisposers = [];
+    let livePropertyDialogDisposers = [];
     const guidedValidationFlow = {
         open: openGuidedValidationForEvent, openProperty: openGuidedValidationForProperty,
         close: () => {
@@ -3165,6 +3167,8 @@ export function createSchemasInstalledController(ports) {
                 dispose();
             guidedValidationFlow.close();
             guidedPropertyReturn = undefined;
+            for (const dispose of livePropertyDialogDisposers.splice(0))
+                dispose();
             guidedValidationRoot?.replaceChildren();
             const disposed = new Error("Schemas controller disposed before durable persistence settled");
             pendingLocalRulePromotionPersistence?.reject(disposed);
@@ -3266,6 +3270,7 @@ export function createSchemasInstalledController(ports) {
         persistGuidedValidation: (result) => persistPublishedGuidedValidation(result).then(() => finishGuidedValidationSave(result)),
         openGuidedEvent: guidedValidationFlow.open,
         openGuidedProperty: guidedValidationFlow.openProperty,
+        openLivePropertyDeclaration,
         closeGuided: guidedValidationFlow.close,
         guidedDraft: guidedValidationFlow.currentDraft,
         guidedState: () => ({ selections: structuredClone(guidedContinuationSelections), selectedSchemaPropertyPath,
@@ -3360,7 +3365,14 @@ export function createSchemasInstalledController(ports) {
             const choose = schemaOwnerDocument.createElement("button");
             choose.type = "button";
             choose.textContent = `${schema.name} revision ${schema.version} · ${schema.workingDraft?.pendingChanges.length ?? 0} pending changes`;
-            const select = () => { persistGuidedContinuation(event, schema.id); dialog.close(); guidedValidationRoot.replaceChildren(); };
+            const select = () => {
+                persistGuidedContinuation(event, schema.id);
+                dialog.close();
+                guidedValidationRoot.replaceChildren();
+                ports.restoreGuidedCapture(event.id);
+                for (const dispose of guidedDialogDisposers.splice(0))
+                    dispose();
+            };
             choose.addEventListener("click", select);
             guidedDialogDisposers.push(() => choose.removeEventListener("click", select));
             choices.append(choose);
@@ -3368,13 +3380,93 @@ export function createSchemasInstalledController(ports) {
         const cancel = schemaOwnerDocument.createElement("button");
         cancel.type = "button";
         cancel.textContent = "Cancel";
-        const close = () => { dialog.close(); guidedValidationRoot.replaceChildren(); };
+        const close = () => { dialog.close(); guidedValidationRoot.replaceChildren(); for (const dispose of guidedDialogDisposers.splice(0))
+            dispose(); };
         cancel.addEventListener("click", close);
         guidedDialogDisposers.push(() => cancel.removeEventListener("click", close));
         dialog.append(heading, choices, cancel);
         guidedValidationRoot.append(dialog);
         dialog.showModal();
         heading.focus({ preventScroll: true });
+    }
+    function openLivePropertyDeclaration(event, path, trigger) {
+        if (!guidedValidationRoot || !schemaOwnerDocument)
+            return false;
+        for (const dispose of livePropertyDialogDisposers.splice(0))
+            dispose();
+        guidedValidationRoot.replaceChildren();
+        const dialog = schemaOwnerDocument.createElement("dialog"), feedback = schemaOwnerDocument.createElement("output");
+        dialog.className = "live-schema-property-declaration-review";
+        dialog.setAttribute("aria-labelledby", "live-schema-property-declaration-heading");
+        const close = (restoreFocus = true) => {
+            for (const dispose of livePropertyDialogDisposers.splice(0))
+                dispose();
+            dialog.close();
+            guidedValidationRoot.replaceChildren();
+            if (restoreFocus)
+                trigger.focus({ preventScroll: true });
+        };
+        const listen = (control, action) => {
+            control.addEventListener("click", action);
+            livePropertyDialogDisposers.push(() => control.removeEventListener("click", action));
+        };
+        const showReview = (schema) => {
+            const heading = schemaOwnerDocument.createElement("h5"), review = schemaOwnerDocument.createElement("p"), confirm = schemaOwnerDocument.createElement("button"), cancel = schemaOwnerDocument.createElement("button");
+            heading.id = "live-schema-property-declaration-heading";
+            heading.textContent = "Review schema property declaration";
+            try {
+                const declaration = createLiveSchemaPropertyDeclaration(event.payload, path, schema);
+                review.textContent = `${declaration.canonicalPath} · ${declaration.detectedType} · ${schema.name} revision ${schema.version}. No validation rule will be added.`;
+                confirm.type = cancel.type = "button";
+                confirm.textContent = `Add property to ${schema.name} draft`;
+                cancel.textContent = "Cancel";
+                listen(confirm, () => {
+                    try {
+                        schemas = schemas.map((candidate) => candidate.id === schema.id
+                            ? addLiveSchemaPropertyDeclaration(candidate, declaration) : candidate);
+                        persistSchemaLibrary();
+                        renderSchemas();
+                        close(false);
+                        ports.scheduleFrame(() => ports.restoreGuidedCapture(event.id, declaration.concretePath));
+                    }
+                    catch (error) {
+                        feedback.textContent = error instanceof Error ? error.message : "The property could not be added to the schema draft.";
+                    }
+                });
+                listen(cancel, () => close());
+                dialog.replaceChildren(heading, review, feedback, confirm, cancel);
+            }
+            catch (error) {
+                feedback.textContent = error instanceof Error ? error.message : "The observed property is unavailable.";
+                cancel.type = "button";
+                cancel.textContent = "Cancel";
+                listen(cancel, () => close());
+                dialog.replaceChildren(heading, feedback, cancel);
+            }
+            heading.focus({ preventScroll: true });
+        };
+        const selected = selectedGuidedContinuation(guidedContinuationSelections, event, schemas);
+        if (selected?.workingDraft)
+            showReview(selected);
+        else {
+            const heading = schemaOwnerDocument.createElement("h5"), choices = schemas.filter(({ workingDraft }) => Boolean(workingDraft)).map((schema) => {
+                const choose = schemaOwnerDocument.createElement("button");
+                choose.type = "button";
+                choose.textContent = schema.name;
+                listen(choose, () => showReview(schema));
+                return choose;
+            }), cancel = schemaOwnerDocument.createElement("button");
+            heading.id = "live-schema-property-declaration-heading";
+            heading.textContent = "Choose schema destination";
+            cancel.type = "button";
+            cancel.textContent = "Cancel";
+            listen(cancel, () => close());
+            dialog.replaceChildren(heading, ...choices, cancel);
+            heading.focus({ preventScroll: true });
+        }
+        guidedValidationRoot.append(dialog);
+        dialog.showModal();
+        return true;
     }
     function downloadSchemaJson(value, filename) { ports.downloadSchema(value, filename); }
     function omittedRuleStatus(count) { return `${count} omitted ${count === 1 ? "rule" : "rules"}`; }

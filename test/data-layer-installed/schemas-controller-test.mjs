@@ -17,7 +17,7 @@ const controller = createSchemasInstalledController({
   downloadSchema() {},
   relationshipTree:()=>({ projectId:"no-project", nodes:[] }), openProjectLibrary() {}, openContributor() {},
   openContributorInStudio() {}, adoptSavedSchema() {}, renderSchemaSpecification() {}, reportMissingSchemaEvent() {},
-  scheduleFrame:(callback)=>callback(),
+  scheduleFrame:(callback)=>callback(), restoreGuidedCapture() {},
   activeProjectId:()=>undefined, ensureProjectSchemaContributors:async()=>({ name:"" }),
 });
 controller.mount(); controller.open("schema:page"); controller.beginDraft();
@@ -123,6 +123,7 @@ const schemaDownloads = [];
 const relationshipActions = [];
 let deferHydration = false, releaseHydration;
 let closeSpecification;
+const restoredGuidedCaptures = [];
 let canonicalSettlementMode = "resolve", releaseCanonicalSettlement;
 const uiController = createSchemasInstalledController({
   root:{ ownerDocument:fakeDocument, querySelector:(selector) => elements.get(selector) ?? null,
@@ -152,6 +153,7 @@ const uiController = createSchemasInstalledController({
     relationshipActions.push(`build:${candidate.id}:${surface}`); closeSpecification = close;
   },
   reportMissingSchemaEvent:(id) => relationshipActions.push(`missing:${id}`), scheduleFrame:(callback)=>callback(),
+  restoreGuidedCapture:(eventId, propertyPath) => restoredGuidedCaptures.push([eventId, propertyPath]),
   activeProjectId:()=>"project:one", ensureProjectSchemaContributors:()=>deferHydration
     ? new Promise((resolve)=>{ releaseHydration=resolve; }) : Promise.resolve({ name:"Project One" }),
   settleCanonical:() => canonicalSettlementMode === "reject" ? Promise.reject(new Error("canonical conflict"))
@@ -419,7 +421,7 @@ assert.match(schemaDownloads[0], /schema.*\.json/, "confirmed standard export cr
 const persistenceSchemaId = uiController.state().activeSchemaId;
 uiController.beginDraft();
 const persistenceSchema = uiController.schemas().find(({ id }) => id === persistenceSchemaId);
-const guidedCapture = { id:"capture:checkout", sourceId:"gtm", name:"checkout", payload:{ checkout:{} }, rawInput:{} };
+const guidedCapture = { id:"capture:checkout", sourceId:"gtm", name:"checkout", payload:{ checkout:{ email:"buyer@example.test" } }, rawInput:{} };
 const schemaPaths = uiController.schemaDocumentPaths(persistenceSchema.workingDraft.document);
 assert.ok(schemaPaths.length > 0); assert.ok(uiController.schemaPropertyAt(persistenceSchema.workingDraft.document, schemaPaths[0]));
 const definedDocument = uiController.defineSchemaProperty({ type:"object" }, { path:"sample", type:"string" });
@@ -440,7 +442,22 @@ const guidedChoice = guidedPicker.children[1].children[0];
 assert.ok(guidedChoice.listenerCount() > 0, "the continuation picker owns its live choice listener");
 guidedPicker.children[2].click();
 assert.equal(elements.get("#guided-validation-flow").children.length, 0, "cancelling removes the guided continuation picker");
+assert.equal(guidedChoice.listenerCount(), 0, "cancelling disposes the guided continuation choice listener immediately");
+guidedContinuation.useDifferent();
+elements.get("#guided-validation-flow").children[0].children[1].children[0].click();
+assert.deepEqual(restoredGuidedCaptures.at(-1), [guidedCapture.id, undefined],
+  "choosing a continuation restores the captured event through the explicit Capture port");
 await uiController.openGuidedProperty(guidedCapture, persistenceSchema, "checkout.email");
+const declarationTrigger = element();
+assert.equal(uiController.openLivePropertyDeclaration(guidedCapture, "checkout.email", declarationTrigger), true);
+const declarationDialog = elements.get("#guided-validation-flow").children[0];
+const declarationConfirm = declarationDialog.children[3];
+declarationConfirm.click();
+assert.ok(uiController.schemaDocumentPaths(uiController.schemas().find(({ id }) => id === persistenceSchemaId).workingDraft.document).includes("/checkout/email"),
+  "the live declaration commits the observed property into the selected Schema draft");
+assert.deepEqual(restoredGuidedCaptures.at(-1), [guidedCapture.id, "checkout.email"],
+  "live declaration completion returns through the explicit Capture port");
+assert.equal(declarationConfirm.listenerCount(), 0, "closing the live declaration disposes its confirm listener");
 const validationRecords = uiController.recheckCaptured([guidedCapture]);
 assert.equal(validationRecords.length, 1); assert.equal(elements.get("#schema-validation-record-list").children.length, 1);
 uiController.updateDraft({ attachedRules:[...(persistenceSchema.workingDraft?.attachedRules ?? persistenceSchema.attachedRules ?? []),

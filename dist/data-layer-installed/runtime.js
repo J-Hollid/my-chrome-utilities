@@ -16,6 +16,7 @@ export function createChromeRuntimeMessagePort(runtimeMessages) {
     };
 }
 export function createInstalledSidePanelShellController(ports) {
+    const allCommands = [...commandsForUtilityShell(listCommands(), extensionShell.commands)];
     const paletteController = ports.palette;
     const workspaceTabsController = ports.workspaceTabs;
     const hotkeyController = ports.hotkeys;
@@ -67,6 +68,13 @@ export function createInstalledSidePanelShellController(ports) {
         },
         commandContext: commandRunContext,
         runDataLayerCommand: recordDataLayerCommandRun,
+        commands: () => allCommands,
+        runCommand: (id) => {
+            const command = allCommands.find((candidate) => candidate.id === id);
+            if (!command)
+                throw new Error(`Unknown installed command ${id}`);
+            command.run(commandRunContext);
+        },
     };
 }
 export function installDurableProjectCoordinationSubscription(durableProjectRuntime, ports) {
@@ -159,6 +167,7 @@ export function createInstalledDataLayerLifecycle(controllers) {
     };
 }
 import { extensionShell, utilityRegistry } from "../utility-registry.js";
+import { commandsForUtilityShell, listCommands } from "../utilities/command-palette/index.js";
 import { bindUtilityPanels, mountUtilityShell, renderUtilityDirectory } from "../platform/utility-shell-dom.js";
 import { createUtilityStorage } from "../platform/utility-storage.js";
 import { installDurableRepositoryStartupFailure, openDurableProjectRuntime, SCHEMA_LIBRARY_STORAGE_KEY } from "../utilities/data-layer/schemas.js";
