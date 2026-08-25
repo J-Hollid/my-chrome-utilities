@@ -439,3 +439,15 @@ Feature: Modular Chrome utility architecture
     And the preparation leaves src/side-panel.ts, public facade imports, and installed product behavior unchanged
     And only exact bounded preparation evidence may run before architect qa-ready integration
     And the stable product task resumes automatically from that exact QA descendant without another user decision
+
+  # Modular Chrome utility architecture 037
+  Scenario: Modular Chrome utility architecture 037
+    Given the frozen direct compatibility map no longer names the assertions executed by the exact unchanged cutover candidate
+    And current QA cannot reproduce that candidate's supported permission-recovery path
+    When verification-slice-side-panel-single-cutover-compatibility-repair prepares a replacement evidence boundary from current QA
+    Then a preparation-only capture runs the exact candidate through the selected-tab exact-origin permission request and path recheck before Start testing becomes enabled
+    And the capture freezes every executed direct assertion identity in order across the original four viewports
+    And an independent validation execution matches the committed map before the correction is QA-ready
+    And every frozen identity resolves to a current assertion call while the registered 7,088 target assertion leaves remain unchanged
+    And the product candidate range still rejects changes to the map, capture mechanism, and focused-evidence bootstrap
+    And stable task side-panel-single-cutover resumes with the same product tree from the exact corrected QA descendant
