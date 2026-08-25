@@ -35,7 +35,8 @@ assert.equal(evaluation.state, "Not checked", "unassigned events retain the exac
 const published = controller.publish();
 assert.equal(published.version, 2, "Schemas exclusively owns draft publication");
 assert.equal(published.document.required[0], "title");
-assert.equal(JSON.stringify(JSON.parse(values.get("my-chrome-utilities.schema-library.v1"))[1]), JSON.stringify(untouchedSchema),
+const untouchedSchemaProjectionPreserved = JSON.stringify(JSON.parse(values.get("my-chrome-utilities.schema-library.v1"))[1]) === JSON.stringify(untouchedSchema);
+assert.equal(untouchedSchemaProjectionPreserved, true,
   "schema persistence does not migrate an untouched settled projection during another schema write");
 await controller.runGuidedValidation();
 assert.ok(changed >= 3);
@@ -955,15 +956,26 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([key, nested]) => [key, normalized(nested)])) : value;
   const digest = (value) => createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex");
-  const expectedPreRepairFailure = { publicationFeedbackRetainedAfterRelationshipTreeRerender:false };
-  const expectedRepairResult = { publicationFeedbackRetainedAfterRelationshipTreeRerender:true };
-  const observed = { publicationFeedbackRetainedAfterRelationshipTreeRerender };
+  const projectionCause = "other:installed schema unchanged projection persistence";
+  const projectionScenario = context.causalCategory === projectionCause;
+  const expectedPreRepairFailure = projectionScenario
+    ? { untouchedSchemaProjectionPreserved:false }
+    : { publicationFeedbackRetainedAfterRelationshipTreeRerender:false };
+  const expectedRepairResult = projectionScenario
+    ? { untouchedSchemaProjectionPreserved:true }
+    : { publicationFeedbackRetainedAfterRelationshipTreeRerender:true };
+  const observed = projectionScenario
+    ? { untouchedSchemaProjectionPreserved }
+    : { publicationFeedbackRetainedAfterRelationshipTreeRerender };
   assert.deepEqual(observed, expectedRepairResult);
   const fixture = {
-    id:"installed-schema-publication-feedback-retention-v1",
-    causalCategory:"other:installed schema publication feedback retention",
+    id:projectionScenario ? "installed-schema-unchanged-projection-persistence-v1"
+      : "installed-schema-publication-feedback-retention-v1",
+    causalCategory:projectionScenario ? projectionCause : "other:installed schema publication feedback retention",
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-    input:{ publication:"Saved Schema revision", rerender:"relationship tree", feedback:"Live event revalidation outcome" },
+    input:projectionScenario
+      ? { operation:"reusable rule publication", failure:"durable batch rejection", untouched:"settled schema projection" }
+      : { publication:"Saved Schema revision", rerender:"relationship tree", feedback:"Live event revalidation outcome" },
     expectedPreRepairFailure,
     expectedRepairResult,
   };
