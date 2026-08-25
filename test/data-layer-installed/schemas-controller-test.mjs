@@ -11,6 +11,7 @@ const controller = createSchemasInstalledController({
   subscribe:() => () => {}, specificIndexSelected() {}, rulePickerChanged() {}, createRuleId:() => "rule:first",
   capturedAssignmentValue:() => undefined, renderAssignmentConditions() {},
   localRulePromotionDialog:{ open() {}, close() {} }, subscribeSchemaPersistence:() => () => {},
+  downloadSchema() {},
 });
 controller.mount(); controller.open("schema:page"); controller.beginDraft();
 controller.updateDraft({ document:{ type:"object", required:["title"], properties:{ title:{ type:"string" } } } }, "Require title");
@@ -83,6 +84,7 @@ selectors.push("#create-schema-assignment", "#schema-assignment-editor", "#schem
   "#schema-import-review", "#schema-import-review-summary", "#replace-schema-library", "#append-schema-library",
   "#cancel-schema-import", "#schema-delete-review", "#schema-delete-review-summary", "#confirm-schema-delete",
   "#cancel-schema-delete");
+selectors.push("#export-schema", "#schema-export-choices", "#schema-export-compatibility-review");
 const elements = new Map(selectors.map((selector) => [selector, element()]));
 elements.set("#side-panel-layered-profile-editor", element()); elements.set("#live-event-query", element());
 const schemaMasterTab = Object.assign(element(), { textContent:"Schemas", dataset:{ schemaSubview:"schema-master" } });
@@ -98,6 +100,7 @@ const uiValues = new Map([
 let selectedSpecificIndex;
 const rulePickerChanges = [];
 let promotionDialogInput, persistenceListener, promotionRuleSequence = 0;
+const schemaDownloads = [];
 const uiController = createSchemasInstalledController({
   root:{ querySelector:(selector) => elements.get(selector) ?? null,
     querySelectorAll:(selector) => selector.includes("role=tab") ? [schemaMasterTab, schemaRulesTab] : [schemaMasterPanel, schemaRulesPanel] },
@@ -110,6 +113,7 @@ const uiController = createSchemasInstalledController({
   renderAssignmentConditions:(root, state) => { root.textContent = `${state.target}:${state.group?.predicates.length ?? 0}`; },
   localRulePromotionDialog:{ open:(input) => { promotionDialogInput = input; }, close:() => { promotionDialogInput = undefined; } },
   subscribeSchemaPersistence:(listener) => { persistenceListener = listener; return () => { if (persistenceListener === listener) persistenceListener = undefined; }; },
+  downloadSchema:(_value, filename) => schemaDownloads.push(filename),
 });
 uiController.mount(); uiController.open("schema:page"); uiController.beginDraft();
 elements.get("#schema-editor-name").value = "Page checkout"; elements.get("#schema-editor-name").dispatch("input");
@@ -255,6 +259,14 @@ elements.get("#cancel-schema-delete").click();
 assert.equal(uiController.schemas().some(({ id }) => id === importedSchema.id), true);
 uiController.requestDeletion(importedSchema.id); elements.get("#confirm-schema-delete").click();
 assert.equal(uiController.schemas().some(({ id }) => id === importedSchema.id), false);
+assert.equal(uiController.openExportChoices(), true);
+assert.equal(elements.get("#schema-export-choices").open, true);
+elements.get("#schema-export-choices").children[2].click();
+assert.deepEqual(schemaDownloads, [], "cancelled export produces no download");
+uiController.openExportChoices(); elements.get("#schema-export-choices").children[1].click();
+assert.equal(elements.get("#schema-export-compatibility-review").open, true);
+elements.get("#schema-export-compatibility-review").children[1].click();
+assert.match(schemaDownloads[0], /schema.*\.json/, "confirmed standard export crosses the typed download port");
 const persistenceSchemaId = uiController.state().activeSchemaId;
 const persistenceSchema = uiController.schemas().find(({ id }) => id === persistenceSchemaId);
 uiController.updateDraft({ attachedRules:[...(persistenceSchema.workingDraft?.attachedRules ?? persistenceSchema.attachedRules ?? []),

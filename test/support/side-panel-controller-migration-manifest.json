@@ -1697,7 +1697,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaSearch:108"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaSearch:115"
       }
     },
     {
@@ -1710,7 +1710,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaCategoryFilter:109"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaCategoryFilter:116"
       }
     },
     {
@@ -1723,7 +1723,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::sidePanelLayeredProfileEditorHost:115"
+        "target": "src/data-layer-installed/schemas/index.ts::sidePanelLayeredProfileEditorHost:122"
       }
     },
     {
@@ -1736,7 +1736,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::liveEventQuery:116"
+        "target": "src/data-layer-installed/schemas/index.ts::liveEventQuery:123"
       }
     },
     {
@@ -1749,7 +1749,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaSubviews:117"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaSubviews:124"
       }
     },
     {
@@ -1762,7 +1762,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPanels:118"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPanels:125"
       }
     },
     {
@@ -1775,7 +1775,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaEditor:113"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaEditor:120"
       }
     },
     {
@@ -1788,7 +1788,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaDetail:114"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaDetail:121"
       }
     },
     {
@@ -1801,7 +1801,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaDetailEmpty:122"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaDetailEmpty:129"
       }
     },
     {
@@ -1814,7 +1814,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaEditorName:123"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaEditorName:130"
       }
     },
     {
@@ -1827,7 +1827,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaEditorNameAssistance:124"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaEditorNameAssistance:131"
       }
     },
     {
@@ -1840,7 +1840,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaEditorDescription:125"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaEditorDescription:132"
       }
     },
     {
@@ -1853,7 +1853,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaDescriptionButton:126"
+        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaDescriptionButton:133"
       }
     },
     {
@@ -1866,7 +1866,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaDescriptionOrigin:127"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaDescriptionOrigin:134"
       }
     },
     {
@@ -1879,7 +1879,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaEditorTarget:128"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaEditorTarget:135"
       }
     },
     {
@@ -1892,7 +1892,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaButton:129"
+        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaButton:136"
       }
     },
     {
@@ -1905,7 +1905,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaReason:130"
+        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaReason:137"
       }
     },
     {
@@ -1918,7 +1918,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaRevisionReview:131"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRevisionReview:138"
       }
     },
     {
@@ -1931,7 +1931,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaRevisionReviewSummary:132"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRevisionReviewSummary:139"
       }
     },
     {
@@ -1944,7 +1944,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::confirmSchemaRevisionButton:133"
+        "target": "src/data-layer-installed/schemas/index.ts::confirmSchemaRevisionButton:140"
       }
     },
     {
@@ -1957,7 +1957,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::cancelSchemaRevisionButton:134"
+        "target": "src/data-layer-installed/schemas/index.ts::cancelSchemaRevisionButton:141"
       }
     },
     {
@@ -1970,7 +1970,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaCloseReview:135"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaCloseReview:142"
       }
     },
     {
@@ -1983,7 +1983,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaCloseReviewSummary:136"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaCloseReviewSummary:143"
       }
     },
     {
@@ -1996,7 +1996,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::discardSchemaDraftButton:137"
+        "target": "src/data-layer-installed/schemas/index.ts::discardSchemaDraftButton:144"
       }
     },
     {
@@ -2009,7 +2009,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::keepEditingSchemaButton:138"
+        "target": "src/data-layer-installed/schemas/index.ts::keepEditingSchemaButton:145"
       }
     },
     {
@@ -2022,7 +2022,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::closeSchemaEditorButton:139"
+        "target": "src/data-layer-installed/schemas/index.ts::closeSchemaEditorButton:146"
       }
     },
     {
@@ -2035,7 +2035,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::saveAndCloseSchemaButton:140"
+        "target": "src/data-layer-installed/schemas/index.ts::saveAndCloseSchemaButton:147"
       }
     },
     {
@@ -2048,7 +2048,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaCloseReviewButton:141"
+        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaCloseReviewButton:148"
       }
     },
     {
@@ -2061,7 +2061,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::discardWorkingSchemaDraftButton:142"
+        "target": "src/data-layer-installed/schemas/index.ts::discardWorkingSchemaDraftButton:149"
       }
     },
     {
@@ -2074,7 +2074,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaRevisionSelector:143"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRevisionSelector:150"
       }
     },
     {
@@ -2087,7 +2087,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaRevisionComparison:144"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRevisionComparison:151"
       }
     },
     {
@@ -2100,7 +2100,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::duplicateSchemaRevisionButton:145"
+        "target": "src/data-layer-installed/schemas/index.ts::duplicateSchemaRevisionButton:152"
       }
     },
     {
@@ -2113,7 +2113,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::restoreSchemaRevisionButton:146"
+        "target": "src/data-layer-installed/schemas/index.ts::restoreSchemaRevisionButton:153"
       }
     },
     {
@@ -2126,7 +2126,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::addSchemaPropertyButton:147"
+        "target": "src/data-layer-installed/schemas/index.ts::addSchemaPropertyButton:154"
       }
     },
     {
@@ -2139,7 +2139,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyViewControls:152"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyViewControls:159"
       }
     },
     {
@@ -2152,7 +2152,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyFilterLabel:153"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyFilterLabel:160"
       }
     },
     {
@@ -2165,7 +2165,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyFilter:154"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyFilter:161"
       }
     },
     {
@@ -2178,7 +2178,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertySortLabel:155"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertySortLabel:162"
       }
     },
     {
@@ -2191,7 +2191,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertySort:156"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertySort:163"
       }
     },
     {
@@ -2204,7 +2204,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyResultStatus:157"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyResultStatus:164"
       }
     },
     {
@@ -2217,7 +2217,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyEmpty:158"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyEmpty:165"
       }
     },
     {
@@ -2230,7 +2230,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyEmptyMessage:159"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyEmptyMessage:166"
       }
     },
     {
@@ -2243,7 +2243,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::clearSchemaPropertyFilter:160"
+        "target": "src/data-layer-installed/schemas/index.ts::clearSchemaPropertyFilter:167"
       }
     },
     {
@@ -2256,7 +2256,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyTree:161"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyTree:168"
       }
     },
     {
@@ -2269,7 +2269,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyRemovalFeedback:162"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyRemovalFeedback:169"
       }
     },
     {
@@ -2282,7 +2282,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::undoSchemaPropertyRemovalButton:163"
+        "target": "src/data-layer-installed/schemas/index.ts::undoSchemaPropertyRemovalButton:170"
       }
     },
     {
@@ -2295,7 +2295,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyCopyFeedback:164"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyCopyFeedback:171"
       }
     },
     {
@@ -2308,7 +2308,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::undoSchemaPropertyCopyButton:165"
+        "target": "src/data-layer-installed/schemas/index.ts::undoSchemaPropertyCopyButton:172"
       }
     },
     {
@@ -2321,7 +2321,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyCopyDialog:166"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyCopyDialog:173"
       }
     },
     {
@@ -2334,7 +2334,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyRemovalDialog:167"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyRemovalDialog:174"
       }
     },
     {
@@ -2347,7 +2347,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyRemovalHeading:168"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyRemovalHeading:175"
       }
     },
     {
@@ -2360,7 +2360,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyRemovalSummary:169"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyRemovalSummary:176"
       }
     },
     {
@@ -2373,7 +2373,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::confirmSchemaPropertyRemovalButton:170"
+        "target": "src/data-layer-installed/schemas/index.ts::confirmSchemaPropertyRemovalButton:177"
       }
     },
     {
@@ -2386,7 +2386,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::cancelSchemaPropertyRemovalButton:171"
+        "target": "src/data-layer-installed/schemas/index.ts::cancelSchemaPropertyRemovalButton:178"
       }
     },
     {
@@ -2399,7 +2399,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::selectedSchemaPropertyPath:399"
+        "target": "src/data-layer-installed/schemas/index.ts::selectedSchemaPropertyPath:411"
       }
     },
     {
@@ -2412,7 +2412,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::expandedSchemaPropertyRulePaths:400"
+        "target": "src/data-layer-installed/schemas/index.ts::expandedSchemaPropertyRulePaths:412"
       }
     },
     {
@@ -2425,7 +2425,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::pendingSchemaPropertyRemoval:401"
+        "target": "src/data-layer-installed/schemas/index.ts::pendingSchemaPropertyRemoval:413"
       }
     },
     {
@@ -2438,7 +2438,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::lastSchemaPropertyRemoval:402"
+        "target": "src/data-layer-installed/schemas/index.ts::lastSchemaPropertyRemoval:414"
       }
     },
     {
@@ -2451,7 +2451,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::lastSchemaPropertyCopy:403"
+        "target": "src/data-layer-installed/schemas/index.ts::lastSchemaPropertyCopy:415"
       }
     },
     {
@@ -2464,7 +2464,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::pendingSchemaDocumentationRemoval:405"
+        "target": "src/data-layer-installed/schemas/index.ts::pendingSchemaDocumentationRemoval:417"
       }
     },
     {
@@ -2477,7 +2477,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaDocumentationRemovalDialog:172"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaDocumentationRemovalDialog:179"
       }
     },
     {
@@ -2490,7 +2490,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaDocumentationRemovalHeading:173"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaDocumentationRemovalHeading:180"
       }
     },
     {
@@ -2503,7 +2503,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaDocumentationRemovalSummary:174"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaDocumentationRemovalSummary:181"
       }
     },
     {
@@ -2516,7 +2516,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::confirmSchemaDocumentationRemoval:175"
+        "target": "src/data-layer-installed/schemas/index.ts::confirmSchemaDocumentationRemoval:182"
       }
     },
     {
@@ -2529,7 +2529,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::cancelSchemaDocumentationRemoval:176"
+        "target": "src/data-layer-installed/schemas/index.ts::cancelSchemaDocumentationRemoval:183"
       }
     },
     {
@@ -2542,7 +2542,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::specificIndexArrayPath:406"
+        "target": "src/data-layer-installed/schemas/index.ts::specificIndexArrayPath:418"
       }
     },
     {
@@ -2555,7 +2555,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::specificIndexTrigger:407"
+        "target": "src/data-layer-installed/schemas/index.ts::specificIndexTrigger:419"
       }
     },
     {
@@ -2568,7 +2568,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaSpecificIndexDialog:177"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaSpecificIndexDialog:184"
       }
     },
     {
@@ -2581,7 +2581,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaSpecificIndexForm:178"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaSpecificIndexForm:185"
       }
     },
     {
@@ -2594,7 +2594,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaSpecificIndexHeading:179"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaSpecificIndexHeading:186"
       }
     },
     {
@@ -2607,7 +2607,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaSpecificIndexLabel:180"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaSpecificIndexLabel:187"
       }
     },
     {
@@ -2620,7 +2620,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaSpecificIndex:181"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaSpecificIndex:188"
       }
     },
     {
@@ -2633,7 +2633,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaSpecificIndexAssistance:182"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaSpecificIndexAssistance:189"
       }
     },
     {
@@ -2646,7 +2646,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::confirmSchemaSpecificIndex:183"
+        "target": "src/data-layer-installed/schemas/index.ts::confirmSchemaSpecificIndex:190"
       }
     },
     {
@@ -2659,7 +2659,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::cancelSchemaSpecificIndex:184"
+        "target": "src/data-layer-installed/schemas/index.ts::cancelSchemaSpecificIndex:191"
       }
     },
     {
@@ -2672,7 +2672,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyDialog:185"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyDialog:192"
       }
     },
     {
@@ -2685,7 +2685,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyForm:186"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyForm:193"
       }
     },
     {
@@ -2698,7 +2698,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyHeading:187"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyHeading:194"
       }
     },
     {
@@ -2711,7 +2711,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyPathLabel:188"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyPathLabel:195"
       }
     },
     {
@@ -2724,7 +2724,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyPath:189"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyPath:196"
       }
     },
     {
@@ -2737,7 +2737,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyParentContext:190"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyParentContext:197"
       }
     },
     {
@@ -2750,7 +2750,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyChildNameLabel:191"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyChildNameLabel:198"
       }
     },
     {
@@ -2763,7 +2763,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyChildName:192"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyChildName:199"
       }
     },
     {
@@ -2776,7 +2776,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyTypeLabel:193"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyTypeLabel:200"
       }
     },
     {
@@ -2789,7 +2789,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyType:194"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyType:201"
       }
     },
     {
@@ -2802,7 +2802,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaManualArrayTypeGroup:195"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaManualArrayTypeGroup:202"
       }
     },
     {
@@ -2815,7 +2815,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaManualArrayItemType:196"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaManualArrayItemType:203"
       }
     },
     {
@@ -2828,7 +2828,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyPreview:197"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyPreview:204"
       }
     },
     {
@@ -2841,7 +2841,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyAssistance:198"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaManualPropertyAssistance:205"
       }
     },
     {
@@ -2854,7 +2854,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::goToExistingSchemaPropertyButton:199"
+        "target": "src/data-layer-installed/schemas/index.ts::goToExistingSchemaPropertyButton:206"
       }
     },
     {
@@ -2867,7 +2867,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::confirmSchemaManualPropertyButton:200"
+        "target": "src/data-layer-installed/schemas/index.ts::confirmSchemaManualPropertyButton:207"
       }
     },
     {
@@ -2880,7 +2880,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::cancelSchemaManualPropertyButton:201"
+        "target": "src/data-layer-installed/schemas/index.ts::cancelSchemaManualPropertyButton:208"
       }
     },
     {
@@ -2893,7 +2893,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::pendingManualPropertyContext:408"
+        "target": "src/data-layer-installed/schemas/index.ts::pendingManualPropertyContext:420"
       }
     },
     {
@@ -2906,7 +2906,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaRulePickerPath:409"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRulePickerPath:421"
       }
     },
     {
@@ -2919,7 +2919,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaRulePickerTrigger:410"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRulePickerTrigger:422"
       }
     },
     {
@@ -2932,7 +2932,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyInteractionReturn:411"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyInteractionReturn:423"
       }
     },
     {
@@ -2945,7 +2945,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyRenderSequence:413"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyRenderSequence:425"
       }
     },
     {
@@ -2958,7 +2958,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleConfiguration:414"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleConfiguration:426"
       }
     },
     {
@@ -2971,7 +2971,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::editingAttachedLocalRule:415"
+        "target": "src/data-layer-installed/schemas/index.ts::editingAttachedLocalRule:427"
       }
     },
     {
@@ -2984,7 +2984,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyRulePicker:202"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyRulePicker:209"
       }
     },
     {
@@ -2997,7 +2997,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::localRulePromotionDialog:428"
+        "target": "src/data-layer-installed/schemas/index.ts::localRulePromotionDialog:440"
       }
     },
     {
@@ -3010,7 +3010,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::pendingLocalRulePromotion:429"
+        "target": "src/data-layer-installed/schemas/index.ts::pendingLocalRulePromotion:441"
       }
     },
     {
@@ -3023,7 +3023,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::pendingLocalRulePromotionPersistence:436"
+        "target": "src/data-layer-installed/schemas/index.ts::pendingLocalRulePromotionPersistence:448"
       }
     },
     {
@@ -3036,7 +3036,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::pendingGuidedValidationPersistence:437"
+        "target": "src/data-layer-installed/schemas/index.ts::pendingGuidedValidationPersistence:449"
       }
     },
     {
@@ -3049,7 +3049,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::createSchemaAssignmentButton:203"
+        "target": "src/data-layer-installed/schemas/index.ts::createSchemaAssignmentButton:210"
       }
     },
     {
@@ -3062,7 +3062,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::createSchemaRuleButton:204"
+        "target": "src/data-layer-installed/schemas/index.ts::createSchemaRuleButton:211"
       }
     },
     {
@@ -3075,7 +3075,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleEditor:205"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleEditor:212"
       }
     },
     {
@@ -3088,7 +3088,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleName:206"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleName:213"
       }
     },
     {
@@ -3101,7 +3101,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleParameters:207"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleParameters:214"
       }
     },
     {
@@ -3114,7 +3114,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleTypes:208"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleTypes:215"
       }
     },
     {
@@ -3127,7 +3127,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleOperator:209"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleOperator:216"
       }
     },
     {
@@ -3140,7 +3140,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleSeverity:210"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleSeverity:217"
       }
     },
     {
@@ -3153,7 +3153,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleMessage:211"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleMessage:218"
       }
     },
     {
@@ -3166,7 +3166,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleExamples:212"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleExamples:219"
       }
     },
     {
@@ -3179,7 +3179,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaRuleButton:213"
+        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaRuleButton:220"
       }
     },
     {
@@ -3192,7 +3192,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleList:214"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleList:221"
       }
     },
     {
@@ -3205,7 +3205,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleSearch:215"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleSearch:222"
       }
     },
     {
@@ -3218,7 +3218,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleAttachments:216"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRuleAttachments:223"
       }
     },
     {
@@ -3231,7 +3231,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::updateSchemaRuleAttachments:217"
+        "target": "src/data-layer-installed/schemas/index.ts::updateSchemaRuleAttachments:224"
       }
     },
     {
@@ -3496,7 +3496,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentEditor:235"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentEditor:242"
       }
     },
     {
@@ -3509,7 +3509,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentSource:236"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentSource:243"
       }
     },
     {
@@ -3522,7 +3522,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentEvent:237"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentEvent:244"
       }
     },
     {
@@ -3535,7 +3535,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentPriority:238"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentPriority:245"
       }
     },
     {
@@ -3548,7 +3548,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaAssignmentButton:239"
+        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaAssignmentButton:246"
       }
     },
     {
@@ -3561,7 +3561,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentTarget:240"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentTarget:247"
       }
     },
     {
@@ -3574,7 +3574,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentDomain:241"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentDomain:248"
       }
     },
     {
@@ -3587,7 +3587,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentPathname:242"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentPathname:249"
       }
     },
     {
@@ -3600,7 +3600,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentVersionPolicy:243"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentVersionPolicy:250"
       }
     },
     {
@@ -3613,7 +3613,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentEnabled:244"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentEnabled:251"
       }
     },
     {
@@ -3626,7 +3626,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentList:245"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentList:252"
       }
     },
     {
@@ -3639,7 +3639,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentConflicts:246"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentConflicts:253"
       }
     },
     {
@@ -3652,7 +3652,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentSchema:247"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentSchema:254"
       }
     },
     {
@@ -3665,7 +3665,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentDataConditions:248"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentDataConditions:255"
       }
     },
     {
@@ -4041,7 +4041,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::importSchemaButton:249"
+        "target": "src/data-layer-installed/schemas/index.ts::importSchemaButton:256"
       }
     },
     {
@@ -4054,7 +4054,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaLibraryImportFile:250"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaLibraryImportFile:257"
       }
     },
     {
@@ -4066,7 +4066,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::exportSchemaButton:267"
       }
     },
     {
@@ -4175,7 +4176,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaImportReview:251"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaImportReview:258"
       }
     },
     {
@@ -4188,7 +4189,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaImportReviewSummary:252"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaImportReviewSummary:259"
       }
     },
     {
@@ -4201,7 +4202,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::replaceSchemaLibraryButton:253"
+        "target": "src/data-layer-installed/schemas/index.ts::replaceSchemaLibraryButton:260"
       }
     },
     {
@@ -4214,7 +4215,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::appendSchemaLibraryButton:254"
+        "target": "src/data-layer-installed/schemas/index.ts::appendSchemaLibraryButton:261"
       }
     },
     {
@@ -4227,7 +4228,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::cancelSchemaImportButton:255"
+        "target": "src/data-layer-installed/schemas/index.ts::cancelSchemaImportButton:262"
       }
     },
     {
@@ -4240,7 +4241,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaDeleteReview:256"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaDeleteReview:263"
       }
     },
     {
@@ -4253,7 +4254,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaDeleteReviewSummary:257"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaDeleteReviewSummary:264"
       }
     },
     {
@@ -4266,7 +4267,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::confirmSchemaDeleteButton:258"
+        "target": "src/data-layer-installed/schemas/index.ts::confirmSchemaDeleteButton:265"
       }
     },
     {
@@ -4279,7 +4280,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::cancelSchemaDeleteButton:259"
+        "target": "src/data-layer-installed/schemas/index.ts::cancelSchemaDeleteButton:266"
       }
     },
     {
@@ -4352,7 +4353,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaCount:110"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaCount:117"
       }
     },
     {
@@ -4365,7 +4366,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaList:111"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaList:118"
       }
     },
     {
@@ -4402,7 +4403,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaResult:112"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaResult:119"
       }
     },
     {
@@ -4414,7 +4415,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaExportChoices:268"
       }
     },
     {
@@ -4426,7 +4428,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaExportReview:269"
       }
     },
     {
@@ -4438,7 +4441,8 @@
         "column": 5
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaExportTrigger:451"
       }
     },
     {
@@ -4450,7 +4454,8 @@
         "column": 5
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::pendingStandardSchemaExport:452"
       }
     },
     {
@@ -4961,7 +4966,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::storedSchemaLibrary:395"
+        "target": "src/data-layer-installed/schemas/index.ts::storedSchemaLibrary:407"
       }
     },
     {
@@ -4974,7 +4979,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemas:396"
+        "target": "src/data-layer-installed/schemas/index.ts::schemas:408"
       }
     },
     {
@@ -5086,7 +5091,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaDraft:398"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaDraft:410"
       }
     },
     {
@@ -5303,7 +5308,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::pendingSchemaImport:426"
+        "target": "src/data-layer-installed/schemas/index.ts::pendingSchemaImport:438"
       }
     },
     {
@@ -5316,7 +5321,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::pendingSchemaDeletion:427"
+        "target": "src/data-layer-installed/schemas/index.ts::pendingSchemaDeletion:439"
       }
     },
     {
@@ -5341,7 +5346,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::editingSchemaAssignment:424"
+        "target": "src/data-layer-installed/schemas/index.ts::editingSchemaAssignment:436"
       }
     },
     {
@@ -5354,7 +5359,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentConditionState:425"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaAssignmentConditionState:437"
       }
     },
     {
@@ -5379,7 +5384,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::pendingReusableSchemaRuleDeletionId:423"
+        "target": "src/data-layer-installed/schemas/index.ts::pendingReusableSchemaRuleDeletionId:435"
       }
     },
     {
@@ -5464,7 +5469,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::SCHEMA_RULE_STORAGE_KEY:105"
+        "target": "src/data-layer-installed/schemas/index.ts::SCHEMA_RULE_STORAGE_KEY:112"
       }
     },
     {
@@ -5489,7 +5494,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::reusableSchemaRules:416"
+        "target": "src/data-layer-installed/schemas/index.ts::reusableSchemaRules:428"
       }
     },
     {
@@ -6585,7 +6590,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::finishSchemaExport:1158"
       }
     },
     {
@@ -6611,7 +6617,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::openStandardSchemaExportReview:1162"
       }
     },
     {
@@ -6624,7 +6631,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::openSchemaExportChoices:1178"
       }
     },
     {
@@ -6677,7 +6685,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::renderSchemas:496"
+        "target": "src/data-layer-installed/schemas/index.ts::renderSchemas:510"
       }
     },
     {
@@ -6691,7 +6699,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::showSchemaSubview:551"
+        "target": "src/data-layer-installed/schemas/index.ts::showSchemaSubview:565"
       }
     },
     {
@@ -6757,7 +6765,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::restoreLocalRulePromotionPresentation:789"
+        "target": "src/data-layer-installed/schemas/index.ts::restoreLocalRulePromotionPresentation:803"
       }
     },
     {
@@ -6771,7 +6779,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::openLocalRulePromotionReview:792"
+        "target": "src/data-layer-installed/schemas/index.ts::openLocalRulePromotionReview:806"
       }
     },
     {
@@ -6785,7 +6793,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::renderSchemaDraft:471"
+        "target": "src/data-layer-installed/schemas/index.ts::renderSchemaDraft:485"
       }
     },
     {
@@ -6890,7 +6898,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::persistSchemaLibrary:445"
+        "target": "src/data-layer-installed/schemas/index.ts::persistSchemaLibrary:459"
       }
     },
     {
@@ -7177,7 +7185,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::persistSchemaEditorDraft:515"
+        "target": "src/data-layer-installed/schemas/index.ts::persistSchemaEditorDraft:529"
       }
     },
     {
@@ -7308,7 +7316,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::openSchemaPropertyCopyReview:619"
+        "target": "src/data-layer-installed/schemas/index.ts::openSchemaPropertyCopyReview:633"
       }
     },
     {
@@ -7322,7 +7330,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::requestSchemaDocumentationRemoval:601"
+        "target": "src/data-layer-installed/schemas/index.ts::requestSchemaDocumentationRemoval:615"
       }
     },
     {
@@ -7336,7 +7344,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::closeSchemaDocumentationRemoval:606"
+        "target": "src/data-layer-installed/schemas/index.ts::closeSchemaDocumentationRemoval:620"
       }
     },
     {
@@ -7363,7 +7371,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::applySchemaPropertyRemoval:560"
+        "target": "src/data-layer-installed/schemas/index.ts::applySchemaPropertyRemoval:574"
       }
     },
     {
@@ -7377,7 +7385,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::requestSchemaPropertyRemoval:574"
+        "target": "src/data-layer-installed/schemas/index.ts::requestSchemaPropertyRemoval:588"
       }
     },
     {
@@ -7391,7 +7399,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::closeSchemaPropertyRemovalDialog:583"
+        "target": "src/data-layer-installed/schemas/index.ts::closeSchemaPropertyRemovalDialog:597"
       }
     },
     {
@@ -7405,7 +7413,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaParentDocuments:664"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaParentDocuments:678"
       }
     },
     {
@@ -7419,7 +7427,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::manualPropertyDefinition:671"
+        "target": "src/data-layer-installed/schemas/index.ts::manualPropertyDefinition:685"
       }
     },
     {
@@ -7433,7 +7441,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::renderManualPropertyForm:679"
+        "target": "src/data-layer-installed/schemas/index.ts::renderManualPropertyForm:693"
       }
     },
     {
@@ -7447,7 +7455,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::closeManualPropertyForm:701"
+        "target": "src/data-layer-installed/schemas/index.ts::closeManualPropertyForm:715"
       }
     },
     {
@@ -7474,7 +7482,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::openManualPropertyForm:703"
+        "target": "src/data-layer-installed/schemas/index.ts::openManualPropertyForm:717"
       }
     },
     {
@@ -7670,7 +7678,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::persistPublishedGuidedValidation:823"
+        "target": "src/data-layer-installed/schemas/index.ts::persistPublishedGuidedValidation:837"
       }
     },
     {
@@ -7788,7 +7796,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::closeSchemaPropertyRulePicker:740"
+        "target": "src/data-layer-installed/schemas/index.ts::closeSchemaPropertyRulePicker:754"
       }
     },
     {
@@ -7919,7 +7927,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::renderSchemaPropertyRulePicker:721"
+        "target": "src/data-layer-installed/schemas/index.ts::renderSchemaPropertyRulePicker:735"
       }
     },
     {
@@ -7933,7 +7941,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::openSchemaPropertyRulePicker:727"
+        "target": "src/data-layer-installed/schemas/index.ts::openSchemaPropertyRulePicker:741"
       }
     },
     {
@@ -7947,7 +7955,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::closeSpecificIndexDialog:661"
+        "target": "src/data-layer-installed/schemas/index.ts::closeSpecificIndexDialog:675"
       }
     },
     {
@@ -8039,7 +8047,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::assignmentConditionCapturedValue:852"
+        "target": "src/data-layer-installed/schemas/index.ts::assignmentConditionCapturedValue:866"
       }
     },
     {
@@ -8053,7 +8061,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::assignmentConditionEditorState:855"
+        "target": "src/data-layer-installed/schemas/index.ts::assignmentConditionEditorState:869"
       }
     },
     {
@@ -8067,7 +8075,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::renderSchemaAssignmentConditionEditor:860"
+        "target": "src/data-layer-installed/schemas/index.ts::renderSchemaAssignmentConditionEditor:874"
       }
     },
     {
@@ -9291,11 +9299,12 @@
       "frozen": {
         "expression": "confirm.addEventListener",
         "line": 2256,
-        "column": 3,
-        "invocation": "confirm.addEventListener(\"click\", () => {\n    if (!pendingStandardSchemaExport) return;\n    if (pendingStandardSchemaExport.scope === \"library\") {\n      const bundle = exportJsonSchemaBundle(schemas); downloadSchemaJson(bundle.document, bundle.filename);\n      finishSchemaExport(`Exported JSON Schema Draft 2020-12 bundle · ${bundle.resourceIds.length} schemas · ${omittedRuleStatus(bundle.compatibility.omitted.length)}.`);\n    } else if (pendingStandardSchemaExport.schema) {\n      const exported = exportJsonSchemaResource(pendingStandardSchemaExport.schema, schemas); downloadSchemaJson(exported.document, exported.filename);\n      finishSchemaExport(`Exported JSON Schema Draft 2020-12 · ${pendingStandardSchemaExport.schema.name} revision ${pendingStandardSchemaExport.schema.version} · ${omittedRuleStatus(exported.compatibility.omitted.length)}.`);\n    }\n  })"
+        "column": 3
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::confirm.addEventListener:1170",
+        "reviewed": true
       }
     },
     {
@@ -9304,11 +9313,12 @@
       "frozen": {
         "expression": "cancel.addEventListener",
         "line": 2266,
-        "column": 3,
-        "invocation": "cancel.addEventListener(\"click\", () => { schemaExportReview.close(); pendingStandardSchemaExport = undefined; schemaExportTrigger?.focus({ preventScroll:true }); })"
+        "column": 3
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::cancel.addEventListener:1175",
+        "reviewed": true
       }
     },
     {
@@ -9317,11 +9327,12 @@
       "frozen": {
         "expression": "extension.addEventListener",
         "line": 2278,
-        "column": 3,
-        "invocation": "extension.addEventListener(\"click\", () => {\n    if (schema) {\n      const archive = createExtensionSchemaPackage(schema, schemas, reusableSchemaRules); downloadSchemaJson(archive, `${schema.name.toLowerCase().replace(/[^a-z0-9]+/g, \"-\")}-extension-package-v1.json`);\n      finishSchemaExport(`Exported Extension schema package · ${schema.name} revision ${schema.version}.`);\n    } else {\n      const archive = createSchemaLibraryExport(schemas, reusableSchemaRules); downloadSchemaJson(archive, \"schema-library-v1.json\");\n      finishSchemaExport(`Exported Extension backup · ${archive.schemas.length} schemas and ${archive.rules.length} rules.`);\n    }\n  })"
+        "column": 3
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::extension.addEventListener:1183",
+        "reviewed": true
       }
     },
     {
@@ -9330,11 +9341,12 @@
       "frozen": {
         "expression": "standard.addEventListener",
         "line": 2287,
-        "column": 3,
-        "invocation": "standard.addEventListener(\"click\", () => { schemaExportChoices.close(); openStandardSchemaExportReview(schema ? \"schema\" : \"library\", schema); })"
+        "column": 3
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::standard.addEventListener:1188",
+        "reviewed": true
       }
     },
     {
@@ -9343,11 +9355,12 @@
       "frozen": {
         "expression": "cancel.addEventListener",
         "line": 2288,
-        "column": 107,
-        "invocation": "cancel.addEventListener(\"click\", () => { schemaExportChoices.close(); schemaExportTrigger?.focus({ preventScroll:true }); })"
+        "column": 107
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::cancel.addEventListener:1189",
+        "reviewed": true
       }
     },
     {
@@ -10767,7 +10780,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyRulePicker?.addEventListener:1188",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyRulePicker?.addEventListener:1237",
         "reviewed": true
       }
     },
@@ -10781,7 +10794,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyRulePicker?.addEventListener:1189",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyRulePicker?.addEventListener:1238",
         "reviewed": true
       }
     },
@@ -10957,7 +10970,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::edit.addEventListener:908",
+        "target": "src/data-layer-installed/schemas/index.ts::edit.addEventListener:922",
         "reviewed": true
       }
     },
@@ -10971,7 +10984,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::duplicate.addEventListener:909",
+        "target": "src/data-layer-installed/schemas/index.ts::duplicate.addEventListener:923",
         "reviewed": true
       }
     },
@@ -10985,7 +10998,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::disable.addEventListener:912",
+        "target": "src/data-layer-installed/schemas/index.ts::disable.addEventListener:926",
         "reviewed": true
       }
     },
@@ -10999,7 +11012,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::remove.addEventListener:914",
+        "target": "src/data-layer-installed/schemas/index.ts::remove.addEventListener:928",
         "reviewed": true
       }
     },
@@ -12140,11 +12153,12 @@
       "frozen": {
         "expression": "exportSchemaButton?.addEventListener",
         "line": 5971,
-        "column": 1,
-        "invocation": "exportSchemaButton?.addEventListener(\"click\", () => openSchemaExportChoices(exportSchemaButton))"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::exportSchemaButton?.addEventListener",
+        "reviewed": true
       }
     },
     {

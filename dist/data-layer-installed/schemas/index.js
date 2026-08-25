@@ -1,4 +1,4 @@
-import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, importSchema, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaPropertyRows, schemaPropertyCopySource, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentDraftAfterGuidedSave, assignmentConditionSuggestions, assignmentDataConditionSummary, contextualManualPropertyDefinition, createRuleConfiguration, duplicateSchemaAssignment, guidedAttachedRule, guidedPropertyDocument, manualPropertyPreview, mergeGuidedDocument, restoreSchemaLibrary, searchSchemas, serializeSchemaLibrary, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateAssignmentDataConditions, validateEvent, } from "../../utilities/data-layer/schemas.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, inspectJsonSchemaExport, importSchema, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaPropertyRows, schemaPropertyCopySource, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentDraftAfterGuidedSave, assignmentConditionSuggestions, assignmentDataConditionSummary, contextualManualPropertyDefinition, createRuleConfiguration, createExtensionSchemaPackage, createSchemaLibraryExport, duplicateSchemaAssignment, guidedAttachedRule, guidedPropertyDocument, manualPropertyPreview, mergeGuidedDocument, restoreSchemaLibrary, searchSchemas, serializeSchemaLibrary, exportJsonSchemaBundle, exportJsonSchemaResource, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateAssignmentDataConditions, validateEvent, } from "../../utilities/data-layer/schemas.js";
 import { applySchemaPropertyCopy, planSchemaPropertyCopy } from "../../data-layer-schema-property-copy.js";
 import { persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, } from "../../data-layer-local-rule-promotion.js";
 import { publishReusableRuleSync, reviewReusableRuleSync, } from "../../data-layer-reusable-rule-sync.js";
@@ -155,6 +155,9 @@ export function createSchemasInstalledController(ports) {
     const schemaDeleteReviewSummary = ownedElement("#schema-delete-review-summary", "output");
     const confirmSchemaDeleteButton = ownedElement("#confirm-schema-delete", "button");
     const cancelSchemaDeleteButton = ownedElement("#cancel-schema-delete", "button");
+    const exportSchemaButton = ports.root.querySelector("#export-schema");
+    const schemaExportChoices = ownedElement("#schema-export-choices", "dialog");
+    const schemaExportReview = ownedElement("#schema-export-compatibility-review", "dialog");
     if (schemaPropertyViewControls && !schemaPropertyViewControls.isConnected) {
         schemaPropertyViewControls.id = "schema-property-view-controls";
         if (schemaPropertyFilterLabel) {
@@ -421,6 +424,14 @@ export function createSchemasInstalledController(ports) {
         schemaImportReview.append(appendSchemaLibraryButton);
     }
     installRuleReviewDialog(schemaDeleteReview, "schema-delete-review", "Delete schema", schemaDeleteReviewSummary, confirmSchemaDeleteButton, cancelSchemaDeleteButton);
+    if (schemaExportChoices && !schemaExportChoices.isConnected) {
+        schemaExportChoices.id = "schema-export-choices";
+        schemaOwnerDocument?.body.append(schemaExportChoices);
+    }
+    if (schemaExportReview && !schemaExportReview.isConnected) {
+        schemaExportReview.id = "schema-export-compatibility-review";
+        schemaOwnerDocument?.body.append(schemaExportReview);
+    }
     if (schemaAssignmentDataConditions && !schemaAssignmentDataConditions.isConnected) {
         schemaAssignmentDataConditions.id = "schema-assignment-data-conditions";
         schemaAssignmentDataConditions.setAttribute("aria-label", "Data layer conditions");
@@ -471,6 +482,8 @@ export function createSchemasInstalledController(ports) {
     let pendingLocalRulePromotionPersistence;
     let pendingGuidedValidationPersistence;
     let persistenceGeneration = 0;
+    let schemaExportTrigger;
+    let pendingStandardSchemaExport;
     const activeIndex = () => schemas.findIndex(({ id }) => id === activeSchemaId);
     const active = () => {
         const schema = schemas[activeIndex()];
@@ -1621,6 +1634,82 @@ export function createSchemasInstalledController(ports) {
             schemaResult.textContent = `Deleted ${schema.name}.`;
     };
     const cancelSchemaDeletion = () => { pendingSchemaDeletion = undefined; schemaDeleteReview?.close(); };
+    function finishSchemaExport(status) {
+        if (schemaResult)
+            schemaResult.textContent = status;
+        schemaExportReview?.close();
+        schemaExportChoices?.close();
+        pendingStandardSchemaExport = undefined;
+        schemaExportTrigger?.focus();
+        schemaExportTrigger = undefined;
+    }
+    function openStandardSchemaExportReview(scope, schema) {
+        const review = schema ? inspectJsonSchemaExport(schema, schemas) : exportJsonSchemaBundle(schemas).compatibility;
+        pendingStandardSchemaExport = { scope, ...(schema ? { schema } : {}), review };
+        if (!schemaExportReview?.ownerDocument)
+            return;
+        const summary = schemaExportReview.ownerDocument.createElement("p");
+        summary.textContent =
+            `${scope === "library" ? `${schemas.length} schema resources` : `${schema?.name} revision ${schema?.version}`} · ${review.conversions.length} conversions · ${review.omitted.length} omitted rules`;
+        const confirm = schemaExportReview.ownerDocument.createElement("button");
+        confirm.type = "button";
+        confirm.textContent = "Confirm standard export";
+        const cancel = schemaExportReview.ownerDocument.createElement("button");
+        cancel.type = "button";
+        cancel.textContent = "Cancel";
+        confirm.addEventListener("click", () => {
+            const pending = pendingStandardSchemaExport;
+            if (!pending)
+                return;
+            if (pending.scope === "library") {
+                const exported = exportJsonSchemaBundle(schemas);
+                ports.downloadSchema(exported.document, exported.filename);
+                finishSchemaExport(`Exported JSON Schema bundle with ${exported.resourceIds.length} schemas.`);
+            }
+            else if (pending.schema) {
+                const exported = exportJsonSchemaResource(pending.schema, schemas);
+                ports.downloadSchema(exported.document, exported.filename);
+                finishSchemaExport(`Exported ${pending.schema.name} revision ${pending.schema.version}.`);
+            }
+        });
+        cancel.addEventListener("click", () => { pendingStandardSchemaExport = undefined; schemaExportReview.close(); schemaExportTrigger?.focus(); });
+        schemaExportReview.replaceChildren(summary, confirm, cancel);
+        schemaExportReview.showModal();
+        confirm.focus();
+    }
+    function openSchemaExportChoices(trigger, schema) {
+        schemaExportTrigger = trigger;
+        if (!schemaExportChoices?.ownerDocument)
+            return;
+        const extension = schemaExportChoices.ownerDocument.createElement("button");
+        extension.type = "button";
+        extension.textContent = "Extension backup";
+        const standard = schemaExportChoices.ownerDocument.createElement("button");
+        standard.type = "button";
+        standard.textContent = "JSON Schema Draft 2020-12";
+        const cancel = schemaExportChoices.ownerDocument.createElement("button");
+        cancel.type = "button";
+        cancel.textContent = "Cancel";
+        extension.addEventListener("click", () => {
+            if (schema) {
+                const archive = createExtensionSchemaPackage(schema, schemas, reusableSchemaRules);
+                ports.downloadSchema(archive, `${schema.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-extension-package-v1.json`);
+                finishSchemaExport(`Exported Extension schema package for ${schema.name}.`);
+            }
+            else {
+                const archive = createSchemaLibraryExport(schemas, reusableSchemaRules);
+                ports.downloadSchema(archive, "schema-library-v1.json");
+                finishSchemaExport(`Exported Extension backup with ${archive.schemas.length} schemas and ${archive.rules.length} rules.`);
+            }
+        });
+        standard.addEventListener("click", () => { schemaExportChoices.close(); openStandardSchemaExportReview(schema ? "schema" : "library", schema); });
+        cancel.addEventListener("click", () => { schemaExportChoices.close(); schemaExportTrigger?.focus(); schemaExportTrigger = undefined; });
+        schemaExportChoices.replaceChildren(extension, standard, cancel);
+        schemaExportChoices.showModal();
+        extension.focus();
+    }
+    const requestSchemaLibraryExport = () => { if (exportSchemaButton)
+        openSchemaExportChoices(exportSchemaButton); };
     return {
         mount() {
             if (mounted)
@@ -1693,6 +1782,7 @@ export function createSchemasInstalledController(ports) {
             cancelSchemaImportButton?.addEventListener("click", cancelSchemaLibraryImport);
             confirmSchemaDeleteButton?.addEventListener("click", confirmSchemaDeletion);
             cancelSchemaDeleteButton?.addEventListener("click", cancelSchemaDeletion);
+            exportSchemaButton?.addEventListener("click", requestSchemaLibraryExport);
             unsubscribe = ports.subscribe(renderSchemas);
             unsubscribeSchemaPersistence = ports.subscribeSchemaPersistence(settleSchemaPersistence);
             renderSchemas();
@@ -1768,6 +1858,7 @@ export function createSchemasInstalledController(ports) {
             cancelSchemaImportButton?.removeEventListener("click", cancelSchemaLibraryImport);
             confirmSchemaDeleteButton?.removeEventListener("click", confirmSchemaDeletion);
             cancelSchemaDeleteButton?.removeEventListener("click", cancelSchemaDeletion);
+            exportSchemaButton?.removeEventListener("click", requestSchemaLibraryExport);
             pendingSchemaPropertyRemoval = undefined;
             pendingSchemaDocumentationRemoval = undefined;
             lastSchemaPropertyRemoval = undefined;
@@ -1789,6 +1880,12 @@ export function createSchemasInstalledController(ports) {
             schemaAssignmentConditionState = { target: "payload", suggestions: [] };
             pendingSchemaImport = undefined;
             pendingSchemaDeletion = undefined;
+            pendingStandardSchemaExport = undefined;
+            schemaExportTrigger = undefined;
+            schemaExportChoices?.close();
+            schemaExportReview?.close();
+            schemaExportChoices?.replaceChildren();
+            schemaExportReview?.replaceChildren();
             const disposed = new Error("Schemas controller disposed before durable persistence settled");
             pendingLocalRulePromotionPersistence?.reject(disposed);
             pendingGuidedValidationPersistence?.reject(disposed);
@@ -1839,6 +1936,15 @@ export function createSchemasInstalledController(ports) {
         editAssignment: editSchemaAssignment,
         reviewLibraryImport: reviewSchemaLibraryImport,
         requestDeletion: requestSchemaDeletion,
+        openExportChoices: (schemaId) => {
+            if (!exportSchemaButton)
+                return false;
+            const schema = schemaId ? schemas.find(({ id }) => id === schemaId) : undefined;
+            if (schemaId && !schema)
+                return false;
+            openSchemaExportChoices(exportSchemaButton, schema);
+            return true;
+        },
         requestLocalRulePromotion: openLocalRulePromotionReview,
         persistGuidedValidation: persistPublishedGuidedValidation,
         rulePickerState: () => ({ path: schemaRulePickerPath, renderSequence: schemaPropertyRenderSequence,
