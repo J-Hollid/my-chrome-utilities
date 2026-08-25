@@ -1,4 +1,4 @@
-import { DEFECT_LIBRARY_STORAGE_KEY, addDefect, cancelDefectDeletion, confirmDefectDeletion, editDefect, eventContainsDefectIssue, eventMatchesOccurrenceDefect, findDefectLibraryElements, renderDefectLibrary, requestDefectDeletion, restoreDefectLibrary, searchDefects, serializeDefectLibrary, presentedEventTriage, updateDefectStatus, } from "../../utilities/data-layer/defect-reporting.js";
+import { DEFECT_LIBRARY_STORAGE_KEY, addDefect, cancelDefectDeletion, confirmDefectDeletion, editDefect, eventContainsDefectIssue, eventMatchesOccurrenceDefect, findDefectLibraryElements, renderDefectLibrary, requestDefectDeletion, restoreDefectLibrary, searchDefects, serializeDefectLibrary, presentedEventTriage, missingEventVisits, createMissingEventDefect, updateDefectStatus, } from "../../utilities/data-layer/defect-reporting.js";
 export function createDefectsInstalledController(ports) {
     const defectLibraryElements = findDefectLibraryElements(ports.root);
     const defectLibrarySearch = ports.root.querySelector("#defect-library-search");
@@ -12,6 +12,7 @@ export function createDefectsInstalledController(ports) {
     let defectReturn;
     let defectListScrollTop = 0;
     let mounted = false;
+    let missingEventBuilderController;
     const now = ports.now ?? (() => new Date().toISOString());
     const persistDefectLibrary = () => {
         ports.storage.setItem(DEFECT_LIBRARY_STORAGE_KEY, serializeDefectLibrary(defectLibrary));
@@ -60,6 +61,25 @@ export function createDefectsInstalledController(ports) {
     };
     const triagedEvent = (candidate) => ({ ...candidate,
         defectTriage: presentedEventTriage(candidate, defectLibrary) });
+    function currentMissingEventVisits() {
+        const context = ports.missingEventContext(), visits = missingEventVisits(context.events, context.pageUrl, Boolean(context.archived));
+        return context.archived ? visits.map((visit) => ({ ...visit, startedAt: context.archived.startedAt,
+            ...(context.archived.endedAt ? { endedAt: context.archived.endedAt } : {}), immutable: true })) : visits;
+    }
+    function openMissingEventBuilder(entryPoint, initialSchemaId) {
+        missingEventBuilderController?.close();
+        missingEventBuilderController = ports.mountMissingEventBuilder({ entryPoint, ...(initialSchemaId ? { initialSchemaId } : {}),
+            visits: currentMissingEventVisits(), save: (report) => {
+                const defect = createMissingEventDefect({ id: `defect:${now()}`, now: now(), report });
+                const result = addDefect(defectLibrary, defect);
+                if (result.added) {
+                    defectLibrary = result.library;
+                    persistDefectLibrary();
+                    renderDefects();
+                    ports.renderLive();
+                }
+            } });
+    }
     const recopyDefect = async (id) => {
         const defect = defectLibrary.defects.find((candidate) => candidate.id === id);
         return defect ? ports.recopy(defect) : "Defect unavailable";
@@ -104,6 +124,8 @@ export function createDefectsInstalledController(ports) {
             renderDefects();
         },
         dispose() {
+            missingEventBuilderController?.close();
+            missingEventBuilderController = undefined;
             if (!mounted)
                 return;
             mounted = false;
@@ -131,6 +153,8 @@ export function createDefectsInstalledController(ports) {
         open: openDefect, close: closeDefect, render: renderDefects, triage: triagedEvent,
         matchingEvent: matchingEventForDefect,
         selectedId: () => selectedDefectId,
+        currentMissingEventVisits,
+        openMissingEventBuilder,
     };
 }
 export const installedControllerDefinition = Object.freeze({

@@ -81,3 +81,16 @@ invalidSelectors.get("#export-legacy-migration-sources").click();
 assert.equal(invalidDownloads[0][0], "invalid-legacy-migration-sources.json");
 assert.equal(invalidDownloads[0][1].sources[1].error, "bad JSON");
 invalidController.dispose();
+
+let saveFailureListener, saveFailureUnsubscribed = 0, handledFailure;
+const failureController = createDurableProjectsInstalledController({ root, startRepository:async()=>()=>{},
+  migration:()=>({ status:"none" }), resolveMigration:async()=>{}, readLegacySource:()=>null,
+  downloadMigrationSources() {}, reload() {}, reviewMigration:async()=>{}, retryFailedSave:async()=>{}, rejectFailedSave:async()=>{}, storageRecoveryClosed() {},
+  subscribeSaveFailed:(listener)=>{ saveFailureListener = listener; return ()=>{ saveFailureUnsubscribed += 1; }; },
+  saveFailed:(error)=>{ handledFailure = error; },
+});
+await failureController.mount(); saveFailureListener(new Error("disk full"));
+assert.equal(handledFailure.message, "disk full", "durable controller owns the save-failure subscription reaction");
+failureController.dispose(); saveFailureListener(new Error("late"));
+assert.equal(handledFailure.message, "disk full", "a save failure after disposal cannot reopen recovery UI");
+assert.equal(saveFailureUnsubscribed, 1);

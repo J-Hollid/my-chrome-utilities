@@ -11,6 +11,7 @@ export function createDurableProjectsInstalledController(ports) {
     let stop;
     let mounting;
     let generation = 0;
+    let stopSaveFailed;
     const storageRecoveryClosed = () => ports.storageRecoveryClosed();
     const migrationChoice = (control) => control === migrateLegacyLibrarySourceButton ? "library" : control === migrateLegacyActiveSourceButton ? "active" : undefined;
     const migrationSourceKey = (choice) => choice === "library"
@@ -97,6 +98,8 @@ export function createDurableProjectsInstalledController(ports) {
             const operation = ++generation;
             phase = "starting";
             durableStorageRecovery?.addEventListener("close", storageRecoveryClosed);
+            stopSaveFailed = ports.subscribeSaveFailed?.((error) => { if (operation === generation && phase !== "idle")
+                ports.saveFailed?.(error); });
             exportLegacyMigrationSourcesButton?.addEventListener("click", exportLegacyMigrationSources);
             for (const control of [migrateLegacyLibrarySourceButton, migrateLegacyActiveSourceButton])
                 control?.addEventListener("click", resolveReviewedMigration);
@@ -117,6 +120,8 @@ export function createDurableProjectsInstalledController(ports) {
         dispose() {
             generation += 1;
             durableStorageRecovery?.removeEventListener("close", storageRecoveryClosed);
+            stopSaveFailed?.();
+            stopSaveFailed = undefined;
             exportLegacyMigrationSourcesButton?.removeEventListener("click", exportLegacyMigrationSources);
             for (const control of [migrateLegacyLibrarySourceButton, migrateLegacyActiveSourceButton])
                 control?.removeEventListener("click", resolveReviewedMigration);

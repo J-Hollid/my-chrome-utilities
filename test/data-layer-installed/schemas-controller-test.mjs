@@ -17,7 +17,7 @@ const controller = createSchemasInstalledController({
   downloadSchema() {},
   relationshipTree:()=>({ projectId:"no-project", nodes:[] }), openProjectLibrary() {}, openContributor() {},
   openContributorInStudio() {}, adoptSavedSchema() {}, renderSchemaSpecification() {}, reportMissingSchemaEvent() {},
-  scheduleFrame:(callback)=>callback(), restoreGuidedCapture() {},
+  scheduleFrame:(callback)=>callback(), restoreGuidedCapture() {}, mountLayeredProfileEditor:() => undefined,
   activeProjectId:()=>undefined, ensureProjectSchemaContributors:async()=>({ name:"" }),
 });
 controller.mount(); controller.open("schema:page"); controller.beginDraft();
@@ -46,7 +46,7 @@ function element() {
     setAttribute(name, value) { this[name] = value; }, removeAttribute(name) { delete this[name]; },
     getAttribute(name) { return this[name] ?? null; }, replaceChildren(...children) { this.children = children; },
     append(...children) { this.children.push(...children); }, prepend(...children) { this.children.unshift(...children); },
-    insertBefore(child) { this.children.push(child); }, before() {}, after() {}, contains() { return false; }, closest() { return null; },
+    insertBefore(child) { this.children.push(child); }, before() {}, after() {}, remove() { this.removed = true; }, contains() { return false; }, closest() { return null; },
     querySelector(selector) { const id = selector.startsWith("#") ? selector.slice(1) : undefined;
       const visit = (children) => children.find((child) => id && child.id === id) ?? children.map((child) => visit(child.children ?? [])).find(Boolean);
       return visit(this.children); },
@@ -125,6 +125,8 @@ let deferHydration = false, releaseHydration;
 let closeSpecification;
 const restoredGuidedCaptures = [];
 let canonicalSettlementMode = "resolve", releaseCanonicalSettlement;
+let layeredProfileMounts = 0, layeredProfileDisposals = 0;
+let liveRevalidations = 0, continuationPreparation, continuationCommit;
 const uiController = createSchemasInstalledController({
   root:{ ownerDocument:fakeDocument, querySelector:(selector) => elements.get(selector) ?? null,
     querySelectorAll:(selector) => selector.includes("role=tab") ? [schemaMasterTab, schemaRulesTab] : [schemaMasterPanel, schemaRulesPanel] },
@@ -154,12 +156,18 @@ const uiController = createSchemasInstalledController({
   },
   reportMissingSchemaEvent:(id) => relationshipActions.push(`missing:${id}`), scheduleFrame:(callback)=>callback(),
   restoreGuidedCapture:(eventId, propertyPath) => restoredGuidedCaptures.push([eventId, propertyPath]),
+  mountLayeredProfileEditor:() => { layeredProfileMounts += 1; return { dispose:() => { layeredProfileDisposals += 1; } }; },
   activeProjectId:()=>"project:one", ensureProjectSchemaContributors:()=>deferHydration
     ? new Promise((resolve)=>{ releaseHydration=resolve; }) : Promise.resolve({ name:"Project One" }),
   settleCanonical:() => canonicalSettlementMode === "reject" ? Promise.reject(new Error("canonical conflict"))
     : canonicalSettlementMode === "defer" ? new Promise((resolve) => { releaseCanonicalSettlement = resolve; }) : Promise.resolve(),
+  revalidateCurrentLive:(currentSchemas) => { liveRevalidations += 1; return currentSchemas.length; },
+  prepareCapturedValidationContinuation:async (record) => { continuationPreparation = record; return { summary:`Continue ${record.eventName}`,
+    destinations:[{ id:"fixture", label:"Event validation Test case" }, { id:"profile", label:"Profile requirements" }],
+    commit:async (destination) => { continuationCommit = destination; } }; },
 });
 uiController.mount();
+assert.equal(layeredProfileMounts, 1, "Schemas mounts the layered Profile editor exactly once");
 await uiController.hydrateActiveProjectForSchemas();
 assert.equal(elements.get("#schema-result").textContent, "Loaded schema contributors for Project One.");
 const initialSavedRow = elements.get("#schema-list").children.find(({ dataset }) => dataset.schemaEntryKey === "saved:schema:page");
@@ -325,6 +333,7 @@ elements.get("#schema-property-rule-picker").children[2].children[0].click();
 assert.ok(elements.get("#schema-property-rule-picker").children[2].children.length > 1, "clearing restores compatible rule choices");
 elements.get("#schema-property-rule-picker").children.at(-1).click();
 uiController.publish();
+assert.ok(liveRevalidations > 0, "schema publication revalidates the current Live view through its typed port");
 elements.get("#create-schema-rule").click();
 elements.get("#schema-rule-name").value = "Checkout required";
 elements.get("#schema-rule-types").value = "string"; elements.get("#schema-rule-operator").value = "required";
@@ -460,6 +469,18 @@ assert.deepEqual(restoredGuidedCaptures.at(-1), [guidedCapture.id, "checkout.ema
 assert.equal(declarationConfirm.listenerCount(), 0, "closing the live declaration disposes its confirm listener");
 const validationRecords = uiController.recheckCaptured([guidedCapture]);
 assert.equal(validationRecords.length, 1); assert.equal(elements.get("#schema-validation-record-list").children.length, 1);
+const continuationTrigger = elements.get("#schema-validation-record-list").children[0].children[0];
+continuationTrigger.click(); await Promise.resolve();
+assert.equal(continuationPreparation.eventId, guidedCapture.id);
+let continuationDialog = elements.get("#guided-validation-flow").children[0];
+continuationDialog.children[3].click();
+assert.ok(continuationTrigger.listenerCount() > 0, "cancelling a continuation keeps its existing row action live");
+continuationTrigger.click(); await Promise.resolve();
+continuationDialog = elements.get("#guided-validation-flow").children[0];
+const continuationDestination = continuationDialog.children[1], continuationConfirm = continuationDialog.children[2];
+continuationDestination.value = "profile"; continuationDestination.dispatch("change"); continuationConfirm.click(); await Promise.resolve();
+assert.equal(continuationCommit, "profile", "captured continuation commits the explicitly selected destination");
+assert.equal(continuationConfirm.listenerCount(), 0, "captured continuation completion disposes its dialog listeners");
 uiController.updateDraft({ attachedRules:[...(persistenceSchema.workingDraft?.attachedRules ?? persistenceSchema.attachedRules ?? []),
   { id:"local:email", name:"Email required", version:1, propertyPath:"/checkout/email", operator:"required", enabled:true }] });
 assert.equal(uiController.requestLocalRulePromotion("/checkout/email", "local:email"), true);
@@ -515,11 +536,83 @@ const projectedCanonical = uiController.canonicalProjection(); projectedCanonica
 assert.equal(await uiController.persistCanonicalProjection(projectedCanonical, "schema name"), true);
 assert.equal(uiController.canonicalProjection().name, "Canonical metadata name", "projection metadata uses the same serialized settlement queue");
 assert.equal(await uiController.resumeCanonicalProjection(), true, "an already-settled canonical projection resumes idempotently");
+let customCanonical = structuredClone(uiController.canonicalDocument()), undoCount = 0, redoCount = 0, contextActionCount = 0, renderedContextCount = 0;
+uiController.openCanonical({ key:"test:canonical-context", label:"Context contract", load:() => customCanonical,
+  dispatch:(command) => { if (command.kind === "rename") return { status:"conflict", document:customCanonical, propertyId:command.propertyId, message:"newer draft" };
+    if (command.kind === "view") customCanonical = { ...customCanonical, view:command.view }; return { status:"applied", document:customCanonical }; },
+  onUndo:() => { undoCount += 1; }, onRedo:() => { redoCount += 1; }, actions:[{ label:"Inspect", run:() => { contextActionCount += 1; } }],
+  renderContext:(host) => { renderedContextCount += 1; host.dataset.customContext = "rendered"; } });
+let canonicalControls = elements.get("#compact-canonical-context").children;
+canonicalControls.find(({ textContent }) => textContent === "Undo").click(); canonicalControls.find(({ textContent }) => textContent === "Redo").click();
+canonicalControls.find(({ textContent }) => textContent === "Inspect").click(); canonicalControls.find(({ textContent }) => textContent === "Table").click();
+await Promise.resolve();
+assert.deepEqual([undoCount, redoCount, contextActionCount, customCanonical.view], [1, 1, 1, "table"],
+  "compact context actions and view controls execute through the adapter contract");
+assert.ok(renderedContextCount > 0); assert.equal(elements.get("#compact-canonical-context").dataset.customContext, "rendered");
+let migrationResolution, migrationCancelled = 0, migrationConfirmed = 0;
+const migrationAdapter = { key:"test:canonical-migration", label:"Migration contract", load:() => customCanonical,
+  dispatch:() => ({ status:"applied", document:customCanonical }), migration:{ summary:"One legacy facet needs review",
+    conflicts:[{ id:"conflict:1", label:"Resolve title type", choices:[{ id:"string", label:"String" }, { id:"number", label:"Number" }] }],
+    resolve:(conflict, choice) => { migrationResolution = [conflict, choice]; }, cancel:() => { migrationCancelled += 1; migrationAdapter.migration = undefined; },
+    confirm:async () => { migrationConfirmed += 1; migrationAdapter.migration = undefined; } } };
+uiController.openCanonical(migrationAdapter);
+let migrationReview = elements.get("#compact-canonical-context").children.find((child) => child["aria-label"] === "Canonical schema migration review");
+const migrationResolutionControl = migrationReview.children[0]; migrationResolutionControl.value = "number"; migrationResolutionControl.dispatch("change");
+assert.deepEqual(migrationResolution, ["conflict:1", "number"], "migration conflict resolution remains controller-owned");
+migrationReview.children.at(-2).click(); assert.equal(migrationCancelled, 1); assert.equal(migrationResolutionControl.listenerCount(), 0);
+migrationAdapter.migration = { summary:"Migration ready", conflicts:[], resolve() {}, cancel() {},
+  confirm:async () => { migrationConfirmed += 1; migrationAdapter.migration = undefined; } };
+uiController.openCanonical(migrationAdapter); migrationReview = elements.get("#compact-canonical-context").children.find((child) => child["aria-label"] === "Canonical schema migration review");
+const migrationConfirm = migrationReview.children.at(-1); migrationConfirm.click(); await Promise.resolve();
+assert.equal(migrationConfirmed, 1); assert.equal(migrationConfirm.listenerCount(), 0, "migration confirmation rerender disposes its controls");
+uiController.openCanonical({ key:"test:canonical-context", label:"Context contract", load:() => customCanonical,
+  dispatch:(command) => { if (command.kind === "rename") return { status:"conflict", document:customCanonical, propertyId:command.propertyId, message:"newer draft" };
+    if (command.kind === "view") customCanonical = { ...customCanonical, view:command.view }; return { status:"applied", document:customCanonical }; } });
+assert.equal(await uiController.dispatchCanonical({ kind:"rename", baseRevision:customCanonical.revision,
+  propertyId:canonicalPropertyId, name:"Conflicting rename" }), false);
+canonicalControls = elements.get("#compact-canonical-context").children;
+const compareControl = canonicalControls.find(({ textContent }) => textContent === "Compare latest property"); compareControl.click();
+assert.equal(compareControl.listenerCount(), 0, "compact context rerender disposes replaced review controls");
+assert.equal(uiController.canonicalState().reviewVisible, true, "Compare exposes the pending command base against the latest revision");
+elements.get("#compact-canonical-context").children.find(({ textContent }) => textContent === "Reject local edit").click();
+assert.equal(uiController.canonicalState().pending, false, "Reject clears the preserved compact canonical command");
+assert.equal(uiController.openSavedCanonical(persistenceSchemaId), true); uiController.openCanonicalPropertyActions(canonicalPropertyId);
+const compactDocumentationControl = elements.get("#compact-canonical-context").children.find(({ textContent }) => textContent === "Save documentation");
+assert.ok(compactDocumentationControl?.listenerCount() > 0, "compact property actions are live disposable controls");
+assert.equal(await uiController.compactPropertyAction(canonicalPropertyId, "documentation", "Checkout property"), true);
+assert.equal(compactDocumentationControl.listenerCount(), 0, "canonical property rerender disposes the replaced action controls");
+assert.equal(uiController.canonicalDocument().nodes[canonicalPropertyId].documentation.description, "Checkout property");
+assert.equal(await uiController.compactPropertyAction(canonicalPropertyId, "presence", "required"), true);
+assert.equal(uiController.canonicalDocument().nodes[canonicalPropertyId].presence.mode, "required");
+assert.equal(await uiController.compactPropertyAction(canonicalPropertyId, "custom-example", "sample"), true);
+assert.deepEqual(uiController.canonicalDocument().nodes[canonicalPropertyId].documentation.example, { method:"custom", value:"sample" });
+assert.equal(await uiController.compactPropertyAction(canonicalPropertyId, "expected", "expected"), true);
+assert.equal(await uiController.compactPropertyAction(canonicalPropertyId, "reset-expected"), true);
+assert.equal(uiController.canonicalDocument().nodes[canonicalPropertyId].expectedValue, undefined);
 assert.deepEqual(uiController.storePromotionRules([{ id:"rule:history", name:"Current", kind:"Required", version:2, enabled:true,
   revisionHistory:[{ id:"rule:history", name:"Previous", kind:"Required", version:1, enabled:false }] }])[0].revisionHistory,
   [{ name:"Previous", kind:"Required", version:1, enabled:false }], "promotion persistence normalizes historical rule snapshots");
+const expansionSchema = { id:"schema:expansion", name:"Expansion", version:2, published:true,
+  document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[],
+  attachedRules:[{ id:"rule:allowed", name:"Known types", version:1, propertyPath:"/page_type", operator:"allowed-values", parameters:"product,content" }],
+  workingDraft:{ baseVersion:2, sourceVersion:2, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[],
+    attachedRules:[{ id:"rule:allowed", name:"Known types", version:1, propertyPath:"/page_type", operator:"allowed-values", parameters:"product,content" }], pendingChanges:[] } };
+uiController.add(expansionSchema);
+const expansionEvidence = { propertyPath:"/page_type", status:"warning", message:"Choose a known type", expected:"product,content", actual:"checkout",
+  actualValue:"checkout", rule:"Known types", ruleId:"rule:allowed", ruleVersion:1, operator:"allowed-values", severity:"warning",
+  schemaId:expansionSchema.id, schemaName:expansionSchema.name, schemaVersion:2 };
+const expansionTrigger = element();
+assert.equal(uiController.openAllowedValueExpansionReview(guidedCapture.id, expansionSchema.id, expansionEvidence, expansionTrigger), true);
+let expansionConfirm = elements.get("#guided-validation-flow").children[0].children[4]; expansionConfirm.click();
+assert.deepEqual(uiController.schemas().find(({ id }) => id === expansionSchema.id).workingDraft.attachedRules[0].allowedValues,
+  ["product", "content", "checkout"], "allowed-value expansion persists the exact observed scalar in the Schema-owned working draft");
+assert.deepEqual(restoredGuidedCaptures.at(-1), [guidedCapture.id, "/page_type"], "allowed-value completion returns through the Capture port");
+assert.equal(expansionConfirm.listenerCount(), 0, "allowed-value confirmation disposes its dialog listeners symmetrically");
+uiController.openAllowedValueExpansionReview(guidedCapture.id, expansionSchema.id, expansionEvidence, expansionTrigger);
+expansionConfirm = elements.get("#guided-validation-flow").children[0].children[4];
 const disposedCompletion = uiController.persistGuidedValidation(guidedResult("rule:guided-dispose", "checkout.postcode"));
 const disposedRejection = disposedCompletion.then(() => undefined, (error) => error);
+assert.equal(uiController.openSavedCanonical(persistenceSchemaId), true);
 canonicalSettlementMode = "defer"; const beforeDisposeCanonical = uiController.canonicalDocument();
 const staleCanonicalSettlement = uiController.dispatchCanonical({ kind:"rename", baseRevision:beforeDisposeCanonical.revision,
   propertyId:canonicalPropertyId, name:"Settles after disposal" });
@@ -532,6 +625,8 @@ assert.notEqual(elements.get("#schema-result").textContent, "Loaded schema contr
   "a durable hydration settling after disposal cannot render stale project state");
 assert.match(String(await disposedRejection), /disposed before durable persistence settled/);
 assert.equal(persistenceListener, undefined, "disposal detaches the durable persistence port");
+assert.equal(layeredProfileDisposals, 1, "Schemas disposes the layered Profile editor with its owner lifecycle");
 assert.equal(guidedChoice.listenerCount(), 0, "disposal removes the guided continuation choice listener");
+assert.equal(expansionConfirm.listenerCount(), 0, "disposal removes the open allowed-value dialog listeners");
 assert.equal([...elements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
   "Schemas removes every editor and revision listener it owns");

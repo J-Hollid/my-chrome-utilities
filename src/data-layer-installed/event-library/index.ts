@@ -41,6 +41,9 @@ export interface EventLibraryInstalledPorts {
   changed(): void;
   createSchema?(template: EditableEventTemplate): void;
   createTestCase?(template: EditableEventTemplate): void;
+  appendInspectorAction?(label:string, activate:() => void):() => void;
+  openLibrary?():void;
+  announce?(message:string):void;
   createId?(): string;
   downloadExport(exported: ReturnType<typeof eventLibraryExport>): void;
   readImportFile(): Promise<string>;
@@ -135,6 +138,8 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
   let savedInspectorTemplateId: string | undefined;
   let pushPathReadiness:{ key:string; status:"checking" | "ready" | "blocked"; message:string } | undefined;
   let pushPathReadinessRequest = 0;
+  let inspectorActionDispose:(() => void) | undefined;
+  let testCaseReviewRequest = 0;
   const createId = ports.createId ?? (() => `template:${crypto.randomUUID()}`);
   const persistEventTemplateLibrary = (): void => {
     ports.storage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
@@ -283,6 +288,24 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
     if (!pendingEventLibraryDeletion.id || propertyEditorState?.template.id === pendingEventLibraryDeletion.id) closeEditor();
     pendingEventLibraryDeletion = undefined; eventLibraryDeleteReview?.close(); renderEventLibraryTransfer(); persistEventTemplateLibrary();
   };
+  function appendOpenInLibraryAction(eventId:string, templateName:string):void {
+    inspectorActionDispose?.(); inspectorActionDispose = undefined;
+    const activate = ():void => {
+      if (!mounted) return;
+      const template = eventTemplates.find(({ id }) => id === savedInspectorTemplateId)
+        ?? eventTemplates.find(({ originatingEventId }) => originatingEventId === eventId);
+      if (!template) return;
+      ports.openLibrary?.(); openTemplateEditor(template.id); renderEventTemplateLibrary();
+    };
+    inspectorActionDispose = ports.appendInspectorAction?.("Open in Library", activate);
+    ports.announce?.(`Saved ${templateName} to Library. Open in Library is available.`);
+  }
+  async function reviewEventTemplateTestCaseCreation(template:EditableEventTemplate):Promise<void> {
+    if (!ports.createTestCase || !mounted) return;
+    const request = ++testCaseReviewRequest;
+    await Promise.resolve(ports.createTestCase(structuredClone(template)));
+    if (!mounted || request !== testCaseReviewRequest) return;
+  }
   const renderEventTemplateLibrary = (): void => {
     if (!mounted) return;
     const visible = searchEventTemplates(eventTemplates, eventTemplateSearch?.value ?? "");
@@ -298,7 +321,7 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
       push:pushLibraryTemplate,
       delete:(template) => requestEventTemplateDeletion(template.id),
       ...(ports.createSchema ? { createSchema:ports.createSchema } : {}),
-      ...(ports.createTestCase ? { createTestCase:ports.createTestCase } : {}),
+      ...(ports.createTestCase ? { createTestCase:reviewEventTemplateTestCaseCreation } : {}),
     });
   };
   function refreshPushPathReadiness():void {
@@ -455,6 +478,7 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
       saveAndCloseTemplateButton?.removeEventListener("click", saveAndCloseTemplate);
       discardAndCloseTemplateButton?.removeEventListener("click", discardAndCloseTemplate);
       closeEditor(); pendingEventLibraryImport = undefined; pendingEventLibraryDeletion = undefined; replaceEventLibraryArmed = false;
+      inspectorActionDispose?.(); inspectorActionDispose = undefined; testCaseReviewRequest += 1;
       pushPathReadiness = undefined; pushPathReadinessRequest += 1;
       pendingPushDraftReview = undefined; pendingRevisionChangeReview = undefined;
       hideDialog(pushDraftReview); hideDialog(revisionChangeReview);
@@ -496,6 +520,8 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
     confirmDelete:commitEventLibraryDeletion,
     cancelDelete:cancelEventLibraryDelete,
     async pushSelected(): Promise<void> { if (!selectedId) throw new Error("Select a template before pushing"); await pushPayloadToSelectedTargetPage(find(selectedId)); },
+    appendOpenInLibraryAction,
+    reviewEventTemplateTestCaseCreation,
     export:() => eventLibraryExport(eventTemplates),
     templates:(): readonly EditableEventTemplate[] => structuredClone(eventTemplates),
     state:(): EventLibraryInstalledState => structuredClone({ ...(selectedId ? { selectedId } : {}),

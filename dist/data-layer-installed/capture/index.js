@@ -200,15 +200,25 @@ export function createCaptureInstalledController(ports) {
     const navigateObservationTargetSearch = (event) => handleObservationTargetSearchKeydown(observationTargetElements, event);
     const navigateObservationTargetList = (event) => handleObservationTargetListKeydown(observationTargetElements, event);
     const navigateObservationTargetDialog = (event) => handleObservationTargetDialogKeydown(observationTargetElements, event);
+    const liveTargetPermissionRecoveryCoordinator = {
+        async requestAccess(target) {
+            const granted = await ports.observation.requestOriginAccess(target.origin);
+            if (!mounted)
+                return false;
+            observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, granted ? "Ready" : "Permission required");
+            renderObservationTargetPicker();
+            renderObservationTargetContext();
+            return granted;
+        },
+    };
     async function requestSelectedTargetAccess(target) {
-        const granted = await ports.observation.requestOriginAccess(target.origin);
+        const granted = await liveTargetPermissionRecoveryCoordinator.requestAccess(target);
         if (!mounted)
             return;
         if (!granted) {
             setObservationTargetResult("Permission required");
             return;
         }
-        observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Ready");
         setObservationTargetResult(`Access granted for ${target.origin}`);
         renderObservationTargetPicker();
     }
@@ -604,7 +614,7 @@ export function createCaptureInstalledController(ports) {
     }
     const backToEvents = () => closeInspectorAndReturnToEvents();
     function copyLivePageUrl() { ports.ui.copyPageUrl(); }
-    const openMissingEventBuilder = () => ports.ui.reportMissingEvent();
+    const requestMissingEventBuilder = () => ports.ui.reportMissingEvent();
     function currentSessionSaveDraft() {
         const now = ports.savedSessions.now();
         const flowTests = ports.savedSessions.flowTests?.();
@@ -863,6 +873,14 @@ export function createCaptureInstalledController(ports) {
     function updateSessionFromObserverState() { syncCapturedEventsToLive(); }
     function persistAndRenderSessionState() { persistSession(dataLayerSessionState, ports.storage); renderSessionState(); publish(); }
     function persistAndRenderObservationState() { persistAndRenderSessionState(); renderObserverState(); }
+    async function applyLiveTargetPathObservation(observation) {
+        dataLayerObserverState = restartHistoryObservation(dataLayerSessionState, dataLayerObserverState, observation);
+        updateSessionFromObserverState();
+        await startLiveHistoryCapture(observation);
+        if (!mounted)
+            return;
+        persistAndRenderObservationState();
+    }
     function restartLiveHistoryCaptureIfActive(observation) {
         if (dataLayerSessionState.session?.status === "active")
             startLiveHistoryCapture(observation).catch(() => { });
@@ -897,12 +915,9 @@ export function createCaptureInstalledController(ports) {
                 setObservationTargetResult("Permission required — Request access");
             }
             else {
-                dataLayerObserverState = restartHistoryObservation(dataLayerSessionState, dataLayerObserverState, observation);
-                updateSessionFromObserverState();
-                await startLiveHistoryCapture(observation);
+                await applyLiveTargetPathObservation(observation);
                 if (!mounted || generation !== attachedTargetRecoveryGeneration)
                     return;
-                persistAndRenderObservationState();
                 setObservationTargetResult(`Recovered ${target.title}`);
             }
         }
@@ -1115,7 +1130,7 @@ export function createCaptureInstalledController(ports) {
             copyPageUrlButton?.addEventListener("click", copyLivePageUrl);
             saveLiveSessionButton?.addEventListener("click", requestSessionSave);
             startFreshSessionButton?.addEventListener("click", requestFreshSession);
-            reportMissingEventButton?.addEventListener("click", openMissingEventBuilder);
+            reportMissingEventButton?.addEventListener("click", requestMissingEventBuilder);
             saveLiveSessionName?.addEventListener("input", updateSaveConfirmation);
             saveLiveSessionForm?.addEventListener("submit", confirmSessionSaveSubmission);
             cancelSaveLiveSessionButton?.addEventListener("click", closeSaveLiveSessionDialog);
@@ -1174,7 +1189,7 @@ export function createCaptureInstalledController(ports) {
             copyPageUrlButton?.removeEventListener("click", copyLivePageUrl);
             saveLiveSessionButton?.removeEventListener("click", requestSessionSave);
             startFreshSessionButton?.removeEventListener("click", requestFreshSession);
-            reportMissingEventButton?.removeEventListener("click", openMissingEventBuilder);
+            reportMissingEventButton?.removeEventListener("click", requestMissingEventBuilder);
             saveLiveSessionName?.removeEventListener("input", updateSaveConfirmation);
             saveLiveSessionForm?.removeEventListener("submit", confirmSessionSaveSubmission);
             cancelSaveLiveSessionButton?.removeEventListener("click", closeSaveLiveSessionDialog);

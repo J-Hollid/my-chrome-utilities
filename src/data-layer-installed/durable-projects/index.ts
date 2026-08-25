@@ -17,6 +17,8 @@ export interface DurableProjectsInstalledPorts {
   retryFailedSave(): Promise<void>;
   rejectFailedSave(): Promise<void>;
   storageRecoveryClosed(): void;
+  subscribeSaveFailed?(listener:(error:unknown) => void):() => void;
+  saveFailed?(error:unknown):void;
 }
 
 export function createDurableProjectsInstalledController(ports: DurableProjectsInstalledPorts) {
@@ -32,6 +34,7 @@ export function createDurableProjectsInstalledController(ports: DurableProjectsI
   let stop: (() => void) | undefined;
   let mounting: Promise<void> | undefined;
   let generation = 0;
+  let stopSaveFailed:(() => void) | undefined;
   const storageRecoveryClosed = (): void => ports.storageRecoveryClosed();
   const migrationChoice = (control: HTMLButtonElement | null): "library" | "active" | undefined =>
     control === migrateLegacyLibrarySourceButton ? "library" : control === migrateLegacyActiveSourceButton ? "active" : undefined;
@@ -98,6 +101,7 @@ export function createDurableProjectsInstalledController(ports: DurableProjectsI
       const operation = ++generation;
       phase = "starting";
       durableStorageRecovery?.addEventListener("close", storageRecoveryClosed);
+      stopSaveFailed = ports.subscribeSaveFailed?.((error) => { if (operation === generation && phase !== "idle") ports.saveFailed?.(error); });
       exportLegacyMigrationSourcesButton?.addEventListener("click", exportLegacyMigrationSources);
       for (const control of [migrateLegacyLibrarySourceButton, migrateLegacyActiveSourceButton]) control?.addEventListener("click", resolveReviewedMigration);
       renderMigrationReview();
@@ -108,7 +112,7 @@ export function createDurableProjectsInstalledController(ports: DurableProjectsI
         .finally(() => { if (operation === generation) mounting = undefined; });
       return mounting;
     },
-    dispose(): void { generation += 1; durableStorageRecovery?.removeEventListener("close", storageRecoveryClosed);
+    dispose(): void { generation += 1; durableStorageRecovery?.removeEventListener("close", storageRecoveryClosed); stopSaveFailed?.(); stopSaveFailed = undefined;
       exportLegacyMigrationSourcesButton?.removeEventListener("click", exportLegacyMigrationSources);
       for (const control of [migrateLegacyLibrarySourceButton, migrateLegacyActiveSourceButton]) control?.removeEventListener("click", resolveReviewedMigration);
       stop?.(); stop = undefined; mounting = undefined; migrationPending = false; phase = "idle"; },

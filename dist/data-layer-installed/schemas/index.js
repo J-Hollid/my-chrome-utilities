@@ -1,8 +1,9 @@
-import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, inspectJsonSchemaExport, importSchema, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaPropertyRows, schemaRevisionChoices, schemaPropertyCopySource, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentDraftAfterGuidedSave, assignmentConditionSuggestions, configuredRuleDetails, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, reusableRulesForProperty, reusableRuleMetadata, assignmentDataConditionSummary, contextualManualPropertyDefinition, createRuleConfiguration, createExtensionSchemaPackage, createSchemaLibraryExport, duplicateSchemaAssignment, guidedAttachedRule, guidedPropertyDocument, manualPropertyPreview, mergeGuidedDocument, restoreSchemaLibrary, serializeSchemaLibrary, exportJsonSchemaBundle, exportJsonSchemaResource, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateAssignmentDataConditions, validateEvent, typedComparisonValue, GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, filterSchemaRelationshipTree, restoreSchemaRelationshipTreeView, saveSchemaRelationshipTreeView, applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, compactCanonicalCommandPolicy, compactSchemaProjection, savedSchemaCanonicalDocument, beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, completeCompactCanonicalHistoryTransition, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition, } from "../../utilities/data-layer/schemas.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, inspectJsonSchemaExport, importSchema, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaPropertyRows, schemaRevisionChoices, schemaPropertyCopySource, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentDraftAfterGuidedSave, assignmentConditionSuggestions, configuredRuleDetails, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, reusableRulesForProperty, reusableRuleMetadata, assignmentDataConditionSummary, contextualManualPropertyDefinition, createRuleConfiguration, createExtensionSchemaPackage, createSchemaLibraryExport, duplicateSchemaAssignment, guidedAttachedRule, guidedPropertyDocument, manualPropertyPreview, mergeGuidedDocument, restoreSchemaLibrary, serializeSchemaLibrary, exportJsonSchemaBundle, exportJsonSchemaResource, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateAssignmentDataConditions, validateEvent, typedComparisonValue, GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, filterSchemaRelationshipTree, restoreSchemaRelationshipTreeView, saveSchemaRelationshipTreeView, applyCanonicalCommand, canonicalCommandOutcome, canonicalPropertyPath, canonicalCommandsFromCompactProjection, compactCanonicalCommandPolicy, compactSchemaProjection, savedSchemaCanonicalDocument, beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, completeCompactCanonicalHistoryTransition, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition, } from "../../utilities/data-layer/schemas.js";
 import { applySchemaPropertyCopy, planSchemaPropertyCopy } from "../../data-layer-schema-property-copy.js";
 import { persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, } from "../../data-layer-local-rule-promotion.js";
 import { publishReusableRuleSync, reviewReusableRuleSync, } from "../../data-layer-reusable-rule-sync.js";
 import { addLiveSchemaPropertyDeclaration, createLiveSchemaPropertyDeclaration, } from "../../data-layer-live-schema-property-declaration.js";
+import { applyAllowedValueExpansion, reviewAllowedValueExpansion, } from "../../data-layer-allowed-value-expansion.js";
 const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 export function createSchemasInstalledController(ports) {
     const schemaSearch = ports.root.querySelector("#schema-search");
@@ -593,6 +594,8 @@ export function createSchemasInstalledController(ports) {
             return [];
         }
     })();
+    let capturedContinuationRowDisposers = [];
+    let capturedContinuationDialogDisposers = [];
     let persistenceGeneration = 0;
     let schemaExportTrigger;
     let pendingStandardSchemaExport;
@@ -612,6 +615,8 @@ export function createSchemasInstalledController(ports) {
     let compactCanonicalHistoryState = compactCanonicalHistorySettlement();
     let compactCanonicalPendingHistoryLabel;
     let compactCanonicalPresenceDraft;
+    let compactCanonicalContextDisposers = [];
+    let compactCanonicalPropertyMenuId;
     const compactCanonicalProjection = (adapter, canonical = adapter.load()) => adapter.projection?.(canonical) ?? compactSchemaProjection(canonical, { id: canonical.contributorId, name: canonical.contributorName, version: canonical.revision });
     const compactCanonicalFacetText = (canonical, node) => {
         const allowed = node.allowedValues.length ? node.allowedValues.map(({ value }) => String(value)).join(", ") : "none";
@@ -647,6 +652,8 @@ export function createSchemasInstalledController(ports) {
     const renderCompactCanonicalContext = () => {
         if (!compactCanonicalContext)
             return;
+        for (const dispose of compactCanonicalContextDisposers.splice(0))
+            dispose();
         const adapter = compactCanonicalEditor;
         compactCanonicalContext.hidden = !adapter;
         compactCanonicalContext.replaceChildren();
@@ -656,14 +663,119 @@ export function createSchemasInstalledController(ports) {
         identity.textContent = `${adapter.label} · revision ${adapter.load().revision}`;
         feedback.textContent = compactCanonicalCommandFeedback ?? "Canonical editor ready.";
         compactCanonicalContext.append(identity, feedback);
-        if (compactCanonicalPendingCommand)
-            for (const [label, action] of [["Retry", retryCompactCanonicalCommand], ["Reject", rejectCompactCanonicalCommand]]) {
-                const button = schemaOwnerDocument.createElement("button");
-                button.type = "button";
-                button.textContent = label;
-                listen(button, "click", action);
-                compactCanonicalContext.append(button);
+        const own = (control, action, type = "click") => { compactCanonicalContextDisposers.push(() => control.removeEventListener(type, action)); };
+        if (adapter.onUndo) {
+            const undo = schemaOwnerDocument.createElement("button"), action = () => adapter.onUndo?.();
+            undo.type = "button";
+            undo.textContent = "Undo";
+            undo.addEventListener("click", action);
+            own(undo, action);
+            compactCanonicalContext.append(undo);
+        }
+        if (adapter.onRedo) {
+            const redo = schemaOwnerDocument.createElement("button"), action = () => adapter.onRedo?.();
+            redo.type = "button";
+            redo.textContent = "Redo";
+            redo.addEventListener("click", action);
+            own(redo, action);
+            compactCanonicalContext.append(redo);
+        }
+        for (const configured of adapter.actions ?? []) {
+            const contextAction = schemaOwnerDocument.createElement("button"), action = () => configured.run();
+            contextAction.type = "button";
+            contextAction.textContent = configured.label;
+            contextAction.addEventListener("click", action);
+            own(contextAction, action);
+            compactCanonicalContext.append(contextAction);
+        }
+        const tableControl = schemaOwnerDocument.createElement("button"), treeControl = schemaOwnerDocument.createElement("button");
+        tableControl.type = treeControl.type = "button";
+        tableControl.textContent = "Table";
+        treeControl.textContent = "Tree";
+        const showTable = () => { const current = adapter.load(); void dispatchCompactCanonicalCommand({ kind: "view", baseRevision: current.revision, view: "table" }); };
+        const showTree = () => { const current = adapter.load(); void dispatchCompactCanonicalCommand({ kind: "view", baseRevision: current.revision, view: "tree" }); };
+        tableControl.addEventListener("click", showTable);
+        treeControl.addEventListener("click", showTree);
+        own(tableControl, showTable);
+        own(treeControl, showTree);
+        compactCanonicalContext.append(tableControl, treeControl);
+        adapter.renderContext?.(compactCanonicalContext);
+        if (adapter.migration) {
+            const migration = adapter.migration, review = schemaOwnerDocument.createElement("section"), summary = schemaOwnerDocument.createElement("p"), cancel = schemaOwnerDocument.createElement("button"), confirm = schemaOwnerDocument.createElement("button");
+            review.setAttribute("aria-label", "Canonical schema migration review");
+            summary.textContent = migration.summary;
+            for (const conflict of migration.conflicts) {
+                const resolution = schemaOwnerDocument.createElement("select");
+                resolution.setAttribute("aria-label", conflict.label);
+                resolution.append(...conflict.choices.map(({ id, label }) => {
+                    const option = schemaOwnerDocument.createElement("option");
+                    option.value = id;
+                    option.textContent = label;
+                    return option;
+                }));
+                const select = () => { if (resolution.value)
+                    migration.resolve(conflict.id, resolution.value); };
+                resolution.addEventListener("change", select);
+                own(resolution, select, "change");
+                review.append(resolution);
             }
+            cancel.type = confirm.type = "button";
+            cancel.textContent = "Cancel migration";
+            confirm.textContent = "Confirm canonical migration";
+            confirm.disabled = migration.conflicts.length > 0;
+            const cancelMigration = () => { migration.cancel(); renderCompactCanonicalContext(); };
+            const confirmMigration = () => {
+                const generation = lifecycleGeneration;
+                confirm.disabled = true;
+                void migration.confirm().then(() => { if (mounted && generation === lifecycleGeneration && compactCanonicalEditor === adapter)
+                    renderCompactCanonicalContext(); }, () => { if (mounted && generation === lifecycleGeneration && compactCanonicalEditor === adapter) {
+                    confirm.disabled = false;
+                    renderCompactCanonicalContext();
+                } });
+            };
+            cancel.addEventListener("click", cancelMigration);
+            confirm.addEventListener("click", confirmMigration);
+            own(cancel, cancelMigration);
+            own(confirm, confirmMigration);
+            review.append(summary, cancel, confirm);
+            compactCanonicalContext.append(review);
+        }
+        if (compactCanonicalPropertyMenuId && adapter.load().nodes[compactCanonicalPropertyMenuId]) {
+            const propertyId = compactCanonicalPropertyMenuId;
+            for (const [label, action, value] of [
+                ["Add child", "add-child"], ["Clear example", "no-example"], ["Use custom example", "custom-example", "example"],
+                ["Save documentation", "documentation", "Documented property"], ["Required", "presence", "required"],
+                ["Rename", "rename", `${adapter.load().nodes[propertyId].name} renamed`], ["Move to root", "move"], ["Duplicate", "duplicate"],
+                ["Save expected value", "expected", "expected"], ["Reset expected value", "reset-expected"], ["View", "view"], ["Remove", "remove"],
+            ]) {
+                const compactPropertyControl = schemaOwnerDocument.createElement("button"), run = () => { void compactCanonicalPropertyAction(propertyId, action, value); };
+                compactPropertyControl.type = "button";
+                compactPropertyControl.textContent = label;
+                compactPropertyControl.addEventListener("click", run);
+                own(compactPropertyControl, run);
+                compactCanonicalContext.append(compactPropertyControl);
+            }
+        }
+        if (compactCanonicalPendingCommand) {
+            const compare = schemaOwnerDocument.createElement("button"), retry = schemaOwnerDocument.createElement("button"), reject = schemaOwnerDocument.createElement("button");
+            compare.type = retry.type = reject.type = "button";
+            compare.textContent = "Compare latest property";
+            retry.textContent = "Retry local edit";
+            reject.textContent = "Reject local edit";
+            const compareLatest = () => {
+                compactCanonicalReviewVisible = true;
+                const base = compactCanonicalPendingBase, latest = adapter.load();
+                compactCanonicalCommandFeedback = `Comparing command base revision ${base?.revision ?? "unknown"} with latest revision ${latest.revision}.`;
+                renderCompactCanonicalContext();
+            };
+            compare.addEventListener("click", compareLatest);
+            retry.addEventListener("click", retryCompactCanonicalCommand);
+            reject.addEventListener("click", rejectCompactCanonicalCommand);
+            own(compare, compareLatest);
+            own(retry, retryCompactCanonicalCommand);
+            own(reject, rejectCompactCanonicalCommand);
+            compactCanonicalContext.append(compare, retry, reject);
+        }
     };
     function renderCompactCanonicalEditor() { renderCompactCanonicalContext(); }
     const blockedCompactCanonicalCommand = (adapter, command, message) => ({ status: "conflict", document: adapter.load(), ...(command.kind !== "policy" && "propertyId" in command ? { propertyId: command.propertyId } : {}), message });
@@ -813,6 +925,38 @@ export function createSchemasInstalledController(ports) {
         compactCanonicalProjectionRequest = undefined;
         compactCanonicalCommandFeedback = "Local edit rejected; durable state is unchanged.";
         renderCompactCanonicalContext();
+    }
+    async function compactCanonicalPropertyAction(propertyId, action, value) {
+        const adapter = compactCanonicalEditor, document = adapter?.load(), node = document?.nodes[propertyId];
+        if (!adapter || !document || !node)
+            return false;
+        const baseRevision = document.revision;
+        if (action === "add-child")
+            return dispatchCompactCanonicalCommand({ kind: "add", baseRevision, parentId: propertyId, name: "New child", type: "string", id: () => ports.createRuleId() });
+        if (action === "rename")
+            return dispatchCompactCanonicalCommand({ kind: "rename", baseRevision, propertyId, name: value?.trim() || node.name });
+        if (action === "move")
+            return dispatchCompactCanonicalCommand({ kind: "move", baseRevision, propertyId });
+        if (action === "duplicate")
+            return dispatchCompactCanonicalCommand({ kind: "duplicate", baseRevision, propertyId, id: () => ports.createRuleId() });
+        if (action === "view")
+            return dispatchCompactCanonicalCommand({ kind: "select", baseRevision, propertyId });
+        if (action === "remove")
+            return dispatchCompactCanonicalCommand({ kind: "delete", baseRevision, propertyId });
+        if (action === "presence")
+            return dispatchCompactCanonicalCommand({ kind: "set", baseRevision, propertyId,
+                patch: { presence: { ...node.presence, mode: (value || "optional") } } });
+        if (action === "documentation")
+            return dispatchCompactCanonicalCommand({ kind: "set", baseRevision, propertyId,
+                patch: { documentation: { ...node.documentation, description: value ?? node.documentation.description } } });
+        if (action === "no-example")
+            return dispatchCompactCanonicalCommand({ kind: "set", baseRevision, propertyId,
+                patch: { documentation: { ...node.documentation, example: { method: "blank" } } } });
+        if (action === "custom-example")
+            return dispatchCompactCanonicalCommand({ kind: "set", baseRevision, propertyId,
+                patch: { documentation: { ...node.documentation, example: { method: "custom", value } } } });
+        return dispatchCompactCanonicalCommand({ kind: "set", baseRevision, propertyId,
+            patch: { expectedValue: action === "expected" ? value : undefined } });
     }
     const openCompactCanonicalEditor = (adapter) => {
         compactCanonicalEditor = adapter;
@@ -1150,7 +1294,7 @@ export function createSchemasInstalledController(ports) {
             remove.textContent = "Delete";
             listen(revise, "click", () => { schemaTreeInvokingReference = node.key; activeSchemaId = schema.id; schemaDraft = structuredClone(schema); renderSchemas(); });
             listen(duplicate, "click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version, schemas)]; persistSchemaLibrary(); renderSchemas(); });
-            listen(adopt, "click", () => reviewSavedSchemaAdoption(schema, adopt));
+            listen(adopt, "click", () => requestSavedSchemaAdoption(schema, adopt));
             listen(build, "click", () => openSchemaSpecification(schema, `published:${schema.version}`, build));
             listen(exportCurrent, "click", () => openSchemaExportChoices(exportCurrent, schema));
             listen(reportMissing, "click", () => ports.reportMissingSchemaEvent(schema.id));
@@ -1320,12 +1464,16 @@ export function createSchemasInstalledController(ports) {
         renderSchemas();
     };
     const openSchemaRevisionReview = () => { renderSchemaDraft(); schemaRevisionReview?.showModal(); };
+    function refreshCurrentLiveAfterSchemaPublication() {
+        return ports.revalidateCurrentLive?.(structuredClone(schemas), structuredClone(manualSchemaOverrides)) ?? 0;
+    }
     const publishActiveSchema = () => {
         const published = publishSchemaWorkingDraft(active());
         replaceActive(published);
         persistSchemaLibrary();
         schemaRevisionReview?.close();
         renderSchemas();
+        refreshCurrentLiveAfterSchemaPublication();
         return published;
     };
     const confirmSchemaRevision = () => { publishActiveSchema(); };
@@ -1739,7 +1887,13 @@ export function createSchemasInstalledController(ports) {
         return attached;
     }
     function openCompactCanonicalRuleEditor(path, trigger) { openSchemaPropertyRulePicker(path, trigger); renderSchemaLocalRuleConfiguration(); }
-    function openCompactCanonicalPropertyActions(path) { selectedSchemaPropertyPath = path.replace(/^\//, "").replaceAll("/", "."); renderSchemaPropertyView(); }
+    function openCompactCanonicalPropertyActions(path) {
+        const document = compactCanonicalEditor?.load();
+        compactCanonicalPropertyMenuId = document ? Object.values(document.nodes).find((node) => canonicalPropertyPath(document, node.id) === path || node.id === path)?.id : undefined;
+        selectedSchemaPropertyPath = path.replace(/^\//, "").replaceAll("/", ".");
+        renderSchemaPropertyView();
+        renderCompactCanonicalContext();
+    }
     const updateConfiguredRulePreview = () => { if (schemaRulePickerPath)
         renderSchemaLocalRuleConfiguration(); };
     const renderSchemaPropertyRulePicker = () => {
@@ -2187,10 +2341,67 @@ export function createSchemasInstalledController(ports) {
     const renderSchemaValidationRecords = () => {
         if (!schemaValidationRecordList || !schemaOwnerDocument)
             return;
-        schemaValidationRecordList.replaceChildren(...schemaValidationRecords.map((record) => Object.assign(schemaOwnerDocument.createElement("li"), {
-            textContent: `${record.eventName} · ${record.state}${record.schemaName ? ` · ${record.schemaName} v${record.schemaVersion}` : ""} · ${record.checkedAt}`
-        })));
+        for (const dispose of capturedContinuationRowDisposers.splice(0))
+            dispose();
+        for (const dispose of capturedContinuationDialogDisposers.splice(0))
+            dispose();
+        schemaValidationRecordList.replaceChildren(...schemaValidationRecords.map((record) => {
+            const item = schemaOwnerDocument.createElement("li"), continueButton = schemaOwnerDocument.createElement("button");
+            item.textContent = `${record.eventName} · ${record.state}${record.schemaName ? ` · ${record.schemaName} v${record.schemaVersion}` : ""} · ${record.checkedAt}`;
+            if (ports.prepareCapturedValidationContinuation) {
+                continueButton.type = "button";
+                continueButton.textContent = "Continue in project";
+                const review = () => { void reviewCapturedValidationContinuation(record, continueButton); };
+                continueButton.addEventListener("click", review);
+                capturedContinuationRowDisposers.push(() => continueButton.removeEventListener("click", review));
+                item.append(continueButton);
+            }
+            return item;
+        }));
     };
+    async function reviewCapturedValidationContinuation(record, trigger) {
+        if (!ports.prepareCapturedValidationContinuation || !guidedValidationRoot || !schemaOwnerDocument || !mounted)
+            return;
+        const generation = lifecycleGeneration, continuation = await ports.prepareCapturedValidationContinuation(structuredClone(record));
+        if (!mounted || generation !== lifecycleGeneration)
+            return;
+        for (const dispose of capturedContinuationDialogDisposers.splice(0))
+            dispose();
+        const dialog = schemaOwnerDocument.createElement("dialog"), summary = schemaOwnerDocument.createElement("p"), destination = schemaOwnerDocument.createElement("select"), confirm = schemaOwnerDocument.createElement("button"), cancel = schemaOwnerDocument.createElement("button");
+        summary.textContent = continuation.summary;
+        for (const choice of continuation.destinations) {
+            const option = schemaOwnerDocument.createElement("option");
+            option.value = choice.id;
+            option.textContent = choice.label;
+            destination.append(option);
+        }
+        confirm.type = cancel.type = "button";
+        confirm.textContent = "Continue";
+        cancel.textContent = "Cancel";
+        confirm.disabled = !destination.value;
+        const close = () => { for (const dispose of capturedContinuationDialogDisposers.splice(0))
+            dispose(); dialog.close(); dialog.remove(); trigger.focus({ preventScroll: true }); };
+        const selectDestination = () => { confirm.disabled = !destination.value; };
+        const confirmContinuation = () => {
+            const selected = destination.value;
+            if (!selected)
+                return;
+            confirm.disabled = true;
+            void continuation.commit(selected).then(() => { if (mounted && generation === lifecycleGeneration)
+                close(); }, () => {
+                if (mounted && generation === lifecycleGeneration)
+                    confirm.disabled = false;
+            });
+        };
+        destination.addEventListener("change", selectDestination);
+        confirm.addEventListener("click", confirmContinuation);
+        cancel.addEventListener("click", close);
+        capturedContinuationDialogDisposers.push(() => destination.removeEventListener("change", selectDestination), () => confirm.removeEventListener("click", confirmContinuation), () => cancel.removeEventListener("click", close), () => { dialog.close(); dialog.remove(); });
+        dialog.append(summary, destination, confirm, cancel);
+        guidedValidationRoot.replaceChildren(dialog);
+        dialog.showModal();
+        destination.focus();
+    }
     const recheckCapturedSchemaValidation = (events = []) => {
         const checkedAt = new Date().toISOString(), issues = [];
         const records = events.map((event) => {
@@ -2924,6 +3135,8 @@ export function createSchemasInstalledController(ports) {
     };
     let guidedDialogDisposers = [];
     let livePropertyDialogDisposers = [];
+    let allowedValueDialogDisposers = [];
+    let sidePanelLayeredProfileEditor;
     const guidedValidationFlow = {
         open: openGuidedValidationForEvent, openProperty: openGuidedValidationForProperty,
         close: () => {
@@ -2943,6 +3156,7 @@ export function createSchemasInstalledController(ports) {
                 return;
             mounted = true;
             lifecycleGeneration += 1;
+            sidePanelLayeredProfileEditor = ports.mountLayeredProfileEditor();
             schemaSearch?.addEventListener("input", updateSchemaTreeView);
             createSchemaButton?.addEventListener("click", openNewSchemaEditor);
             recheckSchemaValidationButton?.addEventListener("click", recheckCapturedSchemaValidationFromControl);
@@ -3155,6 +3369,10 @@ export function createSchemasInstalledController(ports) {
             closeCompactCanonicalEditor();
             savedCanonicalDocument = undefined;
             compactCanonicalPendingCommand = undefined;
+            for (const dispose of compactCanonicalContextDisposers.splice(0))
+                dispose();
+            sidePanelLayeredProfileEditor?.dispose();
+            sidePanelLayeredProfileEditor = undefined;
             compactCanonicalPendingBase = undefined;
             compactCanonicalReviewVisible = false;
             compactCanonicalRevisionSnapshots.clear();
@@ -3168,6 +3386,12 @@ export function createSchemasInstalledController(ports) {
             guidedValidationFlow.close();
             guidedPropertyReturn = undefined;
             for (const dispose of livePropertyDialogDisposers.splice(0))
+                dispose();
+            for (const dispose of allowedValueDialogDisposers.splice(0))
+                dispose();
+            for (const dispose of capturedContinuationRowDisposers.splice(0))
+                dispose();
+            for (const dispose of capturedContinuationDialogDisposers.splice(0))
                 dispose();
             guidedValidationRoot?.replaceChildren();
             const disposed = new Error("Schemas controller disposed before durable persistence settled");
@@ -3238,6 +3462,7 @@ export function createSchemasInstalledController(ports) {
             return true;
         },
         openCanonicalPropertyActions: openCompactCanonicalPropertyActions,
+        compactPropertyAction: compactCanonicalPropertyAction,
         configuredRule: configuredRuleInput,
         conditionPredicate: initialConditionPredicate,
         createConfiguredRule: createConfiguredSchemaRule,
@@ -3271,12 +3496,15 @@ export function createSchemasInstalledController(ports) {
         openGuidedEvent: guidedValidationFlow.open,
         openGuidedProperty: guidedValidationFlow.openProperty,
         openLivePropertyDeclaration,
+        openAllowedValueExpansionReview,
         closeGuided: guidedValidationFlow.close,
         guidedDraft: guidedValidationFlow.currentDraft,
         guidedState: () => ({ selections: structuredClone(guidedContinuationSelections), selectedSchemaPropertyPath,
             hasPropertyReturn: Boolean(guidedPropertyReturn), dialogListenerCount: guidedDialogDisposers.length }),
         guidedContinuation: guidedDraftContinuationForEvent,
         recheckCaptured: recheckCapturedSchemaValidation,
+        refreshCurrentLiveAfterSchemaPublication,
+        reviewCapturedValidationContinuation,
         setManualSchemaOverride: (eventId, schemaId) => {
             if (schemaId)
                 manualSchemaOverrides[eventId] = schemaId;
@@ -3292,6 +3520,7 @@ export function createSchemasInstalledController(ports) {
             openSavedSchemaInUnifiedEditor(schema);
             return true;
         },
+        openCanonical: openCompactCanonicalEditor,
         closeCanonical: closeCompactCanonicalEditor,
         dispatchCanonical: dispatchCompactCanonicalCommand,
         persistCanonicalProjection: (projection, change) => compactCanonicalEditor
@@ -3468,6 +3697,87 @@ export function createSchemasInstalledController(ports) {
         dialog.showModal();
         return true;
     }
+    function openAllowedValueExpansionReview(eventId, assignedSchemaId, evaluation, trigger) {
+        if (!guidedValidationRoot || !schemaOwnerDocument)
+            return false;
+        const input = { schemas, reusableRules: expansionReusableRules(), assignedSchemaId, evidence: evaluation };
+        let review;
+        try {
+            review = reviewAllowedValueExpansion(input);
+        }
+        catch (error) {
+            if (schemaResult)
+                schemaResult.textContent = error instanceof Error ? error.message : "The allowed value review is unavailable.";
+            return false;
+        }
+        for (const dispose of allowedValueDialogDisposers.splice(0))
+            dispose();
+        guidedValidationRoot.replaceChildren();
+        const dialog = schemaOwnerDocument.createElement("dialog"), heading = schemaOwnerDocument.createElement("h5"), summary = schemaOwnerDocument.createElement("p"), destinations = schemaOwnerDocument.createElement("fieldset"), feedback = schemaOwnerDocument.createElement("output"), confirm = schemaOwnerDocument.createElement("button"), openDraft = schemaOwnerDocument.createElement("button"), cancel = schemaOwnerDocument.createElement("button");
+        let destination = review.destinations[0];
+        heading.textContent = "Review allowed value addition";
+        summary.textContent = `${review.assignedSchema.name} revision ${review.assignedSchema.version} · ${review.propertyPath} · proposed ${String(review.proposedValue)}.`;
+        const listenAllowed = (control, type, action) => {
+            control.addEventListener(type, action);
+            allowedValueDialogDisposers.push(() => control.removeEventListener(type, action));
+        };
+        for (const [index, choice] of review.destinations.entries()) {
+            const label = schemaOwnerDocument.createElement("label"), radio = schemaOwnerDocument.createElement("input");
+            radio.type = "radio";
+            radio.value = choice;
+            radio.checked = index === 0;
+            const select = () => { destination = choice; };
+            listenAllowed(radio, "change", select);
+            label.append(radio, choice);
+            destinations.append(label);
+        }
+        const close = (restoreFocus = true) => {
+            for (const dispose of allowedValueDialogDisposers.splice(0))
+                dispose();
+            dialog.close();
+            guidedValidationRoot.replaceChildren();
+            if (restoreFocus)
+                trigger.focus({ preventScroll: true });
+        };
+        confirm.type = openDraft.type = cancel.type = "button";
+        confirm.textContent = review.alreadyPending ? "Keep existing pending value" : "Confirm addition";
+        openDraft.textContent = "Open working draft";
+        cancel.textContent = "Cancel";
+        listenAllowed(confirm, "click", () => {
+            try {
+                const applied = applyAllowedValueExpansion({ ...input, destination });
+                schemas = applied.schemas;
+                reusableSchemaRules = storedPromotionRules(applied.reusableRules.map((rule) => ({ ...rule,
+                    name: rule.name ?? rule.id, enabled: rule.enabled !== false })));
+                persistSchemaAndRuleLibraries();
+                activeSchemaId = applied.affectedSchemaId;
+                schemaDraft = schemaEditorDraft(active());
+                renderSchemas();
+                close(false);
+                if (schemaResult)
+                    schemaResult.textContent = applied.changed ? `${String(review.proposedValue)} was added to the working draft.` : "The allowed value was already pending; no duplicate was created.";
+                ports.scheduleFrame(() => ports.restoreGuidedCapture(eventId, evaluation.propertyPath));
+            }
+            catch (error) {
+                feedback.textContent = error instanceof Error ? error.message : "The allowed value could not be added.";
+            }
+        });
+        listenAllowed(openDraft, "click", () => {
+            const targetId = destination === "parent-schema-draft" ? evaluation.schemaId : assignedSchemaId, target = schemas.find(({ id }) => id === targetId);
+            if (!target)
+                return;
+            activeSchemaId = target.id;
+            schemaDraft = schemaEditorDraft(target);
+            close(false);
+            renderSchemas();
+        });
+        listenAllowed(cancel, "click", () => close());
+        dialog.append(heading, summary, destinations, feedback, confirm, openDraft, cancel);
+        guidedValidationRoot.append(dialog);
+        dialog.showModal();
+        heading.focus({ preventScroll: true });
+        return true;
+    }
     function downloadSchemaJson(value, filename) { ports.downloadSchema(value, filename); }
     function omittedRuleStatus(count) { return `${count} omitted ${count === 1 ? "rule" : "rules"}`; }
     function storedPromotionRules(rules) {
@@ -3482,7 +3792,7 @@ export function createSchemasInstalledController(ports) {
                         ...(snapshot.conditionGroup !== undefined ? { conditionGroup: structuredClone(snapshot.conditionGroup) } : {}) })) } : {}) };
         });
     }
-    function reviewSavedSchemaAdoption(schema, trigger) {
+    function requestSavedSchemaAdoption(schema, trigger) {
         ports.adoptSavedSchema(structuredClone(schema), trigger);
     }
     function openSchemaSpecification(schema, surface, trigger) {

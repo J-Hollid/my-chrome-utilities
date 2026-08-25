@@ -161,3 +161,22 @@ assert.equal(readinessElements.get("#push-template-draft").disabled, true, "disp
 assert.notEqual(readinessElements.get("#push-template-draft-reason").textContent, "disposed ready",
   "disposed readiness cannot repaint its former status surface");
 assert.equal([...readinessElements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0);
+
+let inspectorActivate, inspectorDisposed = 0, libraryOpened = 0, announced = "", reviewedTemplate;
+const ownershipController = createEventLibraryInstalledController({
+  root:{ querySelector:() => null }, storage:{ getItem:() => JSON.stringify([{ ...template, originatingEventId:"capture:1" }]), setItem() {} },
+  defaultPushPath:() => "event.history", push:async () => {}, changed() {}, createId:() => "template:owned", ...noOpTransfer,
+  appendInspectorAction:(label, activate) => { assert.equal(label, "Open in Library"); inspectorActivate = activate; return () => { inspectorDisposed += 1; }; },
+  openLibrary:() => { libraryOpened += 1; }, announce:(message) => { announced = message; },
+  createTestCase:(value) => { reviewedTemplate = value; },
+});
+ownershipController.mount();
+ownershipController.appendOpenInLibraryAction("capture:1", "Page view");
+assert.match(announced, /Open in Library is available/); inspectorActivate();
+assert.equal(libraryOpened, 1); assert.equal(ownershipController.state().editor.template.id, "template:1");
+await ownershipController.reviewEventTemplateTestCaseCreation(template);
+assert.equal(reviewedTemplate.id, "template:1"); assert.notEqual(reviewedTemplate, template, "review receives a controller-owned snapshot");
+ownershipController.appendOpenInLibraryAction("capture:1", "Page view");
+assert.equal(inspectorDisposed, 1, "replacing the inspector action disposes the prior action");
+ownershipController.dispose(); inspectorActivate();
+assert.equal(inspectorDisposed, 2); assert.equal(libraryOpened, 1, "disposed inspector actions cannot reopen Library UI");

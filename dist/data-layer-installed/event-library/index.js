@@ -64,6 +64,8 @@ export function createEventLibraryInstalledController(ports) {
     let savedInspectorTemplateId;
     let pushPathReadiness;
     let pushPathReadinessRequest = 0;
+    let inspectorActionDispose;
+    let testCaseReviewRequest = 0;
     const createId = ports.createId ?? (() => `template:${crypto.randomUUID()}`);
     const persistEventTemplateLibrary = () => {
         ports.storage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
@@ -322,6 +324,31 @@ export function createEventLibraryInstalledController(ports) {
         renderEventLibraryTransfer();
         persistEventTemplateLibrary();
     };
+    function appendOpenInLibraryAction(eventId, templateName) {
+        inspectorActionDispose?.();
+        inspectorActionDispose = undefined;
+        const activate = () => {
+            if (!mounted)
+                return;
+            const template = eventTemplates.find(({ id }) => id === savedInspectorTemplateId)
+                ?? eventTemplates.find(({ originatingEventId }) => originatingEventId === eventId);
+            if (!template)
+                return;
+            ports.openLibrary?.();
+            openTemplateEditor(template.id);
+            renderEventTemplateLibrary();
+        };
+        inspectorActionDispose = ports.appendInspectorAction?.("Open in Library", activate);
+        ports.announce?.(`Saved ${templateName} to Library. Open in Library is available.`);
+    }
+    async function reviewEventTemplateTestCaseCreation(template) {
+        if (!ports.createTestCase || !mounted)
+            return;
+        const request = ++testCaseReviewRequest;
+        await Promise.resolve(ports.createTestCase(structuredClone(template)));
+        if (!mounted || request !== testCaseReviewRequest)
+            return;
+    }
     const renderEventTemplateLibrary = () => {
         if (!mounted)
             return;
@@ -342,7 +369,7 @@ export function createEventLibraryInstalledController(ports) {
             push: pushLibraryTemplate,
             delete: (template) => requestEventTemplateDeletion(template.id),
             ...(ports.createSchema ? { createSchema: ports.createSchema } : {}),
-            ...(ports.createTestCase ? { createTestCase: ports.createTestCase } : {}),
+            ...(ports.createTestCase ? { createTestCase: reviewEventTemplateTestCaseCreation } : {}),
         });
     };
     function refreshPushPathReadiness() {
@@ -592,6 +619,9 @@ export function createEventLibraryInstalledController(ports) {
             pendingEventLibraryImport = undefined;
             pendingEventLibraryDeletion = undefined;
             replaceEventLibraryArmed = false;
+            inspectorActionDispose?.();
+            inspectorActionDispose = undefined;
+            testCaseReviewRequest += 1;
             pushPathReadiness = undefined;
             pushPathReadinessRequest += 1;
             pendingPushDraftReview = undefined;
@@ -651,6 +681,8 @@ export function createEventLibraryInstalledController(ports) {
         cancelDelete: cancelEventLibraryDelete,
         async pushSelected() { if (!selectedId)
             throw new Error("Select a template before pushing"); await pushPayloadToSelectedTargetPage(find(selectedId)); },
+        appendOpenInLibraryAction,
+        reviewEventTemplateTestCaseCreation,
         export: () => eventLibraryExport(eventTemplates),
         templates: () => structuredClone(eventTemplates),
         state: () => structuredClone({ ...(selectedId ? { selectedId } : {}),
