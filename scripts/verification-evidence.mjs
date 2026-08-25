@@ -52,8 +52,8 @@ import {
 import {
   isSidePanelSingleCutoverEvidenceTask,
   sidePanelSingleCutoverCompatibilityRepairEvidenceTask,
-  sidePanelSingleCutoverFocusedTaskKeys,
-  sidePanelSingleCutoverPackIds,
+  sidePanelSingleCutoverEvidenceFocusedTaskKeysFor,
+  sidePanelSingleCutoverEvidencePackIdsFor,
   sidePanelSingleCutoverProductEvidenceTask,
   sidePanelSingleCutoverProductFocusedTaskKeys,
   validateSidePanelSingleCutoverFocusedPlan,
@@ -598,7 +598,7 @@ function canonicalSidePanelSingleCutoverPlan(candidatePacks, {
     historicalRegistryFallback,
   });
   const executionPlan = bindEvidenceChangeScope(planVerification(candidatePacks, {
-    packIds:sidePanelSingleCutoverPackIds,
+    packIds:sidePanelSingleCutoverEvidencePackIdsFor(evidenceTask),
     includeProperties:productEvidence,
   }), bindingPlan);
   const runnablePackIds = createVerificationPackCardinalityAdapter(candidatePacks).runnablePackIds;
@@ -612,7 +612,7 @@ function canonicalSidePanelSingleCutoverPlan(candidatePacks, {
       ...executionPlan.tasks,
       ...canonical.tasks.filter(({ key }) => key === "package:extension"),
     ])
-    : sidePanelSingleCutoverFocusedTaskKeys;
+    : sidePanelSingleCutoverEvidenceFocusedTaskKeysFor(evidenceTask);
   const requested = focusedTaskKeys.map((key) => {
     const task = candidates.get(key);
     if (!task) throw new Error(`Side-panel single-cutover task is not registered: ${key}`);
