@@ -57,6 +57,8 @@ export function createEventLibraryInstalledController(ports) {
     let replaceEventLibraryArmed = false;
     let pendingPushDraftReview;
     let pendingRevisionChangeReview;
+    let templateEditorReturnTemplateId;
+    let savedInspectorTemplateId;
     const createId = ports.createId ?? (() => `template:${crypto.randomUUID()}`);
     const persistEventTemplateLibrary = () => {
         ports.storage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
@@ -186,12 +188,16 @@ export function createEventLibraryInstalledController(ports) {
             confirmPushDraftButton.textContent = pendingPushDraftReview.confirmLabel;
         showDialog(pushDraftReview, pushDraftReviewHeading);
     }
+    async function pushPayloadToSelectedTargetPage(template) { await ports.push(structuredClone(template)); }
+    function pushCurrentTemplateDraft() { if (propertyEditorState)
+        void pushPayloadToSelectedTargetPage(propertyEditorState.template); }
+    function pushLibraryTemplate(template) { selectedId = template.id; void pushPayloadToSelectedTargetPage(template); }
     const confirmPushDraft = () => {
         const pending = pendingPushDraftReview;
         pendingPushDraftReview = undefined;
         hideDialog(pushDraftReview);
         if (pending)
-            void ports.push(pending.editor.template);
+            void pushPayloadToSelectedTargetPage(pending.editor.template);
     };
     const cancelPushDraft = () => { pendingPushDraftReview = undefined; hideDialog(pushDraftReview); pushTemplateDraftButton?.focus(); };
     const cancelRevisionChangeDialog = (event) => { event.preventDefault(); closeRevisionChangeReview(); };
@@ -199,9 +205,20 @@ export function createEventLibraryInstalledController(ports) {
         pendingPushDraftReview = undefined;
         hideDialog(pushDraftReview);
     } };
+    function resetTemplateEditorDisclosures() {
+        pendingTemplateRename = undefined;
+        pendingPushDraftReview = undefined;
+        pendingRevisionChangeReview = undefined;
+        if (closeTemplateEditorConfirmation)
+            closeTemplateEditorConfirmation.hidden = true;
+        hideDialog(templateRenameDialog);
+        hideDialog(templateRenameReview);
+        hideDialog(pushDraftReview);
+        hideDialog(revisionChangeReview);
+    }
     const closeEditor = () => {
         propertyEditorState = undefined;
-        pendingTemplateRename = undefined;
+        resetTemplateEditorDisclosures();
         if (closeTemplateEditorConfirmation)
             closeTemplateEditorConfirmation.hidden = true;
     };
@@ -307,15 +324,23 @@ export function createEventLibraryInstalledController(ports) {
             return;
         const visible = searchEventTemplates(eventTemplates, eventTemplateSearch?.value ?? "");
         renderEventLibraryEditor(eventLibraryEditorElements, visible, propertyEditorState, {
-            edit: (template) => { selectedId = template.id; propertyEditorState = openPropertyEditor(template); renderEventTemplateLibrary(); },
+            edit: (template) => { openTemplateEditor(template.id); renderEventTemplateLibrary(); },
             rename: openTemplateRename,
             duplicate: (template) => { selectedId = template.id; propertyEditorState = openPropertyEditor(template); },
-            push: (template) => { selectedId = template.id; void ports.push(template); },
+            push: pushLibraryTemplate,
             delete: (template) => requestEventTemplateDeletion(template.id),
             ...(ports.createSchema ? { createSchema: ports.createSchema } : {}),
             ...(ports.createTestCase ? { createTestCase: ports.createTestCase } : {}),
         });
     };
+    function openTemplateEditor(id) {
+        const template = find(id);
+        templateEditorReturnTemplateId = selectedId;
+        selectedId = id;
+        propertyEditorState = openPropertyEditor(template);
+        savedInspectorTemplateId = id;
+        resetTemplateEditorDisclosures();
+    }
     const openNewEventEditor = () => {
         selectedId = undefined;
         propertyEditorState = createNewEventEditor(ports.defaultPushPath());
@@ -373,14 +398,19 @@ export function createEventLibraryInstalledController(ports) {
         persistEventTemplateLibrary();
         renderEventTemplateLibrary();
     };
-    const pushTemplateDraft = () => { if (propertyEditorState)
-        void ports.push(propertyEditorState.template); };
+    const pushTemplateDraft = pushCurrentTemplateDraft;
     const discardTemplateDraft = () => {
         if (propertyEditorState)
             propertyEditorState = discardDraft(propertyEditorState);
         renderEventTemplateLibrary();
     };
-    const closeTemplateEditor = () => { closeEditor(); renderEventTemplateLibrary(); };
+    function closeTemplateEditor() {
+        closeEditor();
+        selectedId = templateEditorReturnTemplateId;
+        templateEditorReturnTemplateId = undefined;
+        savedInspectorTemplateId = undefined;
+        renderEventTemplateLibrary();
+    }
     const backToCapturedEvent = () => ports.backToCapturedEvent();
     const refreshLibraryDraftValidation = () => ports.validateDraft(libraryDraftSchemaSelector?.value ?? "");
     function downloadEventLibrary() { ports.downloadExport(eventLibraryExport(eventTemplates)); }
@@ -501,7 +531,7 @@ export function createEventLibraryInstalledController(ports) {
             hideDialog(revisionChangeReview);
         },
         select(id) { find(id); selectedId = id; },
-        beginDraft(id) { const template = find(id); selectedId = id; propertyEditorState = openPropertyEditor(template); },
+        beginDraft: openTemplateEditor,
         beginNew: openNewEventEditor,
         discardDraft() { if (propertyEditorState)
             propertyEditorState = discardDraft(propertyEditorState); },
@@ -551,14 +581,15 @@ export function createEventLibraryInstalledController(ports) {
         confirmDelete: commitEventLibraryDeletion,
         cancelDelete: cancelEventLibraryDelete,
         async pushSelected() { if (!selectedId)
-            throw new Error("Select a template before pushing"); await ports.push(find(selectedId)); },
+            throw new Error("Select a template before pushing"); await pushPayloadToSelectedTargetPage(find(selectedId)); },
         export: () => eventLibraryExport(eventTemplates),
         templates: () => structuredClone(eventTemplates),
         state: () => structuredClone({ ...(selectedId ? { selectedId } : {}),
             ...(propertyEditorState ? { editor: propertyEditorState } : {}), ...(pendingTemplateRename ? { rename: pendingTemplateRename } : {}),
             ...(pendingEventLibraryImport ? { pendingImport: pendingEventLibraryImport } : {}),
             ...(pendingEventLibraryDeletion ? { pendingDeletion: pendingEventLibraryDeletion } : {}),
-            replaceArmed: replaceEventLibraryArmed, templates: eventTemplates }),
+            replaceArmed: replaceEventLibraryArmed, templates: eventTemplates,
+            ...(templateEditorReturnTemplateId ? { templateEditorReturnTemplateId } : {}), ...(savedInspectorTemplateId ? { savedInspectorTemplateId } : {}) }),
         mounted: () => mounted,
     };
 }

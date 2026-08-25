@@ -284,13 +284,25 @@ assert.ok(sessionCalls.includes("reset-flow"));
 assert.ok(sessionCalls.some((call) => call.startsWith("download:renamed-checkout.json")));
 assert.ok(sessionCalls.some((call) => call.startsWith("replay:saved:live-")));
 
+const linkedSessionId = sessionController.state().session.session.id;
 sessionElements.get("#start-fresh-session").click();
 assert.equal(sessionElements.get("#fresh-session-confirmation").open, false, "empty linked capture starts fresh without review");
+const firstFreshSessionId = sessionController.state().session.session.id;
+assert.notEqual(firstFreshSessionId, linkedSessionId, "Capture owns fresh-session identity generation");
 sessionController.capture({ id:"event:unsaved", name:"unsaved", sourceId:"history", captureTime:"2026-08-25T00:00:03.000Z" });
 sessionElements.get("#start-fresh-session").click();
 assert.equal(sessionElements.get("#fresh-session-confirmation").open, true);
+sessionElements.get("#cancel-fresh-session").click();
+assert.equal(sessionElements.get("#fresh-session-confirmation").open, false, "Capture closes fresh-session review and restores its trigger");
+sessionElements.get("#start-fresh-session").click();
 sessionElements.get("#discard-and-start-fresh-session").click();
 assert.equal(sessionController.state().observer.events.length, 0, "discard transition starts a fresh owned session");
+assert.notEqual(sessionController.state().session.session.id, firstFreshSessionId, "Capture advances each fresh-session identity");
+sessionController.capture({ id:"event:save-cancel", name:"save-cancel", sourceId:"history", captureTime:"2026-08-25T00:00:04.000Z" });
+sessionElements.get("#save-live-session").click();
+assert.equal(sessionElements.get("#save-live-session-dialog").open, true);
+sessionElements.get("#cancel-save-live-session").click();
+assert.equal(sessionElements.get("#save-live-session-dialog").open, false, "Capture closes save review without persisting a draft");
 
 let staleResolve;
 sessionPorts.readImportFile = () => new Promise((resolve) => { staleResolve = resolve; });

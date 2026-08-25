@@ -88,6 +88,7 @@ export function createCaptureInstalledController(ports) {
     let archivedSavedSession;
     let pendingSessionSaveDraft;
     let startFreshAfterSessionSave = false;
+    let nextSessionSequence = 0;
     let savedThroughEventCount = Math.max(0, Number(ports.storage.getItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY)) || 0);
     let inspectorReturnSnapshot;
     const liveInspectorPresentation = new Map();
@@ -696,7 +697,7 @@ export function createCaptureInstalledController(ports) {
         ports.setLiveSessionMessage(`Saved immutable snapshot ${name}; capture state unchanged.`);
         saveLiveSessionButton?.focus({ preventScroll: true });
     };
-    function cancelSessionSave(event) {
+    function closeSaveLiveSessionDialog(event) {
         event?.preventDefault();
         pendingSessionSaveDraft = undefined;
         const returnToFreshAction = startFreshAfterSessionSave;
@@ -709,7 +710,7 @@ export function createCaptureInstalledController(ports) {
         freshSessionConfirmation.close(); openSessionSaveDialog(true); };
     const discardAndStartFreshSession = () => { if (freshSessionConfirmation?.open)
         freshSessionConfirmation.close(); startFreshSession(); };
-    function cancelFreshSession(event) {
+    function closeFreshSessionConfirmation(event) {
         event?.preventDefault();
         if (freshSessionConfirmation?.open)
             freshSessionConfirmation.close();
@@ -837,7 +838,11 @@ export function createCaptureInstalledController(ports) {
         setLiveSessionMessage("Capture resumed");
         publish();
     };
-    function newDataLayerSessionId(tabId) { return ports.savedSessions.createSessionId(tabId); }
+    function newDataLayerSessionId(tabId) {
+        nextSessionSequence += 1;
+        const unique = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${nextSessionSequence}`;
+        return `tab-${tabId}-session-${unique}`;
+    }
     function renderSessionState() { renderObservationTargetContext(); }
     function renderObserverState() { renderLiveSessionSummary(liveSessionSummaryElements, currentLiveSessionSummary()); renderLiveObserver(); }
     function syncCapturedEventsToLive() {
@@ -1113,12 +1118,12 @@ export function createCaptureInstalledController(ports) {
             reportMissingEventButton?.addEventListener("click", openMissingEventBuilder);
             saveLiveSessionName?.addEventListener("input", updateSaveConfirmation);
             saveLiveSessionForm?.addEventListener("submit", confirmSessionSaveSubmission);
-            cancelSaveLiveSessionButton?.addEventListener("click", cancelSessionSave);
-            saveLiveSessionDialog?.addEventListener("cancel", cancelSessionSave);
+            cancelSaveLiveSessionButton?.addEventListener("click", closeSaveLiveSessionDialog);
+            saveLiveSessionDialog?.addEventListener("cancel", closeSaveLiveSessionDialog);
             saveAndStartFreshSessionButton?.addEventListener("click", saveAndStartFreshSession);
             discardAndStartFreshSessionButton?.addEventListener("click", discardAndStartFreshSession);
-            cancelFreshSessionButton?.addEventListener("click", cancelFreshSession);
-            freshSessionConfirmation?.addEventListener("cancel", cancelFreshSession);
+            cancelFreshSessionButton?.addEventListener("click", closeFreshSessionConfirmation);
+            freshSessionConfirmation?.addEventListener("cancel", closeFreshSessionConfirmation);
             returnToCurrentLiveFeedButton?.addEventListener("click", returnToCurrentLiveFeedAction);
             revalidateSavedSessionButton?.addEventListener("click", revalidateSavedSession);
             liveObserverElements.eventList?.addEventListener("scroll", synchronizeSavedSessionFeedScroll);
@@ -1172,12 +1177,12 @@ export function createCaptureInstalledController(ports) {
             reportMissingEventButton?.removeEventListener("click", openMissingEventBuilder);
             saveLiveSessionName?.removeEventListener("input", updateSaveConfirmation);
             saveLiveSessionForm?.removeEventListener("submit", confirmSessionSaveSubmission);
-            cancelSaveLiveSessionButton?.removeEventListener("click", cancelSessionSave);
-            saveLiveSessionDialog?.removeEventListener("cancel", cancelSessionSave);
+            cancelSaveLiveSessionButton?.removeEventListener("click", closeSaveLiveSessionDialog);
+            saveLiveSessionDialog?.removeEventListener("cancel", closeSaveLiveSessionDialog);
             saveAndStartFreshSessionButton?.removeEventListener("click", saveAndStartFreshSession);
             discardAndStartFreshSessionButton?.removeEventListener("click", discardAndStartFreshSession);
-            cancelFreshSessionButton?.removeEventListener("click", cancelFreshSession);
-            freshSessionConfirmation?.removeEventListener("cancel", cancelFreshSession);
+            cancelFreshSessionButton?.removeEventListener("click", closeFreshSessionConfirmation);
+            freshSessionConfirmation?.removeEventListener("cancel", closeFreshSessionConfirmation);
             returnToCurrentLiveFeedButton?.removeEventListener("click", returnToCurrentLiveFeedAction);
             revalidateSavedSessionButton?.removeEventListener("click", revalidateSavedSession);
             liveObserverElements.eventList?.removeEventListener("scroll", synchronizeSavedSessionFeedScroll);
