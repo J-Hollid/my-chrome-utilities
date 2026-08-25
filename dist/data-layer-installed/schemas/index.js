@@ -1,4 +1,4 @@
-import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaPropertyRows, schemaPropertyCopySource, addManualProperty, assignmentConditionSuggestions, assignmentDataConditionSummary, contextualManualPropertyDefinition, createRuleConfiguration, duplicateSchemaAssignment, manualPropertyPreview, restoreSchemaLibrary, searchSchemas, serializeSchemaLibrary, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateAssignmentDataConditions, validateEvent, } from "../../utilities/data-layer/schemas.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, importSchema, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaPropertyRows, schemaPropertyCopySource, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentConditionSuggestions, assignmentDataConditionSummary, contextualManualPropertyDefinition, createRuleConfiguration, duplicateSchemaAssignment, manualPropertyPreview, restoreSchemaLibrary, searchSchemas, serializeSchemaLibrary, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateAssignmentDataConditions, validateEvent, } from "../../utilities/data-layer/schemas.js";
 import { applySchemaPropertyCopy, planSchemaPropertyCopy } from "../../data-layer-schema-property-copy.js";
 import { publishReusableRuleSync, reviewReusableRuleSync, } from "../../data-layer-reusable-rule-sync.js";
 const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
@@ -143,6 +143,17 @@ export function createSchemasInstalledController(ports) {
     const schemaAssignmentConflicts = ports.root.querySelector("#schema-assignment-conflicts");
     const schemaAssignmentSchema = ports.root.querySelector("#schema-assignment-schema");
     const schemaAssignmentDataConditions = ownedElement("#schema-assignment-data-conditions", "section");
+    const importSchemaButton = ports.root.querySelector("#import-schema");
+    const schemaLibraryImportFile = ports.root.querySelector("#schema-library-import-file");
+    const schemaImportReview = ownedElement("#schema-import-review", "dialog");
+    const schemaImportReviewSummary = ownedElement("#schema-import-review-summary", "output");
+    const replaceSchemaLibraryButton = ownedElement("#replace-schema-library", "button");
+    const appendSchemaLibraryButton = ownedElement("#append-schema-library", "button");
+    const cancelSchemaImportButton = ownedElement("#cancel-schema-import", "button");
+    const schemaDeleteReview = ownedElement("#schema-delete-review", "dialog");
+    const schemaDeleteReviewSummary = ownedElement("#schema-delete-review-summary", "output");
+    const confirmSchemaDeleteButton = ownedElement("#confirm-schema-delete", "button");
+    const cancelSchemaDeleteButton = ownedElement("#cancel-schema-delete", "button");
     if (schemaPropertyViewControls && !schemaPropertyViewControls.isConnected) {
         schemaPropertyViewControls.id = "schema-property-view-controls";
         if (schemaPropertyFilterLabel) {
@@ -401,6 +412,14 @@ export function createSchemasInstalledController(ports) {
     installRuleReviewDialog(schemaRuleUpgradeReview, "schema-rule-upgrade-review", "Update pinned rule attachments", schemaRuleUpgradeReviewSummary, confirmSchemaRuleUpgradeButton, cancelSchemaRuleUpgradeButton);
     installRuleReviewDialog(schemaRuleSyncReview, "schema-rule-sync-review", "Sync attached schemas and publish revisions", schemaRuleSyncReviewSummary, confirmSchemaRuleSyncButton, cancelSchemaRuleSyncButton);
     installRuleReviewDialog(schemaRuleDeleteReview, "schema-rule-delete-review", "Delete reusable rule", schemaRuleDeleteReviewSummary, confirmSchemaRuleDeleteButton, cancelSchemaRuleDeleteButton);
+    installRuleReviewDialog(schemaImportReview, "schema-import-review", "Import Schema Library", schemaImportReviewSummary, replaceSchemaLibraryButton, cancelSchemaImportButton);
+    if (schemaImportReview && appendSchemaLibraryButton && !appendSchemaLibraryButton.isConnected) {
+        appendSchemaLibraryButton.id = "append-schema-library";
+        appendSchemaLibraryButton.type = "button";
+        appendSchemaLibraryButton.textContent = "Append";
+        schemaImportReview.append(appendSchemaLibraryButton);
+    }
+    installRuleReviewDialog(schemaDeleteReview, "schema-delete-review", "Delete schema", schemaDeleteReviewSummary, confirmSchemaDeleteButton, cancelSchemaDeleteButton);
     if (schemaAssignmentDataConditions && !schemaAssignmentDataConditions.isConnected) {
         schemaAssignmentDataConditions.id = "schema-assignment-data-conditions";
         schemaAssignmentDataConditions.setAttribute("aria-label", "Data layer conditions");
@@ -443,6 +462,8 @@ export function createSchemasInstalledController(ports) {
     let pendingReusableSchemaRuleDeletionId;
     let editingSchemaAssignment;
     let schemaAssignmentConditionState = { target: "payload", suggestions: [] };
+    let pendingSchemaImport;
+    let pendingSchemaDeletion;
     const activeIndex = () => schemas.findIndex(({ id }) => id === activeSchemaId);
     const active = () => {
         const schema = schemas[activeIndex()];
@@ -1347,6 +1368,102 @@ export function createSchemasInstalledController(ports) {
         }
         URL.revokeObjectURL(url);
     };
+    const openSchemaLibraryImportFile = () => schemaLibraryImportFile?.click();
+    const reviewSchemaLibraryImport = (serialized) => {
+        const archive = JSON.parse(serialized);
+        if (archive.version !== 1 || !Array.isArray(archive.schemas) || !Array.isArray(archive.rules)) {
+            throw new Error("Choose a version 1 Schema Library export.");
+        }
+        const importedSchemas = archive.schemas.map((schema) => importSchema(JSON.stringify(schema)));
+        const candidates = [...schemas.filter((schema) => !importedSchemas.some(({ id }) => id === schema.id)), ...importedSchemas];
+        for (const schema of importedSchemas) {
+            const issue = schemaInheritanceError(schema, candidates) ?? schemaInheritanceConflict(schema, candidates);
+            if (issue)
+                throw new Error(issue);
+        }
+        const rules = archive.rules.filter((rule) => Boolean(rule && typeof rule === "object"
+            && "id" in rule && "name" in rule && "kind" in rule && "version" in rule && "enabled" in rule));
+        pendingSchemaImport = { schemas: importedSchemas, rules: structuredClone(rules) };
+        if (schemaImportReviewSummary)
+            schemaImportReviewSummary.textContent =
+                `${importedSchemas.length} schemas and ${rules.length} reusable rules are ready to import.`;
+        schemaImportReview?.showModal();
+    };
+    const readSchemaLibraryImportFile = async () => {
+        const file = schemaLibraryImportFile?.files?.[0];
+        if (!file)
+            return;
+        try {
+            reviewSchemaLibraryImport(await file.text());
+        }
+        catch (error) {
+            if (schemaResult)
+                schemaResult.textContent = error instanceof Error ? error.message : "Schema Library import failed.";
+        }
+        if (schemaLibraryImportFile)
+            schemaLibraryImportFile.value = "";
+    };
+    const replaceSchemaLibrary = () => {
+        if (!pendingSchemaImport)
+            return;
+        schemas = structuredClone(pendingSchemaImport.schemas);
+        reusableSchemaRules = structuredClone(pendingSchemaImport.rules);
+        pendingSchemaImport = undefined;
+        persistSchemaLibrary();
+        persistReusableSchemaRules();
+        renderSchemas();
+        renderSchemaRuleLibrary();
+        schemaImportReview?.close();
+    };
+    const appendSchemaLibrary = () => {
+        if (!pendingSchemaImport)
+            return;
+        schemas = [...schemas.filter((schema) => !pendingSchemaImport.schemas.some(({ id }) => id === schema.id)),
+            ...structuredClone(pendingSchemaImport.schemas)];
+        reusableSchemaRules = [...reusableSchemaRules.filter((rule) => !pendingSchemaImport.rules.some(({ id }) => id === rule.id)),
+            ...structuredClone(pendingSchemaImport.rules)];
+        pendingSchemaImport = undefined;
+        persistSchemaLibrary();
+        persistReusableSchemaRules();
+        renderSchemas();
+        renderSchemaRuleLibrary();
+        schemaImportReview?.close();
+    };
+    const cancelSchemaLibraryImport = () => { pendingSchemaImport = undefined; schemaImportReview?.close(); };
+    const requestSchemaDeletion = (id) => {
+        const schema = schemas.find((candidate) => candidate.id === id);
+        if (!schema)
+            return false;
+        const children = schemas.filter(({ parentSchemaId }) => parentSchemaId === id);
+        if (children.length) {
+            if (schemaResult)
+                schemaResult.textContent =
+                    `Cannot delete ${schema.name}: it is the parent of ${children.map(({ name }) => name).join(", ")}.`;
+            return false;
+        }
+        pendingSchemaDeletion = structuredClone(schema);
+        if (schemaDeleteReviewSummary)
+            schemaDeleteReviewSummary.textContent = `${schema.name} v${schema.version} and its assignments will be removed.`;
+        schemaDeleteReview?.showModal();
+        return true;
+    };
+    const confirmSchemaDeletion = () => {
+        const schema = pendingSchemaDeletion;
+        if (!schema)
+            return;
+        schemas = schemas.filter(({ id }) => id !== schema.id);
+        pendingSchemaDeletion = undefined;
+        if (activeSchemaId === schema.id) {
+            activeSchemaId = undefined;
+            schemaDraft = undefined;
+        }
+        persistSchemaLibrary();
+        renderSchemas();
+        schemaDeleteReview?.close();
+        if (schemaResult)
+            schemaResult.textContent = `Deleted ${schema.name}.`;
+    };
+    const cancelSchemaDeletion = () => { pendingSchemaDeletion = undefined; schemaDeleteReview?.close(); };
     return {
         mount() {
             if (mounted)
@@ -1412,6 +1529,13 @@ export function createSchemasInstalledController(ports) {
             schemaAssignmentTarget?.addEventListener("change", changeSchemaAssignmentTarget);
             createSchemaAssignmentButton?.addEventListener("click", openNewSchemaAssignmentEditor);
             saveSchemaAssignmentButton?.addEventListener("click", saveSchemaAssignment);
+            importSchemaButton?.addEventListener("click", openSchemaLibraryImportFile);
+            schemaLibraryImportFile?.addEventListener("change", readSchemaLibraryImportFile);
+            replaceSchemaLibraryButton?.addEventListener("click", replaceSchemaLibrary);
+            appendSchemaLibraryButton?.addEventListener("click", appendSchemaLibrary);
+            cancelSchemaImportButton?.addEventListener("click", cancelSchemaLibraryImport);
+            confirmSchemaDeleteButton?.addEventListener("click", confirmSchemaDeletion);
+            cancelSchemaDeleteButton?.addEventListener("click", cancelSchemaDeletion);
             unsubscribe = ports.subscribe(renderSchemas);
             renderSchemas();
         },
@@ -1479,6 +1603,13 @@ export function createSchemasInstalledController(ports) {
             schemaAssignmentTarget?.removeEventListener("change", changeSchemaAssignmentTarget);
             createSchemaAssignmentButton?.removeEventListener("click", openNewSchemaAssignmentEditor);
             saveSchemaAssignmentButton?.removeEventListener("click", saveSchemaAssignment);
+            importSchemaButton?.removeEventListener("click", openSchemaLibraryImportFile);
+            schemaLibraryImportFile?.removeEventListener("change", readSchemaLibraryImportFile);
+            replaceSchemaLibraryButton?.removeEventListener("click", replaceSchemaLibrary);
+            appendSchemaLibraryButton?.removeEventListener("click", appendSchemaLibrary);
+            cancelSchemaImportButton?.removeEventListener("click", cancelSchemaLibraryImport);
+            confirmSchemaDeleteButton?.removeEventListener("click", confirmSchemaDeletion);
+            cancelSchemaDeleteButton?.removeEventListener("click", cancelSchemaDeletion);
             pendingSchemaPropertyRemoval = undefined;
             pendingSchemaDocumentationRemoval = undefined;
             lastSchemaPropertyRemoval = undefined;
@@ -1498,6 +1629,8 @@ export function createSchemasInstalledController(ports) {
             pendingReusableSchemaRuleDeletionId = undefined;
             editingSchemaAssignment = undefined;
             schemaAssignmentConditionState = { target: "payload", suggestions: [] };
+            pendingSchemaImport = undefined;
+            pendingSchemaDeletion = undefined;
             unsubscribe?.();
             unsubscribe = undefined;
             schemaList?.replaceChildren();
@@ -1539,6 +1672,8 @@ export function createSchemasInstalledController(ports) {
         confirmRuleSync: confirmReusableSchemaRuleSync,
         requestRuleDeletion: requestSchemaRuleDeletion,
         editAssignment: editSchemaAssignment,
+        reviewLibraryImport: reviewSchemaLibraryImport,
+        requestDeletion: requestSchemaDeletion,
         rulePickerState: () => ({ path: schemaRulePickerPath, renderSequence: schemaPropertyRenderSequence,
             ...(schemaRuleConfiguration ? { configuration: structuredClone(schemaRuleConfiguration) } : {}) }),
         rules: () => structuredClone(reusableSchemaRules),

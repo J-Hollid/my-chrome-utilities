@@ -78,7 +78,10 @@ selectors.push("#create-schema-assignment", "#schema-assignment-editor", "#schem
   "#schema-assignment-event", "#schema-assignment-priority", "#save-schema-assignment", "#schema-assignment-target",
   "#schema-assignment-domain", "#schema-assignment-pathname", "#schema-assignment-version-policy",
   "#schema-assignment-enabled", "#schema-assignment-list", "#schema-assignment-conflicts",
-  "#schema-assignment-schema", "#schema-assignment-data-conditions");
+  "#schema-assignment-schema", "#schema-assignment-data-conditions", "#import-schema", "#schema-library-import-file",
+  "#schema-import-review", "#schema-import-review-summary", "#replace-schema-library", "#append-schema-library",
+  "#cancel-schema-import", "#schema-delete-review", "#schema-delete-review-summary", "#confirm-schema-delete",
+  "#cancel-schema-delete");
 const elements = new Map(selectors.map((selector) => [selector, element()]));
 elements.set("#side-panel-layered-profile-editor", element()); elements.set("#live-event-query", element());
 const schemaMasterTab = Object.assign(element(), { textContent:"Schemas", dataset:{ schemaSubview:"schema-master" } });
@@ -234,6 +237,20 @@ assert.equal(uiController.schemas().find(({ id }) => id === uiController.state()
 assert.match(elements.get("#schema-assignment-conflicts").textContent, /Assignment conflict/);
 elements.get("#schema-assignment-list").children[1].children[3].click();
 assert.equal(elements.get("#schema-assignment-conflicts").textContent, "", "disabled duplicates no longer conflict");
+const importedSchema = { id:"schema:imported", name:"Imported", version:1, document:{ type:"object" }, assignments:[], published:true };
+uiController.reviewLibraryImport(JSON.stringify({ version:1, schemas:[importedSchema], rules:[] }));
+assert.equal(elements.get("#schema-import-review").open, true);
+elements.get("#cancel-schema-import").click();
+assert.equal(uiController.schemas().some(({ id }) => id === importedSchema.id), false, "cancel leaves both libraries untouched");
+uiController.reviewLibraryImport(JSON.stringify({ version:1, schemas:[importedSchema], rules:[] }));
+elements.get("#append-schema-library").click();
+assert.equal(uiController.schemas().some(({ id }) => id === importedSchema.id), true);
+assert.equal(uiController.requestDeletion(importedSchema.id), true);
+assert.match(elements.get("#schema-delete-review-summary").textContent, /Imported v1/);
+elements.get("#cancel-schema-delete").click();
+assert.equal(uiController.schemas().some(({ id }) => id === importedSchema.id), true);
+uiController.requestDeletion(importedSchema.id); elements.get("#confirm-schema-delete").click();
+assert.equal(uiController.schemas().some(({ id }) => id === importedSchema.id), false);
 uiController.dispose();
 assert.equal([...elements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
   "Schemas removes every editor and revision listener it owns");
