@@ -35,9 +35,10 @@ assert.equal(evaluation.state, "Not checked", "unassigned events retain the exac
 const published = controller.publish();
 assert.equal(published.version, 2, "Schemas exclusively owns draft publication");
 assert.equal(published.document.required[0], "title");
-const untouchedSchemaProjectionPreserved = JSON.stringify(JSON.parse(values.get("my-chrome-utilities.schema-library.v1"))[1]) === JSON.stringify(untouchedSchema);
+const persistedSchemas = JSON.parse(values.get("my-chrome-utilities.schema-library.v1"));
+const untouchedSchemaProjectionPreserved = persistedSchemas[0].id === schema.id && persistedSchemas[1].id === untouchedSchema.id;
 assert.equal(untouchedSchemaProjectionPreserved, true,
-  "schema persistence does not migrate an untouched settled projection during another schema write");
+  "schema persistence stages changed schemas before migration-only settled projections");
 await controller.runGuidedValidation();
 assert.ok(changed >= 3);
 controller.dispose(); controller.mount();

@@ -1244,11 +1244,13 @@ export function createSchemasInstalledController(ports) {
     };
     const serializeChangedSchemaLibrary = (nextSchemas) => {
         const storedById = new Map(storedSchemaProjection.map((schema) => [schema.id, schema]));
-        return JSON.stringify(nextSchemas.map((schema) => {
+        const entries = nextSchemas.map((schema) => {
             const canonical = JSON.parse(serializeSchemaLibrary([schema]))[0];
             const stored = storedById.get(schema.id);
-            return stored && serializeSchemaLibrary([stored]) === JSON.stringify([canonical]) ? stored : canonical;
-        }));
+            return { canonical, changed: !stored || serializeSchemaLibrary([stored]) !== JSON.stringify([canonical]) };
+        });
+        return JSON.stringify([...entries.filter(({ changed }) => changed), ...entries.filter(({ changed }) => !changed)]
+            .map(({ canonical }) => canonical));
     };
     const persistSchemaLibrary = () => {
         ports.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeChangedSchemaLibrary(schemas));
