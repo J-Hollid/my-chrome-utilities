@@ -4,7 +4,7 @@ export function createReplayInstalledController(ports) {
     const empty = ports.root.querySelector("#sequence-empty-state");
     let mounted = false;
     let replaySequences = [];
-    const render = () => {
+    const renderSequences = () => {
         if (!mounted)
             return;
         if (empty)
@@ -25,7 +25,7 @@ export function createReplayInstalledController(ports) {
     return {
         mount() { if (!mounted) {
             mounted = true;
-            render();
+            renderSequences();
         } },
         dispose() {
             if (!mounted)
@@ -39,7 +39,7 @@ export function createReplayInstalledController(ports) {
             const templates = ports.listTemplates().filter(({ id: templateId }) => ids.has(templateId.replace(/^template:/u, "")));
             const sequence = createSequence(`sequence:${id}`, `${name} sequence`, id, templates);
             replaySequences = [...replaySequences, sequence];
-            render();
+            renderSequences();
             return sequence;
         },
         sequences: () => replaySequences,

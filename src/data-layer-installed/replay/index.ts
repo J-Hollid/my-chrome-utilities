@@ -31,7 +31,7 @@ export function createReplayInstalledController(
   let mounted = false;
   let replaySequences: ReplaySequence[] = [];
 
-  const render = (): void => {
+  const renderSequences = (): void => {
     if (!mounted) return;
     if (empty) empty.hidden = replaySequences.length > 0;
     renderSequenceReplay(elements, replaySequences, (sequence) => {
@@ -49,7 +49,7 @@ export function createReplayInstalledController(
   };
 
   return {
-    mount(): void { if (!mounted) { mounted = true; render(); } },
+    mount(): void { if (!mounted) { mounted = true; renderSequences(); } },
     dispose(): void {
       if (!mounted) return;
       mounted = false;
@@ -62,7 +62,7 @@ export function createReplayInstalledController(
         ids.has(templateId.replace(/^template:/u, "")));
       const sequence = createSequence(`sequence:${id}`, `${name} sequence`, id, templates);
       replaySequences = [...replaySequences, sequence];
-      render();
+      renderSequences();
       return sequence;
     },
     sequences:() => replaySequences,
