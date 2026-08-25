@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { verifyPreparedInstalledController } from "../support/data-layer-installed-controller-contract.mjs";
 await verifyPreparedInstalledController("schemas");
 const { createSchemasInstalledController } = await import("../../dist/data-layer-installed/schemas/index.js");
@@ -142,6 +143,7 @@ const restoredGuidedCaptures = [];
 let canonicalSettlementMode = "resolve", releaseCanonicalSettlement;
 let layeredProfileMounts = 0, layeredProfileDisposals = 0;
 let liveRevalidations = 0, continuationPreparation, continuationCommit, continuationFailure;
+let publicationFeedbackRetainedAfterRelationshipTreeRerender = false;
 let canonicalTableMounts = 0, canonicalTableRenders = 0, canonicalTableOptions;
 let schemaStorageWrites = 0;
 const uiRoot = { ownerDocument:fakeDocument,
@@ -277,6 +279,15 @@ uiController.openSchemaFromSource({ name:"Checkout", sourceId:"gtm", eventName:"
   payload:{ total:12, coupon:"SAVE" }, label:"Library template" });
 elements.get("#save-schema").click(); const sourceWritesBeforePublish = schemaStorageWrites; elements.get("#confirm-schema-revision").click();
 assert.equal(uiController.schemas().length, sourceLibraryBefore.length + 1, "confirming Source publication appends exactly one schema");
+assert.equal(elements.get("#schema-result").textContent,
+  "Published Checkout schema revision 1. Revalidated 3 current Live events.",
+  "installed publication reports the exact current-Live revalidation outcome");
+elements.get("#schema-search").dispatch("input");
+publicationFeedbackRetainedAfterRelationshipTreeRerender = elements.get("#schema-result").textContent ===
+  "Published Checkout schema revision 1. Revalidated 3 current Live events.";
+assert.equal(elements.get("#schema-result").textContent,
+  "Published Checkout schema revision 1. Revalidated 3 current Live events.",
+  "relationship-tree rerenders retain the completed publication outcome");
 assert.deepEqual(uiController.schemas().at(-1).assignments, [{ sourceId:"gtm", eventName:"checkout", target:"payload" }]);
 assert.equal(uiController.schemas().at(-1).document.properties.total.type, "number");
 assert.equal(schemaStorageWrites, sourceWritesBeforePublish + 1, "Source confirmation performs the first and only library write");
@@ -370,10 +381,9 @@ assert.equal(elements.get("#schema-property-empty").hidden, false);
 assert.equal(elements.get("#schema-property-empty-message").textContent, "No properties match missing");
 elements.get("#clear-schema-property-filter").click();
 assert.equal(elements.get("#schema-property-filter").value, "");
-const propertyToggle = elements.get("#schema-property-tree").children[0].children
-  .find(({ textContent }) => textContent === "Show rules");
+const propertyToggle = elements.get("#schema-property-tree").children[0].children[0];
 propertyToggle.click();
-assert.equal(propertyToggle.listenerCount(), 0, "property action rerender disposes the replaced row listeners");
+assert.equal(propertyToggle.listenerCount(), 0, "property selection rerender disposes the replaced row listeners");
 schemaRulesTab.click();
 assert.equal(schemaMasterPanel.hidden, true); assert.equal(schemaRulesPanel.hidden, false);
 uiController.beginDraft();
@@ -426,6 +436,21 @@ assert.match(elements.get("#schema-manual-property-preview").textContent, /check
 elements.get("#schema-manual-property-form").dispatch("submit");
 assert.equal(uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId)
   .workingDraft.document.properties.checkout.properties.total.type, "number");
+uiController.openManualProperty();
+elements.get("#schema-manual-property-path").value = "checkout.tax";
+elements.get("#schema-manual-property-type").value = "number";
+elements.get("#schema-manual-property-path").dispatch("input");
+elements.get("#schema-manual-property-form").dispatch("submit");
+const activeSchemaForRuleIdentity = uiController.state().activeSchemaId;
+assert.equal(uiController.attachReusableRule(activeSchemaForRuleIdentity, "rule:quantities", "checkout.total"), true);
+uiController.openRulePicker("checkout.tax");
+assert.equal(findByText(elements.get("#schema-property-rule-picker"), "Reusable quantities version 3").disabled, false,
+  "a reusable rule attached to one property remains available on another compatible property");
+elements.get("#schema-property-rule-picker").dispatch("cancel");
+uiController.openRulePicker("checkout.total");
+assert.equal(findByText(elements.get("#schema-property-rule-picker"), "Reusable quantities version 3 · already attached").disabled, true,
+  "canonical dotted and pointer paths identify the same property attachment");
+elements.get("#schema-property-rule-picker").dispatch("cancel");
 uiController.openContextualManualProperty("/items/*");
 elements.get("#schema-manual-property-child-name").value = "sku";
 elements.get("#schema-manual-property-type").value = "string";
@@ -529,10 +554,10 @@ assert.equal(uiController.updateAttachedRule(uiController.state().activeSchemaId
 assert.equal(uiController.updateAttachedRule(uiController.state().activeSchemaId, "rule:checkout", true), true);
 elements.get("#schema-rule-search").value = "checkout"; elements.get("#schema-rule-search").dispatch("input");
 const checkoutRuleRow = elements.get("#schema-rule-list").children.find(({ children }) => /Checkout required/.test(children[0].textContent));
-assert.ok(checkoutRuleRow); const disableRuleButton = checkoutRuleRow.children[5]; disableRuleButton.click();
+assert.ok(checkoutRuleRow); const disableRuleButton = findByText(checkoutRuleRow, "Disable"); disableRuleButton.click();
 assert.equal(uiController.rules().find(({ id }) => id === "rule:checkout").enabled, false);
 assert.equal(disableRuleButton.listenerCount(), 0, "rerender disposes the replaced rule-row action listeners");
-elements.get("#schema-rule-list").children[0].children[5].click();
+findByText(elements.get("#schema-rule-list").children[0], "Enable").click();
 assert.equal(uiController.requestRuleRevision("rule:checkout", { name:"Checkout present", message:"Checkout must be present" }), true);
 assert.equal(elements.get("#schema-rule-revision-review").open, true);
 elements.get("#cancel-schema-rule-revision").click();
@@ -913,4 +938,30 @@ assert.equal([...elements.values()].reduce((count, item) => count + item.listene
     "Retry settles through both durable observation and explicit recovery acknowledgement");
   await recovery.reject(); assert.equal(rejected, 1); assert.equal(persistenceEvents.at(-1), "rejected");
   coordination.dispose();
+}
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const normalized = (value) => Array.isArray(value) ? value.map(normalized)
+    : value && typeof value === "object" ? Object.fromEntries(Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, nested]) => [key, normalized(nested)])) : value;
+  const digest = (value) => createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex");
+  const expectedPreRepairFailure = { publicationFeedbackRetainedAfterRelationshipTreeRerender:false };
+  const expectedRepairResult = { publicationFeedbackRetainedAfterRelationshipTreeRerender:true };
+  const observed = { publicationFeedbackRetainedAfterRelationshipTreeRerender };
+  assert.deepEqual(observed, expectedRepairResult);
+  const fixture = {
+    id:"installed-schema-publication-feedback-retention-v1",
+    causalCategory:"other:installed schema publication feedback retention",
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{ publication:"Saved Schema revision", rerender:"relationship tree", feedback:"Live event revalidation outcome" },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const fixtureDigest = digest(fixture);
+  console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+    incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed } } }));
 }

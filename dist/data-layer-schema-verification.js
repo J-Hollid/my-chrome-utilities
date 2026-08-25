@@ -142,6 +142,11 @@ export function proposeSchemaWorkingDraftName(schema, proposedName) {
     const nextDraft = { ...draft, pendingChanges };
     if (proposed !== schema.name || draft.name !== undefined)
         nextDraft.name = proposed;
+    if (nextDraft.canonicalSchema && proposed)
+        nextDraft.canonicalSchema = {
+            ...nextDraft.canonicalSchema,
+            contributorName: proposed,
+        };
     return { ...withDraft, workingDraft: nextDraft };
 }
 export function discardSchemaWorkingDraft(schema) {

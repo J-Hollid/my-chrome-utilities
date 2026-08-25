@@ -119,6 +119,18 @@ export function createCaptureInstalledController(ports) {
     let savedThroughEventCount = Math.max(0, Number(ports.storage.getItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY)) || 0);
     let inspectorReturnSnapshot;
     const liveInspectorPresentation = new Map();
+    const rememberLiveInspectorPresentation = (eventId) => {
+        const captured = ports.inspector.capturePresentation(), previous = liveInspectorPresentation.get(eventId);
+        if (previous?.focusedPropertyPath && !captured.focusedPropertyPath) {
+            liveInspectorPresentation.set(eventId, previous);
+            return;
+        }
+        liveInspectorPresentation.set(eventId, {
+            ...captured,
+            ...(!captured.focusedId && previous?.focusedId ? { focusedId: previous.focusedId } : {}),
+            ...(!captured.focusedPropertyPath && previous?.focusedPropertyPath ? { focusedPropertyPath: previous.focusedPropertyPath } : {}),
+        });
+    };
     let importGeneration = 0;
     let observationRefreshTimeoutId;
     let unsubscribeTabUpdated;
@@ -352,7 +364,13 @@ export function createCaptureInstalledController(ports) {
     }
     const cancelDetachTarget = () => { pendingObservationTargetSwitchId = undefined; setObservationTargetResult("Detach cancelled"); };
     const confirmDetachTarget = () => { void confirmDetachSelectedTarget(); };
-    function showDataLayerView(view) { ports.ui.showDataLayerView(view); }
+    function showDataLayerView(view) {
+        if (view !== "Live" && liveObserverState.inspectorEventId)
+            rememberLiveInspectorPresentation(liveObserverState.inspectorEventId);
+        ports.ui.showDataLayerView(view);
+        if (view === "Live" && liveObserverState.inspectorEventId)
+            ports.inspector.restorePresentation(liveInspectorPresentation.get(liveObserverState.inspectorEventId));
+    }
     const selectDataLayerView = (event) => {
         const button = event.target?.closest("[role=tab]");
         if (button?.textContent)
@@ -684,7 +702,7 @@ export function createCaptureInstalledController(ports) {
     function closeInspectorAndReturnToEvents() {
         const selectedId = liveObserverState.inspectorEventId;
         if (selectedId)
-            liveInspectorPresentation.set(selectedId, ports.inspector.capturePresentation());
+            rememberLiveInspectorPresentation(selectedId);
         const returnSnapshot = inspectorReturnSnapshot;
         liveObserverState = closeLiveInspector(liveObserverState);
         synchronizeSavedSessionFeedView();
@@ -696,7 +714,7 @@ export function createCaptureInstalledController(ports) {
     function openLiveInspector(eventId, preserveReturnSnapshot = false) {
         const previousEventId = liveObserverState.inspectorEventId;
         if (previousEventId)
-            liveInspectorPresentation.set(previousEventId, ports.inspector.capturePresentation());
+            rememberLiveInspectorPresentation(previousEventId);
         if (!preserveReturnSnapshot)
             inspectorReturnSnapshot = captureInspectorReturn(eventId, liveObserverElements.eventList?.scrollTop ?? 0);
         liveObserverState = selectLiveEvent(liveObserverState, eventId, ports.inspector.splitView() ? "split" : "stacked");
@@ -1370,6 +1388,14 @@ export function createCaptureInstalledController(ports) {
         beginDetachTarget: beginDetachSelectedTarget,
         confirmDetachTarget: confirmDetachSelectedTarget,
         openInspector: openLiveInspector,
+        rememberInspectorPresentation() {
+            if (liveObserverState.inspectorEventId)
+                rememberLiveInspectorPresentation(liveObserverState.inspectorEventId);
+        },
+        restoreInspectorPresentation() {
+            if (liveObserverState.inspectorEventId)
+                ports.inspector.restorePresentation(liveInspectorPresentation.get(liveObserverState.inspectorEventId));
+        },
         closeInspector: closeInspectorAndReturnToEvents,
         updateEvent(id, patch) {
             const index = liveObserverState.events.findIndex((event) => event.id === id);

@@ -1,13 +1,14 @@
 export function captureLiveInspectorPresentation(inspector, focused = document.activeElement) {
     const focusedElement = focused instanceof HTMLElement ? focused : undefined;
-    const focusedPropertyPath = focusedElement?.closest(".live-validation-property")?.dataset.propertyPath;
+    const focusedInsideInspector = Boolean(focusedElement && inspector?.contains(focusedElement));
+    const focusedPropertyPath = focusedInsideInspector ? focusedElement?.closest(".live-validation-property")?.dataset.propertyPath : undefined;
     return {
         showNonApplicableProperties: inspector?.querySelector('[aria-label="Properties"]')?.dataset.showNonApplicableProperties === "true",
         expandedPropertyPaths: Array.from(inspector?.querySelectorAll("details[open][data-property-path]") ?? [])
             .map(({ dataset }) => dataset.propertyPath).filter((path) => Boolean(path)),
         expandedRulePaths: Array.from(inspector?.querySelectorAll('.live-validation-property[data-property-path] .live-property-status[aria-expanded="true"]') ?? [])
             .map((button) => button.closest(".live-validation-property")?.dataset.propertyPath).filter((path) => Boolean(path)),
-        ...(focusedElement?.id ? { focusedId: focusedElement.id } : {}),
+        ...(focusedInsideInspector && focusedElement?.id ? { focusedId: focusedElement.id } : {}),
         ...(focusedPropertyPath ? { focusedPropertyPath } : {}),
         scrollTop: inspector?.scrollTop ?? 0,
     };
@@ -15,6 +16,11 @@ export function captureLiveInspectorPresentation(inspector, focused = document.a
 export function restoreLiveInspectorPresentation(inspector, snapshot, root = document) {
     if (!snapshot)
         return;
+    const properties = inspector?.querySelector('[aria-label="Properties"]');
+    const showingNonApplicable = properties?.dataset.showNonApplicableProperties === "true";
+    if (showingNonApplicable !== snapshot.showNonApplicableProperties) {
+        inspector?.querySelector("#live-non-applicable-properties")?.click();
+    }
     for (const path of snapshot.expandedPropertyPaths)
         inspector?.querySelector(`details[data-property-path="${CSS.escape(path)}"]`)?.setAttribute("open", "");
     for (const path of snapshot.expandedRulePaths) {

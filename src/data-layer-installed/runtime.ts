@@ -537,8 +537,10 @@ export async function mountInstalledDataLayerRuntime(
   let currentView:DataLayerView=(dataStorage.getItem("my-chrome-utilities.data-layer-view.v1") as DataLayerView|null)??"Live";
   const liveElements=liveApi.findLiveObserverElements(root);
   const showDataLayerView=(view:string,focus=false):void=>{if(!liveApi.dataLayerViews.includes(view as DataLayerView))return;
+    if(currentView==="Live"&&view!=="Live")controllers?.capture.rememberInspectorPresentation();
     currentView=view as DataLayerView;dataStorage.setItem("my-chrome-utilities.data-layer-view.v1",currentView);
     liveApi.renderDataLayerView(liveElements,currentView,focus);if(currentView==="Defects")controllers?.defects.render();
+    if(currentView==="Live")controllers?.capture.restoreInspectorPresentation();
     if(currentView==="Schemas")void controllers?.schemas.hydrateActiveProjectForSchemas();};
   const projectLibraryUi=schemaApi.mountProjectLibraryUi({root,storage:projectStorage,
     prepareProject:durable.ensureProject,settled:durable.settled,undoProject:durable.undo,
@@ -692,7 +694,13 @@ export async function mountInstalledDataLayerRuntime(
       openProjectLibrary:()=>showDataLayerView("Projects"),openContributor:()=>{},openContributorInStudio:(key)=>globalThis.open(`specification-builder.html?contributor=${encodeURIComponent(key)}`,"_blank"),
       adoptSavedSchema:()=>{},renderSchemaSpecification:(host,schema,schemas,surface,close)=>schemaApi.renderSchemaSpecificationBuilder(host,schema,schemas,surface,close,{
         writePlain:async(plain:string)=>navigator.clipboard.writeText(plain),
-        writeRich:async(_html:string,plain:string)=>navigator.clipboard.writeText(plain),
+        writeRich:async(html:string,plain:string)=>{
+          if(!navigator.clipboard?.write||typeof ClipboardItem==="undefined")throw new Error("Rich clipboard writing is unavailable.");
+          await navigator.clipboard.write([new ClipboardItem({
+            "text/html":new Blob([html],{type:"text/html"}),
+            "text/plain":new Blob([plain],{type:"text/plain"}),
+          })]);
+        },
       }),reportMissingSchemaEvent:()=>controllers.defects.openMissingEventBuilder("Schemas"),
       showSchemasView:()=>showDataLayerView("Schemas"),scheduleFrame:(callback)=>requestAnimationFrame(callback),restoreGuidedCapture:(id,path,focusAction="validation")=>{
         const snapshot=guidedLivePropertyReturn?.eventId===id?guidedLivePropertyReturn:undefined;

@@ -369,6 +369,15 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
   );
   let inspectorReturnSnapshot: InspectorReturnSnapshot | undefined;
   const liveInspectorPresentation = new Map<string, LiveInspectorPresentationSnapshot>();
+  const rememberLiveInspectorPresentation = (eventId:string):void => {
+    const captured = ports.inspector.capturePresentation(), previous = liveInspectorPresentation.get(eventId);
+    if (previous?.focusedPropertyPath && !captured.focusedPropertyPath) { liveInspectorPresentation.set(eventId, previous); return; }
+    liveInspectorPresentation.set(eventId, {
+      ...captured,
+      ...(!captured.focusedId && previous?.focusedId ? { focusedId:previous.focusedId } : {}),
+      ...(!captured.focusedPropertyPath && previous?.focusedPropertyPath ? { focusedPropertyPath:previous.focusedPropertyPath } : {}),
+    });
+  };
   let importGeneration = 0;
   let observationRefreshTimeoutId: number | undefined;
   let unsubscribeTabUpdated: (() => void) | undefined;
@@ -526,7 +535,11 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
   }
   const cancelDetachTarget = (): void => { pendingObservationTargetSwitchId = undefined; setObservationTargetResult("Detach cancelled"); };
   const confirmDetachTarget = (): void => { void confirmDetachSelectedTarget(); };
-  function showDataLayerView(view: string): void { ports.ui.showDataLayerView(view); }
+  function showDataLayerView(view: string): void {
+    if (view !== "Live" && liveObserverState.inspectorEventId) rememberLiveInspectorPresentation(liveObserverState.inspectorEventId);
+    ports.ui.showDataLayerView(view);
+    if (view === "Live" && liveObserverState.inspectorEventId) ports.inspector.restorePresentation(liveInspectorPresentation.get(liveObserverState.inspectorEventId));
+  }
   const selectDataLayerView = (event: Event): void => {
     const button = (event.target as Element | null)?.closest<HTMLButtonElement>("[role=tab]");
     if (button?.textContent) showDataLayerView(button.textContent);
@@ -769,7 +782,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
   }
   function closeInspectorAndReturnToEvents(): void {
     const selectedId = liveObserverState.inspectorEventId;
-    if (selectedId) liveInspectorPresentation.set(selectedId, ports.inspector.capturePresentation());
+    if (selectedId) rememberLiveInspectorPresentation(selectedId);
     const returnSnapshot = inspectorReturnSnapshot;
     liveObserverState = closeLiveInspector(liveObserverState);
     synchronizeSavedSessionFeedView(); renderLiveObserver();
@@ -778,7 +791,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
   }
   function openLiveInspector(eventId: string, preserveReturnSnapshot = false): void {
     const previousEventId = liveObserverState.inspectorEventId;
-    if (previousEventId) liveInspectorPresentation.set(previousEventId, ports.inspector.capturePresentation());
+    if (previousEventId) rememberLiveInspectorPresentation(previousEventId);
     if (!preserveReturnSnapshot) inspectorReturnSnapshot = captureInspectorReturn(
       eventId, liveObserverElements.eventList?.scrollTop ?? 0,
     );
@@ -1270,6 +1283,12 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     beginDetachTarget:beginDetachSelectedTarget,
     confirmDetachTarget:confirmDetachSelectedTarget,
     openInspector:openLiveInspector,
+    rememberInspectorPresentation():void {
+      if (liveObserverState.inspectorEventId) rememberLiveInspectorPresentation(liveObserverState.inspectorEventId);
+    },
+    restoreInspectorPresentation():void {
+      if (liveObserverState.inspectorEventId) ports.inspector.restorePresentation(liveInspectorPresentation.get(liveObserverState.inspectorEventId));
+    },
     closeInspector:closeInspectorAndReturnToEvents,
     updateEvent(id:string, patch:Partial<LiveEvent>):boolean {
       const index=liveObserverState.events.findIndex((event)=>event.id===id);if(index<0)return false;

@@ -124,11 +124,15 @@ export function renderSchemaPropertyCopyReview(dialog, options) {
     };
     destination.addEventListener("change", renderPlan);
     sourceChoice.addEventListener("change", () => { activeSource = (options.sources ?? [options.source])[Number(sourceChoice.value)] ?? options.source; source.textContent = `Source: ${activeSource.label} · Selected path: ${options.selectedPath}`; destructiveConfirmed = false; renderPlan(); });
+    let closed = false;
+    const onCancel = (event) => { event.preventDefault(); close(); };
+    const cleanup = () => { if (closed)
+        return; closed = true; dialog.removeEventListener("cancel", onCancel); };
+    const close = () => { cleanup(); dialog.close(); options.onClose?.(); options.trigger?.focus({ preventScroll: true }); };
     confirm.addEventListener("click", () => { if (!current || !current.ready)
-        return; const transaction = applySchemaPropertyCopy(current); options.onApply(transaction); feedback.textContent = `Copied ${current.selectedPath} to ${transaction.schema.name}. Undo is available.`; dialog.close(); options.onClose?.(); });
-    const close = () => { dialog.close(); options.onClose?.(); options.trigger?.focus({ preventScroll: true }); };
+        return; const transaction = applySchemaPropertyCopy(current); options.onApply(transaction); feedback.textContent = `Copied ${current.selectedPath} to ${transaction.schema.name}. Undo is available.`; cleanup(); dialog.close(); options.onClose?.(); });
     cancel.addEventListener("click", close);
-    dialog.addEventListener("cancel", (event) => { event.preventDefault(); close(); }, { once: true });
+    dialog.addEventListener("cancel", onCancel);
     dialog.replaceChildren(heading, source, sourceLabel, destinationLabel, review, confirm, cancel, feedback);
     dialog.showModal();
     heading.focus({ preventScroll: true });
