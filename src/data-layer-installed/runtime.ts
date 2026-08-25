@@ -7,6 +7,10 @@ import { createProjectEventTransportInstalledController, type ProjectEventTransp
 import { createProjectsInstalledController, type ProjectsInstalledPorts } from "./projects/index.js";
 import { createReplayInstalledController, type ReplayInstalledPorts } from "./replay/index.js";
 import { createSchemasInstalledController, type SchemasInstalledPorts } from "./schemas/index.js";
+import { attachSavedSessionToDefect, type DefectLibrary, type ReportedDefect } from "../utilities/data-layer/defect-reporting.js";
+import type { SessionSaveDraft } from "../data-layer-saved-session-live-feed.js";
+import type { SavedSessionLibrary } from "../utilities/data-layer/live-inspection.js";
+import type { EditableEventTemplate } from "../utilities/data-layer/event-library.js";
 
 export const installedDataLayerControllerOrder = [
   "capture",
@@ -234,6 +238,47 @@ export function createInstalledDataLayerControllers(ports:InstalledDataLayerCont
   return { controllers, lifecycle:createInstalledDataLayerLifecycle(controllers) };
 }
 
+export interface DefectCaptureOwners {
+  capture:{ currentSessionDraft():SessionSaveDraft; savedSessions():SavedSessionLibrary;
+    replaceSavedSessions(next:SavedSessionLibrary):void; openSavedSession(id:string):boolean; openInspector(id:string):void };
+  defects:{ library():DefectLibrary; replace(next:DefectLibrary):void; matchingEvent(defect:ReportedDefect):{ id:string } | undefined };
+}
+
+export function createDefectCaptureCoordination(owners:DefectCaptureOwners, now:() => string = () => new Date().toISOString()) {
+  return {
+    attachCurrentSession(defectId:string):void {
+      const draft = owners.capture.currentSessionDraft();
+      const result = attachSavedSessionToDefect(owners.defects.library(), owners.capture.savedSessions(), defectId,
+        draft.completed, `Evidence for ${defectId}`, now());
+      owners.defects.replace(result.library); owners.capture.replaceSavedSessions(result.savedSessions);
+    },
+    openLinkedSession(defectId:string):boolean {
+      const defect = owners.defects.library().defects.find(({ id }) => id === defectId);
+      if (!defect?.savedSession || !owners.capture.openSavedSession(defect.savedSession.id)) return false;
+      const matching = owners.defects.matchingEvent(defect); if (matching) owners.capture.openInspector(matching.id);
+      return true;
+    },
+  };
+}
+
+export interface EventLibrarySchemaOwners {
+  schemas:{ schemas():readonly { id:string; name:string; version:number }[];
+    validateAgainstSchema(event:{ sourceId:string; eventName:string; payload:unknown; rawInput:unknown }, schemaId:string):{ message:string };
+    openSchemaFromSource(name:string, value:unknown):unknown };
+}
+
+export function createEventLibrarySchemaCoordination(owners:EventLibrarySchemaOwners) {
+  return {
+    schemas:() => owners.schemas.schemas(),
+    validateDraft:(draft:{ schemaId:string; sourceId:string; eventName:string; payload:unknown }) =>
+      owners.schemas.validateAgainstSchema({ sourceId:draft.sourceId, eventName:draft.eventName,
+        payload:structuredClone(draft.payload), rawInput:[] }, draft.schemaId),
+    createSchema:(template:EditableEventTemplate):void => {
+      owners.schemas.openSchemaFromSource(template.name, structuredClone(template.payload));
+    },
+  };
+}
+
 export function createInstalledDataLayerLifecycle(
   controllers: InstalledDataLayerControllers,
 ): InstalledDataLayerControllerLifecycle {
@@ -262,4 +307,3 @@ import { installDurableRepositoryStartupFailure, openDurableProjectRuntime,
   SCHEMA_LIBRARY_STORAGE_KEY } from "../utilities/data-layer/schemas.js";
 import type { CommandRunContext, CommandRunRecord } from "../commands.js";
 import type { WorkspaceTabId } from "../workspace-tabs.js";
-

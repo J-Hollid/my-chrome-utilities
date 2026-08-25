@@ -363,8 +363,9 @@ assert.ok(elements.get("#schema-property-rule-picker").querySelector("#schema-pr
 assert.ok(elements.get("#schema-property-rule-picker").querySelector("#schema-property-rule-results"),
   "Schemas preserves the dynamic legacy rule-results ID when returning to rule choices");
 const pickerSearch = elements.get("#schema-property-rule-picker").querySelector("#schema-property-rule-search"); pickerSearch.value = "missing"; pickerSearch.dispatch("input");
-assert.equal(elements.get("#schema-property-rule-picker").children[2].children[0].textContent, "Clear search");
-elements.get("#schema-property-rule-picker").children[2].children[0].click();
+assert.equal(elements.get("#schema-property-rule-picker").children[2].children[0].id, "schema-property-rule-empty");
+assert.equal(elements.get("#schema-property-rule-picker").children[2].children[1].textContent, "Clear search");
+elements.get("#schema-property-rule-picker").children[2].children[1].click();
 assert.ok(elements.get("#schema-property-rule-picker").children[2].children.length > 1, "clearing restores compatible rule choices");
 elements.get("#schema-property-rule-picker").children.at(-1).click();
 uiController.publish();

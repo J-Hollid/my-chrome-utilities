@@ -219,7 +219,6 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const schemaEditorParent = ports.root.querySelector<HTMLSelectElement>("#schema-editor-parent");
   const schemaOnlyDeclaredProperties = ports.root.querySelector<HTMLInputElement>("#schema-only-declared-properties");
   const schemaEditorName = ports.root.querySelector<HTMLInputElement>("#schema-editor-name");
-  const schemaEditorNameAssistance = ports.root.querySelector<HTMLOutputElement>("#schema-editor-name-assistance");
   const schemaEditorDescription = ports.root.querySelector<HTMLTextAreaElement>("#schema-editor-description");
   const saveSchemaDescriptionButton = ports.root.querySelector<HTMLButtonElement>("#save-schema-description");
   const schemaDescriptionOrigin = ports.root.querySelector<HTMLElement>("#schema-description-origin");
@@ -247,6 +246,10 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     ?? ("createElement" in ports.root ? ports.root as Document : undefined);
   const ownedElement = <K extends keyof HTMLElementTagNameMap>(selector: string, tag: K): HTMLElementTagNameMap[K] | null =>
     ports.root.querySelector<HTMLElementTagNameMap[K]>(selector) ?? schemaOwnerDocument?.createElement(tag) ?? null;
+  const schemaEditorNameAssistance = ownedElement("#schema-editor-name-assistance", "output");
+  if (schemaEditorNameAssistance && !schemaEditorNameAssistance.isConnected) {
+    schemaEditorNameAssistance.id = "schema-editor-name-assistance"; schemaEditorName?.after(schemaEditorNameAssistance);
+  }
   const schemaInheritedRuleGroups = ownedElement("#schema-inherited-rule-groups", "section");
   const schemaEffectiveRulePreview = ownedElement("#schema-effective-rule-preview", "section");
   const schemaSpecificationBuilder = ownedElement("#schema-specification-builder", "section");
@@ -408,6 +411,14 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   }
   if (schemaPropertyTree && !schemaPropertyTree.isConnected) { schemaPropertyTree.id = "schema-property-tree";
     addSchemaPropertyButton?.after(schemaPropertyTree); }
+  if (schemaPropertyRemovalFeedback && !schemaPropertyRemovalFeedback.isConnected) {
+    schemaPropertyRemovalFeedback.id = "schema-property-removal-feedback"; schemaPropertyRemovalFeedback.setAttribute("aria-live", "polite");
+    schemaPropertyTree?.after(schemaPropertyRemovalFeedback);
+  }
+  if (schemaPropertyCopyFeedback && !schemaPropertyCopyFeedback.isConnected) {
+    schemaPropertyCopyFeedback.id = "schema-property-copy-feedback"; schemaPropertyCopyFeedback.setAttribute("aria-live", "polite");
+    schemaPropertyRemovalFeedback?.after(schemaPropertyCopyFeedback);
+  }
   if (schemaPropertyCopyDialog && !schemaPropertyCopyDialog.isConnected) {
     schemaPropertyCopyDialog.id = "schema-property-copy-dialog"; schemaOwnerDocument?.body.append(schemaPropertyCopyDialog);
   }
@@ -469,7 +480,10 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (schemaManualArrayTypeGroup) { schemaManualArrayTypeGroup.id = "schema-manual-array-type-group";
       schemaManualArrayTypeGroup.htmlFor = "schema-manual-array-item-type"; schemaManualArrayTypeGroup.textContent = "Array item type ";
       if (schemaManualArrayItemType) { schemaManualArrayItemType.id = "schema-manual-array-item-type"; schemaManualArrayTypeGroup.append(schemaManualArrayItemType); } } append(schemaManualArrayTypeGroup);
-    append(schemaManualPropertyPreview); append(schemaManualPropertyAssistance);
+    if (schemaManualPropertyPreview) { schemaManualPropertyPreview.id = "schema-manual-property-preview";
+      schemaManualPropertyPreview.setAttribute("aria-live", "polite"); } append(schemaManualPropertyPreview);
+    if (schemaManualPropertyAssistance) { schemaManualPropertyAssistance.id = "schema-manual-property-assistance";
+      schemaManualPropertyAssistance.setAttribute("aria-live", "polite"); } append(schemaManualPropertyAssistance);
     if (goToExistingSchemaPropertyButton) { goToExistingSchemaPropertyButton.id = "go-to-existing-schema-property"; goToExistingSchemaPropertyButton.type = "button"; } append(goToExistingSchemaPropertyButton);
     if (confirmSchemaManualPropertyButton) { confirmSchemaManualPropertyButton.id = "confirm-schema-manual-property";
       confirmSchemaManualPropertyButton.type = "submit"; confirmSchemaManualPropertyButton.textContent = "Add property"; } append(confirmSchemaManualPropertyButton);
@@ -499,7 +513,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   installRuleReviewDialog(schemaRuleUpgradeReview, "schema-rule-upgrade-review", "Update pinned rule attachments",
     schemaRuleUpgradeReviewSummary, confirmSchemaRuleUpgradeButton, cancelSchemaRuleUpgradeButton);
   installRuleReviewDialog(schemaRuleSyncReview, "schema-rule-sync-review", "Sync attached schemas and publish revisions",
-    schemaRuleSyncReviewSummary, confirmSchemaRuleSyncButton, cancelSchemaRuleSyncButton);
+    schemaRuleSyncReviewSummary, confirmSchemaRuleSyncButton, cancelSchemaRuleSyncButton, "confirm-schema-rule-sync");
   installRuleReviewDialog(schemaRuleDeleteReview, "schema-rule-delete-review", "Delete reusable rule",
     schemaRuleDeleteReviewSummary, confirmSchemaRuleDeleteButton, cancelSchemaRuleDeleteButton);
   installRuleReviewDialog(schemaImportReview, "schema-import-review", "Import Schema Library",
@@ -1400,9 +1414,10 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
           else { attachReusableRule(active().id, rule.id, path); closeSchemaPropertyRulePickerForCommit(); } };
         button.addEventListener("click", action); schemaRulePickerDisposers.push(() => button.removeEventListener("click", action)); results.append(button);
       }
-      if (!results.children.length) { const clear = document.createElement("button"); clear.type = "button"; clear.textContent = "Clear search";
+      if (!results.children.length) { const empty = document.createElement("p"), clear = document.createElement("button");
+        empty.id = "schema-property-rule-empty"; empty.textContent = "No compatible rules match this search"; clear.type = "button"; clear.textContent = "Clear search";
         const clearSearch = ():void => { schemaRulePickerSearch = ""; renderSchemaPropertyRulePicker(); }; clear.addEventListener("click", clearSearch);
-        schemaRulePickerDisposers.push(() => clear.removeEventListener("click", clearSearch)); results.append(clear); }
+        schemaRulePickerDisposers.push(() => clear.removeEventListener("click", clearSearch)); results.append(empty, clear); }
       const cancelPicker = ():void => closeSchemaPropertyRulePicker(), searchRules = ():void => { schemaRulePickerSearch = search.value; renderSchemaPropertyRulePicker(); };
       cancel.addEventListener("click", cancelPicker); search.addEventListener("input", searchRules); schemaRulePickerDisposers.push(() => cancel.removeEventListener("click", cancelPicker), () => search.removeEventListener("input", searchRules));
       schemaPropertyRulePicker.replaceChildren(heading, search, results, cancel); return;

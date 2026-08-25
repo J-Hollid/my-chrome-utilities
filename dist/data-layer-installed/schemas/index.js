@@ -35,7 +35,6 @@ export function createSchemasInstalledController(ports) {
     const schemaEditorParent = ports.root.querySelector("#schema-editor-parent");
     const schemaOnlyDeclaredProperties = ports.root.querySelector("#schema-only-declared-properties");
     const schemaEditorName = ports.root.querySelector("#schema-editor-name");
-    const schemaEditorNameAssistance = ports.root.querySelector("#schema-editor-name-assistance");
     const schemaEditorDescription = ports.root.querySelector("#schema-editor-description");
     const saveSchemaDescriptionButton = ports.root.querySelector("#save-schema-description");
     const schemaDescriptionOrigin = ports.root.querySelector("#schema-description-origin");
@@ -62,6 +61,11 @@ export function createSchemasInstalledController(ports) {
     const schemaOwnerDocument = ports.root.ownerDocument
         ?? ("createElement" in ports.root ? ports.root : undefined);
     const ownedElement = (selector, tag) => ports.root.querySelector(selector) ?? schemaOwnerDocument?.createElement(tag) ?? null;
+    const schemaEditorNameAssistance = ownedElement("#schema-editor-name-assistance", "output");
+    if (schemaEditorNameAssistance && !schemaEditorNameAssistance.isConnected) {
+        schemaEditorNameAssistance.id = "schema-editor-name-assistance";
+        schemaEditorName?.after(schemaEditorNameAssistance);
+    }
     const schemaInheritedRuleGroups = ownedElement("#schema-inherited-rule-groups", "section");
     const schemaEffectiveRulePreview = ownedElement("#schema-effective-rule-preview", "section");
     const schemaSpecificationBuilder = ownedElement("#schema-specification-builder", "section");
@@ -268,6 +272,16 @@ export function createSchemasInstalledController(ports) {
         schemaPropertyTree.id = "schema-property-tree";
         addSchemaPropertyButton?.after(schemaPropertyTree);
     }
+    if (schemaPropertyRemovalFeedback && !schemaPropertyRemovalFeedback.isConnected) {
+        schemaPropertyRemovalFeedback.id = "schema-property-removal-feedback";
+        schemaPropertyRemovalFeedback.setAttribute("aria-live", "polite");
+        schemaPropertyTree?.after(schemaPropertyRemovalFeedback);
+    }
+    if (schemaPropertyCopyFeedback && !schemaPropertyCopyFeedback.isConnected) {
+        schemaPropertyCopyFeedback.id = "schema-property-copy-feedback";
+        schemaPropertyCopyFeedback.setAttribute("aria-live", "polite");
+        schemaPropertyRemovalFeedback?.after(schemaPropertyCopyFeedback);
+    }
     if (schemaPropertyCopyDialog && !schemaPropertyCopyDialog.isConnected) {
         schemaPropertyCopyDialog.id = "schema-property-copy-dialog";
         schemaOwnerDocument?.body.append(schemaPropertyCopyDialog);
@@ -413,7 +427,15 @@ export function createSchemasInstalledController(ports) {
             }
         }
         append(schemaManualArrayTypeGroup);
+        if (schemaManualPropertyPreview) {
+            schemaManualPropertyPreview.id = "schema-manual-property-preview";
+            schemaManualPropertyPreview.setAttribute("aria-live", "polite");
+        }
         append(schemaManualPropertyPreview);
+        if (schemaManualPropertyAssistance) {
+            schemaManualPropertyAssistance.id = "schema-manual-property-assistance";
+            schemaManualPropertyAssistance.setAttribute("aria-live", "polite");
+        }
         append(schemaManualPropertyAssistance);
         if (goToExistingSchemaPropertyButton) {
             goToExistingSchemaPropertyButton.id = "go-to-existing-schema-property";
@@ -469,7 +491,7 @@ export function createSchemasInstalledController(ports) {
     };
     installRuleReviewDialog(schemaRuleRevisionReview, "schema-rule-revision-review", "Review rule revision", schemaRuleRevisionReviewSummary, confirmSchemaRuleRevisionButton, cancelSchemaRuleRevisionButton, "confirm-schema-rule-revision-review");
     installRuleReviewDialog(schemaRuleUpgradeReview, "schema-rule-upgrade-review", "Update pinned rule attachments", schemaRuleUpgradeReviewSummary, confirmSchemaRuleUpgradeButton, cancelSchemaRuleUpgradeButton);
-    installRuleReviewDialog(schemaRuleSyncReview, "schema-rule-sync-review", "Sync attached schemas and publish revisions", schemaRuleSyncReviewSummary, confirmSchemaRuleSyncButton, cancelSchemaRuleSyncButton);
+    installRuleReviewDialog(schemaRuleSyncReview, "schema-rule-sync-review", "Sync attached schemas and publish revisions", schemaRuleSyncReviewSummary, confirmSchemaRuleSyncButton, cancelSchemaRuleSyncButton, "confirm-schema-rule-sync");
     installRuleReviewDialog(schemaRuleDeleteReview, "schema-rule-delete-review", "Delete reusable rule", schemaRuleDeleteReviewSummary, confirmSchemaRuleDeleteButton, cancelSchemaRuleDeleteButton);
     installRuleReviewDialog(schemaImportReview, "schema-import-review", "Import Schema Library", schemaImportReviewSummary, replaceSchemaLibraryButton, cancelSchemaImportButton);
     if (schemaImportReview && appendSchemaLibraryButton && !appendSchemaLibraryButton.isConnected) {
@@ -1975,13 +1997,15 @@ export function createSchemasInstalledController(ports) {
                 results.append(button);
             }
             if (!results.children.length) {
-                const clear = document.createElement("button");
+                const empty = document.createElement("p"), clear = document.createElement("button");
+                empty.id = "schema-property-rule-empty";
+                empty.textContent = "No compatible rules match this search";
                 clear.type = "button";
                 clear.textContent = "Clear search";
                 const clearSearch = () => { schemaRulePickerSearch = ""; renderSchemaPropertyRulePicker(); };
                 clear.addEventListener("click", clearSearch);
                 schemaRulePickerDisposers.push(() => clear.removeEventListener("click", clearSearch));
-                results.append(clear);
+                results.append(empty, clear);
             }
             const cancelPicker = () => closeSchemaPropertyRulePicker(), searchRules = () => { schemaRulePickerSearch = search.value; renderSchemaPropertyRulePicker(); };
             cancel.addEventListener("click", cancelPicker);

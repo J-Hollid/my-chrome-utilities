@@ -61,7 +61,7 @@ export function createCaptureInstalledController(ports) {
     let dataLayerObserverState = {
         pageObject: samplePageObject(), observedEntries: [], sourceEvents: [],
     };
-    let stopLiveHistoryPushCapture = () => { };
+    let stopLiveHistoryPushCapture;
     let liveHistoryActivationState = initialObservationActivationState;
     let presentedSourceEventCount = 0;
     let observationRefreshState = initialObservationRefreshState;
@@ -936,8 +936,8 @@ export function createCaptureInstalledController(ports) {
     }
     function cancelLiveHistoryCaptureRuntime() {
         liveHistoryActivationState = nextObservationActivation(liveHistoryActivationState).state;
-        stopLiveHistoryPushCapture();
-        stopLiveHistoryPushCapture = () => { };
+        stopLiveHistoryPushCapture?.();
+        stopLiveHistoryPushCapture = undefined;
     }
     function stopLiveHistoryCapture() {
         cancelLiveHistoryCaptureRuntime();
@@ -978,7 +978,7 @@ export function createCaptureInstalledController(ports) {
         }
         catch {
             if (observationActivationIsCurrent(liveHistoryActivationState, captureGeneration))
-                stopLiveHistoryPushCapture = () => { };
+                stopLiveHistoryPushCapture = undefined;
         }
     }
     function clearScheduledObservationRefresh() {

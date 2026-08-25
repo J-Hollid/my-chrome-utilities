@@ -291,7 +291,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
   let dataLayerObserverState: DataLayerHistoryObserverState = {
     pageObject:samplePageObject(), observedEntries:[], sourceEvents:[],
   };
-  let stopLiveHistoryPushCapture: () => void = () => {};
+  let stopLiveHistoryPushCapture: (() => void) | undefined;
   let liveHistoryActivationState = initialObservationActivationState;
   let presentedSourceEventCount = 0;
   let observationRefreshState: ObservationRefreshState = initialObservationRefreshState;
@@ -916,7 +916,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
   }
   function cancelLiveHistoryCaptureRuntime(): void {
     liveHistoryActivationState = nextObservationActivation(liveHistoryActivationState).state;
-    stopLiveHistoryPushCapture(); stopLiveHistoryPushCapture = () => {};
+    stopLiveHistoryPushCapture?.(); stopLiveHistoryPushCapture = undefined;
   }
   function stopLiveHistoryCapture(): void {
     cancelLiveHistoryCaptureRuntime(); dataLayerObserverState = stopHistoryArrayObserver(dataLayerObserverState);
@@ -947,7 +947,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
       });
       if (!mounted || !observationActivationIsCurrent(liveHistoryActivationState, captureGeneration)) { stopCapture(); return; }
       stopLiveHistoryPushCapture = stopCapture;
-    } catch { if (observationActivationIsCurrent(liveHistoryActivationState, captureGeneration)) stopLiveHistoryPushCapture = () => {}; }
+    } catch { if (observationActivationIsCurrent(liveHistoryActivationState, captureGeneration)) stopLiveHistoryPushCapture = undefined; }
   }
   function clearScheduledObservationRefresh(): void {
     if (observationRefreshTimeoutId !== undefined) {

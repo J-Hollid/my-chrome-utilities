@@ -7,6 +7,7 @@ import { createProjectEventTransportInstalledController } from "./project-event-
 import { createProjectsInstalledController } from "./projects/index.js";
 import { createReplayInstalledController } from "./replay/index.js";
 import { createSchemasInstalledController } from "./schemas/index.js";
+import { attachSavedSessionToDefect } from "../utilities/data-layer/defect-reporting.js";
 export const installedDataLayerControllerOrder = [
     "capture",
     "event-library",
@@ -168,6 +169,35 @@ export function createInstalledDataLayerControllers(ports) {
         "live-flow-testing": createLiveFlowTestingInstalledController(ports["live-flow-testing"]),
     };
     return { controllers, lifecycle: createInstalledDataLayerLifecycle(controllers) };
+}
+export function createDefectCaptureCoordination(owners, now = () => new Date().toISOString()) {
+    return {
+        attachCurrentSession(defectId) {
+            const draft = owners.capture.currentSessionDraft();
+            const result = attachSavedSessionToDefect(owners.defects.library(), owners.capture.savedSessions(), defectId, draft.completed, `Evidence for ${defectId}`, now());
+            owners.defects.replace(result.library);
+            owners.capture.replaceSavedSessions(result.savedSessions);
+        },
+        openLinkedSession(defectId) {
+            const defect = owners.defects.library().defects.find(({ id }) => id === defectId);
+            if (!defect?.savedSession || !owners.capture.openSavedSession(defect.savedSession.id))
+                return false;
+            const matching = owners.defects.matchingEvent(defect);
+            if (matching)
+                owners.capture.openInspector(matching.id);
+            return true;
+        },
+    };
+}
+export function createEventLibrarySchemaCoordination(owners) {
+    return {
+        schemas: () => owners.schemas.schemas(),
+        validateDraft: (draft) => owners.schemas.validateAgainstSchema({ sourceId: draft.sourceId, eventName: draft.eventName,
+            payload: structuredClone(draft.payload), rawInput: [] }, draft.schemaId),
+        createSchema: (template) => {
+            owners.schemas.openSchemaFromSource(template.name, structuredClone(template.payload));
+        },
+    };
 }
 export function createInstalledDataLayerLifecycle(controllers) {
     let mounted = false;
