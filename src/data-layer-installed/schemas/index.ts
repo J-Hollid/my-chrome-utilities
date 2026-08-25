@@ -43,6 +43,7 @@ import {
   updateSchemaWorkingDraft,
   validateAssignmentDataConditions,
   validateEvent,
+  typedComparisonValue,
   filterSchemaRelationshipTree,
   restoreSchemaRelationshipTreeView,
   saveSchemaRelationshipTreeView,
@@ -500,9 +501,17 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   let activeSchemaProjectHydration: Promise<void> | undefined;
   const schemaContributorRoute = { collectionKinds:["profiles", "propertySets", "pages", "events", "flows"], includeFlowGraphs:true } as const;
   let schemaRowDisposers: (() => void)[] = [];
+  let schemaRuleRowDisposers: (() => void)[] = [];
+  let schemaPropertyRowDisposers: (() => void)[] = [];
   const clearSchemaRowListeners = (): void => { for (const dispose of schemaRowDisposers.splice(0)) dispose(); };
   const listen = (target: HTMLElement, type: string, listener: EventListener): void => {
     target.addEventListener(type, listener); schemaRowDisposers.push(() => target.removeEventListener(type, listener));
+  };
+  const listenRule = (target:HTMLElement, type:string, listener:EventListener):void => {
+    target.addEventListener(type, listener); schemaRuleRowDisposers.push(() => target.removeEventListener(type, listener));
+  };
+  const listenProperty = (target:HTMLElement, type:string, listener:EventListener):void => {
+    target.addEventListener(type, listener); schemaPropertyRowDisposers.push(() => target.removeEventListener(type, listener));
   };
   const storedSchemaLibrary = ports.storage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
   let schemas = restoreSchemaLibrary(storedSchemaLibrary);
@@ -518,6 +527,11 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   let specificIndexArrayPath: string | undefined;
   let specificIndexTrigger: HTMLButtonElement | undefined;
   let pendingManualPropertyContext: { parentPath:string; trigger?:HTMLButtonElement } | undefined;
+  let pendingManualPropertyCanonicalBase: CanonicalSchemaDocument | undefined;
+  let pendingSchemaRestoration: { schemaId:string; version:number } | undefined;
+  const MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY = "my-chrome-utilities.manual-schema-overrides.v1";
+  let manualSchemaOverrides: Record<string, string> = (() => { try { const parsed = JSON.parse(ports.storage.getItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY) ?? "{}");
+    return parsed && typeof parsed === "object" ? parsed : {}; } catch { return {}; } })();
   let schemaRulePickerPath: string | undefined;
   let schemaRulePickerTrigger: HTMLButtonElement | undefined;
   let schemaPropertyInteractionReturn: { schemaId:string; path:string; triggerLabel:string;
@@ -525,10 +539,18 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   let schemaPropertyRenderSequence = 0;
   let schemaRuleConfiguration: RuleConfiguration | undefined;
   let editingAttachedLocalRule: NonNullable<SchemaDefinition["attachedRules"]>[number] | undefined;
+  const normalizeReusableSchemaRule = (value:unknown):ReusableSchemaRule | undefined => value && typeof value === "object"
+    && "id" in value && "name" in value && "kind" in value && "version" in value
+    ? { ...(structuredClone(value) as ReusableSchemaRule), enabled:(value as ReusableSchemaRule).enabled !== false } : undefined;
+  const storedReusableSchemaRules = ports.storage.getItem(SCHEMA_RULE_STORAGE_KEY);
   let reusableSchemaRules: ReusableSchemaRule[] = (() => { try {
-    const stored = JSON.parse(ports.storage.getItem(SCHEMA_RULE_STORAGE_KEY) ?? "[]") as unknown;
-    return Array.isArray(stored) ? stored.filter((rule): rule is ReusableSchemaRule => Boolean(rule && typeof rule === "object" && "id" in rule)) : [];
+    const stored = JSON.parse(storedReusableSchemaRules ?? "[]") as unknown;
+    return Array.isArray(stored) ? stored.map(normalizeReusableSchemaRule).filter((rule): rule is ReusableSchemaRule => Boolean(rule)) : [];
   } catch { return []; } })();
+  let editingReusableSchemaRuleId: string | undefined;
+  let approvedRuleRevisionId: string | undefined;
+  let approvedRuleAttachmentUpdateId: string | undefined;
+  let pendingRuleSnapshotMetadata: { id:string; version:number; attachments:readonly string[] } | undefined;
   let pendingSchemaRuleRevision: { id:string; changes:Partial<Omit<ReusableSchemaRule, "id" | "version" | "revisionHistory">> } | undefined;
   let pendingSchemaRuleUpgrade: { id:string; schemaIds:readonly string[] } | undefined;
   let pendingSchemaRuleSync: { rule:ReusableSchemaRule; review:ReusableRuleSyncReview } | undefined;
@@ -618,6 +640,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       listen(button, "click", action); compactCanonicalContext.append(button);
     }
   };
+  function renderCompactCanonicalEditor():void { renderCompactCanonicalContext(); }
   const blockedCompactCanonicalCommand = (adapter:CompactCanonicalEditorAdapter, command:CompactCanonicalCommand, message:string):CompactCanonicalCommandResult =>
     ({ status:"conflict", document:adapter.load(), ...(command.kind !== "policy" && "propertyId" in command ? { propertyId:command.propertyId } : {}), message });
   const beginCompactCanonicalCommand = (command:CompactCanonicalCommand, owned?:CompactCanonicalProjectionPersistenceRequest):{ accepted:boolean; result:CompactCanonicalCommandResult; completion:Promise<boolean> } | undefined => {
@@ -680,14 +703,15 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (!adapter || compactCanonicalProjectionRequest?.adapter === adapter) compactCanonicalProjectionRequest = undefined;
     compactCanonicalSettlementPending = false; compactCanonicalSettlementSequence += 1;
   };
-  const resumeCompactCanonicalProjectionPersistence = (adapter:CompactCanonicalEditorAdapter):Promise<boolean> => {
+  function resumeCompactCanonicalProjectionPersistence(adapter:CompactCanonicalEditorAdapter):Promise<boolean> {
     const request = compactCanonicalProjectionRequest; return request?.adapter === adapter
       ? persistCompactCanonicalProjection(adapter, request.projection, request.change) : Promise.resolve(true);
-  };
+  }
   const compactCanonicalCommandScope = (command:CompactCanonicalCommand, document:CanonicalSchemaDocument):string =>
     "propertyId" in command ? document.nodes[command.propertyId]?.name ?? command.propertyId : command.kind;
   function retryCompactCanonicalCommand():void { const command = compactCanonicalPendingCommand, adapter = compactCanonicalEditor; if (!command || !adapter) return;
-    compactCanonicalPendingCommand = undefined; void dispatchCompactCanonicalCommand({ ...command, baseRevision:adapter.load().revision }); }
+    compactCanonicalPendingCommand = undefined; if (compactCanonicalProjectionRequest?.adapter === adapter) { void resumeCompactCanonicalProjectionPersistence(adapter); return; }
+    void dispatchCompactCanonicalCommand({ ...command, baseRevision:adapter.load().revision }).then(renderCompactCanonicalEditor); }
   function rejectCompactCanonicalCommand():void { compactCanonicalPendingCommand = undefined; compactCanonicalPendingBase = undefined;
     compactCanonicalReviewVisible = false; compactCanonicalProjectionRequest = undefined; compactCanonicalCommandFeedback = "Local edit rejected; durable state is unchanged."; renderCompactCanonicalContext(); }
   const openCompactCanonicalEditor = (adapter:CompactCanonicalEditorAdapter):void => {
@@ -753,6 +777,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   };
   const revisionVersion = (): number => Number(schemaRevisionSelector?.value || active().version);
   const renderSchemaPropertyView = (): void => {
+    for (const dispose of schemaPropertyRowDisposers.splice(0)) dispose();
     const schema = activeSchemaId ? active() : undefined;
     const rows = schema ? schemaPropertyRows(schema.workingDraft?.document ?? schema.document) : [];
     const propertyView = filterAndSortSchemaPropertyRows(rows, schemaPropertyFilter?.value ?? "",
@@ -763,7 +788,24 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       ? "" : `No properties match ${schemaPropertyFilter?.value.trim() ?? ""}`;
     if (schemaPropertyTree) {
       const items = propertyView.rows.flatMap((row) => { const item = schemaOwnerDocument?.createElement("li");
-        if (!item) return []; item.dataset.propertyPath = row.canonicalPath; item.textContent = row.displayPath; return [item]; });
+        if (!item) return []; item.dataset.propertyPath = row.canonicalPath; const summary = schemaOwnerDocument!.createElement("span"); summary.textContent = row.displayPath; item.append(summary);
+        const propertyAction = (label:string, run:(button:HTMLButtonElement) => void) => { const button = schemaOwnerDocument!.createElement("button");
+          button.type = "button"; button.textContent = label; button.setAttribute("aria-label", `${label} ${row.canonicalPath}`);
+          listenProperty(button, "click", () => run(button)); item.append(button); };
+        propertyAction("View", () => { selectedSchemaPropertyPath = row.canonicalPath.slice(1).replaceAll("/", "."); });
+        propertyAction("Add child", (button) => openContextualManualPropertyForm(row.canonicalPath, button));
+        propertyAction("Edit rules", (button) => openSchemaPropertyRulePicker(row.canonicalPath, button));
+        propertyAction("Copy", () => { const destination = schemas.find(({ id }) => id !== schema?.id); if (destination) openSchemaPropertyCopyReview(row.canonicalPath, destination.id); });
+        propertyAction("Remove", (button) => requestSchemaPropertyRemoval(row.canonicalPath, button));
+        propertyAction("Remove documentation", (button) => requestSchemaDocumentationRemoval(row.canonicalPath, button));
+        if (row.schema.type === "array") propertyAction("Add specific index", (button) => openSpecificIndexDialog(row.canonicalPath, button));
+        propertyAction(expandedSchemaPropertyRulePaths.has(row.canonicalPath) ? "Hide rules" : "Show rules", () => {
+          if (expandedSchemaPropertyRulePaths.has(row.canonicalPath)) expandedSchemaPropertyRulePaths.delete(row.canonicalPath); else expandedSchemaPropertyRulePaths.add(row.canonicalPath); renderSchemaPropertyView(); });
+        for (const attached of (schema?.workingDraft?.attachedRules ?? schema?.attachedRules ?? []).filter(({ propertyPath }) => normalizedRulePickerPath(propertyPath ?? "") === row.canonicalPath)) {
+          if (attached.id.startsWith("local:")) propertyAction("Promote local rule", () => { openLocalRulePromotionReview(row.canonicalPath, attached.id); });
+          propertyAction("Edit attached rule", () => { editingAttachedLocalRule = attached; openSchemaPropertyRulePicker(row.canonicalPath); });
+        }
+        return [item]; });
       schemaPropertyTree.replaceChildren(...items);
     }
     if (addSchemaPropertyButton) addSchemaPropertyButton.disabled = !schema;
@@ -993,7 +1035,8 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const renderSchemaRevisionComparison = (): void => renderSchemaDraft();
   const duplicateSelectedSchemaRevision = (): void => { const duplicate = duplicateSchemaRevision(active(), revisionVersion(), schemas);
     schemas = [...schemas, duplicate]; activeSchemaId = duplicate.id; schemaDraft = structuredClone(duplicate); persistSchemaLibrary(); renderSchemas(); };
-  const restoreSelectedSchemaRevision = (): void => { replaceActive(restoreSchemaRevisionDraft(active(), revisionVersion()));
+  const restoreSelectedSchemaRevision = (): void => { pendingSchemaRestoration = { schemaId:active().id, version:revisionVersion() };
+    replaceActive(restoreSchemaRevisionDraft(active(), pendingSchemaRestoration.version)); pendingSchemaRestoration = undefined;
     persistSchemaLibrary(); renderSchemas(); };
   const clearSchemaPropertyViewFilter = (): void => { if (schemaPropertyFilter) schemaPropertyFilter.value = "";
     renderSchemaPropertyView(); schemaPropertyFilter?.focus(); };
@@ -1035,6 +1078,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   }
   const confirmSchemaPropertyRemoval = (): void => { const path = pendingSchemaPropertyRemoval?.path;
     closeSchemaPropertyRemovalDialog(false); if (path) applySchemaPropertyRemoval(path); };
+  function focusAfterSchemaPropertyRemoval(path:string):void { selectedSchemaPropertyPath = path.replace(/^\//, "").replaceAll("/", "."); renderSchemaPropertyView(); }
   const cancelSchemaPropertyRemoval = (): void => closeSchemaPropertyRemovalDialog();
   const cancelSchemaPropertyRemovalFromDialog = (event: Event): void => { event.preventDefault(); closeSchemaPropertyRemovalDialog(); };
   const undoLastSchemaPropertyRemoval = (): void => {
@@ -1046,6 +1090,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (schemaPropertyRemovalFeedback) schemaPropertyRemovalFeedback.textContent = `Restored ${path} with its prior definition and tree position.`;
     if (undoSchemaPropertyRemovalButton) undoSchemaPropertyRemovalButton.hidden = true;
     lastSchemaPropertyRemoval = undefined; persistSchemaLibrary(); renderSchemas();
+    focusAfterSchemaPropertyRemoval(path);
   };
   function requestSchemaDocumentationRemoval(path: string, trigger?: HTMLElement): void {
     pendingSchemaDocumentationRemoval = { path, ...(trigger ? { trigger } : {}) };
@@ -1151,6 +1196,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     pendingManualPropertyContext = undefined; schemaManualPropertyDialog?.close(); if (restoreFocus) (trigger ?? addSchemaPropertyButton)?.focus(); }
   function openManualPropertyForm(parentPath?: string, trigger?: HTMLButtonElement): void {
     if (!active().workingDraft) return; pendingManualPropertyContext = parentPath ? { parentPath, ...(trigger ? { trigger } : {}) } : undefined;
+    pendingManualPropertyCanonicalBase = active().workingDraft?.canonicalSchema;
     if (schemaManualPropertyHeading) schemaManualPropertyHeading.textContent = parentPath ? "Add child property" : "Add property";
     if (schemaManualPropertyPath) schemaManualPropertyPath.value = ""; if (schemaManualPropertyChildName) schemaManualPropertyChildName.value = "";
     if (schemaManualPropertyType) schemaManualPropertyType.value = "string"; if (schemaManualArrayItemType) schemaManualArrayItemType.value = "";
@@ -1161,12 +1207,38 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (inspection.result !== "ready") { renderManualPropertyForm(); return; }
     replaceActive(updateSchemaWorkingDraft(schema, { document:addManualProperty(draft.document, schemaParentDocuments(), definition) },
       `Add manual property ${inspection.normalizedPath}`)); selectedSchemaPropertyPath = inspection.normalizedPath.slice(1).replaceAll("/", ".");
-    closeManualPropertyForm(false); persistSchemaLibrary(); renderSchemas(); };
+    closeManualPropertyForm(false); pendingManualPropertyCanonicalBase = undefined; persistSchemaLibrary(); renderSchemas(); };
+  function openContextualManualPropertyForm(parentPath:string, trigger?:HTMLButtonElement):void { openManualPropertyForm(parentPath, trigger); }
+  const openManualPropertyFromControl = ():void => openManualPropertyForm();
   const cancelManualPropertyDialog = (): void => closeManualPropertyForm();
   const cancelManualPropertyFromDialog = (event: Event): void => { event.preventDefault(); closeManualPropertyForm(); };
   const goToExistingSchemaProperty = (): void => { const path = goToExistingSchemaPropertyButton?.dataset.schemaPropertyPath;
     if (!path) return; selectedSchemaPropertyPath = path.replace(/^\//, "").replaceAll("/", "."); closeManualPropertyForm(false); renderSchemas(); };
   const normalizedRulePickerPath = (path: string): string => `/${path.replace(/^\//, "").replaceAll(".", "/")}`;
+  function currentConditionPayload(target:AssignmentConditionTarget = "payload"):unknown { return ports.capturedAssignmentValue(target); }
+  function valueAtSchemaPath(value:unknown, path:string):unknown { return path.replace(/^\//, "").split(/[/.]/).filter(Boolean)
+    .reduce<unknown>((current, segment) => current && typeof current === "object" ? (current as Record<string, unknown>)[segment] : undefined, value); }
+  function initialConditionPredicate(propertyPath:string):NonNullable<PromotableReusableRule["conditionGroup"]> {
+    const sample = valueAtSchemaPath(currentConditionPayload(), propertyPath);
+    const comparable = sample === null || typeof sample === "string" || typeof sample === "boolean" || (typeof sample === "number" && Number.isFinite(sample));
+    return { operator:"All", predicates:[{ propertyPath:normalizedRulePickerPath(propertyPath), operator:comparable ? "Equals" : "Exists",
+      ...(comparable ? { comparison:typedComparisonValue(sample as string | number | boolean | null) } : {}) }] };
+  }
+  function configuredRuleInput():ReusableSchemaRule { const name = schemaRuleName?.value.trim() || "Untitled rule", operator = schemaRuleOperator?.value || "required";
+    return { id:editingReusableSchemaRuleId ?? ports.createRuleId(), name, kind:operator, version:storedReusableRule(editingReusableSchemaRuleId ?? "")?.version ?? 0,
+      enabled:true, applicableType:(schemaRuleTypes?.value || "string") as SchemaPropertyType, operator,
+      ...(schemaRuleParameters?.value.trim() ? { parameters:schemaRuleParameters.value.trim() } : {}),
+      ...(schemaRuleSeverity?.value ? { severity:schemaRuleSeverity.value } : {}), ...(schemaRuleMessage?.value.trim() ? { message:schemaRuleMessage.value.trim() } : {}) };
+  }
+  function renderConditionalRuleConfiguration():void { if (!schemaPropertyRulePicker || !schemaRulePickerPath) return;
+    const condition = initialConditionPredicate(schemaRulePickerPath); schemaPropertyRulePicker.dataset.conditionPreview = JSON.stringify(condition); }
+  function renderSchemaLocalRuleConfiguration():void { renderSchemaPropertyRulePicker(); renderConditionalRuleConfiguration(); }
+  function createConfiguredSchemaRule():boolean { if (!schemaRulePickerPath || !activeSchemaId) return false; const rule = configuredRuleInput();
+    reusableSchemaRules = [...reusableSchemaRules.filter(({ id }) => id !== rule.id), { ...rule, version:Math.max(1, rule.version + 1) }];
+    const attached = attachReusableRule(activeSchemaId, rule.id, schemaRulePickerPath); if (attached) closeSchemaPropertyRulePickerForCommit(); return attached; }
+  function openCompactCanonicalRuleEditor(path:string, trigger?:HTMLButtonElement):void { openSchemaPropertyRulePicker(path, trigger); renderSchemaLocalRuleConfiguration(); }
+  function openCompactCanonicalPropertyActions(path:string):void { selectedSchemaPropertyPath = path.replace(/^\//, "").replaceAll("/", "."); renderSchemaPropertyView(); }
+  const updateConfiguredRulePreview = ():void => { if (schemaRulePickerPath) renderSchemaLocalRuleConfiguration(); };
   const renderSchemaPropertyRulePicker = (): void => {
     schemaPropertyRenderSequence += 1;
     if (!schemaPropertyRulePicker || !schemaRulePickerPath || !schemaRuleConfiguration) return;
@@ -1184,7 +1256,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       editorScroll:schemaEditor?.scrollTop ?? 0, treeScroll:schemaPropertyTree?.scrollTop ?? 0, detailScroll:schemaDetail?.scrollTop ?? 0 };
     editingAttachedLocalRule = draft.attachedRules?.find((rule) => normalizedRulePickerPath(rule.propertyPath ?? "") === canonicalPath);
     schemaRuleConfiguration = createRuleConfiguration("Required", propertyType);
-    renderSchemaPropertyRulePicker(); schemaPropertyRulePicker?.showModal(); ports.rulePickerChanged(path, true);
+    renderSchemaLocalRuleConfiguration(); schemaPropertyRulePicker?.showModal(); ports.rulePickerChanged(path, true);
   }
   function closeSchemaPropertyRulePicker(): void {
     const path = schemaRulePickerPath; schemaPropertyRulePicker?.close(); schemaRulePickerTrigger?.focus();
@@ -1312,6 +1384,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const guidedSchemaCandidates = (event:GuidedCapturedEvent) => schemas.map((schema) => guidedSchemaCandidate(event, schema)).filter((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate));
   const guidedEvent = (event:GuidedCapturedEvent):GuidedCapturedEvent => structuredClone(event);
   const openGuidedValidationForEvent = async (event:GuidedCapturedEvent, schema?:SchemaDefinition):Promise<void> => {
+    event = guidedEvent(event);
     const selected = schema ?? guidedSchemaCandidates(event)[0]?.schema; if (selected) guidedContinuationSelections.set(event.id, selected.id);
     guidedPropertyReturn = undefined; if (guidedValidationRoot) { guidedValidationRoot.hidden = false;
       guidedValidationRoot.dataset.eventId = event.id; guidedValidationRoot.dataset.schemaId = selected?.id ?? ""; }
@@ -1340,8 +1413,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   };
   const recheckCapturedSchemaValidation = (events:readonly GuidedCapturedEvent[] = []):readonly SchemaValidationRecord[] => {
     const checkedAt = new Date().toISOString(), issues:string[] = [];
-    const records = events.map((event):SchemaValidationRecord => { const result = validateEvent({ sourceId:event.sourceId, eventName:event.name,
-      payload:event.payload, rawInput:event.rawInput }, schemas, event.pageUrl); issues.push(...result.issues.map((issue) => `${event.name} · ${issue.instancePath || "root"} · ${issue.message}`));
+    const records = events.map((event):SchemaValidationRecord => { const override = manualSchemaOverrides[event.id], candidates = override ? schemas.filter(({ id }) => id === override) : schemas;
+      const result = validateEvent({ sourceId:event.sourceId, eventName:event.name, payload:event.payload, rawInput:event.rawInput }, candidates, event.pageUrl);
+      issues.push(...result.issues.map((issue) => `${event.name} · ${issue.instancePath || "root"} · ${issue.message}`));
       return { eventId:event.id, eventName:event.name, state:result.state, checkedAt, ...(result.schema ? { schemaId:result.schema.id, schemaName:result.schema.name,
         schemaVersion:result.schema.version } : {}), issueCodes:result.issues.map((issue) => issue.rule ?? issue.schemaLocation) }; });
     schemaValidationRecords = [...schemaValidationRecords, ...records].slice(-50); ports.storage.setItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY, JSON.stringify(schemaValidationRecords));
@@ -1353,6 +1427,31 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const createSchemaDraft = ():void => { const sequence = schemas.length + 1, created:SchemaDefinition = { id:`schema:new:${sequence}`, name:`Untitled schema ${sequence}`,
     version:0, document:{ type:"object" }, assignments:[], published:false, workingDraft:{ baseVersion:0, sourceVersion:0, document:{ type:"object" }, assignments:[], pendingChanges:[] } };
     schemas = [...schemas, created]; activeSchemaId = created.id; schemaDraft = structuredClone(created); persistSchemaLibrary(); renderSchemas(); };
+  function schemaDocumentPaths(document:SchemaDefinition["document"]):readonly string[] { return schemaPropertyRows(document).map(({ canonicalPath }) => canonicalPath); }
+  function schemaPropertyAt(document:SchemaDefinition["document"], path:string):unknown { return schemaPropertyRows(document).find(({ canonicalPath }) => canonicalPath === normalizedRulePickerPath(path))?.schema; }
+  function schemaDocumentFromValue(value:unknown):SchemaDefinition["document"] {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return { type:typeof value === "number" ? "number" : typeof value === "boolean" ? "boolean" : "string" };
+    return { type:"object", properties:Object.fromEntries(Object.entries(value).map(([name, child]) => [name, schemaDocumentFromValue(child)])) };
+  }
+  function openSchemaFromSource(name:string, value:unknown):SchemaDefinition { const sequence = schemas.length + 1, schema:SchemaDefinition = {
+    id:`schema:source:${sequence}`, name, version:0, document:{ type:"object" }, assignments:[], published:false,
+    workingDraft:{ baseVersion:0, sourceVersion:0, document:schemaDocumentFromValue(value), assignments:[], pendingChanges:["Create schema from captured source"] } };
+    schemas = [...schemas, schema]; activeSchemaId = schema.id; schemaDraft = structuredClone(schema); persistSchemaLibrary(); renderSchemas(); return structuredClone(schema); }
+  function openNewSchemaEditor():void { createSchemaDraft(); }
+  function defineSchemaProperty(document:SchemaDefinition["document"], definition:ManualPropertyDefinition):SchemaDefinition["document"] {
+    return addManualProperty(document, [], definition);
+  }
+  function schemaPropertyType(document:SchemaDefinition["document"], path:string):SchemaPropertyType | undefined {
+    const value = schemaPropertyAt(document, path) as { type?:SchemaPropertyType } | undefined; return value?.type;
+  }
+  function captureSchemaPropertyInteractionReturn(path:string, triggerLabel:string):void { schemaPropertyInteractionReturn = { schemaId:active().id,
+    path, triggerLabel, editorScroll:schemaEditor?.scrollTop ?? 0, treeScroll:schemaPropertyTree?.scrollTop ?? 0, detailScroll:schemaDetail?.scrollTop ?? 0 }; }
+  function restoreSchemaPropertyInteractionReturn():void { const restoration = schemaPropertyInteractionReturn; if (!restoration || restoration.schemaId !== activeSchemaId) return;
+    selectedSchemaPropertyPath = restoration.path; if (schemaEditor) schemaEditor.scrollTop = restoration.editorScroll;
+    schemaPropertyTree && (schemaPropertyTree.scrollTop = restoration.treeScroll); schemaDetail && (schemaDetail.scrollTop = restoration.detailScroll); renderSchemas(); }
+  function finishSchemaPropertyInteractionReturn():void { restoreSchemaPropertyInteractionReturn(); schemaPropertyInteractionReturn = undefined; }
+  function closeSchemaPropertyRulePickerInternal(restore=true):void { if (restore) finishSchemaPropertyInteractionReturn(); closeSchemaPropertyRulePicker(); }
+  function closeSchemaPropertyRulePickerForCommit():void { closeSchemaPropertyRulePickerInternal(true); }
   function assignmentConditionCapturedValue(target: AssignmentConditionTarget): unknown {
     return ports.capturedAssignmentValue(target);
   }
@@ -1467,9 +1566,59 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const renderSchemaRuleLibrary = (): void => {
     const query = schemaRuleSearch?.value.trim().toLowerCase() ?? "";
     const visible = reusableSchemaRules.filter((rule) => `${rule.name} ${rule.kind}`.toLowerCase().includes(query));
-    if (schemaRuleList) schemaRuleList.textContent = visible.map((rule) => `${rule.name} v${rule.version} · ${rule.kind}`).join("\n");
+    for (const dispose of schemaRuleRowDisposers.splice(0)) dispose();
+    if (!schemaRuleList?.ownerDocument) { if (schemaRuleList) schemaRuleList.textContent = visible.map((rule) => `${rule.name} v${rule.version} · ${rule.kind}`).join("\n"); return; }
+    schemaRuleList.replaceChildren(...visible.map((rule) => { const item = schemaRuleList.ownerDocument!.createElement("li"), summary = schemaRuleList.ownerDocument!.createElement("span");
+      summary.textContent = `${rule.name} v${rule.version} · ${rule.kind}`; item.append(summary);
+      const action = (label:string, run:() => void) => { const button = schemaRuleList.ownerDocument!.createElement("button"); button.type = "button"; button.textContent = label;
+        listenRule(button, "click", run); item.append(button); };
+      action("Edit", () => { editReusableSchemaRule(rule.id); });
+      action("Sync", () => { openReusableRuleSyncReview(rule.id); });
+      action("Duplicate", () => { reusableSchemaRules = [...reusableSchemaRules, { ...structuredClone(rule), id:ports.createRuleId(), name:`${rule.name} copy`, version:1, attachments:[] }]; persistReusableSchemaRules(); renderSchemaRuleLibrary(); });
+      action("Export", () => ports.downloadSchema(rule, `${rule.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-rule-v${rule.version}.json`));
+      action(rule.enabled ? "Disable" : "Enable", () => { reusableSchemaRules = reusableSchemaRules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled:!candidate.enabled } : candidate); persistReusableSchemaRules(); renderSchemaRuleLibrary(); });
+      action("Delete", () => { requestSchemaRuleDeletion(rule.id); }); return item; }));
   };
+  const expansionReusableRules = ():readonly PromotableReusableRule[] => structuredClone(reusableSchemaRules) as readonly PromotableReusableRule[];
+  const promotionReusableRules = expansionReusableRules;
+  const storedReusableRule = (id:string):ReusableSchemaRule | undefined => reusableSchemaRules.find((rule) => rule.id === id);
+  const persistSchemaAndRuleLibraries = ():void => { persistReusableSchemaRules(); persistSchemaLibrary(); };
+  const schemaRuleTypeForAttachment = (schema:SchemaDefinition, propertyPath:string):SchemaPropertyType => {
+    const row = schemaPropertyRows(schema.workingDraft?.document ?? schema.document).find(({ canonicalPath }) => canonicalPath === normalizedRulePickerPath(propertyPath));
+    return (["string", "number", "array", "object", "boolean"] as const).includes(row?.schema.type as SchemaPropertyType)
+      ? row!.schema.type as SchemaPropertyType : "string";
+  };
+  const attachReusableRule = (schemaId:string, ruleId:string, propertyPath?:string):boolean => {
+    const rule = storedReusableRule(ruleId), schema = schemas.find(({ id }) => id === schemaId); if (!rule || !schema) return false;
+    if (propertyPath && rule.applicableType && rule.applicableType !== schemaRuleTypeForAttachment(schema, propertyPath)) return false;
+    schemas = schemas.map((candidate) => candidate.id !== schemaId ? candidate : { ...candidate, attachedRules:[...(candidate.attachedRules ?? [])
+      .filter((attached) => attached.id !== rule.id || attached.propertyPath !== propertyPath), { id:rule.id, name:rule.name, version:rule.version,
+        ...(propertyPath ? { propertyPath:normalizedRulePickerPath(propertyPath) } : {}), ...(rule.operator ? { operator:rule.operator } : {}),
+        ...(rule.parameters ? { parameters:rule.parameters } : {}), ...(rule.severity ? { severity:rule.severity } : {}),
+        ...(rule.message ? { message:rule.message } : {}), enabled:rule.enabled }] });
+    persistSchemaAndRuleLibraries(); renderSchemas(); return true;
+  };
+  const updateAttachedRule = (schemaId:string, ruleId:string, enabled:boolean):boolean => {
+    let changed = false; schemas = schemas.map((schema) => { if (schema.id !== schemaId || !schema.attachedRules) return schema;
+      return { ...schema, attachedRules:schema.attachedRules.map((rule) => { if (rule.id !== ruleId) return rule; changed = true; return { ...rule, enabled }; }) }; });
+    if (changed) { persistSchemaAndRuleLibraries(); renderSchemas(); } return changed;
+  };
+  const editReusableSchemaRule = (id:string):boolean => {
+    const rule = storedReusableRule(id); if (!rule) return false; editingReusableSchemaRuleId = id; openNewSchemaRuleEditor();
+    if (schemaRuleName) schemaRuleName.value = rule.name; if (schemaRuleParameters) schemaRuleParameters.value = rule.parameters ?? "";
+    if (schemaRuleTypes) schemaRuleTypes.value = rule.applicableType ?? "string"; if (schemaRuleOperator) schemaRuleOperator.value = rule.operator ?? "required";
+    if (schemaRuleSeverity) schemaRuleSeverity.value = rule.severity ?? "error"; if (schemaRuleMessage) schemaRuleMessage.value = rule.message ?? "";
+    if (schemaRuleExamples) schemaRuleExamples.value = rule.examples ?? ""; return true;
+  };
+  const openAttachedSchemaRuleEditor = (schemaId:string, ruleId:string):boolean => {
+    const schema = schemas.find(({ id }) => id === schemaId), attached = schema?.attachedRules?.find(({ id }) => id === ruleId);
+    return Boolean(attached && editReusableSchemaRule(ruleId));
+  };
+  const focusSchemaPropertyRule = (propertyPath:string):void => { selectedSchemaPropertyPath = propertyPath.replace(/^\//, "").replaceAll("/", "."); renderSchemas(); };
+  const focusSchemaPropertyRow = focusSchemaPropertyRule;
+  const renderSchemaWorkflowRows = ():void => { renderSchemaRuleLibrary(); renderSchemaAssignments(); };
   const openNewSchemaRuleEditor = (): void => {
+    if (!editingReusableSchemaRuleId) pendingRuleSnapshotMetadata = undefined;
     if (schemaRuleEditor) schemaRuleEditor.hidden = false;
     if (schemaRuleName) schemaRuleName.value = ""; if (schemaRuleParameters) schemaRuleParameters.value = "";
     if (schemaRuleMessage) schemaRuleMessage.value = ""; if (schemaRuleExamples) schemaRuleExamples.value = "";
@@ -1484,11 +1633,17 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     const parameters = schemaRuleParameters?.value.trim(); const applicableType = schemaRuleTypes?.value as SchemaPropertyType | undefined;
     const operator = schemaRuleOperator?.value; const severity = schemaRuleSeverity?.value; const message = schemaRuleMessage?.value.trim();
     const examples = schemaRuleExamples?.value.trim(); const attachments = Array.from(schemaRuleAttachments?.selectedOptions ?? []).map(({ value }) => value);
-    const rule: ReusableSchemaRule = { id:ports.createRuleId(), name,
-      kind:`${operator || "Required"}${parameters ? ` (${parameters})` : ""}`, version:1, enabled:true,
+    const previous = editingReusableSchemaRuleId ? storedReusableRule(editingReusableSchemaRuleId) : undefined;
+    if (previous && approvedRuleRevisionId !== previous.id) { captureReusableRuleSnapshot();
+      requestSchemaRuleRevision(previous.id, { name, kind:`${operator || "Required"}${parameters ? ` (${parameters})` : ""}`,
+        ...(applicableType ? { applicableType } : {}), ...(operator ? { operator } : {}), ...(parameters ? { parameters } : {}),
+        ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(examples ? { examples } : {}), attachments }); return; }
+    const rule: ReusableSchemaRule = { id:previous?.id ?? ports.createRuleId(), name,
+      kind:`${operator || "Required"}${parameters ? ` (${parameters})` : ""}`, version:(previous?.version ?? 0) + 1, enabled:previous?.enabled ?? true,
       ...(applicableType ? { applicableType } : {}), ...(operator ? { operator } : {}), ...(parameters ? { parameters } : {}),
       ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(examples ? { examples } : {}), attachments };
-    reusableSchemaRules = [...reusableSchemaRules, rule];
+    pendingRuleSnapshotMetadata = previous ? { id:previous.id, version:previous.version, attachments:[...(previous.attachments ?? [])] } : undefined;
+    reusableSchemaRules = [...reusableSchemaRules.filter(({ id }) => id !== rule.id), rule];
     if (updateSchemaRuleAttachments?.checked || rule.version === 1) schemas = schemas.map((schema) => {
       if (!attachments.includes(schema.id)) return schema;
       const attachedRules = [...(schema.attachedRules ?? []).filter(({ id }) => id !== rule.id),
@@ -1496,9 +1651,12 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
           ...(parameters ? { parameters } : {}), ...(severity ? { severity } : {}), ...(message ? { message } : {}), enabled:true }];
       return { ...schema, attachedRules };
     });
-    persistReusableSchemaRules(); persistSchemaLibrary(); renderSchemas(); renderSchemaRuleLibrary();
+    editingReusableSchemaRuleId = undefined; persistSchemaAndRuleLibraries(); renderSchemas(); renderSchemaRuleLibrary();
     if (schemaRuleEditor) schemaRuleEditor.hidden = true;
   };
+  const captureReusableRuleSnapshot = ():void => { const previous = editingReusableSchemaRuleId ? storedReusableRule(editingReusableSchemaRuleId) : undefined;
+    if (previous) pendingRuleSnapshotMetadata = { id:previous.id, version:previous.version, attachments:[...(previous.attachments ?? [])] }; };
+  const captureReusableRuleSnapshotFromEditor = (event:Event):void => { if ((event.target as HTMLElement)?.id === "schema-rule-save") captureReusableRuleSnapshot(); };
   const updateRuleAttachmentPreview = (): void => {
     if (schemaResult) schemaResult.textContent = updateSchemaRuleAttachments?.checked
       ? "Pinned attachments will be updated" : "Existing pinned attachments remain unchanged";
@@ -1506,7 +1664,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const requestSchemaRuleRevision = (id: string,
     changes: Partial<Omit<ReusableSchemaRule, "id" | "version" | "revisionHistory">>): boolean => {
     const previous = reusableSchemaRules.find((rule) => rule.id === id); if (!previous) return false;
-    pendingSchemaRuleRevision = { id, changes:structuredClone(changes) };
+    pendingSchemaRuleRevision = { id, changes:structuredClone(changes) }; approvedRuleRevisionId = undefined;
     const nextName = changes.name ?? previous.name; const nextParameters = changes.parameters ?? previous.parameters ?? "none";
     if (schemaRuleRevisionReviewSummary) schemaRuleRevisionReviewSummary.textContent =
       `${previous.name} v${previous.version} will become ${nextName} v${previous.version + 1}; parameters ${previous.parameters ?? "none"} → ${nextParameters}.`;
@@ -1523,6 +1681,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
         ...(rule.message ? { message:rule.message } : {}), ...(rule.examples ? { examples:rule.examples } : {}),
       }],
     });
+    approvedRuleRevisionId = pending.id; if (editingReusableSchemaRuleId === pending.id) { editingReusableSchemaRuleId = undefined; if (schemaRuleEditor) schemaRuleEditor.hidden = true; }
     pendingSchemaRuleRevision = undefined; persistReusableSchemaRules(); renderSchemaRuleLibrary(); schemaRuleRevisionReview?.close();
   };
   const cancelReusableSchemaRuleRevision = (): void => { pendingSchemaRuleRevision = undefined; schemaRuleRevisionReview?.close(); };
@@ -1547,7 +1706,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
         ...(rule.message ? { message:rule.message } : {}), enabled:rule.enabled,
       }) };
     });
-    pendingSchemaRuleUpgrade = undefined; persistSchemaLibrary(); schemaRuleUpgradeReview?.close();
+    approvedRuleAttachmentUpdateId = pending.id; pendingSchemaRuleUpgrade = undefined; persistSchemaLibrary(); schemaRuleUpgradeReview?.close();
   };
   const cancelReusableSchemaRuleUpgrade = (): void => { pendingSchemaRuleUpgrade = undefined; schemaRuleUpgradeReview?.close(); };
   const requestSchemaRuleSync = (id: string): boolean => {
@@ -1560,6 +1719,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (confirmSchemaRuleSyncButton) confirmSchemaRuleSyncButton.disabled = !review.ready;
     schemaRuleSyncReview?.showModal(); (review.ready ? confirmSchemaRuleSyncButton : cancelSchemaRuleSyncButton)?.focus(); return true;
   };
+  const openReusableRuleSyncReview = requestSchemaRuleSync;
   const confirmReusableSchemaRuleSync = (): void => {
     const pending = pendingSchemaRuleSync; if (!pending) return;
     const settledRule = reusableSchemaRules.find((rule) => rule.id === pending.rule.id);
@@ -1686,7 +1846,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     mount(): void {
       if (mounted) return; mounted = true; lifecycleGeneration += 1;
       schemaSearch?.addEventListener("input", updateSchemaTreeView);
-      createSchemaButton?.addEventListener("click", createSchemaDraft);
+      createSchemaButton?.addEventListener("click", openNewSchemaEditor);
       recheckSchemaValidationButton?.addEventListener("click", recheckCapturedSchemaValidationFromControl);
       schemaCategoryFilter?.addEventListener("change", updateSchemaTreeView);
       schemaTreeScrollOwner?.addEventListener("scroll", persistSchemaTreeScroll, { passive:true });
@@ -1709,6 +1869,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       schemaRevisionSelector?.addEventListener("change", renderSchemaRevisionComparison);
       duplicateSchemaRevisionButton?.addEventListener("click", duplicateSelectedSchemaRevision);
       restoreSchemaRevisionButton?.addEventListener("click", restoreSelectedSchemaRevision);
+      addSchemaPropertyButton?.addEventListener("click", openManualPropertyFromControl);
       schemaPropertyFilter?.addEventListener("input", renderSchemaPropertyView);
       schemaPropertySort?.addEventListener("change", renderSchemaPropertyView);
       clearSchemaPropertyFilter?.addEventListener("click", clearSchemaPropertyViewFilter);
@@ -1737,6 +1898,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       schemaPropertyRulePicker?.addEventListener("keydown", navigateSchemaPropertyRulePicker);
       createSchemaRuleButton?.addEventListener("click", openNewSchemaRuleEditor);
       saveSchemaRuleButton?.addEventListener("click", saveReusableSchemaRule);
+      saveSchemaRuleButton?.addEventListener("pointerdown", captureReusableRuleSnapshot);
+      schemaRuleEditor?.addEventListener("input", updateConfiguredRulePreview);
+      schemaRuleEditor?.addEventListener("click", captureReusableRuleSnapshotFromEditor);
       schemaRuleSearch?.addEventListener("input", renderSchemaRuleLibrary);
       updateSchemaRuleAttachments?.addEventListener("change", updateRuleAttachmentPreview);
       confirmSchemaRuleRevisionButton?.addEventListener("click", confirmReusableSchemaRuleRevision);
@@ -1766,7 +1930,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     dispose(): void {
       if (!mounted) return; mounted = false; lifecycleGeneration += 1;
       schemaSearch?.removeEventListener("input", updateSchemaTreeView);
-      createSchemaButton?.removeEventListener("click", createSchemaDraft);
+      createSchemaButton?.removeEventListener("click", openNewSchemaEditor);
       recheckSchemaValidationButton?.removeEventListener("click", recheckCapturedSchemaValidationFromControl);
       schemaCategoryFilter?.removeEventListener("change", updateSchemaTreeView);
       schemaTreeScrollOwner?.removeEventListener("scroll", persistSchemaTreeScroll);
@@ -1789,6 +1953,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       schemaRevisionSelector?.removeEventListener("change", renderSchemaRevisionComparison);
       duplicateSchemaRevisionButton?.removeEventListener("click", duplicateSelectedSchemaRevision);
       restoreSchemaRevisionButton?.removeEventListener("click", restoreSelectedSchemaRevision);
+      addSchemaPropertyButton?.removeEventListener("click", openManualPropertyFromControl);
       schemaPropertyFilter?.removeEventListener("input", renderSchemaPropertyView);
       schemaPropertySort?.removeEventListener("change", renderSchemaPropertyView);
       clearSchemaPropertyFilter?.removeEventListener("click", clearSchemaPropertyViewFilter);
@@ -1817,6 +1982,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       schemaPropertyRulePicker?.removeEventListener("keydown", navigateSchemaPropertyRulePicker);
       createSchemaRuleButton?.removeEventListener("click", openNewSchemaRuleEditor);
       saveSchemaRuleButton?.removeEventListener("click", saveReusableSchemaRule);
+      saveSchemaRuleButton?.removeEventListener("pointerdown", captureReusableRuleSnapshot);
+      schemaRuleEditor?.removeEventListener("input", updateConfiguredRulePreview);
+      schemaRuleEditor?.removeEventListener("click", captureReusableRuleSnapshotFromEditor);
       schemaRuleSearch?.removeEventListener("input", renderSchemaRuleLibrary);
       updateSchemaRuleAttachments?.removeEventListener("change", updateRuleAttachmentPreview);
       confirmSchemaRuleRevisionButton?.removeEventListener("click", confirmReusableSchemaRuleRevision);
@@ -1842,11 +2010,13 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       pendingSchemaPropertyRemoval = undefined; pendingSchemaDocumentationRemoval = undefined; lastSchemaPropertyRemoval = undefined;
       pendingSchemaPropertyCopy = undefined; lastSchemaPropertyCopy = undefined;
       specificIndexArrayPath = undefined; specificIndexTrigger = undefined;
-      pendingManualPropertyContext = undefined;
+      pendingManualPropertyContext = undefined; pendingManualPropertyCanonicalBase = undefined; pendingSchemaRestoration = undefined;
       schemaRulePickerPath = undefined; schemaRulePickerTrigger = undefined; schemaPropertyInteractionReturn = undefined;
       schemaRuleConfiguration = undefined; editingAttachedLocalRule = undefined;
       pendingSchemaRuleRevision = undefined; pendingSchemaRuleUpgrade = undefined;
       pendingSchemaRuleSync = undefined; pendingReusableSchemaRuleDeletionId = undefined;
+      editingReusableSchemaRuleId = undefined; approvedRuleRevisionId = undefined; approvedRuleAttachmentUpdateId = undefined;
+      pendingRuleSnapshotMetadata = undefined;
       editingSchemaAssignment = undefined; schemaAssignmentConditionState = { target:"payload", suggestions:[] };
       pendingSchemaImport = undefined; pendingSchemaDeletion = undefined;
       pendingStandardSchemaExport = undefined; schemaExportTrigger = undefined;
@@ -1866,6 +2036,8 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       unsubscribeSchemaPersistence?.(); unsubscribeSchemaPersistence = undefined;
       activeSchemaProjectHydration = undefined;
       clearSchemaRowListeners();
+      for (const dispose of schemaRuleRowDisposers.splice(0)) dispose();
+      for (const dispose of schemaPropertyRowDisposers.splice(0)) dispose();
       schemaList?.replaceChildren();
       schemaAssignmentList?.replaceChildren();
       schemaAssignmentDataConditions?.replaceChildren();
@@ -1891,12 +2063,34 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     confirmPropertyCopy:confirmSchemaPropertyCopy,
     openSpecificIndex:openSpecificIndexDialog,
     openManualProperty:openManualPropertyForm,
+    openContextualManualProperty:openContextualManualPropertyForm,
+    openSchemaFromSource,
+    schemaDocumentPaths,
+    schemaPropertyAt,
+    defineSchemaProperty,
+    schemaPropertyType,
+    capturePropertyReturn:captureSchemaPropertyInteractionReturn,
+    restorePropertyReturn:restoreSchemaPropertyInteractionReturn,
+    closeRulePickerForCommit:closeSchemaPropertyRulePickerForCommit,
     openRulePicker:openSchemaPropertyRulePicker,
+    openCanonicalRuleEditor:openCompactCanonicalRuleEditor,
+    openCanonicalPropertyActions:openCompactCanonicalPropertyActions,
+    configuredRule:configuredRuleInput,
+    conditionPredicate:initialConditionPredicate,
+    createConfiguredRule:createConfiguredSchemaRule,
     requestRuleRevision:requestSchemaRuleRevision,
     requestRuleUpgrade:requestSchemaRuleUpgrade,
-    requestRuleSync:requestSchemaRuleSync,
+    requestRuleSync:openReusableRuleSyncReview,
     confirmRuleSync:confirmReusableSchemaRuleSync,
     requestRuleDeletion:requestSchemaRuleDeletion,
+    editReusableRule:editReusableSchemaRule,
+    openAttachedRule:openAttachedSchemaRuleEditor,
+    attachReusableRule,
+    updateAttachedRule,
+    focusPropertyRule:focusSchemaPropertyRule,
+    focusPropertyRow:focusSchemaPropertyRow,
+    promotionRules:promotionReusableRules,
+    renderWorkflow:renderSchemaWorkflowRows,
     editAssignment:editSchemaAssignment,
     reviewLibraryImport:reviewSchemaLibraryImport,
     requestDeletion:requestSchemaDeletion,
@@ -1909,6 +2103,8 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     openGuidedProperty:openGuidedValidationForProperty,
     guidedContinuation:guidedDraftContinuationForEvent,
     recheckCaptured:recheckCapturedSchemaValidation,
+    setManualSchemaOverride:(eventId:string, schemaId?:string) => { if (schemaId) manualSchemaOverrides[eventId] = schemaId; else delete manualSchemaOverrides[eventId];
+      ports.storage.setItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY, JSON.stringify(manualSchemaOverrides)); },
     hydrateActiveProjectForSchemas,
     openSavedCanonical:(schemaId:string) => { const schema = schemas.find(({ id }) => id === schemaId); if (!schema) return false;
       openSavedSchemaInUnifiedEditor(schema); return true; },
@@ -1936,9 +2132,12 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       settlementPending:compactCanonicalSettlementPending, reviewVisible:compactCanonicalReviewVisible,
       feedback:compactCanonicalCommandFeedback, reopenSelection:compactCanonicalReopenSelection,
       projectionPending:Boolean(compactCanonicalProjectionRequest), historyPending:Boolean(compactCanonicalHistoryState.pending) }),
+    renderCanonical:renderCompactCanonicalEditor,
     rulePickerState:() => ({ path:schemaRulePickerPath, renderSequence:schemaPropertyRenderSequence,
       ...(schemaRuleConfiguration ? { configuration:structuredClone(schemaRuleConfiguration) } : {}) }),
     rules:(): readonly ReusableSchemaRule[] => structuredClone(reusableSchemaRules),
+    ruleState:() => ({ editingReusableSchemaRuleId, approvedRuleRevisionId, approvedRuleAttachmentUpdateId,
+      pendingRuleSnapshotMetadata:pendingRuleSnapshotMetadata ? structuredClone(pendingRuleSnapshotMetadata) : undefined }),
     schemas:(): readonly SchemaDefinition[] => structuredClone(schemas),
     state:() => ({ ...(activeSchemaId ? { activeSchemaId } : {}), draftDirty:Boolean(activeSchemaId && active().workingDraft),
       schemaCount:schemas.length, mounted }),

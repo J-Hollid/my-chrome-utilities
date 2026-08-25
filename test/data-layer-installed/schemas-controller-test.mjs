@@ -200,6 +200,8 @@ assert.equal(elements.get("#schema-property-empty").hidden, false);
 assert.equal(elements.get("#schema-property-empty-message").textContent, "No properties match missing");
 elements.get("#clear-schema-property-filter").click();
 assert.equal(elements.get("#schema-property-filter").value, "");
+const propertyToggle = elements.get("#schema-property-tree").children[0].children[7]; propertyToggle.click();
+assert.equal(propertyToggle.listenerCount(), 0, "property action rerender disposes the replaced row listeners");
 schemaRulesTab.click();
 assert.equal(schemaMasterPanel.hidden, true); assert.equal(schemaRulesPanel.hidden, false);
 uiController.beginDraft();
@@ -244,7 +246,7 @@ assert.match(elements.get("#schema-manual-property-preview").textContent, /check
 elements.get("#schema-manual-property-form").dispatch("submit");
 assert.equal(uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId)
   .workingDraft.document.properties.checkout.properties.total.type, "number");
-uiController.openManualProperty("/items/*");
+uiController.openContextualManualProperty("/items/*");
 elements.get("#schema-manual-property-child-name").value = "sku";
 elements.get("#schema-manual-property-type").value = "string";
 elements.get("#schema-manual-property-child-name").dispatch("input");
@@ -254,6 +256,10 @@ assert.equal(uiController.schemas().find(({ id }) => id === uiController.state()
 uiController.openRulePicker("items.*.sku");
 assert.equal(elements.get("#schema-property-rule-picker").open, true);
 assert.equal(uiController.rulePickerState().configuration.propertyType, "string");
+assert.match(elements.get("#schema-property-rule-picker").dataset.conditionPreview, /items\/\*\/sku/);
+assert.deepEqual(uiController.conditionPredicate("checkout.total"), { operator:"All", predicates:[{
+  propertyPath:"/checkout/total", operator:"Equals", comparison:{ type:"number", value:12 },
+}] }, "sampled primitive condition values become typed Equals comparisons");
 elements.get("#schema-property-rule-picker").dispatch("cancel");
 assert.deepEqual(rulePickerChanges, ["items.*.sku:true", "items.*.sku:false"]);
 uiController.publish();
@@ -266,8 +272,14 @@ elements.get("#save-schema-rule").click();
 assert.equal(uiController.rules().find(({ id }) => id === "rule:checkout").name, "Checkout required");
 assert.equal(uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId)
   .attachedRules.some(({ id }) => id === "rule:checkout"), true);
+assert.equal(uiController.updateAttachedRule(uiController.state().activeSchemaId, "rule:checkout", false), true);
+assert.equal(uiController.updateAttachedRule(uiController.state().activeSchemaId, "rule:checkout", true), true);
 elements.get("#schema-rule-search").value = "checkout"; elements.get("#schema-rule-search").dispatch("input");
-assert.match(elements.get("#schema-rule-list").textContent, /Checkout required/);
+assert.match(elements.get("#schema-rule-list").children[0].children[0].textContent, /Checkout required/);
+const disableRuleButton = elements.get("#schema-rule-list").children[0].children[5]; disableRuleButton.click();
+assert.equal(uiController.rules().find(({ id }) => id === "rule:checkout").enabled, false);
+assert.equal(disableRuleButton.listenerCount(), 0, "rerender disposes the replaced rule-row action listeners");
+elements.get("#schema-rule-list").children[0].children[5].click();
 assert.equal(uiController.requestRuleRevision("rule:checkout", { name:"Checkout present", message:"Checkout must be present" }), true);
 assert.equal(elements.get("#schema-rule-revision-review").open, true);
 elements.get("#cancel-schema-rule-revision").click();
@@ -290,6 +302,14 @@ assert.equal(elements.get("#schema-rule-upgrade-review").open, true);
 elements.get("#confirm-schema-rule-upgrade").click();
 assert.equal(uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId)
   .attachedRules.find(({ id }) => id === "rule:checkout").version, 3, "upgrade changes the selected pinned attachment without publishing");
+assert.equal(uiController.ruleState().approvedRuleRevisionId, "rule:checkout");
+assert.equal(uiController.ruleState().approvedRuleAttachmentUpdateId, "rule:checkout");
+assert.equal(uiController.editReusableRule("rule:retired"), true); elements.get("#schema-rule-name").value = "Retired rule reviewed";
+elements.get("#schema-rule-attachments").selectedOptions = []; elements.get("#save-schema-rule").click();
+assert.equal(elements.get("#schema-rule-revision-review").open, true, "editing a reusable rule requires revision review");
+elements.get("#confirm-schema-rule-revision").click();
+assert.equal(uiController.rules().find(({ id }) => id === "rule:retired").version, 2);
+assert.deepEqual(uiController.ruleState().pendingRuleSnapshotMetadata, { id:"rule:retired", version:1, attachments:[] });
 assert.equal(uiController.requestRuleDeletion("rule:checkout"), false, "attached rules cannot be deleted");
 assert.equal(uiController.requestRuleDeletion("rule:retired"), true);
 elements.get("#cancel-schema-rule-delete").click();
@@ -339,6 +359,11 @@ const persistenceSchemaId = uiController.state().activeSchemaId;
 uiController.beginDraft();
 const persistenceSchema = uiController.schemas().find(({ id }) => id === persistenceSchemaId);
 const guidedCapture = { id:"capture:checkout", sourceId:"gtm", name:"checkout", payload:{ checkout:{} }, rawInput:{} };
+const schemaPaths = uiController.schemaDocumentPaths(persistenceSchema.workingDraft.document);
+assert.ok(schemaPaths.length > 0); assert.ok(uiController.schemaPropertyAt(persistenceSchema.workingDraft.document, schemaPaths[0]));
+const definedDocument = uiController.defineSchemaProperty({ type:"object" }, { path:"sample", type:"string" });
+assert.equal(uiController.schemaPropertyType(definedDocument, "/sample"), "string");
+uiController.setManualSchemaOverride(guidedCapture.id, persistenceSchemaId);
 await uiController.openGuidedProperty(guidedCapture, persistenceSchema, "checkout.email");
 assert.equal(elements.get("#guided-validation-flow").dataset.eventId, guidedCapture.id);
 assert.equal(uiController.guidedContinuation(guidedCapture).schemaId, persistenceSchemaId,
