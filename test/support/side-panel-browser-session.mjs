@@ -76,7 +76,7 @@ async function startInstalledBrowserProcess({ nativePermissionUi = false } = {})
       ...(nativePermissionUi ? { DISPLAY:process.env.DISPLAY ?? ":0" } : {}),
       TMPDIR:chromeTemporaryRoot } },
   );
-  const processResources = { assetPort, assetServer, chrome, chromeProfile };
+  const processResources = { assetPort, assetServer, chrome, chromeProfile, nativePermissionUi };
   processResources.acceptNativePermissionPrompt = async (permissionSocket) => {
     const helper = "/tmp/swarmforge-x11-accept-chrome-permission-prompt";
     execFileSync("gcc", [

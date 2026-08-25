@@ -173,6 +173,7 @@ function approvedCompatibilityRepairChangedPath(file) {
     "test/support/side-panel-browser-direct-compatibility.mjs",
     "test/support/side-panel-browser-fixture-primitives.mjs",
     "test/support/side-panel-browser-session.mjs",
+    "test/support/side-panel-capture-fixtures.mjs",
     "test/support/side-panel-defect-fixtures.mjs",
     "test/support/side-panel-schema-fixture-primitives.mjs",
     "test/support/side-panel-schema-guided-lifecycle-fixtures.mjs",
