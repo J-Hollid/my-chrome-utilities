@@ -78,6 +78,7 @@ export interface CaptureInstalledPorts {
     confirmDetachTarget(): void;
     sessionPresentation(): { heading:string; summary:string; freshHeading:string; freshSummary:string;
       liveSummary:string; backgroundStatus:string; validationComparison:string; savedCount:string; confirmation:string };
+    savedSessionCount(): number;
     showDataLayerView(view: string): void;
     backToEvents(): void;
     copyPageUrl(): void;
@@ -156,6 +157,9 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
   const savedSessionConfirmation = ports.root.querySelector<HTMLElement>("#saved-session-confirmation");
   const cancelSavedSessionDeleteButton = ports.root.querySelector<HTMLButtonElement>("#cancel-saved-session-delete");
   const confirmSavedSessionDeleteButton = ports.root.querySelector<HTMLButtonElement>("#confirm-saved-session-delete");
+  const liveEventsEmptyState = ports.root.querySelector<HTMLElement>("#live-events-empty-state");
+  const liveSourceErrorState = ports.root.querySelector<HTMLElement>("#live-source-error-state");
+  const savedSessionEmptyState = ports.root.querySelector<HTMLElement>("#saved-session-empty-state");
   const liveNotificationController = createLiveNotificationController(
     (message) => ports.setLiveSessionMessage(message),
     (clear, delayMs) => { globalThis.setTimeout(clear, delayMs); },
@@ -276,6 +280,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     if (confirmSaveLiveSessionButton) confirmSaveLiveSessionButton.disabled = !(saveLiveSessionName?.value.trim());
     savedSessionList?.setAttribute("aria-live", "polite");
     liveGuidedWorkflowElements.setupSteps?.setAttribute("data-session-owner", "capture");
+    if (savedSessionEmptyState) savedSessionEmptyState.hidden = ports.ui.savedSessionCount() > 0;
   }
   const backToEvents = (): void => ports.ui.backToEvents();
   function copyLivePageUrl(): void { ports.ui.copyPageUrl(); }
@@ -301,6 +306,8 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
   const confirmSavedSessionDelete = (): void => ports.ui.confirmSavedSessionDelete();
   const renderLiveObserver = (): void => {
     if (mounted) renderLiveObserverState(liveObserverElements, liveObserverState, () => {});
+    if (liveEventsEmptyState) liveEventsEmptyState.hidden = liveObserverState.events.length > 0;
+    if (liveSourceErrorState) liveSourceErrorState.hidden = !liveObserverState.sources.some(({ status }) => status !== "Connected");
   };
   const publish = (): void => { persistSession(dataLayerSessionState, ports.storage);
     ports.changed(dataLayerSessionState, liveObserverState); renderLiveObserver(); };
@@ -433,6 +440,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     beginDetachTarget:beginDetachSelectedTarget,
     confirmDetachTarget:confirmDetachSelectedTarget,
     scheduleObservationRefresh,
+    refreshPresentation(): void { renderLiveObserver(); renderSavedSessionLiveBanner(); },
     state:() => ({ session:structuredClone(dataLayerSessionState), observer:structuredClone(liveObserverState),
       targets:structuredClone(observationTargetState), pendingObservationTargetSwitchId }),
   };

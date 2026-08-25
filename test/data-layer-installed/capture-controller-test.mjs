@@ -10,6 +10,7 @@ const noOpCaptureUi = {
   sessionPresentation:() => ({ heading:"Save session", summary:"No events", freshHeading:"Start fresh",
     freshSummary:"Current session", liveSummary:"Live feed", backgroundStatus:"Connected",
     validationComparison:"Not validated", savedCount:"0 saved sessions", confirmation:"" }),
+  savedSessionCount:() => 0,
   showDataLayerView() {}, backToEvents() {}, copyPageUrl() {}, openSessionSave() {}, startFreshSession() {},
   reportMissingEvent() {}, confirmSaveSession() {}, cancelSaveSession() {}, saveAndStartFreshSession() {},
   discardAndStartFreshSession() {}, cancelFreshSession() {}, returnToCurrentLiveFeed() {},
@@ -132,14 +133,17 @@ const sessionSelectors = [
   "#return-to-current-live-feed", "#revalidate-saved-session", "#saved-session-validation-comparison",
   "#saved-session-search", "#import-saved-session", "#saved-session-file", "#saved-session-list",
   "#saved-session-count", "#saved-session-confirmation", "#cancel-saved-session-delete", "#confirm-saved-session-delete",
+  "#live-events-empty-state", "#live-source-error-state", "#saved-session-empty-state",
 ];
 const sessionElements = new Map(sessionSelectors.map((selector) => [selector, interactiveElement()]));
 const sessionCalls = [];
+let savedSessionPresentationCount = 0;
 const sessionUi = {
   ...noOpCaptureUi,
   sessionPresentation:() => ({ heading:"Save checkout", summary:"3 captured events", freshHeading:"Start fresh?",
     freshSummary:"Unsaved checkout", liveSummary:"Checkout live feed", backgroundStatus:"Observing",
     validationComparison:"2 matches", savedCount:"4 saved sessions", confirmation:"Session imported" }),
+  savedSessionCount:() => savedSessionPresentationCount,
   backToEvents:() => sessionCalls.push("back"), copyPageUrl:() => sessionCalls.push("copy"),
   openSessionSave:() => sessionCalls.push("save"), startFreshSession:() => sessionCalls.push("fresh"),
   reportMissingEvent:() => sessionCalls.push("report"), confirmSaveSession:(name) => sessionCalls.push(`confirm:${name}`),
@@ -160,6 +164,11 @@ const sessionController = createCaptureInstalledController({
 sessionController.mount();
 assert.equal(sessionElements.get("#save-live-session-heading").textContent, "Save checkout");
 assert.equal(sessionElements.get("#saved-session-count").textContent, "4 saved sessions");
+assert.equal(sessionElements.get("#live-events-empty-state").hidden, false);
+assert.equal(sessionElements.get("#live-source-error-state").hidden, true);
+assert.equal(sessionElements.get("#saved-session-empty-state").hidden, false);
+savedSessionPresentationCount = 2; sessionController.refreshPresentation();
+assert.equal(sessionElements.get("#saved-session-empty-state").hidden, true, "saved-session empty state follows live collection updates");
 sessionElements.get("#back-to-events").click(); sessionElements.get("#copy-live-page-url").click();
 sessionElements.get("#save-live-session").click(); sessionElements.get("#start-fresh-session").click();
 sessionElements.get("#report-missing-event").click();

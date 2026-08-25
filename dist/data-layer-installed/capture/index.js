@@ -50,6 +50,9 @@ export function createCaptureInstalledController(ports) {
     const savedSessionConfirmation = ports.root.querySelector("#saved-session-confirmation");
     const cancelSavedSessionDeleteButton = ports.root.querySelector("#cancel-saved-session-delete");
     const confirmSavedSessionDeleteButton = ports.root.querySelector("#confirm-saved-session-delete");
+    const liveEventsEmptyState = ports.root.querySelector("#live-events-empty-state");
+    const liveSourceErrorState = ports.root.querySelector("#live-source-error-state");
+    const savedSessionEmptyState = ports.root.querySelector("#saved-session-empty-state");
     const liveNotificationController = createLiveNotificationController((message) => ports.setLiveSessionMessage(message), (clear, delayMs) => { globalThis.setTimeout(clear, delayMs); });
     let mounted = false;
     let unsubscribe;
@@ -236,6 +239,8 @@ export function createCaptureInstalledController(ports) {
             confirmSaveLiveSessionButton.disabled = !(saveLiveSessionName?.value.trim());
         savedSessionList?.setAttribute("aria-live", "polite");
         liveGuidedWorkflowElements.setupSteps?.setAttribute("data-session-owner", "capture");
+        if (savedSessionEmptyState)
+            savedSessionEmptyState.hidden = ports.ui.savedSessionCount() > 0;
     }
     const backToEvents = () => ports.ui.backToEvents();
     function copyLivePageUrl() { ports.ui.copyPageUrl(); }
@@ -265,6 +270,10 @@ export function createCaptureInstalledController(ports) {
     const renderLiveObserver = () => {
         if (mounted)
             renderLiveObserverState(liveObserverElements, liveObserverState, () => { });
+        if (liveEventsEmptyState)
+            liveEventsEmptyState.hidden = liveObserverState.events.length > 0;
+        if (liveSourceErrorState)
+            liveSourceErrorState.hidden = !liveObserverState.sources.some(({ status }) => status !== "Connected");
     };
     const publish = () => {
         persistSession(dataLayerSessionState, ports.storage);
@@ -415,6 +424,7 @@ export function createCaptureInstalledController(ports) {
         beginDetachTarget: beginDetachSelectedTarget,
         confirmDetachTarget: confirmDetachSelectedTarget,
         scheduleObservationRefresh,
+        refreshPresentation() { renderLiveObserver(); renderSavedSessionLiveBanner(); },
         state: () => ({ session: structuredClone(dataLayerSessionState), observer: structuredClone(liveObserverState),
             targets: structuredClone(observationTargetState), pendingObservationTargetSwitchId }),
     };
