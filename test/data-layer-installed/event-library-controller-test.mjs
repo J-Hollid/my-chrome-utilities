@@ -42,7 +42,8 @@ function element() {
     showModal() { this.open = true; }, close() { this.open = false; }, listenerCount:() => listeners.size,
   };
 }
-const selectors = ["#library-draft-schema-selector", "#refresh-library-draft-validation", "#export-event-library",
+const selectors = ["#event-template-search", "#event-template-empty-state", "#event-template-empty-recovery",
+  "#library-draft-schema-selector", "#refresh-library-draft-validation", "#export-event-library",
   "#import-event-library", "#event-library-file", "#event-library-transfer-result", "#clear-event-library",
   "#event-library-delete-review", "#event-library-delete-review-heading", "#event-library-delete-review-summary",
   "#confirm-event-library-delete", "#cancel-event-library-delete", "#event-library-import-review",
@@ -55,7 +56,7 @@ const transferController = createEventLibraryInstalledController({
   defaultPushPath:() => "event.history", push:async () => {}, changed() {}, createId:() => "template:transfer",
   downloadExport:(exported) => transferCalls.push(`export:${JSON.stringify(exported).includes("event-library")}`),
   readImportFile:async () => JSON.stringify({ format:"my-chrome-utilities.event-library", version:1, templates:[template] }),
-  validateDraft:(schemaId) => transferCalls.push(`validate:${schemaId}`),
+  validateDraft:(schemaId) => transferCalls.push(`validate:${schemaId}`), backToCapturedEvent:() => transferCalls.push("live"),
 });
 transferController.mount();
 elements.get("#library-draft-schema-selector").value = "schema:checkout";
@@ -64,8 +65,13 @@ elements.get("#import-event-library").click(); await new Promise((resolve) => se
 assert.deepEqual(transferCalls, ["validate:schema:checkout", "export:true"]);
 assert.ok(transferController.state().pendingImport, "file selection opens controller-owned import review");
 elements.get("#append-event-library").click(); assert.equal(transferController.templates().length, 1);
+elements.get("#event-template-search").value = "missing"; elements.get("#event-template-search").dispatch("input");
+assert.equal(elements.get("#event-template-empty-state").hidden, false);
+elements.get("#event-template-empty-recovery").click(); assert.equal(elements.get("#event-template-search").value, "");
 elements.get("#clear-event-library").click(); assert.equal(elements.get("#event-library-delete-review").open, true);
-elements.get("#cancel-event-library-delete").click(); assert.equal(transferController.state().pendingDeletion, undefined);
+elements.get("#event-library-delete-review").dispatch("cancel"); assert.equal(transferController.state().pendingDeletion, undefined);
+transferController.requestDelete(); transferController.confirmDelete(); elements.get("#event-template-empty-recovery").click();
+assert.equal(transferCalls.at(-1), "live", "empty Library recovery returns through the explicit Live port");
 transferController.dispose();
 assert.equal([...elements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
   "Event Library removes transfer and review listeners on disposal");

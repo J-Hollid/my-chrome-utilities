@@ -1,6 +1,8 @@
 // Each entry is an individually reviewed behavior-preserving rename. The audit verifies
 // that the exact target path and declaration/call symbol exist; broad rules are forbidden.
 export const reviewedControllerReplacements = [
+  { identity:"listeners:187:templateEmptyRecovery?.addEventListener@5721:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"templateEmptyRecovery?.addEventListener", line:351 },
+  { identity:"listeners:250:eventLibraryDeleteReview?.addEventListener@5998:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"eventLibraryDeleteReview?.addEventListener", line:360 },
   { identity:"stateOwners:365:completedLiveFlowTests@892:5", kind:"declaration", path:"src/data-layer-installed/live-flow-testing/index.ts", symbol:"completed" },
   { identity:"listeners:161:startTestingButton?.addEventListener@5510:1", kind:"call", path:"src/data-layer-installed/capture/index.ts", symbol:"startTestingButton?.addEventListener" },
   { identity:"listeners:162:endTestingButton?.addEventListener@5513:1", kind:"call", path:"src/data-layer-installed/capture/index.ts", symbol:"endTestingButton?.addEventListener" },
