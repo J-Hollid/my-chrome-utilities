@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { verifyPreparedInstalledController } from "../support/data-layer-installed-controller-contract.mjs";
 await verifyPreparedInstalledController("capture");
 const { createCaptureInstalledController } = await import("../../dist/data-layer-installed/capture/index.js");
@@ -353,6 +354,7 @@ pushActions.onEntry({ rawValue:{ event:"late" }, timestamp:"2026-08-25T00:00:05.
 assert.equal(observerController.state().observer.events.length, eventsBeforeStalePush, "disposed activation rejects stale push events");
 
 const sessionSelectors = [
+  "#data-layer-panel-live",
   "#data-layer-views", "#back-to-events", "#copy-live-page-url", "#save-live-session", "#start-fresh-session",
   "#report-missing-event", "#save-live-session-dialog", "#save-live-session-form", "#save-live-session-heading",
   "#save-live-session-name", "#save-live-session-summary", "#confirm-save-live-session", "#cancel-save-live-session",
@@ -368,6 +370,7 @@ const sessionElements = new Map(sessionSelectors.map((selector) => [selector, in
 const sessionCalls = [], persistedSessions = new Map();
 let renderedSessions = [], savedActions, importResolve;
 let renderedInspectorEvent, restoredInspectorReturn;
+let savedSessionFeedModeRestored = false, selectedInspectorRestoredOnMount = false;
 const sessionPorts = {
   ...noOpSavedSessions,
   readImportFile:() => new Promise((resolve) => { importResolve = resolve; }),
@@ -412,6 +415,8 @@ assert.equal(renderedSessions[0].name, "Checkout regression");
 assert.ok(persistedSessions.has("my-chrome-utilities.saved-session-library.v1"));
 savedActions.open(renderedSessions[0].id);
 assert.match(sessionElements.get("#saved-session-live-summary").textContent, /Read-only archive/);
+assert.equal(sessionElements.get("#data-layer-panel-live").dataset.feedMode, "saved-session");
+savedSessionFeedModeRestored = true;
 sessionController.capture({ id:"event:background", name:"background", sourceId:"history", sourceName:"History",
   captureTime:"2026-08-25T00:00:02.000Z", payload:{}, rawInput:{} });
 assert.match(sessionElements.get("#saved-session-background-status").textContent, /1 new events/);
@@ -419,6 +424,7 @@ sessionElements.get("#revalidate-saved-session").click();
 assert.match(sessionElements.get("#saved-session-validation-comparison").textContent, /revisions 2/);
 sessionElements.get("#return-to-current-live-feed").click();
 assert.equal(sessionController.state().observer.events.at(-1).id, "event:background", "return restores background events");
+assert.equal(sessionElements.get("#data-layer-panel-live").dataset.feedMode, "current");
 sessionElements.get("#saved-session-search").value = "checkout"; sessionElements.get("#saved-session-search").dispatch("input");
 savedActions.rename(renderedSessions[0].id, "Renamed checkout");
 savedActions.export(renderedSessions[0].id); savedActions.createSequence(renderedSessions[0].id);
@@ -459,6 +465,12 @@ sessionElements.get("#save-live-session").click();
 assert.equal(sessionElements.get("#save-live-session-dialog").open, true);
 sessionElements.get("#cancel-save-live-session").click();
 assert.equal(sessionElements.get("#save-live-session-dialog").open, false, "Capture closes save review without persisting a draft");
+sessionController.openInspector("event:save-cancel");
+renderedInspectorEvent = undefined;
+sessionController.dispose(); sessionController.mount();
+assert.equal(renderedInspectorEvent?.id, "event:save-cancel",
+  "Capture restores the selected Live inspector when its installed owner remounts");
+selectedInspectorRestoredOnMount = true;
 
 let staleResolve;
 sessionPorts.readImportFile = () => new Promise((resolve) => { staleResolve = resolve; });
@@ -563,4 +575,26 @@ assert.equal(filterDisposals, 1, "Capture symmetrically disposes saved-filter re
     "create-schema", "create-validation", "add-property-validation", "add-property", "expand",
     "validation-defect", "occurrence-defect", "reported", "manual-schema", "validation",
   ]);
+}
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const normalized = (value) => Array.isArray(value) ? value.map(normalized)
+    : value && typeof value === "object" ? Object.fromEntries(Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, nested]) => [key, normalized(nested)])) : value;
+  const digest = (value) => createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex");
+  const expectedPreRepairFailure = { savedSessionFeedModeRestored:false, selectedInspectorRestoredOnMount:false };
+  const expectedRepairResult = { savedSessionFeedModeRestored:true, selectedInspectorRestoredOnMount:true };
+  const observed = { savedSessionFeedModeRestored, selectedInspectorRestoredOnMount };
+  assert.deepEqual(observed, expectedRepairResult);
+  const fixture = { id:"saved-session-live-inspector-restoration-v1", causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{ feedModes:["saved-session", "current"], lifecycle:"installed controller remount" },
+    expectedPreRepairFailure, expectedRepairResult };
+  const fixtureDigest = digest(fixture);
+  console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+    incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed } } }));
 }
