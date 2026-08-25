@@ -1,3 +1,13 @@
+import { createCaptureInstalledController, type CaptureInstalledPorts } from "./capture/index.js";
+import { createDefectsInstalledController, type DefectsInstalledPorts } from "./defects/index.js";
+import { createDurableProjectsInstalledController, type DurableProjectsInstalledPorts } from "./durable-projects/index.js";
+import { createEventLibraryInstalledController, type EventLibraryInstalledPorts } from "./event-library/index.js";
+import { createLiveFlowTestingInstalledController, type LiveFlowTestingInstalledPorts } from "./live-flow-testing/index.js";
+import { createProjectEventTransportInstalledController, type ProjectEventTransportInstalledPorts } from "./project-event-transport/index.js";
+import { createProjectsInstalledController, type ProjectsInstalledPorts } from "./projects/index.js";
+import { createReplayInstalledController, type ReplayInstalledPorts } from "./replay/index.js";
+import { createSchemasInstalledController, type SchemasInstalledPorts } from "./schemas/index.js";
+
 export const installedDataLayerControllerOrder = [
   "capture",
   "event-library",
@@ -197,6 +207,33 @@ export type InstalledDataLayerControllers = Readonly<Record<
   InstalledDataLayerControllerLifecycle
 >>;
 
+export interface InstalledDataLayerControllerPorts {
+  capture:CaptureInstalledPorts;
+  "event-library":EventLibraryInstalledPorts;
+  schemas:SchemasInstalledPorts;
+  defects:DefectsInstalledPorts;
+  replay:ReplayInstalledPorts;
+  projects:ProjectsInstalledPorts;
+  "durable-projects":DurableProjectsInstalledPorts;
+  "project-event-transport":ProjectEventTransportInstalledPorts;
+  "live-flow-testing":LiveFlowTestingInstalledPorts;
+}
+
+export function createInstalledDataLayerControllers(ports:InstalledDataLayerControllerPorts) {
+  const controllers = {
+    capture:createCaptureInstalledController(ports.capture),
+    "event-library":createEventLibraryInstalledController(ports["event-library"]),
+    schemas:createSchemasInstalledController(ports.schemas),
+    defects:createDefectsInstalledController(ports.defects),
+    replay:createReplayInstalledController(ports.replay),
+    projects:createProjectsInstalledController(ports.projects),
+    "durable-projects":createDurableProjectsInstalledController(ports["durable-projects"]),
+    "project-event-transport":createProjectEventTransportInstalledController(ports["project-event-transport"]),
+    "live-flow-testing":createLiveFlowTestingInstalledController(ports["live-flow-testing"]),
+  } satisfies InstalledDataLayerControllers;
+  return { controllers, lifecycle:createInstalledDataLayerLifecycle(controllers) };
+}
+
 export function createInstalledDataLayerLifecycle(
   controllers: InstalledDataLayerControllers,
 ): InstalledDataLayerControllerLifecycle {
@@ -225,3 +262,4 @@ import { installDurableRepositoryStartupFailure, openDurableProjectRuntime,
   SCHEMA_LIBRARY_STORAGE_KEY } from "../utilities/data-layer/schemas.js";
 import type { CommandRunContext, CommandRunRecord } from "../commands.js";
 import type { WorkspaceTabId } from "../workspace-tabs.js";
+

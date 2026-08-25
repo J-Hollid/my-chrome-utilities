@@ -1,3 +1,12 @@
+import { createCaptureInstalledController } from "./capture/index.js";
+import { createDefectsInstalledController } from "./defects/index.js";
+import { createDurableProjectsInstalledController } from "./durable-projects/index.js";
+import { createEventLibraryInstalledController } from "./event-library/index.js";
+import { createLiveFlowTestingInstalledController } from "./live-flow-testing/index.js";
+import { createProjectEventTransportInstalledController } from "./project-event-transport/index.js";
+import { createProjectsInstalledController } from "./projects/index.js";
+import { createReplayInstalledController } from "./replay/index.js";
+import { createSchemasInstalledController } from "./schemas/index.js";
 export const installedDataLayerControllerOrder = [
     "capture",
     "event-library",
@@ -145,6 +154,20 @@ export async function createInstalledSidePanelRuntimeFoundation(root = document,
         createKeymapButton, updateKeymapButton, loadKeymapButton, keymapFileInput, keymapStatus, keymapWarning,
         workspaceTabList, hotkeyEditorFilter, hotkeyEditorCommands,
         dataLayerStorage, hotkeyStorage, shellStorage, durableProjectRuntime };
+}
+export function createInstalledDataLayerControllers(ports) {
+    const controllers = {
+        capture: createCaptureInstalledController(ports.capture),
+        "event-library": createEventLibraryInstalledController(ports["event-library"]),
+        schemas: createSchemasInstalledController(ports.schemas),
+        defects: createDefectsInstalledController(ports.defects),
+        replay: createReplayInstalledController(ports.replay),
+        projects: createProjectsInstalledController(ports.projects),
+        "durable-projects": createDurableProjectsInstalledController(ports["durable-projects"]),
+        "project-event-transport": createProjectEventTransportInstalledController(ports["project-event-transport"]),
+        "live-flow-testing": createLiveFlowTestingInstalledController(ports["live-flow-testing"]),
+    };
+    return { controllers, lifecycle: createInstalledDataLayerLifecycle(controllers) };
 }
 export function createInstalledDataLayerLifecycle(controllers) {
     let mounted = false;

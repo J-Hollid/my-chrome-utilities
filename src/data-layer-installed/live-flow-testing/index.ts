@@ -1,37 +1,61 @@
-export interface LiveFlowTestingInstalledPorts {
-  beginTest(): Promise<void>;
-  currentSummary(): Readonly<Record<string, unknown>> | undefined;
-  projectEventResult(): Readonly<Record<string, unknown>> | undefined;
-  openProjectEntity(id: string): void;
+import { mountLiveFlowTestingUi, type LiveFlowTestingUiOptions } from "../../data-layer-live-flow-testing-ui.js";
+import type { LiveFlowTestingUi } from "../../data-layer-live-flow-testing-ui.js";
+
+export interface LiveFlowTestingInstalledPorts extends Pick<LiveFlowTestingUiOptions,
+  "root" | "activeProject" | "events" | "saveSummary" | "savedSummary" | "onResult" |
+  "openProject" | "createProject" | "id" | "now"> {
   subscribe(listener: () => void): () => void;
+  createUi?(options:LiveFlowTestingUiOptions):LiveFlowTestingUi;
 }
 
 export function createLiveFlowTestingInstalledController(ports: LiveFlowTestingInstalledPorts) {
   let mounted = false;
   let unsubscribe: (() => void) | undefined;
-  let summary: Readonly<Record<string, unknown>> | undefined;
-  let result: Readonly<Record<string, unknown>> | undefined;
   let generation = 0;
   let completed: Readonly<Record<string, unknown>>[] = [];
-  const refresh = (): void => { if (mounted) { summary = ports.currentSummary(); result = ports.projectEventResult(); } };
-  const liveFlowTestingUi = {
-    open:ports.beginTest,
-    refreshProject:refresh,
-    reset:() => { summary = undefined; result = undefined; },
+  const liveFlowTestingUi = (ports.createUi ?? mountLiveFlowTestingUi)(ports);
+  const refresh = (): void => {
+    if (!mounted) return;
+    const operation = generation;
+    void liveFlowTestingUi.refreshProject().then(() => {
+      if (!mounted || operation !== generation) return;
+      const summary = liveFlowTestingUi.summary();
+      completed = summary ? [structuredClone(summary) as unknown as Readonly<Record<string,unknown>>] : [];
+    });
   };
   function resetLiveFlowTestingSession(): void {
-    completed = []; liveFlowTestingUi.reset(); if (mounted) liveFlowTestingUi.refreshProject();
+    completed = []; liveFlowTestingUi.reset(); if (mounted) refresh();
   }
   return {
-    mount(): void { if (!mounted) { mounted = true; generation += 1; unsubscribe = ports.subscribe(refresh); refresh(); } },
-    dispose(): void { if (mounted) { mounted = false; generation += 1; unsubscribe?.(); unsubscribe = undefined; summary = undefined; result = undefined; } },
-    async begin(): Promise<void> { const operation = generation; await liveFlowTestingUi.open(); if (mounted && operation === generation) refresh(); },
+    mount(): void {
+      if (mounted) return;
+      mounted = true; generation += 1; unsubscribe = ports.subscribe(refresh); refresh();
+    },
+    dispose(): void {
+      if (!mounted) return;
+      mounted = false; generation += 1; unsubscribe?.(); unsubscribe = undefined;
+      completed = []; liveFlowTestingUi.reset();
+    },
+    async begin(): Promise<void> {
+      const operation = generation; await liveFlowTestingUi.open();
+      if (!mounted || operation !== generation) return;
+      const summary = liveFlowTestingUi.summary();
+      completed = summary ? [structuredClone(summary) as unknown as Readonly<Record<string,unknown>>] : [];
+    },
     refresh,
-    complete(record: Readonly<Record<string, unknown>>): void { completed = [structuredClone(record)]; summary = structuredClone(record); },
+    complete(record: Readonly<Record<string, unknown>>): void {
+      completed = [structuredClone(record)];
+    },
     reset:resetLiveFlowTestingSession,
-    openProjectEntity:ports.openProjectEntity,
-    state:() => ({ ...(summary ? { summary:structuredClone(summary) } : {}),
-      ...(result ? { result:structuredClone(result) } : {}), completed:structuredClone(completed), mounted }),
+    renderEventDetails:liveFlowTestingUi.renderEventDetails,
+    attachDefect:liveFlowTestingUi.attachDefect,
+    state:() => {
+      const summary = mounted ? liveFlowTestingUi.summary() : undefined;
+      const result = mounted ? liveFlowTestingUi.run()?.history.at(-1) : undefined;
+      return { ...(summary ? { summary:structuredClone(summary) } : {}),
+        ...(result ? { result:structuredClone(result) } : {}),
+        completed:structuredClone(completed), mounted };
+    },
   };
 }
 

@@ -44,6 +44,7 @@ import {
   validateAssignmentDataConditions,
   validateEvent,
   typedComparisonValue, GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation,
+  createGuidedValidationFlow,
   filterSchemaRelationshipTree,
   restoreSchemaRelationshipTreeView,
   saveSchemaRelationshipTreeView,
@@ -111,10 +112,7 @@ export interface SchemasInstalledPorts {
   storage: Pick<Storage, "getItem" | "setItem" | "removeItem">;
   relationshipViewStorage: Pick<Storage, "getItem" | "setItem">;
   changed(schemas: readonly SchemaDefinition[]): void;
-  runGuidedValidation(schemaId?: string): Promise<void>;
   subscribe(listener: () => void): () => void;
-  specificIndexSelected(path: string): void;
-  rulePickerChanged(path: string, open: boolean): void;
   createRuleId(): string;
   capturedAssignmentValue(target: AssignmentConditionTarget): unknown;
   renderAssignmentConditions(root: HTMLElement, state: AssignmentDataConditionEditorState,
@@ -1248,8 +1246,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const submitSpecificIndex = (event: Event): void => { event.preventDefault();
     const draft = active().workingDraft; if (!draft || !specificIndexArrayPath) return;
     const inspection = inspectSpecificIndexRuleTarget(draft.document, specificIndexArrayPath, schemaSpecificIndex?.value ?? "");
-    if (inspection.result !== "accepted") return; schemaSpecificIndexDialog?.close();
-    ports.specificIndexSelected(inspection.canonicalPath.slice(1).replaceAll("/", "."));
+    if (inspection.result !== "accepted") return;
+    const trigger=specificIndexTrigger, dottedPath=inspection.canonicalPath.slice(1).replaceAll("/", ".");
+    closeSpecificIndexDialog(); openSchemaPropertyRulePicker(dottedPath, trigger);
   };
   const closeSpecificIndexDialog = (): void => { schemaSpecificIndexDialog?.close(); specificIndexTrigger?.focus();
     specificIndexArrayPath = undefined; specificIndexTrigger = undefined; };
@@ -1451,13 +1450,12 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       editorScroll:schemaEditor?.scrollTop ?? 0, treeScroll:schemaPropertyTree?.scrollTop ?? 0, detailScroll:schemaDetail?.scrollTop ?? 0 };
     editingAttachedLocalRule = draft.attachedRules?.find((rule) => normalizedRulePickerPath(rule.propertyPath ?? "") === canonicalPath);
     schemaRuleConfiguration = createRuleConfiguration("Required", propertyType);
-    renderSchemaLocalRuleConfiguration(); schemaPropertyRulePicker?.showModal(); ports.rulePickerChanged(path, true);
+    renderSchemaLocalRuleConfiguration(); schemaPropertyRulePicker?.showModal();
   }
   function closeSchemaPropertyRulePicker(): void {
     const path = schemaRulePickerPath; schemaPropertyRulePicker?.close(); schemaRulePickerTrigger?.focus();
     schemaRulePickerPath = undefined; schemaRulePickerTrigger = undefined; schemaRuleConfiguration = undefined; schemaRulePickerSearch = "";
     editingAttachedLocalRule = undefined; schemaPropertyInteractionReturn = undefined;
-    if (path) ports.rulePickerChanged(path, false);
   }
   const cancelSchemaPropertyRulePicker = (event: Event): void => { event.preventDefault(); closeSchemaPropertyRulePicker(); };
   const navigateSchemaPropertyRulePicker = (event: KeyboardEvent): void => {
@@ -1577,23 +1575,43 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     return assignment ? { schema, assignment, typeCoverage:new Set(guidedDocumentTypes(event.payload)).size } : undefined;
   };
   const guidedSchemaCandidates = (event:GuidedCapturedEvent) => schemas.map((schema) => guidedSchemaCandidate(event, schema)).filter((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate));
+  const guidedSchemaPropertyTypes = (document:SchemaDefinition["document"], prefix=""):Record<string,"String"|"Number"|"Boolean"|"Array"|"Object"> =>
+    Object.entries(document.properties ?? {}).reduce<Record<string,"String"|"Number"|"Boolean"|"Array"|"Object">>((types, [name, child]) => {
+      const path=prefix ? `${prefix}.${name}` : name, type=child.type === "string" ? "String" : child.type === "number" ? "Number"
+        : child.type === "boolean" ? "Boolean" : child.type === "array" ? "Array" : child.type === "object" ? "Object" : undefined;
+      if (type) types[path]=type; return { ...types, ...guidedSchemaPropertyTypes(child, path) };
+    }, {});
+  const guidedUiCandidate = (schema:SchemaDefinition) => { const editable=schema.workingDraft ? schemaEditorDraft(schema) : schema; return {
+    id:schema.id, name:schema.name, version:schema.version, target:editable.assignments[0]?.target ?? "payload" as const,
+    propertyTypes:guidedSchemaPropertyTypes(editable.document), assignments:editable.assignments.map((assignment) => ({
+      ...(assignment.id ? { id:assignment.id } : {}), ...(assignment.name ? { name:assignment.name } : {}), sourceId:assignment.sourceId,
+      eventName:assignment.eventName, target:assignment.target, ...(assignment.domainCondition ? { domainCondition:assignment.domainCondition } : {}),
+      ...(assignment.pathnameCondition ? { pathnameCondition:assignment.pathnameCondition } : {}), ...(assignment.pathConditions ? { pathConditions:assignment.pathConditions } : {}),
+      ...(assignment.priority !== undefined ? { priority:assignment.priority } : {}), ...(assignment.versionPolicy ? { versionPolicy:assignment.versionPolicy } : {}),
+      ...(assignment.enabled !== undefined ? { enabled:assignment.enabled } : {}) })) }; };
   const guidedEvent = (event:GuidedCapturedEvent):GuidedCapturedEvent => structuredClone(event);
+  const guidedUiEvent = (event:GuidedCapturedEvent) => ({ id:event.id, sourceId:event.sourceId, name:event.name,
+    pageUrl:event.pageUrl ?? globalThis.location?.href ?? "https://invalid.local/", payload:event.payload && typeof event.payload === "object" && !Array.isArray(event.payload)
+      ? structuredClone(event.payload) as Record<string,unknown> : {} });
   const openGuidedValidationForEvent = async (event:GuidedCapturedEvent, schema?:SchemaDefinition):Promise<void> => {
     event = guidedEvent(event);
     const selected = schema ?? selectedGuidedContinuation(guidedContinuationSelections, event, schemas) ?? guidedSchemaCandidates(event)[0]?.schema;
     if (selected) persistGuidedContinuation(event, selected.id);
     guidedPropertyReturn = undefined; if (guidedValidationRoot) { guidedValidationRoot.hidden = false;
       guidedValidationRoot.dataset.eventId = event.id; guidedValidationRoot.dataset.schemaId = selected?.id ?? ""; }
-    await ports.runGuidedValidation(selected?.id);
+    guidedValidationFlow.open(guidedUiEvent(event), selected ? guidedUiCandidate(selected) : undefined);
   };
   const openGuidedValidationForProperty = async (event:GuidedCapturedEvent, schema:SchemaDefinition, propertyPath:string):Promise<void> => {
-    await openGuidedValidationForEvent(event, schema);
+    event = guidedEvent(event); persistGuidedContinuation(event, schema.id);
+    if (guidedValidationRoot) { guidedValidationRoot.hidden = false; guidedValidationRoot.dataset.eventId = event.id;
+      guidedValidationRoot.dataset.schemaId = schema.id; }
+    guidedValidationFlow.openProperty(guidedUiEvent(event), propertyPath, guidedUiCandidate(schema));
     guidedPropertyReturn = { schemaId:schema.id, propertyPath, generation:lifecycleGeneration };
   };
   const guidedDraftContinuationForEvent = (event:GuidedCapturedEvent) => {
     const schema = selectedGuidedContinuation(guidedContinuationSelections, event, schemas);
     return schema?.workingDraft ? { schemaId:schema.id, schemaName:schema.name, schemaVersion:schema.version, pendingChanges:schema.workingDraft.pendingChanges.length,
-      addProperty:() => guidedValidationFlow.open(event, schema), review:() => openGuidedDraft(schema),
+      addProperty:() => { guidedValidationFlow.open(guidedUiEvent(event), guidedUiCandidate(schema)); }, review:() => openGuidedDraft(schema),
       publish:() => { openGuidedDraft(schema); openSchemaRevisionReview(); }, useDifferent:() => openGuidedContinuationPicker(event) } : undefined;
   };
   const finishGuidedValidationSave = (result:PublishedGuidedValidation):void => {
@@ -2071,13 +2089,13 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   let livePropertyDialogDisposers:(() => void)[] = [];
   let allowedValueDialogDisposers:(() => void)[] = [];
   let sidePanelLayeredProfileEditor:{ dispose():void } | undefined;
-  const guidedValidationFlow = {
-    open:openGuidedValidationForEvent, openProperty:openGuidedValidationForProperty,
-    close:():void => { if (guidedValidationRoot) { guidedValidationRoot.hidden = true; guidedValidationRoot.removeAttribute("data-event-id");
+  const guidedValidationFlow = createGuidedValidationFlow(guidedValidationRoot, {
+    schemaCandidates:() => schemas.map(guidedUiCandidate),
+    publish:persistPublishedGuidedValidation,
+    close:() => { if (guidedValidationRoot) { guidedValidationRoot.hidden = true; guidedValidationRoot.removeAttribute("data-event-id");
       guidedValidationRoot.removeAttribute("data-schema-id"); } restoreGuidedPropertyReturn(); },
-    currentDraft:() => guidedValidationRoot && !guidedValidationRoot.hidden ? { eventId:guidedValidationRoot.dataset.eventId,
-      schemaId:guidedValidationRoot.dataset.schemaId } : undefined,
-  };
+    saved:finishGuidedValidationSave,
+  });
   return {
     mount(): void {
       if (mounted) return; mounted = true; lifecycleGeneration += 1;
@@ -2301,7 +2319,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     add(schema: SchemaDefinition): void { schemas = [...schemas, structuredClone(schema)]; activeSchemaId = schema.id; schemaDraft = structuredClone(schema); persistSchemaLibrary(); renderSchemas(); },
     replace(next: readonly SchemaDefinition[]): void { schemas = structuredClone([...next]); if (!schemas.some(({ id }) => id === activeSchemaId)) { activeSchemaId = undefined; schemaDraft = undefined; } persistSchemaLibrary(); renderSchemas(); },
     validate:(event: Parameters<typeof validateEvent>[0]) => validateEvent(event, schemas),
-    runGuidedValidation:() => ports.runGuidedValidation(activeSchemaId),
+    runGuidedValidation:async () => { const event = guidedValidationRoot?.dataset.eventId;
+      if (event) { const captured={ id:event, sourceId:"", name:"", pageUrl:"", payload:{}, rawInput:{} };
+        guidedValidationFlow.open(guidedUiEvent(captured), activeSchemaId ? guidedUiCandidate(active()) : undefined); } },
     requestPropertyRemoval:requestSchemaPropertyRemoval,
     requestDocumentationRemoval:requestSchemaDocumentationRemoval,
     requestPropertyCopy:openSchemaPropertyCopyReview,
@@ -2347,8 +2367,8 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       openSchemaExportChoices(exportSchemaButton, schema); return true; },
     requestLocalRulePromotion:openLocalRulePromotionReview,
     persistGuidedValidation:(result:PublishedGuidedValidation) => persistPublishedGuidedValidation(result).then(() => finishGuidedValidationSave(result)),
-    openGuidedEvent:guidedValidationFlow.open,
-    openGuidedProperty:guidedValidationFlow.openProperty,
+    openGuidedEvent:openGuidedValidationForEvent,
+    openGuidedProperty:openGuidedValidationForProperty,
     openLivePropertyDeclaration,
     openAllowedValueExpansionReview,
     closeGuided:guidedValidationFlow.close,

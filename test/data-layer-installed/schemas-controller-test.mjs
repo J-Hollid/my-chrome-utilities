@@ -5,13 +5,12 @@ const schema = { id:"schema:page", name:"Page", version:1, document:{ type:"obje
 const parentSchema = { id:"schema:parent", name:"Parent", version:2, document:{ type:"object", properties:{ title:{ type:"string" } } },
   assignments:[], attachedRules:[{ id:"rule:parent", version:1, propertyPath:"/title", enabled:true }], published:true };
 const values = new Map([["my-chrome-utilities.schema-library.v1", JSON.stringify([schema])]]);
-let changed = 0, guided;
+let changed = 0;
 const controller = createSchemasInstalledController({
   root:{ querySelector:() => null, querySelectorAll:() => [] },
   storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value), removeItem:(key) => values.delete(key) },
   relationshipViewStorage:{ getItem:()=>null, setItem() {} },
-  changed:() => { changed += 1; }, runGuidedValidation:async (id) => { guided = id; },
-  subscribe:() => () => {}, specificIndexSelected() {}, rulePickerChanged() {}, createRuleId:() => "rule:first",
+  changed:() => { changed += 1; }, subscribe:() => () => {}, createRuleId:() => "rule:first",
   capturedAssignmentValue:() => undefined, renderAssignmentConditions() {},
   localRulePromotionDialog:{ open() {}, close() {} }, subscribeSchemaPersistence:() => () => {},
   downloadSchema() {},
@@ -28,7 +27,7 @@ assert.equal(evaluation.state, "Not checked", "unassigned events retain the exac
 const published = controller.publish();
 assert.equal(published.version, 2, "Schemas exclusively owns draft publication");
 assert.equal(published.document.required[0], "title");
-await controller.runGuidedValidation(); assert.equal(guided, "schema:page");
+await controller.runGuidedValidation();
 assert.ok(changed >= 3);
 controller.dispose(); controller.mount();
 assert.equal(controller.state().activeSchemaId, "schema:page");
@@ -55,6 +54,7 @@ function element() {
   };
 }
 fakeDocument = { createElement:() => element(), body:element() };
+globalThis.document = fakeDocument;
 const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "#schema-editor-name",
   "#schema-search", "#schema-category-filter", "#schema-count", "#schema-list", "#schema-empty-state", "#schema-result",
   "#create-schema", "#recheck-schema-validation", "#schema-validation-issues", "#schema-validation-record-list", "#guided-validation-flow",
@@ -116,8 +116,6 @@ const uiValues = new Map([
     { id:"rule:retired", name:"Retired rule", kind:"Required", version:1, enabled:true, attachments:[] },
   ])],
 ]);
-let selectedSpecificIndex;
-const rulePickerChanges = [];
 let promotionDialogInput, persistenceListener, promotionRuleSequence = 0;
 const schemaDownloads = [];
 const relationshipActions = [];
@@ -132,9 +130,7 @@ const uiController = createSchemasInstalledController({
     querySelectorAll:(selector) => selector.includes("role=tab") ? [schemaMasterTab, schemaRulesTab] : [schemaMasterPanel, schemaRulesPanel] },
   storage:{ getItem:(key) => uiValues.get(key) ?? null, setItem:(key, value) => uiValues.set(key, value), removeItem:(key) => uiValues.delete(key) },
   relationshipViewStorage:{ getItem:(key) => uiValues.get(`view:${key}`) ?? null, setItem:(key, value) => uiValues.set(`view:${key}`, value) },
-  changed() {}, runGuidedValidation:async () => {}, subscribe:() => () => {},
-  specificIndexSelected:(path) => { selectedSpecificIndex = path; },
-  rulePickerChanged:(path, open) => rulePickerChanges.push(`${path}:${open}`),
+  changed() {}, subscribe:() => () => {},
   createRuleId:() => ["rule:conditional", "rule:checkout", "rule:promoted"][promotionRuleSequence++] ?? `rule:${promotionRuleSequence}`,
   capturedAssignmentValue:(target) => target === "payload" ? { checkout:{ total:12 } } : { raw:true },
   renderAssignmentConditions:(root, state) => { root.textContent = `${state.target}:${state.group?.predicates.length ?? 0}`; },
@@ -250,7 +246,15 @@ uiController.openSpecificIndex("/items");
 elements.get("#schema-specific-index").value = "2"; elements.get("#schema-specific-index").dispatch("input");
 assert.equal(elements.get("#confirm-schema-specific-index").disabled, false);
 elements.get("#schema-specific-index-form").dispatch("submit");
-assert.equal(selectedSpecificIndex, "items.2");
+assert.equal(elements.get("#schema-specific-index-dialog").open, false);
+assert.equal(elements.get("#schema-property-rule-picker").open, true,
+  "an accepted specific index transitions directly into the controller-owned rule picker");
+assert.equal(uiController.rulePickerState().path, "items.2");
+assert.match(elements.get("#schema-property-rule-picker").dataset.conditionPreview, /items\/2/,
+  "the dotted controller path retains the accepted canonical array index");
+elements.get("#schema-property-rule-picker").dispatch("cancel");
+assert.equal(uiController.rulePickerState().path, undefined,
+  "closing the owned rule picker clears its transition state without an external callback");
 uiController.openManualProperty();
 elements.get("#schema-manual-property-path").value = "checkout.total";
 elements.get("#schema-manual-property-type").value = "number";
@@ -274,7 +278,8 @@ assert.deepEqual(uiController.conditionPredicate("checkout.total"), { operator:"
   propertyPath:"/checkout/total", operator:"Equals", comparison:{ type:"number", value:12 },
 }] }, "sampled primitive condition values become typed Equals comparisons");
 elements.get("#schema-property-rule-picker").dispatch("cancel");
-assert.deepEqual(rulePickerChanges, ["items.*.sku:true", "items.*.sku:false"]);
+assert.equal(uiController.rulePickerState().path, undefined,
+  "rule-picker close owns its state transition after removal of the notification-only port");
 uiController.openRulePicker("checkout.total");
 const conditionalControl = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-conditional");
 conditionalControl.checked = true; conditionalControl.dispatch("change");
@@ -438,7 +443,8 @@ assert.equal(uiController.schemaPropertyType(definedDocument, "/sample"), "strin
 uiController.setManualSchemaOverride(guidedCapture.id, persistenceSchemaId);
 await uiController.openGuidedProperty(guidedCapture, persistenceSchema, "checkout.email");
 assert.equal(elements.get("#guided-validation-flow").dataset.eventId, guidedCapture.id);
-assert.equal(uiController.guidedDraft().schemaId, persistenceSchemaId, "the Schema-owned guided flow exposes its live draft");
+assert.equal(uiController.guidedDraft().continuation.schemaId, persistenceSchemaId,
+  "the Schema-owned guided flow exposes the real continuation draft");
 assert.match(uiValues.get("my-chrome-utilities.guided-validation-continuations.v1"), /schema:page/,
   "guided continuation selection is persisted by the Schema owner");
 assert.equal(uiController.guidedContinuation(guidedCapture).schemaId, persistenceSchemaId,

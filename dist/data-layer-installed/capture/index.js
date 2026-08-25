@@ -56,7 +56,6 @@ export function createCaptureInstalledController(ports) {
     const savedSessionEmptyState = ports.root.querySelector("#saved-session-empty-state");
     const liveNotificationController = createLiveNotificationController((message) => ports.setLiveSessionMessage(message), (clear, delayMs) => { globalThis.setTimeout(clear, delayMs); });
     let mounted = false;
-    let unsubscribe;
     let dataLayerSessionState = restoreSession(ports.storage);
     let liveObserverState = createLiveObserverState({ pageUrl: ports.initialPageUrl(), sources: ports.initialSources() });
     let dataLayerObserverState = {
@@ -234,7 +233,8 @@ export function createCaptureInstalledController(ports) {
             setObservationTargetResult(decision.result);
             return;
         }
-        if (!await ports.observation.attach(target)) {
+        const observation = await ports.observation.probe(target, ports.ui.historyPath().path, observationPageLoadId(target.tabId));
+        if (observation.pageAccessStatus !== "page access available") {
             observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Permission required");
             setObservationTargetResult("Permission required");
             return;
@@ -250,7 +250,7 @@ export function createCaptureInstalledController(ports) {
     async function confirmDetachSelectedTarget() {
         const attached = attachedObservationTarget(observationTargetState);
         if (attached)
-            await ports.observation.detach(attached);
+            stopLiveHistoryCapture();
         const switchId = pendingObservationTargetSwitchId;
         pendingObservationTargetSwitchId = undefined;
         observationTargetState = detachObservationTarget(observationTargetState);
@@ -258,8 +258,11 @@ export function createCaptureInstalledController(ports) {
             const decision = endAndAttachObservationTarget(observationTargetState, switchId);
             observationTargetState = decision.state;
             const target = attachedObservationTarget(observationTargetState);
-            if (target && !await ports.observation.attach(target))
-                observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Permission required");
+            if (target) {
+                const observation = await ports.observation.probe(target, ports.ui.historyPath().path, observationPageLoadId(target.tabId));
+                if (observation.pageAccessStatus !== "page access available")
+                    observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Permission required");
+            }
         }
         setObservationTargetResult(switchId ? "Attached" : "Detached");
         renderObservationTargetPicker();
@@ -1106,7 +1109,6 @@ export function createCaptureInstalledController(ports) {
             if (mounted)
                 return;
             mounted = true;
-            unsubscribe = ports.subscribeToLiveFeed(recordCapturedLiveEvent);
             unsubscribeTabUpdated = ports.observerRuntime.subscribeTabUpdated(handleTabUpdated);
             unsubscribeTabRemoved = ports.observerRuntime.subscribeTabRemoved(handleTabRemoved);
             unsubscribePermissionsRemoved = ports.observerRuntime.subscribePermissionsRemoved(revokeObservationTargetOrigins);
@@ -1161,8 +1163,6 @@ export function createCaptureInstalledController(ports) {
             if (!mounted)
                 return;
             mounted = false;
-            unsubscribe?.();
-            unsubscribe = undefined;
             unsubscribeTabUpdated?.();
             unsubscribeTabUpdated = undefined;
             unsubscribeTabRemoved?.();

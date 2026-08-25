@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 const { createCaptureInstalledController } = await import("../../dist/data-layer-installed/capture/index.js");
-let subscriptions = 0, removals = 0, listener, changes = 0;
+let changes = 0;
 const values = new Map();
 const noOpCaptureUi = {
   historyPath:() => ({ path:"event.history", fieldValue:"event.history", status:"Ready" }),
@@ -10,7 +10,8 @@ const noOpCaptureUi = {
   showDataLayerView() {}, backToEvents() {}, copyPageUrl() {}, reportMissingEvent() {},
 };
 const noOpObservation = { discover:async () => [], requestTabsAccess:async () => true,
-  requestOriginAccess:async () => true, attach:async () => true, detach:async () => {}, render() {} };
+  requestOriginAccess:async () => true, probe:async (target, historyPath, pageLoadId) => ({ tabId:target.tabId,
+    pageUrl:target.pageUrl, historyPath, pageLoadId, pageAccessStatus:"page access available", pageObject:{ dataLayer:[] } }), render() {} };
 const noOpSavedSessions = {
   now:() => "2026-08-25T00:00:00.000Z", createSessionId:(tabId) => `fresh:${tabId}`,
   readImportFile:async () => undefined, download() {}, validate:() => ({ state:"Not checked" }),
@@ -32,7 +33,6 @@ const controller = createCaptureInstalledController({
   storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value) },
   initialPageUrl:() => "https://shop.example/", initialSources:() => [{ id:"history", name:"History", status:"Connected" }],
   sessionStart:async () => ({ id:"session:1", tabId:4, url:"https://shop.example/", historyPath:"event.history" }),
-  subscribeToLiveFeed:(next) => { subscriptions += 1; listener = next; return () => { removals += 1; listener = undefined; }; },
   changed:() => { changes += 1; },
   runCommand() {}, setLiveSessionMessage() {}, observerRuntime:noOpObserverRuntime,
   observation:noOpObservation,
@@ -41,9 +41,9 @@ const controller = createCaptureInstalledController({
   inspector:noOpInspector,
   ui:noOpCaptureUi,
 });
-controller.mount(); controller.mount(); assert.equal(subscriptions, 1);
+controller.mount(); controller.mount();
 await controller.begin();
-listener({ id:"event:1", name:"page_view", sourceId:"history", captureTime:"2026-08-25T00:00:00.000Z",
+controller.capture({ id:"event:1", name:"page_view", sourceId:"history", captureTime:"2026-08-25T00:00:00.000Z",
   pageUrl:"https://shop.example/product" });
 assert.equal(controller.state().observer.events.length, 1);
 assert.equal(controller.state().session.session.timeline.length, 1,
@@ -55,8 +55,8 @@ controller.resume(); controller.end();
 assert.equal(controller.state().session.session.status, "ended");
 assert.ok(values.has("dataLayerTestingSession"), "Capture owns session persistence");
 assert.ok(changes >= 6);
-controller.dispose(); controller.dispose(); assert.equal(removals, 1);
-controller.mount(); assert.equal(subscriptions, 2);
+controller.dispose(); controller.dispose();
+controller.mount();
 assert.equal(controller.state().observer.events.length, 1, "owned state survives one fresh lifecycle");
 
 function interactiveElement() {
@@ -90,12 +90,12 @@ const uiController = createCaptureInstalledController({
   root:{ querySelector:(selector) => elements.get(selector) ?? null },
   storage:{ getItem:() => null, setItem() {} }, initialPageUrl:() => "https://shop.example/",
   initialSources:() => [], sessionStart:async () => ({ id:"unused", tabId:1, url:"", historyPath:"" }),
-  subscribeToLiveFeed:() => () => {}, changed() {}, runCommand() {}, setLiveSessionMessage() {},
+  changed() {}, runCommand() {}, setLiveSessionMessage() {},
   observerRuntime:noOpObserverRuntime, observation:{
     discover:async (scope) => scope === "current" ? [currentTarget] : [currentTarget, checkoutTarget],
     requestTabsAccess:async () => true, requestOriginAccess:async () => false,
-    attach:async (target) => { uiCalls.push(`attach:${target.tabId}`); return true; },
-    detach:async (target) => { uiCalls.push(`detach:${target.tabId}`); },
+    probe:async (target, historyPath, pageLoadId) => { uiCalls.push(`probe:${target.tabId}`); return {
+      tabId:target.tabId, pageUrl:target.pageUrl, historyPath, pageLoadId, pageAccessStatus:"page access available", pageObject:{ dataLayer:[] } }; },
     render:(targets, actions) => { renderedTargets = targets; renderedTargetActions = actions; },
   }, ui:{
     historyPath:() => ({ path:"dataLayer", fieldValue:"dataLayer", status:"Waiting for path" }),
@@ -133,7 +133,8 @@ elements.get("#close-observation-target-picker").dispatch("click");
 elements.get("#observation-target-search").value = "checkout";
 elements.get("#observation-target-search").dispatch("input");
 assert.deepEqual(renderedTargets.map(({ title }) => title), ["Checkout"]);
-assert.deepEqual(uiCalls, ["attach:7", "detach:7", "attach:8", "close"]);
+assert.deepEqual(uiCalls, ["probe:7", "probe:8", "close"],
+  "Capture proves target access through the observation probe and owns detach cleanup itself");
 uiController.dispose();
 assert.equal([...elements.values()].reduce((count, element) => count + element.listenerCount(), 0), 0,
   "Capture removes every observation-target listener it owns");
@@ -160,7 +161,7 @@ const observerController = createCaptureInstalledController({
   root:{ querySelector:() => null }, storage:{ getItem:() => null, setItem() {}, removeItem() {} },
   initialPageUrl:() => "https://shop.example/", initialSources:() => [{ id:"event-history", name:"History", status:"Connected" }],
   sessionStart:async () => ({ id:"observer-session", tabId:9, windowId:2, url:"https://shop.example/", historyPath:"dataLayer" }),
-  subscribeToLiveFeed:() => () => {}, changed() {}, runCommand() {}, setLiveSessionMessage() {},
+  changed() {}, runCommand() {}, setLiveSessionMessage() {},
   observerRuntime, observation:{ ...noOpObservation,
     discover:async () => [{ tabId:9, windowId:2, pageUrl:"https://shop.example/", title:"Shop" }] },
   savedSessions:noOpSavedSessions, savedFilters:noOpSavedFilters, inspector:noOpInspector, ui:noOpCaptureUi,
@@ -226,7 +227,7 @@ const sessionController = createCaptureInstalledController({
   storage:{ getItem:(key) => persistedSessions.get(key) ?? null,
     setItem:(key, value) => persistedSessions.set(key, value), removeItem:(key) => persistedSessions.delete(key) },
   initialPageUrl:() => "https://shop.example/", initialSources:() => [],
-  sessionStart:async () => ({ id:"live:1", tabId:1, url:"https://shop.example/", historyPath:"dataLayer" }), subscribeToLiveFeed:() => () => {},
+  sessionStart:async () => ({ id:"live:1", tabId:1, url:"https://shop.example/", historyPath:"dataLayer" }),
   changed() {}, runCommand() {}, setLiveSessionMessage:(message) => sessionCalls.push(`message:${message}`), observerRuntime:noOpObserverRuntime, ui:noOpCaptureUi,
   observation:noOpObservation,
   savedSessions:sessionPorts,
@@ -324,7 +325,7 @@ const filterController = createCaptureInstalledController({
       filterStorage.set(key, value); }, removeItem:(key) => filterStorage.delete(key) },
   initialPageUrl:() => "https://shop.example/", initialSources:() => [],
   sessionStart:async () => ({ id:"filter-session", tabId:3, url:"https://shop.example/", historyPath:"dataLayer" }),
-  subscribeToLiveFeed:() => () => {}, changed() {}, runCommand() {}, setLiveSessionMessage() {}, observerRuntime:noOpObserverRuntime,
+  changed() {}, runCommand() {}, setLiveSessionMessage() {}, observerRuntime:noOpObserverRuntime,
   observation:noOpObservation, savedSessions:noOpSavedSessions, ui:noOpCaptureUi,
   savedFilters:{ createId:() => "saved-filter:checkout",
     render:(_events, _query, controls, update) => { filterControls = controls; updateWorkingFilter = update; },
