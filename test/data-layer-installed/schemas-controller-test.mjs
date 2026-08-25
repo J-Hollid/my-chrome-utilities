@@ -199,6 +199,9 @@ assert.equal(elements.get("#confirm-schema-rule-revision-review").id, "confirm-s
   "Schemas preserves the installed browser contract for rule revision confirmation");
 uiController.mount();
 assert.equal(layeredProfileMounts, 1, "Schemas mounts the layered Profile editor exactly once");
+assert.deepEqual(elements.get("#schema-rule-types").children.map(({ value }) => value),
+  ["string", "number", "boolean", "object", "array"],
+  "Schemas replaces the legacy rule-kind choices with canonical value types at its installed boundary");
 assert.deepEqual(uiController.rules().find(({ id }) => id === "rule:quantities")?.allowedValues, [1, 2],
   "Schemas migrates parameter-backed reusable allowed values at the installed storage boundary");
 assert.equal(uiController.rules().find(({ id }) => id === "rule:quantities")?.parameters, undefined);

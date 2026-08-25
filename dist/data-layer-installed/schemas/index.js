@@ -166,6 +166,16 @@ export function createSchemasInstalledController(ports) {
     const schemaRuleName = ports.root.querySelector("#schema-rule-name");
     const schemaRuleParameters = ports.root.querySelector("#schema-rule-parameters");
     const schemaRuleTypes = ports.root.querySelector("#schema-rule-types");
+    if (schemaRuleTypes?.ownerDocument)
+        schemaRuleTypes.replaceChildren(...[
+            ["string", "String"], ["number", "Number"], ["boolean", "Boolean"],
+            ["object", "Object"], ["array", "Array"],
+        ].map(([value, label]) => {
+            const option = schemaRuleTypes.ownerDocument.createElement("option");
+            option.value = value;
+            option.textContent = label;
+            return option;
+        }));
     const schemaRuleOperator = ports.root.querySelector("#schema-rule-operator");
     const schemaRuleSeverity = ports.root.querySelector("#schema-rule-severity");
     const schemaRuleMessage = ports.root.querySelector("#schema-rule-message");
