@@ -4,6 +4,8 @@ import {
   beginDataLayerTestingSession,
   beginObservedPageLoad,
   captureEntry,
+  canonicalLiveObserverStatus,
+  createLiveSessionSummary,
   createLiveNotificationController,
   findLiveGuidedWorkflowElements,
   findLiveSessionSummaryElements,
@@ -25,6 +27,7 @@ import {
   initialObservationActivationState,
   initialObservationRefreshState,
   markObservationRefreshPageEntryCaptured,
+  liveGuidedWorkflow,
   navigateObservationTarget,
   navigateSession,
   nextObservationActivation,
@@ -33,12 +36,16 @@ import {
   observationRefreshDelay,
   observationRefreshRequestForPageLoad,
   observationRefreshRequestIsCurrent,
+  observerAttachmentStatus,
   persistSession,
   restartObservation as restartHistoryObservation,
   restoreSession,
   samplePageObject,
   shouldRetryObservationRefresh,
   stopHistoryArrayObserver,
+  renderLiveGuidedWorkflow,
+  renderLiveSessionControls,
+  renderLiveSessionSummary,
   type DataLayerHistoryObserverState,
   type DataLayerSessionState,
   type ObservationRefreshRequest,
@@ -87,6 +94,7 @@ import {
   savedSessionSummary,
   searchSavedSessions,
   selectLiveEvent,
+  dataLayerViewForNavigationKey,
   serializeSavedSessionLibrary,
   serializeSavedSessionLiveFeed,
   serializeSavedEventFeedWorkingView,
@@ -355,6 +363,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     const context = ports.ui.historyPath();
     renderHistoryPath(context.path, context.fieldValue, context.status);
     observationTargetList?.setAttribute("aria-live", "polite");
+    renderLiveContextActions();
   };
   async function restartObservationAction(): Promise<void> {
     const observation = await currentTargetObservation(ports.ui.historyPath().path);
@@ -438,6 +447,37 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     const button = (event.target as Element | null)?.closest<HTMLButtonElement>("[role=tab]");
     if (button?.textContent) showDataLayerView(button.textContent);
   };
+  const navigateDataLayerView = (event: KeyboardEvent): void => {
+    const next = dataLayerViewForNavigationKey(liveObserverState.view, event.key);
+    if (!next) return; event.preventDefault(); showDataLayerView(next);
+  };
+  function renderLiveContextActions(): void {
+    const activeSession = dataLayerSessionState.session?.status === "active";
+    const selectedTarget = selectedObservationTarget(observationTargetState);
+    const status = ports.ui.historyPath().status;
+    const pathStatus = status === "Ready" || status === "Waiting for path" || status === "Selection required"
+      ? status : "Selection required";
+    renderLiveSessionControls({ startTestingButton, endTestingButton, pauseCaptureButton, resumeCaptureButton },
+      { activeSession, captureStatus:liveObserverState.status });
+    renderLiveGuidedWorkflow(liveGuidedWorkflowElements, liveGuidedWorkflow({ activeSession,
+      ...(selectedTarget ? { selectedTarget } : {}), pathStatus }));
+    if (startFreshSessionButton) { startFreshSessionButton.hidden = !activeSession;
+      startFreshSessionButton.disabled = Boolean(savedSessionLiveFeed); }
+  }
+  function currentLiveSessionSummary() {
+    if (savedSessionLiveFeed) return createLiveSessionSummary({ testingState:"Ended", observerStatus:"Disconnected",
+      targetPage:`${savedSessionLiveFeed.session.name} · Read-only archive`, pageUrl:savedSessionLiveFeed.session.pageScope,
+      observerPath:"Saved session", capturedEventCount:savedSessionLiveFeed.savedView.events.length, connectedSourceCount:0 });
+    const session = dataLayerSessionState.session;
+    const target = attachedObservationTarget(observationTargetState) ?? selectedObservationTarget(observationTargetState);
+    return createLiveSessionSummary({ testingState:session?.status === "active"
+      ? (liveObserverState.status === "Paused" ? "Paused" : "Active") : "Ended",
+      observerStatus:canonicalLiveObserverStatus(observerAttachmentStatus(dataLayerSessionState, dataLayerObserverState)),
+      targetPage:session?.targetTitle ?? target?.title ?? "No target selected",
+      pageUrl:session?.currentUrl ?? target?.pageUrl ?? "", observerPath:session?.historyPath ?? ports.ui.historyPath().path,
+      capturedEventCount:liveObserverState.events.length,
+      connectedSourceCount:liveObserverState.sources.filter(({ status }) => status === "Connected").length });
+  }
   function persistSavedEventFeedWorkingView(): void {
     if (savedSessionLiveFeed) { synchronizeSavedSessionFeedView(); return; }
     const sessionId = dataLayerSessionState.session?.id;
@@ -692,7 +732,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     if (savedSessionLiveFeed) return;
     const previous = dataLayerSessionState.session;
     if (!previous || previous.status !== "active") return;
-    dataLayerSessionState = { session:{ id:ports.savedSessions.createSessionId(previous.tabId), status:"active", freshBoundary:true,
+    dataLayerSessionState = { session:{ id:newDataLayerSessionId(previous.tabId), status:"active", freshBoundary:true,
       tabId:previous.tabId, historyPath:previous.historyPath, startUrl:previous.currentUrl, currentUrl:previous.currentUrl,
       ...(previous.windowId === undefined ? {} : { windowId:previous.windowId }),
       ...(previous.targetTitle === undefined ? {} : { targetTitle:previous.targetTitle }),
@@ -806,8 +846,9 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     setLiveSessionMessage("Capture paused"); publish(); };
   const resumeInstalledCapture = (): void => { liveObserverState = resumeCapture(liveObserverState);
     setLiveSessionMessage("Capture resumed"); publish(); };
+  function newDataLayerSessionId(tabId:number): string { return ports.savedSessions.createSessionId(tabId); }
   function renderSessionState(): void { renderObservationTargetContext(); }
-  function renderObserverState(): void { renderLiveObserver(); }
+  function renderObserverState(): void { renderLiveSessionSummary(liveSessionSummaryElements, currentLiveSessionSummary()); renderLiveObserver(); }
   function syncCapturedEventsToLive(): void {
     dataLayerSessionState = dataLayerObserverState.sessionState ?? dataLayerSessionState;
     const events = dataLayerObserverState.sourceEvents ?? [];
@@ -1013,6 +1054,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
       cancelDetachTargetButton?.addEventListener("click", cancelDetachTarget);
       confirmDetachTargetButton?.addEventListener("click", confirmDetachTarget);
       dataLayerViewList?.addEventListener("click", selectDataLayerView);
+      dataLayerViewList?.addEventListener("keydown", navigateDataLayerView);
       backToEventsButton?.addEventListener("click", backToEvents);
       copyPageUrlButton?.addEventListener("click", copyLivePageUrl);
       saveLiveSessionButton?.addEventListener("click", requestSessionSave);
@@ -1063,6 +1105,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
       cancelDetachTargetButton?.removeEventListener("click", cancelDetachTarget);
       confirmDetachTargetButton?.removeEventListener("click", confirmDetachTarget);
       dataLayerViewList?.removeEventListener("click", selectDataLayerView);
+      dataLayerViewList?.removeEventListener("keydown", navigateDataLayerView);
       backToEventsButton?.removeEventListener("click", backToEvents);
       copyPageUrlButton?.removeEventListener("click", copyLivePageUrl);
       saveLiveSessionButton?.removeEventListener("click", requestSessionSave);
