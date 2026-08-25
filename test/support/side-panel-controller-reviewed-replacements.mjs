@@ -73,4 +73,5 @@ export const reviewedControllerReplacements = [
   { identity:"listeners:0:schemaPropertyFilter.addEventListener@624:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"schemaPropertyFilter?.addEventListener" },
   { identity:"listeners:1:schemaPropertySort.addEventListener@625:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"schemaPropertySort?.addEventListener" },
   { identity:"listeners:2:clearSchemaPropertyFilter.addEventListener@626:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"clearSchemaPropertyFilter?.addEventListener" },
+  { identity:"listeners:192:tab.addEventListener@5737:33", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"tab.addEventListener" },
 ];

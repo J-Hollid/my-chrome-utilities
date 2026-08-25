@@ -7,6 +7,13 @@ export function createSchemasInstalledController(ports) {
     const schemaResult = ports.root.querySelector("#schema-result");
     const schemaEditor = ports.root.querySelector("#schema-editor");
     const schemaDetail = ports.root.querySelector("#schema-detail");
+    const sidePanelLayeredProfileEditorHost = ports.root.querySelector("#side-panel-layered-profile-editor");
+    const liveEventQuery = ports.root.querySelector("#live-event-query");
+    const schemaSubviews = Array.from(ports.root.querySelectorAll("#schema-subviews [role=tab]"));
+    const schemaPanels = Array.from(ports.root.querySelectorAll("#schema-master, #schema-rule-library, #schema-assignments"));
+    if (sidePanelLayeredProfileEditorHost && schemaDetail && !schemaDetail.contains(sidePanelLayeredProfileEditorHost)) {
+        schemaDetail.prepend(sidePanelLayeredProfileEditorHost);
+    }
     const schemaDetailEmpty = ports.root.querySelector("#schema-detail-empty");
     const schemaEditorName = ports.root.querySelector("#schema-editor-name");
     const schemaEditorNameAssistance = ports.root.querySelector("#schema-editor-name-assistance");
@@ -294,6 +301,19 @@ export function createSchemasInstalledController(ports) {
         renderSchemaPropertyView();
         schemaPropertyFilter?.focus();
     };
+    function showSchemaSubview(subview) {
+        for (const tab of schemaSubviews)
+            tab.setAttribute("aria-selected", String(tab.dataset.schemaSubview === subview));
+        for (const panel of schemaPanels)
+            panel.hidden = panel.id !== subview;
+        if (liveEventQuery)
+            liveEventQuery.hidden = subview !== "schema-master";
+    }
+    const activateSchemaSubview = (event) => {
+        const subview = event.currentTarget.dataset.schemaSubview;
+        if (subview)
+            showSchemaSubview(subview);
+    };
     return {
         mount() {
             if (mounted)
@@ -319,6 +339,8 @@ export function createSchemasInstalledController(ports) {
             schemaPropertyFilter?.addEventListener("input", renderSchemaPropertyView);
             schemaPropertySort?.addEventListener("change", renderSchemaPropertyView);
             clearSchemaPropertyFilter?.addEventListener("click", clearSchemaPropertyViewFilter);
+            for (const tab of schemaSubviews)
+                tab.addEventListener("click", activateSchemaSubview);
             unsubscribe = ports.subscribe(renderSchemas);
             renderSchemas();
         },
@@ -346,6 +368,8 @@ export function createSchemasInstalledController(ports) {
             schemaPropertyFilter?.removeEventListener("input", renderSchemaPropertyView);
             schemaPropertySort?.removeEventListener("change", renderSchemaPropertyView);
             clearSchemaPropertyFilter?.removeEventListener("click", clearSchemaPropertyViewFilter);
+            for (const tab of schemaSubviews)
+                tab.removeEventListener("click", activateSchemaSubview);
             unsubscribe?.();
             unsubscribe = undefined;
             schemaList?.replaceChildren();

@@ -5,7 +5,7 @@ const schema = { id:"schema:page", name:"Page", version:1, document:{ type:"obje
 const values = new Map([["my-chrome-utilities.schema-library.v1", JSON.stringify([schema])]]);
 let changed = 0, guided;
 const controller = createSchemasInstalledController({
-  root:{ querySelector:() => null },
+  root:{ querySelector:() => null, querySelectorAll:() => [] },
   storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value) },
   changed:() => { changed += 1; }, runGuidedValidation:async (id) => { guided = id; },
   subscribe:() => () => {},
@@ -26,12 +26,14 @@ assert.equal(controller.state().draftDirty, false);
 
 function element() {
   const listeners = new Map();
-  return { value:"", textContent:"", hidden:false, disabled:false, open:false, isConnected:true, dataset:{},
+  return { id:"", value:"", textContent:"", hidden:false, disabled:false, open:false, isConnected:true, dataset:{},
     addEventListener(type, listener) { listeners.set(type, listener); },
     removeEventListener(type, listener) { if (listeners.get(type) === listener) listeners.delete(type); },
-    dispatch(type) { listeners.get(type)?.({ preventDefault() {}, target:this }); }, click() { this.dispatch("click"); },
+    dispatch(type) { listeners.get(type)?.({ preventDefault() {}, target:this, currentTarget:this }); }, click() { this.dispatch("click"); },
     showModal() { this.open = true; }, close() { this.open = false; }, focus() {},
-    setAttribute() {}, removeAttribute() {}, replaceChildren() {}, listenerCount:() => listeners.size,
+    setAttribute(name, value) { this[name] = value; }, removeAttribute(name) { delete this[name]; },
+    getAttribute(name) { return this[name] ?? null; }, replaceChildren() {}, prepend() {}, contains() { return false; },
+    listenerCount:() => listeners.size,
   };
 }
 const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "#schema-editor-name",
@@ -45,9 +47,15 @@ const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "
   "#schema-property-sort-label", "#schema-property-sort", "#schema-property-result-status", "#schema-property-empty",
   "#schema-property-empty-message", "#clear-schema-property-filter", "#schema-property-tree"];
 const elements = new Map(selectors.map((selector) => [selector, element()]));
+elements.set("#side-panel-layered-profile-editor", element()); elements.set("#live-event-query", element());
+const schemaMasterTab = Object.assign(element(), { textContent:"Schemas", dataset:{ schemaSubview:"schema-master" } });
+const schemaRulesTab = Object.assign(element(), { textContent:"Rules", dataset:{ schemaSubview:"schema-rule-library" } });
+const schemaMasterPanel = Object.assign(element(), { id:"schema-master" });
+const schemaRulesPanel = Object.assign(element(), { id:"schema-rule-library" });
 const uiValues = new Map([["my-chrome-utilities.schema-library.v1", JSON.stringify([schema])]]);
 const uiController = createSchemasInstalledController({
-  root:{ querySelector:(selector) => elements.get(selector) ?? null },
+  root:{ querySelector:(selector) => elements.get(selector) ?? null,
+    querySelectorAll:(selector) => selector.includes("role=tab") ? [schemaMasterTab, schemaRulesTab] : [schemaMasterPanel, schemaRulesPanel] },
   storage:{ getItem:(key) => uiValues.get(key) ?? null, setItem:(key, value) => uiValues.set(key, value) },
   changed() {}, runGuidedValidation:async () => {}, subscribe:() => () => {},
 });
@@ -68,6 +76,8 @@ assert.equal(elements.get("#schema-property-empty").hidden, false);
 assert.equal(elements.get("#schema-property-empty-message").textContent, "No properties match missing");
 elements.get("#clear-schema-property-filter").click();
 assert.equal(elements.get("#schema-property-filter").value, "");
+schemaRulesTab.click();
+assert.equal(schemaMasterPanel.hidden, true); assert.equal(schemaRulesPanel.hidden, false);
 uiController.dispose();
 assert.equal([...elements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
   "Schemas removes every editor and revision listener it owns");
