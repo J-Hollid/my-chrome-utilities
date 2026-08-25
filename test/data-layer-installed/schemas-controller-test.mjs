@@ -8,7 +8,7 @@ const controller = createSchemasInstalledController({
   root:{ querySelector:() => null, querySelectorAll:() => [] },
   storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value) },
   changed:() => { changed += 1; }, runGuidedValidation:async (id) => { guided = id; },
-  subscribe:() => () => {}, specificIndexSelected() {},
+  subscribe:() => () => {}, specificIndexSelected() {}, rulePickerChanged() {},
 });
 controller.mount(); controller.open("schema:page"); controller.beginDraft();
 controller.updateDraft({ document:{ type:"object", required:["title"], properties:{ title:{ type:"string" } } } }, "Require title");
@@ -53,7 +53,13 @@ const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "
   "#schema-property-copy-feedback", "#undo-schema-property-copy", "#schema-property-copy-dialog",
   "#schema-specific-index-dialog", "#schema-specific-index-form", "#schema-specific-index-heading",
   "#schema-specific-index-label", "#schema-specific-index", "#schema-specific-index-assistance",
-  "#confirm-schema-specific-index", "#cancel-schema-specific-index"];
+  "#confirm-schema-specific-index", "#cancel-schema-specific-index", "#schema-manual-property-dialog",
+  "#schema-manual-property-form", "#schema-manual-property-heading", "#schema-manual-property-path-label",
+  "#schema-manual-property-path", "#schema-manual-property-parent-context", "#schema-manual-property-child-name-label",
+  "#schema-manual-property-child-name", "#schema-manual-property-type-label", "#schema-manual-property-type",
+  "#schema-manual-array-type-group", "#schema-manual-array-item-type", "#schema-manual-property-preview",
+  "#schema-manual-property-assistance", "#go-to-existing-schema-property", "#confirm-schema-manual-property",
+  "#cancel-schema-manual-property", "#schema-property-rule-picker"];
 const elements = new Map(selectors.map((selector) => [selector, element()]));
 elements.set("#side-panel-layered-profile-editor", element()); elements.set("#live-event-query", element());
 const schemaMasterTab = Object.assign(element(), { textContent:"Schemas", dataset:{ schemaSubview:"schema-master" } });
@@ -62,12 +68,14 @@ const schemaMasterPanel = Object.assign(element(), { id:"schema-master" });
 const schemaRulesPanel = Object.assign(element(), { id:"schema-rule-library" });
 const uiValues = new Map([["my-chrome-utilities.schema-library.v1", JSON.stringify([schema])]]);
 let selectedSpecificIndex;
+const rulePickerChanges = [];
 const uiController = createSchemasInstalledController({
   root:{ querySelector:(selector) => elements.get(selector) ?? null,
     querySelectorAll:(selector) => selector.includes("role=tab") ? [schemaMasterTab, schemaRulesTab] : [schemaMasterPanel, schemaRulesPanel] },
   storage:{ getItem:(key) => uiValues.get(key) ?? null, setItem:(key, value) => uiValues.set(key, value) },
   changed() {}, runGuidedValidation:async () => {}, subscribe:() => () => {},
   specificIndexSelected:(path) => { selectedSpecificIndex = path; },
+  rulePickerChanged:(path, open) => rulePickerChanges.push(`${path}:${open}`),
 });
 uiController.mount(); uiController.open("schema:page"); uiController.beginDraft();
 elements.get("#schema-editor-name").value = "Page checkout"; elements.get("#schema-editor-name").dispatch("input");
@@ -122,6 +130,26 @@ elements.get("#schema-specific-index").value = "2"; elements.get("#schema-specif
 assert.equal(elements.get("#confirm-schema-specific-index").disabled, false);
 elements.get("#schema-specific-index-form").dispatch("submit");
 assert.equal(selectedSpecificIndex, "items.2");
+uiController.openManualProperty();
+elements.get("#schema-manual-property-path").value = "checkout.total";
+elements.get("#schema-manual-property-type").value = "number";
+elements.get("#schema-manual-property-path").dispatch("input");
+assert.match(elements.get("#schema-manual-property-preview").textContent, /checkout.total is number/);
+elements.get("#schema-manual-property-form").dispatch("submit");
+assert.equal(uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId)
+  .workingDraft.document.properties.checkout.properties.total.type, "number");
+uiController.openManualProperty("/items/*");
+elements.get("#schema-manual-property-child-name").value = "sku";
+elements.get("#schema-manual-property-type").value = "string";
+elements.get("#schema-manual-property-child-name").dispatch("input");
+elements.get("#schema-manual-property-form").dispatch("submit");
+assert.equal(uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId)
+  .workingDraft.document.properties.items.items.properties.sku.type, "string");
+uiController.openRulePicker("items.*.sku");
+assert.equal(elements.get("#schema-property-rule-picker").open, true);
+assert.equal(uiController.rulePickerState().configuration.propertyType, "string");
+elements.get("#schema-property-rule-picker").dispatch("cancel");
+assert.deepEqual(rulePickerChanges, ["items.*.sku:true", "items.*.sku:false"]);
 uiController.dispose();
 assert.equal([...elements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
   "Schemas removes every editor and revision listener it owns");

@@ -5,6 +5,7 @@ import {
   filterAndSortSchemaPropertyRows,
   inspectSchemaPropertyRemoval,
   inspectSpecificIndexRuleTarget,
+  inspectManualProperty,
   inspectSchemaRename,
   proposeSchemaWorkingDraftName,
   publishSchemaWorkingDraft,
@@ -12,6 +13,10 @@ import {
   restoreSchemaRevisionDraft,
   schemaPropertyRows,
   schemaPropertyCopySource,
+  addManualProperty,
+  contextualManualPropertyDefinition,
+  createRuleConfiguration,
+  manualPropertyPreview,
   restoreSchemaLibrary,
   searchSchemas,
   serializeSchemaLibrary,
@@ -25,6 +30,11 @@ import {
   type SchemaPropertySortOrder,
   type SchemaPropertyRemoval,
   type AppliedSchemaPropertyCopy,
+  type ManualArrayItemType,
+  type ManualPropertyDefinition,
+  type ManualPropertyValueType,
+  type RuleConfiguration,
+  type SchemaPropertyType,
   type SchemaWorkingDraft,
 } from "../../utilities/data-layer/schemas.js";
 import { applySchemaPropertyCopy, planSchemaPropertyCopy, type SchemaPropertyCopyPlan } from "../../data-layer-schema-property-copy.js";
@@ -36,6 +46,7 @@ export interface SchemasInstalledPorts {
   runGuidedValidation(schemaId?: string): Promise<void>;
   subscribe(listener: () => void): () => void;
   specificIndexSelected(path: string): void;
+  rulePickerChanged(path: string, open: boolean): void;
 }
 
 export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
@@ -116,6 +127,24 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const schemaSpecificIndexAssistance = ownedElement("#schema-specific-index-assistance", "output");
   const confirmSchemaSpecificIndex = ownedElement("#confirm-schema-specific-index", "button");
   const cancelSchemaSpecificIndex = ownedElement("#cancel-schema-specific-index", "button");
+  const schemaManualPropertyDialog = ownedElement("#schema-manual-property-dialog", "dialog");
+  const schemaManualPropertyForm = ownedElement("#schema-manual-property-form", "form");
+  const schemaManualPropertyHeading = ownedElement("#schema-manual-property-heading", "h4");
+  const schemaManualPropertyPathLabel = ownedElement("#schema-manual-property-path-label", "label");
+  const schemaManualPropertyPath = ownedElement("#schema-manual-property-path", "input");
+  const schemaManualPropertyParentContext = ownedElement("#schema-manual-property-parent-context", "output");
+  const schemaManualPropertyChildNameLabel = ownedElement("#schema-manual-property-child-name-label", "label");
+  const schemaManualPropertyChildName = ownedElement("#schema-manual-property-child-name", "input");
+  const schemaManualPropertyTypeLabel = ownedElement("#schema-manual-property-type-label", "label");
+  const schemaManualPropertyType = ownedElement("#schema-manual-property-type", "select");
+  const schemaManualArrayTypeGroup = ownedElement("#schema-manual-array-type-group", "label");
+  const schemaManualArrayItemType = ownedElement("#schema-manual-array-item-type", "select");
+  const schemaManualPropertyPreview = ownedElement("#schema-manual-property-preview", "output");
+  const schemaManualPropertyAssistance = ownedElement("#schema-manual-property-assistance", "output");
+  const goToExistingSchemaPropertyButton = ownedElement("#go-to-existing-schema-property", "button");
+  const confirmSchemaManualPropertyButton = ownedElement("#confirm-schema-manual-property", "button");
+  const cancelSchemaManualPropertyButton = ownedElement("#cancel-schema-manual-property", "button");
+  const schemaPropertyRulePicker = ownedElement("#schema-property-rule-picker", "dialog");
   if (schemaPropertyViewControls && !schemaPropertyViewControls.isConnected) {
     schemaPropertyViewControls.id = "schema-property-view-controls";
     if (schemaPropertyFilterLabel) { schemaPropertyFilterLabel.id = "schema-property-filter-label";
@@ -184,6 +213,39 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       cancelSchemaSpecificIndex.type = "button"; cancelSchemaSpecificIndex.textContent = "Cancel"; schemaSpecificIndexForm.append(cancelSchemaSpecificIndex); }
     schemaSpecificIndexDialog.append(schemaSpecificIndexForm); schemaOwnerDocument?.body.append(schemaSpecificIndexDialog);
   }
+  if (schemaManualPropertyDialog && schemaManualPropertyForm && !schemaManualPropertyDialog.isConnected) {
+    schemaManualPropertyDialog.id = "schema-manual-property-dialog"; schemaManualPropertyForm.id = "schema-manual-property-form";
+    const append = (element: HTMLElement | null): void => { if (element) schemaManualPropertyForm.append(element); };
+    if (schemaManualPropertyHeading) { schemaManualPropertyHeading.id = "schema-manual-property-heading";
+      schemaManualPropertyHeading.textContent = "Add property"; } append(schemaManualPropertyHeading);
+    if (schemaManualPropertyPathLabel) { schemaManualPropertyPathLabel.id = "schema-manual-property-path-label";
+      schemaManualPropertyPathLabel.htmlFor = "schema-manual-property-path"; schemaManualPropertyPathLabel.textContent = "Property path"; } append(schemaManualPropertyPathLabel);
+    if (schemaManualPropertyPath) schemaManualPropertyPath.id = "schema-manual-property-path"; append(schemaManualPropertyPath);
+    if (schemaManualPropertyParentContext) schemaManualPropertyParentContext.id = "schema-manual-property-parent-context"; append(schemaManualPropertyParentContext);
+    if (schemaManualPropertyChildNameLabel) { schemaManualPropertyChildNameLabel.id = "schema-manual-property-child-name-label";
+      schemaManualPropertyChildNameLabel.htmlFor = "schema-manual-property-child-name"; schemaManualPropertyChildNameLabel.textContent = "Child property name"; } append(schemaManualPropertyChildNameLabel);
+    if (schemaManualPropertyChildName) schemaManualPropertyChildName.id = "schema-manual-property-child-name"; append(schemaManualPropertyChildName);
+    if (schemaManualPropertyTypeLabel) { schemaManualPropertyTypeLabel.id = "schema-manual-property-type-label";
+      schemaManualPropertyTypeLabel.htmlFor = "schema-manual-property-type"; schemaManualPropertyTypeLabel.textContent = "Value type"; } append(schemaManualPropertyTypeLabel);
+    if (schemaManualPropertyType) { schemaManualPropertyType.id = "schema-manual-property-type";
+      for (const type of ["string", "number", "boolean", "object", "array"] as const) { const option = schemaOwnerDocument?.createElement("option");
+        if (option) { option.value = type; option.textContent = type; schemaManualPropertyType.append(option); } } } append(schemaManualPropertyType);
+    if (schemaManualArrayTypeGroup) { schemaManualArrayTypeGroup.id = "schema-manual-array-type-group";
+      schemaManualArrayTypeGroup.htmlFor = "schema-manual-array-item-type"; schemaManualArrayTypeGroup.textContent = "Array item type ";
+      if (schemaManualArrayItemType) { schemaManualArrayItemType.id = "schema-manual-array-item-type"; schemaManualArrayTypeGroup.append(schemaManualArrayItemType); } } append(schemaManualArrayTypeGroup);
+    append(schemaManualPropertyPreview); append(schemaManualPropertyAssistance);
+    if (goToExistingSchemaPropertyButton) { goToExistingSchemaPropertyButton.id = "go-to-existing-schema-property"; goToExistingSchemaPropertyButton.type = "button"; } append(goToExistingSchemaPropertyButton);
+    if (confirmSchemaManualPropertyButton) { confirmSchemaManualPropertyButton.id = "confirm-schema-manual-property";
+      confirmSchemaManualPropertyButton.type = "submit"; confirmSchemaManualPropertyButton.textContent = "Add property"; } append(confirmSchemaManualPropertyButton);
+    if (cancelSchemaManualPropertyButton) { cancelSchemaManualPropertyButton.id = "cancel-schema-manual-property";
+      cancelSchemaManualPropertyButton.type = "button"; cancelSchemaManualPropertyButton.textContent = "Cancel"; } append(cancelSchemaManualPropertyButton);
+    schemaManualPropertyDialog.append(schemaManualPropertyForm); schemaOwnerDocument?.body.append(schemaManualPropertyDialog);
+  }
+  if (schemaPropertyRulePicker && !schemaPropertyRulePicker.isConnected) {
+    schemaPropertyRulePicker.id = "schema-property-rule-picker";
+    schemaPropertyRulePicker.setAttribute("aria-label", "Schema property rule picker");
+    schemaOwnerDocument?.body.append(schemaPropertyRulePicker);
+  }
   let mounted = false;
   let unsubscribe: (() => void) | undefined;
   const storedSchemaLibrary = ports.storage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
@@ -199,6 +261,14 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   let pendingSchemaDocumentationRemoval: { path:string; trigger?:HTMLElement } | undefined;
   let specificIndexArrayPath: string | undefined;
   let specificIndexTrigger: HTMLButtonElement | undefined;
+  let pendingManualPropertyContext: { parentPath:string; trigger?:HTMLButtonElement } | undefined;
+  let schemaRulePickerPath: string | undefined;
+  let schemaRulePickerTrigger: HTMLButtonElement | undefined;
+  let schemaPropertyInteractionReturn: { schemaId:string; path:string; triggerLabel:string;
+    editorScroll:number; treeScroll:number; detailScroll:number } | undefined;
+  let schemaPropertyRenderSequence = 0;
+  let schemaRuleConfiguration: RuleConfiguration | undefined;
+  let editingAttachedLocalRule: NonNullable<SchemaDefinition["attachedRules"]>[number] | undefined;
   const activeIndex = (): number => schemas.findIndex(({ id }) => id === activeSchemaId);
   const active = (): SchemaDefinition => {
     const schema = schemas[activeIndex()];
@@ -423,6 +493,92 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const closeSpecificIndexDialog = (): void => { schemaSpecificIndexDialog?.close(); specificIndexTrigger?.focus();
     specificIndexArrayPath = undefined; specificIndexTrigger = undefined; };
   const cancelSpecificIndexDialog = (event: Event): void => { event.preventDefault(); closeSpecificIndexDialog(); };
+  function schemaParentDocuments(): SchemaDefinition["document"][] {
+    const documents: SchemaDefinition["document"][] = []; const visited = new Set<string>();
+    let parentId = active().workingDraft?.parentSchemaId ?? active().parentSchemaId;
+    while (parentId && !visited.has(parentId)) { visited.add(parentId); const parent = schemas.find(({ id }) => id === parentId);
+      if (!parent) break; documents.push(parent.document); parentId = parent.parentSchemaId; }
+    return documents;
+  }
+  function manualPropertyDefinition(): ManualPropertyDefinition {
+    const type = (schemaManualPropertyType?.value || "string") as ManualPropertyValueType;
+    const arrayItemType = (schemaManualArrayItemType?.value ?? "") as ManualArrayItemType | "";
+    if (pendingManualPropertyContext) return contextualManualPropertyDefinition(pendingManualPropertyContext.parentPath,
+      schemaManualPropertyChildName?.value ?? "", type, type === "array" && arrayItemType ? arrayItemType : undefined);
+    return { path:schemaManualPropertyPath?.value ?? "", type,
+      ...(type === "array" && arrayItemType ? { arrayItemType } : {}) };
+  }
+  function renderManualPropertyForm(): void {
+    const draft = active().workingDraft; if (!draft) return; const definition = manualPropertyDefinition();
+    const inspection = inspectManualProperty(draft.document, schemaParentDocuments(), definition);
+    const contextual = Boolean(pendingManualPropertyContext);
+    if (schemaManualPropertyPathLabel) schemaManualPropertyPathLabel.hidden = contextual;
+    if (schemaManualPropertyPath) schemaManualPropertyPath.hidden = contextual;
+    if (schemaManualPropertyChildNameLabel) schemaManualPropertyChildNameLabel.hidden = !contextual;
+    if (schemaManualPropertyChildName) schemaManualPropertyChildName.hidden = !contextual;
+    if (schemaManualPropertyParentContext) { schemaManualPropertyParentContext.hidden = !contextual;
+      schemaManualPropertyParentContext.textContent = pendingManualPropertyContext ? `Parent path: ${pendingManualPropertyContext.parentPath}` : ""; }
+    if (schemaManualArrayTypeGroup) schemaManualArrayTypeGroup.hidden = definition.type !== "array";
+    if (schemaManualPropertyPreview) schemaManualPropertyPreview.textContent = definition.path.trim()
+      ? `Normalized path: ${inspection.normalizedPath || "none"}. ${manualPropertyPreview(definition)}. Missing object path: ${inspection.missingObjectPath.join(", ") || "none"}.`
+      : "Normalized path: none. Missing object path: none.";
+    if (schemaManualPropertyAssistance) schemaManualPropertyAssistance.textContent = inspection.result === "blocked" ? inspection.assistance : "Ready to add";
+    if (confirmSchemaManualPropertyButton) confirmSchemaManualPropertyButton.disabled = inspection.result === "blocked";
+    const existingPath = inspection.result === "blocked" ? inspection.existingPath : undefined;
+    if (goToExistingSchemaPropertyButton) { goToExistingSchemaPropertyButton.hidden = !existingPath;
+      if (existingPath && inspection.result === "blocked") { goToExistingSchemaPropertyButton.textContent = inspection.assistance;
+        goToExistingSchemaPropertyButton.dataset.schemaPropertyPath = existingPath; }
+      else delete goToExistingSchemaPropertyButton.dataset.schemaPropertyPath; }
+  }
+  function closeManualPropertyForm(restoreFocus = true): void { const trigger = pendingManualPropertyContext?.trigger;
+    pendingManualPropertyContext = undefined; schemaManualPropertyDialog?.close(); if (restoreFocus) (trigger ?? addSchemaPropertyButton)?.focus(); }
+  function openManualPropertyForm(parentPath?: string, trigger?: HTMLButtonElement): void {
+    if (!active().workingDraft) return; pendingManualPropertyContext = parentPath ? { parentPath, ...(trigger ? { trigger } : {}) } : undefined;
+    if (schemaManualPropertyHeading) schemaManualPropertyHeading.textContent = parentPath ? "Add child property" : "Add property";
+    if (schemaManualPropertyPath) schemaManualPropertyPath.value = ""; if (schemaManualPropertyChildName) schemaManualPropertyChildName.value = "";
+    if (schemaManualPropertyType) schemaManualPropertyType.value = "string"; if (schemaManualArrayItemType) schemaManualArrayItemType.value = "";
+    renderManualPropertyForm(); schemaManualPropertyDialog?.showModal(); (parentPath ? schemaManualPropertyChildName : schemaManualPropertyPath)?.focus();
+  }
+  const submitManualProperty = (event: Event): void => { event.preventDefault(); const schema = active(); const draft = schema.workingDraft;
+    if (!draft) return; const definition = manualPropertyDefinition(); const inspection = inspectManualProperty(draft.document, schemaParentDocuments(), definition);
+    if (inspection.result !== "ready") { renderManualPropertyForm(); return; }
+    replaceActive(updateSchemaWorkingDraft(schema, { document:addManualProperty(draft.document, schemaParentDocuments(), definition) },
+      `Add manual property ${inspection.normalizedPath}`)); selectedSchemaPropertyPath = inspection.normalizedPath.slice(1).replaceAll("/", ".");
+    closeManualPropertyForm(false); persistSchemaLibrary(); renderSchemas(); };
+  const cancelManualPropertyDialog = (): void => closeManualPropertyForm();
+  const cancelManualPropertyFromDialog = (event: Event): void => { event.preventDefault(); closeManualPropertyForm(); };
+  const goToExistingSchemaProperty = (): void => { const path = goToExistingSchemaPropertyButton?.dataset.schemaPropertyPath;
+    if (!path) return; selectedSchemaPropertyPath = path.replace(/^\//, "").replaceAll("/", "."); closeManualPropertyForm(false); renderSchemas(); };
+  const normalizedRulePickerPath = (path: string): string => `/${path.replace(/^\//, "").replaceAll(".", "/")}`;
+  const renderSchemaPropertyRulePicker = (): void => {
+    schemaPropertyRenderSequence += 1;
+    if (!schemaPropertyRulePicker || !schemaRulePickerPath || !schemaRuleConfiguration) return;
+    const editLabel = editingAttachedLocalRule ? `Edit ${editingAttachedLocalRule.name ?? editingAttachedLocalRule.id}` : "Create local rule";
+    schemaPropertyRulePicker.textContent = `${editLabel} for ${schemaRulePickerPath} · ${schemaRuleConfiguration.propertyType} · render ${schemaPropertyRenderSequence}`;
+  };
+  function openSchemaPropertyRulePicker(path: string, trigger?: HTMLButtonElement): void {
+    const draft = active().workingDraft; if (!draft) return;
+    const canonicalPath = normalizedRulePickerPath(path);
+    const row = schemaPropertyRows(draft.document).find(({ canonicalPath:candidate }) => candidate === canonicalPath);
+    const propertyType = (["string", "number", "array", "object", "boolean"] as const)
+      .includes(row?.schema.type as SchemaPropertyType) ? row?.schema.type as SchemaPropertyType : "string";
+    schemaRulePickerPath = path; schemaRulePickerTrigger = trigger; selectedSchemaPropertyPath = path;
+    schemaPropertyInteractionReturn = { schemaId:active().id, path, triggerLabel:trigger?.ariaLabel ?? `Add rule for ${path}`,
+      editorScroll:schemaEditor?.scrollTop ?? 0, treeScroll:schemaPropertyTree?.scrollTop ?? 0, detailScroll:schemaDetail?.scrollTop ?? 0 };
+    editingAttachedLocalRule = draft.attachedRules?.find((rule) => normalizedRulePickerPath(rule.propertyPath ?? "") === canonicalPath);
+    schemaRuleConfiguration = createRuleConfiguration("Required", propertyType);
+    renderSchemaPropertyRulePicker(); schemaPropertyRulePicker?.showModal(); ports.rulePickerChanged(path, true);
+  }
+  function closeSchemaPropertyRulePicker(): void {
+    const path = schemaRulePickerPath; schemaPropertyRulePicker?.close(); schemaRulePickerTrigger?.focus();
+    schemaRulePickerPath = undefined; schemaRulePickerTrigger = undefined; schemaRuleConfiguration = undefined;
+    editingAttachedLocalRule = undefined; schemaPropertyInteractionReturn = undefined;
+    if (path) ports.rulePickerChanged(path, false);
+  }
+  const cancelSchemaPropertyRulePicker = (event: Event): void => { event.preventDefault(); closeSchemaPropertyRulePicker(); };
+  const navigateSchemaPropertyRulePicker = (event: KeyboardEvent): void => {
+    if (event.key === "Escape") { event.preventDefault(); closeSchemaPropertyRulePicker(); }
+  };
   return {
     mount(): void {
       if (mounted) return; mounted = true;
@@ -459,6 +615,16 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       schemaSpecificIndexForm?.addEventListener("submit", submitSpecificIndex);
       cancelSchemaSpecificIndex?.addEventListener("click", closeSpecificIndexDialog);
       schemaSpecificIndexDialog?.addEventListener("cancel", cancelSpecificIndexDialog);
+      schemaManualPropertyPath?.addEventListener("input", renderManualPropertyForm);
+      schemaManualPropertyChildName?.addEventListener("input", renderManualPropertyForm);
+      schemaManualPropertyType?.addEventListener("change", renderManualPropertyForm);
+      schemaManualArrayItemType?.addEventListener("change", renderManualPropertyForm);
+      schemaManualPropertyForm?.addEventListener("submit", submitManualProperty);
+      cancelSchemaManualPropertyButton?.addEventListener("click", cancelManualPropertyDialog);
+      schemaManualPropertyDialog?.addEventListener("cancel", cancelManualPropertyFromDialog);
+      goToExistingSchemaPropertyButton?.addEventListener("click", goToExistingSchemaProperty);
+      schemaPropertyRulePicker?.addEventListener("cancel", cancelSchemaPropertyRulePicker);
+      schemaPropertyRulePicker?.addEventListener("keydown", navigateSchemaPropertyRulePicker);
       unsubscribe = ports.subscribe(renderSchemas);
       renderSchemas();
     },
@@ -497,9 +663,22 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       schemaSpecificIndexForm?.removeEventListener("submit", submitSpecificIndex);
       cancelSchemaSpecificIndex?.removeEventListener("click", closeSpecificIndexDialog);
       schemaSpecificIndexDialog?.removeEventListener("cancel", cancelSpecificIndexDialog);
+      schemaManualPropertyPath?.removeEventListener("input", renderManualPropertyForm);
+      schemaManualPropertyChildName?.removeEventListener("input", renderManualPropertyForm);
+      schemaManualPropertyType?.removeEventListener("change", renderManualPropertyForm);
+      schemaManualArrayItemType?.removeEventListener("change", renderManualPropertyForm);
+      schemaManualPropertyForm?.removeEventListener("submit", submitManualProperty);
+      cancelSchemaManualPropertyButton?.removeEventListener("click", cancelManualPropertyDialog);
+      schemaManualPropertyDialog?.removeEventListener("cancel", cancelManualPropertyFromDialog);
+      goToExistingSchemaPropertyButton?.removeEventListener("click", goToExistingSchemaProperty);
+      schemaPropertyRulePicker?.removeEventListener("cancel", cancelSchemaPropertyRulePicker);
+      schemaPropertyRulePicker?.removeEventListener("keydown", navigateSchemaPropertyRulePicker);
       pendingSchemaPropertyRemoval = undefined; pendingSchemaDocumentationRemoval = undefined; lastSchemaPropertyRemoval = undefined;
       pendingSchemaPropertyCopy = undefined; lastSchemaPropertyCopy = undefined;
       specificIndexArrayPath = undefined; specificIndexTrigger = undefined;
+      pendingManualPropertyContext = undefined;
+      schemaRulePickerPath = undefined; schemaRulePickerTrigger = undefined; schemaPropertyInteractionReturn = undefined;
+      schemaRuleConfiguration = undefined; editingAttachedLocalRule = undefined;
       unsubscribe?.(); unsubscribe = undefined;
       schemaList?.replaceChildren();
     },
@@ -523,6 +702,10 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     requestPropertyCopy:openSchemaPropertyCopyReview,
     confirmPropertyCopy:confirmSchemaPropertyCopy,
     openSpecificIndex:openSpecificIndexDialog,
+    openManualProperty:openManualPropertyForm,
+    openRulePicker:openSchemaPropertyRulePicker,
+    rulePickerState:() => ({ path:schemaRulePickerPath, renderSequence:schemaPropertyRenderSequence,
+      ...(schemaRuleConfiguration ? { configuration:structuredClone(schemaRuleConfiguration) } : {}) }),
     schemas:(): readonly SchemaDefinition[] => structuredClone(schemas),
     state:() => ({ ...(activeSchemaId ? { activeSchemaId } : {}), draftDirty:Boolean(activeSchemaId && active().workingDraft),
       schemaCount:schemas.length, mounted }),
