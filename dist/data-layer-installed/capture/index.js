@@ -1,4 +1,4 @@
-import { beginDataLayerTestingSession, createLiveNotificationController, findLiveGuidedWorkflowElements, findLiveSessionSummaryElements, findObservationTargetElements, findObservationTargets, createObservationTarget, createObservationTargetState, restoreAttachedObservationTarget, registerObservationTarget, refreshDiscoveredObservationTargets, selectObservationTarget, selectedObservationTarget, attachedObservationTarget, attachSelectedObservationTarget, updateObservationTargetAccess, observationRefreshDelay, persistSession, restoreSession, } from "../../utilities/data-layer/capture.js";
+import { appendObservedHistoryEntry, attachHistoryArraySnapshot, beginDataLayerTestingSession, beginObservedPageLoad, captureEntry, createLiveNotificationController, findLiveGuidedWorkflowElements, findLiveSessionSummaryElements, findObservationTargetElements, findObservationTargets, handleObservationTargetDialogKeydown, handleObservationTargetListKeydown, handleObservationTargetSearchKeydown, createObservationTarget, createObservationTargetState, restoreAttachedObservationTarget, registerObservationTarget, refreshDiscoveredObservationTargets, selectObservationTarget, selectedObservationTarget, attachedObservationTarget, attachSelectedObservationTarget, updateObservationTargetAccess, initialObservationActivationState, initialObservationRefreshState, markObservationRefreshPageEntryCaptured, navigateObservationTarget, navigateSession, nextObservationActivation, nextObservationRefreshAttempt, observationActivationIsCurrent, observationRefreshDelay, observationRefreshRequestForPageLoad, observationRefreshRequestIsCurrent, persistSession, restartObservation as restartHistoryObservation, restoreSession, samplePageObject, shouldRetryObservationRefresh, stopHistoryArrayObserver, } from "../../utilities/data-layer/capture.js";
 import { detachObservationTarget, endAndAttachObservationTarget } from "../../data-layer-observation-targets.js";
 import { SAVED_EVENT_FEED_FILTER_STORAGE_KEY, SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, SAVED_SESSION_LIBRARY_STORAGE_KEY, SAVED_SESSION_LIVE_FEED_STORAGE_KEY, applySavedEventFeedFilter, cancelSavedSessionDeletion, commitSavedEventFeedFilterLibrary, confirmSavedSessionDeletion, confirmSessionSave, createSavedEventFeedFilter, createSessionSaveDraft, createLiveObserverState, exportSavedSession, deleteSavedEventFeedFilter, findLiveObserverElements, importSavedSession, openSavedSession, openSavedSessionLiveFeed, pauseCapture, recordBackgroundLiveEvent, recordLiveEvent, resetLiveObserverForSession, renameSavedEventFeedFilter, renameSavedSession, renderLiveObserverState, requestSavedSessionDeletion, restoreSavedEventFeedFilterLibrary, restoreSavedEventFeedWorkingView, restoreSavedSessionLibrary, restoreSavedSessionLiveFeed, resumeSavedSession, resumeCapture, returnToCurrentLiveFeed, revalidateSavedSessionLiveFeed, savedSessionSummary, searchSavedSessions, serializeSavedSessionLibrary, serializeSavedSessionLiveFeed, serializeSavedEventFeedWorkingView, setDefaultSavedEventFeedFilter, setLiveQuery, updateSavedEventFeedFilter, updateSavedSessionLiveFeedView, } from "../../utilities/data-layer/live-inspection.js";
 import { endDataLayerTestingSession } from "../../data-layer-session.js";
@@ -59,6 +59,13 @@ export function createCaptureInstalledController(ports) {
     let unsubscribe;
     let dataLayerSessionState = restoreSession(ports.storage);
     let liveObserverState = createLiveObserverState({ pageUrl: ports.initialPageUrl(), sources: ports.initialSources() });
+    let dataLayerObserverState = {
+        pageObject: samplePageObject(), observedEntries: [], sourceEvents: [],
+    };
+    let stopLiveHistoryPushCapture = () => { };
+    let liveHistoryActivationState = initialObservationActivationState;
+    let presentedSourceEventCount = 0;
+    let observationRefreshState = initialObservationRefreshState;
     let savedEventFeedFilterLibrary = restoreSavedEventFeedFilterLibrary(ports.storage.getItem(SAVED_EVENT_FEED_FILTER_STORAGE_KEY));
     let savedEventFeedFilterFeedback = "";
     let restoredSavedEventFeedWorkingView = false;
@@ -84,6 +91,10 @@ export function createCaptureInstalledController(ports) {
     let savedThroughEventCount = Math.max(0, Number(ports.storage.getItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY)) || 0);
     let importGeneration = 0;
     let observationRefreshTimeoutId;
+    let unsubscribeTabUpdated;
+    let unsubscribeTabRemoved;
+    let unsubscribePermissionsRemoved;
+    let attachedTargetRecoveryGeneration = 0;
     function restoredObservationTargetState() {
         const session = dataLayerSessionState.session;
         return session?.status === "active" && session.windowId !== undefined
@@ -113,7 +124,17 @@ export function createCaptureInstalledController(ports) {
         renderHistoryPath(context.path, context.fieldValue, context.status);
         observationTargetList?.setAttribute("aria-live", "polite");
     };
-    const restartObservation = () => ports.ui.restartObservation();
+    async function restartObservationAction() {
+        const observation = await currentTargetObservation(ports.ui.historyPath().path);
+        if (!mounted || !observation)
+            return;
+        dataLayerObserverState = restartHistoryObservation(dataLayerSessionState, dataLayerObserverState, observation);
+        updateSessionFromObserverState();
+        persistAndRenderSessionState();
+        restartLiveHistoryCaptureIfActive(observation);
+        renderObserverState();
+    }
+    const requestObservationRestart = () => { restartObservationAction().catch(() => { }); };
     function targetFromTab(tab) {
         return createObservationTarget({ tabId: tab.tabId, windowId: tab.windowId, pageUrl: tab.pageUrl, title: tab.title,
             ...(tab.activeTab !== undefined ? { activeTab: tab.activeTab } : {}), ...(tab.currentWindow !== undefined ? { currentWindow: tab.currentWindow } : {}) });
@@ -172,6 +193,9 @@ export function createCaptureInstalledController(ports) {
                 void requestSelectedTargetAccess(target); } });
     }
     const searchObservationTargets = () => renderObservationTargetPicker();
+    const navigateObservationTargetSearch = (event) => handleObservationTargetSearchKeydown(observationTargetElements, event);
+    const navigateObservationTargetList = (event) => handleObservationTargetListKeydown(observationTargetElements, event);
+    const navigateObservationTargetDialog = (event) => handleObservationTargetDialogKeydown(observationTargetElements, event);
     async function requestSelectedTargetAccess(target) {
         const granted = await ports.observation.requestOriginAccess(target.origin);
         if (!mounted)
@@ -719,7 +743,7 @@ export function createCaptureInstalledController(ports) {
         ports.changed(dataLayerSessionState, liveObserverState);
         renderLiveObserver();
     };
-    const syncCapturedEventsToLive = (event) => {
+    const recordCapturedLiveEvent = (event) => {
         const previousCount = savedSessionLiveFeed?.currentView.events.length ?? liveObserverState.events.length;
         if (savedSessionLiveFeed) {
             savedSessionLiveFeed = recordBackgroundLiveEvent(savedSessionLiveFeed, event);
@@ -749,6 +773,126 @@ export function createCaptureInstalledController(ports) {
         setLiveSessionMessage("Capture resumed");
         publish();
     };
+    function renderSessionState() { renderObservationTargetContext(); }
+    function renderObserverState() { renderLiveObserver(); }
+    function syncCapturedEventsToLive() {
+        dataLayerSessionState = dataLayerObserverState.sessionState ?? dataLayerSessionState;
+        const events = dataLayerObserverState.sourceEvents ?? [];
+        const pendingEvents = events.slice(presentedSourceEventCount);
+        presentedSourceEventCount = events.length;
+        for (const event of pendingEvents) {
+            const presented = ports.observerRuntime.present(event, dataLayerObserverState.observer?.historyPath);
+            if (savedSessionLiveFeed) {
+                savedSessionLiveFeed = recordBackgroundLiveEvent(savedSessionLiveFeed, presented);
+                persistSavedSessionFeed();
+            }
+            else
+                liveObserverState = recordLiveEvent(liveObserverState, presented);
+        }
+    }
+    function updateSessionFromObserverState() { syncCapturedEventsToLive(); }
+    function persistAndRenderSessionState() { persistSession(dataLayerSessionState, ports.storage); renderSessionState(); publish(); }
+    function persistAndRenderObservationState() { persistAndRenderSessionState(); renderObserverState(); }
+    function restartLiveHistoryCaptureIfActive(observation) {
+        if (dataLayerSessionState.session?.status === "active")
+            startLiveHistoryCapture(observation).catch(() => { });
+    }
+    function observationPageLoadId(tabId) {
+        return `tab:${tabId}:page-load:${observationRefreshState.observedPageLoadSequence}`;
+    }
+    async function currentTargetObservation(historyPath) {
+        const target = attachedObservationTarget(observationTargetState) ?? selectedObservationTarget(observationTargetState);
+        if (!target) {
+            setObservationTargetResult("Selection required");
+            return undefined;
+        }
+        return ports.observerRuntime.read({ tabId: target.tabId, pageUrl: target.pageUrl, historyPath,
+            pageLoadId: observationPageLoadId(target.tabId) });
+    }
+    async function recoverAttachedObservationTarget() {
+        const generation = ++attachedTargetRecoveryGeneration;
+        const target = attachedObservationTarget(observationTargetState);
+        const session = dataLayerSessionState.session;
+        if (!target || session?.status !== "active")
+            return;
+        try {
+            const observation = await ports.observerRuntime.read({ tabId: target.tabId, pageUrl: target.pageUrl,
+                historyPath: session.historyPath, pageLoadId: observationPageLoadId(target.tabId) });
+            if (!mounted || generation !== attachedTargetRecoveryGeneration
+                || attachedObservationTarget(observationTargetState)?.id !== target.id)
+                return;
+            if (observation.pageAccessStatus === "page access unavailable") {
+                observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Permission required");
+                stopLiveHistoryCapture();
+                setObservationTargetResult("Permission required — Request access");
+            }
+            else {
+                dataLayerObserverState = restartHistoryObservation(dataLayerSessionState, dataLayerObserverState, observation);
+                updateSessionFromObserverState();
+                await startLiveHistoryCapture(observation);
+                if (!mounted || generation !== attachedTargetRecoveryGeneration)
+                    return;
+                persistAndRenderObservationState();
+                setObservationTargetResult(`Recovered ${target.title}`);
+            }
+        }
+        catch {
+            if (!mounted || generation !== attachedTargetRecoveryGeneration)
+                return;
+            observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Closed");
+            stopLiveHistoryCapture();
+            setObservationTargetResult("Target unavailable — Choose target");
+        }
+        renderObservationTargetPicker();
+        renderObservationTargetContext();
+    }
+    function cancelLiveHistoryCaptureRuntime() {
+        liveHistoryActivationState = nextObservationActivation(liveHistoryActivationState).state;
+        stopLiveHistoryPushCapture();
+        stopLiveHistoryPushCapture = () => { };
+    }
+    function stopLiveHistoryCapture() {
+        cancelLiveHistoryCaptureRuntime();
+        dataLayerObserverState = stopHistoryArrayObserver(dataLayerObserverState);
+    }
+    async function startLiveHistoryCapture(observation) {
+        cancelLiveHistoryCaptureRuntime();
+        const captureGeneration = liveHistoryActivationState.generation;
+        try {
+            const stopCapture = await ports.observerRuntime.startPush({
+                ...(observation.tabId === undefined ? {} : { tabId: observation.tabId }), historyPath: observation.historyPath,
+                onSnapshot: ({ historyPath, rawValues }) => {
+                    if (!mounted || !observationActivationIsCurrent(liveHistoryActivationState, captureGeneration))
+                        return;
+                    dataLayerObserverState = attachHistoryArraySnapshot({ ...dataLayerObserverState, sessionState: dataLayerSessionState }, { pageUrl: observation.pageUrl, ...(observation.pageLoadId ? { pageLoadId: observation.pageLoadId } : {}),
+                        historyPath, rawValues, requestId: `activation:${captureGeneration}` });
+                    updateSessionFromObserverState();
+                    persistAndRenderObservationState();
+                },
+                onEntry: ({ rawValue, timestamp }) => {
+                    if (!mounted || !observationActivationIsCurrent(liveHistoryActivationState, captureGeneration))
+                        return;
+                    dataLayerObserverState = appendObservedHistoryEntry(dataLayerObserverState, rawValue, timestamp);
+                    ports.observerRuntime.recordCapture({
+                        sessionId: `tab:${observation.tabId ?? dataLayerSessionState.session?.tabId ?? "active"}`,
+                        pageUrl: dataLayerSessionState.session?.currentUrl ?? observation.pageUrl,
+                        sourceId: dataLayerSessionState.session?.historyPath ?? observation.historyPath, rawValue,
+                    });
+                    updateSessionFromObserverState();
+                    persistAndRenderObservationState();
+                },
+            });
+            if (!mounted || !observationActivationIsCurrent(liveHistoryActivationState, captureGeneration)) {
+                stopCapture();
+                return;
+            }
+            stopLiveHistoryPushCapture = stopCapture;
+        }
+        catch {
+            if (observationActivationIsCurrent(liveHistoryActivationState, captureGeneration))
+                stopLiveHistoryPushCapture = () => { };
+        }
+    }
     function clearScheduledObservationRefresh() {
         if (observationRefreshTimeoutId !== undefined) {
             globalThis.clearTimeout(observationRefreshTimeoutId);
@@ -760,24 +904,139 @@ export function createCaptureInstalledController(ports) {
         const delay = observationRefreshDelay(request.attempt);
         observationRefreshTimeoutId = globalThis.setTimeout(() => {
             observationRefreshTimeoutId = undefined;
-            void ports.runObservationRefresh(request);
+            runObservationRefresh(request).catch(() => { });
         }, delay);
+    }
+    function activeSessionTabMatches(tabId) {
+        const session = dataLayerSessionState.session;
+        return session?.status === "active" && session.tabId === tabId;
+    }
+    function capturePageEntryForRefresh(request) {
+        if (request.pageEntryCaptured)
+            return request;
+        dataLayerSessionState = navigateSession(dataLayerSessionState, request.pageUrl);
+        dataLayerSessionState = captureEntry(dataLayerSessionState, { type: "page", url: request.pageUrl });
+        persistAndRenderSessionState();
+        return markObservationRefreshPageEntryCaptured(request);
+    }
+    function refreshObservationAfterPageLoad(tabId, pageUrl, pageLoadSequence) {
+        if (!activeSessionTabMatches(tabId))
+            return;
+        const schedule = observationRefreshRequestForPageLoad(observationRefreshState, tabId, pageUrl, pageLoadSequence);
+        observationRefreshState = schedule.state;
+        if (schedule.request)
+            scheduleObservationRefresh(schedule.request);
+    }
+    async function runObservationRefresh(request) {
+        if (!observationRefreshRequestIsCurrent(observationRefreshState, request) || !activeSessionTabMatches(request.tabId))
+            return;
+        const session = dataLayerSessionState.session;
+        if (!session)
+            return;
+        const nextRequest = capturePageEntryForRefresh(request);
+        const observation = await ports.observerRuntime.read({ tabId: nextRequest.tabId, pageUrl: nextRequest.pageUrl,
+            historyPath: session.historyPath, pageLoadId: observationPageLoadId(nextRequest.tabId) });
+        if (!mounted || !observationRefreshRequestIsCurrent(observationRefreshState, nextRequest)
+            || !activeSessionTabMatches(nextRequest.tabId))
+            return;
+        dataLayerObserverState = restartHistoryObservation(dataLayerSessionState, dataLayerObserverState, observation);
+        updateSessionFromObserverState();
+        persistAndRenderObservationState();
+        if (observation.pageAccessStatus === "page access unavailable") {
+            const target = attachedObservationTarget(observationTargetState) ?? selectedObservationTarget(observationTargetState);
+            if (target)
+                observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Permission required");
+            setObservationTargetResult("Permission required — Request access");
+            renderObservationTargetPicker();
+            renderObservationTargetContext();
+            return;
+        }
+        if (dataLayerObserverState.observer?.status === "ready") {
+            await startLiveHistoryCapture(observation);
+            return;
+        }
+        if (shouldRetryObservationRefresh(observation.pageAccessStatus, nextRequest.attempt)) {
+            scheduleObservationRefresh(nextObservationRefreshAttempt(nextRequest));
+        }
+    }
+    function revokeObservationTargetOrigins(origins) {
+        const affected = observationTargetState.targets.filter((target) => origins.some((originPattern) => originPattern.startsWith(target.origin)));
+        for (const target of affected) {
+            const attached = observationTargetState.attachedTargetId === target.id;
+            observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Permission required");
+            if (attached) {
+                stopLiveHistoryCapture();
+                setObservationTargetResult("Permission required — Request access");
+            }
+        }
+        if (affected.length) {
+            renderObservationTargetPicker();
+            renderObservationTargetContext();
+        }
+    }
+    function handleTabUpdated(tabId, changeInfo, tab) {
+        if (changeInfo.url !== undefined) {
+            const current = observationTargetState.targets.find((target) => target.tabId === tabId);
+            if (current) {
+                observationTargetState = navigateObservationTarget(observationTargetState, tabId, changeInfo.url);
+                const updated = observationTargetState.targets.find((target) => target.tabId === tabId);
+                if (updated && tab.title)
+                    observationTargetState = registerObservationTarget(observationTargetState, { ...updated, title: tab.title });
+                renderObservationTargetPicker();
+                renderObservationTargetContext();
+            }
+        }
+        if (!activeSessionTabMatches(tabId))
+            return;
+        if (changeInfo.status === "loading" || changeInfo.url !== undefined) {
+            observationRefreshState = beginObservedPageLoad(observationRefreshState);
+            clearScheduledObservationRefresh();
+            stopLiveHistoryCapture();
+            if (changeInfo.url !== undefined) {
+                dataLayerSessionState = navigateSession(dataLayerSessionState, changeInfo.url);
+                ports.observerRuntime.recordNavigation({ sessionId: `tab:${tabId}`, pageUrl: changeInfo.url });
+                persistAndRenderSessionState();
+            }
+        }
+        if (changeInfo.status === "complete") {
+            refreshObservationAfterPageLoad(tabId, tab.url ?? changeInfo.url
+                ?? dataLayerSessionState.session?.currentUrl ?? ports.initialPageUrl(), observationRefreshState.observedPageLoadSequence);
+        }
+    }
+    function handleTabRemoved(tabId) {
+        const target = observationTargetState.targets.find((candidate) => candidate.tabId === tabId);
+        if (!target)
+            return;
+        observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Closed");
+        if (dataLayerSessionState.session?.tabId === tabId) {
+            stopLiveHistoryCapture();
+            setObservationTargetResult("Target unavailable — Save session, End session, or Choose target");
+            persistAndRenderObservationState();
+        }
+        renderObservationTargetPicker();
+        renderObservationTargetContext();
     }
     return {
         mount() {
             if (mounted)
                 return;
             mounted = true;
-            unsubscribe = ports.subscribeToLiveFeed(syncCapturedEventsToLive);
+            unsubscribe = ports.subscribeToLiveFeed(recordCapturedLiveEvent);
+            unsubscribeTabUpdated = ports.observerRuntime.subscribeTabUpdated(handleTabUpdated);
+            unsubscribeTabRemoved = ports.observerRuntime.subscribeTabRemoved(handleTabRemoved);
+            unsubscribePermissionsRemoved = ports.observerRuntime.subscribePermissionsRemoved(revokeObservationTargetOrigins);
             startTestingButton?.addEventListener("click", startTesting);
             endTestingButton?.addEventListener("click", endTesting);
             pauseCaptureButton?.addEventListener("click", pauseInstalledCapture);
             resumeCaptureButton?.addEventListener("click", resumeInstalledCapture);
-            restartObservationButton?.addEventListener("click", restartObservation);
+            restartObservationButton?.addEventListener("click", requestObservationRestart);
             chooseObservationTargetButton?.addEventListener("click", chooseObservationTarget);
             browseObservationTargetsButton?.addEventListener("click", browseObservationTargets);
             closeObservationTargetPickerButton?.addEventListener("click", closeObservationTargetPicker);
             observationTargetSearch?.addEventListener("input", searchObservationTargets);
+            observationTargetSearch?.addEventListener("keydown", navigateObservationTargetSearch);
+            observationTargetList?.addEventListener("keydown", navigateObservationTargetList);
+            observationTargetPicker?.addEventListener("keydown", navigateObservationTargetDialog);
             cancelDetachTargetButton?.addEventListener("click", cancelDetachTarget);
             confirmDetachTargetButton?.addEventListener("click", confirmDetachTarget);
             dataLayerViewList?.addEventListener("click", selectDataLayerView);
@@ -805,6 +1064,8 @@ export function createCaptureInstalledController(ports) {
             confirmSavedSessionDeleteButton?.addEventListener("click", confirmSavedSessionDelete);
             renderObservationTargetContext();
             renderObservationTargetPicker();
+            if (attachedObservationTarget(observationTargetState))
+                recoverAttachedObservationTarget().catch(() => { });
             renderSavedSessions();
             renderSavedSessionLiveBanner();
             ports.changed(dataLayerSessionState, liveObserverState);
@@ -816,15 +1077,24 @@ export function createCaptureInstalledController(ports) {
             mounted = false;
             unsubscribe?.();
             unsubscribe = undefined;
+            unsubscribeTabUpdated?.();
+            unsubscribeTabUpdated = undefined;
+            unsubscribeTabRemoved?.();
+            unsubscribeTabRemoved = undefined;
+            unsubscribePermissionsRemoved?.();
+            unsubscribePermissionsRemoved = undefined;
             startTestingButton?.removeEventListener("click", startTesting);
             endTestingButton?.removeEventListener("click", endTesting);
             pauseCaptureButton?.removeEventListener("click", pauseInstalledCapture);
             resumeCaptureButton?.removeEventListener("click", resumeInstalledCapture);
-            restartObservationButton?.removeEventListener("click", restartObservation);
+            restartObservationButton?.removeEventListener("click", requestObservationRestart);
             chooseObservationTargetButton?.removeEventListener("click", chooseObservationTarget);
             browseObservationTargetsButton?.removeEventListener("click", browseObservationTargets);
             closeObservationTargetPickerButton?.removeEventListener("click", closeObservationTargetPicker);
             observationTargetSearch?.removeEventListener("input", searchObservationTargets);
+            observationTargetSearch?.removeEventListener("keydown", navigateObservationTargetSearch);
+            observationTargetList?.removeEventListener("keydown", navigateObservationTargetList);
+            observationTargetPicker?.removeEventListener("keydown", navigateObservationTargetDialog);
             cancelDetachTargetButton?.removeEventListener("click", cancelDetachTarget);
             confirmDetachTargetButton?.removeEventListener("click", confirmDetachTarget);
             dataLayerViewList?.removeEventListener("click", selectDataLayerView);
@@ -856,8 +1126,10 @@ export function createCaptureInstalledController(ports) {
             ports.savedFilters.dispose();
             targetDiscoveryGeneration += 1;
             importGeneration += 1;
+            attachedTargetRecoveryGeneration += 1;
             pendingObservationTargetSwitchId = undefined;
             clearScheduledObservationRefresh();
+            stopLiveHistoryCapture();
         },
         async begin() {
             const started = beginDataLayerTestingSession(dataLayerSessionState, liveObserverState, await ports.sessionStart());
@@ -872,7 +1144,7 @@ export function createCaptureInstalledController(ports) {
         },
         pause: pauseInstalledCapture,
         resume: resumeInstalledCapture,
-        capture: syncCapturedEventsToLive,
+        capture: recordCapturedLiveEvent,
         discoverTargets: discoverCurrentObservationTarget,
         browseTargets: browseObservationTargets,
         selectTarget(id) { observationTargetState = selectObservationTarget(observationTargetState, id); renderObservationTargetPicker(); },
@@ -889,6 +1161,8 @@ export function createCaptureInstalledController(ports) {
             targets: structuredClone(observationTargetState), savedSessions: structuredClone(savedSessionLibrary),
             savedFeed: structuredClone(savedSessionLiveFeed), archivedSavedSession: structuredClone(archivedSavedSession),
             savedFilters: structuredClone(savedEventFeedFilterLibrary), savedEventFeedFilterFeedback,
+            historyObserver: structuredClone(dataLayerObserverState), observationRefresh: structuredClone(observationRefreshState),
+            liveHistoryGeneration: liveHistoryActivationState.generation,
             savedThroughEventCount, pendingObservationTargetSwitchId }),
     };
 }

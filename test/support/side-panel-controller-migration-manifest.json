@@ -208,7 +208,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::startTestingButton:166"
+        "target": "src/data-layer-installed/capture/index.ts::startTestingButton:208"
       }
     },
     {
@@ -221,7 +221,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::endTestingButton:167"
+        "target": "src/data-layer-installed/capture/index.ts::endTestingButton:209"
       }
     },
     {
@@ -247,7 +247,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::historyPathDisplay:169"
+        "target": "src/data-layer-installed/capture/index.ts::historyPathDisplay:211"
       }
     },
     {
@@ -260,7 +260,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::historyPathStatus:170"
+        "target": "src/data-layer-installed/capture/index.ts::historyPathStatus:212"
       }
     },
     {
@@ -325,7 +325,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::sessionHistoryPath:171"
+        "target": "src/data-layer-installed/capture/index.ts::sessionHistoryPath:213"
       }
     },
     {
@@ -338,7 +338,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::sessionWarning:172"
+        "target": "src/data-layer-installed/capture/index.ts::sessionWarning:214"
       }
     },
     {
@@ -351,7 +351,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::restartObservationButton:173"
+        "target": "src/data-layer-installed/capture/index.ts::restartObservationButton:215"
       }
     },
     {
@@ -364,7 +364,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::observationTargetElements:174"
+        "target": "src/data-layer-installed/capture/index.ts::observationTargetElements:216"
       }
     },
     {
@@ -377,7 +377,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::chooseObservationTargetButton:176"
+        "target": "src/data-layer-installed/capture/index.ts::chooseObservationTargetButton:218"
       }
     },
     {
@@ -390,7 +390,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::browseObservationTargetsButton:177"
+        "target": "src/data-layer-installed/capture/index.ts::browseObservationTargetsButton:219"
       }
     },
     {
@@ -403,7 +403,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::closeObservationTargetPickerButton:178"
+        "target": "src/data-layer-installed/capture/index.ts::closeObservationTargetPickerButton:220"
       }
     },
     {
@@ -416,7 +416,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::observationTargetPicker:179"
+        "target": "src/data-layer-installed/capture/index.ts::observationTargetPicker:221"
       }
     },
     {
@@ -429,7 +429,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::observationTargetSearch:180"
+        "target": "src/data-layer-installed/capture/index.ts::observationTargetSearch:222"
       }
     },
     {
@@ -442,7 +442,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::observationTargetList:181"
+        "target": "src/data-layer-installed/capture/index.ts::observationTargetList:223"
       }
     },
     {
@@ -455,7 +455,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::cancelDetachTargetButton:182"
+        "target": "src/data-layer-installed/capture/index.ts::cancelDetachTargetButton:224"
       }
     },
     {
@@ -468,7 +468,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::confirmDetachTargetButton:183"
+        "target": "src/data-layer-installed/capture/index.ts::confirmDetachTargetButton:225"
       }
     },
     {
@@ -598,7 +598,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::liveObserverElements:168"
+        "target": "src/data-layer-installed/capture/index.ts::liveObserverElements:210"
       }
     },
     {
@@ -611,7 +611,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::liveSessionSummaryElements:187"
+        "target": "src/data-layer-installed/capture/index.ts::liveSessionSummaryElements:229"
       }
     },
     {
@@ -624,7 +624,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::liveGuidedWorkflowElements:188"
+        "target": "src/data-layer-installed/capture/index.ts::liveGuidedWorkflowElements:230"
       }
     },
     {
@@ -637,7 +637,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::dataLayerViewList:189"
+        "target": "src/data-layer-installed/capture/index.ts::dataLayerViewList:231"
       }
     },
     {
@@ -650,7 +650,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::backToEventsButton:190"
+        "target": "src/data-layer-installed/capture/index.ts::backToEventsButton:232"
       }
     },
     {
@@ -663,7 +663,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::pauseCaptureButton:185"
+        "target": "src/data-layer-installed/capture/index.ts::pauseCaptureButton:227"
       }
     },
     {
@@ -676,7 +676,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::resumeCaptureButton:186"
+        "target": "src/data-layer-installed/capture/index.ts::resumeCaptureButton:228"
       }
     },
     {
@@ -689,7 +689,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::copyPageUrlButton:191"
+        "target": "src/data-layer-installed/capture/index.ts::copyPageUrlButton:233"
       }
     },
     {
@@ -702,7 +702,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::liveNotificationController:225"
+        "target": "src/data-layer-installed/capture/index.ts::liveNotificationController:267"
       }
     },
     {
@@ -715,7 +715,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionButton:192"
+        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionButton:234"
       }
     },
     {
@@ -728,7 +728,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::startFreshSessionButton:193"
+        "target": "src/data-layer-installed/capture/index.ts::startFreshSessionButton:235"
       }
     },
     {
@@ -741,7 +741,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::reportMissingEventButton:194"
+        "target": "src/data-layer-installed/capture/index.ts::reportMissingEventButton:236"
       }
     },
     {
@@ -754,7 +754,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionDialog:195"
+        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionDialog:237"
       }
     },
     {
@@ -767,7 +767,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionForm:196"
+        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionForm:238"
       }
     },
     {
@@ -780,7 +780,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionHeading:197"
+        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionHeading:239"
       }
     },
     {
@@ -793,7 +793,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionName:198"
+        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionName:240"
       }
     },
     {
@@ -806,7 +806,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionSummary:199"
+        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionSummary:241"
       }
     },
     {
@@ -819,7 +819,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::confirmSaveLiveSessionButton:200"
+        "target": "src/data-layer-installed/capture/index.ts::confirmSaveLiveSessionButton:242"
       }
     },
     {
@@ -832,7 +832,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::cancelSaveLiveSessionButton:201"
+        "target": "src/data-layer-installed/capture/index.ts::cancelSaveLiveSessionButton:243"
       }
     },
     {
@@ -845,7 +845,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::freshSessionConfirmation:202"
+        "target": "src/data-layer-installed/capture/index.ts::freshSessionConfirmation:244"
       }
     },
     {
@@ -858,7 +858,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::freshSessionConfirmationHeading:203"
+        "target": "src/data-layer-installed/capture/index.ts::freshSessionConfirmationHeading:245"
       }
     },
     {
@@ -871,7 +871,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::freshSessionConfirmationSummary:204"
+        "target": "src/data-layer-installed/capture/index.ts::freshSessionConfirmationSummary:246"
       }
     },
     {
@@ -884,7 +884,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::saveAndStartFreshSessionButton:205"
+        "target": "src/data-layer-installed/capture/index.ts::saveAndStartFreshSessionButton:247"
       }
     },
     {
@@ -897,7 +897,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::discardAndStartFreshSessionButton:206"
+        "target": "src/data-layer-installed/capture/index.ts::discardAndStartFreshSessionButton:248"
       }
     },
     {
@@ -910,7 +910,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::cancelFreshSessionButton:207"
+        "target": "src/data-layer-installed/capture/index.ts::cancelFreshSessionButton:249"
       }
     },
     {
@@ -923,7 +923,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::savedSessionLiveBanner:208"
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionLiveBanner:250"
       }
     },
     {
@@ -936,7 +936,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::savedSessionLiveSummary:209"
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionLiveSummary:251"
       }
     },
     {
@@ -949,7 +949,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::savedSessionBackgroundStatus:210"
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionBackgroundStatus:252"
       }
     },
     {
@@ -962,7 +962,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::returnToCurrentLiveFeedButton:211"
+        "target": "src/data-layer-installed/capture/index.ts::returnToCurrentLiveFeedButton:253"
       }
     },
     {
@@ -975,7 +975,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::revalidateSavedSessionButton:212"
+        "target": "src/data-layer-installed/capture/index.ts::revalidateSavedSessionButton:254"
       }
     },
     {
@@ -988,7 +988,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::savedSessionValidationComparison:213"
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionValidationComparison:255"
       }
     },
     {
@@ -1001,7 +1001,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::savedSessionSearch:214"
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionSearch:256"
       }
     },
     {
@@ -1014,7 +1014,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::importSavedSessionButton:215"
+        "target": "src/data-layer-installed/capture/index.ts::importSavedSessionButton:257"
       }
     },
     {
@@ -1027,7 +1027,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::savedSessionFileInput:216"
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionFileInput:258"
       }
     },
     {
@@ -1040,7 +1040,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::savedSessionList:217"
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionList:259"
       }
     },
     {
@@ -1053,7 +1053,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::savedSessionCount:218"
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionCount:260"
       }
     },
     {
@@ -1066,7 +1066,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::savedSessionConfirmation:219"
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionConfirmation:261"
       }
     },
     {
@@ -1079,7 +1079,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::cancelSavedSessionDeleteButton:220"
+        "target": "src/data-layer-installed/capture/index.ts::cancelSavedSessionDeleteButton:262"
       }
     },
     {
@@ -1092,7 +1092,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::confirmSavedSessionDeleteButton:221"
+        "target": "src/data-layer-installed/capture/index.ts::confirmSavedSessionDeleteButton:263"
       }
     },
     {
@@ -1235,7 +1235,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::liveEventsEmptyState:222"
+        "target": "src/data-layer-installed/capture/index.ts::liveEventsEmptyState:264"
       }
     },
     {
@@ -1248,7 +1248,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::liveSourceErrorState:223"
+        "target": "src/data-layer-installed/capture/index.ts::liveSourceErrorState:265"
       }
     },
     {
@@ -1493,7 +1493,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::savedSessionEmptyState:224"
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionEmptyState:266"
       }
     },
     {
@@ -4508,7 +4508,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::dataLayerSessionState:231"
+        "target": "src/data-layer-installed/capture/index.ts::dataLayerSessionState:273"
       }
     },
     {
@@ -4521,7 +4521,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::savedEventFeedFilterLibrary:233"
+        "target": "src/data-layer-installed/capture/index.ts::savedEventFeedFilterLibrary:282"
       }
     },
     {
@@ -4534,7 +4534,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::savedEventFeedFilterFeedback:236"
+        "target": "src/data-layer-installed/capture/index.ts::savedEventFeedFilterFeedback:285"
       }
     },
     {
@@ -4546,7 +4546,8 @@
         "column": 5
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::dataLayerObserverState:275"
       }
     },
     {
@@ -4558,7 +4559,8 @@
         "column": 5
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::liveHistoryActivationState:279"
       }
     },
     {
@@ -4570,7 +4572,8 @@
         "column": 5
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::presentedSourceEventCount:280"
       }
     },
     {
@@ -4583,7 +4586,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::observationRefreshTimeoutId:266"
+        "target": "src/data-layer-installed/capture/index.ts::observationRefreshTimeoutId:315"
       }
     },
     {
@@ -4595,7 +4598,8 @@
         "column": 5
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::observationRefreshState:281"
       }
     },
     {
@@ -4608,7 +4612,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::liveObserverState:232"
+        "target": "src/data-layer-installed/capture/index.ts::liveObserverState:274"
       }
     },
     {
@@ -4621,7 +4625,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::restoredSavedEventFeedWorkingView:237"
+        "target": "src/data-layer-installed/capture/index.ts::restoredSavedEventFeedWorkingView:286"
       }
     },
     {
@@ -4634,7 +4638,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::restoredSavedEventFeedView:238"
+        "target": "src/data-layer-installed/capture/index.ts::restoredSavedEventFeedView:287"
       }
     },
     {
@@ -4671,7 +4675,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::savedSessionLibrary:252"
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionLibrary:301"
       }
     },
     {
@@ -4736,7 +4740,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::savedSessionLiveFeed:255"
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionLiveFeed:304"
       }
     },
     {
@@ -4763,7 +4767,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::archivedSavedSession:259"
+        "target": "src/data-layer-installed/capture/index.ts::archivedSavedSession:308"
       }
     },
     {
@@ -4776,7 +4780,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::pendingSessionSaveDraft:260"
+        "target": "src/data-layer-installed/capture/index.ts::pendingSessionSaveDraft:309"
       }
     },
     {
@@ -4789,7 +4793,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::startFreshAfterSessionSave:261"
+        "target": "src/data-layer-installed/capture/index.ts::startFreshAfterSessionSave:310"
       }
     },
     {
@@ -4802,7 +4806,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY:165"
+        "target": "src/data-layer-installed/capture/index.ts::SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY:207"
       }
     },
     {
@@ -4815,7 +4819,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::savedThroughEventCount:262"
+        "target": "src/data-layer-installed/capture/index.ts::savedThroughEventCount:311"
       }
     },
     {
@@ -5546,7 +5550,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::observationTargetState:275"
+        "target": "src/data-layer-installed/capture/index.ts::observationTargetState:328"
       }
     },
     {
@@ -5571,7 +5575,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::pendingObservationTargetSwitchId:276"
+        "target": "src/data-layer-installed/capture/index.ts::pendingObservationTargetSwitchId:329"
       }
     },
     {
@@ -5802,7 +5806,8 @@
         "column": 5
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::stopLiveHistoryPushCapture:278"
       }
     },
     {
@@ -5925,7 +5930,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::renderHistoryPath:278"
+        "target": "src/data-layer-installed/capture/index.ts::renderHistoryPath:331"
       }
     },
     {
@@ -5939,7 +5944,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::restoredObservationTargetState:267"
+        "target": "src/data-layer-installed/capture/index.ts::restoredObservationTargetState:320"
       }
     },
     {
@@ -5953,7 +5958,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::setObservationTargetResult:286"
+        "target": "src/data-layer-installed/capture/index.ts::setObservationTargetResult:339"
       }
     },
     {
@@ -5967,7 +5972,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::renderObservationTargetContext:287"
+        "target": "src/data-layer-installed/capture/index.ts::renderObservationTargetContext:340"
       }
     },
     {
@@ -5994,7 +5999,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::targetFromTab:293"
+        "target": "src/data-layer-installed/capture/index.ts::targetFromTab:353"
       }
     },
     {
@@ -6008,7 +6013,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::registerTargetTabs:297"
+        "target": "src/data-layer-installed/capture/index.ts::registerTargetTabs:357"
       }
     },
     {
@@ -6022,7 +6027,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::discoverCurrentObservationTarget:302"
+        "target": "src/data-layer-installed/capture/index.ts::discoverCurrentObservationTarget:362"
       }
     },
     {
@@ -6036,7 +6041,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::browseObservationTargets:310"
+        "target": "src/data-layer-installed/capture/index.ts::browseObservationTargets:370"
       }
     },
     {
@@ -6050,7 +6055,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::renderObservationTargetPicker:321"
+        "target": "src/data-layer-installed/capture/index.ts::renderObservationTargetPicker:381"
       }
     },
     {
@@ -6064,7 +6069,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::requestSelectedTargetAccess:328"
+        "target": "src/data-layer-installed/capture/index.ts::requestSelectedTargetAccess:394"
       }
     },
     {
@@ -6077,7 +6082,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::recoverAttachedObservationTarget:803"
       }
     },
     {
@@ -6090,7 +6096,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::revokeObservationTargetOrigins:914"
       }
     },
     {
@@ -6104,7 +6111,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::attachSelectedTarget:334"
+        "target": "src/data-layer-installed/capture/index.ts::attachSelectedTarget:400"
       }
     },
     {
@@ -6118,7 +6125,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::beginDetachSelectedTarget:344"
+        "target": "src/data-layer-installed/capture/index.ts::beginDetachSelectedTarget:410"
       }
     },
     {
@@ -6132,7 +6139,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::confirmDetachSelectedTarget:346"
+        "target": "src/data-layer-installed/capture/index.ts::confirmDetachSelectedTarget:412"
       }
     },
     {
@@ -6146,7 +6153,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::showDataLayerView:356"
+        "target": "src/data-layer-installed/capture/index.ts::showDataLayerView:422"
       }
     },
     {
@@ -6272,7 +6279,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::renderSavedSessionLiveBanner:538"
+        "target": "src/data-layer-installed/capture/index.ts::renderSavedSessionLiveBanner:604"
       }
     },
     {
@@ -6286,7 +6293,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::persistSavedEventFeedWorkingView:361"
+        "target": "src/data-layer-installed/capture/index.ts::persistSavedEventFeedWorkingView:427"
       }
     },
     {
@@ -6300,7 +6307,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::installSavedEventFeedWorkingQuery:373"
+        "target": "src/data-layer-installed/capture/index.ts::installSavedEventFeedWorkingQuery:439"
       }
     },
     {
@@ -6314,7 +6321,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::installDefaultSavedEventFeedFilterForNewSession:378"
+        "target": "src/data-layer-installed/capture/index.ts::installDefaultSavedEventFeedFilterForNewSession:444"
       }
     },
     {
@@ -6328,7 +6335,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::commitSavedEventFeedFilters:382"
+        "target": "src/data-layer-installed/capture/index.ts::commitSavedEventFeedFilters:448"
       }
     },
     {
@@ -6342,7 +6349,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::applyConfiguredSavedEventFeedFilter:388"
+        "target": "src/data-layer-installed/capture/index.ts::applyConfiguredSavedEventFeedFilter:454"
       }
     },
     {
@@ -6356,7 +6363,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::renderSavedEventFeedFilterResult:395"
+        "target": "src/data-layer-installed/capture/index.ts::renderSavedEventFeedFilterResult:461"
       }
     },
     {
@@ -6370,7 +6377,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::savedEventFeedFilterControls:396"
+        "target": "src/data-layer-installed/capture/index.ts::savedEventFeedFilterControls:462"
       }
     },
     {
@@ -6384,7 +6391,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::renderLiveObserver:672"
+        "target": "src/data-layer-installed/capture/index.ts::renderLiveObserver:738"
       }
     },
     {
@@ -6424,7 +6431,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::openMissingEventBuilder:563"
+        "target": "src/data-layer-installed/capture/index.ts::openMissingEventBuilder:629"
       }
     },
     {
@@ -6529,7 +6536,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::setLiveSessionMessage:703"
+        "target": "src/data-layer-installed/capture/index.ts::setLiveSessionMessage:769"
       }
     },
     {
@@ -6543,7 +6550,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::copyLivePageUrl:562"
+        "target": "src/data-layer-installed/capture/index.ts::copyLivePageUrl:628"
       }
     },
     {
@@ -8572,7 +8579,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::persistSavedSessionLibrary:441"
+        "target": "src/data-layer-installed/capture/index.ts::persistSavedSessionLibrary:507"
       }
     },
     {
@@ -8586,7 +8593,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::persistSavedSessionFeed:444"
+        "target": "src/data-layer-installed/capture/index.ts::persistSavedSessionFeed:510"
       }
     },
     {
@@ -8600,7 +8607,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::currentUnsavedEventCount:450"
+        "target": "src/data-layer-installed/capture/index.ts::currentUnsavedEventCount:516"
       }
     },
     {
@@ -8614,7 +8621,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::testingEndedMessage:454"
+        "target": "src/data-layer-installed/capture/index.ts::testingEndedMessage:520"
       }
     },
     {
@@ -8628,7 +8635,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::synchronizeSavedSessionFeedView:458"
+        "target": "src/data-layer-installed/capture/index.ts::synchronizeSavedSessionFeedView:524"
       }
     },
     {
@@ -8642,7 +8649,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::openSessionInLiveFeed:469"
+        "target": "src/data-layer-installed/capture/index.ts::openSessionInLiveFeed:535"
       }
     },
     {
@@ -8656,7 +8663,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::startLinkedCaptureFromSavedSession:481"
+        "target": "src/data-layer-installed/capture/index.ts::startLinkedCaptureFromSavedSession:547"
       }
     },
     {
@@ -8670,7 +8677,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::renderSavedSessions:513"
+        "target": "src/data-layer-installed/capture/index.ts::renderSavedSessions:579"
       }
     },
     {
@@ -8684,7 +8691,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::savedSessionFileName:507"
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionFileName:573"
       }
     },
     {
@@ -8698,7 +8705,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::downloadSavedSessionFile:510"
+        "target": "src/data-layer-installed/capture/index.ts::downloadSavedSessionFile:576"
       }
     },
     {
@@ -8712,7 +8719,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::loadSavedSessionFile:647"
+        "target": "src/data-layer-installed/capture/index.ts::loadSavedSessionFile:713"
       }
     },
     {
@@ -8725,7 +8732,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::renderSessionState:774"
       }
     },
     {
@@ -8738,7 +8746,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::renderObserverState:775"
       }
     },
     {
@@ -8751,7 +8760,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::updateSessionFromObserverState:788"
       }
     },
     {
@@ -8765,7 +8775,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::syncCapturedEventsToLive:686"
+        "target": "src/data-layer-installed/capture/index.ts::syncCapturedEventsToLive:776"
       }
     },
     {
@@ -8778,7 +8788,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::persistAndRenderSessionState:789"
       }
     },
     {
@@ -8791,7 +8802,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::persistAndRenderObservationState:790"
       }
     },
     {
@@ -8804,7 +8816,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::restartLiveHistoryCaptureIfActive:791"
       }
     },
     {
@@ -8817,7 +8830,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::observationPageLoadId:794"
       }
     },
     {
@@ -8830,7 +8844,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::currentTargetObservation:797"
       }
     },
     {
@@ -8843,7 +8858,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::cancelLiveHistoryCaptureRuntime:829"
       }
     },
     {
@@ -8856,7 +8872,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::stopLiveHistoryCapture:833"
       }
     },
     {
@@ -8869,7 +8886,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::startLiveHistoryCapture:836"
       }
     },
     {
@@ -8883,7 +8901,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::clearScheduledObservationRefresh:708"
+        "target": "src/data-layer-installed/capture/index.ts::clearScheduledObservationRefresh:864"
       }
     },
     {
@@ -8896,7 +8914,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::activeSessionTabMatches:878"
       }
     },
     {
@@ -8909,7 +8928,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::capturePageEntryForRefresh:882"
       }
     },
     {
@@ -8923,7 +8943,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::scheduleObservationRefresh:714"
+        "target": "src/data-layer-installed/capture/index.ts::scheduleObservationRefresh:870"
       }
     },
     {
@@ -8936,7 +8956,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::refreshObservationAfterPageLoad:888"
       }
     },
     {
@@ -8949,7 +8970,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::runObservationRefresh:893"
       }
     },
     {
@@ -9002,7 +9024,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::currentSessionSaveDraft:564"
+        "target": "src/data-layer-installed/capture/index.ts::currentSessionSaveDraft:630"
       }
     },
     {
@@ -9016,7 +9038,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::openSessionSaveDialog:577"
+        "target": "src/data-layer-installed/capture/index.ts::openSessionSaveDialog:643"
       }
     },
     {
@@ -9030,7 +9052,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::startFreshSession:590"
+        "target": "src/data-layer-installed/capture/index.ts::startFreshSession:656"
       }
     },
     {
@@ -13042,7 +13064,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::observationTargetSearch?.addEventListener",
+        "target": "src/data-layer-installed/capture/index.ts::observationTargetSearch?.addEventListener:974",
         "reviewed": true
       }
     },
@@ -13052,11 +13074,12 @@
       "frozen": {
         "expression": "observationTargetSearch?.addEventListener",
         "line": 6271,
-        "column": 1,
-        "invocation": "observationTargetSearch?.addEventListener(\"keydown\", (event) =>\n  handleObservationTargetSearchKeydown(observationTargetElements, event))"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::observationTargetSearch?.addEventListener:975",
+        "reviewed": true
       }
     },
     {
@@ -13065,11 +13088,12 @@
       "frozen": {
         "expression": "observationTargetList?.addEventListener",
         "line": 6273,
-        "column": 1,
-        "invocation": "observationTargetList?.addEventListener(\"keydown\", (event) =>\n  handleObservationTargetListKeydown(observationTargetElements, event))"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::observationTargetList?.addEventListener:976",
+        "reviewed": true
       }
     },
     {
@@ -13078,11 +13102,12 @@
       "frozen": {
         "expression": "observationTargetPicker?.addEventListener",
         "line": 6275,
-        "column": 1,
-        "invocation": "observationTargetPicker?.addEventListener(\"keydown\", (event) =>\n  handleObservationTargetDialogKeydown(observationTargetElements, event))"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::observationTargetPicker?.addEventListener:977",
+        "reviewed": true
       }
     },
     {
@@ -13091,11 +13116,12 @@
       "frozen": {
         "expression": "chrome.tabs.onUpdated.addListener",
         "line": 6279,
-        "column": 3,
-        "invocation": "chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {\n    if (changeInfo.url !== undefined) {\n      const current = observationTargetState.targets.find((target) => target.tabId === tabId);\n      if (current) {\n        observationTargetState = navigateObservationTarget(\n          observationTargetState,\n          tabId,\n          changeInfo.url,\n        );\n        const updated = observationTargetState.targets.find(\n          (target) => target.tabId === tabId,\n        );\n        if (updated && tab.title) {\n          observationTargetState = registerObservationTarget(\n            observationTargetState,\n            { ...updated, title: tab.title },\n          );\n        }\n        renderObservationTargetPicker();\n        renderObservationTargetContext();\n      }\n    }\n    if (!activeSessionTabMatches(tabId)) {\n      return;\n    }\n\n    if (changeInfo.status === \"loading\" || changeInfo.url !== undefined) {\n      observationRefreshState = beginObservedPageLoad(observationRefreshState);\n      clearScheduledObservationRefresh();\n      stopLiveHistoryCapture();\n\n      if (changeInfo.url !== undefined) {\n        dataLayerSessionState = navigateSession(\n          dataLayerSessionState,\n          changeInfo.url,\n        );\n        recordSpecificationNavigation(globalThis.localStorage,{\n          sessionId:`tab:${tabId}`,\n          pageUrl:changeInfo.url,\n        });\n        persistAndRenderSessionState();\n      }\n    }\n\n    if (changeInfo.status === \"complete\") {\n      const pageUrl =\n        tab.url ??\n        changeInfo.url ??\n        dataLayerSessionState.session?.currentUrl ??\n        globalThis.location.href;\n\n      refreshObservationAfterPageLoad(\n        tabId,\n        pageUrl,\n        observationRefreshState.observedPageLoadSequence,\n      );\n    }\n  })"
+        "column": 3
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::ports.observerRuntime.subscribeTabUpdated",
+        "reviewed": true
       }
     },
     {
@@ -13104,11 +13130,12 @@
       "frozen": {
         "expression": "chrome.tabs.onRemoved.addListener",
         "line": 6340,
-        "column": 3,
-        "invocation": "chrome.tabs.onRemoved.addListener((tabId) => {\n    const target = observationTargetState.targets.find((candidate) => candidate.tabId === tabId);\n    if (!target) return;\n    observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, \"Closed\");\n    if (dataLayerSessionState.session?.tabId === tabId) {\n      stopLiveHistoryCapture();\n      setObservationTargetResult(\"Target unavailable — Save session, End session, or Choose target\");\n      persistAndRenderObservationState();\n    }\n    renderObservationTargetPicker();\n    renderObservationTargetContext();\n  })"
+        "column": 3
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::ports.observerRuntime.subscribeTabRemoved",
+        "reviewed": true
       }
     },
     {
@@ -13117,11 +13144,12 @@
       "frozen": {
         "expression": "chrome.permissions.onRemoved.addListener",
         "line": 6355,
-        "column": 3,
-        "invocation": "chrome.permissions.onRemoved.addListener((permissions) => {\n    revokeObservationTargetOrigins(permissions.origins ?? []);\n  })"
+        "column": 3
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::ports.observerRuntime.subscribePermissionsRemoved",
+        "reviewed": true
       }
     },
     {
@@ -13191,7 +13219,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::globalThis.setTimeout:227"
+        "target": "src/data-layer-installed/capture/index.ts::globalThis.setTimeout:269"
       }
     },
     {
@@ -13204,7 +13232,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::globalThis.setTimeout:717",
+        "target": "src/data-layer-installed/capture/index.ts::globalThis.setTimeout:873",
         "reviewed": true
       }
     }

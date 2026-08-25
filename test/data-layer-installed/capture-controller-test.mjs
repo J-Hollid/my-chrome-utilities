@@ -4,7 +4,7 @@ let subscriptions = 0, removals = 0, listener, changes = 0;
 const values = new Map();
 const noOpCaptureUi = {
   historyPath:() => ({ path:"event.history", fieldValue:"event.history", status:"Ready" }),
-  restartObservation() {}, chooseObservationTarget() {}, browseObservationTargets() {},
+  chooseObservationTarget() {}, browseObservationTargets() {},
   closeObservationTargetPicker() {}, searchObservationTargets() {}, cancelDetachTarget() {},
   confirmDetachTarget() {},
   showDataLayerView() {}, backToEvents() {}, copyPageUrl() {}, reportMissingEvent() {},
@@ -17,6 +17,13 @@ const noOpSavedSessions = {
   render() {}, resetFlowTesting() {}, createReplaySequence() {},
 };
 const noOpSavedFilters = { createId:() => "saved-filter:1", render() {}, dispose() {} };
+const noOpObserverRuntime = {
+  read:async ({ tabId, pageUrl, historyPath, pageLoadId }) => ({ tabId, pageUrl, historyPath, pageLoadId,
+    pageAccessStatus:"page access available", pageObject:{ dataLayer:[] } }),
+  startPush:async () => () => {}, present:(event) => ({ ...event, sourceName:event.sourceId }),
+  recordCapture() {}, recordNavigation() {}, subscribeTabUpdated:() => () => {},
+  subscribeTabRemoved:() => () => {}, subscribePermissionsRemoved:() => () => {},
+};
 const controller = createCaptureInstalledController({
   root:{ querySelector:() => null },
   storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value) },
@@ -24,7 +31,7 @@ const controller = createCaptureInstalledController({
   sessionStart:async () => ({ id:"session:1", tabId:4, url:"https://shop.example/", historyPath:"event.history" }),
   subscribeToLiveFeed:(next) => { subscriptions += 1; listener = next; return () => { removals += 1; listener = undefined; }; },
   changed:() => { changes += 1; },
-  runCommand() {}, setLiveSessionMessage() {}, runObservationRefresh() {},
+  runCommand() {}, setLiveSessionMessage() {}, observerRuntime:noOpObserverRuntime,
   observation:noOpObservation,
   savedSessions:noOpSavedSessions,
   savedFilters:noOpSavedFilters,
@@ -80,7 +87,7 @@ const uiController = createCaptureInstalledController({
   storage:{ getItem:() => null, setItem() {} }, initialPageUrl:() => "https://shop.example/",
   initialSources:() => [], sessionStart:async () => ({ id:"unused", tabId:1, url:"", historyPath:"" }),
   subscribeToLiveFeed:() => () => {}, changed() {}, runCommand() {}, setLiveSessionMessage() {},
-  runObservationRefresh() {}, observation:{
+  observerRuntime:noOpObserverRuntime, observation:{
     discover:async (scope) => scope === "current" ? [currentTarget] : [currentTarget, checkoutTarget],
     requestTabsAccess:async () => true, requestOriginAccess:async () => false,
     attach:async (target) => { uiCalls.push(`attach:${target.tabId}`); return true; },
@@ -88,13 +95,13 @@ const uiController = createCaptureInstalledController({
     render:(targets, actions) => { renderedTargets = targets; renderedTargetActions = actions; },
   }, ui:{
     historyPath:() => ({ path:"dataLayer", fieldValue:"dataLayer", status:"Waiting for path" }),
-    restartObservation:() => uiCalls.push("restart"), chooseObservationTarget:() => uiCalls.push("choose"),
+    chooseObservationTarget:() => uiCalls.push("choose"),
     browseObservationTargets:() => uiCalls.push("browse"), closeObservationTargetPicker:() => uiCalls.push("close"),
     searchObservationTargets:(query) => uiCalls.push(`search:${query}`),
     cancelDetachTarget:() => uiCalls.push("cancel"), confirmDetachTarget:() => uiCalls.push("confirm"),
     ...noOpCaptureUi,
     historyPath:() => ({ path:"dataLayer", fieldValue:"dataLayer", status:"Waiting for path" }),
-    restartObservation:() => uiCalls.push("restart"), chooseObservationTarget:() => uiCalls.push("choose"),
+    chooseObservationTarget:() => uiCalls.push("choose"),
     browseObservationTargets:() => uiCalls.push("browse"), closeObservationTargetPicker:() => uiCalls.push("close"),
     searchObservationTargets:(query) => uiCalls.push(`search:${query}`),
     cancelDetachTarget:() => uiCalls.push("cancel"), confirmDetachTarget:() => uiCalls.push("confirm"),
@@ -121,10 +128,68 @@ elements.get("#close-observation-target-picker").dispatch("click");
 elements.get("#observation-target-search").value = "checkout";
 elements.get("#observation-target-search").dispatch("input");
 assert.deepEqual(renderedTargets.map(({ title }) => title), ["Checkout"]);
-assert.deepEqual(uiCalls, ["restart", "attach:7", "detach:7", "attach:8", "close"]);
+assert.deepEqual(uiCalls, ["attach:7", "detach:7", "attach:8", "close"]);
 uiController.dispose();
 assert.equal([...elements.values()].reduce((count, element) => count + element.listenerCount(), 0), 0,
   "Capture removes every observation-target listener it owns");
+
+let tabUpdated, tabRemoved, permissionsRemoved, pushActions, pushStops = 0, runtimeUnsubscribes = 0;
+let resolveStaleRead;
+let pageAccessAvailable = true;
+const observerRuntime = {
+  ...noOpObserverRuntime,
+  read:({ tabId, pageUrl, historyPath, pageLoadId }) => pageUrl.includes("stale")
+    ? new Promise((resolve) => { resolveStaleRead = () => resolve({ tabId, pageUrl, historyPath, pageLoadId,
+      pageAccessStatus:"page access available", pageObject:{ dataLayer:[] } }); })
+    : Promise.resolve({ tabId, pageUrl, historyPath, pageLoadId,
+      pageAccessStatus:pageAccessAvailable ? "page access available" : "page access unavailable",
+      ...(pageAccessAvailable ? { pageObject:{ dataLayer:[] } } : {}) }),
+  startPush:async (actions) => { pushActions = actions; return () => { pushStops += 1; }; },
+  present:(event, destination) => ({ ...event, sourceName:"History", destination, validation:"Valid" }),
+  recordCapture:() => {}, recordNavigation:() => {},
+  subscribeTabUpdated:(listener) => { tabUpdated = listener; return () => { runtimeUnsubscribes += 1; }; },
+  subscribeTabRemoved:(listener) => { tabRemoved = listener; return () => { runtimeUnsubscribes += 1; }; },
+  subscribePermissionsRemoved:(listener) => { permissionsRemoved = listener; return () => { runtimeUnsubscribes += 1; }; },
+};
+const observerController = createCaptureInstalledController({
+  root:{ querySelector:() => null }, storage:{ getItem:() => null, setItem() {}, removeItem() {} },
+  initialPageUrl:() => "https://shop.example/", initialSources:() => [{ id:"event-history", name:"History", status:"Connected" }],
+  sessionStart:async () => ({ id:"observer-session", tabId:9, windowId:2, url:"https://shop.example/", historyPath:"dataLayer" }),
+  subscribeToLiveFeed:() => () => {}, changed() {}, runCommand() {}, setLiveSessionMessage() {},
+  observerRuntime, observation:{ ...noOpObservation,
+    discover:async () => [{ tabId:9, windowId:2, pageUrl:"https://shop.example/", title:"Shop" }] },
+  savedSessions:noOpSavedSessions, savedFilters:noOpSavedFilters, ui:noOpCaptureUi,
+});
+observerController.mount(); await observerController.begin(); await observerController.discoverTargets();
+tabUpdated(9, { status:"loading", url:"https://shop.example/stale" }, { url:"https://shop.example/stale", title:"Stale" });
+tabUpdated(9, { status:"complete" }, { url:"https://shop.example/stale", title:"Stale" });
+await new Promise((resolve) => setTimeout(resolve, 0));
+tabUpdated(9, { status:"loading", url:"https://shop.example/current" }, { url:"https://shop.example/current", title:"Current" });
+resolveStaleRead(); await new Promise((resolve) => setTimeout(resolve, 0));
+assert.equal(pushActions, undefined, "a superseded page read cannot activate stale capture");
+tabUpdated(9, { status:"complete" }, { url:"https://shop.example/current", title:"Current" });
+await new Promise((resolve) => setTimeout(resolve, 0));
+assert.ok(pushActions, "the current completed page activates observer push capture");
+pushActions.onSnapshot({ historyPath:"dataLayer", rawValues:[{ event:"snapshot" }] });
+pushActions.onEntry({ rawValue:{ event:"purchase" }, timestamp:"2026-08-25T00:00:04.000Z" });
+assert.equal(observerController.state().observer.events.length, 2);
+assert.equal(observerController.state().session.session.timeline.filter(({ type }) => type === "observed").length, 2);
+pageAccessAvailable = false;
+tabUpdated(9, { status:"loading", url:"https://shop.example/denied" }, { url:"https://shop.example/denied", title:"Denied" });
+tabUpdated(9, { status:"complete" }, { url:"https://shop.example/denied", title:"Denied" });
+await new Promise((resolve) => setTimeout(resolve, 0));
+assert.equal(observerController.state().targets.targets[0].accessState, "Permission required",
+  "an unavailable current refresh transitions the selected target to access recovery");
+permissionsRemoved(["https://shop.example/*"]);
+assert.equal(observerController.state().targets.targets[0].accessState, "Permission required");
+tabRemoved(9);
+assert.equal(observerController.state().targets.targets[0].accessState, "Closed");
+assert.ok(pushStops >= 1, "tab removal stops the active push capture");
+observerController.dispose(); observerController.dispose();
+assert.equal(runtimeUnsubscribes, 3, "Capture removes all browser-runtime subscriptions exactly once");
+const eventsBeforeStalePush = observerController.state().observer.events.length;
+pushActions.onEntry({ rawValue:{ event:"late" }, timestamp:"2026-08-25T00:00:05.000Z" });
+assert.equal(observerController.state().observer.events.length, eventsBeforeStalePush, "disposed activation rejects stale push events");
 
 const sessionSelectors = [
   "#data-layer-views", "#back-to-events", "#copy-live-page-url", "#save-live-session", "#start-fresh-session",
@@ -156,7 +221,7 @@ const sessionController = createCaptureInstalledController({
     setItem:(key, value) => persistedSessions.set(key, value), removeItem:(key) => persistedSessions.delete(key) },
   initialPageUrl:() => "https://shop.example/", initialSources:() => [],
   sessionStart:async () => ({ id:"live:1", tabId:1, url:"https://shop.example/", historyPath:"dataLayer" }), subscribeToLiveFeed:() => () => {},
-  changed() {}, runCommand() {}, setLiveSessionMessage:(message) => sessionCalls.push(`message:${message}`), runObservationRefresh() {}, ui:noOpCaptureUi,
+  changed() {}, runCommand() {}, setLiveSessionMessage:(message) => sessionCalls.push(`message:${message}`), observerRuntime:noOpObserverRuntime, ui:noOpCaptureUi,
   observation:noOpObservation,
   savedSessions:sessionPorts,
   savedFilters:noOpSavedFilters,
@@ -234,7 +299,7 @@ const filterController = createCaptureInstalledController({
       filterStorage.set(key, value); }, removeItem:(key) => filterStorage.delete(key) },
   initialPageUrl:() => "https://shop.example/", initialSources:() => [],
   sessionStart:async () => ({ id:"filter-session", tabId:3, url:"https://shop.example/", historyPath:"dataLayer" }),
-  subscribeToLiveFeed:() => () => {}, changed() {}, runCommand() {}, setLiveSessionMessage() {}, runObservationRefresh() {},
+  subscribeToLiveFeed:() => () => {}, changed() {}, runCommand() {}, setLiveSessionMessage() {}, observerRuntime:noOpObserverRuntime,
   observation:noOpObservation, savedSessions:noOpSavedSessions, ui:noOpCaptureUi,
   savedFilters:{ createId:() => "saved-filter:checkout",
     render:(_events, _query, controls, update) => { filterControls = controls; updateWorkingFilter = update; },
