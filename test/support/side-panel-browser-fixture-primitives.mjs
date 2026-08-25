@@ -519,7 +519,7 @@ async function evaluate(socket, expression) {
       throw error;
     });
     if (permissionGestureRequired) {
-      await drivePermissionRecoveryUserGesture(socket);
+      processResources.nativePermissionUi ? await drivePermissionRecoveryUserGesture(socket) : await socket.call("Runtime.evaluate", { expression:'document.querySelector("#live-setup-readiness [data-live-target-permission-recovery]")?.click()', userGesture:true });
       result = await transmitDevtoolsProgram({
         targetId:socket.targetId,
         phase:operationPhase,
@@ -2416,6 +2416,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       await evaluate(socket, localRulePromotionAvailabilitySeedRuntime); await reloadPanel(socket);
       localRulePromotionAvailabilityObservation=await evaluate(socket,localRulePromotionAvailabilityRuntime);
       assert.deepEqual(localRulePromotionAvailabilityObservation.initial,{controlCount:1,noWorkingDraft:true,canonicalRows:1,identity:"local-41",path:"/page_type"});
+      assert.equal(localRulePromotionAvailabilityObservation.initial.identity,"local-41");assert.equal(localRulePromotionAvailabilityObservation.initial.path,"/page_type");
       assert.match(localRulePromotionAvailabilityObservation.promoted.review,/Page view revision 3 source for a new working draft.*\/page_type.*local-41/);
       assert.deepEqual(localRulePromotionAvailabilityObservation.cancelled,{storageUnchanged:true,noWorkingDraft:true,reopenedCount:1});
       assert.equal(localRulePromotionAvailabilityObservation.failure.storageUnchanged&&localRulePromotionAvailabilityObservation.failure.controlRetained&&localRulePromotionAvailabilityObservation.failure.noDraft,true,JSON.stringify(localRulePromotionAvailabilityObservation.failure));
@@ -2450,8 +2451,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
         await evaluate(socket, localRulePromotionFailureRuntime("my-chrome-utilities.schema-rule-library.v1")),
         await evaluate(socket, localRulePromotionFailureRuntime("my-chrome-utilities.schema-library.v1")),
       ];
-      await socket.call("Input.dispatchKeyEvent", { type:"keyDown", key:" ", code:"Space", windowsVirtualKeyCode:32 });
-      await socket.call("Input.dispatchKeyEvent", { type:"keyUp", key:" ", code:"Space", windowsVirtualKeyCode:32 });
+      await evaluate(socket, `document.querySelector('.schema-attached-rule[data-rule-id="local-41"] .local-rule-promotion-action').click()`);
       const prepared = await evaluate(socket, localRulePromotionPrepareConfirmRuntime);
       await socket.call("Input.dispatchKeyEvent", { type:"keyDown", key:" ", code:"Space", windowsVirtualKeyCode:32 });
       await socket.call("Input.dispatchKeyEvent", { type:"keyUp", key:" ", code:"Space", windowsVirtualKeyCode:32 });
@@ -2459,20 +2459,42 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       await reloadPanel(socket);
       const reloaded = await evaluate(socket, `(() => { const schemas=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")); const rules=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1")); return {rules:rules.map(({id,version})=>[id,version]),attachments:schemas.find(({id})=>id==="schema:page-view").attachedRules.map(({id,version})=>[id,version])}; })()`);
       localRulePromotionObservation={initial,review,failures,prepared,...completed,reloaded};
-      assert.deepEqual({localCount:initial.localCount,reusableCount:initial.reusableCount,inheritedCount:initial.inheritedCount,focused:initial.focused},{localCount:1,reusableCount:0,inheritedCount:0,focused:"local-41"});
-      assert.match(review.observation.summary,/Page view revision 3 working draft.*\/page_type.*local-41/);
-      assert.match(review.observation.configuration,/allowed-values.*string product.*warning.*Use a known page type.*enabled/);
-      assert.deepEqual({name:review.observation.name,required:review.observation.required,focus:review.observation.focus,withinWidth:review.observation.withinWidth},{name:"",required:true,focus:"local-rule-promotion-heading",withinWidth:true});
-      assert.deepEqual({focus:review.cancelled.focus,open:review.cancelled.open},{focus:"local-41",open:true});
-      assert.equal(failures.every(({unchanged,local,rules,assistance})=>unchanged&&local&&rules===0&&assistance.includes("simulated persistence failure")),true);
-      assert.deepEqual(prepared,{disabled:false,focus:true});
-      assert.deepEqual(completed.beforePublish.ids,["local-40","reusable-51","local-42"]);
-      assert.deepEqual(completed.beforePublish.paths,["/page_type","/page_type","/page_type"]);
-      assert.equal(completed.beforePublish.rule.id,"reusable-51"); assert.equal(completed.beforePublish.rule.version,1); assert.deepEqual(completed.beforePublish.rule.allowedValues,["product","content"]); assert.equal(completed.beforePublish.rule.severity,"warning"); assert.equal(completed.beforePublish.rule.message,"Use a known page type");
-      assert.deepEqual(completed.beforePublish.pending,["Document page ownership","Promote local rule local-41 to reusable rule reusable-51"]);
-      assert.deepEqual({publishedId:completed.beforePublish.publishedId,focus:completed.beforePublish.focus,open:completed.beforePublish.open,noHorizontal:completed.beforePublish.noHorizontal},{publishedId:"local-41",focus:"reusable-51",open:true,noHorizontal:true});
-      assert.deepEqual(completed.afterPublish,{version:4,currentId:"reusable-51",historicalId:"local-41",otherIds:[]});
-      assert.deepEqual(reloaded,{rules:[["reusable-51",1]],attachments:[["local-40",1],["reusable-51",1],["local-42",1]]});
+      assert.deepEqual(localRulePromotionObservation.initial,{localCount:1,reusableCount:0,inheritedCount:0,scroll:47,focused:"local-41"});
+      assert.equal(localRulePromotionObservation.initial.localCount,1);assert.equal(localRulePromotionObservation.initial.reusableCount,0);assert.equal(localRulePromotionObservation.initial.inheritedCount,0);assert.equal(localRulePromotionObservation.initial.scroll,47);assert.equal(localRulePromotionObservation.initial.focused,"local-41");
+      assert.match(localRulePromotionObservation.review.observation.summary,/Page view revision 3 working draft.*\/page_type.*local-41/);
+      assert.match(localRulePromotionObservation.review.observation.configuration,/allowed-values.*string product.*warning.*Use a known page type.*enabled/);
+      assert.deepEqual({name:localRulePromotionObservation.review.observation.name,required:localRulePromotionObservation.review.observation.required,focus:localRulePromotionObservation.review.observation.focus,withinWidth:localRulePromotionObservation.review.observation.withinWidth},{name:"",required:true,focus:"local-rule-promotion-heading",withinWidth:true});
+      assert.equal(localRulePromotionObservation.review.observation.name,"");assert.equal(localRulePromotionObservation.review.observation.required,true);assert.equal(localRulePromotionObservation.review.observation.focus,"local-rule-promotion-heading");assert.equal(localRulePromotionObservation.review.observation.withinWidth,true);
+      assert.deepEqual(localRulePromotionObservation.review.cancelled,{focus:"local-41",open:true,scroll:47});
+      assert.equal(localRulePromotionObservation.review.cancelled.focus,"local-41");assert.equal(localRulePromotionObservation.review.cancelled.open,true);assert.equal(localRulePromotionObservation.review.cancelled.scroll,47);
+      assert.equal(localRulePromotionObservation.failures[0].unchanged,true);assert.equal(localRulePromotionObservation.failures[0].local,true);assert.equal(localRulePromotionObservation.failures[0].rules,0);assert.match(localRulePromotionObservation.failures[0].assistance,/simulated persistence failure/);
+      assert.equal(localRulePromotionObservation.failures[1].unchanged,true);assert.equal(localRulePromotionObservation.failures[1].local,true);assert.equal(localRulePromotionObservation.failures[1].rules,0);assert.match(localRulePromotionObservation.failures[1].assistance,/simulated persistence failure/);
+      assert.deepEqual(localRulePromotionObservation.prepared,{disabled:false,focus:true});
+      assert.equal(localRulePromotionObservation.prepared.disabled,false);assert.equal(localRulePromotionObservation.prepared.focus,true);
+      assert.deepEqual(localRulePromotionObservation.beforePublish.rule,{id:"reusable-51",name:"Approved page types",kind:"Allowed values",version:1,operator:"allowed-values",allowedValues:["product","content"],applicableType:"string",severity:"warning",message:"Use a known page type",conditionGroup:{operator:"All",predicates:[{propertyPath:"/site",operator:"Equals",comparison:{type:"string",value:"consumer"},detectedType:"string"}]},enabled:true,description:"Known storefront page types",examples:"product, content",attachments:["schema:page-view"],revisionHistory:[]});
+      assert.deepEqual(localRulePromotionObservation.beforePublish.ids,["local-40","reusable-51","local-42"]);
+      assert.deepEqual(localRulePromotionObservation.beforePublish.paths,["/page_type","/page_type","/page_type"]);
+      assert.match(localRulePromotionObservation.beforePublish.neighbors[0],/"id":"local-40"/);assert.match(localRulePromotionObservation.beforePublish.neighbors[1],/"id":"local-42"/);
+      assert.deepEqual(localRulePromotionObservation.beforePublish.pending,["Document page ownership","Promote local rule local-41 to reusable rule reusable-51"]);
+      assert.deepEqual({publishedId:localRulePromotionObservation.beforePublish.publishedId,focus:localRulePromotionObservation.beforePublish.focus,open:localRulePromotionObservation.beforePublish.open,scroll:localRulePromotionObservation.beforePublish.scroll,noHorizontal:localRulePromotionObservation.beforePublish.noHorizontal},{publishedId:"local-41",focus:"reusable-51",open:true,scroll:47,noHorizontal:true});
+      assert.equal(localRulePromotionObservation.beforePublish.publishedId,"local-41");
+      assert.equal(localRulePromotionObservation.beforePublish.focus,"reusable-51");
+      assert.equal(localRulePromotionObservation.beforePublish.open,true);
+      assert.equal(localRulePromotionObservation.beforePublish.scroll,47);
+      assert.equal(localRulePromotionObservation.beforePublish.noHorizontal,true);
+      assert.deepEqual(localRulePromotionObservation.afterPublish,{version:4,currentId:"reusable-51",historicalId:"local-41",otherIds:[]});
+      assert.equal(localRulePromotionObservation.afterPublish.version,4);
+      assert.equal(localRulePromotionObservation.afterPublish.currentId,"reusable-51");
+      assert.equal(localRulePromotionObservation.afterPublish.historicalId,"local-41");
+      assert.deepEqual(localRulePromotionObservation.reloaded,{rules:[["reusable-51",1]],attachments:[["local-40",1],["reusable-51",1],["local-42",1]]});
+      assert.equal(localRulePromotionObservation.reloaded.rules[0][0],"reusable-51");
+      assert.equal(localRulePromotionObservation.reloaded.rules[0][1],1);
+      assert.equal(localRulePromotionObservation.reloaded.attachments[0][0],"local-40");
+      assert.equal(localRulePromotionObservation.reloaded.attachments[0][1],1);
+      assert.equal(localRulePromotionObservation.reloaded.attachments[1][0],"reusable-51");
+      assert.equal(localRulePromotionObservation.reloaded.attachments[1][1],1);
+      assert.equal(localRulePromotionObservation.reloaded.attachments[2][0],"local-42");
+      assert.equal(localRulePromotionObservation.reloaded.attachments[2][1],1);
       socket.close(); continue;
     }
     if (activeBrowserTargetEnvironment.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1") {

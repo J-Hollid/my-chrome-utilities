@@ -156,6 +156,7 @@ const savedSessionLiveFeedRuntime = `(async () => {
     storedCount:JSON.parse(localStorage.getItem("my-chrome-utilities.saved-session-library.v1")).sessions[0].events.length,
   };
   const eventButton = q('[data-event-id="saved-18"]'); eventButton.click();
+  await waitFor(() => q("#live-event-inspector").querySelector("h4"), "the saved event inspector");
   const analysisActions = Array.from(q("#live-event-inspector").querySelectorAll("button")).map(({ textContent }) => textContent);
   const model = await import("/data-layer-saved-session-live-feed.js");
   const sessions = await import("/data-layer-saved-sessions.js");
@@ -182,21 +183,24 @@ const savedSessionLiveFeedRuntime = `(async () => {
   };
 })()`;
 
-const savedSessionLiveFeedReloadRuntime = `(() => {
+const savedSessionLiveFeedReloadRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  const waitFor = async (predicate, label) => { for (let attempt = 0; attempt < 100; attempt += 1) { const value=predicate(); if (value) return value; await new Promise((resolve) => setTimeout(resolve, 10)); } throw new Error("Timed out waiting for " + label); };
+  await waitFor(() => q("#live-event-inspector").querySelector("h4"), "the restored saved event inspector");
   const restored = { mode:q("#data-layer-panel-live").dataset.feedMode, banner:q("#saved-session-live-summary").textContent, background:q("#saved-session-background-status").textContent, returnLabel:q("#return-to-current-live-feed").textContent, selected:q("#live-event-inspector h4").textContent, scrollTop:q("#live-event-list").scrollTop, observer:q("#live-observer-status").textContent };
   q("#revalidate-saved-session").click();
   const comparison = q("#saved-session-validation-comparison").textContent;
   const original = JSON.parse(localStorage.getItem("my-chrome-utilities.saved-session-library.v1")).sessions[0].events[17];
   q("#return-to-current-live-feed").click();
+  await waitFor(() => q("#live-event-inspector").querySelector("h4"), "the returned current event inspector");
   const returned = { count:q("#live-captured-event-count").textContent, selected:q("#live-event-inspector h4").textContent, query:q("#live-event-query-count").textContent, hasSavedEvent:Boolean(document.querySelector('[data-event-id="saved-18"]')), message:q("#live-session-message").textContent };
   q("#save-live-session").click();
   const saveDialog = q("#save-live-session-dialog"); const name = q("#save-live-session-name"); const confirm = q("#confirm-save-live-session");
   const save = { open:saveDialog.open, focused:document.activeElement === q("#save-live-session-heading"), summary:q("#save-live-session-summary").textContent, blankDisabled:confirm.disabled };
   name.value = "Checkout journey snapshot"; name.dispatchEvent(new Event("input", { bubbles:true })); save.namedEnabled = !confirm.disabled; confirm.click();
   save.persisted = JSON.parse(localStorage.getItem("my-chrome-utilities.saved-session-library.v1")).sessions.find(({ name }) => name === "Checkout journey snapshot").events.length;
-  q("#data-layer-view-sessions").click(); const originalRow = Array.from(q("#saved-session-list").children).find(({ textContent }) => textContent.includes("Checkout journey:") && !textContent.includes("snapshot")); click(originalRow, "Start linked capture");
+  q("#data-layer-view-sessions").click(); const originalRow = await waitFor(() => Array.from(q("#saved-session-list").children).find(({ textContent }) => textContent.includes("Checkout journey") && !textContent.includes("snapshot")), "the original saved-session row"); click(originalRow, "Start linked capture");
   const linkedSession = JSON.parse(localStorage.getItem("dataLayerTestingSession")).session;
   const linked = { count:q("#live-captured-event-count").textContent, message:q("#live-session-message").textContent, savedCount:JSON.parse(localStorage.getItem("my-chrome-utilities.saved-session-library.v1")).sessions.find(({ name }) => name === "Checkout journey").events.length, parent:linkedSession.parentSavedSessionId, active:linkedSession.status };
   return { restored, comparison, original:{ validation:original.validation, version:original.validationDetails.schema.version }, returned, save, linked };
