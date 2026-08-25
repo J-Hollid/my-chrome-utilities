@@ -5,7 +5,9 @@ const template = { id:"template:1", name:"Page view", eventName:"page_view", sou
   version:1, provenance:"captured" };
 const values = new Map([["my-chrome-utilities.event-template-library.v1", JSON.stringify([template])]]);
 let changed = 0, pushed;
-const noOpTransfer = { downloadExport() {}, readImportFile:async () => "", validateDraft() {}, backToCapturedEvent() {} };
+const noOpTransfer = { downloadExport() {}, readImportFile:async () => "", validateDraft() {}, backToCapturedEvent() {},
+  pushTarget:() => ({ id:"target:1", tabId:1, windowId:1, title:"Checkout", pageUrl:"https://shop.example/checkout",
+    origin:"https://shop.example", accessState:"Ready" }), renderPushReview() {}, renderRevisionReview() {} };
 const controller = createEventLibraryInstalledController({
   root:{ querySelector:() => null },
   storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value) },
@@ -75,7 +77,10 @@ const editorSelectors = ["#event-template-name", "#event-template-event-name", "
   "#event-template-rename-event-name", "#event-template-rename-name-error", "#event-template-rename-event-name-error",
   "#save-template-names", "#cancel-template-rename", "#event-template-rename-review",
   "#event-template-rename-review-heading", "#event-template-rename-review-summary", "#confirm-template-rename",
-  "#cancel-template-rename-review"];
+  "#cancel-template-rename-review", "#push-draft-review", "#push-draft-review-heading", "#push-draft-review-summary",
+  "#confirm-push-draft", "#cancel-push-draft", "#revision-change-review", "#revision-change-review-heading",
+  "#confirm-revision-change", "#cancel-revision-change", "#close-template-editor-confirmation",
+  "#close-template-editor-summary", "#keep-editing-template", "#save-and-close-template", "#discard-and-close-template"];
 const editorElements = new Map(editorSelectors.map((selector) => [selector, element()]));
 let editorPush, returned = 0;
 const editorController = createEventLibraryInstalledController({
@@ -89,8 +94,15 @@ editorElements.get("#event-template-name").value = "Checkout"; editorElements.ge
 editorElements.get("#push-destination-path").value = "checkout.events";
 editorElements.get("#push-destination-path").dispatch("input");
 editorElements.get("#save-template-revision").click();
+assert.equal(editorElements.get("#revision-change-review").open, true);
+editorElements.get("#cancel-revision-change").click();
+assert.equal(editorController.templates()[0].name, "Page view", "revision cancellation leaves the saved template untouched");
+editorElements.get("#save-template-revision").click(); editorElements.get("#confirm-revision-change").click();
 assert.equal(editorController.templates()[0].name, "Checkout");
-editorElements.get("#push-template-draft").click(); await new Promise((resolve) => setTimeout(resolve, 0));
+editorElements.get("#push-template-draft").click(); assert.equal(editorElements.get("#push-draft-review").open, true);
+editorElements.get("#cancel-push-draft").click(); assert.equal(editorPush, undefined, "push cancellation performs no side effect");
+editorElements.get("#push-template-draft").click(); editorElements.get("#confirm-push-draft").click();
+await new Promise((resolve) => setTimeout(resolve, 0));
 assert.equal(editorPush, "Checkout");
 editorElements.get("#back-to-captured-event").click(); assert.equal(returned, 1);
 editorController.beginRename("template:1");
@@ -108,6 +120,12 @@ assert.equal(editorElements.get("#event-template-rename").open, true, "review ca
 editorElements.get("#save-template-names").click(); editorElements.get("#confirm-template-rename").click();
 assert.equal(editorController.templates()[0].name, "Checkout complete");
 assert.equal(editorController.templates()[0].eventName, "checkout_complete");
+editorElements.get("#event-template-name").value = "Unsaved rename"; editorElements.get("#event-template-name").dispatch("input");
+editorElements.get("#close-template-editor").click();
+assert.equal(editorElements.get("#close-template-editor-confirmation").hidden, false, "dirty close opens its controller-owned decision state");
+editorElements.get("#keep-editing-template").click(); assert.equal(editorController.state().editor.template.name, "Unsaved rename");
+editorElements.get("#close-template-editor").click(); editorElements.get("#discard-and-close-template").click();
+assert.equal(editorController.state().editor, undefined, "discard closes without persisting dirty state");
 editorController.dispose();
 assert.equal([...editorElements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
   "Event Library removes template-editor listeners on disposal");

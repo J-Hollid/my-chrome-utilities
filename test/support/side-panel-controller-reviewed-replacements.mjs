@@ -149,4 +149,13 @@ export const reviewedControllerReplacements = [
   { identity:"listeners:261:confirmTemplateRenameButton?.addEventListener@6067:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"confirmTemplateRenameButton?.addEventListener" },
   { identity:"listeners:262:cancelTemplateRenameReviewButton?.addEventListener@6068:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"cancelTemplateRenameReviewButton?.addEventListener" },
   { identity:"listeners:263:templateRenameReview?.addEventListener@6069:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"templateRenameReview?.addEventListener" },
+  { identity:"listeners:267:confirmPushDraftButton?.addEventListener@6112:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"confirmPushDraftButton?.addEventListener" },
+  { identity:"listeners:268:cancelPushDraftButton?.addEventListener@6118:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"cancelPushDraftButton?.addEventListener" },
+  { identity:"listeners:269:confirmRevisionChangeButton?.addEventListener@6122:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"confirmRevisionChangeButton?.addEventListener" },
+  { identity:"listeners:270:cancelRevisionChangeButton?.addEventListener@6123:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"cancelRevisionChangeButton?.addEventListener" },
+  { identity:"listeners:271:revisionChangeReview?.addEventListener@6124:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"revisionChangeReview?.addEventListener" },
+  { identity:"listeners:272:pushDraftReview?.addEventListener@6125:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"pushDraftReview?.addEventListener" },
+  { identity:"listeners:275:keepEditingTemplateButton?.addEventListener@6148:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"keepEditingTemplateButton?.addEventListener" },
+  { identity:"listeners:276:saveAndCloseTemplateButton?.addEventListener@6149:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"saveAndCloseTemplateButton?.addEventListener" },
+  { identity:"listeners:277:discardAndCloseTemplateButton?.addEventListener@6162:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"discardAndCloseTemplateButton?.addEventListener" },
 ];

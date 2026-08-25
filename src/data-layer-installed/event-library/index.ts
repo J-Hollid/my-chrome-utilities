@@ -3,6 +3,8 @@ import {
   appendImportedTemplates,
   beginTemplateRename,
   clearEventLibrary,
+  createPushDraftReview,
+  createTemplateChangeReview,
   createNewEventEditor,
   deleteEventTemplate,
   discardDraft,
@@ -25,7 +27,9 @@ import {
   setTemplateIdentity,
   updateDraftJson,
   type EditableEventTemplate,
+  type PushDraftReview,
   type PropertyEditorState,
+  type TemplateChangeReview,
   type TemplateRenameDraft,
 } from "../../utilities/data-layer/event-library.js";
 
@@ -42,6 +46,9 @@ export interface EventLibraryInstalledPorts {
   readImportFile(): Promise<string>;
   validateDraft(schemaId: string): void;
   backToCapturedEvent(): void;
+  pushTarget(): PushDraftReview["target"] | undefined;
+  renderPushReview(root: ParentNode, review: PushDraftReview): void;
+  renderRevisionReview(root: ParentNode, review: TemplateChangeReview): void;
 }
 
 export interface EventLibraryInstalledState {
@@ -94,6 +101,20 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
   const templateRenameReviewSummary = ports.root.querySelector<HTMLElement>("#event-template-rename-review-summary");
   const confirmTemplateRenameButton = ports.root.querySelector<HTMLButtonElement>("#confirm-template-rename");
   const cancelTemplateRenameReviewButton = ports.root.querySelector<HTMLButtonElement>("#cancel-template-rename-review");
+  const pushDraftReview = ports.root.querySelector<HTMLDialogElement>("#push-draft-review");
+  const pushDraftReviewHeading = ports.root.querySelector<HTMLElement>("#push-draft-review-heading");
+  const pushDraftReviewSummary = ports.root.querySelector<HTMLElement>("#push-draft-review-summary");
+  const confirmPushDraftButton = ports.root.querySelector<HTMLButtonElement>("#confirm-push-draft");
+  const cancelPushDraftButton = ports.root.querySelector<HTMLButtonElement>("#cancel-push-draft");
+  const revisionChangeReview = ports.root.querySelector<HTMLDialogElement>("#revision-change-review");
+  const revisionChangeReviewHeading = ports.root.querySelector<HTMLElement>("#revision-change-review-heading");
+  const confirmRevisionChangeButton = ports.root.querySelector<HTMLButtonElement>("#confirm-revision-change");
+  const cancelRevisionChangeButton = ports.root.querySelector<HTMLButtonElement>("#cancel-revision-change");
+  const closeTemplateEditorConfirmation = ports.root.querySelector<HTMLElement>("#close-template-editor-confirmation");
+  const closeTemplateEditorSummary = ports.root.querySelector<HTMLElement>("#close-template-editor-summary");
+  const keepEditingTemplateButton = ports.root.querySelector<HTMLButtonElement>("#keep-editing-template");
+  const saveAndCloseTemplateButton = ports.root.querySelector<HTMLButtonElement>("#save-and-close-template");
+  const discardAndCloseTemplateButton = ports.root.querySelector<HTMLButtonElement>("#discard-and-close-template");
   let mounted = false;
   let eventTemplates = restoreEventTemplateLibrary(ports.storage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
   let selectedId: string | undefined;
@@ -102,6 +123,8 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
   let pendingEventLibraryImport: ReturnType<typeof eventLibraryImport> | undefined;
   let pendingEventLibraryDeletion: EventLibraryInstalledState["pendingDeletion"];
   let replaceEventLibraryArmed = false;
+  let pendingPushDraftReview: PushDraftReview | undefined;
+  let pendingRevisionChangeReview: { editor:PropertyEditorState; review:TemplateChangeReview } | undefined;
   const createId = ports.createId ?? (() => `template:${crypto.randomUUID()}`);
   const persistEventTemplateLibrary = (): void => {
     ports.storage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
@@ -161,7 +184,52 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
     renderTemplateRenameValidation(); };
   const cancelTemplateRenameDialog = (event: Event): void => { event.preventDefault(); closeTemplateRename(); };
   const cancelTemplateRenameReview = (event: Event): void => { event.preventDefault(); returnToTemplateRename(); };
-  const closeEditor = (): void => { propertyEditorState = undefined; pendingTemplateRename = undefined; };
+  function openRevisionChangeReview(): void {
+    if (!propertyEditorState || propertyEditorState.isNew || propertyEditorState.jsonError) return;
+    pendingRevisionChangeReview = { editor:structuredClone(propertyEditorState), review:createTemplateChangeReview(propertyEditorState, "revision") };
+    ports.renderRevisionReview(revisionChangeReview ?? ports.root, pendingRevisionChangeReview.review);
+    if (confirmRevisionChangeButton) confirmRevisionChangeButton.textContent = `Save revision ${pendingRevisionChangeReview.review.resultingVersion}`;
+    showDialog(revisionChangeReview, revisionChangeReviewHeading);
+  }
+  function closeRevisionChangeReview(): void { pendingRevisionChangeReview = undefined; hideDialog(revisionChangeReview); saveTemplateRevisionButton?.focus(); }
+  function commitRevisionChangeReview(): void {
+    const pending = pendingRevisionChangeReview; if (!pending) return;
+    propertyEditorState = saveDraftRevision(pending.editor);
+    eventTemplates = eventTemplates.map((template) => template.id === propertyEditorState?.template.id ? propertyEditorState.template : template);
+    pendingRevisionChangeReview = undefined; hideDialog(revisionChangeReview); persistEventTemplateLibrary(); renderEventTemplateLibrary();
+  }
+  function openPushDraftReview(): void {
+    if (!propertyEditorState || propertyEditorState.jsonError) return; const target = ports.pushTarget();
+    if (!target || target.accessState !== "Ready") return;
+    pendingPushDraftReview = createPushDraftReview(propertyEditorState, target);
+    ports.renderPushReview(pushDraftReview ?? ports.root, pendingPushDraftReview);
+    if (pushDraftReviewSummary) pushDraftReviewSummary.textContent = pendingPushDraftReview.summary;
+    if (confirmPushDraftButton) confirmPushDraftButton.textContent = pendingPushDraftReview.confirmLabel;
+    showDialog(pushDraftReview, pushDraftReviewHeading);
+  }
+  const confirmPushDraft = (): void => { const pending = pendingPushDraftReview; pendingPushDraftReview = undefined;
+    hideDialog(pushDraftReview); if (pending) void ports.push(pending.editor.template); };
+  const cancelPushDraft = (): void => { pendingPushDraftReview = undefined; hideDialog(pushDraftReview); pushTemplateDraftButton?.focus(); };
+  const cancelRevisionChangeDialog = (event: Event): void => { event.preventDefault(); closeRevisionChangeReview(); };
+  const navigatePushDraftReview = (event: KeyboardEvent): void => { if (event.key === "Escape") { pendingPushDraftReview = undefined; hideDialog(pushDraftReview); } };
+  const closeEditor = (): void => { propertyEditorState = undefined; pendingTemplateRename = undefined;
+    if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = true; };
+  const requestCloseTemplateEditor = (): void => {
+    if (!propertyEditorState?.dirty) { closeEditor(); renderEventTemplateLibrary(); return; }
+    if (propertyEditorState.isNew) { if (saveAndCloseTemplateButton) saveAndCloseTemplateButton.textContent = "Save new event";
+      if (discardAndCloseTemplateButton) discardAndCloseTemplateButton.textContent = "Discard new event"; }
+    if (closeTemplateEditorSummary) closeTemplateEditorSummary.textContent =
+      `Unsaved changes: ${Object.keys(propertyEditorState.draft as Record<string, unknown>).join(", ")}.`;
+    if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = false;
+  };
+  const keepEditingTemplate = (): void => { if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = true; };
+  const saveAndCloseTemplate = (): void => {
+    if (!propertyEditorState) return;
+    if (propertyEditorState.isNew) { const saved = saveNewEvent(propertyEditorState, createId); eventTemplates = [...eventTemplates, saved]; }
+    else { const saved = saveDraftRevision(propertyEditorState); eventTemplates = eventTemplates.map((template) => template.id === saved.template.id ? saved.template : template); }
+    persistEventTemplateLibrary(); closeEditor(); renderEventTemplateLibrary();
+  };
+  const discardAndCloseTemplate = (): void => { closeEditor(); renderEventTemplateLibrary(); };
   const renderEventLibraryTransfer = (): void => {
     if (eventLibraryTransferResult) eventLibraryTransferResult.textContent = pendingEventLibraryImport
       ? `${pendingEventLibraryImport.templates.length} templates ready to import` : "";
@@ -273,11 +341,11 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
       eventTemplateSource?.addEventListener("change", updateTemplateSource);
       eventTemplateJson?.addEventListener("input", updateTemplateJson);
       eventTemplatePushDestination?.addEventListener("input", updateTemplatePushDestination);
-      saveTemplateRevisionButton?.addEventListener("click", saveTemplateRevision);
+      saveTemplateRevisionButton?.addEventListener("click", openRevisionChangeReview);
       saveTemplateCopyButton?.addEventListener("click", saveTemplateCopy);
-      pushTemplateDraftButton?.addEventListener("click", pushTemplateDraft);
+      pushTemplateDraftButton?.addEventListener("click", openPushDraftReview);
       discardTemplateDraftButton?.addEventListener("click", discardTemplateDraft);
-      closeTemplateEditorButton?.addEventListener("click", closeTemplateEditor);
+      closeTemplateEditorButton?.addEventListener("click", requestCloseTemplateEditor);
       backToCapturedEventButton?.addEventListener("click", backToCapturedEvent);
       templateRenameName?.addEventListener("input", updateTemplateRenameName);
       templateRenameEventName?.addEventListener("input", updateTemplateRenameEventName);
@@ -287,6 +355,15 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
       confirmTemplateRenameButton?.addEventListener("click", commitTemplateRename);
       cancelTemplateRenameReviewButton?.addEventListener("click", returnToTemplateRename);
       templateRenameReview?.addEventListener("cancel", cancelTemplateRenameReview);
+      confirmPushDraftButton?.addEventListener("click", confirmPushDraft);
+      cancelPushDraftButton?.addEventListener("click", cancelPushDraft);
+      confirmRevisionChangeButton?.addEventListener("click", commitRevisionChangeReview);
+      cancelRevisionChangeButton?.addEventListener("click", closeRevisionChangeReview);
+      revisionChangeReview?.addEventListener("cancel", cancelRevisionChangeDialog);
+      pushDraftReview?.addEventListener("keydown", navigatePushDraftReview);
+      keepEditingTemplateButton?.addEventListener("click", keepEditingTemplate);
+      saveAndCloseTemplateButton?.addEventListener("click", saveAndCloseTemplate);
+      discardAndCloseTemplateButton?.addEventListener("click", discardAndCloseTemplate);
       renderEventTemplateLibrary(); renderEventLibraryTransfer();
     },
     dispose(): void {
@@ -308,11 +385,11 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
       eventTemplateSource?.removeEventListener("change", updateTemplateSource);
       eventTemplateJson?.removeEventListener("input", updateTemplateJson);
       eventTemplatePushDestination?.removeEventListener("input", updateTemplatePushDestination);
-      saveTemplateRevisionButton?.removeEventListener("click", saveTemplateRevision);
+      saveTemplateRevisionButton?.removeEventListener("click", openRevisionChangeReview);
       saveTemplateCopyButton?.removeEventListener("click", saveTemplateCopy);
-      pushTemplateDraftButton?.removeEventListener("click", pushTemplateDraft);
+      pushTemplateDraftButton?.removeEventListener("click", openPushDraftReview);
       discardTemplateDraftButton?.removeEventListener("click", discardTemplateDraft);
-      closeTemplateEditorButton?.removeEventListener("click", closeTemplateEditor);
+      closeTemplateEditorButton?.removeEventListener("click", requestCloseTemplateEditor);
       backToCapturedEventButton?.removeEventListener("click", backToCapturedEvent);
       templateRenameName?.removeEventListener("input", updateTemplateRenameName);
       templateRenameEventName?.removeEventListener("input", updateTemplateRenameEventName);
@@ -322,7 +399,18 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
       confirmTemplateRenameButton?.removeEventListener("click", commitTemplateRename);
       cancelTemplateRenameReviewButton?.removeEventListener("click", returnToTemplateRename);
       templateRenameReview?.removeEventListener("cancel", cancelTemplateRenameReview);
+      confirmPushDraftButton?.removeEventListener("click", confirmPushDraft);
+      cancelPushDraftButton?.removeEventListener("click", cancelPushDraft);
+      confirmRevisionChangeButton?.removeEventListener("click", commitRevisionChangeReview);
+      cancelRevisionChangeButton?.removeEventListener("click", closeRevisionChangeReview);
+      revisionChangeReview?.removeEventListener("cancel", cancelRevisionChangeDialog);
+      pushDraftReview?.removeEventListener("keydown", navigatePushDraftReview);
+      keepEditingTemplateButton?.removeEventListener("click", keepEditingTemplate);
+      saveAndCloseTemplateButton?.removeEventListener("click", saveAndCloseTemplate);
+      discardAndCloseTemplateButton?.removeEventListener("click", discardAndCloseTemplate);
       closeEditor(); pendingEventLibraryImport = undefined; pendingEventLibraryDeletion = undefined; replaceEventLibraryArmed = false;
+      pendingPushDraftReview = undefined; pendingRevisionChangeReview = undefined;
+      hideDialog(pushDraftReview); hideDialog(revisionChangeReview);
     },
     select(id: string): void { find(id); selectedId = id; },
     beginDraft(id: string): void { const template = find(id); selectedId = id; propertyEditorState = openPropertyEditor(template); },
