@@ -216,10 +216,13 @@ export function createEventLibraryInstalledController(ports) {
             return;
         propertyEditorState = saveDraftRevision(pending.editor);
         eventTemplates = eventTemplates.map((template) => template.id === propertyEditorState?.template.id ? propertyEditorState.template : template);
+        const version = propertyEditorState.template.version;
         pendingRevisionChangeReview = undefined;
         hideDialog(revisionChangeReview);
         persistEventTemplateLibrary();
         renderEventTemplateLibrary();
+        if (eventLibraryEditorElements.result)
+            eventLibraryEditorElements.result.textContent = `Saved version ${version}; identity, execution, and payload changes applied.`;
     }
     function openPushDraftReview() {
         if (!propertyEditorState || propertyEditorState.jsonError)
@@ -262,6 +265,9 @@ export function createEventLibraryInstalledController(ports) {
         hideDialog(templateRenameReview);
         hideDialog(pushDraftReview);
         hideDialog(revisionChangeReview);
+        if ("querySelectorAll" in ports.root)
+            for (const disclosure of Array.from(ports.root.querySelectorAll("#event-property-editor details")))
+                disclosure.open = false;
     }
     const closeEditor = () => {
         propertyEditorState = undefined;
@@ -310,6 +316,9 @@ export function createEventLibraryInstalledController(ports) {
         if (eventLibraryImportReviewHeading)
             eventLibraryImportReviewHeading.textContent = replaceEventLibraryArmed
                 ? "Confirm replacement" : "Review Event Library import";
+        if (replaceEventLibraryButton)
+            replaceEventLibraryButton.textContent = replaceEventLibraryArmed && pendingEventLibraryImport
+                ? `Confirm replace ${eventTemplates.length} with ${pendingEventLibraryImport.templates.length}` : "Replace entire Library";
         if (eventLibraryImportReviewSummary)
             eventLibraryImportReviewSummary.textContent = pendingEventLibraryImport
                 ? `${pendingEventLibraryImport.templates.length} imported templates` : "";
@@ -317,14 +326,15 @@ export function createEventLibraryInstalledController(ports) {
             eventLibraryDeleteReviewHeading.textContent = pendingEventLibraryDeletion?.id
                 ? "Delete event template?" : "Clear Event Library?";
         if (eventLibraryDeleteReviewSummary)
-            eventLibraryDeleteReviewSummary.textContent = pendingEventLibraryDeletion
-                ? `${pendingEventLibraryDeletion.count} template${pendingEventLibraryDeletion.count === 1 ? "" : "s"}` : "";
+            eventLibraryDeleteReviewSummary.textContent = pendingEventLibraryDeletion?.id
+                ? (() => { const template = find(pendingEventLibraryDeletion.id); return `${template.name}; event ${template.eventName}; ${template.version} saved versions will be deleted. Captured events, saved sessions, and execution records remain unchanged.`; })()
+                : pendingEventLibraryDeletion ? `All ${pendingEventLibraryDeletion.count} templates and their saved revisions will be removed.` : "";
     };
     const reviewEventLibraryImport = (serialized) => {
         pendingEventLibraryImport = eventLibraryImport(serialized);
         replaceEventLibraryArmed = false;
         renderEventLibraryTransfer();
-        eventLibraryImportReview?.showModal();
+        showDialog(eventLibraryImportReview, eventLibraryImportReviewHeading);
     };
     const commitEventLibraryImport = (mode) => {
         if (!pendingEventLibraryImport)
@@ -332,6 +342,7 @@ export function createEventLibraryInstalledController(ports) {
         if (mode === "replace") {
             if (!replaceEventLibraryArmed) {
                 replaceEventLibraryArmed = true;
+                renderEventLibraryTransfer();
                 return;
             }
             eventTemplates = replaceImportedTemplates(eventTemplates, pendingEventLibraryImport.templates);
@@ -341,14 +352,15 @@ export function createEventLibraryInstalledController(ports) {
         pendingEventLibraryImport = undefined;
         replaceEventLibraryArmed = false;
         closeEditor();
-        eventLibraryImportReview?.close();
+        hideDialog(eventLibraryImportReview);
         renderEventLibraryTransfer();
         persistEventTemplateLibrary();
+        renderEventTemplateLibrary();
     };
     const requestEventTemplateDeletion = (id) => {
         pendingEventLibraryDeletion = id ? { id, name: find(id).name, count: 1 } : { count: eventTemplates.length };
         renderEventLibraryTransfer();
-        eventLibraryDeleteReview?.showModal();
+        showDialog(eventLibraryDeleteReview, eventLibraryDeleteReviewHeading);
     };
     const commitEventLibraryDeletion = () => {
         if (!pendingEventLibraryDeletion)
@@ -360,9 +372,10 @@ export function createEventLibraryInstalledController(ports) {
         if (!pendingEventLibraryDeletion.id || propertyEditorState?.template.id === pendingEventLibraryDeletion.id)
             closeEditor();
         pendingEventLibraryDeletion = undefined;
-        eventLibraryDeleteReview?.close();
+        hideDialog(eventLibraryDeleteReview);
         renderEventLibraryTransfer();
         persistEventTemplateLibrary();
+        renderEventTemplateLibrary();
     };
     function appendOpenInLibraryAction(eventId, templateName) {
         inspectorActionDispose?.();
@@ -476,6 +489,11 @@ export function createEventLibraryInstalledController(ports) {
         if (!mounted)
             return;
         const visible = searchEventTemplates(eventTemplates, eventTemplateSearch?.value ?? "");
+        const libraryEmpty = eventTemplates.length === 0;
+        if (exportEventLibraryButton)
+            exportEventLibraryButton.disabled = libraryEmpty;
+        if (clearEventLibraryButton)
+            clearEventLibraryButton.disabled = libraryEmpty;
         if (templateEmptyStateElements.state)
             templateEmptyStateElements.state.hidden = visible.length > 0;
         if (templateEmptyRecovery) {
@@ -549,7 +567,9 @@ export function createEventLibraryInstalledController(ports) {
     const openNewEventEditor = () => {
         selectedId = undefined;
         propertyEditorState = createNewEventEditor(ports.defaultPushPath());
+        resetTemplateEditorDisclosures();
         renderEventTemplateLibrary();
+        eventTemplateName?.focus();
     };
     const updateTemplateName = () => {
         if (!propertyEditorState)
@@ -623,11 +643,15 @@ export function createEventLibraryInstalledController(ports) {
         renderEventTemplateLibrary();
     };
     function closeTemplateEditor() {
+        const returningId = templateEditorReturnTemplateId ?? propertyEditorState?.template.id;
         closeEditor();
-        selectedId = templateEditorReturnTemplateId;
+        selectedId = returningId;
         templateEditorReturnTemplateId = undefined;
         savedInspectorTemplateId = undefined;
         renderEventTemplateLibrary();
+        if (selectedId && "querySelectorAll" in ports.root)
+            Array.from(ports.root.querySelectorAll("[data-template-id]"))
+                .find(({ dataset }) => dataset.templateId === selectedId)?.focus();
     }
     const recoverTemplateEmptyState = () => {
         if (eventTemplateSearch?.value.trim()) {

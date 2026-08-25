@@ -415,7 +415,8 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
       : targets.reduce(registerObservationTarget, observationTargetState); renderObservationTargetPicker();
   }
   async function discoverCurrentObservationTarget(): Promise<void> {
-    const generation = ++targetDiscoveryGeneration; const tabs = await ports.observation.discover("current");
+    const generation = ++targetDiscoveryGeneration; observationTargetList?.replaceChildren?.(); setObservationTargetResult("Looking for the active tab…");
+    const tabs = await ports.observation.discover("current");
     if (!mounted || generation !== targetDiscoveryGeneration) return; registerTargetTabs(tabs);
     const target = tabs[0] ? targetFromTab(tabs[0]) : undefined;
     if (target) { observationTargetState = selectObservationTarget(observationTargetState, target.id); setObservationTargetResult(`Selected ${target.title}`); ports.ui.selectedTargetChanged?.(); }
@@ -492,6 +493,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
   const navigateDataLayerView = (event: KeyboardEvent): void => {
     const next = dataLayerViewForNavigationKey(liveObserverState.view, event.key);
     if (!next) return; event.preventDefault(); showDataLayerView(next);
+    dataLayerViewList?.querySelector<HTMLButtonElement>(`#data-layer-view-${next.toLowerCase()}`)?.focus();
   };
   function renderLiveContextActions(): void {
     const activeSession = dataLayerSessionState.session?.status === "active";
@@ -1204,8 +1206,9 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
       savedThroughEventCount = 0; ports.storage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
       persistAndRenderObservationState(); setObservationTargetResult(""); ports.setLiveSessionMessage("Testing started");
     },
-    end(): void { dataLayerSessionState = endDataLayerTestingSession(dataLayerSessionState);
-      ports.setLiveSessionMessage(testingEndedMessage()); publish(); },
+    end(): void { attachedTargetRecoveryGeneration += 1; stopLiveHistoryCapture();
+      dataLayerSessionState = endDataLayerTestingSession(dataLayerSessionState);
+      ports.setLiveSessionMessage(testingEndedMessage()); renderLiveContextActions(); publish(); },
     pause:pauseInstalledCapture,
     resume:resumeInstalledCapture,
     capture:recordCapturedLiveEvent,

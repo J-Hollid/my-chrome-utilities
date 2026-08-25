@@ -100,7 +100,12 @@ const transferController = createEventLibraryInstalledController({
     return { message:"Library draft validation: Valid · Checkout v2." }; }, backToCapturedEvent:() => transferCalls.push("live"),
   pushTarget:() => undefined, checkPushPath:async () => ({ success:true, message:"ready" }),
 });
-transferController.mount(); transferController.store(template); transferController.beginDraft("template:1");
+transferController.mount();
+assert.equal(elements.get("#export-event-library").disabled, true);
+assert.equal(elements.get("#clear-event-library").disabled, true, "empty Library disables actions that require templates");
+transferController.store(template); transferController.beginDraft("template:1");
+assert.equal(elements.get("#export-event-library").disabled, false);
+assert.equal(elements.get("#clear-event-library").disabled, false, "storing a template enables Library-wide actions");
 elements.get("#library-draft-schema-selector").value = "schema:checkout";
 elements.get("#refresh-library-draft-validation").click(); elements.get("#export-event-library").click();
 assert.equal(elements.get("#event-template-validation").textContent, "Library draft validation: Valid · Checkout v2.",
@@ -116,7 +121,14 @@ elements.get("#event-template-empty-recovery").click(); assert.equal(elements.ge
 elements.get("#clear-event-library").click(); assert.equal(elements.get("#event-library-delete-review").open, true);
 elements.get("#event-library-delete-review").dispatch("cancel"); assert.equal(transferController.state().pendingDeletion, undefined);
 transferController.requestDelete(); transferController.confirmDelete(); elements.get("#event-template-empty-recovery").click();
+assert.equal(elements.get("#export-event-library").disabled, true);
+assert.equal(elements.get("#clear-event-library").disabled, true, "clearing the Library disables template-dependent actions again");
 assert.equal(transferCalls.at(-1), "live", "empty Library recovery returns through the explicit Live port");
+transferController.reviewImport(JSON.stringify({ format:"my-chrome-utilities.event-library", version:1, templates:[template] }));
+transferController.commitImport("append");
+assert.equal(elements.get("#export-event-library").disabled, false);
+assert.equal(elements.get("#clear-event-library").disabled, false,
+  "committing an import rerenders the Library action surface from its restored templates");
 transferController.dispose();
 assert.equal([...elements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
   "Event Library removes transfer and review listeners on disposal");

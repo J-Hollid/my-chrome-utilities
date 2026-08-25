@@ -251,7 +251,9 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
     const pending = pendingRevisionChangeReview; if (!pending) return;
     propertyEditorState = saveDraftRevision(pending.editor);
     eventTemplates = eventTemplates.map((template) => template.id === propertyEditorState?.template.id ? propertyEditorState.template : template);
+    const version = propertyEditorState.template.version;
     pendingRevisionChangeReview = undefined; hideDialog(revisionChangeReview); persistEventTemplateLibrary(); renderEventTemplateLibrary();
+    if (eventLibraryEditorElements.result) eventLibraryEditorElements.result.textContent = `Saved version ${version}; identity, execution, and payload changes applied.`;
   }
   function openPushDraftReview(): void {
     if (!propertyEditorState || propertyEditorState.jsonError) return; const target = ports.pushTarget();
@@ -272,7 +274,8 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
   const navigatePushDraftReview = (event: KeyboardEvent): void => { if (event.key === "Escape") { pendingPushDraftReview = undefined; hideDialog(pushDraftReview); } };
   function resetTemplateEditorDisclosures():void { pendingTemplateRename = undefined; pendingPushDraftReview = undefined; pendingRevisionChangeReview = undefined;
     if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = true; hideDialog(templateRenameDialog); hideDialog(templateRenameReview);
-    hideDialog(pushDraftReview); hideDialog(revisionChangeReview); }
+    hideDialog(pushDraftReview); hideDialog(revisionChangeReview);
+    if ("querySelectorAll" in ports.root) for (const disclosure of Array.from(ports.root.querySelectorAll<HTMLDetailsElement>("#event-property-editor details"))) disclosure.open = false; }
   const closeEditor = (): void => { propertyEditorState = undefined; resetTemplateEditorDisclosures();
     if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = true; };
   const requestCloseTemplateEditor = (): void => {
@@ -296,29 +299,32 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
       ? `${pendingEventLibraryImport.templates.length} templates ready to import` : "";
     if (eventLibraryImportReviewHeading) eventLibraryImportReviewHeading.textContent = replaceEventLibraryArmed
       ? "Confirm replacement" : "Review Event Library import";
+    if (replaceEventLibraryButton) replaceEventLibraryButton.textContent = replaceEventLibraryArmed && pendingEventLibraryImport
+      ? `Confirm replace ${eventTemplates.length} with ${pendingEventLibraryImport.templates.length}` : "Replace entire Library";
     if (eventLibraryImportReviewSummary) eventLibraryImportReviewSummary.textContent = pendingEventLibraryImport
       ? `${pendingEventLibraryImport.templates.length} imported templates` : "";
     if (eventLibraryDeleteReviewHeading) eventLibraryDeleteReviewHeading.textContent = pendingEventLibraryDeletion?.id
       ? "Delete event template?" : "Clear Event Library?";
-    if (eventLibraryDeleteReviewSummary) eventLibraryDeleteReviewSummary.textContent = pendingEventLibraryDeletion
-      ? `${pendingEventLibraryDeletion.count} template${pendingEventLibraryDeletion.count === 1 ? "" : "s"}` : "";
+    if (eventLibraryDeleteReviewSummary) eventLibraryDeleteReviewSummary.textContent = pendingEventLibraryDeletion?.id
+      ? (() => { const template = find(pendingEventLibraryDeletion.id!); return `${template.name}; event ${template.eventName}; ${template.version} saved versions will be deleted. Captured events, saved sessions, and execution records remain unchanged.`; })()
+      : pendingEventLibraryDeletion ? `All ${pendingEventLibraryDeletion.count} templates and their saved revisions will be removed.` : "";
   };
   const reviewEventLibraryImport = (serialized: string): void => {
     pendingEventLibraryImport = eventLibraryImport(serialized); replaceEventLibraryArmed = false;
-    renderEventLibraryTransfer(); eventLibraryImportReview?.showModal();
+    renderEventLibraryTransfer(); showDialog(eventLibraryImportReview, eventLibraryImportReviewHeading);
   };
   const commitEventLibraryImport = (mode: "replace" | "append"): void => {
     if (!pendingEventLibraryImport) throw new Error("Review an import before committing");
     if (mode === "replace") {
-      if (!replaceEventLibraryArmed) { replaceEventLibraryArmed = true; return; }
+      if (!replaceEventLibraryArmed) { replaceEventLibraryArmed = true; renderEventLibraryTransfer(); return; }
       eventTemplates = replaceImportedTemplates(eventTemplates, pendingEventLibraryImport.templates);
     } else eventTemplates = appendImportedTemplates(eventTemplates, pendingEventLibraryImport.templates, createId).templates;
     pendingEventLibraryImport = undefined; replaceEventLibraryArmed = false; closeEditor();
-    eventLibraryImportReview?.close(); renderEventLibraryTransfer(); persistEventTemplateLibrary();
+    hideDialog(eventLibraryImportReview); renderEventLibraryTransfer(); persistEventTemplateLibrary(); renderEventTemplateLibrary();
   };
   const requestEventTemplateDeletion = (id?: string): void => {
     pendingEventLibraryDeletion = id ? { id, name:find(id).name, count:1 } : { count:eventTemplates.length };
-    renderEventLibraryTransfer(); eventLibraryDeleteReview?.showModal();
+    renderEventLibraryTransfer(); showDialog(eventLibraryDeleteReview, eventLibraryDeleteReviewHeading);
   };
   const commitEventLibraryDeletion = (): void => {
     if (!pendingEventLibraryDeletion) return;
@@ -326,7 +332,7 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
       ? deleteEventTemplate(eventTemplates, pendingEventLibraryDeletion.id) : clearEventLibrary(eventTemplates);
     if (!pendingEventLibraryDeletion.id || selectedId === pendingEventLibraryDeletion.id) selectedId = undefined;
     if (!pendingEventLibraryDeletion.id || propertyEditorState?.template.id === pendingEventLibraryDeletion.id) closeEditor();
-    pendingEventLibraryDeletion = undefined; eventLibraryDeleteReview?.close(); renderEventLibraryTransfer(); persistEventTemplateLibrary();
+    pendingEventLibraryDeletion = undefined; hideDialog(eventLibraryDeleteReview); renderEventLibraryTransfer(); persistEventTemplateLibrary(); renderEventTemplateLibrary();
   };
   function appendOpenInLibraryAction(eventId:string, templateName:string):void {
     inspectorActionDispose?.(); inspectorActionDispose = undefined;
@@ -369,6 +375,9 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
   const renderEventTemplateLibrary = (): void => {
     if (!mounted) return;
     const visible = searchEventTemplates(eventTemplates, eventTemplateSearch?.value ?? "");
+    const libraryEmpty = eventTemplates.length === 0;
+    if (exportEventLibraryButton) exportEventLibraryButton.disabled = libraryEmpty;
+    if (clearEventLibraryButton) clearEventLibraryButton.disabled = libraryEmpty;
     if (templateEmptyStateElements.state) templateEmptyStateElements.state.hidden = visible.length > 0;
     if (templateEmptyRecovery) { templateEmptyRecovery.hidden = visible.length > 0;
       templateEmptyRecovery.textContent = eventTemplateSearch?.value.trim() ? "Clear template search" : "Return to Live events"; }
@@ -403,7 +412,7 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
   function openTemplateEditor(id:string):void { const template = find(id); templateEditorReturnTemplateId = selectedId; selectedId = id;
     propertyEditorState = openPropertyEditor(template); savedInspectorTemplateId = id; resetTemplateEditorDisclosures(); refreshPushPathReadiness(); }
   const openNewEventEditor = (): void => { selectedId = undefined;
-    propertyEditorState = createNewEventEditor(ports.defaultPushPath()); renderEventTemplateLibrary(); };
+    propertyEditorState = createNewEventEditor(ports.defaultPushPath()); resetTemplateEditorDisclosures(); renderEventTemplateLibrary(); eventTemplateName?.focus(); };
   const updateTemplateName = (): void => { if (!propertyEditorState) return;
     propertyEditorState = propertyEditorState.isNew
       ? setNewEventField(propertyEditorState, "name", eventTemplateName?.value ?? "")
@@ -435,8 +444,11 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
   const pushTemplateDraft = pushCurrentTemplateDraft;
   const discardTemplateDraft = (): void => { if (propertyEditorState) propertyEditorState = discardDraft(propertyEditorState);
     renderEventTemplateLibrary(); };
-  function closeTemplateEditor():void { closeEditor(); selectedId = templateEditorReturnTemplateId; templateEditorReturnTemplateId = undefined;
-    savedInspectorTemplateId = undefined; renderEventTemplateLibrary(); }
+  function closeTemplateEditor():void { const returningId = templateEditorReturnTemplateId ?? propertyEditorState?.template.id;
+    closeEditor(); selectedId = returningId; templateEditorReturnTemplateId = undefined;
+    savedInspectorTemplateId = undefined; renderEventTemplateLibrary();
+    if (selectedId && "querySelectorAll" in ports.root) Array.from(ports.root.querySelectorAll<HTMLElement>("[data-template-id]"))
+      .find(({ dataset }) => dataset.templateId === selectedId)?.focus(); }
   const recoverTemplateEmptyState = ():void => { if (eventTemplateSearch?.value.trim()) { eventTemplateSearch.value = ""; renderEventTemplateLibrary(); }
     else ports.backToCapturedEvent(); };
   const backToCapturedEvent = (): void => ports.backToCapturedEvent();

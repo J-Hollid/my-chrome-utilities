@@ -378,3 +378,61 @@ assert.equal(filterController.state().savedFilters.filters.length, 0);
 assert.equal(filterController.state().observer.savedFilterId, undefined);
 filterController.dispose(); filterController.dispose();
 assert.equal(filterDisposals, 1, "Capture symmetrically disposes saved-filter rendering");
+
+{
+  const { createInstalledLiveInspectorCoordination } = await import("../../dist/data-layer-installed/runtime.js");
+  const coordinationCalls = [];
+  const selectedEvent = { id:"event:coordination", name:"page_view", sourceId:"history",
+    payload:{ page_type:"product" }, rawInput:[] };
+  const coordinationEvaluation = { propertyPath:"/page_type", ruleId:"rule:1", schemaId:"schema:1" };
+  const coordinationTrigger = { id:"trigger" };
+  const effects = createInstalledLiveInspectorCoordination({
+    currentPageUrl:() => "https://shop.example/page",
+    writeClipboard:async (text) => { coordinationCalls.push(["clipboard", text]); },
+    storeTemplate:(template) => { coordinationCalls.push(["template", template]); },
+    defaultDestination:() => "dataLayer",
+    onTemplateSaved:(template) => { coordinationCalls.push(["template-saved", template]); },
+    schemas:{
+      create:(selected) => coordinationCalls.push(["create-schema", selected]),
+      createValidation:(selected) => coordinationCalls.push(["create-validation", selected]),
+      addPropertyValidation:(selected, path) => coordinationCalls.push(["add-property-validation", selected, path]),
+      addPropertyToSchema:(selected, path, control) => coordinationCalls.push(["add-property", selected, path, control]),
+      propertyDeclaration:(selected, path) => ({ destination:selected.name, alreadyDeclared:path === "/page_type" }),
+      expandAllowedValue:(selected, item, control) => coordinationCalls.push(["expand", selected, item, control]),
+      draftContinuation:(selected) => ({ schemaId:"schema:1", schemaName:selected.name, schemaVersion:1, pendingChanges:0,
+        addProperty() {}, review() {}, publish() {}, useDifferent() {} }),
+      validationAvailable:() => true,
+      validationState:() => "Valid",
+      manualSchemaChoices:() => [{ id:"schema:1", label:"Page view v1" }],
+      selectManualSchema:(eventId, schemaId) => coordinationCalls.push(["manual-schema", eventId, schemaId]),
+    },
+    defects:{
+      startValidationReport:(selected) => coordinationCalls.push(["validation-defect", selected]),
+      startOccurrenceReport:(selected, mode) => coordinationCalls.push(["occurrence-defect", selected, mode]),
+      openReported:(defectId, selected, issueIndex, control) => coordinationCalls.push(["reported", defectId, selected, issueIndex, control]),
+    },
+    updateValidation:(eventId, state) => coordinationCalls.push(["validation", eventId, state]),
+  });
+  assert.deepEqual(Object.keys(effects).sort(), [
+    "addPropertyToSchema", "addPropertyValidation", "createSchema", "createValidation", "currentPageUrl",
+    "defaultDestination", "draftContinuation", "expandAllowedValue", "manualSchemaChoices", "onTemplateSaved",
+    "openReportedDefect", "propertyDeclaration", "selectManualSchema", "startDefectReport",
+    "startOccurrenceDefectReport", "storeTemplate", "updateValidation", "validationAvailable", "validationState",
+    "writeClipboard",
+  ].sort(), "the installed coordination seam must supply every conserved Live Inspector capability");
+  effects.createSchema(selectedEvent); effects.createValidation(selectedEvent);
+  effects.addPropertyValidation(selectedEvent, "/page_type", coordinationTrigger);
+  effects.addPropertyToSchema(selectedEvent, "/page_type", coordinationTrigger);
+  effects.expandAllowedValue(selectedEvent, coordinationEvaluation, coordinationTrigger);
+  effects.startDefectReport(selectedEvent); effects.startOccurrenceDefectReport(selectedEvent, "Unexpected event");
+  effects.openReportedDefect("defect:1", selectedEvent, 2, coordinationTrigger);
+  effects.selectManualSchema("event:coordination", "schema:1"); effects.updateValidation("event:coordination", "Valid");
+  assert.deepEqual(effects.propertyDeclaration(selectedEvent, "/page_type"), { destination:"page_view", alreadyDeclared:true });
+  assert.equal(effects.draftContinuation(selectedEvent).schemaId, "schema:1");
+  assert.equal(effects.validationAvailable(selectedEvent), true); assert.equal(effects.validationState(selectedEvent), "Valid");
+  assert.deepEqual(effects.manualSchemaChoices(selectedEvent), [{ id:"schema:1", label:"Page view v1" }]);
+  assert.deepEqual(coordinationCalls.map(([name]) => name), [
+    "create-schema", "create-validation", "add-property-validation", "add-property", "expand",
+    "validation-defect", "occurrence-defect", "reported", "manual-schema", "validation",
+  ]);
+}

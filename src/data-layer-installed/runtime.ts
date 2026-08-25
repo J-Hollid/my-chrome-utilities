@@ -14,6 +14,10 @@ import { attachSavedSessionToDefect, type DefectLibrary, type ReportedDefect } f
 import type { SessionSaveDraft } from "../data-layer-saved-session-live-feed.js";
 import type { SavedSessionLibrary } from "../utilities/data-layer/live-inspection.js";
 import type { EditableEventTemplate } from "../utilities/data-layer/event-library.js";
+import type { ValidationState } from "../utilities/data-layer/capture.js";
+import type { ValidationEvaluation } from "../utilities/data-layer/schemas.js";
+import type { OccurrenceExpectationMode } from "../utilities/data-layer/defect-reporting.js";
+import type { LiveDraftContinuation, LiveInspectorActionEffects } from "../data-layer-live-inspector-actions.js";
 import { applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements,
   createFixtureFromCapturedValidation, transactProject, type ProjectState } from "../utilities/data-layer/schemas.js";
 import type { CapturedValidationResult } from "../data-layer-specification-project.js";
@@ -140,6 +144,96 @@ export interface InstalledSidePanelRuntimeFoundation {
   hotkeyStorage: Storage;
   shellStorage: Storage;
   durableProjectRuntime: Awaited<ReturnType<typeof openDurableProjectRuntime>>;
+  durableProjectRepositoryUi: Awaited<ReturnType<typeof mountDurableProjectRepositoryUi>>;
+}
+
+type InstalledSchemaPersistenceEvent = Parameters<SchemasInstalledPorts["subscribeSchemaPersistence"]>[0] extends (event: infer T) => void ? T : never;
+
+export interface InstalledLiveInspectorCoordinationPorts {
+  currentPageUrl():string;
+  writeClipboard(text:string):Promise<void>;
+  storeTemplate(template:EditableEventTemplate):void;
+  defaultDestination():string;
+  onTemplateSaved(template:EditableEventTemplate):void;
+  schemas:{
+    create(event:LiveEvent):void;
+    createValidation(event:LiveEvent):void;
+    addPropertyValidation(event:LiveEvent,path:string,trigger:HTMLButtonElement):void;
+    addPropertyToSchema(event:LiveEvent,path:string,trigger:HTMLButtonElement):void;
+    propertyDeclaration(event:LiveEvent,path:string):{destination?:string;alreadyDeclared?:boolean};
+    expandAllowedValue(event:LiveEvent,evaluation:ValidationEvaluation,trigger:HTMLButtonElement):void;
+    draftContinuation(event:LiveEvent):LiveDraftContinuation|undefined;
+    validationAvailable(event:LiveEvent):boolean;
+    validationState(event:LiveEvent):ValidationState;
+    manualSchemaChoices(event:LiveEvent):readonly {id:string;label:string}[];
+    selectManualSchema(eventId:string,schemaId:string|undefined):void;
+  };
+  defects:{
+    startValidationReport(event:LiveEvent):void;
+    startOccurrenceReport(event:LiveEvent,mode:OccurrenceExpectationMode):void;
+    openReported(defectId:string,event:LiveEvent,issueIndex:number,trigger:HTMLButtonElement):void;
+  };
+  updateValidation(eventId:string,state:ValidationState):void;
+}
+
+export function createInstalledLiveInspectorCoordination(
+  ports:InstalledLiveInspectorCoordinationPorts,
+):LiveInspectorActionEffects {
+  return {
+    currentPageUrl:ports.currentPageUrl,
+    writeClipboard:ports.writeClipboard,
+    storeTemplate:ports.storeTemplate,
+    defaultDestination:ports.defaultDestination,
+    onTemplateSaved:ports.onTemplateSaved,
+    createSchema:ports.schemas.create,
+    createValidation:ports.schemas.createValidation,
+    addPropertyValidation:ports.schemas.addPropertyValidation,
+    addPropertyToSchema:ports.schemas.addPropertyToSchema,
+    propertyDeclaration:ports.schemas.propertyDeclaration,
+    expandAllowedValue:ports.schemas.expandAllowedValue,
+    draftContinuation:ports.schemas.draftContinuation,
+    startDefectReport:ports.defects.startValidationReport,
+    startOccurrenceDefectReport:ports.defects.startOccurrenceReport,
+    openReportedDefect:ports.defects.openReported,
+    validationAvailable:ports.schemas.validationAvailable,
+    validationState:ports.schemas.validationState,
+    updateValidation:ports.updateValidation,
+    manualSchemaChoices:ports.schemas.manualSchemaChoices,
+    selectManualSchema:ports.schemas.selectManualSchema,
+  };
+}
+
+export interface DurableSchemaPersistenceCoordinationPorts {
+  runtime: Pick<Awaited<ReturnType<typeof openDurableProjectRuntime>>, "failedSchemaSave" | "retryFailedSchemaSave" | "resolveFailedSchemaSave" | "exportUnsavedSchemas"> & {
+    repository: Pick<Awaited<ReturnType<typeof openDurableProjectRuntime>>["repository"], "subscribeSavedSchemas">;
+  };
+  repositoryUi: Pick<Awaited<ReturnType<typeof mountDurableProjectRepositoryUi>>, "reportSaveFailure">;
+  eventTarget: Pick<Window, "addEventListener" | "removeEventListener">;
+  origin(): HTMLElement | undefined;
+  download(serialized:string):void;
+  recoveryStarted?():void;
+}
+
+export function createDurableSchemaPersistenceCoordination(ports:DurableSchemaPersistenceCoordinationPorts) {
+  const listeners=new Set<(event:InstalledSchemaPersistenceEvent)=>void>();
+  const announce=(event:InstalledSchemaPersistenceEvent):void=>{for(const listener of listeners)listener(event);};
+  const unsubscribeSaved=ports.runtime.repository.subscribeSavedSchemas(({schemaId})=>{
+    if(!ports.runtime.failedSchemaSave())announce({type:"saved",schemaId});
+  });
+  const failed=(event:Event):void=>{const pending=ports.runtime.failedSchemaSave();if(!pending)return;
+    ports.recoveryStarted?.();
+    const schemaIds=[...new Set([...pending.batch.upserts.map(({schema})=>String(schema.id)),...pending.batch.deletes.map(({schemaId})=>schemaId)])];
+    for(const schemaId of schemaIds)announce({type:"failed",schemaId,error:pending.error});
+    const origin=ports.origin();
+    void ports.repositoryUi.reportSaveFailure({kind:"saved-schema",projectName:pending.batch.names.join(", "),command:{label:pending.batch.label},
+      retry:async()=>{await ports.runtime.retryFailedSchemaSave();for(const schemaId of schemaIds)announce({type:"retried",schemaId});},
+      reject:async()=>{await ports.runtime.resolveFailedSchemaSave("reject");for(const schemaId of schemaIds)announce({type:"rejected",schemaId,error:pending.error});},
+      exportUnsaved:()=>ports.download(ports.runtime.exportUnsavedSchemas()),...(origin?{originControl:origin}:{})},
+    (event as CustomEvent<{error?:unknown}>).detail?.error??pending.error);
+  };
+  ports.eventTarget.addEventListener("durable-project-save-failed",failed);
+  return {subscribe(listener:(event:InstalledSchemaPersistenceEvent)=>void){listeners.add(listener);return()=>listeners.delete(listener);},
+    dispose(){ports.eventTarget.removeEventListener("durable-project-save-failed",failed);unsubscribeSaved();listeners.clear();}};
 }
 
 export interface DurableProjectCoordinationPorts {
@@ -184,7 +278,7 @@ export async function createInstalledSidePanelRuntimeFoundation(
     installDurableRepositoryStartupFailure(root, error);
     return new Promise<never>(() => {});
   });
-  await mountDurableProjectRepositoryUi(root, globalThis.indexedDB, durableProjectRuntime.repository);
+  const durableProjectRepositoryUi=await mountDurableProjectRepositoryUi(root, globalThis.indexedDB, durableProjectRuntime.repository);
   const projectStorage = durableProjectRuntime.storage;
   const scopedDataLayerStorage = createUtilityStorage(storage, utilityStorageContract("data-layer"));
   const dataLayerStorage: Storage = {
@@ -216,7 +310,7 @@ export async function createInstalledSidePanelRuntimeFoundation(
   return { app, sidePanelContent, commandLog, openPaletteButton, palette, paletteFilter, paletteResults,
     createKeymapButton, updateKeymapButton, loadKeymapButton, keymapFileInput, keymapStatus, keymapWarning,
     workspaceTabList, hotkeyEditorFilter, hotkeyEditorCommands,
-    dataLayerStorage, hotkeyStorage, shellStorage, durableProjectRuntime };
+    dataLayerStorage, hotkeyStorage, shellStorage, durableProjectRuntime, durableProjectRepositoryUi };
 }
 
 export type InstalledDataLayerControllers = Readonly<Record<
@@ -433,6 +527,11 @@ export async function mountInstalledDataLayerRuntime(
   const dataStorage=foundation.dataLayerStorage, projectStorage=durable.storage;
   const download=(filename:string,contents:BlobPart,type="application/json"):void=>{const url=URL.createObjectURL(new Blob([contents],{type}));
     const link=root.createElement("a");link.href=url;link.download=filename;link.click();URL.revokeObjectURL(url);};
+  let schemaRecoveryActive=false;
+  let guidedLivePropertyReturn:{eventId:string;path:string;expanded:readonly string[];inspectorScroll:number;feedScroll:number}|undefined;
+  const schemaPersistence=createDurableSchemaPersistenceCoordination({runtime:durable,repositoryUi:foundation.durableProjectRepositoryUi,
+    eventTarget:globalThis,origin:()=>root.activeElement instanceof HTMLElement?root.activeElement:undefined,
+    download:(serialized)=>download("unsaved-saved-schema-batch.json",serialized),recoveryStarted:()=>{schemaRecoveryActive=true;}});
   const currentProject=():ProjectState|undefined=>schemaApi.restoreCanonicalProjectState(projectStorage.getItem("my-chrome-utilities.specification-project.v1"));
   let controllers:ReturnType<typeof createInstalledDataLayerControllers>["controllers"];
   let currentView:DataLayerView=(dataStorage.getItem("my-chrome-utilities.data-layer-view.v1") as DataLayerView|null)??"Live";
@@ -469,6 +568,35 @@ export async function mountInstalledDataLayerRuntime(
     event?.addListener(listener);return()=>event?.removeListener(listener);};
   const targetFromTab=(tab:chrome.tabs.Tab):CaptureTargetTab|undefined=>tab.id===undefined||tab.windowId===undefined||!tab.url?undefined:{tabId:tab.id,windowId:tab.windowId,
     pageUrl:tab.url,title:tab.title??tab.url,activeTab:tab.active,currentWindow:tab.highlighted};
+  const defectNavigation=(selected:LiveEvent,action:()=>HTMLButtonElement|null)=>defectApi.createLiveDefectReportNavigation(selected.id,{
+    reopenCapturedEvent:(id:string)=>controllers.capture.openInspector(id,true),createDefectReportAction:action,
+    closeToLiveFeed:()=>controllers.capture.closeInspector(),
+  });
+  const guidedCapturedEvent=(event:LiveEvent)=>({id:event.id,sourceId:event.sourceId,name:event.name,payload:event.payload??{},rawInput:event.rawInput??[],
+    ...(event.pageUrl?{pageUrl:event.pageUrl}:{})});
+  const startValidationDefectReport=(selected:LiveEvent):void=>{const inspector=liveElements.eventInspector;if(!inspector)return;
+    defectApi.renderDefectReportBuilder(inspector,selected,undefined,controllers.capture.state().observer.events,
+      defectNavigation(selected,()=>liveElements.eventInspector?.querySelector<HTMLButtonElement>("#live-inspector-action-create-defect-report")??null),{
+        save:async(report,options)=>{const selectedPointers=new Set(report.evidence.validation.map(({pointer}:{pointer:string})=>pointer));
+          const issues=defectApi.currentDefectIssues(selected).filter((issue:{concretePath:string})=>selectedPointers.has(issue.concretePath));
+          const defect=defectApi.createValidationDefect({id:`defect:${crypto.randomUUID()}`,now:new Date().toISOString(),report,issues});
+          const result=controllers.defects.add(defect,options.saveSeparately);if(result.added&&selected.manualFlowContext)controllers["live-flow-testing"].attachDefect(
+            selected.manualFlowContext.selectedStepId,selected.manualFlowContext.eventId,defect.id);
+          if(options.copy&&navigator.clipboard?.writeText)await navigator.clipboard.writeText(defectApi.renderJiraReport(report).text);
+          return result.added?{feedback:options.copy?"Defect saved and copied for Jira Cloud.":"Defect saved."}:{feedback:"A reported defect already matches the selected issue.",
+            existing:result.existing.map((candidate:ReportedDefect)=>({id:candidate.id,label:String(candidate.report?.summary??candidate.id)}))};},
+        openExisting:(id:string)=>controllers.defects.open(id),updateExisting:(id:string,report:unknown)=>{controllers.defects.edit(id,{report});controllers.defects.open(id);},
+      });};
+  const startOccurrenceDefectReport=(selected:LiveEvent,mode:Parameters<typeof defectApi.renderOccurrenceDefectReportBuilder>[2]):void=>{
+    const inspector=liveElements.eventInspector;if(!inspector)return;
+    defectApi.renderOccurrenceDefectReportBuilder(inspector,selected,mode,controllers.schemas.schemas(),controllers.capture.state().observer.events,undefined,
+      defectNavigation(selected,()=>liveElements.eventInspector?.querySelector<HTMLButtonElement>(`#live-inspector-action-report-${mode==="Unexpected event"?"unexpected-event":"wrong-event-name"}`)??null),{
+        save:async(report,options)=>{const defect=defectApi.createOccurrenceDefect({id:`defect:${crypto.randomUUID()}`,now:new Date().toISOString(),report});
+          const result=controllers.defects.add(defect,options.saveSeparately);if(options.copy&&navigator.clipboard?.writeText)await navigator.clipboard.writeText(defectApi.renderOccurrenceReport(report).text);
+          return result.added?{feedback:options.copy?"Occurrence defect saved and copied for Jira Cloud.":"Occurrence defect saved."}:{feedback:"A reported occurrence defect already matches this event.",
+            existing:result.existing.map((candidate:ReportedDefect)=>({id:candidate.id,label:String(candidate.report?.summary??candidate.id)}))};},
+        openExisting:(id:string)=>controllers.defects.open(id),updateExisting:(id:string,report:unknown)=>{controllers.defects.edit(id,{report});controllers.defects.open(id);},
+      });};
   const captureObserverRuntime:CaptureObserverRuntimePorts={
     read:({tabId,pageUrl,historyPath,pageLoadId})=>tabPageObservation(tabId,pageUrl,historyPath,pageLoadId),
     startPush:({tabId,historyPath,onSnapshot,onEntry})=>captureApi.startLiveHistoryPushCapture({...(tabId===undefined?{}:{tabId}),historyPath,onSnapshot,onEntry}),
@@ -507,22 +635,33 @@ export async function mountInstalledDataLayerRuntime(
       inspector:{splitView:()=>globalThis.innerWidth>=700,capturePresentation:()=>liveApi.captureLiveInspectorPresentation(liveElements.eventInspector),
         restorePresentation:(snapshot)=>liveApi.restoreLiveInspectorPresentation(liveElements.eventInspector,snapshot),
         restoreReturn:(snapshot)=>liveApi.restoreInspectorReturnUi(liveElements,snapshot),render:(event)=>liveApi.renderLiveInspector(liveElements,event,
-          liveApi.createLiveInspectorActions({currentPageUrl:()=>controllers.capture.state().observer.pageUrl,
+          liveApi.createLiveInspectorActions(createInstalledLiveInspectorCoordination({currentPageUrl:()=>controllers.capture.state().observer.pageUrl,
             writeClipboard:async(text)=>navigator.clipboard.writeText(text),storeTemplate:(template)=>controllers["event-library"].store(template),
             defaultDestination:()=>controllers["project-event-transport"].state().pushPath,
-            expandAllowedValue:(selected,evaluation,trigger)=>{
-              const assignedSchemaId=selected.validationDetails?.schema?.id??evaluation.schemaId;
-              if(assignedSchemaId)controllers.schemas.openAllowedValueExpansionReview(selected.id,assignedSchemaId,evaluation,trigger);
-            },
-            openReportedDefect:(defectId,selected,issueIndex)=>controllers.defects.open(defectId,{returnPosition:{eventId:selected.id,issueIndex,
-              listScrollTop:liveElements.eventList?.scrollTop??0}}),
-            validationState:(candidate)=>controllers.schemas.validate({sourceId:candidate.sourceId,eventName:candidate.name,payload:candidate.payload,rawInput:candidate.rawInput}).state,
-            updateValidation:(eventId)=>{const candidate=controllers.capture.state().observer.events.find(({id})=>id===eventId);if(!candidate)return;
-              const validation=controllers.schemas.validate({sourceId:candidate.sourceId,eventName:candidate.name,payload:candidate.payload,rawInput:candidate.rawInput});
-              controllers.capture.updateEvent(eventId,{validation:validation.state,validationDetails:{issues:validation.issues,evaluations:validation.evaluations??[],
-                ...(validation.schema?{schema:validation.schema}:{}),...(validation.documentation?{documentation:validation.documentation}:{}),...(validation.assignment?{assignment:validation.assignment}:{})}});},
-            manualSchemaChoices:()=>controllers.schemas.schemas().map(({id,name,version})=>({id,label:`${name} version ${version}`})),
-            selectManualSchema:()=>{}}))},
+            onTemplateSaved:(template)=>controllers["event-library"].appendOpenInLibraryAction(event.id,template.name),
+            schemas:{create:(selected)=>controllers.schemas.openSchemaFromSource({name:selected.name,sourceId:selected.sourceId,eventName:selected.name,payload:selected.payload,label:"Live event"}),
+              createValidation:(selected)=>{void controllers.schemas.openGuidedEvent(guidedCapturedEvent(selected));},
+              addPropertyValidation:(selected,path)=>{guidedLivePropertyReturn={eventId:selected.id,path,
+                expanded:Array.from(liveElements.eventInspector?.querySelectorAll<HTMLDetailsElement>("details[open][data-property-path]")??[],({dataset})=>dataset.propertyPath!).filter(Boolean),
+                inspectorScroll:liveElements.eventInspector?.scrollTop??0,feedScroll:liveElements.eventFeed?.scrollTop??0};
+                void controllers.schemas.openGuidedLiveProperty(guidedCapturedEvent(selected),path);},
+              addPropertyToSchema:(selected,path,trigger)=>{controllers.schemas.openLivePropertyDeclaration(guidedCapturedEvent(selected),path,trigger);},
+              propertyDeclaration:(selected,path)=>controllers.schemas.livePropertyDeclaration(guidedCapturedEvent(selected),path),
+              expandAllowedValue:(selected,evaluation,trigger)=>{const assignedSchemaId=selected.validationDetails?.schema?.id??evaluation.schemaId;
+                if(assignedSchemaId)controllers.schemas.openAllowedValueExpansionReview(selected.id,assignedSchemaId,evaluation,trigger);},
+              draftContinuation:(selected)=>controllers.schemas.guidedContinuation(guidedCapturedEvent(selected)),
+              validationAvailable:(selected)=>controllers.schemas.liveValidationAvailable(guidedCapturedEvent(selected)),
+              validationState:(selected)=>controllers.schemas.validateLive(guidedCapturedEvent(selected)).state,manualSchemaChoices:()=>controllers.schemas.liveSchemaChoices(),
+              selectManualSchema:(eventId,schemaId)=>controllers.schemas.setManualSchemaOverride(eventId,schemaId)},
+            defects:{startValidationReport:startValidationDefectReport,startOccurrenceReport:startOccurrenceDefectReport,
+              openReported:(defectId,selected,issueIndex)=>controllers.defects.open(defectId,{returnPosition:{eventId:selected.id,issueIndex,listScrollTop:liveElements.eventList?.scrollTop??0}})},
+            updateValidation:(eventId,state)=>{const candidate=controllers.capture.state().observer.events.find(({id})=>id===eventId);if(!candidate)return;
+              const scroll=liveElements.eventInspector?.scrollTop??0,focusedId=root.activeElement instanceof HTMLElement?root.activeElement.id:"",validation=controllers.schemas.validateLive(guidedCapturedEvent(candidate));
+              controllers.capture.updateEvent(eventId,{validation:state,validationDetails:{issues:validation.issues,evaluations:validation.evaluations??[],
+                ...(validation.schema?{schema:validation.schema}:{}),...(validation.documentation?{documentation:validation.documentation}:{}),...(validation.assignment?{assignment:validation.assignment}:{})}});
+              controllers.capture.openInspector(eventId,true);if(liveElements.eventInspector)liveElements.eventInspector.scrollTop=scroll;if(focusedId)root.getElementById(focusedId)?.focus({preventScroll:true});
+              liveApi.setEventValidationUpdateStatus(liveElements,`Validation changed to ${state}.`);},
+          })))},
       ui:{historyPath:()=>{const state=controllers["project-event-transport"].state(),status=["Selection required","Waiting for path","Ready","Unavailable"].includes(state.currentTargetPathStatus)?state.currentTargetPathStatus:"Unavailable";return{path:state.observationPath,fieldValue:state.observationPath,status:status as "Selection required"|"Waiting for path"|"Ready"|"Unavailable"};},
         chooseObservationTarget:()=>root.querySelector<HTMLButtonElement>("#choose-observation-target")?.click(),browseObservationTargets:()=>root.querySelector<HTMLButtonElement>("#browse-observation-targets")?.click(),
         closeObservationTargetPicker:()=>captureApi.closeObservationTargetPicker(captureApi.findObservationTargetElements(root)),searchObservationTargets:()=>{},cancelDetachTarget:()=>{},confirmDetachTarget:()=>{},
@@ -542,10 +681,10 @@ export async function mountInstalledDataLayerRuntime(
       pushTarget:()=>{const state=controllers.capture.state().targets,target=state.targets.find(({id})=>id===state.selectedTargetId);return target?{id:target.id,tabId:target.tabId,windowId:target.windowId,title:target.title,pageUrl:target.pageUrl,origin:target.origin,accessState:target.accessState}:undefined;},
       checkPushPath:async(target,destination)=>{const [result]=await chromeApi().scripting.executeScript({target:{tabId:target.tabId},world:"MAIN",args:[destination],func:eventApi.pushPathCapabilityInPage});return result?.result?.success?{success:true,message:"Selected-page push path is ready."}:{success:false,message:result?.result?.result??"Push path is not push-capable"};},
       renderPushReview:(host,review)=>eventApi.renderPushDraftReview(host,review),
-      renderRevisionReview:(host,review)=>{const dialog=host.querySelector<HTMLDialogElement>("#revision-change-review");if(dialog)eventApi.renderTemplateChangeReview(dialog,review);}},
+      renderRevisionReview:(host,review)=>eventApi.renderTemplateChangeReview(host,review)},
     schemas:{root,storage:dataStorage,relationshipViewStorage:dataStorage,changed:()=>{},subscribe:(listener)=>durable.subscribe(()=>listener()),
       createRuleId:()=>`rule:${crypto.randomUUID()}`,capturedAssignmentValue:()=>undefined,renderAssignmentConditions:schemaApi.renderAssignmentDataConditionEditor,
-      localRulePromotionDialog:schemaApi.createLocalRulePromotionDialog(),subscribeSchemaPersistence:()=>()=>{},
+      localRulePromotionDialog:schemaApi.createLocalRulePromotionDialog(),subscribeSchemaPersistence:schemaPersistence.subscribe,
       downloadSchema:(value,filename)=>download(filename,`${JSON.stringify(value,null,2)}\n`),
       relationshipTree:(schemas)=>({projectId:activeProjectId()??"",nodes:schemaApi.projectSchemaRelationshipTree(currentProject(),schemas)}),
       openProjectLibrary:()=>showDataLayerView("Projects"),openContributor:()=>{},openContributorInStudio:(key)=>globalThis.open(`specification-builder.html?contributor=${encodeURIComponent(key)}`,"_blank"),
@@ -553,9 +692,19 @@ export async function mountInstalledDataLayerRuntime(
         writePlain:async(plain:string)=>navigator.clipboard.writeText(plain),
         writeRich:async(_html:string,plain:string)=>navigator.clipboard.writeText(plain),
       }),reportMissingSchemaEvent:()=>controllers.defects.openMissingEventBuilder("Schemas"),
-      showSchemasView:()=>showDataLayerView("Schemas"),scheduleFrame:(callback)=>requestAnimationFrame(callback),restoreGuidedCapture:(id,path)=>{
-        controllers.capture.openInspector(id,true);const property=path?root.querySelector<HTMLElement>(`[data-property-path="${CSS.escape(path)}"]`):undefined;
-        (property?.querySelector<HTMLElement>(".live-allowed-value-expansion")??property)?.focus({preventScroll:true});},
+      showSchemasView:()=>showDataLayerView("Schemas"),scheduleFrame:(callback)=>requestAnimationFrame(callback),restoreGuidedCapture:(id,path,focusAction="validation")=>{
+        const snapshot=guidedLivePropertyReturn?.eventId===id?guidedLivePropertyReturn:undefined;
+        const restore=()=>{controllers.capture.openInspector(id,true);const inspector=liveElements.eventInspector,feed=liveElements.eventFeed;
+          if(snapshot){for(const propertyPath of snapshot.expanded)inspector?.querySelector<HTMLDetailsElement>(`details[data-property-path="${CSS.escape(propertyPath)}"]`)?.setAttribute("open","");
+            if(inspector)inspector.scrollTop=snapshot.inspectorScroll;if(feed)feed.scrollTop=snapshot.feedScroll;}
+          const action=focusAction==="declaration"?"add-property-to-schema":"add-property-validation";
+          const target=Array.from(inspector?.querySelectorAll<HTMLButtonElement>(`button[data-action="${action}"]`)??[])
+            .find((button)=>button.dataset.propertyPath===(path??snapshot?.path));
+          target?.focus({preventScroll:true});};
+        restore();if(schemaRecoveryActive){root.querySelector<HTMLDialogElement>("#durable-storage-recovery")?.close();schemaRecoveryActive=false;
+          requestAnimationFrame(()=>{if(snapshot&&guidedLivePropertyReturn!==snapshot)return;restore();if(guidedLivePropertyReturn===snapshot)guidedLivePropertyReturn=undefined;});}
+        else queueMicrotask(()=>{if(snapshot&&guidedLivePropertyReturn!==snapshot)return;restore();if(guidedLivePropertyReturn===snapshot)guidedLivePropertyReturn=undefined;});},
+      guidedSaved:(message)=>{const status=root.querySelector<HTMLElement>("#live-session-message");if(status)status.textContent=message;},
       activeProjectId,ensureProjectSchemaContributors:async(projectId)=>{await durable.ensureProject(projectId);return{name:(await durable.repository.loadProject(projectId)).state.project.name};},
       settleCanonical:async()=>{await durable.settled("schema");},mountLayeredProfileEditor:()=>undefined,canonicalConceptSuggestions:()=>schemaApi.projectCanonicalConcepts(currentProject()!),
       revalidateCurrentLive:(schemas,overrides)=>{const refresh=schemaApi.revalidateCurrentLiveSession(controllers.capture.state().observer,schemas,overrides);
@@ -615,7 +764,8 @@ export async function mountInstalledDataLayerRuntime(
       void durable.settled().then(()=>{if(runtimeMounted)controllers["project-event-transport"].synchronizeProjectPaths();});
       showDataLayerView(currentView);foundation.app?.setAttribute("aria-label","TWAtility Belt");
       const panel=root.querySelector<HTMLElement>("#side-panel-root");if(panel){panel.dataset.chromeApiCapabilities="installed-runtime";panel.dataset.utilityShellReady="true";}},
-    dispose(){if(!runtimeMounted)return;runtimeMounted=false;stopDurableCoordination?.();stopDurableCoordination=undefined;lifecycle.dispose();shell.dispose();}};
+    dispose(){if(!runtimeMounted)return;runtimeMounted=false;stopDurableCoordination?.();stopDurableCoordination=undefined;lifecycle.dispose();schemaPersistence.dispose();
+      guidedLivePropertyReturn=undefined;shell.dispose();}};
 }
 import { commandsForUtilityShell, listCommands } from "../utilities/command-palette/index.js";
 import { bindUtilityPanels, mountUtilityShell, renderUtilityDirectory } from "../platform/utility-shell-dom.js";

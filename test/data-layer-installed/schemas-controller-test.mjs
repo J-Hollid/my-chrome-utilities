@@ -318,6 +318,21 @@ assert.equal(uiController.schemas()[0].documentation.description, "Checkout payl
 assert.equal(uiController.state().activeSchemaId, undefined); assert.equal(elements.get("#schema-editor").hidden, true,
   "stored-schema publication clears editor state and returns to the list");
 uiController.open("schema:page");
+assert.deepEqual(elements.get("#schema-revision-selector").children.map(({ value, textContent }) => ({ value, textContent })),
+  [{ value:"1", textContent:"Revision 1" }], "opening a published schema renders its historical revision choices");
+elements.get("#schema-revision-selector").value = "1"; elements.get("#restore-schema-revision").click();
+assert.equal(elements.get("#schema-revision-comparison").textContent,
+  "Revision 1 compared with current revision 2. 1 historical properties; 1 current properties.");
+assert.equal(elements.get("#schema-revision-review").open, true);
+assert.equal(uiController.schemas().find(({ id }) => id === "schema:page").workingDraft, undefined,
+  "requesting historical restoration does not mutate the current schema before confirmation");
+elements.get("#cancel-schema-revision").click();
+assert.equal(uiController.schemas().find(({ id }) => id === "schema:page").workingDraft, undefined,
+  "cancelling historical restoration leaves the current schema unchanged");
+elements.get("#restore-schema-revision").click(); elements.get("#confirm-schema-revision").click();
+assert.equal(uiController.schemas().find(({ id }) => id === "schema:page").workingDraft.sourceVersion, 1,
+  "confirming historical restoration creates a working draft from the selected revision");
+elements.get("#discard-working-schema-draft").click(); uiController.open("schema:page");
 elements.get("#schema-revision-selector").value = "1"; elements.get("#build-historical-specification").click();
 assert.equal(relationshipActions.at(-1), "build:schema:page:historical:1"); closeSpecification();
 elements.get("#schema-revision-selector").value = "1"; elements.get("#duplicate-schema-revision").click();
@@ -600,6 +615,13 @@ const persistenceSchemaId = uiController.state().activeSchemaId;
 uiController.beginDraft();
 const persistenceSchema = uiController.schemas().find(({ id }) => id === persistenceSchemaId);
 const guidedCapture = { id:"capture:checkout", sourceId:"gtm", name:"checkout", payload:{ checkout:{ email:"buyer@example.test" } }, rawInput:{} };
+const unboundGuidedCapture = { id:"capture:pageview", sourceId:"gtm", name:"pageview", payload:{ page_type:"home" }, rawInput:{} };
+await uiController.openGuidedLiveProperty(unboundGuidedCapture, "/page_type");
+assert.equal(uiController.guidedDraft().continuation, undefined,
+  "a live property without an explicit continuation keeps the guided destination picker available");
+uiController.closeGuided();
+assert.deepEqual(restoredGuidedCaptures.at(-1), [unboundGuidedCapture.id, "/page_type"],
+  "closing an unbound live-property flow returns to the originating captured property");
 const schemaPaths = uiController.schemaDocumentPaths(persistenceSchema.workingDraft.document);
 assert.ok(schemaPaths.length > 0); assert.ok(uiController.schemaPropertyAt(persistenceSchema.workingDraft.document, schemaPaths[0]));
 const definedDocument = uiController.defineSchemaProperty({ type:"object" }, { path:"sample", type:"string" });
@@ -833,3 +855,42 @@ assert.equal(guidedChoice.listenerCount(), 0, "disposal removes the guided conti
 assert.equal(expansionConfirm.listenerCount(), 0, "disposal removes the open allowed-value dialog listeners");
 assert.equal([...elements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
   "Schemas removes every editor and revision listener it owns");
+
+{
+  const { createDurableSchemaPersistenceCoordination } = await import("../../dist/data-layer-installed/runtime.js");
+  let savedListener = () => {};
+  let recovery;
+  let retried = 0;
+  let rejected = 0;
+  let downloaded = "";
+  const target = new EventTarget();
+  const pending = { batch:{ upserts:[{ schema:{ id:"schema:page", name:"Page" } }], deletes:[],
+    label:"Save Page in the Saved Schema Library", names:["Page"] }, error:new Error("quota") };
+  let failed = pending;
+  const coordination = createDurableSchemaPersistenceCoordination({
+    runtime:{
+      repository:{ subscribeSavedSchemas:(listener) => { savedListener = listener; return () => { savedListener = () => {}; }; } },
+      failedSchemaSave:() => failed,
+      retryFailedSchemaSave:async () => { retried += 1; failed = undefined;
+        savedListener({ schemaId:"schema:page", token:"next", deleted:false }); },
+      resolveFailedSchemaSave:async () => { rejected += 1; },
+      exportUnsavedSchemas:() => "serialized batch",
+    },
+    repositoryUi:{ reportSaveFailure:async (input) => { recovery = input; } },
+    eventTarget:target,
+    origin:() => undefined,
+    download:(serialized) => { downloaded = serialized; },
+  });
+  const persistenceEvents = [];
+  coordination.subscribe((event) => persistenceEvents.push(event.type));
+  target.dispatchEvent(new CustomEvent("durable-project-save-failed", { detail:{ error:pending.error } }));
+  await Promise.resolve();
+  assert.deepEqual(persistenceEvents, ["failed"], "a durable schema failure pauses the installed Schema transaction");
+  assert.equal(recovery.kind, "saved-schema"); recovery.exportUnsaved();
+  assert.equal(downloaded, "serialized batch"); await recovery.retry();
+  assert.equal(retried, 1);
+  assert.deepEqual(persistenceEvents, ["failed", "saved", "retried"],
+    "Retry settles through both durable observation and explicit recovery acknowledgement");
+  await recovery.reject(); assert.equal(rejected, 1); assert.equal(persistenceEvents.at(-1), "rejected");
+  coordination.dispose();
+}

@@ -177,6 +177,8 @@ export function createCaptureInstalledController(ports) {
     }
     async function discoverCurrentObservationTarget() {
         const generation = ++targetDiscoveryGeneration;
+        observationTargetList?.replaceChildren?.();
+        setObservationTargetResult("Looking for the active tab…");
         const tabs = await ports.observation.discover("current");
         if (!mounted || generation !== targetDiscoveryGeneration)
             return;
@@ -313,6 +315,7 @@ export function createCaptureInstalledController(ports) {
             return;
         event.preventDefault();
         showDataLayerView(next);
+        dataLayerViewList?.querySelector(`#data-layer-view-${next.toLowerCase()}`)?.focus();
     };
     function renderLiveContextActions() {
         const activeSession = dataLayerSessionState.session?.status === "active";
@@ -1281,8 +1284,11 @@ export function createCaptureInstalledController(ports) {
             ports.setLiveSessionMessage("Testing started");
         },
         end() {
+            attachedTargetRecoveryGeneration += 1;
+            stopLiveHistoryCapture();
             dataLayerSessionState = endDataLayerTestingSession(dataLayerSessionState);
             ports.setLiveSessionMessage(testingEndedMessage());
+            renderLiveContextActions();
             publish();
         },
         pause: pauseInstalledCapture,

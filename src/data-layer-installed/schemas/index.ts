@@ -13,6 +13,7 @@ import {
   publishSchemaWorkingDraft,
   removeSchemaProperty,
   restoreSchemaRevisionDraft,
+  schemaRevision,
   schemaPropertyRows,
   schemaRevisionChoices,
   schemaPropertyCopySource,
@@ -20,6 +21,7 @@ import {
   schemaInheritanceError,
   addManualProperty,
   assignmentDraftAfterGuidedSave,
+  assignableSchemas,
   assignmentConditionSuggestions, configuredRuleDetails, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, reusableRulesForProperty, reusableRuleMetadata,
   assignmentDataConditionSummary,
   contextualManualPropertyDefinition,
@@ -53,6 +55,7 @@ import {
   applyCanonicalCommand,
   canonicalCommandOutcome,
   canonicalPropertyPath,
+  canonicalLivePropertyPath,
   canonicalRulePropertyPath,
   canonicalCommandsFromCompactProjection,
   compactCanonicalCommandPolicy,
@@ -137,7 +140,8 @@ export interface SchemasInstalledPorts {
   reportMissingSchemaEvent(schemaId: string): void;
   showSchemasView():void;
   scheduleFrame(callback: () => void): void;
-  restoreGuidedCapture(eventId:string, propertyPath?:string):void;
+  restoreGuidedCapture(eventId:string, propertyPath?:string, focusAction?:"validation"|"declaration"):void;
+  guidedSaved?(message:string):void;
   activeProjectId(): string | undefined;
   ensureProjectSchemaContributors(projectId: string, route: Readonly<{ collectionKinds:readonly string[]; includeFlowGraphs:boolean }>): Promise<{ name:string }>;
   settleCanonical?(schemaId:string):Promise<void>;
@@ -628,7 +632,10 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   let pendingLocalRulePromotionPersistence: PendingSchemaPersistence | undefined;
   let pendingGuidedValidationPersistence: PendingSchemaPersistence | undefined;
   let guidedContinuationSelections:GuidedContinuationSelections = restoreGuidedContinuationSelections(ports.storage.getItem(GUIDED_CONTINUATION_STORAGE_KEY));
-  let guidedPropertyReturn: { schemaId:string; propertyPath:string; generation:number } | undefined;
+  let guidedPropertyReturn:
+    | { kind:"schema"; schemaId:string; propertyPath:string; generation:number }
+    | { kind:"capture"; eventId:string; propertyPath:string; generation:number }
+    | undefined;
   const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validation-records.v1";
   let schemaValidationRecords: SchemaValidationRecord[] = (() => { try { const parsed = JSON.parse(ports.storage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]");
     return Array.isArray(parsed) ? parsed : []; } catch { return []; } })();
@@ -951,6 +958,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (schemaPropertyTree) {
       const items = propertyView.rows.flatMap((row) => { const item = schemaOwnerDocument?.createElement("li");
         if (!item) return []; item.dataset.propertyPath = row.canonicalPath;
+        item.dataset.schemaPropertyPath = row.displayPath;
         item.dataset.schemaPropertyCanonicalPath = row.canonicalPath;
         const summary = schemaOwnerDocument!.createElement("strong"); summary.textContent = row.displayPath; item.append(summary);
         const propertyAction = (label:string, run:(button:HTMLButtonElement) => void, ariaLabel = `${label} ${row.canonicalPath}`) => { const button = schemaOwnerDocument!.createElement("button");
@@ -975,8 +983,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
         const disclosure = schemaOwnerDocument!.createElement("details"), disclosureSummary = schemaOwnerDocument!.createElement("summary");
         disclosure.dataset.attachedRules = "true"; disclosure.open = expandedSchemaPropertyRulePaths.has(row.canonicalPath);
         disclosureSummary.textContent = `View attached rules (${attachedRules.length})`;
+        const activeRuleCount = schemaOwnerDocument!.createElement("span"); activeRuleCount.textContent = `${attachedRules.length} active rules`;
         listenProperty(disclosure, "toggle", () => { if (disclosure.open) expandedSchemaPropertyRulePaths.add(row.canonicalPath);
-          else expandedSchemaPropertyRulePaths.delete(row.canonicalPath); }); disclosure.append(disclosureSummary);
+          else expandedSchemaPropertyRulePaths.delete(row.canonicalPath); }); disclosure.append(disclosureSummary, activeRuleCount);
         if (!attachedRules.length) disclosure.append("No rules attached to this property.");
         for (const attached of attachedRules) {
           const attachedRow = schemaOwnerDocument!.createElement("div"); attachedRow.dataset.ruleId = attached.id;
@@ -1006,7 +1015,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     const draft = schema?.workingDraft;
     const presented = schema ? schemaEditorDraft(schema) : undefined;
     if (schemaEditor) schemaEditor.hidden = !schema;
-    if (schemaDetail) schemaDetail.hidden = !schema;
+    if (schemaDetail) schemaDetail.hidden = false;
     if (schemaDetailEmpty) schemaDetailEmpty.hidden = Boolean(schema);
     if (schemaEditorName) schemaEditorName.value = draft?.name ?? schema?.name ?? "";
     if (schemaEditorStatus) {
@@ -1064,6 +1073,15 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (buildSpecificationButton) { buildSpecificationButton.hidden = !draft;
       buildSpecificationButton.onclick = schema && draft ? () => openSchemaSpecification(schema, "working-draft", buildSpecificationButton) : null; }
     const historyVersions = schema ? schemaRevisionChoices(schema) : [];
+    if (schemaRevisionSelector && schemaOwnerDocument) {
+      const selectedRevision = Number(schemaRevisionSelector.value);
+      schemaRevisionSelector.replaceChildren(...historyVersions.map((version) => {
+        const option = schemaOwnerDocument.createElement("option"); option.value = String(version); option.textContent = `Revision ${version}`; return option;
+      }));
+      schemaRevisionSelector.value = String(historyVersions.includes(selectedRevision) ? selectedRevision : historyVersions[0] ?? "");
+    }
+    if (duplicateSchemaRevisionButton) duplicateSchemaRevisionButton.disabled = historyVersions.length === 0;
+    if (restoreSchemaRevisionButton) restoreSchemaRevisionButton.disabled = historyVersions.length === 0;
     if (buildHistoricalSpecificationButton) { buildHistoricalSpecificationButton.disabled = historyVersions.length === 0;
       buildHistoricalSpecificationButton.onclick = schema && historyVersions.length
         ? () => openSchemaSpecification(schema, `historical:${revisionVersion()}`, buildHistoricalSpecificationButton) : null; }
@@ -1071,7 +1089,12 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       ? `${pendingChanges.length} pending change${pendingChanges.length === 1 ? "" : "s"}` : "No pending changes";
     if (confirmSchemaRevisionButton && schema) confirmSchemaRevisionButton.textContent = schema.published === false
       ? "Publish revision 1" : `Publish revision ${schema.version + 1}`;
-    if (schemaRevisionComparison && schema) schemaRevisionComparison.textContent = `Revision ${revisionVersion()} compared with ${schema.version}`;
+    if (schemaRevisionComparison && schema) {
+      const version = revisionVersion(), historical = schemaRevision(schema, version);
+      const historicalProperties = Object.keys(historical?.document.properties ?? {}).length;
+      const currentProperties = Object.keys(schema.document.properties ?? {}).length;
+      schemaRevisionComparison.textContent = `Revision ${version} compared with current revision ${schema.version}. ${historicalProperties} historical properties; ${currentProperties} current properties.`;
+    }
     if (schemaEditorNameAssistance && schema) schemaEditorNameAssistance.textContent = inspectSchemaRename(
       schema, schemas, schemaEditorName?.value ?? draft?.name ?? schema.name).assistance;
     renderSchemaPropertyView();
@@ -1266,8 +1289,17 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (closeEditor) { activeSchemaId = undefined; schemaDraft = undefined; }
     renderSchemas(); refreshCurrentLiveAfterSchemaPublication(); return published;
   };
-  const confirmSchemaRevision = (): void => { publishActiveSchema(true); };
-  const cancelSchemaRevision = (): void => { schemaRevisionReview?.close(); if (schemaRevisionReview) schemaRevisionReview.hidden = true; };
+  const confirmSchemaRevision = (): void => {
+    if (pendingSchemaRestoration) {
+      const pending = pendingSchemaRestoration; pendingSchemaRestoration = undefined;
+      if (active().id !== pending.schemaId) throw new Error("The schema selected for restoration is no longer active.");
+      replaceActive(restoreSchemaRevisionDraft(active(), pending.version)); persistSchemaLibrary();
+      schemaRevisionReview?.close(); if (schemaRevisionReview) schemaRevisionReview.hidden = true; renderSchemas(); return;
+    }
+    publishActiveSchema(true);
+  };
+  const cancelSchemaRevision = (): void => { pendingSchemaRestoration = undefined;
+    schemaRevisionReview?.close(); if (schemaRevisionReview) schemaRevisionReview.hidden = true; };
   const discardSchemaDraft = (): void => {
     schemaDraft = undefined; activeSchemaId = undefined; schemaCloseReview?.close(); if (schemaCloseReview) schemaCloseReview.hidden = true; renderSchemas();
   };
@@ -1284,9 +1316,11 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const renderSchemaRevisionComparison = (): void => renderSchemaDraft();
   const duplicateSelectedSchemaRevision = (): void => { const duplicate = duplicateSchemaRevision(active(), revisionVersion(), schemas);
     schemas = [...schemas, duplicate]; activeSchemaId = duplicate.id; schemaDraft = structuredClone(duplicate); persistSchemaLibrary(); renderSchemas(); };
-  const restoreSelectedSchemaRevision = (): void => { pendingSchemaRestoration = { schemaId:active().id, version:revisionVersion() };
-    replaceActive(restoreSchemaRevisionDraft(active(), pendingSchemaRestoration.version)); pendingSchemaRestoration = undefined;
-    persistSchemaLibrary(); renderSchemas(); };
+  const restoreSelectedSchemaRevision = (): void => { const schema = active(), version = revisionVersion();
+    pendingSchemaRestoration = { schemaId:schema.id, version };
+    if (schemaRevisionReviewSummary) schemaRevisionReviewSummary.textContent =
+      `${schema.name} revision ${version} will replace ${schema.workingDraft?.pendingChanges.length ?? 0} pending draft changes and create a working draft. Current revision ${schema.version} remains active; publication will create revision ${schema.version + 1}.`;
+    if (schemaRevisionReview) schemaRevisionReview.hidden = false; schemaRevisionReview?.showModal(); };
   const clearSchemaPropertyViewFilter = (): void => { if (schemaPropertyFilter) schemaPropertyFilter.value = "";
     renderSchemaPropertyView(); schemaPropertyFilter?.focus(); };
   function showSchemaSubview(subview: string): void {
@@ -1684,6 +1718,10 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     ports.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(schemas)); persistReusableSchemaRules();
     renderSchemas(); renderSchemaRuleLibrary();
   };
+  const restorePersistenceSnapshot = (nextSchemas: readonly SchemaDefinition[], nextRules: readonly ReusableSchemaRule[]): void => {
+    schemas = structuredClone([...nextSchemas]); reusableSchemaRules = structuredClone([...nextRules]);
+    persistReusableSchemaRules(); renderSchemas(); renderSchemaRuleLibrary();
+  };
   const beginSchemaPersistence = (kind: "promotion" | "guided", schemaId: string,
     previousSchemas: readonly SchemaDefinition[], previousRules: readonly ReusableSchemaRule[],
     nextSchemas: readonly SchemaDefinition[], nextRules: readonly ReusableSchemaRule[]): Promise<void> => {
@@ -1693,14 +1731,14 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       schemaId, generation, kind, paused:false, settled:false, previousSchemas:structuredClone([...previousSchemas]),
       previousRules:structuredClone([...previousRules]), nextSchemas:structuredClone([...nextSchemas]), nextRules:structuredClone([...nextRules]),
       pause() { if (transaction.settled || transaction.paused) return; transaction.paused = true;
-        applyPersistenceSnapshot(transaction.previousSchemas, transaction.previousRules); },
+        restorePersistenceSnapshot(transaction.previousSchemas, transaction.previousRules); },
       complete() { if (transaction.settled || transaction.generation !== generation) return; transaction.settled = true;
         if (transaction.paused) applyPersistenceSnapshot(transaction.nextSchemas, transaction.nextRules);
         if (pendingLocalRulePromotionPersistence === transaction) pendingLocalRulePromotionPersistence = undefined;
         if (pendingGuidedValidationPersistence === transaction) pendingGuidedValidationPersistence = undefined;
         resolveCompletion(); },
       reject(error) { if (transaction.settled || transaction.generation !== generation) return; transaction.settled = true;
-        applyPersistenceSnapshot(transaction.previousSchemas, transaction.previousRules);
+        restorePersistenceSnapshot(transaction.previousSchemas, transaction.previousRules);
         if (pendingLocalRulePromotionPersistence === transaction) pendingLocalRulePromotionPersistence = undefined;
         if (pendingGuidedValidationPersistence === transaction) pendingGuidedValidationPersistence = undefined;
         rejectCompletion(error); },
@@ -1757,7 +1795,10 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     const previousSchema = result.destination.previousSchemaId ? schemas.find(({ id }) => id === result.destination.previousSchemaId) : undefined;
     const assignment: SchemaAssignment = { id:result.assignment.id, name:result.assignment.name, sourceId:result.assignment.sourceId,
       eventName:result.assignment.eventName, target:result.assignment.target, priority:result.assignment.priority,
-      versionPolicy:result.assignment.versionPolicy, enabled:true };
+      versionPolicy:result.assignment.versionPolicy, enabled:true,
+      ...(result.assignment.domainCondition ? { domainCondition:result.assignment.domainCondition } : {}),
+      ...(result.assignment.pathnameCondition ? { pathnameCondition:result.assignment.pathnameCondition } : {}),
+      ...(result.assignment.pathConditions ? { pathConditions:result.assignment.pathConditions } : {}) };
     const attachedRule = guidedAttachedRule(rule, result.reusableRules[0]?.name ?? `${rule.path} requirement`,
       `local-rule:${result.schema.id}:${rule.path}`);
     const currentDraft = previousSchema?.workingDraft; const assignments = assignmentDraftAfterGuidedSave(
@@ -1772,7 +1813,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
         workingDraft:{ baseVersion:0, sourceVersion:0, document, assignments, attachedRules, pendingChanges:[`Add ${rule.path} validation`] } };
     const nextSchemas = [...schemas.filter(({ id }) => id !== schema.id), schema];
     const published = result.reusableRules[0]; const nextRules = published ? [...reusableSchemaRules.filter(({ id }) => id !== published.id),
-      { id:published.id, name:published.name, kind:"Guided validation", version:published.version, enabled:published.enabled ?? true,
+      { id:published.id, name:published.name, kind:attachedRule.operator ?? "required", version:published.version, enabled:published.enabled ?? true,
         attachments:[schema.id], ...(attachedRule.operator ? { operator:attachedRule.operator } : {}),
         ...(attachedRule.parameters ? { parameters:attachedRule.parameters } : {}), ...(attachedRule.allowedValues ? { allowedValues:attachedRule.allowedValues } : {}),
         ...(attachedRule.severity ? { severity:attachedRule.severity } : {}), ...(attachedRule.message ? { message:attachedRule.message } : {}),
@@ -1818,12 +1859,13 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       guidedValidationRoot.dataset.eventId = event.id; guidedValidationRoot.dataset.schemaId = selected?.id ?? ""; }
     guidedValidationFlow.open(guidedUiEvent(event), selected ? guidedUiCandidate(selected) : undefined);
   };
-  const openGuidedValidationForProperty = async (event:GuidedCapturedEvent, schema:SchemaDefinition, propertyPath:string):Promise<void> => {
-    event = guidedEvent(event); persistGuidedContinuation(event, schema.id);
+  const openGuidedValidationForProperty = async (event:GuidedCapturedEvent, schema:SchemaDefinition | undefined, propertyPath:string,
+    returnToSchema=true):Promise<void> => {
+    event = guidedEvent(event); if (schema) persistGuidedContinuation(event, schema.id);
     if (guidedValidationRoot) { guidedValidationRoot.hidden = false; guidedValidationRoot.dataset.eventId = event.id;
-      guidedValidationRoot.dataset.schemaId = schema.id; }
-    guidedValidationFlow.openProperty(guidedUiEvent(event), propertyPath, guidedUiCandidate(schema));
-    guidedPropertyReturn = { schemaId:schema.id, propertyPath, generation:lifecycleGeneration };
+      guidedValidationRoot.dataset.schemaId = schema?.id ?? ""; }
+    guidedValidationFlow.openProperty(guidedUiEvent(event), propertyPath, schema ? guidedUiCandidate(schema) : undefined);
+    if (returnToSchema) guidedPropertyReturn = schema ? { kind:"schema", schemaId:schema.id, propertyPath, generation:lifecycleGeneration } : undefined;
   };
   const guidedDraftContinuationForEvent = (event:GuidedCapturedEvent) => {
     const schema = selectedGuidedContinuation(guidedContinuationSelections, event, schemas);
@@ -1833,7 +1875,10 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   };
   const finishGuidedValidationSave = (result:PublishedGuidedValidation):void => {
     persistGuidedContinuation({ sourceId:result.assignment.sourceId, name:result.assignment.eventName }, result.schema.id);
-    if (guidedPropertyReturn?.schemaId === result.schema.id && guidedPropertyReturn.generation === lifecycleGeneration) {
+    ports.guidedSaved?.(result.destination.kind === "new" ? `Draft ${result.schema.name} was created.` : `Validation was added to ${result.schema.name} draft.`);
+    if (guidedPropertyReturn?.generation === lifecycleGeneration && guidedPropertyReturn.kind === "capture") {
+      const snapshot=guidedPropertyReturn;guidedPropertyReturn=undefined;ports.restoreGuidedCapture(snapshot.eventId,snapshot.propertyPath);
+    } else if (guidedPropertyReturn?.generation === lifecycleGeneration && guidedPropertyReturn.kind === "schema" && guidedPropertyReturn.schemaId === result.schema.id) {
       restoreGuidedPropertyReturn();
     }
     if (schemaResult) schemaResult.textContent = result.destination.kind === "new" ? `Draft ${result.schema.name} was created.` : `Validation was added to ${result.schema.name} draft.`;
@@ -1979,7 +2024,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   };
   const renderSchemaAssignments = (): void => {
     const assignments = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment })));
-    if (schemaAssignmentSchema?.ownerDocument) schemaAssignmentSchema.replaceChildren(...schemas.map((schema) => {
+    if (schemaAssignmentSchema?.ownerDocument) schemaAssignmentSchema.replaceChildren(...schemas.filter(({ published }) => published !== false).map((schema) => {
       const option = schemaAssignmentSchema.ownerDocument.createElement("option"); option.value = schema.id;
       option.textContent = `${schema.name} version ${schema.version}`; return option;
     }));
@@ -2636,7 +2681,20 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     persistGuidedValidation:(result:PublishedGuidedValidation) => persistPublishedGuidedValidation(result).then(() => finishGuidedValidationSave(result)),
     openGuidedEvent:openGuidedValidationForEvent,
     openGuidedProperty:openGuidedValidationForProperty,
+    openGuidedLiveProperty:async(event:GuidedCapturedEvent,path:string) => {
+      guidedPropertyReturn={kind:"capture",eventId:event.id,propertyPath:path,generation:lifecycleGeneration};
+      await openGuidedValidationForProperty(event, selectedGuidedContinuation(guidedContinuationSelections,event,schemas), path, false);
+      guidedPropertyReturn={kind:"capture",eventId:event.id,propertyPath:path,generation:lifecycleGeneration};
+    },
     openLivePropertyDeclaration,
+    livePropertyDeclaration:(event:GuidedCapturedEvent,path:string) => { const schema = selectedGuidedContinuation(guidedContinuationSelections,event,schemas);
+      if (!schema?.workingDraft) return {}; const canonical=canonicalLivePropertyPath(path);
+      return { destination:schema.name, alreadyDeclared:Boolean(schemaPropertyAt(schema.workingDraft.document,canonical)) }; },
+    liveValidationAvailable:(event:GuidedCapturedEvent) => { const manual=schemas.find(({id})=>id===manualSchemaOverrides[event.id]);
+      return Boolean(manual??validateEvent({sourceId:event.sourceId,eventName:event.name,payload:event.payload,rawInput:event.rawInput},schemas,event.pageUrl).schema); },
+    validateLive:(event:GuidedCapturedEvent) => { const input={sourceId:event.sourceId,eventName:event.name,payload:event.payload,rawInput:event.rawInput};
+      const manual=schemas.find(({id})=>id===manualSchemaOverrides[event.id]);return manual?validateWithSchema(input,manual,schemas):validateEvent(input,schemas,event.pageUrl); },
+    liveSchemaChoices:() => assignableSchemas(schemas).map(({id,name,version})=>({id,label:`${name} v${version}`})),
     openAllowedValueExpansionReview,
     closeGuided:guidedValidationFlow.close,
     guidedDraft:guidedValidationFlow.currentDraft,
@@ -2693,14 +2751,16 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   };
   function restoreGuidedPropertyReturn():void {
     const snapshot = guidedPropertyReturn; if (!snapshot || snapshot.generation !== lifecycleGeneration) return;
-    selectedSchemaPropertyPath = snapshot.propertyPath; activeSchemaId = snapshot.schemaId; guidedPropertyReturn = undefined; renderSchemas();
+    if(snapshot.kind === "capture"){guidedPropertyReturn=undefined;ports.restoreGuidedCapture(snapshot.eventId,snapshot.propertyPath);return;}
+    guidedPropertyReturn = undefined;
+    selectedSchemaPropertyPath = snapshot.propertyPath; activeSchemaId = snapshot.schemaId; renderSchemas();
   }
   function persistGuidedContinuation(event:Pick<GuidedCapturedEvent, "sourceId" | "name">, schemaId:string):void {
     guidedContinuationSelections = selectGuidedContinuation(guidedContinuationSelections, event, schemaId);
     ports.storage.setItem(GUIDED_CONTINUATION_STORAGE_KEY, JSON.stringify(guidedContinuationSelections));
   }
   function openGuidedDraft(schema:SchemaDefinition):void {
-    activeSchemaId = schema.id; schemaDraft = schemaEditorDraft(schema); renderSchemas();
+    activeSchemaId = schema.id; schemaDraft = schemaEditorDraft(schema); ports.showSchemasView(); renderSchemas();
   }
   function openGuidedContinuationPicker(event:GuidedCapturedEvent):void {
     if (!guidedValidationRoot || !schemaOwnerDocument) return;
@@ -2739,7 +2799,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
         confirm.type = cancel.type = "button"; confirm.textContent = `Add property to ${schema.name} draft`; cancel.textContent = "Cancel";
         listen(confirm, () => { try { schemas = schemas.map((candidate) => candidate.id === schema.id
             ? addLiveSchemaPropertyDeclaration(candidate, declaration) : candidate); persistSchemaLibrary(); renderSchemas(); close(false);
-            ports.scheduleFrame(() => ports.restoreGuidedCapture(event.id, declaration.concretePath)); }
+            ports.scheduleFrame(() => ports.restoreGuidedCapture(event.id, declaration.concretePath, "declaration")); }
           catch (error) { feedback.textContent = error instanceof Error ? error.message : "The property could not be added to the schema draft."; } });
         listen(cancel, () => close()); dialog.replaceChildren(heading, review, feedback, confirm, cancel);
       } catch (error) { feedback.textContent = error instanceof Error ? error.message : "The observed property is unavailable.";
@@ -2759,6 +2819,16 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   function openAllowedValueExpansionReview(eventId:string, assignedSchemaId:string, evaluation:ValidationEvaluation, trigger:HTMLButtonElement):boolean {
     const inspector = ports.root.querySelector<HTMLElement>("#live-event-inspector");
     if (!inspector) return false;
+    const inspectorScroll = inspector.scrollTop;
+    const expandedPaths = Array.from(inspector.querySelectorAll<HTMLDetailsElement>("details[open][data-property-path]"),
+      ({ dataset }) => dataset.propertyPath).filter((path):path is string => Boolean(path));
+    const restoreLiveAction = ():void => { ports.restoreGuidedCapture(eventId, evaluation.propertyPath);
+      ports.scheduleFrame(() => { const restoredInspector = ports.root.querySelector<HTMLElement>("#live-event-inspector");
+        for (const path of expandedPaths) restoredInspector?.querySelector<HTMLDetailsElement>(`details[data-property-path="${CSS.escape(path)}"]`)?.setAttribute("open", "");
+        if (restoredInspector) restoredInspector.scrollTop = inspectorScroll;
+        const restoredAction = restoredInspector?.querySelector<HTMLButtonElement>(`.live-allowed-value-expansion[data-rule-id="${CSS.escape(evaluation.ruleId ?? "")}"]`);
+        restoredAction?.focus({ preventScroll:true }); });
+    };
     const input = { schemas, reusableRules:expansionReusableRules(), assignedSchemaId, evidence:evaluation };
     let review:ReturnType<typeof reviewAllowedValueExpansion>;
     try { review = reviewAllowedValueExpansion(input); }
@@ -2770,7 +2840,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
           name:rule.name ?? rule.id, enabled:rule.enabled !== false })) as unknown as readonly PromotableReusableRule[]); persistSchemaAndRuleLibraries();
         activeSchemaId = applied.affectedSchemaId; schemaDraft = schemaEditorDraft(active()); renderSchemas();
         if (schemaResult) schemaResult.textContent = applied.changed ? `${String(review.proposedValue)} was added to the working draft.` : "The allowed value was already pending; no duplicate was created.";
-        return () => ports.scheduleFrame(() => ports.restoreGuidedCapture(eventId, evaluation.propertyPath)); },
+        return () => ports.scheduleFrame(restoreLiveAction); },
       openDraft:(destination:AllowedValueExpansionDestination) => { const targetId = destination === "parent-schema-draft" ? evaluation.schemaId : assignedSchemaId,
           target = schemas.find(({ id }) => id === targetId); trigger.focus({ preventScroll:true }); if (!target) return;
         activeSchemaId = target.id; schemaDraft = schemaEditorDraft(target); ports.showSchemasView(); renderSchemas(); schemaEditorName?.focus({ preventScroll:true }); },
