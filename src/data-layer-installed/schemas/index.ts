@@ -99,6 +99,7 @@ import {
 } from "../../utilities/data-layer/schemas.js";
 import { applySchemaPropertyCopy, planSchemaPropertyCopy, type SchemaPropertyCopyPlan } from "../../data-layer-schema-property-copy.js";
 import type { AssignmentDataConditionEditorState } from "../../data-layer-schema-assignment-data-conditions-ui.js";
+import { normalizeAllowedValuesRuleLibraryEntry } from "../../data-layer-allowed-values-rule.js";
 import {
   persistLocalRulePromotion,
   promoteLocalRule,
@@ -612,12 +613,16 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   let editingAttachedLocalRule: NonNullable<SchemaDefinition["attachedRules"]>[number] | undefined;
   const normalizeReusableSchemaRule = (value:unknown):ReusableSchemaRule | undefined => value && typeof value === "object"
     && "id" in value && "name" in value && "kind" in value && "version" in value
-    ? { ...(structuredClone(value) as ReusableSchemaRule), enabled:(value as ReusableSchemaRule).enabled !== false } : undefined;
+    ? normalizeAllowedValuesRuleLibraryEntry({ ...(structuredClone(value) as ReusableSchemaRule),
+      enabled:(value as ReusableSchemaRule).enabled !== false }) : undefined;
   const storedReusableSchemaRules = ports.storage.getItem(SCHEMA_RULE_STORAGE_KEY);
   let reusableSchemaRules: ReusableSchemaRule[] = (() => { try {
     const stored = JSON.parse(storedReusableSchemaRules ?? "[]") as unknown;
     return Array.isArray(stored) ? stored.map(normalizeReusableSchemaRule).filter((rule): rule is ReusableSchemaRule => Boolean(rule)) : [];
   } catch { return []; } })();
+  if (storedReusableSchemaRules !== null && JSON.stringify(reusableSchemaRules) !== storedReusableSchemaRules) {
+    ports.storage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
+  }
   let editingReusableSchemaRuleId: string | undefined;
   let approvedRuleRevisionId: string | undefined;
   let approvedRuleAttachmentUpdateId: string | undefined;
@@ -2332,12 +2337,14 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (schemaResult) schemaResult.textContent = `Saved ${next.name} with ${assignmentDataConditionSummary(next)}.`;
   };
   const renderSchemaRuleLibrary = (): void => {
+    const summaryFor = (rule:ReusableSchemaRule):string =>
+      `${rule.name} v${rule.version} · ${reusableRuleMetadata(rule, rule.applicableType ?? "string")}`;
     const query = schemaRuleSearch?.value.trim().toLowerCase() ?? "";
-    const visible = reusableSchemaRules.filter((rule) => `${rule.name} ${rule.kind}`.toLowerCase().includes(query));
+    const visible = reusableSchemaRules.filter((rule) => summaryFor(rule).toLowerCase().includes(query));
     for (const dispose of schemaRuleRowDisposers.splice(0)) dispose();
-    if (!schemaRuleList?.ownerDocument) { if (schemaRuleList) schemaRuleList.textContent = visible.map((rule) => `${rule.name} v${rule.version} · ${rule.kind}`).join("\n"); return; }
+    if (!schemaRuleList?.ownerDocument) { if (schemaRuleList) schemaRuleList.textContent = visible.map(summaryFor).join("\n"); return; }
     schemaRuleList.replaceChildren(...visible.map((rule) => { const item = schemaRuleList.ownerDocument!.createElement("li"), summary = schemaRuleList.ownerDocument!.createElement("span");
-      summary.textContent = `${rule.name} v${rule.version} · ${rule.kind}`; item.append(summary);
+      summary.textContent = summaryFor(rule); item.append(summary);
       const action = (label:string, run:() => void) => { const button = schemaRuleList.ownerDocument!.createElement("button"); button.type = "button"; button.textContent = label;
         listenRule(button, "click", run); item.append(button); };
       action("Edit", () => { editReusableSchemaRule(rule.id); });
@@ -2427,17 +2434,18 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       requestSchemaRuleRevision(previous.id, { name, kind:`${operator || "Required"}${parameters ? ` (${parameters})` : ""}`,
         ...(applicableType ? { applicableType } : {}), ...(operator ? { operator } : {}), ...(parameters ? { parameters } : {}),
         ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(examples ? { examples } : {}), attachments }); return; }
-    const rule: ReusableSchemaRule = { id:previous?.id ?? ports.createRuleId(), name,
+    const rule: ReusableSchemaRule = normalizeAllowedValuesRuleLibraryEntry({ id:previous?.id ?? ports.createRuleId(), name,
       kind:`${operator || "Required"}${parameters ? ` (${parameters})` : ""}`, version:(previous?.version ?? 0) + 1, enabled:previous?.enabled ?? true,
       ...(applicableType ? { applicableType } : {}), ...(operator ? { operator } : {}), ...(parameters ? { parameters } : {}),
-      ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(examples ? { examples } : {}), attachments };
+      ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(examples ? { examples } : {}), attachments });
     pendingRuleSnapshotMetadata = previous ? { id:previous.id, version:previous.version, attachments:[...(previous.attachments ?? [])] } : undefined;
     reusableSchemaRules = [...reusableSchemaRules.filter(({ id }) => id !== rule.id), rule];
     if (updateSchemaRuleAttachments?.checked || rule.version === 1) schemas = schemas.map((schema) => {
       if (!attachments.includes(schema.id)) return schema;
       const attachedRules = [...(schema.attachedRules ?? []).filter(({ id }) => id !== rule.id),
         { id:rule.id, name:rule.name, version:rule.version, ...(operator ? { operator } : {}),
-          ...(parameters ? { parameters } : {}), ...(severity ? { severity } : {}), ...(message ? { message } : {}), enabled:true }];
+          ...(rule.parameters ? { parameters:rule.parameters } : {}), ...(rule.allowedValues ? { allowedValues:rule.allowedValues } : {}),
+          ...(severity ? { severity } : {}), ...(message ? { message } : {}), enabled:true }];
       return { ...schema, attachedRules };
     });
     editingReusableSchemaRuleId = undefined; persistSchemaAndRuleLibraries(); renderSchemas(); renderSchemaRuleLibrary();

@@ -129,6 +129,8 @@ const uiValues = new Map([
   ["my-chrome-utilities.schema-library.v1", JSON.stringify([schema, parentSchema])],
   ["my-chrome-utilities.schema-rule-library.v1", JSON.stringify([
     { id:"rule:retired", name:"Retired rule", kind:"Required", version:1, enabled:true, attachments:[] },
+    { id:"rule:quantities", name:"Reusable quantities", kind:"Allowed values", version:3,
+      operator:"allowed-values", parameters:"1,2", applicableType:"number", enabled:true },
   ])],
 ]);
 let promotionDialogInput, persistenceListener, promotionRuleSequence = 0;
@@ -197,6 +199,12 @@ assert.equal(elements.get("#confirm-schema-rule-revision-review").id, "confirm-s
   "Schemas preserves the installed browser contract for rule revision confirmation");
 uiController.mount();
 assert.equal(layeredProfileMounts, 1, "Schemas mounts the layered Profile editor exactly once");
+assert.deepEqual(uiController.rules().find(({ id }) => id === "rule:quantities")?.allowedValues, [1, 2],
+  "Schemas migrates parameter-backed reusable allowed values at the installed storage boundary");
+assert.equal(uiController.rules().find(({ id }) => id === "rule:quantities")?.parameters, undefined);
+assert.deepEqual(JSON.parse(uiValues.get("my-chrome-utilities.schema-rule-library.v1"))
+  .find(({ id }) => id === "rule:quantities").allowedValues, [1, 2],
+"Schemas persists the canonical reusable-rule migration for future installed owners");
 await uiController.hydrateActiveProjectForSchemas();
 assert.equal(elements.get("#schema-result").textContent, "Loaded schema contributors for Project One.");
 const initialSavedRow = elements.get("#schema-list").children.find(({ dataset }) => dataset.schemaEntryKey === "saved:schema:page");

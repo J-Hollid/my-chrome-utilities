@@ -1,5 +1,6 @@
 import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, inspectJsonSchemaExport, importSchema, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaRevision, schemaPropertyRows, schemaRevisionChoices, schemaPropertyCopySource, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentDraftAfterGuidedSave, assignableSchemas, assignmentConditionSuggestions, configuredRuleDetails, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, reusableRulesForProperty, reusableRuleMetadata, conditionGroupAppliesToValue, operatorsForConditionType, cardinalityComparisonPasses, renderSchemaPropertyTypeEditor, applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner, canonicalDocumentationPath, resolveEffectiveSchemaDocumentation, schemaPropertyExampleChoices, schemaPropertyExampleInputType, exampleValueFromInput, schemaPropertyExampleConflicts, assignmentDataConditionSummary, contextualManualPropertyDefinition, createRuleConfiguration, createRuleConfigurationFromAttachedRule, createExtensionSchemaPackage, createSchemaLibraryExport, duplicateSchemaAssignment, guidedAttachedRule, guidedPropertyDocument, manualPropertyPreview, mergeGuidedDocument, restoreSchemaLibrary, serializeSchemaLibrary, exportJsonSchemaBundle, exportJsonSchemaResource, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateAssignmentDataConditions, validateEvent, validateWithSchema, mountCanonicalSchemaEditor, typedComparisonValue, GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, createGuidedValidationFlow, filterSchemaRelationshipTree, restoreSchemaRelationshipTreeView, saveSchemaRelationshipTreeView, applyCanonicalCommand, canonicalCommandOutcome, canonicalPropertyPath, canonicalLivePropertyPath, canonicalRulePropertyPath, canonicalCommandsFromCompactProjection, compactCanonicalCommandPolicy, compactSchemaProjection, createSchema, renderCanonicalFocusedRules, savedSchemaCanonicalDocument, savedSchemaFromCanonical, beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, completeCompactCanonicalHistoryTransition, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition, } from "../../utilities/data-layer/schemas.js";
 import { applySchemaPropertyCopy, planSchemaPropertyCopy } from "../../data-layer-schema-property-copy.js";
+import { normalizeAllowedValuesRuleLibraryEntry } from "../../data-layer-allowed-values-rule.js";
 import { persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, } from "../../data-layer-local-rule-promotion.js";
 import { publishReusableRuleSync, reviewReusableRuleSync, } from "../../data-layer-reusable-rule-sync.js";
 import { addLiveSchemaPropertyDeclaration, createLiveSchemaPropertyDeclaration, } from "../../data-layer-live-schema-property-declaration.js";
@@ -579,7 +580,8 @@ export function createSchemasInstalledController(ports) {
     let editingAttachedLocalRule;
     const normalizeReusableSchemaRule = (value) => value && typeof value === "object"
         && "id" in value && "name" in value && "kind" in value && "version" in value
-        ? { ...structuredClone(value), enabled: value.enabled !== false } : undefined;
+        ? normalizeAllowedValuesRuleLibraryEntry({ ...structuredClone(value),
+            enabled: value.enabled !== false }) : undefined;
     const storedReusableSchemaRules = ports.storage.getItem(SCHEMA_RULE_STORAGE_KEY);
     let reusableSchemaRules = (() => {
         try {
@@ -590,6 +592,9 @@ export function createSchemasInstalledController(ports) {
             return [];
         }
     })();
+    if (storedReusableSchemaRules !== null && JSON.stringify(reusableSchemaRules) !== storedReusableSchemaRules) {
+        ports.storage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
+    }
     let editingReusableSchemaRuleId;
     let approvedRuleRevisionId;
     let approvedRuleAttachmentUpdateId;
@@ -3436,18 +3441,19 @@ export function createSchemasInstalledController(ports) {
             schemaResult.textContent = `Saved ${next.name} with ${assignmentDataConditionSummary(next)}.`;
     };
     const renderSchemaRuleLibrary = () => {
+        const summaryFor = (rule) => `${rule.name} v${rule.version} · ${reusableRuleMetadata(rule, rule.applicableType ?? "string")}`;
         const query = schemaRuleSearch?.value.trim().toLowerCase() ?? "";
-        const visible = reusableSchemaRules.filter((rule) => `${rule.name} ${rule.kind}`.toLowerCase().includes(query));
+        const visible = reusableSchemaRules.filter((rule) => summaryFor(rule).toLowerCase().includes(query));
         for (const dispose of schemaRuleRowDisposers.splice(0))
             dispose();
         if (!schemaRuleList?.ownerDocument) {
             if (schemaRuleList)
-                schemaRuleList.textContent = visible.map((rule) => `${rule.name} v${rule.version} · ${rule.kind}`).join("\n");
+                schemaRuleList.textContent = visible.map(summaryFor).join("\n");
             return;
         }
         schemaRuleList.replaceChildren(...visible.map((rule) => {
             const item = schemaRuleList.ownerDocument.createElement("li"), summary = schemaRuleList.ownerDocument.createElement("span");
-            summary.textContent = `${rule.name} v${rule.version} · ${rule.kind}`;
+            summary.textContent = summaryFor(rule);
             item.append(summary);
             const action = (label, run) => {
                 const button = schemaRuleList.ownerDocument.createElement("button");
@@ -3627,10 +3633,10 @@ export function createSchemasInstalledController(ports) {
                 ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(examples ? { examples } : {}), attachments });
             return;
         }
-        const rule = { id: previous?.id ?? ports.createRuleId(), name,
+        const rule = normalizeAllowedValuesRuleLibraryEntry({ id: previous?.id ?? ports.createRuleId(), name,
             kind: `${operator || "Required"}${parameters ? ` (${parameters})` : ""}`, version: (previous?.version ?? 0) + 1, enabled: previous?.enabled ?? true,
             ...(applicableType ? { applicableType } : {}), ...(operator ? { operator } : {}), ...(parameters ? { parameters } : {}),
-            ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(examples ? { examples } : {}), attachments };
+            ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(examples ? { examples } : {}), attachments });
         pendingRuleSnapshotMetadata = previous ? { id: previous.id, version: previous.version, attachments: [...(previous.attachments ?? [])] } : undefined;
         reusableSchemaRules = [...reusableSchemaRules.filter(({ id }) => id !== rule.id), rule];
         if (updateSchemaRuleAttachments?.checked || rule.version === 1)
@@ -3639,7 +3645,8 @@ export function createSchemasInstalledController(ports) {
                     return schema;
                 const attachedRules = [...(schema.attachedRules ?? []).filter(({ id }) => id !== rule.id),
                     { id: rule.id, name: rule.name, version: rule.version, ...(operator ? { operator } : {}),
-                        ...(parameters ? { parameters } : {}), ...(severity ? { severity } : {}), ...(message ? { message } : {}), enabled: true }];
+                        ...(rule.parameters ? { parameters: rule.parameters } : {}), ...(rule.allowedValues ? { allowedValues: rule.allowedValues } : {}),
+                        ...(severity ? { severity } : {}), ...(message ? { message } : {}), enabled: true }];
                 return { ...schema, attachedRules };
             });
         editingReusableSchemaRuleId = undefined;
