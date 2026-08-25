@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import ts from "typescript";
@@ -18,7 +18,8 @@ for (const file of controllerPaths) {
   function visit(node) {
     if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) add(declarations, node.name.text, { path:file, symbol:node.name.text, line:position(node) });
     if ((ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node)) && node.name && ts.isIdentifier(node.name)) add(declarations, node.name.text, { path:file, symbol:node.name.text, line:position(node) });
-    if (ts.isCallExpression(node)) add(calls, node.expression.getText(ast), { path:file, symbol:node.expression.getText(ast), line:position(node) });
+    if (ts.isCallExpression(node)) add(calls, node.getText(ast), { path:file,
+      symbol:node.expression.getText(ast), invocation:node.getText(ast), line:position(node) });
     ts.forEachChild(node, visit);
   }
   visit(ast);
@@ -27,28 +28,51 @@ const replacementMap = new Map();
 for (const replacement of reviewedControllerReplacements) {
   if (replacementMap.has(replacement.identity)) throw new Error(`Duplicate reviewed replacement ${replacement.identity}`);
   if (!controllerPaths.includes(replacement.path)) throw new Error(`Replacement target is not a controller: ${replacement.path}`);
-  const targets = (replacement.kind === "call" ? calls : declarations).get(replacement.symbol) ?? [];
+  const targets = replacement.kind === "call"
+    ? [...calls.values()].flat().filter(({ symbol }) => symbol === replacement.symbol)
+    : declarations.get(replacement.symbol) ?? [];
   const exactTargets = targets.filter(({ path:targetPath }) => targetPath === replacement.path);
-  if (exactTargets.length !== 1) {
+  const lineTargets = replacement.line ? exactTargets.filter(({ line }) => line === replacement.line) : exactTargets;
+  if (lineTargets.length !== 1) {
     throw new Error(`Reviewed replacement target is absent: ${replacement.path}::${replacement.symbol}`);
   }
   replacementMap.set(replacement.identity, replacement);
 }
 const inventory = await collectSidePanelCutoverInventory({ repositoryRoot:process.cwd(), base });
+const frozenRoot = execFileSync("git", ["show", `${base}:src/side-panel.ts`], { encoding:"utf8" });
+const frozenAst = ts.createSourceFile("src/side-panel.ts", frozenRoot, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+const frozenCalls = new Map();
+function visitFrozen(node) {
+  if (ts.isCallExpression(node)) {
+    const { line, character } = frozenAst.getLineAndCharacterOfPosition(node.getStart());
+    frozenCalls.set(`${line + 1}:${character + 1}`, node.getText(frozenAst));
+  }
+  ts.forEachChild(node, visitFrozen);
+}
+visitFrozen(frozenAst);
 const unresolved = [], duplicate = [], resolved = [];
+const entries = [];
 for (const kind of ["stateOwners", "functions", "listeners", "subscriptions", "timers"]) {
   for (const [index, record] of inventory[kind].entries()) {
     const label = record.name ?? record.expression;
     const identity = `${kind}:${index}:${label}@${record.line}:${record.column}`;
     const reviewed = replacementMap.get(identity);
-    if (reviewed) { resolved.push({ identity, target:`${reviewed.path}::${reviewed.symbol}`, reviewed:true }); continue; }
-    const candidates = (kind === "stateOwners" || kind === "functions" ? declarations : calls).get(label) ?? [];
-    if (candidates.length === 1) resolved.push({ identity, target:`${candidates[0].path}::${candidates[0].symbol}` });
-    else if (candidates.length === 0) unresolved.push(identity);
-    else duplicate.push({ identity, targets:candidates.map(({ path:targetPath, symbol }) => `${targetPath}::${symbol}`) });
+    const invocation = kind === "stateOwners" || kind === "functions" ? undefined : frozenCalls.get(`${record.line}:${record.column}`);
+    const candidates = kind === "stateOwners" || kind === "functions" ? declarations.get(label) ?? [] : calls.get(invocation) ?? [];
+    if (reviewed) {
+      const target = `${reviewed.path}::${reviewed.symbol}${reviewed.line ? `:${reviewed.line}` : ""}`;
+      resolved.push({ identity, target, reviewed:true }); entries.push({ identity, kind, frozen:record, binding:{ status:"resolved", target, reviewed:true } });
+    } else if (candidates.length === 1) {
+      const target = `${candidates[0].path}::${candidates[0].symbol}:${candidates[0].line}`;
+      resolved.push({ identity, target }); entries.push({ identity, kind, frozen:{ ...record, ...(invocation ? { invocation } : {}) }, binding:{ status:"resolved", target } });
+    } else if (candidates.length === 0) {
+      unresolved.push(identity); entries.push({ identity, kind, frozen:{ ...record, ...(invocation ? { invocation } : {}) }, binding:{ status:"pending" } });
+    } else {
+      const targets = candidates.map(({ path:targetPath, symbol, line }) => `${targetPath}::${symbol}:${line}`);
+      duplicate.push({ identity, targets }); entries.push({ identity, kind, frozen:{ ...record, ...(invocation ? { invocation } : {}) }, binding:{ status:"ambiguous", targets } });
+    }
   }
 }
-const frozenRoot = execFileSync("git", ["show", `${base}:src/side-panel.ts`], { encoding:"utf8" });
 const usedReviewed = new Set(resolved.filter(({ reviewed }) => reviewed).map(({ identity }) => identity));
 for (const identity of replacementMap.keys()) if (!usedReviewed.has(identity)) throw new Error(`Reviewed replacement does not bind a frozen identity: ${identity}`);
 const currentRoot = await readFile("src/side-panel.ts", "utf8");
@@ -64,6 +88,13 @@ if (currentRoot !== frozenRoot) {
   }
   visitRoot(rootAst);
   if (retained.length) throw new Error(`Composition root retains frozen identities:\n${retained.join("\n")}`);
+}
+const manifest = `${JSON.stringify({ version:1, base, sourceSha256:inventory.source.sha256, entries }, null, 2)}\n`;
+const manifestPath = "test/support/side-panel-controller-migration-manifest.json";
+if (process.argv.includes("--write-manifest")) await writeFile(manifestPath, manifest);
+else {
+  const recorded = await readFile(manifestPath, "utf8");
+  if (recorded !== manifest) throw new Error(`Controller migration manifest is stale; regenerate ${manifestPath}`);
 }
 console.log(JSON.stringify({ frozen:resolved.length + unresolved.length + duplicate.length, resolved:resolved.length,
   reviewed:resolved.filter(({ reviewed }) => reviewed).length, unresolved:unresolved.length, duplicate:duplicate.length,
