@@ -166,6 +166,7 @@ function approvedCompatibilityRepairChangedPath(file) {
     "test/acceptance/data_layer_observer_steps_test.clj",
     "test/acceptance/data_layer_page_context_steps_test.clj",
     "test/acceptance/data_layer_timeline_steps_test.clj",
+    "test/modular-utility-architecture-test.mjs",
     "test/side-panel-component-layout-runtime-test.mjs",
     "test/side-panel-single-cutover-preparation-test.mjs",
     "test/support/side-panel-browser-direct-assertion-map.mjs",
