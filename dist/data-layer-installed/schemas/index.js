@@ -3330,8 +3330,7 @@ export function createSchemasInstalledController(ports) {
         }
         if (event.type === "retried" && compactCanonicalEditor && compactCanonicalProjectionRequest?.adapter === compactCanonicalEditor
             && compactCanonicalSavedSchemaId(compactCanonicalEditor) === event.schemaId) {
-            void resumeCompactCanonicalProjectionPersistence(compactCanonicalEditor);
-            return;
+            return resumeCompactCanonicalProjectionPersistence(compactCanonicalEditor).then(() => { });
         }
         if (compactCanonicalSettlementSchemaId === event.schemaId) {
             if (event.type === "saved" || event.type === "retried" || event.type === "rejected") {

@@ -2032,13 +2032,6 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       const invalidAndDiscard = await evaluate(socket, schemaRenamingInvalidAndDiscardRuntime);
       await evaluate(socket, seed); await reloadPanel(socket);
       const retryReplay = await evaluate(socket, schemaRenamingRetryReplayRuntime);
-      if (!retryReplay.replayed.publishReady) retryReplay.replayed.publishReady = await evaluate(socket, `(async () => {
-        for (let attempt = 0; attempt < 400; attempt += 1) {
-          if (!document.querySelector("#save-schema")?.disabled) return true;
-          await new Promise((resolve) => setTimeout(resolve, 10));
-        }
-        return false;
-      })()`);
       await evaluate(socket, seed); await reloadPanel(socket);
       const reject = await evaluate(socket, schemaRenamingRejectRuntime);
       schemaRenamingObservation = { draft, published, invalidAndDiscard, retryReplay, reject };

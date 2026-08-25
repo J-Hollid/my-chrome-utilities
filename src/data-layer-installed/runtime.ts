@@ -147,7 +147,7 @@ export interface InstalledSidePanelRuntimeFoundation {
   durableProjectRepositoryUi: Awaited<ReturnType<typeof mountDurableProjectRepositoryUi>>;
 }
 
-type InstalledSchemaPersistenceEvent = Parameters<SchemasInstalledPorts["subscribeSchemaPersistence"]>[0] extends (event: infer T) => void ? T : never;
+type InstalledSchemaPersistenceEvent = Parameters<SchemasInstalledPorts["subscribeSchemaPersistence"]>[0] extends (event: infer T) => unknown ? T : never;
 
 export interface InstalledLiveInspectorCoordinationPorts {
   currentPageUrl():string;
@@ -215,24 +215,24 @@ export interface DurableSchemaPersistenceCoordinationPorts {
 }
 
 export function createDurableSchemaPersistenceCoordination(ports:DurableSchemaPersistenceCoordinationPorts) {
-  const listeners=new Set<(event:InstalledSchemaPersistenceEvent)=>void>();
-  const announce=(event:InstalledSchemaPersistenceEvent):void=>{for(const listener of listeners)listener(event);};
+  const listeners=new Set<(event:InstalledSchemaPersistenceEvent)=>void|Promise<void>>();
+  const announce=async(event:InstalledSchemaPersistenceEvent):Promise<void>=>{await Promise.all([...listeners].map((listener)=>listener(event)));};
   const unsubscribeSaved=ports.runtime.repository.subscribeSavedSchemas(({schemaId})=>{
-    if(!ports.runtime.failedSchemaSave())announce({type:"saved",schemaId});
+    if(!ports.runtime.failedSchemaSave())void announce({type:"saved",schemaId});
   });
   const failed=(event:Event):void=>{const pending=ports.runtime.failedSchemaSave();if(!pending)return;
     ports.recoveryStarted?.();
     const schemaIds=[...new Set([...pending.batch.upserts.map(({schema})=>String(schema.id)),...pending.batch.deletes.map(({schemaId})=>schemaId)])];
-    for(const schemaId of schemaIds)announce({type:"failed",schemaId,error:pending.error});
+    for(const schemaId of schemaIds)void announce({type:"failed",schemaId,error:pending.error});
     const origin=ports.origin();
     void ports.repositoryUi.reportSaveFailure({kind:"saved-schema",projectName:pending.batch.names.join(", "),command:{label:pending.batch.label},
-      retry:async()=>{await ports.runtime.retryFailedSchemaSave();for(const schemaId of schemaIds)announce({type:"retried",schemaId});},
-      reject:async()=>{await ports.runtime.resolveFailedSchemaSave("reject");for(const schemaId of schemaIds)announce({type:"rejected",schemaId,error:pending.error});},
+      retry:async()=>{await ports.runtime.retryFailedSchemaSave();for(const schemaId of schemaIds)await announce({type:"retried",schemaId});},
+      reject:async()=>{await ports.runtime.resolveFailedSchemaSave("reject");for(const schemaId of schemaIds)await announce({type:"rejected",schemaId,error:pending.error});},
       exportUnsaved:()=>ports.download(ports.runtime.exportUnsavedSchemas()),...(origin?{originControl:origin}:{})},
     (event as CustomEvent<{error?:unknown}>).detail?.error??pending.error);
   };
   ports.eventTarget.addEventListener("durable-project-save-failed",failed);
-  return {subscribe(listener:(event:InstalledSchemaPersistenceEvent)=>void){listeners.add(listener);return()=>listeners.delete(listener);},
+  return {subscribe(listener:(event:InstalledSchemaPersistenceEvent)=>void|Promise<void>){listeners.add(listener);return()=>listeners.delete(listener);},
     dispose(){ports.eventTarget.removeEventListener("durable-project-save-failed",failed);unsubscribeSaved();listeners.clear();}};
 }
 

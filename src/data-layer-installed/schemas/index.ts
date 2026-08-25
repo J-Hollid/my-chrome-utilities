@@ -139,7 +139,7 @@ export interface SchemasInstalledPorts {
   renderAssignmentConditions(root: HTMLElement, state: AssignmentDataConditionEditorState,
     changed: (state: AssignmentDataConditionEditorState) => void): void;
   localRulePromotionDialog: LocalRulePromotionDialogController;
-  subscribeSchemaPersistence(listener: (event: SchemaPersistenceEvent) => void): () => void;
+  subscribeSchemaPersistence(listener: (event: SchemaPersistenceEvent) => void | Promise<void>): () => void;
   downloadSchema(value: unknown, filename: string): void;
   relationshipTree(schemas: readonly SchemaDefinition[]): { projectId:string; nodes:readonly SchemaRelationshipTreeNode[] };
   openProjectLibrary(create: boolean): void;
@@ -2272,14 +2272,14 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     else pendingGuidedValidationPersistence = transaction;
     return completion;
   };
-  const settleSchemaPersistence = (event: SchemaPersistenceEvent): void => {
+  const settleSchemaPersistence = (event: SchemaPersistenceEvent): void | Promise<void> => {
     if (pendingSchemaPropertyCopyPosition && (event.type === "saved" || event.type === "retried" || event.type === "rejected")) {
       const restoration = pendingSchemaPropertyCopyPosition;
       ports.scheduleFrame(() => { if (pendingSchemaPropertyCopyPosition === restoration) pendingSchemaPropertyCopyPosition = undefined; });
     }
     if (event.type === "retried" && compactCanonicalEditor && compactCanonicalProjectionRequest?.adapter === compactCanonicalEditor
       && compactCanonicalSavedSchemaId(compactCanonicalEditor) === event.schemaId) {
-      void resumeCompactCanonicalProjectionPersistence(compactCanonicalEditor); return;
+      return resumeCompactCanonicalProjectionPersistence(compactCanonicalEditor).then(() => {});
     }
     if (compactCanonicalSettlementSchemaId === event.schemaId) {
       if (event.type === "saved" || event.type === "retried" || event.type === "rejected") {

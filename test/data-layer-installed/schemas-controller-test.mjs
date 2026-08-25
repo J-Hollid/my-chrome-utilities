@@ -941,11 +941,17 @@ assert.deepEqual(retainedSchemaListeners, [], "Schemas removes every editor and 
   });
   const persistenceEvents = [];
   coordination.subscribe((event) => persistenceEvents.push(event.type));
+  let releaseRetriedSettlement;
+  const retriedSettlement = new Promise((resolve) => { releaseRetriedSettlement = resolve; });
+  coordination.subscribe((event) => event.type === "retried" ? retriedSettlement : undefined);
   target.dispatchEvent(new CustomEvent("durable-project-save-failed", { detail:{ error:pending.error } }));
   await Promise.resolve();
   assert.deepEqual(persistenceEvents, ["failed"], "a durable schema failure pauses the installed Schema transaction");
   assert.equal(recovery.kind, "saved-schema"); recovery.exportUnsaved();
-  assert.equal(downloaded, "serialized batch"); await recovery.retry();
+  assert.equal(downloaded, "serialized batch"); let recoverySettled = false;
+  const recoveryCompletion = recovery.retry().then(() => { recoverySettled = true; }); await Promise.resolve(); await Promise.resolve();
+  assert.equal(recoverySettled, false, "Retry feedback waits for the installed Schema owner to settle its queued latest projection");
+  releaseRetriedSettlement(); await recoveryCompletion;
   assert.equal(retried, 1);
   assert.deepEqual(persistenceEvents, ["failed", "saved", "retried"],
     "Retry settles through both durable observation and explicit recovery acknowledgement");

@@ -116,11 +116,10 @@ export function createInstalledLiveInspectorCoordination(ports) {
 }
 export function createDurableSchemaPersistenceCoordination(ports) {
     const listeners = new Set();
-    const announce = (event) => { for (const listener of listeners)
-        listener(event); };
+    const announce = async (event) => { await Promise.all([...listeners].map((listener) => listener(event))); };
     const unsubscribeSaved = ports.runtime.repository.subscribeSavedSchemas(({ schemaId }) => {
         if (!ports.runtime.failedSchemaSave())
-            announce({ type: "saved", schemaId });
+            void announce({ type: "saved", schemaId });
     });
     const failed = (event) => {
         const pending = ports.runtime.failedSchemaSave();
@@ -129,13 +128,13 @@ export function createDurableSchemaPersistenceCoordination(ports) {
         ports.recoveryStarted?.();
         const schemaIds = [...new Set([...pending.batch.upserts.map(({ schema }) => String(schema.id)), ...pending.batch.deletes.map(({ schemaId }) => schemaId)])];
         for (const schemaId of schemaIds)
-            announce({ type: "failed", schemaId, error: pending.error });
+            void announce({ type: "failed", schemaId, error: pending.error });
         const origin = ports.origin();
         void ports.repositoryUi.reportSaveFailure({ kind: "saved-schema", projectName: pending.batch.names.join(", "), command: { label: pending.batch.label },
             retry: async () => { await ports.runtime.retryFailedSchemaSave(); for (const schemaId of schemaIds)
-                announce({ type: "retried", schemaId }); },
+                await announce({ type: "retried", schemaId }); },
             reject: async () => { await ports.runtime.resolveFailedSchemaSave("reject"); for (const schemaId of schemaIds)
-                announce({ type: "rejected", schemaId, error: pending.error }); },
+                await announce({ type: "rejected", schemaId, error: pending.error }); },
             exportUnsaved: () => ports.download(ports.runtime.exportUnsavedSchemas()), ...(origin ? { originControl: origin } : {}) }, event.detail?.error ?? pending.error);
     };
     ports.eventTarget.addEventListener("durable-project-save-failed", failed);
