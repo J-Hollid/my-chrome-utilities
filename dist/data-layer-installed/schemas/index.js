@@ -692,6 +692,7 @@ export function createSchemasInstalledController(ports) {
     const compactCanonicalRevisionSnapshots = new Map();
     let compactCanonicalCommandFeedback;
     let compactCanonicalSettlementSequence = 0;
+    const compactCanonicalSettlementClaims = new Map();
     let compactCanonicalIdSequence = 0;
     let compactCanonicalSettlementPending = false;
     let compactCanonicalSettlementSchemaId;
@@ -739,11 +740,25 @@ export function createSchemasInstalledController(ports) {
         || (compactCanonicalProjectionWorker && compactCanonicalProjectionWorker.adapter !== owned?.adapter)
         || (compactCanonicalProjectionRequest && compactCanonicalProjectionRequest !== owned));
     const compactCanonicalSavedSchemaId = (adapter) => adapter?.key.startsWith("saved:") ? adapter.key.slice("saved:".length) : undefined;
+    const beginCompactCanonicalSettlement = (schemaId) => {
+        const settlement = ++compactCanonicalSettlementSequence;
+        compactCanonicalSettlementClaims.set(settlement, schemaId);
+        compactCanonicalSettlementPending = true;
+        compactCanonicalSettlementSchemaId = schemaId;
+        return settlement;
+    };
     const clearCompactCanonicalSettlement = (schemaId, settlement) => {
-        if (schemaId && compactCanonicalSettlementSchemaId !== schemaId)
-            return false;
-        if (settlement !== undefined && settlement !== compactCanonicalSettlementSequence)
-            return false;
+        if (settlement !== undefined) {
+            if (!compactCanonicalSettlementClaims.has(settlement) || compactCanonicalSettlementClaims.get(settlement) !== schemaId)
+                return false;
+            compactCanonicalSettlementClaims.delete(settlement);
+            if (compactCanonicalSettlementClaims.size) {
+                compactCanonicalSettlementSchemaId = [...compactCanonicalSettlementClaims.values()].at(-1);
+                return false;
+            }
+        }
+        else
+            compactCanonicalSettlementClaims.clear();
         compactCanonicalSettlementPending = false;
         compactCanonicalSettlementSchemaId = undefined;
         return true;
@@ -984,24 +999,23 @@ export function createSchemasInstalledController(ports) {
         }
         compactCanonicalCommandFeedback = canonicalCommandOutcome(command, result, before);
         renderCompactCanonicalContext();
-        const settlement = policy.settles && adapter.settle && (adapter.settles?.(command) ?? true) ? ++compactCanonicalSettlementSequence : undefined;
+        const settlementSchemaId = compactCanonicalSavedSchemaId(adapter);
+        const settlement = policy.settles && adapter.settle && (adapter.settles?.(command) ?? true)
+            ? beginCompactCanonicalSettlement(settlementSchemaId) : undefined;
         if (!settlement || !adapter.settle)
             return { accepted: true, result, completion: Promise.resolve(true) };
-        compactCanonicalSettlementPending = true;
         const generation = lifecycleGeneration;
-        const settlementSchemaId = compactCanonicalSavedSchemaId(adapter);
-        compactCanonicalSettlementSchemaId = settlementSchemaId;
         const completion = adapter.settle().then(() => {
             adapter.onSettlementCommitted?.();
             if (mounted && generation === lifecycleGeneration) {
-                if (clearCompactCanonicalSettlement(settlementSchemaId))
+                if (clearCompactCanonicalSettlement(settlementSchemaId, settlement))
                     compactCanonicalCommandFeedback = `Committed to ${adapter.settlementTarget ?? "durable Saved Draft"}.`;
                 renderCompactCanonicalEditor();
             }
             return true;
         }, (error) => {
             if (mounted && generation === lifecycleGeneration) {
-                if (!ports.blocked?.() && clearCompactCanonicalSettlement(settlementSchemaId)) {
+                if (!ports.blocked?.() && clearCompactCanonicalSettlement(settlementSchemaId, settlement)) {
                     compactCanonicalPendingCommand = command;
                     compactCanonicalPendingBase = before;
                     compactCanonicalCommandFeedback = `Not saved; Retry or Reject. ${error instanceof Error ? error.message : String(error)}`;
@@ -1025,18 +1039,18 @@ export function createSchemasInstalledController(ports) {
             renderCompactCanonicalContext();
             return Promise.resolve(false);
         }
+        const settlementSchemaId = compactCanonicalSavedSchemaId(adapter);
         compactCanonicalSettlementPending = true;
-        compactCanonicalSettlementSchemaId = compactCanonicalSavedSchemaId(adapter);
+        compactCanonicalSettlementSchemaId = settlementSchemaId;
         if (schemaEditor)
             schemaEditor.setAttribute("aria-busy", "true");
         if (saveSchemaButton)
             saveSchemaButton.disabled = true;
-        if (compactCanonicalProjectionWorker?.adapter === adapter) {
-            compactCanonicalProjectionWorker.settlement = ++compactCanonicalSettlementSequence;
+        if (compactCanonicalProjectionWorker?.adapter === adapter)
             return compactCanonicalProjectionWorker.promise;
-        }
         const generation = lifecycleGeneration;
-        const worker = { adapter, promise: Promise.resolve(false), settlement: ++compactCanonicalSettlementSequence };
+        const worker = { adapter, promise: Promise.resolve(false),
+            settlement: beginCompactCanonicalSettlement(settlementSchemaId) };
         compactCanonicalProjectionWorker = worker;
         worker.promise = (async () => {
             let committed = false, activeRequest;
@@ -1066,7 +1080,7 @@ export function createSchemasInstalledController(ports) {
             finally {
                 if (compactCanonicalProjectionWorker === worker) {
                     compactCanonicalProjectionWorker = undefined;
-                    clearCompactCanonicalSettlement(compactCanonicalSavedSchemaId(adapter), worker.settlement);
+                    clearCompactCanonicalSettlement(settlementSchemaId, worker.settlement);
                     renderCompactCanonicalEditor();
                 }
             }
@@ -2161,7 +2175,7 @@ export function createSchemasInstalledController(ports) {
         const documentation = updateSchemaDescription(schema.workingDraft?.documentation ?? schema.documentation ?? {}, schemaEditorDescription?.value ?? "");
         replaceActive(updateSchemaWorkingDraft(schema, { documentation }, "Update schema description"));
         const tracksCanonicalSettlement = Boolean(compactCanonicalEditor && ports.settleCanonical);
-        const settlement = tracksCanonicalSettlement ? ++compactCanonicalSettlementSequence : undefined;
+        const settlement = tracksCanonicalSettlement ? beginCompactCanonicalSettlement(schema.id) : undefined;
         if (tracksCanonicalSettlement) {
             compactCanonicalSettlementPending = true;
             compactCanonicalSettlementSchemaId = schema.id;
@@ -2204,7 +2218,7 @@ export function createSchemasInstalledController(ports) {
         replaceActive(updateSchemaWorkingDraft(schema, { document: schemaOnlyDeclaredProperties?.checked
                 ? { ...document, additionalProperties: false } : document }, "Change additional-property policy"));
         const tracksCanonicalSettlement = Boolean(compactCanonicalEditor && ports.settleCanonical);
-        const settlement = tracksCanonicalSettlement ? ++compactCanonicalSettlementSequence : undefined;
+        const settlement = tracksCanonicalSettlement ? beginCompactCanonicalSettlement(schema.id) : undefined;
         if (tracksCanonicalSettlement) {
             compactCanonicalSettlementPending = true;
             compactCanonicalSettlementSchemaId = schema.id;
@@ -2529,7 +2543,7 @@ export function createSchemasInstalledController(ports) {
             destinations: schemas.filter(({ id }) => id !== sourceSchema.id), schemas, reusableRuleIds: reusableSchemaRules.map(({ id }) => id),
             ...(trigger ? { trigger } : {}),
             onApply: (transaction) => {
-                pendingSchemaPropertyCopyPosition = { schemaId: sourceSchema.id, path, editorScroll, treeScroll };
+                pendingSchemaPropertyCopyPosition = { schemaId: sourceSchema.id, settlementSchemaId: transaction.schema.id, path, editorScroll, treeScroll };
                 schemas = schemas.map((schema) => schema.id === transaction.schema.id ? transaction.schema : schema);
                 lastSchemaPropertyCopy = transaction;
                 pendingSchemaPropertyCopy = undefined;
@@ -2557,6 +2571,7 @@ export function createSchemasInstalledController(ports) {
                             pendingSchemaPropertyCopyPosition = undefined;
                     });
                 };
+                queueMicrotask(restoreCopyPosition);
                 ports.scheduleFrame(restoreCopyPosition);
                 if (ports.settleCanonical)
                     void ports.settleCanonical(transaction.schema.id)
@@ -3340,14 +3355,37 @@ export function createSchemasInstalledController(ports) {
         return completion;
     };
     const settleSchemaPersistence = (event) => {
-        if (pendingSchemaPropertyCopyPosition && (event.type === "retried" || event.type === "rejected")) {
+        if (pendingSchemaPropertyCopyPosition && pendingSchemaPropertyCopyPosition.settlementSchemaId === event.schemaId
+            && (event.type === "saved" || event.type === "retried" || event.type === "rejected")) {
             const restoration = pendingSchemaPropertyCopyPosition;
-            ports.scheduleFrame(() => { if (pendingSchemaPropertyCopyPosition === restoration)
-                pendingSchemaPropertyCopyPosition = undefined; });
+            const restoreCopyPosition = () => {
+                schemaPropertyTree?.querySelector(`button[aria-label="Copy ${restoration.path} to another schema"]`)?.focus({ preventScroll: true });
+                if (schemaEditor)
+                    schemaEditor.scrollTop = restoration.editorScroll;
+                if (schemaPropertyTree)
+                    schemaPropertyTree.scrollTop = restoration.treeScroll;
+            };
+            queueMicrotask(restoreCopyPosition);
+            ports.scheduleFrame(() => {
+                restoreCopyPosition();
+                ports.scheduleFrame(() => {
+                    restoreCopyPosition();
+                    if (pendingSchemaPropertyCopyPosition === restoration)
+                        pendingSchemaPropertyCopyPosition = undefined;
+                });
+            });
         }
         if (event.type === "retried" && compactCanonicalEditor && compactCanonicalProjectionRequest?.adapter === compactCanonicalEditor
             && compactCanonicalSavedSchemaId(compactCanonicalEditor) === event.schemaId) {
             return resumeCompactCanonicalProjectionPersistence(compactCanonicalEditor).then(() => { renderSchemas(); renderCompactCanonicalEditor(); });
+        }
+        if (event.type === "saved") {
+            const acknowledged = [...compactCanonicalSettlementClaims]
+                .find(([, schemaId]) => schemaId === event.schemaId)?.[0];
+            if (acknowledged !== undefined)
+                clearCompactCanonicalSettlement(event.schemaId, acknowledged);
+            if (compactCanonicalEditor)
+                renderCompactCanonicalEditor();
         }
         if (compactCanonicalSettlementSchemaId === event.schemaId) {
             if (event.type === "retried" || event.type === "rejected") {

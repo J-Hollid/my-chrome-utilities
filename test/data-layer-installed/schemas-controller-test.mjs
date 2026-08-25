@@ -787,6 +787,15 @@ const ownedCanonicalTableHost = elements.get("#schema-editor").querySelector("#c
 assert.ok(ownedCanonicalTableHost, "Schemas creates the compact canonical table host on demand with the legacy ID");
 assert.equal(canonicalTableMounts, 1); assert.equal(canonicalTableOptions.host, ownedCanonicalTableHost);
 assert.deepEqual(canonicalTableOptions.conceptSuggestions(), ["Checkout concept"]);
+canonicalSettlementMode = "defer";
+elements.get("#schema-only-declared-properties").checked = true;
+elements.get("#schema-only-declared-properties").dispatch("change");
+assert.equal(uiController.canonicalState().settlementPending, true,
+  "a saved-schema policy edit remains busy until its durable acknowledgement");
+persistenceListener({ type:"saved", schemaId:persistenceSchemaId });
+assert.equal(uiController.canonicalState().settlementPending, false,
+  "the matching saved acknowledgement releases policy presentation before the broader queue drains");
+releaseCanonicalSettlement(); await Promise.resolve(); canonicalSettlementMode = "resolve";
 const canonicalBefore = uiController.canonicalDocument();
 const canonicalPropertyId = Object.keys(canonicalBefore.nodes)[0];
 assert.match(uiController.canonicalFacet(canonicalPropertyId), /Canonical facets/);

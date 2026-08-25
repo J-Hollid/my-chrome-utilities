@@ -624,7 +624,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   let lastSchemaPropertyCopy: AppliedSchemaPropertyCopy | undefined;
   let pendingSchemaPropertyCopy: SchemaPropertyCopyPlan | undefined;
   let pendingSchemaPropertyCopyReview: SchemaPropertyCopyReviewController | undefined;
-  let pendingSchemaPropertyCopyPosition: { schemaId:string; path:string; editorScroll:number; treeScroll:number } | undefined;
+  let pendingSchemaPropertyCopyPosition: { schemaId:string; settlementSchemaId:string; path:string; editorScroll:number; treeScroll:number } | undefined;
   let pendingSchemaDocumentationRemoval: { path:string; trigger?:HTMLElement } | undefined;
   let specificIndexArrayPath: string | undefined;
   let specificIndexTrigger: HTMLButtonElement | undefined;
@@ -701,6 +701,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const compactCanonicalRevisionSnapshots = new Map<number, CanonicalSchemaDocument>();
   let compactCanonicalCommandFeedback: string | undefined;
   let compactCanonicalSettlementSequence = 0;
+  const compactCanonicalSettlementClaims = new Map<number, string | undefined>();
   let compactCanonicalIdSequence = 0;
   let compactCanonicalSettlementPending = false;
   let compactCanonicalSettlementSchemaId: string | undefined;
@@ -749,9 +750,20 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     || (compactCanonicalProjectionRequest && compactCanonicalProjectionRequest !== owned));
   const compactCanonicalSavedSchemaId = (adapter:CompactCanonicalEditorAdapter | undefined):string | undefined =>
     adapter?.key.startsWith("saved:") ? adapter.key.slice("saved:".length) : undefined;
+  const beginCompactCanonicalSettlement = (schemaId?:string):number => {
+    const settlement = ++compactCanonicalSettlementSequence;
+    compactCanonicalSettlementClaims.set(settlement, schemaId); compactCanonicalSettlementPending = true;
+    compactCanonicalSettlementSchemaId = schemaId; return settlement;
+  };
   const clearCompactCanonicalSettlement = (schemaId?:string, settlement?:number):boolean => {
-    if (schemaId && compactCanonicalSettlementSchemaId !== schemaId) return false;
-    if (settlement !== undefined && settlement !== compactCanonicalSettlementSequence) return false;
+    if (settlement !== undefined) {
+      if (!compactCanonicalSettlementClaims.has(settlement) || compactCanonicalSettlementClaims.get(settlement) !== schemaId) return false;
+      compactCanonicalSettlementClaims.delete(settlement);
+      if (compactCanonicalSettlementClaims.size) {
+        compactCanonicalSettlementSchemaId = [...compactCanonicalSettlementClaims.values()].at(-1);
+        return false;
+      }
+    } else compactCanonicalSettlementClaims.clear();
     compactCanonicalSettlementPending = false; compactCanonicalSettlementSchemaId = undefined; return true;
   };
   const compactCanonicalProjectionQueueUnavailable = (adapter:CompactCanonicalEditorAdapter):boolean => Boolean(
@@ -884,18 +896,18 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (policy.semantic) { compactCanonicalPendingCommand = undefined; compactCanonicalPendingBase = undefined;
       compactCanonicalReviewVisible = false; compactCanonicalPresenceDraft = undefined; }
     compactCanonicalCommandFeedback = canonicalCommandOutcome(command, result, before); renderCompactCanonicalContext();
-    const settlement = policy.settles && adapter.settle && (adapter.settles?.(command) ?? true) ? ++compactCanonicalSettlementSequence : undefined;
-    if (!settlement || !adapter.settle) return { accepted:true, result, completion:Promise.resolve(true) };
-    compactCanonicalSettlementPending = true; const generation = lifecycleGeneration;
     const settlementSchemaId = compactCanonicalSavedSchemaId(adapter);
-    compactCanonicalSettlementSchemaId = settlementSchemaId;
+    const settlement = policy.settles && adapter.settle && (adapter.settles?.(command) ?? true)
+      ? beginCompactCanonicalSettlement(settlementSchemaId) : undefined;
+    if (!settlement || !adapter.settle) return { accepted:true, result, completion:Promise.resolve(true) };
+    const generation = lifecycleGeneration;
     const completion = adapter.settle().then(() => { adapter.onSettlementCommitted?.();
       if (mounted && generation === lifecycleGeneration) {
-        if (clearCompactCanonicalSettlement(settlementSchemaId)) compactCanonicalCommandFeedback = `Committed to ${adapter.settlementTarget ?? "durable Saved Draft"}.`;
+        if (clearCompactCanonicalSettlement(settlementSchemaId, settlement)) compactCanonicalCommandFeedback = `Committed to ${adapter.settlementTarget ?? "durable Saved Draft"}.`;
         renderCompactCanonicalEditor(); }
       return true;
     }, (error) => { if (mounted && generation === lifecycleGeneration) {
-      if (!ports.blocked?.() && clearCompactCanonicalSettlement(settlementSchemaId)) {
+      if (!ports.blocked?.() && clearCompactCanonicalSettlement(settlementSchemaId, settlement)) {
         compactCanonicalPendingCommand = command; compactCanonicalPendingBase = before;
         compactCanonicalCommandFeedback = `Not saved; Retry or Reject. ${error instanceof Error ? error.message : String(error)}`;
       } renderCompactCanonicalEditor(); }
@@ -912,15 +924,14 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       compactCanonicalCommandFeedback = "Projection is waiting for the failed durable save to be retried or rejected.";
       renderCompactCanonicalContext(); return Promise.resolve(false);
     }
-    compactCanonicalSettlementPending = true; compactCanonicalSettlementSchemaId = compactCanonicalSavedSchemaId(adapter);
+    const settlementSchemaId = compactCanonicalSavedSchemaId(adapter);
+    compactCanonicalSettlementPending = true; compactCanonicalSettlementSchemaId = settlementSchemaId;
     if (schemaEditor) schemaEditor.setAttribute("aria-busy", "true");
     if (saveSchemaButton) saveSchemaButton.disabled = true;
-    if (compactCanonicalProjectionWorker?.adapter === adapter) {
-      compactCanonicalProjectionWorker.settlement = ++compactCanonicalSettlementSequence;
-      return compactCanonicalProjectionWorker.promise;
-    }
+    if (compactCanonicalProjectionWorker?.adapter === adapter) return compactCanonicalProjectionWorker.promise;
     const generation = lifecycleGeneration;
-    const worker:CompactCanonicalProjectionWorker = { adapter, promise:Promise.resolve(false), settlement:++compactCanonicalSettlementSequence };
+    const worker:CompactCanonicalProjectionWorker = { adapter, promise:Promise.resolve(false),
+      settlement:beginCompactCanonicalSettlement(settlementSchemaId) };
     compactCanonicalProjectionWorker = worker;
     worker.promise = (async () => { let committed = false, activeRequest:CompactCanonicalProjectionPersistenceRequest | undefined;
       try { while (mounted && generation === lifecycleGeneration && compactCanonicalEditor === adapter) {
@@ -933,7 +944,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
           compactCanonicalProjectionRequest = activeRequest;
         compactCanonicalCommandFeedback = `Projection not saved; Retry or Reject. ${error instanceof Error ? error.message : String(error)}`; return false;
       } finally { if (compactCanonicalProjectionWorker === worker) { compactCanonicalProjectionWorker = undefined;
-        clearCompactCanonicalSettlement(compactCanonicalSavedSchemaId(adapter), worker.settlement); renderCompactCanonicalEditor(); } }
+        clearCompactCanonicalSettlement(settlementSchemaId, worker.settlement); renderCompactCanonicalEditor(); } }
     })(); return worker.promise;
   };
   const persistCompactCanonicalProjection = async (adapter:CompactCanonicalEditorAdapter, projection:SchemaDefinition, change?:string):Promise<boolean> => {
@@ -1605,7 +1616,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       schemaEditorDescription?.value ?? "");
     replaceActive(updateSchemaWorkingDraft(schema, { documentation }, "Update schema description"));
     const tracksCanonicalSettlement = Boolean(compactCanonicalEditor && ports.settleCanonical);
-    const settlement = tracksCanonicalSettlement ? ++compactCanonicalSettlementSequence : undefined;
+    const settlement = tracksCanonicalSettlement ? beginCompactCanonicalSettlement(schema.id) : undefined;
     if (tracksCanonicalSettlement) { compactCanonicalSettlementPending = true; compactCanonicalSettlementSchemaId = schema.id; }
     persistEditedSchemaIfStored(); renderSchemas();
     if (tracksCanonicalSettlement) void ports.settleCanonical!(schema.id).then(() => {
@@ -1624,7 +1635,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     replaceActive(updateSchemaWorkingDraft(schema, { document:schemaOnlyDeclaredProperties?.checked
       ? { ...document, additionalProperties:false } : document }, "Change additional-property policy"));
     const tracksCanonicalSettlement = Boolean(compactCanonicalEditor && ports.settleCanonical);
-    const settlement = tracksCanonicalSettlement ? ++compactCanonicalSettlementSequence : undefined;
+    const settlement = tracksCanonicalSettlement ? beginCompactCanonicalSettlement(schema.id) : undefined;
     if (tracksCanonicalSettlement) { compactCanonicalSettlementPending = true; compactCanonicalSettlementSchemaId = schema.id; }
     persistEditedSchemaIfStored(); renderSchemas();
     if (tracksCanonicalSettlement) { if (saveSchemaButton) saveSchemaButton.disabled = true; void ports.settleCanonical!(schema.id).then(() => {
@@ -1813,7 +1824,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       destinations:schemas.filter(({ id }) => id !== sourceSchema.id), schemas, reusableRuleIds:reusableSchemaRules.map(({ id }) => id),
       ...(trigger ? { trigger } : {}),
       onApply:(transaction) => {
-        pendingSchemaPropertyCopyPosition = { schemaId:sourceSchema.id, path, editorScroll, treeScroll };
+        pendingSchemaPropertyCopyPosition = { schemaId:sourceSchema.id, settlementSchemaId:transaction.schema.id, path, editorScroll, treeScroll };
         schemas = schemas.map((schema) => schema.id === transaction.schema.id ? transaction.schema : schema);
         lastSchemaPropertyCopy = transaction; pendingSchemaPropertyCopy = undefined; pendingSchemaPropertyCopyReview = undefined; persistSchemaLibrary(); renderSchemas(); renderSchemaRuleLibrary();
         if (undoSchemaPropertyCopyButton) undoSchemaPropertyCopyButton.hidden = false;
@@ -1823,7 +1834,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
           if (schemaEditor) schemaEditor.scrollTop = editorScroll; if (schemaPropertyTree) schemaPropertyTree.scrollTop = treeScroll; };
         const completeCopyPosition = ():void => { restoreCopyPosition(); ports.scheduleFrame(() => { restoreCopyPosition();
           if (pendingSchemaPropertyCopyPosition === restoration) pendingSchemaPropertyCopyPosition = undefined; }); };
-        ports.scheduleFrame(restoreCopyPosition); if (ports.settleCanonical) void ports.settleCanonical(transaction.schema.id)
+        queueMicrotask(restoreCopyPosition); ports.scheduleFrame(restoreCopyPosition); if (ports.settleCanonical) void ports.settleCanonical(transaction.schema.id)
           .then(() => ports.scheduleFrame(completeCopyPosition), () => {}); else ports.scheduleFrame(completeCopyPosition);
       }, ...(trigger ? { onClose:() => trigger.focus({ preventScroll:true }) } : {}) });
     pendingSchemaPropertyCopyReview = reviewController;
@@ -2284,13 +2295,27 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     return completion;
   };
   const settleSchemaPersistence = (event: SchemaPersistenceEvent): void | Promise<void> => {
-    if (pendingSchemaPropertyCopyPosition && (event.type === "retried" || event.type === "rejected")) {
+    if (pendingSchemaPropertyCopyPosition && pendingSchemaPropertyCopyPosition.settlementSchemaId === event.schemaId
+      && (event.type === "saved" || event.type === "retried" || event.type === "rejected")) {
       const restoration = pendingSchemaPropertyCopyPosition;
-      ports.scheduleFrame(() => { if (pendingSchemaPropertyCopyPosition === restoration) pendingSchemaPropertyCopyPosition = undefined; });
+      const restoreCopyPosition = ():void => {
+        schemaPropertyTree?.querySelector<HTMLElement>(`button[aria-label="Copy ${restoration.path} to another schema"]`)?.focus({ preventScroll:true });
+        if (schemaEditor) schemaEditor.scrollTop = restoration.editorScroll;
+        if (schemaPropertyTree) schemaPropertyTree.scrollTop = restoration.treeScroll;
+      };
+      queueMicrotask(restoreCopyPosition); ports.scheduleFrame(() => { restoreCopyPosition(); ports.scheduleFrame(() => {
+        restoreCopyPosition(); if (pendingSchemaPropertyCopyPosition === restoration) pendingSchemaPropertyCopyPosition = undefined;
+      }); });
     }
     if (event.type === "retried" && compactCanonicalEditor && compactCanonicalProjectionRequest?.adapter === compactCanonicalEditor
       && compactCanonicalSavedSchemaId(compactCanonicalEditor) === event.schemaId) {
       return resumeCompactCanonicalProjectionPersistence(compactCanonicalEditor).then(() => { renderSchemas(); renderCompactCanonicalEditor(); });
+    }
+    if (event.type === "saved") {
+      const acknowledged = [...compactCanonicalSettlementClaims]
+        .find(([, schemaId]) => schemaId === event.schemaId)?.[0];
+      if (acknowledged !== undefined) clearCompactCanonicalSettlement(event.schemaId, acknowledged);
+      if (compactCanonicalEditor) renderCompactCanonicalEditor();
     }
     if (compactCanonicalSettlementSchemaId === event.schemaId) {
       if (event.type === "retried" || event.type === "rejected") {
