@@ -1,14 +1,21 @@
+import type { ActivePageObservationResult } from "../../active-page-observation.js";
+import { targetPathStatusForObservation, type TargetPathStatus } from "../../data-layer-target-path-status.js";
+
 export interface ProjectEventTransportInstalledPorts {
   root: ParentNode;
   loadPaths(): { observationPath: string; pushPath: string };
   savePaths(paths: { observationPath: string; pushPath: string }): Promise<void>;
   settleTransport(): Promise<void>;
-  refreshTargetPath(): Promise<void>;
+  readTargetObservation(path: string): Promise<ActivePageObservationResult | undefined>;
+  applyLiveTargetPathObservation(observation: ActivePageObservationResult): void;
+  renderTargetReadiness(): void;
   projectName(): string | undefined;
 }
 
 export function createProjectEventTransportInstalledController(ports: ProjectEventTransportInstalledPorts) {
   const historyPathInput = ports.root.querySelector<HTMLInputElement>("#history-path");
+  const transportHistoryPathDisplay = ports.root.querySelector<HTMLElement>("#history-path-display");
+  const transportHistoryPathStatus = ports.root.querySelector<HTMLElement>("#history-path-status");
   const defaultPushPathInput = ports.root.querySelector<HTMLInputElement>("#default-push-path");
   const defaultPushPathStatus = ports.root.querySelector<HTMLElement>("#default-push-path-status");
   const projectTransportContext = ports.root.querySelector<HTMLElement>("#project-transport-context");
@@ -18,9 +25,33 @@ export function createProjectEventTransportInstalledController(ports: ProjectEve
   let phase: "idle" | "dirty" | "saving" | "saved" | "failed" = "idle";
   let projectTransportSavePending = false;
   let generation = 0;
-  const input = (): void => { paths = { observationPath:historyPathInput?.value ?? paths.observationPath,
-    pushPath:defaultPushPathInput?.value ?? paths.pushPath }; phase = "dirty"; renderProjectEventTransport(); };
+  let targetPathRequest = 0;
+  let currentTargetPathStatus: TargetPathStatus = "Selection required";
+  function renderTargetPath(path: string, fieldValue = path, status: TargetPathStatus = "Selection required"): void {
+    if (historyPathInput) historyPathInput.value = fieldValue;
+    if (transportHistoryPathDisplay) transportHistoryPathDisplay.textContent = path;
+    if (transportHistoryPathStatus) transportHistoryPathStatus.textContent = status === "Waiting for path" ? "Waiting for observation path" : status;
+  }
   function currentObservationHistoryPath(): string { return paths.observationPath; }
+  const targetPathStatusController = {
+    async configure(path: string, fieldValue = path): Promise<void> {
+      const request = ++targetPathRequest, operation = generation;
+      const observation = await ports.readTargetObservation(path);
+      if (!mounted || operation !== generation || request !== targetPathRequest) return;
+      currentTargetPathStatus = observation ? targetPathStatusForObservation(observation, path) : "Selection required";
+      renderTargetPath(path, fieldValue, currentTargetPathStatus); ports.renderTargetReadiness();
+      if (observation) ports.applyLiveTargetPathObservation(observation);
+    },
+  };
+  function refreshSelectedTargetPathStatus(): void {
+    const path = currentObservationHistoryPath();
+    void targetPathStatusController.configure(path, historyPathInput?.value ?? path);
+  }
+  const syncPaths = (): void => { paths = { observationPath:historyPathInput?.value ?? paths.observationPath,
+    pushPath:defaultPushPathInput?.value ?? paths.pushPath }; phase = "dirty"; };
+  const input = (): void => { syncPaths();
+    void targetPathStatusController.configure(currentObservationHistoryPath(), historyPathInput?.value ?? paths.observationPath);
+    renderProjectEventTransport(); };
   function renderProjectEventTransport(): void {
     const name = ports.projectName();
     if (projectTransportContext) projectTransportContext.textContent = name ? `Project context: ${name}` : "No active project";
@@ -30,33 +61,43 @@ export function createProjectEventTransportInstalledController(ports: ProjectEve
       : "Open project";
   }
   async function saveProjectEventTransport(): Promise<void> {
-    input(); const operation = ++generation, snapshot = { ...paths }; phase = "saving";
+    syncPaths(); const operation = ++generation, snapshot = { ...paths }; phase = "saving";
     projectTransportSavePending = true; renderProjectEventTransport();
     try {
-      await ports.savePaths(snapshot); await ports.settleTransport(); await ports.refreshTargetPath();
+      await ports.savePaths(snapshot); await ports.settleTransport();
       if (mounted && operation === generation) phase = "saved";
     } catch (error) { if (mounted && operation === generation) phase = "failed"; throw error; }
     finally { if (operation === generation) { projectTransportSavePending = false; renderProjectEventTransport(); } }
   }
-  const change = (): void => { void saveProjectEventTransport(); };
+  const observationPathChange = (): void => { void saveProjectEventTransport().then(refreshSelectedTargetPathStatus).catch((error: unknown) => {
+    if (transportHistoryPathStatus) transportHistoryPathStatus.textContent = error instanceof Error ? error.message : String(error);
+  }); };
+  const pushPathChange = (): void => { void saveProjectEventTransport().catch((error: unknown) => {
+    if (defaultPushPathStatus) defaultPushPathStatus.textContent = error instanceof Error ? error.message : String(error);
+  }); };
   return {
     mount(): void {
       if (mounted) return; mounted = true; generation += 1;
       if (historyPathInput) historyPathInput.value = paths.observationPath;
       if (defaultPushPathInput) defaultPushPathInput.value = paths.pushPath;
-      historyPathInput?.addEventListener("input", input); historyPathInput?.addEventListener("change", change);
-      defaultPushPathInput?.addEventListener("input", input); defaultPushPathInput?.addEventListener("change", change);
+      historyPathInput?.addEventListener("input", input);
+      historyPathInput?.addEventListener("change", observationPathChange);
+      defaultPushPathInput?.addEventListener("change", pushPathChange);
       renderProjectEventTransport();
     },
     dispose(): void {
       if (!mounted) return; mounted = false; generation += 1; phase = "idle";
-      historyPathInput?.removeEventListener("input", input); historyPathInput?.removeEventListener("change", change);
-      defaultPushPathInput?.removeEventListener("input", input); defaultPushPathInput?.removeEventListener("change", change);
+      targetPathRequest += 1;
+      historyPathInput?.removeEventListener("input", input);
+      historyPathInput?.removeEventListener("change", observationPathChange);
+      defaultPushPathInput?.removeEventListener("change", pushPathChange);
     },
     currentObservationHistoryPath,
+    configureTargetPath:targetPathStatusController.configure,
+    refreshTargetPath:refreshSelectedTargetPathStatus,
     render:renderProjectEventTransport,
     save:saveProjectEventTransport,
-    state:() => ({ ...paths, phase }),
+    state:() => ({ ...paths, phase, currentTargetPathStatus }),
   };
 }
 

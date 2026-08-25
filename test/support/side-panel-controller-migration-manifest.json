@@ -234,7 +234,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/project-event-transport/index.ts::historyPathInput:11"
+        "target": "src/data-layer-installed/project-event-transport/index.ts::historyPathInput:16"
       }
     },
     {
@@ -273,7 +273,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/project-event-transport/index.ts::defaultPushPathInput:12"
+        "target": "src/data-layer-installed/project-event-transport/index.ts::defaultPushPathInput:19"
       }
     },
     {
@@ -286,7 +286,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/project-event-transport/index.ts::defaultPushPathStatus:13"
+        "target": "src/data-layer-installed/project-event-transport/index.ts::defaultPushPathStatus:20"
       }
     },
     {
@@ -299,7 +299,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/project-event-transport/index.ts::projectTransportContext:14"
+        "target": "src/data-layer-installed/project-event-transport/index.ts::projectTransportContext:21"
       }
     },
     {
@@ -312,7 +312,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/project-event-transport/index.ts::projectTransportGuidance:15"
+        "target": "src/data-layer-installed/project-event-transport/index.ts::projectTransportGuidance:22"
       }
     },
     {
@@ -5024,7 +5024,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/project-event-transport/index.ts::projectTransportSavePending:19"
+        "target": "src/data-layer-installed/project-event-transport/index.ts::projectTransportSavePending:26"
       }
     },
     {
@@ -5601,7 +5601,8 @@
         "column": 5
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/project-event-transport/index.ts::currentTargetPathStatus:29"
       }
     },
     {
@@ -5781,7 +5782,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/project-event-transport/index.ts::targetPathStatusController:36"
       }
     },
     {
@@ -5837,7 +5839,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/project-event-transport/index.ts::currentObservationHistoryPath:23"
+        "target": "src/data-layer-installed/project-event-transport/index.ts::currentObservationHistoryPath:35"
       }
     },
     {
@@ -5851,7 +5853,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/project-event-transport/index.ts::renderProjectEventTransport:24"
+        "target": "src/data-layer-installed/project-event-transport/index.ts::renderProjectEventTransport:55"
       }
     },
     {
@@ -5865,7 +5867,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/project-event-transport/index.ts::saveProjectEventTransport:32"
+        "target": "src/data-layer-installed/project-event-transport/index.ts::saveProjectEventTransport:63"
       }
     },
     {
@@ -9098,7 +9100,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/project-event-transport/index.ts::refreshSelectedTargetPathStatus:46"
       }
     },
     {
@@ -9163,11 +9166,12 @@
       "frozen": {
         "expression": "document.querySelector<HTMLButtonElement>(\"#export-legacy-migration-sources\")!.addEventListener",
         "line": 985,
-        "column": 659,
-        "invocation": "document.querySelector<HTMLButtonElement>(\"#export-legacy-migration-sources\")"
+        "column": 659
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/durable-projects/index.ts::exportLegacyMigrationSourcesButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -9176,11 +9180,12 @@
       "frozen": {
         "expression": "document.querySelector<HTMLButtonElement>(selector)!.addEventListener",
         "line": 985,
-        "column": 1721,
-        "invocation": "document.querySelector<HTMLButtonElement>(selector)"
+        "column": 1721
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/durable-projects/index.ts::control?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -9189,11 +9194,12 @@
       "frozen": {
         "expression": "document.querySelector<HTMLButtonElement>(\"#export-legacy-migration-sources\")!.addEventListener",
         "line": 986,
-        "column": 971,
-        "invocation": "document.querySelector<HTMLButtonElement>(\"#export-legacy-migration-sources\")"
+        "column": 971
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/durable-projects/index.ts::exportLegacyMigrationSourcesButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -9202,11 +9208,12 @@
       "frozen": {
         "expression": "control.addEventListener",
         "line": 986,
-        "column": 1898,
-        "invocation": "control.addEventListener(\"click\",()=>{result.textContent=`Migrating only the explicitly reviewed valid ${choice} source; rejected bytes remain in backup…`;void durableProjectRuntime.resolveMigration(choice).then(()=>location.reload(),error=>{result.textContent=`Migration was not committed; every legacy source remains byte-identical. ${error instanceof Error?error.message:String(error)}`;});})"
+        "column": 1898
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/durable-projects/index.ts::control?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -12948,11 +12955,12 @@
       "frozen": {
         "expression": "historyPathInput?.addEventListener",
         "line": 6230,
-        "column": 1,
-        "invocation": "historyPathInput?.addEventListener(\"input\",()=>{\n  const typedPath=historyPathInput.value;\n  void targetPathStatusController.configure(currentObservationHistoryPath(),typedPath);\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/project-event-transport/index.ts::historyPathInput?.addEventListener:83",
+        "reviewed": true
       }
     },
     {
@@ -12961,11 +12969,12 @@
       "frozen": {
         "expression": "historyPathInput?.addEventListener",
         "line": 6234,
-        "column": 1,
-        "invocation": "historyPathInput?.addEventListener(\"change\",()=>{void saveProjectEventTransport().then(refreshSelectedTargetPathStatus).catch((error)=>{if(historyPathStatus)historyPathStatus.textContent=error instanceof Error?error.message:String(error);});})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/project-event-transport/index.ts::historyPathInput?.addEventListener:84",
+        "reviewed": true
       }
     },
     {
@@ -12974,11 +12983,12 @@
       "frozen": {
         "expression": "defaultPushPathInput?.addEventListener",
         "line": 6235,
-        "column": 1,
-        "invocation": "defaultPushPathInput?.addEventListener(\"change\",()=>{void saveProjectEventTransport().catch((error)=>{if(defaultPushPathStatus)defaultPushPathStatus.textContent=error instanceof Error?error.message:String(error);});})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/project-event-transport/index.ts::defaultPushPathInput?.addEventListener:85",
+        "reviewed": true
       }
     },
     {
