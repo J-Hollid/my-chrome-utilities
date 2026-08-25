@@ -1,5 +1,6 @@
-import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, importSchema, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaPropertyRows, schemaPropertyCopySource, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentConditionSuggestions, assignmentDataConditionSummary, contextualManualPropertyDefinition, createRuleConfiguration, duplicateSchemaAssignment, manualPropertyPreview, restoreSchemaLibrary, searchSchemas, serializeSchemaLibrary, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateAssignmentDataConditions, validateEvent, } from "../../utilities/data-layer/schemas.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, importSchema, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaPropertyRows, schemaPropertyCopySource, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentDraftAfterGuidedSave, assignmentConditionSuggestions, assignmentDataConditionSummary, contextualManualPropertyDefinition, createRuleConfiguration, duplicateSchemaAssignment, guidedAttachedRule, guidedPropertyDocument, manualPropertyPreview, mergeGuidedDocument, restoreSchemaLibrary, searchSchemas, serializeSchemaLibrary, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateAssignmentDataConditions, validateEvent, } from "../../utilities/data-layer/schemas.js";
 import { applySchemaPropertyCopy, planSchemaPropertyCopy } from "../../data-layer-schema-property-copy.js";
+import { persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, } from "../../data-layer-local-rule-promotion.js";
 import { publishReusableRuleSync, reviewReusableRuleSync, } from "../../data-layer-reusable-rule-sync.js";
 const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 export function createSchemasInstalledController(ports) {
@@ -427,6 +428,7 @@ export function createSchemasInstalledController(ports) {
     }
     let mounted = false;
     let unsubscribe;
+    let unsubscribeSchemaPersistence;
     const storedSchemaLibrary = ports.storage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
     let schemas = restoreSchemaLibrary(storedSchemaLibrary);
     let activeSchemaId;
@@ -464,6 +466,11 @@ export function createSchemasInstalledController(ports) {
     let schemaAssignmentConditionState = { target: "payload", suggestions: [] };
     let pendingSchemaImport;
     let pendingSchemaDeletion;
+    const localRulePromotionDialog = ports.localRulePromotionDialog;
+    let pendingLocalRulePromotion;
+    let pendingLocalRulePromotionPersistence;
+    let pendingGuidedValidationPersistence;
+    let persistenceGeneration = 0;
     const activeIndex = () => schemas.findIndex(({ id }) => id === activeSchemaId);
     const active = () => {
         const schema = schemas[activeIndex()];
@@ -1004,6 +1011,156 @@ export function createSchemasInstalledController(ports) {
         }
     };
     const persistReusableSchemaRules = () => { ports.storage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); };
+    const applyPersistenceSnapshot = (nextSchemas, nextRules) => {
+        schemas = structuredClone([...nextSchemas]);
+        reusableSchemaRules = structuredClone([...nextRules]);
+        ports.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(schemas));
+        persistReusableSchemaRules();
+        renderSchemas();
+        renderSchemaRuleLibrary();
+    };
+    const beginSchemaPersistence = (kind, schemaId, previousSchemas, previousRules, nextSchemas, nextRules) => {
+        const generation = ++persistenceGeneration;
+        let resolveCompletion;
+        let rejectCompletion;
+        const completion = new Promise((resolve, reject) => { resolveCompletion = resolve; rejectCompletion = reject; });
+        const transaction = {
+            schemaId, generation, kind, paused: false, settled: false, previousSchemas: structuredClone([...previousSchemas]),
+            previousRules: structuredClone([...previousRules]), nextSchemas: structuredClone([...nextSchemas]), nextRules: structuredClone([...nextRules]),
+            pause() {
+                if (transaction.settled || transaction.paused)
+                    return;
+                transaction.paused = true;
+                applyPersistenceSnapshot(transaction.previousSchemas, transaction.previousRules);
+            },
+            complete() {
+                if (transaction.settled || transaction.generation !== generation)
+                    return;
+                transaction.settled = true;
+                if (transaction.paused)
+                    applyPersistenceSnapshot(transaction.nextSchemas, transaction.nextRules);
+                if (pendingLocalRulePromotionPersistence === transaction)
+                    pendingLocalRulePromotionPersistence = undefined;
+                if (pendingGuidedValidationPersistence === transaction)
+                    pendingGuidedValidationPersistence = undefined;
+                resolveCompletion();
+            },
+            reject(error) {
+                if (transaction.settled || transaction.generation !== generation)
+                    return;
+                transaction.settled = true;
+                applyPersistenceSnapshot(transaction.previousSchemas, transaction.previousRules);
+                if (pendingLocalRulePromotionPersistence === transaction)
+                    pendingLocalRulePromotionPersistence = undefined;
+                if (pendingGuidedValidationPersistence === transaction)
+                    pendingGuidedValidationPersistence = undefined;
+                rejectCompletion(error);
+            },
+        };
+        if (kind === "promotion")
+            pendingLocalRulePromotionPersistence = transaction;
+        else
+            pendingGuidedValidationPersistence = transaction;
+        return completion;
+    };
+    const settleSchemaPersistence = (event) => {
+        for (const pending of [pendingLocalRulePromotionPersistence, pendingGuidedValidationPersistence]) {
+            if (!pending || pending.schemaId !== event.schemaId || pending.settled)
+                continue;
+            if (event.type === "failed") {
+                if (pending.kind === "guided")
+                    pending.pause();
+                continue;
+            }
+            if (event.type === "rejected")
+                pending.reject(event.error);
+            else
+                pending.complete();
+        }
+    };
+    function restoreLocalRulePromotionPresentation() {
+        pendingLocalRulePromotion = undefined;
+        renderSchemas();
+        renderSchemaRuleLibrary();
+    }
+    function openLocalRulePromotionReview(propertyPath, sourceRuleId) {
+        const schema = activeSchemaId ? active() : undefined;
+        if (!schema)
+            return false;
+        const generation = ++persistenceGeneration;
+        let review;
+        try {
+            review = reviewLocalRulePromotion({ schema, reusableRules: reusableSchemaRules,
+                propertyPath, sourceRuleId, editorContext: "editable" });
+        }
+        catch (error) {
+            if (schemaResult)
+                schemaResult.textContent = error instanceof Error ? error.message : "Promotion is no longer available.";
+            return false;
+        }
+        pendingLocalRulePromotion = { propertyPath, sourceRuleId, generation };
+        localRulePromotionDialog.open({ review,
+            cancel: () => { if (pendingLocalRulePromotion?.generation === generation)
+                restoreLocalRulePromotionPresentation(); },
+            confirm: (selected) => {
+                if (pendingLocalRulePromotion?.generation !== generation)
+                    throw new Error("The promotion review is stale");
+                const previousSchemas = structuredClone(schemas), previousRules = structuredClone(reusableSchemaRules);
+                const result = selected.action === "create"
+                    ? promoteLocalRule({ schema, reusableRules: reusableSchemaRules, propertyPath,
+                        sourceRuleId, editorContext: "editable", ...selected, createId: ports.createRuleId })
+                    : promoteLocalRule({ schema, reusableRules: reusableSchemaRules, propertyPath,
+                        sourceRuleId, editorContext: "editable", action: "use-existing", reusableRuleId: selected.reusableRuleId });
+                const nextSchemas = schemas.map((candidate) => candidate.id === result.schema.id ? result.schema : candidate);
+                const nextRules = result.reusableRules;
+                persistLocalRulePromotion(ports.storage, { schemaKey: SCHEMA_LIBRARY_STORAGE_KEY,
+                    schemaValue: serializeSchemaLibrary(nextSchemas), ruleKey: SCHEMA_RULE_STORAGE_KEY, ruleValue: JSON.stringify(nextRules) });
+                schemas = structuredClone(nextSchemas);
+                reusableSchemaRules = structuredClone([...nextRules]);
+                renderSchemas();
+                renderSchemaRuleLibrary();
+                const completion = beginSchemaPersistence("promotion", result.schema.id, previousSchemas, previousRules, nextSchemas, nextRules);
+                return completion.then(() => {
+                    if (pendingLocalRulePromotion?.generation === generation) {
+                        restoreLocalRulePromotionPresentation();
+                        if (schemaResult)
+                            schemaResult.textContent =
+                                `Promoted ${sourceRuleId} to reusable rule ${result.replacementRuleId}.`;
+                    }
+                });
+            },
+        });
+        return true;
+    }
+    function persistPublishedGuidedValidation(result) {
+        const rule = result.schema.rules[0];
+        if (!rule)
+            return Promise.resolve();
+        const previousSchemas = structuredClone(schemas), previousRules = structuredClone(reusableSchemaRules);
+        const previousSchema = result.destination.previousSchemaId ? schemas.find(({ id }) => id === result.destination.previousSchemaId) : undefined;
+        const assignment = { id: result.assignment.id, name: result.assignment.name, sourceId: result.assignment.sourceId,
+            eventName: result.assignment.eventName, target: result.assignment.target, priority: result.assignment.priority,
+            versionPolicy: result.assignment.versionPolicy, enabled: true };
+        const attachedRule = guidedAttachedRule(rule, result.reusableRules[0]?.name ?? `${rule.path} requirement`, `local-rule:${result.schema.id}:${rule.path}`);
+        const currentDraft = previousSchema?.workingDraft;
+        const assignments = assignmentDraftAfterGuidedSave(currentDraft?.assignments ?? previousSchema?.assignments ?? [], assignment, result.destination.assignmentAction);
+        const document = mergeGuidedDocument(currentDraft?.document ?? previousSchema?.document ?? { type: "object" }, guidedPropertyDocument(rule.path, rule.expectedType));
+        const attachedRules = [...(currentDraft?.attachedRules ?? previousSchema?.attachedRules ?? []).filter((candidate) => candidate.id !== attachedRule.id || candidate.propertyPath !== attachedRule.propertyPath), attachedRule];
+        const schema = previousSchema
+            ? updateSchemaWorkingDraft(previousSchema, { document, assignments, attachedRules }, `Add ${rule.path} validation`)
+            : { id: result.schema.id, name: result.schema.name, version: 1, document: { type: "object" }, assignments: [], published: false,
+                workingDraft: { baseVersion: 0, sourceVersion: 0, document, assignments, attachedRules, pendingChanges: [`Add ${rule.path} validation`] } };
+        const nextSchemas = [...schemas.filter(({ id }) => id !== schema.id), schema];
+        const published = result.reusableRules[0];
+        const nextRules = published ? [...reusableSchemaRules.filter(({ id }) => id !== published.id),
+            { id: published.id, name: published.name, kind: "Guided validation", version: published.version, enabled: published.enabled ?? true,
+                attachments: [schema.id], ...(attachedRule.operator ? { operator: attachedRule.operator } : {}),
+                ...(attachedRule.parameters ? { parameters: attachedRule.parameters } : {}), ...(attachedRule.allowedValues ? { allowedValues: attachedRule.allowedValues } : {}),
+                ...(attachedRule.severity ? { severity: attachedRule.severity } : {}), ...(attachedRule.message ? { message: attachedRule.message } : {}),
+                ...(attachedRule.conditionGroup ? { conditionGroup: attachedRule.conditionGroup } : {}) }] : reusableSchemaRules;
+        applyPersistenceSnapshot(nextSchemas, nextRules);
+        return beginSchemaPersistence("guided", schema.id, previousSchemas, previousRules, nextSchemas, nextRules);
+    }
     function assignmentConditionCapturedValue(target) {
         return ports.capturedAssignmentValue(target);
     }
@@ -1537,6 +1694,7 @@ export function createSchemasInstalledController(ports) {
             confirmSchemaDeleteButton?.addEventListener("click", confirmSchemaDeletion);
             cancelSchemaDeleteButton?.addEventListener("click", cancelSchemaDeletion);
             unsubscribe = ports.subscribe(renderSchemas);
+            unsubscribeSchemaPersistence = ports.subscribeSchemaPersistence(settleSchemaPersistence);
             renderSchemas();
         },
         dispose() {
@@ -1631,8 +1789,15 @@ export function createSchemasInstalledController(ports) {
             schemaAssignmentConditionState = { target: "payload", suggestions: [] };
             pendingSchemaImport = undefined;
             pendingSchemaDeletion = undefined;
+            const disposed = new Error("Schemas controller disposed before durable persistence settled");
+            pendingLocalRulePromotionPersistence?.reject(disposed);
+            pendingGuidedValidationPersistence?.reject(disposed);
+            pendingLocalRulePromotion = undefined;
+            localRulePromotionDialog.close();
             unsubscribe?.();
             unsubscribe = undefined;
+            unsubscribeSchemaPersistence?.();
+            unsubscribeSchemaPersistence = undefined;
             schemaList?.replaceChildren();
             schemaAssignmentList?.replaceChildren();
             schemaAssignmentDataConditions?.replaceChildren();
@@ -1674,6 +1839,8 @@ export function createSchemasInstalledController(ports) {
         editAssignment: editSchemaAssignment,
         reviewLibraryImport: reviewSchemaLibraryImport,
         requestDeletion: requestSchemaDeletion,
+        requestLocalRulePromotion: openLocalRulePromotionReview,
+        persistGuidedValidation: persistPublishedGuidedValidation,
         rulePickerState: () => ({ path: schemaRulePickerPath, renderSequence: schemaPropertyRenderSequence,
             ...(schemaRuleConfiguration ? { configuration: structuredClone(schemaRuleConfiguration) } : {}) }),
         rules: () => structuredClone(reusableSchemaRules),

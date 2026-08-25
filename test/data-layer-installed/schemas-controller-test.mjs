@@ -6,10 +6,11 @@ const values = new Map([["my-chrome-utilities.schema-library.v1", JSON.stringify
 let changed = 0, guided;
 const controller = createSchemasInstalledController({
   root:{ querySelector:() => null, querySelectorAll:() => [] },
-  storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value) },
+  storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value), removeItem:(key) => values.delete(key) },
   changed:() => { changed += 1; }, runGuidedValidation:async (id) => { guided = id; },
   subscribe:() => () => {}, specificIndexSelected() {}, rulePickerChanged() {}, createRuleId:() => "rule:first",
   capturedAssignmentValue:() => undefined, renderAssignmentConditions() {},
+  localRulePromotionDialog:{ open() {}, close() {} }, subscribeSchemaPersistence:() => () => {},
 });
 controller.mount(); controller.open("schema:page"); controller.beginDraft();
 controller.updateDraft({ document:{ type:"object", required:["title"], properties:{ title:{ type:"string" } } } }, "Require title");
@@ -96,16 +97,19 @@ const uiValues = new Map([
 ]);
 let selectedSpecificIndex;
 const rulePickerChanges = [];
+let promotionDialogInput, persistenceListener, promotionRuleSequence = 0;
 const uiController = createSchemasInstalledController({
   root:{ querySelector:(selector) => elements.get(selector) ?? null,
     querySelectorAll:(selector) => selector.includes("role=tab") ? [schemaMasterTab, schemaRulesTab] : [schemaMasterPanel, schemaRulesPanel] },
-  storage:{ getItem:(key) => uiValues.get(key) ?? null, setItem:(key, value) => uiValues.set(key, value) },
+  storage:{ getItem:(key) => uiValues.get(key) ?? null, setItem:(key, value) => uiValues.set(key, value), removeItem:(key) => uiValues.delete(key) },
   changed() {}, runGuidedValidation:async () => {}, subscribe:() => () => {},
   specificIndexSelected:(path) => { selectedSpecificIndex = path; },
   rulePickerChanged:(path, open) => rulePickerChanges.push(`${path}:${open}`),
-  createRuleId:() => "rule:checkout",
+  createRuleId:() => promotionRuleSequence++ === 0 ? "rule:checkout" : "rule:promoted",
   capturedAssignmentValue:(target) => target === "payload" ? { checkout:{ total:12 } } : { raw:true },
   renderAssignmentConditions:(root, state) => { root.textContent = `${state.target}:${state.group?.predicates.length ?? 0}`; },
+  localRulePromotionDialog:{ open:(input) => { promotionDialogInput = input; }, close:() => { promotionDialogInput = undefined; } },
+  subscribeSchemaPersistence:(listener) => { persistenceListener = listener; return () => { if (persistenceListener === listener) persistenceListener = undefined; }; },
 });
 uiController.mount(); uiController.open("schema:page"); uiController.beginDraft();
 elements.get("#schema-editor-name").value = "Page checkout"; elements.get("#schema-editor-name").dispatch("input");
@@ -251,6 +255,42 @@ elements.get("#cancel-schema-delete").click();
 assert.equal(uiController.schemas().some(({ id }) => id === importedSchema.id), true);
 uiController.requestDeletion(importedSchema.id); elements.get("#confirm-schema-delete").click();
 assert.equal(uiController.schemas().some(({ id }) => id === importedSchema.id), false);
+const persistenceSchemaId = uiController.state().activeSchemaId;
+const persistenceSchema = uiController.schemas().find(({ id }) => id === persistenceSchemaId);
+uiController.updateDraft({ attachedRules:[...(persistenceSchema.workingDraft?.attachedRules ?? persistenceSchema.attachedRules ?? []),
+  { id:"local:email", name:"Email required", version:1, propertyPath:"/checkout/email", operator:"required", enabled:true }] });
+assert.equal(uiController.requestLocalRulePromotion("/checkout/email", "local:email"), true);
+const promotionCompletion = Promise.resolve(promotionDialogInput.confirm({ action:"create", name:"Reusable email" }));
+assert.equal(uiController.rules().some(({ id }) => id === "rule:promoted"), true, "promotion writes its optimistic rule snapshot");
+persistenceListener({ type:"saved", schemaId:persistenceSchemaId }); await promotionCompletion;
+assert.equal(uiController.schemas().find(({ id }) => id === persistenceSchemaId).workingDraft.attachedRules
+  .some(({ id }) => id === "rule:promoted"), true, "durable success retains the promoted replacement");
+const guidedResult = (id, path) => ({
+  schema:{ id:persistenceSchemaId, name:"Page guided", version:1, pending:true,
+    rules:[{ path, expectedType:"String", requirement:"Must be present", values:[], reusableRuleId:id }] },
+  reusableRules:[{ id, name:`Guided ${path}`, version:1, requirement:"Must be present", values:[] }],
+  assignment:{ id:`assignment:${id}`, name:`Assignment ${id}`, schemaId:persistenceSchemaId, sourceId:"gtm",
+    eventName:"checkout", target:"payload", priority:30, versionPolicy:"pinned", enabled:true },
+  destination:{ kind:"existing", previousSchemaId:persistenceSchemaId, previousVersion:1,
+    assignmentAction:"add the reviewed assignment as a pending change" }, readableRequirement:"Must be present",
+});
+const retryCompletion = uiController.persistGuidedValidation(guidedResult("rule:guided-retry", "checkout.phone"));
+persistenceListener({ type:"failed", schemaId:persistenceSchemaId, error:new Error("offline") });
+assert.equal(uiController.rules().some(({ id }) => id === "rule:guided-retry"), false, "guided failure pauses optimistic Rule Library state");
+persistenceListener({ type:"retried", schemaId:persistenceSchemaId }); await retryCompletion;
+assert.equal(uiController.rules().some(({ id }) => id === "rule:guided-retry"), true, "retry reapplies the reviewed snapshot exactly once");
+persistenceListener({ type:"rejected", schemaId:persistenceSchemaId, error:new Error("stale rejection") });
+assert.equal(uiController.rules().some(({ id }) => id === "rule:guided-retry"), true, "settled transactions ignore stale durable events");
+const rejectedCompletion = uiController.persistGuidedValidation(guidedResult("rule:guided-reject", "checkout.country"));
+const observedRejection = rejectedCompletion.then(() => undefined, (error) => error);
+persistenceListener({ type:"failed", schemaId:persistenceSchemaId, error:new Error("conflict") });
+persistenceListener({ type:"rejected", schemaId:persistenceSchemaId, error:new Error("rejected by operator") });
+assert.match(String(await observedRejection), /rejected by operator/);
+assert.equal(uiController.rules().some(({ id }) => id === "rule:guided-reject"), false, "rejection restores the pre-transaction libraries");
+const disposedCompletion = uiController.persistGuidedValidation(guidedResult("rule:guided-dispose", "checkout.postcode"));
+const disposedRejection = disposedCompletion.then(() => undefined, (error) => error);
 uiController.dispose();
+assert.match(String(await disposedRejection), /disposed before durable persistence settled/);
+assert.equal(persistenceListener, undefined, "disposal detaches the durable persistence port");
 assert.equal([...elements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
   "Schemas removes every editor and revision listener it owns");
