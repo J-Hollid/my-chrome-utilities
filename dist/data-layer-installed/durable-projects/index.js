@@ -1,8 +1,10 @@
 export function createDurableProjectsInstalledController(ports) {
+    const durableStorageRecovery = ports.root.querySelector("#durable-storage-recovery");
     let phase = "idle";
     let stop;
     let mounting;
     let generation = 0;
+    const storageRecoveryClosed = () => ports.storageRecoveryClosed();
     return {
         mount() {
             if (phase === "ready")
@@ -11,6 +13,7 @@ export function createDurableProjectsInstalledController(ports) {
                 return mounting;
             const operation = ++generation;
             phase = "starting";
+            durableStorageRecovery?.addEventListener("close", storageRecoveryClosed);
             mounting = ports.startRepository().then((dispose) => {
                 if (operation !== generation) {
                     dispose();
@@ -24,7 +27,14 @@ export function createDurableProjectsInstalledController(ports) {
                 mounting = undefined; });
             return mounting;
         },
-        dispose() { generation += 1; stop?.(); stop = undefined; mounting = undefined; phase = "idle"; },
+        dispose() {
+            generation += 1;
+            durableStorageRecovery?.removeEventListener("close", storageRecoveryClosed);
+            stop?.();
+            stop = undefined;
+            mounting = undefined;
+            phase = "idle";
+        },
         reviewMigration: ports.reviewMigration,
         retryFailedSave: ports.retryFailedSave,
         rejectFailedSave: ports.rejectFailedSave,

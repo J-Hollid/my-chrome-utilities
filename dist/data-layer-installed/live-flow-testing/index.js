@@ -9,6 +9,17 @@ export function createLiveFlowTestingInstalledController(ports) {
         summary = ports.currentSummary();
         result = ports.projectEventResult();
     } };
+    const liveFlowTestingUi = {
+        open: ports.beginTest,
+        refreshProject: refresh,
+        reset: () => { summary = undefined; result = undefined; },
+    };
+    function resetLiveFlowTestingSession() {
+        completed = [];
+        liveFlowTestingUi.reset();
+        if (mounted)
+            liveFlowTestingUi.refreshProject();
+    }
     return {
         mount() { if (!mounted) {
             mounted = true;
@@ -24,12 +35,11 @@ export function createLiveFlowTestingInstalledController(ports) {
             summary = undefined;
             result = undefined;
         } },
-        async begin() { const operation = generation; await ports.beginTest(); if (mounted && operation === generation)
+        async begin() { const operation = generation; await liveFlowTestingUi.open(); if (mounted && operation === generation)
             refresh(); },
         refresh,
         complete(record) { completed = [structuredClone(record)]; summary = structuredClone(record); },
-        reset() { completed = []; summary = undefined; result = undefined; if (mounted)
-            refresh(); },
+        reset: resetLiveFlowTestingSession,
         openProjectEntity: ports.openProjectEntity,
         state: () => ({ ...(summary ? { summary: structuredClone(summary) } : {}),
             ...(result ? { result: structuredClone(result) } : {}), completed: structuredClone(completed), mounted }),

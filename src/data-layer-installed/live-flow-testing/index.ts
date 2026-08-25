@@ -14,13 +14,21 @@ export function createLiveFlowTestingInstalledController(ports: LiveFlowTestingI
   let generation = 0;
   let completed: Readonly<Record<string, unknown>>[] = [];
   const refresh = (): void => { if (mounted) { summary = ports.currentSummary(); result = ports.projectEventResult(); } };
+  const liveFlowTestingUi = {
+    open:ports.beginTest,
+    refreshProject:refresh,
+    reset:() => { summary = undefined; result = undefined; },
+  };
+  function resetLiveFlowTestingSession(): void {
+    completed = []; liveFlowTestingUi.reset(); if (mounted) liveFlowTestingUi.refreshProject();
+  }
   return {
     mount(): void { if (!mounted) { mounted = true; generation += 1; unsubscribe = ports.subscribe(refresh); refresh(); } },
     dispose(): void { if (mounted) { mounted = false; generation += 1; unsubscribe?.(); unsubscribe = undefined; summary = undefined; result = undefined; } },
-    async begin(): Promise<void> { const operation = generation; await ports.beginTest(); if (mounted && operation === generation) refresh(); },
+    async begin(): Promise<void> { const operation = generation; await liveFlowTestingUi.open(); if (mounted && operation === generation) refresh(); },
     refresh,
     complete(record: Readonly<Record<string, unknown>>): void { completed = [structuredClone(record)]; summary = structuredClone(record); },
-    reset(): void { completed = []; summary = undefined; result = undefined; if (mounted) refresh(); },
+    reset:resetLiveFlowTestingSession,
     openProjectEntity:ports.openProjectEntity,
     state:() => ({ ...(summary ? { summary:structuredClone(summary) } : {}),
       ...(result ? { result:structuredClone(result) } : {}), completed:structuredClone(completed), mounted }),

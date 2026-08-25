@@ -9,7 +9,7 @@ const controller = createCaptureInstalledController({
   sessionStart:async () => ({ id:"session:1", tabId:4, url:"https://shop.example/", historyPath:"event.history" }),
   subscribeToLiveFeed:(next) => { subscriptions += 1; listener = next; return () => { removals += 1; listener = undefined; }; },
   changed:() => { changes += 1; },
-  runCommand() {}, setLiveSessionMessage() {},
+  runCommand() {}, setLiveSessionMessage() {}, runObservationRefresh() {},
 });
 controller.mount(); controller.mount(); assert.equal(subscriptions, 1);
 await controller.begin();

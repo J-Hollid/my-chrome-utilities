@@ -1,8 +1,11 @@
 import {
   beginDataLayerTestingSession,
+  createLiveNotificationController,
+  observationRefreshDelay,
   persistSession,
   restoreSession,
   type DataLayerSessionState,
+  type ObservationRefreshRequest,
 } from "../../utilities/data-layer/capture.js";
 import {
   createLiveObserverState,
@@ -36,6 +39,7 @@ export interface CaptureInstalledPorts {
   changed(session: DataLayerSessionState, observer: LiveObserverState): void;
   runCommand(id: "data-layer.start-testing" | "data-layer.end-testing"): void;
   setLiveSessionMessage(message: string): void;
+  runObservationRefresh(request: ObservationRefreshRequest): Promise<void> | void;
 }
 
 export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
@@ -44,10 +48,15 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
   const liveObserverElements = findLiveObserverElements(ports.root);
   const pauseCaptureButton = liveObserverElements.pauseCaptureButton;
   const resumeCaptureButton = liveObserverElements.resumeCaptureButton;
+  const liveNotificationController = createLiveNotificationController(
+    (message) => ports.setLiveSessionMessage(message),
+    (clear, delayMs) => { globalThis.setTimeout(clear, delayMs); },
+  );
   let mounted = false;
   let unsubscribe: (() => void) | undefined;
   let dataLayerSessionState = restoreSession(ports.storage);
   let liveObserverState = createLiveObserverState({ pageUrl:ports.initialPageUrl(), sources:ports.initialSources() });
+  let observationRefreshTimeoutId: number | undefined;
   const renderLiveObserver = (): void => {
     if (mounted) renderLiveObserverState(liveObserverElements, liveObserverState, () => {});
   };
@@ -66,10 +75,25 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
   };
   const startTesting = (): void => ports.runCommand("data-layer.start-testing");
   const endTesting = (): void => ports.runCommand("data-layer.end-testing");
+  const setLiveSessionMessage = (message: string): void => liveNotificationController.announce(message);
   const pauseInstalledCapture = (): void => { liveObserverState = pauseCapture(liveObserverState);
-    ports.setLiveSessionMessage("Capture paused"); publish(); };
+    setLiveSessionMessage("Capture paused"); publish(); };
   const resumeInstalledCapture = (): void => { liveObserverState = resumeCapture(liveObserverState);
-    ports.setLiveSessionMessage("Capture resumed"); publish(); };
+    setLiveSessionMessage("Capture resumed"); publish(); };
+  function clearScheduledObservationRefresh(): void {
+    if (observationRefreshTimeoutId !== undefined) {
+      globalThis.clearTimeout(observationRefreshTimeoutId);
+      observationRefreshTimeoutId = undefined;
+    }
+  }
+  function scheduleObservationRefresh(request: ObservationRefreshRequest): void {
+    clearScheduledObservationRefresh();
+    const delay = observationRefreshDelay(request.attempt);
+    observationRefreshTimeoutId = globalThis.setTimeout(() => {
+      observationRefreshTimeoutId = undefined;
+      void ports.runObservationRefresh(request);
+    }, delay);
+  }
   return {
     mount(): void {
       if (mounted) return;
@@ -89,6 +113,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
       endTestingButton?.removeEventListener("click", endTesting);
       pauseCaptureButton?.removeEventListener("click", pauseInstalledCapture);
       resumeCaptureButton?.removeEventListener("click", resumeInstalledCapture);
+      clearScheduledObservationRefresh();
     },
     async begin(): Promise<void> {
       const started = beginDataLayerTestingSession(dataLayerSessionState, liveObserverState, await ports.sessionStart());
@@ -98,6 +123,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     pause:pauseInstalledCapture,
     resume:resumeInstalledCapture,
     capture:syncCapturedEventsToLive,
+    scheduleObservationRefresh,
     state:() => ({ session:structuredClone(dataLayerSessionState), observer:structuredClone(liveObserverState) }),
   };
 }

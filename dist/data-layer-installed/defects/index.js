@@ -1,12 +1,12 @@
 import { DEFECT_LIBRARY_STORAGE_KEY, addDefect, cancelDefectDeletion, confirmDefectDeletion, editDefect, eventContainsDefectIssue, eventMatchesOccurrenceDefect, findDefectLibraryElements, renderDefectLibrary, requestDefectDeletion, restoreDefectLibrary, searchDefects, serializeDefectLibrary, presentedEventTriage, updateDefectStatus, } from "../../utilities/data-layer/defect-reporting.js";
 export function createDefectsInstalledController(ports) {
-    const elements = findDefectLibraryElements(ports.root);
-    const search = ports.root.querySelector("#defect-library-search");
-    const status = ports.root.querySelector("#defect-library-status");
-    const type = ports.root.querySelector("#defect-library-type");
-    const event = ports.root.querySelector("#defect-library-event");
-    const schema = ports.root.querySelector("#defect-library-schema");
-    const path = ports.root.querySelector("#defect-library-path");
+    const defectLibraryElements = findDefectLibraryElements(ports.root);
+    const defectLibrarySearch = ports.root.querySelector("#defect-library-search");
+    const defectLibraryStatus = ports.root.querySelector("#defect-library-status");
+    const defectLibraryType = ports.root.querySelector("#defect-library-type");
+    const defectLibraryEvent = ports.root.querySelector("#defect-library-event");
+    const defectLibrarySchema = ports.root.querySelector("#defect-library-schema");
+    const defectLibraryPath = ports.root.querySelector("#defect-library-path");
     let defectLibrary = restoreDefectLibrary(ports.storage.getItem(DEFECT_LIBRARY_STORAGE_KEY));
     let selectedDefectId;
     let defectReturn;
@@ -17,12 +17,12 @@ export function createDefectsInstalledController(ports) {
         ports.storage.setItem(DEFECT_LIBRARY_STORAGE_KEY, serializeDefectLibrary(defectLibrary));
     };
     const filteredDefectLibrary = () => searchDefects(defectLibrary, {
-        query: search?.value ?? "",
-        status: (status?.value || "All"),
-        type: (type?.value || "All"),
-        eventName: event?.value ?? "",
-        schema: schema?.value ?? "",
-        path: path?.value ?? "",
+        query: defectLibrarySearch?.value ?? "",
+        status: (defectLibraryStatus?.value || "All"),
+        type: (defectLibraryType?.value || "All"),
+        eventName: defectLibraryEvent?.value ?? "",
+        schema: defectLibrarySchema?.value ?? "",
+        path: defectLibraryPath?.value ?? "",
     });
     const matchingEventForDefect = (defect) => {
         const events = ports.liveEvents();
@@ -70,7 +70,7 @@ export function createDefectsInstalledController(ports) {
         const filtered = filteredDefectLibrary();
         const selected = selectedDefectId ? defectLibrary.defects.find(({ id }) => id === selectedDefectId) : undefined;
         const presented = selected && !filtered.some(({ id }) => id === selected.id) ? [...filtered, selected] : filtered;
-        renderDefectLibrary(elements, presented, selectedDefectId, defectLibrary.deletionConfirmationId, {
+        renderDefectLibrary(defectLibraryElements, presented, selectedDefectId, defectLibrary.deletionConfirmationId, {
             open: (id, trigger) => openDefect(id, { trigger }), close: closeDefect,
             save: (id, report, notes) => { defectLibrary = editDefect(defectLibrary, id, { report, notes }, now()); persistDefectLibrary(); renderDefects(); },
             recopy: recopyDefect,
@@ -90,15 +90,16 @@ export function createDefectsInstalledController(ports) {
             },
         });
     }
-    const controls = [search, status, type, event, schema, path].filter((control) => Boolean(control));
+    const controls = [defectLibrarySearch, defectLibraryStatus, defectLibraryType, defectLibraryEvent,
+        defectLibrarySchema, defectLibraryPath].filter((filter) => Boolean(filter));
     return {
         mount() {
             if (mounted)
                 return;
             mounted = true;
-            for (const control of controls) {
-                control.addEventListener("input", renderDefects);
-                control.addEventListener("change", renderDefects);
+            for (const filter of controls) {
+                filter?.addEventListener("input", renderDefects);
+                filter?.addEventListener("change", renderDefects);
             }
             renderDefects();
         },
@@ -106,13 +107,13 @@ export function createDefectsInstalledController(ports) {
             if (!mounted)
                 return;
             mounted = false;
-            for (const control of controls) {
-                control.removeEventListener("input", renderDefects);
-                control.removeEventListener("change", renderDefects);
+            for (const filter of controls) {
+                filter?.removeEventListener("input", renderDefects);
+                filter?.removeEventListener("change", renderDefects);
             }
-            elements.list?.replaceChildren();
-            elements.detail?.replaceChildren();
-            elements.confirmation?.replaceChildren();
+            defectLibraryElements.list?.replaceChildren();
+            defectLibraryElements.detail?.replaceChildren();
+            defectLibraryElements.confirmation?.replaceChildren();
         },
         library: () => structuredClone(defectLibrary),
         replace(next) { defectLibrary = structuredClone(next); persistDefectLibrary(); renderDefects(); },

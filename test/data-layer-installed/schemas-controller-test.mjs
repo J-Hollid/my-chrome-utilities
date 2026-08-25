@@ -5,8 +5,10 @@ const schema = { id:"schema:page", name:"Page", version:1, document:{ type:"obje
 const values = new Map([["my-chrome-utilities.schema-library.v1", JSON.stringify([schema])]]);
 let changed = 0, guided;
 const controller = createSchemasInstalledController({
+  root:{ querySelector:() => null },
   storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value) },
   changed:() => { changed += 1; }, runGuidedValidation:async (id) => { guided = id; },
+  subscribe:() => () => {},
 });
 controller.mount(); controller.open("schema:page"); controller.beginDraft();
 controller.updateDraft({ document:{ type:"object", required:["title"], properties:{ title:{ type:"string" } } } }, "Require title");

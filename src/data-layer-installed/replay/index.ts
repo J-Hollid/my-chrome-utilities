@@ -26,25 +26,25 @@ export interface ReplayInstalledController {
 export function createReplayInstalledController(
   ports: ReplayInstalledPorts,
 ): ReplayInstalledController {
-  const elements = findSequenceReplayElements(ports.root);
-  const empty = ports.root.querySelector<HTMLElement>("#sequence-empty-state");
+  const sequenceReplayElements = findSequenceReplayElements(ports.root);
+  const sequenceEmptyState = ports.root.querySelector<HTMLElement>("#sequence-empty-state");
   let mounted = false;
   let replaySequences: ReplaySequence[] = [];
 
   const renderSequences = (): void => {
     if (!mounted) return;
-    if (empty) empty.hidden = replaySequences.length > 0;
-    renderSequenceReplay(elements, replaySequences, (sequence) => {
+    if (sequenceEmptyState) sequenceEmptyState.hidden = replaySequences.length > 0;
+    renderSequenceReplay(sequenceReplayElements, replaySequences, (sequence) => {
       const templates = ports.listTemplates();
       const adapters = ports.listSources().map((source) => ({ ...source, kind:"Data Layer",
         destination:"event.history", enabled:true, capabilities:["push"] as const }));
       const ready = readiness(sequence, templates, adapters);
       if (!ready.runnable) {
-        setSequenceReplayResult(elements, `Not runnable: ${ready.blocked.join(", ")}`);
+        setSequenceReplayResult(sequenceReplayElements, `Not runnable: ${ready.blocked.join(", ")}`);
         return;
       }
       const record = runSequence(sequence, templates, adapters, ports.pageUrl(), "Run all");
-      setSequenceReplayResult(elements, `${record.result}: ${record.steps.length} steps.`);
+      setSequenceReplayResult(sequenceReplayElements, `${record.result}: ${record.steps.length} steps.`);
     });
   };
 
@@ -53,8 +53,8 @@ export function createReplayInstalledController(
     dispose(): void {
       if (!mounted) return;
       mounted = false;
-      elements.list?.replaceChildren();
-      setSequenceReplayResult(elements, "");
+      sequenceReplayElements.list?.replaceChildren();
+      setSequenceReplayResult(sequenceReplayElements, "");
     },
     createFromSession(id, name, eventIds): ReplaySequence {
       const ids = new Set(eventIds);

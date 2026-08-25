@@ -9,6 +9,17 @@ export const installedDataLayerControllerOrder = [
     "project-event-transport",
     "live-flow-testing",
 ];
+export function installDurableProjectCoordinationSubscription(durableProjectRuntime, ports) {
+    return durableProjectRuntime.subscribe(({ active }) => {
+        ports.renderProjectEventTransport();
+        if (!active?.state)
+            return;
+        ports.renderSchemas();
+        ports.renderSchemaWorkflowRows();
+        ports.renderCompactCanonicalEditor();
+        ports.renderLayeredProfileEditor();
+    });
+}
 export async function createInstalledSidePanelRuntimeFoundation(root = document, storage = globalThis.localStorage) {
     const app = root.querySelector("#app");
     const panelRoot = root.querySelector("#side-panel-root");

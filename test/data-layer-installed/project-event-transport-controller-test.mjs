@@ -5,7 +5,7 @@ const input = {value:"",addEventListener:(type,listener)=>listeners.set(type,lis
   removeEventListener:(type,listener)=>{if(listeners.get(type)===listener)listeners.delete(type);}};
 const controller = createProjectEventTransportInstalledController({ root:{querySelector:()=>input},
   loadPaths:()=>({observationPath:"event.history",pushPath:"event.history"}), savePaths:async()=>{},
-  settleTransport:async()=>{}, refreshTargetPath:async()=>{} });
+  settleTransport:async()=>{}, refreshTargetPath:async()=>{}, projectName:()=>"One" });
 controller.mount(); controller.mount(); assert.equal(listeners.size, 2);
 controller.dispose(); controller.dispose(); assert.equal(listeners.size, 0);
 assert.equal(controller.state().observationPath, "event.history");

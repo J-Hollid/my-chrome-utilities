@@ -11,6 +11,14 @@ export function createProjectsInstalledController(ports) {
         projects = ports.loadProjects().map((project) => ({ ...project }));
         activeProjectId = ports.activeProjectId();
     };
+    const projectLibraryUi = {
+        render: refresh,
+        library: () => ({ activeProjectId, projects: structuredClone(projects) }),
+        activate: async (projectId) => { await ports.openProject(projectId); activeProjectId = projectId; },
+    };
+    function activeTransportProject() {
+        return projects.find(({ id }) => id === projectLibraryUi.library().activeProjectId);
+    }
     return {
         mount() { if (!mounted) {
             mounted = true;
@@ -31,7 +39,7 @@ export function createProjectsInstalledController(ports) {
             const operation = generation;
             openingProjectId = id;
             try {
-                await ports.openProject(id);
+                await projectLibraryUi.activate(id);
                 if (mounted && operation === generation)
                     activeProjectId = id;
             }
@@ -41,6 +49,7 @@ export function createProjectsInstalledController(ports) {
             }
         },
         navigate: ports.navigateToProjectArea,
+        activeTransportProject,
         state: () => ({ ...(activeProjectId ? { activeProjectId } : {}), ...(openingProjectId ? { openingProjectId } : {}),
             projectCount: projects.length, mounted }),
     };

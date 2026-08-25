@@ -41,6 +41,28 @@ export interface InstalledSidePanelRuntimeFoundation {
   durableProjectRuntime: Awaited<ReturnType<typeof openDurableProjectRuntime>>;
 }
 
+export interface DurableProjectCoordinationPorts {
+  renderProjectEventTransport(): void;
+  renderSchemas(): void;
+  renderSchemaWorkflowRows(): void;
+  renderCompactCanonicalEditor(): void;
+  renderLayeredProfileEditor(): void;
+}
+
+export function installDurableProjectCoordinationSubscription(
+  durableProjectRuntime: Awaited<ReturnType<typeof openDurableProjectRuntime>>,
+  ports: DurableProjectCoordinationPorts,
+): () => void {
+  return durableProjectRuntime.subscribe(({ active }) => {
+    ports.renderProjectEventTransport();
+    if (!active?.state) return;
+    ports.renderSchemas();
+    ports.renderSchemaWorkflowRows();
+    ports.renderCompactCanonicalEditor();
+    ports.renderLayeredProfileEditor();
+  });
+}
+
 export async function createInstalledSidePanelRuntimeFoundation(
   root: Document = document,
   storage: Storage = globalThis.localStorage,
