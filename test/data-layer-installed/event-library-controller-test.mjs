@@ -32,7 +32,8 @@ assert.equal(controller.templates()[0].version, 2, "durable template ownership s
 function element() {
   const listeners = new Map();
   return { value:"", textContent:"", hidden:false, dataset:{},
-    setAttribute() {}, removeAttribute() {}, replaceChildren() {},
+    setAttribute(name, value) { this[name] = value; }, removeAttribute(name) { delete this[name]; }, replaceChildren() {},
+    setCustomValidity(value) { this.validationMessage = value; }, focus() {},
     addEventListener(type, listener) { listeners.set(type, listener); },
     removeEventListener(type, listener) { if (listeners.get(type) === listener) listeners.delete(type); },
     dispatch(type) { listeners.get(type)?.({ preventDefault() {}, target:this }); }, click() { this.dispatch("click"); },
@@ -69,7 +70,12 @@ assert.equal([...elements.values()].reduce((count, item) => count + item.listene
 
 const editorSelectors = ["#event-template-name", "#event-template-event-name", "#event-template-source",
   "#event-template-json", "#push-destination-path", "#save-template-revision", "#save-template-copy",
-  "#push-template-draft", "#discard-template-draft", "#close-template-editor", "#back-to-captured-event"];
+  "#push-template-draft", "#discard-template-draft", "#close-template-editor", "#back-to-captured-event",
+  "#event-template-rename", "#event-template-rename-heading", "#event-template-rename-name",
+  "#event-template-rename-event-name", "#event-template-rename-name-error", "#event-template-rename-event-name-error",
+  "#save-template-names", "#cancel-template-rename", "#event-template-rename-review",
+  "#event-template-rename-review-heading", "#event-template-rename-review-summary", "#confirm-template-rename",
+  "#cancel-template-rename-review"];
 const editorElements = new Map(editorSelectors.map((selector) => [selector, element()]));
 let editorPush, returned = 0;
 const editorController = createEventLibraryInstalledController({
@@ -87,6 +93,21 @@ assert.equal(editorController.templates()[0].name, "Checkout");
 editorElements.get("#push-template-draft").click(); await new Promise((resolve) => setTimeout(resolve, 0));
 assert.equal(editorPush, "Checkout");
 editorElements.get("#back-to-captured-event").click(); assert.equal(returned, 1);
+editorController.beginRename("template:1");
+assert.equal(editorElements.get("#event-template-rename").open, true);
+editorElements.get("#event-template-rename-name").value = ""; editorElements.get("#event-template-rename-name").dispatch("input");
+assert.equal(editorElements.get("#save-template-names").disabled, true, "rename validation remains controller-owned");
+editorElements.get("#event-template-rename-name").value = "Checkout complete";
+editorElements.get("#event-template-rename-name").dispatch("input");
+editorElements.get("#event-template-rename-event-name").value = "checkout_complete";
+editorElements.get("#event-template-rename-event-name").dispatch("input");
+editorElements.get("#save-template-names").click();
+assert.equal(editorElements.get("#event-template-rename-review").open, true, "event-name changes require a second review");
+editorElements.get("#event-template-rename-review").dispatch("cancel");
+assert.equal(editorElements.get("#event-template-rename").open, true, "review cancellation returns to the editable rename dialog");
+editorElements.get("#save-template-names").click(); editorElements.get("#confirm-template-rename").click();
+assert.equal(editorController.templates()[0].name, "Checkout complete");
+assert.equal(editorController.templates()[0].eventName, "checkout_complete");
 editorController.dispose();
 assert.equal([...editorElements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
   "Event Library removes template-editor listeners on disposal");

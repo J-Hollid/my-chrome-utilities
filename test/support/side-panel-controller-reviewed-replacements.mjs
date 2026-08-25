@@ -141,4 +141,12 @@ export const reviewedControllerReplacements = [
   { identity:"listeners:237:cancelSchemaImportButton?.addEventListener@5975:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"cancelSchemaImportButton?.addEventListener" },
   { identity:"listeners:238:confirmSchemaDeleteButton?.addEventListener@5976:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"confirmSchemaDeleteButton?.addEventListener" },
   { identity:"listeners:239:cancelSchemaDeleteButton?.addEventListener@5977:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"cancelSchemaDeleteButton?.addEventListener" },
+  { identity:"listeners:256:templateRenameName?.addEventListener@6045:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"templateRenameName?.addEventListener" },
+  { identity:"listeners:257:templateRenameEventName?.addEventListener@6053:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"templateRenameEventName?.addEventListener" },
+  { identity:"listeners:258:saveTemplateNamesButton?.addEventListener@6061:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"saveTemplateNamesButton?.addEventListener" },
+  { identity:"listeners:259:cancelTemplateRenameButton?.addEventListener@6062:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"cancelTemplateRenameButton?.addEventListener" },
+  { identity:"listeners:260:templateRenameDialog?.addEventListener@6063:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"templateRenameDialog?.addEventListener" },
+  { identity:"listeners:261:confirmTemplateRenameButton?.addEventListener@6067:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"confirmTemplateRenameButton?.addEventListener" },
+  { identity:"listeners:262:cancelTemplateRenameReviewButton?.addEventListener@6068:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"cancelTemplateRenameReviewButton?.addEventListener" },
+  { identity:"listeners:263:templateRenameReview?.addEventListener@6069:1", kind:"call", path:"src/data-layer-installed/event-library/index.ts", symbol:"templateRenameReview?.addEventListener" },
 ];
