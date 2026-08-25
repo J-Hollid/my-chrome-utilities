@@ -3,16 +3,28 @@ export function createProjectEventTransportInstalledController(ports) {
     const push = ports.root.querySelector("#default-push-path");
     let mounted = false;
     let paths = { ...ports.loadPaths() };
+    let phase = "idle";
+    let generation = 0;
     const input = () => {
         paths = { observationPath: observation?.value ?? paths.observationPath,
             pushPath: push?.value ?? paths.pushPath };
+        phase = "dirty";
     };
-    const change = () => { input(); void ports.savePaths(paths).then(ports.settleTransport).then(ports.refreshTargetPath); };
+    const change = () => {
+        input();
+        const operation = ++generation, snapshot = { ...paths };
+        phase = "saving";
+        void ports.savePaths(snapshot).then(ports.settleTransport).then(ports.refreshTargetPath)
+            .then(() => { if (mounted && operation === generation)
+            phase = "saved"; }, () => { if (mounted && operation === generation)
+            phase = "failed"; });
+    };
     return {
         mount() {
             if (mounted)
                 return;
             mounted = true;
+            generation += 1;
             if (observation)
                 observation.value = paths.observationPath;
             if (push)
@@ -26,12 +38,14 @@ export function createProjectEventTransportInstalledController(ports) {
             if (!mounted)
                 return;
             mounted = false;
+            generation += 1;
+            phase = "idle";
             observation?.removeEventListener("input", input);
             observation?.removeEventListener("change", change);
             push?.removeEventListener("input", input);
             push?.removeEventListener("change", change);
         },
-        state: () => ({ ...paths }),
+        state: () => ({ ...paths, phase }),
     };
 }
 export const installedControllerDefinition = Object.freeze({

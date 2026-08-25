@@ -7,3 +7,4 @@ const controller = createProjectsInstalledController({ loadProjects:() => [{id:"
 controller.mount(); controller.mount(); assert.equal(subscribed, 1);
 controller.dispose(); controller.dispose(); assert.equal(disposed, 1);
 assert.equal(controller.state().activeProjectId, "project:1");
+assert.equal(controller.state().mounted, false);

@@ -11,15 +11,19 @@ export function createLiveFlowTestingInstalledController(ports: LiveFlowTestingI
   let unsubscribe: (() => void) | undefined;
   let summary: Readonly<Record<string, unknown>> | undefined;
   let result: Readonly<Record<string, unknown>> | undefined;
-  const refresh = (): void => { summary = ports.currentSummary(); result = ports.projectEventResult(); };
+  let generation = 0;
+  let completed: Readonly<Record<string, unknown>>[] = [];
+  const refresh = (): void => { if (mounted) { summary = ports.currentSummary(); result = ports.projectEventResult(); } };
   return {
-    mount(): void { if (!mounted) { mounted = true; unsubscribe = ports.subscribe(refresh); refresh(); } },
-    dispose(): void { if (mounted) { mounted = false; unsubscribe?.(); unsubscribe = undefined; } },
-    begin:ports.beginTest,
+    mount(): void { if (!mounted) { mounted = true; generation += 1; unsubscribe = ports.subscribe(refresh); refresh(); } },
+    dispose(): void { if (mounted) { mounted = false; generation += 1; unsubscribe?.(); unsubscribe = undefined; summary = undefined; result = undefined; } },
+    async begin(): Promise<void> { const operation = generation; await ports.beginTest(); if (mounted && operation === generation) refresh(); },
     refresh,
+    complete(record: Readonly<Record<string, unknown>>): void { completed = [structuredClone(record)]; summary = structuredClone(record); },
+    reset(): void { completed = []; summary = undefined; result = undefined; if (mounted) refresh(); },
     openProjectEntity:ports.openProjectEntity,
     state:() => ({ ...(summary ? { summary:structuredClone(summary) } : {}),
-      ...(result ? { result:structuredClone(result) } : {}) }),
+      ...(result ? { result:structuredClone(result) } : {}), completed:structuredClone(completed), mounted }),
   };
 }
 

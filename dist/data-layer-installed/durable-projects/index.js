@@ -2,17 +2,29 @@ export function createDurableProjectsInstalledController(ports) {
     let phase = "idle";
     let stop;
     let mounting;
+    let generation = 0;
     return {
         mount() {
             if (phase === "ready")
                 return Promise.resolve();
             if (mounting)
                 return mounting;
+            const operation = ++generation;
             phase = "starting";
-            mounting = ports.startRepository().then((dispose) => { stop = dispose; phase = "ready"; }, (error) => { phase = "failed"; throw error; }).finally(() => { mounting = undefined; });
+            mounting = ports.startRepository().then((dispose) => {
+                if (operation !== generation) {
+                    dispose();
+                    return;
+                }
+                stop = dispose;
+                phase = "ready";
+            }, (error) => { if (operation === generation)
+                phase = "failed"; throw error; })
+                .finally(() => { if (operation === generation)
+                mounting = undefined; });
             return mounting;
         },
-        dispose() { stop?.(); stop = undefined; phase = "idle"; },
+        dispose() { generation += 1; stop?.(); stop = undefined; mounting = undefined; phase = "idle"; },
         reviewMigration: ports.reviewMigration,
         retryFailedSave: ports.retryFailedSave,
         rejectFailedSave: ports.rejectFailedSave,

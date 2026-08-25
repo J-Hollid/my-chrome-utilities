@@ -9,3 +9,4 @@ const controller = createProjectEventTransportInstalledController({ root:{queryS
 controller.mount(); controller.mount(); assert.equal(listeners.size, 2);
 controller.dispose(); controller.dispose(); assert.equal(listeners.size, 0);
 assert.equal(controller.state().observationPath, "event.history");
+assert.equal(controller.state().phase, "idle");
