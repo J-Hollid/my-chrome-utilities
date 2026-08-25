@@ -10,7 +10,7 @@ export const guidedDestinationOptionsRuntime = `(async () => {
   await endActiveSession();
   q("#choose-observation-target").click();
   (await waitForElement("#observation-target-list [data-target-id]")).click();
-  (await waitForElement("#start-data-layer-testing:not(:disabled)")).click();
+  (await waitForStartableSelectedTarget()).click();
   (await waitForElement("#live-event-feed button")).click();
   q('#live-event-inspector button[aria-label="Add validation for /page_type"]').click();
   const flow = q("#guided-validation-flow");
@@ -38,7 +38,7 @@ export const guidedValidationRuntime = `(async () => {
   await endActiveSession();
   q("#choose-observation-target").click();
   (await waitForElement("#observation-target-list [data-target-id]")).click();
-  (await waitForElement("#start-data-layer-testing:not(:disabled)")).click();
+  (await waitForStartableSelectedTarget()).click();
   (await waitForElement("#live-event-feed button")).click();
   const create = q('#live-event-inspector button[aria-label="Add validation for /page_type"]');
   const beforeSchemas = await readSchemas();

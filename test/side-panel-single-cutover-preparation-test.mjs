@@ -155,11 +155,19 @@ const selectedProductTargetIds = new Set(productEvidencePlan.tasks.flatMap(
 ));
 assert.equal(sidePanelTargetContract.every(({ id }) => selectedProductTargetIds.has(id)), true,
   "the product route retains every canonical installed assertion target and its session batch");
-assert.throws(() => validateSidePanelSingleCutoverFocusedPlan({
-  ...productEvidencePlan,
-  changedPaths:["scripts/side-panel-single-cutover-focused-evidence.mjs"],
-}, sidePanelSingleCutoverProductEvidenceTask), /outside the approved cutover scope/u,
-"the product candidate cannot add or alter the evidence bypass that admits it");
+for (const protectedEvidencePath of [
+  "scripts/side-panel-single-cutover-focused-evidence.mjs",
+  "test/side-panel-component-layout-runtime-test.mjs",
+  "test/support/side-panel-browser-direct-assertion-map.mjs",
+  "test/support/side-panel-browser-direct-compatibility.mjs",
+  "verification/packs.json",
+]) {
+  assert.throws(() => validateSidePanelSingleCutoverFocusedPlan({
+    ...productEvidencePlan,
+    changedPaths:[protectedEvidencePath],
+  }, sidePanelSingleCutoverProductEvidenceTask), /outside the approved cutover scope/u,
+  `the product candidate cannot add or alter its protected evidence boundary: ${protectedEvidencePath}`);
+}
 for (const [id, packId, sliceId, consumers] of controllers) {
   const pack = packs.find(({ id: candidate }) => candidate === packId);
   const slice = pack.verificationSlices.find(({ id: candidate }) => candidate === sliceId);

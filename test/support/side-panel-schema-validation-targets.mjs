@@ -20,7 +20,7 @@ const conditionalValidationRulesRuntime = `(async () => {
     if (!start) {
       q("#choose-observation-target").click();
       (await waitForElement("#observation-target-list [data-target-id]")).click();
-      start = await waitForElement("#start-data-layer-testing:not(:disabled)");
+      start = await waitForStartableSelectedTarget();
     }
     start.click();
   }

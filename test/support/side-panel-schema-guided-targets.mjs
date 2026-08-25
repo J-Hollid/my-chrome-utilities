@@ -18,7 +18,7 @@ const guidedNestedPropertyMergeRuntime = `(async () => {
   };
   q("#choose-observation-target").click();
   (await waitForElement("#observation-target-list [data-target-id]")).click();
-  (await waitForElement("#start-data-layer-testing:not(:disabled)")).click();
+  (await waitForStartableSelectedTarget()).click();
   (await waitForElement("#live-event-feed button")).click();
   const flow = q("#guided-validation-flow");
   let stored;
@@ -72,7 +72,7 @@ const guidedNestedConstraintRuntime = `(async () => {
   await endActiveSession();
   q("#choose-observation-target").click();
   (await waitForElement("#observation-target-list [data-target-id]")).click();
-  (await waitForElement("#start-data-layer-testing:not(:disabled)")).click();
+  (await waitForStartableSelectedTarget()).click();
   (await waitForElement("#live-event-feed button")).click();
   q('#live-event-inspector button[aria-label="Add validation for /products/*/product_id"]').click();
   const flow = q("#guided-validation-flow");
@@ -102,7 +102,7 @@ const guidedSchemaPickerRuntime = `(async () => {
   await endActiveSession();
   q("#choose-observation-target").click();
   (await waitForElement("#observation-target-list [data-target-id]")).click();
-  (await waitForElement("#start-data-layer-testing:not(:disabled)")).click();
+  (await waitForStartableSelectedTarget()).click();
   (await waitForElement("#live-event-feed button")).click();
   q('#live-event-inspector button[aria-label="Add validation for /page_type"]').click();
   const flow = q("#guided-validation-flow");

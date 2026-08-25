@@ -19,6 +19,19 @@ export const guidedRuntimeWaitHelpers = `
     }));
   };
   const waitForElement = (selector, attempts, interval) => waitForCondition(() => document.querySelector(selector), selector, attempts, interval);
+  const waitForStartableSelectedTarget = async () => {
+    let permissionRequested = false;
+    return waitForCondition(() => {
+      const start = document.querySelector("#start-data-layer-testing:not(:disabled)");
+      if (start) return start;
+      const requestAccess = document.querySelector("#live-setup-readiness [data-live-target-permission-recovery]");
+      if (requestAccess && !permissionRequested) {
+        permissionRequested = true;
+        requestAccess.click();
+      }
+      return undefined;
+    }, "selected target permission recovery and start readiness");
+  };
   const endActiveSession = async () => {
     const end = document.querySelector("#end-data-layer-testing");
     if (!end || end.hidden) return;
@@ -40,7 +53,7 @@ export const openPageviewInspector = `
     if (!start) {
       document.querySelector("#choose-observation-target").click();
       (await waitForElement("#observation-target-list [data-target-id]")).click();
-      start = await waitForElement("#start-data-layer-testing:not(:disabled)");
+      start = await waitForStartableSelectedTarget();
     }
     start.click();
   }

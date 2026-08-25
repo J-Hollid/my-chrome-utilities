@@ -11,7 +11,11 @@ import {
   runInstalledSidePanelSession,
   runSidePanelBrowserSession,
 } from "../support/side-panel-browser-session.mjs";
-import { runDirectSidePanelCompatibility } from "../support/side-panel-browser-direct-compatibility.mjs";
+import {
+  directCompatibilityCaptureExecution,
+  runDirectSidePanelCompatibility,
+  validateDirectCompatibilityAssertionSites,
+} from "../support/side-panel-browser-direct-compatibility.mjs";
 import {
   directCompatibilityAssertionLeaves,
   directCompatibilityViewportWidths,
@@ -281,6 +285,8 @@ const entrySource = await readFile(new URL("../support/side-panel-browser-entry.
 const launcherSource = await readFile(new URL("../side-panel-component-layout-runtime-test.mjs", import.meta.url), "utf8");
 const directCompatibilitySource = await readFile(
   new URL("../support/side-panel-browser-direct-compatibility.mjs", import.meta.url), "utf8");
+const schemaFixturePrimitiveSource = await readFile(
+  new URL("../support/side-panel-schema-fixture-primitives.mjs", import.meta.url), "utf8");
 const targetModuleSources = await Promise.all(targetModulePaths.map(async (modulePath) => [
   modulePath,
   await readFile(new URL(`../support/${modulePath}`, import.meta.url), "utf8"),
@@ -309,6 +315,9 @@ assert.ok(fixtureSource.trim().split(/\r?\n/u).length < 4000,
 assert.doesNotMatch(directCompatibilitySource,
   /side-panel-(?:capture|event-library|defect)-targets\.mjs/u,
   "direct compatibility must not broaden non-Schema target-module consumers to Shell");
+assert.match(launcherSource,
+  /SWARMFORGE_SIDE_PANEL_DIRECT_COMPATIBILITY_CAPTURE[\s\S]+preparation-v1[\s\S]+capturePreparation:true/u,
+  "the supported direct launcher must expose only the explicit preparation capture authority");
 const directRecords = [];
 const directContract = await runDirectSidePanelCompatibility({
   runCompatibility:async ({ assertionLeaves, viewportWidths }) => ({
@@ -320,6 +329,39 @@ assert.equal(directCompatibilityAssertionLeaves.length, 247,
   "the explicit no-target assertion map must retain every executed original assertion leaf");
 assert.deepEqual(directCompatibilityViewportWidths, [320, 360, 520, 720],
   "the direct compatibility map must retain the original four viewports");
+assert.equal(validateDirectCompatibilityAssertionSites(
+  directCompatibilityAssertionLeaves, fixtureSource,
+).assertionLeafCount, directCompatibilityAssertionLeaves.length,
+"every committed direct identity must resolve to a current assertion call");
+assert.match(schemaFixturePrimitiveSource,
+  /data-live-target-permission-recovery[\s\S]+click\(\)[\s\S]+start-data-layer-testing:not\(:disabled\)/u,
+  "the direct fixture must drive visible permission recovery before observing Start testing readiness");
+const assertionSource = ["", "      assert.equal(true, true);", ""].join("\n");
+assert.deepEqual(validateDirectCompatibilityAssertionSites(["equal@2:14"], assertionSource), {
+  assertionLeafCount:1, uniqueAssertionSiteCount:1,
+}, "the frozen direct identity must resolve to its current assertion method and source location");
+assert.throws(() => validateDirectCompatibilityAssertionSites(["equal@3:14"], assertionSource),
+  /does not resolve to a current assertion call/u);
+assert.deepEqual(directCompatibilityCaptureExecution({
+  assertionLeaves:["equal@2:14"], viewportWidths:[320, 360, 520, 720],
+}, assertionSource), {
+  assertionLeafCount:1,
+  assertionLeaves:["equal@2:14"],
+  uniqueAssertionSiteCount:1,
+  viewportWidths:[320, 360, 520, 720],
+}, "preparation capture must retain the actual ordered assertion identities and original viewports");
+const captureRecords = [];
+const capturedDirectContract = await runDirectSidePanelCompatibility({
+  capturePreparation:true,
+  assertionSource,
+  runCompatibility:async () => ({
+    assertionLeaves:["equal@2:14"], viewportWidths:[320, 360, 520, 720],
+  }),
+  emit:(record) => captureRecords.push(record),
+});
+assert.deepEqual(capturedDirectContract.assertionLeaves, ["equal@2:14"],
+  "preparation capture must derive its map from execution instead of accepting the committed map as input");
+assert.deepEqual(captureRecords.at(-1), { vtd006DirectCompatibilityCapture:capturedDirectContract });
 assert.equal(directRecords.at(-1)?.vtd006DirectCompatibility?.assertionMapExact, true,
   "the launcher boundary must emit its direct contract only after execution");
 let noOpLauncherRejected = false;
