@@ -42,7 +42,7 @@ export interface EventLibraryInstalledPorts {
   push(template: EditableEventTemplate): Promise<void>;
   changed(): void;
   createSchema?(template: EditableEventTemplate): void;
-  createTestCase?(template: EditableEventTemplate): void;
+  createTestCase?(template: EditableEventTemplate): Promise<EventLibraryTestCaseReview>;
   appendInspectorAction?(label:string, activate:() => void):() => void;
   openLibrary?():void;
   announce?(message:string):void;
@@ -57,6 +57,11 @@ export interface EventLibraryInstalledPorts {
   renderPushReview(root: ParentNode, review: PushDraftReview): void;
   renderRevisionReview(root: ParentNode, review: TemplateChangeReview): void;
 }
+
+export interface EventLibraryTestCaseMapping { summary:string; events:readonly {id:string;name:string}[]; profiles:readonly {id:string;name:string;revision:number}[] }
+export interface EventLibraryTestCaseReview { projects:readonly {id:string;name:string}[]; activeProjectId?:string;
+  refresh(projectId:string):Promise<EventLibraryTestCaseMapping>; repair(projectId:string,kind:"events"|"profiles"):void;
+  commit(input:{projectId:string;eventId:string;profileId:string}):Promise<void> }
 
 export interface EventLibraryInstalledState {
   selectedId?: string;
@@ -144,6 +149,7 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
   let pushPathReadinessRequest = 0;
   let inspectorActionDispose:(() => void) | undefined;
   let testCaseReviewRequest = 0;
+  let testCaseDialogDisposers:(() => void)[] = [];
   const createId = ports.createId ?? (() => `template:${crypto.randomUUID()}`);
   const persistEventTemplateLibrary = (): void => {
     ports.storage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
@@ -337,8 +343,28 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
   async function reviewEventTemplateTestCaseCreation(template:EditableEventTemplate):Promise<void> {
     if (!ports.createTestCase || !mounted) return;
     const request = ++testCaseReviewRequest;
-    await Promise.resolve(ports.createTestCase(structuredClone(template)));
-    if (!mounted || request !== testCaseReviewRequest) return;
+    let review:EventLibraryTestCaseReview; try { review=await ports.createTestCase(structuredClone(template)); }
+    catch(error){if(mounted&&request===testCaseReviewRequest&&eventLibraryTransferResult)eventLibraryTransferResult.textContent=error instanceof Error?error.message:String(error);return;}
+    const document=eventLibraryEditorElements.list?.ownerDocument;if(!mounted||request!==testCaseReviewRequest||!document)return;
+    for(const dispose of testCaseDialogDisposers.splice(0))dispose();
+    const dialog=document.createElement("dialog"),heading=document.createElement("h3"),summary=document.createElement("p"),projectLabel=document.createElement("label"),projectSelect=document.createElement("select"),
+      eventLabel=document.createElement("label"),eventSelect=document.createElement("select"),schemaLabel=document.createElement("label"),schemaSelect=document.createElement("select"),confirm=document.createElement("button"),cancel=document.createElement("button"),repair=document.createElement("button");
+    heading.textContent=`Create Test case from ${template.name}`;summary.textContent="Choose the destination project, then review the matching named Event and input-guidance schema. The Library template remains unchanged.";
+    projectLabel.append("Project",projectSelect);eventLabel.append("Matching Event",eventSelect);schemaLabel.append("Input-guidance schema",schemaSelect);confirm.type=cancel.type=repair.type="button";
+    confirm.textContent="Create Event validation Test case";cancel.textContent="Cancel";repair.textContent="Open Specification Studio to create, adopt, or select missing relationships";repair.hidden=true;
+    for(const project of review.projects){const option=document.createElement("option");option.value=project.id;option.textContent=project.name;projectSelect.append(option);}projectSelect.value=review.activeProjectId??review.projects[0]?.id??"";
+    const listen=(control:HTMLElement,type:string,listener:EventListener):void=>{control.addEventListener(type,listener);testCaseDialogDisposers.push(()=>control.removeEventListener(type,listener));};
+    const close=():void=>{for(const dispose of testCaseDialogDisposers.splice(0))dispose();dialog.close();dialog.remove();};
+    const refresh=async():Promise<void>=>{const refreshRequest=++testCaseReviewRequest,projectId=projectSelect.value;confirm.disabled=true;repair.hidden=true;
+      const loadingEvent=document.createElement("option"),loadingSchema=document.createElement("option");loadingEvent.textContent="Loading matching Events…";loadingSchema.textContent="Loading schema relationships…";eventSelect.replaceChildren(loadingEvent);schemaSelect.replaceChildren(loadingSchema);
+      try{const mapping=await review.refresh(projectId);if(!mounted||refreshRequest!==testCaseReviewRequest)return;
+        const eventEmpty=document.createElement("option"),schemaEmpty=document.createElement("option");eventEmpty.value=schemaEmpty.value="";eventEmpty.textContent=mapping.events.length?"Choose reviewed Event":"No matching Event";schemaEmpty.textContent=mapping.profiles.length?"Choose reviewed input guidance":"No matching project schema";
+        eventSelect.replaceChildren(eventEmpty,...mapping.events.map((entry)=>{const option=document.createElement("option");option.value=entry.id;option.textContent=entry.name;return option;}));schemaSelect.replaceChildren(schemaEmpty,...mapping.profiles.map((entry)=>{const option=document.createElement("option");option.value=entry.id;option.textContent=`${entry.name} revision ${entry.revision}`;return option;}));
+        if(mapping.events.length===1)eventSelect.value=mapping.events[0]!.id;if(mapping.profiles.length===1)schemaSelect.value=mapping.profiles[0]!.id;confirm.disabled=!(mapping.events.length&&mapping.profiles.length);repair.hidden=!confirm.disabled;summary.textContent=mapping.summary;
+      }catch(error){if(mounted&&refreshRequest===testCaseReviewRequest){summary.textContent=error instanceof Error?error.message:String(error);repair.hidden=false;}}};
+    const updateReady=():void=>{confirm.disabled=!(eventSelect.value&&schemaSelect.value);};listen(projectSelect,"change",()=>{void refresh();});listen(eventSelect,"change",updateReady);listen(schemaSelect,"change",updateReady);
+    listen(repair,"click",()=>review.repair(projectSelect.value,eventSelect.value?"profiles":"events"));listen(confirm,"click",()=>{confirm.disabled=true;void review.commit({projectId:projectSelect.value,eventId:eventSelect.value,profileId:schemaSelect.value}).then(()=>{if(mounted)close();},(error)=>{if(mounted){confirm.disabled=false;summary.textContent=error instanceof Error?error.message:String(error);}});});listen(cancel,"click",close);
+    dialog.append(heading,summary,projectLabel,eventLabel,schemaLabel,confirm,repair,cancel);document.body.append(dialog);dialog.showModal();heading.tabIndex=-1;heading.focus();void refresh();
   }
   const renderEventTemplateLibrary = (): void => {
     if (!mounted) return;
@@ -530,6 +556,7 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
       discardAndCloseTemplateButton?.removeEventListener("click", discardAndCloseTemplate);
       closeEditor(); pendingEventLibraryImport = undefined; pendingEventLibraryDeletion = undefined; replaceEventLibraryArmed = false;
       inspectorActionDispose?.(); inspectorActionDispose = undefined; testCaseReviewRequest += 1;
+      for(const dispose of testCaseDialogDisposers.splice(0))dispose();
       pushPathReadiness = undefined; pushPathReadinessRequest += 1;
       pendingPushDraftReview = undefined; pendingRevisionChangeReview = undefined;
       hideDialog(pushDraftReview); hideDialog(revisionChangeReview);

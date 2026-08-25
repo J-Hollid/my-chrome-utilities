@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 
 const { createInstalledSidePanelShellController, createChromeRuntimeMessagePort, createDefectCaptureCoordination,
-  createEventLibrarySchemaCoordination, createCapturedValidationContinuationCoordination } =
+  createEventLibrarySchemaCoordination, createEventLibraryTestCaseCoordination,
+  createCapturedValidationContinuationCoordination } =
   await import("../../dist/data-layer-installed/runtime.js");
 const { createSpecificationProject, transactProject } = await import("../../dist/data-layer-specification-project.js");
 
@@ -88,6 +89,31 @@ eventSchemas.createSchema({ id:"template:checkout", name:"Checkout", eventName:"
   sourceName:"History", destination:"event.history", tags:[], validation:"Not checked", payload:{ total:12 }, version:1, provenance:"captured" });
 assert.deepEqual(openedSchema, { name:"Checkout", sourceId:"history", eventName:"checkout", payload:{ total:12 }, label:"Library template" },
   "Create schema transfers the complete Library source identity into Schema ownership");
+
+let testCaseProjectSequence=0,testCaseProject=createSpecificationProject({name:"Retail",site:"shop.example",id:(kind)=>`${kind}:test-case:${++testCaseProjectSequence}`});
+testCaseProject=transactProject(testCaseProject,"Add Event Library destinations",(project)=>({...project,collections:{...project.collections,
+  events:[{id:"event:page",name:"Page view",sourceId:"history",eventName:"page_view"}],
+  profiles:[{id:"profile:page",name:"Page profile",revision:3,sourceIdentity:"schema:page",requirements:[]}],
+}}));
+let testCaseRevision=7,testCaseState=testCaseProject;const testCaseRoutes=[],testCaseStudio=[],testCaseRepairs=[];
+const reviewEventLibraryTestCase=createEventLibraryTestCaseCoordination({
+  projects:()=>[{id:testCaseState.project.id,name:testCaseState.project.name}],activeProjectId:()=>testCaseState.project.id,
+  ensureProject:async()=>{},settle:async()=>{},load:async()=>({state:structuredClone(testCaseState),revision:testCaseRevision}),
+  commit:(next)=>{testCaseState=next;return{status:"saved",revision:++testCaseRevision};},capture:(next)=>{testCaseState=next;},
+  route:(projectId,id)=>testCaseRoutes.push([projectId,id]),openStudio:(projectId,id)=>testCaseStudio.push([projectId,id]),
+  repair:(projectId,kind)=>testCaseRepairs.push([projectId,kind]),createId:(kind)=>`${kind}:from-library`,
+});
+const testCaseTemplate={id:"template:page",name:"Page view",eventName:"page_view",sourceId:"history",sourceName:"History",
+  destination:"event.history",tags:[],validation:"Not checked",payload:{page:"/"},schemaId:"schema:page",version:2,provenance:"captured"};
+const testCaseReview=await reviewEventLibraryTestCase(testCaseTemplate),testCaseMapping=await testCaseReview.refresh(testCaseState.project.id);
+assert.deepEqual(testCaseReview.projects,[{id:testCaseState.project.id,name:"Retail"}]);
+assert.deepEqual(testCaseMapping.events,[{id:"event:page",name:"Page view"}]);
+assert.deepEqual(testCaseMapping.profiles,[{id:"profile:page",name:"Page profile",revision:3}]);
+await testCaseReview.commit({projectId:testCaseState.project.id,eventId:"event:page",profileId:"profile:page"});
+assert.equal(testCaseState.project.collections.fixtures.at(-1).sourceProvenance.id,"template:page");
+assert.equal(testCaseState.project.collections.fixtures.at(-1).inputGuidance.revision,"3");
+assert.deepEqual(testCaseRoutes.at(-1),testCaseStudio.at(-1),"the committed Test case routes and opens one stable entity");
+testCaseReview.repair(testCaseState.project.id,"events");assert.deepEqual(testCaseRepairs,[[testCaseState.project.id,"events"]]);
 
 let projectSequence=0, projectState=createSpecificationProject({name:"Checkout project",site:"shop.example",id:(kind)=>`${kind}:${++projectSequence}`});
 projectState=transactProject(projectState,"Add continuation destinations",(project)=>({...project,collections:{...project.collections,

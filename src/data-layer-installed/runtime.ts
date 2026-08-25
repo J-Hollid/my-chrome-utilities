@@ -1,7 +1,8 @@
 import { createCaptureInstalledController, type CaptureInstalledPorts } from "./capture/index.js";
 import { createDefectsInstalledController, type DefectsInstalledPorts } from "./defects/index.js";
 import { createDurableProjectsInstalledController, type DurableProjectsInstalledPorts } from "./durable-projects/index.js";
-import { createEventLibraryInstalledController, type EventLibraryInstalledPorts } from "./event-library/index.js";
+import { createEventLibraryInstalledController, type EventLibraryInstalledPorts,
+  type EventLibraryTestCaseReview } from "./event-library/index.js";
 import { createLiveFlowTestingInstalledController, type LiveFlowTestingInstalledPorts } from "./live-flow-testing/index.js";
 import { createProjectEventTransportInstalledController, type ProjectEventTransportInstalledPorts } from "./project-event-transport/index.js";
 import { createProjectsInstalledController, type ProjectsInstalledPorts } from "./projects/index.js";
@@ -13,8 +14,9 @@ import type { SessionSaveDraft } from "../data-layer-saved-session-live-feed.js"
 import type { SavedSessionLibrary } from "../utilities/data-layer/live-inspection.js";
 import type { EditableEventTemplate } from "../utilities/data-layer/event-library.js";
 import { applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements,
-  createFixtureFromCapturedValidation, type ProjectState } from "../utilities/data-layer/schemas.js";
+  createFixtureFromCapturedValidation, transactProject, type ProjectState } from "../utilities/data-layer/schemas.js";
 import type { CapturedValidationResult } from "../data-layer-specification-project.js";
+import { createGuidedTestCase } from "../data-layer-guided-test-cases.js";
 
 export const installedDataLayerControllerOrder = [
   "capture",
@@ -281,6 +283,59 @@ export function createEventLibrarySchemaCoordination(owners:EventLibrarySchemaOw
       owners.schemas.openSchemaFromSource({ name:template.name, sourceId:template.sourceId, eventName:template.eventName,
         payload:structuredClone(template.payload), label:"Library template" });
     },
+  };
+}
+
+export interface EventLibraryTestCaseCoordinationPorts {
+  projects():readonly {id:string;name:string}[];
+  activeProjectId():string | undefined;
+  ensureProject(projectId:string):Promise<void>;
+  settle():Promise<void>;
+  load(projectId:string):Promise<{state:ProjectState;revision:number}>;
+  commit(state:ProjectState,expectedRevision:number,label:string):{status:"saved"|"conflict";revision:number};
+  capture(state:ProjectState,revision:number):void;
+  route(projectId:string,testCaseId:string):void;
+  openStudio(projectId:string,testCaseId:string):void;
+  repair(projectId:string,kind:"events"|"profiles"):void;
+  createId(kind:string):string;
+}
+
+export function createEventLibraryTestCaseCoordination(ports:EventLibraryTestCaseCoordinationPorts) {
+  return async (template:EditableEventTemplate):Promise<EventLibraryTestCaseReview> => {
+    const mapping = async (projectId:string) => {
+      await ports.ensureProject(projectId); await ports.settle();
+      const { state } = await ports.load(projectId), project = state.project;
+      const events = project.collections.events.filter(({ eventName, sourceId }) =>
+        eventName === template.eventName && sourceId === template.sourceId).map(({id,name})=>({id,name}));
+      const profiles = project.collections.profiles.filter((profile) => profile.id === template.schemaId ||
+        profile.sourceIdentity === template.schemaId ||
+        (profile.canonicalSchema as {source?:{identity?:string}}|undefined)?.source?.identity === template.schemaId)
+        .map(({id,name,revision,canonicalSchema})=>({id,name,
+          revision:Number((canonicalSchema as {revision?:number}|undefined)?.revision ?? revision ?? 1)}));
+      return { summary:events.length && profiles.length
+        ? `${template.name} revision ${template.version} will be copied as typed input with exact source provenance.`
+        : `No mapping was guessed. ${events.length ? "" : "Create or select a matching Event. "}${profiles.length ? "" : "Adopt or select the attached schema in this project."}`,
+        events, profiles };
+    };
+    const activeProjectId=ports.activeProjectId();
+    return { projects:ports.projects().map((project)=>({...project})), ...(activeProjectId?{activeProjectId}:{}),
+      refresh:mapping, repair:ports.repair,
+      commit:async ({projectId,eventId,profileId}) => {
+        await ports.ensureProject(projectId); await ports.settle();
+        const loaded=await ports.load(projectId),profile=loaded.state.project.collections.profiles.find(({id})=>id===profileId);
+        if (!eventId || !profile) throw new Error("Review a matching Event and input-guidance schema before creating the Test case.");
+        const testCase=createGuidedTestCase({name:template.name,testType:"event-validation",eventId,
+          source:{kind:"event-library",id:template.id,revision:String(template.version),eventId,destination:template.destination,
+            payload:structuredClone(template.payload) as Record<string,unknown>,schemaId:profile.id,
+            schemaRevision:String((profile.canonicalSchema as {revision?:number}|undefined)?.revision??profile.revision??1)},
+          id:ports.createId});
+        const label=`Create Test case from Event Library ${template.name}`;
+        const next=transactProject(loaded.state,label,(project)=>({...project,collections:{...project.collections,
+          fixtures:[...project.collections.fixtures,testCase]}}));
+        const result=ports.commit(next,loaded.revision,`Create Test case from ${template.name}`);
+        if(result.status==="conflict")throw new Error("The selected project changed; review the Test case mapping again.");
+        ports.capture(next,result.revision);ports.route(projectId,testCase.id);await ports.settle();ports.openStudio(projectId,testCase.id);
+      } };
   };
 }
 

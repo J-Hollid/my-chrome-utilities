@@ -38,6 +38,7 @@ assert.equal(controller.templates()[0].version, 2, "durable template ownership s
 function element() {
   const listeners = new Map();
   return { value:"", textContent:"", hidden:false, dataset:{}, children:[],
+    append(...children) { this.children.push(...children); },
     setAttribute(name, value) { this[name] = value; }, removeAttribute(name) { delete this[name]; }, replaceChildren(...children) { this.children = children; },
     setCustomValidity(value) { this.validationMessage = value; }, focus() {},
     addEventListener(type, listener) { listeners.set(type, listener); },
@@ -49,7 +50,8 @@ function element() {
 
 const minimalNodes = new Map();
 const minimalDocument = { createElement(tagName) { const node = element(); node.tagName = tagName.toUpperCase();
-  node.ownerDocument = minimalDocument; node.remove = () => minimalNodes.delete(`#${node.id}`); return node; } };
+  node.ownerDocument = minimalDocument; node.remove = () => { node.removed = true; minimalNodes.delete(`#${node.id}`); }; return node; }, body:element() };
+minimalDocument.body.ownerDocument = minimalDocument;
 const minimalValidation = element(); minimalValidation.ownerDocument = minimalDocument;
 minimalValidation.after = (...nodes) => { for (const node of nodes) minimalNodes.set(`#${node.id}`, node); };
 minimalNodes.set("#event-template-validation", minimalValidation);
@@ -211,7 +213,8 @@ const ownershipController = createEventLibraryInstalledController({
   defaultPushPath:() => "event.history", push:async () => {}, changed() {}, createId:() => "template:owned", ...noOpTransfer,
   appendInspectorAction:(label, activate) => { assert.equal(label, "Open in Library"); inspectorActivate = activate; return () => { inspectorDisposed += 1; }; },
   openLibrary:() => { libraryOpened += 1; }, announce:(message) => { announced = message; },
-  createTestCase:(value) => { reviewedTemplate = value; },
+  createTestCase:async(value) => { reviewedTemplate = value; return { projects:[], refresh:async()=>({summary:"",events:[],profiles:[]}),
+    repair() {}, commit:async()=>{} }; },
 });
 ownershipController.mount();
 ownershipController.appendOpenInLibraryAction("capture:1", "Page view");
@@ -223,3 +226,33 @@ ownershipController.appendOpenInLibraryAction("capture:1", "Page view");
 assert.equal(inspectorDisposed, 1, "replacing the inspector action disposes the prior action");
 ownershipController.dispose(); inspectorActivate();
 assert.equal(inspectorDisposed, 2); assert.equal(libraryOpened, 1, "disposed inspector actions cannot reopen Library UI");
+
+const testCaseList = element(); testCaseList.ownerDocument = minimalDocument;
+const priorDocument = globalThis.document; globalThis.document = minimalDocument;
+const committedTestCases = [], repairedTestCases = [];
+const testCaseController = createEventLibraryInstalledController({
+  root:{ querySelector:(selector) => selector === "#event-template-list" ? testCaseList : null },
+  storage:{ getItem:() => JSON.stringify([template]), setItem() {} }, defaultPushPath:() => "event.history",
+  push:async()=>{}, changed() {}, createId:()=>"template:test-case", ...noOpTransfer,
+  createTestCase:async(value) => ({
+    projects:[{id:"project:retail",name:"Retail"}], activeProjectId:"project:retail",
+    refresh:async(projectId) => { assert.equal(projectId,"project:retail"); return { summary:`${value.name} is ready.`,
+      events:[{id:"event:page",name:"Page view"}], profiles:[{id:"profile:page",name:"Page profile",revision:3}] }; },
+    repair:(projectId,kind) => repairedTestCases.push([projectId,kind]),
+    commit:async(input) => committedTestCases.push(input),
+  }),
+});
+testCaseController.mount(); await testCaseController.reviewEventTemplateTestCaseCreation(template);
+await new Promise((resolve) => setTimeout(resolve,0));
+const testCaseDialog = minimalDocument.body.children.at(-1);
+assert.equal(testCaseDialog.tagName,"DIALOG");
+const [,summary,projectLabel,eventLabel,schemaLabel,confirm] = testCaseDialog.children;
+const projectSelect=projectLabel.children[1],eventSelect=eventLabel.children[1],schemaSelect=schemaLabel.children[1];
+assert.equal(summary.textContent,"Page view is ready.");
+assert.deepEqual([projectSelect.value,eventSelect.value,schemaSelect.value],["project:retail","event:page","profile:page"]);
+confirm.click(); await new Promise((resolve) => setTimeout(resolve,0));
+assert.deepEqual(committedTestCases,[{projectId:"project:retail",eventId:"event:page",profileId:"profile:page"}],
+  "Event Library owns the reviewed destination dialog while commit crosses its typed runtime port");
+assert.equal(testCaseDialog.removed,true);
+testCaseController.dispose();
+globalThis.document = priorDocument;
