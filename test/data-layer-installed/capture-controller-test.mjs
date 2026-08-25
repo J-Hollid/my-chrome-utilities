@@ -7,18 +7,15 @@ const noOpCaptureUi = {
   restartObservation() {}, chooseObservationTarget() {}, browseObservationTargets() {},
   closeObservationTargetPicker() {}, searchObservationTargets() {}, cancelDetachTarget() {},
   confirmDetachTarget() {},
-  sessionPresentation:() => ({ heading:"Save session", summary:"No events", freshHeading:"Start fresh",
-    freshSummary:"Current session", liveSummary:"Live feed", backgroundStatus:"Connected",
-    validationComparison:"Not validated", savedCount:"0 saved sessions", confirmation:"" }),
-  savedSessionCount:() => 0,
-  showDataLayerView() {}, backToEvents() {}, copyPageUrl() {}, openSessionSave() {}, startFreshSession() {},
-  reportMissingEvent() {}, confirmSaveSession() {}, cancelSaveSession() {}, saveAndStartFreshSession() {},
-  discardAndStartFreshSession() {}, cancelFreshSession() {}, returnToCurrentLiveFeed() {},
-  revalidateSavedSession() {}, searchSavedSessions() {}, importSavedSession() {}, selectSavedSession() {},
-  cancelSavedSessionDelete() {}, confirmSavedSessionDelete() {},
+  showDataLayerView() {}, backToEvents() {}, copyPageUrl() {}, reportMissingEvent() {},
 };
 const noOpObservation = { discover:async () => [], requestTabsAccess:async () => true,
   requestOriginAccess:async () => true, attach:async () => true, detach:async () => {}, render() {} };
+const noOpSavedSessions = {
+  now:() => "2026-08-25T00:00:00.000Z", createSessionId:(tabId) => `fresh:${tabId}`,
+  readImportFile:async () => undefined, download() {}, validate:() => ({ state:"Not checked" }),
+  render() {}, resetFlowTesting() {}, createReplaySequence() {},
+};
 const controller = createCaptureInstalledController({
   root:{ querySelector:() => null },
   storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value) },
@@ -28,6 +25,7 @@ const controller = createCaptureInstalledController({
   changed:() => { changes += 1; },
   runCommand() {}, setLiveSessionMessage() {}, runObservationRefresh() {},
   observation:noOpObservation,
+  savedSessions:noOpSavedSessions,
   ui:noOpCaptureUi,
 });
 controller.mount(); controller.mount(); assert.equal(subscriptions, 1);
@@ -51,8 +49,9 @@ assert.equal(controller.state().observer.events.length, 1, "owned state survives
 function interactiveElement() {
   const listeners = new Map();
   return {
-    textContent:"", value:"", dataset:{},
+    textContent:"", value:"", dataset:{}, hidden:false, disabled:false, open:false, scrollTop:0,
     setAttribute() {}, removeAttribute() {},
+    showModal() { this.open = true; }, close() { this.open = false; }, focus() {},
     addEventListener(type, handler) { listeners.set(type, handler); },
     removeEventListener(type, handler) { if (listeners.get(type) === handler) listeners.delete(type); },
     dispatch(type, event = { target:this, preventDefault() {} }) { listeners.get(type)?.(event); },
@@ -98,6 +97,7 @@ const uiController = createCaptureInstalledController({
     searchObservationTargets:(query) => uiCalls.push(`search:${query}`),
     cancelDetachTarget:() => uiCalls.push("cancel"), confirmDetachTarget:() => uiCalls.push("confirm"),
   },
+  savedSessions:noOpSavedSessions,
 });
 uiController.mount();
 assert.equal(elements.get("#history-path-status").textContent, "Waiting for observation path");
@@ -136,53 +136,87 @@ const sessionSelectors = [
   "#live-events-empty-state", "#live-source-error-state", "#saved-session-empty-state",
 ];
 const sessionElements = new Map(sessionSelectors.map((selector) => [selector, interactiveElement()]));
-const sessionCalls = [];
-let savedSessionPresentationCount = 0;
-const sessionUi = {
-  ...noOpCaptureUi,
-  sessionPresentation:() => ({ heading:"Save checkout", summary:"3 captured events", freshHeading:"Start fresh?",
-    freshSummary:"Unsaved checkout", liveSummary:"Checkout live feed", backgroundStatus:"Observing",
-    validationComparison:"2 matches", savedCount:"4 saved sessions", confirmation:"Session imported" }),
-  savedSessionCount:() => savedSessionPresentationCount,
-  backToEvents:() => sessionCalls.push("back"), copyPageUrl:() => sessionCalls.push("copy"),
-  openSessionSave:() => sessionCalls.push("save"), startFreshSession:() => sessionCalls.push("fresh"),
-  reportMissingEvent:() => sessionCalls.push("report"), confirmSaveSession:(name) => sessionCalls.push(`confirm:${name}`),
-  cancelSaveSession:() => sessionCalls.push("cancel-save"), saveAndStartFreshSession:() => sessionCalls.push("save-fresh"),
-  discardAndStartFreshSession:() => sessionCalls.push("discard-fresh"), cancelFreshSession:() => sessionCalls.push("cancel-fresh"),
-  returnToCurrentLiveFeed:() => sessionCalls.push("return"), revalidateSavedSession:() => sessionCalls.push("revalidate"),
-  searchSavedSessions:(query) => sessionCalls.push(`search-saved:${query}`), importSavedSession:() => sessionCalls.push("import"),
-  cancelSavedSessionDelete:() => sessionCalls.push("cancel-delete"),
-  confirmSavedSessionDelete:() => sessionCalls.push("confirm-delete"),
+const sessionCalls = [], persistedSessions = new Map();
+let renderedSessions = [], savedActions, importResolve;
+const sessionPorts = {
+  ...noOpSavedSessions,
+  readImportFile:() => new Promise((resolve) => { importResolve = resolve; }),
+  download:(name, serialized) => sessionCalls.push(`download:${name}:${JSON.parse(serialized).id}`),
+  validate:() => ({ state:"Valid", schema:{ name:"Checkout", version:2 } }),
+  render:(sessions, actions) => { renderedSessions = sessions; savedActions = actions; },
+  resetFlowTesting:() => sessionCalls.push("reset-flow"),
+  createReplaySequence:(session) => sessionCalls.push(`replay:${session.id}`),
 };
 const sessionController = createCaptureInstalledController({
-  root:{ querySelector:(selector) => sessionElements.get(selector) ?? null }, storage:{ getItem:() => null, setItem() {} },
+  root:{ querySelector:(selector) => sessionElements.get(selector) ?? null },
+  storage:{ getItem:(key) => persistedSessions.get(key) ?? null,
+    setItem:(key, value) => persistedSessions.set(key, value), removeItem:(key) => persistedSessions.delete(key) },
   initialPageUrl:() => "https://shop.example/", initialSources:() => [],
-  sessionStart:async () => ({ id:"unused", tabId:1, url:"", historyPath:"" }), subscribeToLiveFeed:() => () => {},
-  changed() {}, runCommand() {}, setLiveSessionMessage() {}, runObservationRefresh() {}, ui:sessionUi,
+  sessionStart:async () => ({ id:"live:1", tabId:1, url:"https://shop.example/", historyPath:"dataLayer" }), subscribeToLiveFeed:() => () => {},
+  changed() {}, runCommand() {}, setLiveSessionMessage:(message) => sessionCalls.push(`message:${message}`), runObservationRefresh() {}, ui:noOpCaptureUi,
   observation:noOpObservation,
+  savedSessions:sessionPorts,
 });
 sessionController.mount();
-assert.equal(sessionElements.get("#save-live-session-heading").textContent, "Save checkout");
-assert.equal(sessionElements.get("#saved-session-count").textContent, "4 saved sessions");
-assert.equal(sessionElements.get("#live-events-empty-state").hidden, false);
+await sessionController.begin();
+sessionController.capture({ id:"event:checkout", name:"checkout", sourceId:"history", sourceName:"History",
+  captureTime:"2026-08-25T00:00:01.000Z", payload:{ total:42 }, rawInput:{ total:42 } });
+assert.equal(sessionElements.get("#live-events-empty-state").hidden, true);
 assert.equal(sessionElements.get("#live-source-error-state").hidden, true);
 assert.equal(sessionElements.get("#saved-session-empty-state").hidden, false);
-savedSessionPresentationCount = 2; sessionController.refreshPresentation();
-assert.equal(sessionElements.get("#saved-session-empty-state").hidden, true, "saved-session empty state follows live collection updates");
-sessionElements.get("#back-to-events").click(); sessionElements.get("#copy-live-page-url").click();
-sessionElements.get("#save-live-session").click(); sessionElements.get("#start-fresh-session").click();
-sessionElements.get("#report-missing-event").click();
+sessionElements.get("#save-live-session").click();
+assert.equal(sessionElements.get("#save-live-session-dialog").open, true);
+assert.match(sessionElements.get("#save-live-session-summary").textContent, /1 events/);
 sessionElements.get("#save-live-session-name").value = "Checkout regression";
 sessionElements.get("#save-live-session-form").dispatch("submit");
-sessionElements.get("#cancel-save-live-session").click(); sessionElements.get("#save-and-start-fresh-session").click();
-sessionElements.get("#discard-and-start-fresh-session").click(); sessionElements.get("#cancel-fresh-session").click();
-sessionElements.get("#return-to-current-live-feed").click(); sessionElements.get("#revalidate-saved-session").click();
+assert.equal(renderedSessions.length, 1, "Capture persists and renders its saved-session library");
+assert.equal(renderedSessions[0].name, "Checkout regression");
+assert.ok(persistedSessions.has("my-chrome-utilities.saved-session-library.v1"));
+savedActions.open(renderedSessions[0].id);
+assert.match(sessionElements.get("#saved-session-live-summary").textContent, /Read-only archive/);
+sessionController.capture({ id:"event:background", name:"background", sourceId:"history", sourceName:"History",
+  captureTime:"2026-08-25T00:00:02.000Z", payload:{}, rawInput:{} });
+assert.match(sessionElements.get("#saved-session-background-status").textContent, /1 new events/);
+sessionElements.get("#revalidate-saved-session").click();
+assert.match(sessionElements.get("#saved-session-validation-comparison").textContent, /revisions 2/);
+sessionElements.get("#return-to-current-live-feed").click();
+assert.equal(sessionController.state().observer.events.at(-1).id, "event:background", "return restores background events");
 sessionElements.get("#saved-session-search").value = "checkout"; sessionElements.get("#saved-session-search").dispatch("input");
+savedActions.rename(renderedSessions[0].id, "Renamed checkout");
+savedActions.export(renderedSessions[0].id); savedActions.createSequence(renderedSessions[0].id);
+savedActions.requestDelete(renderedSessions[0].id);
+assert.equal(sessionElements.get("#confirm-saved-session-delete").hidden, false);
+sessionElements.get("#cancel-saved-session-delete").click();
+savedActions.requestDelete(renderedSessions[0].id); sessionElements.get("#confirm-saved-session-delete").click();
+assert.equal(renderedSessions.length, 0, "confirmed deletion persists and rerenders");
+sessionElements.get("#saved-session-search").value = "";
 sessionElements.get("#import-saved-session").click(); sessionElements.get("#saved-session-file").dispatch("change");
-sessionElements.get("#cancel-saved-session-delete").click(); sessionElements.get("#confirm-saved-session-delete").click();
-assert.deepEqual(sessionCalls, ["back", "copy", "save", "fresh", "report", "confirm:Checkout regression", "cancel-save",
-  "save-fresh", "discard-fresh", "cancel-fresh", "return", "revalidate", "search-saved:checkout", "import",
-  "cancel-delete", "confirm-delete"]);
+importResolve(JSON.stringify({ id:"saved:imported", name:"Imported", pageScope:"https://import.example/",
+  startedAt:"2026-08-25T00:00:00.000Z", endedAt:"2026-08-25T00:00:01.000Z", events:[] }));
+await new Promise((resolve) => setTimeout(resolve, 0));
+assert.equal(renderedSessions[0].name, "Imported", "async import settles into controller-owned persistence");
+savedActions.resume(renderedSessions[0].id);
+assert.equal(sessionController.state().session.session.parentSavedSessionId, "saved:imported");
+assert.equal(sessionController.state().observer.events.length, 0);
+assert.ok(sessionCalls.includes("reset-flow"));
+assert.ok(sessionCalls.some((call) => call.startsWith("download:renamed-checkout.json")));
+assert.ok(sessionCalls.some((call) => call.startsWith("replay:saved:live-")));
+
+sessionElements.get("#start-fresh-session").click();
+assert.equal(sessionElements.get("#fresh-session-confirmation").open, false, "empty linked capture starts fresh without review");
+sessionController.capture({ id:"event:unsaved", name:"unsaved", sourceId:"history", captureTime:"2026-08-25T00:00:03.000Z" });
+sessionElements.get("#start-fresh-session").click();
+assert.equal(sessionElements.get("#fresh-session-confirmation").open, true);
+sessionElements.get("#discard-and-start-fresh-session").click();
+assert.equal(sessionController.state().observer.events.length, 0, "discard transition starts a fresh owned session");
+
+let staleResolve;
+sessionPorts.readImportFile = () => new Promise((resolve) => { staleResolve = resolve; });
+sessionElements.get("#saved-session-file").dispatch("change");
 sessionController.dispose();
+staleResolve(JSON.stringify({ id:"saved:stale", name:"Stale", pageScope:"https://stale.example/",
+  startedAt:"2026-08-25T00:00:00.000Z", endedAt:"2026-08-25T00:00:01.000Z", events:[] }));
+await new Promise((resolve) => setTimeout(resolve, 0));
+assert.equal(renderedSessions.some(({ id }) => id === "saved:stale"), false, "disposed controller rejects stale import settlement");
 assert.equal([...sessionElements.values()].reduce((count, element) => count + element.listenerCount(), 0), 0,
   "Capture removes every live-session and saved-library listener it owns");
