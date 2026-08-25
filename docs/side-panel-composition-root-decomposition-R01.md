@@ -237,6 +237,59 @@ through its five browser batches, and package proof. Preparation evidence is not
 product evidence: the coder must record a fresh review-ready claim for the exact
 cutover task, base, commit, tree, changed paths, and receipt.
 
+## Frozen direct-compatibility correction
+
+Product candidate `caeb4f09d4` completes the controller construction,
+pre-cutover settlement, and atomic cutover from QA base `c0d3fa239f`. Its build,
+controller regressions, ownership contracts, architecture checks, and focused
+Capture, Event Library, and Schema browser targets pass. The candidate is clean
+and its product tree is preserved unchanged while exact evidence remains
+deferred.
+
+The installed-stabilization prerequisite exposed a defect in the independently
+owned evidence boundary. The direct no-target command executes 372 assertion
+leaves on the candidate, while the QA-integrated frozen map contains 247 stale
+source-line identities. Its first expected identity names a non-assertion line.
+The command cannot truthfully validate the candidate against that map, and the
+exact QA base cannot regenerate the map because its older permission-recovery
+route waits for an enabled Start testing action that it cannot reach. This is not
+a product behavior failure and does not authorize changing, dropping, or
+substituting an assertion.
+
+Structured preparation task
+`verification-slice-side-panel-single-cutover-compatibility-repair` owns the
+smallest correction. From current QA it may change only verification fixtures,
+the direct compatibility capture and validation boundary, its frozen direct map,
+focused preparation declarations, and their direct contracts. It may assemble a
+temporary composite with the exact preserved candidate solely to execute the
+supported path and derive evidence; no product source or product tree may enter
+the preparation commit.
+
+The correction must:
+
+1. drive the selected-tab, exact-origin permission request and recheck the same
+   target path before observing enabled Start testing, without forcing readiness,
+   bypassing Chrome permission behavior, or granting a broader origin;
+2. provide an explicit preparation-only capture mode that records every executed
+   direct assertion identity and the original four viewports in order;
+3. freeze that result independently, prove each identity resolves to a current
+   assertion call, and run a separate validation execution that compares actual
+   execution with the committed map;
+4. leave the registered 64-target, 7,088-leaf canonical assertion inventory and
+   all product behavior unchanged; and
+5. retain the product route's rejection of changes to the frozen map, capture
+   mechanism, focused-evidence bootstrap, or ownership policy. A product
+   candidate cannot regenerate or self-authorize its own evidence.
+
+The preparation receives its own exact bounded plan, evidence receipt, and
+architect review before QA integration. No all-runnable-pack feature checkpoint
+is authorized. After integration, stable task `side-panel-single-cutover`
+resumes automatically by reapplying the exact product tree of `caeb4f09d4` to
+the corrected QA descendant. The candidate then reruns installed stabilization,
+fresh preflight, and its already approved exact evidence route. Any product-tree
+change, permission expansion, assertion loss, failure to reproduce the map in a
+second execution, or weakening of the strict allowlist stops fail-closed.
+
 ## Completion evidence
 
 The program is complete on QA only when:
