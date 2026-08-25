@@ -47,6 +47,9 @@ function element() {
     getAttribute(name) { return this[name] ?? null; }, replaceChildren(...children) { this.children = children; },
     append(...children) { this.children.push(...children); }, prepend(...children) { this.children.unshift(...children); },
     insertBefore(child) { this.children.push(child); }, before() {}, after() {}, contains() { return false; }, closest() { return null; },
+    querySelector(selector) { const id = selector.startsWith("#") ? selector.slice(1) : undefined;
+      const visit = (children) => children.find((child) => id && child.id === id) ?? children.map((child) => visit(child.children ?? [])).find(Boolean);
+      return visit(this.children); },
     querySelectorAll() { return this.children.flatMap((child) => child.children?.[0] ? [child.children[0]] : []); },
     listenerCount:() => listeners.size,
   };
@@ -129,7 +132,7 @@ const uiController = createSchemasInstalledController({
   changed() {}, runGuidedValidation:async () => {}, subscribe:() => () => {},
   specificIndexSelected:(path) => { selectedSpecificIndex = path; },
   rulePickerChanged:(path, open) => rulePickerChanges.push(`${path}:${open}`),
-  createRuleId:() => promotionRuleSequence++ === 0 ? "rule:checkout" : "rule:promoted",
+  createRuleId:() => ["rule:conditional", "rule:checkout", "rule:promoted"][promotionRuleSequence++] ?? `rule:${promotionRuleSequence}`,
   capturedAssignmentValue:(target) => target === "payload" ? { checkout:{ total:12 } } : { raw:true },
   renderAssignmentConditions:(root, state) => { root.textContent = `${state.target}:${state.group?.predicates.length ?? 0}`; },
   localRulePromotionDialog:{ open:(input) => { promotionDialogInput = input; }, close:() => { promotionDialogInput = undefined; } },
@@ -262,6 +265,42 @@ assert.deepEqual(uiController.conditionPredicate("checkout.total"), { operator:"
 }] }, "sampled primitive condition values become typed Equals comparisons");
 elements.get("#schema-property-rule-picker").dispatch("cancel");
 assert.deepEqual(rulePickerChanges, ["items.*.sku:true", "items.*.sku:false"]);
+uiController.openRulePicker("checkout.total");
+const conditionalControl = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-conditional");
+conditionalControl.checked = true; conditionalControl.dispatch("change");
+assert.deepEqual(uiController.rulePickerState().configuration.conditions[0].comparison, { type:"number", value:12 },
+  "the live conditional editor seeds its predicate from the sampled typed value");
+const reusableControl = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-reusable");
+reusableControl.checked = true; reusableControl.dispatch("change");
+const conditionGroup = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-condition-group");
+conditionGroup.value = "Any"; conditionGroup.dispatch("change");
+assert.equal(uiController.rulePickerState().configuration.conditionGroupOperator, "Any");
+const conditionProperty = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-condition-property-0");
+conditionProperty.value = "/checkout/total"; conditionProperty.dispatch("change");
+const conditionComparison = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-condition-value-0");
+conditionComparison.value = "13"; conditionComparison.dispatch("input");
+assert.deepEqual(uiController.rulePickerState().configuration.conditions[0].comparison, { type:"number", value:13 });
+elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-condition-add").click();
+assert.equal(uiController.rulePickerState().configuration.conditions.length, 2, "the live editor adds conditional predicates");
+elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-condition-remove-1").click();
+assert.equal(uiController.rulePickerState().configuration.conditions.length, 1, "the live editor removes conditional predicates");
+const conditionOperator = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-condition-operator-0");
+conditionOperator.value = "Exists"; conditionOperator.dispatch("change");
+assert.equal(uiController.rulePickerState().configuration.conditions[0].comparison, undefined);
+const severityControl = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-severity");
+severityControl.value = "warning"; severityControl.dispatch("change");
+const messageControl = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-message");
+messageControl.value = "Observed checkout total is required"; messageControl.dispatch("input");
+const enabledControl = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-enabled");
+enabledControl.checked = false; enabledControl.dispatch("change");
+const configuredName = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-name");
+configuredName.value = "Sampled checkout total"; configuredName.dispatch("input");
+const configuredDescription = elements.get("#schema-property-rule-picker").querySelector("#schema-local-rule-description");
+configuredDescription.value = "Created from the current capture"; configuredDescription.dispatch("input");
+elements.get("#schema-property-rule-picker").children[0].dispatch("submit");
+assert.equal(uiController.rules().some(({ name }) => name === "Sampled checkout total"), true,
+  "the live rule form commits its validated reusable rule through Schema ownership");
+assert.equal(uiController.rules().find(({ name }) => name === "Sampled checkout total").severity, "warning");
 uiController.publish();
 elements.get("#create-schema-rule").click();
 elements.get("#schema-rule-name").value = "Checkout required";
@@ -275,8 +314,8 @@ assert.equal(uiController.schemas().find(({ id }) => id === uiController.state()
 assert.equal(uiController.updateAttachedRule(uiController.state().activeSchemaId, "rule:checkout", false), true);
 assert.equal(uiController.updateAttachedRule(uiController.state().activeSchemaId, "rule:checkout", true), true);
 elements.get("#schema-rule-search").value = "checkout"; elements.get("#schema-rule-search").dispatch("input");
-assert.match(elements.get("#schema-rule-list").children[0].children[0].textContent, /Checkout required/);
-const disableRuleButton = elements.get("#schema-rule-list").children[0].children[5]; disableRuleButton.click();
+const checkoutRuleRow = elements.get("#schema-rule-list").children.find(({ children }) => /Checkout required/.test(children[0].textContent));
+assert.ok(checkoutRuleRow); const disableRuleButton = checkoutRuleRow.children[5]; disableRuleButton.click();
 assert.equal(uiController.rules().find(({ id }) => id === "rule:checkout").enabled, false);
 assert.equal(disableRuleButton.listenerCount(), 0, "rerender disposes the replaced rule-row action listeners");
 elements.get("#schema-rule-list").children[0].children[5].click();
@@ -353,6 +392,7 @@ elements.get("#schema-export-choices").children[2].click();
 assert.deepEqual(schemaDownloads, [], "cancelled export produces no download");
 uiController.openExportChoices(); elements.get("#schema-export-choices").children[1].click();
 assert.equal(elements.get("#schema-export-compatibility-review").open, true);
+assert.equal(uiController.omittedRuleStatus(1), "1 omitted rule");
 elements.get("#schema-export-compatibility-review").children[1].click();
 assert.match(schemaDownloads[0], /schema.*\.json/, "confirmed standard export crosses the typed download port");
 const persistenceSchemaId = uiController.state().activeSchemaId;
@@ -436,6 +476,10 @@ assert.equal(uiController.canonicalState().pending, false, "Retry rebases only t
 const projectedCanonical = uiController.canonicalProjection(); projectedCanonical.name = "Canonical metadata name";
 assert.equal(await uiController.persistCanonicalProjection(projectedCanonical, "schema name"), true);
 assert.equal(uiController.canonicalProjection().name, "Canonical metadata name", "projection metadata uses the same serialized settlement queue");
+assert.equal(await uiController.resumeCanonicalProjection(), true, "an already-settled canonical projection resumes idempotently");
+assert.deepEqual(uiController.storePromotionRules([{ id:"rule:history", name:"Current", kind:"Required", version:2, enabled:true,
+  revisionHistory:[{ id:"rule:history", name:"Previous", kind:"Required", version:1, enabled:false }] }])[0].revisionHistory,
+  [{ name:"Previous", kind:"Required", version:1, enabled:false }], "promotion persistence normalizes historical rule snapshots");
 const disposedCompletion = uiController.persistGuidedValidation(guidedResult("rule:guided-dispose", "checkout.postcode"));
 const disposedRejection = disposedCompletion.then(() => undefined, (error) => error);
 canonicalSettlementMode = "defer"; const beforeDisposeCanonical = uiController.canonicalDocument();

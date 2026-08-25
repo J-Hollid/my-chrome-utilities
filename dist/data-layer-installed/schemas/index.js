@@ -1,4 +1,4 @@
-import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, inspectJsonSchemaExport, importSchema, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaPropertyRows, schemaRevisionChoices, schemaPropertyCopySource, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentDraftAfterGuidedSave, assignmentConditionSuggestions, assignmentDataConditionSummary, contextualManualPropertyDefinition, createRuleConfiguration, createExtensionSchemaPackage, createSchemaLibraryExport, duplicateSchemaAssignment, guidedAttachedRule, guidedPropertyDocument, manualPropertyPreview, mergeGuidedDocument, restoreSchemaLibrary, serializeSchemaLibrary, exportJsonSchemaBundle, exportJsonSchemaResource, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateAssignmentDataConditions, validateEvent, typedComparisonValue, GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, filterSchemaRelationshipTree, restoreSchemaRelationshipTreeView, saveSchemaRelationshipTreeView, applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, compactCanonicalCommandPolicy, compactSchemaProjection, savedSchemaCanonicalDocument, beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, completeCompactCanonicalHistoryTransition, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition, } from "../../utilities/data-layer/schemas.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, inspectJsonSchemaExport, importSchema, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaPropertyRows, schemaRevisionChoices, schemaPropertyCopySource, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentDraftAfterGuidedSave, assignmentConditionSuggestions, configuredRuleDetails, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, assignmentDataConditionSummary, contextualManualPropertyDefinition, createRuleConfiguration, createExtensionSchemaPackage, createSchemaLibraryExport, duplicateSchemaAssignment, guidedAttachedRule, guidedPropertyDocument, manualPropertyPreview, mergeGuidedDocument, restoreSchemaLibrary, serializeSchemaLibrary, exportJsonSchemaBundle, exportJsonSchemaResource, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateAssignmentDataConditions, validateEvent, typedComparisonValue, GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, filterSchemaRelationshipTree, restoreSchemaRelationshipTreeView, saveSchemaRelationshipTreeView, applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, compactCanonicalCommandPolicy, compactSchemaProjection, savedSchemaCanonicalDocument, beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, completeCompactCanonicalHistoryTransition, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition, } from "../../utilities/data-layer/schemas.js";
 import { applySchemaPropertyCopy, planSchemaPropertyCopy } from "../../data-layer-schema-property-copy.js";
 import { persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, } from "../../data-layer-local-rule-promotion.js";
 import { publishReusableRuleSync, reviewReusableRuleSync, } from "../../data-layer-reusable-rule-sync.js";
@@ -504,7 +504,7 @@ export function createSchemasInstalledController(ports) {
     const schemaContributorRoute = { collectionKinds: ["profiles", "propertySets", "pages", "events", "flows"], includeFlowGraphs: true };
     let schemaRowDisposers = [];
     let schemaRuleRowDisposers = [];
-    let schemaPropertyRowDisposers = [];
+    let schemaPropertyRowDisposers = [], schemaRulePickerDisposers = [];
     const clearSchemaRowListeners = () => { for (const dispose of schemaRowDisposers.splice(0))
         dispose(); };
     const listen = (target, type, listener) => {
@@ -1701,6 +1701,19 @@ export function createSchemasInstalledController(ports) {
                     ...(comparable ? { comparison: typedComparisonValue(sample) } : {}) }] };
     }
     function configuredRuleInput() {
+        const configuration = schemaRuleConfiguration;
+        if (configuration) {
+            const details = configuredRuleDetails(configuration);
+            return { id: editingReusableSchemaRuleId ?? ports.createRuleId(),
+                name: configuration.reusableName.trim() || `${configuration.ruleType} for ${schemaRulePickerPath}`, kind: configuration.ruleType,
+                version: storedReusableRule(editingReusableSchemaRuleId ?? "")?.version ?? 0, enabled: configuration.enabled, applicableType: configuration.propertyType,
+                operator: details.operator, ...(details.parameters !== undefined ? { parameters: details.parameters } : {}),
+                ...(details.allowedValues !== undefined ? { allowedValues: details.allowedValues } : {}), ...(details.comparison !== undefined ? { comparison: details.comparison } : {}),
+                ...(details.limit !== undefined ? { limit: details.limit } : {}), severity: configuration.severity,
+                ...(configuration.message.trim() ? { message: configuration.message.trim() } : {}),
+                ...(configuration.applyOnlyWhen ? { conditionGroup: { operator: configuration.conditionGroupOperator, predicates: structuredClone(configuration.conditions) } } : {}),
+                ...(configuration.description.trim() ? { description: configuration.description.trim() } : {}) };
+        }
         const name = schemaRuleName?.value.trim() || "Untitled rule", operator = schemaRuleOperator?.value || "required";
         return { id: editingReusableSchemaRuleId ?? ports.createRuleId(), name, kind: operator, version: storedReusableRule(editingReusableSchemaRuleId ?? "")?.version ?? 0,
             enabled: true, applicableType: (schemaRuleTypes?.value || "string"), operator,
@@ -1732,8 +1745,166 @@ export function createSchemasInstalledController(ports) {
         schemaPropertyRenderSequence += 1;
         if (!schemaPropertyRulePicker || !schemaRulePickerPath || !schemaRuleConfiguration)
             return;
+        for (const dispose of schemaRulePickerDisposers.splice(0))
+            dispose();
+        const configuration = schemaRuleConfiguration, path = schemaRulePickerPath, document = schemaPropertyRulePicker.ownerDocument;
+        if (!document)
+            return;
         const editLabel = editingAttachedLocalRule ? `Edit ${editingAttachedLocalRule.name ?? editingAttachedLocalRule.id}` : "Create local rule";
-        schemaPropertyRulePicker.textContent = `${editLabel} for ${schemaRulePickerPath} · ${schemaRuleConfiguration.propertyType} · render ${schemaPropertyRenderSequence}`;
+        const form = document.createElement("form"), heading = document.createElement("h4"), status = document.createElement("output");
+        heading.textContent = `${editLabel} for ${path}`;
+        status.id = "schema-local-rule-assistance";
+        const refreshValidation = () => {
+            const validation = validateRuleConfiguration(configuration);
+            status.textContent = validation.assistance;
+            form.dataset.ready = String(validation.ready);
+            schemaPropertyRulePicker.dataset.conditionPreview = JSON.stringify({ operator: configuration.conditionGroupOperator,
+                predicates: configuration.conditions });
+        };
+        for (const control of ruleConfigurationControls(configuration.ruleType, configuration.propertyType)) {
+            if (control.repeatable)
+                continue;
+            const input = control.inputType === "select" ? document.createElement("select") : document.createElement("input");
+            input.id = `schema-local-rule-${control.key}`;
+            input.value = String(configuration[control.key]);
+            const update = () => { configuration[control.key] = input.value; refreshValidation(); };
+            input.addEventListener(control.inputType === "select" ? "change" : "input", update);
+            schemaRulePickerDisposers.push(() => input.removeEventListener(control.inputType === "select" ? "change" : "input", update));
+            form.append(input);
+        }
+        if (configuration.ruleType === "Allowed values")
+            configuration.allowedValues.forEach((value, index) => {
+                const input = document.createElement("input"), remove = document.createElement("button");
+                input.id = `schema-local-rule-allowed-value-${index + 1}`;
+                input.value = value;
+                remove.type = "button";
+                remove.textContent = `Remove value ${index + 1}`;
+                const update = () => { configuration.allowedValues[index] = input.value; refreshValidation(); };
+                const removeValue = () => { configuration.allowedValues.splice(index, 1); renderSchemaPropertyRulePicker(); };
+                input.addEventListener("input", update);
+                remove.addEventListener("click", removeValue);
+                schemaRulePickerDisposers.push(() => input.removeEventListener("input", update), () => remove.removeEventListener("click", removeValue));
+                form.append(input, remove);
+            });
+        if (configuration.ruleType === "Allowed values") {
+            const add = document.createElement("button");
+            add.type = "button";
+            add.textContent = "Add another value";
+            const addValue = () => { configuration.allowedValues.push(""); renderSchemaPropertyRulePicker(); };
+            add.addEventListener("click", addValue);
+            schemaRulePickerDisposers.push(() => add.removeEventListener("click", addValue));
+            form.append(add);
+        }
+        const severity = document.createElement("select"), message = document.createElement("input"), enabled = document.createElement("input");
+        severity.id = "schema-local-rule-severity";
+        severity.value = configuration.severity;
+        message.id = "schema-local-rule-message";
+        message.value = configuration.message;
+        enabled.id = "schema-local-rule-enabled";
+        enabled.type = "checkbox";
+        enabled.checked = configuration.enabled;
+        const changeSeverity = () => { configuration.severity = severity.value; refreshValidation(); }, changeMessage = () => { configuration.message = message.value; }, changeEnabled = () => { configuration.enabled = enabled.checked; };
+        severity.addEventListener("change", changeSeverity);
+        message.addEventListener("input", changeMessage);
+        enabled.addEventListener("change", changeEnabled);
+        schemaRulePickerDisposers.push(() => severity.removeEventListener("change", changeSeverity), () => message.removeEventListener("input", changeMessage), () => enabled.removeEventListener("change", changeEnabled));
+        const conditional = document.createElement("input"), reusable = document.createElement("input");
+        conditional.id = "schema-local-rule-conditional";
+        conditional.type = "checkbox";
+        conditional.checked = configuration.applyOnlyWhen;
+        reusable.id = "schema-local-rule-reusable";
+        reusable.type = "checkbox";
+        reusable.checked = configuration.saveReusable;
+        const changeConditional = () => {
+            configuration.applyOnlyWhen = conditional.checked;
+            if (conditional.checked && !configuration.conditions.length)
+                configuration.conditions.push(initialConditionPredicate(path).predicates[0]);
+            renderSchemaPropertyRulePicker();
+        };
+        const changeReusable = () => { configuration.saveReusable = reusable.checked; renderSchemaPropertyRulePicker(); };
+        conditional.addEventListener("change", changeConditional);
+        reusable.addEventListener("change", changeReusable);
+        schemaRulePickerDisposers.push(() => conditional.removeEventListener("change", changeConditional), () => reusable.removeEventListener("change", changeReusable));
+        form.append(heading, severity, message, enabled, conditional, reusable);
+        if (configuration.applyOnlyWhen) {
+            const group = document.createElement("select");
+            group.id = "schema-local-rule-condition-group";
+            group.value = configuration.conditionGroupOperator;
+            const changeGroup = () => { configuration.conditionGroupOperator = group.value === "Any" ? "Any" : "All"; refreshValidation(); };
+            group.addEventListener("change", changeGroup);
+            schemaRulePickerDisposers.push(() => group.removeEventListener("change", changeGroup));
+            form.append(group);
+            configuration.conditions.forEach((predicate, index) => {
+                const property = document.createElement("select"), operator = document.createElement("select"), comparison = document.createElement("input"), remove = document.createElement("button");
+                property.id = `schema-local-rule-condition-property-${index}`;
+                property.value = predicate.propertyPath;
+                operator.id = `schema-local-rule-condition-operator-${index}`;
+                operator.value = predicate.operator;
+                comparison.id = `schema-local-rule-condition-value-${index}`;
+                comparison.value = predicate.comparison ? String(predicate.comparison.value ?? "") : "";
+                remove.id = `schema-local-rule-condition-remove-${index}`;
+                remove.type = "button";
+                remove.textContent = `Remove condition ${index + 1}`;
+                const changeProperty = () => {
+                    const schemaPath = property.value.slice(1).replaceAll("/", "."), sample = valueAtSchemaPath(currentConditionPayload(), schemaPath);
+                    const comparable = sample === null || ["string", "number", "boolean"].includes(typeof sample), detectedType = sample === null ? "null"
+                        : typeof sample === "string" ? "string" : typeof sample === "number" ? "number" : typeof sample === "boolean" ? "boolean" : undefined;
+                    configuration.conditions[index] = { propertyPath: property.value,
+                        operator: comparable ? "Equals" : "Exists", ...(comparable ? { comparison: typedComparisonValue(sample),
+                            ...(detectedType ? { detectedType } : {}) } : {}) };
+                    renderSchemaPropertyRulePicker();
+                };
+                const changeOperator = () => { predicate.operator = operator.value; if (predicate.operator === "Exists" || predicate.operator === "Does not exist")
+                    delete predicate.comparison; renderSchemaPropertyRulePicker(); };
+                const changeComparison = () => { const value = comparisonValueFromInput(comparison.value, predicate.detectedType ?? "string"); if (value)
+                    predicate.comparison = value;
+                else
+                    delete predicate.comparison; refreshValidation(); };
+                const removeCondition = () => { configuration.conditions.splice(index, 1); renderSchemaPropertyRulePicker(); };
+                property.addEventListener("change", changeProperty);
+                operator.addEventListener("change", changeOperator);
+                comparison.addEventListener("input", changeComparison);
+                remove.addEventListener("click", removeCondition);
+                schemaRulePickerDisposers.push(() => property.removeEventListener("change", changeProperty), () => operator.removeEventListener("change", changeOperator), () => comparison.removeEventListener("input", changeComparison), () => remove.removeEventListener("click", removeCondition));
+                form.append(property, operator, comparison, remove);
+            });
+            const add = document.createElement("button");
+            add.id = "schema-local-rule-condition-add";
+            add.type = "button";
+            add.textContent = "Add condition";
+            const addCondition = () => { configuration.conditions.push(initialConditionPredicate(path).predicates[0]); renderSchemaPropertyRulePicker(); };
+            add.addEventListener("click", addCondition);
+            schemaRulePickerDisposers.push(() => add.removeEventListener("click", addCondition));
+            form.append(add);
+        }
+        if (configuration.saveReusable) {
+            const name = document.createElement("input"), description = document.createElement("textarea");
+            name.id = "schema-local-rule-name";
+            name.value = configuration.reusableName;
+            description.id = "schema-local-rule-description";
+            description.value = configuration.description;
+            const changeName = () => { configuration.reusableName = name.value; refreshValidation(); }, changeDescription = () => { configuration.description = description.value; };
+            name.addEventListener("input", changeName);
+            description.addEventListener("input", changeDescription);
+            schemaRulePickerDisposers.push(() => name.removeEventListener("input", changeName), () => description.removeEventListener("input", changeDescription));
+            form.append(name, description);
+        }
+        const back = document.createElement("button"), cancel = document.createElement("button"), create = document.createElement("button");
+        back.type = cancel.type = "button";
+        create.type = "submit";
+        back.textContent = "Back";
+        cancel.textContent = "Cancel";
+        create.textContent = "Create rule";
+        const goBack = () => { schemaRuleConfiguration = undefined; closeSchemaPropertyRulePicker(); }, cancelEdit = () => closeSchemaPropertyRulePicker();
+        const submit = (event) => { event.preventDefault(); if (validateRuleConfiguration(configuration).ready)
+            createConfiguredSchemaRule(); };
+        back.addEventListener("click", goBack);
+        cancel.addEventListener("click", cancelEdit);
+        form.addEventListener("submit", submit);
+        schemaRulePickerDisposers.push(() => back.removeEventListener("click", goBack), () => cancel.removeEventListener("click", cancelEdit), () => form.removeEventListener("submit", submit));
+        form.append(status, create, back, cancel);
+        schemaPropertyRulePicker.replaceChildren(form);
+        refreshValidation();
     };
     function openSchemaPropertyRulePicker(path, trigger) {
         const draft = active().workingDraft;
@@ -1853,7 +2024,7 @@ export function createSchemasInstalledController(ports) {
         const generation = ++persistenceGeneration;
         let review;
         try {
-            review = reviewLocalRulePromotion({ schema, reusableRules: reusableSchemaRules,
+            review = reviewLocalRulePromotion({ schema, reusableRules: promotionReusableRules(),
                 propertyPath, sourceRuleId, editorContext: "editable" });
         }
         catch (error) {
@@ -1870,12 +2041,12 @@ export function createSchemasInstalledController(ports) {
                     throw new Error("The promotion review is stale");
                 const previousSchemas = structuredClone(schemas), previousRules = structuredClone(reusableSchemaRules);
                 const result = selected.action === "create"
-                    ? promoteLocalRule({ schema, reusableRules: reusableSchemaRules, propertyPath,
+                    ? promoteLocalRule({ schema, reusableRules: promotionReusableRules(), propertyPath,
                         sourceRuleId, editorContext: "editable", ...selected, createId: ports.createRuleId })
-                    : promoteLocalRule({ schema, reusableRules: reusableSchemaRules, propertyPath,
+                    : promoteLocalRule({ schema, reusableRules: promotionReusableRules(), propertyPath,
                         sourceRuleId, editorContext: "editable", action: "use-existing", reusableRuleId: selected.reusableRuleId });
                 const nextSchemas = schemas.map((candidate) => candidate.id === result.schema.id ? result.schema : candidate);
-                const nextRules = result.reusableRules;
+                const nextRules = storedPromotionRules(result.reusableRules);
                 persistLocalRulePromotion(ports.storage, { schemaKey: SCHEMA_LIBRARY_STORAGE_KEY,
                     schemaValue: serializeSchemaLibrary(nextSchemas), ruleKey: SCHEMA_RULE_STORAGE_KEY, ruleValue: JSON.stringify(nextRules) });
                 schemas = structuredClone(nextSchemas);
@@ -2644,7 +2815,7 @@ export function createSchemasInstalledController(ports) {
             return;
         const summary = schemaExportReview.ownerDocument.createElement("p");
         summary.textContent =
-            `${scope === "library" ? `${schemas.length} schema resources` : `${schema?.name} revision ${schema?.version}`} · ${review.conversions.length} conversions · ${review.omitted.length} omitted rules`;
+            `${scope === "library" ? `${schemas.length} schema resources` : `${schema?.name} revision ${schema?.version}`} · ${review.conversions.length} conversions · ${omittedRuleStatus(review.omitted.length)}`;
         const confirm = schemaExportReview.ownerDocument.createElement("button");
         confirm.type = "button";
         confirm.textContent = "Confirm standard export";
@@ -2657,12 +2828,12 @@ export function createSchemasInstalledController(ports) {
                 return;
             if (pending.scope === "library") {
                 const exported = exportJsonSchemaBundle(schemas);
-                ports.downloadSchema(exported.document, exported.filename);
+                downloadSchemaJson(exported.document, exported.filename);
                 finishSchemaExport(`Exported JSON Schema bundle with ${exported.resourceIds.length} schemas.`);
             }
             else if (pending.schema) {
                 const exported = exportJsonSchemaResource(pending.schema, schemas);
-                ports.downloadSchema(exported.document, exported.filename);
+                downloadSchemaJson(exported.document, exported.filename);
                 finishSchemaExport(`Exported ${pending.schema.name} revision ${pending.schema.version}.`);
             }
         });
@@ -2968,6 +3139,8 @@ export function createSchemasInstalledController(ports) {
                 dispose();
             for (const dispose of schemaPropertyRowDisposers.splice(0))
                 dispose();
+            for (const dispose of schemaRulePickerDisposers.splice(0))
+                dispose();
             schemaList?.replaceChildren();
             schemaAssignmentList?.replaceChildren();
             schemaAssignmentDataConditions?.replaceChildren();
@@ -3011,6 +3184,13 @@ export function createSchemasInstalledController(ports) {
         closeRulePickerForCommit: closeSchemaPropertyRulePickerForCommit,
         openRulePicker: openSchemaPropertyRulePicker,
         openCanonicalRuleEditor: openCompactCanonicalRuleEditor,
+        configureRule: (ruleType) => {
+            if (!schemaRuleConfiguration)
+                return false;
+            schemaRuleConfiguration = createRuleConfiguration(ruleType, schemaRuleConfiguration.propertyType);
+            renderSchemaPropertyRulePicker();
+            return true;
+        },
         openCanonicalPropertyActions: openCompactCanonicalPropertyActions,
         configuredRule: configuredRuleInput,
         conditionPredicate: initialConditionPredicate,
@@ -3069,6 +3249,7 @@ export function createSchemasInstalledController(ports) {
         dispatchCanonical: dispatchCompactCanonicalCommand,
         persistCanonicalProjection: (projection, change) => compactCanonicalEditor
             ? persistCompactCanonicalProjection(compactCanonicalEditor, projection, change) : Promise.resolve(false),
+        resumeCanonicalProjection: () => compactCanonicalEditor ? resumeCompactCanonicalProjectionPersistence(compactCanonicalEditor) : Promise.resolve(false),
         retryCanonical: retryCompactCanonicalCommand,
         rejectCanonical: rejectCompactCanonicalCommand,
         canonicalProjection: () => compactCanonicalEditor ? compactCanonicalProjection(compactCanonicalEditor) : undefined,
@@ -3100,6 +3281,8 @@ export function createSchemasInstalledController(ports) {
         rules: () => structuredClone(reusableSchemaRules),
         ruleState: () => ({ editingReusableSchemaRuleId, approvedRuleRevisionId, approvedRuleAttachmentUpdateId,
             pendingRuleSnapshotMetadata: pendingRuleSnapshotMetadata ? structuredClone(pendingRuleSnapshotMetadata) : undefined }),
+        omittedRuleStatus,
+        storePromotionRules: storedPromotionRules,
         schemas: () => structuredClone(schemas),
         state: () => ({ ...(activeSchemaId ? { activeSchemaId } : {}), draftDirty: Boolean(activeSchemaId && active().workingDraft),
             schemaCount: schemas.length, mounted }),
@@ -3150,6 +3333,20 @@ export function createSchemasInstalledController(ports) {
         guidedValidationRoot.append(dialog);
         dialog.showModal();
         heading.focus({ preventScroll: true });
+    }
+    function downloadSchemaJson(value, filename) { ports.downloadSchema(value, filename); }
+    function omittedRuleStatus(count) { return `${count} omitted ${count === 1 ? "rule" : "rules"}`; }
+    function storedPromotionRules(rules) {
+        return rules.map((rule) => {
+            const { revisionHistory, ...current } = structuredClone(rule);
+            return { ...current,
+                ...(revisionHistory ? { revisionHistory: revisionHistory.map((snapshot) => ({ name: snapshot.name ?? rule.name,
+                        kind: snapshot.kind ?? rule.kind, version: snapshot.version ?? 1, ...(snapshot.enabled !== undefined ? { enabled: snapshot.enabled } : {}),
+                        ...(snapshot.operator !== undefined ? { operator: snapshot.operator } : {}), ...(snapshot.parameters !== undefined ? { parameters: snapshot.parameters } : {}),
+                        ...(snapshot.allowedValues !== undefined ? { allowedValues: structuredClone(snapshot.allowedValues) } : {}),
+                        ...(snapshot.severity !== undefined ? { severity: snapshot.severity } : {}), ...(snapshot.message !== undefined ? { message: snapshot.message } : {}),
+                        ...(snapshot.conditionGroup !== undefined ? { conditionGroup: structuredClone(snapshot.conditionGroup) } : {}) })) } : {}) };
+        });
     }
     function reviewSavedSchemaAdoption(schema, trigger) {
         ports.adoptSavedSchema(structuredClone(schema), trigger);
