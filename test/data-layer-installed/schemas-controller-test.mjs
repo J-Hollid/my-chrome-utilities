@@ -45,7 +45,12 @@ const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "
   "#schema-revision-selector", "#schema-revision-comparison", "#duplicate-schema-revision", "#restore-schema-revision",
   "#add-schema-property", "#schema-property-view-controls", "#schema-property-filter-label", "#schema-property-filter",
   "#schema-property-sort-label", "#schema-property-sort", "#schema-property-result-status", "#schema-property-empty",
-  "#schema-property-empty-message", "#clear-schema-property-filter", "#schema-property-tree"];
+  "#schema-property-empty-message", "#clear-schema-property-filter", "#schema-property-tree",
+  "#schema-property-removal-feedback", "#undo-schema-property-removal", "#schema-property-removal-dialog",
+  "#schema-property-removal-heading", "#schema-property-removal-summary", "#confirm-schema-property-removal",
+  "#cancel-schema-property-removal", "#schema-documentation-removal-dialog", "#schema-documentation-removal-heading",
+  "#schema-documentation-removal-summary", "#confirm-schema-documentation-removal", "#cancel-schema-documentation-removal",
+  "#schema-property-copy-feedback", "#undo-schema-property-copy", "#schema-property-copy-dialog"];
 const elements = new Map(selectors.map((selector) => [selector, element()]));
 elements.set("#side-panel-layered-profile-editor", element()); elements.set("#live-event-query", element());
 const schemaMasterTab = Object.assign(element(), { textContent:"Schemas", dataset:{ schemaSubview:"schema-master" } });
@@ -78,6 +83,33 @@ elements.get("#clear-schema-property-filter").click();
 assert.equal(elements.get("#schema-property-filter").value, "");
 schemaRulesTab.click();
 assert.equal(schemaMasterPanel.hidden, true); assert.equal(schemaRulesPanel.hidden, false);
+uiController.beginDraft();
+uiController.updateDraft({ documentation:{ properties:{ "/title":{ displayName:"Title", description:"Page title" } } } });
+uiController.requestPropertyRemoval("/title");
+assert.equal(elements.get("#schema-property-removal-dialog").open, true);
+assert.match(elements.get("#schema-property-removal-summary").textContent, /Documentation entries: \/title/);
+elements.get("#confirm-schema-property-removal").click();
+assert.equal(uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId).workingDraft.document.properties.title,
+  undefined);
+elements.get("#undo-schema-property-removal").click();
+assert.equal(uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId).workingDraft.document.properties.title.type,
+  "string", "Undo restores the exact property definition");
+uiController.requestDocumentationRemoval("/title");
+elements.get("#confirm-schema-documentation-removal").click();
+const documentationDraft = uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId).workingDraft;
+assert.equal(documentationDraft.document.properties.title.type, "string");
+assert.equal(documentationDraft.documentation.properties, undefined,
+  "documentation-only removal leaves the schema property intact");
+const sourceId = uiController.state().activeSchemaId;
+const destinationId = uiController.schemas().find(({ id }) => id !== sourceId).id;
+uiController.updateDraft({ document:{ type:"object", properties:{ title:{ type:"string" }, checkout:{ type:"boolean" } } } });
+uiController.requestPropertyCopy("/checkout", destinationId);
+assert.equal(elements.get("#schema-property-copy-dialog").open, true);
+uiController.confirmPropertyCopy();
+assert.equal(uiController.schemas().find(({ id }) => id === destinationId).workingDraft.document.properties.checkout.type, "boolean");
+elements.get("#undo-schema-property-copy").click();
+assert.equal(uiController.schemas().find(({ id }) => id === destinationId).workingDraft, undefined,
+  "property-copy undo restores the complete destination schema state");
 uiController.dispose();
 assert.equal([...elements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
   "Schemas removes every editor and revision listener it owns");

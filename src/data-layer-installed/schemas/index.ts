@@ -3,21 +3,30 @@ import {
   discardSchemaWorkingDraft,
   duplicateSchemaRevision,
   filterAndSortSchemaPropertyRows,
+  inspectSchemaPropertyRemoval,
   inspectSchemaRename,
   proposeSchemaWorkingDraftName,
   publishSchemaWorkingDraft,
+  removeSchemaProperty,
   restoreSchemaRevisionDraft,
   schemaPropertyRows,
+  schemaPropertyCopySource,
   restoreSchemaLibrary,
   searchSchemas,
   serializeSchemaLibrary,
   setSchemaDescription as updateSchemaDescription,
+  setPropertyDocumentation,
+  undoSchemaPropertyRemoval,
+  undoSchemaPropertyCopy,
   updateSchemaWorkingDraft,
   validateEvent,
   type SchemaDefinition,
   type SchemaPropertySortOrder,
+  type SchemaPropertyRemoval,
+  type AppliedSchemaPropertyCopy,
   type SchemaWorkingDraft,
 } from "../../utilities/data-layer/schemas.js";
+import { applySchemaPropertyCopy, planSchemaPropertyCopy, type SchemaPropertyCopyPlan } from "../../data-layer-schema-property-copy.js";
 
 export interface SchemasInstalledPorts {
   root: ParentNode;
@@ -82,6 +91,21 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const schemaPropertyEmptyMessage = ownedElement("#schema-property-empty-message", "p");
   const clearSchemaPropertyFilter = ownedElement("#clear-schema-property-filter", "button");
   const schemaPropertyTree = ownedElement("#schema-property-tree", "ul");
+  const schemaPropertyRemovalFeedback = ownedElement("#schema-property-removal-feedback", "output");
+  const undoSchemaPropertyRemovalButton = ownedElement("#undo-schema-property-removal", "button");
+  const schemaPropertyCopyFeedback = ownedElement("#schema-property-copy-feedback", "output");
+  const undoSchemaPropertyCopyButton = ownedElement("#undo-schema-property-copy", "button");
+  const schemaPropertyCopyDialog = ownedElement("#schema-property-copy-dialog", "dialog");
+  const schemaPropertyRemovalDialog = ownedElement("#schema-property-removal-dialog", "dialog");
+  const schemaPropertyRemovalHeading = ownedElement("#schema-property-removal-heading", "h4");
+  const schemaPropertyRemovalSummary = ownedElement("#schema-property-removal-summary", "output");
+  const confirmSchemaPropertyRemovalButton = ownedElement("#confirm-schema-property-removal", "button");
+  const cancelSchemaPropertyRemovalButton = ownedElement("#cancel-schema-property-removal", "button");
+  const schemaDocumentationRemovalDialog = ownedElement("#schema-documentation-removal-dialog", "dialog");
+  const schemaDocumentationRemovalHeading = ownedElement("#schema-documentation-removal-heading", "h4");
+  const schemaDocumentationRemovalSummary = ownedElement("#schema-documentation-removal-summary", "p");
+  const confirmSchemaDocumentationRemoval = ownedElement("#confirm-schema-documentation-removal", "button");
+  const cancelSchemaDocumentationRemoval = ownedElement("#cancel-schema-documentation-removal", "button");
   if (schemaPropertyViewControls && !schemaPropertyViewControls.isConnected) {
     schemaPropertyViewControls.id = "schema-property-view-controls";
     if (schemaPropertyFilterLabel) { schemaPropertyFilterLabel.id = "schema-property-filter-label";
@@ -109,12 +133,45 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   }
   if (schemaPropertyTree && !schemaPropertyTree.isConnected) { schemaPropertyTree.id = "schema-property-tree";
     addSchemaPropertyButton?.after(schemaPropertyTree); }
+  if (schemaPropertyCopyDialog && !schemaPropertyCopyDialog.isConnected) {
+    schemaPropertyCopyDialog.id = "schema-property-copy-dialog"; schemaOwnerDocument?.body.append(schemaPropertyCopyDialog);
+  }
+  if (schemaPropertyRemovalDialog && !schemaPropertyRemovalDialog.isConnected) {
+    schemaPropertyRemovalDialog.id = "schema-property-removal-dialog";
+    if (schemaPropertyRemovalHeading) { schemaPropertyRemovalHeading.id = "schema-property-removal-heading";
+      schemaPropertyRemovalHeading.textContent = "Remove property?"; schemaPropertyRemovalDialog.append(schemaPropertyRemovalHeading); }
+    if (schemaPropertyRemovalSummary) { schemaPropertyRemovalSummary.id = "schema-property-removal-summary";
+      schemaPropertyRemovalDialog.append(schemaPropertyRemovalSummary); }
+    if (confirmSchemaPropertyRemovalButton) { confirmSchemaPropertyRemovalButton.id = "confirm-schema-property-removal";
+      confirmSchemaPropertyRemovalButton.textContent = "Remove property"; schemaPropertyRemovalDialog.append(confirmSchemaPropertyRemovalButton); }
+    if (cancelSchemaPropertyRemovalButton) { cancelSchemaPropertyRemovalButton.id = "cancel-schema-property-removal";
+      cancelSchemaPropertyRemovalButton.textContent = "Cancel"; schemaPropertyRemovalDialog.append(cancelSchemaPropertyRemovalButton); }
+    schemaOwnerDocument?.body.append(schemaPropertyRemovalDialog);
+  }
+  if (schemaDocumentationRemovalDialog && !schemaDocumentationRemovalDialog.isConnected) {
+    schemaDocumentationRemovalDialog.id = "schema-documentation-removal-dialog";
+    if (schemaDocumentationRemovalHeading) { schemaDocumentationRemovalHeading.id = "schema-documentation-removal-heading";
+      schemaDocumentationRemovalHeading.textContent = "Remove property documentation?"; schemaDocumentationRemovalDialog.append(schemaDocumentationRemovalHeading); }
+    if (schemaDocumentationRemovalSummary) schemaDocumentationRemovalDialog.append(schemaDocumentationRemovalSummary);
+    if (confirmSchemaDocumentationRemoval) { confirmSchemaDocumentationRemoval.id = "confirm-schema-documentation-removal";
+      confirmSchemaDocumentationRemoval.textContent = "Remove documentation"; schemaDocumentationRemovalDialog.append(confirmSchemaDocumentationRemoval); }
+    if (cancelSchemaDocumentationRemoval) { cancelSchemaDocumentationRemoval.id = "cancel-schema-documentation-removal";
+      cancelSchemaDocumentationRemoval.textContent = "Cancel"; schemaDocumentationRemovalDialog.append(cancelSchemaDocumentationRemoval); }
+    schemaOwnerDocument?.body.append(schemaDocumentationRemovalDialog);
+  }
   let mounted = false;
   let unsubscribe: (() => void) | undefined;
   const storedSchemaLibrary = ports.storage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
   let schemas = restoreSchemaLibrary(storedSchemaLibrary);
   let activeSchemaId: string | undefined;
   let schemaDraft: SchemaDefinition | undefined;
+  let selectedSchemaPropertyPath = "example";
+  const expandedSchemaPropertyRulePaths = new Set<string>();
+  let pendingSchemaPropertyRemoval: { path:string; trigger?:HTMLButtonElement } | undefined;
+  let lastSchemaPropertyRemoval: SchemaPropertyRemoval | undefined;
+  let lastSchemaPropertyCopy: AppliedSchemaPropertyCopy | undefined;
+  let pendingSchemaPropertyCopy: SchemaPropertyCopyPlan | undefined;
+  let pendingSchemaDocumentationRemoval: { path:string; trigger?:HTMLElement } | undefined;
   const activeIndex = (): number => schemas.findIndex(({ id }) => id === activeSchemaId);
   const active = (): SchemaDefinition => {
     const schema = schemas[activeIndex()];
@@ -235,6 +292,88 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     const subview = (event.currentTarget as HTMLButtonElement).dataset.schemaSubview;
     if (subview) showSchemaSubview(subview);
   };
+  function applySchemaPropertyRemoval(path: string): void {
+    const schema = active();
+    const draft = schema.workingDraft;
+    if (!draft) return;
+    const removal = removeSchemaProperty(draft.document, draft.attachedRules ?? [], path, draft.documentation);
+    lastSchemaPropertyRemoval = removal; selectedSchemaPropertyPath = removal.propertyPath.slice(1).replaceAll("/", ".");
+    expandedSchemaPropertyRulePaths.delete(removal.propertyPath);
+    replaceActive(updateSchemaWorkingDraft(schema, { document:removal.document, attachedRules:removal.attachedRules,
+      ...(removal.documentation !== undefined ? { documentation:removal.documentation } : {}) },
+    `Remove property ${removal.propertyPath} and property-specific constraints`));
+    if (schemaPropertyRemovalFeedback) schemaPropertyRemovalFeedback.textContent = `Removed ${removal.propertyPath} from the working draft. Undo is available.`;
+    if (undoSchemaPropertyRemovalButton) undoSchemaPropertyRemovalButton.hidden = false;
+    persistSchemaLibrary(); renderSchemas();
+  }
+  function requestSchemaPropertyRemoval(path: string, trigger?: HTMLButtonElement): void {
+    const schema = active(); const draft = schema.workingDraft;
+    if (!draft) return;
+    const inspection = inspectSchemaPropertyRemoval(draft.document, draft.attachedRules ?? [], path, draft.documentation);
+    if (!inspection.requiresConfirmation) { applySchemaPropertyRemoval(path); return; }
+    pendingSchemaPropertyRemoval = { path, ...(trigger ? { trigger } : {}) };
+    if (schemaPropertyRemovalSummary) schemaPropertyRemovalSummary.textContent = `${inspection.propertyPath} contains ${inspection.descendants.length} descendants: ${inspection.descendants.join(", ") || "none"}. ${inspection.affectedRuleAttachments.length} affected rule attachments. Documentation entries: ${inspection.affectedDocumentationPaths?.join(", ") || "none"}. No changes occur until confirmation.`;
+    schemaPropertyRemovalDialog?.showModal(); schemaPropertyRemovalHeading?.focus();
+  }
+  function closeSchemaPropertyRemovalDialog(restoreFocus = true): void {
+    const trigger = pendingSchemaPropertyRemoval?.trigger; pendingSchemaPropertyRemoval = undefined;
+    if (schemaPropertyRemovalDialog?.open) schemaPropertyRemovalDialog.close(); if (restoreFocus) trigger?.focus();
+  }
+  const confirmSchemaPropertyRemoval = (): void => { const path = pendingSchemaPropertyRemoval?.path;
+    closeSchemaPropertyRemovalDialog(false); if (path) applySchemaPropertyRemoval(path); };
+  const cancelSchemaPropertyRemoval = (): void => closeSchemaPropertyRemovalDialog();
+  const cancelSchemaPropertyRemovalFromDialog = (event: Event): void => { event.preventDefault(); closeSchemaPropertyRemovalDialog(); };
+  const undoLastSchemaPropertyRemoval = (): void => {
+    if (!lastSchemaPropertyRemoval) return; const schema = active(); const restored = undoSchemaPropertyRemoval(lastSchemaPropertyRemoval);
+    const path = lastSchemaPropertyRemoval.propertyPath; selectedSchemaPropertyPath = path.slice(1).replaceAll("/", ".");
+    expandedSchemaPropertyRulePaths.add(path);
+    replaceActive(updateSchemaWorkingDraft(schema, { document:restored.document, attachedRules:restored.attachedRules,
+      ...(restored.documentation !== undefined ? { documentation:restored.documentation } : {}) }, `Undo property removal ${path}`));
+    if (schemaPropertyRemovalFeedback) schemaPropertyRemovalFeedback.textContent = `Restored ${path} with its prior definition and tree position.`;
+    if (undoSchemaPropertyRemovalButton) undoSchemaPropertyRemovalButton.hidden = true;
+    lastSchemaPropertyRemoval = undefined; persistSchemaLibrary(); renderSchemas();
+  };
+  function requestSchemaDocumentationRemoval(path: string, trigger?: HTMLElement): void {
+    pendingSchemaDocumentationRemoval = { path, ...(trigger ? { trigger } : {}) };
+    if (schemaDocumentationRemovalSummary) schemaDocumentationRemovalSummary.textContent = `${path} documentation will be removed from the working draft. The schema property and validation rules remain unchanged.`;
+    schemaDocumentationRemovalDialog?.showModal(); schemaDocumentationRemovalHeading?.focus();
+  }
+  function closeSchemaDocumentationRemoval(restoreFocus = true): void {
+    const trigger = pendingSchemaDocumentationRemoval?.trigger; pendingSchemaDocumentationRemoval = undefined;
+    if (schemaDocumentationRemovalDialog?.open) schemaDocumentationRemovalDialog.close(); if (restoreFocus) trigger?.focus();
+  }
+  const confirmSchemaDocumentationRemovalAction = (): void => {
+    const path = pendingSchemaDocumentationRemoval?.path; if (!path) return; const schema = active(); const draft = schema.workingDraft;
+    closeSchemaDocumentationRemoval(false); if (!draft) return;
+    const documentation = setPropertyDocumentation(draft.documentation ?? {}, path, { displayName:"", description:"" });
+    replaceActive(updateSchemaWorkingDraft(schema, { documentation }, `Remove property documentation ${path}`));
+    persistSchemaLibrary(); renderSchemas();
+  };
+  const cancelSchemaDocumentationRemovalAction = (): void => closeSchemaDocumentationRemoval();
+  const cancelSchemaDocumentationRemovalFromDialog = (event: Event): void => { event.preventDefault(); closeSchemaDocumentationRemoval(); };
+  function openSchemaPropertyCopyReview(path: string, destinationId: string): void {
+    const sourceSchema = active(); const destination = schemas.find(({ id }) => id === destinationId);
+    if (!destination) throw new Error(`Unknown destination schema ${destinationId}`);
+    const source = schemaPropertyCopySource(sourceSchema, { surface:sourceSchema.workingDraft ? "working draft" : "current" });
+    pendingSchemaPropertyCopy = planSchemaPropertyCopy({ source, destination, selectedPath:path, schemas, reusableRuleIds:[] });
+    if (!pendingSchemaPropertyCopy.ready) throw new Error("Resolve property-copy conflicts before confirmation");
+    schemaPropertyCopyDialog?.showModal();
+  }
+  const confirmSchemaPropertyCopy = (): void => {
+    if (!pendingSchemaPropertyCopy) return; const transaction = applySchemaPropertyCopy(pendingSchemaPropertyCopy);
+    schemas = schemas.map((schema) => schema.id === transaction.schema.id ? transaction.schema : schema);
+    lastSchemaPropertyCopy = transaction; pendingSchemaPropertyCopy = undefined; schemaPropertyCopyDialog?.close();
+    if (schemaPropertyCopyFeedback) schemaPropertyCopyFeedback.textContent = `Copied ${transaction.plan.selectedPath} from ${transaction.plan.source.label} to ${transaction.schema.name}. Published revisions are unchanged.`;
+    if (undoSchemaPropertyCopyButton) undoSchemaPropertyCopyButton.hidden = false;
+    persistSchemaLibrary(); renderSchemas();
+  };
+  const undoLastSchemaPropertyCopy = (): void => {
+    if (!lastSchemaPropertyCopy) return; const restored = undoSchemaPropertyCopy(lastSchemaPropertyCopy).schema;
+    schemas = schemas.map((schema) => schema.id === restored.id ? restored : schema);
+    if (schemaPropertyCopyFeedback) schemaPropertyCopyFeedback.textContent = `Undid property copy to ${restored.name}; the pre-copy working draft was restored.`;
+    if (undoSchemaPropertyCopyButton) undoSchemaPropertyCopyButton.hidden = true;
+    lastSchemaPropertyCopy = undefined; persistSchemaLibrary(); renderSchemas();
+  };
   return {
     mount(): void {
       if (mounted) return; mounted = true;
@@ -259,6 +398,14 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       schemaPropertySort?.addEventListener("change", renderSchemaPropertyView);
       clearSchemaPropertyFilter?.addEventListener("click", clearSchemaPropertyViewFilter);
       for (const tab of schemaSubviews) tab.addEventListener("click", activateSchemaSubview);
+      confirmSchemaPropertyRemovalButton?.addEventListener("click", confirmSchemaPropertyRemoval);
+      cancelSchemaPropertyRemovalButton?.addEventListener("click", cancelSchemaPropertyRemoval);
+      schemaPropertyRemovalDialog?.addEventListener("cancel", cancelSchemaPropertyRemovalFromDialog);
+      undoSchemaPropertyRemovalButton?.addEventListener("click", undoLastSchemaPropertyRemoval);
+      confirmSchemaDocumentationRemoval?.addEventListener("click", confirmSchemaDocumentationRemovalAction);
+      cancelSchemaDocumentationRemoval?.addEventListener("click", cancelSchemaDocumentationRemovalAction);
+      schemaDocumentationRemovalDialog?.addEventListener("cancel", cancelSchemaDocumentationRemovalFromDialog);
+      undoSchemaPropertyCopyButton?.addEventListener("click", undoLastSchemaPropertyCopy);
       unsubscribe = ports.subscribe(renderSchemas);
       renderSchemas();
     },
@@ -285,6 +432,16 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       schemaPropertySort?.removeEventListener("change", renderSchemaPropertyView);
       clearSchemaPropertyFilter?.removeEventListener("click", clearSchemaPropertyViewFilter);
       for (const tab of schemaSubviews) tab.removeEventListener("click", activateSchemaSubview);
+      confirmSchemaPropertyRemovalButton?.removeEventListener("click", confirmSchemaPropertyRemoval);
+      cancelSchemaPropertyRemovalButton?.removeEventListener("click", cancelSchemaPropertyRemoval);
+      schemaPropertyRemovalDialog?.removeEventListener("cancel", cancelSchemaPropertyRemovalFromDialog);
+      undoSchemaPropertyRemovalButton?.removeEventListener("click", undoLastSchemaPropertyRemoval);
+      confirmSchemaDocumentationRemoval?.removeEventListener("click", confirmSchemaDocumentationRemovalAction);
+      cancelSchemaDocumentationRemoval?.removeEventListener("click", cancelSchemaDocumentationRemovalAction);
+      schemaDocumentationRemovalDialog?.removeEventListener("cancel", cancelSchemaDocumentationRemovalFromDialog);
+      undoSchemaPropertyCopyButton?.removeEventListener("click", undoLastSchemaPropertyCopy);
+      pendingSchemaPropertyRemoval = undefined; pendingSchemaDocumentationRemoval = undefined; lastSchemaPropertyRemoval = undefined;
+      pendingSchemaPropertyCopy = undefined; lastSchemaPropertyCopy = undefined;
       unsubscribe?.(); unsubscribe = undefined;
       schemaList?.replaceChildren();
     },
@@ -303,6 +460,10 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     replace(next: readonly SchemaDefinition[]): void { schemas = structuredClone([...next]); if (!schemas.some(({ id }) => id === activeSchemaId)) { activeSchemaId = undefined; schemaDraft = undefined; } persistSchemaLibrary(); renderSchemas(); },
     validate:(event: Parameters<typeof validateEvent>[0]) => validateEvent(event, schemas),
     runGuidedValidation:() => ports.runGuidedValidation(activeSchemaId),
+    requestPropertyRemoval:requestSchemaPropertyRemoval,
+    requestDocumentationRemoval:requestSchemaDocumentationRemoval,
+    requestPropertyCopy:openSchemaPropertyCopyReview,
+    confirmPropertyCopy:confirmSchemaPropertyCopy,
     schemas:(): readonly SchemaDefinition[] => structuredClone(schemas),
     state:() => ({ ...(activeSchemaId ? { activeSchemaId } : {}), draftDirty:Boolean(activeSchemaId && active().workingDraft),
       schemaCount:schemas.length, mounted }),

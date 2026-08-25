@@ -74,4 +74,12 @@ export const reviewedControllerReplacements = [
   { identity:"listeners:1:schemaPropertySort.addEventListener@625:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"schemaPropertySort?.addEventListener" },
   { identity:"listeners:2:clearSchemaPropertyFilter.addEventListener@626:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"clearSchemaPropertyFilter?.addEventListener" },
   { identity:"listeners:192:tab.addEventListener@5737:33", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"tab.addEventListener" },
+  { identity:"listeners:82:confirmSchemaDocumentationRemoval.addEventListener@3346:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"confirmSchemaDocumentationRemoval?.addEventListener" },
+  { identity:"listeners:83:cancelSchemaDocumentationRemoval.addEventListener@3353:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"cancelSchemaDocumentationRemoval?.addEventListener" },
+  { identity:"listeners:84:schemaDocumentationRemovalDialog.addEventListener@3354:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"schemaDocumentationRemovalDialog?.addEventListener" },
+  { identity:"listeners:85:confirmSchemaPropertyRemovalButton.addEventListener@3401:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"confirmSchemaPropertyRemovalButton?.addEventListener" },
+  { identity:"listeners:86:cancelSchemaPropertyRemovalButton.addEventListener@3406:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"cancelSchemaPropertyRemovalButton?.addEventListener" },
+  { identity:"listeners:87:schemaPropertyRemovalDialog.addEventListener@3407:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"schemaPropertyRemovalDialog?.addEventListener" },
+  { identity:"listeners:88:undoSchemaPropertyRemovalButton.addEventListener@3408:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"undoSchemaPropertyRemovalButton?.addEventListener" },
+  { identity:"listeners:81:undoSchemaPropertyCopyButton.addEventListener@3325:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"undoSchemaPropertyCopyButton?.addEventListener" },
 ];
