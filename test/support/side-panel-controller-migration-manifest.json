@@ -1697,7 +1697,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaSearch:23"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaSearch:31"
       }
     },
     {
@@ -1710,7 +1710,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaCategoryFilter:24"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaCategoryFilter:32"
       }
     },
     {
@@ -1770,7 +1770,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaEditor:36"
       }
     },
     {
@@ -1782,7 +1783,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaDetail:37"
       }
     },
     {
@@ -1794,7 +1796,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaDetailEmpty:38"
       }
     },
     {
@@ -1806,7 +1809,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaEditorName:39"
       }
     },
     {
@@ -1818,7 +1822,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaEditorNameAssistance:40"
       }
     },
     {
@@ -1830,7 +1835,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaEditorDescription:41"
       }
     },
     {
@@ -1842,7 +1848,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaDescriptionButton:42"
       }
     },
     {
@@ -1854,7 +1861,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaDescriptionOrigin:43"
       }
     },
     {
@@ -1866,7 +1874,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaEditorTarget:44"
       }
     },
     {
@@ -1878,7 +1887,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaButton:45"
       }
     },
     {
@@ -1890,7 +1900,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaReason:46"
       }
     },
     {
@@ -1902,7 +1913,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRevisionReview:47"
       }
     },
     {
@@ -1914,7 +1926,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRevisionReviewSummary:48"
       }
     },
     {
@@ -1926,7 +1939,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::confirmSchemaRevisionButton:49"
       }
     },
     {
@@ -1938,7 +1952,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::cancelSchemaRevisionButton:50"
       }
     },
     {
@@ -1950,7 +1965,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaCloseReview:51"
       }
     },
     {
@@ -1962,7 +1978,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaCloseReviewSummary:52"
       }
     },
     {
@@ -1974,7 +1991,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::discardSchemaDraftButton:53"
       }
     },
     {
@@ -1986,7 +2004,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::keepEditingSchemaButton:54"
       }
     },
     {
@@ -1998,7 +2017,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::closeSchemaEditorButton:55"
       }
     },
     {
@@ -2010,7 +2030,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::saveAndCloseSchemaButton:56"
       }
     },
     {
@@ -2022,7 +2043,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaCloseReviewButton:57"
       }
     },
     {
@@ -2034,7 +2056,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::discardWorkingSchemaDraftButton:58"
       }
     },
     {
@@ -2046,7 +2069,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRevisionSelector:59"
       }
     },
     {
@@ -2058,7 +2082,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRevisionComparison:60"
       }
     },
     {
@@ -2070,7 +2095,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::duplicateSchemaRevisionButton:61"
       }
     },
     {
@@ -2082,7 +2108,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::restoreSchemaRevisionButton:62"
       }
     },
     {
@@ -2094,7 +2121,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::addSchemaPropertyButton:63"
       }
     },
     {
@@ -2106,7 +2134,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyViewControls:68"
       }
     },
     {
@@ -2118,7 +2147,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyFilterLabel:69"
       }
     },
     {
@@ -2130,7 +2160,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyFilter:70"
       }
     },
     {
@@ -2142,7 +2173,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertySortLabel:71"
       }
     },
     {
@@ -2154,7 +2186,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertySort:72"
       }
     },
     {
@@ -2166,7 +2199,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyResultStatus:73"
       }
     },
     {
@@ -2178,7 +2212,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyEmpty:74"
       }
     },
     {
@@ -2190,7 +2225,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyEmptyMessage:75"
       }
     },
     {
@@ -2202,7 +2238,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::clearSchemaPropertyFilter:76"
       }
     },
     {
@@ -2214,7 +2251,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyTree:77"
       }
     },
     {
@@ -4147,7 +4185,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaCount:25"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaCount:33"
       }
     },
     {
@@ -4160,7 +4198,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaList:26"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaList:34"
       }
     },
     {
@@ -4197,7 +4235,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaResult:27"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaResult:35"
       }
     },
     {
@@ -4754,7 +4792,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::storedSchemaLibrary:30"
+        "target": "src/data-layer-installed/schemas/index.ts::storedSchemaLibrary:107"
       }
     },
     {
@@ -4767,7 +4805,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemas:31"
+        "target": "src/data-layer-installed/schemas/index.ts::schemas:108"
       }
     },
     {
@@ -4879,7 +4917,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::schemaDraft:33"
+        "target": "src/data-layer-installed/schemas/index.ts::schemaDraft:110"
       }
     },
     {
@@ -6463,7 +6501,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::renderSchemas:49"
+        "target": "src/data-layer-installed/schemas/index.ts::renderSchemas:168"
       }
     },
     {
@@ -6567,7 +6605,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::renderSchemaDraft:143"
       }
     },
     {
@@ -6672,7 +6711,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/schemas/index.ts::persistSchemaLibrary:40"
+        "target": "src/data-layer-installed/schemas/index.ts::persistSchemaLibrary:117"
       }
     },
     {
@@ -6958,7 +6997,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::persistSchemaEditorDraft:186"
       }
     },
     {
@@ -8777,11 +8817,12 @@
       "frozen": {
         "expression": "schemaPropertyFilter.addEventListener",
         "line": 624,
-        "column": 1,
-        "invocation": "schemaPropertyFilter.addEventListener(\"input\", () => renderSchemaDraft())"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertyFilter?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -8790,11 +8831,12 @@
       "frozen": {
         "expression": "schemaPropertySort.addEventListener",
         "line": 625,
-        "column": 1,
-        "invocation": "schemaPropertySort.addEventListener(\"change\", () => renderSchemaDraft())"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaPropertySort?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -8803,11 +8845,12 @@
       "frozen": {
         "expression": "clearSchemaPropertyFilter.addEventListener",
         "line": 626,
-        "column": 1,
-        "invocation": "clearSchemaPropertyFilter.addEventListener(\"click\", () => {\n  schemaPropertyFilter.value = \"\";\n  renderSchemaDraft();\n  schemaPropertyFilter.focus({ preventScroll:true });\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::clearSchemaPropertyFilter?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11308,11 +11351,12 @@
       "frozen": {
         "expression": "schemaEditorName?.addEventListener",
         "line": 5738,
-        "column": 1,
-        "invocation": "schemaEditorName?.addEventListener(\"input\", () => {\n  if (!schemaDraft) return;\n  schemaDraft = { ...schemaDraft, name:schemaEditorName.value };\n  if(compactCanonicalEditor){const adapter=compactCanonicalEditor;if(compactCanonicalProjectionQueueUnavailable(adapter)){schemaDraft=compactCanonicalProjectionRequest?.adapter===adapter?structuredClone(compactCanonicalProjectionRequest.projection):compactCanonicalProjection(adapter);compactCanonicalCommandFeedback=\"Wait for the current durable schema save or resolve its Retry/Reject recovery before renaming.\";renderSchemaDraft();renderCompactCanonicalContext();return;}const projection=structuredClone(schemaDraft);renderSchemaDraft();void beginCompactCanonicalProjectionPersistence(adapter,projection,\"schema name\");return;}\n  persistSchemaEditorDraft(); renderSchemaDraft();\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaEditorName?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11321,11 +11365,12 @@
       "frozen": {
         "expression": "saveSchemaDescriptionButton?.addEventListener",
         "line": 5744,
-        "column": 1,
-        "invocation": "saveSchemaDescriptionButton?.addEventListener(\"click\", () => {\n  if (!schemaDraft || !schemaEditorDescription) return;\n  schemaDraft = { ...schemaDraft, documentation:setSchemaDescription(schemaDraft.documentation ?? {}, schemaEditorDescription.value) };\n  persistSchemaEditorDraft(\"Update schema description\"); renderSchemaDraft();\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaDescriptionButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11334,11 +11379,12 @@
       "frozen": {
         "expression": "schemaEditorTarget?.addEventListener",
         "line": 5749,
-        "column": 1,
-        "invocation": "schemaEditorTarget?.addEventListener(\"input\", () => {\n  if (!schemaDraft) return;\n  const target = schemaEditorTarget.value === \"raw input\" ? \"raw input\" : \"payload\";\n  schemaDraft = {\n    ...schemaDraft,\n    assignments:schemaDraft.assignments.length\n      ? schemaDraft.assignments.map((assignment) => ({ ...assignment, target }))\n      : [{ sourceId:\"\", eventName:\"\", target }],\n  };\n  persistSchemaEditorDraft(\"Change validation target\"); renderSchemaDraft();\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaEditorTarget?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11399,11 +11445,12 @@
       "frozen": {
         "expression": "saveSchemaButton?.addEventListener",
         "line": 5764,
-        "column": 1,
-        "invocation": "saveSchemaButton?.addEventListener(\"click\", () => {\n  if (!schemaDraft) return;\n  if(compactCanonicalEditor&&compactCanonicalSemanticUnresolved()){compactCanonicalCommandFeedback=\"Publish is waiting for the current canonical edit to commit. Retry after the Saved Draft is ready, or resolve the pending command first.\";if(schemaResult)schemaResult.textContent=compactCanonicalCommandFeedback;renderCompactCanonicalContext();return;}\n  if(saveSchemaButton.disabled)return;\n  const draft = schemaDraft;\n  if (schemaRevisionReview) {\n    const existing = schemas.find((schema) => schema.id === draft.id);\n    if (existing&&!compactCanonicalEditor) persistSchemaEditorDraft();\n    const persisted = schemas.find((schema) => schema.id === draft.id);\n    const pendingChangeSummary = persisted?.workingDraft?.pendingChanges\n      .filter((change) => !change.startsWith(\"Rename schema from \"))\n      .join(\"; \") ?? \"\";\n    const proposedName = persisted?.workingDraft?.name ?? draft.name;\n    const renameSummary = existing && proposedName !== existing.name ? ` Rename schema from ${existing.name} to ${proposedName}.` : \"\";\n    if (schemaRevisionReviewSummary) schemaRevisionReviewSummary.textContent = existing?.published === false\n      ? `${draft.name} draft will be published as current revision 1.`\n      : existing\n        ? `${existing.name} working draft will be compared with current revision ${existing.version}; confirmation publishes revision ${existing.version + 1}.${renameSummary}${pendingChangeSummary ? ` Pending changes: ${pendingChangeSummary}.` : \"\"}`\n        : `${draft.name} will be published as current revision 1.`;\n    if (confirmSchemaRevisionButton) confirmSchemaRevisionButton.textContent = existing?.published === false || !existing ? \"Publish revision 1\" : `Publish revision ${existing.version + 1}`;\n    schemaRevisionReview.hidden = false; schemaRevisionReview.showModal(); return;\n  }\n  confirmSchemaRevisionButton?.click();\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11412,11 +11459,12 @@
       "frozen": {
         "expression": "confirmSchemaRevisionButton?.addEventListener",
         "line": 5788,
-        "column": 1,
-        "invocation": "confirmSchemaRevisionButton?.addEventListener(\"click\", () => {\n  if(compactCanonicalEditor&&compactCanonicalSemanticUnresolved()){compactCanonicalCommandFeedback=\"Publish was not started because a canonical edit is still saving or awaiting Retry or Reject.\";if(schemaResult)schemaResult.textContent=compactCanonicalCommandFeedback;renderCompactCanonicalContext();return;}\n  if (pendingSchemaRestoration) {\n    const current = schemas.find((schema) => schema.id === pendingSchemaRestoration?.schemaId);\n    if (!current) return;\n    const restored = restoreSchemaRevisionDraft(current, pendingSchemaRestoration.version);\n    schemas = schemas.map((schema) => schema.id === restored.id ? restored : schema);\n    schemaDraft = schemaEditorDraft(restored); pendingSchemaRestoration = undefined;\n    persistSchemaLibrary(); renderSchemas(); renderSchemaDraft();\n    if (schemaRevisionReview?.open) schemaRevisionReview.close(); if (schemaRevisionReview) schemaRevisionReview.hidden = true;\n    if (schemaResult) schemaResult.textContent = `Created ${restored.name} working draft from revision ${restored.workingDraft?.sourceVersion}; current revision ${restored.version} is unchanged.`;\n    return;\n  }\n  if (!schemaDraft) return;\n  const presentedDraft = schemaDraft;\n  const existing = schemas.find((schema) => schema.id === presentedDraft.id);\n  const draft = compactCanonicalEditor&&existing?schemaEditorDraft(existing):presentedDraft;\n  const completeAssignments = draft.assignments.filter(({ sourceId, eventName }) => Boolean(sourceId.trim() && eventName.trim()));\n  const candidate = { ...draft, id:existing?.id ?? createSchema(draft.name, 1, draft.document).id };\n  const candidates = [...schemas.filter((schema) => schema.id !== candidate.id), candidate];\n  const inheritanceError = schemaInheritanceError(candidate, candidates) ?? schemaInheritanceConflict(candidate, candidates);\n  if (inheritanceError) { if (schemaResult) schemaResult.textContent = inheritanceError; return; }\n  const saved = existing\n    ? publishSchemaWorkingDraft(updateSchemaWorkingDraft(existing, compactCanonicalEditor?{\n      assignments:completeAssignments,\n    }:{\n      name:draft.name.trim(),\n      document:draft.document,\n      assignments:completeAssignments,\n      attachedRules:draft.attachedRules,\n      parentSchemaId:draft.parentSchemaId,\n      inheritedRuleOverrides:draft.inheritedRuleOverrides,\n      documentation:draft.documentation,\n    }))\n    : { ...draft, id:`schema:${draft.name.toLowerCase().replace(/[^a-z0-9]+/g, \"-\")}:1`, published:true, assignments:completeAssignments };\n  schemas = existing ? schemas.map((schema) => schema.id === existing.id ? saved : schema) : [...schemas, saved];\n  for (const rule of saved.attachedRules ?? []) {\n    if (!rule.id.startsWith(\"rule:\") || reusableSchemaRules.some(({ id }) => id === rule.id)) continue;\n    reusableSchemaRules = [...reusableSchemaRules, { id:rule.id, name:rule.name ?? rule.id, kind:rule.operator ?? \"required\", version:rule.version, enabled:rule.enabled !== false, ...(rule.operator ? { operator:rule.operator } : {}), ...(rule.parameters ? { parameters:rule.parameters } : {}), ...(rule.severity ? { severity:rule.severity } : {}), ...(rule.message ? { message:rule.message } : {}), attachments:[saved.id] }];\n  }\n  persistSchemaLibrary(); dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));\n  const refreshedEventCount = refreshCurrentLiveAfterSchemaPublication();\n  schemaDraft = undefined; renderSchemaDraft(); renderSchemas(); renderSchemaWorkflowRows();\n  if (schemaResult) schemaResult.textContent = `Published ${saved.name} revision ${saved.version}. Revalidated ${refreshedEventCount} current Live ${refreshedEventCount === 1 ? \"event\" : \"events\"}.`;\n  if (schemaRevisionReview?.open) schemaRevisionReview.close(); if (schemaRevisionReview) schemaRevisionReview.hidden = true;\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::confirmSchemaRevisionButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11425,11 +11473,12 @@
       "frozen": {
         "expression": "cancelSchemaRevisionButton?.addEventListener",
         "line": 5834,
-        "column": 1,
-        "invocation": "cancelSchemaRevisionButton?.addEventListener(\"click\", () => { pendingSchemaRestoration = undefined; if (schemaRevisionReview?.open) schemaRevisionReview.close(); if (schemaRevisionReview) schemaRevisionReview.hidden = true; })"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::cancelSchemaRevisionButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11438,11 +11487,12 @@
       "frozen": {
         "expression": "schemaRevisionSelector?.addEventListener",
         "line": 5835,
-        "column": 1,
-        "invocation": "schemaRevisionSelector?.addEventListener(\"change\", () => {\n  if (!schemaDraft || !schemaRevisionComparison) return;\n  const current = schemas.find((schema) => schema.id === schemaDraft?.id);\n  const version = Number(schemaRevisionSelector.value);\n  const historical = current && schemaRevision(current, version);\n  schemaRevisionComparison.textContent = historical ? `Revision ${version} compared with current revision ${current.version}. ${Object.keys(historical.document.properties ?? {}).length} historical properties; ${Object.keys(current.document.properties ?? {}).length} current properties.` : \"Historical revision unavailable.\";\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::schemaRevisionSelector?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11451,11 +11501,12 @@
       "frozen": {
         "expression": "duplicateSchemaRevisionButton?.addEventListener",
         "line": 5842,
-        "column": 1,
-        "invocation": "duplicateSchemaRevisionButton?.addEventListener(\"click\", () => {\n  if (!schemaDraft) return;\n  const current = schemas.find((schema) => schema.id === schemaDraft?.id); const version = Number(schemaRevisionSelector?.value);\n  if (!current || !version) return;\n  const duplicate = duplicateSchemaRevision(current, version, schemas); schemas = [...schemas, duplicate]; schemaDraft = schemaEditorDraft(duplicate);\n  persistSchemaLibrary(); renderSchemas(); renderSchemaDraft(); schemaEditorName?.focus({ preventScroll:true });\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::duplicateSchemaRevisionButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11464,11 +11515,12 @@
       "frozen": {
         "expression": "restoreSchemaRevisionButton?.addEventListener",
         "line": 5849,
-        "column": 1,
-        "invocation": "restoreSchemaRevisionButton?.addEventListener(\"click\", () => {\n  if (!schemaDraft) return;\n  const current = schemas.find((schema) => schema.id === schemaDraft?.id); const version = Number(schemaRevisionSelector?.value);\n  if (!current || !version) return;\n  pendingSchemaRestoration = { schemaId:current.id, version };\n  if (schemaRevisionReviewSummary) schemaRevisionReviewSummary.textContent = `${current.name} revision ${version} will replace ${current.workingDraft?.pendingChanges.length ?? 0} pending draft changes and create a working draft. Current revision ${current.version} remains active; publication will create revision ${current.version + 1}.`;\n  if (confirmSchemaRevisionButton) confirmSchemaRevisionButton.textContent = `Restore revision ${version} to working draft`;\n  if (schemaRevisionReview) { schemaRevisionReview.hidden = false; schemaRevisionReview.showModal(); }\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::restoreSchemaRevisionButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11477,11 +11529,12 @@
       "frozen": {
         "expression": "discardSchemaDraftButton?.addEventListener",
         "line": 5858,
-        "column": 1,
-        "invocation": "discardSchemaDraftButton?.addEventListener(\"click\", () => { if(compactCanonicalEditor)closeCompactCanonicalEditor();else{schemaDraft = undefined;renderSchemaDraft();} if (schemaCloseReview?.open) schemaCloseReview.close(); if (schemaCloseReview) schemaCloseReview.hidden = true; })"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::discardSchemaDraftButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11490,11 +11543,12 @@
       "frozen": {
         "expression": "discardWorkingSchemaDraftButton?.addEventListener",
         "line": 5859,
-        "column": 1,
-        "invocation": "discardWorkingSchemaDraftButton?.addEventListener(\"click\", () => {\n  if (!schemaDraft) return;\n  const stored = schemas.find((schema) => schema.id === schemaDraft?.id);\n  if (!stored) return;\n  schemas = stored.published === false ? schemas.filter((schema) => schema.id !== stored.id) : schemas.map((schema) => schema.id === stored.id ? discardSchemaWorkingDraft(stored) : schema);\n  if(compactCanonicalEditor)closeCompactCanonicalEditor();else schemaDraft = undefined; persistSchemaLibrary(); renderSchemaDraft(); renderSchemas(); renderSchemaWorkflowRows();\n  if (schemaResult) schemaResult.textContent = `Discarded ${stored.name} working draft; revision ${stored.version} remains current.`;\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::discardWorkingSchemaDraftButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11503,11 +11557,12 @@
       "frozen": {
         "expression": "keepEditingSchemaButton?.addEventListener",
         "line": 5867,
-        "column": 1,
-        "invocation": "keepEditingSchemaButton?.addEventListener(\"click\", () => { if (schemaCloseReview?.open) schemaCloseReview.close(); if (schemaCloseReview) schemaCloseReview.hidden = true; schemaEditorName?.focus({ preventScroll:true }); })"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::keepEditingSchemaButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11516,11 +11571,12 @@
       "frozen": {
         "expression": "closeSchemaEditorButton?.addEventListener",
         "line": 5868,
-        "column": 1,
-        "invocation": "closeSchemaEditorButton?.addEventListener(\"click\", () => { if (!schemaDraft) return; if(compactCanonicalEditor)closeCompactCanonicalEditor();else{schemaDraft = undefined;renderSchemaDraft();} renderSchemas(); if (schemaResult) schemaResult.textContent = \"Working draft retained without publishing.\"; })"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::closeSchemaEditorButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11529,11 +11585,12 @@
       "frozen": {
         "expression": "saveAndCloseSchemaButton?.addEventListener",
         "line": 5869,
-        "column": 1,
-        "invocation": "saveAndCloseSchemaButton?.addEventListener(\"click\", () => { saveSchemaButton?.click(); })"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::saveAndCloseSchemaButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11542,11 +11599,12 @@
       "frozen": {
         "expression": "saveSchemaCloseReviewButton?.addEventListener",
         "line": 5870,
-        "column": 1,
-        "invocation": "saveSchemaCloseReviewButton?.addEventListener(\"click\", () => { if (schemaCloseReview?.open) schemaCloseReview.close(); if (schemaCloseReview) schemaCloseReview.hidden = true; saveSchemaButton?.click(); })"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/schemas/index.ts::saveSchemaCloseReviewButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
