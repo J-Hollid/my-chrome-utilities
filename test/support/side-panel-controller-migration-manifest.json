@@ -4471,8 +4471,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::templates",
-        "reviewed": true
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplates:44"
       }
     },
     {
@@ -4485,8 +4484,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::editor",
-        "reviewed": true
+        "target": "src/data-layer-installed/event-library/index.ts::propertyEditorState:46"
       }
     },
     {
@@ -4546,7 +4544,8 @@
         "column": 5
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::pendingTemplateRename:47"
       }
     },
     {
@@ -4558,7 +4557,8 @@
         "column": 5
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::pendingEventLibraryImport:48"
       }
     },
     {
@@ -4570,7 +4570,8 @@
         "column": 5
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::replaceEventLibraryArmed:50"
       }
     },
     {
@@ -4582,7 +4583,8 @@
         "column": 5
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::pendingEventLibraryDeletion:49"
       }
     },
     {
@@ -7761,7 +7763,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::persistEventTemplateLibrary:52"
       }
     },
     {
@@ -7787,7 +7790,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::reviewEventLibraryImport:62"
       }
     },
     {
@@ -7800,7 +7804,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::commitEventLibraryImport:65"
       }
     },
     {
@@ -7813,7 +7818,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::requestEventTemplateDeletion:73"
       }
     },
     {
@@ -7839,7 +7845,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::commitEventLibraryDeletion:76"
       }
     },
     {
