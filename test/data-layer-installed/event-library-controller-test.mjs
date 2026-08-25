@@ -133,7 +133,14 @@ const editorController = createEventLibraryInstalledController({
   push:async (draft) => { editorPush = draft.name; }, changed() {}, createId:() => "template:copy", ...noOpTransfer,
   backToCapturedEvent:() => { returned += 1; },
 });
-editorController.mount(); editorController.beginDraft("template:1"); await new Promise((resolve) => setTimeout(resolve, 0));
+editorController.mount(); editorController.beginNew();
+editorElements.get("#event-template-source").value = "gtm";
+editorElements.get("#event-template-source").selectedOptions = [{ textContent:"Google Tag Manager" }];
+editorElements.get("#event-template-source").dispatch("input");
+assert.equal(editorController.state().editor.template.sourceId, "gtm");
+assert.equal(editorController.state().editor.template.sourceName, "Google Tag Manager",
+  "Event Library source input updates the new draft through the exact installed event type");
+editorController.beginDraft("template:1"); await new Promise((resolve) => setTimeout(resolve, 0));
 assert.equal(editorController.state().pushPathReadiness.status, "ready", "Event Library owns selected-page push readiness");
 assert.equal(editorElements.get("#push-template-draft").disabled, false);
 editorElements.get("#event-template-name").value = "Checkout"; editorElements.get("#event-template-name").dispatch("input");

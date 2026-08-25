@@ -17,6 +17,7 @@ const controller = createSchemasInstalledController({
   relationshipTree:()=>({ projectId:"no-project", nodes:[] }), openProjectLibrary() {}, openContributor() {},
   openContributorInStudio() {}, adoptSavedSchema() {}, renderSchemaSpecification() {}, reportMissingSchemaEvent() {},
   scheduleFrame:(callback)=>callback(), restoreGuidedCapture() {}, mountLayeredProfileEditor:() => undefined,
+  showSchemasView() {},
   canonicalConceptSuggestions:() => [],
   activeProjectId:()=>undefined, ensureProjectSchemaContributors:async()=>({ name:"" }),
 });
@@ -42,7 +43,7 @@ function element() {
     removeEventListener(type, listener) { if (listeners.get(type) === listener) listeners.delete(type); },
     dispatch(type, event = {}) { listeners.get(type)?.({ preventDefault() {}, target:this, currentTarget:this, ...event }); },
     click() { this.onclick?.(); this.dispatch("click"); },
-    showModal() { this.open = true; }, close() { this.open = false; }, focus() { this.focused = true; },
+    showModal() { this.open = true; }, close() { this.open = false; }, focus(options) { this.focused = true; this.focusOptions = options; },
     setAttribute(name, value) { this[name] = value; }, removeAttribute(name) { delete this[name]; },
     getAttribute(name) { return this[name] ?? null; }, replaceChildren(...children) { this.children = children; },
     append(...children) { for (const child of children) if (child && typeof child === "object") { child.isConnected = true; child.parentElement = this; } this.children.push(...children); },
@@ -133,14 +134,15 @@ let closeSpecification;
 const restoredGuidedCaptures = [];
 let canonicalSettlementMode = "resolve", releaseCanonicalSettlement;
 let layeredProfileMounts = 0, layeredProfileDisposals = 0;
-let liveRevalidations = 0, continuationPreparation, continuationCommit;
+let liveRevalidations = 0, continuationPreparation, continuationCommit, continuationFailure;
 let canonicalTableMounts = 0, canonicalTableRenders = 0, canonicalTableOptions;
+let schemaStorageWrites = 0;
 const uiRoot = { ownerDocument:fakeDocument,
   querySelector:(selector) => elements.get(selector) ?? fakeDocument.body.querySelector(selector) ?? null,
   querySelectorAll:(selector) => selector.includes("role=tab") ? [schemaMasterTab, schemaRulesTab] : [schemaMasterPanel, schemaRulesPanel] };
 const uiController = createSchemasInstalledController({
   root:uiRoot,
-  storage:{ getItem:(key) => uiValues.get(key) ?? null, setItem:(key, value) => uiValues.set(key, value), removeItem:(key) => uiValues.delete(key) },
+  storage:{ getItem:(key) => uiValues.get(key) ?? null, setItem:(key, value) => { if (key === "my-chrome-utilities.schema-library.v1") schemaStorageWrites += 1; uiValues.set(key, value); }, removeItem:(key) => uiValues.delete(key) },
   relationshipViewStorage:{ getItem:(key) => uiValues.get(`view:${key}`) ?? null, setItem:(key, value) => uiValues.set(`view:${key}`, value) },
   changed() {}, subscribe:() => () => {},
   canonicalConceptSuggestions:() => ["Checkout concept"],
@@ -166,6 +168,7 @@ const uiController = createSchemasInstalledController({
     relationshipActions.push(`build:${candidate.id}:${surface}`); closeSpecification = close;
   },
   reportMissingSchemaEvent:(id) => relationshipActions.push(`missing:${id}`), scheduleFrame:(callback)=>callback(),
+  showSchemasView:() => relationshipActions.push("view:Schemas"),
   restoreGuidedCapture:(eventId, propertyPath) => restoredGuidedCaptures.push([eventId, propertyPath]),
   mountLayeredProfileEditor:() => { layeredProfileMounts += 1; return { dispose:() => { layeredProfileDisposals += 1; } }; },
   activeProjectId:()=>"project:one", ensureProjectSchemaContributors:()=>deferHydration
@@ -173,9 +176,12 @@ const uiController = createSchemasInstalledController({
   settleCanonical:() => canonicalSettlementMode === "reject" ? Promise.reject(new Error("canonical conflict"))
     : canonicalSettlementMode === "defer" ? new Promise((resolve) => { releaseCanonicalSettlement = resolve; }) : Promise.resolve(),
   revalidateCurrentLive:(currentSchemas) => { liveRevalidations += 1; return currentSchemas.length; },
-  prepareCapturedValidationContinuation:async (record) => { continuationPreparation = record; return { summary:`Continue ${record.eventName}`,
-    destinations:[{ id:"fixture", label:"Event validation Test case" }, { id:"profile", label:"Profile requirements" }],
-    commit:async (destination) => { continuationCommit = destination; } }; },
+  prepareCapturedValidationContinuation:async (record) => { continuationPreparation = record; if(continuationFailure)throw continuationFailure; return { projectName:"Project One",
+    summary:`${record.eventName} · ${record.state} · ${record.schemaName} revision ${record.schemaVersion} → Project One.`,
+    review:"Evaluated result capture:one. Proposed reviewed expectations: outcome Valid; issue paths and codes none. Proposed Profile requirements: /email (string, required). Each requirement retains this evidence identity.",
+    suggestedName:"Checkout captured validation", events:[{id:"event:checkout",name:"Checkout"}], pages:[{id:"page:checkout",name:"Checkout"}],
+    flowSteps:[{id:"step:checkout",name:"Checkout / Submit"}], profiles:[{id:"profile:checkout",name:"Checkout profile"}],
+    commit:async (input) => { continuationCommit = input; return { entityName:"Checkout profile", kind:"profiles" }; } }; },
 });
 for (const selector of ["#schema-rule-revision-review", "#schema-rule-revision-review-summary",
   "#confirm-schema-rule-revision-review", "#cancel-schema-rule-revision"]) {
@@ -204,6 +210,85 @@ const treeControls = elements.get("#schema-list").querySelectorAll();
 elements.get("#schema-list").dispatch("keydown", { target:treeControls[0], key:"End" });
 assert.equal(treeControls.at(-1).focused, true, "tree keyboard navigation remains controller-owned");
 uiController.open("schema:page"); uiController.beginDraft();
+const sourceLibraryBefore = uiController.schemas();
+const sourceStorageBefore = uiValues.get("my-chrome-utilities.schema-library.v1");
+const richSourceSchema = uiController.openSchemaFromSource({ name:"Checkout", sourceId:"gtm", eventName:"checkout",
+  payload:{ total:12, coupon:"SAVE" }, label:"Library template" });
+assert.deepEqual(richSourceSchema.assignments, [{ sourceId:"gtm", eventName:"checkout", target:"payload" }]);
+assert.deepEqual(richSourceSchema.workingDraft.assignments, [{ sourceId:"gtm", eventName:"checkout", target:"payload" }]);
+assert.equal(uiController.guidedState().selectedSchemaPropertyPath, "total");
+assert.equal(elements.get("#schema-result").textContent, "Library template fields loaded into a new schema draft.");
+assert.equal(elements.get("#schema-editor-name").focused, true);
+assert.equal(relationshipActions.at(-1), "view:Schemas");
+elements.get("#schema-editor-target").value = "raw input"; elements.get("#schema-editor-target").dispatch("input");
+assert.equal(uiController.state().transientDraft.workingDraft.assignments[0].target, "raw input",
+  "schema target input updates the transient draft through the exact installed event type");
+elements.get("#schema-editor-target").value = "payload"; elements.get("#schema-editor-target").dispatch("input");
+assert.deepEqual(uiController.schemas(), sourceLibraryBefore, "opening a source does not append transient editor state to the Schema Library");
+assert.equal(uiValues.get("my-chrome-utilities.schema-library.v1"), sourceStorageBefore,
+  "opening a source performs no premature Schema Library storage write");
+const primitiveSourceSchema = uiController.openSchemaFromSource({ name:"Consent", sourceId:"page", eventName:"consent",
+  payload:true, label:"Captured event" });
+assert.equal(primitiveSourceSchema.workingDraft.document.type, "object");
+assert.equal(primitiveSourceSchema.workingDraft.document.properties.value.type, "boolean",
+  "primitive source payloads remain editable through the legacy value wrapper");
+assert.deepEqual(primitiveSourceSchema.workingDraft.assignments, [{ sourceId:"page", eventName:"consent", target:"payload" }]);
+assert.equal(uiController.guidedState().selectedSchemaPropertyPath, "value");
+const arraySourceSchema = uiController.openSchemaFromSource({ name:"Products", sourceId:"gtm", eventName:"products",
+  payload:[{ sku:"A", quantity:2 }], label:"Captured event" });
+assert.equal(arraySourceSchema.workingDraft.document.properties.value.type, "array");
+assert.equal(arraySourceSchema.workingDraft.document.properties.value.items.type, "object");
+assert.equal(arraySourceSchema.workingDraft.document.properties.value.items.properties.quantity.type, "number",
+  "array source inference recursively preserves the first item schema");
+const emptyArraySchema = uiController.openSchemaFromSource({ name:"Empty products", sourceId:"gtm", eventName:"products",
+  payload:[], label:"Captured event" });
+assert.deepEqual(emptyArraySchema.workingDraft.document.properties.value, { type:"array", items:{} },
+  "empty arrays retain an explicit empty item schema");
+assert.deepEqual(uiController.schemas(), sourceLibraryBefore); assert.equal(uiValues.get("my-chrome-utilities.schema-library.v1"), sourceStorageBefore);
+elements.get("#save-schema").click();
+assert.equal(elements.get("#schema-revision-review").open, true, "a transient Source draft reaches the publication review");
+elements.get("#cancel-schema-revision").click();
+assert.deepEqual(uiController.schemas(), sourceLibraryBefore); assert.equal(uiValues.get("my-chrome-utilities.schema-library.v1"), sourceStorageBefore,
+  "canceling Source publication leaves both the library and storage unchanged");
+elements.get("#discard-schema-draft").click();
+assert.deepEqual(uiController.schemas(), sourceLibraryBefore); assert.equal(uiValues.get("my-chrome-utilities.schema-library.v1"), sourceStorageBefore,
+  "discarding a transient Source draft leaves no stored schema behind");
+uiController.openSchemaFromSource({ name:"Checkout", sourceId:"gtm", eventName:"checkout",
+  payload:{ total:12, coupon:"SAVE" }, label:"Library template" });
+elements.get("#save-schema").click(); const sourceWritesBeforePublish = schemaStorageWrites; elements.get("#confirm-schema-revision").click();
+assert.equal(uiController.schemas().length, sourceLibraryBefore.length + 1, "confirming Source publication appends exactly one schema");
+assert.deepEqual(uiController.schemas().at(-1).assignments, [{ sourceId:"gtm", eventName:"checkout", target:"payload" }]);
+assert.equal(uiController.schemas().at(-1).document.properties.total.type, "number");
+assert.equal(schemaStorageWrites, sourceWritesBeforePublish + 1, "Source confirmation performs the first and only library write");
+assert.equal(uiController.state().activeSchemaId, undefined); assert.equal(elements.get("#schema-editor").hidden, true);
+assert.equal(elements.get("#schema-revision-review").open, false, "Source publication closes the review and returns to the list");
+uiController.replace(sourceLibraryBefore);
+const newLibraryBefore = uiController.schemas(), newStorageBefore = uiValues.get("my-chrome-utilities.schema-library.v1");
+elements.get("#create-schema").click(); elements.get("#schema-editor-name").value = "Transient New"; elements.get("#schema-editor-name").dispatch("input");
+assert.deepEqual(uiController.schemas(), newLibraryBefore); assert.equal(uiValues.get("my-chrome-utilities.schema-library.v1"), newStorageBefore,
+  "New Schema editing remains transient before confirmation");
+elements.get("#save-schema").click(); elements.get("#cancel-schema-revision").click();
+elements.get("#close-schema-editor").click();
+assert.deepEqual(uiController.schemas(), newLibraryBefore); assert.equal(uiValues.get("my-chrome-utilities.schema-library.v1"), newStorageBefore,
+  "cancel and close remove a transient New Schema without library mutation");
+assert.equal(elements.get("#close-schema-editor-review").open, false, "close does not route a transient draft through discard review");
+elements.get("#create-schema").click(); elements.get("#schema-editor-name").value = "Published New"; elements.get("#schema-editor-name").dispatch("input");
+const newWritesBeforeReview = schemaStorageWrites; elements.get("#save-and-close-schema").click();
+assert.equal(elements.get("#schema-revision-review").open, true); assert.deepEqual(uiController.schemas(), newLibraryBefore);
+assert.equal(schemaStorageWrites, newWritesBeforeReview, "save-and-close waits for revision confirmation before persistence");
+const newWritesBeforePublish = schemaStorageWrites; elements.get("#confirm-schema-revision").click();
+assert.equal(uiController.schemas().length, newLibraryBefore.length + 1, "confirming New Schema appends exactly once");
+assert.equal(uiController.schemas().at(-1).name, "Published New");
+assert.equal(schemaStorageWrites, newWritesBeforePublish + 1, "New Schema confirmation performs its first library write");
+assert.equal(uiController.state().activeSchemaId, undefined); assert.equal(elements.get("#schema-editor").hidden, true,
+  "New Schema publication clears transient editor state");
+uiController.replace(sourceLibraryBefore);
+uiController.openSchemaFromSource({ name:"Review boundary", sourceId:"page", eventName:"review", payload:{ ready:true }, label:"Captured event" });
+const closeReviewWrites = schemaStorageWrites; elements.get("#save-schema-close-review").click();
+assert.equal(elements.get("#schema-revision-review").open, true); assert.deepEqual(uiController.schemas(), sourceLibraryBefore);
+assert.equal(schemaStorageWrites, closeReviewWrites, "close-review save also delegates to confirmation without eager publication");
+elements.get("#cancel-schema-revision").click(); elements.get("#discard-schema-draft").click();
+uiController.open("schema:page"); uiController.beginDraft();
 elements.get("#build-specification").click();
 assert.equal(relationshipActions.at(-1), "build:schema:page:working-draft"); closeSpecification();
 elements.get("#schema-editor-parent").value = "schema:parent"; elements.get("#schema-editor-parent").dispatch("change");
@@ -221,10 +306,29 @@ elements.get("#confirm-schema-revision").click();
 assert.equal(uiController.schemas()[0].version, 2);
 assert.equal(uiController.schemas()[0].name, "Page checkout");
 assert.equal(uiController.schemas()[0].documentation.description, "Checkout payload");
+assert.equal(uiController.state().activeSchemaId, undefined); assert.equal(elements.get("#schema-editor").hidden, true,
+  "stored-schema publication clears editor state and returns to the list");
+uiController.open("schema:page");
 elements.get("#schema-revision-selector").value = "1"; elements.get("#build-historical-specification").click();
 assert.equal(relationshipActions.at(-1), "build:schema:page:historical:1"); closeSpecification();
 elements.get("#schema-revision-selector").value = "1"; elements.get("#duplicate-schema-revision").click();
 assert.equal(uiController.schemas().length, 3, "revision duplication remains schema-controller behavior");
+const lifecycleSchemaId = uiController.state().activeSchemaId;
+uiController.beginDraft();
+const storedDraftStorage = uiValues.get("my-chrome-utilities.schema-library.v1"), storedDraftWrites = schemaStorageWrites;
+elements.get("#close-schema-editor").click();
+assert.equal(uiController.state().activeSchemaId, undefined); assert.equal(elements.get("#close-schema-editor-review").open, false);
+assert.equal(schemaStorageWrites, storedDraftWrites); assert.equal(uiValues.get("my-chrome-utilities.schema-library.v1"), storedDraftStorage);
+assert.ok(uiController.schemas().find(({ id }) => id === lifecycleSchemaId).workingDraft,
+  "close retains the stored working draft without another persistence write");
+assert.equal(elements.get("#schema-result").textContent, "Working draft retained without publishing.");
+uiController.open(lifecycleSchemaId); const abandonWrites = schemaStorageWrites; elements.get("#discard-schema-draft").click();
+assert.equal(schemaStorageWrites, abandonWrites); assert.ok(uiController.schemas().find(({ id }) => id === lifecycleSchemaId).workingDraft,
+  "discard-schema-draft abandons editor state without discarding the stored working draft");
+uiController.open(lifecycleSchemaId); const discardStoredWrites = schemaStorageWrites; elements.get("#discard-working-schema-draft").click();
+assert.equal(schemaStorageWrites, discardStoredWrites + 1); assert.equal(uiController.schemas().find(({ id }) => id === lifecycleSchemaId).workingDraft, undefined,
+  "discard-working-schema-draft is the distinct operation that mutates the stored library");
+uiController.open(lifecycleSchemaId); uiController.beginDraft();
 assert.equal(elements.get("#schema-property-result-status").textContent, "1 of 1 properties");
 elements.get("#schema-property-filter").value = "missing"; elements.get("#schema-property-filter").dispatch("input");
 assert.equal(elements.get("#schema-property-empty").hidden, false);
@@ -456,13 +560,28 @@ uiController.requestDeletion(importedSchema.id); elements.get("#confirm-schema-d
 assert.equal(uiController.schemas().some(({ id }) => id === importedSchema.id), false);
 assert.equal(uiController.openExportChoices(), true);
 assert.equal(elements.get("#schema-export-choices").open, true);
-elements.get("#schema-export-choices").children[2].click();
+assert.equal(elements.get("#schema-export-choices").children[0].textContent, "Export Schema Library");
+assert.equal(elements.get("#schema-export-choices").children[3].textContent, "JSON Schema Draft 2020-12 bundle");
+assert.equal(elements.get("#schema-export-choices").children[4].textContent, "For third-party standards-based validation; not extension configuration.");
+elements.get("#schema-export-choices").children[5].click();
 assert.deepEqual(schemaDownloads, [], "cancelled export produces no download");
-uiController.openExportChoices(); elements.get("#schema-export-choices").children[1].click();
+uiController.openExportChoices(); elements.get("#schema-export-choices").children[3].click();
 assert.equal(elements.get("#schema-export-compatibility-review").open, true);
+assert.equal(elements.get("#schema-export-compatibility-review").children[0].textContent, "JSON Schema Draft 2020-12 compatibility review");
+assert.equal(elements.get("#schema-export-compatibility-review").children[2]["aria-label"], "Standard export conversions");
 assert.equal(uiController.omittedRuleStatus(1), "1 omitted rule");
-elements.get("#schema-export-compatibility-review").children[1].click();
+elements.get("#schema-export-compatibility-review").children[4].click();
 assert.match(schemaDownloads[0], /schema.*\.json/, "confirmed standard export crosses the typed download port");
+const publishedExportCount=uiController.schemas().filter(({published,version})=>published!==false&&version>0).length;
+assert.equal(elements.get("#schema-result").textContent,`Exported JSON Schema Draft 2020-12 bundle · ${publishedExportCount} schemas · 2 omitted rules.`);
+assert.deepEqual(elements.get("#export-schema").focusOptions,{preventScroll:true},"export completion restores trigger focus without scrolling");
+uiController.openExportChoices();elements.get("#schema-export-choices").children[1].click();
+assert.equal(elements.get("#schema-result").textContent,`Exported Extension backup · ${uiController.schemas().length} schemas and ${uiController.rules().length} rules.`);
+const exportedSchemaId=uiController.state().activeSchemaId;uiController.openExportChoices(exportedSchemaId);elements.get("#schema-export-choices").children[1].click();
+const exportedSchema=uiController.schemas().find(({id})=>id===exportedSchemaId);
+assert.equal(elements.get("#schema-result").textContent,`Exported Extension schema package · ${exportedSchema.name} revision ${exportedSchema.version}.`);
+uiController.openExportChoices(exportedSchemaId);elements.get("#schema-export-choices").children[3].click();elements.get("#schema-export-compatibility-review").children[4].click();
+assert.equal(elements.get("#schema-result").textContent,`Exported JSON Schema Draft 2020-12 · ${exportedSchema.name} revision ${exportedSchema.version} · 0 omitted rules.`);
 const persistenceSchemaId = uiController.state().activeSchemaId;
 uiController.beginDraft();
 const persistenceSchema = uiController.schemas().find(({ id }) => id === persistenceSchemaId);
@@ -510,18 +629,36 @@ assert.deepEqual(restoredGuidedCaptures.at(-1), [guidedCapture.id, "checkout.ema
 assert.equal(declarationConfirm.listenerCount(), 0, "closing the live declaration disposes its confirm listener");
 const validationRecords = uiController.recheckCaptured([guidedCapture]);
 assert.equal(validationRecords.length, 1); assert.equal(elements.get("#schema-validation-record-list").children.length, 1);
-const continuationTrigger = elements.get("#schema-validation-record-list").children[0].children[0];
+assert.equal(elements.get("#schema-validation-record-list").children[0].children[1].disabled, true,
+  "ordinary validateEvent results cannot continue without canonical evaluator evidence");
+uiController.recordCapturedValidation({ eventId:guidedCapture.id, eventName:"checkout", state:"Valid", checkedAt:"2026-08-25T10:00:00.000Z",
+  schemaId:persistenceSchemaId, schemaName:"Page guided", schemaVersion:1, target:"payload", assignmentId:"assignment:checkout",
+  assignmentName:"Checkout assignment", assignmentEvidence:"canonical winner", issueCodes:[], evaluated:{ resultIdentity:"evaluation:checkout:1",
+    winner:{ schemaId:persistenceSchemaId, schemaRevision:1 }, issueDetails:[] } });
+const continuationTrigger = elements.get("#schema-validation-record-list").children[1].children[1];
 continuationTrigger.click(); await Promise.resolve();
 assert.equal(continuationPreparation.eventId, guidedCapture.id);
 let continuationDialog = elements.get("#guided-validation-flow").children[0];
-continuationDialog.children[3].click();
+assert.equal(continuationDialog.children[0].textContent, "Continue captured validation in project");
+assert.equal(continuationDialog.children[4].children[0].children[0].textContent, "Event validation Test case");
+assert.equal(continuationDialog.children[9].textContent, "Create Test case and open in Specification Studio");
+continuationDialog.children[10].click();
 assert.ok(continuationTrigger.listenerCount() > 0, "cancelling a continuation keeps its existing row action live");
+assert.equal(continuationTrigger.focused, true, "cancel restores focus to the continuation row action");
+continuationTrigger.focused = false;
 continuationTrigger.click(); await Promise.resolve();
 continuationDialog = elements.get("#guided-validation-flow").children[0];
-const continuationDestination = continuationDialog.children[1], continuationConfirm = continuationDialog.children[2];
-continuationDestination.value = "profile"; continuationDestination.dispatch("change"); continuationConfirm.click(); await Promise.resolve();
-assert.equal(continuationCommit, "profile", "captured continuation commits the explicitly selected destination");
+const continuationDestination = continuationDialog.children[4].children[0], continuationProfile = continuationDialog.children[8].children[0], continuationConfirm = continuationDialog.children[9];
+continuationDestination.value = "profile"; continuationDestination.dispatch("change");
+assert.equal(continuationConfirm.textContent, "Add requirements and open Profile"); continuationProfile.value = "profile:checkout"; continuationConfirm.click(); await Promise.resolve();
+assert.deepEqual(continuationCommit, { destination:"profile", name:"Checkout captured validation", eventId:"event:checkout", profileId:"profile:checkout" },
+  "captured continuation commits the explicitly reviewed project destination");
+assert.equal(elements.get("#schema-result").textContent, "Saved evaluated capture evidence in Checkout profile; opening it in Specification Studio.");
+assert.equal(continuationTrigger.focused, false, "successful routing does not take the cancel-only trigger-focus path");
 assert.equal(continuationConfirm.listenerCount(), 0, "captured continuation completion disposes its dialog listeners");
+continuationFailure=new Error("Create or open a Specification Project before continuing captured validation.");continuationTrigger.click();await Promise.resolve();
+assert.equal(elements.get("#schema-result").textContent,"Create or open a Specification Project before continuing captured validation.",
+  "guarded continuation failure is rendered by the Schema owner without opening stale review UI");continuationFailure=undefined;
 uiController.updateDraft({ attachedRules:[...(persistenceSchema.workingDraft?.attachedRules ?? persistenceSchema.attachedRules ?? []),
   { id:"local:email", name:"Email required", version:1, propertyPath:"/checkout/email", operator:"required", enabled:true }] });
 assert.equal(uiController.requestLocalRulePromotion("/checkout/email", "local:email"), true);

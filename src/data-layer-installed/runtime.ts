@@ -6,11 +6,15 @@ import { createLiveFlowTestingInstalledController, type LiveFlowTestingInstalled
 import { createProjectEventTransportInstalledController, type ProjectEventTransportInstalledPorts } from "./project-event-transport/index.js";
 import { createProjectsInstalledController, type ProjectsInstalledPorts } from "./projects/index.js";
 import { createReplayInstalledController, type ReplayInstalledPorts } from "./replay/index.js";
-import { createSchemasInstalledController, type SchemasInstalledPorts } from "./schemas/index.js";
+import { createSchemasInstalledController, type SchemasInstalledPorts, type SchemaSourceDraftInput, type SchemaValidationRecord,
+  type CapturedValidationContinuation } from "./schemas/index.js";
 import { attachSavedSessionToDefect, type DefectLibrary, type ReportedDefect } from "../utilities/data-layer/defect-reporting.js";
 import type { SessionSaveDraft } from "../data-layer-saved-session-live-feed.js";
 import type { SavedSessionLibrary } from "../utilities/data-layer/live-inspection.js";
 import type { EditableEventTemplate } from "../utilities/data-layer/event-library.js";
+import { applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements,
+  createFixtureFromCapturedValidation, type ProjectState } from "../utilities/data-layer/schemas.js";
+import type { CapturedValidationResult } from "../data-layer-specification-project.js";
 
 export const installedDataLayerControllerOrder = [
   "capture",
@@ -264,7 +268,7 @@ export function createDefectCaptureCoordination(owners:DefectCaptureOwners, now:
 export interface EventLibrarySchemaOwners {
   schemas:{ schemas():readonly { id:string; name:string; version:number }[];
     validateAgainstSchema(event:{ sourceId:string; eventName:string; payload:unknown; rawInput:unknown }, schemaId:string):{ message:string };
-    openSchemaFromSource(name:string, value:unknown):unknown };
+    openSchemaFromSource(source:SchemaSourceDraftInput):unknown };
 }
 
 export function createEventLibrarySchemaCoordination(owners:EventLibrarySchemaOwners) {
@@ -274,8 +278,59 @@ export function createEventLibrarySchemaCoordination(owners:EventLibrarySchemaOw
       owners.schemas.validateAgainstSchema({ sourceId:draft.sourceId, eventName:draft.eventName,
         payload:structuredClone(draft.payload), rawInput:[] }, draft.schemaId),
     createSchema:(template:EditableEventTemplate):void => {
-      owners.schemas.openSchemaFromSource(template.name, structuredClone(template.payload));
+      owners.schemas.openSchemaFromSource({ name:template.name, sourceId:template.sourceId, eventName:template.eventName,
+        payload:structuredClone(template.payload), label:"Library template" });
     },
+  };
+}
+
+export interface CapturedValidationCoordinationPorts {
+  load(record:SchemaValidationRecord):Promise<{ state?:ProjectState; revision:number; captured?:{ id:string; sourceId:string; payload:unknown } }>;
+  settle():Promise<void>;
+  ensureProject(projectId:string):Promise<void>;
+  loadCurrent(projectId:string):Promise<{ state:ProjectState; revision:number }>;
+  commit(state:ProjectState, expectedRevision:number, label:string):{ status:"saved" | "conflict"; revision:number };
+  capture(state:ProjectState, revision:number):void;
+  route(projectId:string, kind:"fixtures" | "profiles", entityId:string):void;
+  openStudio(projectId:string, kind:"fixtures" | "profiles", entityId:string):void;
+  createId(kind:string):string;
+}
+
+export function createCapturedValidationContinuationCoordination(ports:CapturedValidationCoordinationPorts) {
+  return async (record:SchemaValidationRecord):Promise<CapturedValidationContinuation> => {
+    let loaded:Awaited<ReturnType<CapturedValidationCoordinationPorts["load"]>>;
+    try { loaded = await ports.load(record); }
+    catch (error) { throw new Error(`Captured continuation could not load the active project. ${error instanceof Error ? error.message : String(error)}`); }
+    const captured = loaded.captured;
+    if (!loaded.state) throw new Error("Create or open a Specification Project before continuing captured validation.");
+    const project = loaded.state.project;
+    if (!captured || !record.schemaId || !record.evaluated) throw new Error("Recheck the captured event with the project evaluator before continuing.");
+    if (!project.collections.assignments.some(({ id, targetId }) => id === record.assignmentId && targetId === record.schemaId)) {
+      throw new Error(`Add ${record.schemaName ?? "the validated contributor"} to ${project.name} before creating its Test case.`);
+    }
+    const evaluated = structuredClone(record.evaluated) as CapturedValidationResult;
+    const choices = capturedValidationDestinationChoices(project, { eventName:record.eventName, sourceId:captured.sourceId });
+    const requirements = capturedValidationProfileRequirements(project, { captureId:record.eventId, contributorId:record.schemaId, evaluated });
+    if (!choices.events.length) throw new Error(`Add the ${record.eventName} Event to ${project.name} before continuing.`);
+    return { projectName:project.name,
+      summary:`${record.eventName} · ${record.state} · ${record.schemaName} revision ${record.schemaVersion} → ${project.name}.`,
+      review:`Evaluated result ${evaluated.resultIdentity}. Proposed reviewed expectations: outcome ${evaluated.issueDetails.length ? "Invalid" : "Valid"}; issue paths and codes ${evaluated.issueDetails.map(({path,code})=>`${path ?? "/"} ${code}`).join(", ") || "none"}. Proposed Profile requirements: ${requirements.map(({path,type,required})=>`${path} (${type ?? "value"}${required ? ", required" : ""})`).join(", ") || "none"}. Each requirement retains this evidence identity.`,
+      suggestedName:choices.suggestedFixtureName, events:choices.events, pages:choices.pages, flowSteps:choices.flowSteps, profiles:choices.profiles,
+      commit:async (input) => {
+        await ports.settle(); await ports.ensureProject(project.id); await ports.settle();
+        const current = await ports.loadCurrent(project.id);
+        const next = input.destination === "profile"
+          ? applyCapturedValidationToProfile(current.state, { captureId:record.eventId, profileId:input.profileId!, contributorId:record.schemaId!, evaluated })
+          : createFixtureFromCapturedValidation(current.state, { name:input.name, captureId:record.eventId, sourceId:captured.sourceId,
+              eventName:record.eventName, payload:captured.payload, contributorId:record.schemaId!, eventId:input.eventId,
+              ...(input.pageId ? {pageId:input.pageId}:{}), ...(input.flowStepId ? {flowStepId:input.flowStepId}:{}), evaluated }, ports.createId);
+        const kind = input.destination === "profile" ? "profiles" : "fixtures", entity = input.destination === "profile"
+          ? next.project.collections.profiles.find(({id}) => id === input.profileId)! : next.project.collections.fixtures.at(-1)!;
+        const result = ports.commit(next, current.revision, `Continue evaluated capture ${record.eventId} as ${input.destination === "profile" ? "Profile requirements" : "Test case"}`);
+        if (result.status === "conflict") throw new Error("Project changed in a newer Saved Draft; review the continuation again.");
+        ports.capture(next, result.revision); ports.route(project.id, kind, entity.id); await ports.settle(); ports.openStudio(project.id, kind, entity.id);
+        return { entityName:entity.name, kind };
+      } };
   };
 }
 

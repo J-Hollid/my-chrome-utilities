@@ -455,7 +455,7 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
       cancelEventLibraryImportButton?.addEventListener("click", cancelEventLibraryImport);
       eventTemplateName?.addEventListener("input", updateTemplateName);
       eventTemplateEventName?.addEventListener("input", updateTemplateEventName);
-      eventTemplateSource?.addEventListener("change", updateTemplateSource);
+      eventTemplateSource?.addEventListener("input", updateTemplateSource);
       eventTemplateJson?.addEventListener("input", updateTemplateJson);
       eventTemplatePushDestination?.addEventListener("input", updateTemplatePushDestination);
       saveTemplateRevisionButton?.addEventListener("click", openRevisionChangeReview);
@@ -502,7 +502,7 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
       cancelEventLibraryImportButton?.removeEventListener("click", cancelEventLibraryImport);
       eventTemplateName?.removeEventListener("input", updateTemplateName);
       eventTemplateEventName?.removeEventListener("input", updateTemplateEventName);
-      eventTemplateSource?.removeEventListener("change", updateTemplateSource);
+      eventTemplateSource?.removeEventListener("input", updateTemplateSource);
       eventTemplateJson?.removeEventListener("input", updateTemplateJson);
       eventTemplatePushDestination?.removeEventListener("input", updateTemplatePushDestination);
       saveTemplateRevisionButton?.removeEventListener("click", openRevisionChangeReview);

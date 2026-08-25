@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 
 const { createInstalledSidePanelShellController, createChromeRuntimeMessagePort, createDefectCaptureCoordination,
-  createEventLibrarySchemaCoordination } =
+  createEventLibrarySchemaCoordination, createCapturedValidationContinuationCoordination } =
   await import("../../dist/data-layer-installed/runtime.js");
+const { createSpecificationProject, transactProject } = await import("../../dist/data-layer-specification-project.js");
 
 const events = new Map(), calls = [];
 const lifecycle = (name, extra = {}) => ({
@@ -75,7 +76,7 @@ let validatedEvent, openedSchema;
 const eventSchemas = createEventLibrarySchemaCoordination({ schemas:{
   schemas:() => [{ id:"schema:checkout", name:"Checkout", version:2 }],
   validateAgainstSchema:(event, schemaId) => { validatedEvent = { event, schemaId }; return { message:"Library draft validation: Valid · Checkout v2." }; },
-  openSchemaFromSource:(name, value) => { openedSchema = { name, value }; },
+  openSchemaFromSource:(source) => { openedSchema = source; },
 } });
 assert.deepEqual(eventSchemas.schemas(), [{ id:"schema:checkout", name:"Checkout", version:2 }]);
 assert.match(eventSchemas.validateDraft({ schemaId:"schema:checkout", sourceId:"history", eventName:"checkout",
@@ -85,5 +86,40 @@ assert.deepEqual(validatedEvent, { schemaId:"schema:checkout",
 "Event Library validation delegates the real draft to the Schema owner");
 eventSchemas.createSchema({ id:"template:checkout", name:"Checkout", eventName:"checkout", sourceId:"history",
   sourceName:"History", destination:"event.history", tags:[], validation:"Not checked", payload:{ total:12 }, version:1, provenance:"captured" });
-assert.deepEqual(openedSchema, { name:"Checkout", value:{ total:12 } },
-  "Create schema transfers the actual Library payload into Schema ownership");
+assert.deepEqual(openedSchema, { name:"Checkout", sourceId:"history", eventName:"checkout", payload:{ total:12 }, label:"Library template" },
+  "Create schema transfers the complete Library source identity into Schema ownership");
+
+let projectSequence=0, projectState=createSpecificationProject({name:"Checkout project",site:"shop.example",id:(kind)=>`${kind}:${++projectSequence}`});
+projectState=transactProject(projectState,"Add continuation destinations",(project)=>({...project,collections:{...project.collections,
+  profiles:[{id:"schema:page",name:"Evaluated contributor",requirements:[{path:"/email",type:"string",required:true}]},{id:"profile:checkout",name:"Checkout profile",requirements:[]}],
+  events:[{id:"event:checkout",name:"Checkout",sourceId:"gtm",eventName:"checkout"}],
+  pages:[{id:"page:checkout",name:"Checkout page"}],
+  assignments:[{id:"assignment:checkout",name:"Checkout assignment",targetId:"schema:page"}],
+}}));
+let durableState=projectState, durableRevision=4, commitMode="saved", capturedAvailable=true, projectAvailable=true, loadFailure;
+const routed=[], opened=[];
+const prepareContinuation=createCapturedValidationContinuationCoordination({
+  load:async()=>{if(loadFailure)throw loadFailure;return{...(projectAvailable?{state:structuredClone(durableState)}:{}),revision:durableRevision,
+    ...(capturedAvailable?{captured:{id:"capture:checkout",sourceId:"gtm",payload:{email:"buyer@example.test"}}}: {})};},
+  settle:async()=>{},ensureProject:async()=>{},loadCurrent:async()=>({state:structuredClone(durableState),revision:durableRevision}),
+  commit:(next,_expected)=>{if(commitMode==="conflict")return{status:"conflict",revision:durableRevision};durableState=next;return{status:"saved",revision:++durableRevision};},
+  capture:(state)=>{durableState=state;},route:(projectId,kind,id)=>routed.push([projectId,kind,id]),
+  openStudio:(projectId,kind,id)=>opened.push([projectId,kind,id]),createId:(kind)=>`${kind}:continued`,
+});
+const evaluatedRecord={eventId:"capture:checkout",eventName:"checkout",state:"Valid",checkedAt:"now",schemaId:"schema:page",schemaName:"Evaluated contributor",schemaVersion:1,
+  assignmentId:"assignment:checkout",issueCodes:[],evaluated:{resultIdentity:"evaluation:checkout:1",winner:{schemaId:"schema:page",schemaRevision:1},issueDetails:[]}};
+loadFailure=new Error("repository offline"); await assert.rejects(()=>prepareContinuation(evaluatedRecord),
+  /Captured continuation could not load the active project\. repository offline/); loadFailure=undefined;
+projectAvailable=false; await assert.rejects(()=>prepareContinuation(evaluatedRecord),/Create or open a Specification Project/); projectAvailable=true;
+capturedAvailable=false; await assert.rejects(()=>prepareContinuation(evaluatedRecord),/Recheck the captured event/); capturedAvailable=true;
+let continuation=await prepareContinuation(evaluatedRecord);
+assert.match(continuation.review,/evaluation:checkout:1/); assert.equal(continuation.events[0].id,"event:checkout");
+durableRevision+=1;
+const completed=await continuation.commit({destination:"fixture",name:"Checkout proof",eventId:"event:checkout",pageId:"page:checkout"});
+assert.deepEqual(completed,{entityName:"Checkout proof",kind:"fixtures"});
+assert.equal(durableState.project.collections.fixtures.at(-1).evaluationResultIdentity,"evaluation:checkout:1",
+  "continuation persists genuine canonical evaluator evidence against the freshly loaded durable revision");
+assert.deepEqual(routed.at(-1).slice(1),["fixtures","fixture:continued"]); assert.deepEqual(opened.at(-1),routed.at(-1));
+continuation=await prepareContinuation(evaluatedRecord); commitMode="conflict";
+await assert.rejects(()=>continuation.commit({destination:"profile",name:"",eventId:"event:checkout",profileId:"profile:checkout"}),
+  /Project changed in a newer Saved Draft; review the continuation again/);
