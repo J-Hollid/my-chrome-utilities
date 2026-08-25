@@ -580,11 +580,17 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
                             root.getElementById(focusedId)?.focus({ preventScroll: true });
                         liveApi.setEventValidationUpdateStatus(liveElements, `Validation changed to ${state}.`);
                     }, }))) },
-            ui: { historyPath: () => { const state = controllers["project-event-transport"].state(), status = ["Selection required", "Waiting for path", "Ready", "Unavailable"].includes(state.currentTargetPathStatus) ? state.currentTargetPathStatus : "Unavailable"; return { path: state.observationPath, fieldValue: state.observationPath, status: status }; },
+            ui: { historyPath: () => { const state = controllers["project-event-transport"].state(), status = ["Selection required", "Waiting for path", "Ready", "Unavailable"].includes(state.currentTargetPathStatus) ? state.currentTargetPathStatus : "Unavailable"; return { path: state.observationPath, fieldValue: state.observationPath, status: status, generation: state.targetPathRequest }; },
                 chooseObservationTarget: () => root.querySelector("#choose-observation-target")?.click(), browseObservationTargets: () => root.querySelector("#browse-observation-targets")?.click(),
                 closeObservationTargetPicker: () => captureApi.closeObservationTargetPicker(captureApi.findObservationTargetElements(root)), searchObservationTargets: () => { }, cancelDetachTarget: () => { }, confirmDetachTarget: () => { },
-                selectedTargetChanged: () => { controllers["project-event-transport"].refreshTargetPath(); if (currentView === "Schemas")
-                    showDataLayerView("Live"); },
+                selectedTargetChanged: (observation) => {
+                    if (observation)
+                        controllers["project-event-transport"].applyTargetPathObservation(observation);
+                    else
+                        controllers["project-event-transport"].refreshTargetPath();
+                    if (currentView === "Schemas")
+                        showDataLayerView("Live");
+                },
                 showDataLayerView, copyPageUrl: () => { const url = controllers.capture.state().observer.pageUrl; void captureApi.copyLivePageUrl(url, navigator.clipboard?.writeText?.bind(navigator.clipboard)); },
                 reportMissingEvent: () => controllers.defects.openMissingEventBuilder("Live") } },
         "event-library": { root, storage: dataStorage, defaultPushPath: () => controllers["project-event-transport"].state().pushPath,

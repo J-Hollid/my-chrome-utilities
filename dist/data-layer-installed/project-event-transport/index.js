@@ -24,16 +24,27 @@ export function createProjectEventTransportInstalledController(ports) {
     }
     function currentObservationHistoryPath() { return paths.observationPath; }
     const targetPathStatusController = {
+        apply(observation, path = currentObservationHistoryPath(), fieldValue = path) {
+            if (!mounted)
+                return;
+            targetPathRequest += 1;
+            currentTargetPathStatus = targetPathStatusForObservation(observation, path);
+            renderTargetPath(path, fieldValue, currentTargetPathStatus);
+            ports.renderTargetReadiness();
+            ports.applyLiveTargetPathObservation(observation);
+        },
         async configure(path, fieldValue = path) {
             const request = ++targetPathRequest, operation = generation;
             const observation = await ports.readTargetObservation(path);
             if (!mounted || operation !== generation || request !== targetPathRequest)
                 return;
-            currentTargetPathStatus = observation ? targetPathStatusForObservation(observation, path) : "Selection required";
-            renderTargetPath(path, fieldValue, currentTargetPathStatus);
-            ports.renderTargetReadiness();
             if (observation)
-                ports.applyLiveTargetPathObservation(observation);
+                targetPathStatusController.apply(observation, path, fieldValue);
+            else {
+                currentTargetPathStatus = "Selection required";
+                renderTargetPath(path, fieldValue, currentTargetPathStatus);
+                ports.renderTargetReadiness();
+            }
         },
     };
     function refreshSelectedTargetPathStatus() {
@@ -141,11 +152,12 @@ export function createProjectEventTransportInstalledController(ports) {
         },
         currentObservationHistoryPath,
         configureTargetPath: targetPathStatusController.configure,
+        applyTargetPathObservation: targetPathStatusController.apply,
         refreshTargetPath: refreshSelectedTargetPathStatus,
         synchronizeProjectPaths,
         render: renderProjectEventTransport,
         save: saveProjectEventTransport,
-        state: () => ({ ...paths, phase, currentTargetPathStatus }),
+        state: () => ({ ...paths, phase, currentTargetPathStatus, targetPathRequest }),
     };
 }
 export const installedControllerDefinition = Object.freeze({

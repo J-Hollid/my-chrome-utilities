@@ -34,13 +34,20 @@ export function createProjectEventTransportInstalledController(ports: ProjectEve
   }
   function currentObservationHistoryPath(): string { return paths.observationPath; }
   const targetPathStatusController = {
+    apply(observation:ActivePageObservationResult, path = currentObservationHistoryPath(), fieldValue = path): void {
+      if (!mounted) return;
+      targetPathRequest += 1;
+      currentTargetPathStatus = targetPathStatusForObservation(observation, path);
+      renderTargetPath(path, fieldValue, currentTargetPathStatus); ports.renderTargetReadiness();
+      ports.applyLiveTargetPathObservation(observation);
+    },
     async configure(path: string, fieldValue = path): Promise<void> {
       const request = ++targetPathRequest, operation = generation;
       const observation = await ports.readTargetObservation(path);
       if (!mounted || operation !== generation || request !== targetPathRequest) return;
-      currentTargetPathStatus = observation ? targetPathStatusForObservation(observation, path) : "Selection required";
-      renderTargetPath(path, fieldValue, currentTargetPathStatus); ports.renderTargetReadiness();
-      if (observation) ports.applyLiveTargetPathObservation(observation);
+      if (observation) targetPathStatusController.apply(observation, path, fieldValue);
+      else { currentTargetPathStatus = "Selection required";
+        renderTargetPath(path, fieldValue, currentTargetPathStatus); ports.renderTargetReadiness(); }
     },
   };
   function refreshSelectedTargetPathStatus(): void {
@@ -108,11 +115,12 @@ export function createProjectEventTransportInstalledController(ports: ProjectEve
     },
     currentObservationHistoryPath,
     configureTargetPath:targetPathStatusController.configure,
+    applyTargetPathObservation:targetPathStatusController.apply,
     refreshTargetPath:refreshSelectedTargetPathStatus,
     synchronizeProjectPaths,
     render:renderProjectEventTransport,
     save:saveProjectEventTransport,
-    state:() => ({ ...paths, phase, currentTargetPathStatus }),
+    state:() => ({ ...paths, phase, currentTargetPathStatus, targetPathRequest }),
   };
 }
 

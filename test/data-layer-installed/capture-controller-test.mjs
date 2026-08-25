@@ -164,6 +164,119 @@ uiController.dispose();
 assert.equal([...elements.values()].reduce((count, element) => count + element.listenerCount(), 0), 0,
   "Capture removes every observation-target listener it owns");
 
+{
+  const permissionCalls = [];
+  let pathStatus = "Permission required";
+  const permissionController = createCaptureInstalledController({
+    root:{ querySelector:() => null }, storage:{ getItem:() => null, setItem() {} },
+    initialPageUrl:() => "https://shop.example/", initialSources:() => [],
+    sessionStart:async () => ({ id:"unused", tabId:42, url:"", historyPath:"" }),
+    changed() {}, runCommand() {}, setLiveSessionMessage() {}, observerRuntime:noOpObserverRuntime,
+    observation:{ ...noOpObservation,
+      discover:async () => [{ tabId:42, windowId:7, pageUrl:"https://shop.example/checkout", title:"Checkout" }],
+      requestOriginAccess:async (origin) => { permissionCalls.push(["request", origin]); return true; },
+      probe:async (target, historyPath, pageLoadId) => {
+        permissionCalls.push(["probe", target.tabId, historyPath]);
+        return { tabId:target.tabId, pageUrl:target.pageUrl, historyPath, pageLoadId,
+          pageAccessStatus:"page access available", pageObject:{ event:{ history:[] } } };
+      },
+    }, savedSessions:noOpSavedSessions, savedFilters:noOpSavedFilters, inspector:noOpInspector,
+    ui:{ ...noOpCaptureUi,
+      historyPath:() => ({ path:"event.history", fieldValue:"event.history", status:pathStatus, generation:1 }),
+      selectedTargetChanged:(observation) => {
+        permissionCalls.push(["apply", observation?.tabId, observation?.historyPath]);
+        if (observation) pathStatus = "Ready";
+      },
+    },
+  });
+  permissionController.mount();
+  await permissionController.discoverTargets();
+  await permissionController.requestTargetAccess("tab:42:window:7");
+  assert.deepEqual(permissionCalls, [
+    ["apply", undefined, undefined],
+    ["request", "https://shop.example"],
+    ["probe", 42, "event.history"],
+    ["apply", 42, "event.history"],
+  ], "a native exact-origin grant settles through one same-tab configured-path probe before readiness");
+  assert.equal(permissionController.state().targets.targets[0].accessState, "Ready");
+  permissionController.dispose();
+}
+
+async function permissionRecoveryHarness({ grant = true, observation, deferProbe = false } = {}) {
+  const calls = [], applied = [];
+  let path = "event.history", generation = 1, releaseProbe;
+  const probeGate = deferProbe ? new Promise((resolve) => { releaseProbe = resolve; }) : undefined;
+  const targets = [
+    { tabId:42, windowId:7, pageUrl:"https://shop.example/checkout", title:"Checkout" },
+    { tabId:84, windowId:7, pageUrl:"https://other.example/", title:"Other" },
+  ];
+  const fallbackObservation = { tabId:42, pageUrl:targets[0].pageUrl, historyPath:path, pageLoadId:"permission",
+    pageAccessStatus:"page access available", pageObject:{ event:{ history:[] } } };
+  const controller = createCaptureInstalledController({
+    root:{ querySelector:() => null }, storage:{ getItem:() => null, setItem() {} },
+    initialPageUrl:() => "https://shop.example/", initialSources:() => [],
+    sessionStart:async () => ({ id:"unused", tabId:42, url:"", historyPath:"" }),
+    changed() {}, runCommand() {}, setLiveSessionMessage() {}, observerRuntime:noOpObserverRuntime,
+    observation:{ ...noOpObservation, discover:async (scope) => scope === "current" ? targets.slice(0, 1) : targets,
+      requestOriginAccess:async () => { calls.push("request"); return grant; },
+      probe:async () => { calls.push("probe"); if (probeGate) await probeGate; return observation ?? fallbackObservation; },
+    }, savedSessions:noOpSavedSessions, savedFilters:noOpSavedFilters, inspector:noOpInspector,
+    ui:{ ...noOpCaptureUi, historyPath:() => ({ path, fieldValue:path, status:"Permission required", generation }),
+      selectedTargetChanged:(value) => { if (value) applied.push(value); },
+    },
+  });
+  controller.mount(); await controller.discoverTargets();
+  return { controller, calls, applied, releaseProbe,
+    changePath(next) { path = next; generation += 1; },
+  };
+}
+
+{
+  const declined = await permissionRecoveryHarness({ grant:false });
+  await declined.controller.requestTargetAccess("tab:42:window:7");
+  assert.deepEqual(declined.calls, ["request"], "a declined permission result never probes");
+  assert.equal(declined.controller.state().targets.targets[0].accessState, "Permission required");
+  declined.controller.dispose();
+
+  const unavailable = await permissionRecoveryHarness({ observation:{ tabId:42, pageUrl:"https://shop.example/checkout",
+    historyPath:"event.history", pageLoadId:"permission", pageAccessStatus:"page access unavailable" } });
+  await unavailable.controller.requestTargetAccess("tab:42:window:7");
+  assert.deepEqual(unavailable.calls, ["request", "probe"]);
+  assert.equal(unavailable.controller.state().targets.targets[0].accessState, "Permission required",
+    "the permission Boolean cannot override an unavailable post-grant probe");
+  unavailable.controller.dispose();
+
+  const missingPath = await permissionRecoveryHarness({ observation:{ tabId:42, pageUrl:"https://shop.example/checkout",
+    historyPath:"event.history", pageLoadId:"permission", pageAccessStatus:"page access available",
+    pageObject:{ event:{} } } });
+  await missingPath.controller.requestTargetAccess("tab:42:window:7");
+  assert.equal(missingPath.controller.state().targets.targets[0].accessState, "Ready",
+    "accessible pages retain Ready access even when the configured path is absent");
+  assert.equal(missingPath.applied.length, 1, "the transport receives the missing-path observation that keeps Start disabled");
+  missingPath.controller.dispose();
+
+  const staleTarget = await permissionRecoveryHarness({ deferProbe:true });
+  const staleTargetRequest = staleTarget.controller.requestTargetAccess("tab:42:window:7");
+  await Promise.resolve(); await Promise.resolve();
+  await staleTarget.controller.browseTargets(); staleTarget.controller.selectTarget("tab:84:window:7");
+  staleTarget.releaseProbe(); await staleTargetRequest;
+  assert.equal(staleTarget.applied.length, 0, "a target change invalidates the granted probe settlement");
+  staleTarget.controller.dispose();
+
+  const stalePath = await permissionRecoveryHarness({ deferProbe:true });
+  const stalePathRequest = stalePath.controller.requestTargetAccess("tab:42:window:7");
+  await Promise.resolve(); await Promise.resolve();
+  stalePath.changePath("dataLayer"); stalePath.releaseProbe(); await stalePathRequest;
+  assert.equal(stalePath.applied.length, 0, "a configured-path generation change invalidates the granted probe settlement");
+  stalePath.controller.dispose();
+
+  const disposed = await permissionRecoveryHarness({ deferProbe:true });
+  const disposedRequest = disposed.controller.requestTargetAccess("tab:42:window:7");
+  await Promise.resolve(); await Promise.resolve();
+  disposed.controller.dispose(); disposed.releaseProbe(); await disposedRequest;
+  assert.equal(disposed.applied.length, 0, "a disposed controller ignores the granted probe settlement");
+}
+
 let tabUpdated, tabRemoved, permissionsRemoved, pushActions, pushStops = 0, runtimeUnsubscribes = 0;
 let resolveStaleRead;
 let pageAccessAvailable = true;

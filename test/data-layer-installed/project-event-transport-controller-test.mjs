@@ -39,10 +39,16 @@ assert.equal(targetController.state().currentTargetPathStatus, "Ready");
 assert.equal(elements.get("#history-path-status").textContent, "Ready");
 assert.equal(applyCount, 1); assert.equal(readinessRenders, 1);
 
+targetController.applyTargetPathObservation({ pageAccessStatus:"page access available",
+  historyPath:"event.history", pageObject:{event:{}} });
+assert.equal(targetController.state().currentTargetPathStatus, "Waiting for path",
+  "the already awaited post-grant observation determines configured-path readiness without another read");
+assert.equal(applyCount, 2); assert.equal(readinessRenders, 2);
+
 elements.get("#history-path").value = "event.missing";
 elements.get("#history-path").dispatch("input");
 targetController.dispose();
 releaseObservation({ pageAccessStatus:"page access available", pageObject:{event:{}} });
 await Promise.resolve(); await Promise.resolve();
-assert.equal(applyCount, 1, "a target observation resolving after disposal cannot apply Capture effects");
+assert.equal(applyCount, 2, "a target observation resolving after disposal cannot apply Capture effects");
 for (const element of elements.values()) assert.equal(element.listeners.size, 0);

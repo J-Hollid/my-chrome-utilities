@@ -134,6 +134,7 @@ export function createCaptureInstalledController(ports) {
     let observationTargetState = restoredObservationTargetState();
     let pendingObservationTargetSwitchId;
     let targetDiscoveryGeneration = 0;
+    let permissionRecoveryGeneration = 0;
     function renderHistoryPath(path, fieldValue = path, status = "Selection required") {
         if (historyPathDisplay)
             historyPathDisplay.textContent = path;
@@ -185,6 +186,7 @@ export function createCaptureInstalledController(ports) {
         registerTargetTabs(tabs);
         const target = tabs[0] ? targetFromTab(tabs[0]) : undefined;
         if (target) {
+            permissionRecoveryGeneration += 1;
             observationTargetState = selectObservationTarget(observationTargetState, target.id);
             setObservationTargetResult(`Selected ${target.title}`);
             ports.ui.selectedTargetChanged?.();
@@ -217,6 +219,7 @@ export function createCaptureInstalledController(ports) {
     function renderObservationTargetPicker() {
         const targets = findObservationTargets(observationTargetState, observationTargetSearch?.value ?? "");
         ports.observation.render(targets, { select: (id) => {
+                permissionRecoveryGeneration += 1;
                 observationTargetState = selectObservationTarget(observationTargetState, id);
                 setObservationTargetResult(`Selected ${selectedObservationTarget(observationTargetState)?.title ?? id}`);
                 renderObservationTargetPicker();
@@ -233,27 +236,63 @@ export function createCaptureInstalledController(ports) {
     const navigateObservationTargetDialog = (event) => handleObservationTargetDialogKeydown(observationTargetElements, event);
     const liveTargetPermissionRecoveryCoordinator = {
         async requestAccess(target) {
-            const granted = await ports.observation.requestOriginAccess(target.origin);
-            if (!mounted)
-                return false;
-            observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, granted ? "Ready" : "Permission required");
+            const operation = ++permissionRecoveryGeneration;
+            const requestedPath = ports.ui.historyPath();
+            const requestIsCurrent = () => {
+                const selected = selectedObservationTarget(observationTargetState);
+                const currentPath = ports.ui.historyPath();
+                return mounted && operation === permissionRecoveryGeneration && selected?.id === target.id
+                    && selected.tabId === target.tabId && selected.pageUrl === target.pageUrl
+                    && currentPath.path === requestedPath.path && currentPath.generation === requestedPath.generation;
+            };
+            let granted = false;
+            try {
+                granted = await ports.observation.requestOriginAccess(target.origin);
+            }
+            catch {
+                granted = false;
+            }
+            if (!requestIsCurrent())
+                return "stale";
+            if (!granted) {
+                observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Permission required");
+                renderObservationTargetPicker();
+                renderObservationTargetContext();
+                return "denied";
+            }
+            let observation;
+            try {
+                observation = await ports.observation.probe(target, requestedPath.path, observationPageLoadId(target.tabId));
+            }
+            catch {
+                if (!requestIsCurrent())
+                    return "stale";
+                observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Permission required");
+                renderObservationTargetPicker();
+                renderObservationTargetContext();
+                return "denied";
+            }
+            if (!requestIsCurrent())
+                return "stale";
+            const accessible = observation.pageAccessStatus === "page access available";
+            observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, accessible ? "Ready" : "Permission required");
+            ports.ui.selectedTargetChanged?.(observation);
             renderObservationTargetPicker();
             renderObservationTargetContext();
-            return granted;
+            return accessible ? "ready" : "denied";
         },
     };
     async function requestSelectedTargetAccess(target) {
-        const granted = await liveTargetPermissionRecoveryCoordinator.requestAccess(target);
-        if (!mounted)
+        const result = await liveTargetPermissionRecoveryCoordinator.requestAccess(target);
+        if (!mounted || result === "stale")
             return;
-        if (!granted) {
+        if (result === "denied") {
             setObservationTargetResult("Permission required");
             return;
         }
         setObservationTargetResult(`Access granted for ${target.origin}`);
         renderObservationTargetPicker();
         renderObservationTargetContext();
-        ports.ui.selectedTargetChanged?.();
     }
     async function attachSelectedTarget() {
         const decision = attachSelectedObservationTarget(observationTargetState);
@@ -1252,6 +1291,7 @@ export function createCaptureInstalledController(ports) {
             observationTargetList?.removeAttribute("aria-live");
             ports.savedFilters.dispose();
             targetDiscoveryGeneration += 1;
+            permissionRecoveryGeneration += 1;
             importGeneration += 1;
             attachedTargetRecoveryGeneration += 1;
             pendingObservationTargetSwitchId = undefined;
@@ -1296,7 +1336,11 @@ export function createCaptureInstalledController(ports) {
         capture: recordCapturedLiveEvent,
         discoverTargets: discoverCurrentObservationTarget,
         browseTargets: browseObservationTargets,
-        selectTarget(id) { observationTargetState = selectObservationTarget(observationTargetState, id); renderObservationTargetPicker(); },
+        selectTarget(id) {
+            permissionRecoveryGeneration += 1;
+            observationTargetState = selectObservationTarget(observationTargetState, id);
+            renderObservationTargetPicker();
+        },
         requestTargetAccess(id) {
             const target = observationTargetState.targets.find((candidate) => candidate.id === id);
             return target ? requestSelectedTargetAccess(target) : Promise.reject(new Error(`Unknown target ${id}`));
