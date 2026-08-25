@@ -3,11 +3,13 @@ const { createCaptureInstalledController } = await import("../../dist/data-layer
 let subscriptions = 0, removals = 0, listener, changes = 0;
 const values = new Map();
 const controller = createCaptureInstalledController({
+  root:{ querySelector:() => null },
   storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value) },
   initialPageUrl:() => "https://shop.example/", initialSources:() => [{ id:"history", name:"History", status:"Connected" }],
   sessionStart:async () => ({ id:"session:1", tabId:4, url:"https://shop.example/", historyPath:"event.history" }),
   subscribeToLiveFeed:(next) => { subscriptions += 1; listener = next; return () => { removals += 1; listener = undefined; }; },
   changed:() => { changes += 1; },
+  runCommand() {}, setLiveSessionMessage() {},
 });
 controller.mount(); controller.mount(); assert.equal(subscriptions, 1);
 await controller.begin();

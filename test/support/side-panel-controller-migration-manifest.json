@@ -207,7 +207,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::startTestingButton:42"
       }
     },
     {
@@ -219,7 +220,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::endTestingButton:43"
       }
     },
     {
@@ -578,7 +580,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::liveObserverElements:44"
       }
     },
     {
@@ -638,7 +641,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::pauseCaptureButton:45"
       }
     },
     {
@@ -650,7 +654,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::resumeCaptureButton:46"
       }
     },
     {
@@ -1130,7 +1135,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryEditorElements:49"
       }
     },
     {
@@ -1442,7 +1448,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplateSearch:50"
       }
     },
     {
@@ -1454,7 +1461,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::addNewButton:50"
       }
     },
     {
@@ -4190,7 +4198,8 @@
         "column": 5
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::dataLayerSessionState:49"
       }
     },
     {
@@ -4286,7 +4295,8 @@
         "column": 5
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::liveObserverState:50"
       }
     },
     {
@@ -4497,7 +4507,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::eventTemplates:44"
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplates:52"
       }
     },
     {
@@ -4510,7 +4520,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::propertyEditorState:46"
+        "target": "src/data-layer-installed/event-library/index.ts::propertyEditorState:54"
       }
     },
     {
@@ -4571,7 +4581,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::pendingTemplateRename:47"
+        "target": "src/data-layer-installed/event-library/index.ts::pendingTemplateRename:55"
       }
     },
     {
@@ -4584,7 +4594,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::pendingEventLibraryImport:48"
+        "target": "src/data-layer-installed/event-library/index.ts::pendingEventLibraryImport:56"
       }
     },
     {
@@ -4597,7 +4607,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::replaceEventLibraryArmed:50"
+        "target": "src/data-layer-installed/event-library/index.ts::replaceEventLibraryArmed:58"
       }
     },
     {
@@ -4610,7 +4620,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::pendingEventLibraryDeletion:49"
+        "target": "src/data-layer-installed/event-library/index.ts::pendingEventLibraryDeletion:57"
       }
     },
     {
@@ -6009,7 +6019,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::renderLiveObserver:51"
       }
     },
     {
@@ -6191,7 +6202,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::renderEventTemplateLibrary:92"
       }
     },
     {
@@ -7791,7 +7803,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::persistEventTemplateLibrary:52"
+        "target": "src/data-layer-installed/event-library/index.ts::persistEventTemplateLibrary:60"
       }
     },
     {
@@ -7818,7 +7830,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::reviewEventLibraryImport:62"
+        "target": "src/data-layer-installed/event-library/index.ts::reviewEventLibraryImport:70"
       }
     },
     {
@@ -7832,7 +7844,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::commitEventLibraryImport:65"
+        "target": "src/data-layer-installed/event-library/index.ts::commitEventLibraryImport:73"
       }
     },
     {
@@ -7846,7 +7858,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::requestEventTemplateDeletion:73"
+        "target": "src/data-layer-installed/event-library/index.ts::requestEventTemplateDeletion:81"
       }
     },
     {
@@ -7873,7 +7885,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::commitEventLibraryDeletion:76"
+        "target": "src/data-layer-installed/event-library/index.ts::commitEventLibraryDeletion:84"
       }
     },
     {
@@ -7926,7 +7938,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::openNewEventEditor:105"
       }
     },
     {
@@ -8329,7 +8342,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::syncCapturedEventsToLive:56"
       }
     },
     {
@@ -10730,11 +10744,12 @@
       "frozen": {
         "expression": "startTestingButton?.addEventListener",
         "line": 5510,
-        "column": 1,
-        "invocation": "startTestingButton?.addEventListener(\"click\", () => {\n  runCommandById(\"data-layer.start-testing\", commandRunContext);\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::startTestingButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -10743,11 +10758,12 @@
       "frozen": {
         "expression": "endTestingButton?.addEventListener",
         "line": 5513,
-        "column": 1,
-        "invocation": "endTestingButton?.addEventListener(\"click\", () => {\n  runCommandById(\"data-layer.end-testing\", commandRunContext);\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::endTestingButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -10795,11 +10811,12 @@
       "frozen": {
         "expression": "pauseCaptureButton?.addEventListener",
         "line": 5536,
-        "column": 1,
-        "invocation": "pauseCaptureButton?.addEventListener(\"click\", () => {\n  liveObserverState = pauseCapture(liveObserverState);\n  setLiveSessionMessage(\"Capture paused\");\n  renderLiveObserver();\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::pauseCaptureButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -10808,11 +10825,12 @@
       "frozen": {
         "expression": "resumeCaptureButton?.addEventListener",
         "line": 5542,
-        "column": 1,
-        "invocation": "resumeCaptureButton?.addEventListener(\"click\", () => {\n  liveObserverState = resumeCapture(liveObserverState);\n  setLiveSessionMessage(\"Capture resumed\");\n  renderLiveObserver();\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::resumeCaptureButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11059,7 +11077,8 @@
         "invocation": "eventTemplateSearch?.addEventListener(\"input\", renderEventTemplateLibrary)"
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplateSearch?.addEventListener:111"
       }
     },
     {
@@ -11761,7 +11780,8 @@
         "invocation": "addNewButton?.addEventListener(\"click\", openNewEventEditor)"
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::addNewButton?.addEventListener:112"
       }
     },
     {

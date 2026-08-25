@@ -1,20 +1,46 @@
 import { beginDataLayerTestingSession, persistSession, restoreSession, } from "../../utilities/data-layer/capture.js";
-import { createLiveObserverState, pauseCapture, recordLiveEvent, resumeCapture, } from "../../utilities/data-layer/live-inspection.js";
+import { createLiveObserverState, findLiveObserverElements, pauseCapture, recordLiveEvent, renderLiveObserverState, resumeCapture, } from "../../utilities/data-layer/live-inspection.js";
 import { endDataLayerTestingSession } from "../../data-layer-session.js";
 export function createCaptureInstalledController(ports) {
+    const startTestingButton = ports.root.querySelector("#start-data-layer-testing");
+    const endTestingButton = ports.root.querySelector("#end-data-layer-testing");
+    const liveObserverElements = findLiveObserverElements(ports.root);
+    const pauseCaptureButton = liveObserverElements.pauseCaptureButton;
+    const resumeCaptureButton = liveObserverElements.resumeCaptureButton;
     let mounted = false;
     let unsubscribe;
-    let session = restoreSession(ports.storage);
-    let observer = createLiveObserverState({ pageUrl: ports.initialPageUrl(), sources: ports.initialSources() });
-    const publish = () => { persistSession(session, ports.storage); ports.changed(session, observer); };
-    const capture = (event) => {
-        const previousCount = observer.events.length;
-        observer = recordLiveEvent(observer, event);
-        if (observer.events.length !== previousCount && session.session?.status === "active") {
-            session = { ...session, session: { ...session.session, currentUrl: event.pageUrl ?? session.session.currentUrl,
-                    timeline: [...session.session.timeline, { ...event, type: "observed", url: event.pageUrl ?? session.session.currentUrl,
+    let dataLayerSessionState = restoreSession(ports.storage);
+    let liveObserverState = createLiveObserverState({ pageUrl: ports.initialPageUrl(), sources: ports.initialSources() });
+    const renderLiveObserver = () => {
+        if (mounted)
+            renderLiveObserverState(liveObserverElements, liveObserverState, () => { });
+    };
+    const publish = () => {
+        persistSession(dataLayerSessionState, ports.storage);
+        ports.changed(dataLayerSessionState, liveObserverState);
+        renderLiveObserver();
+    };
+    const syncCapturedEventsToLive = (event) => {
+        const previousCount = liveObserverState.events.length;
+        liveObserverState = recordLiveEvent(liveObserverState, event);
+        if (liveObserverState.events.length !== previousCount && dataLayerSessionState.session?.status === "active") {
+            dataLayerSessionState = { ...dataLayerSessionState, session: { ...dataLayerSessionState.session,
+                    currentUrl: event.pageUrl ?? dataLayerSessionState.session.currentUrl,
+                    timeline: [...dataLayerSessionState.session.timeline, { ...event, type: "observed", url: event.pageUrl ?? dataLayerSessionState.session.currentUrl,
                             timestamp: event.captureTime, rawValue: event.rawInput }] } };
         }
+        publish();
+    };
+    const startTesting = () => ports.runCommand("data-layer.start-testing");
+    const endTesting = () => ports.runCommand("data-layer.end-testing");
+    const pauseInstalledCapture = () => {
+        liveObserverState = pauseCapture(liveObserverState);
+        ports.setLiveSessionMessage("Capture paused");
+        publish();
+    };
+    const resumeInstalledCapture = () => {
+        liveObserverState = resumeCapture(liveObserverState);
+        ports.setLiveSessionMessage("Capture resumed");
         publish();
     };
     return {
@@ -22,8 +48,13 @@ export function createCaptureInstalledController(ports) {
             if (mounted)
                 return;
             mounted = true;
-            unsubscribe = ports.subscribeToLiveFeed(capture);
-            ports.changed(session, observer);
+            unsubscribe = ports.subscribeToLiveFeed(syncCapturedEventsToLive);
+            startTestingButton?.addEventListener("click", startTesting);
+            endTestingButton?.addEventListener("click", endTesting);
+            pauseCaptureButton?.addEventListener("click", pauseInstalledCapture);
+            resumeCaptureButton?.addEventListener("click", resumeInstalledCapture);
+            ports.changed(dataLayerSessionState, liveObserverState);
+            renderLiveObserver();
         },
         dispose() {
             if (!mounted)
@@ -31,18 +62,22 @@ export function createCaptureInstalledController(ports) {
             mounted = false;
             unsubscribe?.();
             unsubscribe = undefined;
+            startTestingButton?.removeEventListener("click", startTesting);
+            endTestingButton?.removeEventListener("click", endTesting);
+            pauseCaptureButton?.removeEventListener("click", pauseInstalledCapture);
+            resumeCaptureButton?.removeEventListener("click", resumeInstalledCapture);
         },
         async begin() {
-            const started = beginDataLayerTestingSession(session, observer, await ports.sessionStart());
-            session = started.sessionState;
-            observer = started.liveObserverState;
+            const started = beginDataLayerTestingSession(dataLayerSessionState, liveObserverState, await ports.sessionStart());
+            dataLayerSessionState = started.sessionState;
+            liveObserverState = started.liveObserverState;
             publish();
         },
-        end() { session = endDataLayerTestingSession(session); publish(); },
-        pause() { observer = pauseCapture(observer); publish(); },
-        resume() { observer = resumeCapture(observer); publish(); },
-        capture,
-        state: () => ({ session: structuredClone(session), observer: structuredClone(observer) }),
+        end() { dataLayerSessionState = endDataLayerTestingSession(dataLayerSessionState); publish(); },
+        pause: pauseInstalledCapture,
+        resume: resumeInstalledCapture,
+        capture: syncCapturedEventsToLive,
+        state: () => ({ session: structuredClone(dataLayerSessionState), observer: structuredClone(liveObserverState) }),
     };
 }
 export const installedControllerDefinition = Object.freeze({

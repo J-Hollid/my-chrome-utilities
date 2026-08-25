@@ -6,6 +6,7 @@ const template = { id:"template:1", name:"Page view", eventName:"page_view", sou
 const values = new Map([["my-chrome-utilities.event-template-library.v1", JSON.stringify([template])]]);
 let changed = 0, pushed;
 const controller = createEventLibraryInstalledController({
+  root:{ querySelector:() => null },
   storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value) },
   defaultPushPath:() => "event.history", push:async (value) => { pushed = value.id; },
   changed:() => { changed += 1; }, createId:() => "template:2",

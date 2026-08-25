@@ -8,13 +8,16 @@ import {
   discardDraft,
   eventLibraryExport,
   eventLibraryImport,
+  findEventLibraryEditorElements,
   openPropertyEditor,
+  renderEventLibraryEditor,
   replaceImportedTemplates,
   restoreEventTemplateLibrary,
   saveAsTemplateCopy,
   saveDraftRevision,
   saveNewEvent,
   saveTemplateRename,
+  searchEventTemplates,
   serializeEventTemplateLibrary,
   type EditableEventTemplate,
   type PropertyEditorState,
@@ -22,10 +25,13 @@ import {
 } from "../../utilities/data-layer/event-library.js";
 
 export interface EventLibraryInstalledPorts {
+  root: ParentNode;
   storage: Pick<Storage, "getItem" | "setItem">;
   defaultPushPath(): string;
   push(template: EditableEventTemplate): Promise<void>;
   changed(): void;
+  createSchema?(template: EditableEventTemplate): void;
+  createTestCase?(template: EditableEventTemplate): void;
   createId?(): string;
 }
 
@@ -40,6 +46,8 @@ export interface EventLibraryInstalledState {
 }
 
 export function createEventLibraryInstalledController(ports: EventLibraryInstalledPorts) {
+  const eventLibraryEditorElements = findEventLibraryEditorElements(ports.root);
+  const { search:eventTemplateSearch, addNewButton } = eventLibraryEditorElements;
   let mounted = false;
   let eventTemplates = restoreEventTemplateLibrary(ports.storage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
   let selectedId: string | undefined;
@@ -81,29 +89,54 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
     if (!pendingEventLibraryDeletion.id || propertyEditorState?.template.id === pendingEventLibraryDeletion.id) closeEditor();
     pendingEventLibraryDeletion = undefined; persistEventTemplateLibrary();
   };
+  const renderEventTemplateLibrary = (): void => {
+    if (!mounted || !eventLibraryEditorElements.list) return;
+    const visible = searchEventTemplates(eventTemplates, eventTemplateSearch?.value ?? "");
+    renderEventLibraryEditor(eventLibraryEditorElements, visible, propertyEditorState, {
+      edit:(template) => { selectedId = template.id; propertyEditorState = openPropertyEditor(template); renderEventTemplateLibrary(); },
+      rename:(template) => { pendingTemplateRename = { templateId:template.id, draft:beginTemplateRename(template) }; },
+      duplicate:(template) => { selectedId = template.id; propertyEditorState = openPropertyEditor(template); },
+      push:(template) => { selectedId = template.id; void ports.push(template); },
+      delete:(template) => requestEventTemplateDeletion(template.id),
+      ...(ports.createSchema ? { createSchema:ports.createSchema } : {}),
+      ...(ports.createTestCase ? { createTestCase:ports.createTestCase } : {}),
+    });
+  };
+  const openNewEventEditor = (): void => { selectedId = undefined;
+    propertyEditorState = createNewEventEditor(ports.defaultPushPath()); renderEventTemplateLibrary(); };
 
   return {
-    mount(): void { mounted = true; },
-    dispose(): void { mounted = false; closeEditor(); pendingEventLibraryImport = undefined; pendingEventLibraryDeletion = undefined; replaceEventLibraryArmed = false; },
+    mount(): void {
+      if (mounted) return; mounted = true;
+      eventTemplateSearch?.addEventListener("input", renderEventTemplateLibrary);
+      addNewButton?.addEventListener("click", openNewEventEditor);
+      renderEventTemplateLibrary();
+    },
+    dispose(): void {
+      if (!mounted) return; mounted = false;
+      eventTemplateSearch?.removeEventListener("input", renderEventTemplateLibrary);
+      addNewButton?.removeEventListener("click", openNewEventEditor);
+      closeEditor(); pendingEventLibraryImport = undefined; pendingEventLibraryDeletion = undefined; replaceEventLibraryArmed = false;
+    },
     select(id: string): void { find(id); selectedId = id; },
     beginDraft(id: string): void { const template = find(id); selectedId = id; propertyEditorState = openPropertyEditor(template); },
-    beginNew(): void { selectedId = undefined; propertyEditorState = createNewEventEditor(ports.defaultPushPath()); },
+    beginNew:openNewEventEditor,
     discardDraft(): void { if (propertyEditorState) propertyEditorState = discardDraft(propertyEditorState); },
     saveRevision(): EditableEventTemplate {
       if (!propertyEditorState) throw new Error("Open a template before saving a revision");
       propertyEditorState = saveDraftRevision(propertyEditorState);
       eventTemplates = eventTemplates.map((candidate) => candidate.id === propertyEditorState?.template.id ? propertyEditorState.template : candidate);
-      persistEventTemplateLibrary(); return structuredClone(propertyEditorState.template);
+      persistEventTemplateLibrary(); renderEventTemplateLibrary(); return structuredClone(propertyEditorState.template);
     },
     saveNew(): EditableEventTemplate {
       if (!propertyEditorState?.isNew) throw new Error("Open a new event draft before saving");
       const saved = saveNewEvent(propertyEditorState, createId); eventTemplates = [...eventTemplates, saved];
-      selectedId = saved.id; propertyEditorState = openPropertyEditor(saved); persistEventTemplateLibrary(); return structuredClone(saved);
+      selectedId = saved.id; propertyEditorState = openPropertyEditor(saved); persistEventTemplateLibrary(); renderEventTemplateLibrary(); return structuredClone(saved);
     },
     saveCopy(name: string): EditableEventTemplate {
       if (!propertyEditorState) throw new Error("Open a template before saving a copy");
       const copy = { ...saveAsTemplateCopy(propertyEditorState, name), id:createId() };
-      eventTemplates = [...eventTemplates, copy]; persistEventTemplateLibrary(); return structuredClone(copy);
+      eventTemplates = [...eventTemplates, copy]; persistEventTemplateLibrary(); renderEventTemplateLibrary(); return structuredClone(copy);
     },
     beginRename(id: string): void { const template = find(id); pendingTemplateRename = { templateId:id, draft:beginTemplateRename(template) }; },
     commitRename(): void {

@@ -1,5 +1,7 @@
-import { EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, appendImportedTemplates, beginTemplateRename, clearEventLibrary, createNewEventEditor, deleteEventTemplate, discardDraft, eventLibraryExport, eventLibraryImport, openPropertyEditor, replaceImportedTemplates, restoreEventTemplateLibrary, saveAsTemplateCopy, saveDraftRevision, saveNewEvent, saveTemplateRename, serializeEventTemplateLibrary, } from "../../utilities/data-layer/event-library.js";
+import { EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, appendImportedTemplates, beginTemplateRename, clearEventLibrary, createNewEventEditor, deleteEventTemplate, discardDraft, eventLibraryExport, eventLibraryImport, findEventLibraryEditorElements, openPropertyEditor, renderEventLibraryEditor, replaceImportedTemplates, restoreEventTemplateLibrary, saveAsTemplateCopy, saveDraftRevision, saveNewEvent, saveTemplateRename, searchEventTemplates, serializeEventTemplateLibrary, } from "../../utilities/data-layer/event-library.js";
 export function createEventLibraryInstalledController(ports) {
+    const eventLibraryEditorElements = findEventLibraryEditorElements(ports.root);
+    const { search: eventTemplateSearch, addNewButton } = eventLibraryEditorElements;
     let mounted = false;
     let eventTemplates = restoreEventTemplateLibrary(ports.storage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
     let selectedId;
@@ -56,12 +58,48 @@ export function createEventLibraryInstalledController(ports) {
         pendingEventLibraryDeletion = undefined;
         persistEventTemplateLibrary();
     };
+    const renderEventTemplateLibrary = () => {
+        if (!mounted || !eventLibraryEditorElements.list)
+            return;
+        const visible = searchEventTemplates(eventTemplates, eventTemplateSearch?.value ?? "");
+        renderEventLibraryEditor(eventLibraryEditorElements, visible, propertyEditorState, {
+            edit: (template) => { selectedId = template.id; propertyEditorState = openPropertyEditor(template); renderEventTemplateLibrary(); },
+            rename: (template) => { pendingTemplateRename = { templateId: template.id, draft: beginTemplateRename(template) }; },
+            duplicate: (template) => { selectedId = template.id; propertyEditorState = openPropertyEditor(template); },
+            push: (template) => { selectedId = template.id; void ports.push(template); },
+            delete: (template) => requestEventTemplateDeletion(template.id),
+            ...(ports.createSchema ? { createSchema: ports.createSchema } : {}),
+            ...(ports.createTestCase ? { createTestCase: ports.createTestCase } : {}),
+        });
+    };
+    const openNewEventEditor = () => {
+        selectedId = undefined;
+        propertyEditorState = createNewEventEditor(ports.defaultPushPath());
+        renderEventTemplateLibrary();
+    };
     return {
-        mount() { mounted = true; },
-        dispose() { mounted = false; closeEditor(); pendingEventLibraryImport = undefined; pendingEventLibraryDeletion = undefined; replaceEventLibraryArmed = false; },
+        mount() {
+            if (mounted)
+                return;
+            mounted = true;
+            eventTemplateSearch?.addEventListener("input", renderEventTemplateLibrary);
+            addNewButton?.addEventListener("click", openNewEventEditor);
+            renderEventTemplateLibrary();
+        },
+        dispose() {
+            if (!mounted)
+                return;
+            mounted = false;
+            eventTemplateSearch?.removeEventListener("input", renderEventTemplateLibrary);
+            addNewButton?.removeEventListener("click", openNewEventEditor);
+            closeEditor();
+            pendingEventLibraryImport = undefined;
+            pendingEventLibraryDeletion = undefined;
+            replaceEventLibraryArmed = false;
+        },
         select(id) { find(id); selectedId = id; },
         beginDraft(id) { const template = find(id); selectedId = id; propertyEditorState = openPropertyEditor(template); },
-        beginNew() { selectedId = undefined; propertyEditorState = createNewEventEditor(ports.defaultPushPath()); },
+        beginNew: openNewEventEditor,
         discardDraft() { if (propertyEditorState)
             propertyEditorState = discardDraft(propertyEditorState); },
         saveRevision() {
@@ -70,6 +108,7 @@ export function createEventLibraryInstalledController(ports) {
             propertyEditorState = saveDraftRevision(propertyEditorState);
             eventTemplates = eventTemplates.map((candidate) => candidate.id === propertyEditorState?.template.id ? propertyEditorState.template : candidate);
             persistEventTemplateLibrary();
+            renderEventTemplateLibrary();
             return structuredClone(propertyEditorState.template);
         },
         saveNew() {
@@ -80,6 +119,7 @@ export function createEventLibraryInstalledController(ports) {
             selectedId = saved.id;
             propertyEditorState = openPropertyEditor(saved);
             persistEventTemplateLibrary();
+            renderEventTemplateLibrary();
             return structuredClone(saved);
         },
         saveCopy(name) {
@@ -88,6 +128,7 @@ export function createEventLibraryInstalledController(ports) {
             const copy = { ...saveAsTemplateCopy(propertyEditorState, name), id: createId() };
             eventTemplates = [...eventTemplates, copy];
             persistEventTemplateLibrary();
+            renderEventTemplateLibrary();
             return structuredClone(copy);
         },
         beginRename(id) { const template = find(id); pendingTemplateRename = { templateId: id, draft: beginTemplateRename(template) }; },
