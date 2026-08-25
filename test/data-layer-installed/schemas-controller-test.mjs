@@ -958,24 +958,30 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       .map(([key, nested]) => [key, normalized(nested)])) : value;
   const digest = (value) => createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex");
   const projectionCause = "other:installed schema unchanged projection persistence";
+  const orderingCause = "other:installed schema canonical persistence ordering";
   const projectionScenario = context.causalCategory === projectionCause;
-  const expectedPreRepairFailure = projectionScenario
+  const orderingScenario = context.causalCategory === orderingCause;
+  const expectedPreRepairFailure = projectionScenario || orderingScenario
     ? { untouchedSchemaProjectionPreserved:false }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:false };
-  const expectedRepairResult = projectionScenario
+  const expectedRepairResult = projectionScenario || orderingScenario
     ? { untouchedSchemaProjectionPreserved:true }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:true };
-  const observed = projectionScenario
+  const observed = projectionScenario || orderingScenario
     ? { untouchedSchemaProjectionPreserved }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender };
   assert.deepEqual(observed, expectedRepairResult);
   const fixture = {
     id:projectionScenario ? "installed-schema-unchanged-projection-persistence-v1"
-      : "installed-schema-publication-feedback-retention-v1",
-    causalCategory:projectionScenario ? projectionCause : "other:installed schema publication feedback retention",
+      : orderingScenario ? "installed-schema-canonical-persistence-ordering-v1"
+        : "installed-schema-publication-feedback-retention-v1",
+    causalCategory:projectionScenario ? projectionCause : orderingScenario ? orderingCause
+      : "other:installed schema publication feedback retention",
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
     input:projectionScenario
       ? { operation:"reusable rule publication", failure:"durable batch rejection", untouched:"settled schema projection" }
+      : orderingScenario
+        ? { operation:"successful schema library write", changed:"edited schema projection", untouched:"migration-only schema projection" }
       : { publication:"Saved Schema revision", rerender:"relationship tree", feedback:"Live event revalidation outcome" },
     expectedPreRepairFailure,
     expectedRepairResult,
