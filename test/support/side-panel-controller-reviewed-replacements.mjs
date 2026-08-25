@@ -94,6 +94,10 @@ export const reviewedControllerReplacements = [
   { identity:"listeners:94:cancelSchemaManualPropertyButton.addEventListener@3530:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"cancelSchemaManualPropertyButton?.addEventListener" },
   { identity:"listeners:95:schemaManualPropertyDialog.addEventListener@3531:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"schemaManualPropertyDialog?.addEventListener" },
   { identity:"listeners:96:goToExistingSchemaPropertyButton.addEventListener@3532:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"goToExistingSchemaPropertyButton?.addEventListener" },
-  { identity:"listeners:132:schemaPropertyRulePicker.addEventListener@4296:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"schemaPropertyRulePicker?.addEventListener", line:626 },
-  { identity:"listeners:133:schemaPropertyRulePicker.addEventListener@4297:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"schemaPropertyRulePicker?.addEventListener", line:627 },
+  { identity:"listeners:132:schemaPropertyRulePicker.addEventListener@4296:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"schemaPropertyRulePicker?.addEventListener", line:692 },
+  { identity:"listeners:133:schemaPropertyRulePicker.addEventListener@4297:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"schemaPropertyRulePicker?.addEventListener", line:693 },
+  { identity:"listeners:212:createSchemaRuleButton?.addEventListener@5871:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"createSchemaRuleButton?.addEventListener" },
+  { identity:"listeners:215:saveSchemaRuleButton?.addEventListener@5875:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"saveSchemaRuleButton?.addEventListener" },
+  { identity:"listeners:221:schemaRuleSearch?.addEventListener@5908:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"schemaRuleSearch?.addEventListener" },
+  { identity:"listeners:222:updateSchemaRuleAttachments?.addEventListener@5909:1", kind:"call", path:"src/data-layer-installed/schemas/index.ts", symbol:"updateSchemaRuleAttachments?.addEventListener" },
 ];

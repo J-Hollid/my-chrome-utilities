@@ -8,7 +8,7 @@ const controller = createSchemasInstalledController({
   root:{ querySelector:() => null, querySelectorAll:() => [] },
   storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value) },
   changed:() => { changed += 1; }, runGuidedValidation:async (id) => { guided = id; },
-  subscribe:() => () => {}, specificIndexSelected() {}, rulePickerChanged() {},
+  subscribe:() => () => {}, specificIndexSelected() {}, rulePickerChanged() {}, createRuleId:() => "rule:first",
 });
 controller.mount(); controller.open("schema:page"); controller.beginDraft();
 controller.updateDraft({ document:{ type:"object", required:["title"], properties:{ title:{ type:"string" } } } }, "Require title");
@@ -59,7 +59,10 @@ const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "
   "#schema-manual-property-child-name", "#schema-manual-property-type-label", "#schema-manual-property-type",
   "#schema-manual-array-type-group", "#schema-manual-array-item-type", "#schema-manual-property-preview",
   "#schema-manual-property-assistance", "#go-to-existing-schema-property", "#confirm-schema-manual-property",
-  "#cancel-schema-manual-property", "#schema-property-rule-picker"];
+  "#cancel-schema-manual-property", "#schema-property-rule-picker", "#create-schema-rule", "#schema-rule-editor",
+  "#schema-rule-name", "#schema-rule-parameters", "#schema-rule-types", "#schema-rule-operator",
+  "#schema-rule-severity", "#schema-rule-message", "#schema-rule-examples", "#save-schema-rule",
+  "#schema-rule-list", "#schema-rule-search", "#schema-rule-attachments", "#update-schema-rule-attachments"];
 const elements = new Map(selectors.map((selector) => [selector, element()]));
 elements.set("#side-panel-layered-profile-editor", element()); elements.set("#live-event-query", element());
 const schemaMasterTab = Object.assign(element(), { textContent:"Schemas", dataset:{ schemaSubview:"schema-master" } });
@@ -76,6 +79,7 @@ const uiController = createSchemasInstalledController({
   changed() {}, runGuidedValidation:async () => {}, subscribe:() => () => {},
   specificIndexSelected:(path) => { selectedSpecificIndex = path; },
   rulePickerChanged:(path, open) => rulePickerChanges.push(`${path}:${open}`),
+  createRuleId:() => "rule:checkout",
 });
 uiController.mount(); uiController.open("schema:page"); uiController.beginDraft();
 elements.get("#schema-editor-name").value = "Page checkout"; elements.get("#schema-editor-name").dispatch("input");
@@ -150,6 +154,17 @@ assert.equal(elements.get("#schema-property-rule-picker").open, true);
 assert.equal(uiController.rulePickerState().configuration.propertyType, "string");
 elements.get("#schema-property-rule-picker").dispatch("cancel");
 assert.deepEqual(rulePickerChanges, ["items.*.sku:true", "items.*.sku:false"]);
+elements.get("#create-schema-rule").click();
+elements.get("#schema-rule-name").value = "Checkout required";
+elements.get("#schema-rule-types").value = "string"; elements.get("#schema-rule-operator").value = "required";
+elements.get("#schema-rule-severity").value = "error"; elements.get("#schema-rule-message").value = "Checkout is required";
+elements.get("#schema-rule-attachments").selectedOptions = [{ value:uiController.state().activeSchemaId }];
+elements.get("#save-schema-rule").click();
+assert.equal(uiController.rules()[0].name, "Checkout required");
+assert.equal(uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId)
+  .attachedRules.some(({ id }) => id === "rule:checkout"), true);
+elements.get("#schema-rule-search").value = "checkout"; elements.get("#schema-rule-search").dispatch("input");
+assert.match(elements.get("#schema-rule-list").textContent, /Checkout required/);
 uiController.dispose();
 assert.equal([...elements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,
   "Schemas removes every editor and revision listener it owns");
