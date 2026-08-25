@@ -580,7 +580,7 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
                             root.getElementById(focusedId)?.focus({ preventScroll: true });
                         liveApi.setEventValidationUpdateStatus(liveElements, `Validation changed to ${state}.`);
                     }, }))) },
-            ui: { historyPath: () => { const state = controllers["project-event-transport"].state(), status = ["Selection required", "Waiting for path", "Ready", "Unavailable"].includes(state.currentTargetPathStatus) ? state.currentTargetPathStatus : "Unavailable"; return { path: state.observationPath, fieldValue: state.observationPath, status: status, generation: state.targetPathRequest }; },
+            ui: { historyPath: () => { const state = controllers["project-event-transport"].state(), status = ["Selection required", "Waiting for path", "Ready", "Unavailable"].includes(state.currentTargetPathStatus) ? state.currentTargetPathStatus : "Unavailable"; return { path: state.observationPath, fieldValue: state.observationPath, status: status, generation: state.pathGeneration }; },
                 chooseObservationTarget: () => root.querySelector("#choose-observation-target")?.click(), browseObservationTargets: () => root.querySelector("#browse-observation-targets")?.click(),
                 closeObservationTargetPicker: () => captureApi.closeObservationTargetPicker(captureApi.findObservationTargetElements(root)), searchObservationTargets: () => { }, cancelDetachTarget: () => { }, confirmDetachTarget: () => { },
                 selectedTargetChanged: (observation) => {
@@ -705,7 +705,8 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
                 projectLibraryUi.captureActiveProject(next, result.revision);
             },
             settleTransport: durable.settled, readTargetObservation: async (path) => { const state = controllers.capture.state().targets, target = state.targets.find(({ id }) => id === (state.attachedTargetId ?? state.selectedTargetId)); return target ? captureObserverRuntime.read({ tabId: target.tabId, pageUrl: target.pageUrl, historyPath: path, pageLoadId: `tab:${target.tabId}:transport` }) : undefined; },
-            applyLiveTargetPathObservation: async () => { }, renderTargetReadiness: () => controllers.capture.refreshPresentation(), projectName: () => currentProject()?.project.name },
+            applyLiveTargetPathObservation: (observation) => controllers.capture.applyTargetPathObservation(observation),
+            renderTargetReadiness: () => controllers.capture.refreshPresentation(), projectName: () => currentProject()?.project.name },
         "live-flow-testing": { root, activeProject: async () => { const id = activeProjectId(); if (!id)
                 return; await durable.ensureProject(id); return (await durable.repository.loadProject(id)).state; },
             events: () => controllers?.capture.state().observer.events ?? [], saveSummary: () => { }, savedSummary: () => {

@@ -1,4 +1,5 @@
 import { appendObservedHistoryEntry, attachHistoryArrayObserver, attachHistoryArraySnapshot, beginDataLayerTestingSession, beginObservedPageLoad, captureEntry, canonicalLiveObserverStatus, createLiveSessionSummary, createLiveNotificationController, findLiveGuidedWorkflowElements, findLiveSessionSummaryElements, findObservationTargetElements, findObservationTargets, handleObservationTargetDialogKeydown, handleObservationTargetListKeydown, handleObservationTargetSearchKeydown, createObservationTarget, createObservationTargetState, restoreAttachedObservationTarget, registerObservationTarget, refreshDiscoveredObservationTargets, selectObservationTarget, selectedObservationTarget, attachedObservationTarget, attachSelectedObservationTarget, updateObservationTargetAccess, initialObservationActivationState, initialObservationRefreshState, markObservationRefreshPageEntryCaptured, liveGuidedWorkflow, navigateObservationTarget, navigateSession, nextObservationActivation, nextObservationRefreshAttempt, observationActivationIsCurrent, observationRefreshDelay, observationRefreshRequestForPageLoad, observationRefreshRequestIsCurrent, observerAttachmentStatus, persistSession, restartObservation as restartHistoryObservation, restoreFreshSessionLiveObserver, restoreSession, samplePageObject, shouldRetryObservationRefresh, startFreshLiveSession, stopHistoryArrayObserver, renderLiveGuidedWorkflow, renderLiveSessionControls, renderLiveSessionSummary, } from "../../utilities/data-layer/capture.js";
+import { createLiveTargetPermissionRecoveryActionHost } from "../../data-layer-live-target-permission-recovery/action-host.js";
 import { detachObservationTarget, endAndAttachObservationTarget } from "../../data-layer-observation-targets.js";
 import { SAVED_EVENT_FEED_FILTER_STORAGE_KEY, SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, SAVED_SESSION_LIBRARY_STORAGE_KEY, SAVED_SESSION_LIVE_FEED_STORAGE_KEY, applySavedEventFeedFilter, cancelSavedSessionDeletion, captureInspectorReturn, closeLiveInspector, commitSavedEventFeedFilterLibrary, confirmSavedSessionDeletion, confirmSessionSave, createSavedEventFeedFilter, createSessionSaveDraft, createLiveObserverState, exportSavedSession, deleteSavedEventFeedFilter, findLiveObserverElements, importSavedSession, openSavedSession, openSavedSessionLiveFeed, pauseCapture, recordBackgroundLiveEvent, recordLiveEvent, renameSavedEventFeedFilter, renameSavedSession, renderLiveObserverState, requestSavedSessionDeletion, restoreSavedEventFeedFilterLibrary, restoreSavedEventFeedWorkingView, restoreSavedSessionLibrary, restoreSavedSessionLiveFeed, restoreInspectorReturn, resumeSavedSession, resumeCapture, returnToCurrentLiveFeed, revalidateSavedSessionLiveFeed, savedSessionSummary, searchSavedSessions, selectLiveEvent, dataLayerViewForNavigationKey, serializeSavedSessionLibrary, serializeSavedSessionLiveFeed, serializeSavedEventFeedWorkingView, setDefaultSavedEventFeedFilter, setLiveQuery, updateSavedEventFeedFilter, updateSavedSessionLiveFeedView, } from "../../utilities/data-layer/live-inspection.js";
 export function renderInstalledSavedSessionList(list, sessions, actions) {
@@ -43,6 +44,7 @@ export function createCaptureInstalledController(ports) {
     const resumeCaptureButton = liveObserverElements.resumeCaptureButton;
     const liveSessionSummaryElements = findLiveSessionSummaryElements(ports.root);
     const liveGuidedWorkflowElements = findLiveGuidedWorkflowElements(ports.root);
+    const permissionRecoveryActionHost = createLiveTargetPermissionRecoveryActionHost(ports.root);
     const dataLayerViewList = liveObserverElements.viewList;
     const backToEventsButton = liveObserverElements.backToEventsButton;
     const copyPageUrlButton = liveSessionSummaryElements.copyPageUrlButton;
@@ -294,6 +296,14 @@ export function createCaptureInstalledController(ports) {
         renderObservationTargetPicker();
         renderObservationTargetContext();
     }
+    function applyTargetPathObservation(observation) {
+        const target = attachedObservationTarget(observationTargetState) ?? selectedObservationTarget(observationTargetState);
+        if (!mounted || !target || target.tabId !== observation.tabId)
+            return;
+        observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, observation.pageAccessStatus === "page access available" ? "Ready" : "Permission required");
+        renderObservationTargetPicker();
+        renderObservationTargetContext();
+    }
     async function attachSelectedTarget() {
         const decision = attachSelectedObservationTarget(observationTargetState);
         if (decision.result === "End current session before attaching selected target") {
@@ -365,6 +375,11 @@ export function createCaptureInstalledController(ports) {
         renderLiveSessionControls({ startTestingButton, endTestingButton, pauseCaptureButton, resumeCaptureButton }, { activeSession, captureStatus: liveObserverState.status });
         renderLiveGuidedWorkflow(liveGuidedWorkflowElements, liveGuidedWorkflow({ activeSession,
             ...(selectedTarget ? { selectedTarget } : {}), pathStatus }));
+        if (!activeSession && selectedTarget?.accessState === "Permission required") {
+            permissionRecoveryActionHost.show(selectedTarget, () => requestSelectedTargetAccess(selectedTarget));
+        }
+        else
+            permissionRecoveryActionHost.hide();
         if (startFreshSessionButton) {
             startFreshSessionButton.hidden = !activeSession;
             startFreshSessionButton.disabled = Boolean(savedSessionLiveFeed);
@@ -1289,6 +1304,7 @@ export function createCaptureInstalledController(ports) {
             savedSessionList?.removeAttribute("aria-live");
             liveGuidedWorkflowElements.setupSteps?.removeAttribute("data-session-owner");
             observationTargetList?.removeAttribute("aria-live");
+            permissionRecoveryActionHost.hide();
             ports.savedFilters.dispose();
             targetDiscoveryGeneration += 1;
             permissionRecoveryGeneration += 1;
@@ -1345,6 +1361,7 @@ export function createCaptureInstalledController(ports) {
             const target = observationTargetState.targets.find((candidate) => candidate.id === id);
             return target ? requestSelectedTargetAccess(target) : Promise.reject(new Error(`Unknown target ${id}`));
         },
+        applyTargetPathObservation,
         attachTarget: attachSelectedTarget,
         beginDetachTarget: beginDetachSelectedTarget,
         confirmDetachTarget: confirmDetachSelectedTarget,

@@ -167,8 +167,15 @@ assert.equal([...elements.values()].reduce((count, element) => count + element.l
 {
   const permissionCalls = [];
   let pathStatus = "Permission required";
+  let recoveryAction;
+  const previousDocument = globalThis.document;
+  const readinessHost = interactiveElement();
+  readinessHost.append = (action) => { recoveryAction = action;
+    action.remove = () => { if (recoveryAction === action) recoveryAction = undefined; }; };
+  globalThis.document = { createElement:() => interactiveElement() };
   const permissionController = createCaptureInstalledController({
-    root:{ querySelector:() => null }, storage:{ getItem:() => null, setItem() {} },
+    root:{ querySelector:(selector) => selector === "#live-setup-readiness" ? readinessHost : null },
+    storage:{ getItem:() => null, setItem() {} },
     initialPageUrl:() => "https://shop.example/", initialSources:() => [],
     sessionStart:async () => ({ id:"unused", tabId:42, url:"", historyPath:"" }),
     changed() {}, runCommand() {}, setLiveSessionMessage() {}, observerRuntime:noOpObserverRuntime,
@@ -191,6 +198,12 @@ assert.equal([...elements.values()].reduce((count, element) => count + element.l
   });
   permissionController.mount();
   await permissionController.discoverTargets();
+  permissionController.applyTargetPathObservation({ tabId:42, pageUrl:"https://shop.example/checkout",
+    historyPath:"event.history", pageLoadId:"pre-grant", pageAccessStatus:"page access unavailable" });
+  assert.equal(permissionController.state().targets.targets[0].accessState, "Permission required",
+    "the failed pre-grant transport observation activates recovery on the retained target");
+  assert.equal(recoveryAction?.textContent, "Request access",
+    "Capture projects the retained target's recovery into the visible current step");
   await permissionController.requestTargetAccess("tab:42:window:7");
   assert.deepEqual(permissionCalls, [
     ["apply", undefined, undefined],
@@ -200,6 +213,8 @@ assert.equal([...elements.values()].reduce((count, element) => count + element.l
   ], "a native exact-origin grant settles through one same-tab configured-path probe before readiness");
   assert.equal(permissionController.state().targets.targets[0].accessState, "Ready");
   permissionController.dispose();
+  if (previousDocument === undefined) delete globalThis.document;
+  else globalThis.document = previousDocument;
 }
 
 async function permissionRecoveryHarness({ grant = true, observation, deferProbe = false } = {}) {

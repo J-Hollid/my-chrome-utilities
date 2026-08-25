@@ -55,6 +55,8 @@ import {
   type ObservationTarget,
   type ObservationTargetState,
 } from "../../utilities/data-layer/capture.js";
+import { createLiveTargetPermissionRecoveryActionHost } from
+  "../../data-layer-live-target-permission-recovery/action-host.js";
 import { detachObservationTarget, endAndAttachObservationTarget } from "../../data-layer-observation-targets.js";
 import {
   SAVED_EVENT_FEED_FILTER_STORAGE_KEY,
@@ -280,6 +282,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
   const resumeCaptureButton = liveObserverElements.resumeCaptureButton;
   const liveSessionSummaryElements = findLiveSessionSummaryElements(ports.root);
   const liveGuidedWorkflowElements = findLiveGuidedWorkflowElements(ports.root);
+  const permissionRecoveryActionHost = createLiveTargetPermissionRecoveryActionHost(ports.root);
   const dataLayerViewList = liveObserverElements.viewList;
   const backToEventsButton = liveObserverElements.backToEventsButton;
   const copyPageUrlButton = liveSessionSummaryElements.copyPageUrlButton;
@@ -492,6 +495,13 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     setObservationTargetResult(`Access granted for ${target.origin}`); renderObservationTargetPicker();
     renderObservationTargetContext();
   }
+  function applyTargetPathObservation(observation:ActivePageObservationResult):void {
+    const target = attachedObservationTarget(observationTargetState) ?? selectedObservationTarget(observationTargetState);
+    if (!mounted || !target || target.tabId !== observation.tabId) return;
+    observationTargetState = updateObservationTargetAccess(observationTargetState, target.id,
+      observation.pageAccessStatus === "page access available" ? "Ready" : "Permission required");
+    renderObservationTargetPicker(); renderObservationTargetContext();
+  }
   async function attachSelectedTarget(): Promise<void> {
     const decision = attachSelectedObservationTarget(observationTargetState);
     if (decision.result === "End current session before attaching selected target") {
@@ -536,6 +546,9 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
       { activeSession, captureStatus:liveObserverState.status });
     renderLiveGuidedWorkflow(liveGuidedWorkflowElements, liveGuidedWorkflow({ activeSession,
       ...(selectedTarget ? { selectedTarget } : {}), pathStatus }));
+    if (!activeSession && selectedTarget?.accessState === "Permission required") {
+      permissionRecoveryActionHost.show(selectedTarget, () => requestSelectedTargetAccess(selectedTarget));
+    } else permissionRecoveryActionHost.hide();
     if (startFreshSessionButton) { startFreshSessionButton.hidden = !activeSession;
       startFreshSessionButton.disabled = Boolean(savedSessionLiveFeed); }
   }
@@ -1215,6 +1228,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
       savedSessionList?.removeAttribute("aria-live");
       liveGuidedWorkflowElements.setupSteps?.removeAttribute("data-session-owner");
       observationTargetList?.removeAttribute("aria-live");
+      permissionRecoveryActionHost.hide();
       ports.savedFilters.dispose();
       targetDiscoveryGeneration += 1; permissionRecoveryGeneration += 1; importGeneration += 1; attachedTargetRecoveryGeneration += 1;
       pendingObservationTargetSwitchId = undefined;
@@ -1249,6 +1263,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
       observationTargetState = selectObservationTarget(observationTargetState, id); renderObservationTargetPicker(); },
     requestTargetAccess(id:string): Promise<void> { const target = observationTargetState.targets.find((candidate) => candidate.id === id);
       return target ? requestSelectedTargetAccess(target) : Promise.reject(new Error(`Unknown target ${id}`)); },
+    applyTargetPathObservation,
     attachTarget:attachSelectedTarget,
     beginDetachTarget:beginDetachSelectedTarget,
     confirmDetachTarget:confirmDetachSelectedTarget,

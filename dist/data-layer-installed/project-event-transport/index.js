@@ -13,6 +13,7 @@ export function createProjectEventTransportInstalledController(ports) {
     let projectTransportSavePending = false;
     let generation = 0;
     let targetPathRequest = 0;
+    let pathGeneration = 0;
     let currentTargetPathStatus = "Selection required";
     function renderTargetPath(path, fieldValue = path, status = "Selection required") {
         if (historyPathInput)
@@ -58,7 +59,10 @@ export function createProjectEventTransportInstalledController(ports) {
         void targetPathStatusController.configure(path, historyPathInput?.value ?? path);
     }
     function synchronizeProjectPaths() {
-        paths = { ...ports.loadPaths() };
+        const next = { ...ports.loadPaths() };
+        if (next.observationPath !== paths.observationPath)
+            pathGeneration += 1;
+        paths = next;
         if (historyPathInput)
             historyPathInput.value = paths.observationPath;
         if (defaultPushPathInput)
@@ -67,8 +71,11 @@ export function createProjectEventTransportInstalledController(ports) {
         refreshSelectedTargetPathStatus();
     }
     const syncPaths = () => {
-        paths = { observationPath: historyPathInput?.value ?? paths.observationPath,
+        const next = { observationPath: historyPathInput?.value ?? paths.observationPath,
             pushPath: defaultPushPathInput?.value ?? paths.pushPath };
+        if (next.observationPath !== paths.observationPath)
+            pathGeneration += 1;
+        paths = next;
         phase = "dirty";
     };
     const input = () => {
@@ -157,7 +164,7 @@ export function createProjectEventTransportInstalledController(ports) {
         synchronizeProjectPaths,
         render: renderProjectEventTransport,
         save: saveProjectEventTransport,
-        state: () => ({ ...paths, phase, currentTargetPathStatus, targetPathRequest }),
+        state: () => ({ ...paths, phase, currentTargetPathStatus, targetPathRequest, pathGeneration }),
     };
 }
 export const installedControllerDefinition = Object.freeze({

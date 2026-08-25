@@ -31,6 +31,7 @@ const targetController = createProjectEventTransportInstalledController({ root:{
   readTargetObservation:()=>new Promise((resolve)=>{ releaseObservation=resolve; }),
   applyLiveTargetPathObservation:()=>{applyCount += 1;}, renderTargetReadiness:()=>{readinessRenders += 1;}, projectName:()=>"One" });
 targetController.mount();
+assert.equal(targetController.state().pathGeneration, 0);
 elements.get("#history-path").value = "event.history";
 elements.get("#history-path").dispatch("input");
 releaseObservation({ pageAccessStatus:"page access available", pageObject:{event:{history:[]}} });
@@ -47,6 +48,8 @@ assert.equal(applyCount, 2); assert.equal(readinessRenders, 2);
 
 elements.get("#history-path").value = "event.missing";
 elements.get("#history-path").dispatch("input");
+assert.equal(targetController.state().pathGeneration, 1,
+  "only a configured observation-path edit advances the permission settlement generation");
 targetController.dispose();
 releaseObservation({ pageAccessStatus:"page access available", pageObject:{event:{}} });
 await Promise.resolve(); await Promise.resolve();
