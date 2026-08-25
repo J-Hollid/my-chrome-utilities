@@ -2,16 +2,23 @@ import assert from "node:assert/strict";
 const { createSchemasInstalledController } = await import("../../dist/data-layer-installed/schemas/index.js");
 const schema = { id:"schema:page", name:"Page", version:1, document:{ type:"object", properties:{ title:{ type:"string" } } },
   assignments:[], published:true };
+const parentSchema = { id:"schema:parent", name:"Parent", version:2, document:{ type:"object", properties:{ title:{ type:"string" } } },
+  assignments:[], attachedRules:[{ id:"rule:parent", version:1, propertyPath:"/title", enabled:true }], published:true };
 const values = new Map([["my-chrome-utilities.schema-library.v1", JSON.stringify([schema])]]);
 let changed = 0, guided;
 const controller = createSchemasInstalledController({
   root:{ querySelector:() => null, querySelectorAll:() => [] },
   storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value), removeItem:(key) => values.delete(key) },
+  relationshipViewStorage:{ getItem:()=>null, setItem() {} },
   changed:() => { changed += 1; }, runGuidedValidation:async (id) => { guided = id; },
   subscribe:() => () => {}, specificIndexSelected() {}, rulePickerChanged() {}, createRuleId:() => "rule:first",
   capturedAssignmentValue:() => undefined, renderAssignmentConditions() {},
   localRulePromotionDialog:{ open() {}, close() {} }, subscribeSchemaPersistence:() => () => {},
   downloadSchema() {},
+  relationshipTree:()=>({ projectId:"no-project", nodes:[] }), openProjectLibrary() {}, openContributor() {},
+  openContributorInStudio() {}, adoptSavedSchema() {}, buildSchemaSpecification() {}, reportMissingSchemaEvent() {},
+  scheduleFrame:(callback)=>callback(),
+  activeProjectId:()=>undefined, ensureProjectSchemaContributors:async()=>({ name:"" }),
 });
 controller.mount(); controller.open("schema:page"); controller.beginDraft();
 controller.updateDraft({ document:{ type:"object", required:["title"], properties:{ title:{ type:"string" } } } }, "Require title");
@@ -30,20 +37,25 @@ assert.equal(controller.state().draftDirty, false);
 let fakeDocument;
 function element() {
   const listeners = new Map();
-  return { id:"", value:"", textContent:"", hidden:false, disabled:false, open:false, isConnected:true, dataset:{}, children:[], ownerDocument:fakeDocument,
+  return { id:"", value:"", textContent:"", hidden:false, disabled:false, open:false, isConnected:true, dataset:{}, children:[], ownerDocument:fakeDocument, scrollTop:0,
     addEventListener(type, listener) { listeners.set(type, listener); },
     removeEventListener(type, listener) { if (listeners.get(type) === listener) listeners.delete(type); },
-    dispatch(type) { listeners.get(type)?.({ preventDefault() {}, target:this, currentTarget:this }); }, click() { this.dispatch("click"); },
-    showModal() { this.open = true; }, close() { this.open = false; }, focus() {},
+    dispatch(type, event = {}) { listeners.get(type)?.({ preventDefault() {}, target:this, currentTarget:this, ...event }); }, click() { this.dispatch("click"); },
+    showModal() { this.open = true; }, close() { this.open = false; }, focus() { this.focused = true; },
     setAttribute(name, value) { this[name] = value; }, removeAttribute(name) { delete this[name]; },
     getAttribute(name) { return this[name] ?? null; }, replaceChildren(...children) { this.children = children; },
     append(...children) { this.children.push(...children); }, prepend(...children) { this.children.unshift(...children); },
-    insertBefore(child) { this.children.push(child); }, before() {}, after() {}, contains() { return false; },
+    insertBefore(child) { this.children.push(child); }, before() {}, after() {}, contains() { return false; }, closest() { return null; },
+    querySelectorAll() { return this.children.flatMap((child) => child.children?.[0] ? [child.children[0]] : []); },
     listenerCount:() => listeners.size,
   };
 }
 fakeDocument = { createElement:() => element(), body:element() };
 const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "#schema-editor-name",
+  "#schema-search", "#schema-category-filter", "#schema-count", "#schema-list", "#schema-empty-state", "#schema-result",
+  "#workspace-panel-data-layer", "#data-layer-panel-schemas",
+  "#schema-editor-parent", "#schema-only-declared-properties", "#schema-inheritance-provenance",
+  "#schema-rule-overrides", "#schema-rule-override-list", "#schema-inherited-rule-groups", "#schema-effective-rule-preview",
   "#schema-editor-name-assistance", "#schema-editor-description", "#save-schema-description", "#schema-description-origin",
   "#schema-editor-target", "#save-schema", "#save-schema-reason", "#schema-revision-review",
   "#schema-revision-review-summary", "#confirm-schema-revision", "#cancel-schema-revision",
@@ -92,7 +104,7 @@ const schemaRulesTab = Object.assign(element(), { textContent:"Rules", dataset:{
 const schemaMasterPanel = Object.assign(element(), { id:"schema-master" });
 const schemaRulesPanel = Object.assign(element(), { id:"schema-rule-library" });
 const uiValues = new Map([
-  ["my-chrome-utilities.schema-library.v1", JSON.stringify([schema])],
+  ["my-chrome-utilities.schema-library.v1", JSON.stringify([schema, parentSchema])],
   ["my-chrome-utilities.schema-rule-library.v1", JSON.stringify([
     { id:"rule:retired", name:"Retired rule", kind:"Required", version:1, enabled:true, attachments:[] },
   ])],
@@ -101,10 +113,13 @@ let selectedSpecificIndex;
 const rulePickerChanges = [];
 let promotionDialogInput, persistenceListener, promotionRuleSequence = 0;
 const schemaDownloads = [];
+const relationshipActions = [];
+let deferHydration = false, releaseHydration;
 const uiController = createSchemasInstalledController({
-  root:{ querySelector:(selector) => elements.get(selector) ?? null,
+  root:{ ownerDocument:fakeDocument, querySelector:(selector) => elements.get(selector) ?? null,
     querySelectorAll:(selector) => selector.includes("role=tab") ? [schemaMasterTab, schemaRulesTab] : [schemaMasterPanel, schemaRulesPanel] },
   storage:{ getItem:(key) => uiValues.get(key) ?? null, setItem:(key, value) => uiValues.set(key, value), removeItem:(key) => uiValues.delete(key) },
+  relationshipViewStorage:{ getItem:(key) => uiValues.get(`view:${key}`) ?? null, setItem:(key, value) => uiValues.set(`view:${key}`, value) },
   changed() {}, runGuidedValidation:async () => {}, subscribe:() => () => {},
   specificIndexSelected:(path) => { selectedSpecificIndex = path; },
   rulePickerChanged:(path, open) => rulePickerChanges.push(`${path}:${open}`),
@@ -114,8 +129,45 @@ const uiController = createSchemasInstalledController({
   localRulePromotionDialog:{ open:(input) => { promotionDialogInput = input; }, close:() => { promotionDialogInput = undefined; } },
   subscribeSchemaPersistence:(listener) => { persistenceListener = listener; return () => { if (persistenceListener === listener) persistenceListener = undefined; }; },
   downloadSchema:(_value, filename) => schemaDownloads.push(filename),
+  relationshipTree:(currentSchemas) => ({ projectId:"project:one", nodes:[{ key:"saved-schemas", name:"Saved schemas",
+    kind:"branch", role:"Structural ancestor", relationshipPath:"Saved schemas", children:[...currentSchemas.map((candidate) => ({
+      key:`saved:${candidate.id}`, name:candidate.name, kind:"contributor", role:"Saved schema", category:"Saved schemas",
+      targetKey:`saved:${candidate.id}`, relationshipPath:`Saved schemas / ${candidate.name}`, children:[],
+    })), { key:"page:checkout", name:"Checkout", kind:"contributor", role:"Page", category:"Pages",
+      targetKey:"pages:checkout", relationshipPath:"Pages / Checkout", children:[] }] }] }),
+  openProjectLibrary:(create) => relationshipActions.push(`project:${create}`),
+  openContributor:(key) => relationshipActions.push(`open:${key}`),
+  openContributorInStudio:(key) => relationshipActions.push(`studio:${key}`),
+  adoptSavedSchema:(candidate) => relationshipActions.push(`adopt:${candidate.id}`),
+  buildSchemaSpecification:(candidate, surface) => relationshipActions.push(`build:${candidate.id}:${surface}`),
+  reportMissingSchemaEvent:(id) => relationshipActions.push(`missing:${id}`), scheduleFrame:(callback)=>callback(),
+  activeProjectId:()=>"project:one", ensureProjectSchemaContributors:()=>deferHydration
+    ? new Promise((resolve)=>{ releaseHydration=resolve; }) : Promise.resolve({ name:"Project One" }),
 });
-uiController.mount(); uiController.open("schema:page"); uiController.beginDraft();
+uiController.mount();
+await uiController.hydrateActiveProjectForSchemas();
+assert.equal(elements.get("#schema-result").textContent, "Loaded schema contributors for Project One.");
+const initialSavedRow = elements.get("#schema-list").children.find(({ dataset }) => dataset.schemaEntryKey === "saved:schema:page");
+assert.ok(initialSavedRow, "the Schema owner renders saved relationship-tree rows");
+initialSavedRow.children[2].click(); initialSavedRow.children[3].click(); initialSavedRow.children[5].click();
+assert.deepEqual(relationshipActions, ["adopt:schema:page", "build:schema:page:published:1", "missing:schema:page"]);
+const contributorRow = elements.get("#schema-list").children.find(({ dataset }) => dataset.schemaEntryKey === "pages:checkout");
+contributorRow.children[0].click(); contributorRow.children[1].click();
+assert.deepEqual(relationshipActions.slice(-2), ["open:pages:checkout", "studio:pages:checkout"]);
+await Promise.resolve();
+elements.get("#workspace-panel-data-layer").scrollTop = 37; elements.get("#workspace-panel-data-layer").dispatch("scroll");
+assert.match(uiValues.get("view:my-chrome-utilities.schema-relationship-tree-view.v1:project:one"), /"scrollTop":37/);
+const treeControls = elements.get("#schema-list").querySelectorAll();
+elements.get("#schema-list").dispatch("keydown", { target:treeControls[0], key:"End" });
+assert.equal(treeControls.at(-1).focused, true, "tree keyboard navigation remains controller-owned");
+uiController.open("schema:page"); uiController.beginDraft();
+elements.get("#schema-editor-parent").value = "schema:parent"; elements.get("#schema-editor-parent").dispatch("change");
+assert.equal(uiController.schemas().find(({ id }) => id === "schema:page").workingDraft.parentSchemaId, "schema:parent");
+assert.match(elements.get("#schema-inheritance-provenance").textContent, /Parent v2/);
+assert.equal(elements.get("#schema-inherited-rule-groups").hidden, false);
+assert.match(elements.get("#schema-inherited-rule-groups").children[0].children[0].textContent, /Active inherited \(1\)/);
+elements.get("#schema-only-declared-properties").checked = true; elements.get("#schema-only-declared-properties").dispatch("change");
+assert.equal(uiController.schemas().find(({ id }) => id === "schema:page").workingDraft.document.additionalProperties, false);
 elements.get("#schema-editor-name").value = "Page checkout"; elements.get("#schema-editor-name").dispatch("input");
 elements.get("#schema-editor-description").value = "Checkout payload"; elements.get("#save-schema-description").click();
 elements.get("#save-schema").click();
@@ -125,7 +177,7 @@ assert.equal(uiController.schemas()[0].version, 2);
 assert.equal(uiController.schemas()[0].name, "Page checkout");
 assert.equal(uiController.schemas()[0].documentation.description, "Checkout payload");
 elements.get("#schema-revision-selector").value = "1"; elements.get("#duplicate-schema-revision").click();
-assert.equal(uiController.schemas().length, 2, "revision duplication remains schema-controller behavior");
+assert.equal(uiController.schemas().length, 3, "revision duplication remains schema-controller behavior");
 assert.equal(elements.get("#schema-property-result-status").textContent, "1 of 1 properties");
 elements.get("#schema-property-filter").value = "missing"; elements.get("#schema-property-filter").dispatch("input");
 assert.equal(elements.get("#schema-property-empty").hidden, false);
@@ -301,7 +353,11 @@ assert.match(String(await observedRejection), /rejected by operator/);
 assert.equal(uiController.rules().some(({ id }) => id === "rule:guided-reject"), false, "rejection restores the pre-transaction libraries");
 const disposedCompletion = uiController.persistGuidedValidation(guidedResult("rule:guided-dispose", "checkout.postcode"));
 const disposedRejection = disposedCompletion.then(() => undefined, (error) => error);
+deferHydration = true; const staleHydration = uiController.hydrateActiveProjectForSchemas();
 uiController.dispose();
+releaseHydration({ name:"Stale Project" }); await staleHydration;
+assert.notEqual(elements.get("#schema-result").textContent, "Loaded schema contributors for Stale Project.",
+  "a durable hydration settling after disposal cannot render stale project state");
 assert.match(String(await disposedRejection), /disposed before durable persistence settled/);
 assert.equal(persistenceListener, undefined, "disposal detaches the durable persistence port");
 assert.equal([...elements.values()].reduce((count, item) => count + item.listenerCount(), 0), 0,

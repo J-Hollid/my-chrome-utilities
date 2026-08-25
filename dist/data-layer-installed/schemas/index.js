@@ -1,4 +1,4 @@
-import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, inspectJsonSchemaExport, importSchema, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaPropertyRows, schemaPropertyCopySource, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentDraftAfterGuidedSave, assignmentConditionSuggestions, assignmentDataConditionSummary, contextualManualPropertyDefinition, createRuleConfiguration, createExtensionSchemaPackage, createSchemaLibraryExport, duplicateSchemaAssignment, guidedAttachedRule, guidedPropertyDocument, manualPropertyPreview, mergeGuidedDocument, restoreSchemaLibrary, searchSchemas, serializeSchemaLibrary, exportJsonSchemaBundle, exportJsonSchemaResource, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateAssignmentDataConditions, validateEvent, } from "../../utilities/data-layer/schemas.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, inspectJsonSchemaExport, importSchema, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaPropertyRows, schemaRevisionChoices, schemaPropertyCopySource, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentDraftAfterGuidedSave, assignmentConditionSuggestions, assignmentDataConditionSummary, contextualManualPropertyDefinition, createRuleConfiguration, createExtensionSchemaPackage, createSchemaLibraryExport, duplicateSchemaAssignment, guidedAttachedRule, guidedPropertyDocument, manualPropertyPreview, mergeGuidedDocument, restoreSchemaLibrary, serializeSchemaLibrary, exportJsonSchemaBundle, exportJsonSchemaResource, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateAssignmentDataConditions, validateEvent, filterSchemaRelationshipTree, restoreSchemaRelationshipTreeView, saveSchemaRelationshipTreeView, } from "../../utilities/data-layer/schemas.js";
 import { applySchemaPropertyCopy, planSchemaPropertyCopy } from "../../data-layer-schema-property-copy.js";
 import { persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, } from "../../data-layer-local-rule-promotion.js";
 import { publishReusableRuleSync, reviewReusableRuleSync, } from "../../data-layer-reusable-rule-sync.js";
@@ -6,11 +6,14 @@ const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 export function createSchemasInstalledController(ports) {
     const schemaSearch = ports.root.querySelector("#schema-search");
     const schemaCategoryFilter = ports.root.querySelector("#schema-category-filter");
+    const schemaEmptyState = ports.root.querySelector("#schema-empty-state");
     const schemaCount = ports.root.querySelector("#schema-count");
     const schemaList = ports.root.querySelector("#schema-list");
     const schemaResult = ports.root.querySelector("#schema-result");
     const schemaEditor = ports.root.querySelector("#schema-editor");
     const schemaDetail = ports.root.querySelector("#schema-detail");
+    const schemaTreeScrollOwner = ports.root.querySelector("#workspace-panel-data-layer");
+    const schemaPanel = ports.root.querySelector("#data-layer-panel-schemas");
     const sidePanelLayeredProfileEditorHost = ports.root.querySelector("#side-panel-layered-profile-editor");
     const liveEventQuery = ports.root.querySelector("#live-event-query");
     const schemaSubviews = Array.from(ports.root.querySelectorAll("#schema-subviews [role=tab]"));
@@ -19,6 +22,11 @@ export function createSchemasInstalledController(ports) {
         schemaDetail.prepend(sidePanelLayeredProfileEditorHost);
     }
     const schemaDetailEmpty = ports.root.querySelector("#schema-detail-empty");
+    const schemaInheritanceProvenance = ports.root.querySelector("#schema-inheritance-provenance");
+    const schemaRuleOverrides = ports.root.querySelector("#schema-rule-overrides");
+    const schemaRuleOverrideList = ports.root.querySelector("#schema-rule-override-list");
+    const schemaEditorParent = ports.root.querySelector("#schema-editor-parent");
+    const schemaOnlyDeclaredProperties = ports.root.querySelector("#schema-only-declared-properties");
     const schemaEditorName = ports.root.querySelector("#schema-editor-name");
     const schemaEditorNameAssistance = ports.root.querySelector("#schema-editor-name-assistance");
     const schemaEditorDescription = ports.root.querySelector("#schema-editor-description");
@@ -47,6 +55,19 @@ export function createSchemasInstalledController(ports) {
     const schemaOwnerDocument = ports.root.ownerDocument
         ?? ("createElement" in ports.root ? ports.root : undefined);
     const ownedElement = (selector, tag) => ports.root.querySelector(selector) ?? schemaOwnerDocument?.createElement(tag) ?? null;
+    const schemaInheritedRuleGroups = ownedElement("#schema-inherited-rule-groups", "section");
+    const schemaEffectiveRulePreview = ownedElement("#schema-effective-rule-preview", "section");
+    if (schemaInheritedRuleGroups) {
+        schemaInheritedRuleGroups.id = "schema-inherited-rule-groups";
+        schemaInheritedRuleGroups.setAttribute("aria-label", "Inherited rule states");
+    }
+    if (schemaEffectiveRulePreview) {
+        schemaEffectiveRulePreview.id = "schema-effective-rule-preview";
+        schemaEffectiveRulePreview.setAttribute("aria-label", "Effective-rule preview");
+    }
+    if (schemaRuleOverrides && schemaInheritedRuleGroups && schemaEffectiveRulePreview) {
+        schemaRuleOverrides.after(schemaInheritedRuleGroups, schemaEffectiveRulePreview);
+    }
     const schemaPropertyViewControls = ownedElement("#schema-property-view-controls", "div");
     const schemaPropertyFilterLabel = ownedElement("#schema-property-filter-label", "label");
     const schemaPropertyFilter = ownedElement("#schema-property-filter", "input");
@@ -438,8 +459,24 @@ export function createSchemasInstalledController(ports) {
         schemaAssignmentEditor?.insertBefore(schemaAssignmentDataConditions, saveSchemaAssignmentButton);
     }
     let mounted = false;
+    let lifecycleGeneration = 0;
     let unsubscribe;
     let unsubscribeSchemaPersistence;
+    let schemaTreeProjectId;
+    let schemaTreeExpandedKeys = new Set();
+    let schemaTreeInvokingReference;
+    let schemaTreeRestoringScroll = false;
+    let schemaTreePendingScroll;
+    const schemaTreeStorage = ports.relationshipViewStorage;
+    let activeSchemaProjectHydration;
+    const schemaContributorRoute = { collectionKinds: ["profiles", "propertySets", "pages", "events", "flows"], includeFlowGraphs: true };
+    let schemaRowDisposers = [];
+    const clearSchemaRowListeners = () => { for (const dispose of schemaRowDisposers.splice(0))
+        dispose(); };
+    const listen = (target, type, listener) => {
+        target.addEventListener(type, listener);
+        schemaRowDisposers.push(() => target.removeEventListener(type, listener));
+    };
     const storedSchemaLibrary = ports.storage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
     let schemas = restoreSchemaLibrary(storedSchemaLibrary);
     let activeSchemaId;
@@ -531,6 +568,7 @@ export function createSchemasInstalledController(ports) {
     function renderSchemaDraft() {
         const schema = activeSchemaId ? active() : undefined;
         const draft = schema?.workingDraft;
+        const presented = schema ? schemaEditorDraft(schema) : undefined;
         if (schemaEditor)
             schemaEditor.hidden = !schema;
         if (schemaDetail)
@@ -547,6 +585,52 @@ export function createSchemasInstalledController(ports) {
                 ? "Working draft" : schema?.documentation?.description ? `Revision ${schema.version}` : "No description";
         if (schemaEditorTarget)
             schemaEditorTarget.value = draft?.assignments[0]?.target ?? schema?.assignments[0]?.target ?? "payload";
+        if (schemaOnlyDeclaredProperties)
+            schemaOnlyDeclaredProperties.checked = presented?.document.additionalProperties === false;
+        if (schemaEditorParent && presented && schemaOwnerDocument) {
+            const parents = schemas.filter(({ id }) => id !== presented.id);
+            const empty = schemaOwnerDocument.createElement("option");
+            empty.value = "";
+            empty.textContent = "No parent";
+            schemaEditorParent.replaceChildren(empty, ...parents.map((candidate) => {
+                const option = schemaOwnerDocument.createElement("option");
+                option.value = candidate.id;
+                option.textContent = `${candidate.name} v${candidate.version}`;
+                return option;
+            }));
+            schemaEditorParent.value = presented.parentSchemaId ?? "";
+        }
+        const parent = presented?.parentSchemaId ? schemas.find(({ id }) => id === presented.parentSchemaId) : undefined;
+        if (schemaInheritanceProvenance)
+            schemaInheritanceProvenance.textContent = parent
+                ? `Inherited rules originate in ${parent.name} v${parent.version}. Local rules override only after conflicts are resolved.` : "Local schema only";
+        if (schemaRuleOverrides)
+            schemaRuleOverrides.hidden = !parent;
+        if (schemaRuleOverrideList && schemaOwnerDocument)
+            schemaRuleOverrideList.replaceChildren(...Object.keys(parent?.document.properties ?? {}).map((property) => {
+                const label = schemaOwnerDocument.createElement("label"), select = schemaOwnerDocument.createElement("select");
+                select.setAttribute("aria-label", `${property} inherited rule override`);
+                select.replaceChildren(...["inherit", "enabled", "disabled"].map((state) => {
+                    const option = schemaOwnerDocument.createElement("option");
+                    option.value = state;
+                    option.textContent = state === "inherit" ? "Inherit" : state === "enabled" ? "Enabled in this schema" : "Disabled in this schema";
+                    return option;
+                }));
+                select.value = presented?.inheritedRuleOverrides?.[property] ?? "inherit";
+                listen(select, "change", () => {
+                    if (!activeSchemaId)
+                        return;
+                    const current = active(), currentDraft = schemaEditorDraft(current);
+                    replaceActive(updateSchemaWorkingDraft(current, { inheritedRuleOverrides: { ...(currentDraft.inheritedRuleOverrides ?? {}),
+                            [property]: select.value } }, `Change inherited rule override ${property}`));
+                    persistSchemaLibrary();
+                    renderSchemas();
+                });
+                label.append(`${property}: `, select);
+                return label;
+            }));
+        if (presented)
+            renderSchemaInheritancePresentation(presented);
         const pendingChanges = draft?.pendingChanges ?? [];
         if (saveSchemaReason)
             saveSchemaReason.textContent = pendingChanges.join("; ");
@@ -565,28 +649,219 @@ export function createSchemasInstalledController(ports) {
             schemaEditorNameAssistance.textContent = inspectSchemaRename(schema, schemas, schemaEditorName?.value ?? draft?.name ?? schema.name).assistance;
         renderSchemaPropertyView();
     }
+    function restorePendingSchemaTreeScroll() {
+        if (schemaTreePendingScroll === undefined || !schemaTreeScrollOwner)
+            return;
+        const scrollTop = schemaTreePendingScroll;
+        schemaTreeRestoringScroll = true;
+        queueMicrotask(() => {
+            schemaTreeScrollOwner.scrollTop = scrollTop;
+            schemaTreePendingScroll = undefined;
+            ports.scheduleFrame(() => { schemaTreeRestoringScroll = false; });
+        });
+    }
+    function persistSchemaTreeView(projectId) {
+        saveSchemaRelationshipTreeView(schemaTreeStorage, projectId, { query: schemaSearch?.value ?? "",
+            category: (schemaCategoryFilter?.value ?? "All"),
+            expandedKeys: [...schemaTreeExpandedKeys], scrollTop: schemaTreeScrollOwner?.scrollTop ?? 0 });
+    }
+    function hydrateActiveProjectForSchemas() {
+        if (activeSchemaProjectHydration)
+            return activeSchemaProjectHydration;
+        const activeProjectId = ports.activeProjectId();
+        if (!activeProjectId)
+            return;
+        const operation = lifecycleGeneration;
+        if (schemaResult)
+            schemaResult.textContent = "Loading active project schema contributors from durable storage…";
+        activeSchemaProjectHydration = ports.ensureProjectSchemaContributors(activeProjectId, schemaContributorRoute)
+            .then(({ name }) => {
+            if (!mounted || operation !== lifecycleGeneration)
+                return;
+            renderSchemas();
+            if (schemaResult)
+                schemaResult.textContent = `Loaded schema contributors for ${name}.`;
+        })
+            .catch((error) => {
+            if (mounted && operation === lifecycleGeneration && schemaResult) {
+                schemaResult.textContent = `Schema contributors are unavailable. ${error instanceof Error ? error.message : String(error)}`;
+            }
+        })
+            .finally(() => { activeSchemaProjectHydration = undefined; });
+        return activeSchemaProjectHydration;
+    }
     const renderSchemas = () => {
         if (!mounted)
             return;
-        const visible = searchSchemas(schemas, schemaSearch?.value ?? "")
-            .filter((schema) => !schemaCategoryFilter?.value || schemaCategoryFilter.value === "All"
-            || String(schema.document.type ?? "").toLowerCase() === schemaCategoryFilter.value.toLowerCase());
-        if (schemaCount)
-            schemaCount.textContent = `${visible.length} schemas`;
-        if (schemaList) {
-            const document = schemaList.ownerDocument;
-            schemaList.replaceChildren(...visible.map((schema) => {
-                const button = document.createElement("button");
-                button.type = "button";
-                button.textContent = `${schema.name} v${schema.version}`;
-                button.addEventListener("click", () => { activeSchemaId = schema.id; schemaDraft = structuredClone(schema); renderSchemas(); });
-                return button;
-            }));
+        clearSchemaRowListeners();
+        const relationship = ports.relationshipTree(schemas), projectId = relationship.projectId;
+        const allNodes = (nodes) => nodes.flatMap((node) => [node, ...allNodes(node.children)]);
+        const validNodes = allNodes(relationship.nodes), validKeys = new Set(validNodes.map(({ key }) => key));
+        if (schemaTreeProjectId !== projectId) {
+            schemaTreeProjectId = projectId;
+            const restored = restoreSchemaRelationshipTreeView(schemaTreeStorage, projectId, validKeys);
+            schemaTreeExpandedKeys = new Set(restored.expandedKeys.length ? restored.expandedKeys
+                : validNodes.filter(({ children }) => children.length).map(({ key }) => key));
+            if (schemaSearch)
+                schemaSearch.value = restored.query;
+            if (schemaCategoryFilter)
+                schemaCategoryFilter.value = restored.category;
+            schemaTreePendingScroll = restored.scrollTop;
+            if (!schemaPanel?.hidden)
+                restorePendingSchemaTreeScroll();
         }
+        else
+            schemaTreeExpandedKeys = new Set([...schemaTreeExpandedKeys].filter((key) => validKeys.has(key)));
+        const filtered = filterSchemaRelationshipTree(relationship.nodes, { query: schemaSearch?.value ?? "",
+            category: (schemaCategoryFilter?.value ?? "All") });
+        const rows = [], document = schemaList?.ownerDocument;
+        const savedRow = (node, level) => {
+            const schema = schemas.find(({ id }) => `saved:${id}` === node.targetKey);
+            if (!schema || !document)
+                return;
+            const item = document.createElement("li"), revise = document.createElement("button"), duplicate = document.createElement("button"), adopt = document.createElement("button"), build = document.createElement("button"), exportCurrent = document.createElement("button"), reportMissing = document.createElement("button"), remove = document.createElement("button");
+            const pending = schema.workingDraft?.pendingChanges.length ?? 0, history = schemaRevisionChoices(schema).length;
+            item.dataset.schemaEntryKey = node.targetKey;
+            item.dataset.schemaReferenceKey = node.key;
+            item.dataset.schemaRole = node.role;
+            item.setAttribute("role", "treeitem");
+            item.setAttribute("aria-level", String(level));
+            item.setAttribute("aria-selected", String(activeSchemaId === schema.id));
+            item.textContent = schema.published === false
+                ? `${schema.name} · role Saved schema · path ${node.relationshipPath} · revision ${schema.version} · Draft · ${pending} pending changes. `
+                : `${schema.name} · current revision ${schema.version} · role Saved schema · path ${node.relationshipPath} · saved · ${pending} pending draft changes · ${history} historical revisions · ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
+            revise.type = duplicate.type = adopt.type = build.type = exportCurrent.type = reportMissing.type = remove.type = "button";
+            revise.textContent = "Edit working draft";
+            duplicate.textContent = "Duplicate";
+            adopt.textContent = "Add saved schema to project";
+            build.textContent = "Build documentation table";
+            exportCurrent.textContent = "Export";
+            reportMissing.textContent = "Report missing event";
+            remove.textContent = "Delete";
+            listen(revise, "click", () => { schemaTreeInvokingReference = node.key; activeSchemaId = schema.id; schemaDraft = structuredClone(schema); renderSchemas(); });
+            listen(duplicate, "click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version, schemas)]; persistSchemaLibrary(); renderSchemas(); });
+            listen(adopt, "click", () => reviewSavedSchemaAdoption(schema, adopt));
+            listen(build, "click", () => openSchemaSpecification(schema, `published:${schema.version}`, build));
+            listen(exportCurrent, "click", () => openSchemaExportChoices(exportCurrent, schema));
+            listen(reportMissing, "click", () => ports.reportMissingSchemaEvent(schema.id));
+            listen(remove, "click", () => {
+                const children = schemas.filter((candidate) => candidate.parentSchemaId === schema.id);
+                if (children.length) {
+                    if (schemaResult)
+                        schemaResult.textContent = `Cannot delete ${schema.name}: it is the parent of ${children.map(({ name }) => name).join(", ")}.`;
+                    return;
+                }
+                pendingSchemaDeletion = schema;
+                if (schemaDeleteReviewSummary)
+                    schemaDeleteReviewSummary.textContent = `${schema.name} v${schema.version} and its assignments will be removed.`;
+                schemaDeleteReview?.showModal();
+            });
+            item.append(revise, duplicate, adopt, build, exportCurrent, reportMissing, remove);
+            return item;
+        };
+        const visit = (node, level) => {
+            if (node.targetKey?.startsWith("saved:")) {
+                const item = savedRow(node, level);
+                if (item)
+                    rows.push(item);
+                return;
+            }
+            if (!document)
+                return;
+            const item = document.createElement("li");
+            item.dataset.schemaReferenceKey = node.key;
+            item.setAttribute("role", "treeitem");
+            item.setAttribute("aria-level", String(level));
+            if (node.targetKey) {
+                const open = document.createElement("button"), studio = document.createElement("button");
+                item.dataset.schemaEntryKey = node.targetKey;
+                item.dataset.schemaRole = node.role;
+                item.textContent = `${node.name} · role ${node.role} · path ${node.relationshipPath}. `;
+                open.type = studio.type = "button";
+                open.textContent = "Open schema";
+                studio.textContent = "Open schema in Specification Studio";
+                listen(open, "click", () => { schemaTreeInvokingReference = node.key; openContributorInUnifiedEditor(node.targetKey); });
+                listen(studio, "click", () => ports.openContributorInStudio(node.targetKey));
+                item.append(open, studio);
+            }
+            else {
+                const toggle = document.createElement("button"), expanded = node.expanded || schemaTreeExpandedKeys.has(node.key);
+                item.dataset.schemaGroup = node.name;
+                item.setAttribute("aria-expanded", String(expanded));
+                toggle.type = "button";
+                toggle.textContent = node.name;
+                listen(toggle, "click", () => {
+                    if (expanded)
+                        schemaTreeExpandedKeys.delete(node.key);
+                    else
+                        schemaTreeExpandedKeys.add(node.key);
+                    persistSchemaTreeView(projectId);
+                    renderSchemas();
+                });
+                item.append(toggle);
+            }
+            rows.push(item);
+            const expanded = node.expanded || schemaTreeExpandedKeys.has(node.key);
+            if (node.children.length && (node.targetKey || expanded))
+                for (const child of node.children)
+                    visit(child, level + 1);
+        };
+        for (const root of filtered)
+            visit(root, 1);
+        if (projectId === "no-project" && document) {
+            const item = document.createElement("li"), open = document.createElement("button"), create = document.createElement("button");
+            item.setAttribute("role", "status");
+            item.textContent = "No active project. Open a project to see relationship-derived contributors. ";
+            open.type = create.type = "button";
+            open.textContent = "Open project";
+            create.textContent = "Create project";
+            listen(open, "click", () => ports.openProjectLibrary(false));
+            listen(create, "click", () => ports.openProjectLibrary(true));
+            item.append(open, create);
+            rows.push(item);
+        }
+        const resultCount = rows.filter(({ dataset }) => Boolean(dataset.schemaEntryKey)).length;
+        if (schemaEmptyState)
+            schemaEmptyState.hidden = resultCount > 0;
+        if (schemaCount) {
+            schemaCount.textContent = `${resultCount} relationship-tree results`;
+            schemaCount.setAttribute("aria-label", `${resultCount} schema relationship-tree results`);
+        }
+        schemaList?.replaceChildren(...rows);
         if (schemaResult)
             schemaResult.textContent = activeSchemaId ? `Selected ${activeSchemaId}` : "";
         renderSchemaDraft();
         renderSchemaAssignments();
+    };
+    const updateSchemaTreeView = () => { if (schemaTreeProjectId)
+        persistSchemaTreeView(schemaTreeProjectId); renderSchemas(); };
+    const persistSchemaTreeScroll = () => {
+        if (schemaTreeProjectId && !schemaTreeRestoringScroll && schemaTreePendingScroll === undefined && !schemaPanel?.hidden) {
+            persistSchemaTreeView(schemaTreeProjectId);
+        }
+    };
+    const navigateSchemaTree = (event) => {
+        const target = event.target;
+        const controls = Array.from(schemaList?.querySelectorAll("li[role=treeitem] > button:first-of-type") ?? []);
+        const current = target ? controls.indexOf(target) : -1;
+        if (current < 0 || !target)
+            return;
+        if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+            event.preventDefault();
+            const next = event.key === "Home" ? 0 : event.key === "End" ? controls.length - 1
+                : Math.max(0, Math.min(controls.length - 1, current + (event.key === "ArrowDown" ? 1 : -1)));
+            controls[next]?.focus({ preventScroll: false });
+        }
+        if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+            const row = target.closest('[role="treeitem"][aria-expanded]');
+            if (!row)
+                return;
+            const expanded = row.getAttribute("aria-expanded") === "true";
+            if ((event.key === "ArrowRight" && !expanded) || (event.key === "ArrowLeft" && expanded)) {
+                event.preventDefault();
+                target.click();
+            }
+        }
     };
     const persistSchemaEditorDraft = () => {
         if (!activeSchemaId)
@@ -612,6 +887,25 @@ export function createSchemasInstalledController(ports) {
         const assignments = (schema.workingDraft?.assignments ?? schema.assignments)
             .map((assignment) => ({ ...assignment, target: (schemaEditorTarget?.value === "raw input" ? "raw input" : "payload") }));
         replaceActive(updateSchemaWorkingDraft(schema, { assignments }, "Update validation target"));
+        persistSchemaLibrary();
+        renderSchemas();
+    };
+    const changeSchemaParent = () => {
+        if (!activeSchemaId)
+            return;
+        const schema = active(), draft = schemaEditorDraft(schema);
+        const changed = withSchemaParent(draft, schemaEditorParent?.value || undefined);
+        replaceActive(updateSchemaWorkingDraft(schema, { parentSchemaId: changed.parentSchemaId }, "Change parent schema"));
+        persistSchemaLibrary();
+        renderSchemas();
+    };
+    const changeOnlyDeclaredProperties = () => {
+        if (!activeSchemaId)
+            return;
+        const schema = active(), draft = schemaEditorDraft(schema);
+        const { additionalProperties: _previous, ...document } = draft.document;
+        replaceActive(updateSchemaWorkingDraft(schema, { document: schemaOnlyDeclaredProperties?.checked
+                ? { ...document, additionalProperties: false } : document }, "Change additional-property policy"));
         persistSchemaLibrary();
         renderSchemas();
     };
@@ -1715,11 +2009,16 @@ export function createSchemasInstalledController(ports) {
             if (mounted)
                 return;
             mounted = true;
-            schemaSearch?.addEventListener("input", renderSchemas);
-            schemaCategoryFilter?.addEventListener("change", renderSchemas);
+            lifecycleGeneration += 1;
+            schemaSearch?.addEventListener("input", updateSchemaTreeView);
+            schemaCategoryFilter?.addEventListener("change", updateSchemaTreeView);
+            schemaTreeScrollOwner?.addEventListener("scroll", persistSchemaTreeScroll, { passive: true });
+            schemaList?.addEventListener("keydown", navigateSchemaTree);
             schemaEditorName?.addEventListener("input", persistSchemaEditorDraft);
             saveSchemaDescriptionButton?.addEventListener("click", saveSchemaDescription);
             schemaEditorTarget?.addEventListener("change", updateSchemaTarget);
+            schemaEditorParent?.addEventListener("change", changeSchemaParent);
+            schemaOnlyDeclaredProperties?.addEventListener("change", changeOnlyDeclaredProperties);
             saveSchemaButton?.addEventListener("click", openSchemaRevisionReview);
             confirmSchemaRevisionButton?.addEventListener("click", confirmSchemaRevision);
             cancelSchemaRevisionButton?.addEventListener("click", cancelSchemaRevision);
@@ -1791,11 +2090,16 @@ export function createSchemasInstalledController(ports) {
             if (!mounted)
                 return;
             mounted = false;
-            schemaSearch?.removeEventListener("input", renderSchemas);
-            schemaCategoryFilter?.removeEventListener("change", renderSchemas);
+            lifecycleGeneration += 1;
+            schemaSearch?.removeEventListener("input", updateSchemaTreeView);
+            schemaCategoryFilter?.removeEventListener("change", updateSchemaTreeView);
+            schemaTreeScrollOwner?.removeEventListener("scroll", persistSchemaTreeScroll);
+            schemaList?.removeEventListener("keydown", navigateSchemaTree);
             schemaEditorName?.removeEventListener("input", persistSchemaEditorDraft);
             saveSchemaDescriptionButton?.removeEventListener("click", saveSchemaDescription);
             schemaEditorTarget?.removeEventListener("change", updateSchemaTarget);
+            schemaEditorParent?.removeEventListener("change", changeSchemaParent);
+            schemaOnlyDeclaredProperties?.removeEventListener("change", changeOnlyDeclaredProperties);
             saveSchemaButton?.removeEventListener("click", openSchemaRevisionReview);
             confirmSchemaRevisionButton?.removeEventListener("click", confirmSchemaRevision);
             cancelSchemaRevisionButton?.removeEventListener("click", cancelSchemaRevision);
@@ -1895,6 +2199,8 @@ export function createSchemasInstalledController(ports) {
             unsubscribe = undefined;
             unsubscribeSchemaPersistence?.();
             unsubscribeSchemaPersistence = undefined;
+            activeSchemaProjectHydration = undefined;
+            clearSchemaRowListeners();
             schemaList?.replaceChildren();
             schemaAssignmentList?.replaceChildren();
             schemaAssignmentDataConditions?.replaceChildren();
@@ -1947,6 +2253,7 @@ export function createSchemasInstalledController(ports) {
         },
         requestLocalRulePromotion: openLocalRulePromotionReview,
         persistGuidedValidation: persistPublishedGuidedValidation,
+        hydrateActiveProjectForSchemas,
         rulePickerState: () => ({ path: schemaRulePickerPath, renderSequence: schemaPropertyRenderSequence,
             ...(schemaRuleConfiguration ? { configuration: structuredClone(schemaRuleConfiguration) } : {}) }),
         rules: () => structuredClone(reusableSchemaRules),
@@ -1954,6 +2261,81 @@ export function createSchemasInstalledController(ports) {
         state: () => ({ ...(activeSchemaId ? { activeSchemaId } : {}), draftDirty: Boolean(activeSchemaId && active().workingDraft),
             schemaCount: schemas.length, mounted }),
     };
+    function reviewSavedSchemaAdoption(schema, trigger) {
+        ports.adoptSavedSchema(structuredClone(schema), trigger);
+    }
+    function openSchemaSpecification(schema, surface, trigger) {
+        ports.buildSchemaSpecification(structuredClone(schema), surface, trigger);
+    }
+    function openContributorInUnifiedEditor(key) { ports.openContributor(key); }
+    function schemaEditorDraft(schema) {
+        const draft = schema.workingDraft;
+        if (!draft)
+            return structuredClone(schema);
+        const { attachedRules: _attachedRules, parentSchemaId: _parentSchemaId, inheritedRuleOverrides: _overrides, documentation: _documentation, canonicalSchema: _canonicalSchema, ...current } = structuredClone(schema);
+        return { ...current, name: draft.name ?? current.name, document: structuredClone(draft.document), assignments: structuredClone(draft.assignments),
+            ...(draft.attachedRules !== undefined ? { attachedRules: structuredClone(draft.attachedRules) } : {}),
+            ...(draft.parentSchemaId !== undefined ? { parentSchemaId: draft.parentSchemaId } : {}),
+            ...(draft.inheritedRuleOverrides !== undefined ? { inheritedRuleOverrides: structuredClone(draft.inheritedRuleOverrides) } : {}),
+            ...(draft.documentation !== undefined ? { documentation: structuredClone(draft.documentation) } : {}),
+            ...(draft.canonicalSchema !== undefined ? { canonicalSchema: structuredClone(draft.canonicalSchema) } : {}) };
+    }
+    function withSchemaParent(schema, parentSchemaId) {
+        const { parentSchemaId: _previousParentSchemaId, ...withoutParent } = schema;
+        return parentSchemaId ? { ...withoutParent, parentSchemaId } : withoutParent;
+    }
+    function schemaRuleLabel(entry) {
+        return reusableSchemaRules.find(({ id }) => id === entry.rule.id)?.name ?? entry.rule.id;
+    }
+    function displaySchemaRule(entry) {
+        return `${schemaRuleLabel(entry)} v${entry.rule.version} · ${entry.path} · ${entry.origin.name} v${entry.origin.version}`;
+    }
+    function renderSchemaInheritancePresentation(draft) {
+        if (!schemaInheritedRuleGroups || !schemaEffectiveRulePreview || !schemaOwnerDocument)
+            return;
+        const ancestors = [], seen = new Set([draft.id]);
+        let parentId = draft.parentSchemaId;
+        while (parentId && !seen.has(parentId)) {
+            seen.add(parentId);
+            const parent = schemas.find(({ id }) => id === parentId);
+            if (!parent)
+                break;
+            ancestors.push(parent);
+            parentId = parent.parentSchemaId;
+        }
+        const inherited = ancestors.flatMap((origin) => (origin.attachedRules ?? []).map((rule) => {
+            const override = rule.propertyPath ? draft.inheritedRuleOverrides?.[rule.propertyPath] : undefined;
+            return { path: rule.propertyPath ?? "root", rule, origin, state: override === "disabled" ? "disabled-inherited"
+                    : override === "enabled" ? "explicitly-reenabled" : "active-inherited" };
+        }));
+        const local = (draft.attachedRules ?? []).map((rule) => ({ path: rule.propertyPath ?? "root", rule, origin: draft, state: "local" }));
+        const groups = {
+            "active-inherited": inherited.filter((entry) => entry.state === "active-inherited" && entry.rule.enabled !== false),
+            "disabled-inherited": inherited.filter((entry) => entry.state === "disabled-inherited" || (entry.state === "active-inherited" && entry.rule.enabled === false)),
+            "explicitly-reenabled": inherited.filter((entry) => entry.state === "explicitly-reenabled"), local
+        };
+        const labels = { "active-inherited": "Active inherited",
+            "disabled-inherited": "Disabled inherited", "explicitly-reenabled": "Explicitly re-enabled", local: "Local" };
+        schemaInheritedRuleGroups.hidden = ancestors.length === 0;
+        schemaEffectiveRulePreview.hidden = ancestors.length === 0;
+        schemaInheritedRuleGroups.replaceChildren(...["active-inherited", "disabled-inherited", "explicitly-reenabled", "local"].map((state) => {
+            const group = schemaOwnerDocument.createElement("section"), heading = schemaOwnerDocument.createElement("h5"), list = schemaOwnerDocument.createElement("ul"), entries = groups[state];
+            group.dataset.inheritedRuleGroup = state;
+            heading.textContent = `${labels[state]} (${entries.length})`;
+            const empty = state === "local" ? "No local rules." : state === "explicitly-reenabled" ? "No explicitly re-enabled inherited rules." : `No ${labels[state].toLowerCase()} rules.`;
+            list.replaceChildren(...(entries.length ? entries.map((entry) => { const item = schemaOwnerDocument.createElement("li"); item.textContent = displaySchemaRule(entry); return item; })
+                : [Object.assign(schemaOwnerDocument.createElement("li"), { textContent: empty })]));
+            group.append(heading, list);
+            return group;
+        }));
+        const effective = [...groups["active-inherited"], ...groups["explicitly-reenabled"], ...groups.local], heading = schemaOwnerDocument.createElement("h4"), list = schemaOwnerDocument.createElement("ul");
+        heading.textContent = "Effective-rule preview";
+        list.replaceChildren(...(effective.length ? effective.map((entry) => Object.assign(schemaOwnerDocument.createElement("li"), {
+            textContent: `${entry.path} · ${schemaRuleLabel(entry)} v${entry.rule.version} · ${entry.state === "local" ? "local" : `inherited from ${entry.origin.name} v${entry.origin.version}`}`
+        }))
+            : [Object.assign(schemaOwnerDocument.createElement("li"), { textContent: "No effective rules." })]));
+        schemaEffectiveRulePreview.replaceChildren(heading, list);
+    }
 }
 export const installedControllerDefinition = Object.freeze({
     id: "schemas",
