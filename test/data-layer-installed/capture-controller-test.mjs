@@ -7,6 +7,14 @@ const noOpCaptureUi = {
   restartObservation() {}, chooseObservationTarget() {}, browseObservationTargets() {},
   closeObservationTargetPicker() {}, searchObservationTargets() {}, cancelDetachTarget() {},
   confirmDetachTarget() {},
+  sessionPresentation:() => ({ heading:"Save session", summary:"No events", freshHeading:"Start fresh",
+    freshSummary:"Current session", liveSummary:"Live feed", backgroundStatus:"Connected",
+    validationComparison:"Not validated", savedCount:"0 saved sessions", confirmation:"" }),
+  showDataLayerView() {}, backToEvents() {}, copyPageUrl() {}, openSessionSave() {}, startFreshSession() {},
+  reportMissingEvent() {}, confirmSaveSession() {}, cancelSaveSession() {}, saveAndStartFreshSession() {},
+  discardAndStartFreshSession() {}, cancelFreshSession() {}, returnToCurrentLiveFeed() {},
+  revalidateSavedSession() {}, searchSavedSessions() {}, importSavedSession() {}, selectSavedSession() {},
+  cancelSavedSessionDelete() {}, confirmSavedSessionDelete() {},
 };
 const controller = createCaptureInstalledController({
   root:{ querySelector:() => null },
@@ -43,7 +51,8 @@ function interactiveElement() {
     setAttribute() {}, removeAttribute() {},
     addEventListener(type, handler) { listeners.set(type, handler); },
     removeEventListener(type, handler) { if (listeners.get(type) === handler) listeners.delete(type); },
-    dispatch(type) { listeners.get(type)?.({ target:this }); },
+    dispatch(type, event = { target:this, preventDefault() {} }) { listeners.get(type)?.(event); },
+    click() { this.dispatch("click"); },
     listenerCount:() => listeners.size,
   };
 }
@@ -68,6 +77,12 @@ const uiController = createCaptureInstalledController({
     browseObservationTargets:() => uiCalls.push("browse"), closeObservationTargetPicker:() => uiCalls.push("close"),
     searchObservationTargets:(query) => uiCalls.push(`search:${query}`),
     cancelDetachTarget:() => uiCalls.push("cancel"), confirmDetachTarget:() => uiCalls.push("confirm"),
+    ...noOpCaptureUi,
+    historyPath:() => ({ path:"dataLayer", fieldValue:"dataLayer", status:"Waiting for path" }),
+    restartObservation:() => uiCalls.push("restart"), chooseObservationTarget:() => uiCalls.push("choose"),
+    browseObservationTargets:() => uiCalls.push("browse"), closeObservationTargetPicker:() => uiCalls.push("close"),
+    searchObservationTargets:(query) => uiCalls.push(`search:${query}`),
+    cancelDetachTarget:() => uiCalls.push("cancel"), confirmDetachTarget:() => uiCalls.push("confirm"),
   },
 });
 uiController.mount();
@@ -84,3 +99,58 @@ assert.deepEqual(uiCalls, ["restart", "choose", "browse", "close", "search:check
 uiController.dispose();
 assert.equal([...elements.values()].reduce((count, element) => count + element.listenerCount(), 0), 0,
   "Capture removes every observation-target listener it owns");
+
+const sessionSelectors = [
+  "#data-layer-views", "#back-to-events", "#copy-live-page-url", "#save-live-session", "#start-fresh-session",
+  "#report-missing-event", "#save-live-session-dialog", "#save-live-session-form", "#save-live-session-heading",
+  "#save-live-session-name", "#save-live-session-summary", "#confirm-save-live-session", "#cancel-save-live-session",
+  "#fresh-session-confirmation", "#fresh-session-confirmation-heading", "#fresh-session-confirmation-summary",
+  "#save-and-start-fresh-session", "#discard-and-start-fresh-session", "#cancel-fresh-session",
+  "#saved-session-live-banner", "#saved-session-live-summary", "#saved-session-background-status",
+  "#return-to-current-live-feed", "#revalidate-saved-session", "#saved-session-validation-comparison",
+  "#saved-session-search", "#import-saved-session", "#saved-session-file", "#saved-session-list",
+  "#saved-session-count", "#saved-session-confirmation", "#cancel-saved-session-delete", "#confirm-saved-session-delete",
+];
+const sessionElements = new Map(sessionSelectors.map((selector) => [selector, interactiveElement()]));
+const sessionCalls = [];
+const sessionUi = {
+  ...noOpCaptureUi,
+  sessionPresentation:() => ({ heading:"Save checkout", summary:"3 captured events", freshHeading:"Start fresh?",
+    freshSummary:"Unsaved checkout", liveSummary:"Checkout live feed", backgroundStatus:"Observing",
+    validationComparison:"2 matches", savedCount:"4 saved sessions", confirmation:"Session imported" }),
+  backToEvents:() => sessionCalls.push("back"), copyPageUrl:() => sessionCalls.push("copy"),
+  openSessionSave:() => sessionCalls.push("save"), startFreshSession:() => sessionCalls.push("fresh"),
+  reportMissingEvent:() => sessionCalls.push("report"), confirmSaveSession:(name) => sessionCalls.push(`confirm:${name}`),
+  cancelSaveSession:() => sessionCalls.push("cancel-save"), saveAndStartFreshSession:() => sessionCalls.push("save-fresh"),
+  discardAndStartFreshSession:() => sessionCalls.push("discard-fresh"), cancelFreshSession:() => sessionCalls.push("cancel-fresh"),
+  returnToCurrentLiveFeed:() => sessionCalls.push("return"), revalidateSavedSession:() => sessionCalls.push("revalidate"),
+  searchSavedSessions:(query) => sessionCalls.push(`search-saved:${query}`), importSavedSession:() => sessionCalls.push("import"),
+  cancelSavedSessionDelete:() => sessionCalls.push("cancel-delete"),
+  confirmSavedSessionDelete:() => sessionCalls.push("confirm-delete"),
+};
+const sessionController = createCaptureInstalledController({
+  root:{ querySelector:(selector) => sessionElements.get(selector) ?? null }, storage:{ getItem:() => null, setItem() {} },
+  initialPageUrl:() => "https://shop.example/", initialSources:() => [],
+  sessionStart:async () => ({ id:"unused", tabId:1, url:"", historyPath:"" }), subscribeToLiveFeed:() => () => {},
+  changed() {}, runCommand() {}, setLiveSessionMessage() {}, runObservationRefresh() {}, ui:sessionUi,
+});
+sessionController.mount();
+assert.equal(sessionElements.get("#save-live-session-heading").textContent, "Save checkout");
+assert.equal(sessionElements.get("#saved-session-count").textContent, "4 saved sessions");
+sessionElements.get("#back-to-events").click(); sessionElements.get("#copy-live-page-url").click();
+sessionElements.get("#save-live-session").click(); sessionElements.get("#start-fresh-session").click();
+sessionElements.get("#report-missing-event").click();
+sessionElements.get("#save-live-session-name").value = "Checkout regression";
+sessionElements.get("#save-live-session-form").dispatch("submit");
+sessionElements.get("#cancel-save-live-session").click(); sessionElements.get("#save-and-start-fresh-session").click();
+sessionElements.get("#discard-and-start-fresh-session").click(); sessionElements.get("#cancel-fresh-session").click();
+sessionElements.get("#return-to-current-live-feed").click(); sessionElements.get("#revalidate-saved-session").click();
+sessionElements.get("#saved-session-search").value = "checkout"; sessionElements.get("#saved-session-search").dispatch("input");
+sessionElements.get("#import-saved-session").click(); sessionElements.get("#saved-session-file").dispatch("change");
+sessionElements.get("#cancel-saved-session-delete").click(); sessionElements.get("#confirm-saved-session-delete").click();
+assert.deepEqual(sessionCalls, ["back", "copy", "save", "fresh", "report", "confirm:Checkout regression", "cancel-save",
+  "save-fresh", "discard-fresh", "cancel-fresh", "return", "revalidate", "search-saved:checkout", "import",
+  "cancel-delete", "confirm-delete"]);
+sessionController.dispose();
+assert.equal([...sessionElements.values()].reduce((count, element) => count + element.listenerCount(), 0), 0,
+  "Capture removes every live-session and saved-library listener it owns");

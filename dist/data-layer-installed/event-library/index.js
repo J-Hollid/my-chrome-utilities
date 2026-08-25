@@ -2,6 +2,24 @@ import { EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, appendImportedTemplates, beginTempl
 export function createEventLibraryInstalledController(ports) {
     const eventLibraryEditorElements = findEventLibraryEditorElements(ports.root);
     const { search: eventTemplateSearch, addNewButton } = eventLibraryEditorElements;
+    const libraryDraftSchemaSelector = ports.root.querySelector("#library-draft-schema-selector");
+    const refreshLibraryDraftValidationButton = ports.root.querySelector("#refresh-library-draft-validation");
+    const exportEventLibraryButton = ports.root.querySelector("#export-event-library");
+    const importEventLibraryButton = ports.root.querySelector("#import-event-library");
+    const eventLibraryFile = ports.root.querySelector("#event-library-file");
+    const eventLibraryTransferResult = ports.root.querySelector("#event-library-transfer-result");
+    const clearEventLibraryButton = ports.root.querySelector("#clear-event-library");
+    const eventLibraryDeleteReview = ports.root.querySelector("#event-library-delete-review");
+    const eventLibraryDeleteReviewHeading = ports.root.querySelector("#event-library-delete-review-heading");
+    const eventLibraryDeleteReviewSummary = ports.root.querySelector("#event-library-delete-review-summary");
+    const confirmEventLibraryDeleteButton = ports.root.querySelector("#confirm-event-library-delete");
+    const cancelEventLibraryDeleteButton = ports.root.querySelector("#cancel-event-library-delete");
+    const eventLibraryImportReview = ports.root.querySelector("#event-library-import-review");
+    const eventLibraryImportReviewHeading = ports.root.querySelector("#event-library-import-review-heading");
+    const eventLibraryImportReviewSummary = ports.root.querySelector("#event-library-import-review-summary");
+    const replaceEventLibraryButton = ports.root.querySelector("#replace-event-library");
+    const appendEventLibraryButton = ports.root.querySelector("#append-event-library");
+    const cancelEventLibraryImportButton = ports.root.querySelector("#cancel-event-library-import");
     let mounted = false;
     let eventTemplates = restoreEventTemplateLibrary(ports.storage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
     let selectedId;
@@ -22,9 +40,28 @@ export function createEventLibraryInstalledController(ports) {
         return template;
     };
     const closeEditor = () => { propertyEditorState = undefined; pendingTemplateRename = undefined; };
+    const renderEventLibraryTransfer = () => {
+        if (eventLibraryTransferResult)
+            eventLibraryTransferResult.textContent = pendingEventLibraryImport
+                ? `${pendingEventLibraryImport.templates.length} templates ready to import` : "";
+        if (eventLibraryImportReviewHeading)
+            eventLibraryImportReviewHeading.textContent = replaceEventLibraryArmed
+                ? "Confirm replacement" : "Review Event Library import";
+        if (eventLibraryImportReviewSummary)
+            eventLibraryImportReviewSummary.textContent = pendingEventLibraryImport
+                ? `${pendingEventLibraryImport.templates.length} imported templates` : "";
+        if (eventLibraryDeleteReviewHeading)
+            eventLibraryDeleteReviewHeading.textContent = pendingEventLibraryDeletion?.id
+                ? "Delete event template?" : "Clear Event Library?";
+        if (eventLibraryDeleteReviewSummary)
+            eventLibraryDeleteReviewSummary.textContent = pendingEventLibraryDeletion
+                ? `${pendingEventLibraryDeletion.count} template${pendingEventLibraryDeletion.count === 1 ? "" : "s"}` : "";
+    };
     const reviewEventLibraryImport = (serialized) => {
         pendingEventLibraryImport = eventLibraryImport(serialized);
         replaceEventLibraryArmed = false;
+        renderEventLibraryTransfer();
+        eventLibraryImportReview?.showModal();
     };
     const commitEventLibraryImport = (mode) => {
         if (!pendingEventLibraryImport)
@@ -41,10 +78,14 @@ export function createEventLibraryInstalledController(ports) {
         pendingEventLibraryImport = undefined;
         replaceEventLibraryArmed = false;
         closeEditor();
+        eventLibraryImportReview?.close();
+        renderEventLibraryTransfer();
         persistEventTemplateLibrary();
     };
     const requestEventTemplateDeletion = (id) => {
         pendingEventLibraryDeletion = id ? { id, name: find(id).name, count: 1 } : { count: eventTemplates.length };
+        renderEventLibraryTransfer();
+        eventLibraryDeleteReview?.showModal();
     };
     const commitEventLibraryDeletion = () => {
         if (!pendingEventLibraryDeletion)
@@ -56,6 +97,8 @@ export function createEventLibraryInstalledController(ports) {
         if (!pendingEventLibraryDeletion.id || propertyEditorState?.template.id === pendingEventLibraryDeletion.id)
             closeEditor();
         pendingEventLibraryDeletion = undefined;
+        eventLibraryDeleteReview?.close();
+        renderEventLibraryTransfer();
         persistEventTemplateLibrary();
     };
     const renderEventTemplateLibrary = () => {
@@ -77,6 +120,23 @@ export function createEventLibraryInstalledController(ports) {
         propertyEditorState = createNewEventEditor(ports.defaultPushPath());
         renderEventTemplateLibrary();
     };
+    const refreshLibraryDraftValidation = () => ports.validateDraft(libraryDraftSchemaSelector?.value ?? "");
+    function downloadEventLibrary() { ports.downloadExport(eventLibraryExport(eventTemplates)); }
+    const loadEventLibraryFile = async () => reviewEventLibraryImport(await ports.readImportFile());
+    const requestClearEventLibrary = () => requestEventTemplateDeletion();
+    const replaceEventLibrary = () => commitEventLibraryImport("replace");
+    const appendEventLibrary = () => commitEventLibraryImport("append");
+    const cancelEventLibraryImport = () => {
+        pendingEventLibraryImport = undefined;
+        replaceEventLibraryArmed = false;
+        eventLibraryImportReview?.close();
+        renderEventLibraryTransfer();
+    };
+    const cancelEventLibraryDelete = () => {
+        pendingEventLibraryDeletion = undefined;
+        eventLibraryDeleteReview?.close();
+        renderEventLibraryTransfer();
+    };
     return {
         mount() {
             if (mounted)
@@ -84,7 +144,18 @@ export function createEventLibraryInstalledController(ports) {
             mounted = true;
             eventTemplateSearch?.addEventListener("input", renderEventTemplateLibrary);
             addNewButton?.addEventListener("click", openNewEventEditor);
+            refreshLibraryDraftValidationButton?.addEventListener("click", refreshLibraryDraftValidation);
+            exportEventLibraryButton?.addEventListener("click", downloadEventLibrary);
+            importEventLibraryButton?.addEventListener("click", loadEventLibraryFile);
+            eventLibraryFile?.addEventListener("change", loadEventLibraryFile);
+            clearEventLibraryButton?.addEventListener("click", requestClearEventLibrary);
+            confirmEventLibraryDeleteButton?.addEventListener("click", commitEventLibraryDeletion);
+            cancelEventLibraryDeleteButton?.addEventListener("click", cancelEventLibraryDelete);
+            replaceEventLibraryButton?.addEventListener("click", replaceEventLibrary);
+            appendEventLibraryButton?.addEventListener("click", appendEventLibrary);
+            cancelEventLibraryImportButton?.addEventListener("click", cancelEventLibraryImport);
             renderEventTemplateLibrary();
+            renderEventLibraryTransfer();
         },
         dispose() {
             if (!mounted)
@@ -92,6 +163,16 @@ export function createEventLibraryInstalledController(ports) {
             mounted = false;
             eventTemplateSearch?.removeEventListener("input", renderEventTemplateLibrary);
             addNewButton?.removeEventListener("click", openNewEventEditor);
+            refreshLibraryDraftValidationButton?.removeEventListener("click", refreshLibraryDraftValidation);
+            exportEventLibraryButton?.removeEventListener("click", downloadEventLibrary);
+            importEventLibraryButton?.removeEventListener("click", loadEventLibraryFile);
+            eventLibraryFile?.removeEventListener("change", loadEventLibraryFile);
+            clearEventLibraryButton?.removeEventListener("click", requestClearEventLibrary);
+            confirmEventLibraryDeleteButton?.removeEventListener("click", commitEventLibraryDeletion);
+            cancelEventLibraryDeleteButton?.removeEventListener("click", cancelEventLibraryDelete);
+            replaceEventLibraryButton?.removeEventListener("click", replaceEventLibrary);
+            appendEventLibraryButton?.removeEventListener("click", appendEventLibrary);
+            cancelEventLibraryImportButton?.removeEventListener("click", cancelEventLibraryImport);
             closeEditor();
             pendingEventLibraryImport = undefined;
             pendingEventLibraryDeletion = undefined;
@@ -149,7 +230,7 @@ export function createEventLibraryInstalledController(ports) {
         commitImport: commitEventLibraryImport,
         requestDelete: requestEventTemplateDeletion,
         confirmDelete: commitEventLibraryDeletion,
-        cancelDelete() { pendingEventLibraryDeletion = undefined; },
+        cancelDelete: cancelEventLibraryDelete,
         async pushSelected() { if (!selectedId)
             throw new Error("Select a template before pushing"); await ports.push(find(selectedId)); },
         export: () => eventLibraryExport(eventTemplates),

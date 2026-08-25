@@ -33,6 +33,9 @@ export interface EventLibraryInstalledPorts {
   createSchema?(template: EditableEventTemplate): void;
   createTestCase?(template: EditableEventTemplate): void;
   createId?(): string;
+  downloadExport(exported: ReturnType<typeof eventLibraryExport>): void;
+  readImportFile(): Promise<string>;
+  validateDraft(schemaId: string): void;
 }
 
 export interface EventLibraryInstalledState {
@@ -48,6 +51,24 @@ export interface EventLibraryInstalledState {
 export function createEventLibraryInstalledController(ports: EventLibraryInstalledPorts) {
   const eventLibraryEditorElements = findEventLibraryEditorElements(ports.root);
   const { search:eventTemplateSearch, addNewButton } = eventLibraryEditorElements;
+  const libraryDraftSchemaSelector = ports.root.querySelector<HTMLSelectElement>("#library-draft-schema-selector");
+  const refreshLibraryDraftValidationButton = ports.root.querySelector<HTMLButtonElement>("#refresh-library-draft-validation");
+  const exportEventLibraryButton = ports.root.querySelector<HTMLButtonElement>("#export-event-library");
+  const importEventLibraryButton = ports.root.querySelector<HTMLButtonElement>("#import-event-library");
+  const eventLibraryFile = ports.root.querySelector<HTMLInputElement>("#event-library-file");
+  const eventLibraryTransferResult = ports.root.querySelector<HTMLElement>("#event-library-transfer-result");
+  const clearEventLibraryButton = ports.root.querySelector<HTMLButtonElement>("#clear-event-library");
+  const eventLibraryDeleteReview = ports.root.querySelector<HTMLDialogElement>("#event-library-delete-review");
+  const eventLibraryDeleteReviewHeading = ports.root.querySelector<HTMLElement>("#event-library-delete-review-heading");
+  const eventLibraryDeleteReviewSummary = ports.root.querySelector<HTMLElement>("#event-library-delete-review-summary");
+  const confirmEventLibraryDeleteButton = ports.root.querySelector<HTMLButtonElement>("#confirm-event-library-delete");
+  const cancelEventLibraryDeleteButton = ports.root.querySelector<HTMLButtonElement>("#cancel-event-library-delete");
+  const eventLibraryImportReview = ports.root.querySelector<HTMLDialogElement>("#event-library-import-review");
+  const eventLibraryImportReviewHeading = ports.root.querySelector<HTMLElement>("#event-library-import-review-heading");
+  const eventLibraryImportReviewSummary = ports.root.querySelector<HTMLElement>("#event-library-import-review-summary");
+  const replaceEventLibraryButton = ports.root.querySelector<HTMLButtonElement>("#replace-event-library");
+  const appendEventLibraryButton = ports.root.querySelector<HTMLButtonElement>("#append-event-library");
+  const cancelEventLibraryImportButton = ports.root.querySelector<HTMLButtonElement>("#cancel-event-library-import");
   let mounted = false;
   let eventTemplates = restoreEventTemplateLibrary(ports.storage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
   let selectedId: string | undefined;
@@ -67,8 +88,21 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
     return template;
   };
   const closeEditor = (): void => { propertyEditorState = undefined; pendingTemplateRename = undefined; };
+  const renderEventLibraryTransfer = (): void => {
+    if (eventLibraryTransferResult) eventLibraryTransferResult.textContent = pendingEventLibraryImport
+      ? `${pendingEventLibraryImport.templates.length} templates ready to import` : "";
+    if (eventLibraryImportReviewHeading) eventLibraryImportReviewHeading.textContent = replaceEventLibraryArmed
+      ? "Confirm replacement" : "Review Event Library import";
+    if (eventLibraryImportReviewSummary) eventLibraryImportReviewSummary.textContent = pendingEventLibraryImport
+      ? `${pendingEventLibraryImport.templates.length} imported templates` : "";
+    if (eventLibraryDeleteReviewHeading) eventLibraryDeleteReviewHeading.textContent = pendingEventLibraryDeletion?.id
+      ? "Delete event template?" : "Clear Event Library?";
+    if (eventLibraryDeleteReviewSummary) eventLibraryDeleteReviewSummary.textContent = pendingEventLibraryDeletion
+      ? `${pendingEventLibraryDeletion.count} template${pendingEventLibraryDeletion.count === 1 ? "" : "s"}` : "";
+  };
   const reviewEventLibraryImport = (serialized: string): void => {
     pendingEventLibraryImport = eventLibraryImport(serialized); replaceEventLibraryArmed = false;
+    renderEventLibraryTransfer(); eventLibraryImportReview?.showModal();
   };
   const commitEventLibraryImport = (mode: "replace" | "append"): void => {
     if (!pendingEventLibraryImport) throw new Error("Review an import before committing");
@@ -76,10 +110,12 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
       if (!replaceEventLibraryArmed) { replaceEventLibraryArmed = true; return; }
       eventTemplates = replaceImportedTemplates(eventTemplates, pendingEventLibraryImport.templates);
     } else eventTemplates = appendImportedTemplates(eventTemplates, pendingEventLibraryImport.templates, createId).templates;
-    pendingEventLibraryImport = undefined; replaceEventLibraryArmed = false; closeEditor(); persistEventTemplateLibrary();
+    pendingEventLibraryImport = undefined; replaceEventLibraryArmed = false; closeEditor();
+    eventLibraryImportReview?.close(); renderEventLibraryTransfer(); persistEventTemplateLibrary();
   };
   const requestEventTemplateDeletion = (id?: string): void => {
     pendingEventLibraryDeletion = id ? { id, name:find(id).name, count:1 } : { count:eventTemplates.length };
+    renderEventLibraryTransfer(); eventLibraryDeleteReview?.showModal();
   };
   const commitEventLibraryDeletion = (): void => {
     if (!pendingEventLibraryDeletion) return;
@@ -87,7 +123,7 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
       ? deleteEventTemplate(eventTemplates, pendingEventLibraryDeletion.id) : clearEventLibrary(eventTemplates);
     if (!pendingEventLibraryDeletion.id || selectedId === pendingEventLibraryDeletion.id) selectedId = undefined;
     if (!pendingEventLibraryDeletion.id || propertyEditorState?.template.id === pendingEventLibraryDeletion.id) closeEditor();
-    pendingEventLibraryDeletion = undefined; persistEventTemplateLibrary();
+    pendingEventLibraryDeletion = undefined; eventLibraryDeleteReview?.close(); renderEventLibraryTransfer(); persistEventTemplateLibrary();
   };
   const renderEventTemplateLibrary = (): void => {
     if (!mounted || !eventLibraryEditorElements.list) return;
@@ -104,18 +140,48 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
   };
   const openNewEventEditor = (): void => { selectedId = undefined;
     propertyEditorState = createNewEventEditor(ports.defaultPushPath()); renderEventTemplateLibrary(); };
+  const refreshLibraryDraftValidation = (): void => ports.validateDraft(libraryDraftSchemaSelector?.value ?? "");
+  function downloadEventLibrary(): void { ports.downloadExport(eventLibraryExport(eventTemplates)); }
+  const loadEventLibraryFile = async (): Promise<void> => reviewEventLibraryImport(await ports.readImportFile());
+  const requestClearEventLibrary = (): void => requestEventTemplateDeletion();
+  const replaceEventLibrary = (): void => commitEventLibraryImport("replace");
+  const appendEventLibrary = (): void => commitEventLibraryImport("append");
+  const cancelEventLibraryImport = (): void => { pendingEventLibraryImport = undefined; replaceEventLibraryArmed = false;
+    eventLibraryImportReview?.close(); renderEventLibraryTransfer(); };
+  const cancelEventLibraryDelete = (): void => { pendingEventLibraryDeletion = undefined;
+    eventLibraryDeleteReview?.close(); renderEventLibraryTransfer(); };
 
   return {
     mount(): void {
       if (mounted) return; mounted = true;
       eventTemplateSearch?.addEventListener("input", renderEventTemplateLibrary);
       addNewButton?.addEventListener("click", openNewEventEditor);
-      renderEventTemplateLibrary();
+      refreshLibraryDraftValidationButton?.addEventListener("click", refreshLibraryDraftValidation);
+      exportEventLibraryButton?.addEventListener("click", downloadEventLibrary);
+      importEventLibraryButton?.addEventListener("click", loadEventLibraryFile);
+      eventLibraryFile?.addEventListener("change", loadEventLibraryFile);
+      clearEventLibraryButton?.addEventListener("click", requestClearEventLibrary);
+      confirmEventLibraryDeleteButton?.addEventListener("click", commitEventLibraryDeletion);
+      cancelEventLibraryDeleteButton?.addEventListener("click", cancelEventLibraryDelete);
+      replaceEventLibraryButton?.addEventListener("click", replaceEventLibrary);
+      appendEventLibraryButton?.addEventListener("click", appendEventLibrary);
+      cancelEventLibraryImportButton?.addEventListener("click", cancelEventLibraryImport);
+      renderEventTemplateLibrary(); renderEventLibraryTransfer();
     },
     dispose(): void {
       if (!mounted) return; mounted = false;
       eventTemplateSearch?.removeEventListener("input", renderEventTemplateLibrary);
       addNewButton?.removeEventListener("click", openNewEventEditor);
+      refreshLibraryDraftValidationButton?.removeEventListener("click", refreshLibraryDraftValidation);
+      exportEventLibraryButton?.removeEventListener("click", downloadEventLibrary);
+      importEventLibraryButton?.removeEventListener("click", loadEventLibraryFile);
+      eventLibraryFile?.removeEventListener("change", loadEventLibraryFile);
+      clearEventLibraryButton?.removeEventListener("click", requestClearEventLibrary);
+      confirmEventLibraryDeleteButton?.removeEventListener("click", commitEventLibraryDeletion);
+      cancelEventLibraryDeleteButton?.removeEventListener("click", cancelEventLibraryDelete);
+      replaceEventLibraryButton?.removeEventListener("click", replaceEventLibrary);
+      appendEventLibraryButton?.removeEventListener("click", appendEventLibrary);
+      cancelEventLibraryImportButton?.removeEventListener("click", cancelEventLibraryImport);
       closeEditor(); pendingEventLibraryImport = undefined; pendingEventLibraryDeletion = undefined; replaceEventLibraryArmed = false;
     },
     select(id: string): void { find(id); selectedId = id; },
@@ -155,7 +221,7 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
     commitImport:commitEventLibraryImport,
     requestDelete:requestEventTemplateDeletion,
     confirmDelete:commitEventLibraryDeletion,
-    cancelDelete(): void { pendingEventLibraryDeletion = undefined; },
+    cancelDelete:cancelEventLibraryDelete,
     async pushSelected(): Promise<void> { if (!selectedId) throw new Error("Select a template before pushing"); await ports.push(find(selectedId)); },
     export:() => eventLibraryExport(eventTemplates),
     templates:(): readonly EditableEventTemplate[] => structuredClone(eventTemplates),

@@ -208,7 +208,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::startTestingButton:57"
+        "target": "src/data-layer-installed/capture/index.ts::startTestingButton:79"
       }
     },
     {
@@ -221,7 +221,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::endTestingButton:58"
+        "target": "src/data-layer-installed/capture/index.ts::endTestingButton:80"
       }
     },
     {
@@ -247,7 +247,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::historyPathDisplay:60"
+        "target": "src/data-layer-installed/capture/index.ts::historyPathDisplay:82"
       }
     },
     {
@@ -260,7 +260,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::historyPathStatus:61"
+        "target": "src/data-layer-installed/capture/index.ts::historyPathStatus:83"
       }
     },
     {
@@ -325,7 +325,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::sessionHistoryPath:62"
+        "target": "src/data-layer-installed/capture/index.ts::sessionHistoryPath:84"
       }
     },
     {
@@ -338,7 +338,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::sessionWarning:63"
+        "target": "src/data-layer-installed/capture/index.ts::sessionWarning:85"
       }
     },
     {
@@ -351,7 +351,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::restartObservationButton:64"
+        "target": "src/data-layer-installed/capture/index.ts::restartObservationButton:86"
       }
     },
     {
@@ -364,7 +364,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::observationTargetElements:65"
+        "target": "src/data-layer-installed/capture/index.ts::observationTargetElements:87"
       }
     },
     {
@@ -377,7 +377,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::chooseObservationTargetButton:67"
+        "target": "src/data-layer-installed/capture/index.ts::chooseObservationTargetButton:89"
       }
     },
     {
@@ -390,7 +390,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::browseObservationTargetsButton:68"
+        "target": "src/data-layer-installed/capture/index.ts::browseObservationTargetsButton:90"
       }
     },
     {
@@ -403,7 +403,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::closeObservationTargetPickerButton:69"
+        "target": "src/data-layer-installed/capture/index.ts::closeObservationTargetPickerButton:91"
       }
     },
     {
@@ -416,7 +416,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::observationTargetPicker:70"
+        "target": "src/data-layer-installed/capture/index.ts::observationTargetPicker:92"
       }
     },
     {
@@ -429,7 +429,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::observationTargetSearch:71"
+        "target": "src/data-layer-installed/capture/index.ts::observationTargetSearch:93"
       }
     },
     {
@@ -442,7 +442,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::observationTargetList:72"
+        "target": "src/data-layer-installed/capture/index.ts::observationTargetList:94"
       }
     },
     {
@@ -455,7 +455,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::cancelDetachTargetButton:73"
+        "target": "src/data-layer-installed/capture/index.ts::cancelDetachTargetButton:95"
       }
     },
     {
@@ -468,7 +468,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::confirmDetachTargetButton:74"
+        "target": "src/data-layer-installed/capture/index.ts::confirmDetachTargetButton:96"
       }
     },
     {
@@ -598,7 +598,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::liveObserverElements:59"
+        "target": "src/data-layer-installed/capture/index.ts::liveObserverElements:81"
       }
     },
     {
@@ -610,7 +610,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::liveSessionSummaryElements:100"
       }
     },
     {
@@ -622,7 +623,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::liveGuidedWorkflowElements:101"
       }
     },
     {
@@ -634,7 +636,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::dataLayerViewList:102"
       }
     },
     {
@@ -646,7 +649,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::backToEventsButton:103"
       }
     },
     {
@@ -659,7 +663,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::pauseCaptureButton:76"
+        "target": "src/data-layer-installed/capture/index.ts::pauseCaptureButton:98"
       }
     },
     {
@@ -672,7 +676,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::resumeCaptureButton:77"
+        "target": "src/data-layer-installed/capture/index.ts::resumeCaptureButton:99"
       }
     },
     {
@@ -684,7 +688,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::copyPageUrlButton:104"
       }
     },
     {
@@ -697,7 +702,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::liveNotificationController:78"
+        "target": "src/data-layer-installed/capture/index.ts::liveNotificationController:135"
       }
     },
     {
@@ -709,7 +714,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionButton:105"
       }
     },
     {
@@ -721,7 +727,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::startFreshSessionButton:106"
       }
     },
     {
@@ -733,7 +740,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::reportMissingEventButton:107"
       }
     },
     {
@@ -745,7 +753,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionDialog:108"
       }
     },
     {
@@ -757,7 +766,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionForm:109"
       }
     },
     {
@@ -769,7 +779,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionHeading:110"
       }
     },
     {
@@ -781,7 +792,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionName:111"
       }
     },
     {
@@ -793,7 +805,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionSummary:112"
       }
     },
     {
@@ -805,7 +818,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::confirmSaveLiveSessionButton:113"
       }
     },
     {
@@ -817,7 +831,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::cancelSaveLiveSessionButton:114"
       }
     },
     {
@@ -829,7 +844,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::freshSessionConfirmation:115"
       }
     },
     {
@@ -841,7 +857,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::freshSessionConfirmationHeading:116"
       }
     },
     {
@@ -853,7 +870,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::freshSessionConfirmationSummary:117"
       }
     },
     {
@@ -865,7 +883,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::saveAndStartFreshSessionButton:118"
       }
     },
     {
@@ -877,7 +896,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::discardAndStartFreshSessionButton:119"
       }
     },
     {
@@ -889,7 +909,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::cancelFreshSessionButton:120"
       }
     },
     {
@@ -901,7 +922,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionLiveBanner:121"
       }
     },
     {
@@ -913,7 +935,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionLiveSummary:122"
       }
     },
     {
@@ -925,7 +948,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionBackgroundStatus:123"
       }
     },
     {
@@ -937,7 +961,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::returnToCurrentLiveFeedButton:124"
       }
     },
     {
@@ -949,7 +974,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::revalidateSavedSessionButton:125"
       }
     },
     {
@@ -961,7 +987,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionValidationComparison:126"
       }
     },
     {
@@ -973,7 +1000,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionSearch:127"
       }
     },
     {
@@ -985,7 +1013,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::importSavedSessionButton:128"
       }
     },
     {
@@ -997,7 +1026,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionFileInput:129"
       }
     },
     {
@@ -1009,7 +1039,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionList:130"
       }
     },
     {
@@ -1021,7 +1052,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionCount:131"
       }
     },
     {
@@ -1033,7 +1065,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionConfirmation:132"
       }
     },
     {
@@ -1045,7 +1078,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::cancelSavedSessionDeleteButton:133"
       }
     },
     {
@@ -1057,7 +1091,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::confirmSavedSessionDeleteButton:134"
       }
     },
     {
@@ -1161,7 +1196,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryEditorElements:49"
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryEditorElements:52"
       }
     },
     {
@@ -1173,7 +1208,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::libraryDraftSchemaSelector:54"
       }
     },
     {
@@ -1185,7 +1221,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::refreshLibraryDraftValidationButton:55"
       }
     },
     {
@@ -1245,7 +1282,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::exportEventLibraryButton:56"
       }
     },
     {
@@ -1257,7 +1295,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::importEventLibraryButton:57"
       }
     },
     {
@@ -1269,7 +1308,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryFile:58"
       }
     },
     {
@@ -1281,7 +1321,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryTransferResult:59"
       }
     },
     {
@@ -1293,7 +1334,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::clearEventLibraryButton:60"
       }
     },
     {
@@ -1305,7 +1347,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryDeleteReview:61"
       }
     },
     {
@@ -1317,7 +1360,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryDeleteReviewHeading:62"
       }
     },
     {
@@ -1329,7 +1373,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryDeleteReviewSummary:63"
       }
     },
     {
@@ -1341,7 +1386,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::confirmEventLibraryDeleteButton:64"
       }
     },
     {
@@ -1353,7 +1399,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::cancelEventLibraryDeleteButton:65"
       }
     },
     {
@@ -1365,7 +1412,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryImportReview:66"
       }
     },
     {
@@ -1377,7 +1425,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryImportReviewHeading:67"
       }
     },
     {
@@ -1389,7 +1438,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryImportReviewSummary:68"
       }
     },
     {
@@ -1401,7 +1451,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::replaceEventLibraryButton:69"
       }
     },
     {
@@ -1413,7 +1464,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::appendEventLibraryButton:70"
       }
     },
     {
@@ -1425,7 +1477,8 @@
         "column": 7
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::cancelEventLibraryImportButton:71"
       }
     },
     {
@@ -1475,7 +1528,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::eventTemplateSearch:50"
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplateSearch:53"
       }
     },
     {
@@ -1488,7 +1541,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::addNewButton:50"
+        "target": "src/data-layer-installed/event-library/index.ts::addNewButton:53"
       }
     },
     {
@@ -4231,7 +4284,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::dataLayerSessionState:84"
+        "target": "src/data-layer-installed/capture/index.ts::dataLayerSessionState:141"
       }
     },
     {
@@ -4304,7 +4357,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::observationRefreshTimeoutId:86"
+        "target": "src/data-layer-installed/capture/index.ts::observationRefreshTimeoutId:143"
       }
     },
     {
@@ -4329,7 +4382,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::liveObserverState:85"
+        "target": "src/data-layer-installed/capture/index.ts::liveObserverState:142"
       }
     },
     {
@@ -4540,7 +4593,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::eventTemplates:52"
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplates:73"
       }
     },
     {
@@ -4553,7 +4606,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::propertyEditorState:54"
+        "target": "src/data-layer-installed/event-library/index.ts::propertyEditorState:75"
       }
     },
     {
@@ -4614,7 +4667,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::pendingTemplateRename:55"
+        "target": "src/data-layer-installed/event-library/index.ts::pendingTemplateRename:76"
       }
     },
     {
@@ -4627,7 +4680,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::pendingEventLibraryImport:56"
+        "target": "src/data-layer-installed/event-library/index.ts::pendingEventLibraryImport:77"
       }
     },
     {
@@ -4640,7 +4693,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::replaceEventLibraryArmed:58"
+        "target": "src/data-layer-installed/event-library/index.ts::replaceEventLibraryArmed:79"
       }
     },
     {
@@ -4653,7 +4706,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::pendingEventLibraryDeletion:57"
+        "target": "src/data-layer-installed/event-library/index.ts::pendingEventLibraryDeletion:78"
       }
     },
     {
@@ -5626,7 +5679,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::renderHistoryPath:87"
+        "target": "src/data-layer-installed/capture/index.ts::renderHistoryPath:144"
       }
     },
     {
@@ -5666,7 +5719,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::renderObservationTargetContext:95"
+        "target": "src/data-layer-installed/capture/index.ts::renderObservationTargetContext:152"
       }
     },
     {
@@ -5732,7 +5785,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::browseObservationTargets:102"
+        "target": "src/data-layer-installed/capture/index.ts::browseObservationTargets:159"
       }
     },
     {
@@ -5836,7 +5889,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::showDataLayerView:167"
       }
     },
     {
@@ -5961,7 +6015,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::renderSavedSessionLiveBanner:172"
       }
     },
     {
@@ -6066,7 +6121,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::renderLiveObserver:110"
+        "target": "src/data-layer-installed/capture/index.ts::renderLiveObserver:212"
       }
     },
     {
@@ -6105,7 +6160,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::openMissingEventBuilder:194"
       }
     },
     {
@@ -6210,7 +6266,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::setLiveSessionMessage:128"
+        "target": "src/data-layer-installed/capture/index.ts::setLiveSessionMessage:230"
       }
     },
     {
@@ -6223,7 +6279,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::copyLivePageUrl:191"
       }
     },
     {
@@ -6250,7 +6307,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::renderEventTemplateLibrary:92"
+        "target": "src/data-layer-installed/event-library/index.ts::renderEventTemplateLibrary:128"
       }
     },
     {
@@ -6276,7 +6333,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::refreshLibraryDraftValidation:143"
       }
     },
     {
@@ -7852,7 +7910,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::persistEventTemplateLibrary:60"
+        "target": "src/data-layer-installed/event-library/index.ts::persistEventTemplateLibrary:81"
       }
     },
     {
@@ -7865,7 +7923,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::downloadEventLibrary:144"
       }
     },
     {
@@ -7879,7 +7938,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::reviewEventLibraryImport:70"
+        "target": "src/data-layer-installed/event-library/index.ts::reviewEventLibraryImport:103"
       }
     },
     {
@@ -7893,7 +7952,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::commitEventLibraryImport:73"
+        "target": "src/data-layer-installed/event-library/index.ts::commitEventLibraryImport:107"
       }
     },
     {
@@ -7907,7 +7966,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::requestEventTemplateDeletion:81"
+        "target": "src/data-layer-installed/event-library/index.ts::requestEventTemplateDeletion:116"
       }
     },
     {
@@ -7920,7 +7979,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::requestClearEventLibrary:146"
       }
     },
     {
@@ -7934,7 +7994,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::commitEventLibraryDeletion:84"
+        "target": "src/data-layer-installed/event-library/index.ts::commitEventLibraryDeletion:120"
       }
     },
     {
@@ -7988,7 +8048,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::openNewEventEditor:105"
+        "target": "src/data-layer-installed/event-library/index.ts::openNewEventEditor:141"
       }
     },
     {
@@ -8339,7 +8399,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::loadSavedSessionFile:205"
       }
     },
     {
@@ -8392,7 +8453,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::syncCapturedEventsToLive:115"
+        "target": "src/data-layer-installed/capture/index.ts::syncCapturedEventsToLive:217"
       }
     },
     {
@@ -8510,7 +8571,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::clearScheduledObservationRefresh:133"
+        "target": "src/data-layer-installed/capture/index.ts::clearScheduledObservationRefresh:235"
       }
     },
     {
@@ -8550,7 +8611,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::scheduleObservationRefresh:139"
+        "target": "src/data-layer-installed/capture/index.ts::scheduleObservationRefresh:241"
       }
     },
     {
@@ -8641,7 +8702,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::openSessionSaveDialog:192"
       }
     },
     {
@@ -8654,7 +8716,8 @@
         "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::startFreshSession:193"
       }
     },
     {
@@ -8950,11 +9013,12 @@
       "frozen": {
         "expression": "refreshLibraryDraftValidationButton.addEventListener",
         "line": 2224,
-        "column": 1,
-        "invocation": "refreshLibraryDraftValidationButton.addEventListener(\"click\", refreshLibraryDraftValidation)"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::refreshLibraryDraftValidationButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -10837,11 +10901,12 @@
       "frozen": {
         "expression": "dataLayerViewList?.addEventListener",
         "line": 5522,
-        "column": 1,
-        "invocation": "dataLayerViewList?.addEventListener(\"click\", (event) => {\n  const button = (event.target as Element).closest<HTMLButtonElement>(\"[role=tab]\");\n  const view = button?.textContent as DataLayerView | null;\n  if (view && dataLayerViews.includes(view)) showDataLayerView(view, true);\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::dataLayerViewList?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -10891,11 +10956,12 @@
       "frozen": {
         "expression": "copyPageUrlButton?.addEventListener",
         "line": 5548,
-        "column": 1,
-        "invocation": "copyPageUrlButton?.addEventListener(\"click\", () => {\n  void copyLivePageUrl();\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::copyPageUrlButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -10904,11 +10970,12 @@
       "frozen": {
         "expression": "saveLiveSessionButton?.addEventListener",
         "line": 5629,
-        "column": 1,
-        "invocation": "saveLiveSessionButton?.addEventListener(\"click\", () => openSessionSaveDialog())"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -10917,11 +10984,12 @@
       "frozen": {
         "expression": "reportMissingEventButton?.addEventListener",
         "line": 5630,
-        "column": 1,
-        "invocation": "reportMissingEventButton?.addEventListener(\"click\", () => openMissingEventBuilder(savedSessionLiveFeed ? \"saved session\" : \"Live session actions\"))"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::reportMissingEventButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -10930,11 +10998,12 @@
       "frozen": {
         "expression": "startFreshSessionButton?.addEventListener",
         "line": 5631,
-        "column": 1,
-        "invocation": "startFreshSessionButton?.addEventListener(\"click\", () => {\n  const availability = freshSessionAvailability({\n    eventCount:liveObserverState.events.length,\n    savedThroughEventCount,\n    savedSessionMode:Boolean(savedSessionLiveFeed),\n  });\n  if (availability.action === \"unavailable\") return;\n  if (availability.action === \"start\") { startFreshSession(); return; }\n  if (freshSessionConfirmationSummary) freshSessionConfirmationSummary.textContent = `${availability.unsavedEventCount} unsaved events would be discarded.`;\n  freshSessionConfirmation?.showModal();\n  freshSessionConfirmationHeading?.focus({ preventScroll:true });\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::startFreshSessionButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -10956,11 +11025,12 @@
       "frozen": {
         "expression": "saveLiveSessionForm?.addEventListener",
         "line": 5647,
-        "column": 1,
-        "invocation": "saveLiveSessionForm?.addEventListener(\"submit\", (event) => {\n  event.preventDefault();\n  const name = saveLiveSessionName?.value.trim() ?? \"\";\n  if (!pendingSessionSaveDraft || !name) return;\n  savedSessionLibrary = confirmSessionSave(savedSessionLibrary, pendingSessionSaveDraft, name);\n  savedThroughEventCount = pendingSessionSaveDraft.completed.events.length;\n  dataLayerStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, String(savedThroughEventCount));\n  pendingSessionSaveDraft = undefined;\n  persistSavedSessionLibrary();\n  saveLiveSessionDialog?.close();\n  renderSavedSessions();\n  if (startFreshAfterSessionSave) {\n    startFreshAfterSessionSave = false;\n    startFreshSession();\n    return;\n  }\n  setLiveSessionMessage(`Saved immutable snapshot ${name}; capture state unchanged.`);\n  saveLiveSessionButton?.focus({ preventScroll:true });\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::saveLiveSessionForm?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -10969,11 +11039,12 @@
       "frozen": {
         "expression": "cancelSaveLiveSessionButton?.addEventListener",
         "line": 5673,
-        "column": 1,
-        "invocation": "cancelSaveLiveSessionButton?.addEventListener(\"click\", closeSaveLiveSessionDialog)"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::cancelSaveLiveSessionButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -10995,11 +11066,12 @@
       "frozen": {
         "expression": "cancelFreshSessionButton?.addEventListener",
         "line": 5680,
-        "column": 1,
-        "invocation": "cancelFreshSessionButton?.addEventListener(\"click\", closeFreshSessionConfirmation)"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::cancelFreshSessionButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11021,11 +11093,12 @@
       "frozen": {
         "expression": "saveAndStartFreshSessionButton?.addEventListener",
         "line": 5682,
-        "column": 1,
-        "invocation": "saveAndStartFreshSessionButton?.addEventListener(\"click\", () => {\n  if (freshSessionConfirmation?.open) freshSessionConfirmation.close();\n  openSessionSaveDialog(true);\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::saveAndStartFreshSessionButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11034,11 +11107,12 @@
       "frozen": {
         "expression": "discardAndStartFreshSessionButton?.addEventListener",
         "line": 5686,
-        "column": 1,
-        "invocation": "discardAndStartFreshSessionButton?.addEventListener(\"click\", () => {\n  if (freshSessionConfirmation?.open) freshSessionConfirmation.close();\n  startFreshSession();\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::discardAndStartFreshSessionButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11047,11 +11121,12 @@
       "frozen": {
         "expression": "returnToCurrentLiveFeedButton?.addEventListener",
         "line": 5691,
-        "column": 1,
-        "invocation": "returnToCurrentLiveFeedButton?.addEventListener(\"click\", () => {\n  if (!savedSessionLiveFeed) return;\n  const returned = returnToCurrentLiveFeed(savedSessionLiveFeed);\n  savedSessionLiveFeed = undefined;\n  persistSavedSessionFeed();\n  liveObserverState = returned.state;\n  renderLiveObserver();\n  if (liveObserverElements.eventList) liveObserverElements.eventList.scrollTop = returned.scrollTop;\n  setLiveSessionMessage(`Returned to current Live feed${returned.newEventCount ? ` with ${returned.newEventCount} new events` : \"\"}.`);\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::returnToCurrentLiveFeedButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11060,11 +11135,12 @@
       "frozen": {
         "expression": "revalidateSavedSessionButton?.addEventListener",
         "line": 5702,
-        "column": 1,
-        "invocation": "revalidateSavedSessionButton?.addEventListener(\"click\", () => {\n  if (!savedSessionLiveFeed) return;\n  savedSessionLiveFeed = revalidateSavedSessionLiveFeed(savedSessionLiveFeed, (event) => {\n    const result = validateEvent({ sourceId:event.sourceId, eventName:event.name, payload:event.payload, rawInput:event.rawInput }, schemas, event.pageUrl);\n    return { state:result.state, ...(result.schema ? { schema:{ name:result.schema.name, version:result.schema.version } } : {}) };\n  });\n  persistSavedSessionFeed();\n  renderSavedSessionLiveBanner();\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::revalidateSavedSessionButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11086,11 +11162,12 @@
       "frozen": {
         "expression": "savedSessionSearch?.addEventListener",
         "line": 5714,
-        "column": 1,
-        "invocation": "savedSessionSearch?.addEventListener(\"input\", renderSavedSessions)"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionSearch?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11132,7 +11209,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::eventTemplateSearch?.addEventListener:111"
+        "target": "src/data-layer-installed/event-library/index.ts::eventTemplateSearch?.addEventListener:157"
       }
     },
     {
@@ -11835,7 +11912,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/event-library/index.ts::addNewButton?.addEventListener:112"
+        "target": "src/data-layer-installed/event-library/index.ts::addNewButton?.addEventListener:158"
       }
     },
     {
@@ -11848,7 +11925,8 @@
         "invocation": "exportEventLibraryButton?.addEventListener(\"click\", downloadEventLibrary)"
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::exportEventLibraryButton?.addEventListener:160"
       }
     },
     {
@@ -11857,11 +11935,12 @@
       "frozen": {
         "expression": "importEventLibraryButton?.addEventListener",
         "line": 5981,
-        "column": 1,
-        "invocation": "importEventLibraryButton?.addEventListener(\"click\", () => eventLibraryFile?.click())"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::importEventLibraryButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11870,11 +11949,12 @@
       "frozen": {
         "expression": "eventLibraryFile?.addEventListener",
         "line": 5982,
-        "column": 1,
-        "invocation": "eventLibraryFile?.addEventListener(\"change\", () => { void reviewEventLibraryImport(); })"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::eventLibraryFile?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11883,11 +11963,12 @@
       "frozen": {
         "expression": "replaceEventLibraryButton?.addEventListener",
         "line": 5983,
-        "column": 1,
-        "invocation": "replaceEventLibraryButton?.addEventListener(\"click\", () => {\n  if (!pendingEventLibraryImport) return;\n  if (!replaceEventLibraryArmed) {\n    replaceEventLibraryArmed = true;\n    replaceEventLibraryButton.textContent = `Confirm replace ${eventTemplates.length} with ${pendingEventLibraryImport.templates.length}`;\n    if (eventLibraryImportReviewSummary) eventLibraryImportReviewSummary.textContent = `${eventTemplates.length} current templates will be removed and ${pendingEventLibraryImport.templates.length} imported templates will be added.`;\n    return;\n  }\n  commitEventLibraryImport(\"replace\");\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::replaceEventLibraryButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11896,11 +11977,12 @@
       "frozen": {
         "expression": "appendEventLibraryButton?.addEventListener",
         "line": 5993,
-        "column": 1,
-        "invocation": "appendEventLibraryButton?.addEventListener(\"click\", () => commitEventLibraryImport(\"append\"))"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::appendEventLibraryButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11909,11 +11991,12 @@
       "frozen": {
         "expression": "cancelEventLibraryImportButton?.addEventListener",
         "line": 5994,
-        "column": 1,
-        "invocation": "cancelEventLibraryImportButton?.addEventListener(\"click\", () => { pendingEventLibraryImport = undefined; hideDialog(eventLibraryImportReview); })"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::cancelEventLibraryImportButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -11926,7 +12009,8 @@
         "invocation": "clearEventLibraryButton?.addEventListener(\"click\", requestClearEventLibrary)"
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::clearEventLibraryButton?.addEventListener:163"
       }
     },
     {
@@ -11939,7 +12023,8 @@
         "invocation": "confirmEventLibraryDeleteButton?.addEventListener(\"click\", commitEventLibraryDeletion)"
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::confirmEventLibraryDeleteButton?.addEventListener:164"
       }
     },
     {
@@ -11948,11 +12033,12 @@
       "frozen": {
         "expression": "cancelEventLibraryDeleteButton?.addEventListener",
         "line": 5997,
-        "column": 1,
-        "invocation": "cancelEventLibraryDeleteButton?.addEventListener(\"click\", () => { pendingEventLibraryDeletion = undefined; hideDialog(eventLibraryDeleteReview); })"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/event-library/index.ts::cancelEventLibraryDeleteButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -12338,11 +12424,12 @@
       "frozen": {
         "expression": "importSavedSessionButton?.addEventListener",
         "line": 6175,
-        "column": 1,
-        "invocation": "importSavedSessionButton?.addEventListener(\"click\", () => savedSessionFileInput?.click())"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::importSavedSessionButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -12351,11 +12438,12 @@
       "frozen": {
         "expression": "savedSessionFileInput?.addEventListener",
         "line": 6176,
-        "column": 1,
-        "invocation": "savedSessionFileInput?.addEventListener(\"change\", () => {\n  void loadSavedSessionFile();\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::savedSessionFileInput?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -12364,11 +12452,12 @@
       "frozen": {
         "expression": "cancelSavedSessionDeleteButton?.addEventListener",
         "line": 6180,
-        "column": 1,
-        "invocation": "cancelSavedSessionDeleteButton?.addEventListener(\"click\", () => {\n  savedSessionLibrary = cancelSavedSessionDeletion(savedSessionLibrary);\n  if (savedSessionConfirmation) savedSessionConfirmation.textContent = \"\";\n  cancelSavedSessionDeleteButton.hidden = true;\n  if (confirmSavedSessionDeleteButton) confirmSavedSessionDeleteButton.hidden = true;\n  renderSavedSessions();\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::cancelSavedSessionDeleteButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -12377,11 +12466,12 @@
       "frozen": {
         "expression": "confirmSavedSessionDeleteButton?.addEventListener",
         "line": 6188,
-        "column": 1,
-        "invocation": "confirmSavedSessionDeleteButton?.addEventListener(\"click\", () => {\n  savedSessionLibrary = confirmSavedSessionDeletion(savedSessionLibrary);\n  persistSavedSessionLibrary();\n  if (savedSessionConfirmation) savedSessionConfirmation.textContent = \"Saved session deleted.\";\n  confirmSavedSessionDeleteButton.hidden = true;\n  if (cancelSavedSessionDeleteButton) cancelSavedSessionDeleteButton.hidden = true;\n  renderSavedSessions();\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::confirmSavedSessionDeleteButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -12390,11 +12480,12 @@
       "frozen": {
         "expression": "backToEventsButton?.addEventListener",
         "line": 6197,
-        "column": 1,
-        "invocation": "backToEventsButton?.addEventListener(\"click\", () => {\n  closeInspectorAndReturnToEvents();\n})"
+        "column": 1
       },
       "binding": {
-        "status": "pending"
+        "status": "resolved",
+        "target": "src/data-layer-installed/capture/index.ts::backToEventsButton?.addEventListener",
+        "reviewed": true
       }
     },
     {
@@ -12679,7 +12770,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::globalThis.setTimeout:80"
+        "target": "src/data-layer-installed/capture/index.ts::globalThis.setTimeout:137"
       }
     },
     {
@@ -12692,7 +12783,7 @@
       },
       "binding": {
         "status": "resolved",
-        "target": "src/data-layer-installed/capture/index.ts::globalThis.setTimeout:142",
+        "target": "src/data-layer-installed/capture/index.ts::globalThis.setTimeout:244",
         "reviewed": true
       }
     }

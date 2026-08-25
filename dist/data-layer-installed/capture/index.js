@@ -1,4 +1,4 @@
-import { beginDataLayerTestingSession, createLiveNotificationController, findObservationTargetElements, observationRefreshDelay, persistSession, restoreSession, } from "../../utilities/data-layer/capture.js";
+import { beginDataLayerTestingSession, createLiveNotificationController, findLiveGuidedWorkflowElements, findLiveSessionSummaryElements, findObservationTargetElements, observationRefreshDelay, persistSession, restoreSession, } from "../../utilities/data-layer/capture.js";
 import { createLiveObserverState, findLiveObserverElements, pauseCapture, recordLiveEvent, renderLiveObserverState, resumeCapture, } from "../../utilities/data-layer/live-inspection.js";
 import { endDataLayerTestingSession } from "../../data-layer-session.js";
 export function createCaptureInstalledController(ports) {
@@ -14,6 +14,41 @@ export function createCaptureInstalledController(ports) {
     const { chooseButton: chooseObservationTargetButton, browseButton: browseObservationTargetsButton, closePickerButton: closeObservationTargetPickerButton, picker: observationTargetPicker, search: observationTargetSearch, list: observationTargetList, cancelDetachButton: cancelDetachTargetButton, confirmDetachButton: confirmDetachTargetButton, } = observationTargetElements;
     const pauseCaptureButton = liveObserverElements.pauseCaptureButton;
     const resumeCaptureButton = liveObserverElements.resumeCaptureButton;
+    const liveSessionSummaryElements = findLiveSessionSummaryElements(ports.root);
+    const liveGuidedWorkflowElements = findLiveGuidedWorkflowElements(ports.root);
+    const dataLayerViewList = liveObserverElements.viewList;
+    const backToEventsButton = liveObserverElements.backToEventsButton;
+    const copyPageUrlButton = liveSessionSummaryElements.copyPageUrlButton;
+    const saveLiveSessionButton = ports.root.querySelector("#save-live-session");
+    const startFreshSessionButton = ports.root.querySelector("#start-fresh-session");
+    const reportMissingEventButton = ports.root.querySelector("#report-missing-event");
+    const saveLiveSessionDialog = ports.root.querySelector("#save-live-session-dialog");
+    const saveLiveSessionForm = ports.root.querySelector("#save-live-session-form");
+    const saveLiveSessionHeading = ports.root.querySelector("#save-live-session-heading");
+    const saveLiveSessionName = ports.root.querySelector("#save-live-session-name");
+    const saveLiveSessionSummary = ports.root.querySelector("#save-live-session-summary");
+    const confirmSaveLiveSessionButton = ports.root.querySelector("#confirm-save-live-session");
+    const cancelSaveLiveSessionButton = ports.root.querySelector("#cancel-save-live-session");
+    const freshSessionConfirmation = ports.root.querySelector("#fresh-session-confirmation");
+    const freshSessionConfirmationHeading = ports.root.querySelector("#fresh-session-confirmation-heading");
+    const freshSessionConfirmationSummary = ports.root.querySelector("#fresh-session-confirmation-summary");
+    const saveAndStartFreshSessionButton = ports.root.querySelector("#save-and-start-fresh-session");
+    const discardAndStartFreshSessionButton = ports.root.querySelector("#discard-and-start-fresh-session");
+    const cancelFreshSessionButton = ports.root.querySelector("#cancel-fresh-session");
+    const savedSessionLiveBanner = ports.root.querySelector("#saved-session-live-banner");
+    const savedSessionLiveSummary = ports.root.querySelector("#saved-session-live-summary");
+    const savedSessionBackgroundStatus = ports.root.querySelector("#saved-session-background-status");
+    const returnToCurrentLiveFeedButton = ports.root.querySelector("#return-to-current-live-feed");
+    const revalidateSavedSessionButton = ports.root.querySelector("#revalidate-saved-session");
+    const savedSessionValidationComparison = ports.root.querySelector("#saved-session-validation-comparison");
+    const savedSessionSearch = ports.root.querySelector("#saved-session-search");
+    const importSavedSessionButton = ports.root.querySelector("#import-saved-session");
+    const savedSessionFileInput = ports.root.querySelector("#saved-session-file");
+    const savedSessionList = ports.root.querySelector("#saved-session-list");
+    const savedSessionCount = ports.root.querySelector("#saved-session-count");
+    const savedSessionConfirmation = ports.root.querySelector("#saved-session-confirmation");
+    const cancelSavedSessionDeleteButton = ports.root.querySelector("#cancel-saved-session-delete");
+    const confirmSavedSessionDeleteButton = ports.root.querySelector("#confirm-saved-session-delete");
     const liveNotificationController = createLiveNotificationController((message) => ports.setLiveSessionMessage(message), (clear, delayMs) => { globalThis.setTimeout(clear, delayMs); });
     let mounted = false;
     let unsubscribe;
@@ -47,6 +82,68 @@ export function createCaptureInstalledController(ports) {
     const searchObservationTargets = () => ports.ui.searchObservationTargets(observationTargetSearch?.value ?? "");
     const cancelDetachTarget = () => ports.ui.cancelDetachTarget();
     const confirmDetachTarget = () => ports.ui.confirmDetachTarget();
+    function showDataLayerView(view) { ports.ui.showDataLayerView(view); }
+    const selectDataLayerView = (event) => {
+        const button = event.target?.closest("[role=tab]");
+        if (button?.textContent)
+            showDataLayerView(button.textContent);
+    };
+    function renderSavedSessionLiveBanner() {
+        const presentation = ports.ui.sessionPresentation();
+        if (saveLiveSessionHeading)
+            saveLiveSessionHeading.textContent = presentation.heading;
+        if (saveLiveSessionSummary)
+            saveLiveSessionSummary.textContent = presentation.summary;
+        if (freshSessionConfirmationHeading)
+            freshSessionConfirmationHeading.textContent = presentation.freshHeading;
+        if (freshSessionConfirmationSummary)
+            freshSessionConfirmationSummary.textContent = presentation.freshSummary;
+        if (savedSessionLiveSummary)
+            savedSessionLiveSummary.textContent = presentation.liveSummary;
+        if (savedSessionBackgroundStatus)
+            savedSessionBackgroundStatus.textContent = presentation.backgroundStatus;
+        if (savedSessionValidationComparison)
+            savedSessionValidationComparison.textContent = presentation.validationComparison;
+        if (savedSessionCount)
+            savedSessionCount.textContent = presentation.savedCount;
+        if (savedSessionConfirmation)
+            savedSessionConfirmation.textContent = presentation.confirmation;
+        if (savedSessionLiveBanner)
+            savedSessionLiveBanner.hidden = presentation.liveSummary.length === 0;
+        if (saveLiveSessionDialog)
+            saveLiveSessionDialog.dataset.controllerOwned = "capture";
+        if (freshSessionConfirmation)
+            freshSessionConfirmation.dataset.controllerOwned = "capture";
+        if (confirmSaveLiveSessionButton)
+            confirmSaveLiveSessionButton.disabled = !(saveLiveSessionName?.value.trim());
+        savedSessionList?.setAttribute("aria-live", "polite");
+        liveGuidedWorkflowElements.setupSteps?.setAttribute("data-session-owner", "capture");
+    }
+    const backToEvents = () => ports.ui.backToEvents();
+    function copyLivePageUrl() { ports.ui.copyPageUrl(); }
+    const openSessionSaveDialog = () => ports.ui.openSessionSave();
+    const startFreshSession = () => ports.ui.startFreshSession();
+    const openMissingEventBuilder = () => ports.ui.reportMissingEvent();
+    const confirmSessionSave = (event) => {
+        event.preventDefault();
+        ports.ui.confirmSaveSession(saveLiveSessionName?.value.trim() ?? "");
+    };
+    const cancelSessionSave = () => ports.ui.cancelSaveSession();
+    const saveAndStartFreshSession = () => ports.ui.saveAndStartFreshSession();
+    const discardAndStartFreshSession = () => ports.ui.discardAndStartFreshSession();
+    const cancelFreshSession = () => ports.ui.cancelFreshSession();
+    const returnToCurrentLiveFeed = () => ports.ui.returnToCurrentLiveFeed();
+    const revalidateSavedSession = () => ports.ui.revalidateSavedSession();
+    const searchSavedSessions = () => ports.ui.searchSavedSessions(savedSessionSearch?.value ?? "");
+    const beginSavedSessionImport = () => savedSessionFileInput?.click();
+    const loadSavedSessionFile = () => ports.ui.importSavedSession();
+    const selectSavedSession = (event) => {
+        const id = event.target?.closest("[data-session-id]")?.dataset.sessionId;
+        if (id)
+            ports.ui.selectSavedSession(id);
+    };
+    const cancelSavedSessionDelete = () => ports.ui.cancelSavedSessionDelete();
+    const confirmSavedSessionDelete = () => ports.ui.confirmSavedSessionDelete();
     const renderLiveObserver = () => {
         if (mounted)
             renderLiveObserverState(liveObserverElements, liveObserverState, () => { });
@@ -111,7 +208,27 @@ export function createCaptureInstalledController(ports) {
             observationTargetSearch?.addEventListener("input", searchObservationTargets);
             cancelDetachTargetButton?.addEventListener("click", cancelDetachTarget);
             confirmDetachTargetButton?.addEventListener("click", confirmDetachTarget);
+            dataLayerViewList?.addEventListener("click", selectDataLayerView);
+            backToEventsButton?.addEventListener("click", backToEvents);
+            copyPageUrlButton?.addEventListener("click", copyLivePageUrl);
+            saveLiveSessionButton?.addEventListener("click", openSessionSaveDialog);
+            startFreshSessionButton?.addEventListener("click", startFreshSession);
+            reportMissingEventButton?.addEventListener("click", openMissingEventBuilder);
+            saveLiveSessionForm?.addEventListener("submit", confirmSessionSave);
+            cancelSaveLiveSessionButton?.addEventListener("click", cancelSessionSave);
+            saveAndStartFreshSessionButton?.addEventListener("click", saveAndStartFreshSession);
+            discardAndStartFreshSessionButton?.addEventListener("click", discardAndStartFreshSession);
+            cancelFreshSessionButton?.addEventListener("click", cancelFreshSession);
+            returnToCurrentLiveFeedButton?.addEventListener("click", returnToCurrentLiveFeed);
+            revalidateSavedSessionButton?.addEventListener("click", revalidateSavedSession);
+            savedSessionSearch?.addEventListener("input", searchSavedSessions);
+            importSavedSessionButton?.addEventListener("click", beginSavedSessionImport);
+            savedSessionFileInput?.addEventListener("change", loadSavedSessionFile);
+            savedSessionList?.addEventListener("click", selectSavedSession);
+            cancelSavedSessionDeleteButton?.addEventListener("click", cancelSavedSessionDelete);
+            confirmSavedSessionDeleteButton?.addEventListener("click", confirmSavedSessionDelete);
             renderObservationTargetContext();
+            renderSavedSessionLiveBanner();
             ports.changed(dataLayerSessionState, liveObserverState);
             renderLiveObserver();
         },
@@ -132,6 +249,27 @@ export function createCaptureInstalledController(ports) {
             observationTargetSearch?.removeEventListener("input", searchObservationTargets);
             cancelDetachTargetButton?.removeEventListener("click", cancelDetachTarget);
             confirmDetachTargetButton?.removeEventListener("click", confirmDetachTarget);
+            dataLayerViewList?.removeEventListener("click", selectDataLayerView);
+            backToEventsButton?.removeEventListener("click", backToEvents);
+            copyPageUrlButton?.removeEventListener("click", copyLivePageUrl);
+            saveLiveSessionButton?.removeEventListener("click", openSessionSaveDialog);
+            startFreshSessionButton?.removeEventListener("click", startFreshSession);
+            reportMissingEventButton?.removeEventListener("click", openMissingEventBuilder);
+            saveLiveSessionForm?.removeEventListener("submit", confirmSessionSave);
+            cancelSaveLiveSessionButton?.removeEventListener("click", cancelSessionSave);
+            saveAndStartFreshSessionButton?.removeEventListener("click", saveAndStartFreshSession);
+            discardAndStartFreshSessionButton?.removeEventListener("click", discardAndStartFreshSession);
+            cancelFreshSessionButton?.removeEventListener("click", cancelFreshSession);
+            returnToCurrentLiveFeedButton?.removeEventListener("click", returnToCurrentLiveFeed);
+            revalidateSavedSessionButton?.removeEventListener("click", revalidateSavedSession);
+            savedSessionSearch?.removeEventListener("input", searchSavedSessions);
+            importSavedSessionButton?.removeEventListener("click", beginSavedSessionImport);
+            savedSessionFileInput?.removeEventListener("change", loadSavedSessionFile);
+            savedSessionList?.removeEventListener("click", selectSavedSession);
+            cancelSavedSessionDeleteButton?.removeEventListener("click", cancelSavedSessionDelete);
+            confirmSavedSessionDeleteButton?.removeEventListener("click", confirmSavedSessionDelete);
+            savedSessionList?.removeAttribute("aria-live");
+            liveGuidedWorkflowElements.setupSteps?.removeAttribute("data-session-owner");
             observationTargetList?.removeAttribute("aria-live");
             clearScheduledObservationRefresh();
         },
