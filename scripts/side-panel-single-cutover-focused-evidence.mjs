@@ -154,6 +154,7 @@ function approvedCompatibilityRepairChangedPath(file) {
   return [
     "scripts/run-focused-acceptance.mjs",
     "scripts/side-panel-single-cutover-focused-evidence.mjs",
+    "scripts/verification-evidence.mjs",
     "test/acceptance/side-panel-browser-session-contract.mjs",
     "test/side-panel-component-layout-runtime-test.mjs",
     "test/side-panel-single-cutover-preparation-test.mjs",

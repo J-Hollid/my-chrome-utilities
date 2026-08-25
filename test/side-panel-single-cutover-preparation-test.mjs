@@ -131,6 +131,7 @@ assert.equal(validateSidePanelSingleCutoverFocusedPlan({
   ...compatibilityRepairPlan,
   changedPaths:[
     "scripts/side-panel-single-cutover-focused-evidence.mjs",
+    "scripts/verification-evidence.mjs",
     "test/side-panel-component-layout-runtime-test.mjs",
     "test/support/side-panel-browser-direct-assertion-map.mjs",
   ],
