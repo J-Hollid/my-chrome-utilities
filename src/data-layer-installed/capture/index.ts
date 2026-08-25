@@ -53,6 +53,8 @@ import {
   SAVED_SESSION_LIVE_FEED_STORAGE_KEY,
   applySavedEventFeedFilter,
   cancelSavedSessionDeletion,
+  captureInspectorReturn,
+  closeLiveInspector,
   commitSavedEventFeedFilterLibrary,
   confirmSavedSessionDeletion,
   confirmSessionSave,
@@ -77,12 +79,14 @@ import {
   restoreSavedEventFeedWorkingView,
   restoreSavedSessionLibrary,
   restoreSavedSessionLiveFeed,
+  restoreInspectorReturn,
   resumeSavedSession,
   resumeCapture,
   returnToCurrentLiveFeed,
   revalidateSavedSessionLiveFeed,
   savedSessionSummary,
   searchSavedSessions,
+  selectLiveEvent,
   serializeSavedSessionLibrary,
   serializeSavedSessionLiveFeed,
   serializeSavedEventFeedWorkingView,
@@ -92,8 +96,10 @@ import {
   updateSavedSessionLiveFeedView,
   type CompletedSession,
   type EventFeedQuery,
+  type InspectorReturnSnapshot,
   type LiveEvent,
   type LiveObserverState,
+  type LiveInspectorPresentationSnapshot,
   type SavedSessionLibrary,
   type SavedSessionLiveFeed,
   type SavedEventFeedFilterLibrary,
@@ -188,6 +194,13 @@ export interface CaptureInstalledPorts {
       update:(query:EventFeedQuery) => void): void;
     dispose(): void;
   };
+  inspector: {
+    splitView(): boolean;
+    capturePresentation(): LiveInspectorPresentationSnapshot;
+    restorePresentation(snapshot:LiveInspectorPresentationSnapshot | undefined): void;
+    restoreReturn(snapshot:InspectorReturnSnapshot): void;
+    render(event:LiveEvent): void;
+  };
   ui: {
     historyPath(): { path:string; fieldValue:string; status:"Selection required" | "Waiting for path" | "Ready" | "Unavailable" };
     chooseObservationTarget(): void;
@@ -197,7 +210,6 @@ export interface CaptureInstalledPorts {
     cancelDetachTarget(): void;
     confirmDetachTarget(): void;
     showDataLayerView(view: string): void;
-    backToEvents(): void;
     copyPageUrl(): void;
     reportMissingEvent(): void;
   };
@@ -311,6 +323,8 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
   let savedThroughEventCount = Math.max(0,
     Number(ports.storage.getItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY)) || 0,
   );
+  let inspectorReturnSnapshot: InspectorReturnSnapshot | undefined;
+  const liveInspectorPresentation = new Map<string, LiveInspectorPresentationSnapshot>();
   let importGeneration = 0;
   let observationRefreshTimeoutId: number | undefined;
   let unsubscribeTabUpdated: (() => void) | undefined;
@@ -624,7 +638,28 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
       if (button) button.disabled = Boolean(feed);
     }
   }
-  const backToEvents = (): void => ports.ui.backToEvents();
+  function closeInspectorAndReturnToEvents(): void {
+    const selectedId = liveObserverState.inspectorEventId;
+    if (selectedId) liveInspectorPresentation.set(selectedId, ports.inspector.capturePresentation());
+    const returnSnapshot = inspectorReturnSnapshot;
+    liveObserverState = closeLiveInspector(liveObserverState);
+    synchronizeSavedSessionFeedView(); renderLiveObserver();
+    if (returnSnapshot) ports.inspector.restoreReturn(restoreInspectorReturn(returnSnapshot));
+    inspectorReturnSnapshot = undefined;
+  }
+  function openLiveInspector(eventId: string, preserveReturnSnapshot = false): void {
+    const previousEventId = liveObserverState.inspectorEventId;
+    if (previousEventId) liveInspectorPresentation.set(previousEventId, ports.inspector.capturePresentation());
+    if (!preserveReturnSnapshot) inspectorReturnSnapshot = captureInspectorReturn(
+      eventId, liveObserverElements.eventList?.scrollTop ?? 0,
+    );
+    liveObserverState = selectLiveEvent(liveObserverState, eventId, ports.inspector.splitView() ? "split" : "stacked");
+    synchronizeSavedSessionFeedView();
+    const event = liveObserverState.events.find(({ id }) => id === eventId);
+    if (event) ports.inspector.render(event);
+    ports.inspector.restorePresentation(liveInspectorPresentation.get(eventId));
+  }
+  const backToEvents = (): void => closeInspectorAndReturnToEvents();
   function copyLivePageUrl(): void { ports.ui.copyPageUrl(); }
   const openMissingEventBuilder = (): void => ports.ui.reportMissingEvent();
   function currentSessionSaveDraft(): SessionSaveDraft {
@@ -736,7 +771,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     if (cancelSavedSessionDeleteButton) cancelSavedSessionDeleteButton.hidden = true;
     if (confirmSavedSessionDeleteButton) confirmSavedSessionDeleteButton.hidden = true; renderSavedSessions(); };
   const renderLiveObserver = (): void => {
-    if (mounted) renderLiveObserverState(liveObserverElements, liveObserverState, () => {});
+    if (mounted) renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
     if (mounted) ports.savedFilters.render(liveObserverState.events, liveObserverState.query ?? { conditions:[] },
       savedEventFeedFilterControls(), (query) => {
         liveObserverState = setLiveQuery(liveObserverState, query);
@@ -1075,6 +1110,8 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     attachTarget:attachSelectedTarget,
     beginDetachTarget:beginDetachSelectedTarget,
     confirmDetachTarget:confirmDetachSelectedTarget,
+    openInspector:openLiveInspector,
+    closeInspector:closeInspectorAndReturnToEvents,
     scheduleObservationRefresh,
     refreshPresentation(): void { renderLiveObserver(); renderSavedSessionLiveBanner(); },
     state:() => ({ session:structuredClone(dataLayerSessionState), observer:structuredClone(liveObserverState),
@@ -1083,6 +1120,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
       savedFilters:structuredClone(savedEventFeedFilterLibrary), savedEventFeedFilterFeedback,
       historyObserver:structuredClone(dataLayerObserverState), observationRefresh:structuredClone(observationRefreshState),
       liveHistoryGeneration:liveHistoryActivationState.generation,
+      inspectorReturnSnapshot:structuredClone(inspectorReturnSnapshot),
       savedThroughEventCount, pendingObservationTargetSwitchId }),
   };
 }

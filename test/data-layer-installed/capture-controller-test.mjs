@@ -24,6 +24,9 @@ const noOpObserverRuntime = {
   recordCapture() {}, recordNavigation() {}, subscribeTabUpdated:() => () => {},
   subscribeTabRemoved:() => () => {}, subscribePermissionsRemoved:() => () => {},
 };
+const noOpInspector = { splitView:() => false,
+  capturePresentation:() => ({ showNonApplicableProperties:false, expandedPropertyPaths:[], expandedRulePaths:[], scrollTop:0 }),
+  restorePresentation() {}, restoreReturn() {}, render() {} };
 const controller = createCaptureInstalledController({
   root:{ querySelector:() => null },
   storage:{ getItem:(key) => values.get(key) ?? null, setItem:(key, value) => values.set(key, value) },
@@ -35,6 +38,7 @@ const controller = createCaptureInstalledController({
   observation:noOpObservation,
   savedSessions:noOpSavedSessions,
   savedFilters:noOpSavedFilters,
+  inspector:noOpInspector,
   ui:noOpCaptureUi,
 });
 controller.mount(); controller.mount(); assert.equal(subscriptions, 1);
@@ -108,6 +112,7 @@ const uiController = createCaptureInstalledController({
   },
   savedSessions:noOpSavedSessions,
   savedFilters:noOpSavedFilters,
+  inspector:noOpInspector,
 });
 uiController.mount();
 assert.equal(elements.get("#history-path-status").textContent, "Waiting for observation path");
@@ -158,7 +163,7 @@ const observerController = createCaptureInstalledController({
   subscribeToLiveFeed:() => () => {}, changed() {}, runCommand() {}, setLiveSessionMessage() {},
   observerRuntime, observation:{ ...noOpObservation,
     discover:async () => [{ tabId:9, windowId:2, pageUrl:"https://shop.example/", title:"Shop" }] },
-  savedSessions:noOpSavedSessions, savedFilters:noOpSavedFilters, ui:noOpCaptureUi,
+  savedSessions:noOpSavedSessions, savedFilters:noOpSavedFilters, inspector:noOpInspector, ui:noOpCaptureUi,
 });
 observerController.mount(); await observerController.begin(); await observerController.discoverTargets();
 tabUpdated(9, { status:"loading", url:"https://shop.example/stale" }, { url:"https://shop.example/stale", title:"Stale" });
@@ -206,6 +211,7 @@ const sessionSelectors = [
 const sessionElements = new Map(sessionSelectors.map((selector) => [selector, interactiveElement()]));
 const sessionCalls = [], persistedSessions = new Map();
 let renderedSessions = [], savedActions, importResolve;
+let renderedInspectorEvent, restoredInspectorReturn;
 const sessionPorts = {
   ...noOpSavedSessions,
   readImportFile:() => new Promise((resolve) => { importResolve = resolve; }),
@@ -225,11 +231,18 @@ const sessionController = createCaptureInstalledController({
   observation:noOpObservation,
   savedSessions:sessionPorts,
   savedFilters:noOpSavedFilters,
+  inspector:{ ...noOpInspector, render:(event) => { renderedInspectorEvent = event; },
+    restoreReturn:(snapshot) => { restoredInspectorReturn = snapshot; } },
 });
 sessionController.mount();
 await sessionController.begin();
 sessionController.capture({ id:"event:checkout", name:"checkout", sourceId:"history", sourceName:"History",
   captureTime:"2026-08-25T00:00:01.000Z", payload:{ total:42 }, rawInput:{ total:42 } });
+sessionController.openInspector("event:checkout");
+assert.equal(renderedInspectorEvent.id, "event:checkout", "Capture owns inspector selection and rendering");
+assert.equal(sessionController.state().inspectorReturnSnapshot.eventId, "event:checkout");
+sessionController.closeInspector();
+assert.equal(restoredInspectorReturn.eventId, "event:checkout");
 assert.equal(sessionElements.get("#live-events-empty-state").hidden, true);
 assert.equal(sessionElements.get("#live-source-error-state").hidden, true);
 assert.equal(sessionElements.get("#saved-session-empty-state").hidden, false);
@@ -304,6 +317,7 @@ const filterController = createCaptureInstalledController({
   savedFilters:{ createId:() => "saved-filter:checkout",
     render:(_events, _query, controls, update) => { filterControls = controls; updateWorkingFilter = update; },
     dispose:() => { filterDisposals += 1; } },
+  inspector:noOpInspector,
 });
 filterController.mount(); await filterController.begin();
 updateWorkingFilter({ conditions:[{ id:"condition:1", field:"Name", operator:"contains", values:["checkout"] }] });
