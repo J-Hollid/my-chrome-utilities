@@ -171,6 +171,7 @@ import {
   verificationRunIntent,
   verificationRunIntents,
 } from "../scripts/verification-run-intent.mjs";
+import { verifyCommittedReviewTransaction } from "../scripts/settled-final-verification.mjs";
 import {
   browserTargetSuccessionBoundary, loadTaskSuccessionGraph, resolveIncidentTaskSuccession,
   resolveTaskSuccessionGraph, taskSuccessionBoundaryDigest, validateUnresolvedIncidentTaskSuccession,
@@ -8140,6 +8141,10 @@ assert.deepEqual(rawBootstrapCoverage[0], {
   failureTaskDigest:verificationTaskDigest(unselectedBootstrapTask),
   selectedTaskKey:null, selectedTaskDigest:null, terminalObligation:true,
 }, "the exact preparation retains a rejected broad-run failure as a terminal obligation");
+await assert.rejects(() => verifyCommittedReviewTransaction({
+  runIntentBootstrap:{ version:1, coverage:[rawBootstrapCoverage[0]] },
+}, "fixture", { store:{} }), /requires a committed transaction/i,
+"bootstrap terminal obligations cannot bypass the atomic review transaction binding");
 await assert.rejects(() => runIntentBootstrapCoverage({
   incidents:[{ ...structuredClone(rawBootstrapIncident), id:"unrelated-bootstrap-failure",
     failure:{ ...structuredClone(rawBootstrapIncident.failure),
