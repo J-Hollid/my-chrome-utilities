@@ -7968,7 +7968,10 @@ const registryPlannerBootstrap = verificationRegistryPlannerBootstrapEligibility
   baseCommit:"registry-planner-base", feature:registryPlannerFeature,
   registry:JSON.stringify(registryPlannerBasePacks), candidatePacks:packs,
   changedPaths:[
+    "scripts/run-focused-acceptance.mjs",
+    "scripts/verification-run-intent.mjs",
     "test/verification-pack-cardinality-contract-test.mjs",
+    "test/verification-process-contract-test.mjs",
     "verification/packs.json",
   ],
   evidenceTask:"verification-slice-verification-registry-planner-modularization",
@@ -7979,12 +7982,15 @@ assert.throws(() => verificationRegistryPlannerBootstrapEligibility({
   baseCommit:"registry-planner-base", feature:registryPlannerFeature,
   registry:JSON.stringify(registryPlannerBasePacks), candidatePacks:packs,
   changedPaths:[
+    "scripts/run-focused-acceptance.mjs",
+    "scripts/verification-run-intent.mjs",
     "src/data-layer-installed/runtime.ts",
     "test/verification-pack-cardinality-contract-test.mjs",
+    "test/verification-process-contract-test.mjs",
     "verification/packs.json",
   ],
   evidenceTask:"verification-slice-verification-registry-planner-modularization",
-}), /two-file preparation/u,
+}), /bounded preparation paths/u,
 "the ownership bootstrap rejects product or later-task implementation paths");
 const bootstrapPlan = planVerification(packs, { packIds:["shell"] });
 const bootstrapTask = verificationTaskIdentity(bootstrapPlan.tasks.find(({ stage }) => stage === "unit"));

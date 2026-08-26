@@ -191,7 +191,10 @@ export function verificationRegistryPlannerBootstrapEligibility({
   const task = "verification-slice-verification-registry-planner-modularization";
   const featurePath = "features/verification-registry-planner-modularization.feature";
   const expectedPaths = [
+    "scripts/run-focused-acceptance.mjs",
+    "scripts/verification-run-intent.mjs",
     "test/verification-pack-cardinality-contract-test.mjs",
+    "test/verification-process-contract-test.mjs",
     "verification/packs.json",
   ];
   let basePacks;
@@ -220,7 +223,7 @@ export function verificationRegistryPlannerBootstrapEligibility({
       JSON.stringify(terminalAfter.tasks.map(verificationTaskIdentity));
   if (evidenceTask !== task || !contractsPresent || baseOwners.length || !exactPaths ||
       !exactOwner || !terminalConserved) {
-    throw new Error("Registry-planner ownership bootstrap requires its exact unowned base, empty planned owner, conserved terminal plan, and two-file preparation");
+    throw new Error("Registry-planner ownership bootstrap requires its exact unowned base, empty planned owner, conserved terminal plan, and bounded preparation paths");
   }
   return { version:1, kind:"verification-registry-planner-ownership", baseCommit,
     contracts:[18, 19, 20], featurePath, exactPaths, terminalConserved };
