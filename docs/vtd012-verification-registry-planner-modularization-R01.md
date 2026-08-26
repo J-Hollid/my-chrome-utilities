@@ -1,7 +1,7 @@
 # VTD-012 verification registry and planner modularization R01
 
-Status: implementation approved; standing ownership preparation active after
-exact preflight stopped candidate `4bb46a9d`
+Status: ownership preparation QA-integrated at `276db16442`; stable product task
+approved for automatic resumption from the exact preparation descendant
 
 Prepared: 2026-08-26
 
@@ -398,6 +398,40 @@ fast-forwards QA and automatically reissues stable task
 changes onto the prepared QA lineage, do not merge its stale ancestry wholesale.
 The resumed exact preflight must observe `verification_process` as both historical
 and current owner of the feature before any evidence task launches.
+
+## Ownership preparation result and product resumption
+
+Ownership preparation candidate `276db16442` is QA-integrated. Its only registry
+delta adds the exact non-runnable `verification_process` compatibility-metadata
+pack with the approved feature as its sole planned feature and empty source,
+dependency, task, executable-feature, handler, browser, checkpoint, and package
+inventories. The runnable pack set and terminal task inventory are conserved.
+
+The one-time bootstrap is hard-bound to this task, specification base, feature,
+exact registry delta, and exact support-path inventory. Those support changes
+make its focused evidence and incident obligations portable and fail closed; they
+do not activate the VTD-012 production decomposition or change Chrome-extension
+behavior. The reviewed Shell-focused checkpoint passed build, the modular utility
+architecture contract, pack-cardinality contract, process contract, and package
+proof in 273.405 seconds. No properties or all-runnable-pack feature gate ran.
+
+The bootstrap conserved 49 applicable incident entries. In particular, incidents
+`2dbbc9f9-280e-4b00-8ea3-1159f6a5539b`,
+`494ddfa3-2926-43bf-b74d-8ceee38f4242`,
+`aadcb8c6-393f-4d49-a803-ad1e289411f5`, and
+`fd10e821-af43-45c0-b1a5-fe041e9c52b3` remain unresolved with exact-candidate
+`terminal-verification-deferred` dispositions. Their immutable broad-attempt
+failures were neither abandoned nor represented as passing focused tasks; they
+remain obligations of the later explicitly requested QA-to-master terminal
+checkpoint.
+
+Stable task `verification-registry-planner-modularization` therefore resumes
+automatically from this recording descendant with `276db16442` as its exact
+implementation base. Candidate `4bb46a9d` remains a stopped patch reference only.
+The coder reconstructs its task-owned behavior on the prepared QA lineage, runs
+fresh read-only intent and exact preflight before product coding and evidence,
+and continues through the approved durable stages without another routine user
+decision or a feature-mode all-runnable-pack gate.
 
 ## Verification specification
 
