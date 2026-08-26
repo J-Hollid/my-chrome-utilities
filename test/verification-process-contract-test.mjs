@@ -76,6 +76,7 @@ import {
   planPackageTask,
   selectFocusedVerificationTasks,
   prepareCheckpointExecution,
+  registryPlannerPreparationFocusedPlan,
   reliabilityAdmissionPartition,
   reviewReadyScopeGuardRequired,
   resumeVerificationPlan,
@@ -5485,6 +5486,16 @@ const focusedEvidencePlan = planPackageTask(selectFocusedVerificationTasks(
 assert.deepEqual(focusedEvidencePlan.tasks.map(({ key }) => key),
   ["build:dist", focusedEvidenceUnitKey, "package:extension"],
 "adding evidence packaging re-closes the package build prerequisite around focused units");
+const registryPlannerFocusedPlan = planPackageTask(selectFocusedVerificationTasks(
+  focusedEvidenceCanonicalPlan, registryPlannerPreparationOptions.focusedTaskKeys),
+focusedEvidenceCanonicalPlan);
+assert.equal(registryPlannerPreparationFocusedPlan(registryPlannerFocusedPlan,
+  "verification-slice-verification-registry-planner-modularization"), true,
+"the exact non-property ownership preparation is an admitted canonical evidence plan");
+assert.equal(registryPlannerPreparationFocusedPlan({ ...registryPlannerFocusedPlan,
+  tasks:registryPlannerFocusedPlan.tasks.slice(1) },
+"verification-slice-verification-registry-planner-modularization"), false,
+"the ownership preparation exception rejects a plan missing its build prerequisite");
 const repositoryCommonStore = await defaultStoreDirectory(process.cwd());
 assert.ok(repositoryCommonStore.startsWith(path.join(os.tmpdir(), "swarmforge-repository-runtime")),
   "the repository-common incident store is writable under the real workspace restriction");

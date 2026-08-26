@@ -133,6 +133,13 @@ const registryPlannerPreparationTaskKeys = Object.freeze([
 ]);
 const require = createRequire(import.meta.url);
 
+export function registryPlannerPreparationFocusedPlan(plan, evidenceTask) {
+  if (evidenceTask !== registryPlannerPreparationEvidenceTask ||
+      plan?.mode !== "focused-task" || plan.includeProperties !== false) return false;
+  const expected = ["build:dist", ...registryPlannerPreparationTaskKeys, "package:extension"];
+  return JSON.stringify(plan.tasks.map(({ key }) => key)) === JSON.stringify(expected);
+}
+
 async function legacyCheckpointAttemptDirectory(root) {
   const common = await new Promise((resolve, reject) => {
     execFile("git", ["rev-parse", "--git-common-dir"], { cwd:root },
@@ -1701,10 +1708,14 @@ export async function checkpointPreflight({
         validateLiveTargetPermissionRecoveryFocusedPlan(plan, evidenceTask);
       const sidePanelSingleCutoverFocused = isSidePanelSingleCutoverEvidenceTask(evidenceTask) &&
         validateSidePanelSingleCutoverFocusedPlan(plan, evidenceTask);
+      const registryPlannerPreparationFocused =
+        registryPlannerPreparationFocusedPlan(plan, evidenceTask);
       if (evidenceTask && (plan.mode !== "exact" && !registryCardinalityFocusedPlanMode({
         task:evidenceTask, mode:plan.mode,
-      }) && !permissionRecoveryFocused && !sidePanelSingleCutoverFocused ||
-          !plan.includeProperties && !permissionRecoveryFocused && !sidePanelSingleCutoverFocused ||
+      }) && !permissionRecoveryFocused && !sidePanelSingleCutoverFocused &&
+          !registryPlannerPreparationFocused ||
+          !plan.includeProperties && !permissionRecoveryFocused && !sidePanelSingleCutoverFocused &&
+            !registryPlannerPreparationFocused ||
           !plan.changeSet || !plan.baseCommit || !plan.claimPackIds?.length)) {
         throw new Error("Checkpoint preflight requires an exact canonical evidence plan");
       }
