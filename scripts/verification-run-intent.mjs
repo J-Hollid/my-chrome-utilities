@@ -804,7 +804,9 @@ export async function runIntentBootstrapCoverage({
         ? selectedByKey.get(promotionRegressionKey)
         : selected.get(failureDigest);
     let succession;
-    if(!selectedIdentity&&admission.kind==="terminal-deferred"&&evidenceTask==="verification-ownership-readiness"){
+    if (!selectedIdentity && admission.kind === "terminal-deferred" &&
+        ["verification-ownership-readiness",
+          "verification-slice-verification-registry-planner-modularization"].includes(evidenceTask)) {
       coverage.push({incidentId:incident.id,admission,failureTaskKey:incident.failure.task.key,selectedTaskKey:null,selectedTaskDigest:null,terminalObligation:true});
       continue;
     }

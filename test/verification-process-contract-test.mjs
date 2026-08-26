@@ -8032,6 +8032,24 @@ const confirmedFlakyBootstrapCoverage = await runIntentBootstrapCoverage({
 });
 assert.equal(confirmedFlakyBootstrapCoverage[0].admission.kind, "terminal-deferred",
   "the bootstrap preserves a newer confirmed-flaky terminal deferral without inventing a repair");
+const inheritedTerminalObligation = structuredClone(confirmedFlakyBootstrapIncident);
+inheritedTerminalObligation.id = "bootstrap-inherited-terminal-obligation";
+inheritedTerminalObligation.failure.task = verificationTaskIdentity({
+  key:"unit:test/inherited-terminal-obligation-test.mjs", stage:"unit", executable:"node",
+  args:["test/inherited-terminal-obligation-test.mjs"],
+});
+const inheritedTerminalCoverage = await runIntentBootstrapCoverage({
+  incidents:[inheritedTerminalObligation], plan:bootstrapPlan, packs,
+  candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+  evidenceTask:"verification-slice-verification-registry-planner-modularization",
+  resolveSuccession:async() => { throw new Error("ownership preparation must not project inherited terminal work"); },
+});
+assert.deepEqual(inheritedTerminalCoverage[0], {
+  incidentId:inheritedTerminalObligation.id,
+  admission:{ kind:"terminal-deferred" },
+  failureTaskKey:inheritedTerminalObligation.failure.task.key,
+  selectedTaskKey:null, selectedTaskDigest:null, terminalObligation:true,
+}, "the ownership preparation leaves inherited deferred work at the terminal checkpoint");
 const unselectedBootstrapTask = verificationTaskIdentity(bootstrapPlan.tasks.find(({ key }) =>
   key !== bootstrapTask.key && key.startsWith("unit:")));
 const rawBootstrapIncident = {
