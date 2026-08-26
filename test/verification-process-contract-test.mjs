@@ -171,20 +171,27 @@ import {
   verificationRunIntent,
   verificationRunIntents,
 } from "../scripts/verification-run-intent.mjs";
-import { verifyCommittedReviewTransaction } from "../scripts/settled-final-verification.mjs";
+import {
+  persistBootstrapTerminalObligationSourceReceipt,
+  readBootstrapTerminalObligationSourceReceipt,
+  verifyCommittedReviewTransaction,
+} from "../scripts/settled-final-verification.mjs";
 import {
   browserTargetSuccessionBoundary, loadTaskSuccessionGraph, resolveIncidentTaskSuccession,
   resolveTaskSuccessionGraph, taskSuccessionBoundaryDigest, validateUnresolvedIncidentTaskSuccession,
   verificationTaskDigest,
 } from "../scripts/verification-task-succession.mjs";
 import {
-  defaultStoreDirectory, validateIncident,
+  defaultRepositoryRuntimeDirectory, defaultStoreDirectory, validateIncident,
 } from "../scripts/verification-reliability-persistence.mjs";
 import {
   terminalProjectionCoverage,
   terminalProjectionCoverageValid,
 } from "../scripts/verification-reliability-deferred.mjs";
-import { recordEligibleIncidentDeferral } from "../scripts/verification-reliability-runtime.mjs";
+import {
+  recordEligibleIncidentDeferral,
+  reviewAdmissionTransactionOwnsDeferrals,
+} from "../scripts/verification-reliability-runtime.mjs";
 import {
   boundedClosureContractRevision,
   boundedClosureEvidenceTask,
@@ -7998,6 +8005,7 @@ const registryPlannerBootstrap = verificationRegistryPlannerBootstrapEligibility
     "scripts/verification-evidence.mjs",
     "scripts/verification-reliability-persistence.mjs",
     "scripts/verification-reliability-repair.mjs",
+    "scripts/verification-reliability-runtime.mjs",
     "scripts/verification-reliability-store.mjs",
     "scripts/verification-run-intent.mjs",
     "test/verification-pack-cardinality-contract-test.mjs",
@@ -8022,6 +8030,7 @@ assert.throws(() => verificationRegistryPlannerBootstrapEligibility({
     "scripts/verification-evidence.mjs",
     "scripts/verification-reliability-persistence.mjs",
     "scripts/verification-reliability-repair.mjs",
+    "scripts/verification-reliability-runtime.mjs",
     "scripts/verification-reliability-store.mjs",
     "scripts/verification-run-intent.mjs",
     "test/verification-pack-cardinality-contract-test.mjs",
@@ -8040,6 +8049,7 @@ assert.throws(() => verificationRegistryPlannerBootstrapEligibility({
     "scripts/verification-evidence.mjs",
     "scripts/verification-reliability-persistence.mjs",
     "scripts/verification-reliability-repair.mjs",
+    "scripts/verification-reliability-runtime.mjs",
     "scripts/verification-reliability-store.mjs",
     "scripts/verification-run-intent.mjs",
     "test/verification-pack-cardinality-contract-test.mjs",
@@ -8057,6 +8067,7 @@ assert.throws(() => verificationRegistryPlannerBootstrapEligibility({
     "scripts/settled-final-verification.mjs",
     "scripts/verification-reliability-persistence.mjs",
     "scripts/verification-reliability-repair.mjs",
+    "scripts/verification-reliability-runtime.mjs",
     "scripts/verification-reliability-store.mjs",
     "scripts/verification-run-intent.mjs",
     "src/data-layer-installed/runtime.ts",
@@ -8141,6 +8152,58 @@ assert.deepEqual(rawBootstrapCoverage[0], {
   failureTaskDigest:verificationTaskDigest(unselectedBootstrapTask),
   selectedTaskKey:null, selectedTaskDigest:null, terminalObligation:true,
 }, "the exact preparation retains a rejected broad-run failure as a terminal obligation");
+assert.equal(reviewAdmissionTransactionOwnsDeferrals({
+  runIntentBootstrap:{ version:1, coverage:[rawBootstrapCoverage[0]] },
+}), true, "bootstrap obligations remain owned by their committed admission transaction at handoff");
+const portableProofRepository = await mkdtemp(path.join(os.tmpdir(), "bootstrap-proof-source-"));
+const portableProofSibling = `${portableProofRepository}-sibling`;
+try {
+  await exec("git", ["init", "-q", "--initial-branch=main"], { cwd:portableProofRepository });
+  await exec("git", ["config", "user.name", "Bootstrap Proof Test"],
+    { cwd:portableProofRepository });
+  await exec("git", ["config", "user.email", "bootstrap-proof@example.test"],
+    { cwd:portableProofRepository });
+  await writeFile(path.join(portableProofRepository, "tracked.txt"), "shared repository\n");
+  await writeFile(path.join(portableProofRepository, ".gitignore"), "tmp/\n");
+  await exec("git", ["add", "tracked.txt", ".gitignore"], { cwd:portableProofRepository });
+  await exec("git", ["commit", "-qm", "shared base"], { cwd:portableProofRepository });
+  await exec("git", ["worktree", "add", "-q", "--detach", portableProofSibling, "HEAD"],
+    { cwd:portableProofRepository });
+  const sourceReceipt = "tmp/verification-receipts/source-review.json";
+  const sourceBytes = Buffer.from(JSON.stringify({ version:2, proof:"source-plan-result" }));
+  const sourceDigest = createHash("sha256").update(sourceBytes).digest("hex");
+  await mkdir(path.dirname(path.join(portableProofRepository, sourceReceipt)), { recursive:true });
+  await writeFile(path.join(portableProofRepository, sourceReceipt), sourceBytes);
+  assert.equal(await exec("git", ["status", "--porcelain"],
+    { cwd:portableProofRepository }), "",
+  "the source receipt is recorded from a clean worktree");
+  await persistBootstrapTerminalObligationSourceReceipt({
+    root:portableProofRepository, sourceReceipt, sourceReceiptSha256:sourceDigest,
+  });
+  assert.deepEqual(await readBootstrapTerminalObligationSourceReceipt({
+    root:portableProofSibling, sourceReceiptSha256:sourceDigest,
+  }), sourceBytes, "a sibling worktree validates the repository-common immutable source proof");
+  const durableProof = path.join(await defaultRepositoryRuntimeDirectory(portableProofSibling),
+    "bootstrap-terminal-obligation-source-receipts", `${sourceDigest}.json`);
+  await rm(durableProof);
+  await assert.rejects(() => readBootstrapTerminalObligationSourceReceipt({
+    root:portableProofSibling, sourceReceiptSha256:sourceDigest,
+  }), /durable source receipt is missing/i,
+  "forwarding rejects a missing repository-common bootstrap proof");
+  await persistBootstrapTerminalObligationSourceReceipt({
+    root:portableProofRepository, sourceReceipt, sourceReceiptSha256:sourceDigest,
+  });
+  await writeFile(durableProof, "tampered proof");
+  await assert.rejects(() => readBootstrapTerminalObligationSourceReceipt({
+    root:portableProofSibling, sourceReceiptSha256:sourceDigest,
+  }), /durable source receipt digest changed/i,
+  "forwarding rejects a tampered repository-common bootstrap proof");
+} finally {
+  await exec("git", ["worktree", "remove", "--force", portableProofSibling],
+    { cwd:portableProofRepository }).catch(()=>undefined);
+  await rm(portableProofSibling, { recursive:true, force:true });
+  await rm(portableProofRepository, { recursive:true, force:true });
+}
 await assert.rejects(() => verifyCommittedReviewTransaction({
   runIntentBootstrap:{ version:1, coverage:[rawBootstrapCoverage[0]] },
 }, "fixture", { store:{} }), /requires a committed transaction/i,

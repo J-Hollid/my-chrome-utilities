@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { lstat, open, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -32,13 +32,17 @@ import { canonicalPackageProof } from "./verification-reliability-runtime.mjs";
 import {
   buildConfirmedFlakyAdmissions, buildEligibleRepairAdmissions,
   confirmedFlakyAdmissionCandidates, eligibleRepairAdmissionCandidates,
-  eligibleRepairCandidateMatches, runIntentBootstrapCoverage,
+  eligibleRepairCandidateMatches, registryPlannerTerminalObligationProof,
+  runIntentBootstrapCoverage,
 } from "./verification-run-intent.mjs";
 import { withVerificationNotesLock } from "./verification-git-notes.mjs";
 import {
   eligibleRepairReviewTransactionDirectory, readEligibleRepairReviewTransaction,
   withEligibleRepairReviewTransactionLock, writeEligibleRepairReviewTransaction,
 } from "./eligible-repair-review-transaction-store.mjs";
+import {
+  defaultRepositoryRuntimeDirectory, ensureSafeDirectory,
+} from "./verification-reliability-persistence.mjs";
 
 export {
   createReviewReadyRecord,
@@ -56,6 +60,72 @@ export {
 
 const repository = fileURLToPath(new URL("../", import.meta.url));
 const reviewNotesRef = "refs/notes/swarmforge-review-ready";
+const sha256Pattern = /^[a-f0-9]{64}$/u;
+
+async function bootstrapSourceReceiptDirectory(root) {
+  return ensureSafeDirectory(path.join(await defaultRepositoryRuntimeDirectory(root),
+    "bootstrap-terminal-obligation-source-receipts"));
+}
+
+function canonicalSourceReceiptPath(root, sourceReceipt) {
+  if (typeof sourceReceipt !== "string" ||
+      !/^tmp\/verification-receipts\/[A-Za-z0-9._-]+\.json$/u.test(sourceReceipt)) {
+    throw new Error("Bootstrap terminal obligation requires a canonical source receipt path");
+  }
+  const target = path.resolve(root, sourceReceipt);
+  if (path.relative(path.resolve(root), target).split(path.sep).join("/") !== sourceReceipt) {
+    throw new Error("Bootstrap terminal obligation source receipt escapes the repository");
+  }
+  return target;
+}
+
+export async function readBootstrapTerminalObligationSourceReceipt({
+  root, sourceReceiptSha256,
+}) {
+  if (!sha256Pattern.test(sourceReceiptSha256 ?? "")) {
+    throw new Error("Bootstrap terminal obligation source receipt digest is malformed");
+  }
+  const target = path.join(await bootstrapSourceReceiptDirectory(root),
+    `${sourceReceiptSha256}.json`);
+  let details;
+  let bytes;
+  try {
+    [details, bytes] = await Promise.all([lstat(target), readFile(target)]);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      throw new Error("Bootstrap terminal obligation durable source receipt is missing");
+    }
+    throw error;
+  }
+  if (!details.isFile() || details.isSymbolicLink() ||
+      createHash("sha256").update(bytes).digest("hex") !== sourceReceiptSha256) {
+    throw new Error("Bootstrap terminal obligation durable source receipt digest changed");
+  }
+  return bytes;
+}
+
+export async function persistBootstrapTerminalObligationSourceReceipt({
+  root, sourceReceipt, sourceReceiptSha256,
+}) {
+  const bytes = await readFile(canonicalSourceReceiptPath(root, sourceReceipt));
+  if (createHash("sha256").update(bytes).digest("hex") !== sourceReceiptSha256) {
+    throw new Error("Bootstrap terminal obligation source receipt digest changed");
+  }
+  const target = path.join(await bootstrapSourceReceiptDirectory(root),
+    `${sourceReceiptSha256}.json`);
+  let handle;
+  try {
+    handle = await open(target, "wx", 0o600);
+    await handle.writeFile(bytes);
+    await handle.sync();
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+  } finally {
+    await handle?.close();
+  }
+  await readBootstrapTerminalObligationSourceReceipt({ root, sourceReceiptSha256 });
+  return { version:1, sha256:sourceReceiptSha256 };
+}
 
 function git(root, args, { input } = {}) {
   return new Promise((resolve, reject) => {
@@ -96,6 +166,27 @@ function admittedDeferralProof(record, packageProof, transaction) {
 function bootstrapTerminalObligationEntries(record) {
   return (record.runIntentBootstrap?.coverage ?? []).filter(({ admission, terminalObligation }) =>
     admission?.kind === "bootstrap-terminal-obligation" && terminalObligation === true);
+}
+
+function bootstrapSourceReceiptProofs(record) {
+  return bootstrapTerminalObligationEntries(record).map(({ incidentId, admission }) => {
+    if (typeof incidentId !== "string" || !incidentId ||
+        !sha256Pattern.test(admission?.sourceReceiptSha256 ?? "")) {
+      throw new Error("Bootstrap terminal obligation has no bound source receipt digest");
+    }
+    return { incidentId, sha256:admission.sourceReceiptSha256 };
+  }).sort((left, right) => left.incidentId.localeCompare(right.incidentId));
+}
+
+async function persistBootstrapSourceReceiptProofs(record, store, root) {
+  const manifest = bootstrapSourceReceiptProofs(record);
+  for (const { incidentId, sha256 } of manifest) {
+    const incident = await store.read(incidentId);
+    await persistBootstrapTerminalObligationSourceReceipt({
+      root, sourceReceipt:incident.failure?.sourceReceipt, sourceReceiptSha256:sha256,
+    });
+  }
+  return manifest;
 }
 
 function transactionRecord(record, id) {
@@ -173,6 +264,8 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
     changeSetDigest:admissionBinding?.changeSetDigest,
     planDigest:admissionBinding?.planDigest,
   };
+  const bootstrapEntries = new Map(bootstrapTerminalObligationEntries(record)
+    .map((entry) => [entry.incidentId, entry]));
   const [rebuilt, rebuiltFlaky, rebuiltBootstrap] = await Promise.all([
     record.eligibleRepairAdmissions ? buildEligibleRepairAdmissions(inputs) : null,
     record.confirmedFlakyAdmissions ? buildConfirmedFlakyAdmissions({ ...inputs,
@@ -181,6 +274,15 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
       incidents:blocking, plan, packs,
       candidate:{ commit:record.candidateCommit, tree:record.candidateTree },
       root:repositoryRoot, evidenceTask:record.task,
+      terminalObligationProof:async(args) => {
+        const entry = bootstrapEntries.get(args.incident.id);
+        if (!entry) return null;
+        return registryPlannerTerminalObligationProof({ ...args,
+          sourceReceiptLoader:() => readBootstrapTerminalObligationSourceReceipt({
+            root:repositoryRoot,
+            sourceReceiptSha256:entry.admission.sourceReceiptSha256,
+          }) });
+      },
     }) : null,
   ]);
   if (record.eligibleRepairAdmissions &&
@@ -214,6 +316,7 @@ export async function verifyCommittedReviewTransaction(record, root, {
     throw new Error("Reliability admission review requires a committed transaction");
   }
   if (!transaction) return record;
+  const sourceReceiptProofs = bootstrapSourceReceiptProofs(record);
   const target = path.join(await eligibleRepairReviewTransactionDirectory(root),
     `${transaction.id}.json`);
   const journal = await readEligibleRepairReviewTransaction(target);
@@ -227,12 +330,15 @@ export async function verifyCommittedReviewTransaction(record, root, {
         ...(record.confirmedFlakyAdmissionsDigest
           ? { confirmedFlakyAdmissionsDigest:record.confirmedFlakyAdmissionsDigest } : {}),
         ...(bootstrapTerminalObligationEntries(record).length
-          ? { runIntentBootstrapDigest:timeoutIncidentDigest(record.runIntentBootstrap) } : {}),
+          ? { runIntentBootstrapDigest:timeoutIncidentDigest(record.runIntentBootstrap),
+            bootstrapSourceReceiptProofsDigest:timeoutIncidentDigest(sourceReceiptProofs) } : {}),
       }) || timeoutIncidentDigest(journal.incidentIds) !== timeoutIncidentDigest(
         [...(record.eligibleRepairAdmissions?.entries ?? []),
           ...(record.confirmedFlakyAdmissions?.entries ?? []),
           ...bootstrapTerminalObligationEntries(record)]
-          .map(({ incidentId }) => incidentId).sort())) {
+          .map(({ incidentId }) => incidentId).sort()) ||
+      timeoutIncidentDigest(journal.bootstrapSourceReceiptProofs ?? []) !==
+        timeoutIncidentDigest(sourceReceiptProofs)) {
     throw new Error("Reliability admission review transaction is not durably committed");
   }
   const expectedTransaction = { version:1, id:transaction.id, inputDigest:journal.inputDigest };
@@ -243,6 +349,24 @@ export async function verifyCommittedReviewTransaction(record, root, {
     const deferred = incident.terminalVerificationDeferred;
     const bootstrap = entry.admission?.kind === "bootstrap-terminal-obligation";
     const eligible = !bootstrap && entry.repairDigest !== undefined;
+    if (bootstrap) {
+      const bytes = await readBootstrapTerminalObligationSourceReceipt({
+        root, sourceReceiptSha256:entry.admission.sourceReceiptSha256,
+      });
+      const proof = await registryPlannerTerminalObligationProof({
+        root, incident, candidate:{ commit:record.candidateCommit, tree:record.candidateTree },
+        plan:{ tasks:record.focusedScope.taskKeys.map((key) => ({ key })) },
+        evidenceTask:record.task, sourceReceiptLoader:async() => bytes,
+      });
+      const expectedProof = {
+        sourceReceiptSha256:entry.admission.sourceReceiptSha256,
+        sourcePlanDigest:entry.admission.sourcePlanDigest,
+        sourceCommit:entry.admission.sourceCommit,
+      };
+      if (timeoutIncidentDigest(proof) !== timeoutIncidentDigest(expectedProof)) {
+        throw new Error(`Reliability admission ${entry.incidentId} durable source proof changed`);
+      }
+    }
     if (incident.id !== entry.incidentId || incident.failureDigest !== entry.failureDigest ||
         bootstrap && (deferred?.basis !== "bootstrap-terminal-obligation" ||
           deferred.failureDigest !== entry.failureDigest) ||
@@ -296,7 +420,9 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
     ...(record.confirmedFlakyAdmissionsDigest
       ? { confirmedFlakyAdmissionsDigest:record.confirmedFlakyAdmissionsDigest } : {}),
     ...(bootstrapObligations.length
-      ? { runIntentBootstrapDigest:timeoutIncidentDigest(record.runIntentBootstrap) } : {}),
+      ? { runIntentBootstrapDigest:timeoutIncidentDigest(record.runIntentBootstrap),
+        bootstrapSourceReceiptProofsDigest:
+          timeoutIncidentDigest(bootstrapSourceReceiptProofs(record)) } : {}),
   };
   const inputDigest = timeoutIncidentDigest(input);
   const id = timeoutIncidentDigest({ version:1, ...input });
@@ -309,6 +435,8 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
   return withVerificationNotesLock(repositoryRoot, () =>
     withEligibleRepairReviewTransactionLock(repositoryRoot, record.candidateCommit,
       ({ directory }) => store.withAdmissionRecordingLock(async() => {
+    const bootstrapProofManifest = await persistBootstrapSourceReceiptProofs(
+      record, store, repositoryRoot);
     await rederiveEligibleRepairAdmissions(record, transactionBinding,
       { repositoryRoot, store, receiptLoader, packsLoader });
     const target = path.join(directory, `${id}.json`);
@@ -345,11 +473,14 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
       }
       journal = { version:1, id, status:"prepared", inputDigest,
         priorNoteDigest:timeoutIncidentDigest(note), desiredNoteDigest:timeoutIncidentDigest(desiredNote),
-        incidentIds, incidents, preparedAt:new Date().toISOString() };
+        incidentIds, incidents, bootstrapSourceReceiptProofs:bootstrapProofManifest,
+        preparedAt:new Date().toISOString() };
       await writeEligibleRepairReviewTransaction(target, journal);
     } else if (journal.inputDigest !== inputDigest ||
         journal.desiredNoteDigest !== timeoutIncidentDigest(desiredNote) ||
-        timeoutIncidentDigest(journal.incidentIds) !== timeoutIncidentDigest(incidentIds)) {
+        timeoutIncidentDigest(journal.incidentIds) !== timeoutIncidentDigest(incidentIds) ||
+        timeoutIncidentDigest(journal.bootstrapSourceReceiptProofs ?? []) !==
+          timeoutIncidentDigest(bootstrapProofManifest)) {
       throw new Error("Eligible repair review transaction conflicts with existing prepared evidence");
     }
     if (journal.status === "committed") {

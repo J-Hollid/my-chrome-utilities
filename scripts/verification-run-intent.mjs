@@ -213,6 +213,7 @@ export function verificationRegistryPlannerBootstrapEligibility({
     "scripts/verification-evidence.mjs",
     "scripts/verification-reliability-persistence.mjs",
     "scripts/verification-reliability-repair.mjs",
+    "scripts/verification-reliability-runtime.mjs",
     "scripts/verification-reliability-store.mjs",
     "scripts/verification-run-intent.mjs",
     "test/verification-pack-cardinality-contract-test.mjs",
@@ -778,7 +779,7 @@ const registryPlannerRejectedBroadAttemptPaths = Object.freeze([
 ]);
 
 export async function registryPlannerTerminalObligationProof({
-  root, incident, candidate, plan, evidenceTask,
+  root, incident, candidate, plan, evidenceTask, sourceReceiptLoader,
 }) {
   const lineage = incident?.failure?.lineage;
   const sourcePath = safeLegacyReceiptPath(root, incident?.failure?.sourceReceipt);
@@ -790,7 +791,9 @@ export async function registryPlannerTerminalObligationProof({
   let bytes;
   let receipt;
   try {
-    bytes = await readFile(sourcePath);
+    bytes = sourceReceiptLoader
+      ? await sourceReceiptLoader({ root, incident })
+      : await readFile(sourcePath);
     receipt = JSON.parse(bytes);
   } catch { return null; }
   const result = receipt.tasks?.[incident.failure?.task?.key];
