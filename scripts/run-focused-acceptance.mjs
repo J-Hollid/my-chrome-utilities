@@ -1437,12 +1437,13 @@ export function createCheckpointIdentityGuard({
   };
 }
 
-function planPackageTask(plan) {
+export function planPackageTask(plan, canonicalPlan) {
   const task = { ...structuredClone(timeoutRepairPackageTaskIdentity), requiredCapabilities:[] };
   task.display = [task.executable, ...task.args].join(" ");
-  return { ...plan, tasks:[...plan.tasks, task], packageTasks:[task],
+  const packaged = { ...plan, tasks:[...plan.tasks, task], packageTasks:[task],
     packageCommands:[task.display], commands:[...plan.commands, task.display],
     stages:{ ...plan.stages, package:[] } };
+  return canonicalPlan ? closeVerificationPlanPrerequisites(packaged, canonicalPlan) : packaged;
 }
 
 const focusedTaskGroups = [
@@ -1901,7 +1902,7 @@ export async function runFocusedAcceptance(
     plan = selectFocusedVerificationTasks(plan, focusedTaskKeys, canonicalPlan);
   } else plan = closeVerificationPlanPrerequisites(plan, canonicalPlan);
   if (evidenceTask && !plan.tasks.some(({ key }) => key === timeoutRepairPackageTaskIdentity.key)) {
-    plan = planPackageTask(plan);
+    plan = planPackageTask(plan, canonicalPlan);
   }
   if (cardinalityReviewEvidence) {
     validateRegistryCardinalityReviewPreflight({

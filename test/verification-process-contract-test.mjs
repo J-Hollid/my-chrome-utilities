@@ -73,6 +73,7 @@ import {
   executeTimeoutRepairTaskPlan,
   enforceTerminalClosureReceipt,
   focusedAcceptanceOptions,
+  planPackageTask,
   selectFocusedVerificationTasks,
   prepareCheckpointExecution,
   reliabilityAdmissionPartition,
@@ -5476,6 +5477,14 @@ const focusedPackagePlan = selectFocusedVerificationTasks(planVerification(packs
 assert.deepEqual(focusedPackagePlan.tasks.map(({ key }) => key),
   ["build:dist", "package:extension"],
 "the focused package path retains only its required build prerequisite");
+const focusedEvidenceCanonicalPlan = planVerification(packs, { packIds:["shell"] });
+const focusedEvidenceUnitKey = focusedEvidenceCanonicalPlan.tasks
+  .find(({ stage }) => stage === "unit").key;
+const focusedEvidencePlan = planPackageTask(selectFocusedVerificationTasks(
+  focusedEvidenceCanonicalPlan, [focusedEvidenceUnitKey]), focusedEvidenceCanonicalPlan);
+assert.deepEqual(focusedEvidencePlan.tasks.map(({ key }) => key),
+  ["build:dist", focusedEvidenceUnitKey, "package:extension"],
+"adding evidence packaging re-closes the package build prerequisite around focused units");
 const repositoryCommonStore = await defaultStoreDirectory(process.cwd());
 assert.ok(repositoryCommonStore.startsWith(path.join(os.tmpdir(), "swarmforge-repository-runtime")),
   "the repository-common incident store is writable under the real workspace restriction");
