@@ -46,7 +46,7 @@ The settled-candidate verification workflow is integrated at
 | Layered schema inherited exclusion and Example reconciliation | QA-integrated at `ad9b9276c2` after exact five-pack/113-task review evidence; Page and Flow Page-instance selection UX correction QA-integrated at `d51e55fa7c` after exact focused 291-task review evidence; compiled-tree and inheritance-card consistency correction is QA-integrated in combined candidate `119c25ef7a`, with its task identity independently confirmed on that exact tree by a second six-pack/200-task review-ready record | Preserve first-class inherited-property selection for Pages and Flow Page-instances, omission of exclusions from the effective Table, sparse stable-identity storage, current-parent restoration, unchanged Event-occurrence behavior, and selected/custom Example reconciliation. Remove the redundant compiled property tree across every layered schema host, and use the established Property Set `profile-inheritance-card` interaction for Page and Flow Page-instance without changing their contextual persistence semantics. Cumulative promotion to `master` remains a separate user decision. Rejected candidate `51aa431eb1` remains a patch reference only. |
 | VTD-010 duplicate browser-smoke consolidation | Open incremental program | The Event Library slice is complete at `cc2c9a01`; remaining pack slices are inactive until separately approved. |
 | VTD-011 terminal shard balancing | Deferred and inactive | The existing two-worker order is within about six seconds of balanced after lock wait is removed; scheduling needed for a possible third worker is bounded inside VTD-017. |
-| VTD-012 registry and planner modularization | Deferred and inactive | Reconsider after broad final-gate and receipt-persistence costs are reduced. |
+| VTD-012 registry and planner modularization | Outcome-driven specification prepared by user direction on 2026-08-26; implementation remains inactive pending explicit coder-handoff approval | `docs/vtd012-verification-registry-planner-modularization-R01.md` defines candidate-scoped inventory, adopted boundary routing, modular manifests, one-to-many compatibility succession, unattended progression, measured payoff, and semantic stop conditions. |
 | VTD-017 shared-artifact parallel execution | Complete at `723ebf6eb5` | Review the settled scorecard in `docs/vtd017-shared-artifact-parallel-execution-R01.md`. |
 | VTD-018 incremental verification receipts | Stopped and unintegrated | Candidate `c7ad4698f9` exceeded the terminal threshold and remains outside `qa` and `master`; resume only by a separate explicit user decision. |
 | Product recovery lineages | Open | Resume in the order listed under **Open product recovery queue**, unless later user direction changes it. |
@@ -196,9 +196,11 @@ overlap and lock wait, not configured worker count alone.
 VTD-017 is complete and proved at least a 3-minute-43-second final-gate saving.
 VTD-018 did not settle: its second terminal occurrence failed 65 Schemas scenarios
 and its 16-minute-16-second gate exceeded the 15-minute-43-second stop threshold.
-The candidate and repair lineage are inactive. VTD-012, VTD-016, and standalone
-VTD-011 remain deferred while ordinary product work proves whether batching one
-terminal gate reduces total delivery time.
+The candidate and repair lineage are inactive. The user selected VTD-012 for an
+outcome-driven specification on 2026-08-26; its implementation remains inactive
+until a separate coder-handoff approval. VTD-016 and standalone VTD-011 remain
+deferred while ordinary product work proves whether batching one terminal gate
+reduces total delivery time.
 
 Every enabling slice requires two visible user reviews: a pre-approval baseline,
 target, expected effort, safety trade-off, and stop condition; then a settled
