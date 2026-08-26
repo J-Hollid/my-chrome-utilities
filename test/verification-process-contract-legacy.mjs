@@ -1005,6 +1005,8 @@ try {
   await copyFile(path.resolve("scripts/run-focused-acceptance.mjs"), cliRunnerPath);
   const extractedCliFiles = [
     "scripts/verification-execution/runner.mjs",
+    "scripts/verification-execution/options.mjs",
+    "scripts/verification-planner/module-inspection.mjs",
     "scripts/verification-planner/tasks/planner.mjs",
     "scripts/verification-planner/ownership/resolve.mjs",
     "scripts/verification-planner/dependencies/expand.mjs",
@@ -1013,9 +1015,13 @@ try {
     "scripts/verification-registry/loader.mjs",
     "scripts/verification-policy/contracts.mjs",
     "scripts/verification-policy/reliability/run-intent.mjs",
+    "scripts/verification-policy/reliability/intent-types.mjs",
     "scripts/verification-policy/reliability/task-succession.mjs",
+    "scripts/verification-policy/reliability/task-succession-graph.mjs",
+    "scripts/verification-policy/reliability/task-succession-values.mjs",
     "verification/packs.base.json",
     "verification/manifests/verification-process.json",
+    "verification/vtd012-adoption-scorecard.json",
     "features/verification-registry-planner-modularization.feature",
     "acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
     "test/verification-candidate-inventory-test.mjs",

@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { link, mkdir, open, readFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -71,6 +71,14 @@ import {
 } from "../settled-final-verification-review.mjs";
 import { verificationPolicySelectionSummary } from
   "../verification-performance/policy-avoidance.mjs";
+import {
+  canonicalJson,
+  sameEvidenceValue as same,
+  sortedUniqueEvidenceValues as sortedUnique,
+  verificationDigest,
+} from "./canonical-values.mjs";
+
+export { canonicalJson, verificationDigest } from "./canonical-values.mjs";
 
 function expectedRunIntentForEvidenceTask(task) {
   return task === boundedClosureEvidenceTask
@@ -229,35 +237,6 @@ async function discoverPendingReviewObligations({ baseCommit, candidateCommit, c
     throw new Error("Final checkpoint does not carry every pending terminal obligation");
   }
   return canonical;
-}
-
-function normalized(value) {
-  if (Array.isArray(value)) return value.map(normalized);
-  if (value && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value)
-      .filter(([, nested]) => nested !== undefined)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, nested]) => [key, normalized(nested)]));
-  }
-  return value;
-}
-
-export function canonicalJson(value) {
-  return JSON.stringify(normalized(value));
-}
-
-export function verificationDigest(value) {
-  return createHash("sha256").update(
-    typeof value === "string" || Buffer.isBuffer(value) ? value : canonicalJson(value),
-  ).digest("hex");
-}
-
-function same(left, right) {
-  return canonicalJson(left) === canonicalJson(right);
-}
-
-function sortedUnique(values) {
-  return [...new Set(values)].sort();
 }
 
 function acceptanceArtifacts(feature) {

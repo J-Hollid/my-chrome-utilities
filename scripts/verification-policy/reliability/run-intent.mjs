@@ -11,15 +11,12 @@ import {
 } from "../../verification-task-succession.mjs";
 import { timeoutIncidentDigest } from "../../verification-reliability-values.mjs";
 import { validateIncident } from "../../verification-reliability-persistence.mjs";
-
-export const verificationRunIntents = Object.freeze({
-  development:"development-diagnostic",
-  review:"review-evidence",
-  repair:"repair-focused",
-  terminal:"terminal",
-});
-
-const intentValues = new Set(Object.values(verificationRunIntents));
+import {
+  requireVerificationRunIntent, verificationRunIntent, verificationRunIntents,
+} from "./intent-types.mjs";
+export {
+  requireVerificationRunIntent, verificationRunIntent, verificationRunIntents,
+} from "./intent-types.mjs";
 
 function selectedSuccessionCoverage(succession,selectedByDigest){
   const digests=successionDestinationTaskDigests(succession);
@@ -37,28 +34,6 @@ function successionCoverageFields(succession,selected){
     selectedTaskDigests:selected.map(verificationTaskDigest),coverageKind:"successor-set",
     destinationTaskDigests:successionDestinationTaskDigests(succession),
     conservationDigest:succession.conservationDigest};
-}
-
-export function verificationRunIntent(options = {}) {
-  if (options.terminalFull || options.boundedClosureEvidenceTask !== undefined &&
-      options.prepareEvidence === options.boundedClosureEvidenceTask) {
-    return verificationRunIntents.terminal;
-  }
-  if (options.timeoutRepairFocused || options.timeoutDiagnosticRetry) {
-    return verificationRunIntents.repair;
-  }
-  if (options.prepareEvidence) return verificationRunIntents.review;
-  return verificationRunIntents.development;
-}
-
-export function requireVerificationRunIntent(receipt, expected) {
-  if (!intentValues.has(receipt?.runIntent)) {
-    throw new Error("Verification receipt is missing a valid immutable run intent");
-  }
-  if (expected !== undefined && receipt.runIntent !== expected) {
-    throw new Error(`Verification receipt run intent ${receipt.runIntent} cannot support ${expected}`);
-  }
-  return receipt.runIntent;
 }
 
 function safeLegacyReceiptPath(root, sourceReceipt) {

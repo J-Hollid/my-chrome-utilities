@@ -42,5 +42,38 @@
     }
   },
   "technicalPayoffStatus": "pending one complete comparable product-only Shell run",
-  "recommendation": "repair or reclassify the inherited Shell failures without widening VTD-012, then repeat the same product-only plan"
+  "inheritedFailureClassification": {
+    "taskRangeBase": "74cf0eac58",
+    "latestReceiptSha256": "ef7ea6ed37a231f75aa0435e0ffd3ffe2f3bf8b34b3fbbd3b0cf069d9a6fe402",
+    "taskRangeChangedFailureFiles": [],
+    "failures": [
+      {
+        "task": "unit:test/side-panel-single-cutover-preparation-test.mjs",
+        "classification": "inherited stale preparation contract",
+        "finding": "The fixture requires the removed verification-process umbrella task from a Shell-only selection."
+      },
+      {
+        "task": "unit:test/live-target-permission-recovery-preparation-contract-test.mjs",
+        "classification": "inherited stale source inventory",
+        "finding": "The exact source list omits four already-present live-observer and utility-layer consumers."
+      },
+      {
+        "task": "unit:test/live-target-permission-path-apply-acceptance-test.mjs",
+        "classification": "inherited modular-pack assertion",
+        "finding": "Modular verification packs example 204 rejects the pre-existing Shell composition source shape."
+      },
+      {
+        "task": "unit:test/swarmforge-process-contract-test.mjs",
+        "classification": "inherited modular-pack assertion",
+        "finding": "Its nested acceptance run reaches the same unchanged modular-pack example 204 failure."
+      },
+      {
+        "task": "unit:test/workspace-tabs-installed-controller-test.mjs",
+        "classification": "inherited stale composition-root matcher",
+        "finding": "The source matcher observes zero constructions although the production and assertion files are unchanged in the VTD-012 range."
+      }
+    ],
+    "scopeDecision": "Reclassified instead of changing unrelated Shell behavior or preparation contracts in VTD-012."
+  },
+  "recommendation": "repair the five classified inherited Shell contracts in their owning task, then repeat the same product-only plan"
 }

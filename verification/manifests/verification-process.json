@@ -3,9 +3,7 @@
   "order": 1000,
   "pack": {
     "id": "verification_process",
-    "source": [
-      "verification/vtd012-adoption-scorecard.json"
-    ],
+    "source": [],
     "dependencies": [],
     "property": [
       "test/verification-process-property-test.mjs"
@@ -88,6 +86,7 @@
         "id": "task_batching",
         "sourcePaths": [
           "scripts/verification-packs.mjs",
+          "scripts/verification-planner/module-inspection.mjs",
           "scripts/verification-policy/contracts.mjs",
           "test/verification-process-contract-test.mjs"
         ],
