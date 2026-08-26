@@ -239,6 +239,44 @@ assert.throws(() => validateCanonicalMasterEvidenceRecord(canonicalEvidence(twoP
 
 const currentRegistry = JSON.parse(await readFile(
   new URL("../verification/packs.json", import.meta.url), "utf8"));
+const verificationProcessPack = currentRegistry.find(({ id }) => id === "verification_process");
+assert.ok(verificationProcessPack,
+  "the ownership preparation registers the verification_process metadata pack");
+assert.deepEqual(verificationProcessPack, {
+  id:"verification_process",
+  source:[],
+  dependencies:[],
+  unit:[],
+  property:[],
+  features:[],
+  plannedFeatures:["features/verification-registry-planner-modularization.feature"],
+  handlers:[],
+  browserAdapters:[],
+  browserAdapterModes:[],
+  browserObservations:[],
+  checkpointCommands:[],
+}, "the preparation adds only one planned feature to an otherwise empty metadata pack");
+assert.deepEqual(classifyPackDefinition(verificationProcessPack, currentRegistry), {
+  classification:"non-runnable compatibility metadata",
+  terminalTreatment:"excluded from the runnable set",
+}, "the prepared owner cannot enter runnable verification");
+const registryBeforePreparation = currentRegistry.filter(
+  ({ id }) => id !== "verification_process");
+const terminalPlanBeforePreparation = planVerification(registryBeforePreparation, {
+  terminalFull:true,
+});
+const terminalPlanAfterPreparation = planVerification(currentRegistry, {
+  terminalFull:true,
+});
+assert.deepEqual(terminalPlanAfterPreparation.selectedPackIds,
+  terminalPlanBeforePreparation.selectedPackIds,
+"the planned owner leaves the runnable pack set unchanged");
+assert.deepEqual(terminalPlanAfterPreparation.tasks.map(verificationTaskIdentity),
+  terminalPlanBeforePreparation.tasks.map(verificationTaskIdentity),
+"the planned owner leaves every terminal task identity unchanged");
+assert.equal(currentRegistry.filter((pack) =>
+  pack.plannedFeatures?.includes("features/verification-registry-planner-modularization.feature"))
+  .length, 1, "the exact specification feature gains exactly one planned owner");
 const shellPack = currentRegistry.find(({ id }) => id === "shell");
 const cardinalitySlice = shellPack.verificationSlices.find(
   ({ id }) => id === "verification_pack_cardinality_contract");

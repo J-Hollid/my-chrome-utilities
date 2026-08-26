@@ -7665,5 +7665,21 @@
         ]
       }
     ]
+  },
+  {
+    "id": "verification_process",
+    "source": [],
+    "dependencies": [],
+    "unit": [],
+    "property": [],
+    "features": [],
+    "plannedFeatures": [
+      "features/verification-registry-planner-modularization.feature"
+    ],
+    "handlers": [],
+    "browserAdapters": [],
+    "browserAdapterModes": [],
+    "browserObservations": [],
+    "checkpointCommands": []
   }
 ]
