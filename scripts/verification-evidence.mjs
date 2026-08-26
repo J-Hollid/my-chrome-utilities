@@ -60,6 +60,7 @@ import {
 import {
   canonicalRunIntentBootstrapPlan,
   registryPlannerPreparationFocusedPlan,
+  registryPlannerPreparationTaskKeys,
   requireVerificationRunIntent,
   runIntentBootstrapCoverage,
   validateRunIntentBootstrapBase,
@@ -543,6 +544,38 @@ function canonicalRegistryCardinalityPlan(candidatePacks, {
   };
 }
 
+function canonicalRegistryPlannerPreparationPlan(candidatePacks, {
+  packIds, changeSet, basePacks, historicalRegistryFallback,
+}) {
+  const bindingPlan = planVerification(candidatePacks, {
+    packIds:[], changedPaths:changeSet.paths, changeSet, includeProperties:false,
+    basePacks, historicalRegistryFallback,
+  });
+  const executionPlan = bindEvidenceChangeScope(planVerification(candidatePacks, {
+    packIds, includeProperties:false,
+  }), bindingPlan);
+  const runnablePackIds = createVerificationPackCardinalityAdapter(candidatePacks).runnablePackIds;
+  const canonical = withEvidencePackageTask(planVerification(candidatePacks, {
+    packIds:runnablePackIds, includeProperties:false,
+  }));
+  const candidates = new Map(canonical.tasks.map((task) => [task.key, task]));
+  const requested = [...registryPlannerPreparationTaskKeys, "package:extension"].map((key) => {
+    const task = candidates.get(key);
+    if (!task) throw new Error(`Registry-planner preparation task is not registered: ${key}`);
+    return task;
+  });
+  const closed = expandVerificationTaskPrerequisites(requested, canonical.tasks,
+    { mode:"ordinary-focused" });
+  const selected = new Set(closed.map(({ key }) => key));
+  return {
+    ...executionPlan,
+    mode:"focused-task",
+    tasks:canonical.tasks.filter(({ key }) => selected.has(key)),
+    includeProperties:false,
+    focusedTaskKeys:[...registryPlannerPreparationTaskKeys],
+  };
+}
+
 function canonicalLiveTargetPermissionRecoveryPlan(candidatePacks, {
   changeSet, basePacks, historicalRegistryFallback, evidenceTask,
 }) {
@@ -646,7 +679,13 @@ async function canonicalPlanDocument({
   } catch {
     historicalRegistryFallback = true;
   }
-  let plan = runIntentBootstrap
+  const registryPlannerPreparation = runIntentBootstrap &&
+    evidenceTask === "verification-slice-verification-registry-planner-modularization";
+  let plan = registryPlannerPreparation
+    ? canonicalRegistryPlannerPreparationPlan(candidatePacks, {
+      packIds, changeSet, basePacks, historicalRegistryFallback,
+    })
+    : runIntentBootstrap
     ? canonicalRunIntentBootstrapPlan(candidatePacks, {
       packIds, changeSet, basePacks, historicalRegistryFallback,
     })
@@ -672,7 +711,7 @@ async function canonicalPlanDocument({
     });
   if (evidenceTask !== "registry-derived-verification-packs" &&
       !isLiveTargetPermissionRecoveryEvidenceTask(evidenceTask) &&
-      !isSidePanelSingleCutoverEvidenceTask(evidenceTask)) {
+      !isSidePanelSingleCutoverEvidenceTask(evidenceTask) && !registryPlannerPreparation) {
     plan = closeCanonicalEvidencePlanPrerequisites(plan, candidatePacks,
       { allowLegacySourceLess:allowLegacyCandidateOwnership });
     if (includePackage) plan = withEvidencePackageTask(plan);
