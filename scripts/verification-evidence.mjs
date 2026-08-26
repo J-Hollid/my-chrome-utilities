@@ -609,6 +609,7 @@ function canonicalRegistryPlannerPreparationPlan(candidatePacks, {
     mode:"focused-task",
     tasks:canonical.tasks.filter(({ key }) => selected.has(key)),
     includeProperties:false,
+    stages:{ ...executionPlan.stages, package:[] },
     focusedTaskKeys:[...registryPlannerPreparationTaskKeys],
   };
 }
