@@ -59,6 +59,7 @@ import {
 } from "./side-panel-single-cutover-focused-evidence.mjs";
 import {
   canonicalRunIntentBootstrapPlan,
+  registryPlannerPreparationFocusedPlan,
   requireVerificationRunIntent,
   runIntentBootstrapCoverage,
   validateRunIntentBootstrapBase,
@@ -384,8 +385,10 @@ function planDocument(plan, { evidenceTask, candidateRegistry } = {}) {
   const sidePanelSingleCutoverFocused =
     isSidePanelSingleCutoverEvidenceTask(evidenceTask) &&
     validateSidePanelSingleCutoverFocusedPlan(plan, evidenceTask);
+  const registryPlannerPreparationFocused =
+    registryPlannerPreparationFocusedPlan(plan, evidenceTask);
   if ((plan.mode !== "exact" && !cardinalityFocused && !permissionRecoveryFocused &&
-      !sidePanelSingleCutoverFocused) || !packIds.length ||
+      !sidePanelSingleCutoverFocused && !registryPlannerPreparationFocused) || !packIds.length ||
       !same(packIds, sortedUnique(plan.requestedPackIds ?? []))) {
     throw new Error("Verification evidence requires exact explicit known pack(s)");
   }
@@ -396,7 +399,7 @@ function planDocument(plan, { evidenceTask, candidateRegistry } = {}) {
     throw new Error("Evidence pack claims must equal the packs whose stages were executed");
   }
   if (plan.includeProperties !== true && !permissionRecoveryFocused &&
-      !sidePanelSingleCutoverFocused) {
+      !sidePanelSingleCutoverFocused && !registryPlannerPreparationFocused) {
     throw new Error("Verification evidence requires every registered property leaf; add --property");
   }
   if (plan.changeSet?.version !== 1 || !plan.baseCommit ||

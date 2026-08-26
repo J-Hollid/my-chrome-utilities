@@ -110,6 +110,9 @@ import {
   eligibleRepairAdmissionCandidates,
   revalidateConfirmedFlakyAdmissions,
   revalidateEligibleRepairAdmissions,
+  registryPlannerPreparationEvidenceTask,
+  registryPlannerPreparationFocusedPlan,
+  registryPlannerPreparationTaskKeys,
   requireVerificationRunIntent,
   runIntentBootstrapCoverage,
   validateEligibleRepairAdmissionsReceipt,
@@ -124,21 +127,7 @@ const defaultTimeoutMs = 600_000;
 const defaultTerminationGraceMs = 5_000;
 const defaultOutputLimitBytes = 16 * 1024 * 1024;
 const maximumOutputLimitBytes = 64 * 1024 * 1024;
-const registryPlannerPreparationEvidenceTask =
-  "verification-slice-verification-registry-planner-modularization";
-const registryPlannerPreparationTaskKeys = Object.freeze([
-  "unit:test/modular-utility-architecture-test.mjs",
-  "unit:test/verification-pack-cardinality-contract-test.mjs",
-  "unit:test/verification-process-contract-test.mjs",
-]);
 const require = createRequire(import.meta.url);
-
-export function registryPlannerPreparationFocusedPlan(plan, evidenceTask) {
-  if (evidenceTask !== registryPlannerPreparationEvidenceTask ||
-      plan?.mode !== "focused-task" || plan.includeProperties !== false) return false;
-  const expected = ["build:dist", ...registryPlannerPreparationTaskKeys, "package:extension"];
-  return JSON.stringify(plan.tasks.map(({ key }) => key)) === JSON.stringify(expected);
-}
 
 async function legacyCheckpointAttemptDirectory(root) {
   const common = await new Promise((resolve, reject) => {

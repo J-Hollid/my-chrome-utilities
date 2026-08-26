@@ -19,6 +19,21 @@ export const verificationRunIntents = Object.freeze({
   terminal:"terminal",
 });
 
+export const registryPlannerPreparationEvidenceTask =
+  "verification-slice-verification-registry-planner-modularization";
+export const registryPlannerPreparationTaskKeys = Object.freeze([
+  "unit:test/modular-utility-architecture-test.mjs",
+  "unit:test/verification-pack-cardinality-contract-test.mjs",
+  "unit:test/verification-process-contract-test.mjs",
+]);
+
+export function registryPlannerPreparationFocusedPlan(plan, evidenceTask) {
+  if (evidenceTask !== registryPlannerPreparationEvidenceTask ||
+      plan?.mode !== "focused-task" || plan.includeProperties !== false) return false;
+  const expected = ["build:dist", ...registryPlannerPreparationTaskKeys, "package:extension"];
+  return JSON.stringify(plan.tasks.map(({ key }) => key)) === JSON.stringify(expected);
+}
+
 const intentValues = new Set(Object.values(verificationRunIntents));
 
 export function verificationRunIntent(options = {}) {
