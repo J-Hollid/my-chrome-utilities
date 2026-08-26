@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "task": "verification-registry-planner-modularization",
+  "baseline": {
+    "commit": "fc552224f290a39dbbd6e27a27f6c3c336b3d2e9",
+    "productOnlyShellFocusedMilliseconds": 300000,
+    "policyUmbrellaTask": "unit:test/verification-process-contract-test.mjs",
+    "policyUmbrellaMilliseconds": 181447,
+    "environmentClass": "accepted comparable normal-load receipt"
+  },
+  "productOnlyShell": {
+    "representativeChangedPath": "src/workspace-tabs-ui.ts",
+    "observedAt": "2026-08-26T06:09:46.412Z",
+    "environment": {
+      "node": "24.19.0",
+      "typescript": "5.9.3",
+      "platform": "linux-x64",
+      "executionLoad": "normal",
+      "concurrency": 4,
+      "observationConcurrency": 2
+    },
+    "plannedTaskCount": 87,
+    "selectedPolicyTasks": [],
+    "avoidedPolicyTasks": [
+      "unit:test/verification-contracts/registry-inventory-contract-test.mjs",
+      "unit:test/verification-contracts/ownership-impact-contract-test.mjs",
+      "unit:test/verification-contracts/dependency-expansion-contract-test.mjs",
+      "unit:test/verification-contracts/task-batching-contract-test.mjs",
+      "unit:test/verification-contracts/historical-planning-contract-test.mjs",
+      "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs",
+      "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs",
+      "unit:test/verification-contracts/evidence-promotion-contract-test.mjs",
+      "unit:test/verification-contracts/timing-performance-contract-test.mjs"
+    ],
+    "attempt": {
+      "receiptSha256": "9b1b9bd355cd51913607ef66bc61b4a8ab68d361e8d2135f8c7d9990004ba8e1",
+      "observedWallMilliseconds": 66878,
+      "passedTaskCount": 22,
+      "failedTaskCount": 5,
+      "status": "not-accepted",
+      "reason": "Inherited product-preparation and modular-pack assertions failed before the full plan completed; this partial wall time is not payoff evidence."
+    }
+  },
+  "technicalPayoffStatus": "pending one complete comparable product-only Shell run",
+  "recommendation": "repair or reclassify the inherited Shell failures without widening VTD-012, then repeat the same product-only plan"
+}

@@ -20,9 +20,14 @@ export function runVerificationProcessCompatibility({
     });
     results.push({ path:successor, status:result.status, signal:result.signal ?? null });
     if (result.error) throw result.error;
-    if (result.status !== 0) {
-      throw new Error(`Verification process successor failed: ${successor}`);
-    }
+  }
+  const failures = results.filter(({ status, signal }) => status !== 0 || signal);
+  if (failures.length) {
+    const error = new Error(`Verification process successors failed: ${failures
+      .map(({ path:successor, status, signal }) =>
+        `${successor} (${signal ? `signal ${signal}` : `status ${status}`})`).join(", ")}`);
+    error.results = results;
+    throw error;
   }
   return results;
 }

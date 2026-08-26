@@ -3,9 +3,13 @@
   "order": 1000,
   "pack": {
     "id": "verification_process",
-    "source": [],
+    "source": [
+      "verification/vtd012-adoption-scorecard.json"
+    ],
     "dependencies": [],
-    "property": [],
+    "property": [
+      "test/verification-process-property-test.mjs"
+    ],
     "browserAdapters": [],
     "browserAdapterModes": [],
     "verificationOnly": {
@@ -170,7 +174,8 @@
         "id": "timing_performance",
         "sourcePaths": [
           "scripts/report-verification-throughput.mjs",
-          "scripts/verification-timing-ledger.mjs"
+          "scripts/verification-timing-ledger.mjs",
+          "verification/vtd012-adoption-scorecard.json"
         ],
         "sourcePrefixes": ["scripts/verification-performance/"],
         "tasks": ["unit:test/verification-contracts/timing-performance-contract-test.mjs"],

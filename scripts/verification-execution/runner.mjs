@@ -76,6 +76,8 @@ import {
   estimatePlanMilliseconds,
   measuredTimingModel,
 } from "../report-verification-throughput.mjs";
+import { verificationPolicySelectionSummary } from
+  "../verification-performance/policy-avoidance.mjs";
 import { createVerificationPackCardinalityAdapter } from
   "../verification-pack-cardinality/contract.mjs";
 import { canonicalRepairTaskIdentities } from
@@ -1930,6 +1932,7 @@ export async function runFocusedAcceptance(
     adapterAuthorizationPackIds:[...new Set(plan.adapterAuthorizationPackIds ?? [])].sort(),
     changeSetDigest:plan.changeSet ? verificationDigest(plan.changeSet) : null,
     taskPlanDigest:verificationDigest(plan.tasks.map(verificationTaskIdentity)),
+    policyWork:verificationPolicySelectionSummary(plan),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };
   let admissionStore;

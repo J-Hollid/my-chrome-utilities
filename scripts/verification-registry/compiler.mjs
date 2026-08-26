@@ -2,6 +2,8 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { validateCompiledRegistry } from "./validation.mjs";
+
 const defaultRoot = fileURLToPath(new URL("../../", import.meta.url));
 
 function validPack(pack) {
@@ -14,7 +16,7 @@ function validFragment(fragment) {
     Number.isSafeInteger(fragment.order) && fragment.order >= 0 && validPack(fragment.pack);
 }
 
-export function compileVerificationRegistry({ base, fragments }) {
+export function compileVerificationRegistry({ base, fragments, repositoryRoot = defaultRoot }) {
   if (!Array.isArray(base) || base.some((pack) => !validPack(pack))) {
     throw new Error("Verification registry base must contain valid pack declarations");
   }
@@ -33,7 +35,7 @@ export function compileVerificationRegistry({ base, fragments }) {
     if (seen.has(pack.id)) throw new Error(`Duplicate verification pack identity: ${pack.id}`);
     seen.add(pack.id);
   }
-  return packs;
+  return validateCompiledRegistry(packs, { repositoryRoot });
 }
 
 export function serializeVerificationRegistry(packs) {
@@ -47,7 +49,7 @@ export async function compiledVerificationRegistry({ repositoryRoot = defaultRoo
   const names = (await readdir(directory)).filter((name) => name.endsWith(".json")).sort();
   const fragments = await Promise.all(names.map(async(name) =>
     JSON.parse(await readFile(path.join(directory, name), "utf8"))));
-  return compileVerificationRegistry({ base, fragments });
+  return compileVerificationRegistry({ base, fragments, repositoryRoot });
 }
 
 export async function writeCompiledVerificationRegistry({ repositoryRoot = defaultRoot } = {}) {

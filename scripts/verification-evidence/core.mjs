@@ -69,6 +69,8 @@ import {
   consumeTerminalFullObligations,
   validateReviewReadyRecord,
 } from "../settled-final-verification-review.mjs";
+import { verificationPolicySelectionSummary } from
+  "../verification-performance/policy-avoidance.mjs";
 
 function expectedRunIntentForEvidenceTask(task) {
   return task === boundedClosureEvidenceTask
@@ -898,6 +900,9 @@ async function parsedReceipt(receiptPath, plan, {
     changeSetDigest:verificationDigest(plan.changeSet),
     ...(receipt.plan?.taskPlanDigest === undefined ? {} : {
       taskPlanDigest:verificationDigest(plan.tasks.map(verificationTaskIdentity)),
+    }),
+    ...(receipt.plan?.policyWork === undefined ? {} : {
+      policyWork:verificationPolicySelectionSummary(plan),
     }),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
     ...(receipt.candidate?.evidenceTask === boundedClosureEvidenceTask &&
