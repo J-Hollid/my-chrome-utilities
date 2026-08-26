@@ -21,6 +21,8 @@ export const verificationRunIntents = Object.freeze({
 
 export const registryPlannerPreparationEvidenceTask =
   "verification-slice-verification-registry-planner-modularization";
+export const registryPlannerPreparationBaseCommit =
+  "ef899ddb417b70c4136a5d2b419431e38673c172";
 export const registryPlannerPreparationTaskKeys = Object.freeze([
   "unit:test/modular-utility-architecture-test.mjs",
   "unit:test/verification-pack-cardinality-contract-test.mjs",
@@ -235,18 +237,28 @@ export function verificationRegistryPlannerBootstrapEligibility({
   const exactPaths = JSON.stringify([...changedPaths].sort()) === JSON.stringify(expectedPaths);
   const exactOwner = candidateOwners.length === 1 &&
     JSON.stringify(candidateOwner) === JSON.stringify(expectedOwner);
+  const exactRegistryDelta = JSON.stringify(candidatePacks) ===
+    JSON.stringify([...basePacks, expectedOwner]);
+  const authorizedBaseLineage = baseCommit === registryPlannerPreparationBaseCommit;
   const terminalBefore = planVerification(basePacks, { terminalFull:true });
   const terminalAfter = planVerification(candidatePacks ?? [], { terminalFull:true });
   const terminalConserved = JSON.stringify(terminalBefore.selectedPackIds) ===
       JSON.stringify(terminalAfter.selectedPackIds) &&
     JSON.stringify(terminalBefore.tasks.map(verificationTaskIdentity)) ===
       JSON.stringify(terminalAfter.tasks.map(verificationTaskIdentity));
+  if (!authorizedBaseLineage) {
+    throw new Error("Registry-planner ownership bootstrap requires its authorized base lineage");
+  }
+  if (!exactRegistryDelta) {
+    throw new Error("Registry-planner ownership bootstrap requires the exact registry delta");
+  }
   if (evidenceTask !== task || !contractsPresent || baseOwners.length || !exactPaths ||
       !exactOwner || !terminalConserved) {
     throw new Error("Registry-planner ownership bootstrap requires its exact unowned base, empty planned owner, conserved terminal plan, and bounded preparation paths");
   }
   return { version:1, kind:"verification-registry-planner-ownership", baseCommit,
-    contracts:[18, 19, 20], featurePath, exactPaths, terminalConserved };
+    contracts:[18, 19, 20], featurePath, exactPaths, exactRegistryDelta,
+    authorizedBaseLineage, terminalConserved };
 }
 
 export function ownershipReadinessBootstrapEligibility({baseCommit,feature,implementation,changedPaths,evidenceTask}){
@@ -760,10 +772,80 @@ export function validateConfirmedFlakyAdmissionsReceipt(
   return admissions;
 }
 
+const registryPlannerRejectedBroadAttemptPaths = Object.freeze([
+  "test/verification-pack-cardinality-contract-test.mjs",
+  "verification/packs.json",
+]);
+
+export async function registryPlannerTerminalObligationProof({
+  root, incident, candidate, plan, evidenceTask,
+}) {
+  const lineage = incident?.failure?.lineage;
+  const sourcePath = safeLegacyReceiptPath(root, incident?.failure?.sourceReceipt);
+  if (evidenceTask !== registryPlannerPreparationEvidenceTask || !sourcePath ||
+      lineage?.evidenceTask !== evidenceTask ||
+      lineage?.baseCommit !== registryPlannerPreparationBaseCommit ||
+      typeof lineage?.commit !== "string" || typeof lineage?.tree !== "string" ||
+      typeof candidate?.commit !== "string") return null;
+  let bytes;
+  let receipt;
+  try {
+    bytes = await readFile(sourcePath);
+    receipt = JSON.parse(bytes);
+  } catch { return null; }
+  const result = receipt.tasks?.[incident.failure?.task?.key];
+  const sourceTaskKeys = Object.keys(receipt.tasks ?? {});
+  const focusedTaskKeys = (plan?.tasks ?? [])
+    .map(({ key }) => key).filter((key) => key !== "package:extension");
+  const rejectedBroadPlan = receipt.runIntent === verificationRunIntents.review &&
+    receipt.runIntentBootstrap === undefined && receipt.plan?.mode === "exact" &&
+    JSON.stringify(receipt.plan.changedPaths) ===
+      JSON.stringify(registryPlannerRejectedBroadAttemptPaths) &&
+    JSON.stringify(receipt.plan.selectedPackIds) === JSON.stringify(["shell"]) &&
+    JSON.stringify(receipt.plan.requestedPackIds) === JSON.stringify(["shell"]) &&
+    focusedTaskKeys.every((key) => sourceTaskKeys.includes(key)) &&
+    sourceTaskKeys.some((key) => !focusedTaskKeys.includes(key)) &&
+    !focusedTaskKeys.includes(incident.failure.task.key) &&
+    Object.values(receipt.tasks ?? {}).filter(({ status }) => status === "failed").length === 4;
+  const exactReceipt = receipt.runId === incident.failure.runnerRunId &&
+    receipt.candidate?.commit === lineage.commit && receipt.candidate?.tree === lineage.tree &&
+    receipt.candidate?.baseCommit === lineage.baseCommit &&
+    receipt.candidate?.evidenceTask === lineage.evidenceTask &&
+    receipt.candidate?.changeSetDigest === lineage.changeSetDigest &&
+    receipt.plan?.changeSetDigest === lineage.changeSetDigest &&
+    receipt.registryDigest === incident.failure.registryDigest &&
+    timeoutIncidentDigest(receipt.plan ?? {}) === incident.failure.planDigest &&
+    result?.status === "failed" && result.provenance === "fresh" &&
+    result.reliabilityIncidentId === incident.id &&
+    result.reliabilityFailureDigest === incident.failureDigest &&
+    result.reliabilityFailureFingerprint === incident.failure.fingerprint &&
+    verificationTaskDigest(result.identity) === verificationTaskDigest(incident.failure.task);
+  if (!rejectedBroadPlan || !exactReceipt) return null;
+  try {
+    const [sourceCommit, sourceTree, sourceParents] = await Promise.all([
+      gitValue(root, "rev-parse", `${lineage.commit}^{commit}`).then((value) => value.trim()),
+      gitValue(root, "rev-parse", `${lineage.commit}^{tree}`).then((value) => value.trim()),
+      gitValue(root, "rev-list", "--parents", "-n", "1", lineage.commit)
+        .then((value) => value.trim().split(/\s+/u)),
+      gitValue(root, "merge-base", "--is-ancestor", lineage.commit, candidate.commit),
+    ]);
+    if (sourceCommit !== lineage.commit || sourceTree !== lineage.tree ||
+        sourceParents.length !== 2 || sourceParents[1] !== registryPlannerPreparationBaseCommit) {
+      return null;
+    }
+  } catch { return null; }
+  return {
+    sourceReceiptSha256:createHash("sha256").update(bytes).digest("hex"),
+    sourcePlanDigest:incident.failure.planDigest,
+    sourceCommit:lineage.commit,
+  };
+}
+
 export async function runIntentBootstrapCoverage({
   incidents, plan, packs, candidate, root, evidenceTask,
   resolveSuccession = resolveIncidentTaskSuccession,
   reviewIncidentProof = bootstrapReviewIncidentProof,
+  terminalObligationProof = registryPlannerTerminalObligationProof,
 }) {
   const selected = new Map(plan.tasks.map((task) => {
     const identity = verificationTaskIdentity(task);
@@ -785,14 +867,21 @@ export async function runIntentBootstrapCoverage({
       admissions.set(incident.id, { kind:"terminal-deferred" });
       continue;
     }
+    const existingBootstrapDeferral = incident?.terminalVerificationDeferred === undefined ||
+      incident.terminalVerificationDeferred?.status === "terminal-verification-deferred" &&
+      incident.terminalVerificationDeferred?.basis === "bootstrap-terminal-obligation" &&
+      incident.terminalVerificationDeferred?.failureDigest === incident.failureDigest;
     const unselectedBootstrapFailure = registryPlannerPreparation &&
       incident?.state === "unresolved" && incident?.repair === undefined &&
-      incident?.retry === undefined && incident?.terminalVerificationDeferred === undefined &&
+      incident?.retry === undefined && existingBootstrapDeferral &&
       incident?.failure?.lineage?.evidenceTask === evidenceTask &&
       !selectedByKey.has(incident?.failure?.task?.key);
     if (unselectedBootstrapFailure) {
-      admissions.set(incident.id, { kind:"bootstrap-terminal-obligation",
-        failureDigest:incident.failureDigest });
+      const proof = await terminalObligationProof({
+        root, incident, candidate, plan, evidenceTask,
+      });
+      if (proof) admissions.set(incident.id, { kind:"bootstrap-terminal-obligation",
+        failureDigest:incident.failureDigest, ...proof });
     }
   }
   const ineligible = incidents.filter((incident) => !admissions.has(incident.id));

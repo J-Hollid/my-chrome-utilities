@@ -7989,7 +7989,7 @@ const registryPlannerFeature = [18, 19, 20]
   .map((number) => `Verification registry and planner modularization 0${number}`).join("\n");
 const registryPlannerBasePacks = packs.filter(({ id }) => id !== "verification_process");
 const registryPlannerBootstrap = verificationRegistryPlannerBootstrapEligibility({
-  baseCommit:"registry-planner-base", feature:registryPlannerFeature,
+  baseCommit:"ef899ddb417b70c4136a5d2b419431e38673c172", feature:registryPlannerFeature,
   registry:JSON.stringify(registryPlannerBasePacks), candidatePacks:packs,
   changedPaths:[
     "scripts/run-focused-acceptance.mjs",
@@ -8008,7 +8008,48 @@ const registryPlannerBootstrap = verificationRegistryPlannerBootstrapEligibility
 assert.equal(registryPlannerBootstrap.kind, "verification-registry-planner-ownership");
 assert.equal(registryPlannerBootstrap.terminalConserved, true);
 assert.throws(() => verificationRegistryPlannerBootstrapEligibility({
-  baseCommit:"registry-planner-base", feature:registryPlannerFeature,
+  baseCommit:"ef899ddb417b70c4136a5d2b419431e38673c172", feature:registryPlannerFeature,
+  registry:JSON.stringify(registryPlannerBasePacks),
+  candidatePacks:[...packs, {
+    id:"unauthorized_metadata", source:[], dependencies:[], unit:[], property:[], features:[],
+    plannedFeatures:[], handlers:[], browserAdapters:[], browserAdapterModes:[],
+    browserObservations:[], checkpointCommands:[],
+  }],
+  changedPaths:[
+    "scripts/run-focused-acceptance.mjs",
+    "scripts/settled-final-verification.mjs",
+    "scripts/verification-evidence.mjs",
+    "scripts/verification-reliability-persistence.mjs",
+    "scripts/verification-reliability-repair.mjs",
+    "scripts/verification-reliability-store.mjs",
+    "scripts/verification-run-intent.mjs",
+    "test/verification-pack-cardinality-contract-test.mjs",
+    "test/verification-process-contract-test.mjs",
+    "verification/packs.json",
+  ],
+  evidenceTask:"verification-slice-verification-registry-planner-modularization",
+}), /exact registry delta/u,
+"the ownership bootstrap rejects an additional non-runnable metadata pack");
+assert.throws(() => verificationRegistryPlannerBootstrapEligibility({
+  baseCommit:"unrelated-base", feature:registryPlannerFeature,
+  registry:JSON.stringify(registryPlannerBasePacks), candidatePacks:packs,
+  changedPaths:[
+    "scripts/run-focused-acceptance.mjs",
+    "scripts/settled-final-verification.mjs",
+    "scripts/verification-evidence.mjs",
+    "scripts/verification-reliability-persistence.mjs",
+    "scripts/verification-reliability-repair.mjs",
+    "scripts/verification-reliability-store.mjs",
+    "scripts/verification-run-intent.mjs",
+    "test/verification-pack-cardinality-contract-test.mjs",
+    "test/verification-process-contract-test.mjs",
+    "verification/packs.json",
+  ],
+  evidenceTask:"verification-slice-verification-registry-planner-modularization",
+}), /authorized base lineage/u,
+"the ownership bootstrap rejects an arbitrary base label");
+assert.throws(() => verificationRegistryPlannerBootstrapEligibility({
+  baseCommit:"ef899ddb417b70c4136a5d2b419431e38673c172", feature:registryPlannerFeature,
   registry:JSON.stringify(registryPlannerBasePacks), candidatePacks:packs,
   changedPaths:[
     "scripts/run-focused-acceptance.mjs",
@@ -8086,15 +8127,33 @@ const rawBootstrapCoverage = await runIntentBootstrapCoverage({
   incidents:[rawBootstrapIncident], plan:{ tasks:[bootstrapTask] }, packs,
   candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
   evidenceTask:"verification-slice-verification-registry-planner-modularization",
+  terminalObligationProof:async() => ({ sourceReceiptSha256:"e".repeat(64),
+    sourcePlanDigest:"f".repeat(64), sourceCommit:"source-commit" }),
 });
 assert.deepEqual(rawBootstrapCoverage[0], {
   incidentId:rawBootstrapIncident.id, failureDigest:rawBootstrapIncident.failureDigest,
   admission:{ kind:"bootstrap-terminal-obligation",
-    failureDigest:rawBootstrapIncident.failureDigest },
+    failureDigest:rawBootstrapIncident.failureDigest,
+    sourceReceiptSha256:"e".repeat(64), sourcePlanDigest:"f".repeat(64),
+    sourceCommit:"source-commit" },
   failureTaskKey:unselectedBootstrapTask.key,
   failureTaskDigest:verificationTaskDigest(unselectedBootstrapTask),
   selectedTaskKey:null, selectedTaskDigest:null, terminalObligation:true,
 }, "the exact preparation retains a rejected broad-run failure as a terminal obligation");
+await assert.rejects(() => runIntentBootstrapCoverage({
+  incidents:[{ ...structuredClone(rawBootstrapIncident), id:"unrelated-bootstrap-failure",
+    failure:{ ...structuredClone(rawBootstrapIncident.failure),
+      sourceReceipt:"tmp/verification-receipts/unrelated.json", lineage:{
+        evidenceTask:"verification-slice-verification-registry-planner-modularization",
+        baseCommit:"unrelated-base", commit:"unrelated-commit", tree:"unrelated-tree",
+        changeSetDigest:"1".repeat(64),
+      } } }],
+  plan:{ tasks:[bootstrapTask] }, packs,
+  candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+  root:"fixture",
+  evidenceTask:"verification-slice-verification-registry-planner-modularization",
+}), /ineligible incident/u,
+"a same-task incident from an unrelated candidate lineage remains blocking");
 await assert.rejects(() => runIntentBootstrapCoverage({
   incidents:[rawBootstrapIncident], plan:{ tasks:[bootstrapTask, unselectedBootstrapTask] }, packs,
   candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
