@@ -6,8 +6,11 @@ import {
 } from "./verification-reliability-values.mjs";
 import { expandVerificationTaskPrerequisites } from "./verification-execution-prerequisites.mjs";
 import {
-  resolveIncidentTaskSuccession, verificationTaskDigest,
+  resolveIncidentTaskSuccession, successionDestinationIdentities, successionExecutions,
+  verificationTaskDigest,
 } from "./verification-task-succession.mjs";
+import { verificationPolicyContractForPath, verificationPolicyContracts } from
+  "./verification-policy/contracts.mjs";
 
 const causalCategories = new Set([
   "viewport/visibility/hit testing", "readiness or settling", "readiness",
@@ -98,12 +101,15 @@ export function timeoutRepairFocusedTaskKeys(incident, changedPaths, regressionK
   validateIncident(incident);
   const internalExecutionContract = incident.failure.failureClass === "execution-contract-failure" &&
     incident.failure.task.stage === "promotion";
-  const keys = new Set([internalExecutionContract ? regressionKey
-    : taskSuccession?.destinationIdentity?.key ?? incident.failure.task.key, regressionKey]);
+  const successionKeys=successionDestinationIdentities(taskSuccession).map(({key})=>key);
+  const keys = new Set([...(internalExecutionContract?[regressionKey]
+    :successionKeys.length?successionKeys:[incident.failure.task.key]),regressionKey]);
   if (changedPaths.some((changedPath) => changedPath.startsWith("scripts/") ||
       changedPath.startsWith("test/support/") ||
       changedPath.startsWith("acceptance/src/acceptance/verification_support/"))) {
-    keys.add("unit:test/verification-process-contract-test.mjs");
+    const affected=changedPaths.map(verificationPolicyContractForPath).filter(Boolean);
+    const contracts=affected.length?affected:verificationPolicyContracts;
+    for(const {testPath} of contracts)keys.add(`unit:${testPath}`);
   }
   if (changedPaths.some((changedPath) => changedPath.startsWith("swarmforge/") ||
       ["scripts/verification-evidence.mjs", "scripts/verification-reliability-incidents.mjs",
@@ -121,15 +127,18 @@ export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionK
   if (!Array.isArray(canonicalIdentities)) throw new Error("Canonical repair task identities are required");
   const canonical = new Map(canonicalIdentities.map((identity) => [identity.key, normalized(identity)]));
   const incidentTaskDigest = verificationTaskDigest(incident.failure.task);
-  const successionDestinationKey = taskSuccession?.destinationIdentity?.key;
+  const successionDestinations=successionDestinationIdentities(taskSuccession);
+  const successionDestinationKeys=new Set(successionDestinations.map(({key})=>key));
+  const successionExecutionByKey=new Map(successionExecutions(taskSuccession)
+    .map((execution)=>[execution.identity.key,execution]));
   const internalExecutionContract = incident.failure.failureClass === "execution-contract-failure" &&
     incident.failure.task.stage === "promotion";
   if (taskSuccession && (taskSuccession.sourceTaskDigest !== incidentTaskDigest ||
-      taskSuccession.destinationTaskDigest !== verificationTaskDigest(taskSuccession.destinationIdentity) ||
+      !successionDestinations.length||successionDestinations.length!==successionExecutionByKey.size||
       !taskSuccession.chain?.length || !taskSuccession.conservationDigest ||
-      !taskSuccession.execution?.identity ||
-      JSON.stringify(normalized(taskSuccession.execution.identity)) !==
-        JSON.stringify(normalized(taskSuccession.destinationIdentity)))) {
+      successionDestinations.some((identity)=>
+        JSON.stringify(normalized(successionExecutionByKey.get(identity.key)?.identity))!==
+          JSON.stringify(normalized(identity))))) {
     throw new Error("Reliability repair task succession does not bind the immutable incident task");
   }
   const expectedKeys = timeoutRepairFocusedTaskKeys(incident, changedPaths, regressionKey, taskSuccession);
@@ -138,8 +147,10 @@ export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionK
     if (!roles.has(key)) roles.set(key, new Set());
     roles.get(key).add(role);
   };
-  addRole(internalExecutionContract ? regressionKey
-    : successionDestinationKey ?? incident.failure.task.key, "diagnosed-boundary");
+  for(const key of internalExecutionContract?[regressionKey]
+    :successionDestinationKeys.size?[...successionDestinationKeys]:[incident.failure.task.key]){
+    addRole(key,"diagnosed-boundary");
+  }
   addRole(regressionKey, "causal-regression");
   for (const key of expectedKeys) {
     if (key.startsWith("unit:test/") && ["unit:test/verification-process-contract-test.mjs",
@@ -156,14 +167,17 @@ export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionK
       throw new Error(`Reliability repair task ${key} is not a canonical current task identity`);
     }
     const descriptor = { identity, roles:[...(roles.get(key) ?? new Set())].sort() };
-    if (!internalExecutionContract && key === (successionDestinationKey ?? incident.failure.task.key)) {
-      descriptor.executionArgs = [...(taskSuccession?.execution.args ?? diagnosedBoundary.executionArgs)];
-      descriptor.executionLogicalTargetIds = [...(taskSuccession?.execution.logicalTargetIds ??
+    if (!internalExecutionContract && (successionDestinationKeys.has(key)||
+        !taskSuccession&&key===incident.failure.task.key)) {
+      const successionExecution=successionExecutionByKey.get(key);
+      descriptor.executionArgs = [...(successionExecution?.args ?? diagnosedBoundary.executionArgs)];
+      descriptor.executionLogicalTargetIds = [...(successionExecution?.logicalTargetIds ??
         diagnosedBoundary.logicalTargetIds ?? [])];
       if (taskSuccession) descriptor.taskSuccession = {
         version:taskSuccession.version,
         sourceTaskDigest:taskSuccession.sourceTaskDigest,
-        destinationTaskDigest:taskSuccession.destinationTaskDigest,
+        destinationTaskDigests:successionDestinations.map(verificationTaskDigest),
+        selectedDestinationTaskDigest:verificationTaskDigest(identity),
         chain:structuredClone(taskSuccession.chain),
         logicalSlice:structuredClone(taskSuccession.logicalSlice),
         conservationDigest:taskSuccession.conservationDigest,

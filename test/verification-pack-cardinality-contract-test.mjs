@@ -243,14 +243,14 @@ const shellPack = currentRegistry.find(({ id }) => id === "shell");
 const cardinalitySlice = shellPack.verificationSlices.find(
   ({ id }) => id === "verification_pack_cardinality_contract");
 assert.ok(cardinalitySlice, "the Shell pack owns the cardinality contract through its named slice");
-assert.deepEqual(cardinalitySlice.consumers, [],
-  "semantic runnable-pack consumers do not become registry consumer edges");
+assert.deepEqual(cardinalitySlice.consumers, [{
+  packId:"verification_process", sliceId:"task_batching",
+}], "the modular task planner is the explicit registry-cardinality consumer");
 assert.deepEqual(cardinalitySlice.tasks, [
   "unit:scripts/verification-pack-cardinality/acceptance.mjs",
   "unit:test/verification-pack-cardinality-contract-test.mjs",
   "unit:test/settled-final-verification-workflow-test.mjs",
   "unit:test/verification-evidence-production-path-test.mjs",
-  "unit:test/verification-process-contract-test.mjs",
 ], "the slice declares only the exact named cardinality evidence tasks");
 const focusedCardinalityKeys = registryCardinalityFocusedTaskKeys(
   planVerification(currentRegistry, { packIds:["shell"], includeProperties:true }));
@@ -290,8 +290,8 @@ assert.throws(() => validateRegistryCardinalityFocusedEvidence({
         ? { ...slice, consumers:[{ packId:"shell", sliceId:"eligible_repair_admission" }] }
         : slice),
   } : pack),
-}), /empty registry consumer set/u,
-"a cardinality registry consumer fails before focused evidence");
+}), /exact verification_process task-batching consumer/u,
+"a non-canonical cardinality registry consumer fails before focused evidence");
 assert.equal(shellPack.globalImpact.includes("scripts/verification-pack-cardinality/"), false,
   "the bounded cardinality prefix is not also registered as globally impactful");
 assert.deepEqual(await dispatchedPackIds(currentRegistry),

@@ -37,13 +37,13 @@ assert.deepEqual(pureStylePlan.observationTasks.map(({ key }) => key), [
   "browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
 ]);
 const mixedStylePlan = planVerification(packs, {
-  packIds:["shell"], changedPaths:[
+  packIds:["shell", "verification_process"], changedPaths:[
     "specification-builder-brand.css", "test/verification-process-contract-test.mjs",
   ],
 });
 assert.ok(mixedStylePlan.unitTasks.some(({ key }) =>
-  key === "unit:test/verification-process-contract-test.mjs"),
-  "a mixed global-style and non-style range retains the non-style unit task");
+  key === "unit:test/verification-contracts/task-batching-contract-test.mjs"),
+  "a mixed global-style and process-policy range retains the boundary successor task");
 assert.ok(mixedStylePlan.unitTasks.length > 0,
   "a mixed global-style and non-style range is not smoke-only");
 const mixedFlowStylePlan = planVerification(packs, {
@@ -120,7 +120,8 @@ function evidencePlan(rawPlan, candidatePacks) {
   const closed = closeCanonicalEvidencePlanPrerequisites(rawPlan, candidatePacks);
   const packageTask = structuredClone(timeoutRepairPackageTaskIdentity);
   return normalizedPlan({
-    ...closed, tasks:[...closed.tasks, packageTask],
+    ...closed, claimPackIds:[...new Set(closed.tasks.map(({packId}) => packId).filter(Boolean))],
+    tasks:[...closed.tasks, packageTask],
     stages:{ ...closed.stages, package:[] },
   });
 }
@@ -229,15 +230,18 @@ try {
     base:masterBase, commit:focusedCommit, repositoryRoot:root,
   });
   const focusedRawPlan = planVerification(packs, {
-    packIds:["shell"], changedPaths:focusedChangeSet.paths, changeSet:focusedChangeSet,
+    packIds:["verification_process"],
+    changedPaths:focusedChangeSet.paths,
+    changeSet:focusedChangeSet,
     basePacks:packs, includeProperties:true,
   });
   const focusedPlan = evidencePlan(focusedRawPlan, packs);
-  assert.equal(focusedPlan.packIds.length, 1, "focused fixture remains one-pack evidence");
+  assert.deepEqual(focusedPlan.packIds, ["verification_process"],
+    "focused fixture claims its declared process-successor owner");
   assert.equal(focusedPlan.terminalFullObligations.length, 1, "focused plan retains the stylesheet obligation boundary");
   for (const key of [
-    "unit:test/package-clean-checkout-contract-test.mjs",
-    "unit:test/verification-evidence-production-path-test.mjs",
+    "unit:test/verification-contracts/task-batching-contract-test.mjs",
+    "unit:test/verification-contracts/registry-inventory-contract-test.mjs",
   ]) {
     assert.ok(focusedPlan.tasks.some((task) => task.key === key),
       `focused receipt includes registered canonical task ${key}`);
@@ -256,7 +260,8 @@ try {
     ...focusedPending.evidence, status:"passed", recordedAt:"2026-08-13T10:00:02.000Z",
   });
   const focusedVerified = await verifyVerificationEvidence(
-    focusedCommit, masterBase, "fixture-evidence", ["shell"], { repositoryRoot:root });
+    focusedCommit, masterBase, "fixture-evidence", ["verification_process"],
+    { repositoryRoot:root });
   assert.deepEqual(focusedVerified.consumedTerminalObligations, [],
     "production verify retains a pending obligation for focused evidence");
 
@@ -282,7 +287,8 @@ try {
     "STUDIO_GLOBAL_STYLE_SMOKE_TARGET", "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
   ].includes(id)), "canonical execution retains a non-style browser observation");
   const terminalPlan = evidencePlan(terminalRawPlan, packs);
-  assert.equal(terminalPlan.packIds.length, 20, "terminal fixture uses the canonical runnable pack set");
+  assert.equal(terminalPlan.packIds.length, runnablePackIds.length,
+    "terminal fixture uses the canonical runnable pack set");
   assert.ok(terminalPlan.tasks.some(({ key }) => key.startsWith("property:")),
     "terminal fixture retains property tasks");
   assert.deepEqual(terminalPlan.terminalFullObligations, ["specification-builder.css"]);

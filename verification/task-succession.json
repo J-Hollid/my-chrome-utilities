@@ -106,6 +106,48 @@
       "FLOW_WORKSPACE_AUTHORING_TARGET": "65d564ab6fca26918788cde0afdef139a8dd059b819c5d48f444fff99c013675"
     }
   },
+  "taskSetSuccessions": [
+    {
+      "id": "verification-process-contract-to-boundary-contracts-v1",
+      "sourceRegistryCommit": "74cf0eac58dfc1766d4342abf610c260dac2d913",
+      "sourceTaskDigest": "668d36657f68aa67c64b498c95058c6f2301efa949be454330b8d728100eb884",
+      "sourceIdentity": {
+        "key": "unit:test/verification-process-contract-test.mjs",
+        "stage": "unit",
+        "packId": "shell",
+        "executable": "node",
+        "args": ["test/verification-process-contract-test.mjs"],
+        "target": "test/verification-process-contract-test.mjs",
+        "environment": null,
+        "requiredCapabilities": ["local-loopback"]
+      },
+      "destinationTaskDigests": [
+        "574d122af659b6ea2f74b9f86b0625de2c96406b4ddcae1a8b3980785deeb915",
+        "90853ade99961c1f2e63c192e42574661c1b1e4949f16500a0cc800cfbffc095",
+        "b30e1563cf70ed11486420132b6f908286425580e8bed742ffb7d895ae800791",
+        "a4fcd776fc280b737e74a3d10a1c616eb046f5adec70503123346cfbdeea5c90",
+        "f0bc8ae1e2346842f55b703dbcaf48ac3b82d744e1e415f04bfdce4b11eb357a",
+        "d30b6cd60ce21bcb28bcead4a83ed6e352ce5183c6f9e32b8b5a107246b28d7a",
+        "ae7163fb904774ef8740f83f326fb0d79eb89331028d21de328922ab0a2fe71f",
+        "a7e2d36a1761e106cc091c49e1cdec9a446ca683ab3e8908bc8877af0ad00f1f",
+        "0819c0b166f08690e9b1c98e969ea71f3c4d80d96231745c78b1b77758aeaaa4",
+        "30a1d22076d3033bed914530b358e498017f70f07de075768184c7afff26526c"
+      ],
+      "destinationBoundaryDigests": [
+        "ed2bfd8b2851a4f31d17980d803b6872f96d5b3cfb3e15dc5e9265f8bd326a6a",
+        "c046bddc07bcb94bab97dfeca1d7b41a548867e530f0e45d452f186421e64ee6",
+        "d30a49698bab8eb6bec5c7d5d3a17299a9790fcf3b438d91194d8b60c3cbfb0f",
+        "e41344e8f81edd7fbb996a6654300b6223109327d7842ac7375f567fa673daa2",
+        "40cbb7794176fce4ce0ce21f0deca7dd7c85c9af6338355c14e6aca7f6770452",
+        "898a1098e1a7e6e0d4eca06a56999850b2569a562f67ad87156b6856ce3cbc4f",
+        "75cdb26a3d7999b90d4ef37832cf07a6db9d7d107af6c85c9c7e5bab62f14836",
+        "887ecdfafe6b50f3d6580b56f0851bc39eb40767b9be74c73ea6dec7da1c84a0",
+        "f39e0843173014da9f31e5834349ce5c59a912045d5290a1e09bfb856f7186be",
+        "72f511f36f5ae920aafdd8343cafc23561f61106d531188a40c85073b9dcb273"
+      ],
+      "logicalSlice": {"kind": "task"}
+    }
+  ],
   "edges": [
     {
       "id": "flow-workspace-controls-standalone-to-flow-graph-batch-v1",

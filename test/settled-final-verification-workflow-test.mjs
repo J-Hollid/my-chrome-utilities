@@ -54,8 +54,9 @@ const allPacks = [
   "event-library", "flow_export", "flow_graph", "guided_test_cases", "hotkeys",
   "layered_schema", "live_flow_testing", "project_assurance_severity",
   "project_event_transport", "project_management", "property_set_flow_sections", "replay",
-  "schema_relationship_tree", "schemas", "shell",
+  "schema_relationship_tree", "schemas", "shell", "verification_process",
 ];
+const historicalAllPacks = allPacks.filter((id) => id !== "verification_process");
 const baseCommit = "1".repeat(40);
 const candidateCommit = "2".repeat(40);
 const candidateTree = "3".repeat(40);
@@ -293,8 +294,8 @@ for (const workflowPath of [
   "scripts/settled-final-verification-review.mjs",
   "scripts/run-focused-acceptance.mjs",
 ]) {
-  assert.deepEqual(planVerification(packs, { changedPaths:[workflowPath] }).packIds.toSorted(), allPacks,
-    `${workflowPath} retains global workflow impact`);
+  assert.deepEqual(planVerification(packs, { changedPaths:[workflowPath] }).packIds,
+    ["verification_process"], `${workflowPath} uses its reviewed process-policy boundary`);
 }
 const flowUiPlan = planVerification(packs, { changedPaths:["src/data-layer-flow-graph-ui.ts"] });
 for (const focusedPolicyPath of [
@@ -303,23 +304,23 @@ for (const focusedPolicyPath of [
   "scripts/verification-reliability-runtime.mjs",
   "scripts/verification-reliability-store.mjs",
 ]) {
-  assert.deepEqual(planVerification(packs, { changedPaths:[focusedPolicyPath] }).packIds.toSorted(),
-    allPacks,
-  `${focusedPolicyPath} retains global impact without explicit focused-pack authorization`);
+  assert.deepEqual(planVerification(packs, { changedPaths:[focusedPolicyPath] }).packIds,
+    ["verification_process"],
+  `${focusedPolicyPath} uses its reviewed process-policy boundary`);
   const mixedPlan = planVerification(packs, {
     changedPaths:["src/data-layer-flow-graph-ui.ts", focusedPolicyPath],
   });
   assert.deepEqual(mixedPlan.packIds, flowUiPlan.packIds,
-    `${focusedPolicyPath} does not suppress or expand an accompanying product boundary`);
+    `${focusedPolicyPath} does not expand an accompanying product boundary`);
   assert.deepEqual(mixedPlan.changedOwners[focusedPolicyPath], [],
-    `${focusedPolicyPath} remains visible without claiming product-pack ownership`);
+    `${focusedPolicyPath} remains visible while the product boundary is authoritative`);
   const canonicalPlan = planVerification(packs, {
     packIds:allPacks, changedPaths:[focusedPolicyPath],
   });
   assert.deepEqual(canonicalPlan.packIds.toSorted(), allPacks,
     `${focusedPolicyPath} retains canonical runnable-pack planning outside feature review`);
-  assert.deepEqual(canonicalPlan.changedOwners[focusedPolicyPath].toSorted(), allPacks,
-    `${focusedPolicyPath} retains its terminal global-impact identity`);
+  assert.deepEqual(canonicalPlan.changedOwners[focusedPolicyPath], ["verification_process"],
+    `${focusedPolicyPath} retains its process-policy identity in the canonical plan`);
 }
 const receipt = {
   version:2,
@@ -396,7 +397,7 @@ const integratedNote = JSON.parse((await exec(
 const integratedEvidence = integratedNote.records.find(({ task }) => task === "vtd017-shared-artifact-parallel");
 assert.ok(integratedEvidence, "the integrated final note supplies the production evidence shape");
 assert.equal(validateCanonicalMasterEvidenceRecord(integratedEvidence, {
-  canonicalPackIds:allPacks,
+  canonicalPackIds:historicalAllPacks,
 }), integratedEvidence);
 assert.throws(() => validateCanonicalMasterEvidenceRecord({
   status:"passed", candidate:{ commit:candidateCommit, tree:candidateTree },

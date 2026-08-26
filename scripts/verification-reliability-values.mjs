@@ -17,6 +17,7 @@ export const timeoutRepairPackIds = Object.freeze([
   "event-library", "flow_export", "flow_graph", "guided_test_cases", "hotkeys", "layered_schema",
   "live_flow_testing", "project_assurance_severity", "project_event_transport", "project_management",
   "property_set_flow_sections", "replay", "schema_relationship_tree", "schemas", "shell",
+  "verification_process",
 ].sort());
 
 export function normalized(value) {
