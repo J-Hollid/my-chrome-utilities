@@ -92,6 +92,7 @@ import {
   candidatePredatesRunIntentImplementation,
   closeCanonicalEvidencePlanPrerequisites,
   createPendingVerificationEvidence,
+  firstCanonicalDifference,
   legacyArchivedCheckpointTaskIdentities,
   legacyAcceptanceSessionPrerequisiteCompatibility,
   preflightGitNotePromotion,
@@ -104,6 +105,9 @@ import {
   verificationDigest,
   verifyVerificationEvidence,
 } from "../scripts/verification-evidence.mjs";
+assert.deepEqual(firstCanonicalDifference({ a:[1, { b:2 }] }, { a:[1, { b:3 }] }),
+  { path:"$.a[1].b", actual:2, expected:3 },
+"canonical plan diagnostics identify the first mismatched field and values");
 import {
   browserAdapterUsesSharedHarness,
   browserObservationEvidenceLeaves,

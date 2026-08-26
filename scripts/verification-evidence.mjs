@@ -256,6 +256,43 @@ function same(left, right) {
   return canonicalJson(left) === canonicalJson(right);
 }
 
+export function firstCanonicalDifference(left, right, path = "$") {
+  if (same(left, right)) return null;
+  const leftArray = Array.isArray(left);
+  const rightArray = Array.isArray(right);
+  if (leftArray || rightArray) {
+    if (!leftArray || !rightArray) return { path, actual:left, expected:right };
+    const length = Math.max(left.length, right.length);
+    for (let index = 0; index < length; index += 1) {
+      if (index >= left.length || index >= right.length) {
+        return { path:`${path}[${index}]`, actual:left[index], expected:right[index] };
+      }
+      const difference = firstCanonicalDifference(left[index], right[index], `${path}[${index}]`);
+      if (difference) return difference;
+    }
+  }
+  const leftObject = left !== null && typeof left === "object";
+  const rightObject = right !== null && typeof right === "object";
+  if (leftObject || rightObject) {
+    if (!leftObject || !rightObject) return { path, actual:left, expected:right };
+    const keys = [...new Set([...Object.keys(left), ...Object.keys(right)])].sort();
+    for (const key of keys) {
+      if (!Object.hasOwn(left, key) || !Object.hasOwn(right, key)) {
+        return { path:`${path}.${key}`, actual:left[key], expected:right[key] };
+      }
+      const difference = firstCanonicalDifference(left[key], right[key], `${path}.${key}`);
+      if (difference) return difference;
+    }
+  }
+  return { path, actual:left, expected:right };
+}
+
+function boundedDifferenceValue(value) {
+  const serialized = canonicalJson(value);
+  if (typeof serialized !== "string") return String(serialized);
+  return serialized.length <= 240 ? serialized : `${serialized.slice(0, 237)}...`;
+}
+
 function sortedUnique(values) {
   return [...new Set(values)].sort();
 }
@@ -831,7 +868,10 @@ export function legacyAcceptanceSessionPrerequisiteCompatibility({
 async function assertCanonicalPlan(recordPlan, details) {
   const canonical = await canonicalPlanDocument(details);
   if (!same(recordPlan, canonical)) {
-    throw new Error("Verification evidence plan does not match the committed pack registry");
+    const difference = firstCanonicalDifference(recordPlan, canonical);
+    throw new Error("Verification evidence plan does not match the committed pack registry at " +
+      `${difference.path}: actual=${boundedDifferenceValue(difference.actual)} ` +
+      `expected=${boundedDifferenceValue(difference.expected)}`);
   }
   return canonical;
 }
