@@ -1,6 +1,7 @@
 # VTD-012 verification registry and planner modularization R01
 
-Status: specification prepared; implementation and coder handoff are not yet approved
+Status: implementation approved; standing ownership preparation active after
+exact preflight stopped candidate `4bb46a9d`
 
 Prepared: 2026-08-26
 
@@ -12,10 +13,8 @@ bottlenecks. "Overnight" means that the approved program may continue unattended
 across as many work periods as its outcomes require. It is not an elapsed-time
 budget and it creates no routine phase-by-phase user gate.
 
-This document specifies the program only. A later explicit approval is required
-before the specifier commits it and hands task
-`verification-registry-planner-modularization` to the coder. That one approval may
-authorize every stage below, including required behavior-preserving ownership
+The user approved implementation and coder handoff on 2026-08-26. That approval
+authorizes every stage below, including required behavior-preserving ownership
 preparation and automatic resumption, while the conservation and stop conditions
 remain satisfied.
 
@@ -348,14 +347,66 @@ with an independently reviewed behavior-preserving ownership-preparation stage
 and automatically resumes this stable task from the exact QA preparation
 descendant. No feature-mode all-runnable-pack run is authorized.
 
+## Activated specification-owner preparation
+
+Exact preflight for coherent stopped candidate `4bb46a9d` proved the approved
+feature path has no historical owner at specification base `74cf0eac58` and gains
+owner `verification_process` in the candidate. The planner correctly refuses to
+let that candidate create and immediately consume its own historical ownership.
+This is `ownership-unavailable` for the product candidate and a bounded standing-
+authorized preparation for the already approved specification path.
+
+Task `verification-slice-verification-registry-planner-modularization` starts from
+current QA at `74cf0eac58`. It establishes only the historical specification owner:
+
+- add one non-runnable `verification_process` compatibility-metadata pack;
+- register `features/verification-registry-planner-modularization.feature` as its
+  only `plannedFeatures` entry;
+- keep its source, dependency, unit, property, executable feature, handler,
+  browser, observation, checkpoint, and package task inventories empty;
+- leave the canonical runnable-pack set and every existing task identity,
+  selection, dependency, consumer, evidence leaf, and product behavior unchanged;
+  and
+- add only the minimum deterministic preparation proof needed to validate those
+  invariants without importing VTD-012 production implementation.
+
+The preparation's one-time focused bootstrap may admit the otherwise prohibited
+`undefined -> verification_process` transition only when all of these facts are
+proved before task launch:
+
+1. the exact feature already exists at base `74cf0eac58` and has no registered
+   owner there;
+2. the candidate assigns that exact path once as a planned feature of the exact
+   non-runnable `verification_process` metadata pack;
+3. no other current or historical path changes owner;
+4. no runnable pack, task, consumer, dependency, package input, or terminal
+   obligation is added, removed, or narrowed; and
+5. the ordinary current registry validates and the normal terminal inventory is
+   byte-for-byte conserved apart from the non-runnable metadata definition.
+
+Any second unowned path, executable task, runnable-pack change, product change,
+weakened validation, or attempt to consume candidate `4bb46a9d` as preparation
+blocks the bootstrap. The preparation uses only its direct deterministic owner
+proof, the existing Shell registry/process validation required by that metadata
+change, and package proof when canonical planning selects it. It cannot run an
+all-runnable-pack feature gate.
+
+After an architect returns the exact preparation as `qa-ready`, the specifier
+fast-forwards QA and automatically reissues stable task
+`verification-registry-planner-modularization` from that exact QA commit. Candidate
+`4bb46a9d` remains a stopped patch reference: reconstruct or port its task-owned
+changes onto the prepared QA lineage, do not merge its stale ancestry wholesale.
+The resumed exact preflight must observe `verification_process` as both historical
+and current owner of the feature before any evidence task launches.
+
 ## Verification specification
 
 The executable behavior contract is
-`features/verification-registry-planner-modularization.feature`. The specification
-commit leaves it executable-unregistered so the handoff remains specification-
-only. The coder first registers it under Shell `plannedFeatures`; it moves to the
-proposed `verification_process` owner only when its steps and exact process
-contracts are implemented.
+`features/verification-registry-planner-modularization.feature`. The original
+specification commit left it executable-unregistered. The activated preparation
+registers it as a planned feature of the non-runnable `verification_process`
+metadata owner; the resumed implementation activates that same pack and feature
+only when its steps and exact process contracts are implemented.
 
 During construction, roles use the exact boundary contract being changed and its
 declared prerequisites. After a stage changes routing or compatibility, its

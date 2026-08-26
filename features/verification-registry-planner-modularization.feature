@@ -196,3 +196,35 @@ Feature: Verification registry and planner modularization
       | unrelated files exist in the user's primary worktree         | leave them untouched and continue                 |
       | required product behavior is unspecified                     | stop at that exact semantic boundary              |
       | progress requires weaker evidence or destructive user impact | stop at that exact semantic boundary              |
+
+  # Verification registry and planner modularization 018
+  Scenario: Verification registry and planner modularization 018
+    Given the approved feature is unowned at specification base 74cf0eac58
+    And stopped implementation candidate 4bb46a9d assigns it to verification_process
+    When standing ownership preparation is constructed from the specification base
+    Then a non-runnable verification_process metadata pack owns the feature as planned
+    And its source, dependency, task, executable feature, handler, browser, checkpoint, and package inventories are empty
+    And no implementation change from stopped candidate 4bb46a9d enters the preparation
+
+  # Verification registry and planner modularization 019
+  Scenario Outline: Verification registry and planner modularization 019
+    Given ownership preparation contains <preparation_state>
+    When its one-time focused bootstrap validates current and historical ownership
+    Then bootstrap result is <bootstrap_result>
+
+    Examples:
+      | preparation_state                                               | bootstrap_result                                  |
+      | the exact unowned feature gains one non-runnable planned owner   | admit the exact transition and focused proof      |
+      | another path changes owner                                      | block before task launch                          |
+      | the metadata pack gains an executable task                      | block before task launch                          |
+      | the runnable pack set or terminal inventory changes             | block before task launch                          |
+      | product or VTD-012 implementation code enters the preparation   | block before task launch                          |
+
+  # Verification registry and planner modularization 020
+  Scenario: Verification registry and planner modularization 020
+    Given the ownership preparation has focused review and is QA-integrated
+    When verification-registry-planner-modularization resumes from that exact QA head
+    Then verification_process is the feature's historical and current owner
+    And exact preflight no longer consumes candidate-authored ownership
+    And stopped candidate 4bb46a9d remains a patch reference rather than merged ancestry
+    And no additional user approval or all-runnable-pack feature gate is requested
