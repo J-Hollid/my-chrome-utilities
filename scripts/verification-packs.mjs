@@ -29,6 +29,8 @@ import ts from "typescript";
 import {sharedBoundaryPlanFor,validateSharedBoundaryDeclarations} from "./verification-shared-boundaries.mjs";
 import { isRunnablePack, runnablePackIdsFromRegistry } from
   "./verification-pack-cardinality/contract.mjs";
+import { candidateRepositoryPaths } from
+  "./verification-registry/candidate-inventory.mjs";
 export {sharedBoundaryPlanFor,validateSharedBoundaryDeclarations} from "./verification-shared-boundaries.mjs";
 
 const registryUrl = new URL("../verification/packs.json", import.meta.url);
@@ -196,26 +198,6 @@ async function repositoryPaths(directory, suffix = "") {
   return paths.sort();
 }
 
-async function trackedRepositoryPaths() {
-  const listed = await new Promise((resolve, reject) => {
-    execFile("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
-      { cwd:repositoryRoot, maxBuffer:16 * 1024 * 1024 },
-      (error, stdout, stderr) => error
-        ? reject(new Error(stderr.trim() || error.message))
-        : resolve(stdout.split("\0").filter(Boolean).sort()));
-  });
-  const existing = [];
-  for (const candidate of listed) {
-    try {
-      await access(path.join(repositoryRoot, candidate));
-      existing.push(candidate);
-    } catch (error) {
-      if (error.code !== "ENOENT") throw error;
-    }
-  }
-  return existing;
-}
-
 export async function verificationInventory() {
   const testPaths = await repositoryPaths("test", ".mjs");
   const rootProcessPaths = [
@@ -242,7 +224,7 @@ export async function verificationInventory() {
     features:await repositoryPaths("features", ".feature"),
     handlers:await repositoryPaths("acceptance/src/acceptance/steps", ".clj"),
     checkpoints:await repositoryPaths("acceptance/runtime", ".mjs"),
-    tracked:await trackedRepositoryPaths(),
+    tracked:await candidateRepositoryPaths({ repositoryRoot }),
     process:[
       ...existingRootProcessPaths,
       ...await repositoryPaths(".github"),

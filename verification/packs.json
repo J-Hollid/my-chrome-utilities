@@ -7237,6 +7237,7 @@
       "test/stacked-campsite-control-test.mjs",
       "scripts/verification-pack-cardinality/acceptance.mjs",
       "test/verification-pack-cardinality-contract-test.mjs",
+      "test/verification-candidate-inventory-test.mjs",
       "test/verification-process-contract-test.mjs",
       "test/verification-evidence-production-path-test.mjs",
       "test/headless-chrome-lifecycle-test.mjs",
@@ -7293,6 +7294,9 @@
       "features/side-panel-visual-regression-coverage.feature",
       "features/side-panel-visual-system.feature",
       "features/side-panel-workspace-tabs.feature"
+    ],
+    "plannedFeatures": [
+      "features/verification-registry-planner-modularization.feature"
     ],
     "reliabilityBoundaries": [
       {
