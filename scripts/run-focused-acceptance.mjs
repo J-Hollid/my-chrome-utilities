@@ -124,6 +124,13 @@ const defaultTimeoutMs = 600_000;
 const defaultTerminationGraceMs = 5_000;
 const defaultOutputLimitBytes = 16 * 1024 * 1024;
 const maximumOutputLimitBytes = 64 * 1024 * 1024;
+const registryPlannerPreparationEvidenceTask =
+  "verification-slice-verification-registry-planner-modularization";
+const registryPlannerPreparationTaskKeys = Object.freeze([
+  "unit:test/modular-utility-architecture-test.mjs",
+  "unit:test/verification-pack-cardinality-contract-test.mjs",
+  "unit:test/verification-process-contract-test.mjs",
+]);
 const require = createRequire(import.meta.url);
 
 async function legacyCheckpointAttemptDirectory(root) {
@@ -436,14 +443,18 @@ export function focusedAcceptanceOptions(args) {
     sidePanelSingleCutoverEvidencePackIdsFor(options.prepareEvidence);
   const sidePanelEvidenceFocusedTaskKeys =
     sidePanelSingleCutoverEvidenceFocusedTaskKeysFor(options.prepareEvidence);
+  const registryPlannerPreparationEvidence =
+    options.prepareEvidence === registryPlannerPreparationEvidenceTask;
   if (options.focusedTaskKeys.length && ((!permissionRecoveryEvidence &&
-      !sidePanelSingleCutoverEvidence && options.packIds.length !== 1) ||
+      !sidePanelSingleCutoverEvidence && !registryPlannerPreparationEvidence &&
+      options.packIds.length !== 1) ||
       options.changedPaths.length ||
       options.terminalFull ||
       (options.includeProperties && !permissionRecoveryProductEvidence) ||
       options.withDependencies ||
       options.skipBuild || options.shard || options.prepareEvidence &&
-        !permissionRecoveryEvidence && !sidePanelSingleCutoverEvidence ||
+        !permissionRecoveryEvidence && !sidePanelSingleCutoverEvidence &&
+        !registryPlannerPreparationEvidence ||
       options.resumeReceipt ||
       options.browserTargetIds.length || options.timeoutDiagnosticRetry || options.timeoutRepairIncident ||
       options.timeoutRepairFocused)) {
@@ -453,8 +464,16 @@ export function focusedAcceptanceOptions(args) {
     if (!options.packIds.length || !options.changedSince) {
       throw new Error("Evidence requires exact --pack selector(s) and --changed-since <commit>");
     }
-    if (!permissionRecoveryEvidence && !sidePanelSingleCutoverEvidence && !options.includeProperties) {
+    if (!permissionRecoveryEvidence && !sidePanelSingleCutoverEvidence &&
+        !registryPlannerPreparationEvidence && !options.includeProperties) {
       throw new Error("Evidence requires --property so every registered property leaf is executed");
+    }
+    if (registryPlannerPreparationEvidence &&
+        (JSON.stringify(options.packIds) !== JSON.stringify(["shell"]) ||
+         JSON.stringify([...options.focusedTaskKeys].sort()) !==
+           JSON.stringify([...registryPlannerPreparationTaskKeys].sort()) ||
+         options.includeProperties || !options.runIntentBootstrap)) {
+      throw new Error("Registry-planner ownership preparation evidence requires its exact Shell contracts and one-time bootstrap");
     }
     if (permissionRecoveryEvidence &&
         (JSON.stringify([...options.packIds].sort()) !==
@@ -1991,7 +2010,8 @@ export async function runFocusedAcceptance(
     const store = createTimeoutIncidentStore();
     const [base, incidents] = await Promise.all([
       validateRunIntentBootstrapBase({
-        root:repositoryRoot, baseCommit:changedSince, changedPaths:plan.changeSet.paths,evidenceTask,
+        root:repositoryRoot, baseCommit:changedSince, changedPaths:plan.changeSet.paths,
+        evidenceTask, candidatePacks:packs,
       }),
       store.blocking({ commit:candidateCommit }),
     ]);

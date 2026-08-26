@@ -154,8 +154,18 @@ async function commitFile(root, commit, file) {
 }
 
 export async function validateRunIntentBootstrapBase({
-  root, baseCommit, changedPaths, evidenceTask, readCommitFile = commitFile,
+  root, baseCommit, changedPaths, evidenceTask, candidatePacks,
+  readCommitFile = commitFile,
 }) {
+  if (evidenceTask === "verification-slice-verification-registry-planner-modularization") {
+    const [feature, registry] = await Promise.all([
+      readCommitFile(root, baseCommit, "features/verification-registry-planner-modularization.feature"),
+      readCommitFile(root, baseCommit, "verification/packs.json"),
+    ]);
+    return verificationRegistryPlannerBootstrapEligibility({
+      baseCommit, feature, registry, candidatePacks, changedPaths, evidenceTask,
+    });
+  }
   if(evidenceTask==="verification-ownership-readiness"){
     const[feature,implementation]=await Promise.all([readCommitFile(root,baseCommit,"features/modular-verification-packs.feature"),readCommitFile(root,baseCommit,"scripts/verification-ownership-readiness.mjs")]);
     return ownershipReadinessBootstrapEligibility({baseCommit,feature,implementation,changedPaths,evidenceTask});
@@ -173,6 +183,47 @@ export async function validateRunIntentBootstrapBase({
     throw new Error("Run-intent bootstrap requires a contract-bearing base without implementation and a candidate that adds it");
   }
   return { version:1, baseCommit, contracts:[159, 160], implementationAbsent, implementationAdded };
+}
+
+export function verificationRegistryPlannerBootstrapEligibility({
+  baseCommit, feature, registry, candidatePacks, changedPaths, evidenceTask,
+}) {
+  const task = "verification-slice-verification-registry-planner-modularization";
+  const featurePath = "features/verification-registry-planner-modularization.feature";
+  const expectedPaths = [
+    "test/verification-pack-cardinality-contract-test.mjs",
+    "verification/packs.json",
+  ];
+  let basePacks;
+  try { basePacks = JSON.parse(registry); }
+  catch { throw new Error("Registry-planner ownership bootstrap requires the exact historical registry"); }
+  const contractsPresent = typeof feature === "string" && [18, 19, 20].every((number) =>
+    feature.includes(`Verification registry and planner modularization 0${number}`));
+  const baseOwners = basePacks.filter((pack) =>
+    [...(pack.features ?? []), ...(pack.plannedFeatures ?? [])].includes(featurePath));
+  const candidateOwners = (candidatePacks ?? []).filter((pack) =>
+    [...(pack.features ?? []), ...(pack.plannedFeatures ?? [])].includes(featurePath));
+  const [candidateOwner] = candidateOwners;
+  const expectedOwner = {
+    id:"verification_process", source:[], dependencies:[], unit:[], property:[], features:[],
+    plannedFeatures:[featurePath], handlers:[], browserAdapters:[], browserAdapterModes:[],
+    browserObservations:[], checkpointCommands:[],
+  };
+  const exactPaths = JSON.stringify([...changedPaths].sort()) === JSON.stringify(expectedPaths);
+  const exactOwner = candidateOwners.length === 1 &&
+    JSON.stringify(candidateOwner) === JSON.stringify(expectedOwner);
+  const terminalBefore = planVerification(basePacks, { terminalFull:true });
+  const terminalAfter = planVerification(candidatePacks ?? [], { terminalFull:true });
+  const terminalConserved = JSON.stringify(terminalBefore.selectedPackIds) ===
+      JSON.stringify(terminalAfter.selectedPackIds) &&
+    JSON.stringify(terminalBefore.tasks.map(verificationTaskIdentity)) ===
+      JSON.stringify(terminalAfter.tasks.map(verificationTaskIdentity));
+  if (evidenceTask !== task || !contractsPresent || baseOwners.length || !exactPaths ||
+      !exactOwner || !terminalConserved) {
+    throw new Error("Registry-planner ownership bootstrap requires its exact unowned base, empty planned owner, conserved terminal plan, and two-file preparation");
+  }
+  return { version:1, kind:"verification-registry-planner-ownership", baseCommit,
+    contracts:[18, 19, 20], featurePath, exactPaths, terminalConserved };
 }
 
 export function ownershipReadinessBootstrapEligibility({baseCommit,feature,implementation,changedPaths,evidenceTask}){

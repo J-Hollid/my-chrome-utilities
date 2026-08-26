@@ -161,6 +161,7 @@ import {
   validateConfirmedFlakyAdmissionsReceipt,
   validateRunIntentBootstrapBase,
   validateRunIntentBootstrapReceipt,
+  verificationRegistryPlannerBootstrapEligibility,
   verificationRunIntent,
   verificationRunIntents,
 } from "../scripts/verification-run-intent.mjs";
@@ -2421,6 +2422,17 @@ assert.equal(focusedAcceptanceOptions([
   "--pack", "capture", "--changed-since", "base", "--property",
   "--prepare-evidence", "task-17", "--run-intent-bootstrap",
 ]).runIntentBootstrap, true);
+const registryPlannerPreparationOptions = focusedAcceptanceOptions([
+  "--pack", "shell", "--changed-since", "base",
+  "--prepare-evidence", "verification-slice-verification-registry-planner-modularization",
+  "--run-intent-bootstrap",
+  "--focused-task", "unit:test/modular-utility-architecture-test.mjs",
+  "--focused-task", "unit:test/verification-pack-cardinality-contract-test.mjs",
+  "--focused-task", "unit:test/verification-process-contract-test.mjs",
+]);
+assert.equal(registryPlannerPreparationOptions.runIntentBootstrap, true);
+assert.deepEqual(registryPlannerPreparationOptions.packIds, ["shell"]);
+assert.equal(registryPlannerPreparationOptions.includeProperties, false);
 assert.equal(reviewReadyScopeGuardRequired(true, true), false,
   "the one-time bootstrap uses its exact deferred-task preflight instead of generic all-pack expansion");
 assert.equal(reviewReadyScopeGuardRequired(true, false), true,
@@ -7949,6 +7961,31 @@ const bootstrapBase = await validateRunIntentBootstrapBase({
   readCommitFile:async(_root, _commit, file) => file.endsWith("modular-verification-packs.feature")
     ? "Modular verification packs 159\nModular verification packs 160\n" : null,
 });
+const registryPlannerFeature = [18, 19, 20]
+  .map((number) => `Verification registry and planner modularization 0${number}`).join("\n");
+const registryPlannerBasePacks = packs.filter(({ id }) => id !== "verification_process");
+const registryPlannerBootstrap = verificationRegistryPlannerBootstrapEligibility({
+  baseCommit:"registry-planner-base", feature:registryPlannerFeature,
+  registry:JSON.stringify(registryPlannerBasePacks), candidatePacks:packs,
+  changedPaths:[
+    "test/verification-pack-cardinality-contract-test.mjs",
+    "verification/packs.json",
+  ],
+  evidenceTask:"verification-slice-verification-registry-planner-modularization",
+});
+assert.equal(registryPlannerBootstrap.kind, "verification-registry-planner-ownership");
+assert.equal(registryPlannerBootstrap.terminalConserved, true);
+assert.throws(() => verificationRegistryPlannerBootstrapEligibility({
+  baseCommit:"registry-planner-base", feature:registryPlannerFeature,
+  registry:JSON.stringify(registryPlannerBasePacks), candidatePacks:packs,
+  changedPaths:[
+    "src/data-layer-installed/runtime.ts",
+    "test/verification-pack-cardinality-contract-test.mjs",
+    "verification/packs.json",
+  ],
+  evidenceTask:"verification-slice-verification-registry-planner-modularization",
+}), /two-file preparation/u,
+"the ownership bootstrap rejects product or later-task implementation paths");
 const bootstrapPlan = planVerification(packs, { packIds:["shell"] });
 const bootstrapTask = verificationTaskIdentity(bootstrapPlan.tasks.find(({ stage }) => stage === "unit"));
 const bootstrapIncident = {
