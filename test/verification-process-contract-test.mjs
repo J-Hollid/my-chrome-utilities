@@ -7969,6 +7969,11 @@ const registryPlannerBootstrap = verificationRegistryPlannerBootstrapEligibility
   registry:JSON.stringify(registryPlannerBasePacks), candidatePacks:packs,
   changedPaths:[
     "scripts/run-focused-acceptance.mjs",
+    "scripts/settled-final-verification.mjs",
+    "scripts/verification-evidence.mjs",
+    "scripts/verification-reliability-persistence.mjs",
+    "scripts/verification-reliability-repair.mjs",
+    "scripts/verification-reliability-store.mjs",
     "scripts/verification-run-intent.mjs",
     "test/verification-pack-cardinality-contract-test.mjs",
     "test/verification-process-contract-test.mjs",
@@ -7983,6 +7988,10 @@ assert.throws(() => verificationRegistryPlannerBootstrapEligibility({
   registry:JSON.stringify(registryPlannerBasePacks), candidatePacks:packs,
   changedPaths:[
     "scripts/run-focused-acceptance.mjs",
+    "scripts/settled-final-verification.mjs",
+    "scripts/verification-reliability-persistence.mjs",
+    "scripts/verification-reliability-repair.mjs",
+    "scripts/verification-reliability-store.mjs",
     "scripts/verification-run-intent.mjs",
     "src/data-layer-installed/runtime.ts",
     "test/verification-pack-cardinality-contract-test.mjs",
@@ -8023,6 +8032,33 @@ const confirmedFlakyBootstrapCoverage = await runIntentBootstrapCoverage({
 });
 assert.equal(confirmedFlakyBootstrapCoverage[0].admission.kind, "terminal-deferred",
   "the bootstrap preserves a newer confirmed-flaky terminal deferral without inventing a repair");
+const unselectedBootstrapTask = verificationTaskIdentity(bootstrapPlan.tasks.find(({ key }) =>
+  key !== bootstrapTask.key && key.startsWith("unit:")));
+const rawBootstrapIncident = {
+  id:"bootstrap-unselected-review-failure", state:"unresolved",
+  failureDigest:"d".repeat(64),
+  failure:{ task:unselectedBootstrapTask, lineage:{
+    evidenceTask:"verification-slice-verification-registry-planner-modularization" } },
+};
+const rawBootstrapCoverage = await runIntentBootstrapCoverage({
+  incidents:[rawBootstrapIncident], plan:{ tasks:[bootstrapTask] }, packs,
+  candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+  evidenceTask:"verification-slice-verification-registry-planner-modularization",
+});
+assert.deepEqual(rawBootstrapCoverage[0], {
+  incidentId:rawBootstrapIncident.id, failureDigest:rawBootstrapIncident.failureDigest,
+  admission:{ kind:"bootstrap-terminal-obligation",
+    failureDigest:rawBootstrapIncident.failureDigest },
+  failureTaskKey:unselectedBootstrapTask.key,
+  failureTaskDigest:verificationTaskDigest(unselectedBootstrapTask),
+  selectedTaskKey:null, selectedTaskDigest:null, terminalObligation:true,
+}, "the exact preparation retains a rejected broad-run failure as a terminal obligation");
+await assert.rejects(() => runIntentBootstrapCoverage({
+  incidents:[rawBootstrapIncident], plan:{ tasks:[bootstrapTask, unselectedBootstrapTask] }, packs,
+  candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+  evidenceTask:"verification-slice-verification-registry-planner-modularization",
+}), /ineligible incident/u,
+"a failure in the approved focused plan cannot be deferred as an unselected obligation");
 await assert.rejects(() => runIntentBootstrapCoverage({
   incidents:[{ ...bootstrapIncident, id:"ineligible", repair:null }],
   plan:bootstrapPlan, packs, candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },

@@ -81,7 +81,8 @@ export function terminalConfirmedFlakyIncident(incident) {
 
 export function terminalCheckpointCandidate(incident) {
   let candidate = timeoutRepairCandidate(incident) ??
-    (incident.terminalVerificationDeferred?.basis === "confirmed-flaky"
+    (["confirmed-flaky", "bootstrap-terminal-obligation"]
+      .includes(incident.terminalVerificationDeferred?.basis)
       ? structuredClone(incident.terminalVerificationDeferred.candidate)
       : terminalConfirmedFlakyIncident(incident)
         ? structuredClone(incident.failure.lineage) : undefined);

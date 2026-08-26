@@ -192,6 +192,11 @@ export function verificationRegistryPlannerBootstrapEligibility({
   const featurePath = "features/verification-registry-planner-modularization.feature";
   const expectedPaths = [
     "scripts/run-focused-acceptance.mjs",
+    "scripts/settled-final-verification.mjs",
+    "scripts/verification-evidence.mjs",
+    "scripts/verification-reliability-persistence.mjs",
+    "scripts/verification-reliability-repair.mjs",
+    "scripts/verification-reliability-store.mjs",
     "scripts/verification-run-intent.mjs",
     "test/verification-pack-cardinality-contract-test.mjs",
     "test/verification-process-contract-test.mjs",
@@ -745,6 +750,13 @@ export async function runIntentBootstrapCoverage({
   resolveSuccession = resolveIncidentTaskSuccession,
   reviewIncidentProof = bootstrapReviewIncidentProof,
 }) {
+  const selected = new Map(plan.tasks.map((task) => {
+    const identity = verificationTaskIdentity(task);
+    return [verificationTaskDigest(identity), identity];
+  }));
+  const selectedByKey = new Map([...selected.values()].map((identity) => [identity.key, identity]));
+  const registryPlannerPreparation =
+    evidenceTask === "verification-slice-verification-registry-planner-modularization";
   const admissions = new Map();
   for (const incident of incidents) {
     if (exactCandidateEligibleRepair(incident, candidate)) {
@@ -756,6 +768,16 @@ export async function runIntentBootstrapCoverage({
     }
     if (eligibleTerminalDeferred(incident)) {
       admissions.set(incident.id, { kind:"terminal-deferred" });
+      continue;
+    }
+    const unselectedBootstrapFailure = registryPlannerPreparation &&
+      incident?.state === "unresolved" && incident?.repair === undefined &&
+      incident?.retry === undefined && incident?.terminalVerificationDeferred === undefined &&
+      incident?.failure?.lineage?.evidenceTask === evidenceTask &&
+      !selectedByKey.has(incident?.failure?.task?.key);
+    if (unselectedBootstrapFailure) {
+      admissions.set(incident.id, { kind:"bootstrap-terminal-obligation",
+        failureDigest:incident.failureDigest });
     }
   }
   const ineligible = incidents.filter((incident) => !admissions.has(incident.id));
@@ -763,17 +785,18 @@ export async function runIntentBootstrapCoverage({
     throw new Error(`Run-intent bootstrap cannot admit ineligible incident(s): ${
       ineligible.map(({ id }) => id).sort().join(", ")}`);
   }
-  const selected = new Map(plan.tasks.map((task) => {
-    const identity = verificationTaskIdentity(task);
-    return [verificationTaskDigest(identity), identity];
-  }));
-  const selectedByKey = new Map([...selected.values()].map((identity) => [identity.key, identity]));
   const canonical = planVerification(packs, { terminalFull:true }).tasks
     .map(verificationTaskIdentity);
   const coverage = [];
   for (const incident of incidents) {
     const admission = admissions.get(incident.id);
     const failureDigest = verificationTaskDigest(incident.failure.task);
+    if (admission.kind === "bootstrap-terminal-obligation") {
+      coverage.push({ incidentId:incident.id, failureDigest:incident.failureDigest, admission,
+        failureTaskKey:incident.failure.task.key, failureTaskDigest:failureDigest,
+        selectedTaskKey:null, selectedTaskDigest:null, terminalObligation:true });
+      continue;
+    }
     const promotionRegressionKey = deferredPromotionRegressionKey(incident, admission);
     let selectedIdentity = admission.kind === "exact-candidate-causal-repair"
       ? selectedByKey.get(incident.repair.regression.key)
@@ -812,7 +835,15 @@ export function validateRunIntentBootstrapReceipt(receipt, bootstrap) {
     throw new Error("Run-intent bootstrap receipt binding is missing or malformed");
   }
   for (const row of bootstrap.coverage) {
-    if(row.terminalObligation===true&&row.selectedTaskKey===null&&row.selectedTaskDigest===null)continue;
+    if(row.terminalObligation===true&&row.selectedTaskKey===null&&row.selectedTaskDigest===null){
+      if (row.admission?.kind === "bootstrap-terminal-obligation" &&
+          (!digestPattern.test(row.admission.failureDigest ?? "") ||
+           row.failureDigest !== row.admission.failureDigest ||
+           !digestPattern.test(row.failureTaskDigest ?? ""))) {
+        throw new Error(`Run-intent bootstrap terminal obligation ${row.incidentId} is malformed`);
+      }
+      continue;
+    }
     const result = receipt.tasks?.[row.selectedTaskKey];
     if (result?.status !== "passed" || result.provenance !== "fresh" ||
         verificationTaskDigest(result.identity) !== row.selectedTaskDigest) {

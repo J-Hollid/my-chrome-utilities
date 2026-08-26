@@ -1288,7 +1288,7 @@ export async function createPendingVerificationEvidence({
   if (runIntentBootstrap) {
     await validateRunIntentBootstrapBase({
       root:repositoryRoot, baseCommit, changedPaths:actualChangeSet.paths,
-      evidenceTask:task,
+      evidenceTask:task, candidatePacks,
     });
     const incidents = await createTimeoutIncidentStore({ root:repositoryRoot })
       .blocking({ commit });
@@ -1460,15 +1460,15 @@ export async function recordPendingVerificationEvidence(
         throw new Error("Pending evidence does not match the current commit and tree");
       }
       if (pending.runIntentBootstrap) {
-        await validateRunIntentBootstrapBase({
-          root:repositoryRoot, baseCommit:pending.baseCommit,
-          changedPaths:pending.changeSet.paths,
-          evidenceTask:pending.task,
-        });
         const [incidents, candidatePacks] = await Promise.all([
           createTimeoutIncidentStore({ root:repositoryRoot }).blocking({ commit }),
           verificationPacksAtCommit(commit, { repositoryRoot }),
         ]);
+        await validateRunIntentBootstrapBase({
+          root:repositoryRoot, baseCommit:pending.baseCommit,
+          changedPaths:pending.changeSet.paths,
+          evidenceTask:pending.task, candidatePacks,
+        });
         const coverage = await runIntentBootstrapCoverage({
           incidents, plan:pending.plan, packs:candidatePacks,
           candidate:{ commit, tree }, root:repositoryRoot, evidenceTask:pending.task,
