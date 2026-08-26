@@ -282,7 +282,8 @@ export function canonicalRunIntentBootstrapPlan(packs, {
 }
 
 function eligibleTerminalDeferred(incident) {
-  return incident?.state === "unresolved" && incident?.repair?.status === "eligible" &&
+  return incident?.state === "unresolved" &&
+    (incident?.repair?.status === "eligible" || confirmedFlakyClassification(incident)) &&
     incident?.terminalVerificationDeferred?.status === "terminal-verification-deferred";
 }
 
@@ -294,17 +295,22 @@ export function eligibleRepairAdmissionCandidates(incidents) {
   });
 }
 
-function confirmedFlakyRetry(incident) {
+function confirmedFlakyClassification(incident) {
   const claimed = incident?.transitions?.filter(({ type }) => type === "diagnostic-retry-claimed") ?? [];
   const classified = incident?.transitions?.filter(({ type }) => type === "diagnostic-retry-classified") ?? [];
-  return incident?.state === "unresolved" && incident?.terminalVerificationDeferred === undefined &&
-    incident?.repair === undefined && incident?.retry?.status === "classified" &&
+  return incident?.state === "unresolved" && incident?.repair === undefined &&
+    incident?.retry?.status === "classified" &&
     incident.retry.outcome === "passed" && incident.retry.classification === "confirmed-flaky" &&
     incident.retry.identity === incident?.failure?.retryIdentity &&
     (incident?.failure?.registryDigest === undefined ||
       digestPattern.test(incident.failure.registryDigest)) &&
     digestPattern.test(incident.retry.receiptSha256 ?? "") && claimed.length === 1 &&
     classified.length === 1 && classified[0].classification === "confirmed-flaky";
+}
+
+function confirmedFlakyRetry(incident) {
+  return incident?.terminalVerificationDeferred === undefined &&
+    confirmedFlakyClassification(incident);
 }
 
 async function historicalRegistryProof(root, incident) {

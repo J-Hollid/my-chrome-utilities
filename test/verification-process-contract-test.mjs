@@ -8004,6 +8004,25 @@ const bootstrapCoverage = await runIntentBootstrapCoverage({
   candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
 });
 assert.equal(bootstrapCoverage[0].selectedTaskKey, bootstrapTask.key);
+const confirmedFlakyBootstrapIncident = {
+  ...structuredClone(bootstrapIncident),
+  id:"bootstrap-confirmed-flaky-deferred",
+  repair:undefined,
+  failure:{ ...structuredClone(bootstrapIncident.failure),
+    retryIdentity:"a".repeat(64), registryDigest:"b".repeat(64) },
+  transitions:[
+    { type:"diagnostic-retry-claimed" },
+    { type:"diagnostic-retry-classified", classification:"confirmed-flaky" },
+  ],
+  retry:{ status:"classified", identity:"a".repeat(64), outcome:"passed",
+    classification:"confirmed-flaky", receiptSha256:"c".repeat(64) },
+};
+const confirmedFlakyBootstrapCoverage = await runIntentBootstrapCoverage({
+  incidents:[confirmedFlakyBootstrapIncident], plan:bootstrapPlan, packs,
+  candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
+});
+assert.equal(confirmedFlakyBootstrapCoverage[0].admission.kind, "terminal-deferred",
+  "the bootstrap preserves a newer confirmed-flaky terminal deferral without inventing a repair");
 await assert.rejects(() => runIntentBootstrapCoverage({
   incidents:[{ ...bootstrapIncident, id:"ineligible", repair:null }],
   plan:bootstrapPlan, packs, candidate:{ commit:"bootstrap-candidate", tree:"bootstrap-tree" },
