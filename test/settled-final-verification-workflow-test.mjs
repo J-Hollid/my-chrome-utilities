@@ -752,6 +752,19 @@ try {
     { version:1, records:[] }, transactionOptions);
   assert.equal(completed.journal.status, "committed");
   assert.equal(deferrals.length, 3, "resume revalidates the idempotent incident disposition");
+  const { eligibleRepairTransaction:_transaction,
+    eligibleRepairAdmissions:_admissions,
+    eligibleRepairAdmissionsDigest:_admissionsDigest,
+    ...bootstrapWithoutTransaction } = completed.record;
+  bootstrapWithoutTransaction.runIntentBootstrap = { version:1, coverage:[{
+    incidentId:"bootstrap-obligation", failureDigest:"b".repeat(64),
+    admission:{ kind:"bootstrap-terminal-obligation", failureDigest:"b".repeat(64) },
+    terminalObligation:true,
+  }] };
+  await assert.rejects(() => verifyCommittedReviewTransaction(
+    bootstrapWithoutTransaction, admissionRepository, { store }),
+  /requires a committed transaction/i,
+  "bootstrap terminal obligations cannot bypass the atomic review transaction binding");
   assert.equal((await verifyCommittedReviewTransaction(completed.record, admissionRepository,
     { store })).eligibleRepairTransaction.status, "committed");
   const replayed = await recordEligibleRepairReviewTransaction(admitted,

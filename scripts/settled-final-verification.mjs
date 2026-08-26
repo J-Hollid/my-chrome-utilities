@@ -206,6 +206,13 @@ export async function verifyCommittedReviewTransaction(record, root, {
   store = createTimeoutIncidentStore({ root }),
 } = {}) {
   const transaction = record.eligibleRepairTransaction;
+  const requiresTransaction = Boolean(
+    record.eligibleRepairAdmissions?.entries?.length ||
+    record.confirmedFlakyAdmissions?.entries?.length ||
+    bootstrapTerminalObligationEntries(record).length);
+  if (!transaction && requiresTransaction) {
+    throw new Error("Reliability admission review requires a committed transaction");
+  }
   if (!transaction) return record;
   const target = path.join(await eligibleRepairReviewTransactionDirectory(root),
     `${transaction.id}.json`);
