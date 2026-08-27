@@ -21,7 +21,7 @@ export function createWorkspaceTabsController({ storage, tabList, root, pageLife
             }
         }
     }
-    function show(tab, focus = false) {
+    function showWorkspace(tab, focus = false) {
         activeTab = tab;
         storage.setItem(WORKSPACE_TAB_STORAGE_KEY, tab);
         render(focus);
@@ -33,7 +33,7 @@ export function createWorkspaceTabsController({ storage, tabList, root, pageLife
             : null;
         const tab = button?.id.replace("workspace-tab-", "") ?? null;
         if (isWorkspaceTabId(tab)) {
-            show(tab, true);
+            showWorkspace(tab, true);
         }
     };
     const onTabKeydown = (event) => {
@@ -41,7 +41,7 @@ export function createWorkspaceTabsController({ storage, tabList, root, pageLife
         const next = workspaceTabForNavigationKey(activeTab, keyboardEvent.key);
         if (next) {
             keyboardEvent.preventDefault();
-            show(next, true);
+            showWorkspace(next, true);
         }
     };
     const onPageHide = () => dispose();
@@ -71,7 +71,7 @@ export function createWorkspaceTabsController({ storage, tabList, root, pageLife
         activeTab: () => activeTab,
         mount,
         render,
-        show,
+        show: showWorkspace,
         dispose,
     };
 }
