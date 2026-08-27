@@ -793,7 +793,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     const adapter = compactCanonicalEditor; compactCanonicalContext.hidden = !adapter; compactCanonicalContext.replaceChildren();
     if (!adapter || !schemaOwnerDocument) return;
     const identity = schemaOwnerDocument.createElement("p"), feedback = schemaOwnerDocument.createElement("output");
-    identity.textContent = `${adapter.label} · revision ${adapter.load().revision}`;
+    identity.textContent = `${adapter.label} · revision ${adapter.load().revision}`; feedback.setAttribute("aria-label", "Compact canonical command result");
     feedback.textContent = compactCanonicalCommandFeedback ?? "Canonical editor ready.";
     compactCanonicalContext.append(identity, feedback);
     const own = (control:HTMLElement, action:EventListener, type="click"):void => { compactCanonicalContextDisposers.push(() => control.removeEventListener(type, action)); };
@@ -1402,8 +1402,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
         ? `Unpublished new schema draft · ${pendingCount} pending changes`
         : schema?.workingDraft ? `Working draft based on revision ${schema.version} · ${pendingCount} pending changes`
           : schema ? `Current revision ${schema.version} · no working draft` : "Unsaved new schema";
-      schemaEditorStatus.textContent = compactCanonicalEditor && savedCanonicalDocument
-        ? `${lifecycleStatus} · ${compactCanonicalEditor.label} · Schema revision ${savedCanonicalDocument.revision}`
+      const compactCanonicalRevision=compactCanonicalEditor?.load().revision;
+      schemaEditorStatus.textContent = compactCanonicalEditor && compactCanonicalRevision!==undefined
+        ? `${lifecycleStatus} · ${compactCanonicalEditor.label} · Schema revision ${compactCanonicalRevision}`
         : lifecycleStatus;
     }
     if (schemaEditorDescription) schemaEditorDescription.value = draft?.documentation?.description

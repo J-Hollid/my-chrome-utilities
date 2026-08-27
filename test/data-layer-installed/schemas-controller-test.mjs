@@ -80,7 +80,7 @@ function findByText(root, text) {
 }
 fakeDocument = { createElement:() => Object.assign(element(), { isConnected:false }), body:element() };
 globalThis.document = fakeDocument;
-const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "#schema-editor-name",
+const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "#schema-editor-name", "#schema-editor-status",
   "#schema-search", "#schema-category-filter", "#schema-count", "#schema-list", "#schema-empty-state", "#schema-result",
   "#create-schema", "#recheck-schema-validation", "#schema-validation-issues", "#schema-validation-record-list", "#guided-validation-flow", "#live-event-inspector",
   "#workspace-panel-data-layer", "#data-layer-panel-schemas",
@@ -833,6 +833,8 @@ uiController.openCanonical({ key:"test:canonical-context", label:"Context contra
   onUndo:() => { undoCount += 1; return "No page-scoped canonical command is available to Undo."; },
   onRedo:() => { redoCount += 1; }, actions:[{ label:"Inspect", run:() => { contextActionCount += 1; } }],
   renderContext:(host) => { renderedContextCount += 1; host.dataset.customContext = "rendered"; } });
+assert.match(elements.get("#schema-editor-status").textContent, /Context contract · Schema revision 0/u,
+  "an installed contributor presents its canonical revision instead of the unrelated Saved Schema draft status alone");
 let canonicalControls = elements.get("#compact-canonical-context").children;
 canonicalControls.find(({ textContent }) => textContent === "Undo").click(); canonicalControls.find(({ textContent }) => textContent === "Redo").click();
 canonicalControls.find(({ textContent }) => textContent === "Inspect").click(); canonicalControls.find(({ textContent }) => textContent === "Table").click();
@@ -843,6 +845,9 @@ const emptyHistoryFeedbackPresented = elements.get("#compact-canonical-context")
   textContent === "No page-scoped canonical command is available to Undo.");
 assert.equal(emptyHistoryFeedbackPresented, true,
 "the installed compact context presents an empty durable-history outcome instead of discarding it");
+assert.equal(elements.get("#compact-canonical-context").children.some((child) =>
+  child["aria-label"] === "Compact canonical command result"), true,
+"the installed compact context exposes command feedback through its accessible result boundary");
 assert.ok(renderedContextCount > 0); assert.equal(elements.get("#compact-canonical-context").dataset.customContext, "rendered");
 let migrationResolution, migrationCancelled = 0, migrationConfirmed = 0;
 const migrationAdapter = { key:"test:canonical-migration", label:"Migration contract", load:() => customCanonical,
