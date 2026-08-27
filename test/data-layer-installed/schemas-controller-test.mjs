@@ -147,7 +147,7 @@ const uiValues = new Map([
 let promotionDialogInput, persistenceListener, promotionRuleSequence = 0;
 const schemaDownloads = [];
 const relationshipActions = [];
-let deferHydration = false, releaseHydration;
+let deferHydration = false, releaseHydration, projectContributorsAvailable = false;
 let closeSpecification;
 const restoredGuidedCaptures = [];
 let canonicalSettlementMode = "resolve", releaseCanonicalSettlement;
@@ -178,8 +178,9 @@ const uiController = createSchemasInstalledController({
     kind:"branch", role:"Structural ancestor", relationshipPath:"Saved schemas", children:[...currentSchemas.map((candidate) => ({
       key:`saved:${candidate.id}`, name:candidate.name, kind:"contributor", role:"Saved schema", category:"Saved schemas",
       targetKey:`saved:${candidate.id}`, relationshipPath:`Saved schemas / ${candidate.name}`, children:[],
-    })), { key:"page:checkout", name:"Checkout", kind:"contributor", role:"Page", category:"Pages",
-      targetKey:"pages:checkout", relationshipPath:"Pages / Checkout", children:[] }] }] }),
+    }))] }, ...(projectContributorsAvailable ? [{ key:"project:one", name:"Project One", kind:"branch", role:"Structural ancestor",
+      relationshipPath:"Project One", children:[{ key:"page:checkout", name:"Checkout", kind:"contributor", role:"Page", category:"Pages",
+        targetKey:"pages:checkout", relationshipPath:"Pages / Checkout", children:[] }] }] : [])] }),
   openProjectLibrary:(create) => relationshipActions.push(`project:${create}`),
   openContributor:(key) => relationshipActions.push(`open:${key}`),
   openContributorInStudio:(key) => relationshipActions.push(`studio:${key}`),
@@ -192,7 +193,8 @@ const uiController = createSchemasInstalledController({
   restoreGuidedCapture:(eventId, propertyPath) => restoredGuidedCaptures.push([eventId, propertyPath]),
   mountLayeredProfileEditor:() => { layeredProfileMounts += 1; return { dispose:() => { layeredProfileDisposals += 1; } }; },
   activeProjectId:()=>"project:one", ensureProjectSchemaContributors:()=>deferHydration
-    ? new Promise((resolve)=>{ releaseHydration=resolve; }) : Promise.resolve({ name:"Project One" }),
+    ? new Promise((resolve)=>{ releaseHydration=(value)=>{ projectContributorsAvailable=true;resolve(value); }; })
+    : (projectContributorsAvailable=true,Promise.resolve({ name:"Project One" })),
   settleCanonical:() => canonicalSettlementMode === "reject" ? Promise.reject(new Error("canonical conflict"))
     : canonicalSettlementMode === "defer" ? new Promise((resolve) => { releaseCanonicalSettlement = resolve; }) : Promise.resolve(),
   revalidateCurrentLive:(currentSchemas) => { liveRevalidations += 1; return currentSchemas.length; },
@@ -926,7 +928,31 @@ const retainedSchemaListeners = [...elements].filter(([, item]) => item.listener
 assert.deepEqual(retainedSchemaListeners, [], "Schemas removes every editor and revision listener it owns");
 
 {
-  const { createDurableSchemaPersistenceCoordination } = await import("../../dist/data-layer-installed/runtime.js");
+  const { createDurableSchemaPersistenceCoordination, createInstalledSchemaContributorCoordination } = await import("../../dist/data-layer-installed/runtime.js");
+  const compatibilityProject = { project:{ id:"project:one", name:"Compatibility" }, profiles:[] };
+  const durableProject = { project:{ id:"project:one", name:"Durable" }, profiles:[{ id:"profile:shipping" }] };
+  let capturedProject;
+  const contributors = createInstalledSchemaContributorCoordination({
+    activeProjectId:()=>"project:one",
+    compatibilityProject:()=>compatibilityProject,
+    ensureProject:async()=>{},
+    loadProject:async()=>({ state:durableProject, revision:7 }),
+    captureProject:(state,revision)=>{ capturedProject=[state,revision]; },
+  });
+  assert.equal(contributors.currentProject(), compatibilityProject,
+    "the installed contributor projection retains its bounded compatibility fallback before durable hydration");
+  assert.deepEqual(await contributors.ensureProjectContributors("project:one"), { name:"Durable" });
+  assert.deepEqual(capturedProject, [durableProject,7],
+    "durable contributor hydration refreshes the installed project-library projection");
+  assert.equal(contributors.currentProject(), durableProject,
+    "relationship-tree reads use the freshly hydrated durable project instead of the stale compatibility snapshot");
+  const refreshedProject = { ...durableProject, profiles:[...durableProject.profiles,{ id:"profile:checkout" }] };
+  contributors.captureProject(refreshedProject);
+  assert.equal(contributors.currentProject(), refreshedProject,
+    "durable subscription updates replace the active contributor projection");
+  contributors.captureProject({ project:{ id:"project:other", name:"Other" }, profiles:[] });
+  assert.equal(contributors.currentProject(), refreshedProject,
+    "a notification for another project cannot replace the active contributor projection");
   let savedListener = () => {};
   let recovery;
   let retried = 0;
