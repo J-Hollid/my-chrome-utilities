@@ -460,6 +460,7 @@ const helperPlanningRows = [
       "test/support/side-panel-browser-target-contract.mjs",
     ],
     expected:["capture", "defects", "event-library", "schemas", "shell"],
+    planned:["capture", "defects", "event-library", "schemas", "shell", "verification_process"],
     renameDestination:"test/support/side-panel-capture-targets.mjs",
   },
   { helperClass:"the Capture target module", paths:["test/support/side-panel-capture-targets.mjs"],
@@ -527,7 +528,7 @@ for (const helperClass of ["the Capture target module", "the Event Library targe
 const helperPlanning = Object.fromEntries(helperPlanningRows.map((row) => {
   const declarations = assertExactHelperScope(packs, row);
   const current = planVerification(packs, { changedPaths:row.paths }).packIds;
-  assert.deepEqual(current, runnablePackIds.filter((id) => row.expected.includes(id)),
+  assert.deepEqual(current, runnablePackIds.filter((id) => (row.planned ?? row.expected).includes(id)),
     `${row.helperClass} current planning must select its exact consumers`);
   const deletion = syntheticChangeSet(row.paths.map((helperPath) => ({ status:"D", path:helperPath })));
   const deleted = planVerification(packs, { changedPaths:deletion.paths,
@@ -537,8 +538,9 @@ const helperPlanning = Object.fromEntries(helperPlanningRows.map((row) => {
     newPath:row.renameDestination }]);
   const renamed = planVerification(packs, { changedPaths:rename.paths,
     changeSet:rename, basePacks:packs }).packIds;
+  const renamedSource = planVerification(packs, { changedPaths:[row.paths[0]] }).packIds;
   const destination = planVerification(packs, { changedPaths:[row.renameDestination] }).packIds;
-  const renameUnion = orderedUnion(current, destination);
+  const renameUnion = orderedUnion(renamedSource, destination);
   assert.deepEqual(renamed, renameUnion,
     `${row.helperClass} rename must union current and historical consumers`);
   const failClosedSelections = [

@@ -10,6 +10,14 @@
 (defn enough-verification-packs? [registry]
   (>= (count registry) 6))
 
+(def ^:private runnable-pack-fields
+  [:unit :property :features :browserAdapters :browserObservations :checkpointCommands])
+
+(defn runnable-pack-count [registry]
+  (count (filter (fn [pack]
+                   (some #(seq (get pack %)) runnable-pack-fields))
+                 registry)))
+
 (defn- classified-browser-adapters [registry]
   (into {}
         (map (juxt :path :mode))
@@ -25,7 +33,9 @@
                root ["src/utility-registry.ts" "src/side-panel.ts"
                      "src/data-layer-installed/runtime.ts"
                      "acceptance/src/acceptance/generator.clj" "scripts/verification-packs.mjs"
-                     "scripts/report-verification-throughput.mjs" "scripts/run-focused-acceptance.mjs"
+                     "scripts/verification-planner/tasks/planner.mjs"
+                     "scripts/verification-performance/report-throughput.mjs"
+                     "scripts/verification-execution/runner.mjs"
                      "scripts/verification-timing-ledger.mjs" "verification/timing-receipt-index.json"
                      "scripts/run-browser-observation.mjs" "test/support/headless-chrome.mjs"
                      "test/side-panel-component-layout-runtime-test.mjs"
@@ -74,11 +84,11 @@
                                             "acceptance.steps.all :as steps")))
                    "Production shell or generated acceptance wiring is not modular." {})
   (doseq [[path signals message]
-          [["scripts/verification-packs.mjs"
+          [["scripts/verification-planner/tasks/planner.mjs"
             ["runtimeInputs" "verificationHelpers" "browserTargetIds" "sessionBatch"
              "browserAdapterPerformance" "impactBoundaries"]
             "Verification planning lacks precise consumer or browser-target boundaries."]
-           ["scripts/report-verification-throughput.mjs"
+           ["scripts/verification-performance/report-throughput.mjs"
             ["representative-change" "rejectedByReason" "checkVerificationPerformanceBudgets"
              "refreshVerificationPerformanceBudgets" "browserTargets"
              "defaultBrowserTargetMilliseconds" "boundedStageMilliseconds"
@@ -95,7 +105,7 @@
             ["legacyExecutionLoads" "3e8f2a30516f3a801de4f0631c935bb7f0bd96d9d6026b2d5d4a1c2e1e72dc58"
              "6ec4fe272461086cb9e2901f8ab34cd40d1b384ee895277cbed4342f47ebe357"]
             "Legacy timing load classifications are not bound to immutable receipt digests."]
-           ["scripts/run-focused-acceptance.mjs"
+           ["scripts/verification-execution/runner.mjs"
             ["checkpointPreflight" "resumeVerificationPlan"
              "SWARMFORGE_VERIFICATION_OUTPUT_DIRECTORY" "provenance:\"fresh\""
              "VERIFICATION_EXECUTION_LOAD"]

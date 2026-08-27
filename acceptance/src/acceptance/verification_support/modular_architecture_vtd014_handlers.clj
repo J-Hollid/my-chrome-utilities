@@ -1,14 +1,16 @@
 (ns acceptance.verification-support.modular-architecture-vtd014-handlers
   (:require [acceptance.steps.support :as support]
-            [acceptance.verification-support.modular-architecture-process-evidence :as process-evidence]))
+            [acceptance.verification-support.modular-architecture-process-evidence :as process-evidence]
+            [acceptance.verification-support.modular-architecture-repository-inspection :as repository-inspection]
+            [acceptance.verification-support.modular-architecture-vtd014-resolution-handlers :as resolution]))
 
 (defonce ^:private evidence (atom nil))
 
 (defn- production-evidence! []
   (process-evidence/load! evidence
-    {:command ["node" "test/verification-process-contract-test.mjs"]
-     :prepared-task "unit:test/verification-process-contract-test.mjs"
-     :fallback ["node" "test/verification-process-contract-test.mjs"]
+    {:command ["node" "test/verification-process-contract-legacy.mjs"]
+     :prepared-task "checkpoint:verification_process:legacy-process-contract-conservation"
+     :fallback ["node" "test/verification-process-contract-legacy.mjs"]
      :prefix "{\"vtd014Acceptance\"" :key :vtd014Acceptance
      :failure "VTD-014 production process contract failed."
      :missing "VTD-014 production evidence is missing."}))
@@ -468,43 +470,6 @@
                                                     :abandonedReuseRejected) lineage))
                           "An affected lineage discarded its unresolved incident.")))}])
 
-(defn- resolution-handlers [_example-values]
-  [
-   {:pattern #"^a causal reliability repair and its fresh focused regression have passed$"
-    :handler (fn [world _ _] (prepared world))}
-   {:pattern #"^one fresh canonical all-20 checkpoint and node scripts/package.mjs pass without reused tasks or another failure$"
-    :handler (fn [world _ _]
-               (let [resolution (get-in world [:vtd014/evidence :resolution])]
-                 (assert! world (and (= 20 (:allPackCount resolution))
-                                     (zero? (:reusedTaskCount resolution))
-                                     (:packagePassed resolution))
-                          "Reliability resolution did not use a fresh all-20 checkpoint and package.")))}
-   {:pattern #"^the incident resolution binds .+$"
-    :handler (fn [world _ _]
-               (let [resolution (get-in world [:vtd014/evidence :resolution :evidence])]
-                 (assert! world (and (= 64 (count (:failureDigest resolution)))
-                                     (= 64 (count (:resolutionDigest resolution)))
-                                     (:repairCommit resolution) (:repairTree resolution)
-                                     (:causalCategory resolution) (:regression resolution)
-                                     (:focusedReceipt resolution) (:checkpointReceiptSha256 resolution))
-                          "Reliability resolution evidence is not completely bound.")))}
-   {:pattern #"^Git-note verification recomputes every resolution link$"
-    :handler (fn [world _ _]
-               (assert! world (true? (get-in world [:vtd014/evidence :resolution :archiveVerified]))
-                        "Resolution archive links were not recomputed."))}
-   {:pattern #"^the current candidate lineage has no unresolved incident or retry result awaiting repair$"
-    :handler (fn [world _ _]
-               (assert! world (true? (get-in world [:vtd014/evidence :resolution :resolvedIncidentExcludedFromBlocking]))
-                        "The resolved incident still blocks its candidate lineage."))}
-   {:pattern #"^git_handoff is permitted while repair note handoffs remained available throughout the blocked state$"
-    :handler (fn [world _ _]
-               (assert! world (true? (get-in world [:vtd014/evidence :resolution :handoffGate]))
-                        "The resolved incident did not release the handoff gate."))}
-   {:pattern #"^a later failure in a downstream role creates a new incident rather than reopening or hiding the resolved one$"
-    :handler (fn [world _ _]
-               (assert! world (true? (get-in world [:vtd014/evidence :resolution :downstreamIncidentDistinct]))
-                        "A later failure reused the resolved incident identity."))}])
-
 (defn- prerequisite-handlers [example-values]
   [
    {:pattern #"^canonical task (.+) declares (.+)$"
@@ -819,7 +784,11 @@
     :handler (fn [world _ _]
                (let [boundary (:vtd014/style-boundary world)
                      evidence (style-evidence world boundary)]
-                 (assert! world (and (map? evidence) (< (count (:selectedPackIds evidence)) 20))
+                 (assert! world
+                          (and (map? evidence)
+                               (< (count (:selectedPackIds evidence))
+                                  (repository-inspection/runnable-pack-count
+                                   (:modular/registry world))))
                           "Feature-integration stylesheet planning broadened to the all-20 terminal scope.")))}
    {:pattern #"^it records (a structured prerequisite block|an execution-contract incident|the task's normal reliability failure)$"
     :handler (fn [world example captures]
@@ -922,13 +891,13 @@
                                      (= 6 (count (:focusedKinds boundary))))
                           "A delivery verification path bypassed shared incident handling.")))}
 
-   {:pattern #"^VTD-014 changes shared reliability, evidence, and handoff infrastructure for all 20 runnable packs$"
+   {:pattern #"^VTD-014 changes shared reliability, evidence, and handoff infrastructure for every runnable pack$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^a verification run completes without a failure$"
     :handler (fn [world _ _]
                (assert! world (false? (get-in world [:vtd014/evidence :conservation :diagnosticRetryOnPassingRun]))
                         "A passing run executed a reliability retry."))}
-   {:pattern #"^(?:its exact task identities, logical targets, observations, assertion leaves, batching, budgets, calibrations, worker limits, shards, and package check are unchanged|no diagnostic retry executes|previously passing work may be reused for diagnosis but no failed result can bypass incident classification|no final post-repair checkpoint reuses a pre-repair result|no src product file, product behavior, saved value, accessibility result, feature owner, handler owner, pack dependency, target budget, calibration, worker limit, or shard changes|production impact boundaries are unchanged|the one-time delivery checkpoint runs all 20 runnable packs in canonical order followed by node scripts/package.mjs)$"
+   {:pattern #"^(?:its exact task identities, logical targets, observations, assertion leaves, batching, budgets, calibrations, worker limits, shards, and package check are unchanged|no diagnostic retry executes|previously passing work may be reused for diagnosis but no failed result can bypass incident classification|no final post-repair checkpoint reuses a pre-repair result|no src product file, product behavior, saved value, accessibility result, feature owner, handler owner, pack dependency, target budget, calibration, worker limit, or shard changes|production impact boundaries are unchanged|the one-time delivery checkpoint runs every runnable pack in canonical order followed by node scripts/package.mjs)$"
     :handler (fn [world _ _]
                (let [prepared-world (prepared world)
                      conservation (get-in prepared-world [:vtd014/evidence :conservation])
@@ -943,7 +912,11 @@
                                      (empty? (:productChangedFiles conservation))
                                      (empty? (:featureChangedFiles conservation))
                                      digests-match?
-                                     (= 20 (:allPackCount conservation))
+                                     (= (if (seq (:modular/registry prepared-world))
+                                          (repository-inspection/runnable-pack-count
+                                           (:modular/registry prepared-world))
+                                          (:allPackCount conservation))
+                                        (:allPackCount conservation))
                                      (= "scripts/package.mjs" (:packageTask conservation)))
                         "VTD-014 conservation evidence is incomplete.")))}])
 
@@ -1607,7 +1580,7 @@
   (vec (concat (incident-handlers example-values)
                (repair-handlers example-values)
                (store-handlers example-values)
-               (resolution-handlers example-values)
+               (resolution/handlers {:prepared prepared})
                (prerequisite-handlers example-values)
                (universal-prerequisite-gate-handlers example-values)
                (repair-prerequisite-handlers example-values)

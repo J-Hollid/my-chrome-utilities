@@ -62,7 +62,7 @@
                                               :missingRejected true :inconsistentRejected true
                                               :earlierTimestampRejected true
                                               :duplicateLineageRejected true}}
-                  :resolution {:allPackCount 20 :reusedTaskCount 0 :packagePassed true
+                  :resolution {:allPackCount 21 :reusedTaskCount 0 :packagePassed true
                                :archiveVerified true :resolvedIncidentExcludedFromBlocking true
                                :handoffGate true :downstreamIncidentDistinct true
                                :evidence {:failureDigest digest :resolutionDigest digest
@@ -74,7 +74,7 @@
                                  :currentTaskDigest digest :acceptedBaseTaskDigest digest
                                  :currentPackContractDigest digest :acceptedBasePackContractDigest digest
                                  :currentCalibrationDigest digest :acceptedBaseCalibrationDigest digest
-                                 :diagnosticRetryOnPassingRun false :allPackCount 20
+                                 :diagnosticRetryOnPassingRun false :allPackCount 21
                                  :packageTask "scripts/package.mjs"}
                   :execution {:prerequisites {:approvedFirstLaunch true :workspaceNarrow true
                                               :mixedRouteObservation

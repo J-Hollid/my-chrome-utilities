@@ -58,7 +58,7 @@ async function verifyScenario192(packs) {
   });
   assert.equal(result.planOnly, true);
   assert.equal(result.classification, "bounded-ready");
-  assert.deepEqual(result.plannedPackIds, ["shell"]);
+  assert.deepEqual(result.plannedPackIds, ["shell", "verification_process"]);
   assert.deepEqual(result.terminalFullObligations, []);
 }
 
@@ -67,7 +67,8 @@ async function verifyScenario193(packs) {
   const slice = shell.verificationSlices.find(
     ({ id }) => id === "verification_pack_cardinality_contract");
   assert.ok(slice);
-  assert.deepEqual(slice.consumers, []);
+  assert.deepEqual(slice.consumers,
+    [{packId:"verification_process", sliceId:"task_batching"}]);
   assert.equal(shell.globalImpact.includes("scripts/verification-pack-cardinality/"), false);
   const helper = await readFile(new URL("../verification-reliability-values.mjs", import.meta.url), "utf8");
   assert.equal(helper.includes("verification-pack-cardinality"), false);
@@ -126,7 +127,7 @@ function verifyScenario195(packs) {
           ? { ...slice, consumers:[{ packId:"shell", sliceId:"eligible_repair_admission" }] }
           : slice),
     } : pack),
-  }), /empty registry consumer set/u);
+  }), /exact verification_process task-batching consumer/u);
 }
 
 function verifyScenario196(packs) {

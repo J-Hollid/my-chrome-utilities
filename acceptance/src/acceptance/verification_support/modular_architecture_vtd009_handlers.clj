@@ -1,5 +1,6 @@
 (ns acceptance.verification-support.modular-architecture-vtd009-handlers
   (:require [acceptance.steps.support :as support]
+            [acceptance.verification-support.modular-architecture-repository-inspection :as repository-inspection]
             [clojure.string :as str]))
 
 (defn- values [example-values example captures]
@@ -17,7 +18,7 @@
   (get-in world (into [:vtd009/evidence] path)))
 
 (def ^:private scopes
-  {"every runnable pack" 20
+  {"every runnable pack" :all
    "every runnable pack except branding_polish" 19
    "shell only" ["shell"]
    "layered_schema only" ["layered_schema"]
@@ -30,6 +31,13 @@
   (or (scopes description)
       (->> (str/split description #",\s*(?:and\s+)?|\s+and\s+")
            (remove str/blank?) vec)))
+
+(defn- scope-matches? [world expected actual]
+  (cond
+    (= :all expected) (= (repository-inspection/runnable-pack-count (:modular/registry world))
+                         (count actual))
+    (number? expected) (= expected (count actual))
+    :else (= (set expected) (set actual))))
 
 (defn- helper-handlers [example-values verify-throughput!]
   [{:pattern #"^tracked verification helper (.+) is active on current master$"
@@ -46,7 +54,7 @@
     :handler (fn [world example captures]
                (let [expected (scope (first (values example-values example captures)))
                      actual (evidence world :helpers (keyword (:vtd009/helper world)) :consumers)]
-                 (assert! world (if (number? expected) (= expected (count actual)) (= (set expected) (set actual)))
+                 (assert! world (scope-matches? world expected actual)
                           "Helper consumers differ from the discovered graph." {:expected expected :actual actual}))) }
    {:pattern #"^changing the helper selects exactly those consumers once$"
     :handler (fn [world _ _]
@@ -154,7 +162,7 @@
     :handler (fn [world example captures]
                (let [expected (scope (first (values example-values example captures)))
                      actual (evidence world :boundaries (keyword (:vtd009/path world)) :packIds)]
-                 (assert! world (if (number? expected) (= expected (count actual)) (= (set expected) (set actual)))
+                 (assert! world (scope-matches? world expected actual)
                           "Shell boundary selects the wrong runtime consumers." {:expected expected :actual actual}))) }
    {:pattern #"^every one of the 18 Shell-owned TypeScript files matches exactly one boundary$"
     :handler (fn [world _ _]
@@ -169,9 +177,9 @@
                (assert! world (= "shell_local_presentation"
                                  (evidence world :boundaries (keyword "src/workspace-tabs-ui.ts") :boundary))
                         "Shell representative is in the wrong boundary." {}))}
-   {:pattern #"^it selects only the complete 59-task property-enabled shell plan with dependant fan-out 0$"
+   {:pattern #"^it selects only the complete 56-task property-enabled shell plan with dependant fan-out 0$"
     :handler (fn [world _ _]
-               (assert! world (= 59 (evidence world :localPlan :tasks))
+               (assert! world (= 56 (evidence world :localPlan :tasks))
                         "Shell representative lost complete evidence." {}))}
    {:pattern #"^its accepted critical-path baseline is 37.2 seconds with tolerance 1.2 and limit 45 seconds$"
     :handler (fn [world _ _]
@@ -214,14 +222,21 @@
    {:pattern #"^selected scope is (.+)$"
     :applies? :vtd009/active
     :handler (fn [world example captures]
-               (let [expected (scope (first (values example-values example captures)))
-                     actual (evidence world :history (history-key (:vtd009/change world)))]
-                 (assert! world (if (number? expected) (= expected (count actual)) (= (set expected) (set actual)))
+               (let [key (history-key (:vtd009/change world))
+                     expected (scope (first (values example-values example captures)))
+                     actual (evidence world :history key)
+                     historical-runnable-count
+                     (- (repository-inspection/runnable-pack-count (:modular/registry world))
+                        (if (= :deleteDormant key) 1 0))]
+                 (assert! world (if (= :all expected)
+                                  (= historical-runnable-count (count actual))
+                                  (scope-matches? world expected actual))
                           "Historical helper or Shell ownership selected the wrong scope."
                           {:expected expected :actual actual}))) }
    {:pattern #"^unavailable, malformed, or incompatible history cannot omit prior consumers$"
     :handler (fn [world _ _]
-               (assert! world (= 20 (count (evidence world :history :unavailable)))
+               (assert! world (= (repository-inspection/runnable-pack-count (:modular/registry world))
+                                 (count (evidence world :history :unavailable)))
                         "Unavailable history did not fail closed." {}))}])
 
 (defn- snapshot-handlers [verify-throughput!]

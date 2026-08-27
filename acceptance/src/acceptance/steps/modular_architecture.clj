@@ -28,8 +28,10 @@
 
 (defn- verify-throughput! [world]
   (when-not @throughput-evidence
-    (let [result (support/verified-command-result
-                  "node" "test/verification-process-contract-test.mjs")
+    (let [result (support/verified-command-or-prepared-task-result
+                  ["node" "test/verification-process-contract-legacy.mjs"]
+                  "checkpoint:verification_process:legacy-process-contract-conservation"
+                  ["node" "test/verification-process-contract-legacy.mjs"])
           evidence-line (first (filter #(str/starts-with? % "{\"vtd004Acceptance\"")
                                        (str/split-lines (:out result))))]
       (support/assert! (zero? (:exit result))
@@ -608,7 +610,9 @@
                        selected (:vtd003/selected-packs world)]
                    (assert-vtd003! world
                                    (if (= expected "every runnable pack")
-                                     (= 20 (count selected))
+                                     (= (repository-inspection/runnable-pack-count
+                                         (:modular/registry world))
+                                        (count selected))
                                      (= expected (str/join ", " selected)))
                                    "Representative changed path selected the wrong packs."))
                  (inspect! world))))}
@@ -746,7 +750,8 @@
                                "VTD-003 calibration is incomplete."))}
    {:pattern #"^every runnable pack has one deliberate representative file and three explicit pack budgets$"
     :handler (fn [world _example _captures]
-               (assert-vtd003! world (= 20 (count (get-in world [:vtd003/calibration :runnablePacks])))
+               (assert-vtd003! world
+                               (= 20 (count (get-in world [:vtd003/calibration :runnablePacks])))
                                "Runnable pack calibration coverage changed."))}
    {:pattern #"^every browser target has an explicit measured or provisional budget with maturity and provenance$"
     :handler (fn [world _example _captures]

@@ -309,7 +309,7 @@
                       (invoke world "the migration neither adds nor removes a planned task or evidence leaf in exact-pack and terminal-full scope" [])))))))
 
 (deftest vtd009-scope-labels-and-history-changes-resolve-exactly
-  (is (= 20 (#'vtd009/scope "every runnable pack")))
+  (is (= :all (#'vtd009/scope "every runnable pack")))
   (is (= ["flow_graph" "layered_schema"]
          (#'vtd009/scope "layered_schema and flow_graph")))
   (is (= ["capture dependant closure" "shell" "10 packs"]

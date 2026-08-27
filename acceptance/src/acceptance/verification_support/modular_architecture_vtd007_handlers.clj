@@ -232,13 +232,14 @@
        "const current=JSON.parse(readFileSync('verification/packs.json','utf8'));"
        "const base=JSON.parse(execFileSync('git',['show','0642b1d4c8:verification/packs.json'],{encoding:'utf8'}));"
        "const delivered=JSON.parse(execFileSync('git',['show','49d97de8441bb87c054842a449eb362faa394215:verification/packs.json'],{encoding:'utf8'}));"
-       "const ids=current.filter(p=>['unit','property','browserAdapters','browserObservations','checkpointCommands'].some(k=>p[k]?.length)).map(p=>p.id);"
-       "if(ids.length!==20)throw new Error('expected 20 runnable packs');"
+       "const runnableIds=packs=>packs.filter(p=>['unit','property','browserAdapters','browserObservations','checkpointCommands'].some(k=>p[k]?.length)).map(p=>p.id);"
+       "const currentIds=runnableIds(current),historicalIds=runnableIds(delivered);"
+       "if(historicalIds.length!==20)throw new Error('expected 20 historical runnable packs');"
        "const migration=new Map(['capture','event-library','schemas','defects','shell'].map(x=>[`test/browser-packs/side-panel-${x}.mjs`,'test/side-panel-component-layout-runtime-test.mjs']));"
        "const normalize=x=>{let s=JSON.stringify(x);for(const [a,b]of migration)s=s.replaceAll(a,b);return JSON.parse(s)};"
        "const expectedCapabilities=new Map(['test/flow-examples-timing-test.mjs','test/headless-chrome-lifecycle-test.mjs','test/verification-process-contract-test.mjs'].map(x=>[x,['local-loopback']]));"
        "const actualIdentity=p=>p.tasks.map(x=>normalize(verificationTaskIdentity(x))),expectedIdentity=p=>p.tasks.map(x=>{const y=normalize(verificationTaskIdentity(x));if(expectedCapabilities.has(y.target))y.requiredCapabilities=expectedCapabilities.get(y.target);return y}),same=(a,b)=>JSON.stringify(a)===JSON.stringify(b),unique=(xs,k)=>new Set(xs.map(x=>x[k])).size===xs.length;"
-       "const currentExact=planVerification(current,{packIds:ids,includeProperties:true}),currentTerminal=planVerification(current,{terminalFull:true}),exact=planVerification(delivered,{packIds:ids,includeProperties:true,historicalRegistryFallback:true}),baseExact=planVerification(base,{packIds:ids,includeProperties:true,historicalRegistryFallback:true}),terminal=planVerification(delivered,{terminalFull:true,historicalRegistryFallback:true}),baseTerminal=planVerification(base,{terminalFull:true,historicalRegistryFallback:true});"
+       "const currentExact=planVerification(current,{packIds:currentIds,includeProperties:true}),currentTerminal=planVerification(current,{terminalFull:true}),exact=planVerification(delivered,{packIds:historicalIds,includeProperties:true,historicalRegistryFallback:true}),baseExact=planVerification(base,{packIds:historicalIds,includeProperties:true,historicalRegistryFallback:true}),terminal=planVerification(delivered,{terminalFull:true,historicalRegistryFallback:true}),baseTerminal=planVerification(base,{terminalFull:true,historicalRegistryFallback:true});"
        "let strictCurrentAmbiguityRejected=false;try{planVerification([{id:'owner',source:['src/owner.ts'],unit:[]},{id:'ambiguous',source:[],unit:['test/ambiguous-test.mjs']}],{packIds:['ambiguous']});}catch(error){strictCurrentAmbiguityRejected=/explicit verification-only production owner/u.test(error.message);}"
        "const executions=packs=>normalize({targets:packs.flatMap(p=>(p.browserObservations??[]).map(x=>({packId:p.id,id:x.id,path:x.path,environment:x.environment,features:x.features}))),features:packs.flatMap(p=>(p.features??[]).map(feature=>({packId:p.id,feature}))),handlers:packs.flatMap(p=>(p.handlers??[]).map(handler=>({packId:p.id,handler}))),evidence:packs.flatMap(p=>(p.browserEvidencePartitions??[]).map(x=>({packId:p.id,path:x.path,sessionBatch:x.sessionBatch,originalLeaves:x.originalLeaves,targets:x.targets}))) });"
        "const now=executions(current),delivery=executions(delivered),prior=executions(base);"
@@ -260,11 +261,20 @@
 (defn- verify-production-boundary! []
   (let [{:keys [evidence lifecycle-evidence]} (run-production-probes!)
         {:keys [helper topology-conserved?]} (registry-context!)
+        historical-consumers (->> (json/parse-string
+                                   (:out (shell/sh "git" "show"
+                                                   (str delivery-commit ":verification/packs.json"))))
+                                  (filter #(some seq (map (partial get %)
+                                                          ["unit" "property" "browserAdapters"
+                                                           "browserObservations" "checkpointCommands"])))
+                                  (map #(get % "id"))
+                                  set)
         {:keys [delegates-to-control? fixed-attempts-removed?] :as sources} (source-context)
         conservation (conservation-context!)
         plan-evidence (plan-conservation-evidence!)]
-    (assert! (= 20 (count (get helper "consumers")))
-             "The common browser control helper does not have all 20 exact consumers." {:helper helper})
+    (assert! (set/subset? historical-consumers (set (get helper "consumers")))
+             "The common browser control helper lost a historical VTD-007 consumer."
+             {:helper helper :historical-consumers historical-consumers})
     (verify-source-context! sources)
     (verify-conservation! conservation
                           (or topology-conserved?
@@ -280,7 +290,8 @@
                   (get-in conservation [:characterization "focusedBudgetMilliseconds"]))
         (assoc :planConservation plan-evidence)
         (assoc :conservation
-               {:consumerCount (count (get helper "consumers"))
+               {:consumerCount (count historical-consumers)
+                :currentConsumerCount (count (get helper "consumers"))
                 :sharedImplementations (count migrated-entry-points)
                 :targetsOnce (every? true? (map #(get plan-evidence %)
                                                 [:targetsExactlyOnce :featuresExactlyOnce

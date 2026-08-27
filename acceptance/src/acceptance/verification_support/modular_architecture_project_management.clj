@@ -1,5 +1,6 @@
 (ns acceptance.verification-support.modular-architecture-project-management
   (:require [acceptance.steps.support :as support]
+            [acceptance.verification-support.modular-architecture-repository-inspection :as repository-inspection]
             [clojure.string :as str]))
 
 (def ^:private owner-evidence-keys
@@ -91,22 +92,23 @@
 (def ^:private event-history-scopes
   {1 "event-library only"
    7 "the seven-pack dependant closure"
-   8 "the eight-pack Capture closure"
-   20 "every runnable pack"})
+   8 "the eight-pack Capture closure"})
 
-(defn- event-history-scope [_owner selected]
-  (get event-history-scopes (count selected) "the ten-pack dependant closure"))
+(defn- event-history-scope [_owner selected runnable-count]
+  (if (= runnable-count (count selected))
+    "every runnable pack"
+    (get event-history-scopes (count selected) "the ten-pack dependant closure")))
 
-(defn- shared-history-scope [owner selected]
+(defn- shared-history-scope [owner selected runnable-count]
   (cond
     (= 1 (count selected)) (first selected)
-    (= 20 (count selected)) "every runnable pack"
+    (= runnable-count (count selected)) "every runnable pack"
     (= owner "durable_project_repository") "the six-pack dependant closure"
     :else "the ten-pack dependant closure"))
 
-(defn- history-scope [owner selected]
+(defn- history-scope [owner selected runnable-count]
   ((if (= owner "event-library") event-history-scope shared-history-scope)
-   owner selected))
+   owner selected runnable-count))
 
 (defn history-world [world change historical-registry dependencies]
   (let [prepared (vtd004-world world dependencies)
@@ -115,7 +117,10 @@
                                    (history-plan-key owner change historical-registry)])]
     (support/assert! (seq selected) "Production historical planner returned no scope."
                      {:change change :historical-registry historical-registry})
-    (assoc prepared :vtd004/historical-scope (history-scope owner selected))))
+    (assoc prepared :vtd004/historical-scope
+           (history-scope owner selected
+                          (repository-inspection/runnable-pack-count
+                           (:modular/registry prepared))))))
 
 (defn conservation-world [world dependencies]
   (let [prepared (vtd004-world world dependencies)

@@ -1,5 +1,6 @@
 (ns acceptance.verification-support.modular-architecture-layered-editor-handlers
   (:require [acceptance.steps.support :as support]
+            [acceptance.verification-support.modular-architecture-repository-inspection :as repository-inspection]
             [clojure.string :as str]))
 
 (def ^:private target-labels
@@ -169,11 +170,16 @@
                (let [actual (get-in world [:vtd005/evidence :history
                                            (history-key (:vtd005/change world))])
                      expected (expected-targets (first (values example-values example captures)))]
-                 (assert-vtd005! world (if (= :all expected) (= 20 (count actual)) (= expected actual))
+                 (assert-vtd005! world (if (= :all expected)
+                                         (= (repository-inspection/runnable-pack-count (:modular/registry world))
+                                            (count actual))
+                                         (= expected actual))
                                  "Layered editor history selected the wrong evidence." {:actual actual :expected expected})))}
    {:pattern #"^unavailable, malformed, or incompatible history cannot omit the old editor evidence$"
     :handler (fn [world _ _]
-               (assert-vtd005! world (= 20 (count (get-in world [:vtd005/evidence :history :unavailable])))
+               (assert-vtd005! world
+                               (= (repository-inspection/runnable-pack-count (:modular/registry world))
+                                  (count (get-in world [:vtd005/evidence :history :unavailable])))
                                "Unavailable history did not fail closed." {}))}])
 
 (defn- sample-calibration-handlers [example-values verify-throughput! performance-calibration]

@@ -114,8 +114,9 @@ function assertCandidateRegistryOwnership(candidateRegistry) {
       declaration.path !== cardinalityPrefix) {
     throw new Error("Registry cardinality prefix must be declared exactly once by the Shell cardinality slice");
   }
-  if (!Array.isArray(declaration.slice.consumers) || declaration.slice.consumers.length) {
-    throw new Error("Registry cardinality slice requires an empty registry consumer set");
+  const expectedConsumers = [{ packId:"verification_process", sliceId:"task_batching" }];
+  if (JSON.stringify(declaration.slice.consumers) !== JSON.stringify(expectedConsumers)) {
+    throw new Error("Registry cardinality slice requires the exact verification_process task-batching consumer");
   }
   if (globalDeclarations.length) {
     throw new Error("Registry cardinality prefix cannot also be globally impactful");

@@ -10,7 +10,8 @@ import {
 import { createTimeoutIncidentStore } from "./verification-reliability-store.mjs";
 import { loadVerificationPacks, planVerification,
   verificationTaskIdentity } from "./verification-packs.mjs";
-import { resolveIncidentTaskSuccession } from "./verification-task-succession.mjs";
+import { resolveIncidentTaskSuccession, successionDestinationIdentities } from
+  "./verification-task-succession.mjs";
 import { git, normalized, timeoutIncidentDigest } from "./verification-reliability-values.mjs";
 import { createVerificationPackCardinalityAdapter } from
   "./verification-pack-cardinality/contract.mjs";
@@ -116,16 +117,17 @@ export async function auditVtd014Closure({
         disposition = { kind:"blocking-verification-repair", blocking:true, resolved:false,
           failureDomain:declaration.domain };
       } else if (declaration.disposition === "verifier-cause-superseded") {
-        let receiptTask = regression.receipt.tasks[incident.failure.task.key];
-        let receiptTaskKey = incident.failure.task.key;
-        if (!receiptTask) {
+        let receiptTasks = [regression.receipt.tasks[incident.failure.task.key]].filter(Boolean);
+        let receiptTaskKeys = receiptTasks.length ? [incident.failure.task.key] : [];
+        if (!receiptTasks.length) {
           const succession = await resolveIncidentTaskSuccession({ incident,
             currentIdentities, currentPacks:packs });
-          receiptTaskKey = succession.destinationIdentity.key;
-          receiptTask = regression.receipt.tasks[receiptTaskKey];
+          receiptTaskKeys = successionDestinationIdentities(succession).map(({ key }) => key);
+          receiptTasks = receiptTaskKeys.map((key) => regression.receipt.tasks[key]);
         }
-        if (receiptTask?.status !== "passed" || receiptTask.provenance !== "fresh") {
-          throw new Error(`Regression receipt lacks fresh influenced task ${receiptTaskKey}`);
+        if (!receiptTasks.length || receiptTasks.some((task) =>
+          task?.status !== "passed" || task.provenance !== "fresh")) {
+          throw new Error(`Regression receipt lacks fresh influenced task ${receiptTaskKeys.join(",")}`);
         }
         const causal = causalFailureIdentity({ domain:declaration.domain,
           task:incident.failure.task, executableBoundary:incident.failure.task.target,
@@ -135,8 +137,10 @@ export async function auditVtd014Closure({
           causalKey:causal.key, regressionReceiptSha256:regression.sha256 }),
           failureDomain:declaration.domain, causalIdentity:causal,
           regression:{ receiptPath:path.relative(root, regression.path),
-            receiptSha256:regression.sha256, taskKey:receiptTaskKey,
-            resultDigest:timeoutIncidentDigest(receiptTask) } };
+            receiptSha256:regression.sha256,
+            ...(receiptTaskKeys.length === 1
+              ? { taskKey:receiptTaskKeys[0], resultDigest:timeoutIncidentDigest(receiptTasks[0]) }
+              : { taskKeys:receiptTaskKeys, resultDigests:receiptTasks.map(timeoutIncidentDigest) }) } };
       } else {
         throw new Error(`Incident ${incident.id} has an unsupported audit disposition`);
       }

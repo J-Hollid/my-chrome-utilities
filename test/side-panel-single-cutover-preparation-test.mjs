@@ -262,7 +262,8 @@ assert.deepEqual(runtimeSlice.consumers.map(({ packId }) => packId).sort(),
   controllers.map(([, packId]) => packId).sort());
 assert.equal(planVerification(packs, {
   changedPaths:["src/side-panel.ts"],
-}).packIds.length, 20, "the installed root remains globally owned");
+}).packIds.length, runnablePackIdsFromRegistry(packs).length,
+"the installed root remains owned by every current runnable pack");
 
 const inventory = await collectSidePanelCutoverInventory({ repositoryRoot:process.cwd(), base });
 assert.equal(inventory.baseCommit, base);

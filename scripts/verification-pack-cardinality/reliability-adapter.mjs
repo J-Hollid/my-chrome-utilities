@@ -42,19 +42,28 @@ export async function registryDerivedCanonicalRepairTaskIdentities({incident}={}
   return canonicalRepairTaskIdentities(packs, { planVerification, verificationTaskIdentity,incident });
 }
 
+export function canonicalCheckpointPackIds(packs) {
+  return createVerificationPackCardinalityAdapter(packs, {
+    allowLegacySourceLess:true,
+  }).runnablePackIds;
+}
+
 export async function registryDerivedCanonicalCheckpointValidator({
   document,
   incident,
   root,
   allowLegacySeparatePackage = false,
 }) {
-  const [{ validateCanonicalVerificationCheckpoint }, { loadVerificationPacks }] = await Promise.all([
-    import("../verification-evidence.mjs"),
-    import("../verification-packs.mjs"),
-  ]);
-  const packs = await loadVerificationPacks();
-  const exactRunnablePackIds = createVerificationPackCardinalityAdapter(packs).runnablePackIds;
   const candidate = timeoutRepairCandidate(incident);
+  const [{ validateCanonicalVerificationCheckpoint }, { verificationPacksAtCommit }] = await Promise.all([
+    import("../verification-evidence.mjs"),
+    import("../verification-changes.mjs"),
+  ]);
+  const packs = await verificationPacksAtCommit(candidate.commit, {
+    repositoryRoot:root,
+    historicalRegistryFallback:true,
+  });
+  const exactRunnablePackIds = canonicalCheckpointPackIds(packs);
   const binding = canonicalCheckpointBinding(incident, document.receipt);
   return validateCanonicalVerificationCheckpoint({
     receiptPath:path.resolve(root, document.path),

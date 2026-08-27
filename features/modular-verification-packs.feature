@@ -1260,7 +1260,7 @@ Feature: Modular verification packs
       | test/support/flow-r02-correction-evidence.mjs                | flow_graph                                                            |
       | test/support/flow-workspace-r02-runtime.mjs                  | flow_graph                                                            |
       | test/support/headless-chrome.mjs                             | every runnable pack                                                   |
-      | test/support/browser-target-session.mjs                      | branding_polish, durable_project_repository, layered_schema, shell    |
+      | test/support/browser-target-session.mjs                      | branding_polish, durable_project_repository, layered_schema, shell, verification_process |
       | test/support/durable-project-targets.mjs                     | durable_project_repository                                           |
       | test/support/layered-schema-overlay-focusability.mjs         | layered_schema and shell                                             |
       | test/support/layered-schema-editing-repairs-probe.mjs        | layered_schema                                                        |
@@ -1338,7 +1338,7 @@ Feature: Modular verification packs
   Scenario: Modular verification packs 085
     Given src/workspace-tabs-ui.ts currently selects all 20 packs with dependant fan-out 19, critical-path baseline 510.8 seconds, and limit 613 seconds
     When its proven shell_local_presentation boundary becomes the Shell representative
-    Then it selects only the complete 59-task property-enabled shell plan with dependant fan-out 0
+    Then it selects only the complete 56-task property-enabled shell plan with dependant fan-out 0
     And its accepted critical-path baseline is 37.2 seconds with tolerance 1.2 and limit 45 seconds
     And the shell exact-pack calibration, the other 19 pack calibrations, and every browser-target budget are unchanged
     And exact-pack and terminal-full planning retain every task identity, assertion leaf, browser batch, checkpoint, package check, worker limit, and shard exactly once
@@ -1555,7 +1555,7 @@ Feature: Modular verification packs
 
     Examples:
       | helper_class                                                   | consumer_scope                                         |
-      | the side-panel session, registry, primitives, or target contract | capture, event-library, schemas, defects, and shell |
+      | the side-panel session, registry, primitives, or target contract | capture, event-library, schemas, defects, shell, and verification_process |
       | the Capture target module                                     | capture                                                |
       | the Event Library target module                               | event-library                                          |
       | any Schema-family target module                               | schemas and shell                                      |
@@ -1665,7 +1665,7 @@ Feature: Modular verification packs
   # Modular verification packs 111
   Scenario: Modular verification packs 111
     Given a causal reliability repair and its fresh focused regression have passed
-    When one fresh canonical all-20 checkpoint and node scripts/package.mjs pass without reused tasks or another failure
+    When one fresh canonical all-runnable-pack checkpoint and node scripts/package.mjs pass without reused tasks or another failure
     Then the incident resolution binds its failure, diagnostic, repair commit and tree, causal category, regression, focused receipt, checkpoint receipt, and digests into commit-bound verification evidence
     And Git-note verification recomputes every resolution link
     And the current candidate lineage has no unresolved incident or retry result awaiting repair
@@ -1674,7 +1674,7 @@ Feature: Modular verification packs
 
   # Modular verification packs 112
   Scenario: Modular verification packs 112
-    Given VTD-014 changes shared reliability, evidence, and handoff infrastructure for all 20 runnable packs
+    Given VTD-014 changes shared reliability, evidence, and handoff infrastructure for every runnable pack
     When a verification run completes without a failure
     Then its exact task identities, logical targets, observations, assertion leaves, batching, budgets, calibrations, worker limits, shards, and package check are unchanged
     And no diagnostic retry executes
@@ -1682,7 +1682,7 @@ Feature: Modular verification packs
     And no final post-repair checkpoint reuses a pre-repair result
     And no src product file, product behavior, saved value, accessibility result, feature owner, handler owner, pack dependency, target budget, calibration, worker limit, or shard changes
     And production impact boundaries are unchanged
-    And the one-time delivery checkpoint runs all 20 runnable packs in canonical order followed by node scripts/package.mjs
+    And the one-time delivery checkpoint runs every runnable pack in canonical order followed by node scripts/package.mjs
 
   # Modular verification packs 113
   Scenario Outline: Modular verification packs 113

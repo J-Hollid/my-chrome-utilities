@@ -233,10 +233,12 @@ assert.match(readinessCli,/--prefix-proposal/u);
 assert.match(readinessCli,/--within-pack/u);
 assert.match(readinessCli,/planOnly:true/u,"readiness judgment remains plan-only");
 const readinessHandlers=await readFile("acceptance/src/acceptance/verification_support/modular_architecture_vtd015_handlers.clj","utf8");
-assert.match(readinessHandlers,/:prepared-task "unit:test\/verification-process-contract-test\.mjs"/u,
-  "readiness acceptance reuses the canonical planned process task");
-assert.doesNotMatch(readinessHandlers,/:prepared-task "unit:scripts\/verification-ownership-readiness-test\.mjs"/u,
-  "readiness acceptance must not invent an unplanned task identity");
+assert.match(readinessHandlers,
+  /:prepared-task "checkpoint:verification_process:legacy-process-contract-conservation"/u,
+  "readiness acceptance reuses the canonical legacy process checkpoint");
+assert.doesNotMatch(readinessHandlers,
+  /:prepared-task "unit:(?:test\/verification-process-contract-test|scripts\/verification-ownership-readiness-test)\.mjs"/u,
+  "readiness acceptance must not reuse a compatibility launcher or invent an unplanned task identity");
 
 const plannedRegistry=JSON.parse(await readFile("verification/packs.json","utf8")),flowExport=plannedRegistry.find(({id})=>id==="flow_export");
 const plannedTemplateFeatures=flowExport.plannedFeatures??[],activeTemplateFeatures=flowExport.features.filter(path=>path.includes("documentation-template"));
