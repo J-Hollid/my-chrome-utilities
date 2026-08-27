@@ -453,7 +453,9 @@ const schemaPropertyCommentsRemovalRuntime = `(async () => {
   Array.from(dialog.querySelectorAll("button")).find(({textContent})=>textContent==="Remove documentation").click();
   const stored=(await __waitForDurableSchemaObservation((schemas)=>schemas.some(({id,workingDraft})=>id==="schema-generic-pageview"&&workingDraft&&!workingDraft.documentation?.properties?.["/products/*/price_monthly"]),"the removed price documentation")).find(({id,workingDraft})=>id==="schema-generic-pageview"&&workingDraft&&!workingDraft.documentation?.properties?.["/products/*/price_monthly"]);
   await waitForEditorIdle("the removed price documentation settlement");
-  return {queuedWhileBusy,requested,summary,cancelled,confirmed:{removed:stored.workingDraft.documentation.properties?.["/products/*/price_monthly"]??null,propertyType:stored.workingDraft.document.properties.products.items.properties.price_monthly.type,rulesUnchanged:rulesBefore===JSON.stringify(stored.workingDraft.attachedRules)}};
+  const canonicalPrice=Object.values(stored.workingDraft.canonicalSchema?.nodes??{}).find(({name})=>name==="price_monthly");
+  const settled=JSON.parse(localStorage.getItem(schemaKey)).find(({id})=>id==="schema-generic-pageview"),settledCanonicalPrice=Object.values(settled.workingDraft.canonicalSchema?.nodes??{}).find(({name})=>name==="price_monthly");
+  return {queuedWhileBusy,requested,summary,cancelled,confirmed:{removed:stored.workingDraft.documentation.properties?.["/products/*/price_monthly"]??null,canonicalComment:canonicalPrice?.documentation?.comments??null,settledComment:settled.workingDraft.documentation?.properties?.["/products/*/price_monthly"]?.comments??null,settledCanonicalComment:settledCanonicalPrice?.documentation?.comments??null,propertyType:stored.workingDraft.document.properties.products.items.properties.price_monthly.type,rulesUnchanged:rulesBefore===JSON.stringify(stored.workingDraft.attachedRules)}};
 })()`;
 
 const schemaPropertyCommentsSpecificationSeedRuntime = `(() => {

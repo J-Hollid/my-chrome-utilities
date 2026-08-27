@@ -41,7 +41,7 @@ const assert = Object.freeze(Object.fromEntries(assertionMethods.map((method) =>
   const snapshots = args.map((value) => {
     try { return structuredClone(value); } catch { return value; }
   });
-  deferredAssertions.push(() => nodeAssert[method](...snapshots));
+  const site=assertionSite(method);deferredAssertions.push(() => {try{return nodeAssert[method](...snapshots);}catch(error){throw new Error(`${error.message} [${site}; values ${JSON.stringify(snapshots)}]`,{cause:error});}});
 }])))
 
 if (!processResources) throw new Error("The installed session must provide browser process resources");
@@ -2323,7 +2323,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       schemaPropertyCommentsObservation=await evaluate(socket,schemaPropertyCommentsRuntime);const observed=schemaPropertyCommentsObservation;
       assert.equal(observed.saved,"Sent by checkout\nDo not derive from position");assert.equal(observed.reopened,observed.saved);assert.equal(observed.publishedUnchanged,true);assert.deepEqual(observed.headings,["Property name","Description","Mandatory","Type","Example value","Allowed values","Comments"]);assert.equal(observed.cells[6],observed.saved);assert.match(observed.clipboard.html,/Comments[\s\S]*Sent by checkout<br>Do not derive from position/);assert.match(observed.clipboard.plain,/Allowed values\tComments/);assert.deepEqual(observed.runtimeErrors,[]);
       await reloadPanel(socket);const removalWorkflow=await evaluate(socket,schemaPropertyCommentsRemovalRuntime);
-      assert.equal(removalWorkflow.queuedWhileBusy,true);assert.equal(removalWorkflow.requested,true);assert.match(removalWorkflow.summary,/documentation will be removed.*property and validation rules remain unchanged/);assert.deepEqual(removalWorkflow.cancelled,{closed:true,retained:"Only local comment"});assert.deepEqual(removalWorkflow.confirmed,{removed:null,propertyType:"number",rulesUnchanged:true});
+      assert.equal(removalWorkflow.queuedWhileBusy,true);assert.equal(removalWorkflow.requested,true);assert.match(removalWorkflow.summary,/documentation will be removed.*property and validation rules remain unchanged/);assert.deepEqual(removalWorkflow.cancelled,{closed:true,retained:"Only local comment"});assert.deepEqual(removalWorkflow.confirmed,{removed:null,canonicalComment:"",settledComment:null,settledCanonicalComment:"",propertyType:"number",rulesUnchanged:true});
       const lifecycle=await evaluate(socket,schemaPropertyCommentsLifecycleRuntime);
       assert.deepEqual(lifecycle.inheritance,{local:"Checkout currency exception",localOwner:"Product detail",restored:"Shared currency convention",restoredOwner:"Generic commerce",restoredInherited:true,parentUnchanged:true,pathCount:1});
       assert.deepEqual(lifecycle.revisions,{working:"Current routing input",workingOwner:"Product detail",current:"Current routing input",currentOwner:"Product detail",currentVersion:4,historical:"Legacy routing input",historicalOwner:"Product detail",historicalVersion:3});

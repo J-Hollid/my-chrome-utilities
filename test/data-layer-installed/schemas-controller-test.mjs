@@ -796,6 +796,8 @@ elements.get("#schema-only-declared-properties").checked = true;
 elements.get("#schema-only-declared-properties").dispatch("change");
 assert.equal(uiController.canonicalState().settlementPending, true,
   "a saved-schema policy edit remains busy until its durable acknowledgement");
+assert.equal(elements.get("#schema-editor")["aria-busy"], "true",
+  "the installed editor exposes the pending settlement synchronously instead of relying on its duration");
 persistenceListener({ type:"saved", schemaId:persistenceSchemaId });
 durableAcknowledgementReleasedPolicyPresentation = !uiController.canonicalState().settlementPending;
 assert.equal(durableAcknowledgementReleasedPolicyPresentation, true,

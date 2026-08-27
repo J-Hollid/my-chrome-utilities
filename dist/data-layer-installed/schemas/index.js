@@ -696,6 +696,7 @@ export function createSchemasInstalledController(ports) {
     let compactCanonicalIdSequence = 0;
     let compactCanonicalSettlementPending = false;
     let compactCanonicalSettlementSchemaId;
+    let compactCanonicalSettlementBarrier = Promise.resolve(true);
     let compactCanonicalProjectionRequest;
     let compactCanonicalProjectionWorker;
     let queuedSchemaLibraryPersistence;
@@ -745,6 +746,9 @@ export function createSchemasInstalledController(ports) {
         compactCanonicalSettlementClaims.set(settlement, schemaId);
         compactCanonicalSettlementPending = true;
         compactCanonicalSettlementSchemaId = schemaId;
+        schemaEditor?.setAttribute("aria-busy", "true");
+        if (saveSchemaButton)
+            saveSchemaButton.disabled = true;
         return settlement;
     };
     const clearCompactCanonicalSettlement = (schemaId, settlement) => {
@@ -759,6 +763,11 @@ export function createSchemasInstalledController(ports) {
         }
         else
             compactCanonicalSettlementClaims.clear();
+        if (queuedSchemaLibraryPersistence || schemaLibraryPersistenceWorker) {
+            compactCanonicalSettlementPending = true;
+            compactCanonicalSettlementSchemaId = queuedSchemaLibraryPersistence?.schemaId ?? schemaId;
+            return false;
+        }
         compactCanonicalSettlementPending = false;
         compactCanonicalSettlementSchemaId = undefined;
         return true;
@@ -1033,6 +1042,7 @@ export function createSchemasInstalledController(ports) {
             }
             return false;
         });
+        compactCanonicalSettlementBarrier = completion;
         return { accepted: true, result, completion };
     };
     const dispatchCompactCanonicalCommand = async (command, owned) => {
@@ -1288,17 +1298,10 @@ export function createSchemasInstalledController(ports) {
         ports.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeChangedSchemaLibrary(schemas));
         ports.changed(schemas);
     };
-    const queueSchemaLibraryPersistence = (schemaId) => {
-        if (!ports.settleCanonical) {
-            persistSchemaLibrary();
+    const startQueuedSchemaLibraryPersistence = () => {
+        if (schemaLibraryPersistenceWorker || !queuedSchemaLibraryPersistence || compactCanonicalSettlementClaims.size)
             return;
-        }
-        queuedSchemaLibraryPersistence = { schemaId, schemas: structuredClone(schemas) };
-        compactCanonicalSettlementPending = true;
-        compactCanonicalSettlementSchemaId = schemaId;
-        schemaEditor?.setAttribute("aria-busy", "true");
-        if (schemaLibraryPersistenceWorker)
-            return;
+        const queuedSchemaId = queuedSchemaLibraryPersistence.schemaId;
         schemaLibraryPersistenceWorker = (async () => {
             let activeRequest;
             try {
@@ -1322,13 +1325,25 @@ export function createSchemasInstalledController(ports) {
             finally {
                 schemaLibraryPersistenceWorker = undefined;
                 if (!queuedSchemaLibraryPersistence)
-                    clearCompactCanonicalSettlement(schemaId);
+                    clearCompactCanonicalSettlement(activeRequest?.schemaId ?? queuedSchemaId);
                 if (compactCanonicalEditor)
                     renderCompactCanonicalEditor();
                 else
                     schemaEditor?.setAttribute("aria-busy", String(Boolean(queuedSchemaLibraryPersistence)));
             }
         })();
+    };
+    const queueSchemaLibraryPersistence = (schemaId) => {
+        if (!ports.settleCanonical) {
+            persistSchemaLibrary();
+            return;
+        }
+        queuedSchemaLibraryPersistence = { schemaId, schemas: structuredClone(schemas) };
+        compactCanonicalSettlementPending = true;
+        compactCanonicalSettlementSchemaId = schemaId;
+        schemaEditor?.setAttribute("aria-busy", "true");
+        void compactCanonicalSettlementBarrier.then((committed) => { if (committed)
+            startQueuedSchemaLibraryPersistence(); });
     };
     const persistEditedSchemaIfStored = () => { if (activeIndex() >= 0)
         persistSchemaLibrary(); };
@@ -1598,16 +1613,17 @@ export function createSchemasInstalledController(ports) {
                             return;
                         }
                         const entry = { displayName: displayName.value, description: description.value, ...(comments.value.trim() ? { comments: comments.value.trim() } : {}), ...(exampleDraft ? { example: structuredClone(exampleDraft) } : {}) };
+                        const currentLocalDocumentation = schemaEditorDraft(active()).documentation?.properties?.[documentationPath];
+                        if ((currentLocalDocumentation ?? localDocumentation) && !entry.displayName.trim() && !entry.description.trim() && !entry.comments && !entry.example) {
+                            requestSchemaDocumentationRemoval(documentationPath, save);
+                            return;
+                        }
                         if (compactCanonicalEditor && compactNode && compactDocument) {
                             const example = entry.example
                                 ? { method: entry.example.selectionMethod === "allowed value" ? "allowed-value" : "custom", value: structuredClone(entry.example.value) }
                                 : { method: "blank" };
                             void dispatchCompactCanonicalCommand({ kind: "set", baseRevision: compactDocument.revision, propertyId: compactNode.id,
                                 patch: { documentation: { displayText: entry.displayName, description: entry.description, comments: entry.comments ?? "", example } } });
-                            return;
-                        }
-                        if (localDocumentation && !entry.displayName.trim() && !entry.description.trim() && !entry.comments && !entry.example) {
-                            requestSchemaDocumentationRemoval(documentationPath, save);
                             return;
                         }
                         const documentation = setPropertyDocumentation(schemaEditorDraft(active()).documentation ?? {}, documentationPath, entry);
@@ -2546,7 +2562,19 @@ export function createSchemasInstalledController(ports) {
         if (!draft)
             return;
         const documentation = setPropertyDocumentation(draft.documentation ?? {}, path, { displayName: "", description: "" });
-        replaceActive(updateSchemaWorkingDraft(schema, { documentation }, `Remove property documentation ${path}`));
+        const canonicalBase = compactCanonicalSavedSchemaId(compactCanonicalEditor) === schema.id
+            ? savedCanonicalDocument : draft.canonicalSchema;
+        const canonicalNode = canonicalBase && Object.values(canonicalBase.nodes)
+            .find((candidate) => canonicalPropertyPath(canonicalBase, candidate.id) === path);
+        const canonicalRemoval = canonicalBase && canonicalNode ? applyCanonicalCommand(canonicalBase, {
+            kind: "set", baseRevision: canonicalBase.revision, propertyId: canonicalNode.id,
+            patch: { documentation: { displayText: "", description: "", comments: "", example: { method: "blank" } } },
+        }) : undefined;
+        const canonicalSchema = canonicalRemoval?.status === "applied" || canonicalRemoval?.status === "rebased"
+            ? canonicalRemoval.document : undefined;
+        if (canonicalSchema && compactCanonicalSavedSchemaId(compactCanonicalEditor) === schema.id)
+            savedCanonicalDocument = canonicalSchema;
+        replaceActive(updateSchemaWorkingDraft(schema, { documentation, ...(canonicalSchema ? { canonicalSchema } : {}) }, `Remove property documentation ${path}`));
         queueSchemaLibraryPersistence(schema.id);
         renderSchemas();
         schemaEditor?.setAttribute("aria-busy", String(Boolean(ports.settleCanonical)));
