@@ -383,7 +383,7 @@
     :handler (fn [world _ _]
                (let [direct (get-in world [:vtd006/evidence :launcher :directContract])]
                  (assert! world
-                          (and (= 247 (:assertionLeafCount direct))
+                          (and (= 373 (:assertionLeafCount direct))
                                (string? (:assertionMapDigest direct))
                                (= 64 (count (:assertionMapDigest direct)))
                                (true? (:assertionMapExact direct))

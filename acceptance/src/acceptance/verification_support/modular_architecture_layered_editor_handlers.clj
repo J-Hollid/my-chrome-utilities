@@ -108,10 +108,10 @@
                (let [expected ({"one" 1} (first (values example-values example captures)))]
                  (assert-vtd005! world (= expected (get-in world [:vtd005/plan :sessions]))
                                  "Layered editor targets do not share one browser session." {})))}
-   {:pattern #"^all 21 Layered Schema unit files, 13 property files, and the exact shared-profile feature and handler evidence remain selected$"
+   {:pattern #"^all 22 Layered Schema unit files, 13 property files, and the exact shared-profile feature and handler evidence remain selected$"
     :handler (fn [world _ _]
                (let [plan (:vtd005/plan world)]
-                 (assert-vtd005! world (and (= [21 13] [(:unit plan) (:property plan)])
+                 (assert-vtd005! world (and (= [22 13] [(:unit plan) (:property plan)])
                                             (= #{"features/data-layer-canonical-shared-profile-schema-authoring.feature"}
                                                (:features plan))
                                             (seq (:handlers plan)))
@@ -135,10 +135,10 @@
     :handler (fn [world _ _]
                (assert-vtd005! world (= 80 (get-in world [:vtd005/evidence :conservation :editorLeaves]))
                                "Layered editor leaves are not conserved." {}))}
-   {:pattern #"^the 54-task exact owner plan retains one build, 21 unit tasks, 13 property tasks, four browser sessions containing all eight logical targets, seven parses, seven generators, and one acceptance session$"
+   {:pattern #"^the 55-task exact owner plan retains one build, 22 unit tasks, 13 property tasks, four browser sessions containing all eight logical targets, seven parses, seven generators, and one acceptance session$"
     :handler (fn [world _ _]
                (let [c (get-in world [:vtd005/evidence :conservation])]
-                 (assert-vtd005! world (= [54 1 21 13 4 8 7 7 1]
+                 (assert-vtd005! world (= [55 1 22 13 4 8 7 7 1]
                                            [(:exactTasks c) (:builds c) (:unit c) (:property c)
                                             (:browserSessions c) (count (:targetIds c)) (:parses c)
                                             (:generators c) (:acceptanceSessions c)])

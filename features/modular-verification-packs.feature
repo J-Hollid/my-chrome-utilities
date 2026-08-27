@@ -899,7 +899,7 @@ Feature: Modular verification packs
     Then its exact boundary is <boundary>
     And its source class is <source_class>
     And its selected scope is <selected_scope>
-    And every one of the 88 Schemas-owned source files matches exactly one boundary
+    And every one of the 89 Schemas-owned source files matches exactly one boundary
 
     Examples:
       | changed_path                                                               | boundary                           | source_class          | selected_scope             |
@@ -1179,7 +1179,7 @@ Feature: Modular verification packs
     When their behavior targets are planned
     Then selected logical targets are <selected_targets>
     And they execute in <browser_sessions> Layered editor browser session
-    And all 21 Layered Schema unit files, 13 property files, and the exact shared-profile feature and handler evidence remain selected
+    And all 22 Layered Schema unit files, 13 property files, and the exact shared-profile feature and handler evidence remain selected
 
     Examples:
       | changed_paths                                                                                                                       | selected_targets                                                                          | browser_sessions |
@@ -1196,7 +1196,7 @@ Feature: Modular verification packs
     Given the Layered editor partition contains 22 general, 19 rule, 23 canonical, and 16 policy assertion leaves
     When exact layered_schema verification and terminal-full planning are compared before and after VTD-005
     Then all 80 editor assertion leaves execute exactly once
-    And the 54-task exact owner plan retains one build, 21 unit tasks, 13 property tasks, four browser sessions containing all eight logical targets, seven parses, seven generators, and one acceptance session
+    And the 55-task exact owner plan retains one build, 22 unit tasks, 13 property tasks, four browser sessions containing all eight logical targets, seven parses, seven generators, and one acceptance session
     And terminal-full planning retains the same eight Layered Schema target identities and four compatible browser sessions
     And product behavior, saved canonical bytes, feature and handler evidence, task order, worker limits, and terminal shards are unchanged
 
@@ -1246,10 +1246,12 @@ Feature: Modular verification packs
     When VTD-009 validates its statically resolvable transitive import graph
     Then its exact consumers are <consumer_scope>
     And changing the helper selects exactly those consumers once
-    And all 23 retained support helpers and shared-harness have one declaration
+    And all 25 retained support helpers and shared-harness have one declaration
 
     Examples:
       | helper                                                       | consumer_scope                                                        |
+      | test/support/data-layer-installed-controller-contract.mjs    | capture, defects, durable_project_repository, event-library, live_flow_testing, project_event_transport, project_management, replay, schemas |
+      | test/support/data-layer-installed-consumer-contract.mjs      | capture, defects, durable_project_repository, event-library, flow_graph, guided_test_cases, layered_schema, live_flow_testing, project_assurance_severity, project_event_transport, project_management, replay, schemas |
       | test/support/documentation-concept-runtime-probes.mjs        | flow_export                                                           |
       | test/support/flat-rule-builder-runtime-probes.mjs            | layered_schema                                                        |
       | test/support/flow-evidence-reporter.mjs                      | flow_graph                                                            |
@@ -1261,6 +1263,7 @@ Feature: Modular verification packs
       | test/support/browser-target-session.mjs                      | branding_polish, durable_project_repository, layered_schema, shell    |
       | test/support/durable-project-targets.mjs                     | durable_project_repository                                           |
       | test/support/layered-schema-overlay-focusability.mjs         | layered_schema and shell                                             |
+      | test/support/layered-schema-editing-repairs-probe.mjs        | layered_schema                                                        |
       | test/support/layered-schema-targets.mjs                      | layered_schema                                                        |
       | test/support/layered-schema-workflows.mjs                    | layered_schema                                                        |
       | test/support/journal-free-installed-runtime-probe.mjs        | layered_schema                                                        |
@@ -1295,7 +1298,7 @@ Feature: Modular verification packs
     When VTD-009 removes it
     Then its intended evidence remains supplied by <active_evidence>
     And no active assertion leaf or task identity is removed
-    And after both removals the 22 tracked support helpers are all declared
+    And after both removals the 24 tracked support helpers are all declared
 
     Examples:
       | helper                                                   | active_evidence                                   |
@@ -1557,7 +1560,7 @@ Feature: Modular verification packs
       | the Event Library target module                               | event-library                                          |
       | any Schema-family target module                               | schemas and shell                                      |
       | the Defects target module                                     | defects                                                |
-      | the Shell target module                                       | shell                                                  |
+      | the Shell target module                                       | schemas and shell                                      |
 
   # Modular verification packs 103
   Scenario: Modular verification packs 103

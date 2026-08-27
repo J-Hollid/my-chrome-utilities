@@ -217,12 +217,12 @@
                (let [prepared (capture-world world dependencies)
                      evidence (get-in prepared [:vtd004/evidence :conservation])]
                  (assert-capture! (assoc prepared :vtd004/conserved? true)
-                                  (= [22 12 66 25 1 5 2 172]
-                                     ((juxt :unitCount :propertyCount :featureCount :handlerCount
-                                            :adapterCount :targetCount :checkpointCount :exactTaskCount)
-                                      evidence))
-                                  (= {:unit 24 :property 12 :exact 174}
-                                     (:executionTaskCounts evidence))
+                                  (and (= [22 12 66 25 1 5 2 172]
+                                          ((juxt :unitCount :propertyCount :featureCount :handlerCount
+                                                 :adapterCount :targetCount :checkpointCount :exactTaskCount)
+                                           evidence))
+                                       (= {:unit 24 :property 12 :exact 174}
+                                          (:executionTaskCounts evidence)))
                                   "Capture owner evidence profile changed." {:evidence evidence})))}
    {:pattern #"^exact capture verification and terminal-full planning are compared before and after VTD-004$"
     :handler (fn [world _ _]

@@ -70,11 +70,11 @@
                  (assert-schemas! world (= expected (:vtd004/selected-scope world))
                                   "Schemas path selected the wrong scope."
                                   {:expected expected :actual (:vtd004/selected-scope world)})))}
-   {:pattern #"^every one of the 88 Schemas-owned source files matches exactly one boundary$"
+   {:pattern #"^every one of the 89 Schemas-owned source files matches exactly one boundary$"
     :handler (fn [world _ _]
                (let [paths (mapcat :prefixes (get-in world [:vtd004/pack :impactBoundaries]))]
-                 (assert-schemas! world (and (= 88 (count paths)) (= 88 (count (set paths))))
-                                  "Schemas impact boundaries do not partition 88 files." {})))}])
+                 (assert-schemas! world (and (= 89 (count paths)) (= 89 (count (set paths))))
+                                  "Schemas impact boundaries do not partition 89 files." {})))}])
 
 (defn- presentation-handlers [example-values dependencies]
   [{:pattern #"^Schemas local presentation (.+) draws supplied values and returns choices through supplied callbacks$"
@@ -88,7 +88,7 @@
    {:pattern #"^its owner-only route is installed$"
     :applies? #(= "schemas" (:vtd004/owner %))
     :handler (fn [world _ _]
-               (let [local (filter (comp false? :propagateDependants)
+               (let [local (filter #(= "schemas_local_browser_presentation" (:id %))
                                    (get-in world [:vtd004/pack :impactBoundaries]))]
                  (assert-schemas! world (= (set (keys presentation-targets))
                                            (set (mapcat :prefixes local)))
@@ -229,11 +229,11 @@
                (let [prepared (schemas-world world dependencies)
                      evidence (get-in prepared [:vtd004/evidence :conservation])]
                  (assert-schemas! (assoc prepared :vtd004/conserved? true)
-                                  (= [49 29 103 60 1 46 288]
-                                     ((juxt :unitCount :propertyCount :featureCount :handlerCount
-                                            :adapterCount :targetCount :exactTaskCount) evidence))
-                                  (= {:unit 52 :property 29 :checkpoints 1 :exact 292}
-                                     (:executionTaskCounts evidence))
+                                  (and (= [49 29 103 60 1 46 288]
+                                          ((juxt :unitCount :propertyCount :featureCount :handlerCount
+                                                 :adapterCount :targetCount :exactTaskCount) evidence))
+                                       (= {:unit 52 :property 29 :checkpoints 1 :exact 292}
+                                          (:executionTaskCounts evidence)))
                                   "Schemas owner evidence profile changed." {:evidence evidence})))}
    {:pattern #"^exact schemas verification and terminal-full planning are compared before and after VTD-004$"
     :handler (fn [world _ _]
