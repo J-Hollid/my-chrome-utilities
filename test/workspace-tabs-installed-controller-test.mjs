@@ -308,11 +308,15 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const verificationEvidenceSource = shellAcceptanceScenario ? await readFile(new URL(
     "../acceptance/src/acceptance/verification_support/modular_architecture_project_management_handlers.clj",
     import.meta.url), "utf8") : "";
+  const projectEvidenceSupportSource = shellAcceptanceScenario ? await readFile(new URL(
+    "../acceptance/src/acceptance/verification_support/modular_architecture_project_management.clj",
+    import.meta.url), "utf8") : "";
   const workspaceControllerSource = shellAcceptanceScenario ? await readFile(new URL(
     "../src/workspace-tabs-ui.ts", import.meta.url), "utf8") : "";
   const expectedPreRepairFailure = shellAcceptanceScenario ? {
     installedCaptureControllerOwned:false,
     currentVerificationOwnerCounts:false,
+    conservedProjectEvidencePartitioned:false,
     stableWorkspaceShowContract:false,
   } : {
     assertedTaskCount:60,
@@ -322,6 +326,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const expectedRepairResult = shellAcceptanceScenario ? {
     installedCaptureControllerOwned:true,
     currentVerificationOwnerCounts:true,
+    conservedProjectEvidencePartitioned:true,
     stableWorkspaceShowContract:true,
   } : {
     actualTaskCount:shellPlan.tasks.length,
@@ -346,6 +351,9 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       'support/source-file root "src/data-layer-installed/capture/index.ts"'),
     currentVerificationOwnerCounts:["[7 3 2 1 2]", "[11 1 8 3 1]", "[8 5 6 1 4]"]
       .every((counts) => verificationEvidenceSource.includes(counts)),
+    conservedProjectEvidencePartitioned:projectEvidenceSupportSource.includes(
+      "(:executionProfile conservation)") && projectEvidenceSupportSource.includes(
+      "[:conservedTaskTargets :unitTasks]"),
     stableWorkspaceShowContract:workspaceControllerSource.includes("function showWorkspace(") &&
       workspaceControllerSource.includes("show:showWorkspace"),
   } : {

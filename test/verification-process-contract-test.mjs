@@ -6048,9 +6048,12 @@ const vtd004Acceptance = {
   handler:{path:projectHandlerPath, servedFeatures:projectServedFeatures,
     consumers:projectHandlerConsumers, negativeMutationRejected:true,
     ownerPlan:planVerification(packs, {changedPaths:[projectHandlerPath], includeProperties:true}).packIds},
-  conservation:{evidenceProfile:projectEvidenceProfile,
+  conservation:{evidenceProfile:projectEvidenceProfile, executionProfile:projectExecutionProfile,
     exactTaskTargets:Object.fromEntries(["unitTasks", "propertyTasks", "parserTasks", "browserTasks"]
       .map((key) => [key, exactProjectPlan[key].map(({ target }) => target)])),
+    conservedTaskTargets:Object.fromEntries(["unitTasks", "propertyTasks", "parserTasks", "browserTasks"]
+      .map((key) => [key, exactProjectPlan[key].map(({ target }) => target)
+        .filter((target) => !sidePanelPreparationProgram(target))])),
     handlerSessions:exactProjectPlan.sessionTasks.map(({ packId }) => packId),
     terminalTaskIdentitiesConserved:true, packageCheckCount:1},
   calibration:{current:vtd004CompletedProjectCalibration.runnablePacks.find(({ id }) => id === "project_management"),
