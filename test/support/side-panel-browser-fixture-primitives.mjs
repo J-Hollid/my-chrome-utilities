@@ -2041,6 +2041,9 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       assert.equal(draft.publishReady, true);
       assert.equal(published.restored.name, "Generic page view");
       assert.equal(published.restored.canonicalName, "Generic page view");
+      assert.match(published.review.text,/Rename schema from Page view to Generic page view/);
+      assert.match(published.review.text,/Change additional-property policy/);
+      assert.equal(published.review.unchanged,true);
       assert.equal(published.published.id, "schema-page-view");
       assert.equal(published.published.history[0].name, "Page view");
       assert.equal(invalidAndDiscard.discarded.current, "Page view");
@@ -2404,6 +2407,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       assert.deepEqual(schemaRulePropertyIdentityObservation.initial.identities,["/page_type","/page_levels","/page_levels/0","/products","/products/*","/products/*/name","/customer/id"]);
       assert.equal(schemaRulePropertyIdentityObservation.initial.metadata,"Manual · type string");
       assert.match(schemaRulePropertyIdentityObservation.initial.documentation,/Business page type/);
+      assert.equal(schemaRulePropertyIdentityObservation.initial.arrayPicker.heading,"Add rule for page_levels · type array");
       assert.equal(schemaRulePropertyIdentityObservation.required.documentUnchanged,true);
       assert.deepEqual([schemaRulePropertyIdentityObservation.required.selected,schemaRulePropertyIdentityObservation.required.expanded,schemaRulePropertyIdentityObservation.required.editorScroll,schemaRulePropertyIdentityObservation.required.treeScroll,schemaRulePropertyIdentityObservation.required.focus],["true",true,31,19,"Add rule for page_type"]);
       assert.equal(schemaRulePropertyIdentityObservation.reusable.documentUnchanged,true);
@@ -2664,6 +2668,9 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       schemaPropertyRemovalReloadObservation = await evaluate(socket, schemaPropertyRemovalReloadRuntime);
       assert.equal(schemaPropertyRemovalObservation.immediate.absent, true);
       assert.equal(schemaPropertyRemovalReloadObservation.restored.draftAbsent, true);
+      assert.match(schemaPropertyRemovalReloadObservation.confirmation.summary,/Order identifier at \/commerce\/order\/id/);
+      assert.match(schemaPropertyRemovalReloadObservation.confirmation.summary,/Order value at \/commerce\/order\/value/);
+      assert.match(schemaPropertyRemovalReloadObservation.confirmation.summary,/Commerce shape at \/commerce/);
       assert.equal(schemaPropertyRemovalReloadObservation.confirmed.reusable, true);
       assert.deepEqual(
         {
@@ -2908,6 +2915,9 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       await reloadPanel(socket);
       schemaNestedPathObservation = await evaluate(socket, schemaNestedPathRuntime);
       assert.deepEqual(schemaNestedPathObservation.advanced.arrayOverflow,{label:"⋯",menu:["Definition","Rules","Structure"]});
+      assert.deepEqual(schemaNestedPathObservation.advanced.arrayActions,["Edit type · Array of Object","Add item property","Add rule","Add specific index rule","Copy to another schema","Remove property"]);
+      assert.equal(schemaNestedPathObservation.exactIndex.heading,"Add rule for fruits.1 · type string");
+      assert.equal(schemaNestedPathObservation.wildcardPicker.heading,"Add rule for products.*.id · type number");
       assert.deepEqual(schemaNestedPathObservation.persisted,{pendingChanges:["Attach Product ids to products.*.id"],attachmentPaths:["/products/*/id"],currentRules:0,currentVersion:3});
       socket.close(); continue;
     }
@@ -2979,6 +2989,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
         await reloadPanel(socket);
         const reload = await evaluate(socket, schemaManualPropertyReloadRuntime);
         schemaManualPropertyObservation = { interaction, reload };
+        assert.deepEqual(interaction.duplicate,{closed:true,unchanged:true,selected:true,visible:true,focused:true});
         await evaluate(socket, `(() => {
           const document = { type:"object", required:["products", "tags"], properties:{
             commerce:{ type:"object", minimum:1, properties:{} },
@@ -3013,6 +3024,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
         })()`);
         await reloadPanel(socket);
         schemaPropertyRulePickerObservation = await evaluate(socket, schemaPropertyRulePickerRuntime);
+        assert.equal(schemaPropertyRulePickerObservation.opened.heading,"Add rule for page_type · type string");
         assert.equal(schemaPropertyRulePickerObservation.attached.draftRules,1);
         assert.equal(schemaPropertyRulePickerObservation.localCreation.count,1);
         assert.deepEqual([schemaPropertyRulePickerObservation.reusableCreation.attachmentCount,schemaPropertyRulePickerObservation.reusableCreation.sameIdentity],[1,true]);

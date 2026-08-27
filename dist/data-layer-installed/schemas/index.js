@@ -1661,6 +1661,8 @@ export function createSchemasInstalledController(ports) {
                     const containerAction = editable ? manualPropertyContainerAction(editable.document, row.canonicalPath) : undefined;
                     propertyAction(containerAction?.label ?? "Add child", (button) => openContextualManualPropertyForm(containerAction?.parentPath ?? row.canonicalPath, button), `${containerAction?.label ?? "Add child"} on ${row.canonicalPath}`);
                     propertyAction("Add rule", (button) => openSchemaPropertyRulePicker(row.displayPath, button), `Add rule for ${row.displayPath}`);
+                    if (row.schema.type === "array")
+                        propertyAction("Add specific index rule", (button) => openSpecificIndexDialog(row.canonicalPath, button));
                     propertyAction("Edit canonical rules", (button) => { openCompactCanonicalRuleEditor(row.displayPath, button); }, `Edit canonical rules for ${row.displayPath}`);
                     propertyAction("Copy to another schema", (button) => openSchemaPropertyCopyReview(row.canonicalPath, button), `Copy ${row.canonicalPath} to another schema`);
                     if (row.origin === "inherited")
@@ -1675,8 +1677,6 @@ export function createSchemasInstalledController(ports) {
                     else
                         propertyAction("Remove property", (button) => requestSchemaPropertyRemoval(row.canonicalPath, button), `Remove property ${row.canonicalPath}`);
                     propertyAction("Remove documentation", (button) => requestSchemaDocumentationRemoval(row.canonicalPath, button));
-                    if (row.schema.type === "array")
-                        propertyAction("Add specific index rule", (button) => openSpecificIndexDialog(row.canonicalPath, button));
                     propertyAction(expandedSchemaPropertyRulePaths.has(row.canonicalPath) ? "Hide rules" : "Show rules", () => {
                         if (expandedSchemaPropertyRulePaths.has(row.canonicalPath))
                             expandedSchemaPropertyRulePaths.delete(row.canonicalPath);
@@ -2487,8 +2487,11 @@ export function createSchemasInstalledController(ports) {
             return;
         }
         pendingSchemaPropertyRemoval = { path, ...(trigger ? { trigger } : {}) };
-        if (schemaPropertyRemovalSummary)
-            schemaPropertyRemovalSummary.textContent = `${inspection.propertyPath} contains ${inspection.descendants.length} descendants: ${inspection.descendants.join(", ") || "none"}. ${inspection.affectedRuleAttachments.length} affected rule attachments. Documentation entries: ${inspection.affectedDocumentationPaths?.join(", ") || "none"}. No changes occur until confirmation.`;
+        if (schemaPropertyRemovalSummary) {
+            const affectedRules = inspection.affectedRuleAttachments
+                .map((rule) => `${rule.name ?? rule.id} at ${rule.propertyPath ?? inspection.propertyPath}`).join(", ") || "none";
+            schemaPropertyRemovalSummary.textContent = `${inspection.propertyPath} contains ${inspection.descendants.length} descendants: ${inspection.descendants.join(", ") || "none"}. ${inspection.affectedRuleAttachments.length} affected rule attachments: ${affectedRules}. Documentation entries: ${inspection.affectedDocumentationPaths?.join(", ") || "none"}. No changes occur until confirmation.`;
+        }
         schemaPropertyRemovalDialog?.showModal();
         schemaPropertyRemovalHeading?.focus();
     }
@@ -2854,6 +2857,7 @@ export function createSchemasInstalledController(ports) {
         selectedSchemaPropertyPath = path.replace(/^\//, "").replaceAll("/", ".");
         closeManualPropertyForm(false);
         renderSchemas();
+        schemaPropertyTree?.querySelector(`button[aria-label="${CSS.escape(`Add rule for ${selectedSchemaPropertyPath}`)}"]`)?.focus({ preventScroll: true });
     };
     const normalizedRulePickerPath = (path) => `/${path.replace(/^\//, "").replaceAll(".", "/")}`;
     function currentConditionPayload(target = "payload") { return ports.capturedAssignmentValue(target); }
@@ -3053,16 +3057,16 @@ export function createSchemasInstalledController(ports) {
         if (!document)
             return;
         if (!schemaRuleConfiguration) {
-            const heading = document.createElement("h4"), search = document.createElement("input"), results = document.createElement("section"), cancel = document.createElement("button");
+            const heading = document.createElement("h4"), search = document.createElement("input"), results = document.createElement("section"), cancel = document.createElement("button"), propertyType = schemaRuleTypeForAttachment(active(), path);
             heading.id = "schema-property-rule-picker-heading";
-            heading.textContent = `Add rule for ${path}`;
+            heading.textContent = `Add rule for ${path} · type ${propertyType}`;
             results.id = "schema-property-rule-results";
             search.id = "schema-property-rule-search";
             search.value = schemaRulePickerSearch;
             schemaPropertyRulePicker.setAttribute("aria-labelledby", heading.id);
             cancel.type = "button";
             cancel.textContent = "Cancel";
-            const propertyType = schemaRuleTypeForAttachment(active(), path), canonicalPath = normalizedRulePickerPath(path), attachedIds = new Set((active().workingDraft?.attachedRules ?? active().attachedRules ?? [])
+            const canonicalPath = normalizedRulePickerPath(path), attachedIds = new Set((active().workingDraft?.attachedRules ?? active().attachedRules ?? [])
                 .filter(({ propertyPath }) => normalizedRulePickerPath(propertyPath ?? "") === canonicalPath)
                 .map(({ id }) => id));
             const normalized = schemaRulePickerSearch.trim().toLowerCase(), builtIns = builtInRulesForProperty(propertyType)

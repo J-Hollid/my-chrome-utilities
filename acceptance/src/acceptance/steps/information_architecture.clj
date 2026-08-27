@@ -9,7 +9,8 @@
            :html (support/source-file root "side-panel.html")
            :css (support/source-file root "side-panel.css")
            :source (str/join "\n" [(support/source-file root "src/side-panel.ts")
-                                     (support/source-file root "src/data-layer-live-observer-ui.ts")]))))
+                                     (support/source-file root "src/data-layer-live-observer-ui.ts")
+                                     (support/source-file root "src/data-layer-installed/capture/index.ts")]))))
 
 (defn- example-value [example key]
   (support/require-example example key))

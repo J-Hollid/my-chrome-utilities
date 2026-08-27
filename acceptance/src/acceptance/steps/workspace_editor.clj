@@ -19,7 +19,8 @@
                           "workspace-tab-hotkeys" "workspace-panel-data-layer"
                           "workspace-panel-hotkeys" "aria-controls"
                           "aria-selected" "WORKSPACE_TAB_STORAGE_KEY"
-                          "workspaceTabForNavigationKey" "showWorkspace"]))
+                          "workspaceTabForNavigationKey" "createWorkspaceTabsController"
+                          "function show("]))
 
 (defn editor-wired? [html source]
   (support/includes-all? (str html source)
