@@ -703,16 +703,16 @@ async function installDurableSchemaObservationProjection(socket) {
     globalThis.__readDurableSchemaObservation = () => structuredClone(globalThis.__durableSchemaObservation);
     globalThis.__waitForDurableSchemaObservation = async (predicate, label = "durable Saved Schema projection") => {
       return new Promise((resolve, reject) => {
-        let checking = false, settled = false, pending = false;
-        const finish = (schemas) => { if (!settled) { settled = true; unsubscribe(); resolve(structuredClone(schemas)); } };
+        const channel = new BroadcastChannel("my-chrome-utilities.durable-saved-schemas"); let checking = false, settled = false, pending = false;
+        const finish = (schemas) => { if (!settled) { settled = true; unsubscribe(); channel.close(); resolve(structuredClone(schemas)); } };
         const check = async () => {
           if (checking) { pending = true; return; }
           checking = true; try { do { pending = false; const schemas = await repository.savedSchemas();
             globalThis.__durableSchemaObservation = structuredClone(schemas);
             if (predicate(schemas)) { finish(schemas); return; }
-          } while (pending); } catch (error) { if (!settled) { settled = true; unsubscribe(); reject(new Error("Failed while waiting for " + label, { cause:error })); }
+          } while (pending); } catch (error) { if (!settled) { settled = true; unsubscribe(); channel.close(); reject(new Error("Failed while waiting for " + label, { cause:error })); }
           } finally { checking = false; } };
-        const unsubscribe = repository.subscribeSavedSchemas(() => { void check(); }); void check(); }); };
+        const unsubscribe = repository.subscribeSavedSchemas(() => { void check(); }); channel.addEventListener("message", () => { void check(); }); void check(); }); };
     if (globalThis.__durableSchemaObservationProjectionInstalled) return true;
     globalThis.__durableSchemaObservationProjectionInstalled = true;
     const storageGetItem = Storage.prototype.getItem;

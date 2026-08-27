@@ -298,6 +298,8 @@ const directFixtureModuleSources = await Promise.all(directFixtureModulePaths.ma
 ]));
 assert.match(fixtureSource, /repository\.subscribeSavedSchemas/u,
   "durable schema fixture settlement must follow repository change notifications");
+assert.match(fixtureSource, /my-chrome-utilities\.durable-saved-schemas/u,
+  "durable schema fixture settlement must follow cross-instance repository notifications");
 assert.doesNotMatch(fixtureSource, /attempt\s*<\s*400[\s\S]{0,300}repository\.savedSchemas/u,
   "durable schema fixture settlement must not encode a polling-duration assertion");
 for (const [modulePath, source] of targetModuleSources) {
@@ -624,10 +626,10 @@ console.log(JSON.stringify({ vtd006Acceptance:{
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   const digest = (value) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
-  const expectedPreRepairFailure = { settlementTrigger:"fixed polling duration", repositoryNotifications:false };
-  const expectedRepairResult = { settlementTrigger:"repository change", repositoryNotifications:true };
+  const expectedPreRepairFailure = { settlementTrigger:"fixed polling duration", crossInstanceNotifications:false };
+  const expectedRepairResult = { settlementTrigger:"repository change", crossInstanceNotifications:true };
   const observed = { settlementTrigger:fixtureSource.includes("repository.subscribeSavedSchemas") ? "repository change" : "fixed polling duration",
-    repositoryNotifications:fixtureSource.includes("repository.subscribeSavedSchemas") };
+    crossInstanceNotifications:fixtureSource.includes("my-chrome-utilities.durable-saved-schemas") };
   assert.deepEqual(observed, expectedRepairResult);
   const fixture = { id:"side-panel-durable-schema-notification-settlement-v1", causalCategory:context.causalCategory,
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary), input:{ boundary:"Saved Schema projection", concurrency:"shared browser batch" },

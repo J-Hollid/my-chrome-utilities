@@ -1022,7 +1022,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const notificationSource = notificationScenario ? await readFile(new URL(
     "../support/side-panel-browser-fixture-primitives.mjs", import.meta.url), "utf8") : "";
   const expectedPreRepairFailure = notificationScenario
-    ? { repositoryNotifications:false, pollingDurationAssertion:true }
+    ? { crossInstanceNotifications:false, pollingDurationAssertion:true }
     : emptyHistoryScenario
     ? { emptyHistoryFeedbackPresented:false }
     : acknowledgementScenario
@@ -1033,7 +1033,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       ? { untouchedSchemaProjectionPreserved:false }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:false };
   const expectedRepairResult = notificationScenario
-    ? { repositoryNotifications:true, pollingDurationAssertion:false }
+    ? { crossInstanceNotifications:true, pollingDurationAssertion:false }
     : emptyHistoryScenario
     ? { emptyHistoryFeedbackPresented:true }
     : acknowledgementScenario
@@ -1044,7 +1044,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       ? { untouchedSchemaProjectionPreserved:true }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:true };
   const observed = notificationScenario
-    ? { repositoryNotifications:notificationSource.includes("repository.subscribeSavedSchemas"),
+    ? { crossInstanceNotifications:notificationSource.includes("my-chrome-utilities.durable-saved-schemas"),
       pollingDurationAssertion:/attempt\s*<\s*400[\s\S]{0,300}repository\.savedSchemas/u.test(notificationSource) }
     : emptyHistoryScenario
     ? { emptyHistoryFeedbackPresented }
