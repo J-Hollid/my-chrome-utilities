@@ -695,7 +695,7 @@ const schemaRenamingPublishRuntime = `(async () => {
   const stored = () => JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
   q("#data-layer-view-schemas").click(); const row = Array.from(q("#schema-list").children).find(({ textContent }) => textContent.includes("Page view")); click(row, "Edit working draft");
   const restoredDraft=stored().find(({id})=>id==="schema-page-view").workingDraft;const restored = { name:q("#schema-editor-name").value,canonicalName:restoredDraft.canonicalSchema?.contributorName,pending:restoredDraft.pendingChanges };
-  q("#schema-only-declared-properties").click();
+  q('#compact-canonical-table-editor [aria-label="Only defined fields"]').click();
   await waitFor(()=>!q("#save-schema").disabled,"the renamed schema publish action");
   const beforeReview = localStorage.getItem("my-chrome-utilities.schema-library.v1"); q("#save-schema").click();
   const review = { text:q("#schema-revision-review-summary").textContent, unchanged:beforeReview === localStorage.getItem("my-chrome-utilities.schema-library.v1") };

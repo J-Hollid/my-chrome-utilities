@@ -2042,7 +2042,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       assert.equal(published.restored.name, "Generic page view");
       assert.equal(published.restored.canonicalName, "Generic page view");
       assert.match(published.review.text,/Rename schema from Page view to Generic page view/);
-      assert.match(published.review.text,/Change additional-property policy/);
+      assert.match(published.review.text,/policy canonical property/);
       assert.equal(published.review.unchanged,true);
       assert.equal(published.published.id, "schema-page-view");
       assert.equal(published.published.history[0].name, "Page view");
