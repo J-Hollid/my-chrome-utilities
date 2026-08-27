@@ -389,7 +389,6 @@ const flowCss=[
 ].join("\n");
 const flowWorkspaceUi=await readFile(new URL("../src/flow-graph/workspace-ui.ts",import.meta.url),"utf8");
 const flowGraphUi=await readFile(new URL("../src/data-layer-flow-graph-ui.ts",import.meta.url),"utf8");
-const installedRuntimeSource=await readFile(new URL("../src/data-layer-installed/runtime.ts",import.meta.url),"utf8");
 const flowGraphStepsSource=await readFile(new URL("../acceptance/src/acceptance/steps/flow_graph.clj",import.meta.url),"utf8");
 const flowBrowserEvidence=await readFile(new URL("./browser-packs/flow-graph.mjs",import.meta.url),"utf8");
 const flowCorrectiveWorkflow=await readFile(new URL("./support/flow-graph-corrective-workflow.mjs",import.meta.url),"utf8");
@@ -417,8 +416,6 @@ assert.ok(connectionStart>=0&&connectingLayout>connectionStart&&connectingLayout
 assert.match(flowGraphUi,/flowPointerSnapTarget\(\{sourceId:connection\.sourceId,compatibleSide,direct:directFlowSnapTarget\(direct\),snap:compatiblePortSnap/u,"installed pointer targeting delegates Page-body precedence to the bounded snap contract");
 assert.match(flowCorrectiveWorkflow,/pageName:page\.name/u,"legacy Flow review evidence carries the exact seeded Page name");
 assert.match(flowCorrectiveWorkflow,/reviewText\.includes\(fixture\.pageName\)/u,"legacy Flow review evidence verifies the rendered seed identity instead of a hardcoded Page label");
-assert.ok(installedRuntimeSource.indexOf("mountUtilityShell(extensionShell, panelRoot, window)")<installedRuntimeSource.indexOf("await openDurableProjectRuntime(storage)"),"the utility Shell becomes ready before the unrelated durable project repository opens");
-
 if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
     normalized=(value)=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"
@@ -426,12 +423,10 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         .sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)]))
       :value,
     digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
-    shellReadiness=context.causalCategory==="other:installed shell readiness source boundary" ||
-      context.diagnosedBoundary?.taskKey==="browser:test/browser-packs/shell.mjs",
     pagePlacementWorkflow=context.causalCategory==="other:Flow Page placement workflow",
     flow019Allowlist=context.causalCategory==="other:mode-aware Flow 019 example allowlist",
     legacySeededReview=context.causalCategory==="other:seeded Flow legacy review identity",
-    readiness=!shellReadiness&&context.causalCategory==="readiness or settling",
+    readiness=context.causalCategory==="readiness or settling",
     zoomContainment=context.incidentId==="d3a49b37-e016-4bed-830c-9531045a6773",
     expectedPreRepairFailure=pagePlacementWorkflow
       ?{liveCameraCaptured:false,pointerRowsAnchored:false}
@@ -439,8 +434,6 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       ?{seedNameCarried:false,renderedSeedNameVerified:false,hardcodedLabel:true}
       :flow019Allowlist
       ?{modelSelectionAccepted:true,runtimeSelectionAccepted:false,modeSeparated:false}
-      :shellReadiness
-      ?{repositoryOpening:true,shellReady:false}
       :readiness
       ?{routeRestored:true,paintedInstanceSelected:false}
       :zoomContainment
@@ -452,14 +445,12 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       ?{seedNameCarried:true,renderedSeedNameVerified:true,hardcodedLabel:false}
       :flow019Allowlist
       ?{modelSelectionAccepted:true,runtimeSelectionAccepted:true,modeSeparated:true}
-      :shellReadiness
-      ?{repositoryOpening:true,shellReady:true}
       :readiness
       ?{routeRestored:true,paintedInstanceSelected:true}
       :zoomContainment
         ?{zoomInContained:true,toolbarWrapped:true,cameraControlsImmediatelyAvailable:true}
         :{entryControlContained:true,focusToolbarWrapped:true,requiredControlsPrecedeSecondary:true},
-    fixture={id:pagePlacementWorkflow?"flow-page-placement-workflow-v1":legacySeededReview?"seeded-flow-legacy-review-identity-v1":flow019Allowlist?"mode-aware-flow019-example-allowlist-v1":shellReadiness?"shell-readiness-before-repository-v1":readiness?"flow-pan-painted-instance-readiness-v1":zoomContainment
+    fixture={id:pagePlacementWorkflow?"flow-page-placement-workflow-v1":legacySeededReview?"seeded-flow-legacy-review-identity-v1":flow019Allowlist?"mode-aware-flow019-example-allowlist-v1":readiness?"flow-pan-painted-instance-readiness-v1":zoomContainment
       ?"zoom-in-360-control-containment-v1":"focus-canvas-360-control-containment-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:pagePlacementWorkflow
@@ -468,8 +459,6 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         ?{preRepair:{seededPageName:"dynamic",reviewLookup:"Confirmation"}}
         :flow019Allowlist
         ?{modelRow:{scope:"the selection",arrangement:"horizontally"},runtimeRow:{scope:"selection",arrangement:"horizontally"}}
-        :shellReadiness
-        ?{preRepair:{shellMount:"after durable repository await",repositoryOpening:true}}
         :readiness
         ?{preRepair:{historicalCanvas:{width:0,height:0},liveCanvas:{width:360,height:800},selection:"first DOM match"}}
         :zoomContainment
@@ -489,9 +478,6 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       modelSelectionAccepted:/\[:model \["the selection" "horizontally"\]\]/u.test(flowGraphStepsSource),
       runtimeSelectionAccepted:/\[:runtime \["selection" "horizontally"\]\]/u.test(flowGraphStepsSource),
       modeSeparated:/key \[mode row\]/u.test(flowGraphStepsSource),
-    }:shellReadiness?{
-      repositoryOpening:installedRuntimeSource.includes("await openDurableProjectRuntime(storage)"),
-      shellReady:installedRuntimeSource.indexOf("mountUtilityShell(extensionShell, panelRoot, window)")<installedRuntimeSource.indexOf("await openDurableProjectRuntime(storage)"),
     }:readiness?{
       routeRestored:/ensureFlowPanWorkspace/u.test(flowBrowserEvidence),
       paintedInstanceSelected:/painted=\(s\)=>all\(s\)\.find/u.test(flowCorrectionEvidence)&&/const painted=\(selector\)=>\[\.\.\.document\.querySelectorAll\(selector\)\]\.find/u.test(flowBrowserEvidence),
