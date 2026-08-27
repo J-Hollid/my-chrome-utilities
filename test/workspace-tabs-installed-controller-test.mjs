@@ -203,6 +203,8 @@ assert.deepEqual([
 
 const controllerSource = await readFile(new URL("../src/workspace-tabs-ui.ts", import.meta.url), "utf8");
 const sidePanelSource = await readFile(new URL("../src/side-panel.ts", import.meta.url), "utf8");
+const installedRuntimeSource = await readFile(
+  new URL("../src/data-layer-installed/runtime.ts", import.meta.url), "utf8");
 function parseTypeScript(name, source) {
   return ts.createSourceFile(name, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 }
@@ -230,14 +232,16 @@ function calledMethodsOf(sourceFile, receiver) {
 function controllerConstructionOf(sourceFile) {
   const calls = [];
   function visit(node) {
-    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
-      node.expression.text === "createWorkspaceTabsController") {
+    if (ts.isCallExpression(node) &&
+      (ts.isIdentifier(node.expression) && node.expression.text === "createWorkspaceTabsController" ||
+       ts.isPropertyAccessExpression(node.expression) &&
+        node.expression.name.text === "createWorkspaceTabsController")) {
       calls.push(node);
     }
     ts.forEachChild(node, visit);
   }
   visit(sourceFile);
-  assert.equal(calls.length, 1, "the composition root constructs one workspace-tabs controller");
+  assert.equal(calls.length, 1, "the installed runtime constructs one workspace-tabs controller");
   const [options] = calls[0].arguments;
   assert.equal(ts.isObjectLiteralExpression(options), true,
     "the controller receives an explicit dependency object");
@@ -246,18 +250,30 @@ function controllerConstructionOf(sourceFile) {
 
 const controllerSyntax = parseTypeScript("src/workspace-tabs-ui.ts", controllerSource);
 const sidePanelSyntax = parseTypeScript("src/side-panel.ts", sidePanelSource);
+const installedRuntimeSyntax = parseTypeScript(
+  "src/data-layer-installed/runtime.ts", installedRuntimeSource);
 assert.deepEqual(importsOf(controllerSyntax), ["./workspace-tabs.js"],
   "the controller imports no sibling utility or composition state");
-const controllerOptions = controllerConstructionOf(sidePanelSyntax);
+const controllerOptions = controllerConstructionOf(installedRuntimeSyntax);
 const optionAssignments = controllerOptions.properties.filter(ts.isPropertyAssignment);
-assert.deepEqual(optionAssignments.map(({ name }) => name.text).sort(),
+const shorthandAssignments = controllerOptions.properties.filter(ts.isShorthandPropertyAssignment);
+assert.deepEqual([
+  ...optionAssignments.map(({ name }) => name.text),
+  ...shorthandAssignments.map(({ name }) => name.text),
+].sort(),
   ["pageLifecycle", "root", "storage", "tabList"],
   "the composition root supplies only the controller's explicit dependencies");
 const pageLifecycle = optionAssignments.find(({ name }) => name.text === "pageLifecycle");
-assert.equal(ts.isIdentifier(pageLifecycle.initializer) && pageLifecycle.initializer.text === "window", true,
+assert.equal(ts.isIdentifier(pageLifecycle.initializer) && pageLifecycle.initializer.text === "globalThis", true,
   "the production page lifecycle is injected into the controller");
-assert.deepEqual(calledMethodsOf(sidePanelSyntax, "workspaceTabsController").sort(), ["mount", "show"],
-  "the composition root retains only controller construction, command routing, and mounting");
+assert.match(installedRuntimeSource,
+  /createInstalledSidePanelShellController\(\{[\s\S]*?workspaceTabs[\s\S]*?hotkeys/u,
+  "the installed runtime delegates workspace-tab lifecycle to the installed shell controller");
+assert.deepEqual(calledMethodsOf(sidePanelSyntax, "installedDataLayer").sort(),
+  ["dispose", "mount"],
+  "the stable entry point retains only installed-runtime mounting and disposal");
+assert.doesNotMatch(sidePanelSource, /createWorkspaceTabsController/u,
+  "the stable side-panel entry point delegates controller construction to the installed runtime");
 
 const packs = await loadVerificationPacks();
 const shellPlan = planVerification(packs, {

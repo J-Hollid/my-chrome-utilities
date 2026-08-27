@@ -88,20 +88,36 @@ assert.doesNotMatch(handoffSource,
   /\(= "note" \(get headers "type"\)\)[\s\S]{0,200}?assert-handoff/u,
   "repair note handoffs remain available while Git handoff is blocked");
 const babashkaTaskSource = await readFile(path.join(root, "bb.edn"), "utf8");
+const verificationRegistrySource = await readFile(
+  path.join(root, "verification/packs.json"), "utf8");
 const acceptanceTestDirectory = path.join(root, "test/acceptance");
 const acceptanceTestFiles = (await readdir(acceptanceTestDirectory))
   .filter((name) => name.endsWith("_test.clj"))
   .sort();
+const directClojureEntrypoints = await Promise.all((await readdir(path.join(root, "test")))
+  .filter((name) => name.endsWith(".mjs"))
+  .map(async (name) => ({
+    name,
+    source:await readFile(path.join(root, "test", name), "utf8"),
+  })));
 assert.ok(acceptanceTestFiles.length > 0, "the aggregate Clojure test inventory must not be empty");
 for (const name of acceptanceTestFiles) {
   const source = await readFile(path.join(acceptanceTestDirectory, name), "utf8");
   const namespace = source.match(/^\(ns\s+([^\s)]+)/mu)?.[1];
   assert.ok(namespace, `${name} must declare a Clojure namespace`);
   assert.match(source, /\(deftest\s/u, `${name} must remain a real test namespace`);
-  assert.ok(babashkaTaskSource.includes(`[${namespace}]`),
-    `${namespace} must be required by the aggregate Babashka tasks`);
-  assert.ok(babashkaTaskSource.includes(`'${namespace}`),
-    `${namespace} must be executed by an aggregate Clojure test lane`);
+  const globallyRequired = babashkaTaskSource.includes(`[${namespace}]`);
+  const globallyExecuted = babashkaTaskSource.includes(`'${namespace}`);
+  const directEntrypoint = directClojureEntrypoints.find(({ source:entrypointSource }) =>
+    entrypointSource.includes(namespace) &&
+    /execFileSync\("bb"/u.test(entrypointSource) &&
+    entrypointSource.includes("test/run-tests"));
+  assert.ok(globallyRequired && globallyExecuted || directEntrypoint,
+    `${namespace} must be executed by a global or pack-local Clojure test lane`);
+  if (directEntrypoint) {
+    assert.ok(verificationRegistrySource.includes(`test/${directEntrypoint.name}`),
+      `${namespace}'s pack-local Clojure entrypoint must be registered for verification`);
+  }
 }
 const runMainSource = launcherSource.slice(
   launcherSource.indexOf("(defn run-main!"),
@@ -843,5 +859,51 @@ assert.match(sharedWorkflow,/Plan-only ownership preflight is read-only/u);
 const sharedHandoffs=await readFile(path.join(root,"swarmforge/scripts/shared-articles/handoffs.prompt"),"utf8");
 assert.match(sharedHandoffs,/release-candidate handoff is rejected.*granularity portfolio/isu);
 assert.equal(lock.codex.requiredFeature, "network_proxy");
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const normalize = (value) => Array.isArray(value) ? value.map(normalize)
+    : value && typeof value === "object"
+      ? Object.fromEntries(Object.entries(value).sort(([left], [right]) =>
+        left.localeCompare(right)).map(([key, nested]) => [key, normalize(nested)]))
+      : value;
+  const digest = (value) => createHash("sha256")
+    .update(JSON.stringify(normalize(value))).digest("hex");
+  const namespace = "acceptance.live-target-permission-path-apply-test";
+  const directEntrypoint = directClojureEntrypoints.find(({ source }) =>
+    source.includes(namespace) && /execFileSync\("bb"/u.test(source) &&
+    source.includes("test/run-tests"));
+  const expectedPreRepairFailure = {
+    globalAggregateRequired:true,
+    registeredPackLocalLaneAccepted:false,
+  };
+  const expectedRepairResult = {
+    globalAggregateRequired:false,
+    registeredPackLocalLaneAccepted:true,
+  };
+  const repairResult = {
+    globalAggregateRequired:babashkaTaskSource.includes(`[${namespace}]`),
+    registeredPackLocalLaneAccepted:Boolean(directEntrypoint &&
+      verificationRegistrySource.includes(`test/${directEntrypoint.name}`)),
+  };
+  assert.deepEqual(repairResult, expectedRepairResult);
+  const fixture = {
+    id:"pack-local-clojure-entrypoint-registration-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{ namespace, globalAggregate:"bb.edn", directLane:"registered Node unit task" },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const fixtureDigest = digest(fixture);
+  console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
+    version:2,
+    incidentId:context.incidentId,
+    failureDigest:context.failureDigest,
+    fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
+  } }));
+}
 
 console.log("SwarmForge process contracts passed.");

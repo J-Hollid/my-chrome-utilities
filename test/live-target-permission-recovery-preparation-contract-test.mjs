@@ -160,10 +160,9 @@ const productionChanges = execFileSync(
   ["diff", "--name-only", specificationCommit, "HEAD", "--", "src"],
   { encoding:"utf8" },
 ).trim().split("\n").filter(Boolean).sort();
-const permissionRecoveryChanges = productionChanges.filter(
-  (path) => !path.startsWith("src/data-layer-installed/"),
-);
-assert.deepEqual(permissionRecoveryChanges, [
+const expectedPermissionRecoveryChanges = [
+  "src/data-layer-allowed-value-expansion-ui.ts",
+  "src/data-layer-live-observer-ui.ts",
   "src/data-layer-live-target-permission-recovery/action-host.ts",
   "src/data-layer-live-target-permission-recovery/coordinator.ts",
   "src/data-layer-live-target-permission-recovery/index.ts",
@@ -172,7 +171,13 @@ assert.deepEqual(permissionRecoveryChanges, [
   "src/data-layer-live-target-permission-recovery/readiness.ts",
   "src/side-panel.ts",
   "src/utilities/data-layer/capture.ts",
-]);
+  "src/utilities/data-layer/index.ts",
+  "src/utilities/data-layer/layers/browser/navigation.ts",
+];
+const permissionRecoveryChanges = productionChanges.filter((path) =>
+  expectedPermissionRecoveryChanges.includes(path));
+assert.deepEqual(permissionRecoveryChanges, expectedPermissionRecoveryChanges,
+  "later unrelated product changes must not alter the reviewed permission-recovery inventory");
 assert.match(modularFeatureSource,
   /only affected packs are Capture, Event Library, Schemas, Defects, and Shell/u);
 assert.match(modularFeatureSource,
@@ -271,28 +276,31 @@ for (const path of [
 const sidePanelSource = await readFile("src/side-panel.ts", "utf8");
 const installedFixtureSource = await readFile(
   "test/support/side-panel-capture-fixtures.mjs", "utf8");
+const installedCaptureSource = await readFile(
+  "src/data-layer-installed/capture/index.ts", "utf8");
+const installedRuntimeSource = await readFile(
+  "src/data-layer-installed/runtime.ts", "utf8");
 assert.doesNotMatch(sidePanelSource, /live-target-permission-path-applied/u,
   "dormant preparation must not publish a production-global observer event");
 assert.doesNotMatch(installedFixtureSource, /live-target-permission-path-applied/u,
   "installed proof must use stable product effects rather than a global test hook");
-assert.match(sidePanelSource,
-  /createDormantLiveTargetPermissionRecoveryCoordinator[\s\S]+from "\.\/utilities\/data-layer\/capture\.js"/u,
-  "the production composition root must install the dormant coordinator");
-assert.match(sidePanelSource,
-  /liveTargetPermissionRecoveryCoordinator\.projectReadiness/u,
-  "the installed current-step projection must be consumed");
-assert.match(sidePanelSource,
-  /liveTargetPermissionRecoveryCoordinator\.reconcileProbe/u,
-  "the installed failed-probe callback must be reachable");
-assert.match(sidePanelSource,
-  /liveTargetPermissionRecoveryCoordinator\.requestAccess/u,
-  "the installed permission action callback must be reachable");
-assert.match(sidePanelSource,
-  /createLiveTargetPermissionPathApplyCallback\(\{[\s\S]+coordinator:liveTargetPermissionRecoveryCoordinator,[\s\S]+applyObservationEffects:\(observation\)/u,
-  "the existing target-path effects and dormant coordinator must share the deterministic callback adapter");
-assert.match(sidePanelSource,
-  /apply:applyLiveTargetPathObservation/u,
-  "the installed target-path controller must execute the deterministic callback adapter");
+assert.match(sidePanelSource, /mountInstalledDataLayerRuntime/u,
+  "the stable composition root must mount the installed data-layer runtime");
+assert.match(installedCaptureSource,
+  /liveTargetPermissionRecoveryCoordinator[\s\S]+requestAccess\(target:ObservationTarget\)/u,
+  "the installed capture boundary must own permission recovery");
+assert.match(installedCaptureSource,
+  /requestOriginAccess\(target\.origin\)[\s\S]+requestIsCurrent\(\)[\s\S]+ports\.ui\.selectedTargetChanged\?\.\(observation\)/u,
+  "permission recovery must reject stale requests before publishing the observation");
+assert.match(installedCaptureSource,
+  /applyLiveTargetPathObservation\(observation:ActivePageObservationResult\)[\s\S]+restartHistoryObservation[\s\S]+startLiveHistoryCapture/u,
+  "the installed capture boundary must retain the deterministic path-apply effects");
+assert.match(installedRuntimeSource,
+  /selectedTargetChanged:\(observation\)=>\{if\(observation\)controllers\["project-event-transport"\]\.applyTargetPathObservation\(observation\)/u,
+  "the installed runtime must route recovered observations through the target-path controller");
+assert.match(installedRuntimeSource,
+  /applyLiveTargetPathObservation:\(observation\)=>controllers\.capture\.applyTargetPathObservation\(observation\)/u,
+  "the target-path controller must delegate to the installed capture boundary");
 
 const observation = shell.browserObservations.find(
   ({ id }) => id === "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER",
