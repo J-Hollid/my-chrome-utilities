@@ -426,7 +426,8 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         .sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)]))
       :value,
     digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
-    shellReadiness=context.diagnosedBoundary?.taskKey==="browser:test/browser-packs/shell.mjs",
+    shellReadiness=context.causalCategory==="other:installed shell readiness source boundary" ||
+      context.diagnosedBoundary?.taskKey==="browser:test/browser-packs/shell.mjs",
     pagePlacementWorkflow=context.causalCategory==="other:Flow Page placement workflow",
     flow019Allowlist=context.causalCategory==="other:mode-aware Flow 019 example allowlist",
     legacySeededReview=context.causalCategory==="other:seeded Flow legacy review identity",
