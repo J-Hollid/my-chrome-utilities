@@ -311,12 +311,15 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const projectEvidenceSupportSource = shellAcceptanceScenario ? await readFile(new URL(
     "../acceptance/src/acceptance/verification_support/modular_architecture_project_management.clj",
     import.meta.url), "utf8") : "";
+  const processContractSource = shellAcceptanceScenario ? await readFile(new URL(
+    "./verification-process-contract-test.mjs", import.meta.url), "utf8") : "";
   const workspaceControllerSource = shellAcceptanceScenario ? await readFile(new URL(
     "../src/workspace-tabs-ui.ts", import.meta.url), "utf8") : "";
   const expectedPreRepairFailure = shellAcceptanceScenario ? {
     installedCaptureControllerOwned:false,
     currentVerificationOwnerCounts:false,
     conservedProjectEvidencePartitioned:false,
+    currentOwnerExecutionProfilesRecorded:false,
     stableWorkspaceShowContract:false,
   } : {
     assertedTaskCount:60,
@@ -327,6 +330,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     installedCaptureControllerOwned:true,
     currentVerificationOwnerCounts:true,
     conservedProjectEvidencePartitioned:true,
+    currentOwnerExecutionProfilesRecorded:true,
     stableWorkspaceShowContract:true,
   } : {
     actualTaskCount:shellPlan.tasks.length,
@@ -354,6 +358,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     conservedProjectEvidencePartitioned:projectEvidenceSupportSource.includes(
       "(:executionProfile conservation)") && projectEvidenceSupportSource.includes(
       "[:conservedTaskTargets :unitTasks]"),
+    currentOwnerExecutionProfilesRecorded:(processContractSource.match(/executionTaskCounts:/gu)??[])
+      .length===4,
     stableWorkspaceShowContract:workspaceControllerSource.includes("function showWorkspace(") &&
       workspaceControllerSource.includes("show:showWorkspace"),
   } : {

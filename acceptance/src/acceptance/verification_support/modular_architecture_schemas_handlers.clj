@@ -232,6 +232,8 @@
                                   (= [49 29 103 60 1 46 288]
                                      ((juxt :unitCount :propertyCount :featureCount :handlerCount
                                             :adapterCount :targetCount :exactTaskCount) evidence))
+                                  (= {:unit 52 :property 29 :checkpoints 1 :exact 292}
+                                     (:executionTaskCounts evidence))
                                   "Schemas owner evidence profile changed." {:evidence evidence})))}
    {:pattern #"^exact schemas verification and terminal-full planning are compared before and after VTD-004$"
     :handler (fn [world _ _]

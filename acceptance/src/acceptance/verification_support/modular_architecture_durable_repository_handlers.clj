@@ -56,6 +56,10 @@
                  (support/assert! (= {:unit 5 :property 3 :features 2 :handlers 1
                                      :adapters 2 :targets 4 :leaves 111} counts)
                                   "Durable exact evidence profile is not conserved." {})
+                 (support/assert! (= {:unit 7 :property 3 :exact 18}
+                                     (get-in prepared [:vtd004/evidence :conservation
+                                                       :executionTaskCounts]))
+                                  "Durable current execution profile is incomplete." {})
                  (assoc prepared :vtd004/conserved? true)))}
    {:pattern #"^exact durable_project_repository verification and terminal-full planning are compared before and after VTD-004$"
     :handler (fn [world _ _]

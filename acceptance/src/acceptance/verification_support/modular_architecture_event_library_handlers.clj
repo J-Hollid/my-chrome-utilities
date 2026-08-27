@@ -86,6 +86,10 @@
                    "Event Library APS handler isolation is incomplete."
                    {:handler handler-name :evidence handler})))
 
+(defn- side-panel-preparation-unit? [path]
+  (boolean (re-matches #"^test/data-layer-installed/(?:consumers/)?[^/]+-(?:controller|consumer)-test\.mjs$"
+                       path)))
+
 (defn- conserved-evidence-profile [pack]
   (let [observation-paths (set (keep :path (:browserObservations pack)))
         registration-only-paths
@@ -94,9 +98,10 @@
                                 (observation-paths path))
                        path))
                    (:browserAdapterModes pack)))]
-    (update (select-keys pack [:unit :property :features :handlers :browserAdapters])
-            :browserAdapters
-            (fn [paths] (vec (remove registration-only-paths paths))))))
+    (-> (select-keys pack [:unit :property :features :handlers :browserAdapters])
+        (update :unit (fn [paths] (vec (remove side-panel-preparation-unit? paths))))
+        (update :browserAdapters
+                (fn [paths] (vec (remove registration-only-paths paths)))))))
 
 (defn- conservation-world [world dependencies]
   (let [prepared (event-world world dependencies)
@@ -108,6 +113,7 @@
                         (= [9 1 8 3 0 1 29]
                            ((juxt :unitCount :propertyCount :featureCount :handlerCount
                                   :adapterCount :targetCount :exactTaskCount) evidence))
+                        (= {:unit 11 :property 1 :exact 31} (:executionTaskCounts evidence))
                         (:terminalTaskIdentitiesConserved evidence)
                         (:directRevisionRenderer evidence)
                         (= 1 (:packageCheckCount evidence)))
