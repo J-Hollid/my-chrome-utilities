@@ -1037,7 +1037,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const notificationSource = notificationScenario ? await readFile(new URL(
     "../support/side-panel-browser-fixture-primitives.mjs", import.meta.url), "utf8") : "";
   const expectedPreRepairFailure = authoringAcceptanceScenario
-    ? { duplicateRecoveryFocus:false, typedRulePickerContext:false, removalRuleDetails:false,
+    ? { duplicateRecoveryFocus:false, typedRulePickerContext:false, localRuleContext:false,
+      cardinalityComparisonPrompt:false, removalRuleDetails:false,
       directArrayActionOrder:false, renameReviewPreserved:false }
     : notificationScenario
     ? { crossInstanceNotifications:false, pollingDurationAssertion:true }
@@ -1051,7 +1052,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       ? { untouchedSchemaProjectionPreserved:false }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:false };
   const expectedRepairResult = authoringAcceptanceScenario
-    ? { duplicateRecoveryFocus:true, typedRulePickerContext:true, removalRuleDetails:true,
+    ? { duplicateRecoveryFocus:true, typedRulePickerContext:true, localRuleContext:true,
+      cardinalityComparisonPrompt:true, removalRuleDetails:true,
       directArrayActionOrder:true, renameReviewPreserved:true }
     : notificationScenario
     ? { crossInstanceNotifications:true, pollingDurationAssertion:false }
@@ -1070,6 +1072,10 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         authoringFixtureSource.includes("interaction.duplicate,{closed:true,unchanged:true,selected:true,visible:true,focused:true}"),
       typedRulePickerContext:authoringSource.includes("`Add rule for ${path} · type ${propertyType}`") &&
         authoringFixtureSource.includes('opened.heading,"Add rule for page_type · type string"'),
+      localRuleContext:authoringSource.includes("Create local rule") &&
+        authoringSource.includes("operator · type ${configuration.propertyType}"),
+      cardinalityComparisonPrompt:authoringSource.includes('textContent:"Choose comparison"') &&
+        authoringTargetSource.includes("comparison.options.length===6"),
       removalRuleDetails:authoringSource.includes("affected rule attachments: ${affectedRules}") &&
         authoringFixtureSource.includes("Order identifier at") &&
         authoringFixtureSource.includes("commerce\\/order\\/id"),
@@ -1108,7 +1114,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
     input:authoringAcceptanceScenario
       ? { interactions:["duplicate manual property recovery", "typed rule selection",
-        "property removal impact review", "nested array rule actions", "rename review"] }
+        "local rule configuration", "cardinality comparison", "property removal impact review",
+        "nested array rule actions", "rename review"] }
       : notificationScenario
       ? { boundary:"Saved Schema projection", concurrency:"shared browser batch" }
       : emptyHistoryScenario

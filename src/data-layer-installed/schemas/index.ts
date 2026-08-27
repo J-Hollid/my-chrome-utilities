@@ -2199,7 +2199,12 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     for (const control of ruleConfigurationControls(configuration.ruleType, configuration.propertyType)) {
       if (control.repeatable) continue; const input = control.inputType === "select" ? document.createElement("select") : document.createElement("input");
       input.id = `schema-local-rule-${control.key}`;
-      if (control.inputType === "select") input.append(...(control.choices ?? []).map((value) => Object.assign(document.createElement("option"), { value, textContent:value })));
+      if (control.inputType === "select") input.append(
+        ...(control.key === "comparison"
+          ? [Object.assign(document.createElement("option"), { value:"", textContent:"Choose comparison" })]
+          : []),
+        ...(control.choices ?? []).map((value) => Object.assign(document.createElement("option"), { value, textContent:value })),
+      );
       else { const textInput = input as HTMLInputElement; textInput.type = control.inputType === "number" ? "number" : "text";
         if (control.minimum !== undefined) textInput.min = String(control.minimum); if (control.step !== undefined) textInput.step = String(control.step); }
       input.value = String(configuration[control.key]);

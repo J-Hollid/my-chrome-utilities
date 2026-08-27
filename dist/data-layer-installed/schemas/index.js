@@ -3147,7 +3147,9 @@ export function createSchemasInstalledController(ports) {
             const input = control.inputType === "select" ? document.createElement("select") : document.createElement("input");
             input.id = `schema-local-rule-${control.key}`;
             if (control.inputType === "select")
-                input.append(...(control.choices ?? []).map((value) => Object.assign(document.createElement("option"), { value, textContent: value })));
+                input.append(...(control.key === "comparison"
+                    ? [Object.assign(document.createElement("option"), { value: "", textContent: "Choose comparison" })]
+                    : []), ...(control.choices ?? []).map((value) => Object.assign(document.createElement("option"), { value, textContent: value })));
             else {
                 const textInput = input;
                 textInput.type = control.inputType === "number" ? "number" : "text";

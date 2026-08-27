@@ -41,7 +41,7 @@
   (and (:unchanged review)
        (= 1 (count (re-seq #"Rename schema from Page view to Generic page view"
                            (:text review))))
-       (str/includes? (:text review) "policy canonical property")))
+       (str/includes? (:text review) "Change additional-property policy")))
 
 (defn- assert-observation! [example observed]
   (let [{:keys [draft published invalidAndDiscard]} observed
