@@ -595,18 +595,18 @@ async function drivePermissionRecoveryUserGesture(socket) {
       ready:(value) => value?.requested === true,
       snapshot:(value) => value,
     });
-    await wait(250);
     await processResources.acceptNativePermissionPrompt?.(gestureSocket);
-    let nativeGranted = false;
-    for (let attempt = 0; attempt < 100; attempt += 1) {
-      const state = await gestureSocket.call("Runtime.evaluate", {
+    await observeBrowserReadiness({
+      targetId:"side-panel-permission-recovery", phase:"interaction",
+      predicateDescription:"the native exact-origin request to settle as granted",
+      timeoutMs:3_000, pollIntervalMs:20, maximumSnapshotCharacters:300,
+      observe:async () => (await gestureSocket.call("Runtime.evaluate", {
         expression:"globalThis.__swarmforgePermissionRequestObservation",
         returnByValue:true,
-      });
-      if (state.result.value?.granted === true) { nativeGranted = true; break; }
-      await wait(20);
-    }
-    if (!nativeGranted) throw new Error("Chrome did not accept the native exact-origin permission prompt");
+      })).result.value,
+      ready:(value) => value?.granted === true,
+      snapshot:(value) => value,
+    });
   } finally {
     gestureSocket.close();
   }
