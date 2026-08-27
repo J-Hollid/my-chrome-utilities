@@ -1,7 +1,7 @@
 # VTD-012 verification registry and planner modularization R01
 
-Status: ownership preparation QA-integrated at `276db16442`; stable product task
-approved for automatic resumption from the exact preparation descendant
+Status: ownership preparation QA-integrated at `276db16442`; cross-pack causal
+repair slice active after exact preflight stopped candidate `962affc8c2`
 
 Prepared: 2026-08-26
 
@@ -432,6 +432,74 @@ The coder reconstructs its task-owned behavior on the prepared QA lineage, runs
 fresh read-only intent and exact preflight before product coding and evidence,
 and continues through the approved durable stages without another routine user
 decision or a feature-mode all-runnable-pack gate.
+
+## Activated cross-pack causal repair slice
+
+Coherent stopped candidate `962affc8c2` completes the nine policy boundaries,
+passes every focused boundary contract, passes a complete 81-task product-only
+Shell plan, and records the adoption scorecard. Its review-scope preflight also
+correctly stops before evidence: the candidate includes four repair groups whose
+shared paths expand `shell,verification_process` to all 21 runnable packs and
+578 tasks. Those repairs restore already-approved inherited behavior, but they
+are not part of the VTD-012 product remainder and cannot justify an all-runnable
+feature checkpoint.
+
+Standing task `verification-slice-vtd012-cross-pack-repairs` starts from current
+QA `23f0284b39`. It reconstructs only the following causal repair groups; the
+commits are patch references, not ancestry to merge or cherry-pick wholesale:
+
+| Repair group and patch reference | Development focus | Proposed parent and slice | Exact consumers and QA impact |
+|---|---|---|---|
+| Inherited Shell and acceptance compatibility, `15f11021` | activation-neutral task, entrypoint, path, and cardinality expectations in `bb.edn`, shared acceptance support, and affected direct contract fixtures | `verification_process` / `cross_pack_acceptance_compatibility` | Shell acceptance; modular architecture; live-target permission path; side-panel preparation; workspace-tabs; review-evidence compatibility |
+| Installed schema-contributor browser flows, `31fc1b81` | `src/data-layer-installed/event-library/`, `src/data-layer-installed/runtime.ts`, `src/data-layer-installed/schemas/`, their generated outputs, and direct tests | `schemas` / `installed_contributor_coordination`, with `event-library` and `shell` consumers | installed schemas controller; Event Library test-case review; guided-test-cases, property-set-flow-sections, Shell, and layered-schema browser targets |
+| Shared side-panel browser synchronization, `1bb4ae05` | permission-dialog state and matching fixture discovery in the shared browser session support | `shell` / `side_panel_permission_fixture` | the side-panel browser session contract and every selected target that uses the shared session fixture |
+| Modular-architecture acceptance matching, `bdfab2fa` | exact phrase matching in the VTD-014 and VTD-015 modular-architecture handlers | `verification_process` / `acceptance_step_isolation` | the modular-architecture acceptance session only |
+
+The repair-only candidate must be independently understandable and revertible.
+For every hunk it records the causal failing contract, the existing approved
+behavior it restores, its direct verification consumer, and its disposition in
+one of the four groups above. A mixed hunk is split; a hunk that implements a
+VTD-012 boundary, successor contract, manifest migration, compatibility alias,
+or adoption scorecard remains exclusively in the preserved product remainder.
+The reconstruction starts from current QA and must not inherit any other file
+from `962affc8c2`.
+
+The installed contributor repair preserves the current active specifications:
+durable hydration replaces only the active project's compatibility projection;
+another project's notification cannot replace it; all installed contributor
+kinds continue through the existing compact canonical editor, command,
+settlement, Undo, and Redo contracts; reopening or hydrating retains the intended
+selection and scroll state; and Event Library test-case review remains accessible
+and bound to the selected project without guessing relationships. This is a
+causal restoration, not authority for another schema-editor design.
+
+The standalone review route is bounded by causal work, not the catalogue count.
+Before launch, read-only intent must bind the exact four-group change set and
+prove every included task is a direct contract, declared prerequisite, or exact
+consumer of one of those groups. Fresh evidence must cover the complete causal
+union, the affected browser targets, generated source parity, properties where
+selected, and package proof. It must also prove that excluded packs have no
+changed owned input or consumer edge. Unknown ownership, an unclassified hunk,
+missing direct consumer, product behavior outside the active contracts, or a
+request for an all-runnable feature run blocks before execution.
+
+After architect `qa-ready` integration, the specifier records the repair result
+and automatically reissues stable task
+`verification-registry-planner-modularization` from that exact QA descendant.
+The coder reconstructs the conserved VTD-012 remainder from patch reference
+`962affc8c2`, subtracts every integrated repair hunk, and records the conservation
+identity. Exact preflight must then use the repaired historical base to select
+only `shell,verification_process` and the nine successor contracts plus declared
+prerequisites. The 81-task product-only Shell scorecard remains evidence of
+partial payoff rather than fresh review-ready proof.
+
+Throughout both slices, incidents
+`2dbbc9f9-280e-4b00-8ea3-1159f6a5539b`,
+`494ddfa3-2926-43bf-b74d-8ceee38f4242`,
+`aadcb8c6-393f-4d49-a803-ad1e289411f5`, and
+`fd10e821-af43-45c0-b1a5-fe041e9c52b3` remain unresolved
+`terminal-verification-deferred` obligations. Neither slice abandons, resolves,
+reclassifies, or copies them, and neither runs the all-runnable feature gate.
 
 ## Verification specification
 

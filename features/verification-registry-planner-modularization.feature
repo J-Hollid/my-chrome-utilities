@@ -228,3 +228,36 @@ Feature: Verification registry and planner modularization
     And exact preflight no longer consumes candidate-authored ownership
     And stopped candidate 4bb46a9d remains a patch reference rather than merged ancestry
     And no additional user approval or all-runnable-pack feature gate is requested
+
+  # Verification registry and planner modularization 021
+  Scenario: Verification registry and planner modularization 021
+    Given coherent candidate 962affc8c2 combines the approved VTD-012 remainder with four cross-pack causal repair groups
+    And exact review preflight expands shell and verification_process to every runnable pack because of the repair paths
+    When the candidate stack is separated from current QA
+    Then verification-slice-vtd012-cross-pack-repairs contains only the four repair groups
+    And the VTD-012 product remainder is preserved independently with its nine successor contracts and scorecard
+    And no commit from candidate 962affc8c2 enters the repair-slice ancestry
+    And no all-runnable-pack feature review is launched
+
+  # Verification registry and planner modularization 022
+  Scenario Outline: Verification registry and planner modularization 022
+    Given the standalone slice contains <repair_group>
+    When its causal outcome is reviewed against current QA
+    Then required result is <required_result>
+    And unrelated product behavior, evidence leaves, and terminal obligations remain unchanged
+
+    Examples:
+      | repair_group                                      | required_result                                                                    |
+      | inherited Shell and acceptance compatibility      | current and activated verification ownership both retain exact contract routing   |
+      | installed schema-contributor browser flows        | durable active-project state drives the existing canonical contributor experience |
+      | shared side-panel browser synchronization         | the matching native permission state replaces fixed-delay fixture assumptions     |
+      | modular-architecture acceptance matching          | each handler matches only its exact scenario wording                              |
+
+  # Verification registry and planner modularization 023
+  Scenario: Verification registry and planner modularization 023
+    Given the repair-only slice has exact focused review and is QA-integrated
+    When repair integration triggers the conserved verification-registry-planner-modularization replay
+    Then the reconstructed candidate excludes every QA-integrated repair hunk from its changed paths
+    And default exact preflight uses historical ownership to select shell and verification_process without unrelated packs
+    And the runner executes the selected nine successor contracts and their declared prerequisites
+    And the product-only Shell scorecard and all unresolved terminal-deferred incidents remain conserved
