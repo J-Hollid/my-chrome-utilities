@@ -23,6 +23,7 @@
      :adapter-classifications (classified-browser-adapters registry)
      :sources (support/source-file-map
                root ["src/utility-registry.ts" "src/side-panel.ts"
+                     "src/data-layer-installed/runtime.ts"
                      "acceptance/src/acceptance/generator.clj" "scripts/verification-packs.mjs"
                      "scripts/report-verification-throughput.mjs" "scripts/run-focused-acceptance.mjs"
                      "scripts/verification-timing-ledger.mjs" "verification/timing-receipt-index.json"
@@ -65,7 +66,10 @@
                                          ["commandPaletteUtility" "hotkeysUtility"
                                           "dataLayerUtility" "composeUtilityShell"])
                    "Shell composition does not use all public utility entries." {})
-  (support/assert! (and (str/includes? (sources "src/side-panel.ts") "extensionShell")
+  (support/assert! (and (str/includes? (sources "src/side-panel.ts")
+                                      "mountInstalledDataLayerRuntime")
+                        (str/includes? (sources "src/data-layer-installed/runtime.ts")
+                                       "registryApi.extensionShell.commands")
                         (not (str/includes? (sources "acceptance/src/acceptance/generator.clj")
                                             "acceptance.steps.all :as steps")))
                    "Production shell or generated acceptance wiring is not modular." {})
