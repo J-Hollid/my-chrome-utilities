@@ -149,7 +149,11 @@ const rejectRepository=createMemoryDurableProjectRepository(),rejectProject=make
 
 if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
-    digest=value=>createHash("sha256").update(JSON.stringify(value)).digest("hex"),
+    normalized=value=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"
+      ?Object.fromEntries(Object.entries(value).filter(([,nested])=>nested!==undefined)
+        .sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)]))
+      :value,
+    digest=value=>createHash("sha256").update(typeof value==="string"?value:JSON.stringify(normalized(value))).digest("hex"),
     expectedPreRepairFailure={dependentBaseToken:"captured-before-publication",assignmentCommitted:false},
     expectedRepairResult={dependentBaseToken:"queued-schema:1",assignmentCommitted:true},
     fixture={id:"queued-saved-schema-token-chaining-v1",causalCategory:context.causalCategory,
