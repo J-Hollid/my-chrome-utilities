@@ -515,7 +515,9 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
                 return result;
             },
             settle: () => pendingRevision === undefined ? durable.settled("project") : controllers.projects.settleUnifiedContributorRevision(initial.project.id, pendingRevision),
-            settles: (command) => command.kind !== "select" && command.kind !== "view", onUndo: () => { void durable.undo(initial.project.id); }, onRedo: () => { void durable.redo(initial.project.id); },
+            settles: (command) => command.kind !== "select" && command.kind !== "view",
+            onUndo: () => durable.canUndo(initial.project.id) ? durable.undo(initial.project.id) : "No page-scoped canonical command is available to Undo.",
+            onRedo: () => durable.canRedo(initial.project.id) ? durable.redo(initial.project.id) : "No page-scoped canonical command is available to Redo.",
             actions: [{ label: "Close editor", run: () => controllers.schemas.closeCanonical() }] });
     };
     const commitProject = (next, expectedRevision, label) => {

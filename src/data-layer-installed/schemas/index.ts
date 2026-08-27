@@ -224,7 +224,7 @@ interface CompactCanonicalEditorAdapter {
   stageProjectionCommand?(command:CompactCanonicalCommand):CompactCanonicalCommandResult;
   restoreStagedProjection?(canonical:CanonicalSchemaDocument):void;
   onSettlementCommitted?():void;
-  onUndo?():void; onRedo?():void;
+  onUndo?():void|string|Promise<void|string>; onRedo?():void|string|Promise<void|string>;
   renderContext?(host:HTMLElement):void;
   actions?:readonly { label:string; run():void }[];
   migration?:{ summary:string; conflicts:readonly { id:string; label:string; choices:readonly { id:string; label:string }[] }[];
@@ -797,9 +797,12 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     feedback.textContent = compactCanonicalCommandFeedback ?? "Canonical editor ready.";
     compactCanonicalContext.append(identity, feedback);
     const own = (control:HTMLElement, action:EventListener, type="click"):void => { compactCanonicalContextDisposers.push(() => control.removeEventListener(type, action)); };
-    if (adapter.onUndo) { const undo = schemaOwnerDocument.createElement("button"), action = ():void => adapter.onUndo?.(); undo.type = "button"; undo.textContent = "Undo";
+    const runHistoryAction = (action:() => void|string|Promise<void|string>):void => { void Promise.resolve(action()).then((message) => {
+      if (message) { compactCanonicalCommandFeedback = message; renderCompactCanonicalContext(); }
+    }, (error) => { compactCanonicalCommandFeedback = `The page-scoped canonical command failed. ${error instanceof Error ? error.message : String(error)}`; renderCompactCanonicalContext(); }); };
+    if (adapter.onUndo) { const undo = schemaOwnerDocument.createElement("button"), action = ():void => runHistoryAction(adapter.onUndo!); undo.type = "button"; undo.textContent = "Undo";
       undo.addEventListener("click", action); own(undo, action); compactCanonicalContext.append(undo); }
-    if (adapter.onRedo) { const redo = schemaOwnerDocument.createElement("button"), action = ():void => adapter.onRedo?.(); redo.type = "button"; redo.textContent = "Redo";
+    if (adapter.onRedo) { const redo = schemaOwnerDocument.createElement("button"), action = ():void => runHistoryAction(adapter.onRedo!); redo.type = "button"; redo.textContent = "Redo";
       redo.addEventListener("click", action); own(redo, action); compactCanonicalContext.append(redo); }
     for (const configured of adapter.actions ?? []) { const contextAction = schemaOwnerDocument.createElement("button"), action = ():void => configured.run();
       contextAction.type = "button"; contextAction.textContent = configured.label; contextAction.addEventListener("click", action); own(contextAction, action); compactCanonicalContext.append(contextAction); }

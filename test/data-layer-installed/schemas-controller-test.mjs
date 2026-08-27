@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { verifyPreparedInstalledController } from "../support/data-layer-installed-controller-contract.mjs";
 await verifyPreparedInstalledController("schemas");
 const { createSchemasInstalledController } = await import("../../dist/data-layer-installed/schemas/index.js");
@@ -829,7 +830,8 @@ let customCanonical = structuredClone(uiController.canonicalDocument()), undoCou
 uiController.openCanonical({ key:"test:canonical-context", label:"Context contract", load:() => customCanonical,
   dispatch:(command) => { if (command.kind === "rename") return { status:"conflict", document:customCanonical, propertyId:command.propertyId, message:"newer draft" };
     if (command.kind === "view") customCanonical = { ...customCanonical, view:command.view }; return { status:"applied", document:customCanonical }; },
-  onUndo:() => { undoCount += 1; }, onRedo:() => { redoCount += 1; }, actions:[{ label:"Inspect", run:() => { contextActionCount += 1; } }],
+  onUndo:() => { undoCount += 1; return "No page-scoped canonical command is available to Undo."; },
+  onRedo:() => { redoCount += 1; }, actions:[{ label:"Inspect", run:() => { contextActionCount += 1; } }],
   renderContext:(host) => { renderedContextCount += 1; host.dataset.customContext = "rendered"; } });
 let canonicalControls = elements.get("#compact-canonical-context").children;
 canonicalControls.find(({ textContent }) => textContent === "Undo").click(); canonicalControls.find(({ textContent }) => textContent === "Redo").click();
@@ -837,6 +839,10 @@ canonicalControls.find(({ textContent }) => textContent === "Inspect").click(); 
 await Promise.resolve();
 assert.deepEqual([undoCount, redoCount, contextActionCount, customCanonical.view], [1, 1, 1, "table"],
   "compact context actions and view controls execute through the adapter contract");
+const emptyHistoryFeedbackPresented = elements.get("#compact-canonical-context").children.some(({ textContent }) =>
+  textContent === "No page-scoped canonical command is available to Undo.");
+assert.equal(emptyHistoryFeedbackPresented, true,
+"the installed compact context presents an empty durable-history outcome instead of discarding it");
 assert.ok(renderedContextCount > 0); assert.equal(elements.get("#compact-canonical-context").dataset.customContext, "rendered");
 let migrationResolution, migrationCancelled = 0, migrationConfirmed = 0;
 const migrationAdapter = { key:"test:canonical-migration", label:"Migration contract", load:() => customCanonical,
@@ -1006,24 +1012,43 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const projectionCause = "other:installed schema unchanged projection persistence";
   const orderingCause = "other:installed schema canonical persistence ordering";
   const acknowledgementCause = "other:installed schema durable acknowledgement settlement";
+  const emptyHistoryCause = "other:installed contributor empty history feedback";
+  const notificationCause = "other:side-panel durable schema notification settlement";
   const projectionScenario = context.causalCategory === projectionCause;
   const orderingScenario = context.causalCategory === orderingCause;
   const acknowledgementScenario = context.causalCategory === acknowledgementCause;
-  const expectedPreRepairFailure = acknowledgementScenario
+  const emptyHistoryScenario = context.causalCategory === emptyHistoryCause;
+  const notificationScenario = context.causalCategory === notificationCause;
+  const notificationSource = notificationScenario ? await readFile(new URL(
+    "../support/side-panel-browser-fixture-primitives.mjs", import.meta.url), "utf8") : "";
+  const expectedPreRepairFailure = notificationScenario
+    ? { repositoryNotifications:false, pollingDurationAssertion:true }
+    : emptyHistoryScenario
+    ? { emptyHistoryFeedbackPresented:false }
+    : acknowledgementScenario
     ? { durableAcknowledgementReleasedPolicyPresentation:false }
     : orderingScenario
     ? { canonicalProjectionSettlementReady:false, untouchedSchemaProjectionPreserved:false }
     : projectionScenario
       ? { untouchedSchemaProjectionPreserved:false }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:false };
-  const expectedRepairResult = acknowledgementScenario
+  const expectedRepairResult = notificationScenario
+    ? { repositoryNotifications:true, pollingDurationAssertion:false }
+    : emptyHistoryScenario
+    ? { emptyHistoryFeedbackPresented:true }
+    : acknowledgementScenario
     ? { durableAcknowledgementReleasedPolicyPresentation:true }
     : orderingScenario
     ? { canonicalProjectionSettlementReady:true, untouchedSchemaProjectionPreserved:true }
     : projectionScenario
       ? { untouchedSchemaProjectionPreserved:true }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:true };
-  const observed = acknowledgementScenario
+  const observed = notificationScenario
+    ? { repositoryNotifications:notificationSource.includes("repository.subscribeSavedSchemas"),
+      pollingDurationAssertion:/attempt\s*<\s*400[\s\S]{0,300}repository\.savedSchemas/u.test(notificationSource) }
+    : emptyHistoryScenario
+    ? { emptyHistoryFeedbackPresented }
+    : acknowledgementScenario
     ? { durableAcknowledgementReleasedPolicyPresentation }
     : orderingScenario
     ? { canonicalProjectionSettlementReady, untouchedSchemaProjectionPreserved }
@@ -1032,15 +1057,23 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender };
   assert.deepEqual(observed, expectedRepairResult);
   const fixture = {
-    id:acknowledgementScenario ? "installed-schema-durable-acknowledgement-settlement-v1"
+    id:notificationScenario ? "side-panel-durable-schema-notification-settlement-v1"
+      : emptyHistoryScenario ? "installed-contributor-empty-history-feedback-v1"
+      : acknowledgementScenario ? "installed-schema-durable-acknowledgement-settlement-v1"
       : projectionScenario ? "installed-schema-unchanged-projection-persistence-v1"
       : orderingScenario ? "installed-schema-canonical-persistence-ordering-v1"
         : "installed-schema-publication-feedback-retention-v1",
-    causalCategory:acknowledgementScenario ? acknowledgementCause
+    causalCategory:notificationScenario ? notificationCause
+      : emptyHistoryScenario ? emptyHistoryCause
+      : acknowledgementScenario ? acknowledgementCause
       : projectionScenario ? projectionCause : orderingScenario ? orderingCause
       : "other:installed schema publication feedback retention",
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-    input:acknowledgementScenario
+    input:notificationScenario
+      ? { boundary:"Saved Schema projection", concurrency:"shared browser batch" }
+      : emptyHistoryScenario
+      ? { operation:"second Undo", history:"empty page-scoped durable history", presentation:"canonical command result" }
+      : acknowledgementScenario
       ? { operation:"saved-schema policy edit", acknowledgement:"matching durable saved event", presentation:"canonical editor busy state" }
       : projectionScenario
       ? { operation:"reusable rule publication", failure:"durable batch rejection", untouched:"settled schema projection" }

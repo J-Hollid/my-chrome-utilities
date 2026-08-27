@@ -614,7 +614,9 @@ export async function mountInstalledDataLayerRuntime(
             const label=`${command.kind} canonical schema in ${selected.entity.name}`,committed=controllers.projects.commitUnifiedContributorState(next,label);pendingRevision=committed.revision;schemaContributors.captureProject(next);}}
         return result;},
       settle:()=>pendingRevision===undefined?durable.settled("project"):controllers.projects.settleUnifiedContributorRevision(initial.project.id,pendingRevision),
-      settles:(command)=>command.kind!=="select"&&command.kind!=="view",onUndo:()=>{void durable.undo(initial.project.id);},onRedo:()=>{void durable.redo(initial.project.id);},
+      settles:(command)=>command.kind!=="select"&&command.kind!=="view",
+      onUndo:()=>durable.canUndo(initial.project.id)?durable.undo(initial.project.id):"No page-scoped canonical command is available to Undo.",
+      onRedo:()=>durable.canRedo(initial.project.id)?durable.redo(initial.project.id):"No page-scoped canonical command is available to Redo.",
       actions:[{label:"Close editor",run:()=>controllers.schemas.closeCanonical()}]});
   };
   const commitProject=(next:ProjectState,expectedRevision:number,label:string):{status:"saved"|"conflict";revision:number}=>{

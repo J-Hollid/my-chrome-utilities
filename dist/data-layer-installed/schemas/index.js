@@ -781,8 +781,16 @@ export function createSchemasInstalledController(ports) {
         feedback.textContent = compactCanonicalCommandFeedback ?? "Canonical editor ready.";
         compactCanonicalContext.append(identity, feedback);
         const own = (control, action, type = "click") => { compactCanonicalContextDisposers.push(() => control.removeEventListener(type, action)); };
+        const runHistoryAction = (action) => {
+            void Promise.resolve(action()).then((message) => {
+                if (message) {
+                    compactCanonicalCommandFeedback = message;
+                    renderCompactCanonicalContext();
+                }
+            }, (error) => { compactCanonicalCommandFeedback = `The page-scoped canonical command failed. ${error instanceof Error ? error.message : String(error)}`; renderCompactCanonicalContext(); });
+        };
         if (adapter.onUndo) {
-            const undo = schemaOwnerDocument.createElement("button"), action = () => adapter.onUndo?.();
+            const undo = schemaOwnerDocument.createElement("button"), action = () => runHistoryAction(adapter.onUndo);
             undo.type = "button";
             undo.textContent = "Undo";
             undo.addEventListener("click", action);
@@ -790,7 +798,7 @@ export function createSchemasInstalledController(ports) {
             compactCanonicalContext.append(undo);
         }
         if (adapter.onRedo) {
-            const redo = schemaOwnerDocument.createElement("button"), action = () => adapter.onRedo?.();
+            const redo = schemaOwnerDocument.createElement("button"), action = () => runHistoryAction(adapter.onRedo);
             redo.type = "button";
             redo.textContent = "Redo";
             redo.addEventListener("click", action);
