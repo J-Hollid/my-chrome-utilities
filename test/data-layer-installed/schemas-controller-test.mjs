@@ -1022,21 +1022,26 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const emptyHistoryCause = "other:installed contributor empty history feedback";
   const notificationCause = "other:side-panel durable schema notification settlement";
   const authoringAcceptanceCause = "other:schema authoring acceptance contract drift";
+  const renamePolicyCause = "other:stale schema-renaming browser fixture boundary";
   const projectionScenario = context.causalCategory === projectionCause;
   const orderingScenario = context.causalCategory === orderingCause;
   const acknowledgementScenario = context.causalCategory === acknowledgementCause;
   const emptyHistoryScenario = context.causalCategory === emptyHistoryCause;
   const notificationScenario = context.causalCategory === notificationCause;
   const authoringAcceptanceScenario = context.causalCategory === authoringAcceptanceCause;
+  const renamePolicyScenario = context.causalCategory === renamePolicyCause;
   const authoringSource = authoringAcceptanceScenario ? await readFile(new URL(
     "../../src/data-layer-installed/schemas/index.ts", import.meta.url), "utf8") : "";
-  const authoringFixtureSource = authoringAcceptanceScenario ? await readFile(new URL(
+  const authoringFixtureSource = authoringAcceptanceScenario || renamePolicyScenario ? await readFile(new URL(
     "../support/side-panel-browser-fixture-primitives.mjs", import.meta.url), "utf8") : "";
-  const authoringTargetSource = authoringAcceptanceScenario ? await readFile(new URL(
+  const authoringTargetSource = authoringAcceptanceScenario || renamePolicyScenario ? await readFile(new URL(
     "../support/side-panel-schema-workspace-targets.mjs", import.meta.url), "utf8") : "";
   const notificationSource = notificationScenario ? await readFile(new URL(
     "../support/side-panel-browser-fixture-primitives.mjs", import.meta.url), "utf8") : "";
-  const expectedPreRepairFailure = authoringAcceptanceScenario
+  const expectedPreRepairFailure = renamePolicyScenario
+    ? { canonicalPolicyControlExercised:false, canonicalPolicyReviewRequired:false,
+      legacyAdditionalPropertyReviewRequired:true }
+    : authoringAcceptanceScenario
     ? { duplicateRecoveryFocus:false, typedRulePickerContext:false, localRuleContext:false,
       cardinalityComparisonPrompt:false, removalRuleDetails:false,
       directArrayActionOrder:false, renameReviewPreserved:false }
@@ -1051,7 +1056,10 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     : projectionScenario
       ? { untouchedSchemaProjectionPreserved:false }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:false };
-  const expectedRepairResult = authoringAcceptanceScenario
+  const expectedRepairResult = renamePolicyScenario
+    ? { canonicalPolicyControlExercised:true, canonicalPolicyReviewRequired:true,
+      legacyAdditionalPropertyReviewRequired:false }
+    : authoringAcceptanceScenario
     ? { duplicateRecoveryFocus:true, typedRulePickerContext:true, localRuleContext:true,
       cardinalityComparisonPrompt:true, removalRuleDetails:true,
       directArrayActionOrder:true, renameReviewPreserved:true }
@@ -1066,7 +1074,16 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     : projectionScenario
       ? { untouchedSchemaProjectionPreserved:true }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:true };
-  const observed = authoringAcceptanceScenario
+  const observed = renamePolicyScenario
+    ? {
+      canonicalPolicyControlExercised:authoringTargetSource.includes(
+        "#compact-canonical-table-editor [aria-label=\"Only defined fields\"]"),
+      canonicalPolicyReviewRequired:authoringFixtureSource.includes(
+        "assert.match(published.review.text,/policy canonical property/)"),
+      legacyAdditionalPropertyReviewRequired:authoringFixtureSource.includes(
+        "assert.match(published.review.text,/Change additional-property policy/)"),
+    }
+    : authoringAcceptanceScenario
     ? {
       duplicateRecoveryFocus:authoringSource.includes("CSS.escape(`Add rule for ${selectedSchemaPropertyPath}`)") &&
         authoringFixtureSource.includes("interaction.duplicate,{closed:true,unchanged:true,selected:true,visible:true,focused:true}"),
@@ -1082,7 +1099,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       directArrayActionOrder:authoringTargetSource.includes('querySelectorAll(":scope > button")') &&
         authoringFixtureSource.includes('["Edit type · Array of Object","Add item property","Add rule","Add specific index rule","Copy to another schema","Remove property"]'),
       renameReviewPreserved:authoringFixtureSource.includes("Rename schema from Page view to Generic page view") &&
-        authoringFixtureSource.includes("Change additional-property policy"),
+        authoringFixtureSource.includes("policy canonical property"),
     }
     : notificationScenario
     ? { crossInstanceNotifications:notificationSource.includes("my-chrome-utilities.durable-saved-schemas"),
@@ -1098,21 +1115,27 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender };
   assert.deepEqual(observed, expectedRepairResult);
   const fixture = {
-    id:authoringAcceptanceScenario ? "schema-authoring-acceptance-contract-group-v1"
+    id:renamePolicyScenario ? "schema-renaming-canonical-policy-boundary-v1"
+      : authoringAcceptanceScenario ? "schema-authoring-acceptance-contract-group-v1"
       : notificationScenario ? "side-panel-durable-schema-notification-settlement-v1"
       : emptyHistoryScenario ? "installed-contributor-empty-history-feedback-v1"
       : acknowledgementScenario ? "installed-schema-durable-acknowledgement-settlement-v1"
       : projectionScenario ? "installed-schema-unchanged-projection-persistence-v1"
       : orderingScenario ? "installed-schema-canonical-persistence-ordering-v1"
         : "installed-schema-publication-feedback-retention-v1",
-    causalCategory:authoringAcceptanceScenario ? authoringAcceptanceCause
+    causalCategory:renamePolicyScenario ? renamePolicyCause
+      : authoringAcceptanceScenario ? authoringAcceptanceCause
       : notificationScenario ? notificationCause
       : emptyHistoryScenario ? emptyHistoryCause
       : acknowledgementScenario ? acknowledgementCause
       : projectionScenario ? projectionCause : orderingScenario ? orderingCause
       : "other:installed schema publication feedback retention",
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-    input:authoringAcceptanceScenario
+    input:renamePolicyScenario
+      ? { interaction:"rename saved schema with a companion policy edit",
+        control:"installed canonical Only defined fields command",
+        review:"canonical pending-change evidence" }
+      : authoringAcceptanceScenario
       ? { interactions:["duplicate manual property recovery", "typed rule selection",
         "local rule configuration", "cardinality comparison", "property removal impact review",
         "nested array rule actions", "rename review"] }
