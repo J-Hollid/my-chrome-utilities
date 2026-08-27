@@ -8,9 +8,9 @@
 
 (defn- production-evidence! []
   (process-evidence/load! evidence
-    {:command ["node" "test/verification-process-contract-legacy.mjs"]
-     :prepared-task "checkpoint:verification_process:legacy-process-contract-conservation"
-     :fallback ["node" "test/verification-process-contract-legacy.mjs"]
+    {:command ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
+     :prepared-task "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs"
+     :fallback ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
      :prefix "{\"vtd014Acceptance\"" :key :vtd014Acceptance
      :failure "VTD-014 production process contract failed."
      :missing "VTD-014 production evidence is missing."}))

@@ -8146,15 +8146,7 @@
         "boundary": "verification-acceptance"
       }
     ],
-    "checkpointCommands": [
-      {
-        "id": "legacy-process-contract-conservation",
-        "executable": "node",
-        "args": [
-          "test/verification-process-contract-legacy.mjs"
-        ]
-      }
-    ],
+    "checkpointCommands": [],
     "verificationSlices": [
       {
         "id": "registry_inventory",
@@ -8362,7 +8354,6 @@
         "tasks": [
           "acceptance-parse:features/modular-verification-packs.feature",
           "acceptance-generate:features/modular-verification-packs.feature",
-          "checkpoint:verification_process:legacy-process-contract-conservation",
           "acceptance-session:verification_process"
         ],
         "prerequisites": [],

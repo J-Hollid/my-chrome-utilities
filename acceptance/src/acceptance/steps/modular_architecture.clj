@@ -29,9 +29,9 @@
 (defn- verify-throughput! [world]
   (when-not @throughput-evidence
     (let [result (support/verified-command-or-prepared-task-result
-                  ["node" "test/verification-process-contract-legacy.mjs"]
-                  "checkpoint:verification_process:legacy-process-contract-conservation"
-                  ["node" "test/verification-process-contract-legacy.mjs"])
+                  ["node" "test/verification-contracts/timing-performance-contract-test.mjs"]
+                  "unit:test/verification-contracts/timing-performance-contract-test.mjs"
+                  ["node" "test/verification-contracts/timing-performance-contract-test.mjs"])
           evidence-line (first (filter #(str/starts-with? % "{\"vtd004Acceptance\"")
                                        (str/split-lines (:out result))))]
       (support/assert! (zero? (:exit result))

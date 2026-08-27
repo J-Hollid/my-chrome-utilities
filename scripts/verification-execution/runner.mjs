@@ -10,8 +10,8 @@ import {
   acquireDistArtifactLock,
   distArtifactLeaseEnvironment,
 } from "../dist-artifact-lock.mjs";
+import { executeAcceptancePlan } from "./execute.mjs";
 import {
-  executeAcceptancePlan,
   loadVerificationPacks,
   planVerification,
   validateVerificationPacks,

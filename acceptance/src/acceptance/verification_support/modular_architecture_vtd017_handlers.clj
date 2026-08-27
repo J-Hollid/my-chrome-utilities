@@ -8,9 +8,9 @@
 (defn- prepared [world]
   (assoc world :vtd017/evidence
          (process-evidence/load! evidence
-           {:command ["node" "test/verification-process-contract-legacy.mjs"]
-            :prepared-task "checkpoint:verification_process:legacy-process-contract-conservation"
-            :fallback ["node" "test/verification-process-contract-legacy.mjs"]
+           {:command ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
+            :prepared-task "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs"
+            :fallback ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
             :prefix "{\"vtd017Acceptance\"" :key :vtd017Acceptance
             :failure "VTD-017 process contract failed."
             :missing "VTD-017 process evidence is missing."})))

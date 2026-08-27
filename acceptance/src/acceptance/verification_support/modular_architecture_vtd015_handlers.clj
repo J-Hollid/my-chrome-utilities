@@ -21,9 +21,9 @@
 (defn- ownership-prepared [world]
   (assoc world :vtd015/ownership-evidence
          (process-evidence/load! ownership-evidence
-           {:command ["node" "test/verification-process-contract-legacy.mjs"]
-            :prepared-task "checkpoint:verification_process:legacy-process-contract-conservation"
-            :fallback ["node" "test/verification-process-contract-legacy.mjs"]
+           {:command ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
+            :prepared-task "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs"
+            :fallback ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
             :prefix "{\"verificationOwnershipReadinessAcceptance\""
             :key :verificationOwnershipReadinessAcceptance
             :failure "Verification ownership-readiness process contract failed."
@@ -32,9 +32,9 @@
 (defn- confirmed-flaky-prepared [world]
   (assoc world :vtd015/confirmed-flaky-evidence
          (process-evidence/load! confirmed-flaky-evidence
-           {:command ["node" "test/verification-process-contract-legacy.mjs"]
-            :prepared-task "checkpoint:verification_process:legacy-process-contract-conservation"
-            :fallback ["node" "test/verification-process-contract-legacy.mjs"]
+           {:command ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
+            :prepared-task "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs"
+            :fallback ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
             :prefix "{\"verificationConfirmedFlakyFeatureDeferralAcceptance\""
             :key :verificationConfirmedFlakyFeatureDeferralAcceptance
             :failure "Confirmed-flaky feature deferral process contract failed."

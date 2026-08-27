@@ -234,8 +234,8 @@ assert.match(readinessCli,/--within-pack/u);
 assert.match(readinessCli,/planOnly:true/u,"readiness judgment remains plan-only");
 const readinessHandlers=await readFile("acceptance/src/acceptance/verification_support/modular_architecture_vtd015_handlers.clj","utf8");
 assert.match(readinessHandlers,
-  /:prepared-task "checkpoint:verification_process:legacy-process-contract-conservation"/u,
-  "readiness acceptance reuses the canonical legacy process checkpoint");
+  /:prepared-task "unit:test\/verification-contracts\/reliability-run-intent-contract-test\.mjs"/u,
+  "readiness acceptance reuses the canonical reliability boundary contract");
 assert.doesNotMatch(readinessHandlers,
   /:prepared-task "unit:(?:test\/verification-process-contract-test|scripts\/verification-ownership-readiness-test)\.mjs"/u,
   "readiness acceptance must not reuse a compatibility launcher or invent an unplanned task identity");
