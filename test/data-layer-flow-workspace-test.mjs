@@ -389,7 +389,7 @@ const flowCss=[
 ].join("\n");
 const flowWorkspaceUi=await readFile(new URL("../src/flow-graph/workspace-ui.ts",import.meta.url),"utf8");
 const flowGraphUi=await readFile(new URL("../src/data-layer-flow-graph-ui.ts",import.meta.url),"utf8");
-const sidePanelSource=await readFile(new URL("../src/side-panel.ts",import.meta.url),"utf8");
+const installedRuntimeSource=await readFile(new URL("../src/data-layer-installed/runtime.ts",import.meta.url),"utf8");
 const flowGraphStepsSource=await readFile(new URL("../acceptance/src/acceptance/steps/flow_graph.clj",import.meta.url),"utf8");
 const flowBrowserEvidence=await readFile(new URL("./browser-packs/flow-graph.mjs",import.meta.url),"utf8");
 const flowCorrectiveWorkflow=await readFile(new URL("./support/flow-graph-corrective-workflow.mjs",import.meta.url),"utf8");
@@ -417,7 +417,7 @@ assert.ok(connectionStart>=0&&connectingLayout>connectionStart&&connectingLayout
 assert.match(flowGraphUi,/flowPointerSnapTarget\(\{sourceId:connection\.sourceId,compatibleSide,direct:directFlowSnapTarget\(direct\),snap:compatiblePortSnap/u,"installed pointer targeting delegates Page-body precedence to the bounded snap contract");
 assert.match(flowCorrectiveWorkflow,/pageName:page\.name/u,"legacy Flow review evidence carries the exact seeded Page name");
 assert.match(flowCorrectiveWorkflow,/reviewText\.includes\(fixture\.pageName\)/u,"legacy Flow review evidence verifies the rendered seed identity instead of a hardcoded Page label");
-assert.ok(sidePanelSource.indexOf("mountUtilityShell(extensionShell, panelRoot, window)")<sidePanelSource.indexOf("await openDurableProjectRuntime(globalThis.localStorage)"),"the utility Shell becomes ready before the unrelated durable project repository opens");
+assert.ok(installedRuntimeSource.indexOf("mountUtilityShell(extensionShell, panelRoot, window)")<installedRuntimeSource.indexOf("await openDurableProjectRuntime(storage)"),"the utility Shell becomes ready before the unrelated durable project repository opens");
 
 if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
@@ -489,8 +489,8 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       runtimeSelectionAccepted:/\[:runtime \["selection" "horizontally"\]\]/u.test(flowGraphStepsSource),
       modeSeparated:/key \[mode row\]/u.test(flowGraphStepsSource),
     }:shellReadiness?{
-      repositoryOpening:sidePanelSource.includes("await openDurableProjectRuntime(globalThis.localStorage)"),
-      shellReady:sidePanelSource.indexOf("mountUtilityShell(extensionShell, panelRoot, window)")<sidePanelSource.indexOf("await openDurableProjectRuntime(globalThis.localStorage)"),
+      repositoryOpening:installedRuntimeSource.includes("await openDurableProjectRuntime(storage)"),
+      shellReady:installedRuntimeSource.indexOf("mountUtilityShell(extensionShell, panelRoot, window)")<installedRuntimeSource.indexOf("await openDurableProjectRuntime(storage)"),
     }:readiness?{
       routeRestored:/ensureFlowPanWorkspace/u.test(flowBrowserEvidence),
       paintedInstanceSelected:/painted=\(s\)=>all\(s\)\.find/u.test(flowCorrectionEvidence)&&/const painted=\(selector\)=>\[\.\.\.document\.querySelectorAll\(selector\)\]\.find/u.test(flowBrowserEvidence),
