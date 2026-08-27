@@ -1,7 +1,8 @@
 # VTD-012 verification registry and planner modularization R01
 
 Status: ownership preparation QA-integrated at `276db16442`; cross-pack causal
-repair slice active after exact preflight stopped candidate `962affc8c2`
+repair slice QA-integrated at `bb8d05ae64`; conserved product refactor approved
+for automatic resumption
 
 Prepared: 2026-08-26
 
@@ -500,6 +501,47 @@ Throughout both slices, incidents
 `fd10e821-af43-45c0-b1a5-fe041e9c52b3` remain unresolved
 `terminal-verification-deferred` obligations. Neither slice abandons, resolves,
 reclassifies, or copies them, and neither runs the all-runnable feature gate.
+
+## Cross-pack causal repair result and product resumption
+
+Repair candidate `bb8d05ae64` is QA-integrated from exact specification base
+`c2cc6daaa6`. Its 59-path change set independently reconstructs the four
+approved repair groups and the causal corrections discovered while exercising
+their direct consumers: installed contributor settlement and project isolation,
+shared permission and Shell readiness synchronization, exact acceptance phrase
+matching and compatibility expectations, and the direct workspace, durable,
+Flow, Layered Schema, and Schema evidence needed to prevent those repairs from
+regressing.
+
+The exact review-evidence plan selected 16 affected packs and 533 tasks with
+properties and package proof. All 533 tasks passed. The summed task duration was
+1,517.598 seconds; parallel execution completed the review interval in
+1,229.227 seconds, and the fresh package task took 0.959 seconds. Plan digest
+`2c058b9209c1daec4355b503aabc3f03b8dd958a95009232b273fdb86aba00ae`
+and receipt digest
+`9b2a6e62e947db4070f2492682875ed3d09b15f612e6ab4ad6f236553cfd3c6e`
+bind that result to tree `09124b5c7648`. No all-runnable feature gate or
+terminal-full obligation ran.
+
+The repair candidate does not contain the nine VTD-012 production boundary
+modules, successor contracts, manifest migration, compatibility alias, or
+adoption scorecard from stopped candidate `962affc8c2`. That candidate remains a
+patch reference only. Incidents
+`2dbbc9f9-280e-4b00-8ea3-1159f6a5539b`,
+`494ddfa3-2926-43bf-b74d-8ceee38f4242`,
+`aadcb8c6-393f-4d49-a803-ad1e289411f5`, and
+`fd10e821-af43-45c0-b1a5-fe041e9c52b3` remain unresolved terminal obligations;
+the feature-mode repair neither reclassified nor abandoned them.
+
+Stable task `verification-registry-planner-modularization` now resumes
+automatically from the documentation-only recording descendant of
+`bb8d05ae64`. The coder reconstructs the conserved product remainder from
+`962affc8c2`, removes every hunk already represented in the integrated repair,
+and records the conservation identity. Fresh exact preflight must bind the
+repaired historical base, select only `shell,verification_process` and the nine
+successor contracts plus declared prerequisites, and run new review evidence.
+The earlier 81-task product-only Shell result remains a payoff comparison, not
+review-ready evidence for the resumed candidate.
 
 ## Verification specification
 
