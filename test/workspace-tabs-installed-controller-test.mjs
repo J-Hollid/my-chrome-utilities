@@ -301,26 +301,54 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       : value;
   const digest = (value) => createHash("sha256")
     .update(JSON.stringify(normalized(value))).digest("hex");
-  const expectedPreRepairFailure = {
+  const shellAcceptanceCause = "other:shell acceptance evidence ownership drift";
+  const shellAcceptanceScenario = context.causalCategory === shellAcceptanceCause;
+  const informationArchitectureSource = shellAcceptanceScenario ? await readFile(new URL(
+    "../acceptance/src/acceptance/steps/information_architecture.clj", import.meta.url), "utf8") : "";
+  const verificationEvidenceSource = shellAcceptanceScenario ? await readFile(new URL(
+    "../acceptance/src/acceptance/verification_support/modular_architecture_project_management_handlers.clj",
+    import.meta.url), "utf8") : "";
+  const workspaceControllerSource = shellAcceptanceScenario ? await readFile(new URL(
+    "../src/workspace-tabs-ui.ts", import.meta.url), "utf8") : "";
+  const expectedPreRepairFailure = shellAcceptanceScenario ? {
+    installedCaptureControllerOwned:false,
+    currentVerificationOwnerCounts:false,
+    stableWorkspaceShowContract:false,
+  } : {
     assertedTaskCount:60,
     actualTaskCount:shellPlan.tasks.length,
     assertionPasses:false,
   };
-  const expectedRepairResult = {
+  const expectedRepairResult = shellAcceptanceScenario ? {
+    installedCaptureControllerOwned:true,
+    currentVerificationOwnerCounts:true,
+    stableWorkspaceShowContract:true,
+  } : {
     actualTaskCount:shellPlan.tasks.length,
     uniqueTaskIdentities:new Set(shellPlan.tasks.map(({ key }) => key)).size,
     controllerUnitRegistrations:shellPlan.unitTasks.filter(({ key }) =>
       key === "unit:test/workspace-tabs-installed-controller-test.mjs").length,
   };
   const fixture = {
-    id:"workspace-shell-inventory-invariant-v1",
+    id:shellAcceptanceScenario ? "shell-acceptance-evidence-ownership-v1"
+      : "workspace-shell-inventory-invariant-v1",
     causalCategory:context.causalCategory,
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-    input:{ approvedVtd015ShellAdditions:3, obsoleteTaskCount:60 },
+    input:shellAcceptanceScenario
+      ? { acceptanceBoundaries:["navigation information architecture", "verification pack ownership",
+        "workspace controller source contract"] }
+      : { approvedVtd015ShellAdditions:3, obsoleteTaskCount:60 },
     expectedPreRepairFailure,
     expectedRepairResult,
   };
-  const repairResult = {
+  const repairResult = shellAcceptanceScenario ? {
+    installedCaptureControllerOwned:informationArchitectureSource.includes(
+      'support/source-file root "src/data-layer-installed/capture/index.ts"'),
+    currentVerificationOwnerCounts:["[7 3 2 1 2]", "[11 1 8 3 1]", "[8 5 6 1 4]"]
+      .every((counts) => verificationEvidenceSource.includes(counts)),
+    stableWorkspaceShowContract:workspaceControllerSource.includes("function showWorkspace(") &&
+      workspaceControllerSource.includes("show:showWorkspace"),
+  } : {
     actualTaskCount:shellPlan.tasks.length,
     uniqueTaskIdentities:new Set(shellPlan.tasks.map(({ key }) => key)).size,
     controllerUnitRegistrations:shellPlan.unitTasks.filter(({ key }) =>

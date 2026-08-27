@@ -1021,14 +1021,25 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const acknowledgementCause = "other:installed schema durable acknowledgement settlement";
   const emptyHistoryCause = "other:installed contributor empty history feedback";
   const notificationCause = "other:side-panel durable schema notification settlement";
+  const authoringAcceptanceCause = "other:schema authoring acceptance contract drift";
   const projectionScenario = context.causalCategory === projectionCause;
   const orderingScenario = context.causalCategory === orderingCause;
   const acknowledgementScenario = context.causalCategory === acknowledgementCause;
   const emptyHistoryScenario = context.causalCategory === emptyHistoryCause;
   const notificationScenario = context.causalCategory === notificationCause;
+  const authoringAcceptanceScenario = context.causalCategory === authoringAcceptanceCause;
+  const authoringSource = authoringAcceptanceScenario ? await readFile(new URL(
+    "../../src/data-layer-installed/schemas/index.ts", import.meta.url), "utf8") : "";
+  const authoringFixtureSource = authoringAcceptanceScenario ? await readFile(new URL(
+    "../support/side-panel-browser-fixture-primitives.mjs", import.meta.url), "utf8") : "";
+  const authoringTargetSource = authoringAcceptanceScenario ? await readFile(new URL(
+    "../support/side-panel-schema-workspace-targets.mjs", import.meta.url), "utf8") : "";
   const notificationSource = notificationScenario ? await readFile(new URL(
     "../support/side-panel-browser-fixture-primitives.mjs", import.meta.url), "utf8") : "";
-  const expectedPreRepairFailure = notificationScenario
+  const expectedPreRepairFailure = authoringAcceptanceScenario
+    ? { duplicateRecoveryFocus:false, typedRulePickerContext:false, removalRuleDetails:false,
+      directArrayActionOrder:false, renameReviewPreserved:false }
+    : notificationScenario
     ? { crossInstanceNotifications:false, pollingDurationAssertion:true }
     : emptyHistoryScenario
     ? { emptyHistoryFeedbackPresented:false }
@@ -1039,7 +1050,10 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     : projectionScenario
       ? { untouchedSchemaProjectionPreserved:false }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:false };
-  const expectedRepairResult = notificationScenario
+  const expectedRepairResult = authoringAcceptanceScenario
+    ? { duplicateRecoveryFocus:true, typedRulePickerContext:true, removalRuleDetails:true,
+      directArrayActionOrder:true, renameReviewPreserved:true }
+    : notificationScenario
     ? { crossInstanceNotifications:true, pollingDurationAssertion:false }
     : emptyHistoryScenario
     ? { emptyHistoryFeedbackPresented:true }
@@ -1050,7 +1064,21 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     : projectionScenario
       ? { untouchedSchemaProjectionPreserved:true }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:true };
-  const observed = notificationScenario
+  const observed = authoringAcceptanceScenario
+    ? {
+      duplicateRecoveryFocus:authoringSource.includes("CSS.escape(`Add rule for ${selectedSchemaPropertyPath}`)") &&
+        authoringFixtureSource.includes("interaction.duplicate,{closed:true,unchanged:true,selected:true,visible:true,focused:true}"),
+      typedRulePickerContext:authoringSource.includes("`Add rule for ${path} · type ${propertyType}`") &&
+        authoringFixtureSource.includes('opened.heading,"Add rule for page_type · type string"'),
+      removalRuleDetails:authoringSource.includes("affected rule attachments: ${affectedRules}") &&
+        authoringFixtureSource.includes("Order identifier at") &&
+        authoringFixtureSource.includes("commerce\\/order\\/id"),
+      directArrayActionOrder:authoringTargetSource.includes('querySelectorAll(":scope > button")') &&
+        authoringFixtureSource.includes('["Edit type · Array of Object","Add item property","Add rule","Add specific index rule","Copy to another schema","Remove property"]'),
+      renameReviewPreserved:authoringFixtureSource.includes("Rename schema from Page view to Generic page view") &&
+        authoringFixtureSource.includes("Change additional-property policy"),
+    }
+    : notificationScenario
     ? { crossInstanceNotifications:notificationSource.includes("my-chrome-utilities.durable-saved-schemas"),
       pollingDurationAssertion:/attempt\s*<\s*400[\s\S]{0,300}repository\.savedSchemas/u.test(notificationSource) }
     : emptyHistoryScenario
@@ -1064,19 +1092,24 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender };
   assert.deepEqual(observed, expectedRepairResult);
   const fixture = {
-    id:notificationScenario ? "side-panel-durable-schema-notification-settlement-v1"
+    id:authoringAcceptanceScenario ? "schema-authoring-acceptance-contract-group-v1"
+      : notificationScenario ? "side-panel-durable-schema-notification-settlement-v1"
       : emptyHistoryScenario ? "installed-contributor-empty-history-feedback-v1"
       : acknowledgementScenario ? "installed-schema-durable-acknowledgement-settlement-v1"
       : projectionScenario ? "installed-schema-unchanged-projection-persistence-v1"
       : orderingScenario ? "installed-schema-canonical-persistence-ordering-v1"
         : "installed-schema-publication-feedback-retention-v1",
-    causalCategory:notificationScenario ? notificationCause
+    causalCategory:authoringAcceptanceScenario ? authoringAcceptanceCause
+      : notificationScenario ? notificationCause
       : emptyHistoryScenario ? emptyHistoryCause
       : acknowledgementScenario ? acknowledgementCause
       : projectionScenario ? projectionCause : orderingScenario ? orderingCause
       : "other:installed schema publication feedback retention",
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-    input:notificationScenario
+    input:authoringAcceptanceScenario
+      ? { interactions:["duplicate manual property recovery", "typed rule selection",
+        "property removal impact review", "nested array rule actions", "rename review"] }
+      : notificationScenario
       ? { boundary:"Saved Schema projection", concurrency:"shared browser batch" }
       : emptyHistoryScenario
       ? { operation:"second Undo", history:"empty page-scoped durable history", presentation:"canonical command result" }
