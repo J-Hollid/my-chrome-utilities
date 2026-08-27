@@ -113,6 +113,7 @@ const surface = (surfaceName, observationKey) => {
         await socket().call("Emulation.setEmulatedMedia", {
           features:[{name:"forced-colors", value:forcedColors ? "active" : "none"}],
         });
+        await socket().call("Page.bringToFront");
         await socket().call("Input.dispatchKeyEvent", {
           type:"keyDown",key:"Tab",code:"Tab",windowsVirtualKeyCode:9,nativeVirtualKeyCode:9,
         });
