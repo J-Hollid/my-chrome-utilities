@@ -1108,7 +1108,7 @@
     :handler (fn [world example captures]
                (assoc world :vtd014/flow-causal-boundary
                       (first (values example-values example captures))))}
-   {:pattern #"^the failure is (.+)$"
+   {:pattern #"^the failure is (product-runtime|verification-execution)$"
     :handler (fn [world example captures]
                (let [contract (flow-classification-contract (:vtd014/flow-causal-boundary world))
                      domain (first (values example-values example captures))
