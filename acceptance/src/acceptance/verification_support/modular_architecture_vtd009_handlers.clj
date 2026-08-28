@@ -39,6 +39,17 @@
     (number? expected) (= expected (count actual))
     :else (= (set expected) (set actual))))
 
+(def ^:private post-vtd009-process-helpers
+  #{"test/support/verification-cleanup.mjs"
+    "test/support/verification-contract-boundary-helpers.mjs"
+    "test/support/verification-contract-conservation.mjs"})
+
+(defn- helper-path [path]
+  (subs (str path) 1))
+
+(defn- post-vtd009-helper? [path]
+  (contains? post-vtd009-process-helpers (helper-path path)))
+
 (defn- helper-handlers [example-values verify-throughput!]
   [{:pattern #"^tracked verification helper (.+) is active on current master$"
     :handler (fn [world example captures]
@@ -66,8 +77,9 @@
                (let [helpers (evidence world :helpers)
                      shared-control (keyword "test/support/browser-observation-control.mjs")
                      retained (into {} (remove (fn [[path]]
-                                                 (str/starts-with? (subs (str path) 1)
-                                                                   "test/support/side-panel-"))
+                                                 (or (str/starts-with? (helper-path path)
+                                                                       "test/support/side-panel-")
+                                                     (post-vtd009-helper? path)))
                                                helpers))]
                  (assert! world (and (= 25 (count (dissoc retained shared-control)))
                                      (some? (get retained shared-control)))
@@ -131,11 +143,14 @@
                      shared-control (keyword "test/support/browser-observation-control.mjs")
                      added-side-panel-helpers
                      (count (filter (fn [path]
-                                      (str/starts-with? (subs (str path) 1)
+                                      (str/starts-with? (helper-path path)
                                                         "test/support/side-panel-"))
-                                    (keys helpers)))]
+                                    (keys helpers)))
+                     added-process-helpers
+                     (count (filter post-vtd009-helper? (keys helpers)))]
                  (assert! world (and (= 24 (- (evidence world :dormant :retainedHelpers)
-                                              1 added-side-panel-helpers))
+                                              1 added-side-panel-helpers
+                                              added-process-helpers))
                                      (some? (get helpers shared-control)))
                           "Retained support-helper inventory is not exact." {})))}])
 
