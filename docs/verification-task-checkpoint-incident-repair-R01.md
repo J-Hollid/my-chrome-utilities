@@ -147,14 +147,24 @@ remainder with these immutable identities:
 - canonical complete change-set digest:
   `3a4325e5df508dfafdf65d1d24765307f08fa95824494b34505f983412033b0a`.
 
-The campsite prerequisite is the exact committed specification handed to the
-coder, the stable task remains `event-library-target-page-push-closure`, and the
-return route remains coder to refactorer after fresh product evidence. After
-this process prerequisite reaches QA, use the existing QA-triggered campsite
-resumption helper to rebase or reapply the unchanged two-commit remainder onto
-that exact QA head, prove complete and product delta conservation, and reissue
-the same product task automatically. Do not reconstruct it manually or reduce
-it to a patch reference.
+That digest was the documentation calculation before preservation. The
+immutable runtime manifest records
+`0f1194bd3a45b67182b3223e7857323070650737b5f9108b2ff06fff1e2e26dc`
+as both its change-set digest and expected delta; that stored identity is
+authoritative for recovery and must not be rewritten.
+
+The campsite records the exact committed specification handed to the coder as
+prerequisite authority; that specification is not implementation satisfaction.
+The stable product task remains `event-library-target-page-push-closure`, and
+the return route remains coder to refactorer after fresh product evidence. Only
+after an implementation of this process prerequisite includes the latest
+placement correction, receives architect `qa-ready` review with bound focused
+evidence, and reaches QA may the QA-triggered helper rebase or reapply the
+unchanged two-commit remainder onto that exact QA head. Follow
+`docs/campsite-implementation-prerequisite-gate-R01.md` for the immutable
+satisfaction record and the append-only recovery of premature resumed head
+`9273c9c903`. Do not reconstruct the remainder manually or reduce it to a patch
+reference.
 
 ## Exact ownership placement correction
 
