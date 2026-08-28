@@ -1,0 +1,313 @@
+{
+  "version": 1,
+  "order": 90,
+  "pack": {
+    "id": "defects",
+    "verificationSlices": [
+      {
+        "id": "defect_reproduction_reorder_adapter",
+        "sourcePaths": [
+          "src/data-layer-defect-report-reproduction-controls.ts"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-defect-report-ui-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumerOnly": true,
+        "consumers": [],
+        "observableBoundary": "Defect reproduction reorder adapter preserves pathname segments and report editing"
+      },
+      {
+        "id": "defects_installed_side_panel",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "src/data-layer-installed/defects/"
+        ],
+        "tasks": [
+          "unit:test/data-layer-installed/defects-controller-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "live_flow_testing",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "shell",
+            "sliceId": "side_panel_installed_controller_consumer"
+          }
+        ],
+        "observableBoundary": "Installed Defect state, presentation, copy, and export"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "unit:test/data-layer-installed/consumers/defects-consumer-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
+      }
+    ],
+    "representativeChangedPath": "src/data-layer-defect-library-ui.ts",
+    "source": [
+      "src/data-layer-installed/defects/",
+      "src/data-layer-defect",
+      "src/data-layer-event-occurrence-defect-report-ui.ts",
+      "src/data-layer-event-occurrence-defect-report.ts",
+      "src/data-layer-missing-event",
+      "src/data-layer-unified-defect"
+    ],
+    "impactBoundaries": [
+      {
+        "id": "defects_existing_boundary",
+        "prefixes": [
+          "src/data-layer-defect",
+          "src/data-layer-event-occurrence-defect-report",
+          "src/data-layer-missing-event",
+          "src/data-layer-unified-defect"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "defects_installed_side_panel_boundary",
+        "prefixes": [
+          "src/data-layer-installed/defects/"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
+      }
+    ],
+    "dependencies": [
+      "schemas",
+      "event-library"
+    ],
+    "unit": [
+      "test/data-layer-installed/defects-controller-test.mjs",
+      "test/data-layer-installed/consumers/defects-consumer-test.mjs",
+      "test/data-layer-defect-library-copy-test.mjs",
+      "test/data-layer-defect-library-test.mjs",
+      "test/data-layer-defect-report-provenance-presentation-test.mjs",
+      "test/data-layer-defect-report-reproduction-test.mjs",
+      "test/data-layer-defect-report-runtime-test.mjs",
+      "test/data-layer-defect-report-semantic-differences-test.mjs",
+      "test/data-layer-defect-report-test.mjs",
+      "test/data-layer-defect-report-ui-test.mjs",
+      "test/data-layer-defect-report-undeclared-property-removal-test.mjs",
+      "test/data-layer-event-occurrence-defect-report-test.mjs",
+      "test/data-layer-missing-event-defect-report-test.mjs",
+      "test/data-layer-missing-event-report-representation-fidelity-test.mjs",
+      "test/data-layer-required-property-defect-schema-choices-test.mjs",
+      "test/data-layer-unified-defect-builder-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-defect-library-property-test.mjs",
+      "test/data-layer-defect-report-property-test.mjs",
+      "test/data-layer-event-occurrence-defect-report-property-test.mjs",
+      "test/data-layer-missing-event-defect-report-property-test.mjs",
+      "test/data-layer-required-property-defect-schema-choices-property-test.mjs",
+      "test/data-layer-unified-defect-builder-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-defect-library-runtime.feature",
+      "features/data-layer-defect-library.feature",
+      "features/data-layer-defect-report-builder.feature",
+      "features/data-layer-defect-report-component-options-runtime.feature",
+      "features/data-layer-defect-report-component-options.feature",
+      "features/data-layer-defect-report-jira-cloud-export.feature",
+      "features/data-layer-defect-report-provenance-presentation-runtime.feature",
+      "features/data-layer-defect-report-provenance-presentation.feature",
+      "features/data-layer-defect-report-reproduction-step-composer.feature",
+      "features/data-layer-defect-report-reproduction.feature",
+      "features/data-layer-defect-report-semantic-differences-runtime.feature",
+      "features/data-layer-defect-report-semantic-differences.feature",
+      "features/data-layer-defect-report-undeclared-property-removal-runtime.feature",
+      "features/data-layer-defect-report-undeclared-property-removal.feature",
+      "features/data-layer-event-occurrence-defect-report-runtime.feature",
+      "features/data-layer-event-occurrence-defect-report.feature",
+      "features/data-layer-missing-event-defect-report-runtime.feature",
+      "features/data-layer-missing-event-defect-report.feature",
+      "features/data-layer-missing-event-expected-payload-hardening-runtime.feature",
+      "features/data-layer-missing-event-expected-payload-hardening.feature",
+      "features/data-layer-missing-event-report-representation-fidelity-runtime.feature",
+      "features/data-layer-missing-event-report-representation-fidelity.feature",
+      "features/data-layer-required-property-defect-schema-choices-runtime.feature",
+      "features/data-layer-required-property-defect-schema-choices.feature",
+      "features/data-layer-unified-defect-report-builder-runtime.feature",
+      "features/data-layer-unified-defect-report-builder.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/defect_library.clj",
+      "acceptance/src/acceptance/steps/defect_report.clj",
+      "acceptance/src/acceptance/steps/defect_report_component_options.clj",
+      "acceptance/src/acceptance/steps/defect_report_delivery_assertions.clj",
+      "acceptance/src/acceptance/steps/defect_report_expected_result_assertions.clj",
+      "acceptance/src/acceptance/steps/defect_report_provenance_presentation.clj",
+      "acceptance/src/acceptance/steps/defect_report_reproduction_assertions.clj",
+      "acceptance/src/acceptance/steps/defect_report_semantic_differences.clj",
+      "acceptance/src/acceptance/steps/defect_report_timeline_assertions.clj",
+      "acceptance/src/acceptance/steps/defect_report_undeclared_property_removal.clj",
+      "acceptance/src/acceptance/steps/event_occurrence_defect_report.clj",
+      "acceptance/src/acceptance/steps/missing_event_defect_report.clj",
+      "acceptance/src/acceptance/steps/missing_event_payload_hardening.clj",
+      "acceptance/src/acceptance/steps/missing_event_report_fidelity.clj",
+      "acceptance/src/acceptance/steps/required_property_defect_schema_choices.clj",
+      "acceptance/src/acceptance/steps/unified_defect_builder.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/defects.mjs",
+      "test/browser-packs/side-panel-defects.mjs"
+    ],
+    "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/defects.mjs",
+        "mode": "shared"
+      },
+      {
+        "path": "test/browser-packs/side-panel-defects.mjs",
+        "mode": "integration"
+      }
+    ],
+    "browserObservationBatches": [
+      {
+        "id": "defects-side-panel",
+        "path": "test/browser-packs/side-panel-defects.mjs",
+        "observationCount": 9
+      }
+    ],
+    "browserObservations": [
+      {
+        "id": "DEFECT_LIBRARY_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-defects.mjs",
+        "environment": {
+          "DEFECT_LIBRARY_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "defectLibrary"
+        ],
+        "features": [
+          "features/data-layer-defect-library-runtime.feature"
+        ]
+      },
+      {
+        "id": "DEFECT_REPORT_COMPONENT_OPTIONS_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-defects.mjs",
+        "environment": {
+          "DEFECT_REPORT_COMPONENT_OPTIONS_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "defectReportComponentOptions"
+        ],
+        "features": [
+          "features/data-layer-defect-report-component-options-runtime.feature"
+        ]
+      },
+      {
+        "id": "DEFECT_REPORT_PROVENANCE_PRESENTATION_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-defects.mjs",
+        "environment": {
+          "DEFECT_REPORT_PROVENANCE_PRESENTATION_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "defectReportProvenancePresentation"
+        ],
+        "features": [
+          "features/data-layer-defect-report-provenance-presentation-runtime.feature"
+        ]
+      },
+      {
+        "id": "DEFECT_REPORT_SEMANTIC_DIFFERENCES_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-defects.mjs",
+        "environment": {
+          "DEFECT_REPORT_SEMANTIC_DIFFERENCES_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "defectReportSemanticDifferences"
+        ],
+        "features": [
+          "features/data-layer-defect-report-semantic-differences-runtime.feature"
+        ]
+      },
+      {
+        "id": "DEFECT_REPORT_UNDECLARED_REMOVAL_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-defects.mjs",
+        "environment": {
+          "DEFECT_REPORT_UNDECLARED_REMOVAL_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "defectReportUndeclaredRemoval"
+        ],
+        "features": [
+          "features/data-layer-defect-report-undeclared-property-removal-runtime.feature"
+        ]
+      },
+      {
+        "id": "EVENT_OCCURRENCE_DEFECT_REPORT_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-defects.mjs",
+        "environment": {
+          "EVENT_OCCURRENCE_DEFECT_REPORT_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "eventOccurrenceDefectReport"
+        ],
+        "features": [
+          "features/data-layer-event-occurrence-defect-report-runtime.feature"
+        ]
+      },
+      {
+        "id": "MISSING_EVENT_DEFECT_FIDELITY_BROWSER_OBSERVATION",
+        "path": "test/browser-packs/side-panel-defects.mjs",
+        "environment": {
+          "MISSING_EVENT_DEFECT_REPORT_BROWSER_ADAPTER": "1",
+          "MISSING_EVENT_REPORT_FIDELITY_BROWSER_ADAPTER": "1",
+          "UNIFIED_DEFECT_BUILDER_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "missingEventDefectReport",
+          "missingEventReportFidelity",
+          "unifiedDefectBuilder"
+        ],
+        "features": [
+          "features/data-layer-missing-event-defect-report-runtime.feature",
+          "features/data-layer-missing-event-report-representation-fidelity-runtime.feature",
+          "features/data-layer-missing-event-expected-payload-hardening-runtime.feature",
+          "features/data-layer-unified-defect-report-builder-runtime.feature"
+        ]
+      },
+      {
+        "id": "REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-defects.mjs",
+        "environment": {
+          "REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "reproductionStepActionRows"
+        ],
+        "features": [
+          "features/data-layer-defect-report-builder.feature",
+          "features/data-layer-defect-report-jira-cloud-export.feature",
+          "features/data-layer-defect-report-reproduction-step-composer.feature",
+          "features/data-layer-defect-report-reproduction.feature"
+        ]
+      },
+      {
+        "id": "REQUIRED_PROPERTY_DEFECT_SCHEMA_CHOICES_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-defects.mjs",
+        "environment": {
+          "REQUIRED_PROPERTY_DEFECT_SCHEMA_CHOICES_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "requiredPropertyDefectSchemaChoices"
+        ],
+        "features": [
+          "features/data-layer-required-property-defect-schema-choices-runtime.feature"
+        ]
+      }
+    ]
+  }
+}

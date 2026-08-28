@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "order": 150,
+  "pack": {
+    "id": "selective_profile_inheritance",
+    "source": [],
+    "dependencies": [
+      "layered_schema"
+    ],
+    "unit": [],
+    "property": [],
+    "features": [],
+    "handlers": [],
+    "browserAdapters": [],
+    "browserAdapterModes": []
+  }
+}

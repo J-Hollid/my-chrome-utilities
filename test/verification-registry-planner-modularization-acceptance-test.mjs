@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { access, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import ts from "typescript";
@@ -222,6 +223,33 @@ assert.equal(succession.destinationBoundaryDigests.length, 9,
   "one-to-many succession conserves exactly nine boundary digests");
 
 const packs = await loadVerificationPacks();
+const [baseDeclarations, migrationLedger, manifestNames, compiledRegistryBytes] =
+  await Promise.all([
+    readFile("verification/packs.base.json", "utf8").then(JSON.parse),
+    readFile("verification/manifests/migration-ledger.v1", "utf8").then(JSON.parse),
+    readdir("verification/manifests").then((names) => names.filter((name) =>
+      name.endsWith(".json")).sort()),
+    readFile("verification/packs.json"),
+  ]);
+assert.deepEqual(baseDeclarations, [],
+  "the hand-authored central base contains no pack declaration");
+assert.equal(manifestNames.length, packs.length,
+  "every registered pack has one authoritative local manifest");
+assert.deepEqual(manifestNames, packs.map(({ id }) => `${id}.json`).sort(),
+  "authoritative manifest names match every registered pack identity exactly");
+assert.equal(migrationLedger.packs.length, 21,
+  "the complete upfront ledger covers every pack migrated from the central base");
+for (const entry of migrationLedger.packs) {
+  const fragment = JSON.parse(await readFile(entry.destination, "utf8"));
+  assert.equal(fragment.version, 1, `${entry.id} uses the explicit fragment schema`);
+  assert.equal(fragment.order, entry.order, `${entry.id} retains its ledger order`);
+  assert.equal(fragment.pack.id, entry.id, `${entry.id} has one destination authority`);
+  assert.equal(createHash("sha256").update(JSON.stringify(fragment.pack)).digest("hex"),
+    entry.sourceObjectDigest, `${entry.id} retains its exact source-object identity`);
+}
+assert.equal(createHash("sha256").update(compiledRegistryBytes).digest("hex"),
+  migrationLedger.expectedCompiledDigest,
+  "compiled compatibility bytes retain the pre-migration canonical digest");
 const verificationProcessPack = packs.find(({id}) => id === "verification_process");
 const successorTaskKeys = new Set(verificationProcessCompatibilitySuccessors
   .map((testPath) => `unit:${testPath}`));

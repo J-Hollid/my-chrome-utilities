@@ -1975,6 +1975,14 @@ assert.deepEqual(compiled.map(({ id }) => id), ["shell", "verification_process"]
 assert.equal(serializeVerificationRegistry(compiled), serializeVerificationRegistry(structuredClone(compiled)),
   "registry serialization is deterministic");
 
+const independentFragments = [
+  { version:1, order:20, pack:{ id:"beta" } },
+  { version:1, order:10, pack:{ id:"alpha" } },
+];
+assert.deepEqual(compileVerificationRegistry({ base:[], fragments:independentFragments })
+  .map(({ id }) => id), ["alpha", "beta"],
+"fragment discovery order cannot change canonical declaration order");
+
 assert.throws(() => compileVerificationRegistry({ base, fragments:[
   { order:1, pack:{ id:"verification_process" } },
 ]}), /schema version 1/u, "fragment schema versions are explicit rather than inferred");
@@ -1990,13 +1998,21 @@ try {
   await Promise.all([
     writeFile(path.join(fixtureRoot, "verification/packs.base.json"),
       serializeVerificationRegistry(base)),
-    writeFile(path.join(fixtureRoot, "verification/manifests/process.json"),
+    writeFile(path.join(fixtureRoot, "verification/manifests/verification_process.json"),
       `${JSON.stringify(fragments[0], null, 2)}\n`),
     writeFile(path.join(fixtureRoot, "verification/packs.json"),
       serializeVerificationRegistry(compiled)),
   ]);
   assert.deepEqual(await loadCompiledVerificationRegistry({ repositoryRoot:fixtureRoot }), compiled,
     "the loader returns the validated fragment assembly");
+  await writeFile(path.join(fixtureRoot, "verification/manifests/wrong-name.json"),
+    `${JSON.stringify({ version:1, order:2, pack:{ id:"other" } }, null, 2)}\n`);
+  await assert.rejects(
+    loadCompiledVerificationRegistry({ repositoryRoot:fixtureRoot }),
+    /Manifest filename wrong-name\.json must match pack identity other/u,
+    "a pack fragment filename must expose its one authoritative pack identity",
+  );
+  await rm(path.join(fixtureRoot, "verification/manifests/wrong-name.json"));
   await writeFile(path.join(fixtureRoot, "verification/packs.json"),
     serializeVerificationRegistry(base));
   await assert.rejects(

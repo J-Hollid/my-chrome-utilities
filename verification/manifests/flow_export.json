@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "order": 120,
+  "pack": {
+    "id": "flow_export",
+    "representativeChangedPath": "src/data-layer-project-documentation-workspace-ui.ts",
+    "source": [
+      "src/data-layer-flow-table-documentation-export.ts",
+      "src/data-layer-flow-table-documentation-export-ui.ts",
+      "src/data-layer-flow-documentation-snapshot.ts",
+      "src/data-layer-project-documentation-compiler.ts",
+      "src/data-layer-project-documentation-records.ts",
+      "src/data-layer-project-documentation-workspace.ts",
+      "src/project-documentation/workspace-build-ui.ts",
+      "src/project-documentation/workspace-content-ui.ts",
+      "src/project-documentation/workspace-export-ui.ts",
+      "src/project-documentation/workspace-navigation.ts",
+      "src/project-documentation/profile-concept-properties.ts",
+      "src/project-documentation/workspace-profile-concepts.ts",
+      "src/project-documentation/workspace-profile-concepts-ui.ts",
+      "src/project-documentation/workspace-set-creation.ts",
+      "src/project-documentation/workspace-set-creation-ui.ts",
+      "src/project-documentation/workspace-theme-ui.ts",
+      "src/project-documentation/workspace-ui-elements.ts",
+      "src/project-documentation/workspace-contribution.ts",
+      "src/project-documentation/workspace-template-library-ui.ts",
+      "src/project-documentation/workspace-excel-template-guidance-ui.ts",
+      "src/documentation-templates/template-contract.ts",
+      "src/documentation-templates/template-context.ts",
+      "src/documentation-templates/template-library.ts",
+      "src/documentation-templates/template-body.ts",
+      "src/documentation-templates/excel-template.ts",
+      "src/documentation-templates/excel-template-catalogue.ts",
+      "src/documentation-templates/excel-workbook.ts",
+      "src/documentation-templates/excel-renderer.ts",
+      "src/documentation-templates/rich-template.ts",
+      "src/documentation-templates/rich-renderer.ts",
+      "src/data-layer-project-documentation-workspace-ui.ts"
+    ],
+    "dependencies": [
+      "layered_schema"
+    ],
+    "sharedComponents": [
+      "flow_graph"
+    ],
+    "sharedBoundaries": [
+      {
+        "id": "project_documentation_workspace_contribution",
+        "prefixes": [
+          "src/project-documentation/workspace-contribution.ts"
+        ],
+        "owner": "flow_export",
+        "consumers": [
+          "shell"
+        ],
+        "structuralClass": "composition",
+        "qaTargets": [
+          "STUDIO_GLOBAL_STYLE_SMOKE_TARGET"
+        ],
+        "propagateDependants": false,
+        "terminalFullObligation": true
+      }
+    ],
+    "verificationSlices": [
+      {
+        "id": "documentation_reorder_adapters",
+        "sourcePaths": [
+          "src/data-layer-flow-table-documentation-export-ui.ts",
+          "src/data-layer-project-documentation-workspace-ui.ts",
+          "src/project-documentation/workspace-build-ui.ts",
+          "src/project-documentation/workspace-content-ui.ts",
+          "src/project-documentation/workspace-template-library-ui.ts"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-project-documentation-workspace-test.mjs",
+          "unit:test/data-layer-documentation-template-rich-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumerOnly": true,
+        "consumers": [],
+        "observableBoundary": "Documentation reorder adapters preserve selection, configuration, template, and export semantics"
+      },
+      {
+        "id": "documentation_template_workspace",
+        "sourcePaths": [
+          "src/project-documentation/workspace-contribution.ts"
+        ],
+        "sourcePrefixes": [
+          "src/documentation-templates/",
+          "src/project-documentation/workspace-template-"
+        ],
+        "tasks": [
+          "unit:test/data-layer-project-documentation-workspace-test.mjs"
+        ],
+        "prerequisites": [
+          "property:test/data-layer-project-documentation-profile-concepts-property-test.mjs"
+        ],
+        "consumers": [
+          {
+            "packId": "shell",
+            "sliceId": "documentation_workspace_consumer"
+          }
+        ],
+        "observableBoundary": "Documentation workspace contribution and template composition"
+      }
+    ],
+    "unit": [
+      "test/data-layer-flow-table-documentation-export-test.mjs",
+      "test/data-layer-project-documentation-workspace-test.mjs",
+      "test/rich-template-reorder-test.mjs",
+      "test/data-layer-documentation-template-acceptance-test.mjs",
+      "test/data-layer-documentation-template-excel-test.mjs",
+      "test/data-layer-documentation-template-library-test.mjs",
+      "test/data-layer-documentation-template-rich-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-flow-table-documentation-export-property-test.mjs",
+      "test/data-layer-project-documentation-profile-concepts-property-test.mjs",
+      "test/data-layer-documentation-template-excel-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-flow-table-documentation-export.feature",
+      "features/data-layer-flow-table-documentation-export-runtime.feature",
+      "features/data-layer-project-documentation-workspace.feature",
+      "features/data-layer-project-documentation-workspace-runtime.feature",
+      "features/data-layer-documentation-template-library.feature",
+      "features/data-layer-documentation-template-library-runtime.feature",
+      "features/data-layer-excel-documentation-templates.feature",
+      "features/data-layer-excel-documentation-templates-runtime.feature",
+      "features/data-layer-rich-page-documentation-templates.feature",
+      "features/data-layer-rich-page-documentation-templates-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/flow_table_documentation_export.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/flow-table-documentation-export.mjs"
+    ],
+    "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/flow-table-documentation-export.mjs",
+        "mode": "shared"
+      }
+    ]
+  }
+}

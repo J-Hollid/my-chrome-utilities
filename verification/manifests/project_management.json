@@ -1,0 +1,270 @@
+{
+  "version": 1,
+  "order": 10,
+  "pack": {
+    "id": "project_management",
+    "representativeChangedPath": "src/data-layer-assignment-routing-ui.ts",
+    "source": [
+      "src/data-layer-installed/projects/",
+      "src/data-layer-project-entity-lifecycle.ts",
+      "src/data-layer-page-authoring.ts",
+      "src/data-layer-assignment-routing.ts",
+      "src/data-layer-assignment-routing-ui.ts",
+      "src/flow-visual-asset-portability.ts",
+      "src/flow-visual-archive-export.ts",
+      "src/flow-visual-archive-format.ts",
+      "src/flow-visual-asset-memory-store.ts",
+      "src/flow-visual-asset-validation.ts",
+      "src/flow-visual-image-bytes.ts",
+      "src/flow-visual-image-completeness.ts",
+      "src/flow-visual-image-inspection.ts",
+      "src/flow-visual-jpeg-inspection.ts",
+      "src/flow-visual-png-inspection.ts",
+      "src/flow-visual-project-identity.ts",
+      "src/flow-visual-sha256-compression.ts",
+      "src/flow-visual-sha256-constants.ts",
+      "src/flow-visual-sha256.ts",
+      "src/flow-visual-webp-inspection.ts",
+      "src/flow-visual-zip-directory.ts",
+      "src/flow-visual-zip-primitives.ts",
+      "src/flow-visual-zip-reader.ts",
+      "src/flow-visual-zip-writer.ts",
+      "src/flow-visual-zip.ts",
+      "src/project-asset-body-contribution.ts",
+      "src/data-layer-project-library.ts",
+      "src/data-layer-project-library-ui.ts",
+      "src/data-layer-project-library-presentation-ui.ts"
+    ],
+    "dependencies": [],
+    "sharedBoundaries": [
+      {
+        "id": "project_asset_body_contribution",
+        "prefixes": [
+          "src/project-asset-body-contribution.ts"
+        ],
+        "owner": "project_management",
+        "consumers": [
+          "durable_project_repository"
+        ],
+        "structuralClass": "persistence",
+        "qaTargets": [
+          "DURABLE_REPOSITORY_STORAGE_TARGET"
+        ],
+        "propagateDependants": false,
+        "terminalFullObligation": true
+      }
+    ],
+    "verificationSlices": [
+      {
+        "id": "documentation_template_asset_body",
+        "sourcePaths": [
+          "src/project-asset-body-contribution.ts"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-flow-visual-asset-portability-test.mjs"
+        ],
+        "prerequisites": [
+          "property:test/data-layer-flow-visual-asset-portability-property-test.mjs"
+        ],
+        "consumers": [
+          {
+            "packId": "durable_project_repository",
+            "sliceId": "documentation_template_archive"
+          }
+        ],
+        "observableBoundary": "Project asset-body persistence and portable archive contribution"
+      },
+      {
+        "id": "project_library_installed_side_panel",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "src/data-layer-installed/projects/"
+        ],
+        "tasks": [
+          "unit:test/data-layer-installed/projects-controller-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "durable_project_repository",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "project_event_transport",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "guided_test_cases",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "shell",
+            "sliceId": "side_panel_installed_controller_consumer"
+          }
+        ],
+        "observableBoundary": "Installed Project Library host, active-project capability, navigation, and project coordination"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "unit:test/data-layer-installed/consumers/project-management-consumer-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
+      }
+    ],
+    "impactBoundaries": [
+      {
+        "id": "project_entity_lifecycle_semantic",
+        "prefixes": [
+          "src/data-layer-project-entity-lifecycle.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "project_page_authoring_controller",
+        "prefixes": [
+          "src/data-layer-page-authoring.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "application controller"
+      },
+      {
+        "id": "project_assignment_routing_semantic",
+        "prefixes": [
+          "src/data-layer-assignment-routing.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "project_assignment_routing_presentation",
+        "prefixes": [
+          "src/data-layer-assignment-routing-ui.ts"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "browser presentation"
+      },
+      {
+        "id": "project_flow_visual_asset_portability",
+        "prefixes": [
+          "src/flow-visual-asset-portability.ts",
+          "src/flow-visual-archive-export.ts",
+          "src/flow-visual-archive-format.ts",
+          "src/flow-visual-asset-memory-store.ts",
+          "src/flow-visual-asset-validation.ts",
+          "src/flow-visual-image-bytes.ts",
+          "src/flow-visual-image-completeness.ts",
+          "src/flow-visual-image-inspection.ts",
+          "src/flow-visual-jpeg-inspection.ts",
+          "src/flow-visual-png-inspection.ts",
+          "src/flow-visual-project-identity.ts",
+          "src/flow-visual-sha256-compression.ts",
+          "src/flow-visual-sha256-constants.ts",
+          "src/flow-visual-sha256.ts",
+          "src/flow-visual-webp-inspection.ts",
+          "src/flow-visual-zip-directory.ts",
+          "src/flow-visual-zip-primitives.ts",
+          "src/flow-visual-zip-reader.ts",
+          "src/flow-visual-zip-writer.ts",
+          "src/flow-visual-zip.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "persistence migration"
+      },
+      {
+        "id": "project_library_persistence",
+        "prefixes": [
+          "src/data-layer-project-library.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "persistence migration"
+      },
+      {
+        "id": "project_library_controller",
+        "prefixes": [
+          "src/data-layer-project-library-ui.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "application controller"
+      },
+      {
+        "id": "project_library_presentation",
+        "prefixes": [
+          "src/data-layer-project-library-presentation-ui.ts"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "browser presentation"
+      },
+      {
+        "id": "project_library_installed_side_panel_boundary",
+        "prefixes": [
+          "src/data-layer-installed/projects/"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
+      }
+    ],
+    "unit": [
+      "test/data-layer-installed/projects-controller-test.mjs",
+      "test/data-layer-installed/consumers/project-management-consumer-test.mjs",
+      "test/data-layer-project-entity-lifecycle-test.mjs",
+      "test/data-layer-page-authoring-test.mjs",
+      "test/data-layer-assignment-routing-test.mjs",
+      "test/data-layer-project-library-transport-test.mjs",
+      "test/data-layer-flow-visual-asset-portability-test.mjs",
+      "test/data-layer-project-library-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-project-entity-lifecycle-property-test.mjs",
+      "test/data-layer-page-authoring-property-test.mjs",
+      "test/data-layer-assignment-routing-property-test.mjs",
+      "test/data-layer-flow-visual-asset-portability-property-test.mjs",
+      "test/data-layer-project-library-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-project-library-and-active-context.feature",
+      "features/data-layer-project-library-and-active-context-runtime.feature",
+      "features/data-layer-project-portability-and-upgrade.feature",
+      "features/data-layer-project-portability-and-upgrade-runtime.feature",
+      "features/specification-studio-assignment-owned-routing.feature",
+      "features/specification-studio-assignment-owned-routing-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/project_management.clj"
+    ],
+    "isolatedVerificationHandlers": [
+      "acceptance/src/acceptance/steps/project_management.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/project-management.mjs",
+      "test/browser-packs/project-entity-lifecycle.mjs",
+      "test/twatility-projects-browser-test.mjs",
+      "test/twatility-studio-shell-browser-test.mjs"
+    ],
+    "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/project-management.mjs",
+        "mode": "shared"
+      },
+      {
+        "path": "test/browser-packs/project-entity-lifecycle.mjs",
+        "mode": "shared"
+      },
+      {
+        "path": "test/twatility-projects-browser-test.mjs",
+        "mode": "integration"
+      },
+      {
+        "path": "test/twatility-studio-shell-browser-test.mjs",
+        "mode": "integration"
+      }
+    ]
+  }
+}

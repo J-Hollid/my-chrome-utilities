@@ -1,0 +1,110 @@
+{
+  "version": 1,
+  "order": 130,
+  "pack": {
+    "id": "live_flow_testing",
+    "representativeChangedPath": "src/data-layer-live-flow-testing-ui.ts",
+    "source": [
+      "src/data-layer-installed/live-flow-testing/",
+      "src/data-layer-live-flow-testing.ts",
+      "src/data-layer-live-flow-testing-ui.ts",
+      "src/data-layer-live-flow-defect-report.ts"
+    ],
+    "impactBoundaries": [
+      {
+        "id": "live_flow_testing_existing_boundary",
+        "prefixes": [
+          "src/data-layer-live-flow-testing.ts",
+          "src/data-layer-live-flow-testing-ui.ts",
+          "src/data-layer-live-flow-defect-report.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "live_flow_testing_installed_side_panel_boundary",
+        "prefixes": [
+          "src/data-layer-installed/live-flow-testing/"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
+      }
+    ],
+    "dependencies": [
+      "capture",
+      "defects",
+      "flow_graph",
+      "layered_schema"
+    ],
+    "verificationSlices": [
+      {
+        "id": "live_flow_testing_installed_side_panel",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "src/data-layer-installed/live-flow-testing/"
+        ],
+        "tasks": [
+          "unit:test/data-layer-installed/live-flow-testing-controller-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "capture",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "defects",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "schemas",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "shell",
+            "sliceId": "side_panel_installed_controller_consumer"
+          }
+        ],
+        "observableBoundary": "Installed Live Flow test lifecycle, result projection, and project actions"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "unit:test/data-layer-installed/consumers/live-flow-testing-consumer-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
+      }
+    ],
+    "unit": [
+      "test/data-layer-installed/live-flow-testing-controller-test.mjs",
+      "test/data-layer-installed/consumers/live-flow-testing-consumer-test.mjs",
+      "test/data-layer-live-flow-testing-test.mjs",
+      "test/data-layer-live-flow-defect-report-test.mjs",
+      "test/data-layer-live-flow-testing-outline-observation.mjs"
+    ],
+    "property": [
+      "test/data-layer-live-flow-testing-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-live-flow-guided-testing.feature",
+      "features/data-layer-live-flow-guided-testing-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/live_flow_guided_testing.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/live-flow-testing.mjs"
+    ],
+    "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/live-flow-testing.mjs",
+        "mode": "shared"
+      }
+    ]
+  }
+}

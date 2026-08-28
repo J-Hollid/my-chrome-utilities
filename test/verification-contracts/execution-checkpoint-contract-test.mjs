@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { access, chmod, copyFile, mkdtemp, mkdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { access, chmod, copyFile, mkdtemp, mkdir, readFile, readdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -546,6 +546,8 @@ try {
     path.join(cliContentionRepository, "scripts/verification-run-intent.mjs"));
   await copyFile(path.resolve("scripts/verification-packs.mjs"),
     path.join(cliContentionRepository, "scripts/verification-packs.mjs"));
+  const migratedManifestPaths = (await readdir(path.resolve("verification/manifests")))
+    .map((name) => `verification/manifests/${name}`);
   const extractedVerificationPaths = [
     "acceptance/src/acceptance/steps/verification_process_legacy.clj",
     "acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
@@ -584,7 +586,7 @@ try {
     "scripts/verification-policy/process-contract-compatibility.mjs",
     "scripts/verification-policy/reliability/run-intent.mjs",
     "scripts/verification-policy/reliability/task-succession.mjs",
-    "verification/manifests/verification-process.json",
+    ...migratedManifestPaths,
     "verification/packs.base.json",
     "verification/packs.json",
     "verification/task-succession.json",
@@ -595,6 +597,8 @@ try {
     await mkdir(path.dirname(destination), { recursive:true });
     await copyFile(path.resolve(verificationPath), destination);
   }
+  await rm(path.join(cliContentionRepository,
+    "verification/manifests/verification-process.json"), { force:true });
   await mkdir(path.join(cliContentionRepository, "scripts/verification-pack-cardinality"),
     { recursive:true });
   await copyFile(path.resolve("scripts/verification-pack-cardinality/contract.mjs"),
@@ -712,6 +716,7 @@ try {
     "scripts/verification-task-succession.mjs",
     "scripts/verification-styles.mjs", "scripts/verification-packs.mjs",
     ...extractedVerificationPaths,
+    "verification/manifests/verification-process.json",
     "scripts/verification-pack-cardinality/contract.mjs",
     "scripts/verification-pack-cardinality/focused-evidence.mjs",
     "scripts/live-target-permission-recovery-focused-evidence.mjs",

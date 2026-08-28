@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "order": 180,
+  "pack": {
+    "id": "project_assurance_severity",
+    "representativeChangedPath": "features/data-layer-project-assurance-severity.feature",
+    "source": [],
+    "verificationOnly": {
+      "productionOwner": "schemas"
+    },
+    "dependencies": [
+      "schemas"
+    ],
+    "verificationSlices": [
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "unit:test/data-layer-installed/consumers/project-assurance-severity-consumer-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
+      }
+    ],
+    "unit": [
+      "test/data-layer-installed/consumers/project-assurance-severity-consumer-test.mjs",
+      "test/data-layer-project-assurance-severity-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-project-assurance-severity-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-project-assurance-severity.feature",
+      "features/data-layer-project-assurance-severity-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/project_assurance_severity.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/project-assurance-severity.mjs"
+    ],
+    "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/project-assurance-severity.mjs",
+        "mode": "shared"
+      }
+    ]
+  }
+}

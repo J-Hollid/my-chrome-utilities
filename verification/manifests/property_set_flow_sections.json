@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "order": 170,
+  "pack": {
+    "id": "property_set_flow_sections",
+    "verificationSlices": [
+      {
+        "id": "property_set_application_reorder_adapter",
+        "sourcePaths": [
+          "src/data-layer-property-set-flow-section-ui.ts"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-property-set-flow-section-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumerOnly": true,
+        "consumers": [],
+        "observableBoundary": "Property Set application reorder adapter preserves impact review and durable commands"
+      }
+    ],
+    "representativeChangedPath": "src/data-layer-property-set-flow-section-ui.ts",
+    "source": [
+      "src/data-layer-property-set-flow-section.ts",
+      "src/data-layer-property-set-flow-section-ui.ts",
+      "src/utilities/data-layer/property-set-flow-section.ts"
+    ],
+    "dependencies": [],
+    "sharedComponents": [
+      "flow_graph"
+    ],
+    "unit": [
+      "test/data-layer-property-set-flow-section-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-property-set-flow-section-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-property-set-and-flow-section-separation.feature",
+      "features/data-layer-property-set-and-flow-section-separation-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/property_set_flow_sections.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/property-set-flow-sections.mjs"
+    ],
+    "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/property-set-flow-sections.mjs",
+        "mode": "shared"
+      }
+    ]
+  }
+}

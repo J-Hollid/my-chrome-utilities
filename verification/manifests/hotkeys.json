@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "order": 40,
+  "pack": {
+    "id": "hotkeys",
+    "representativeChangedPath": "src/hotkey-keymap.ts",
+    "source": [
+      "src/hotkey",
+      "src/utilities/hotkeys"
+    ],
+    "dependencies": [
+      "command-palette"
+    ],
+    "unit": [
+      "test/hotkey-installed-controller-test.mjs"
+    ],
+    "property": [
+      "test/hotkey-binding-property-test.mjs",
+      "test/modular-utility-architecture-property-test.mjs"
+    ],
+    "features": [
+      "features/side-panel-hotkey-editor.feature",
+      "features/side-panel-hotkey-keymap.feature",
+      "features/side-panel-hotkey-operator-layout.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/hotkey_keymap.clj",
+      "acceptance/src/acceptance/steps/workspace_editor.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/hotkeys.mjs"
+    ],
+    "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/hotkeys.mjs",
+        "mode": "shared"
+      }
+    ]
+  }
+}

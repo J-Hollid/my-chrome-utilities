@@ -45,8 +45,13 @@ export async function compiledVerificationRegistry({ repositoryRoot = defaultRoo
     "verification/packs.base.json"), "utf8"));
   const directory = path.join(repositoryRoot, "verification/manifests");
   const names = (await readdir(directory)).filter((name) => name.endsWith(".json")).sort();
-  const fragments = await Promise.all(names.map(async(name) =>
-    JSON.parse(await readFile(path.join(directory, name), "utf8"))));
+  const fragments = await Promise.all(names.map(async(name) => {
+    const fragment = JSON.parse(await readFile(path.join(directory, name), "utf8"));
+    if (validPack(fragment?.pack) && name !== `${fragment.pack.id}.json`) {
+      throw new Error(`Manifest filename ${name} must match pack identity ${fragment.pack.id}`);
+    }
+    return fragment;
+  }));
   return compileVerificationRegistry({ base, fragments });
 }
 
