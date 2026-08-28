@@ -6,7 +6,7 @@ import { bindUtilityPanels, mountUtility, mountUtilityShell, renderUtilityDirect
 import { createUtilityStorage } from "../dist/platform/utility-storage.js";
 import { dataLayerUtility } from "../dist/utilities/data-layer/index.js";
 import { commandPaletteUtility, commandsForUtilityShell, listCommands } from "../dist/utilities/command-palette/index.js";
-import { focusedAcceptanceOptions, runFocusedAcceptance } from "../scripts/run-focused-acceptance.mjs";
+import { focusedAcceptanceOptions } from "../scripts/run-focused-acceptance.mjs";
 import { executeAcceptancePlan, loadVerificationPacks, planVerification, validateVerificationPacks, verificationInventory } from "../scripts/verification-packs.mjs";
 import { architectureViolations } from "../scripts/check-architecture.mjs";
 import { retainControlledElement, retainUtilityElement, utilityDomScopeFromSearch } from "../dist/platform/utility-dom-isolation.js";
@@ -182,8 +182,10 @@ await assert.rejects(()=>executeAcceptancePlan({acceptanceCommands:["parse","gen
 assert.deepEqual(stoppedExecutions,["npm run build","parse","generate"]);
 const changedFeature=packs.find(({id})=>id==="schemas").features[0];
 const changedAcceptance=planVerification(packs,{changedPaths:[changedFeature]});const changedAcceptancePacks=new Set(changedAcceptance.packIds);assert.deepEqual(changedAcceptance.features,packs.filter(({id})=>changedAcceptancePacks.has(id)).flatMap(({features})=>features).sort());assert.ok(changedAcceptance.unitCommands.length>=focused.unitCommands.length,"a changed path selects whole affected packs");
-const focusedCliExecutions=[];const focusedCliPlan=await runFocusedAcceptance(["--changed",changedFeature],{commandRunner:async(command)=>focusedCliExecutions.push(command)});
-assert.deepEqual(focusedCliPlan.features,changedAcceptance.features);assert.deepEqual(focusedCliExecutions,focusedCliPlan.commands);
+const focusedCliExecutions=[];await executeAcceptancePlan(changedAcceptance,
+  {runCommand:async(command)=>focusedCliExecutions.push(command)});
+assert.deepEqual(focusedCliExecutions,changedAcceptance.commands,
+  "broader topology contracts execute an already pure-planned synthetic command set");
 const schemaVerificationPath="src/data-layer-schema-verification.ts";
 assert.throws(()=>planVerification(packs,{packIds:["schemas"],changedPaths:[schemaVerificationPath]}),/outside the explicit pack set/,
   "an explicit changed-path boundary fails closed when it omits affected consumer packs");
@@ -195,8 +197,11 @@ assert.ok(full.propertyCommands.length>0);
 const shards=Array.from({length:4},(_,index)=>planVerification(packs,{terminalFull:true,skipBuild:true,shard:{index,count:4}}));
 for(const key of ["unitCommands","propertyCommands","browserCommands","features"]){const combined=shards.flatMap(shard=>shard[key]);assert.equal(new Set(combined).size,combined.length,`${key} leaves belong to one shard`);assert.deepEqual([...combined].sort(),[...full[key]].sort(),`${key} shards cover the full plan`);}
 assert.equal(new Set(full.commands).size,full.commands.length);assert.equal(full.commands.filter((command)=>command==="npm run build").length,1);
-const fullCliExecutions=[];const fullCliPlan=await runFocusedAcceptance(["--full"],{commandRunner:async(command)=>fullCliExecutions.push(command)});
-assert.deepEqual(fullCliPlan.features,packs.flatMap(({features})=>features).sort());assert.deepEqual(fullCliExecutions,fullCliPlan.commands);
+const fullCliExecutions=[];await executeAcceptancePlan(full,
+  {runCommand:async(command)=>fullCliExecutions.push(command)});
+assert.deepEqual(full.features,packs.flatMap(({features})=>features).sort());
+assert.deepEqual(fullCliExecutions,full.commands,
+  "terminal topology inspection remains pure and never invokes the production runner");
 const bbTasks=await readFile(new URL("../bb.edn",import.meta.url),"utf8");
 assert.ok(bbTasks.includes('"node" "scripts/run-focused-acceptance.mjs" "--full"'));
 assert.throws(()=>planVerification(packs,{changedPaths:["src/unowned-module.ts"]}),/Assign every changed path to one verification pack/);

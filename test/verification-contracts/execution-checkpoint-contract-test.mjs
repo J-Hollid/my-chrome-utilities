@@ -10,14 +10,14 @@ import { acquireDistArtifactLock, distArtifactLeaseEnvironment, withDistArtifact
 import { decideBrowserObservationWorkers, deterministicBrowserWorkerSchedule } from "../../scripts/shared-artifact-parallel.mjs";
 import { assertFreshDistArtifact, createDistInputFingerprint, writeDistArtifactManifest } from "../../scripts/dist-artifact.mjs";
 import { removeVerificationFixtureRoot } from "../../scripts/verification-fixture-cleanup.mjs";
-import { bindVerificationChangeScope, checkpointPreflight, createRepositoryCheckpointIdentityGuard, createVerificationCommandRunner, createVerificationReceiptContext, focusedAcceptanceOptions, resumeVerificationPlan, validateCurrentArtifactForConsumers, verificationResumeIdentity } from "../../scripts/run-focused-acceptance.mjs";
+import { bindVerificationChangeScope, checkpointPreflight, createRepositoryCheckpointIdentityGuard, createVerificationCommandRunner, createVerificationReceiptContext, focusedAcceptanceOptions, runFocusedAcceptance, resumeVerificationPlan, validateCurrentArtifactForConsumers, verificationResumeIdentity } from "../../scripts/run-focused-acceptance.mjs";
 import { verificationDigest } from "../../scripts/verification-evidence.mjs";
 import { planVerification, verificationOwner, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { executeAcceptancePlan } from "../../scripts/verification-execution/execute.mjs";
 import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
 import { createTimeoutIncidentStore, timeoutIncidentDigest, timeoutRepairFocusedTaskPlan } from "../../scripts/verification-reliability-incidents.mjs";
 import { requireVerificationRunIntent, runIntentBootstrapCoverage, validateRunIntentBootstrapBase, verificationRunIntent, verificationRunIntents } from "../../scripts/verification-run-intent.mjs";
-import { classifyExecutionRestriction, consumeVerificationLaunchAuthorization, createVerificationLaunchAuthorizations, normalizeBrowserPrerequisiteTasks, preflightExecutionPrerequisites, probeExecutionPrerequisiteEnvironment, verificationPrerequisiteKindRegistry, verificationRunnerModeRegistry, validateTaskExecutionPrerequisites } from "../../scripts/verification-execution-prerequisites.mjs";
+import { classifyExecutionRestriction, consumeVerificationLaunchAuthorization, createVerificationLaunchAuthorizations, createVerificationParentExecutionContext, normalizeBrowserPrerequisiteTasks, preflightExecutionPrerequisites, probeExecutionPrerequisiteEnvironment, validateVerificationParentExecutionContext, verificationPrerequisiteKindRegistry, verificationRunnerModeRegistry, validateTaskExecutionPrerequisites } from "../../scripts/verification-execution-prerequisites.mjs";
 import { checkpointAttemptInputIdentity, checkpointAttemptIdentity, createCheckpointAttemptStore } from "../../scripts/verification-checkpoint-attempt.mjs";
 
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
@@ -40,6 +40,13 @@ assert.deepEqual(await readFile(sharedArtifactParallelPath), approvedSharedArtif
 
 const createAuthorizedTestCommandRunner = (context, options = {}) => async(display, task) => {
   context.receipt.registryDigest ??= "f".repeat(64);
+  context.receipt.candidate = {
+    ...(context.receipt.candidate ?? {}),
+    commit:/^[a-f0-9]{40}$/u.test(context.receipt.candidate?.commit ?? "")
+      ? context.receipt.candidate.commit : "e".repeat(40),
+    tree:/^[a-f0-9]{40}$/u.test(context.receipt.candidate?.tree ?? "")
+      ? context.receipt.candidate.tree : "d".repeat(40),
+  };
   const authorizedTask = { ...task, requiredCapabilities:[...(task.requiredCapabilities ?? [])] };
   const launchRoutes = options.launchRoutes ?? new Map([[task.key, "workspace-sandbox"]]);
   const authorizationContext = {
@@ -59,6 +66,42 @@ const prerequisiteTasks = [{ key:"browser-observation:known-loopback", stage:"br
   executable:"node", args:["browser.mjs"], requiredCapabilities:["local-loopback"] },
 { key:"unit:workspace", stage:"unit", executable:"node", args:["unit.mjs"],
   requiredCapabilities:[] }];
+
+const parentCandidate={commit:"a".repeat(40),tree:"b".repeat(40)};
+const parentLaunchAuthorization={version:1,taskKey:"unit:parent-contract",runId:"parent-run",
+  candidate:{...parentCandidate}};
+const parentExecutionContext=createVerificationParentExecutionContext({
+  receiptPath:"tmp/verification-receipts/parent.json",receiptRunId:"parent-run",
+  runIntent:"review-evidence",candidate:parentCandidate,parentTaskKey:"unit:parent-contract",
+  authorizedTaskSetDigest:"c".repeat(64),planDigest:"d".repeat(64),
+  launchAuthorization:parentLaunchAuthorization,
+});
+let nestedCallbackCalled=false;
+const priorParentContext=process.env.SWARMFORGE_VERIFICATION_PARENT_CONTEXT;
+const priorParentTask=process.env.SWARMFORGE_VERIFICATION_TASK_KEY;
+try {
+  process.env.SWARMFORGE_VERIFICATION_PARENT_CONTEXT=JSON.stringify(parentExecutionContext);
+  process.env.SWARMFORGE_VERIFICATION_TASK_KEY="unit:parent-contract";
+  for (const arguments_ of [["--full"],["--pack","shell"],
+    ["--pack","shell","--focused-task","unit:test/modular-utility-architecture-test.mjs"],
+    ["--timeout-diagnostic-retry","diagnostic-child"],
+    ["--timeout-repair-focused","repair-child"]]) {
+    await assert.rejects(runFocusedAcceptance(arguments_,{
+      commandRunner:async()=>{nestedCallbackCalled=true;},
+    }),/nested production verification runner/i);
+  }
+  assert.equal(nestedCallbackCalled,false,
+    "nested rejection precedes planning, receipt creation, authorization, callbacks, and launches");
+  process.env.SWARMFORGE_VERIFICATION_PARENT_CONTEXT="{malformed";
+  await assert.rejects(runFocusedAcceptance(["--pack","shell"]),/parent execution context/i);
+  delete process.env.SWARMFORGE_VERIFICATION_PARENT_CONTEXT;
+  await assert.rejects(runFocusedAcceptance(["--pack","shell"]),/parent execution context is missing/i);
+} finally {
+  if (priorParentContext===undefined) delete process.env.SWARMFORGE_VERIFICATION_PARENT_CONTEXT;
+  else process.env.SWARMFORGE_VERIFICATION_PARENT_CONTEXT=priorParentContext;
+  if (priorParentTask===undefined) delete process.env.SWARMFORGE_VERIFICATION_TASK_KEY;
+  else process.env.SWARMFORGE_VERIFICATION_TASK_KEY=priorParentTask;
+}
 
 const deniedPrerequisite = preflightExecutionPrerequisites(prerequisiteTasks, {
   availableCapabilities:[], approvalRoutes:{ "local-loopback":"denied" },
@@ -802,9 +845,20 @@ try {
     ...packIds.flatMap((id) => ["--pack", id]), "--property", "--changed-since", "HEAD^",
     "--prepare-evidence", "vtd014-cli-contention"];
   const observeCli = (args, environment = {}) => {
+    const childEnvironment={...process.env,...environment,
+      SWARMFORGE_SYNTHETIC_VERIFICATION_FIXTURE:JSON.stringify({
+        version:1,root:cliContentionRepository,
+        registry:path.join(cliContentionRepository,"verification/packs.json"),
+        receiptDirectory:path.join(cliContentionRepository,"tmp/verification-receipts"),
+        reliabilityStore:path.join(cliContentionRepository,".git/swarmforge-timeout-incidents"),
+        admissibleAsProductionEvidence:false,
+      })};
+    delete childEnvironment.SWARMFORGE_VERIFICATION_PARENT_CONTEXT;
+    delete childEnvironment.SWARMFORGE_VERIFICATION_TASK_KEY;
+    delete childEnvironment.SWARMFORGE_VERIFICATION_RECEIPT;
     const child = spawn(process.execPath, args, {
       cwd:cliContentionRepository, stdio:["ignore", "pipe", "pipe"],
-      env:{ ...process.env, ...environment },
+      env:childEnvironment,
     });
     cliProcesses.add(child);
     const observation = { child, stdout:"", stderr:"" };
@@ -1555,11 +1609,14 @@ if (process.platform !== "win32") {
     } });
     const envTask = {
       key:"unit:environment", stage:"unit", packId:"process", executable:process.execPath,
-      args:["-e", "require('node:fs').writeSync(1,process.env.VERIFICATION_TEST_VALUE+'\\n')"], target:"environment",
+      args:["-e", "process.stdout.write(JSON.stringify({value:process.env.VERIFICATION_TEST_VALUE,context:JSON.parse(process.env.SWARMFORGE_VERIFICATION_PARENT_CONTEXT)}))"], target:"environment",
       environment:{ VERIFICATION_TEST_VALUE:"visible" }, display:"environment task",
     };
     await runner(envTask.display, envTask);
-    assert.equal(context.receipt.tasks[envTask.key].output.trim(), "visible");
+    const inheritedEnvironment=JSON.parse(context.receipt.tasks[envTask.key].output);
+    assert.equal(inheritedEnvironment.value,"visible");
+    assert.equal(validateVerificationParentExecutionContext(inheritedEnvironment.context).parentTaskKey,
+      envTask.key,"every real task launch inherits its exact parent authorization binding");
     assert.equal(context.receipt.tasks[envTask.key].stderr, "");
     const tempTask = {
       key:"unit:temporary-root", stage:"unit", packId:"process", executable:process.execPath,
@@ -1969,7 +2026,8 @@ if (process.platform !== "win32") {
       `const task={key:'unit:signal-tree',stage:'unit',packId:'process',executable:process.execPath,args:['-e',${JSON.stringify(taskSource)}],target:'signal-tree',environment:null,requiredCapabilities:[],display:'signal tree task'};`,
       `const post={key:'unit:post-signal',stage:'unit',packId:'process',executable:process.execPath,args:['-e',${JSON.stringify(`require('node:fs').writeFileSync(${JSON.stringify(postSignalLeaf)},'started\\n')`)}],target:'post-signal',environment:null,requiredCapabilities:[],display:'post-signal task'};`,
       "const routes=new Map([[task.key,'workspace-sandbox'],[post.key,'workspace-sandbox']]);",
-      "const authorizationContext={mode:'focused',candidate:null,runId:context.receipt.runId,artifact:null,receiptPath:context.receiptPath,checkpointAttempt:null,promotion:null};",
+      "context.receipt.candidate={commit:'e'.repeat(40),tree:'d'.repeat(40)};",
+      "const authorizationContext={mode:'focused',candidate:context.receipt.candidate,runId:context.receipt.runId,artifact:null,receiptPath:context.receiptPath,checkpointAttempt:null,promotion:null};",
       "const launchAuthorizations=createVerificationLaunchAuthorizations({tasks:[task,post],routes,...authorizationContext});",
       "const runner=createVerificationCommandRunner(context,{launchRoutes:routes,launchAuthorizations,authorizationContext});",
       "const plan={unitCommands:[],parserCommands:[],preparationTasks:[],unitTasks:[task,post],propertyTasks:[],browserTasks:[],observationTasks:[],parserTasks:[],generatorTasks:[],checkpointTasks:[],sessionTasks:[]};",
@@ -2166,4 +2224,8 @@ console.log(JSON.stringify({ verificationTaskCheckpointIncidentRepairAcceptance:
     durableBeforeResume:true, causalPartitionPersisted:true },
   placement:{ executionSliceOwned:true, sharedHelperByteIdentical:true,
     sharedExportsConserved:true, noOwnershipException:true, exactBoundedPlanRequired:true },
+  childPlanContainment:{ parentBindingComplete:true, modeIndependent:true,
+    injectedRunnerCannotBypass:true, rejectionBeforeChildSideEffects:true,
+    malformedBindingFailsClosed:true, missingBindingFailsClosed:true,
+    purePlannerContract:true, packageSubprocessesUnchanged:true },
 } }));

@@ -51,6 +51,13 @@ const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
 
 const createAuthorizedTestCommandRunner = (context, options = {}) => async(display, task) => {
   context.receipt.registryDigest ??= "f".repeat(64);
+  context.receipt.candidate = {
+    ...(context.receipt.candidate ?? {}),
+    commit:/^[a-f0-9]{40}$/u.test(context.receipt.candidate?.commit ?? "")
+      ? context.receipt.candidate.commit : "e".repeat(40),
+    tree:/^[a-f0-9]{40}$/u.test(context.receipt.candidate?.tree ?? "")
+      ? context.receipt.candidate.tree : "d".repeat(40),
+  };
   const authorizedTask = { ...task, requiredCapabilities:[...(task.requiredCapabilities ?? [])] };
   const launchRoutes = options.launchRoutes ?? new Map([[task.key, "workspace-sandbox"]]);
   const authorizationContext = {
@@ -2622,6 +2629,7 @@ console.log("repairTmp=" + process.env.TMPDIR);
     executable:"node", args:[runnerRegressionPath],
   });
   const runnerRuntimeTask = { ...runnerTask, temporaryPathClass:"chrome-short" };
+  const runnerRepairCandidate = { commit:"e".repeat(40), tree:"d".repeat(40) };
   let runnerIncidentSequence = 0;
   const runnerStore = createTimeoutIncidentStore({
     root:incidentFixtureRoot,
@@ -2629,7 +2637,7 @@ console.log("repairTmp=" + process.env.TMPDIR);
     now:() => "2026-08-09T00:00:00.000Z",
     randomId:() => `runner-path-incident-${runnerIncidentSequence += 1}`,
     isAncestor:async(ancestor) => ancestor !== "off-lineage",
-    currentCandidate:async() => ({ commit:"repair-commit", tree:"repair-tree" }),
+    currentCandidate:async() => runnerRepairCandidate,
     changedPaths:async() => ["src/repair.ts"],
     canonicalRepairTaskIdentities:async() => [runnerTask],
   });
@@ -2662,12 +2670,13 @@ console.log("repairTmp=" + process.env.TMPDIR);
     baseCommit:"approved-base",
     evidenceTask:"vtd014-runner-path",
     store:runnerStore,
-    candidateIdentity:async() => ({ commit:"repair-commit", tree:"repair-tree", branch:"candidate" }),
+    candidateIdentity:async() => ({ ...runnerRepairCandidate, branch:"candidate" }),
     artifactIdentity:async() => failure.artifact,
     canonicalPlan:{ tasks:[runnerRuntimeTask] },
     strictToolchainValidator:async() => {},
     candidateCleanValidator:async() => {},
-    changeSetLoader:async() => ({ version:1, baseCommit:"approved-base", commit:"repair-commit",
+    changeSetLoader:async() => ({ version:1, baseCommit:"approved-base",
+      commit:runnerRepairCandidate.commit,
       entries:[{ status:"M", path:"src/repair.ts" },
         { status:"M", path:"swarmforge/roles/coder.prompt" }],
       paths:["src/repair.ts", "swarmforge/roles/coder.prompt"] }),
@@ -3890,10 +3899,12 @@ const diagnosticClaims = [];
 
 let diagnosticReceiptObservation;
 
+const diagnosticCandidate = { commit:"c".repeat(40), tree:"b".repeat(40) };
+
 const diagnosticIncident = {
   id:"reachable-diagnostic", failure:{ retryIdentity:"retry-identity", retryScope:{ kind:"task",
     taskKey:"unit:reachable-diagnostic", executionArgs:["-e", "process.stdout.write('diagnostic-ran')"] },
-    lineage:{ commit:"failed", tree:"failed-tree" }, environment:diagnosticEnvironment,
+    lineage:diagnosticCandidate, environment:diagnosticEnvironment,
     registryDigest:"3".repeat(64),
     configuredTimeoutMs:600000,
     resolvedDeadlines:{ DIST_ARTIFACT_LOCK_TIMEOUT_MS:600000,
@@ -3903,7 +3914,7 @@ const diagnosticIncident = {
 };
 
 await runTimeoutDiagnosticRetry(diagnosticIncident.id, {
-  candidateIdentity:async() => ({ commit:"failed", tree:"failed-tree" }),
+  candidateIdentity:async() => diagnosticCandidate,
   artifactIdentity:async() => diagnosticIncident.failure.artifact,
   deadlineIdentity:() => diagnosticIncident.failure.resolvedDeadlines,
   registryIdentity:async() => diagnosticIncident.failure.registryDigest,
@@ -3932,7 +3943,7 @@ assert.equal(diagnosticReceiptObservation.diagnostic.registryDigest,
 let changedDeadlineClaimed = false;
 
 await assert.rejects(runTimeoutDiagnosticRetry(diagnosticIncident.id, {
-  candidateIdentity:async() => ({ commit:"failed", tree:"failed-tree" }),
+  candidateIdentity:async() => diagnosticCandidate,
   artifactIdentity:async() => diagnosticIncident.failure.artifact,
   deadlineIdentity:() => ({ ...diagnosticIncident.failure.resolvedDeadlines,
     DIST_ARTIFACT_LOCK_TIMEOUT_MS:999999 }),
@@ -3948,7 +3959,7 @@ assert.equal(changedDeadlineClaimed, false);
 let changedRegistryClaimed = false;
 
 await assert.rejects(runTimeoutDiagnosticRetry(diagnosticIncident.id, {
-  candidateIdentity:async() => ({ commit:"failed", tree:"failed-tree" }),
+  candidateIdentity:async() => diagnosticCandidate,
   artifactIdentity:async() => diagnosticIncident.failure.artifact,
   deadlineIdentity:() => diagnosticIncident.failure.resolvedDeadlines,
   registryIdentity:async() => "4".repeat(64),

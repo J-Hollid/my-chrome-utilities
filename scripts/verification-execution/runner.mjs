@@ -49,7 +49,9 @@ import {
   classifyExecutionRestriction, consumeVerificationLaunchAuthorization,
   createVerificationLaunchAuthorizations, defaultTaskExecutionPrerequisites,
   expandVerificationTaskPrerequisites,
-  preflightExecutionPrerequisites, probeExecutionPrerequisiteEnvironment,
+  createVerificationParentExecutionContext, preflightExecutionPrerequisites,
+  probeExecutionPrerequisiteEnvironment, rejectNestedProductionVerification,
+  verificationParentExecutionContextEnvironment,
 } from "../verification-execution-prerequisites.mjs";
 import {
   checkpointAttemptIdentity, checkpointAttemptInputIdentity, createCheckpointAttemptStore,
@@ -726,12 +728,22 @@ export function createVerificationCommandRunner(context, options = {}) {
     if (reservedEnvironment) throw new Error(`Verification task cannot override reserved environment: ${reservedEnvironment}`);
     const identity = verificationTaskIdentity(task);
     const launchRoute = options.launchRoutes?.get(task.key);
-    consumeVerificationLaunchAuthorization(options.launchAuthorizations, task, {
+    const launchAuthorization=consumeVerificationLaunchAuthorization(options.launchAuthorizations, task, {
       ...options.authorizationContext,
       route:launchRoute,
       completedPredecessorKeys:Object.entries(context.receipt.tasks)
         .filter(([, result]) => result?.status === "passed")
         .map(([key]) => key),
+    });
+    const syntheticPlanDigest=verificationDigest([identity]);
+    const parentExecutionContext=createVerificationParentExecutionContext({
+      receiptPath:context.receiptPath,receiptRunId:context.receipt.runId,
+      runIntent:context.receipt.runIntent,candidate:context.receipt.candidate,
+      parentTaskKey:task.key,
+      authorizedTaskSetDigest:options.authorizedTaskSetDigest??
+        context.receipt.plan?.taskPlanDigest??syntheticPlanDigest,
+      planDigest:options.planDigest??context.receipt.plan?.taskPlanDigest??syntheticPlanDigest,
+      launchAuthorization,
     });
     const resolvedDeadlines = resolvedVerificationDeadlines({ timeoutMs, terminationGraceMs,
       environment:{ ...process.env, ...taskEnvironment } });
@@ -786,6 +798,7 @@ export function createVerificationCommandRunner(context, options = {}) {
             }),
         SWARMFORGE_VERIFICATION_RECEIPT:context.receiptPath,
         SWARMFORGE_VERIFICATION_TASK_KEY:task.key,
+        [verificationParentExecutionContextEnvironment]:JSON.stringify(parentExecutionContext),
         SWARMFORGE_EXECUTION_ROUTE:launchRoute,
         SWARMFORGE_EXECUTION_BOUNDARY:isolateChild
           ? shareLoopback ? "bwrap-shared-loopback" : "bwrap-unshared-network"
@@ -1790,6 +1803,7 @@ export async function runFocusedAcceptance(
   args,
   { commandRunner, artifactValidator = ({ root }) => assertFreshDist({ root }) } = {},
 ) {
+  rejectNestedProductionVerification(process.env,{repositoryRoot});
   const reviewPreflightStartedAt = Date.now();
   const packs = await loadVerificationPacks();
   const options = focusedAcceptanceOptions(args);
@@ -2219,6 +2233,8 @@ export async function runFocusedAcceptance(
   });
   const baseRunner = commandRunner ?? createVerificationCommandRunner(context, { launchRoutes,
     launchAuthorizations, authorizationContext,
+    authorizedTaskSetDigest:verificationDigest(plan.tasks.map(verificationTaskIdentity)),
+    planDigest:context.receipt.plan.taskPlanDigest,
     onLogicalTargetResult:async(task, receiptTask) => {
       if (checkpointAttempt) {
         await checkpointAttemptStore.recordLogicalTargets(checkpointAttempt.attempt.id,
