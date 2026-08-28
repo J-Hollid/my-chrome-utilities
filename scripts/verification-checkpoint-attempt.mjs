@@ -49,6 +49,28 @@ function validateAttemptResult(attempt, key, result) {
   }
 }
 
+function normalizedFailureQuiescence(attempt, value) {
+  const taskKeys = (items) => Array.isArray(items) && items.every((key) =>
+    typeof key === "string" && attempt.taskKeys.includes(key)) &&
+    new Set(items).size === items.length;
+  const failed = value?.failedTaskKeys;
+  const cancelled = value?.cancelledTaskKeys;
+  const unstarted = value?.unstartedTaskKeys;
+  const terminationResults = value?.terminationResults;
+  const partition = [...(failed ?? []), ...(cancelled ?? []), ...(unstarted ?? [])];
+  if (value?.version !== 1 || typeof value.stage !== "string" || !value.stage ||
+      !taskKeys(failed) || !failed.length || !failed.includes(value.causalFailedTaskKey) ||
+      !taskKeys(cancelled) || !taskKeys(unstarted) || new Set(partition).size !== partition.length ||
+      value.quiesced !== true || !validTimestamp(value.at) || !Array.isArray(terminationResults) ||
+      terminationResults.length !== cancelled.length || terminationResults.some((result) =>
+        !cancelled.includes(result?.taskKey) ||
+        ![null, "SIGTERM", "SIGKILL"].includes(result.signal ?? null) ||
+        ![null, "SIGKILL"].includes(result.escalatedTo ?? null))) {
+    throw new Error(`Checkpoint attempt ${attempt.id} has malformed failure quiescence`);
+  }
+  return structuredClone(value);
+}
+
 function validateAttemptHistory(attempt) {
   if (!validTimestamp(attempt.createdAt) || !Array.isArray(attempt.transitions) ||
       !attempt.transitions.length || attempt.transitions[0]?.type !== "created" ||
@@ -63,6 +85,7 @@ function validateAttemptHistory(attempt) {
   const logicalResults = {};
   const promotions = [];
   let artifactIdentity;
+  let failureQuiescence = null;
   for (const [index, transition] of attempt.transitions.entries()) {
     const at = Date.parse(transition?.at);
     if (!validTimestamp(transition?.at) || at < previousTime ||
@@ -109,6 +132,18 @@ function validateAttemptHistory(attempt) {
       interruptedTask = transition.taskKey;
       continue;
     }
+    if (transition.type === "failure-quiesced") {
+      if (phase !== "active" || passed.has(transition.causalFailedTaskKey)) {
+        throw new Error(`Checkpoint attempt ${attempt.id} has an impossible failure quiescence`);
+      }
+      const { type:discardedType, ...quiescence } = transition;
+      if (discardedType !== "failure-quiesced") throw new Error("unreachable transition type");
+      failureQuiescence = normalizedFailureQuiescence(attempt, quiescence);
+      phase = "interrupted";
+      owner = null;
+      interruptedTask = transition.causalFailedTaskKey;
+      continue;
+    }
     if (["continued", "stale-owner-recovered"].includes(transition.type)) {
       const expectedPhase = transition.type === "continued" ? "interrupted" : "active";
       if (phase !== expectedPhase || !validOwner(transition.owner)) {
@@ -137,7 +172,8 @@ function validateAttemptHistory(attempt) {
     }
     throw new Error(`Checkpoint attempt ${attempt.id} has an unknown transition`);
   }
-  return { phase, owner, interruptedTask, passed, logicalResults, promotions, artifactIdentity };
+  return { phase, owner, interruptedTask, passed, logicalResults, promotions, artifactIdentity,
+    failureQuiescence };
 }
 
 function validatedCheckpointIdentity(value, { allowUnboundArtifact = false } = {}) {
@@ -221,6 +257,7 @@ function validateAttempt(document, expectedId) {
       Object.fromEntries(Object.entries(durableLogicalResults)
         .map(([key, values]) => [key, Object.keys(values).sort()]))) ||
       history.phase !== attempt.state ||
+      !same(attempt.failureQuiescence ?? null, history.failureQuiescence) ||
       attempt.state === "active" && (!validOwner(attempt.owner) || !same(attempt.owner, history.owner) ||
         attempt.currentTask !== null) ||
       attempt.state === "interrupted" && (attempt.owner !== null ||
@@ -442,6 +479,19 @@ export function createCheckpointAttemptStore({ directory, legacyDirectories = []
         }
         return { ...attempt, state:"interrupted", currentTask, owner:null,
           transitions:[...attempt.transitions, { type:"interrupted", taskKey:currentTask, at:now() }] };
+      });
+    },
+    quiesceFailure(id, summary, owner) {
+      return update(id, (attempt) => {
+        requireOwner(attempt, owner);
+        const at = now();
+        const quiescence = normalizedFailureQuiescence(attempt, { ...summary, at });
+        if (attempt.state !== "active" || attempt.results[quiescence.causalFailedTaskKey]) {
+          throw new Error(`Checkpoint attempt ${id} cannot record failure quiescence`);
+        }
+        return { ...attempt, state:"interrupted", currentTask:quiescence.causalFailedTaskKey,
+          owner:null, failureQuiescence:quiescence,
+          transitions:[...attempt.transitions, { type:"failure-quiesced", ...quiescence }] };
       });
     },
     markTasksComplete(id, owner) {

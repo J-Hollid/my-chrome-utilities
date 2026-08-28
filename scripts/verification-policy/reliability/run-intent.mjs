@@ -11,6 +11,9 @@ import {
 } from "../../verification-task-succession.mjs";
 import { timeoutIncidentDigest } from "../../verification-reliability-values.mjs";
 import { validateIncident } from "../../verification-reliability-persistence.mjs";
+import {
+  taskCheckpointRepairRequired, validateTaskCheckpointRepairProof,
+} from "../../verification-reliability-repair.mjs";
 import { verificationPolicyContracts } from "../contracts.mjs";
 
 export const verificationRunIntents = Object.freeze({
@@ -558,6 +561,13 @@ export function eligibleRepairCandidateMatches(incident, candidate) {
 
 function validEligibleRepairProof(incident, candidate, baseCommit, evidenceTask) {
   const repair = incident?.repair;
+  let causalKey = incident?.failure?.causalKey;
+  if (taskCheckpointRepairRequired(incident)) {
+    try {
+      causalKey = validateTaskCheckpointRepairProof(incident,
+        repair?.taskCheckpointProof).causalKey;
+    } catch { return false; }
+  } else if (repair?.taskCheckpointProof !== undefined) return false;
   return [
     incident?.state === "unresolved",
     repair?.status === "eligible",
@@ -579,7 +589,7 @@ function validEligibleRepairProof(incident, candidate, baseCommit, evidenceTask)
     repair?.causalProtocol?.preRepairResult?.status === "failed",
     repair?.causalProtocol?.repairResult?.status === "passed",
     digestPattern.test(incident?.failureDigest ?? ""),
-    digestPattern.test(incident?.failure?.causalKey ?? ""),
+    digestPattern.test(causalKey ?? ""),
   ].every(Boolean);
 }
 
@@ -624,7 +634,7 @@ export async function buildEligibleRepairAdmissions({
     entries.push({
       incidentId:incident.id,
       failureDigest:incident.failureDigest,
-      causalKey:incident.failure.causalKey,
+      causalKey:incident.failure.causalKey ?? incident.repair.taskCheckpointProof?.causalKey,
       repairDigest:timeoutIncidentDigest(incident.repair),
       governedTaskDigest:governedDigest,
       regressionKey:incident.repair.regression.key,

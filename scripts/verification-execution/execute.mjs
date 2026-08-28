@@ -7,7 +7,7 @@ function legacyTasks(commands, stage) {
 export async function executeAcceptancePlan(
   plan,
   { runCommand, concurrency = 4, observationConcurrency = 2, afterPreparation,
-    acquireArtifactLease, onMetrics } = {},
+    acquireArtifactLease, onMetrics, onFailureQuiesced } = {},
 ) {
   if (typeof runCommand !== "function") throw new Error("Provide an acceptance command runner");
   if (!plan.unitCommands && !plan.parserCommands) {
@@ -34,50 +34,38 @@ export async function executeAcceptancePlan(
     if (afterPreparation) await afterPreparation();
     await runBoundedVerificationTasks(
       group("unitTasks", "unitCommands", "unit"), concurrency, runCommand, artifactLease,
+      { onFailureQuiesced },
     );
     await runBoundedVerificationTasks(
       group("propertyTasks", "propertyCommands", "property"), concurrency, runCommand, artifactLease,
+      { onFailureQuiesced },
     );
 
-    const browserFailures = [];
-    for (const task of group("browserTasks", "browserCommands", "browser")) {
-      try { await invokeVerificationTask(task, runCommand, artifactLease); }
-      catch (error) { browserFailures.push({ task, error }); }
-    }
-    const observationFailures = [];
+    await runBoundedVerificationTasks(
+      group("browserTasks", "browserCommands", "browser"), 1, runCommand, artifactLease,
+      { onFailureQuiesced },
+    );
     const observationStartedAt = Date.now();
-    let observationIntervals = [];
-    try {
-      observationIntervals = await runBoundedVerificationTasks(
-        group("observationTasks", "observationCommands", "browser-observation"),
-        observationConcurrency,
-        runCommand,
-        artifactLease,
-      );
-    } catch (error) {
-      observationFailures.push(error);
-    }
+    const observationIntervals = await runBoundedVerificationTasks(
+      group("observationTasks", "observationCommands", "browser-observation"),
+      observationConcurrency,
+      runCommand,
+      artifactLease,
+      { onFailureQuiesced },
+    );
     metrics.browserObservationStageMs = Date.now() - observationStartedAt;
     const observationWorkMs = observationIntervals.reduce(
       (total, interval) => total + interval.completedAt - interval.startedAt, 0);
     metrics.usefulOverlapMs = Math.max(0, observationWorkMs - metrics.browserObservationStageMs);
-    if (browserFailures.length || observationFailures.length) {
-      const failedDisplays = browserFailures.map(({ task }) => task.display);
-      const failedObservations = observationFailures.map(({message}) => message).join("; ");
-      throw new AggregateError(
-        [...browserFailures.map(({ error }) => error), ...observationFailures],
-        `Browser verification failed in ${browserFailures.length} adapter(s) and ${observationFailures.length} observation group(s)${failedDisplays.length ? `: ${failedDisplays.join(", ")}` : ""}${failedObservations ? `; ${failedObservations}` : ""}`,
-      );
-    }
     await runBoundedVerificationTasks(group("parserTasks", "parserCommands", "acceptance-parse"),
-      concurrency, runCommand, artifactLease);
+      concurrency, runCommand, artifactLease, { onFailureQuiesced });
     await runBoundedVerificationTasks(group("generatorTasks", "generatorCommands", "acceptance-generate"),
-      concurrency, runCommand, artifactLease);
+      concurrency, runCommand, artifactLease, { onFailureQuiesced });
     for (const task of group("checkpointTasks", "checkpointCommands", "checkpoint")) {
       await invokeVerificationTask(task, runCommand, artifactLease);
     }
     await runBoundedVerificationTasks(group("sessionTasks", "sessionCommands", "acceptance-session"),
-      concurrency, runCommand, artifactLease);
+      concurrency, runCommand, artifactLease, { onFailureQuiesced });
     for (const task of group("packageTasks", "packageCommands", "package")) {
       await invokeVerificationTask(task, runCommand, artifactLease);
     }

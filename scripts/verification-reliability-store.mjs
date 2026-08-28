@@ -17,7 +17,8 @@ import {
   registryDerivedCanonicalRepairTaskIdentities,
 } from "./verification-pack-cardinality/reliability-adapter.mjs";
 import {
-  timeoutResolutionEvidence, validateRepairReceiptSemantics, validateTimeoutRepairProposal,
+  deriveTaskCheckpointRepairProof, taskCheckpointRepairRequired, timeoutResolutionEvidence,
+  validateRepairReceiptSemantics, validateTimeoutRepairProposal,
   terminalCheckpointCandidate, terminalConfirmedFlakyIncident, timeoutRepairCandidate,
 } from "./verification-reliability-repair.mjs";
 import {
@@ -165,9 +166,11 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
         throw new Error(`Reliability incident ${id} has invalid diagnostic state`);
       }
       const candidate = await currentCandidate();
-      const [regressionDocument, focusedDocument, paths] = await Promise.all([
+      const [regressionDocument, focusedDocument, paths, taskCheckpointProof] = await Promise.all([
         receiptDocument(root, regressionReceiptPath), receiptDocument(root, focusedReceiptPath),
         changedPaths(current.failure.lineage.commit),
+        taskCheckpointRepairRequired(current)
+          ? deriveTaskCheckpointRepairProof(current) : Promise.resolve(undefined),
       ]);
       const regressionTasks = freshPassingReceipt(regressionDocument, candidate,
         "Deterministic regression");
@@ -177,6 +180,7 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
       }
       const proposal = {
         candidate, changedPaths:paths, causalCategory, causalExplanation,
+        ...(taskCheckpointProof ? { taskCheckpointProof } : {}),
         checkpoint:{ baseCommit:focusedDocument.receipt.candidate.baseCommit,
           evidenceTask:focusedDocument.receipt.candidate.evidenceTask },
         regression:{ key:regressionKey, status:"passed", commit:candidate.commit,

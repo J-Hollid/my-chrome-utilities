@@ -32,6 +32,7 @@ import {
   assertNoBlockingTimeoutIncidents,
   createTimeoutIncidentStore,
   createVerificationProgressTracker,
+  deriveTaskCheckpointRepairProof,
   reliabilityFailureFingerprint,
   resolvedVerificationDeadlines,
   timeoutRepairCausalCategory,
@@ -40,6 +41,7 @@ import {
   timeoutRepairFocusedTaskPlan,
   timeoutRepairPackageTaskIdentity,
   timeoutRepairPackIds,
+  taskCheckpointRepairRequired,
   terminalConfirmedFlakyIncident,
   terminalCheckpointCandidate,
 } from "../verification-reliability-incidents.mjs";
@@ -700,7 +702,8 @@ export function createVerificationCommandRunner(context, options = {}) {
   );
   const capabilityApprovedPlan = [...(options.launchRoutes?.values() ?? [])]
     .some((route) => route !== "workspace-sandbox");
-  return async function runCommand(display, task) {
+  const activeStageTasks = new Map();
+  const runCommand = async function runCommand(display, task) {
     if (!task?.executable || !Array.isArray(task.args)) throw new Error(`Missing structured task identity: ${display}`);
     if (receivedParentSignal) {
       throw new Error(`Verification runner received ${receivedParentSignal}; refusing to start: ${display}`);
@@ -801,6 +804,7 @@ export function createVerificationCommandRunner(context, options = {}) {
     const stderr = [];
     let outputBytes = 0;
     let termination;
+    let coordinatorCancellation;
     let runnerTimedOut = false;
     let killTimer;
     const requestTermination = (reason, signal = "SIGTERM") => {
@@ -810,6 +814,15 @@ export function createVerificationCommandRunner(context, options = {}) {
       killTimer = setTimeout(() => terminateProcessGroup(child, "SIGKILL"), terminationGraceMs);
     };
     const untrackChild = trackVerificationChild(child, requestTermination);
+    activeStageTasks.set(task.key, {
+      stage:task.stage,
+      cancel:({ failedTaskKey }) => {
+        if (coordinatorCancellation) return;
+        coordinatorCancellation = { failedTaskKey,
+          reason:`Verification ${task.stage} stage cancelled after ${failedTaskKey} failed` };
+        requestTermination(coordinatorCancellation.reason);
+      },
+    });
     const countOutput = (chunk) => {
       outputBytes += chunk.length;
       if (outputBytes > outputLimit) {
@@ -886,6 +899,7 @@ export function createVerificationCommandRunner(context, options = {}) {
     });
     await logicalPersistence;
     untrackChild();
+    activeStageTasks.delete(task.key);
     clearTimeout(timeout);
     clearTimeout(killTimer);
     const freshDurationMs = Date.now() - started;
@@ -931,14 +945,14 @@ export function createVerificationCommandRunner(context, options = {}) {
       .every(({ status, durationMs }) => status === "passed" && Number.isFinite(durationMs));
     const passed = !logicalPersistenceError && !termination && !result.spawnError &&
       result.code === 0 && logicalPassed;
-    const failure = logicalPersistenceError?.message ?? termination ?? result.spawnError?.message ??
+    const failure = logicalPersistenceError?.message ?? coordinatorCancellation?.reason ?? termination ?? result.spawnError?.message ??
       (!logicalPassed ? `Browser target result incomplete or failed: ${display}`
         : `Verification command failed (${result.signal ?? result.code}): ${display}`);
     const taskProvenance = priorTask ? { provenance:"mixed" } : { provenance:"fresh" };
     const receiptTask = {
       identity,
       executionPrerequisites:{ requiredCapabilities:[...identity.requiredCapabilities], launchRoute },
-      status:passed ? "passed" : "failed",
+      status:passed ? "passed" : coordinatorCancellation ? "cancelled" : "failed",
       ...taskProvenance,
       durationMs:(priorTask?.durationMs ?? 0) + freshDurationMs,
       output:out,
@@ -951,7 +965,7 @@ export function createVerificationCommandRunner(context, options = {}) {
     context.receipt.tasks[task.key] = receiptTask;
     await context.write();
     await options.onTaskResult?.(task, receiptTask);
-    if (!passed && !receivedParentSignal) {
+    if (!passed && !receivedParentSignal && !coordinatorCancellation) {
       const failedLogicalResult = Object.entries(logicalResults ?? {})
         .find(([, logicalResult]) => logicalResult.status !== "passed");
       const failedBoundary = failedLogicalResult ? {
@@ -1051,8 +1065,22 @@ export function createVerificationCommandRunner(context, options = {}) {
       console.error(`[verify:pass ${(freshDurationMs / 1000).toFixed(1)}s] ${executionDisplay}`);
       return { out };
     }
-    throw new Error(failure);
+    const error = new Error(failure);
+    if (coordinatorCancellation) {
+      error.verificationCoordinatorCancellation = {
+        taskKey:task.key,
+        signal:result.signal,
+        escalatedTo:result.signal === "SIGKILL" ? "SIGKILL" : null,
+      };
+    }
+    throw error;
   };
+  runCommand.cancelStage = async({ stage, failedTaskKey }) => {
+    for (const active of activeStageTasks.values()) {
+      if (active.stage === stage) active.cancel({ failedTaskKey });
+    }
+  };
+  return runCommand;
 }
 
 export async function runTimeoutDiagnosticRetry(id, {
@@ -1183,6 +1211,8 @@ export async function runTimeoutRepairFocused(id, {
   await strictToolchainValidator();
   await candidateCleanValidator();
   const incident = await store.read(id);
+  const taskCheckpointProof = taskCheckpointRepairRequired(incident)
+    ? await deriveTaskCheckpointRepairProof(incident) : undefined;
   const [candidate, artifact, changeSet, packs, incidentChangedPaths] = await Promise.all([
     candidateIdentity(), artifactIdentity(),
     changeSetLoader(baseCommit), verificationPacksLoader(),
@@ -1210,7 +1240,7 @@ export async function runTimeoutRepairFocused(id, {
       currentIdentities:canonicalIdentities, currentPacks:packs });
   const registeredRuntimeTasks = new Map(plan.tasks.map((task) => [task.key, task]));
   const taskPlan = timeoutRepairFocusedTaskPlan(incident, incidentChangedPaths, regressionKey,
-    canonicalIdentities, taskSuccession);
+    canonicalIdentities, taskSuccession, taskCheckpointProof);
   const executionTaskPlan = timeoutRepairFocusedExecutionTaskPlan(taskPlan, canonicalIdentities);
   const context = receiptContextFactory(incident.failure.environment.concurrency,
     incident.failure.environment.observationConcurrency, {
@@ -1221,7 +1251,8 @@ export async function runTimeoutRepairFocused(id, {
     changeSetDigest:verificationDigest(changeSet) };
   context.receipt.artifact = structuredClone(artifact);
   context.receipt.plan = { mode:"timeout-repair-focused", incidentId:id, causalCategory,
-    causalExplanation, ...(taskSuccession ? { taskSuccession } : {}), taskPlan, executionTaskPlan };
+    causalExplanation, ...(taskCheckpointProof ? { taskCheckpointProof } : {}),
+    ...(taskSuccession ? { taskSuccession } : {}), taskPlan, executionTaskPlan };
   const runtimeExecutionTasks = executionTaskPlan.map((descriptor) => ({
     ...structuredClone(descriptor.identity),
     ...(registeredRuntimeTasks.get(descriptor.identity.key)?.temporaryPathClass
@@ -1233,7 +1264,8 @@ export async function runTimeoutRepairFocused(id, {
   await context.write();
   console.error(`[verify:receipt] ${path.relative(repositoryRoot, context.receiptPath)}`);
   const regressionContext = { version:1, incidentId:id, failureDigest:incident.failureDigest,
-    diagnosedBoundary:timeoutRepairDiagnosedBoundary(incident), causalCategory, causalExplanation };
+    diagnosedBoundary:timeoutRepairDiagnosedBoundary(incident, { taskCheckpointProof }),
+    causalCategory, causalExplanation };
   const runner = commandRunnerFactory(context, { ...launch, strictAcceptanceReceipt:false,
     incidentStore:store });
   await executeTimeoutRepairTaskPlan(executionTaskPlan,
@@ -2217,6 +2249,7 @@ export async function runFocusedAcceptance(
     activeAttemptTask = undefined;
     return result;
   };
+  runner.cancelStage = (stage) => baseRunner.cancelStage?.(stage);
   if (resumeReceiptPath) {
     let priorReceipt;
     try {
@@ -2250,6 +2283,16 @@ export async function runFocusedAcceptance(
   try {
     await executeAcceptancePlan(executionPlan, {
       runCommand:runner, concurrency, observationConcurrency,
+      onFailureQuiesced:async(summary) => {
+        context.receipt.failureQuiescence = structuredClone(summary);
+        await context.write();
+        if (checkpointAttempt) {
+          checkpointAttempt = { ...checkpointAttempt,
+            attempt:await checkpointAttemptStore.quiesceFailure(
+              checkpointAttempt.attempt.id, summary, checkpointOwner),
+          };
+        }
+      },
       ...(coordinatorArtifactLeaseRequired(artifactRequired, commandRunner) ? {
         acquireArtifactLease:async() => {
           const startedAt = Date.now();

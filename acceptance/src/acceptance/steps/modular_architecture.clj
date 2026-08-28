@@ -10,6 +10,7 @@
             [acceptance.verification-support.modular-architecture-project-management-handlers :as project-management]
             [acceptance.verification-support.modular-architecture-repository-inspection :as repository-inspection]
             [acceptance.verification-support.modular-architecture-schemas-handlers :as schemas]
+            [acceptance.verification-support.modular-architecture-task-checkpoint-repair-handlers :as task-checkpoint-repair]
             [acceptance.verification-support.modular-architecture-vtd006-handlers :as vtd006]
             [acceptance.verification-support.modular-architecture-vtd007-handlers :as vtd007]
             [acceptance.verification-support.modular-architecture-vtd009-handlers :as vtd009]
@@ -820,6 +821,7 @@
                (vtd014/handlers {:example-values example-values})
                (vtd015/handlers {:example-values example-values})
                (live-target-permission/handlers)
+               (task-checkpoint-repair/handlers)
                (cardinality/handlers example-values)
                (vtd009/handlers
                 {:example-values example-values

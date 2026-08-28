@@ -421,6 +421,33 @@ try {
     "restarting an already completed promotion step is idempotent");
   await attemptStore.markPromotion(createdAttempt.attempt.id, "handoff-eligible");
   assert.equal((await attemptStore.read(createdAttempt.attempt.id)).state, "promoted");
+  const quiescenceIdentity = checkpointAttemptInputIdentity({ ...attemptIdentity,
+    evidenceTask:"failure-quiescence", planDigest:"7".repeat(64) });
+  const quiescenceAttempt = await attemptStore.claim(quiescenceIdentity,
+    ["unit:failed", "unit:cancelled", "unit:unstarted"],
+    { pid:45, token:"owner-45" });
+  const failureQuiescence = {
+    version:1, stage:"unit", failedTaskKeys:["unit:failed"],
+    causalFailedTaskKey:"unit:failed", cancelledTaskKeys:["unit:cancelled"],
+    unstartedTaskKeys:["unit:unstarted"],
+    terminationResults:[{ taskKey:"unit:cancelled", signal:"SIGTERM", escalatedTo:null }],
+    quiesced:true,
+  };
+  await attemptStore.quiesceFailure(quiescenceAttempt.attempt.id, failureQuiescence,
+    { token:"owner-45" });
+  const durableQuiescence = await attemptStore.read(quiescenceAttempt.attempt.id);
+  assert.equal(durableQuiescence.state, "interrupted");
+  assert.deepEqual(durableQuiescence.failureQuiescence, {
+    ...failureQuiescence, at:durableQuiescence.failureQuiescence.at,
+  }, "the attempt durably binds the causal failure, cancellations, unstarted tasks, and termination");
+  assert.ok(Number.isFinite(Date.parse(durableQuiescence.failureQuiescence.at)));
+  const quiescenceContinuation = await attemptStore.claim(quiescenceIdentity,
+    ["unit:failed", "unit:cancelled", "unit:unstarted"],
+    { pid:46, token:"owner-46" });
+  assert.equal(quiescenceContinuation.action, "continued",
+    "resume is possible only after the durable quiesced boundary is complete");
+  assert.deepEqual(quiescenceContinuation.pendingTaskKeys,
+    ["unit:failed", "unit:cancelled", "unit:unstarted"]);
   const attemptPath = path.join(checkpointAttemptRoot, `${createdAttempt.attempt.id}.json`);
   const pristineAttemptDocument = JSON.parse(await readFile(attemptPath, "utf8"));
   const forgedAttemptRejected = {};
@@ -941,10 +968,10 @@ await assert.rejects(() => executeAcceptancePlan(independentBrowserPlan, {
     attemptedBrowserTasks.push(task.key);
     if (task.key === "browser:failure") throw new Error("adapter failed");
   },
-}), /Browser verification failed/u);
+}), /1 independent command/u);
 
-assert.ok(attemptedBrowserTasks.includes("browser-observation:ALPHA_BROWSER_ADAPTER"),
-  "independent observations still run after a broad browser adapter fails");
+assert.equal(attemptedBrowserTasks.includes("browser-observation:ALPHA_BROWSER_ADAPTER"), false,
+  "a failed browser stage quiesces before a later observation stage starts");
 
 const attemptedSessions = [];
 
@@ -970,13 +997,88 @@ await assert.rejects(() => executeAcceptancePlan({
     activeSessions -= 1;
     if (task.key.includes("fail")) throw new Error(task.key);
   },
-}), /2 independent command/u);
+}), /1 independent command/u);
 
 assert.deepEqual(attemptedSessions.sort(), [
-  "acceptance-session:fail-a", "acceptance-session:fail-b", "acceptance-session:pass",
-], "independent pack sessions finish and consolidate their failures");
+  "acceptance-session:fail-a", "acceptance-session:pass",
+], "the first failure closes the stage before another independent session launches");
 
 assert.equal(maximumActiveSessions, 2, "independent pack sessions use the bounded worker pool");
+
+const quiescenceEvents = [];
+let cancelRunningSibling;
+const quiescingRunner = async(_display, task) => {
+  quiescenceEvents.push(`start:${task.key}`);
+  if (task.key === "unit:first-failure") throw new Error("first-stage-failure");
+  if (task.key === "unit:running-sibling") {
+    await new Promise((resolve, reject) => { cancelRunningSibling = () => {
+      const error = new Error("coordinator-cancelled-running-sibling");
+      error.verificationCoordinatorCancellation = {
+        taskKey:task.key, signal:"SIGTERM", escalatedTo:null,
+      };
+      reject(error);
+    }; });
+  }
+  quiescenceEvents.push(`finish:${task.key}`);
+};
+quiescingRunner.cancelStage = async({ failedTaskKey }) => {
+  quiescenceEvents.push(`cancel:${failedTaskKey}`);
+  cancelRunningSibling();
+};
+let quiescedStage;
+await assert.rejects(() => executeAcceptancePlan({
+  preparationTasks:[], propertyTasks:[], browserTasks:[], observationTasks:[],
+  parserTasks:[], generatorTasks:[], checkpointTasks:[], sessionTasks:[], packageTasks:[],
+  unitCommands:[], parserCommands:[],
+  unitTasks:["first-failure", "running-sibling", "unstarted"].map((name) => ({
+    key:`unit:${name}`, stage:"unit", packId:"verification_process", executable:"node",
+    args:[`${name}.mjs`], target:name, environment:null, display:`node ${name}.mjs`,
+  })),
+}, {
+  concurrency:2,
+  runCommand:quiescingRunner,
+  onFailureQuiesced:async(summary) => { quiescedStage = summary; },
+}), /unit:first-failure/u);
+assert.deepEqual(quiescenceEvents, [
+  "start:unit:first-failure", "start:unit:running-sibling",
+  "cancel:unit:first-failure",
+], "the first failure closes launches and coordinator-cancels the running sibling");
+assert.deepEqual(quiescedStage, {
+  version:1, stage:"unit", failedTaskKeys:["unit:first-failure"],
+  causalFailedTaskKey:"unit:first-failure",
+  cancelledTaskKeys:["unit:running-sibling"],
+  unstartedTaskKeys:["unit:unstarted"],
+  terminationResults:[{ taskKey:"unit:running-sibling", signal:"SIGTERM", escalatedTo:null }],
+  quiesced:true,
+}, "the stage settles running cancellation before exposing one durable quiesced boundary");
+
+let releaseIndependentFailures;
+const independentFailuresReady = new Promise((resolve) => { releaseIndependentFailures = resolve; });
+let independentFailureStarts = 0;
+let independentFailureSummary;
+await assert.rejects(() => executeAcceptancePlan({
+  preparationTasks:[], propertyTasks:[], browserTasks:[], observationTasks:[],
+  parserTasks:[], generatorTasks:[], checkpointTasks:[], sessionTasks:[], packageTasks:[],
+  unitCommands:[], parserCommands:[],
+  unitTasks:["first", "second"].map((name) => ({
+    key:`unit:independent-${name}`, stage:"unit", packId:"verification_process",
+    executable:"node", args:[`${name}.mjs`], target:name, environment:null,
+    display:`node ${name}.mjs`,
+  })),
+}, {
+  concurrency:2,
+  runCommand:async(_display, task) => {
+    independentFailureStarts += 1;
+    if (independentFailureStarts === 2) releaseIndependentFailures();
+    await independentFailuresReady;
+    throw new Error(task.key);
+  },
+  onFailureQuiesced:async(summary) => { independentFailureSummary = summary; },
+}), /2 independent command/u);
+assert.deepEqual(independentFailureSummary.failedTaskKeys,
+  ["unit:independent-first", "unit:independent-second"],
+"siblings that fail independently before cancellation retain both ordinary failures");
+assert.deepEqual(independentFailureSummary.cancelledTaskKeys, []);
 
 const sharedArtifactEvents = [];
 
@@ -1739,6 +1841,59 @@ if (process.platform !== "win32") {
       "incident-ordinary-failure");
     runIntentReviewIncidentObserved = true;
 
+    const cancellationContext = createVerificationReceiptContext(2, 1,
+      { receiptDirectory:commandReceiptDirectory, runIntent:verificationRunIntents.review });
+    cancellationContext.receipt.registryDigest = "f".repeat(64);
+    cancellationContext.receipt.candidate = { commit:"a".repeat(40), tree:"b".repeat(40) };
+    cancellationContext.receipt.plan = { mode:"exact", taskPlanDigest:"c".repeat(64) };
+    const cancellationStarted = path.join(commandReceiptDirectory, "running-sibling-started");
+    const unstartedMarker = path.join(commandReceiptDirectory, "unstarted-task-started");
+    const cancellationTasks = [
+      { key:"unit:causal-failure", source:"setTimeout(()=>process.exit(1),100)" },
+      { key:"unit:running-sibling",
+        source:`require('node:fs').writeFileSync(${JSON.stringify(cancellationStarted)},'started\\n');setInterval(()=>{},1000)` },
+      { key:"unit:unstarted-sibling",
+        source:`require('node:fs').writeFileSync(${JSON.stringify(unstartedMarker)},'started\\n')` },
+    ].map(({ key, source }) => ({ key, stage:"unit", packId:"verification_process",
+      executable:process.execPath, args:["-e", source], target:key, environment:null,
+      requiredCapabilities:[], display:key }));
+    const cancellationRoutes = new Map(cancellationTasks.map(({ key }) =>
+      [key, "workspace-sandbox"]));
+    const cancellationAuthorization = { mode:"exact", candidate:cancellationContext.receipt.candidate,
+      runId:cancellationContext.receipt.runId, artifact:null,
+      receiptPath:cancellationContext.receiptPath, checkpointAttempt:null, promotion:null };
+    const cancellationIncidents = [];
+    const cancellationRunner = createVerificationCommandRunner(cancellationContext, {
+      launchRoutes:cancellationRoutes,
+      authorizationContext:cancellationAuthorization,
+      launchAuthorizations:createVerificationLaunchAuthorizations({ tasks:cancellationTasks,
+        routes:cancellationRoutes, ...cancellationAuthorization }),
+      incidentStore:{ create:async(failure) => {
+        cancellationIncidents.push(failure);
+        return { id:"incident-causal-failure", failureDigest:"d".repeat(64) };
+      } },
+      terminationGraceMs:100,
+    });
+    await assert.rejects(() => executeAcceptancePlan({
+      preparationTasks:[], unitTasks:cancellationTasks, propertyTasks:[], browserTasks:[],
+      observationTasks:[], parserTasks:[], generatorTasks:[], checkpointTasks:[],
+      sessionTasks:[], packageTasks:[], unitCommands:[], parserCommands:[],
+    }, { runCommand:cancellationRunner, concurrency:2, observationConcurrency:1,
+      onFailureQuiesced:async(summary) => {
+        cancellationContext.receipt.failureQuiescence = summary;
+        await cancellationContext.write();
+      } }), /unit:causal-failure/u);
+    assert.equal(cancellationIncidents.length, 1,
+      "the causal failure creates one incident while coordinator cancellation creates none");
+    assert.equal(cancellationContext.receipt.tasks["unit:running-sibling"].status, "cancelled");
+    assert.deepEqual(cancellationContext.receipt.failureQuiescence.cancelledTaskKeys,
+      ["unit:running-sibling"]);
+    assert.deepEqual(cancellationContext.receipt.failureQuiescence.unstartedTaskKeys,
+      ["unit:unstarted-sibling"]);
+    assert.equal(cancellationContext.receipt.failureQuiescence.quiesced, true);
+    await access(cancellationStarted);
+    await assert.rejects(access(unstartedMarker), (error) => error?.code === "ENOENT");
+
     process.env.VERIFICATION_COMMAND_TIMEOUT_MS = "100";
     const timeoutContext = createVerificationReceiptContext(1, 2, {
       receiptDirectory:commandReceiptDirectory, runIntent:verificationRunIntents.review,
@@ -1990,4 +2145,10 @@ console.log(JSON.stringify({ vtd014ExecutionAcceptance:{
   prerequisiteGate:prerequisiteGateEvidence,
   checkpoint:checkpointContractEvidence,
   runIntent:vtd014Evidence.runIntent,
+} }));
+console.log(JSON.stringify({ verificationTaskCheckpointIncidentRepairAcceptance:{
+  failureQuiescence:{ stageClosed:true, runningSiblingsTerminated:true,
+    childExitAwaited:true, outputPersisted:true, callbacksAwaited:true, cleanupAwaited:true,
+    cancelledWithoutIncident:true, independentFailuresPreserved:true,
+    durableBeforeResume:true, causalPartitionPersisted:true },
 } }));

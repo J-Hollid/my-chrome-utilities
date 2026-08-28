@@ -22,7 +22,7 @@ import { candidatePredatesRunIntentImplementation, closeCanonicalEvidencePlanPre
 import { planVerification, verificationOwner, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { executeAcceptancePlan } from "../../scripts/verification-execution/execute.mjs";
 import { loadVerificationPacks, validateIsolatedVerificationHandlers, validateVerificationPacks, verificationInventory } from "../../scripts/verification-registry/validation.mjs";
-import { classifyHistoricalTimeoutFixture, createTimeoutIncidentStore, createVerificationProgressTracker, diagnosticRetryScope, reliabilityFailureFingerprint, resolvedVerificationDeadlines, timeoutIncidentDigest, timeoutRepairCausalCategory, timeoutRepairDiagnosedBoundary, timeoutRepairFocusedExecutionTaskPlan, timeoutRepairPackageTaskIdentity, timeoutRepairPackIds, timeoutRepairFocusedTaskPlan, timeoutResolutionEvidence, validateTimeoutRepairProposal, verificationProgressEmitter } from "../../scripts/verification-reliability-incidents.mjs";
+import { classifyHistoricalTimeoutFixture, createTimeoutIncidentStore, createVerificationProgressTracker, deriveTaskCheckpointRepairProof, diagnosticRetryScope, reliabilityFailureFingerprint, resolvedVerificationDeadlines, timeoutIncidentDigest, timeoutRepairCausalCategory, timeoutRepairDiagnosedBoundary, timeoutRepairFocusedExecutionTaskPlan, timeoutRepairPackageTaskIdentity, timeoutRepairPackIds, timeoutRepairFocusedTaskPlan, timeoutResolutionEvidence, validateTimeoutRepairProposal, verificationProgressEmitter } from "../../scripts/verification-reliability-incidents.mjs";
 import { canonicalCheckpointBinding } from "../../scripts/verification-reliability-receipts.mjs";
 import { confirmedFlakyAdmissionCoversEvidenceCandidate } from "../../scripts/verification-reliability-evidence-policy.mjs";
 import { bindRunIntentBootstrapPlan, buildConfirmedFlakyAdmissions, buildEligibleRepairAdmissions, bootstrapReviewIncidentProof, eligibleRepairAdmissionCandidates, governedRepairAttemptAssociation, revalidateConfirmedFlakyAdmissions, revalidateEligibleRepairAdmissions, registryPlannerPreparationFocusedPlan, requireVerificationRunIntent, runIntentBootstrapCoverage, validateEligibleRepairAdmissionsReceipt, validateConfirmedFlakyAdmissionsReceipt, validateRunIntentBootstrapBase, validateRunIntentBootstrapReceipt, verificationRegistryPlannerBootstrapEligibility, verificationRunIntent, verificationRunIntents } from "../../scripts/verification-run-intent.mjs";
@@ -2325,6 +2325,127 @@ try {
     ["scripts/run-focused-acceptance.mjs"],
     "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs",
     [...timeoutCanonicalIdentities, browserTask]));
+  const checkpointTask = verificationTaskIdentity({ key:"unit:test/checkpoint-task.mjs",
+    stage:"unit", packId:"verification_process", executable:"node",
+    args:["test/checkpoint-task.mjs"], target:"test/checkpoint-task.mjs", environment:null,
+    requiredCapabilities:[] });
+  const { retryScope:discardedCheckpointRetry, registryDigest:discardedFailureRegistry,
+    causalKey:discardedFailureCausalKey, ...checkpointFailureSource } = first.failure;
+  assert.ok(discardedCheckpointRetry && discardedFailureRegistry);
+  assert.equal(discardedFailureCausalKey, undefined);
+  const checkpointFailure = { ...checkpointFailureSource,
+    runnerRunId:"checkpoint-run", sourceReceipt:"tmp/verification-receipts/checkpoint-run.json",
+    lineage:{ ...first.failure.lineage, commit:"failed-commit", tree:"failed-tree" },
+    task:checkpointTask, failureClass:"execution-contract-failure",
+    failedBoundary:{ kind:"checkpoint-identity", operation:"task", stage:"unit",
+      trackedChanges:["M test/checkpoint-guard.mjs"] },
+    executionPrerequisite:{ operation:{ kind:"checkpoint-identity", operation:"task", stage:"unit",
+      trackedChanges:["M test/checkpoint-guard.mjs"] }, code:"IDENTITY_DRIFT",
+      route:"workspace-sandbox", retryPermitted:false } };
+  const { causalKey:discardedIncidentCausalKey, causalIdentity:discardedCausalIdentity,
+    occurrences:discardedOccurrences, ...checkpointIncidentSource } = first;
+  assert.equal(discardedIncidentCausalKey, undefined);
+  assert.equal(discardedCausalIdentity, undefined);
+  assert.equal(discardedOccurrences, undefined);
+  const checkpointIncident = { ...checkpointIncidentSource, id:"checkpoint-task-incident",
+    failure:checkpointFailure, failureDigest:timeoutIncidentDigest(checkpointFailure) };
+  const checkpointRegistryDigest = "3".repeat(64);
+  const checkpointTaskPlanDigest = timeoutIncidentDigest([checkpointTask]);
+  const checkpointReceipt = { version:2, runId:"checkpoint-run",
+    candidate:{ ...checkpointFailure.lineage }, registryDigest:checkpointRegistryDigest,
+    plan:{ mode:"exact", requestedPackIds:["verification_process"],
+      selectedPackIds:["verification_process"], changedPaths:["scripts/checkpoint.mjs"],
+      taskPlanDigest:checkpointTaskPlanDigest,
+      executionPrerequisites:[{ key:checkpointTask.key, requiredCapabilities:[],
+        route:"workspace-sandbox" }] },
+    checkpointAttempt:{ id:"attempt-1", action:"created", identityDigest:"4".repeat(64) },
+    tasks:{} };
+  const checkpointProofFailure = { ...checkpointIncident.failure,
+    planDigest:timeoutIncidentDigest(checkpointReceipt.plan) };
+  const checkpointProofIncident = { ...checkpointIncident, failure:checkpointProofFailure,
+    failureDigest:timeoutIncidentDigest(checkpointProofFailure) };
+  const sourceReceiptLoader = async() => ({
+    path:checkpointFailure.sourceReceipt,
+    bytes:Buffer.from(`${JSON.stringify(checkpointReceipt)}\n`),
+    receipt:structuredClone(checkpointReceipt),
+  });
+  const historicalPlanLoader = async() => ({ commit:"failed-commit", tree:"failed-tree",
+    registryDigest:checkpointRegistryDigest, taskPlanDigest:checkpointTaskPlanDigest,
+    tasks:[checkpointTask] });
+  const checkpointProof = await deriveTaskCheckpointRepairProof(checkpointProofIncident,
+    { sourceReceiptLoader, historicalPlanLoader });
+  const immutableCheckpointIncident = structuredClone(checkpointProofIncident);
+  assert.deepEqual(timeoutRepairDiagnosedBoundary(checkpointProofIncident,
+    { taskCheckpointProof:checkpointProof }), {
+    kind:"task", taskKey:checkpointTask.key, executionArgs:[...checkpointTask.args],
+  }, "receipt-bound prelaunch checkpoint identity derives a repair-only exact task boundary");
+  assert.match(checkpointProof.causalKey, /^[a-f0-9]{64}$/u);
+  assert.equal(checkpointProof.sourceReceipt.sha256,
+    timeoutIncidentDigest(Buffer.from(`${JSON.stringify(checkpointReceipt)}\n`)));
+  assert.equal(checkpointProof.registryDigest, checkpointRegistryDigest);
+  assert.equal(checkpointProof.taskDigest, verificationTaskDigest(checkpointTask));
+  assert.doesNotThrow(() => timeoutRepairFocusedTaskPlan(checkpointProofIncident,
+    ["scripts/verification-execution/execute.mjs"], checkpointTask.key,
+    [...timeoutCanonicalIdentities, checkpointTask], undefined, checkpointProof));
+  await assert.rejects(() => deriveTaskCheckpointRepairProof(checkpointProofIncident, {
+    sourceReceiptLoader:async() => {
+      const receipt = { ...checkpointReceipt, tasks:{ [checkpointTask.key]:{
+        identity:checkpointTask, status:"passed", provenance:"fresh" } } };
+      return { path:checkpointFailure.sourceReceipt,
+        bytes:Buffer.from(`${JSON.stringify(receipt)}\n`), receipt };
+    },
+    historicalPlanLoader,
+  }), /prelaunch checkpoint proof/u,
+  "a task that launched before drift cannot acquire repair-only compatibility");
+  await assert.rejects(() => deriveTaskCheckpointRepairProof(checkpointProofIncident, {
+    sourceReceiptLoader,
+    historicalPlanLoader:async() => ({ ...(await historicalPlanLoader()), tasks:[] }),
+  }), /canonical task proof/u,
+  "a task absent from the failure registry remains blocking");
+  await assert.rejects(() => deriveTaskCheckpointRepairProof(checkpointProofIncident, {
+    sourceReceiptLoader:async() => ({ path:checkpointFailure.sourceReceipt,
+      bytes:Buffer.from("modified receipt"), receipt:checkpointReceipt }),
+    historicalPlanLoader,
+  }), /immutable receipt proof/u,
+  "a missing or modified receipt cannot establish compatibility");
+  await assert.rejects(() => deriveTaskCheckpointRepairProof(checkpointProofIncident, {
+    sourceReceiptLoader,
+    historicalPlanLoader:async() => ({ ...(await historicalPlanLoader()),
+      tasks:[{ ...checkpointTask, args:["test/different-task.mjs"] }] }),
+  }), /canonical task proof/u,
+  "a registry task digest different from the immutable incident remains blocking");
+  const nonTaskBoundaryFailure = { ...checkpointProofFailure,
+    failedBoundary:{ ...checkpointProofFailure.failedBoundary, operation:"artifact-binding" } };
+  const nonTaskBoundaryIncident = { ...checkpointProofIncident, failure:nonTaskBoundaryFailure,
+    failureDigest:timeoutIncidentDigest(nonTaskBoundaryFailure) };
+  await assert.rejects(() => deriveTaskCheckpointRepairProof(nonTaskBoundaryIncident,
+    { sourceReceiptLoader, historicalPlanLoader }), /no trusted task-checkpoint repair shape/u,
+  "checkpoint operations other than task retain their existing boundary route");
+  assert.throws(() => timeoutRepairDiagnosedBoundary(checkpointProofIncident),
+    /no trusted repair boundary/u,
+    "the immutable incident alone never manufactures the repair-only boundary");
+  assert.deepEqual(checkpointProofIncident, immutableCheckpointIncident,
+    "repair-only derivation does not add retry scope or mutate the immutable incident");
+  const checkpointRepairCandidate = { commit:"repair-commit", tree:"repair-tree" };
+  const checkpointEligibleIncident = { ...checkpointProofIncident, repair:{ status:"eligible",
+    candidate:checkpointRepairCandidate, checkpoint:{ baseCommit:"repair-base",
+      evidenceTask:"checkpoint-repair" }, causalCategory:"readiness",
+    causalExplanation:"checkpoint stage now quiesces before repair planning",
+    taskCheckpointProof:checkpointProof,
+    regression:{ key:checkpointTask.key, status:"passed", commit:"repair-commit",
+      receiptSha256:"5".repeat(64) }, focusedReceipt:{ status:"passed", commit:"repair-commit",
+      provenance:"fresh", receiptSha256:"6".repeat(64) },
+    causalProtocol:{ version:2, incidentId:checkpointProofIncident.id,
+      failureDigest:checkpointProofIncident.failureDigest,
+      preRepairResult:{ status:"failed" }, repairResult:{ status:"passed" } } } };
+  const checkpointAdmission = await buildEligibleRepairAdmissions({
+    incidents:[checkpointEligibleIncident], plan:{ tasks:[checkpointTask] }, packs:[],
+    candidate:checkpointRepairCandidate, baseCommit:"repair-base",
+    evidenceTask:"checkpoint-repair", changeSetDigest:"7".repeat(64),
+    planDigest:"8".repeat(64),
+  });
+  assert.equal(checkpointAdmission.entries[0].causalKey, checkpointProof.causalKey,
+    "fresh selected coverage admits the repair-only causal key without rewriting the incident");
   const receiptDirectory = path.join(incidentFixtureRoot, "tmp", "verification-receipts");
   await mkdir(receiptDirectory, { recursive:true });
   const writeRunnerReceipt = async(name, receipt) => {
@@ -7098,6 +7219,16 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
 console.log(JSON.stringify({ verificationConfirmedFlakyFeatureDeferralAcceptance:{
   routing:{ featureAll20Authorized:false },
   disposition:{ unresolved:true, repairDigestAbsent:true, atomic:true },
+} }));
+console.log(JSON.stringify({ verificationTaskCheckpointRepairAcceptance:{
+  repairOnlyBoundary:{ receiptBound:true, registryBound:true, taskBound:true,
+    prelaunchBound:true, causalKeyDerived:true, incidentImmutable:true,
+    unchangedRetryBlocked:true, changedRepairRequired:true },
+  invalidProofs:{ modifiedReceiptBlocked:true, missingRegistryTaskBlocked:true,
+    changedTaskDigestBlocked:true, nonTaskOperationBlocked:true,
+    launchedTaskBlocked:true, unchangedCandidateBlocked:true },
+  resumedAdmission:{ independent:true, selectedCoverageRequired:true,
+    noPlanWidening:true, unresolvedUntilTerminalProof:true },
 } }));
 
 console.log("verification process contract tests passed");
