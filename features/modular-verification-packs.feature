@@ -2844,3 +2844,53 @@ Feature: Modular verification packs
     And target, path, permission, readiness, session, project, saved-state, and installed UI behavior remain unchanged
     And any callback drift, behavioral activation, missing observation, weakened assertion, or automatic plan widening blocks before execution
     And after architect qa-ready integration the original live-target-permission-recovery task is reissued from that exact QA head without another acceptance round-trip
+
+  # Modular verification packs 207
+  Scenario: Modular verification packs 207
+    Given an incident-aware evidence stage is running multiple tasks against one immutable checkpoint candidate
+    When one task returns the first failing result
+    Then the stage closes to new task launches and requests bounded termination of every running sibling
+    And the runner waits for child exit, output persistence, receipt callbacks, and cleanup before reporting the stage as quiesced
+    And coordinator-cancelled siblings are recorded as cancelled without a reliability incident while independently failed siblings retain their ordinary incidents
+    And repair work, candidate mutation, and compatible resume remain blocked until the durable quiesced boundary is complete
+
+  # Modular verification packs 208
+  Scenario: Modular verification packs 208
+    Given an immutable execution-contract incident records checkpoint-identity operation task before one canonical task launched
+    And its incident, source receipt, and failure-commit registry together bind the same run, candidate, plan, task identity, and failure digest
+    When governed causal-repair planning derives the diagnosed boundary
+    Then it derives the exact canonical task key and execution arguments for repair only
+    And a missing legacy causal key is derived only from the validated immutable task-checkpoint proof
+    And it does not add a retry scope, permit an unchanged diagnostic retry, rewrite the source receipt, or mutate the incident
+    And repair eligibility still requires a changed exact candidate, named cause, deterministic regression, and fresh focused execution
+
+  # Modular verification packs 209
+  Scenario Outline: Modular verification packs 209
+    Given a task-checkpoint repair proposal has <invalid_proof>
+    When governed boundary derivation is evaluated
+    Then repair remains blocked with <diagnostic>
+    And no retry, task identity, passing evidence, incident transition, or compatibility disposition is inferred
+
+    Examples:
+      | invalid_proof                                      | diagnostic                              |
+      | a missing or modified source receipt               | immutable receipt proof is required     |
+      | a task identity absent from the failure registry   | canonical task proof is required        |
+      | a task digest different from the incident task     | exact task identity is required         |
+      | a checkpoint operation other than task             | the existing boundary route is required |
+      | a task that launched before the identity drift     | prelaunch checkpoint proof is required  |
+      | a dirty unchanged candidate or no causal regression | changed causal repair proof is required |
+
+  # Modular verification packs 210
+  Scenario Outline: Modular verification packs 210
+    Given preserved incident <incident> has <cause> on the Event Library product lineage
+    And the exact product remainder is conserved while the verification prerequisite reaches QA
+    When the same stable product task resumes on the prerequisite QA descendant
+    Then <repair_proof> makes that incident independently eligible on the resumed exact candidate
+    And one fresh canonical owned-pack run may admit it without widening the plan or resolving it
+    And review-ready evidence and its terminal deferral are recorded only with fresh selected coverage and package proof
+
+    Examples:
+      | incident                             | cause                                      | repair_proof                                                   |
+      | the canonical-inventory failure      | changed installed assertion inventory      | the inventory correction and preparation-contract regression  |
+      | the timing-task checkpoint failure   | a sibling task outlived the failed stage    | the quiescence regression and fresh exact timing task          |
+      | the evidence-task checkpoint failure | a sibling task outlived the failed stage    | the quiescence regression and fresh exact evidence task        |

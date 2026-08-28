@@ -1288,6 +1288,20 @@ or incompletely mapped inputs rerun; package always runs freshly on the final tr
 prevents bookkeeping-only changes from recursively discarding unrelated product proof
 without allowing a real or uncertain product failure to pass.
 
+Standing task-checkpoint correction (2026-08-28): an Event Library review-evidence
+failure remained visible while two parallel unit workers were still active. Repair work
+then changed the tracked tree, so both workers correctly stopped at their prelaunch
+identity guards and created immutable execution-contract incidents. The stage must now
+close on its first failure, cancel and fully quiesce active siblings before repair begins,
+and distinguish coordinator cancellation from an independently manifested failure.
+Runner-created checkpoint-identity operation `task` incidents also need a fail-closed
+repair-only boundary derived from the immutable incident, source receipt, historical
+registry, and exact task identity. That route never creates an unchanged retry or rewrites
+the failure. Full acceptance, the three preserved incident dispositions, and automatic
+product resumption are controlled by
+`docs/verification-task-checkpoint-incident-repair-R01.md` and Modular verification
+packs 207–210.
+
 ### VTD-015 — Review changing candidates before one final-tree all-20 gate
 
 Priority: P0
