@@ -715,7 +715,7 @@
                                                     :noFreshAttempt :executionContractIncident) row))
                           "Checkpoint identity drift did not fail closed.")))}])
 
-(defn- universal-prerequisite-gate-handlers [example-values]
+(defn- universal-prerequisite-runner-handlers [example-values]
   [{:pattern #"^(.+) selects canonical verification tasks$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/runner-mode
@@ -742,8 +742,10 @@
                                                    :prerequisiteGate :authorization])]
                  (assert! world (every? true? ((juxt :noDefault :missingBlocked :reusedBlocked
                                                     :alteredBlocked :wrongModeBlocked) authorization))
-                          "An unauthorized command reached the spawn boundary.")))}
+                          "An unauthorized command reached the spawn boundary.")))}])
 
+(defn- universal-prerequisite-closure-handlers [example-values]
+  [
    {:pattern #"^the executable plan records (.+) for one task$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/typed-prerequisite
@@ -773,8 +775,10 @@
                (let [closure (get-in world [:vtd014/evidence :execution
                                              :prerequisiteGate :closure])]
                  (assert! world (and (:canonicalOrder closure) (:unrelatedExcluded closure))
-                          "Prerequisite closure order or focus changed.")))}
+                          "Prerequisite closure order or focus changed.")))}])
 
+(defn- universal-prerequisite-outcome-start-handlers [example-values]
+  [
    {:pattern #"^prerequisite evaluation reaches (.+)$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/prerequisite-boundary
@@ -784,7 +788,10 @@
                (assert! world (every? true? (vals (get-in world [:vtd014/evidence :execution
                                                                   :prerequisiteGate
                                                                   :classifications])))
-                        "A prerequisite outcome was misclassified."))}
+                        "A prerequisite outcome was misclassified."))}])
+
+(defn- universal-prerequisite-style-handlers [example-values]
+  [
    {:pattern #"^(.+) has declared destination (.+), style classification (.+), owner (.+), consumers (.+), QA targets (.+), and scope root (.+)$"
     :handler (fn [world example captures]
                (let [source (first (values example-values example captures))
@@ -822,6 +829,10 @@
                                   (repository-inspection/runnable-pack-count
                                    (:modular/registry world))))
                           "Feature-integration stylesheet planning broadened to the all-20 terminal scope.")))}
+   ])
+
+(defn- universal-prerequisite-outcome-result-handlers [example-values]
+  [
    {:pattern #"^it records (a structured prerequisite block|an execution-contract incident|the task's normal reliability failure)$"
     :handler (fn [world example captures]
                (let [classification (first (values example-values example captures))
@@ -836,8 +847,10 @@
                (let [effect (first (values example-values example captures))
                      contract (prerequisite-outcome-contract (:vtd014/prerequisite-boundary world))]
                  (assert! world (= (:effect contract) effect)
-                          "Prerequisite candidate effect does not match its boundary.")))}
+                          "Prerequisite candidate effect does not match its boundary.")))}])
 
+(defn- universal-prerequisite-registry-handlers [_example-values]
+  [
    {:pattern #"^the canonical registries enumerate every runner mode and typed prerequisite kind$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^shared process-contract evidence iterates those registries$"
@@ -872,6 +885,14 @@
                                                                   :prerequisiteGate
                                                                   :causalFixtures])))
                         "Causal prerequisite fixtures became special-case branches."))}])
+
+(defn- universal-prerequisite-gate-handlers [example-values]
+  (vec (concat (universal-prerequisite-runner-handlers example-values)
+               (universal-prerequisite-closure-handlers example-values)
+               (universal-prerequisite-outcome-start-handlers example-values)
+               (universal-prerequisite-style-handlers example-values)
+               (universal-prerequisite-outcome-result-handlers example-values)
+               (universal-prerequisite-registry-handlers example-values))))
 
 (defn- repair-prerequisite-handlers [example-values]
   [{:pattern #"^repair-focused execution selects (.+)$"
@@ -952,7 +973,7 @@
                                      (= "scripts/package.mjs" (:packageTask conservation)))
                         "VTD-014 conservation evidence is incomplete.")))}])
 
-(defn- bounded-closure-handlers [example-values]
+(defn- bounded-closure-contract-handlers [_example-values]
   [{:pattern #"^VTD-014 closure has one user-approved contract revision$"
     :handler (fn [world _ _]
                (let [prepared-world (prepared world)]
@@ -967,8 +988,10 @@
    {:pattern #"^(?:the new requirement is recorded outside the closure candidate for separate approval|only an implementation defect or failure of the frozen contract may change the closure candidate|behavior already prohibited by the frozen contract remains a defect rather than new scope|no assertion, incident record, or evidence-integrity rule is weakened to reach closure)$"
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd014/evidence :boundedClosure :frozen]))
-                        "Frozen closure scope or integrity changed."))}
+                        "Frozen closure scope or integrity changed."))}])
 
+(defn- bounded-closure-domain-handlers [example-values]
+  [
    {:pattern #"^a frozen-contract run reaches (.+)$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/observed-boundary
@@ -989,8 +1012,10 @@
                (let [effect (first (values example-values example captures))
                      contract (failure-domain-contract (:vtd014/observed-boundary world))]
                  (assert! world (= (:effect contract) effect)
-                          "Closure effect does not match its failure domain.")))}
+                          "Closure effect does not match its failure domain.")))}])
 
+(defn- bounded-closure-causal-handlers [example-values]
+  [
    {:pattern #"^an unresolved causal incident exists on an ancestor of the current candidate$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^a descendant manifests (.+)$"
@@ -1009,8 +1034,10 @@
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd014/evidence :boundedClosure
                                                      :causal :occurrencesRetained]))
-                        "A causal occurrence lost immutable provenance."))}
+                        "A causal occurrence lost immutable provenance."))}])
 
+(defn- bounded-closure-disposition-handlers [example-values]
+  [
    {:pattern #"^an open incident is audited against the selected closure candidate$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^(.+) applies$"
@@ -1030,8 +1057,10 @@
                (let [contract (disposition-contract (:vtd014/lineage-condition world))
                      effect (first (values example-values example captures))]
                  (assert! world (= (:effect contract) effect)
-                          "Incident integrity effect does not match its disposition.")))}
+                          "Incident integrity effect does not match its disposition.")))}])
 
+(defn- bounded-closure-input-handlers [example-values]
+  [
    {:pattern #"^a frozen closure attempt contains (.+)$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/earlier-result
@@ -1054,8 +1083,10 @@
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd014/evidence :boundedClosure
                                                      :inputEquivalence :changed]))
-                        "Changed-path classification established false equivalence."))}
+                        "Changed-path classification established false equivalence."))}])
 
+(defn- bounded-closure-terminal-handlers [_example-values]
+  [
    {:pattern #"^the closure contract is frozen and every known current-cause repair has focused proof$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^the terminal checkpoint begins on one sealed candidate$" :handler (fn [world _ _] world)}
@@ -1083,6 +1114,14 @@
                (assert! world (every? #(= "fresh" (:packagePolicy %))
                                       (vals (get-in world [:vtd014/evidence :boundedClosure :terminal])))
                         "Package proof was reused."))}])
+
+(defn- bounded-closure-handlers [example-values]
+  (vec (concat (bounded-closure-contract-handlers example-values)
+               (bounded-closure-domain-handlers example-values)
+               (bounded-closure-causal-handlers example-values)
+               (bounded-closure-disposition-handlers example-values)
+               (bounded-closure-input-handlers example-values)
+               (bounded-closure-terminal-handlers example-values))))
 
 (defn- flow-reload-lifecycle-handlers [example-values]
   [{:pattern #"^one sealed candidate selects FLOW_WORKSPACE_CONTROLS_TARGET through (.+)$"
@@ -1227,7 +1266,7 @@
                                                      :resultPaths :packageAssets])))
                         "The installed Flow stylesheet assets are not package-addressable."))}])
 
-(defn- task-succession-handlers [example-values]
+(defn- task-succession-change-handlers [example-values]
   [{:pattern #"^a historical incident boundary encounters (.+)$"
     :handler (fn [world example captures]
                (let [change (first (values example-values example captures))]
@@ -1243,7 +1282,10 @@
                  (assert! world (and (= (:evidence contract) evidence)
                                      (true? (get-in world [:vtd014/evidence :taskSuccession
                                                            :fixtures (:fixture contract)])))
-                          "Task-succession conservation evidence does not match its change.")))}
+                          "Task-succession conservation evidence does not match its change.")))}])
+
+(defn- task-succession-governance-handlers [_example-values]
+  [
    {:pattern #"^(?:repair-focused planning resolves its historical failure boundary|repair-focused execution plans the mapped boundary|its product repair becomes eligible through that successor|the approved 360 pixel control-containment repair is applied through task succession)$"
     :handler (fn [world _ _] world)}
    {:pattern #"^it uses only a versioned task-succession graph from the failure registry to the current registry$"
@@ -1255,7 +1297,10 @@
    {:pattern #"^the immutable failure task, occurrence, causal key, and diagnostic remain unchanged$"
     :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :immutable])) "Task succession mutated incident evidence."))}
    {:pattern #"^an undeclared, inferred-by-name, ambiguous, cyclic, or incomplete succession blocks before execution$"
-    :handler (fn [world _ _] (assert! world (every? true? (vals (get-in world [:vtd014/evidence :taskSuccession :blocks]))) "A malformed succession did not block."))}
+    :handler (fn [world _ _] (assert! world (every? true? (vals (get-in world [:vtd014/evidence :taskSuccession :blocks]))) "A malformed succession did not block."))}])
+
+(defn- task-succession-mapping-handlers [example-values]
+  [
    {:pattern #"^repair planning produces (.+)$"
     :handler (fn [world example captures]
                (let [contract (task-succession-contract (:vtd014/task-change world))
@@ -1271,7 +1316,10 @@
    {:pattern #"^only the mapped logical slice, its causal regression, affected process-contract tasks, and prerequisites execute$"
     :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :exactSlice])) "Mapped execution broadened its logical slice."))}
    {:pattern #"^an unrelated member of a destination batch does not execute as repair proof$"
-    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :unrelatedBatchMembersExcluded])) "Mapped execution selected an unrelated batch member."))}
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :unrelatedBatchMembersExcluded])) "Mapped execution selected an unrelated batch member."))}])
+
+(defn- task-succession-integrity-handlers [_example-values]
+  [
    {:pattern #"^(?:the incident retains its own id, domain, immutable failure identity, causal key, and occurrence history|task succession is not resolution, lineage retirement, verifier supersession, or product-cause grouping|distinct incidents may cite one repair candidate and focused receipt only when each has its own exact causal regression|incidents group only when every successor-normalized causal field matches, not merely because one change repairs both)$"
     :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :incidentIndependent])) "Task succession conflated incident identity or resolution."))}
    {:pattern #"^eligibility requires its own causal pre-repair failure and post-repair result plus fresh proof of the mapped boundary$"
@@ -1288,6 +1336,12 @@
     :handler (fn [world _ _] (assert! world (every? true? (vals (get-in world [:vtd014/evidence :taskSuccession :fixtures]))) "Task-succession fixture coverage is incomplete."))}
    {:pattern #"^no product behavior, assertion leaf, timeout, target scope, incident record, or evidence meaning changes$"
     :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :noMeaningChanged])) "Task succession changed evidence meaning."))}])
+
+(defn- task-succession-handlers [example-values]
+  (vec (concat (task-succession-change-handlers example-values)
+               (task-succession-governance-handlers example-values)
+               (task-succession-mapping-handlers example-values)
+               (task-succession-integrity-handlers example-values))))
 
 (defn- planner-projection-handlers [example-values]
   [{:pattern #"^(?:one governed review-evidence receipt contains a canonical browser batch and an alias-filtered prerequisite batch that both fail on the same single logical target|an unresolved browser incident needs a same-target planner projection|checkpoint prerequisite closure selects browser batches with overlapping logical targets or alias-only identity differences|a governed repair-focused preflight has one current incident whose bounded causal repair is ready|an inherited browser incident has an eligible repair and a terminal-verification-deferred disposition|that inherited incident diagnoses one target which appears in exactly one current canonical task|its receipt-bound same-target planner projection reports a changed historical-to-current target boundary|unresolved task succession is validated for the current repair plan)$"
@@ -1503,7 +1557,7 @@
                                           :plannerProjection :invalidBlocked]))
                           "Invalid planner projections did not remain blocked.")))}])
 
-(defn- run-intent-handlers [example-values]
+(defn- run-intent-receipt-handlers [example-values]
   [{:pattern #"^the canonical verification runner starts with (.+)$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/run-authority
@@ -1546,8 +1600,10 @@
                         (and (true? (get-in world [:vtd014/evidence :runIntent :immutableRejection]))
                              (true? (get-in world [:vtd014/evidence :runIntent
                                                    :compatibility :ambiguousBlocking])))
-                        "Evidence recording admitted a missing, ambiguous, or upgraded intent."))}
+                        "Evidence recording admitted a missing, ambiguous, or upgraded intent."))}])
 
+(defn- run-intent-bootstrap-handlers [_example-values]
+  [
    {:pattern #"^an exact review-evidence candidate adds run-intent enforcement to a base that already contains its approved contract but lacks the implementation$"
     :handler (fn [world _ _]
                (let [prepared-world (prepared world)]
@@ -1607,6 +1663,10 @@
                         (true? (get-in world [:vtd014/evidence :runIntent
                                               :bootstrap :futureBaseRejected]))
                         "Run-intent bootstrap authority was reusable."))}])
+
+(defn- run-intent-handlers [example-values]
+  (vec (concat (run-intent-receipt-handlers example-values)
+               (run-intent-bootstrap-handlers example-values))))
 
 (defn handlers [{:keys [example-values]}]
   (vec (concat (incident-handlers example-values)
