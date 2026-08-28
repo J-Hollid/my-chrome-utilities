@@ -2914,3 +2914,23 @@ Feature: Modular verification packs
     And the rejected attempt is recorded only as the parent task failure and follows ordinary stage quiescence and incident handling
     And contract tests inspect broader plans through pure planning or isolated synthetic registries without invoking a production child run
     And direct build and package subprocesses inside the clean-checkout contract remain unchanged
+
+  # Modular verification packs 213
+  Scenario: Modular verification packs 213
+    Given a registered aggregate browser task launches declared child commands that each map uniquely to a canonical verification task
+    When one child invocation fails before the aggregate completes its own logical target
+    Then every failed child outcome binds the parent run, candidate, parent task, canonical child task, invocation environment, exit, and output digests
+    And the aggregate closes to new child launches, drains running siblings, and preserves independently failed child outcomes
+    And the aggregate emits its own failed logical-target timing and result without replacing the child cause with an incomplete parent result
+    And incident causality, diagnostic retry, and repair scope select the exact canonical child while retaining the complete parent-child chain
+    And an undeclared, ambiguous, duplicated, mismatched, spoofed, stale, or cross-run child outcome fails closed before retry, repair, or evidence
+
+  # Modular verification packs 214
+  Scenario: Modular verification packs 214
+    Given an immutable legacy aggregate incident records only coarse missing-result causality while its source receipt proves one failed canonical child task and its invocation set
+    When governed planning evaluates an approved append-only compatibility binding
+    Then the binding matches the exact incident, failure, receipt, run, candidate, parent task, canonical child task, command, and invocation environments
+    And it derives only the normal child diagnostic and repair boundary without rewriting the incident or source receipt
+    And the normal single diagnostic, confirmed-flaky, causal-repair, fresh-child, and terminal-deferral rules remain unchanged
+    And the parked aggregate candidate resumes only from the QA descendant of the routing correction before fresh aggregate review evidence runs
+    And any absent, ambiguous, superseded, or mismatched binding leaves the incident and parked candidate blocked without a coarse parent retry
