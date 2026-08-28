@@ -14,7 +14,6 @@
       "swarmforge/scripts/handoff_lib.bb",
       "test/acceptance/flow_table_documentation_export_steps_test.clj",
       "test/acceptance/project_management_steps_test.clj",
-      "test/fixtures/verification-process-contract-conservation.json",
       "test/support/side-panel-browser-fixture-primitives.mjs",
       "test/support/side-panel-browser-project-fixtures.mjs",
       "test/support/side-panel-capture-fixtures.mjs",
